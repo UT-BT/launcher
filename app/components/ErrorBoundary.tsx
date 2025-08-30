@@ -32,7 +32,6 @@ export class ErrorBoundary extends Component<Props, State> {
         this.props.fallback || (
           <div className="min-h-screen bg-background flex items-center justify-center p-4">
             <div className="max-w-md w-full space-y-6">
-              {/* Error Icon */}
               <div className="flex justify-center">
                 <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center">
                   <svg
@@ -52,7 +51,6 @@ export class ErrorBoundary extends Component<Props, State> {
                 </div>
               </div>
 
-              {/* Error Content */}
               <div className="text-center space-y-4">
                 <div className="space-y-2">
                   <h1 className="text-2xl font-semibold text-foreground">Something went wrong</h1>
@@ -62,7 +60,6 @@ export class ErrorBoundary extends Component<Props, State> {
                   </p>
                 </div>
 
-                {/* Error Details */}
                 {this.state.error && (
                   <details className="group">
                     <summary className="cursor-pointer list-none">
@@ -103,7 +100,6 @@ export class ErrorBoundary extends Component<Props, State> {
                   </details>
                 )}
 
-                {/* Action Buttons */}
                 <div className="flex flex-col sm:flex-row gap-3 pt-2">
                   <Button onClick={() => window.location.reload()} className="flex-1" size="lg">
                     <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

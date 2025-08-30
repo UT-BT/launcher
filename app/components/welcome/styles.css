@@ -61,7 +61,12 @@
   transform: scale(1.05);
 }
 
-/* Nebula animated background */
+.actions {
+  margin-top: 2rem;
+  display: flex;
+  gap: 1rem;
+}
+
 .nebula-bg {
   position: absolute;
   inset: -20% -20% -20% -20%;
@@ -100,7 +105,6 @@
   50% { transform: translate3d(2%, -2%, 0) scale(1.03); }
 }
 
-/* Animated gradient title using logo palette (blues and reds) */
 .gradient-title {
   font-size: 2.75rem;
   line-height: 1.1;
@@ -125,13 +129,11 @@
   100% { background-position: 0% 50%; }
 }
 
-/* Parallax utility reads container-set CSS variables (set via mouse move) */
 .parallax {
   transform: translate3d(calc(var(--parallax-x, 0) * 1px), calc(var(--parallax-y, 0) * 1px), 0);
   transition: transform 0.08s linear;
 }
 
-/* Discord placeholder button styling */
 .discord-btn {
   margin-top: 0.5rem;
   background: linear-gradient(135deg, #5865F2 0%, #4752C4 40%, #5965f3 100%);
