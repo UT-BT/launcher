@@ -33,6 +33,7 @@ export default function Install({ onBack }: { onBack?: () => void }) {
   const [rcTooltipVisible, setRcTooltipVisible] = useState<boolean>(false)
   const [rcTooltipPos, setRcTooltipPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 })
   const rcTooltipTimerRef = useRef<number | null>(null)
+  const { webSetLocked } = useConveyor('window')
 
   // In-app confirm for CD2
   const [showCd2Modal, setShowCd2Modal] = useState<boolean>(false)
@@ -145,6 +146,9 @@ export default function Install({ onBack }: { onBack?: () => void }) {
     window.utInstall.onStatus((data: { status: string; message?: string }) => {
       if (data.status.startsWith('downloading')) {
         setStatus('downloading')
+        const ctx = document.getElementById('titlebar-context')
+        if (ctx) ctx.dispatchEvent(new CustomEvent('set-titlebar-lock', { detail: { locked: true } }))
+        webSetLocked(true).catch(() => {})
         if (data.status === 'downloading-cd1') setProgressText('Downloading CD1…')
         if (data.status === 'downloading-cd2') setProgressText('Downloading CD2…')
       } else if (data.status === 'cd1-cached') {
@@ -167,6 +171,9 @@ export default function Install({ onBack }: { onBack?: () => void }) {
         })
       } else if (data.status.startsWith('installing')) {
         setStatus('installing')
+        const ctx = document.getElementById('titlebar-context')
+        if (ctx) ctx.dispatchEvent(new CustomEvent('set-titlebar-lock', { detail: { locked: true } }))
+        webSetLocked(true).catch(() => {})
         if (data.status === 'installing-cd1') setProgressText('Installing UT99 • Disc 1')
         if (data.status === 'installing-cd2') setProgressText('Installing UT99 • Disc 2')
         setProgress(100)
@@ -175,10 +182,16 @@ export default function Install({ onBack }: { onBack?: () => void }) {
         setProgressText('Installation Complete')
         setProgress(100)
         setShowInstallPathModal(true)
+        const ctx = document.getElementById('titlebar-context')
+        if (ctx) ctx.dispatchEvent(new CustomEvent('set-titlebar-lock', { detail: { locked: false } }))
+        webSetLocked(false).catch(() => {})
       } else if (data.status === 'error') {
         setStatus('done')
         setProgressText(`Error: ${data.message || 'UT99 Installation Failed'}`)
         setProgress(0)
+        const ctx = document.getElementById('titlebar-context')
+        if (ctx) ctx.dispatchEvent(new CustomEvent('set-titlebar-lock', { detail: { locked: false } }))
+        webSetLocked(false).catch(() => {})
       }
     })
 
@@ -201,7 +214,7 @@ export default function Install({ onBack }: { onBack?: () => void }) {
         setStatus('done')
       }
     })
-  }, [SIZE_CD1, SIZE_CD2, TOTAL_SIZE])
+  }, [SIZE_CD1, SIZE_CD2, TOTAL_SIZE, webSetLocked])
 
   useEffect(() => {
     return () => {

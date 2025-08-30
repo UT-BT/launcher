@@ -5,6 +5,7 @@ interface TitlebarContextProps {
   activeMenuIndex: number | null
   menusVisible: boolean
   showAppInfo: boolean
+  locked: boolean
   setActiveMenuIndex: (index: number | null) => void
   setMenusVisible: (visible: boolean) => void
   closeActiveMenu: () => void
@@ -17,6 +18,7 @@ export const TitlebarContextProvider = ({ children }: { children: React.ReactNod
   const [activeMenuIndex, setActiveMenuIndex] = useState<number | null>(null)
   const [menusVisible, setMenusVisible] = useState(true)
   const [showAppInfo, setShowAppInfo] = useState(false)
+  const [locked, setLocked] = useState(false)
   const closeActiveMenu = () => setActiveMenuIndex(null)
   const toggleAppInfo = () => setShowAppInfo(prev => !prev)
 
@@ -24,9 +26,15 @@ export const TitlebarContextProvider = ({ children }: { children: React.ReactNod
     const contextElement = document.getElementById('titlebar-context')
     if (contextElement) {
       const handleToggleAppInfo = () => toggleAppInfo()
+      const handleSetLock = (e: Event) => {
+        const custom = e as CustomEvent<{ locked: boolean }>
+        setLocked(Boolean(custom.detail?.locked))
+      }
       contextElement.addEventListener('toggle-app-info', handleToggleAppInfo)
+      contextElement.addEventListener('set-titlebar-lock', handleSetLock as EventListener)
       return () => {
         contextElement.removeEventListener('toggle-app-info', handleToggleAppInfo)
+        contextElement.removeEventListener('set-titlebar-lock', handleSetLock as EventListener)
       }
     }
     return undefined
@@ -38,6 +46,7 @@ export const TitlebarContextProvider = ({ children }: { children: React.ReactNod
         activeMenuIndex, 
         menusVisible, 
         showAppInfo,
+        locked,
         setActiveMenuIndex, 
         setMenusVisible, 
         closeActiveMenu,
