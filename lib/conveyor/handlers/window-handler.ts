@@ -1,5 +1,5 @@
 import type { BrowserWindow } from 'electron'
-import { shell } from 'electron'
+import { shell, app } from 'electron'
 import { handle } from '@/lib/main/shared'
 import { electronAPI } from '@electron-toolkit/preload'
 
@@ -37,7 +37,10 @@ export const registerWindowHandlers = (window: BrowserWindow) => {
   handle('web-select-all', () => { if (!webLocked) webContents.selectAll() })
   handle('web-reload', () => { if (!webLocked) webContents.reload() })
   handle('web-force-reload', () => { if (!webLocked) webContents.reloadIgnoringCache() })
-  handle('web-toggle-devtools', () => { if (!webLocked) webContents.toggleDevTools() })
+  handle('web-toggle-devtools', () => {
+    if (app.isPackaged) return
+    if (!webLocked) webContents.toggleDevTools()
+  })
   handle('web-actual-size', () => webContents.setZoomLevel(0))
   handle('web-zoom-in', () => webContents.setZoomLevel(webContents.zoomLevel + 0.5))
   handle('web-zoom-out', () => webContents.setZoomLevel(webContents.zoomLevel - 0.5))
