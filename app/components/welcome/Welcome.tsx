@@ -1,12 +1,13 @@
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import './styles.css'
 import { Button } from '@/app/components/ui/button'
 import logo from '@/app/assets/logo.png'
-import { SiDiscord } from 'react-icons/si'
+import { useConveyor } from '@/app/hooks/use-conveyor'
 
-export default function Welcome() {
+export default function Welcome({ onInstall }: { onInstall?: () => void }) {
   const containerRef = useRef<HTMLDivElement>(null)
+  const app = useConveyor('app')
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     const el = containerRef.current
@@ -17,6 +18,11 @@ export default function Welcome() {
     el.style.setProperty('--parallax-x', String(x * 30))
     el.style.setProperty('--parallax-y', String(y * 30))
   }
+
+  useEffect(() => {
+    app.getInstallPath().then(() => {})
+  }, [app])
+
 
   return (
     <div ref={containerRef} onMouseMove={handleMouseMove} className="welcome-container">
@@ -48,6 +54,9 @@ export default function Welcome() {
         >
           Welcome to UTBT
         </motion.h1>
+        <div className="actions">
+          <Button onClick={onInstall}>Install Unreal Tournament 1999</Button>
+        </div>
       </motion.div>
     </div>
   )

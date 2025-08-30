@@ -29,3 +29,11 @@ declare module '*.web' {
   const content: string
   export default content
 }
+
+interface Window {
+  conveyor: import('@/lib/conveyor/api').ConveyorApi
+  utInstall: {
+    onProgress: (cb: (data: { stage?: string; progress?: number }) => void) => void
+    onStatus: (cb: (data: { status: string }) => void) => void
+  }
+}
