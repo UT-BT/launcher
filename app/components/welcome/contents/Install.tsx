@@ -292,7 +292,7 @@ export default function Install({ onBack }: { onBack?: () => void }) {
       <div className="nebula-bg" aria-hidden="true" />
       
       <div className="back-button">
-        <Button variant="ghost" onClick={onBack} size="sm">
+        <Button variant="ghost" onClick={onBack} size="sm" disabled={status === 'downloading' || status === 'installing'}>
           ← Back
         </Button>
       </div>
@@ -365,6 +365,7 @@ export default function Install({ onBack }: { onBack?: () => void }) {
                 <input
                   type="checkbox"
                   checked={patchChannel === 'stable'}
+                  disabled={status === 'downloading' || status === 'installing'}
                   onChange={async (e) => {
                     if (e.target.checked) {
                       setPatchChannel('stable')
@@ -378,6 +379,7 @@ export default function Install({ onBack }: { onBack?: () => void }) {
                 <input
                   type="checkbox"
                   checked={patchChannel === 'rc'}
+                  disabled={status === 'downloading' || status === 'installing'}
                   onChange={async (e) => {
                     if (e.target.checked) {
                       setPatchChannel('rc')
