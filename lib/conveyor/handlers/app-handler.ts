@@ -1,12 +1,13 @@
-import { app, dialog, type BrowserWindow } from 'electron'
+import { app, dialog, type BrowserWindow, ipcMain } from 'electron'
 import { handle } from '@/lib/main/shared'
-import { getUt99InstallPath, setUt99InstallPath } from '@/lib/main/config'
+import { getUt99InstallPath, setUt99InstallPath, getPatchChannel, setPatchChannel, getInstalledPatch, setInstalledPatch, setBaseVersion, markFreshInstall, getBaseVersion } from '@/lib/main/config'
 import { join } from 'path'
-import { createWriteStream, existsSync, mkdirSync, statSync, readFileSync } from 'fs'
+import { createWriteStream, existsSync, mkdirSync, statSync, readFileSync, writeFileSync } from 'fs'
 import { createHash } from 'crypto'
 import https from 'https'
-import { IncomingMessage } from 'http'
+import http, { IncomingMessage } from 'http'
 import { spawn } from 'child_process'
+import { URL } from 'url'
 
 export const registerAppHandlers = (_window: BrowserWindow) => {
   handle('version', () => app.getVersion())
@@ -22,6 +23,12 @@ export const registerAppHandlers = (_window: BrowserWindow) => {
     setUt99InstallPath(selected)
     return selected
   })
+
+  handle('getPatchChannel', () => getPatchChannel())
+  handle('setPatchChannel', (channel: 'stable' | 'rc') => setPatchChannel(channel))
+  handle('getInstalledPatch', () => getInstalledPatch())
+  handle('setBaseVersion', (version: string) => setBaseVersion(version))
+  handle('getBaseVersion', () => getBaseVersion())
 
   const downloadFile = (url: string, destinationFile: string, stage: string) =>
     new Promise<void>((resolve, reject) => {
@@ -130,13 +137,6 @@ export const registerAppHandlers = (_window: BrowserWindow) => {
       await downloadFile(cd1, dest1, 'cd1')
     }
     
-    if (verifyFile(dest2, cd2MD5)) {
-      try { _window.webContents.send('ut-install-progress', { stage: 'cd2', progress: 100 }) } catch { /* ignore */ }
-      try { _window.webContents.send('ut-install-status', { status: 'cd2-cached' }) } catch { /* ignore */ }
-    } else {
-      try { _window.webContents.send('ut-install-status', { status: 'downloading-cd2' }) } catch { /* ignore */ }
-      await downloadFile(cd2, dest2, 'cd2')
-    }
 
     const runSetupFromIso = async (isoPath: string, cdName: string) => {
       return new Promise<void>((resolve, reject) => {
@@ -216,15 +216,162 @@ try {
       throw error
     }
 
-    try { _window.webContents.send('ut-install-status', { status: 'installing-cd2' }) } catch { /* ignore */ }
     try {
-      await runSetupFromIso(dest2, 'CD2')
-    } catch (error) {
-      console.error('CD2 installation failed:', error)
-      try { _window.webContents.send('ut-install-status', { status: 'error', message: `CD2 installation failed: ${error}` }) } catch { /* ignore */ }
-      throw error
+      const confirmId = Math.random().toString(36).slice(2)
+      try {
+        _window.webContents.send('ut-install-confirm', {
+          id: confirmId,
+          title: 'Install Optional CD2 Assets?',
+          detail:
+            'CD2 contains optional S3TC high-resolution textures.\n\nThis increases disk usage but improves texture quality on supported renderers.\n\nDo you want to download and install CD2 now?',
+        })
+      } catch { /* ignore */ }
+
+      const installCd2: boolean = await new Promise((resolve) => {
+        const timeout = setTimeout(() => {
+          try { ipcMain.removeListener('ut-install-confirm-response', onResponse) } catch { /* ignore */ }
+          resolve(false)
+        }, 120000)
+
+        const onResponse = (_event: unknown, data: { id?: string; accepted?: boolean }) => {
+          if (!data || data.id !== confirmId) return
+          clearTimeout(timeout)
+          try { ipcMain.removeListener('ut-install-confirm-response', onResponse) } catch { /* ignore */ }
+          resolve(Boolean(data.accepted))
+        }
+
+        ipcMain.on('ut-install-confirm-response', onResponse)
+      })
+
+      if (installCd2) {
+        if (verifyFile(dest2, cd2MD5)) {
+          try { _window.webContents.send('ut-install-progress', { stage: 'cd2', progress: 100 }) } catch { /* ignore */ }
+          try { _window.webContents.send('ut-install-status', { status: 'cd2-cached' }) } catch { /* ignore */ }
+        } else {
+          try { _window.webContents.send('ut-install-status', { status: 'downloading-cd2' }) } catch { /* ignore */ }
+          await downloadFile(cd2, dest2, 'cd2')
+        }
+
+        try { _window.webContents.send('ut-install-status', { status: 'installing-cd2' }) } catch { /* ignore */ }
+        try {
+          await runSetupFromIso(dest2, 'CD2')
+        } catch (error) {
+          console.error('CD2 installation failed:', error)
+          try { _window.webContents.send('ut-install-status', { status: 'error', message: `CD2 installation failed: ${error}` }) } catch { /* ignore */ }
+          throw error
+        }
+      }
+    } catch (err) {
+      console.warn('CD2 prompt failed, skipping CD2:', err)
     }
 
+    try {
+      markFreshInstall('v432')
+    } catch (err) {
+      console.warn('Failed to mark fresh install:', err)
+    }
     try { _window.webContents.send('ut-install-status', { status: 'complete' }) } catch { /* ignore */ }
+  })
+
+  const httpGetBuffer = (urlStr: string, headers?: Record<string, string>): Promise<Buffer> =>
+    new Promise((resolve, reject) => {
+      const visited = new Set<string>()
+      const doGet = (u: string) => {
+        if (visited.has(u)) return reject(new Error('Redirect loop'))
+        visited.add(u)
+        const parsed = new URL(u)
+        const client = parsed.protocol === 'https:' ? https : http
+        client.get(u, { headers }, (res) => {
+          const status = res.statusCode || 0
+          if (status >= 300 && status < 400 && res.headers.location) {
+            const next = new URL(res.headers.location, u).toString()
+            doGet(next)
+            return
+          }
+          if (status !== 200) {
+            reject(new Error(`Request failed with status ${status}`))
+            return
+          }
+          const chunks: Buffer[] = []
+          res.on('data', (c) => chunks.push(Buffer.isBuffer(c) ? c : Buffer.from(c)))
+          res.on('end', () => resolve(Buffer.concat(chunks)))
+          res.on('error', reject)
+        }).on('error', reject)
+      }
+      doGet(urlStr)
+    })
+
+  handle('fetchLatestPatchManifest', async (stableOnly?: boolean) => {
+    const channel = stableOnly === true ? 'stable' : getPatchChannel()
+    const base = 'http://127.0.0.1:8081/patches/latest'
+    const headers = {
+      'X-Api-Key': "changeme",
+    }
+    const url = channel === 'stable' ? `${base}?stable=true` : base
+    try {
+      const buf = await httpGetBuffer(url, headers)
+      const json = JSON.parse(buf.toString('utf-8'))
+      return json
+    } catch {
+      return { success: false }
+    }
+  })
+
+  const calculateSHA256 = (filePath: string): string => {
+    const fileBuffer = readFileSync(filePath)
+    const hashSum = createHash('sha256')
+    hashSum.update(fileBuffer)
+    return hashSum.digest('hex')
+  }
+
+  handle('applyPatchFromManifest', async (m: { asset_url: string; sha256: string; tag: string; channel: 'stable' | 'rc' }) => {
+    const installPath = getUt99InstallPath()
+    if (!installPath) throw new Error('Install path not set')
+
+    const tmpDir = join(app.getPath('temp'), 'utbt-patches')
+    if (!existsSync(tmpDir)) mkdirSync(tmpDir, { recursive: true })
+    const fileName = m.asset_url.split('/').pop() || `patch-${m.tag}.zip`
+    const dest = join(tmpDir, fileName)
+
+    try { _window.webContents.send('ut-patch-status', { status: 'downloading', tag: m.tag }) } catch (err) { console.warn('patch status send failed', err) }
+    await downloadFile(m.asset_url, dest, 'patch')
+
+    const actual = calculateSHA256(dest)
+    if (actual.toLowerCase() !== m.sha256.toLowerCase()) {
+      try { _window.webContents.send('ut-patch-status', { status: 'error', message: 'SHA256 mismatch' }) } catch (err) { console.warn('patch status send failed', err) }
+      throw new Error('SHA256 mismatch')
+    }
+
+    try { _window.webContents.send('ut-patch-status', { status: 'verifying' }) } catch (err) { console.warn('patch status send failed', err) }
+
+    try { _window.webContents.send('ut-patch-status', { status: 'applying' }) } catch (err) { console.warn('patch status send failed', err) }
+    await new Promise<void>((resolve, reject) => {
+      const escapePs = (s: string) => s.replace(/`/g, '``').replace(/"/g, '`"')
+      const zipEsc = escapePs(dest)
+      const destEsc = escapePs(installPath)
+      const psScript = `
+$ErrorActionPreference = 'Stop'
+if (-not (Test-Path -LiteralPath "${zipEsc}")) { exit 2 }
+Expand-Archive -LiteralPath "${zipEsc}" -DestinationPath "${destEsc}" -Force
+`
+      const ps = spawn('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', psScript], {
+        windowsHide: true,
+      })
+      ps.on('exit', (code) => {
+        if (code === 0) resolve()
+        else reject(new Error(`Expand-Archive failed: ${code}`))
+      })
+      ps.on('error', reject)
+    })
+
+    try {
+      const stamp = { tag: m.tag, sha256: m.sha256, channel: m.channel, installedAt: new Date().toISOString() }
+      writeFileSync(join(installPath, '.utbt-installed-patch.json'), JSON.stringify(stamp, null, 2), 'utf-8')
+      setInstalledPatch(stamp)
+    } catch (err) {
+      console.warn('Failed writing installed patch stamp:', err)
+    }
+
+    try { _window.webContents.send('ut-patch-status', { status: 'complete', tag: m.tag }) } catch (err) { console.warn('patch status send failed', err) }
   })
 }

@@ -14,6 +14,17 @@ if (process.contextIsolated) {
       onStatus: (cb: (data: { status: string }) => void) => {
         ipcRenderer.on('ut-install-status', (_, data) => cb(data))
       },
+      onConfirm: (cb: (data: { id: string; title: string; message: string; detail?: string }) => void) => {
+        ipcRenderer.on('ut-install-confirm', (_, data) => cb(data))
+      },
+      respondConfirm: (id: string, accepted: boolean) => {
+        ipcRenderer.send('ut-install-confirm-response', { id, accepted })
+      },
+    })
+    contextBridge.exposeInMainWorld('utPatch', {
+      onStatus: (cb: (data: { status: string; message?: string; tag?: string }) => void) => {
+        ipcRenderer.on('ut-patch-status', (_, data) => cb(data))
+      },
     })
   } catch (error) {
     console.error(error)
@@ -26,6 +37,17 @@ if (process.contextIsolated) {
     },
     onStatus: (cb: (data: { status: string }) => void) => {
       ipcRenderer.on('ut-install-status', (_, data) => cb(data))
+    },
+    onConfirm: (cb: (data: { id: string; title: string; message: string; detail?: string }) => void) => {
+      ipcRenderer.on('ut-install-confirm', (_, data) => cb(data))
+    },
+    respondConfirm: (id: string, accepted: boolean) => {
+      ipcRenderer.send('ut-install-confirm-response', { id, accepted })
+    },
+  }
+  window.utPatch = {
+    onStatus: (cb: (data: { status: string; message?: string; tag?: string }) => void) => {
+      ipcRenderer.on('ut-patch-status', (_, data) => cb(data))
     },
   }
 }

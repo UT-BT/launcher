@@ -27,12 +27,27 @@ export default function Install({ onBack }: { onBack?: () => void }) {
   const [showInstallPathModal, setShowInstallPathModal] = useState<boolean>(false)
   const [showErrorModal, setShowErrorModal] = useState<boolean>(false)
   const [errorMessage, setErrorMessage] = useState<string>('')
+  const [patchChannel, setPatchChannel] = useState<'stable' | 'rc'>('stable')
+  const helpIconRef = useRef<HTMLSpanElement | null>(null)
+  const tooltipRef = useRef<HTMLDivElement | null>(null)
+  const [rcTooltipVisible, setRcTooltipVisible] = useState<boolean>(false)
+  const [rcTooltipPos, setRcTooltipPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 })
+  const rcTooltipTimerRef = useRef<number | null>(null)
+
+  // In-app confirm for CD2
+  const [showCd2Modal, setShowCd2Modal] = useState<boolean>(false)
+  const [cd2ConfirmId, setCd2ConfirmId] = useState<string | null>(null)
+  const [cd2Title, setCd2Title] = useState<string>('')
+  const [cd2Message, setCd2Message] = useState<string>('')
+  const [cd2Detail, setCd2Detail] = useState<string>('')
 
   useEffect(() => {
     const loadCurrentPath = async () => {
       try {
         const path = await app.getInstallPath()
         setCurrentInstallPath(path)
+        const ch = await app.getPatchChannel()
+        setPatchChannel(ch)
       } catch (error) {
         console.error('Failed to load install path:', error)
       }
@@ -166,7 +181,46 @@ export default function Install({ onBack }: { onBack?: () => void }) {
         setProgress(0)
       }
     })
+
+    window.utInstall.onProgress((data) => {
+      if (data.stage === 'patch' && typeof data.progress === 'number') {
+        setStatus('installing')
+        setProgressText(`Downloading Patch (${data.progress}%)`)
+      }
+    })
+    window.utPatch.onStatus((data: { status: string; message?: string; tag?: string }) => {
+      if (data.status === 'downloading') setProgressText('Downloading Patch…')
+      if (data.status === 'verifying') setProgressText('Verifying Patch…')
+      if (data.status === 'applying') setProgressText('Applying Patch…')
+      if (data.status === 'complete') {
+        setProgressText(`Patch ${data.tag ?? ''} Applied`)
+        setStatus('done')
+      }
+      if (data.status === 'error') {
+        setProgressText(`Patch Update Failed${data.message ? `: ${data.message}` : ''}`)
+        setStatus('done')
+      }
+    })
   }, [SIZE_CD1, SIZE_CD2, TOTAL_SIZE])
+
+  useEffect(() => {
+    return () => {
+      if (rcTooltipTimerRef.current) {
+        window.clearTimeout(rcTooltipTimerRef.current)
+        rcTooltipTimerRef.current = null
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    window.utInstall.onConfirm((data) => {
+      setCd2ConfirmId(data.id)
+      setCd2Title(data.title)
+      setCd2Message(data.message)
+      setCd2Detail(data.detail || '')
+      setShowCd2Modal(true)
+    })
+  }, [])
 
   const chooseExisting = async () => {
     const path = await app.pickInstallFolder()
@@ -205,9 +259,28 @@ export default function Install({ onBack }: { onBack?: () => void }) {
     const ok = await app.verifyInstallPath(path)
     if (ok) {
       await app.setInstallPath(path)
+      
+      try { await app.setPatchChannel(patchChannel) } catch (err) { console.warn('Failed to set patch channel after setting path', err) }
       setCurrentInstallPath(path)
       setShowInstallPathModal(false)
-      setProgressText('Setup Complete • Ready to Play!')
+      try {
+        await app.setBaseVersion('v432')
+        const manifestResp = await app.fetchLatestPatchManifest(patchChannel === 'stable' ? true : undefined)
+        if (manifestResp?.success && manifestResp.data) {
+          setStatus('installing')
+          setProgressText(`Downloading Patch ${manifestResp.data.tag}…`)
+          await app.applyPatchFromManifest({
+            asset_url: manifestResp.data.asset_url,
+            sha256: manifestResp.data.sha256,
+            tag: manifestResp.data.tag,
+            channel: (manifestResp.data.channel as 'stable' | 'rc') || patchChannel,
+          })
+          setProgressText(`Patch ${manifestResp.data.tag} Applied • Ready to Play!`)
+        }
+      } catch (e) {
+        console.error('Patch apply error:', e)
+        setProgressText('Patch apply failed')
+      }
     } else {
       setErrorMessage('Invalid UT99 installation directory.\n\nPlease select the folder containing:\nSystem/UnrealTournament.exe')
       setShowErrorModal(true)
@@ -287,13 +360,109 @@ export default function Install({ onBack }: { onBack?: () => void }) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.4 }}
           >
+            <div className="install-preferences">
+              <label className="checkbox">
+                <input
+                  type="checkbox"
+                  checked={patchChannel === 'stable'}
+                  onChange={async (e) => {
+                    if (e.target.checked) {
+                      setPatchChannel('stable')
+                      try { await app.setPatchChannel('stable') } catch (err) { console.warn('Failed to set patch channel', err) }
+                    }
+                  }}
+                />
+                <span>Install full release patches only</span>
+              </label>
+              <label className="checkbox">
+                <input
+                  type="checkbox"
+                  checked={patchChannel === 'rc'}
+                  onChange={async (e) => {
+                    if (e.target.checked) {
+                      setPatchChannel('rc')
+                      try { await app.setPatchChannel('rc') } catch (err) { console.warn('Failed to set patch channel', err) }
+                    }
+                  }}
+                />
+                <span>Install release candidate patches
+                  <span
+                    className="help-icon"
+                    aria-label="Help"
+                    ref={helpIconRef}
+                    tabIndex={0}
+                    onMouseEnter={() => {
+                      if (rcTooltipTimerRef.current) window.clearTimeout(rcTooltipTimerRef.current)
+                      rcTooltipTimerRef.current = window.setTimeout(() => {
+                        const icon = helpIconRef.current
+                        const tip = tooltipRef.current
+                        if (!icon || !tip) return
+                        const rect = icon.getBoundingClientRect()
+                        const padding = 8
+                        const vw = window.innerWidth
+                        const vh = window.innerHeight
+                        const tipWidth = tip.offsetWidth || 300
+                        const tipHeight = tip.offsetHeight || 80
+                        let top = rect.top - tipHeight - 8
+                        let left = rect.left + (rect.width / 2) - (tipWidth / 2)
+                        if (left < padding) left = padding
+                        if (left + tipWidth + padding > vw) left = vw - tipWidth - padding
+                        if (top < padding) top = rect.bottom + 8
+                        if (top + tipHeight + padding > vh) top = Math.max(padding, vh - tipHeight - padding)
+                        setRcTooltipPos({ top, left })
+                        setRcTooltipVisible(true)
+                      }, 200)
+                    }}
+                    onMouseLeave={() => {
+                      if (rcTooltipTimerRef.current) {
+                        window.clearTimeout(rcTooltipTimerRef.current)
+                        rcTooltipTimerRef.current = null
+                      }
+                      setRcTooltipVisible(false)
+                    }}
+                    onFocus={() => {
+                      // mimic hover for keyboard focus
+                      if (rcTooltipTimerRef.current) window.clearTimeout(rcTooltipTimerRef.current)
+                      rcTooltipTimerRef.current = window.setTimeout(() => {
+                        const icon = helpIconRef.current
+                        const tip = tooltipRef.current
+                        if (!icon || !tip) return
+                        const rect = icon.getBoundingClientRect()
+                        const padding = 8
+                        const vw = window.innerWidth
+                        const vh = window.innerHeight
+                        const tipWidth = tip.offsetWidth || 300
+                        const tipHeight = tip.offsetHeight || 80
+                        let top = rect.top - tipHeight - 8
+                        let left = rect.left + (rect.width / 2) - (tipWidth / 2)
+                        if (left < padding) left = padding
+                        if (left + tipWidth + padding > vw) left = vw - tipWidth - padding
+                        if (top < padding) top = rect.bottom + 8
+                        if (top + tipHeight + padding > vh) top = Math.max(padding, vh - tipHeight - padding)
+                        setRcTooltipPos({ top, left })
+                        setRcTooltipVisible(true)
+                      }, 200)
+                    }}
+                    onBlur={() => {
+                      if (rcTooltipTimerRef.current) {
+                        window.clearTimeout(rcTooltipTimerRef.current)
+                        rcTooltipTimerRef.current = null
+                      }
+                      setRcTooltipVisible(false)
+                    }}
+                  >
+                    ℹ️
+                  </span>
+                </span>
+              </label>
+            </div>
             <div className="install-actions-row">
               <Button 
                 variant="secondary" 
                 onClick={chooseExisting}
                 disabled={status === 'downloading' || status === 'installing'}
               >
-                📁 Choose Existing Install
+                {currentInstallPath ? '📁 Change Install Directory' : '📁 Choose Existing Install'}
               </Button>
               <Button 
                 onClick={startDownloadAndInstall} 
@@ -372,6 +541,41 @@ export default function Install({ onBack }: { onBack?: () => void }) {
         </motion.div>
       )}
 
+      {showCd2Modal && (
+        <motion.div
+          className="modal-overlay"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3 }}
+          onClick={() => {
+            if (cd2ConfirmId) window.utInstall.respondConfirm(cd2ConfirmId, false)
+            setShowCd2Modal(false)
+          }}
+        >
+          <motion.div
+            className="modal-content"
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.1 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="modal-title">{cd2Title}</h2>
+            <p className="modal-subtitle">
+              {cd2Message}
+              {cd2Detail ? (<><br /><br />{cd2Detail}</>) : null}
+            </p>
+            <div className="modal-actions">
+              <Button onClick={() => { if (cd2ConfirmId) window.utInstall.respondConfirm(cd2ConfirmId, true); setShowCd2Modal(false) }}>
+                Yes
+              </Button>
+              <Button variant="ghost" onClick={() => { if (cd2ConfirmId) window.utInstall.respondConfirm(cd2ConfirmId, false); setShowCd2Modal(false) }}>
+                No
+              </Button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+
       {showErrorModal && (
         <motion.div
           className="modal-overlay"
@@ -399,6 +603,16 @@ export default function Install({ onBack }: { onBack?: () => void }) {
           </motion.div>
         </motion.div>
       )}
+
+      <div
+        ref={tooltipRef}
+        className={`custom-tooltip${rcTooltipVisible ? ' visible' : ''}`}
+        style={{ top: rcTooltipPos.top, left: rcTooltipPos.left }}
+        role="tooltip"
+        aria-hidden={!rcTooltipVisible}
+      >
+        Unreal Tournament developers often release pre-release versions of newer patches to allow the community to test features. <br /><br />These patches are considered mostly stable by the developers, but could still contain some small bugs and issues.
+      </div>
     </div>
   )
 }
