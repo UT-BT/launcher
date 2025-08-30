@@ -36,6 +36,11 @@ export const windowIpcSchema = {
     return: z.void(),
   },
 
+  'web-set-locked': {
+    args: z.tuple([z.boolean()]),
+    return: z.void(),
+  },
+
   // Web content operations
   'web-undo': {
     args: z.tuple([]),

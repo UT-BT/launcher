@@ -5,10 +5,11 @@ import { useConveyor } from '@/app/hooks/use-conveyor'
 
 const TitlebarMenu = () => {
   const { menuItems } = useWindowContext().titlebar
+  const { locked } = useTitlebarContext()
   if (!menuItems) return null
 
   return (
-    <div className="window-titlebar-menu">
+    <div className={`window-titlebar-menu${locked ? ' locked' : ''}`} aria-disabled={locked}>
       {menuItems.map((menu, index) => (
         <TitlebarMenuItem key={index} menu={menu} index={index} />
       ))}
@@ -17,12 +18,13 @@ const TitlebarMenu = () => {
 }
 
 const TitlebarMenuItem = ({ menu, index }: { menu: TitlebarMenu; index: number }) => {
-  const { activeMenuIndex, setActiveMenuIndex } = useTitlebarContext()
+  const { activeMenuIndex, setActiveMenuIndex, locked } = useTitlebarContext()
   const menuItemRef = useRef<HTMLDivElement>(null)
 
   const togglePopup = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
+    if (locked) return
 
     if (activeMenuIndex === index) {
       menuItemRef.current?.classList.remove('active')
@@ -34,6 +36,7 @@ const TitlebarMenuItem = ({ menu, index }: { menu: TitlebarMenu; index: number }
   }
 
   const handleMouseOver = () => {
+    if (locked) return
     if (activeMenuIndex != null) setActiveMenuIndex(index)
   }
 
@@ -67,7 +70,7 @@ const TitlebarMenuItem = ({ menu, index }: { menu: TitlebarMenu; index: number }
       >
         {menu.name}
       </div>
-      {activeMenuIndex === index && <TitlebarMenuPopup menu={menu} />}
+      {activeMenuIndex === index && !locked && <TitlebarMenuPopup menu={menu} />}
     </div>
   )
 }
@@ -81,10 +84,11 @@ const TitlebarMenuPopup = ({ menu }: { menu: TitlebarMenu }) => (
 )
 
 const TitlebarMenuPopupItem = ({ item }: { item: TitlebarMenuItem }) => {
-  const { setActiveMenuIndex } = useTitlebarContext()
+  const { setActiveMenuIndex, locked } = useTitlebarContext()
   const { invoke } = useConveyor('window')
 
   const handleAction = () => {
+    if (locked) return
     if (typeof item.actionCallback === 'function') {
       item.actionCallback()
     } else if (item.action) {
@@ -98,7 +102,7 @@ const TitlebarMenuPopupItem = ({ item }: { item: TitlebarMenuItem }) => {
   }
 
   return (
-    <div className="menuItem-popupItem" onClick={handleAction}>
+    <div className="menuItem-popupItem" onClick={handleAction} aria-disabled={locked}>
       <div className="menuItem-content">
         {item.icon && <div className="menuItem-icon"><item.icon /></div>}
         <div>{item.name}</div>

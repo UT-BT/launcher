@@ -131,6 +131,11 @@
   font-size: var(--window-titlebar-font-size);
 }
 
+.window-titlebar-menu.locked {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
 .titlebar-menuItem .menuItem-label {
   padding: 2px 8px;
   cursor: pointer;

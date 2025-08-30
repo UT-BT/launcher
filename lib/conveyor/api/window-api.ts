@@ -10,6 +10,8 @@ export class WindowApi extends ConveyorApi {
   windowClose = () => this.invoke('window-close')
   windowMaximizeToggle = () => this.invoke('window-maximize-toggle')
 
+  webSetLocked = (locked: boolean) => this.invoke('web-set-locked', locked)
+
   // Generate web methods
   webUndo = () => this.invoke('web-undo')
   webRedo = () => this.invoke('web-redo')
