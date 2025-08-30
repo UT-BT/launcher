@@ -1,14 +1,23 @@
-import Welcome from '@/app/components/welcome/Welcome'
-import Install from './components/welcome/contents/Install'
 import { useState } from 'react'
-import './styles/app.css'
+import { WelcomeScreen } from '@/app/components/welcome/WelcomeScreen'
+import { InstallationWizard } from '@/app/components/installation/InstallationWizard'
+import './styles/index.css'
 
 export default function App() {
   const [screen, setScreen] = useState<'welcome' | 'install'>('welcome')
 
-  if (screen === 'install') {
-    return <Install onBack={() => setScreen('welcome')} />
-  }
-
-  return <Welcome onInstall={() => setScreen('install')} />
+  return (
+    <>
+      {screen === 'install' ? (
+        <InstallationWizard 
+          onBack={() => setScreen('welcome')}
+          onComplete={() => setScreen('welcome')}
+        />
+      ) : (
+        <WelcomeScreen 
+          onInstall={() => setScreen('install')} 
+        />
+      )}
+    </>
+  )
 }
