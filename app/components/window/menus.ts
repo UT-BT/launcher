@@ -26,6 +26,11 @@ export const menuItems: TitlebarMenu[] = [
         shortcut: 'Ctrl+Shift+R',
       },
       {
+        name: 'Toggle Developer Tools',
+        action: 'web-toggle-devtools',
+        shortcut: 'Ctrl+Shift+I',
+      },
+      {
         name: '---',
       },
       {
