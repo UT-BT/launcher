@@ -64,8 +64,7 @@
   position: relative;
 }
 
-/* Assign last children to use full height of window content */
-.window-content div:last-child {
+.window-content > div:last-child {
   height: 100%;
 }
 
