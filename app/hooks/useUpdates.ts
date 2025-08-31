@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { UpdateState, PatchManifest } from '@/app/types'
 import { updateService } from '@/app/services/UpdateService'
 
 export function useUpdates() {
+  const patchTagRef = useRef<string | undefined>(undefined)
   const [updateState, setUpdateState] = useState<UpdateState>({
     available: false,
     updating: false,
@@ -60,27 +61,31 @@ export function useUpdates() {
   }
 
   useEffect(() => {
-    const handleInstallProgress = (data: { stage: string; progress: number }) => {
+    const handleInstallProgress = (data: { stage?: string; progress?: number }) => {
       if (data.stage === 'patch' && typeof data.progress === 'number') {
+        const pct = data.progress as number
         setUpdateState(prev => ({
           ...prev,
-          progress: data.progress,
-          progressText: `Downloading Latest Patch (${data.progress}%)`
+          progress: pct,
+          progressText: `Downloading Patch${patchTagRef.current ? ` ${patchTagRef.current}` : ''} (${pct}%)`
         }))
       }
     }
 
     const handlePatchStatus = (data: { status: string; message?: string; tag?: string }) => {
+      if (data.tag) {
+        patchTagRef.current = data.tag
+      }
       if (data.status === 'downloading') {
-        setUpdateState(prev => ({ ...prev, progressText: 'Downloading Latest Patch…' }))
+        setUpdateState(prev => ({ ...prev, progressText: `Downloading Patch: ${data.tag ?? patchTagRef.current ?? ''}…` }))
       } else if (data.status === 'verifying') {
-        setUpdateState(prev => ({ ...prev, progressText: 'Verifying Patch…' }))
+        setUpdateState(prev => ({ ...prev, progressText: `Verifying Patch: ${data.tag ?? patchTagRef.current ?? ''}…` }))
       } else if (data.status === 'applying') {
-        setUpdateState(prev => ({ ...prev, progressText: 'Applying Patch…' }))
+        setUpdateState(prev => ({ ...prev, progressText: `Applying Patch: ${data.tag ?? patchTagRef.current ?? ''}…` }))
       } else if (data.status === 'complete') {
         setUpdateState(prev => ({
           ...prev,
-          progressText: 'Latest Patch Applied',
+          progressText: `Patch: ${data.tag ?? patchTagRef.current ?? ''} Applied`,
           progress: 100,
           updating: false,
           available: false
@@ -88,7 +93,7 @@ export function useUpdates() {
       } else if (data.status === 'error') {
         setUpdateState(prev => ({
           ...prev,
-          progressText: 'Patch Update Failed',
+          progressText: `Patch: ${data.tag ?? patchTagRef.current ?? ''} Failed`,
           updating: false
         }))
       }

@@ -314,9 +314,9 @@ try {
       throw new Error('SHA256 mismatch')
     }
 
-    try { _window.webContents.send('ut-patch-status', { status: 'verifying' }) } catch (err) { console.warn('patch status send failed', err) }
+    try { _window.webContents.send('ut-patch-status', { status: 'verifying', tag: m.tag }) } catch (err) { console.warn('patch status send failed', err) }
 
-    try { _window.webContents.send('ut-patch-status', { status: 'applying' }) } catch (err) { console.warn('patch status send failed', err) }
+    try { _window.webContents.send('ut-patch-status', { status: 'applying', tag: m.tag }) } catch (err) { console.warn('patch status send failed', err) }
     await new Promise<void>((resolve, reject) => {
       const escapePs = (s: string) => s.replace(/`/g, '``').replace(/"/g, '`"')
       const zipEsc = escapePs(dest)
