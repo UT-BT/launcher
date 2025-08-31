@@ -33,12 +33,12 @@ declare module '*.web' {
 interface Window {
   conveyor: import('@/lib/conveyor/api').ConveyorApi
   utInstall: {
-    onProgress: (cb: (data: { stage?: string; progress?: number }) => void) => void
-    onStatus: (cb: (data: { status: string }) => void) => void
-    onConfirm: (cb: (data: { id: string; title: string; message: string; detail?: string }) => void) => void
+    onProgress: (cb: (data: { stage?: string; progress?: number }) => void) => () => void
+    onStatus: (cb: (data: { status: string }) => void) => () => void
+    onConfirm: (cb: (data: { id: string; title: string; message: string; detail?: string }) => void) => () => void
     respondConfirm: (id: string, accepted: boolean) => void
   }
   utPatch: {
-    onStatus: (cb: (data: { status: string; message?: string; tag?: string }) => void) => void
+    onStatus: (cb: (data: { status: string; message?: string; tag?: string }) => void) => () => void
   }
 }
