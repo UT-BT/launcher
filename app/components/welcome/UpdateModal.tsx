@@ -1,4 +1,5 @@
 import { Button } from '@/app/components/ui/button'
+import { useEffect, useState } from 'react'
 import { PatchManifest } from '@/app/types'
 
 interface UpdateModalProps {
@@ -7,7 +8,7 @@ interface UpdateModalProps {
   updateProgress: number
   updateText: string
   onClose: () => void
-  onUpdate: () => Promise<void>
+  onUpdate: (manifest?: PatchManifest) => Promise<void>
   onViewReleaseNotes: () => void
   currentVersion?: string
   forced?: boolean
@@ -26,6 +27,64 @@ export function UpdateModal({
   forced = false,
   unsupportedBase = false,
 }: UpdateModalProps) {
+  const [availablePatches, setAvailablePatches] = useState<any[]>([])
+  const [selectedPatchTag, setSelectedPatchTag] = useState<string | null>(null)
+  const [loadingPatches, setLoadingPatches] = useState(false)
+
+  const shouldShowPatchPicker = forced && (currentVersion === 'v432' || unsupportedBase)
+
+  useEffect(() => {
+    let mounted = true
+    const load = async () => {
+      if (!shouldShowPatchPicker) return
+      try {
+        setLoadingPatches(true)
+        const patchesResp: any = await window.conveyor.app.fetchPatches()
+        const list: any[] = Array.isArray(patchesResp?.data) ? patchesResp.data : (Array.isArray(patchesResp) ? patchesResp : [])
+        if (!mounted) return
+        setAvailablePatches(list)
+
+        const stable = list.filter(p => (p.channel ?? 'stable') === 'stable')
+        const parseDate = (v: any) => {
+          const d = Date.parse(v?.added ?? v?.published_at ?? '')
+          return Number.isFinite(d) ? d : 0
+        }
+        const sortByRecency = (arr: any[]) => arr.slice().sort((a, b) => {
+          const ad = parseDate(a), bd = parseDate(b)
+          if (ad !== 0 || bd !== 0) return bd - ad
+          const ai = Number(a?.id ?? 0), bi = Number(b?.id ?? 0)
+          if (ai !== bi) return bi - ai
+          return String(b?.tag ?? '').localeCompare(String(a?.tag ?? ''))
+        })
+        const pick = (stable.length > 0 ? sortByRecency(stable)[0] : sortByRecency(list)[0])
+        setSelectedPatchTag(pick?.tag ?? null)
+      } catch (e) {
+        console.error('Failed to fetch patches:', e)
+      } finally {
+        if (mounted) setLoadingPatches(false)
+      }
+    }
+    load()
+    return () => { mounted = false }
+  }, [shouldShowPatchPicker])
+
+  const handleUpdateClick = async () => {
+    if (shouldShowPatchPicker && selectedPatchTag && availablePatches.length > 0) {
+      const item = availablePatches.find(p => p.tag === selectedPatchTag)
+      if (item) {
+        const chosen: PatchManifest = {
+          asset_url: item.asset_url,
+          sha256: item.sha256,
+          tag: item.tag,
+          channel: (item.channel === 'rc' ? 'rc' : 'stable') as 'stable' | 'rc',
+          release_notes_url: item.release_notes_url
+        }
+        await onUpdate(chosen)
+        return
+      }
+    }
+    await onUpdate()
+  }
   return (
     <>
       <div 
@@ -42,7 +101,7 @@ export function UpdateModal({
         </p>
         <p />
         
-        {currentVersion && (
+        {currentVersion && !shouldShowPatchPicker && (
           <>
             <p className="text-[12px] text-gray-400 mb-2">
               Your current version is <span className="text-gray-200"><b>{currentVersion}</b></span>
@@ -77,15 +136,17 @@ export function UpdateModal({
           </>
         )}
 
-        <div className="mb-3">
-          <Button
-            variant="secondary"
-            className="w-full bg-gray-700/50 hover:bg-gray-700/80 text-[13px] border border-gray-600"
-            onClick={onViewReleaseNotes}
-          >
-            View Release Notes
-          </Button>
-        </div>
+        {!shouldShowPatchPicker && (
+          <div className="mb-3">
+            <Button
+              variant="secondary"
+              className="w-full bg-gray-700/50 hover:bg-gray-700/80 text-[13px] border border-gray-600"
+              onClick={onViewReleaseNotes}
+            >
+              View Release Notes
+            </Button>
+          </div>
+        )}
 
         {updating && (
           <div className="mb-3 space-y-2">
@@ -96,6 +157,30 @@ export function UpdateModal({
               />
             </div>
             <p className="text-[12px] text-gray-400 text-center">{updateText}</p>
+          </div>
+        )}
+
+        <br />
+
+        {shouldShowPatchPicker && !updating && (
+          <div className="mb-3 space-y-2">
+            <p className="text-[12px] text-gray-300">
+              Select the patch you want to install:
+            </p>
+            <div className="flex items-center gap-2">
+              <select
+                className="w-full bg-gray-800 border border-gray-600 rounded px-2 py-1 text-[13px] text-gray-200"
+                value={selectedPatchTag ?? ''}
+                onChange={(e) => setSelectedPatchTag(e.target.value)}
+                disabled={loadingPatches}
+              >
+                {availablePatches.map((p) => (
+                  <option key={p.tag} value={p.tag}>
+                    {p.tag}{p.channel ? ` • ${String(p.channel).toUpperCase()}` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         )}
 
@@ -112,8 +197,8 @@ export function UpdateModal({
           )}
           <Button 
             className="bg-blue-600 hover:bg-blue-700" 
-            onClick={onUpdate} 
-            disabled={updating}
+            onClick={handleUpdateClick} 
+            disabled={updating || (shouldShowPatchPicker && !selectedPatchTag)}
           >
             {updating ? 'Updating...' : 'Update Now'}
           </Button>
