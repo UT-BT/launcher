@@ -1,43 +1,30 @@
+<img src="https://utbt.net/static/media/logo-light.405bacd6892eb0c6732d.png" width="128" alt="UTBT Icon"/>
+
 # UTBT Launcher
-## Prerequisites
-- Node.js (v20 or higher)
-- npm, yarn, pnpm, or bun
+The UTBT Launcher makes getting involved with the Unreal Tournament (1999) BunnyTrack community easy.
 
-## Installation
-Clone the repository and install dependencies:
+We've streamlined downloading and installing the game, applying the latest official patches, and provides a clean and easy to use interface to interact with other BunnyTrack fans.
 
-```bash
-git clone https://github.com/ut-bt/launcher.git
-cd launcher
+## Key Features
+- One-click install of Unreal Tournament 1999 GOTY on Windows
+- Automatic patching to the latest 469 releases (stable and release candidates)
 
-npm install
-```
+## Getting Started
+1. Download and run the UTBT Launcher installer for Windows.
+2. Open the launcher and click "Install Unreal Tournament 1999".
+3. Choose an install location or pick an existing installation.
+4. When prompted, apply the latest patch to ensure compatibility.
+5. Create shortcuts if you want quick access.
 
-## Development
-Starting the dev server:
+## Requirements
+- Windows 10/11 for automated installation and setup
+- Existing UT installation optional (the launcher can validate and patch it)
 
-```bash
-# Can use any package manager (npm, yarn, pnpm, bun)
-npm run dev
-```
+## Community
+- Website: [UTBT.net](https://utbt.net)
+- Discord: [Join the UTBT Discord](https://discord.gg/utbt)
+- YouTube: [UTBT on YouTube](https://youtube.com/@UTBTnet)
+- Twitch: [UTBT on Twitch](https://twitch.tv/utbt)
 
-This will start the Electron app with hot-reload enabled.
-
-## Building for Production
-Build the application for your platform:
-
-```bash
-# Windows
-npm run build:win
-
-# macOS
-npm run build:mac
-
-# Linux
-npm run build:linux
-
-# Unpacked for all platforms
-npm run build:unpack
-```
-
-Distribution files will be located in the `dist` directory.
+## Contributing
+Developer setup and build instructions are available in [CONTRIBUTING.md](./CONTRIBUTING.md).
