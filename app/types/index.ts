@@ -67,3 +67,8 @@ export interface InstallationEvents {
 export interface PatchEvents {
   onStatus: (data: { status: string; message?: string; tag?: string }) => void
 }
+
+export interface GatewayConfig {
+  baseUrl: string
+  apiKey?: string
+}

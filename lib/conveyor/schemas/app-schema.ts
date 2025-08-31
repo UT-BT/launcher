@@ -79,4 +79,24 @@ export const appIpcSchema = {
     args: z.tuple([z.object({ asset_url: z.string().url(), sha256: z.string(), tag: z.string(), channel: z.union([z.literal('stable'), z.literal('rc')]) })]),
     return: z.void(),
   },
+
+  installAnnouncerUax: {
+    args: z.tuple([]),
+    return: z.void(),
+  },
+
+  getGatewayConfig: {
+    args: z.tuple([]),
+    return: z.object({
+      baseUrl: z.string(),
+      apiKey: z.string().optional(),
+    }),
+  },
+  setGatewayConfig: {
+    args: z.tuple([z.object({
+      baseUrl: z.string().optional(),
+      apiKey: z.string().optional(),
+    })]),
+    return: z.void(),
+  },
 }
