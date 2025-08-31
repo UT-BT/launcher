@@ -298,8 +298,11 @@ export function useInstallation(callbacks?: InstallationCallbacks) {
 
           setState(prev => ({
             ...prev,
+            status: 'done',
+            progress: 100,
             progressText: 'UTBT Announcer Installed • Ready to Play!'
           }))
+          installationService.setWindowLocked(false)
         }
 
         // Update config
