@@ -39,6 +39,10 @@ export const appIpcSchema = {
     args: z.tuple([]),
     return: z.union([z.literal('stable'), z.literal('rc')]),
   },
+  fetchPatches: {
+    args: z.tuple([]),
+    return: z.any(),
+  },
   setPatchChannel: {
     args: z.tuple([z.union([z.literal('stable'), z.literal('rc')])]),
     return: z.void(),
@@ -48,6 +52,12 @@ export const appIpcSchema = {
     return: z
       .object({ tag: z.string(), sha256: z.string(), channel: z.union([z.literal('stable'), z.literal('rc')]), installedAt: z.string() })
       .optional(),
+  },
+  setInstalledPatch: {
+    args: z.tuple([
+      z.object({ tag: z.string(), sha256: z.string(), channel: z.union([z.literal('stable'), z.literal('rc')]), installedAt: z.string() })
+    ]),
+    return: z.void(),
   },
   setBaseVersion: {
     args: z.tuple([z.string().min(1)]),
@@ -74,6 +84,11 @@ export const appIpcSchema = {
         })
         .optional(),
     }),
+  },
+  
+  getExeMD5: {
+    args: z.tuple([z.string().min(1)]),
+    return: z.string().optional(),
   },
   applyPatchFromManifest: {
     args: z.tuple([z.object({ asset_url: z.string().url(), sha256: z.string(), tag: z.string(), channel: z.union([z.literal('stable'), z.literal('rc')]) })]),
