@@ -30,6 +30,7 @@ export function useInstallation(callbacks?: InstallationCallbacks) {
   const lastTsRef = useRef(0)
   const speedSamplesRef = useRef<number[]>([])
   const lastUpdateRef = useRef(0)
+  const patchTagRef = useRef<string | undefined>(undefined)
 
   useEffect(() => {
     const loadConfig = async () => {
@@ -37,7 +38,7 @@ export function useInstallation(callbacks?: InstallationCallbacks) {
       setConfig(initialConfig)
     }
     loadConfig()
-  }, [])
+  }, [onInstallComplete])
 
   const updateSpeedAndEta = (downloadedBytes: number) => {
     const now = Date.now()
@@ -115,7 +116,7 @@ export function useInstallation(callbacks?: InstallationCallbacks) {
         setState(prev => ({
           ...prev,
           status: 'installing',
-          progressText: `Downloading Patch… (${data.progress}%)`
+          progressText: `Downloading Patch${patchTagRef.current ? ` ${patchTagRef.current}` : ''}… (${data.progress}%)`
         }))
       } else if (data.stage === 'announcer' && typeof data.progress === 'number') {
         setState(prev => ({
@@ -190,22 +191,25 @@ export function useInstallation(callbacks?: InstallationCallbacks) {
 
   useEffect(() => {
     const handlePatchStatus = (data: { status: string; message?: string; tag?: string }) => {
+      if (data.tag) {
+        patchTagRef.current = data.tag
+      }
       if (data.status === 'downloading') {
-        setState(prev => ({ ...prev, progressText: 'Downloading Patch…' }))
+        setState(prev => ({ ...prev, progressText: `Downloading Patch: ${data.tag ?? patchTagRef.current ?? ''}…` }))
       } else if (data.status === 'verifying') {
-        setState(prev => ({ ...prev, progressText: 'Verifying Patch…' }))
+        setState(prev => ({ ...prev, progressText: `Verifying Patch: ${data.tag ?? patchTagRef.current ?? ''}…` }))
       } else if (data.status === 'applying') {
-        setState(prev => ({ ...prev, progressText: 'Applying Patch…' }))
+        setState(prev => ({ ...prev, progressText: `Applying Patch: ${data.tag ?? patchTagRef.current ?? ''}…` }))
       } else if (data.status === 'complete') {
         setState(prev => ({
           ...prev,
-          progressText: `Patch ${data.tag ?? ''} Applied`,
+          progressText: `Patch: ${data.tag ?? patchTagRef.current ?? ''} Installed`,
           status: 'done'
         }))
       } else if (data.status === 'error') {
         setState(prev => ({
           ...prev,
-          progressText: `Patch Update Failed${data.message ? `: ${data.message}` : ''}`,
+          progressText: `Patch: ${data.tag ?? patchTagRef.current ?? ''} Failed${data.message ? `: ${data.message}` : ''}`,
           status: 'error',
           error: data.message
         }))
@@ -271,6 +275,7 @@ export function useInstallation(callbacks?: InstallationCallbacks) {
         const manifestResp = await window.conveyor.app.fetchLatestPatchManifest(patchChannel === 'stable' ? true : undefined)
         if (manifestResp?.success && manifestResp.data) {
           const data = manifestResp.data
+          patchTagRef.current = data.tag
           setState(prev => ({
             ...prev,
             status: 'installing',
