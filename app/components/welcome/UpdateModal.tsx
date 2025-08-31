@@ -36,10 +36,22 @@ export function UpdateModal({
         </h3>
         
         <p className="text-[13px] text-gray-300 mb-2">
-          A new version of Unreal Tournament 1999 is available.
+          A new version of Unreal Tournament is available.
         </p>
+        <p />
         
-        {forced && (
+        {currentVersion && (
+          <>
+            <p className="text-[12px] text-gray-400 mb-2">
+              Your current version is <span className="text-gray-200"><b>{currentVersion}</b></span>
+              <br />
+              The latest version is <span className="text-gray-200"><b>{manifest.tag}</b></span>
+            </p>
+            <br />
+          </>
+        )}
+
+{forced && (
           <p className="text-[12px] text-gray-300 mb-2">
             <b>
               <i className="text-red-500">
@@ -50,21 +62,12 @@ export function UpdateModal({
           </p>
         )}
         
-        {currentVersion && (
-          <p className="text-[12px] text-gray-400 mb-2">
-            Your current version is <span className="text-gray-300">{currentVersion}</span>
-            <br />
-            Upgrade to <span className="text-gray-200">{manifest.tag}</span>
-          </p>
-        )}
-        
         {manifest.channel === 'rc' && (
           <>
             <p className="text-[12px] text-amber-400/90 mb-3">
-              Please note that this is a Release Candidate patch, which means that some instability could be expected.
-            </p>
-            <p className="text-[12px] text-gray-400 mb-3">  
-              You can check the release notes below for more information.
+              <i>Please note that this is a <b>Release Candidate</b> patch.</i>
+              <br />
+              <i>Thich means that some instability could be expected.</i>
             </p>
           </>
         )}
@@ -75,7 +78,7 @@ export function UpdateModal({
             className="w-full bg-gray-700/50 hover:bg-gray-700/80 text-[13px] border border-gray-600"
             onClick={onViewReleaseNotes}
           >
-            View Patch Release Notes
+            View Release Notes
           </Button>
         </div>
 
