@@ -228,7 +228,7 @@ export function useInstallation(callbacks?: InstallationCallbacks) {
           ...prev,
           status: 'downloading',
           progress: 0,
-          progressText: '🚀 Initializing Download Sequence...',
+          progressText: 'Starting Download...',
           speedText: '',
           etaText: '',
           error: undefined
@@ -300,7 +300,7 @@ export function useInstallation(callbacks?: InstallationCallbacks) {
             ...prev,
             status: 'done',
             progress: 100,
-            progressText: 'UTBT Announcer Installed • Ready to Play!'
+            progressText: 'Game Installation Completed'
           }))
           installationService.setWindowLocked(false)
         }
