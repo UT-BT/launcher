@@ -160,6 +160,8 @@ export function InstallationWizard({ onBack, onComplete: _onComplete }: Installa
       await installationService.applyPatch(manifest)
       
       await installationService.installAnnouncer()
+      installationService.setWindowLocked(false)
+      setShowShortcutModal(true)
     } catch (error) {
       console.error('Upgrade apply failed:', error)
       setErrorMessage('Failed to upgrade. Please try again or choose a different patch.')

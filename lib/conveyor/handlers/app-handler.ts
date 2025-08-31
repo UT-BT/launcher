@@ -415,6 +415,7 @@ Expand-Archive -LiteralPath "${zipEsc}" -DestinationPath "${destEsc}" -Force
 
       https.get(announcerUrl, handleResponse).on('error', (err) => reject(err))
     })
+    try { _window.webContents.send('ut-install-status', { status: 'announcer-complete' }) } catch { /* ignore */ }
   })
 
   handle('createDesktopShortcut', async (installPath: string) => {

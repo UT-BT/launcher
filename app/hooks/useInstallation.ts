@@ -167,15 +167,15 @@ export function useInstallation(callbacks?: InstallationCallbacks) {
         } else if (data.status === 'installing-cd2') {
           setState(prev => ({ ...prev, progressText: 'Installing UT99 • Disc 2' }))
         }
-      } else if (data.status === 'complete') {
+      } else if (data.status === 'announcer-complete') {
         setState(prev => ({
           ...prev,
           status: 'done',
-          progressText: 'Installation Complete',
+          progressText: 'Game Installation Completed',
           progress: 100
         }))
         installationService.setWindowLocked(false)
-        onInstallComplete()
+        onAnnouncerComplete()
       } else if (data.status === 'error') {
         setState(prev => ({
           ...prev,
