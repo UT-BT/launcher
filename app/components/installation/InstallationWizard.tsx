@@ -34,7 +34,10 @@ export function InstallationWizard({ onBack, onComplete: _onComplete }: Installa
     desktop: true,
     startMenu: true
   })
-  const [installationCompleted, setInstallationCompleted] = useState(false)
+  const [showUnsupportedModal, setShowUnsupportedModal] = useState(false)
+  const [availablePatches, setAvailablePatches] = useState<any[]>([])
+  const [selectedPatchTag, setSelectedPatchTag] = useState<string | null>(null)
+  const [upgradeInProgress, setUpgradeInProgress] = useState(false)
 
   const handleChooseExisting = async () => {
     const path = await actions.pickInstallFolder()
@@ -44,11 +47,49 @@ export function InstallationWizard({ onBack, onComplete: _onComplete }: Installa
     if (!success) {
       setErrorMessage('Invalid UT99 installation directory.\n\nPlease select the folder containing:\nSystem/UnrealTournament.exe')
       setShowErrorModal(true)
+      return
+    }
+
+    try {
+      const md5 = await window.conveyor.app.getExeMD5(path)
+      if (!md5) {
+        throw new Error('Failed to fingerprint UnrealTournament.exe')
+      }
+
+      const patchesResp: any = await window.conveyor.app.fetchPatches()
+      const list: any[] = Array.isArray(patchesResp?.data) ? patchesResp.data : (Array.isArray(patchesResp) ? patchesResp : [])
+      const match = list.find(p => (p.exe_md5 || '').toLowerCase() === md5.toLowerCase())
+      if (match) {
+        const stamp = { tag: match.tag, sha256: match.sha256, channel: (match.channel === 'rc' ? 'rc' : 'stable') as 'stable' | 'rc', installedAt: new Date().toISOString() }
+        await window.conveyor.app.setInstalledPatch(stamp)
+      } else {
+        try { await window.conveyor.app.setBaseVersion('unsupported') } catch (e) { console.warn('setBaseVersion unsupported failed', e) }
+        setAvailablePatches(list)
+        const stable = list.filter(p => (p.channel ?? 'stable') === 'stable')
+        const parseDate = (v: any) => {
+          const d = Date.parse(v?.added ?? v?.published_at ?? '')
+          return Number.isFinite(d) ? d : 0
+        }
+        const sortByRecency = (arr: any[]) => arr.slice().sort((a, b) => {
+          const ad = parseDate(a), bd = parseDate(b)
+          if (ad !== 0 || bd !== 0) return bd - ad
+          const ai = Number(a?.id ?? 0), bi = Number(b?.id ?? 0)
+          if (ai !== bi) return bi - ai
+          return String(b?.tag ?? '').localeCompare(String(a?.tag ?? ''))
+        })
+        const pick = (stable.length > 0 ? sortByRecency(stable)[0] : sortByRecency(list)[0])
+        setSelectedPatchTag(pick?.tag ?? null)
+        setShowUnsupportedModal(true)
+      }
+    } catch (err) {
+      console.error('Existing install detection failed:', err)
+      setAvailablePatches([])
+      setSelectedPatchTag(null)
+      setShowUnsupportedModal(true)
     }
   }
 
   const handleStartInstallation = () => {
-    setInstallationCompleted(false)
     actions.startInstallation()
   }
 
@@ -100,14 +141,33 @@ export function InstallationWizard({ onBack, onComplete: _onComplete }: Installa
     }
 
     setShowShortcutModal(false)
-    setInstallationCompleted(true)
-    // Stay on installation screen - don't call onComplete
   }
 
   const handleSkipShortcuts = () => {
     setShowShortcutModal(false)
-    setInstallationCompleted(true)
-    // Stay on installation screen - don't call onComplete
+  }
+
+  const handleApplySelectedUpgrade = async () => {
+    if (!selectedPatchTag) return
+    const item = availablePatches.find(p => p.tag === selectedPatchTag)
+    if (!item) return
+    try {
+      setUpgradeInProgress(true)
+      await installationService.setWindowLocked(true)
+      setShowUnsupportedModal(false)
+      const manifest = { asset_url: item.asset_url, sha256: item.sha256, tag: item.tag, channel: (item.channel === 'rc' ? 'rc' : 'stable') as 'stable' | 'rc' }
+      
+      await installationService.applyPatch(manifest)
+      
+      await installationService.installAnnouncer()
+    } catch (error) {
+      console.error('Upgrade apply failed:', error)
+      setErrorMessage('Failed to upgrade. Please try again or choose a different patch.')
+      setShowErrorModal(true)
+    } finally {
+      await installationService.setWindowLocked(false)
+      setUpgradeInProgress(false)
+    }
   }
 
   const isProcessing = state.status === 'downloading' || state.status === 'installing'
@@ -293,6 +353,49 @@ export function InstallationWizard({ onBack, onComplete: _onComplete }: Installa
         <div className="modal-actions">
           <Button onClick={() => setShowErrorModal(false)}>
             OK
+          </Button>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={showUnsupportedModal}
+        onClose={() => !upgradeInProgress && setShowUnsupportedModal(false)}
+        title="Unsupported Version Detected"
+        closeOnOverlayClick={!upgradeInProgress}
+      >
+        <p className="modal-subtitle">
+          Your current version of Unreal Tournament 1999 is unsupported by the UTBT Launcher.<br /><br />If you want to continue using the launcher with your existing install, you need to upgrade to one of the supported versions.<br /><br /><i>Patching will <b>NOT</b> affect your settings and is safe to do.</i>
+        </p>
+
+        {availablePatches && availablePatches.length > 0 ? (
+          <div className="form-section" style={{ marginTop: 8 }}>
+            <label className="form-checkbox" style={{ alignItems: 'center' }}>
+              <span style={{ marginRight: 12 }}>Select Patch</span>
+              <select
+                value={selectedPatchTag ?? ''}
+                onChange={(e) => setSelectedPatchTag(e.target.value)}
+                disabled={upgradeInProgress}
+                className="modal-select"
+                style={{ flex: 1 }}
+              >
+                {availablePatches.map((p) => (
+                  <option key={p.tag} value={p.tag}>
+                    {p.tag}{p.channel ? ` • ${String(p.channel).toUpperCase()}` : ''}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        ) : (
+          <p style={{ marginTop: 8 }}>No patches available from the gateway.</p>
+        )}
+
+        <div className="modal-actions">
+          <Button variant="secondary" onClick={() => setShowUnsupportedModal(false)} disabled={upgradeInProgress}>
+            Cancel
+          </Button>
+          <Button onClick={handleApplySelectedUpgrade} disabled={!selectedPatchTag || upgradeInProgress}>
+            {upgradeInProgress ? 'Upgrading…' : 'Upgrade Now'}
           </Button>
         </div>
       </Modal>

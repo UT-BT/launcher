@@ -25,8 +25,17 @@ export const registerAppHandlers = (_window: BrowserWindow) => {
   })
 
   handle('getPatchChannel', () => getPatchChannel())
+  handle('fetchPatches', async () => {
+    try {
+      const result = await gatewayService.get('/patches', true)
+      return result
+    } catch {
+      return { success: false }
+    }
+  })
   handle('setPatchChannel', (channel: 'stable' | 'rc') => setPatchChannel(channel))
   handle('getInstalledPatch', () => getInstalledPatch())
+  handle('setInstalledPatch', (patch: { tag: string; sha256: string; channel: 'stable' | 'rc'; installedAt: string }) => setInstalledPatch(patch))
   handle('setBaseVersion', (version: string) => setBaseVersion(version))
   handle('getBaseVersion', () => getBaseVersion())
 
@@ -99,6 +108,19 @@ export const registerAppHandlers = (_window: BrowserWindow) => {
     })
     if (!paths || paths.length === 0) return undefined
     return paths[0]
+  })
+
+  handle('getExeMD5', (dir: string) => {
+    try {
+      const exe = join(dir, 'System', 'UnrealTournament.exe')
+      if (!existsSync(exe)) return undefined
+      const buf = readFileSync(exe)
+      const md5 = createHash('md5').update(buf).digest('hex')
+      return md5
+    } catch (err) {
+      console.warn('getExeMD5 failed:', err)
+      return undefined
+    }
   })
 
   const calculateMD5 = (filePath: string): string => {
