@@ -85,6 +85,15 @@ export const appIpcSchema = {
     return: z.void(),
   },
 
+  createDesktopShortcut: {
+    args: z.tuple([z.string().min(1)]),
+    return: z.void(),
+  },
+  createStartMenuShortcut: {
+    args: z.tuple([z.string().min(1)]),
+    return: z.void(),
+  },
+
   getGatewayConfig: {
     args: z.tuple([]),
     return: z.object({

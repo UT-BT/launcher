@@ -394,4 +394,90 @@ Expand-Archive -LiteralPath "${zipEsc}" -DestinationPath "${destEsc}" -Force
       https.get(announcerUrl, handleResponse).on('error', (err) => reject(err))
     })
   })
+
+  handle('createDesktopShortcut', async (installPath: string) => {
+    const exePath = join(installPath, 'System', 'UnrealTournament.exe')
+    const desktopPath = app.getPath('desktop')
+    const shortcutPath = join(desktopPath, 'Unreal Tournament 1999.lnk')
+
+    const psScript = `
+$ErrorActionPreference = 'Stop'
+$WshShell = New-Object -comObject WScript.Shell
+$Shortcut = $WshShell.CreateShortcut("${shortcutPath.replace(/\\/g, '\\\\')}")
+$Shortcut.TargetPath = "${exePath.replace(/\\/g, '\\\\')}"
+$Shortcut.WorkingDirectory = "${installPath.replace(/\\/g, '\\\\')}"
+$Shortcut.IconLocation = "${exePath.replace(/\\/g, '\\\\')},0"
+$Shortcut.Description = "Unreal Tournament 1999"
+$Shortcut.Save()
+`
+
+    return new Promise<void>((resolve, reject) => {
+      const ps = spawn('powershell.exe', [
+        '-NoProfile',
+        '-ExecutionPolicy', 'Bypass',
+        '-Command', psScript
+      ], {
+        windowsHide: true,
+        stdio: ['pipe', 'pipe', 'pipe']
+      })
+
+      ps.on('exit', (code) => {
+        if (code === 0) {
+          resolve()
+        } else {
+          reject(new Error(`Desktop shortcut creation failed with exit code ${code}`))
+        }
+      })
+
+      ps.on('error', (err) => {
+        console.error('Desktop shortcut creation error:', err)
+        reject(err)
+      })
+    })
+  })
+
+  handle('createStartMenuShortcut', async (installPath: string) => {
+    const exePath = join(installPath, 'System', 'UnrealTournament.exe')
+    const startMenuPath = join(app.getPath('appData'), 'Microsoft', 'Windows', 'Start Menu', 'Programs')
+    const utFolder = join(startMenuPath, 'Unreal Tournament 1999')
+    const shortcutPath = join(utFolder, 'Unreal Tournament 1999.lnk')
+
+    const psScript = `
+$ErrorActionPreference = 'Stop'
+if (-not (Test-Path "${utFolder.replace(/\\/g, '\\\\')}")) {
+  New-Item -ItemType Directory -Path "${utFolder.replace(/\\/g, '\\\\')}" -Force | Out-Null
+}
+$WshShell = New-Object -comObject WScript.Shell
+$Shortcut = $WshShell.CreateShortcut("${shortcutPath.replace(/\\/g, '\\\\')}")
+$Shortcut.TargetPath = "${exePath.replace(/\\/g, '\\\\')}"
+$Shortcut.WorkingDirectory = "${installPath.replace(/\\/g, '\\\\')}"
+$Shortcut.IconLocation = "${exePath.replace(/\\/g, '\\\\')},0"
+$Shortcut.Description = "Unreal Tournament 1999"
+$Shortcut.Save()
+`
+
+    return new Promise<void>((resolve, reject) => {
+      const ps = spawn('powershell.exe', [
+        '-NoProfile',
+        '-ExecutionPolicy', 'Bypass',
+        '-Command', psScript
+      ], {
+        windowsHide: true,
+        stdio: ['pipe', 'pipe', 'pipe']
+      })
+
+      ps.on('exit', (code) => {
+        if (code === 0) {
+          resolve()
+        } else {
+          reject(new Error(`Start Menu shortcut creation failed with exit code ${code}`))
+        }
+      })
+
+      ps.on('error', (err) => {
+        console.error('Start Menu shortcut creation error:', err)
+        reject(err)
+      })
+    })
+  })
 }
