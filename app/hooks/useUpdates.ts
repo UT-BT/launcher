@@ -99,10 +99,13 @@ export function useUpdates() {
       }
     }
 
-    window.utInstall?.onProgress(handleInstallProgress)
-    window.utPatch?.onStatus(handlePatchStatus)
+    const offProgress = window.utInstall?.onProgress(handleInstallProgress)
+    const offPatchStatus = window.utPatch?.onStatus(handlePatchStatus)
 
-    return () => {}
+    return () => {
+      offProgress?.()
+      offPatchStatus?.()
+    }
   }, [])
 
   return {

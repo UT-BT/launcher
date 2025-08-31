@@ -9,13 +9,22 @@ if (process.contextIsolated) {
     contextBridge.exposeInMainWorld('conveyor', conveyor)
     contextBridge.exposeInMainWorld('utInstall', {
       onProgress: (cb: (data: { stage?: string; progress?: number }) => void) => {
-        ipcRenderer.on('ut-install-progress', (_, data) => cb(data))
+        const listener = (_: unknown, data: { stage?: string; progress?: number }) => cb(data)
+        ipcRenderer.on('ut-install-progress', listener)
+        return () => ipcRenderer.removeListener('ut-install-progress', listener)
       },
       onStatus: (cb: (data: { status: string }) => void) => {
-        ipcRenderer.on('ut-install-status', (_, data) => cb(data))
+        const listener = (_: unknown, data: { status: string }) => cb(data)
+        ipcRenderer.on('ut-install-status', listener)
+        return () => ipcRenderer.removeListener('ut-install-status', listener)
       },
       onConfirm: (cb: (data: { id: string; title: string; message: string; detail?: string }) => void) => {
-        ipcRenderer.on('ut-install-confirm', (_, data) => cb(data))
+        const listener = (
+          _: unknown,
+          data: { id: string; title: string; message: string; detail?: string }
+        ) => cb(data)
+        ipcRenderer.on('ut-install-confirm', listener)
+        return () => ipcRenderer.removeListener('ut-install-confirm', listener)
       },
       respondConfirm: (id: string, accepted: boolean) => {
         ipcRenderer.send('ut-install-confirm-response', { id, accepted })
@@ -23,7 +32,12 @@ if (process.contextIsolated) {
     })
     contextBridge.exposeInMainWorld('utPatch', {
       onStatus: (cb: (data: { status: string; message?: string; tag?: string }) => void) => {
-        ipcRenderer.on('ut-patch-status', (_, data) => cb(data))
+        const listener = (
+          _: unknown,
+          data: { status: string; message?: string; tag?: string }
+        ) => cb(data)
+        ipcRenderer.on('ut-patch-status', listener)
+        return () => ipcRenderer.removeListener('ut-patch-status', listener)
       },
     })
   } catch (error) {
@@ -33,13 +47,22 @@ if (process.contextIsolated) {
   window.conveyor = conveyor
   window.utInstall = {
     onProgress: (cb: (data: { stage?: string; progress?: number }) => void) => {
-      ipcRenderer.on('ut-install-progress', (_, data) => cb(data))
+      const listener = (_: unknown, data: { stage?: string; progress?: number }) => cb(data)
+      ipcRenderer.on('ut-install-progress', listener)
+      return () => ipcRenderer.removeListener('ut-install-progress', listener)
     },
     onStatus: (cb: (data: { status: string }) => void) => {
-      ipcRenderer.on('ut-install-status', (_, data) => cb(data))
+      const listener = (_: unknown, data: { status: string }) => cb(data)
+      ipcRenderer.on('ut-install-status', listener)
+      return () => ipcRenderer.removeListener('ut-install-status', listener)
     },
     onConfirm: (cb: (data: { id: string; title: string; message: string; detail?: string }) => void) => {
-      ipcRenderer.on('ut-install-confirm', (_, data) => cb(data))
+      const listener = (
+        _: unknown,
+        data: { id: string; title: string; message: string; detail?: string }
+      ) => cb(data)
+      ipcRenderer.on('ut-install-confirm', listener)
+      return () => ipcRenderer.removeListener('ut-install-confirm', listener)
     },
     respondConfirm: (id: string, accepted: boolean) => {
       ipcRenderer.send('ut-install-confirm-response', { id, accepted })
@@ -47,7 +70,12 @@ if (process.contextIsolated) {
   }
   window.utPatch = {
     onStatus: (cb: (data: { status: string; message?: string; tag?: string }) => void) => {
-      ipcRenderer.on('ut-patch-status', (_, data) => cb(data))
+      const listener = (
+        _: unknown,
+        data: { status: string; message?: string; tag?: string }
+      ) => cb(data)
+      ipcRenderer.on('ut-patch-status', listener)
+      return () => ipcRenderer.removeListener('ut-patch-status', listener)
     },
   }
 }

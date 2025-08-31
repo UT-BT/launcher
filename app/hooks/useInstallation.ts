@@ -188,10 +188,13 @@ export function useInstallation(callbacks?: InstallationCallbacks) {
       }
     }
 
-    window.utInstall?.onProgress(handleProgress)
-    window.utInstall?.onStatus(handleStatus)
+    const offProgress = window.utInstall?.onProgress(handleProgress)
+    const offStatus = window.utInstall?.onStatus(handleStatus)
 
-    return () => {}
+    return () => {
+      offProgress?.()
+      offStatus?.()
+    }
   }, [])
 
   useEffect(() => {
@@ -221,9 +224,11 @@ export function useInstallation(callbacks?: InstallationCallbacks) {
       }
     }
 
-    window.utPatch?.onStatus(handlePatchStatus)
+    const offPatchStatus = window.utPatch?.onStatus(handlePatchStatus)
 
-    return () => {}
+    return () => {
+      offPatchStatus?.()
+    }
   }, [])
 
   const actions = {
@@ -308,7 +313,6 @@ export function useInstallation(callbacks?: InstallationCallbacks) {
             progressText: 'Game Installation Completed'
           }))
 
-          // Call the announcer complete callback instead of immediately unlocking
           onAnnouncerComplete()
         }
 
