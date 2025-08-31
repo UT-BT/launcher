@@ -5,11 +5,16 @@ import { updateService } from '@/app/services/UpdateService'
 
 interface InstallationCallbacks {
   onInstallComplete?: () => void
+  onAnnouncerComplete?: () => void
 }
 
 export function useInstallation(callbacks?: InstallationCallbacks) {
   const onInstallComplete = useCallback(() => {
     callbacks?.onInstallComplete?.()
+  }, [callbacks])
+
+  const onAnnouncerComplete = useCallback(() => {
+    callbacks?.onAnnouncerComplete?.()
   }, [callbacks])
   const [state, setState] = useState<InstallationState>({
     status: 'idle',
@@ -302,7 +307,9 @@ export function useInstallation(callbacks?: InstallationCallbacks) {
             progress: 100,
             progressText: 'Game Installation Completed'
           }))
-          installationService.setWindowLocked(false)
+
+          // Call the announcer complete callback instead of immediately unlocking
+          onAnnouncerComplete()
         }
 
         // Update config

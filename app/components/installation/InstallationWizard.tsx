@@ -7,6 +7,7 @@ import { ConfirmModal } from '@/app/components/shared/ConfirmModal'
 import { ProgressSection } from '@/app/components/shared/ProgressSection'
 import { BackButton } from '@/app/components/shared/BackButton'
 import { Tooltip } from '@/app/components/shared/Tooltip'
+import { installationService } from '@/app/services/InstallationService'
 import logo from '@/app/assets/logo.png'
 import { useState } from 'react'
 
@@ -15,15 +16,25 @@ interface InstallationWizardProps {
   onComplete?: () => void
 }
 
-export function InstallationWizard({ onBack, onComplete }: InstallationWizardProps) {
+export function InstallationWizard({ onBack, onComplete: _onComplete }: InstallationWizardProps) {
   const { state, config, actions } = useInstallation({
-    onInstallComplete: () => setShowInstallPathModal(true)
+    onInstallComplete: () => setShowInstallPathModal(true),
+    onAnnouncerComplete: () => {
+      installationService.setWindowLocked(false)
+      setShowShortcutModal(true)
+    }
   })
   const confirmDialog = useConfirmDialog()
   
   const [showInstallPathModal, setShowInstallPathModal] = useState(false)
   const [showErrorModal, setShowErrorModal] = useState(false)
+  const [showShortcutModal, setShowShortcutModal] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
+  const [shortcutOptions, setShortcutOptions] = useState({
+    desktop: true,
+    startMenu: true
+  })
+  const [installationCompleted, setInstallationCompleted] = useState(false)
 
   const handleChooseExisting = async () => {
     const path = await actions.pickInstallFolder()
@@ -37,6 +48,7 @@ export function InstallationWizard({ onBack, onComplete }: InstallationWizardPro
   }
 
   const handleStartInstallation = () => {
+    setInstallationCompleted(false)
     actions.startInstallation()
   }
 
@@ -47,7 +59,7 @@ export function InstallationWizard({ onBack, onComplete }: InstallationWizardPro
   const handleModalInstallPathSelect = async () => {
     const path = await actions.pickInstallFolder()
     if (!path) return
-    
+
     const success = await actions.setInstallPath(path)
     if (!success) {
       setErrorMessage('Invalid UT99 installation directory.\n\nPlease select the folder containing:\nSystem/UnrealTournament.exe')
@@ -56,12 +68,46 @@ export function InstallationWizard({ onBack, onComplete }: InstallationWizardPro
     }
 
     setShowInstallPathModal(false)
-    
+
     try {
       await actions.applyPatchAfterInstall(path, config.patchChannel)
     } catch (error) {
       console.error('Patch application failed after install:', error)
     }
+  }
+
+  const handleShortcutOptionChange = (option: 'desktop' | 'startMenu') => {
+    setShortcutOptions(prev => ({
+      ...prev,
+      [option]: !prev[option]
+    }))
+  }
+
+  const handleCreateShortcuts = async () => {
+    if (!config.installPath) return
+
+    try {
+      if (shortcutOptions.desktop) {
+        await window.conveyor.app.createDesktopShortcut(config.installPath)
+      }
+      if (shortcutOptions.startMenu) {
+        await window.conveyor.app.createStartMenuShortcut(config.installPath)
+      }
+    } catch (error) {
+      console.error('Shortcut creation failed:', error)
+      setErrorMessage('Failed to create shortcuts. You can create them manually later.')
+      setShowErrorModal(true)
+    }
+
+    setShowShortcutModal(false)
+    setInstallationCompleted(true)
+    // Stay on installation screen - don't call onComplete
+  }
+
+  const handleSkipShortcuts = () => {
+    setShowShortcutModal(false)
+    setInstallationCompleted(true)
+    // Stay on installation screen - don't call onComplete
   }
 
   const isProcessing = state.status === 'downloading' || state.status === 'installing'
@@ -232,12 +278,6 @@ export function InstallationWizard({ onBack, onComplete }: InstallationWizardPro
           <Button onClick={handleModalInstallPathSelect}>
             📁 Select Install Folder
           </Button>
-          <Button 
-            variant="ghost" 
-            onClick={() => setShowInstallPathModal(false)}
-          >
-            Skip for Now
-          </Button>
         </div>
       </Modal>
 
@@ -265,6 +305,49 @@ export function InstallationWizard({ onBack, onComplete }: InstallationWizardPro
         message={confirmDialog.dialog?.message || ''}
         detail={confirmDialog.dialog?.detail}
       />
+
+      <Modal
+        isOpen={showShortcutModal}
+        onClose={handleSkipShortcuts}
+        title="🎯 Create Shortcuts"
+        closeOnOverlayClick={false}
+      >
+        <p className="modal-subtitle">
+          Would you like to create shortcuts for Unreal Tournament 1999?
+        </p>
+
+        <div className="shortcut-options">
+          <label className="form-checkbox">
+            <input
+              type="checkbox"
+              checked={shortcutOptions.desktop}
+              onChange={() => handleShortcutOptionChange('desktop')}
+            />
+            <span>📁 Desktop Shortcut</span>
+          </label>
+
+          <label className="form-checkbox">
+            <input
+              type="checkbox"
+              checked={shortcutOptions.startMenu}
+              onChange={() => handleShortcutOptionChange('startMenu')}
+            />
+            <span>🚀 Start Menu Shortcut</span>
+          </label>
+        </div>
+
+        <div className="modal-actions">
+          <Button variant="secondary" onClick={handleSkipShortcuts}>
+            Skip
+          </Button>
+          <Button
+            onClick={handleCreateShortcuts}
+            disabled={!shortcutOptions.desktop && !shortcutOptions.startMenu}
+          >
+            Create Shortcuts
+          </Button>
+        </div>
+      </Modal>
     </div>
   )
 }

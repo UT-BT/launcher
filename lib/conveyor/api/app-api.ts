@@ -21,6 +21,9 @@ export class AppApi extends ConveyorApi {
 
   installAnnouncerUax = () => this.invoke('installAnnouncerUax')
 
+  createDesktopShortcut = (installPath: string) => this.invoke('createDesktopShortcut', installPath)
+  createStartMenuShortcut = (installPath: string) => this.invoke('createStartMenuShortcut', installPath)
+
   getGatewayConfig = () => this.invoke('getGatewayConfig')
   setGatewayConfig = (config: { baseUrl?: string; apiKey?: string }) => this.invoke('setGatewayConfig', config)
 }
