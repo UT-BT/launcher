@@ -29,7 +29,7 @@ export function ProgressSection({
         {progressText}
       </div>
       
-      {showDetails && (speedText || etaText) && (
+      {showDetails && (
         <div className="progress-details">
           <div>Overall: {Math.round(progress)}%</div>
           {speedText && <div>Speed: {speedText}</div>}

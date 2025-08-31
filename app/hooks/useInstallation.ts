@@ -167,6 +167,14 @@ export function useInstallation(callbacks?: InstallationCallbacks) {
         } else if (data.status === 'installing-cd2') {
           setState(prev => ({ ...prev, progressText: 'Installing UT99 • Disc 2' }))
         }
+      } else if (data.status === 'complete') {
+        installationService.setWindowLocked(false)
+        setState(prev => ({
+          ...prev,
+          status: 'idle',
+          progressText: 'Game Installed'
+        }))
+        onInstallComplete()
       } else if (data.status === 'announcer-complete') {
         setState(prev => ({
           ...prev,
@@ -195,7 +203,7 @@ export function useInstallation(callbacks?: InstallationCallbacks) {
       offProgress?.()
       offStatus?.()
     }
-  }, [])
+  }, [onAnnouncerComplete, onInstallComplete])
 
   useEffect(() => {
     const handlePatchStatus = (data: { status: string; message?: string; tag?: string }) => {
