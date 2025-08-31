@@ -11,6 +11,7 @@ interface UpdateModalProps {
   onViewReleaseNotes: () => void
   currentVersion?: string
   forced?: boolean
+  unsupportedBase?: boolean
 }
 
 export function UpdateModal({
@@ -23,6 +24,7 @@ export function UpdateModal({
   onViewReleaseNotes,
   currentVersion,
   forced = false,
+  unsupportedBase = false,
 }: UpdateModalProps) {
   return (
     <>
@@ -51,12 +53,15 @@ export function UpdateModal({
           </>
         )}
 
-{forced && (
+        {forced && (
           <p className="text-[12px] text-gray-300 mb-2">
             <b>
               <i className="text-red-500">
-                Our servers require all players to be on the 469 patch.<br />
-                Please update in order to be able to play on UTBT.
+                {unsupportedBase ? (
+                  <>Your client is currently on a patch version unsupported by the UTBT Launcher.<br />In order to continue using the application, you need to upgrade.</>
+                ) : (
+                  <>Our servers require all players to be on the 469 patch.<br />Please update in order to be able to play on UTBT.</>
+                )}
               </i>
             </b>
           </p>

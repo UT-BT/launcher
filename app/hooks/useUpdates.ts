@@ -22,7 +22,8 @@ export function useUpdates() {
         available: updateCheck.available,
         manifest: updateCheck.manifest,
         currentVersion,
-        forced: updateCheck.forced
+        forced: updateCheck.forced,
+        unsupportedBase: updateCheck.unsupportedBase
       }))
 
       return updateCheck

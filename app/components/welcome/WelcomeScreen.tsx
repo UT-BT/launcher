@@ -80,6 +80,7 @@ export function WelcomeScreen({ onInstall }: WelcomeScreenProps) {
           updateText={updateState.progressText}
           currentVersion={updateState.currentVersion}
           forced={updateState.forced}
+          unsupportedBase={updateState.unsupportedBase}
           onClose={dismissUpdate}
           onUpdate={handleUpdate}
           onViewReleaseNotes={() => openReleaseNotes(updateState.manifest?.release_notes_url)}
