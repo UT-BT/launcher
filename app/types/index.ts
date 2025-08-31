@@ -42,6 +42,7 @@ export interface UpdateState {
   progress: number
   progressText: string
   forced: boolean
+  unsupportedBase?: boolean
 }
 
 export interface ModalProps {

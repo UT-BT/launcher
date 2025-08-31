@@ -35,12 +35,16 @@ export class UpdateService {
     available: boolean
     manifest?: PatchManifest
     forced: boolean
+    unsupportedBase?: boolean
   }> {
     try {
       const installPath = await this.app.getInstallPath()
       if (!installPath) {
         return { available: false, forced: false }
       }
+
+      const baseVersion = await this.app.getBaseVersion()
+      const isUnsupportedBase = baseVersion === 'unsupported'
 
       const manifestResp = await this.app.fetchLatestPatchManifest(
         channel === 'stable' ? true : undefined
@@ -65,14 +69,15 @@ export class UpdateService {
         return {
           available: true,
           manifest,
-          forced: !installed
+          forced: !installed || isUnsupportedBase,
+          unsupportedBase: isUnsupportedBase
         }
       }
 
-      return { available: false, forced: false }
+      return { available: false, forced: false, unsupportedBase: false }
     } catch (error) {
       console.error('Failed to check for updates:', error)
-      return { available: false, forced: false }
+      return { available: false, forced: false, unsupportedBase: false }
     }
   }
 
