@@ -18,6 +18,21 @@ nsis:
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
+  createStartMenuShortcut: true
+  installerIcon: resources/build/icon.ico
+  uninstallerIcon: resources/build/icon.ico
+  installerHeaderIcon: resources/build/icon.ico
+  menuCategory: true
+  language: 1033
+  installerSidebar: resources/build/installerSidebar.bmp
+  packElevateHelper: true
+  perMachine: true
+  warningsAsErrors: false
+  license: LICENSE
+  oneClick: false
+  allowElevation: true
+  allowToChangeInstallationDirectory: true
+  displayLanguageSelector: false
 npmRebuild: false
 publish:
   provider: generic
