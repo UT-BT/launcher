@@ -24,20 +24,10 @@ npm run dev
 This will start the Electron app with hot-reload enabled.
 
 ## Building for Production
-Build the application for your platform:
+Windows is the only supported target:
 
 ```bash
-# Windows
 npm run build:win
-
-# macOS
-npm run build:mac
-
-# Linux
-npm run build:linux
-
-# Unpacked for all platforms
-npm run build:unpack
 ```
 
 Distribution files will be located in the `dist` directory.
