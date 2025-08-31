@@ -4,6 +4,7 @@ import { Button } from '@/app/components/ui/button'
 import { useUpdates } from '@/app/hooks/useUpdates'
 import { UpdateModal } from './UpdateModal'
 import logo from '@/app/assets/logo.png'
+import type { PatchManifest } from '@/app/types'
 
 interface WelcomeScreenProps {
   onInstall?: () => void
@@ -23,10 +24,11 @@ export function WelcomeScreen({ onInstall }: WelcomeScreenProps) {
     el.style.setProperty('--parallax-y', String(y * 30))
   }
 
-  const handleUpdate = async () => {
-    if (!updateState.manifest) return
+  const handleUpdate = async (chosen?: PatchManifest) => {
+    const manifest = chosen ?? updateState.manifest
+    if (!manifest) return
     try {
-      await applyUpdate(updateState.manifest)
+      await applyUpdate(manifest)
     } catch (error) {
       console.error('Update failed:', error)
     }
