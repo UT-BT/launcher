@@ -80,31 +80,33 @@ export function useInstallation(callbacks?: InstallationCallbacks) {
   }
 
   useEffect(() => {
-    const handleProgress = (data: { stage: string; progress: number }) => {
+    const handleProgress = (data: { stage?: string; progress?: number }) => {
       if (data.stage === 'cd1' && typeof data.progress === 'number') {
-        setProgressCd1(data.progress)
+        const progress = data.progress as number
+        setProgressCd1(progress)
         setProgressCd2(currentCd2 => {
-          const downloadedBytes = (data.progress / 100 * installationService.SIZE_CD1) + (currentCd2 / 100 * installationService.SIZE_CD2)
-          const combinedPct = installationService.calculateCombinedProgress(data.progress, currentCd2)
+          const downloadedBytes = (progress / 100 * installationService.SIZE_CD1) + (currentCd2 / 100 * installationService.SIZE_CD2)
+          const combinedPct = installationService.calculateCombinedProgress(progress, currentCd2)
           setState(prev => ({
             ...prev,
             status: 'downloading',
             progress: combinedPct,
-            progressText: `Downloading UT99 • Disc 1 (${data.progress}%)`
+            progressText: `Downloading UT99 • Disc 1 (${progress}%)`
           }))
           updateSpeedAndEta(downloadedBytes)
           return currentCd2
         })
       } else if (data.stage === 'cd2' && typeof data.progress === 'number') {
-        setProgressCd2(data.progress)
+        const progress = data.progress as number
+        setProgressCd2(progress)
         setProgressCd1(currentCd1 => {
-          const downloadedBytes = (currentCd1 / 100 * installationService.SIZE_CD1) + (data.progress / 100 * installationService.SIZE_CD2)
-          const combinedPct = installationService.calculateCombinedProgress(currentCd1, data.progress)
+          const downloadedBytes = (currentCd1 / 100 * installationService.SIZE_CD1) + (progress / 100 * installationService.SIZE_CD2)
+          const combinedPct = installationService.calculateCombinedProgress(currentCd1, progress)
           setState(prev => ({
             ...prev,
             status: 'downloading',
             progress: combinedPct,
-            progressText: `Downloading UT99 • Disc 2 (${data.progress}%)`
+            progressText: `Downloading UT99 • Disc 2 (${progress}%)`
           }))
           updateSpeedAndEta(downloadedBytes)
           return currentCd1
@@ -113,7 +115,13 @@ export function useInstallation(callbacks?: InstallationCallbacks) {
         setState(prev => ({
           ...prev,
           status: 'installing',
-          progressText: `Downloading Patch (${data.progress}%)`
+          progressText: `Downloading Patch… (${data.progress}%)`
+        }))
+      } else if (data.stage === 'announcer' && typeof data.progress === 'number') {
+        setState(prev => ({
+          ...prev,
+          status: 'installing',
+          progressText: `Downloading Modern Announcer… (${data.progress}%)`
         }))
       }
     }
@@ -262,22 +270,30 @@ export function useInstallation(callbacks?: InstallationCallbacks) {
 
         const manifestResp = await window.conveyor.app.fetchLatestPatchManifest(patchChannel === 'stable' ? true : undefined)
         if (manifestResp?.success && manifestResp.data) {
+          const data = manifestResp.data
           setState(prev => ({
             ...prev,
             status: 'installing',
-            progressText: `Downloading Patch ${manifestResp.data.tag}…`
+            progressText: `Downloading Patch ${data.tag}…`
           }))
 
           await installationService.applyPatch({
-            asset_url: manifestResp.data.asset_url,
-            sha256: manifestResp.data.sha256,
-            tag: manifestResp.data.tag,
-            channel: (manifestResp.data.channel as 'stable' | 'rc') || patchChannel,
+            asset_url: data.asset_url,
+            sha256: data.sha256,
+            tag: data.tag,
+            channel: (data.channel as 'stable' | 'rc') || patchChannel,
           })
 
           setState(prev => ({
             ...prev,
-            progressText: `Patch ${manifestResp.data.tag} Applied • Ready to Play!`
+            progressText: `Patch ${data.tag} Applied • Installing UTBT Announcer…`
+          }))
+
+          await installationService.installAnnouncer()
+
+          setState(prev => ({
+            ...prev,
+            progressText: 'UTBT Announcer Installed • Ready to Play!'
           }))
         }
 

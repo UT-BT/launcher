@@ -64,7 +64,8 @@ export class InstallationService {
 
   async pickInstallFolder(): Promise<string | null> {
     try {
-      return await this.app.pickInstallFolder()
+      const sel = await this.app.pickInstallFolder()
+      return sel ?? null
     } catch (error) {
       console.error('Failed to pick install folder:', error)
       return null
@@ -85,6 +86,15 @@ export class InstallationService {
       await this.app.applyPatchFromManifest(manifest)
     } catch (error) {
       console.error('Patch application failed:', error)
+      throw error
+    }
+  }
+
+  async installAnnouncer(): Promise<void> {
+    try {
+      await this.app.installAnnouncerUax()
+    } catch (error) {
+      console.error('Announcer installation failed:', error)
       throw error
     }
   }

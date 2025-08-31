@@ -11,11 +11,17 @@ type InstalledPatch = {
   installedAt: string
 }
 
+type GatewayConfig = {
+  baseUrl: string
+  apiKey?: string
+}
+
 type LauncherConfig = {
   ut99InstallPath?: string
   patchChannel?: PatchChannel
   baseVersion?: string
   installedPatch?: InstalledPatch
+  gateway?: GatewayConfig
 }
 
 const CONFIG_FILE_NAME = 'config.json'
@@ -101,6 +107,39 @@ export function markFreshInstall(baseVersion: string = 'v432'): void {
   const current = readConfig()
   const next: LauncherConfig = { ...current, baseVersion, installedPatch: undefined }
   writeConfig(next)
+}
+
+export function getGatewayConfig(): GatewayConfig {
+  const config = readConfig()
+  return config.gateway ?? { 
+    baseUrl: 'https://gateway.utbt.net',
+  }
+}
+
+export function setGatewayConfig(gateway: Partial<GatewayConfig>): void {
+  const current = readConfig()
+  const currentGateway = current.gateway ?? { baseUrl: 'https://gateway.utbt.net' }
+  const next: LauncherConfig = { 
+    ...current, 
+    gateway: { ...currentGateway, ...gateway }
+  }
+  writeConfig(next)
+}
+
+export function getGatewayBaseUrl(): string {
+  return getGatewayConfig().baseUrl
+}
+
+export function setGatewayBaseUrl(baseUrl: string): void {
+  setGatewayConfig({ baseUrl })
+}
+
+export function getGatewayApiKey(): string | undefined {
+  return getGatewayConfig().apiKey
+}
+
+export function setGatewayApiKey(apiKey: string | undefined): void {
+  setGatewayConfig({ apiKey })
 }
 
 

@@ -1,13 +1,13 @@
 import { app, dialog, type BrowserWindow, ipcMain } from 'electron'
 import { handle } from '@/lib/main/shared'
-import { getUt99InstallPath, setUt99InstallPath, getPatchChannel, setPatchChannel, getInstalledPatch, setInstalledPatch, setBaseVersion, markFreshInstall, getBaseVersion } from '@/lib/main/config'
+import { getUt99InstallPath, setUt99InstallPath, getPatchChannel, setPatchChannel, getInstalledPatch, setInstalledPatch, setBaseVersion, markFreshInstall, getBaseVersion, getGatewayConfig, setGatewayConfig } from '@/lib/main/config'
+import { gatewayService } from '@/lib/main/gateway-service'
 import { join } from 'path'
 import { createWriteStream, existsSync, mkdirSync, statSync, readFileSync, writeFileSync } from 'fs'
 import { createHash } from 'crypto'
 import https from 'https'
-import http, { IncomingMessage } from 'http'
+import { IncomingMessage } from 'http'
 import { spawn } from 'child_process'
-import { URL } from 'url'
 
 export const registerAppHandlers = (_window: BrowserWindow) => {
   handle('version', () => app.getVersion())
@@ -29,6 +29,9 @@ export const registerAppHandlers = (_window: BrowserWindow) => {
   handle('getInstalledPatch', () => getInstalledPatch())
   handle('setBaseVersion', (version: string) => setBaseVersion(version))
   handle('getBaseVersion', () => getBaseVersion())
+
+  handle('getGatewayConfig', () => getGatewayConfig())
+  handle('setGatewayConfig', (config: { baseUrl?: string; apiKey?: string }) => setGatewayConfig(config))
 
   const downloadFile = (url: string, destinationFile: string, stage: string) =>
     new Promise<void>((resolve, reject) => {
@@ -273,45 +276,14 @@ try {
     try { _window.webContents.send('ut-install-status', { status: 'complete' }) } catch { /* ignore */ }
   })
 
-  const httpGetBuffer = (urlStr: string, headers?: Record<string, string>): Promise<Buffer> =>
-    new Promise((resolve, reject) => {
-      const visited = new Set<string>()
-      const doGet = (u: string) => {
-        if (visited.has(u)) return reject(new Error('Redirect loop'))
-        visited.add(u)
-        const parsed = new URL(u)
-        const client = parsed.protocol === 'https:' ? https : http
-        client.get(u, { headers }, (res) => {
-          const status = res.statusCode || 0
-          if (status >= 300 && status < 400 && res.headers.location) {
-            const next = new URL(res.headers.location, u).toString()
-            doGet(next)
-            return
-          }
-          if (status !== 200) {
-            reject(new Error(`Request failed with status ${status}`))
-            return
-          }
-          const chunks: Buffer[] = []
-          res.on('data', (c) => chunks.push(Buffer.isBuffer(c) ? c : Buffer.from(c)))
-          res.on('end', () => resolve(Buffer.concat(chunks)))
-          res.on('error', reject)
-        }).on('error', reject)
-      }
-      doGet(urlStr)
-    })
+
 
   handle('fetchLatestPatchManifest', async (stableOnly?: boolean) => {
     const channel = stableOnly === true ? 'stable' : getPatchChannel()
-    const base = 'http://127.0.0.1:8081/patches/latest'
-    const headers = {
-      'X-Api-Key': "changeme",
-    }
-    const url = channel === 'stable' ? `${base}?stable=true` : base
+    const endpoint = channel === 'stable' ? '/patches/latest?stable=true' : '/patches/latest'
     try {
-      const buf = await httpGetBuffer(url, headers)
-      const json = JSON.parse(buf.toString('utf-8'))
-      return json
+      const result = await gatewayService.get(endpoint, true)
+      return result
     } catch {
       return { success: false }
     }
@@ -373,5 +345,53 @@ Expand-Archive -LiteralPath "${zipEsc}" -DestinationPath "${destEsc}" -Force
     }
 
     try { _window.webContents.send('ut-patch-status', { status: 'complete', tag: m.tag }) } catch (err) { console.warn('patch status send failed', err) }
+  })
+
+  handle('installAnnouncerUax', async () => {
+    const installPath = getUt99InstallPath()
+    if (!installPath) throw new Error('Install path not set')
+
+    const soundsDir = join(installPath, 'Sounds')
+    const announcerUrl = `${getGatewayConfig().baseUrl.replace(/\/$/, '')}/assets/ut/Announcer.uax`
+    const destFile = join(soundsDir, 'Announcer.uax')
+
+    try { _window.webContents.send('ut-install-progress', { stage: 'announcer', progress: 0 }) } catch { /* ignore */ }
+
+    await new Promise<void>((resolve, reject) => {
+      const dir = soundsDir
+      if (!existsSync(dir)) {
+        try { mkdirSync(dir, { recursive: true }) } catch (err) { return reject(err) }
+      }
+      const fileStream = createWriteStream(destFile)
+
+      const handleResponse = (response: IncomingMessage) => {
+        if (response.statusCode && response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
+          https.get(response.headers.location, handleResponse).on('error', (err) => reject(err))
+          return
+        }
+        if (response.statusCode !== 200) {
+          reject(new Error(`Download failed with status ${response.statusCode}`))
+          return
+        }
+
+        const total = Number(response.headers['content-length'] || 0)
+        let downloaded = 0
+        response.on('data', (chunk) => {
+          downloaded += chunk.length
+          if (total > 0) {
+            const pct = Math.min(100, Math.round((downloaded / total) * 100))
+            try { _window.webContents.send('ut-install-progress', { stage: 'announcer', progress: pct }) } catch { /* ignore */ }
+          }
+        })
+
+        response.pipe(fileStream)
+        fileStream.on('finish', () => fileStream.close(() => {
+          try { _window.webContents.send('ut-install-progress', { stage: 'announcer', progress: 100 }) } catch { /* ignore */ }
+          resolve()
+        }))
+      }
+
+      https.get(announcerUrl, handleResponse).on('error', (err) => reject(err))
+    })
   })
 }

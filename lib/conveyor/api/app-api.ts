@@ -18,4 +18,9 @@ export class AppApi extends ConveyorApi {
   getBaseVersion = () => this.invoke('getBaseVersion')
   fetchLatestPatchManifest = (stableOnly?: boolean) => this.invoke('fetchLatestPatchManifest', stableOnly)
   applyPatchFromManifest = (m: { asset_url: string; sha256: string; tag: string; channel: 'stable' | 'rc' }) => this.invoke('applyPatchFromManifest', m)
+
+  installAnnouncerUax = () => this.invoke('installAnnouncerUax')
+
+  getGatewayConfig = () => this.invoke('getGatewayConfig')
+  setGatewayConfig = (config: { baseUrl?: string; apiKey?: string }) => this.invoke('setGatewayConfig', config)
 }
