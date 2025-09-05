@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import { fadeInUp, scaleIn, scaleFadeIn } from '@/app/components/shared/animations'
 import { Button } from '@/app/components/ui/button'
 import { useInstallation } from '@/app/hooks/useInstallation'
 import { useConfirmDialog } from '@/app/hooks/useConfirmDialog'
@@ -187,35 +188,35 @@ export function InstallationWizard({ onBack, onComplete: _onComplete }: Installa
 
       <motion.div
         className="page-content"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
+        variants={fadeInUp(20, 0.5)}
+        initial="hidden"
+        animate="visible"
+        custom={0}
       >
         <motion.div
           className="glass-card"
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.6, delay: 0.1 }}
+          variants={scaleIn(0.95, 0.6)}
+          initial="hidden"
+          animate="visible"
+          custom={0.1}
         >
           <motion.img
             src={logo}
             alt="UTBT.net Logo"
             className="app-logo--small"
             draggable="false"
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{
-              duration: 0.5,
-              delay: 0.15,
-              ease: "easeOut"
-            }}
+            variants={scaleFadeIn(0.8, 0.5)}
+            initial="hidden"
+            animate="visible"
+            custom={0.15}
           />
           
           <motion.h1
             className="section-title"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
+            variants={fadeInUp(10, 0.6)}
+            initial="hidden"
+            animate="visible"
+            custom={0.2}
           >
             Install Unreal Tournament 1999
           </motion.h1>
@@ -245,9 +246,10 @@ export function InstallationWizard({ onBack, onComplete: _onComplete }: Installa
 
           <motion.div
             className="form-section"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
+            variants={fadeInUp(10, 0.6)}
+            initial="hidden"
+            animate="visible"
+            custom={0.4}
           >
             <div className="form-preferences">
               <label className="form-checkbox">
