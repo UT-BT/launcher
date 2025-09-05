@@ -370,15 +370,14 @@ export function InstallationWizard({ onBack, onComplete: _onComplete }: Installa
         </p>
 
         {availablePatches && availablePatches.length > 0 ? (
-          <div className="form-section" style={{ marginTop: 8 }}>
-            <label className="form-checkbox" style={{ alignItems: 'center' }}>
-              <span style={{ marginRight: 12 }}>Select Patch</span>
+          <div className="form-section install-modal-top-gap">
+            <label className="form-checkbox install-modal-select-row">
+              <span className="install-modal-select-label">Select Patch</span>
               <select
                 value={selectedPatchTag ?? ''}
                 onChange={(e) => setSelectedPatchTag(e.target.value)}
                 disabled={upgradeInProgress}
-                className="modal-select"
-                style={{ flex: 1 }}
+                className="modal-select install-modal-select"
               >
                 {availablePatches.map((p) => (
                   <option key={p.tag} value={p.tag}>
@@ -389,7 +388,7 @@ export function InstallationWizard({ onBack, onComplete: _onComplete }: Installa
             </label>
           </div>
         ) : (
-          <p style={{ marginTop: 8 }}>No patches available from the gateway.</p>
+          <p className="install-modal-top-gap">No patches available from the gateway.</p>
         )}
 
         <div className="modal-actions">
