@@ -1,0 +1,17 @@
+.install-modal-select-row {
+  display: flex;
+  align-items: center;
+}
+
+.install-modal-select-label {
+  margin-right: 12px;
+}
+
+.install-modal-select {
+  flex: 1;
+}
+
+.install-modal-top-gap {
+  margin-top: 8px;
+}
+
