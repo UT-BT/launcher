@@ -1,16 +1,11 @@
 import { useRef } from 'react'
 import { motion } from 'framer-motion'
-import { Button } from '@/app/components/ui/button'
 import { useUpdates } from '@/app/hooks/useUpdates'
 import { UpdateModal } from './UpdateModal'
 import logo from '@/app/assets/logo.png'
 import type { PatchManifest } from '@/app/types'
 
-interface WelcomeScreenProps {
-  onInstall?: () => void
-}
-
-export function WelcomeScreen({ onInstall }: WelcomeScreenProps) {
+export function WelcomeScreen() {
   const containerRef = useRef<HTMLDivElement>(null)
   const { updateState, applyUpdate, openReleaseNotes, dismissUpdate } = useUpdates()
 
@@ -66,12 +61,6 @@ export function WelcomeScreen({ onInstall }: WelcomeScreenProps) {
         >
           Welcome to UTBT
         </motion.h1>
-        
-        <div className="actions-section">
-          <Button onClick={onInstall} className="enhanced-button">
-            Install Unreal Tournament 1999
-          </Button>
-        </div>
       </motion.div>
 
       {updateState.available && updateState.manifest && (
