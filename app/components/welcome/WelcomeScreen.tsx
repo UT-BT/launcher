@@ -4,6 +4,7 @@ import { useUpdates } from '@/app/hooks/useUpdates'
 import { UpdateModal } from './UpdateModal'
 import logo from '@/app/assets/logo.png'
 import type { PatchManifest } from '@/app/types'
+import { fadeInUp, scaleFadeIn } from '@/app/components/shared/animations'
 
 export function WelcomeScreen() {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -35,29 +36,28 @@ export function WelcomeScreen() {
       
       <motion.div
         className="page-content"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
+        variants={fadeInUp(20, 0.5)}
+        initial="hidden"
+        animate="visible"
+        custom={0}
       >
         <motion.img
           src={logo}
           alt="UTBT.net Logo"
           className="app-logo parallax"
           draggable="false"
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ 
-            duration: 0.5, 
-            delay: 0.2,
-            ease: "easeOut"
-          }}
+          variants={scaleFadeIn(0.8, 0.5)}
+          initial="hidden"
+          animate="visible"
+          custom={0.2}
         />
         
         <motion.h1
           className="gradient-title parallax"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.25 }}
+          variants={fadeInUp(10, 0.6)}
+          initial="hidden"
+          animate="visible"
+          custom={0.25}
         >
           Welcome to UTBT
         </motion.h1>
@@ -79,17 +79,4 @@ export function WelcomeScreen() {
       )}
     </div>
   )
-}
-
-const parallaxStyles = `
-.parallax {
-  transform: translate3d(calc(var(--parallax-x, 0) * 1px), calc(var(--parallax-y, 0) * 1px), 0);
-  transition: transform 0.08s linear;
-}
-`
-
-if (typeof document !== 'undefined') {
-  const style = document.createElement('style')
-  style.textContent = parallaxStyles
-  document.head.appendChild(style)
 }

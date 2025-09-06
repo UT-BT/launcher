@@ -155,6 +155,11 @@
   filter: drop-shadow(0 0 20px rgba(56, 189, 248, 0.3));
 }
 
+.parallax {
+  transform: translate3d(calc(var(--parallax-x, 0) * 1px), calc(var(--parallax-y, 0) * 1px), 0);
+  transition: transform 0.08s linear;
+}
+
 @keyframes pulse {
   0% {
     filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.2));
