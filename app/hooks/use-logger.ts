@@ -1,5 +1,6 @@
 import { useCallback } from 'react'
-import type { LogLevel } from '@/lib/main/logging-service'
+
+export type LogLevel = 'info' | 'warn' | 'error' | 'debug'
 
 export interface Logger {
   log: (level: LogLevel, message: string, data?: any) => Promise<void>

@@ -33,8 +33,13 @@ export function useUpdates() {
     }
   }, [])
 
+  const mountedRef = useRef(false)
+
   useEffect(() => {
-    checkForUpdates()
+    if (!mountedRef.current) {
+      mountedRef.current = true
+      checkForUpdates()
+    }
   }, [checkForUpdates])
 
   const applyUpdate = async (manifest: PatchManifest) => {

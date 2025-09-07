@@ -50,7 +50,6 @@ export const Titlebar = () => {
 
 const TitlebarControls = () => {
   const { window: wcontext } = useWindowContext()
-  const { windowMaximizeToggle } = useConveyor('window')
   const [isMaximized, setIsMaximized] = useState(false)
 
   useEffect(() => {
