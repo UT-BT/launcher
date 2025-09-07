@@ -1,6 +1,7 @@
 import { app, BrowserWindow } from 'electron'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { createAppWindow } from './app'
+import '@/lib/main/logging-service'
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
@@ -10,6 +11,7 @@ app.whenReady().then(() => {
   electronApp.setAppUserModelId('com.utbt.launcher')
   // Create app window
   createAppWindow()
+  console.warn('UTBT Launcher application started successfully')
 
   // Default open or close DevTools by F12 in development
   // and ignore CommandOrControl + R in production.

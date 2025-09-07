@@ -1,48 +1,69 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { SplashScreen } from '@/app/components/welcome/WelcomeScreen'
 import { Main } from '@/app/components/main/Main'
 import { InstallationWizard } from '@/app/components/installation/InstallationWizard'
 import { Modal } from '@/app/components/shared/Modal'
 import { Button } from '@/app/components/ui/button'
+import { useLogger } from '@/app/hooks/use-logger'
 import './styles/index.css'
 
 export default function App() {
+  const loggerRef = useRef(useLogger('App'))
+  const logger = loggerRef.current
   const [appPhase, setAppPhase] = useState<'splash' | 'install' | 'main'>('splash')
   const [forceInstallPrompt, setForceInstallPrompt] = useState(false)
 
   const runInstallationChecks = useCallback(async () => {
     try {
+      logger.info('Running installation checks')
       setForceInstallPrompt(false)
       const installPath = await window.conveyor.app.getInstallPath()
+      logger.debug('Install path retrieved', { installPath })
+
       if (!installPath) {
+        logger.warn('No install path found, prompting user to install')
         setForceInstallPrompt(true)
         return false
       }
+
       const isValid = await window.conveyor.app.verifyInstallPath(installPath)
+      logger.debug('Install path verification result', { installPath, isValid })
+
       if (!isValid) {
+        logger.warn('Install path is invalid, prompting user to reinstall', { installPath })
         setForceInstallPrompt(true)
         return false
       }
+
+      logger.info('Installation checks passed successfully')
       return true
-    } catch {
+    } catch (error) {
+      logger.error('Installation check failed', { error })
       setForceInstallPrompt(true)
       return false
     }
-  }, [])
+  }, [logger])
 
   const handleSplashComplete = () => {
+    logger.info('Splash screen completed, transitioning to main phase')
     setAppPhase('main')
   }
 
   const handleShowInstallWizard = () => {
+    logger.info('User requested installation wizard')
     setAppPhase('install')
   }
 
   useEffect(() => {
+    logger.info('App component mounted')
+  }, [logger])
+
+  useEffect(() => {
+    logger.info('App phase changed', { newPhase: appPhase })
     if (appPhase === 'splash') {
       runInstallationChecks()
     }
-  }, [appPhase, runInstallationChecks])
+  }, [appPhase, runInstallationChecks, logger])
 
   return (
     <>
