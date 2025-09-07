@@ -7,9 +7,13 @@ import { Button } from '@/app/components/ui/button'
 import { useLogger } from '@/app/hooks/use-logger'
 import './styles/index.css'
 
+let globalAppMounted = false
+let globalChecksPerformed = false
+
 export default function App() {
   const loggerRef = useRef(useLogger('App'))
   const logger = loggerRef.current
+  const mountedRef = useRef(false)
   const [appPhase, setAppPhase] = useState<'splash' | 'install' | 'main'>('splash')
   const [forceInstallPrompt, setForceInstallPrompt] = useState(false)
 
@@ -42,7 +46,7 @@ export default function App() {
       setForceInstallPrompt(true)
       return false
     }
-  }, [logger])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSplashComplete = () => {
     logger.info('Splash screen completed, transitioning to main phase')
@@ -55,15 +59,31 @@ export default function App() {
   }
 
   useEffect(() => {
-    logger.info('App component mounted')
-  }, [logger])
+    if (!mountedRef.current) {
+      mountedRef.current = true
+      
+      if (!globalAppMounted) {
+        globalAppMounted = true
+        logger.info('App component mounted')
+        
+        if (appPhase === 'splash' && !globalChecksPerformed) {
+          globalChecksPerformed = true
+          runInstallationChecks()
+        }
+      }
+    }
+
+    return () => {
+      mountedRef.current = false
+    }
+  }, [appPhase, runInstallationChecks]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    logger.info('App phase changed', { newPhase: appPhase })
-    if (appPhase === 'splash') {
-      runInstallationChecks()
+    if (mountedRef.current && appPhase !== 'splash' && globalAppMounted) {
+      logger.info('App phase changed', { newPhase: appPhase })
+      globalChecksPerformed = false
     }
-  }, [appPhase, runInstallationChecks, logger])
+  }, [appPhase]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <>

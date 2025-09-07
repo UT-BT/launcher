@@ -1,5 +1,6 @@
 import { Button } from '@/app/components/ui/button'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
+import { useLogger } from '@/app/hooks/use-logger'
 import { PatchManifest } from '@/app/types'
 
 interface UpdateModalProps {
@@ -27,23 +28,38 @@ export function UpdateModal({
   forced = false,
   unsupportedBase = false,
 }: UpdateModalProps) {
+  const logger = useLogger('UpdateModal')
+  const mountedRef = useRef(false)
   const [availablePatches, setAvailablePatches] = useState<any[]>([])
   const [selectedPatchTag, setSelectedPatchTag] = useState<string | null>(null)
   const [loadingPatches, setLoadingPatches] = useState(false)
+  const noPickerLoggedRef = useRef(false)
 
   const shouldShowPatchPicker = forced && (currentVersion === 'v432' || unsupportedBase)
 
   useEffect(() => {
+    if (!mountedRef.current) {
+      logger.info('Mounted', { forced, unsupportedBase, currentVersion })
+      mountedRef.current = true
+    }
     let mounted = true
+  
     const load = async () => {
-      if (!shouldShowPatchPicker) return
+      if (!shouldShowPatchPicker) {
+        if (!noPickerLoggedRef.current) {
+          logger.debug('Patch picker not needed', { shouldShowPatchPicker })
+          noPickerLoggedRef.current = true
+        }
+        return
+      }
+      logger.info('Loading available patches for forced update')
       try {
         setLoadingPatches(true)
         const patchesResp: any = await window.conveyor.app.fetchPatches()
         const list: any[] = Array.isArray(patchesResp?.data) ? patchesResp.data : (Array.isArray(patchesResp) ? patchesResp : [])
         if (!mounted) return
+        logger.debug('Fetched patches', { count: list.length })
         setAvailablePatches(list)
-
         const stable = list.filter(p => (p.channel ?? 'stable') === 'stable')
         const parseDate = (v: any) => {
           const d = Date.parse(v?.added ?? v?.published_at ?? '')
@@ -57,21 +73,36 @@ export function UpdateModal({
           return String(b?.tag ?? '').localeCompare(String(a?.tag ?? ''))
         })
         const pick = (stable.length > 0 ? sortByRecency(stable)[0] : sortByRecency(list)[0])
+        logger.info('Selected default patch', { tag: pick?.tag, channel: pick?.channel })
         setSelectedPatchTag(pick?.tag ?? null)
       } catch (e) {
-        console.error('Failed to fetch patches:', e)
+        logger.error('Failed to fetch patches', { error: e })
       } finally {
         if (mounted) setLoadingPatches(false)
       }
     }
+  
     load()
-    return () => { mounted = false }
-  }, [shouldShowPatchPicker])
+    return () => {
+      mounted = false
+    }
+  }, [shouldShowPatchPicker, forced, unsupportedBase, currentVersion]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleUpdateClick = async () => {
+    logger.info('User clicked update button', {
+      shouldShowPatchPicker,
+      selectedPatchTag,
+      availablePatchesCount: availablePatches.length
+    })
+
     if (shouldShowPatchPicker && selectedPatchTag && availablePatches.length > 0) {
       const item = availablePatches.find(p => p.tag === selectedPatchTag)
       if (item) {
+        logger.info('Applying selected patch', {
+          tag: item.tag,
+          channel: item.channel,
+          asset_url: item.asset_url
+        })
         const chosen: PatchManifest = {
           asset_url: item.asset_url,
           sha256: item.sha256,
@@ -81,57 +112,59 @@ export function UpdateModal({
         }
         await onUpdate(chosen)
         return
+      } else {
+        logger.warn('Selected patch not found in available patches', { selectedPatchTag })
       }
     }
+
+    logger.info('Applying default update manifest', { tag: manifest.tag })
     await onUpdate()
   }
   return (
     <>
       <div 
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40" 
+        className="update-modal-overlay" 
         onClick={() => { if (!updating && !forced) onClose() }} 
       />
-      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[420px] max-w-[90vw] bg-[#0f1629] border border-gray-700 rounded-lg shadow-xl p-5 h-auto">
-        <h3 className="text-base font-semibold text-white mb-2">
+      <div className="update-modal-content">
+        <h3 className="update-modal-title">
           {forced ? 'Update Required' : 'Update Available'}
         </h3>
         
-        <p className="text-[13px] text-gray-300 mb-2">
+        <p className="update-modal-description">
           A new version of Unreal Tournament is available.
         </p>
         <p />
         
         {currentVersion && !shouldShowPatchPicker && (
           <>
-            <p className="text-[12px] text-gray-400 mb-2">
-              Your current version is <span className="text-gray-200"><b>{currentVersion}</b></span>
+            <p className="update-modal-version-info">
+              Your current version is <span className="update-modal-version-highlight">{currentVersion}</span>
               <br />
-              The latest version is <span className="text-gray-200"><b>{manifest.tag}</b></span>
+              The latest version is <span className="update-modal-version-highlight">{manifest.tag}</span>
             </p>
             <br />
           </>
         )}
 
         {forced && (
-          <p className="text-[12px] text-gray-300 mb-2">
-            <b>
-              <i className="text-red-500">
-                {unsupportedBase ? (
-                  <>Your client is currently on a patch version unsupported by the UTBT Launcher.<br />In order to continue using the application, you need to upgrade.</>
-                ) : (
-                  <>Our servers require all players to be on the 469 patch.<br />Please update in order to be able to play on UTBT.</>
-                )}
-              </i>
-            </b>
+          <p className="update-modal-forced-message">
+            <span className="update-modal-forced-text">
+              {unsupportedBase ? (
+                <>Your client is currently on a patch version unsupported by the UTBT Launcher.<br />In order to continue using the application, you need to upgrade.</>
+              ) : (
+                <>Our servers require all players to be on the 469 patch.<br />Please update in order to be able to play on UTBT.</>
+              )}
+            </span>
           </p>
         )}
         
         {manifest.channel === 'rc' && (
           <>
-            <p className="text-[12px] text-amber-400/90 mb-3">
-              <i>Please note that this is a <b>Release Candidate</b> patch.</i>
+            <p className="update-modal-rc-warning">
+              Please note that this is a <b>Release Candidate</b> patch.
               <br />
-              <i>Thich means that some instability could be expected.</i>
+              This means that some instability could be expected.
             </p>
           </>
         )}
@@ -149,33 +182,33 @@ export function UpdateModal({
         )}
 
         {updating && (
-          <div className="mb-3 space-y-2">
-            <div className="w-full h-2 bg-gray-700 rounded-full overflow-hidden">
+          <div className="update-modal-progress-container">
+            <div className="update-modal-progress-bar">
               <div 
-                className="h-full bg-blue-500 rounded-full transition-all duration-300" 
+                className="update-modal-progress-fill" 
                 style={{ width: `${updateProgress}%` }} 
               />
             </div>
-            <p className="text-[12px] text-gray-400 text-center">{updateText}</p>
+            <p className="update-modal-progress-text">{updateText}</p>
           </div>
         )}
 
         <br />
 
         {shouldShowPatchPicker && !updating && (
-          <div className="mb-3 space-y-2">
-            <p className="text-[12px] text-gray-300">
+          <div className="update-modal-patch-section">
+            <p className="update-modal-patch-label">
               Select the patch you want to install:
             </p>
-            <div className="flex items-center gap-2">
+            <div className="update-modal-patch-selector-container">
               <select
-                className="w-full bg-gray-800 border border-gray-600 rounded px-2 py-1 text-[13px] text-gray-200"
+                className="update-modal-patch-selector"
                 value={selectedPatchTag ?? ''}
                 onChange={(e) => setSelectedPatchTag(e.target.value)}
                 disabled={loadingPatches}
               >
                 {availablePatches.map((p) => (
-                  <option key={p.tag} value={p.tag}>
+                  <option key={p.tag} value={p.tag} className="update-modal-patch-option">
                     {p.tag}{p.channel ? ` • ${String(p.channel).toUpperCase()}` : ''}
                   </option>
                 ))}
@@ -184,11 +217,11 @@ export function UpdateModal({
           </div>
         )}
 
-        <div className="flex justify-end items-center gap-2">
+        <div className="update-modal-actions">
           {!forced && (
             <Button 
               variant="outline" 
-              className="text-gray-300 border-gray-600 hover:bg-gray-700/60" 
+              className="update-modal-later-button" 
               onClick={onClose} 
               disabled={updating}
             >
@@ -196,7 +229,7 @@ export function UpdateModal({
             </Button>
           )}
           <Button 
-            className="bg-blue-600 hover:bg-blue-700" 
+            className="update-modal-update-button" 
             onClick={handleUpdateClick} 
             disabled={updating || (shouldShowPatchPicker && !selectedPatchTag)}
           >

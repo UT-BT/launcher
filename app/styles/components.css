@@ -289,3 +289,174 @@
   background: rgba(15, 23, 42, 0.98);
   color: rgba(248, 250, 252, 0.95);
 }
+
+.update-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 90;
+}
+
+.update-modal-content {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 99;
+  width: 420px;
+  max-width: 90vw;
+  background: #0f1629;
+  border: 1px solid rgb(55, 65, 81);
+  border-radius: 0.5rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  padding: 1.25rem;
+  height: auto;
+}
+
+.update-modal-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: white;
+  margin-bottom: 0.5rem;
+}
+
+.update-modal-description {
+  font-size: 0.8125rem;
+  color: rgb(209, 213, 219);
+  margin-bottom: 0.5rem;
+}
+
+.update-modal-version-info {
+  font-size: 0.75rem;
+  color: rgb(156, 163, 175);
+  margin-bottom: 0.5rem;
+}
+
+.update-modal-version-highlight {
+  color: rgb(229, 231, 235);
+  font-weight: bold;
+}
+
+.update-modal-forced-message {
+  font-size: 0.75rem;
+  color: rgb(209, 213, 219);
+  margin-bottom: 0.5rem;
+}
+
+.update-modal-forced-text {
+  font-weight: bold;
+  font-style: italic;
+  color: rgb(239, 68, 68);
+}
+
+.update-modal-rc-warning {
+  font-size: 0.75rem;
+  color: rgba(251, 191, 36, 0.9);
+  margin-bottom: 0.75rem;
+  font-style: italic;
+}
+
+.update-modal-progress-container {
+  margin-bottom: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.update-modal-progress-bar {
+  width: 100%;
+  height: 0.5rem;
+  background: rgb(55, 65, 81);
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.update-modal-progress-fill {
+  height: 100%;
+  background: rgb(59, 130, 246);
+  border-radius: 9999px;
+  transition: width 0.3s ease;
+}
+
+.update-modal-progress-text {
+  font-size: 0.75rem;
+  color: rgb(156, 163, 175);
+  text-align: center;
+}
+
+.update-modal-patch-section {
+  margin-bottom: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.update-modal-patch-label {
+  font-size: 0.75rem;
+  color: rgb(209, 213, 219);
+}
+
+.update-modal-patch-selector-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  position: relative;
+  z-index: 110;
+}
+
+.update-modal-patch-selector {
+  width: 100%;
+  background: rgb(31, 41, 55);
+  border: 1px solid rgb(75, 85, 99);
+  border-radius: 0.25rem;
+  padding: 0.25rem 2.5rem 0.25rem 0.5rem;
+  font-size: 0.8125rem;
+  color: rgb(229, 231, 235);
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 0.5rem center;
+  background-repeat: no-repeat;
+  background-size: 1.5em 1.5em;
+}
+
+.update-modal-patch-selector:focus {
+  outline: none;
+  border-color: rgb(59, 130, 246);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+}
+
+.update-modal-patch-selector:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.update-modal-patch-option {
+  background: rgb(31, 41, 55);
+  color: rgb(229, 231, 235);
+  padding: 0.25rem;
+}
+
+.update-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.update-modal-later-button {
+  color: rgb(209, 213, 219);
+  border-color: rgb(75, 85, 99);
+}
+
+.update-modal-later-button:hover {
+  background: rgba(55, 65, 81, 0.6);
+}
+
+.update-modal-update-button {
+  background: rgb(37, 99, 235);
+}
+
+.update-modal-update-button:hover {
+  background: rgb(29, 78, 216);
+}

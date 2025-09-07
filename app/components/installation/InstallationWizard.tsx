@@ -3,6 +3,7 @@ import { fadeInUp, scaleIn, scaleFadeIn } from '@/app/components/shared/animatio
 import { Button } from '@/app/components/ui/button'
 import { useInstallation } from '@/app/hooks/useInstallation'
 import { useConfirmDialog } from '@/app/hooks/useConfirmDialog'
+import { useLogger } from '@/app/hooks/use-logger'
 import { Modal } from '@/app/components/shared/Modal'
 import { ConfirmModal } from '@/app/components/shared/ConfirmModal'
 import { ProgressSection } from '@/app/components/shared/ProgressSection'
@@ -18,9 +19,14 @@ interface InstallationWizardProps {
 }
 
 export function InstallationWizard({ onBack, onComplete: _onComplete }: InstallationWizardProps) {
+  const logger = useLogger('InstallationWizard')
   const { state, config, actions } = useInstallation({
-    onInstallComplete: () => setShowInstallPathModal(true),
+    onInstallComplete: () => {
+      logger.info('Installation completed, showing install path modal')
+      setShowInstallPathModal(true)
+    },
     onAnnouncerComplete: () => {
+      logger.info('Announcer installation completed, showing shortcut modal')
       installationService.setWindowLocked(false)
       setShowShortcutModal(true)
     }
@@ -41,15 +47,22 @@ export function InstallationWizard({ onBack, onComplete: _onComplete }: Installa
   const [upgradeInProgress, setUpgradeInProgress] = useState(false)
 
   const handleChooseExisting = async () => {
+    logger.info('User clicked "Choose Existing Install"')
     const path = await actions.pickInstallFolder()
-    if (!path) return
-    
+    if (!path) {
+      logger.info('User cancelled folder selection')
+      return
+    }
+
+    logger.info('User selected install path', { path })
     const success = await actions.setInstallPath(path)
     if (!success) {
+      logger.error('Invalid install path selected', { path })
       setErrorMessage('Invalid UT99 installation directory.\n\nPlease select the folder containing:\nSystem/UnrealTournament.exe')
       setShowErrorModal(true)
       return
     }
+    logger.info('Install path set successfully', { path })
 
     try {
       const md5 = await window.conveyor.app.getExeMD5(path)
@@ -91,30 +104,44 @@ export function InstallationWizard({ onBack, onComplete: _onComplete }: Installa
   }
 
   const handleStartInstallation = () => {
+    logger.info('User started installation', {
+      patchChannel: config.patchChannel,
+      installPath: config.installPath
+    })
     actions.startInstallation()
   }
 
   const handlePatchChannelChange = (channel: 'stable' | 'rc') => {
+    logger.info('User changed patch channel', { from: config.patchChannel, to: channel })
     actions.setPatchChannel(channel)
   }
 
   const handleModalInstallPathSelect = async () => {
+    logger.info('User selecting install path after installation completion')
     const path = await actions.pickInstallFolder()
-    if (!path) return
+    if (!path) {
+      logger.info('User cancelled install path selection')
+      return
+    }
 
+    logger.info('User selected post-install path', { path })
     const success = await actions.setInstallPath(path)
     if (!success) {
+      logger.error('Invalid post-install path selected', { path })
       setErrorMessage('Invalid UT99 installation directory.\n\nPlease select the folder containing:\nSystem/UnrealTournament.exe')
       setShowErrorModal(true)
       return
     }
 
+    logger.info('Post-install path set successfully', { path })
     setShowInstallPathModal(false)
 
     try {
+      logger.info('Applying patch after install', { path, patchChannel: config.patchChannel })
       await actions.applyPatchAfterInstall(path, config.patchChannel)
+      logger.info('Post-install patch application completed')
     } catch (error) {
-      console.error('Patch application failed after install:', error)
+      logger.error('Patch application failed after install', { error, path })
     }
   }
 
@@ -126,17 +153,31 @@ export function InstallationWizard({ onBack, onComplete: _onComplete }: Installa
   }
 
   const handleCreateShortcuts = async () => {
-    if (!config.installPath) return
+    if (!config.installPath) {
+      logger.warn('Cannot create shortcuts - no install path')
+      return
+    }
+
+    logger.info('Creating shortcuts', {
+      installPath: config.installPath,
+      desktop: shortcutOptions.desktop,
+      startMenu: shortcutOptions.startMenu
+    })
 
     try {
       if (shortcutOptions.desktop) {
+        logger.info('Creating desktop shortcut')
         await window.conveyor.app.createDesktopShortcut(config.installPath)
+        logger.info('Desktop shortcut created successfully')
       }
       if (shortcutOptions.startMenu) {
+        logger.info('Creating start menu shortcut')
         await window.conveyor.app.createStartMenuShortcut(config.installPath)
+        logger.info('Start menu shortcut created successfully')
       }
+      logger.info('All shortcuts created successfully')
     } catch (error) {
-      console.error('Shortcut creation failed:', error)
+      logger.error('Shortcut creation failed', { error })
       setErrorMessage('Failed to create shortcuts. You can create them manually later.')
       setShowErrorModal(true)
     }
@@ -145,6 +186,7 @@ export function InstallationWizard({ onBack, onComplete: _onComplete }: Installa
   }
 
   const handleSkipShortcuts = () => {
+    logger.info('User skipped shortcut creation')
     setShowShortcutModal(false)
   }
 
