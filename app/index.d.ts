@@ -41,4 +41,13 @@ interface Window {
   utPatch: {
     onStatus: (cb: (data: { status: string; message?: string; tag?: string }) => void) => () => void
   }
+  logging: {
+    log: (level: string, message: string, context?: string, data?: any) => Promise<void>
+    info: (message: string, context?: string, data?: any) => Promise<void>
+    warn: (message: string, context?: string, data?: any) => Promise<void>
+    error: (message: string, context?: string, data?: any) => Promise<void>
+    debug: (message: string, context?: string, data?: any) => Promise<void>
+    getLogFilePath: () => Promise<string>
+    getRecentLogs: (lines?: number) => Promise<string[]>
+  }
 }

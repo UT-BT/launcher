@@ -123,4 +123,22 @@ export const appIpcSchema = {
     })]),
     return: z.void(),
   },
+
+  logMessage: {
+    args: z.tuple([
+      z.union([z.literal('info'), z.literal('warn'), z.literal('error'), z.literal('debug')]),
+      z.string(),
+      z.string().optional(),
+      z.any().optional(),
+    ]),
+    return: z.void(),
+  },
+  getLogFilePath: {
+    args: z.tuple([]),
+    return: z.string(),
+  },
+  getRecentLogs: {
+    args: z.tuple([z.number().optional()]),
+    return: z.array(z.string()),
+  },
 }

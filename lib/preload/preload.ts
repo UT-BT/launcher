@@ -40,6 +40,25 @@ if (process.contextIsolated) {
         return () => ipcRenderer.removeListener('ut-patch-status', listener)
       },
     })
+    contextBridge.exposeInMainWorld('logging', {
+      log: async (level: string, message: string, context?: string, data?: any) => {
+        return ipcRenderer.invoke('logMessage', level, message, context, data)
+      },
+      info: async (message: string, context?: string, data?: any) => {
+        return ipcRenderer.invoke('logMessage', 'info', message, context, data)
+      },
+      warn: async (message: string, context?: string, data?: any) => {
+        return ipcRenderer.invoke('logMessage', 'warn', message, context, data)
+      },
+      error: async (message: string, context?: string, data?: any) => {
+        return ipcRenderer.invoke('logMessage', 'error', message, context, data)
+      },
+      debug: async (message: string, context?: string, data?: any) => {
+        return ipcRenderer.invoke('logMessage', 'debug', message, context, data)
+      },
+      getLogFilePath: async () => ipcRenderer.invoke('getLogFilePath'),
+      getRecentLogs: async (lines?: number) => ipcRenderer.invoke('getRecentLogs', lines),
+    })
   } catch (error) {
     console.error(error)
   }
@@ -77,5 +96,24 @@ if (process.contextIsolated) {
       ipcRenderer.on('ut-patch-status', listener)
       return () => ipcRenderer.removeListener('ut-patch-status', listener)
     },
+  }
+  window.logging = {
+    log: async (level: string, message: string, context?: string, data?: any) => {
+      return ipcRenderer.invoke('logMessage', level, message, context, data)
+    },
+    info: async (message: string, context?: string, data?: any) => {
+      return ipcRenderer.invoke('logMessage', 'info', message, context, data)
+    },
+    warn: async (message: string, context?: string, data?: any) => {
+      return ipcRenderer.invoke('logMessage', 'warn', message, context, data)
+    },
+    error: async (message: string, context?: string, data?: any) => {
+      return ipcRenderer.invoke('logMessage', 'error', message, context, data)
+    },
+    debug: async (message: string, context?: string, data?: any) => {
+      return ipcRenderer.invoke('logMessage', 'debug', message, context, data)
+    },
+    getLogFilePath: async () => ipcRenderer.invoke('getLogFilePath'),
+    getRecentLogs: async (lines?: number) => ipcRenderer.invoke('getRecentLogs', lines),
   }
 }

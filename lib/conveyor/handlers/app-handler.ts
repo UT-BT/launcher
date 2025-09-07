@@ -2,6 +2,7 @@ import { app, dialog, type BrowserWindow, ipcMain } from 'electron'
 import { handle } from '@/lib/main/shared'
 import { getUt99InstallPath, setUt99InstallPath, getPatchChannel, setPatchChannel, getInstalledPatch, setInstalledPatch, setBaseVersion, markFreshInstall, getBaseVersion, getGatewayConfig, setGatewayConfig } from '@/lib/main/config'
 import { gatewayService } from '@/lib/main/gateway-service'
+import { loggingService } from '@/lib/main/logging-service'
 import { join } from 'path'
 import { createWriteStream, existsSync, mkdirSync, statSync, readFileSync, writeFileSync } from 'fs'
 import { createHash } from 'crypto'
@@ -10,7 +11,13 @@ import { IncomingMessage } from 'http'
 import { spawn } from 'child_process'
 
 export const registerAppHandlers = (_window: BrowserWindow) => {
-  handle('version', () => app.getVersion())
+  loggingService.info('Registering app IPC handlers', 'MainProcess')
+
+  handle('version', () => {
+    const version = app.getVersion()
+    loggingService.debug('Version requested', 'MainProcess', { version })
+    return version
+  })
   handle('getInstallPath', () => getUt99InstallPath())
   handle('setInstallPath', (path: string) => setUt99InstallPath(path))
   handle('selectInstallFolder', () => {
@@ -502,5 +509,21 @@ $Shortcut.Save()
         reject(err)
       })
     })
+  })
+
+  handle('logMessage', (level: 'info' | 'warn' | 'error' | 'debug', message: string, context?: string, data?: any) => {
+    loggingService.log(level, message, context, data)
+  })
+
+  handle('getLogFilePath', () => {
+    const logPath = loggingService.getLogFilePath()
+    loggingService.debug('Log file path requested', 'MainProcess', { logPath })
+    return logPath
+  })
+
+  handle('getRecentLogs', (lines?: number) => {
+    const logs = loggingService.getRecentLogs(lines)
+    loggingService.debug('Recent logs requested', 'MainProcess', { lines, count: logs.length })
+    return logs
   })
 }
