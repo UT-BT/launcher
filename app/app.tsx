@@ -1,62 +1,61 @@
 import { useEffect, useState, useCallback } from 'react'
-import { WelcomeScreen } from '@/app/components/welcome/WelcomeScreen'
+import { SplashScreen } from '@/app/components/welcome/WelcomeScreen'
+import { Main } from '@/app/components/main/Main'
 import { InstallationWizard } from '@/app/components/installation/InstallationWizard'
 import { Modal } from '@/app/components/shared/Modal'
 import { Button } from '@/app/components/ui/button'
 import './styles/index.css'
 
 export default function App() {
-  const [screen, setScreen] = useState<'welcome' | 'install'>('welcome')
-  const [checking, setChecking] = useState(true)
+  const [appPhase, setAppPhase] = useState<'splash' | 'install' | 'main'>('splash')
   const [forceInstallPrompt, setForceInstallPrompt] = useState(false)
 
-  const runStartupChecks = useCallback(async () => {
+  const runInstallationChecks = useCallback(async () => {
     try {
       setForceInstallPrompt(false)
-      setChecking(true)
       const installPath = await window.conveyor.app.getInstallPath()
       if (!installPath) {
         setForceInstallPrompt(true)
-        return
+        return false
       }
       const isValid = await window.conveyor.app.verifyInstallPath(installPath)
       if (!isValid) {
         setForceInstallPrompt(true)
-        return
+        return false
       }
+      return true
     } catch {
       setForceInstallPrompt(true)
-    } finally {
-      setChecking(false)
+      return false
     }
   }, [])
 
+  const handleSplashComplete = () => {
+    setAppPhase('main')
+  }
+
+  const handleShowInstallWizard = () => {
+    setAppPhase('install')
+  }
+
   useEffect(() => {
-    if (screen === 'welcome') {
-      runStartupChecks()
+    if (appPhase === 'splash') {
+      runInstallationChecks()
     }
-  }, [screen, runStartupChecks])
+  }, [appPhase, runInstallationChecks])
 
   return (
     <>
-      {screen === 'install' ? (
-        <InstallationWizard 
-          onBack={() => setScreen('welcome')}
-          onComplete={() => setScreen('welcome')}
+      {appPhase === 'install' ? (
+        <InstallationWizard
+          onBack={() => setAppPhase('splash')}
+          onComplete={() => setAppPhase('splash')}
         />
+      ) : appPhase === 'main' ? (
+        <Main />
       ) : (
         <>
-          {checking ? (
-            <div className="page-container">
-              <div className="nebula-bg" aria-hidden="true" />
-              <div className="page-content" style={{ textAlign: 'center' }}>
-                <h1 className="gradient-title">Loading…</h1>
-                <p>Checking your UT99 installation</p>
-              </div>
-            </div>
-          ) : (
-            <WelcomeScreen />
-          )}
+          <SplashScreen onReady={handleSplashComplete} />
 
           <Modal
             isOpen={forceInstallPrompt}
@@ -71,7 +70,7 @@ export default function App() {
               Please run the installation wizard to continue to the launcher.
             </p>
             <div className="modal-actions">
-              <Button onClick={() => setScreen('install')}>Open Installation Wizard</Button>
+              <Button onClick={handleShowInstallWizard}>Open Installation Wizard</Button>
             </div>
           </Modal>
         </>

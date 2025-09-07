@@ -32,5 +32,3 @@ export function scaleFadeIn(fromScale: number = 0.8, duration: number = 0.5): Va
     })
   }
 }
-
-
