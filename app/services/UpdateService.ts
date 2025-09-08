@@ -50,8 +50,46 @@ export class UpdateService {
       }
 
       const baseVersion = await this.app.getBaseVersion()
-      const isUnsupportedBase = baseVersion === 'unsupported'
-      await window.logging.debug('Base version check', 'UpdateService', { baseVersion, isUnsupportedBase })
+      const installed = await this.app.getInstalledPatch()
+
+      await window.logging.debug('Current installation state', 'UpdateService', { 
+        baseVersion, 
+        installedPatch: installed?.tag 
+      })
+
+      const allPatchesResp = await this.app.fetchPatches()
+      if (!allPatchesResp?.success || !allPatchesResp.data) {
+        await window.logging.warn('Failed to fetch patches list', 'UpdateService')
+        return { available: false, forced: false }
+      }
+
+      const activePatches = allPatchesResp.data.filter((p: any) => p.active === true)
+      const channelPatches = activePatches.filter((p: any) => 
+        !channel || p.channel === channel || (channel === 'stable' && !p.channel)
+      )
+
+      await window.logging.debug('Found active patches', 'UpdateService', { 
+        totalActive: activePatches.length,
+        channelPatches: channelPatches.length
+      })
+
+      if (channelPatches.length === 0) {
+        await window.logging.warn('No active patches found for channel', 'UpdateService', { channel })
+        return { available: false, forced: false }
+      }
+
+      let isUnsupportedBase = false
+      if (installed) {
+        const installedPatchIsActive = activePatches.some((p: any) => p.tag === installed.tag)
+        if (!installedPatchIsActive) {
+          await window.logging.warn('Installed patch is not in active patches list', 'UpdateService', { 
+            installedTag: installed.tag 
+          })
+          isUnsupportedBase = true
+        }
+      } else if (baseVersion === 'unsupported') {
+        isUnsupportedBase = true
+      }
 
       const manifestResp = await this.app.fetchLatestPatchManifest(
         channel === 'stable' ? true : undefined
@@ -59,16 +97,16 @@ export class UpdateService {
 
       if (!manifestResp?.success || !manifestResp.data) {
         await window.logging.warn('Failed to fetch latest patch manifest', 'UpdateService', { success: manifestResp?.success })
-        return { available: false, forced: false }
+        return { available: false, forced: false, unsupportedBase: isUnsupportedBase }
       }
 
-      const installed = await this.app.getInstalledPatch()
-      const needsUpdate = !installed || installed.tag !== manifestResp.data.tag
+      const needsUpdate = !installed || installed.tag !== manifestResp.data.tag || isUnsupportedBase
 
       await window.logging.debug('Update check results', 'UpdateService', {
         installedTag: installed?.tag,
         latestTag: manifestResp.data.tag,
-        needsUpdate
+        needsUpdate,
+        isUnsupportedBase
       })
 
       if (needsUpdate) {
