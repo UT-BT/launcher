@@ -45,10 +45,18 @@ export class LoggingService {
   private formatLogEntry(entry: LogEntry): string {
     const timestamp = new Date(entry.timestamp).toISOString()
     const level = entry.level.toUpperCase().padEnd(5)
-    const context = entry.context ? `[${entry.context}] ` : ''
-    const data = entry.data ? `\nData: ${JSON.stringify(entry.data, null, 2)}` : ''
+    const context = entry.context ? `[${entry.context}]: ` : ''
 
-    return `${timestamp} ${level} ${context}${entry.message}${data}\n`
+    let data = ''
+    if (typeof entry.data === 'object') {
+      data = `: ${JSON.stringify(entry.data, null)}`
+    } else if (typeof entry.data === 'string') {
+      data = `: ${entry.data}`
+    } else {
+      data = ''
+    }
+
+    return `[${timestamp}] [${level}] ${context}${entry.message}${data}\n`
   }
 
   log(level: LogLevel, message: string, context?: string, data?: any): void {
@@ -73,10 +81,12 @@ export class LoggingService {
       console.error('Failed to write to log file:', error)
     }
 
-    if (level === 'error') {
-      console.error(`[${level.toUpperCase()}] ${context ? `[${context}] ` : ''}${message}`, data || '')
-    } else if (level === 'warn') {
-      console.warn(`[${level.toUpperCase()}] ${context ? `[${context}] ` : ''}${message}`, data || '')
+    if (process.env.NODE_ENV === 'development') { // only show in development mode
+      if (level === 'error') {
+        console.error(`[${level.toUpperCase()}] ${context ? `[${context}] ` : ''}${message}`, data || '')
+      } else if (level === 'warn') {
+          console.warn(`[${level.toUpperCase()}] ${context ? `[${context}] ` : ''}${message}`, data || '')
+      }
     }
   }
 

@@ -125,7 +125,7 @@ export const registerAppHandlers = (_window: BrowserWindow) => {
       const md5 = createHash('md5').update(buf).digest('hex')
       return md5
     } catch (err) {
-      console.warn('getExeMD5 failed:', err)
+      loggingService.warn('getExeMD5 failed:', 'MainProcess', err)
       return undefined
     }
   })
@@ -174,29 +174,29 @@ export const registerAppHandlers = (_window: BrowserWindow) => {
       return new Promise<void>((resolve, reject) => {
         const psScript = `
 try {
-  Write-Host "Mounting ${cdName}..."
+  [Console]::Out.WriteLine((@{level='info'; message="Mounting ${cdName}..."} | ConvertTo-Json -Compress))
   $mount = Mount-DiskImage -ImagePath "${isoPath}" -PassThru
   $volume = $mount | Get-Volume
   $driveLetter = $volume.DriveLetter
   if (-not $driveLetter) {
     throw "Failed to get drive letter for mounted ISO"
   }
-  Write-Host "Mounted to drive $driveLetter"
-  
+  [Console]::Out.WriteLine((@{level='info'; message="Mounted to drive $driveLetter"} | ConvertTo-Json -Compress))
+
   $setupPath = "$driveLetter" + ":\\Setup.exe"
   if (-not (Test-Path $setupPath)) {
     throw "Setup.exe not found at $setupPath"
   }
-  
-  Write-Host "Running Setup.exe..."
+
+  [Console]::Out.WriteLine((@{level='info'; message="Running Setup.exe..."} | ConvertTo-Json -Compress))
   $process = Start-Process -FilePath $setupPath -Wait -PassThru
-  Write-Host "Setup.exe exited with code $($process.ExitCode)"
-  
-  Write-Host "Unmounting ${cdName}..."
+  [Console]::Out.WriteLine((@{level='info'; message="Setup.exe exited with code $($process.ExitCode)"} | ConvertTo-Json -Compress))
+
+  [Console]::Out.WriteLine((@{level='info'; message="Unmounting..."} | ConvertTo-Json -Compress))
   Dismount-DiskImage -ImagePath "${isoPath}"
-  Write-Host "Done with ${cdName}"
+  [Console]::Out.WriteLine((@{level='info'; message="Unmounted!"} | ConvertTo-Json -Compress))
 } catch {
-  Write-Error "Error with ${cdName}: $($_.Exception.Message)"
+  [Console]::Error.WriteLine((@{level='error'; message="Error with ${cdName}: $($_.Exception.Message)"} | ConvertTo-Json -Compress))
   try { Dismount-DiskImage -ImagePath "${isoPath}" -ErrorAction SilentlyContinue } catch {}
   exit 1
 }`
@@ -212,19 +212,43 @@ try {
 
         let stdout = ''
         let stderr = ''
-        
+
         ps.stdout?.on('data', (data) => {
           stdout += data.toString()
-          console.warn(`${cdName} stdout:`, data.toString().trim())
+          const lines = data.toString().trim().split('\n')
+          lines.forEach(line => {
+            if (line.trim()) {
+              try {
+                const logEntry = JSON.parse(line.trim())
+                if (logEntry.level && logEntry.message) {
+                  loggingService.log(logEntry.level, logEntry.message, `PowerShell`, logEntry.data)
+                }
+              } catch {
+                loggingService.warn(`${cdName}`, 'PowerShell', line)
+              }
+            }
+          })
         })
-        
+
         ps.stderr?.on('data', (data) => {
           stderr += data.toString()
-          console.error(`${cdName} stderr:`, data.toString().trim())
+          const lines = data.toString().trim().split('\n')
+          lines.forEach(line => {
+            if (line.trim()) {
+              try {
+                const logEntry = JSON.parse(line.trim())
+                if (logEntry.level && logEntry.message) {
+                  loggingService.log(logEntry.level, logEntry.message, `PowerShell`, logEntry.data)
+                }
+              } catch {
+                loggingService.error(`${cdName}`, 'PowerShell', line)
+              }
+            }
+          })
         })
 
         ps.on('exit', (code) => {
-          console.warn(`${cdName} PowerShell exit code:`, code)
+          loggingService.info(`Exit code: ${code}`, `PowerShell`)
           if (code === 0) {
             resolve()
           } else {
@@ -233,7 +257,7 @@ try {
         })
 
         ps.on('error', (err) => {
-          console.error(`${cdName} PowerShell process error:`, err)
+          loggingService.error(`Process error: ${err.message}`, `PowerShell`, err)
           reject(err)
         })
       })
@@ -294,13 +318,13 @@ try {
         }
       }
     } catch (err) {
-      console.warn('CD2 prompt failed, skipping CD2:', err)
+      loggingService.warn('CD2 prompt failed, skipping CD2:', 'MainProcess', err)
     }
 
     try {
       markFreshInstall('v432')
     } catch (err) {
-      console.warn('Failed to mark fresh install:', err)
+      loggingService.warn('Failed to mark fresh install:', 'MainProcess', err)
     }
     try { _window.webContents.send('ut-install-status', { status: 'complete' }) } catch { /* ignore */ }
   })
@@ -334,35 +358,83 @@ try {
     const fileName = m.asset_url.split('/').pop() || `patch-${m.tag}.zip`
     const dest = join(tmpDir, fileName)
 
-    try { _window.webContents.send('ut-patch-status', { status: 'downloading', tag: m.tag }) } catch (err) { console.warn('patch status send failed', err) }
+    try { _window.webContents.send('ut-patch-status', { status: 'downloading', tag: m.tag }) } catch (err) { loggingService.warn('patch status send failed', 'MainProcess', err) }
     await downloadFile(m.asset_url, dest, 'patch')
 
     const actual = calculateSHA256(dest)
     if (actual.toLowerCase() !== m.sha256.toLowerCase()) {
-      try { _window.webContents.send('ut-patch-status', { status: 'error', message: 'SHA256 mismatch' }) } catch (err) { console.warn('patch status send failed', err) }
+      try { _window.webContents.send('ut-patch-status', { status: 'error', message: 'SHA256 mismatch' }) } catch (err) { loggingService.warn('patch status send failed', 'MainProcess', err) }
       throw new Error('SHA256 mismatch')
     }
 
-    try { _window.webContents.send('ut-patch-status', { status: 'verifying', tag: m.tag }) } catch (err) { console.warn('patch status send failed', err) }
+    try { _window.webContents.send('ut-patch-status', { status: 'verifying', tag: m.tag }) } catch (err) { loggingService.warn('patch status send failed', 'MainProcess', err) }
 
-    try { _window.webContents.send('ut-patch-status', { status: 'applying', tag: m.tag }) } catch (err) { console.warn('patch status send failed', err) }
+    try { _window.webContents.send('ut-patch-status', { status: 'applying', tag: m.tag }) } catch (err) { loggingService.warn('patch status send failed', 'MainProcess', err) }
     await new Promise<void>((resolve, reject) => {
       const escapePs = (s: string) => s.replace(/`/g, '``').replace(/"/g, '`"')
       const zipEsc = escapePs(dest)
       const destEsc = escapePs(installPath)
       const psScript = `
 $ErrorActionPreference = 'Stop'
-if (-not (Test-Path -LiteralPath "${zipEsc}")) { exit 2 }
+[Console]::Out.WriteLine((@{level='info'; message='Starting patch extraction...'} | ConvertTo-Json -Compress))
+if (-not (Test-Path -LiteralPath "${zipEsc}")) {
+  [Console]::Error.WriteLine((@{level='error'; message='Patch file not found'} | ConvertTo-Json -Compress))
+  exit 2
+}
+[Console]::Out.WriteLine((@{level='info'; message='Extracting patch files...'} | ConvertTo-Json -Compress))
 Expand-Archive -LiteralPath "${zipEsc}" -DestinationPath "${destEsc}" -Force
+[Console]::Out.WriteLine((@{level='info'; message='Patch extraction completed successfully'} | ConvertTo-Json -Compress))
 `
       const ps = spawn('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', psScript], {
         windowsHide: true,
       })
-      ps.on('exit', (code) => {
-        if (code === 0) resolve()
-        else reject(new Error(`Expand-Archive failed: ${code}`))
+
+      let stdout = ''
+      let stderr = ''
+
+      ps.stdout?.on('data', (data) => {
+        stdout += data.toString()
+        const lines = data.toString().trim().split('\n')
+        lines.forEach(line => {
+          if (line.trim()) {
+            try {
+              const logEntry = JSON.parse(line.trim())
+              if (logEntry.level && logEntry.message) {
+                loggingService.log(logEntry.level, logEntry.message, 'PowerShell', logEntry.data)
+              }
+            } catch {
+              loggingService.warn('Patch', 'PowerShell', line)
+            }
+          }
+        })
       })
-      ps.on('error', reject)
+
+      ps.stderr?.on('data', (data) => {
+        stderr += data.toString()
+        const lines = data.toString().trim().split('\n')
+        lines.forEach(line => {
+          if (line.trim()) {
+            try {
+              const logEntry = JSON.parse(line.trim())
+              if (logEntry.level && logEntry.message) {
+                loggingService.log(logEntry.level, logEntry.message, 'PowerShell', logEntry.data)
+              }
+            } catch {
+              loggingService.error('Patch', 'PowerShell', line)
+            }
+          }
+        })
+      })
+
+      ps.on('exit', (code) => {
+        loggingService.info(`Patch extraction PowerShell exit code: ${code}`, 'PowerShell')
+        if (code === 0) resolve()
+        else reject(new Error(`Expand-Archive failed: ${code}. Stdout: ${stdout}. Stderr: ${stderr}`))
+      })
+      ps.on('error', (err) => {
+        loggingService.error(`Patch extraction PowerShell process error: ${err.message}`, 'PowerShell', err)
+        reject(err)
+      })
     })
 
     try {
@@ -370,10 +442,10 @@ Expand-Archive -LiteralPath "${zipEsc}" -DestinationPath "${destEsc}" -Force
       writeFileSync(join(installPath, '.utbt-installed-patch.json'), JSON.stringify(stamp, null, 2), 'utf-8')
       setInstalledPatch(stamp)
     } catch (err) {
-      console.warn('Failed writing installed patch stamp:', err)
+      loggingService.warn('Failed writing installed patch stamp:', 'MainProcess', err)
     }
 
-    try { _window.webContents.send('ut-patch-status', { status: 'complete', tag: m.tag }) } catch (err) { console.warn('patch status send failed', err) }
+    try { _window.webContents.send('ut-patch-status', { status: 'complete', tag: m.tag }) } catch (err) { loggingService.warn('patch status send failed', 'MainProcess', err) }
   })
 
   handle('installAnnouncerUax', async () => {
@@ -432,6 +504,7 @@ Expand-Archive -LiteralPath "${zipEsc}" -DestinationPath "${destEsc}" -Force
 
     const psScript = `
 $ErrorActionPreference = 'Stop'
+[Console]::Out.WriteLine((@{level='info'; message='Creating desktop shortcut...'} | ConvertTo-Json -Compress))
 $WshShell = New-Object -comObject WScript.Shell
 $Shortcut = $WshShell.CreateShortcut("${shortcutPath.replace(/\\/g, '\\\\')}")
 $Shortcut.TargetPath = "${exePath.replace(/\\/g, '\\\\')}"
@@ -439,6 +512,7 @@ $Shortcut.WorkingDirectory = "${installPath.replace(/\\/g, '\\\\')}"
 $Shortcut.IconLocation = "${exePath.replace(/\\/g, '\\\\')},0"
 $Shortcut.Description = "Unreal Tournament 1999"
 $Shortcut.Save()
+[Console]::Out.WriteLine((@{level='info'; message='Desktop shortcut created successfully'} | ConvertTo-Json -Compress))
 `
 
     return new Promise<void>((resolve, reject) => {
@@ -451,16 +525,54 @@ $Shortcut.Save()
         stdio: ['pipe', 'pipe', 'pipe']
       })
 
+      let stdout = ''
+      let stderr = ''
+
+      ps.stdout?.on('data', (data) => {
+        stdout += data.toString()
+        const lines = data.toString().trim().split('\n')
+        lines.forEach(line => {
+          if (line.trim()) {
+            try {
+              const logEntry = JSON.parse(line.trim())
+              if (logEntry.level && logEntry.message) {
+                loggingService.log(logEntry.level, logEntry.message, 'PowerShell', logEntry.data)
+              }
+            } catch {
+              loggingService.warn('Desktop Shortcut:', 'PowerShell', line)
+            }
+          }
+        })
+      })
+
+      ps.stderr?.on('data', (data) => {
+        stderr += data.toString()
+        const lines = data.toString().trim().split('\n')
+        lines.forEach(line => {
+          if (line.trim()) {
+            try {
+              const logEntry = JSON.parse(line.trim())
+              if (logEntry.level && logEntry.message) {
+                loggingService.log(logEntry.level, logEntry.message, 'PowerShell', logEntry.data)
+              }
+            } catch {
+              loggingService.error('Desktop Shortcut:', 'PowerShell', line)
+            }
+          }
+        })
+      })
+
       ps.on('exit', (code) => {
+        loggingService.info(`Desktop shortcut creation PowerShell exit code: ${code}`, 'PowerShell')
         if (code === 0) {
           resolve()
         } else {
-          reject(new Error(`Desktop shortcut creation failed with exit code ${code}`))
+          reject(new Error(`Desktop shortcut creation failed with exit code ${code}. Stdout: ${stdout}. Stderr: ${stderr}`))
         }
       })
 
       ps.on('error', (err) => {
-        console.error('Desktop shortcut creation error:', err)
+        loggingService.error(`Desktop shortcut creation PowerShell process error: ${err.message}`, 'PowerShell', err)
         reject(err)
       })
     })
@@ -474,9 +586,12 @@ $Shortcut.Save()
 
     const psScript = `
 $ErrorActionPreference = 'Stop'
+[Console]::Out.WriteLine((@{level='info'; message='Creating Start Menu shortcut...'} | ConvertTo-Json -Compress))
 if (-not (Test-Path "${utFolder.replace(/\\/g, '\\\\')}")) {
+  [Console]::Out.WriteLine((@{level='info'; message='Creating Start Menu folder...'} | ConvertTo-Json -Compress))
   New-Item -ItemType Directory -Path "${utFolder.replace(/\\/g, '\\\\')}" -Force | Out-Null
 }
+[Console]::Out.WriteLine((@{level='info'; message='Creating shortcut file...'} | ConvertTo-Json -Compress))
 $WshShell = New-Object -comObject WScript.Shell
 $Shortcut = $WshShell.CreateShortcut("${shortcutPath.replace(/\\/g, '\\\\')}")
 $Shortcut.TargetPath = "${exePath.replace(/\\/g, '\\\\')}"
@@ -484,6 +599,7 @@ $Shortcut.WorkingDirectory = "${installPath.replace(/\\/g, '\\\\')}"
 $Shortcut.IconLocation = "${exePath.replace(/\\/g, '\\\\')},0"
 $Shortcut.Description = "Unreal Tournament 1999"
 $Shortcut.Save()
+[Console]::Out.WriteLine((@{level='info'; message='Start Menu shortcut created successfully'} | ConvertTo-Json -Compress))
 `
 
     return new Promise<void>((resolve, reject) => {
@@ -496,16 +612,54 @@ $Shortcut.Save()
         stdio: ['pipe', 'pipe', 'pipe']
       })
 
+      let stdout = ''
+      let stderr = ''
+
+      ps.stdout?.on('data', (data) => {
+        stdout += data.toString()
+        const lines = data.toString().trim().split('\n')
+        lines.forEach(line => {
+          if (line.trim()) {
+            try {
+              const logEntry = JSON.parse(line.trim())
+              if (logEntry.level && logEntry.message) {
+                loggingService.log(logEntry.level, logEntry.message, 'PowerShell', logEntry.data)
+              }
+            } catch {
+              loggingService.warn('Start Menu Shortcut:', 'PowerShell', line)
+            }
+          }
+        })
+      })
+
+      ps.stderr?.on('data', (data) => {
+        stderr += data.toString()
+        const lines = data.toString().trim().split('\n')
+        lines.forEach(line => {
+          if (line.trim()) {
+            try {
+              const logEntry = JSON.parse(line.trim())
+              if (logEntry.level && logEntry.message) {
+                loggingService.log(logEntry.level, logEntry.message, 'PowerShell', logEntry.data)
+              }
+            } catch {
+              loggingService.error('Start Menu Shortcut:', 'PowerShell', line)
+            }
+          }
+        })
+      })
+
       ps.on('exit', (code) => {
+        loggingService.info(`Start Menu shortcut creation PowerShell exit code: ${code}`, 'PowerShell')
         if (code === 0) {
           resolve()
         } else {
-          reject(new Error(`Start Menu shortcut creation failed with exit code ${code}`))
+          reject(new Error(`Start Menu shortcut creation failed with exit code ${code}. Stdout: ${stdout}. Stderr: ${stderr}`))
         }
       })
 
       ps.on('error', (err) => {
-        console.error('Start Menu shortcut creation error:', err)
+        loggingService.error(`Start Menu shortcut creation PowerShell process error: ${err.message}`, 'PowerShell', err)
         reject(err)
       })
     })
