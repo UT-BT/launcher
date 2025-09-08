@@ -94,8 +94,14 @@ export function useUpdates() {
           progressText: `Patch: ${data.tag ?? patchTagRef.current ?? ''} Applied`,
           progress: 100,
           updating: false,
-          available: false
+          available: false,
+          forced: false,
+          unsupportedBase: false
         }))
+        
+        setTimeout(() => {
+          checkForUpdates()
+        }, 500)
       } else if (data.status === 'error') {
         setUpdateState(prev => ({
           ...prev,

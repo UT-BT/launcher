@@ -8,7 +8,6 @@ import { useLogger } from '@/app/hooks/use-logger'
 import './styles/index.css'
 
 let globalAppMounted = false
-let globalChecksPerformed = false
 
 export default function App() {
   const loggerRef = useRef(useLogger('App'))
@@ -65,25 +64,20 @@ export default function App() {
       if (!globalAppMounted) {
         globalAppMounted = true
         logger.info('App component mounted')
-        
-        if (appPhase === 'splash' && !globalChecksPerformed) {
-          globalChecksPerformed = true
-          runInstallationChecks()
-        }
       }
     }
 
     return () => {
       mountedRef.current = false
     }
-  }, [appPhase, runInstallationChecks]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (mountedRef.current && appPhase !== 'splash' && globalAppMounted) {
-      logger.info('App phase changed', { newPhase: appPhase })
-      globalChecksPerformed = false
+    if (appPhase === 'splash' && mountedRef.current) {
+      logger.info('Running installation checks for splash phase')
+      runInstallationChecks()
     }
-  }, [appPhase]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [appPhase, runInstallationChecks]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <>

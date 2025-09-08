@@ -141,6 +141,18 @@ export function SplashScreen({ onReady }: SplashScreenProps) {
     }
   }, [installPathValid, updateState.updating, updateState.forced, updateState.available, phase, startExitAnimation]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    if (installPathValid === true && 
+        !updateState.updating && 
+        !updateState.forced && 
+        !updateState.available && 
+        phase === 'checking' && 
+        !exitDelayRef.current) {
+      logger.info('Update completed or no update needed, starting exit animation')
+      startExitAnimation()
+    }
+  }, [installPathValid, updateState.updating, updateState.forced, updateState.available, phase, startExitAnimation]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const getStatusText = () => {
     if (installPathValid === null) {
       return "Checking UT99 installation..."
