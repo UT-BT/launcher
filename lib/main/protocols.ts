@@ -1,6 +1,7 @@
 import { protocol, net } from 'electron'
 import { join } from 'path'
 import { pathToFileURL } from 'url'
+import { loggingService } from '@/lib/main/logging-service'
 
 export function registerResourcesProtocol() {
   protocol.handle('res', async (request) => {
@@ -11,7 +12,7 @@ export function registerResourcesProtocol() {
       const filePath = join(__dirname, '../../resources', fullPath)
       return net.fetch(pathToFileURL(filePath).toString())
     } catch (error) {
-      console.error('Protocol error:', error)
+      loggingService.error('Protocol error', 'Protocol', error)
       return new Response('Resource not found', { status: 404 })
     }
   })

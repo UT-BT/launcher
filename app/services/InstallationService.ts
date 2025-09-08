@@ -35,7 +35,7 @@ export class InstallationService {
         patchChannel
       }
     } catch (error) {
-      console.error('Failed to load install config:', error)
+      if (window.logging) window.logging.error('Failed to load install config', 'InstallationService', error)
       return { patchChannel: 'stable' }
     }
   }
@@ -49,7 +49,7 @@ export class InstallationService {
       }
       return false
     } catch (error) {
-      console.error('Failed to set install path:', error)
+      if (window.logging) window.logging.error('Failed to set install path', 'InstallationService', error)
       return false
     }
   }
@@ -58,7 +58,7 @@ export class InstallationService {
     try {
       await this.app.setPatchChannel(channel)
     } catch (error) {
-      console.error('Failed to set patch channel:', error)
+      if (window.logging) window.logging.error('Failed to set patch channel', 'InstallationService', error)
     }
   }
 
@@ -67,7 +67,7 @@ export class InstallationService {
       const sel = await this.app.pickInstallFolder()
       return sel ?? null
     } catch (error) {
-      console.error('Failed to pick install folder:', error)
+      if (window.logging) window.logging.error('Failed to pick install folder', 'InstallationService', error)
       return null
     }
   }
@@ -76,7 +76,7 @@ export class InstallationService {
     try {
       await this.app.startUTInstall()
     } catch (error) {
-      console.error('Installation failed:', error)
+      if (window.logging) window.logging.error('Installation failed', 'InstallationService', error)
       throw error
     }
   }
@@ -85,7 +85,7 @@ export class InstallationService {
     try {
       await this.app.applyPatchFromManifest(manifest)
     } catch (error) {
-      console.error('Patch application failed:', error)
+      if (window.logging) window.logging.error('Patch application failed', 'InstallationService', error)
       throw error
     }
   }
@@ -94,7 +94,7 @@ export class InstallationService {
     try {
       await this.app.installAnnouncerUax()
     } catch (error) {
-      console.error('Announcer installation failed:', error)
+      if (window.logging) window.logging.error('Announcer installation failed', 'InstallationService', error)
       throw error
     }
   }
@@ -131,7 +131,7 @@ export class InstallationService {
         ctx.dispatchEvent(new CustomEvent('set-titlebar-lock', { detail: { locked } }))
       }
     } catch (error) {
-      console.error('Failed to set window lock:', error)
+      if (window.logging) window.logging.error('Failed to set window lock', 'InstallationService', error)
     }
   }
 }

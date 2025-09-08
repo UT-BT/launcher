@@ -267,7 +267,7 @@ try {
     try {
       await runSetupFromIso(dest1, 'CD1')
     } catch (error) {
-      console.error('CD1 installation failed:', error)
+      loggingService.error('CD1 installation failed', 'Installation', error)
       try { _window.webContents.send('ut-install-status', { status: 'error', message: `CD1 installation failed: ${error}` }) } catch { /* ignore */ }
       throw error
     }
@@ -312,7 +312,7 @@ try {
         try {
           await runSetupFromIso(dest2, 'CD2')
         } catch (error) {
-          console.error('CD2 installation failed:', error)
+          loggingService.error('CD2 installation failed', 'Installation', error)
           try { _window.webContents.send('ut-install-status', { status: 'error', message: `CD2 installation failed: ${error}` }) } catch { /* ignore */ }
           throw error
         }
