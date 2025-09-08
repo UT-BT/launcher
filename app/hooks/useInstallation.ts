@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { InstallationState, InstallationConfig } from '@/app/types'
 import { installationService } from '@/app/services/InstallationService'
 import { updateService } from '@/app/services/UpdateService'
+import { useLogger } from '@/app/hooks/use-logger'
 
 interface InstallationCallbacks {
   onInstallComplete?: () => void
@@ -9,6 +10,8 @@ interface InstallationCallbacks {
 }
 
 export function useInstallation(callbacks?: InstallationCallbacks) {
+  const logger = useLogger('useInstallation')
+
   const onInstallComplete = useCallback(() => {
     callbacks?.onInstallComplete?.()
   }, [callbacks])
@@ -327,7 +330,7 @@ export function useInstallation(callbacks?: InstallationCallbacks) {
         // Update config
         setConfig(prev => ({ ...prev, installPath }))
       } catch (error) {
-        console.error('Patch apply error:', error)
+        logger.error('Patch apply error', error)
         setState(prev => ({
           ...prev,
           progressText: 'Patch apply failed',

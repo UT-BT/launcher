@@ -77,7 +77,7 @@ export function InstallationWizard({ onBack, onComplete: _onComplete }: Installa
         const stamp = { tag: match.tag, sha256: match.sha256, channel: (match.channel === 'rc' ? 'rc' : 'stable') as 'stable' | 'rc', installedAt: new Date().toISOString() }
         await window.conveyor.app.setInstalledPatch(stamp)
       } else {
-        try { await window.conveyor.app.setBaseVersion('unsupported') } catch (e) { console.warn('setBaseVersion unsupported failed', e) }
+        try { await window.conveyor.app.setBaseVersion('unsupported') } catch (e) { logger.warn('setBaseVersion unsupported failed', e) }
         setAvailablePatches(list)
         const stable = list.filter(p => (p.channel ?? 'stable') === 'stable')
         const parseDate = (v: any) => {
@@ -96,7 +96,7 @@ export function InstallationWizard({ onBack, onComplete: _onComplete }: Installa
         setShowUnsupportedModal(true)
       }
     } catch (err) {
-      console.error('Existing install detection failed:', err)
+      logger.error('Existing install detection failed', err)
       setAvailablePatches([])
       setSelectedPatchTag(null)
       setShowUnsupportedModal(true)
@@ -206,7 +206,7 @@ export function InstallationWizard({ onBack, onComplete: _onComplete }: Installa
       installationService.setWindowLocked(false)
       setShowShortcutModal(true)
     } catch (error) {
-      console.error('Upgrade apply failed:', error)
+      logger.error('Upgrade apply failed', error)
       setErrorMessage('Failed to upgrade. Please try again or choose a different patch.')
       setShowErrorModal(true)
     } finally {

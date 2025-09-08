@@ -1,5 +1,6 @@
 import { ipcMain } from 'electron'
 import { ipcSchemas, validateArgs, validateReturn, type ChannelArgs, type ChannelReturn } from '@/lib/conveyor/schemas'
+import { loggingService } from '@/lib/main/logging-service'
 
 /**
  * Helper to register IPC handlers
@@ -20,7 +21,7 @@ export const handle = <T extends keyof typeof ipcSchemas>(
 
       return validateReturn(channel, result)
     } catch (error) {
-      console.error(`IPC Error in ${channel}:`, error)
+      loggingService.error(`IPC Error in ${channel}`, 'IPC', error)
       throw error
     }
   })

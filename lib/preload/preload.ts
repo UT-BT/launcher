@@ -60,7 +60,7 @@ if (process.contextIsolated) {
       getRecentLogs: async (lines?: number) => ipcRenderer.invoke('getRecentLogs', lines),
     })
   } catch (error) {
-    console.error(error)
+    console.error('Preload script error:', error)
   }
 } else {
   window.conveyor = conveyor

@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { UpdateState, PatchManifest } from '@/app/types'
 import { updateService } from '@/app/services/UpdateService'
+import { useLogger } from '@/app/hooks/use-logger'
 
 export function useUpdates() {
+  const logger = useLogger('useUpdates')
   const patchTagRef = useRef<string | undefined>(undefined)
   const [updateState, setUpdateState] = useState<UpdateState>({
     available: false,
@@ -28,10 +30,10 @@ export function useUpdates() {
 
       return updateCheck
     } catch (error) {
-      console.error('Failed to check for updates:', error)
+      logger.error('Failed to check for updates', error)
       return { available: false, forced: false }
     }
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const mountedRef = useRef(false)
 
