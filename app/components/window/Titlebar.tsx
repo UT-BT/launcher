@@ -4,16 +4,10 @@ import { useConveyor } from '@/app/hooks/use-conveyor'
 import { LinksDropdown } from './LinksDropdown'
 import { AboutButton } from './AboutButton'
 import { TitlebarMenuItem } from './TitlebarMenu'
-
-const SVG_PATHS = {
-  close: 'M 0,0 0,0.7 4.3,5 0,9.3 0,10 0.7,10 5,5.7 9.3,10 10,10 10,9.3 5.7,5 10,0.7 10,0 9.3,0 5,4.3 0.7,0 Z',
-  maximize: 'M 0,0 0,10 10,10 10,0 Z M 1,1 9,1 9,9 1,9 Z',
-  restore: 'M 2,1 2,9 9,9 9,1 Z M 1,0 10,0 10,8 8,8 8,10 0,10 0,3 1,3 Z',
-  minimize: 'M 0,5 10,5 10,6 0,6 Z',
-} as const
+import { FaMinus, FaSquare, FaTimes, FaWindowRestore } from 'react-icons/fa'
 
 export const Titlebar = () => {
-  const { titlebar, icon } = useWindowContext().titlebar
+  const { icon } = useWindowContext().titlebar
   const { window: wcontext } = useWindowContext()
 
   return (
@@ -49,19 +43,19 @@ const TitlebarControls = () => {
 
   return (
     <div className="window-titlebar-controls">
-      {wcontext?.minimizable && <TitlebarControlButton label="minimize" svgPath={SVG_PATHS.minimize} />}
+      {wcontext?.minimizable && <TitlebarControlButton label="minimize" icon={FaMinus} />}
       {wcontext?.maximizable && (
         <TitlebarControlButton
           label="maximize"
-          svgPath={isMaximized ? SVG_PATHS.restore : SVG_PATHS.maximize}
+          icon={isMaximized ? FaWindowRestore : FaSquare}
         />
       )}
-      <TitlebarControlButton label="close" svgPath={SVG_PATHS.close} />
+      <TitlebarControlButton label="close" icon={FaTimes} />
     </div>
   )
 }
 
-const TitlebarControlButton = ({ svgPath, label }: { svgPath: string; label: string }) => {
+const TitlebarControlButton = ({ icon: Icon, label }: { icon: React.ComponentType; label: string }) => {
   const { windowMinimize, windowMaximizeToggle, windowClose } = useConveyor('window')
 
   const handleAction = () => {
@@ -75,9 +69,7 @@ const TitlebarControlButton = ({ svgPath, label }: { svgPath: string; label: str
 
   return (
     <div aria-label={label} className="titlebar-controlButton" onClick={handleAction}>
-      <svg width="10" height="10">
-        <path fill="currentColor" d={svgPath} />
-      </svg>
+      <Icon />
     </div>
   )
 }
