@@ -31,7 +31,7 @@ export function createAppWindow(): void {
     resizable: true,
     minWidth: 1280,
     minHeight: 720,
-    focusable: false,
+    thickFrame: false,
     webPreferences: {
       preload: join(__dirname, '../preload/preload.js'),
       sandbox: false,
