@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useWindowContext } from './WindowContext'
-import { useTitlebarContext } from './TitlebarContext'
-import { TitlebarMenu } from './TitlebarMenu'
 import { useConveyor } from '@/app/hooks/use-conveyor'
+import { LinksDropdown } from './LinksDropdown'
+import { AboutButton } from './AboutButton'
+import { TitlebarMenuItem } from './TitlebarMenu'
 
 const SVG_PATHS = {
   close: 'M 0,0 0,0.7 4.3,5 0,9.3 0,10 0.7,10 5,5.7 9.3,10 10,10 10,9.3 5.7,5 10,0.7 10,0 9.3,0 5,4.3 0.7,0 Z',
@@ -12,37 +13,20 @@ const SVG_PATHS = {
 } as const
 
 export const Titlebar = () => {
-  const { title, icon, titleCentered, menuItems } = useWindowContext().titlebar
-  const { closeActiveMenu } = useTitlebarContext()
+  const { titlebar, icon } = useWindowContext().titlebar
   const { window: wcontext } = useWindowContext()
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.altKey && menuItems?.length && !e.repeat) {
-        closeActiveMenu()
-      }
-    }
-
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [closeActiveMenu, menuItems])
-
   return (
-    <div className={`window-titlebar ${wcontext?.platform ? `platform-${wcontext.platform}` : ''}`}>
-      {wcontext?.platform === 'win32' && (
-        <div className="window-titlebar-icon">
-          <img src={icon} />
-        </div>
-      )}
-
-      <div
-        className="window-titlebar-title"
-        {...(titleCentered && { 'data-centered': true })}
-        style={{ visibility: 'hidden' }}
-      >
-        {title}
+    <div className={`window-titlebar modern-titlebar ${wcontext?.platform ? `platform-${wcontext.platform}` : ''}`}>
+      <div className="window-titlebar-center-icon">
+        <img src={icon} alt="UTBT" />
       </div>
-      <TitlebarMenu />
+
+      <div className="window-titlebar-actions">
+        <LinksDropdown />
+        <AboutButton />
+      </div>
+
       {wcontext?.platform === 'win32' && <TitlebarControls />}
     </div>
   )
@@ -102,5 +86,5 @@ export interface TitlebarProps {
   title: string
   titleCentered?: boolean
   icon?: string
-  menuItems?: TitlebarMenu[]
+  menuItems?: TitlebarMenuItem[]
 }
