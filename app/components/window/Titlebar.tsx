@@ -14,6 +14,7 @@ export const Titlebar = () => {
     <div className={`window-titlebar modern-titlebar ${wcontext?.platform ? `platform-${wcontext.platform}` : ''}`}>
       <div className="window-titlebar-center-icon">
         <img src={icon} alt="UTBT" />
+        <span className="window-titlebar-brand-text">UTBT.net</span>
       </div>
 
       <div className="window-titlebar-actions">
