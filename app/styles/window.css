@@ -148,12 +148,23 @@
 .window-titlebar-actions {
   display: flex;
   position: absolute;
-  right: 140px;
+  right: 120px;
   top: 0;
   height: 100%;
   align-items: center;
   -webkit-app-region: no-drag;
   gap: 8px;
+}
+
+.window-titlebar-actions::after {
+  content: '';
+  position: absolute;
+  right: -12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1px;
+  height: 16px;
+  background-color: #444;
 }
 
 .titlebar-action-button {
