@@ -122,6 +122,8 @@
   position: absolute;
   right: 0;
   top: 0;
+  height: 100%;
+  align-items: center;
   -webkit-app-region: no-drag;
 }
 
@@ -148,6 +150,8 @@
   position: absolute;
   right: 140px;
   top: 0;
+  height: 100%;
+  align-items: center;
   -webkit-app-region: no-drag;
   gap: 8px;
 }
@@ -177,7 +181,7 @@
 
 .titlebar-dropdown-menu {
   position: absolute;
-  top: 24px;
+  top: 100%;
   right: 0;
   background-color: #282828;
   border: 1px solid #3c3c3c;
@@ -186,6 +190,7 @@
   min-width: 180px;
   z-index: 1000;
   padding: 4px 0;
+  margin-top: 2px;
 }
 
 .titlebar-dropdown-item {
