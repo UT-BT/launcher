@@ -136,6 +136,7 @@
   align-items: center;
   justify-content: center;
   -webkit-app-region: drag;
+  gap: 8px;
 }
 
 .window-titlebar-center-icon img {
@@ -143,6 +144,16 @@
   height: 16px;
   max-width: 16px;
   max-height: 16px;
+}
+
+.window-titlebar-brand-text {
+  font-size: 11px;
+  font-weight: 500;
+  color: #ffffffc8;
+  white-space: nowrap;
+  line-height: 1;
+  display: flex;
+  align-items: center;
 }
 
 .window-titlebar-actions {
