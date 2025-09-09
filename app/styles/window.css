@@ -1,9 +1,9 @@
 :root {
   color-scheme: dark;
-  --window-icon-height: 16px;
-  --window-title-margin: 42px;
-  --window-titlebar-height: 40px;
-  --window-titlebar-font-size: 13px;
+  --window-icon-height: 14px;
+  --window-title-margin: 32px;
+  --window-titlebar-height: 26px;
+  --window-titlebar-font-size: 12px;
   --window-scrollbar-width: 12px;
   --window-mac-titlebar-controls-margin: 80px;
   --window-background-transition-duration: 0.3s;
@@ -80,6 +80,11 @@
   border-bottom: 1px solid var(--window-c-titlebar-border);
 }
 
+.modern-titlebar {
+  background-color: #1a1a1a;
+  border-bottom: 1px solid #333;
+}
+
 .window-titlebar-icon {
   position: absolute;
   left: 0;
@@ -118,6 +123,93 @@
   right: 0;
   top: 0;
   -webkit-app-region: no-drag;
+}
+
+.window-titlebar-center-icon {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-app-region: drag;
+}
+
+.window-titlebar-center-icon img {
+  width: 16px;
+  height: 16px;
+  max-width: 16px;
+  max-height: 16px;
+}
+
+.window-titlebar-actions {
+  display: flex;
+  position: absolute;
+  right: 140px;
+  top: 0;
+  -webkit-app-region: no-drag;
+  gap: 8px;
+}
+
+.titlebar-action-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 20px;
+  background: none;
+  border: none;
+  color: #ffffffc8;
+  cursor: pointer;
+  border-radius: 3px;
+  font-size: 12px;
+  transition: background-color 0.2s ease;
+}
+
+.titlebar-action-button:hover {
+  background-color: #3c3c3c;
+}
+
+.titlebar-dropdown {
+  position: relative;
+}
+
+.titlebar-dropdown-menu {
+  position: absolute;
+  top: 24px;
+  right: 0;
+  background-color: #282828;
+  border: 1px solid #3c3c3c;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  min-width: 180px;
+  z-index: 1000;
+  padding: 4px 0;
+}
+
+.titlebar-dropdown-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 6px 12px;
+  background: none;
+  border: none;
+  color: #ffffffc8;
+  cursor: pointer;
+  text-align: left;
+  font-size: 12px;
+  transition: background-color 0.2s ease;
+  gap: 8px;
+}
+
+.titlebar-dropdown-item:hover {
+  background-color: #3c3c3c;
+}
+
+.titlebar-dropdown-icon {
+  font-size: 14px;
+  min-width: 14px;
 }
 
 .window-titlebar-menu {
@@ -202,7 +294,7 @@
   align-items: center;
   justify-content: center;
   width: 36px;
-  height: 30px;
+  height: 26px;
   cursor: pointer;
   background-color: transparent;
 }
