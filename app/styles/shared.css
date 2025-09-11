@@ -147,9 +147,6 @@
   transform: scale(1.05);
 }
 
-.splash-logo {
-  animation: none !important;
-}
 
 .app-logo--small {
   width: 80px;
