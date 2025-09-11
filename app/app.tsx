@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { SplashScreen } from '@/app/components/welcome/WelcomeScreen'
+import { SplashScreen } from '@/app/components/splash/SplashScreen'
 import { Main } from '@/app/components/main/Main'
 import { InstallationWizard } from '@/app/components/installation/InstallationWizard'
 import { Modal } from '@/app/components/shared/Modal'

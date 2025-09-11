@@ -86,7 +86,7 @@ export function SplashScreen({ onReady }: SplashScreenProps) {
 
   useEffect(() => {
     if (!mountedRef.current) {
-      logger.info('WelcomeScreen mounted, initializing checks')
+      logger.info('SplashScreen mounted, initializing checks')
       mountedRef.current = true
 
       const runChecks = async () => {
