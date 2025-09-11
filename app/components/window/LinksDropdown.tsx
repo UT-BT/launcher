@@ -53,7 +53,7 @@ export const LinksDropdown = () => {
   }
 
   return (
-    <div className="titlebar-dropdown" ref={dropdownRef}>
+    <div className="titlebar-dropdown align-left" ref={dropdownRef}>
       <button
         className="titlebar-action-button"
         onClick={() => setIsOpen(!isOpen)}
