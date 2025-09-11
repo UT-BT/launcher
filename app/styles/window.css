@@ -201,6 +201,11 @@
   position: relative;
 }
 
+.titlebar-dropdown.align-left .titlebar-dropdown-menu {
+  left: 0;
+  right: auto;
+}
+
 .titlebar-dropdown-menu {
   position: absolute;
   top: 100%;
@@ -209,7 +214,7 @@
   border: 1px solid #3c3c3c;
   border-radius: 6px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-  min-width: 180px;
+  min-width: max-content;
   z-index: 1000;
   padding: 4px 0;
   margin-top: 2px;
