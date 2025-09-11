@@ -229,13 +229,6 @@
       drop-shadow(0 0 60px rgba(var(--utbt-red-rgb), 0.30))
       brightness(1.12) saturate(125%);
   }
-  100% {
-    filter:
-      drop-shadow(0 0 10px rgba(var(--utbt-blue-rgb), 0.35))
-      drop-shadow(0 0 28px rgba(var(--utbt-blue-rgb), 0.30))
-      drop-shadow(0 0 46px rgba(var(--utbt-blue-rgb), 0.25))
-      brightness(1.05) saturate(115%);
-  }
 }
 
 .splash-container.splash-animating .splash-logo {
