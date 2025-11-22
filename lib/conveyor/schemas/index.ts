@@ -1,11 +1,13 @@
 import { z } from 'zod'
 import { windowIpcSchema } from './window-schema'
 import { appIpcSchema } from './app-schema'
+import { gameIpcSchema } from './game-schema'
 
 // Define all IPC channel schemas in one place
 export const ipcSchemas = {
   ...windowIpcSchema,
   ...appIpcSchema,
+  ...gameIpcSchema,
 } as const
 
 // Extract types from Zod schemas
