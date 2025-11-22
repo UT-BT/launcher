@@ -1,4 +1,4 @@
-import { ReactNode } from 'react'
+import { ReactNode, useEffect } from 'react'
 import { Home, Server, Trophy, Map as MapIcon, Settings } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import logo from '@/app/assets/logo.png'
@@ -24,8 +24,17 @@ interface AppLayoutProps {
 }
 
 export function AppLayout({ children, currentView, onViewChange }: AppLayoutProps) {
+    useEffect(() => {
+        const saved = localStorage.getItem('ui-scale')
+        if (saved) {
+            document.documentElement.style.zoom = `${saved}%`
+        }
+    }, [])
+
     return (
-        <div className="flex h-screen bg-background text-foreground overflow-hidden">
+        <div className="flex h-screen bg-background text-foreground overflow-hidden relative">
+            <div className="nebula-bg absolute inset-0 opacity-30 pointer-events-none" />
+
             {/* Sidebar */}
             <aside className="w-64 bg-card/50 backdrop-blur-xl border-r border-white/10 flex flex-col z-20 relative">
                 <div className="absolute inset-0 bg-gradient-to-b from-blue-900/10 to-transparent pointer-events-none" />
@@ -83,9 +92,8 @@ export function AppLayout({ children, currentView, onViewChange }: AppLayoutProp
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 overflow-y-auto relative">
-                <div className="nebula-bg absolute inset-0 opacity-30 pointer-events-none" />
-                <div className="relative z-10 p-8 min-h-full">
+            <main className="flex-1 overflow-y-auto relative z-10">
+                <div className="p-8 min-h-full">
                     {children}
                 </div>
             </main>
