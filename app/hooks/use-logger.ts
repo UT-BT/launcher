@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 
 export type LogLevel = 'info' | 'warn' | 'error' | 'debug'
 
@@ -42,13 +42,13 @@ export function useLogger(context: string): Logger {
     await log('debug', message, data)
   }, [log])
 
-  return {
+  return useMemo(() => ({
     log,
     info,
     warn,
     error,
     debug,
-  }
+  }), [log, info, warn, error, debug])
 }
 
 /**
