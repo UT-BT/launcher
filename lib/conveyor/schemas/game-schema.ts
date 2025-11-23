@@ -15,7 +15,7 @@ export const gameIpcSchema = {
         return: z.array(z.any()), // Using z.any() for flexibility with backend response
     },
     pingServer: {
-        args: z.tuple([z.string()]),
+        args: z.tuple([z.string().regex(/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/)]),
         return: z.number(),
     },
 }
