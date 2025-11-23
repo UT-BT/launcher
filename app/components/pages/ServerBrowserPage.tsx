@@ -66,34 +66,30 @@ export function ServerBrowserPage() {
     const [error, setError] = useState<string | null>(null)
     const [selectedServer, setSelectedServer] = useState<Server | null>(null)
 
-    const [sortOption, setSortOption] = useState<SortOption>('Name')
-    const [isSidebarOpen, setIsSidebarOpen] = useState(true)
-    const [filters, setFilters] = useState<FilterState>({
+    // Helper to load settings synchronously
+    const getInitialSettings = (): SavedSettings | null => {
+        try {
+            const saved = localStorage.getItem(STORAGE_KEY)
+            if (saved) return JSON.parse(saved)
+        } catch (err) {
+            console.error('Failed to load settings', err)
+        }
+        return null
+    }
+
+    // Initialize state from localStorage if available
+    const [initialSettings] = useState(() => getInitialSettings())
+
+    const [sortOption, setSortOption] = useState<SortOption>(initialSettings?.sortOption ?? 'Name')
+    const [isSidebarOpen, setIsSidebarOpen] = useState(initialSettings?.isSidebarOpen ?? true)
+    const [filters, setFilters] = useState<FilterState>(initialSettings?.filters ?? {
         types: { Certified: true, Duel: true, Casual: true, Other: true },
         hideEmpty: false,
         hideFull: false,
         regions: {}
     })
-    const [isInitialized, setIsInitialized] = useState(false)
 
     useEffect(() => {
-        try {
-            const saved = localStorage.getItem(STORAGE_KEY)
-            if (saved) {
-                const parsed: SavedSettings = JSON.parse(saved)
-                if (parsed.filters) setFilters(parsed.filters)
-                if (parsed.sortOption) setSortOption(parsed.sortOption)
-                if (typeof parsed.isSidebarOpen === 'boolean') setIsSidebarOpen(parsed.isSidebarOpen)
-            }
-        } catch (err) {
-            logger.error('Failed to load settings', { error: err })
-        } finally {
-            setIsInitialized(true)
-        }
-    }, [])
-
-    useEffect(() => {
-        if (!isInitialized) return
         try {
             const settings: SavedSettings = {
                 filters,
@@ -104,7 +100,7 @@ export function ServerBrowserPage() {
         } catch (err) {
             logger.error('Failed to save settings', { error: err })
         }
-    }, [filters, sortOption, isSidebarOpen, isInitialized])
+    }, [filters, sortOption, isSidebarOpen])
 
     const pingAllServers = async (serversToPing: Server[]) => {
         const uniqueIps = Array.from(new Set(serversToPing.map(s => s.ip)))
