@@ -3,7 +3,7 @@ import { Server } from '@/app/components/pages/ServerBrowserPage'
 import { X, Eye, Play } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { trimServerName, getServerRegion } from '@/app/utils/server-utils'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 interface JoinServerModalProps {
     server: Server | null
@@ -14,10 +14,62 @@ interface JoinServerModalProps {
 
 export function JoinServerModal({ server, isOpen, onClose, onJoin }: JoinServerModalProps) {
     const [imgError, setImgError] = useState(false)
+    const modalRef = useRef<HTMLDivElement>(null)
+    const closeButtonRef = useRef<HTMLButtonElement>(null)
 
     useEffect(() => {
         setImgError(false)
     }, [server])
+
+    // Handle Escape key to close modal
+    useEffect(() => {
+        if (!isOpen) return
+
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                onClose()
+            }
+        }
+
+        document.addEventListener('keydown', handleKeyDown)
+        return () => document.removeEventListener('keydown', handleKeyDown)
+    }, [isOpen, onClose])
+
+    // Focus trap: keep focus within modal
+    useEffect(() => {
+        if (!isOpen || !modalRef.current) return
+
+        const modalElement = modalRef.current
+        const focusableElements = modalElement.querySelectorAll<HTMLElement>(
+            'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        )
+        const firstElement = focusableElements[0]
+        const lastElement = focusableElements[focusableElements.length - 1]
+
+        // Focus first element when modal opens
+        firstElement?.focus()
+
+        const handleTabKey = (e: KeyboardEvent) => {
+            if (e.key !== 'Tab') return
+
+            if (e.shiftKey) {
+                // Shift + Tab: moving backwards
+                if (document.activeElement === firstElement) {
+                    e.preventDefault()
+                    lastElement?.focus()
+                }
+            } else {
+                // Tab: moving forwards
+                if (document.activeElement === lastElement) {
+                    e.preventDefault()
+                    firstElement?.focus()
+                }
+            }
+        }
+
+        modalElement.addEventListener('keydown', handleTabKey)
+        return () => modalElement.removeEventListener('keydown', handleTabKey)
+    }, [isOpen])
 
     if (!isOpen || !server) return null
 
@@ -30,11 +82,11 @@ export function JoinServerModal({ server, isOpen, onClose, onJoin }: JoinServerM
 
     return (
         <div className="fixed top-[var(--window-titlebar-height)] right-0 bottom-0 left-64 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-            <div className="w-full max-w-md bg-card border border-white/10 rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div ref={modalRef} className="w-full max-w-md bg-card border border-white/10 rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 border-b border-white/5 bg-white/5">
                     <h3 className="font-bold text-lg truncate pr-4">Join Server</h3>
-                    <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 rounded-full hover:bg-white/10">
+                    <Button ref={closeButtonRef} variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 rounded-full hover:bg-white/10" aria-label="Close modal">
                         <X className="size-4" />
                     </Button>
                 </div>
