@@ -62,36 +62,42 @@ export const registerGameHandlers = (_window: BrowserWindow) => {
             }
 
             const platform = process.platform
-            const pingCommand = 'ping'
             const args = platform === 'win32'
                 ? ['-n', '1', '-w', '1000', ip]
                 : ['-c', '1', '-W', '1', ip]
 
-                    let timeMatch;
-                    if (platform === 'win32') {
-                        // Windows: e.g. "time=23ms"
-                        timeMatch = output.match(/time[=<]?([\d\.]+)ms/i);
-                    } else {
-                        // Unix-like: e.g. "time=23.456 ms"
-                        timeMatch = output.match(/time[=<]?([\d\.]+)\s*ms/i);
-                    }
-                    if (timeMatch) {
-                        resolve(Math.round(parseFloat(timeMatch[1])));
-                        return;
-                    }
-                    // Fallback: try to find any number followed by "ms"
-                    const fallbackMatch = output.match(/([\d\.]+)\s*ms/i);
-                    if (fallbackMatch) {
-                        resolve(Math.round(parseFloat(fallbackMatch[1])));
-                        return;
-                    }
-                }
-                resolve(999); // Failed or timeout
+            const child = spawn('ping', args)
+            let output = ''
+
+            child.stdout.on('data', (data) => {
+                output += data.toString()
+            })
+
+            child.on('error', (err) => {
+                loggingService.error(`Ping failed for ${ip}`, 'GameHandler', err)
+                resolve(999)
+            })
+
             child.on('close', (code) => {
                 if (code === 0) {
-                    const timeMatch = output.match(/time[=<]\s*([\d.]+)\s*m?s?/i)
+                    let timeMatch
+                    if (platform === 'win32') {
+                        // Windows: e.g. "time=23ms"
+                        timeMatch = output.match(/time[=<]?([\d\.]+)ms/i)
+                    } else {
+                        // Unix-like: e.g. "time=23.456 ms"
+                        timeMatch = output.match(/time[=<]?([\d\.]+)\s*ms/i)
+                    }
+
                     if (timeMatch) {
                         resolve(Math.round(parseFloat(timeMatch[1])))
+                        return
+                    }
+
+                    // Fallback: try to find any number followed by "ms"
+                    const fallbackMatch = output.match(/([\d\.]+)\s*ms/i)
+                    if (fallbackMatch) {
+                        resolve(Math.round(parseFloat(fallbackMatch[1])))
                         return
                     }
                 }
