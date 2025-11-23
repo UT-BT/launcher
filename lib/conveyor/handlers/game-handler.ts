@@ -89,7 +89,7 @@ export const registerGameHandlers = (_window: BrowserWindow) => {
                 resolve(999); // Failed or timeout
             child.on('close', (code) => {
                 if (code === 0) {
-                    const timeMatch = output.match(/time[=<]([\d.]+)/i)
+                    const timeMatch = output.match(/time[=<]\s*([\d.]+)\s*m?s?/i)
                     if (timeMatch) {
                         resolve(Math.round(parseFloat(timeMatch[1])))
                         return
