@@ -290,7 +290,7 @@ export function ServerBrowserPage() {
                         const statusText = getGameStatusText(
                             server.remaining_time_seconds,
                             server.certified_records,
-                            type as any,
+                            type,
                             server.red_team_score,
                             server.blue_team_score
                         )
