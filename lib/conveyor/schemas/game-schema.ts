@@ -5,8 +5,6 @@ export const gameIpcSchema = {
         args: z.tuple([
             z.string().min(1), // ip
             z.number().int().positive(), // port
-            z.string().optional(), // password
-            z.boolean().optional(), // asSpectator
         ]),
         return: z.void(),
     },
