@@ -138,7 +138,7 @@ export function ServerBrowserPage() {
 
     useEffect(() => {
         fetchServers()
-    }, [])
+    }, [logger])
 
     const availableRegions = useMemo(() => {
         const regions = new Set<string>()
