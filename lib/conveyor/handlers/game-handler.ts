@@ -21,7 +21,7 @@ export const registerGameHandlers = (_window: BrowserWindow) => {
             throw new Error('UnrealTournament.exe not found')
         }
 
-        let url = `unreal://${ip}:${port}`
+        const url = `unreal://${ip}:${port}`
 
         loggingService.info(`Launching game with URL: ${url}`, 'GameHandler')
 
