@@ -45,9 +45,6 @@ export function AppLayout({ children, currentView, onViewChange }: AppLayoutProp
                         alt="UTBT Logo"
                         className="w-24 h-24 object-contain drop-shadow-[0_0_15px_rgba(56,189,248,0.3)] mb-4 transition-transform hover:scale-105 duration-300"
                     />
-                    <h1 className="text-xl font-bold bg-gradient-to-r from-[#38bdf8] via-[#1d4ed8] to-[#e11d48] bg-clip-text text-transparent">
-                        UTBT.net
-                    </h1>
                 </div>
 
                 <nav className="flex-1 px-4 space-y-2 relative z-10">
