@@ -3,7 +3,7 @@ import { Server } from '@/app/components/pages/ServerBrowserPage'
 import { X, Eye, Play } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { trimServerName, getServerRegion } from '@/app/utils/server-utils'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 interface JoinServerModalProps {
     server: Server | null
@@ -14,6 +14,10 @@ interface JoinServerModalProps {
 
 export function JoinServerModal({ server, isOpen, onClose, onJoin }: JoinServerModalProps) {
     const [imgError, setImgError] = useState(false)
+
+    useEffect(() => {
+        setImgError(false)
+    }, [server])
 
     if (!isOpen || !server) return null
 

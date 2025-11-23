@@ -3,7 +3,7 @@ import { handle } from '@/lib/main/shared'
 import { getUt99InstallPath } from '@/lib/main/config'
 import { gatewayService } from '@/lib/main/gateway-service'
 import { loggingService } from '@/lib/main/logging-service'
-import { spawn } from 'child_process'
+import { spawn, execFile } from 'child_process'
 import { join } from 'path'
 import { existsSync } from 'fs'
 
@@ -53,21 +53,30 @@ export const registerGameHandlers = (_window: BrowserWindow) => {
 
     handle('pingServer', async (ip: string) => {
         return new Promise((resolve) => {
-            const platform = process.platform
-            const command = platform === 'win32'
-                ? `ping -n 1 -w 1000 ${ip}`
-                : `ping -c 1 -W 1 ${ip}`
+            // Validate IP address format to prevent command injection
+            const ipRegex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/
+            if (!ipRegex.test(ip)) {
+                loggingService.warn(`Invalid IP address format: ${ip}`, 'GameHandler')
+                resolve(999)
+                return
+            }
 
-            const child = spawn(command, { shell: true })
+            const platform = process.platform
+            const pingCommand = 'ping'
+            const args = platform === 'win32'
+                ? ['-n', '1', '-w', '1000', ip]
+                : ['-c', '1', '-W', '1', ip]
+
+            const child = execFile(pingCommand, args)
 
             let output = ''
-            child.stdout.on('data', (data) => {
+            child.stdout?.on('data', (data) => {
                 output += data.toString()
             })
 
             child.on('close', (code) => {
                 if (code === 0) {
-                    const timeMatch = output.match(/time[=<]([\d\.]+)/i)
+                    const timeMatch = output.match(/time[=<]([\d.]+)/i)
                     if (timeMatch) {
                         resolve(Math.round(parseFloat(timeMatch[1])))
                         return
