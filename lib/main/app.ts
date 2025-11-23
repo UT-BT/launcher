@@ -5,6 +5,7 @@ import { registerResourcesProtocol } from './protocols'
 import { registerWindowHandlers } from '@/lib/conveyor/handlers/window-handler'
 import { registerAppHandlers } from '@/lib/conveyor/handlers/app-handler'
 import { registerGameHandlers } from '@/lib/conveyor/handlers/game-handler'
+import { registerIniHandlers } from '@/lib/conveyor/handlers/ini-handler'
 import windowStateKeeper from 'electron-window-state'
 
 export function createAppWindow(): void {
@@ -47,6 +48,7 @@ export function createAppWindow(): void {
   registerWindowHandlers(mainWindow)
   registerAppHandlers(mainWindow)
   registerGameHandlers(mainWindow)
+  registerIniHandlers(mainWindow)
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
