@@ -163,7 +163,27 @@ export function ServerBrowserPage() {
         if (!selectedServer) return
 
         try {
+            logger.info('Configuring player settings...', { asSpectator })
+
+            if (window.conveyor?.ini) {
+                if (asSpectator) {
+                    // Join as Spectator
+                    await window.conveyor.ini.writeIniValue('User.ini', 'DefaultPlayer', 'OverrideClass', 'Botpack.CHSpectator')
+                } else {
+                    // Join as Player
+                    const currentClass = await window.conveyor.ini.readIniValue('User.ini', 'DefaultPlayer', 'Class')
+                    if (currentClass === 'Botpack.CHSpectator') {
+                        await window.conveyor.ini.writeIniValue('User.ini', 'DefaultPlayer', 'Class', '')
+                    }
+
+                    await window.conveyor.ini.writeIniValue('User.ini', 'DefaultPlayer', 'OverrideClass', '')
+                }
+            } else {
+                logger.warn('INI API not available, skipping configuration')
+            }
+
             logger.info('Joining server', { server: selectedServer, asSpectator })
+
             await window.conveyor.game.launchGame(selectedServer.ip, selectedServer.hostport, undefined, asSpectator)
             setSelectedServer(null)
         } catch (err) {
