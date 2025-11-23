@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 import { FilterState, getRegionFlag, getServerRegion, getServerType, SortOption, filterServers, sortServers, trimServerName, getGameStatusText } from '@/app/utils/server-utils'
 import { ServerBrowserSidebar } from '@/app/components/ServerBrowserSidebar'
 import { JoinServerModal } from '@/app/components/JoinServerModal'
+import { ErrorModal } from '@/app/components/ErrorModal'
 
 const STORAGE_KEY = 'utbt-server-browser-settings'
 
@@ -65,6 +66,8 @@ export function ServerBrowserPage() {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [selectedServer, setSelectedServer] = useState<Server | null>(null)
+    const [launchError, setLaunchError] = useState<string | null>(null)
+    const [isErrorModalOpen, setIsErrorModalOpen] = useState(false)
 
     // Helper to load settings synchronously
     const getInitialSettings = (): SavedSettings | null => {
@@ -184,6 +187,8 @@ export function ServerBrowserPage() {
             setSelectedServer(null)
         } catch (err) {
             logger.error('Failed to launch game', { error: err })
+            setLaunchError(err instanceof Error ? err.message : 'An unknown error occurred while trying to launch the game.')
+            setIsErrorModalOpen(true)
         }
     }
 
@@ -409,6 +414,13 @@ export function ServerBrowserPage() {
                 isOpen={!!selectedServer}
                 onClose={() => setSelectedServer(null)}
                 onJoin={handleConfirmJoin}
+            />
+
+            <ErrorModal
+                isOpen={isErrorModalOpen}
+                onClose={() => setIsErrorModalOpen(false)}
+                title="Launch Error"
+                message={launchError || 'Unknown error'}
             />
         </div>
     )
