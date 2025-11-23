@@ -333,7 +333,7 @@ export function ServerBrowserPage() {
 
                                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                                         <div className="flex items-center gap-1.5">
-                                            <span className="text-white/80">{server.map_name}</span>
+                                            <span className="text-white/80">{server.map_name.replace('CTF-BT-', '🐰 ').replace('CTF-BT+', '🔑 ')}</span>
                                         </div>
                                         <div className="w-px h-3 bg-white/10" />
                                         <div className="flex items-center gap-1.5">
@@ -354,7 +354,7 @@ export function ServerBrowserPage() {
                                         </div>
                                         {server.spectators > 0 && (
                                             <span className="text-xs text-muted-foreground">
-                                                +{server.spectators} specs
+                                                {server.spectators} spectator{server.spectators === 1 ? '' : 's'}
                                             </span>
                                         )}
                                     </div>
