@@ -3,14 +3,14 @@ import { handle } from '@/lib/main/shared'
 import { getUt99InstallPath } from '@/lib/main/config'
 import { gatewayService } from '@/lib/main/gateway-service'
 import { loggingService } from '@/lib/main/logging-service'
-import { spawn, execFile } from 'child_process'
+import { spawn } from 'child_process'
 import { join } from 'path'
 import { existsSync } from 'fs'
 
 export const registerGameHandlers = (_window: BrowserWindow) => {
     loggingService.info('Registering game IPC handlers', 'MainProcess')
 
-    handle('launchGame', async (ip: string, port: number, password?: string, asSpectator?: boolean) => {
+    handle('launchGame', async (ip: string, port: number) => {
         const installPath = getUt99InstallPath()
         if (!installPath) {
             throw new Error('UT99 install path not found')
@@ -22,14 +22,7 @@ export const registerGameHandlers = (_window: BrowserWindow) => {
         }
 
         let url = `unreal://${ip}:${port}`
-        const params: string[] = []
 
-        if (password) params.push(`password=${password}`)
-        if (asSpectator) params.push('Class=Botpack.CHSpectator')
-
-        if (params.length > 0) {
-            url += `?${params.join('&')}`
-        }
         loggingService.info(`Launching game with URL: ${url}`, 'GameHandler')
 
         const gameProcess = spawn(exePath, [url], {
