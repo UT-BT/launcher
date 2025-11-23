@@ -54,7 +54,13 @@ export function ServerBrowserSidebar({
                 </h3>
                 <div className="space-y-2">
                     {(['Certified', 'Duel', 'Casual'] as ServerType[]).map(type => (
-                        <label key={type} className="flex items-center gap-3 cursor-pointer group" onClick={() => toggleType(type)}>
+                        <label key={type} className="flex items-center gap-3 cursor-pointer group">
+                            <input
+                                type="checkbox"
+                                checked={filters.types[type]}
+                                onChange={() => toggleType(type)}
+                                className="sr-only"
+                            />
                             <div className={cn(
                                 "size-4 rounded border flex items-center justify-center transition-colors",
                                 filters.types[type]
@@ -80,7 +86,13 @@ export function ServerBrowserSidebar({
                     Availability
                 </h3>
                 <div className="space-y-2">
-                    <label className="flex items-center gap-3 cursor-pointer group" onClick={toggleHideEmpty}>
+                    <label className="flex items-center gap-3 cursor-pointer group">
+                        <input
+                            type="checkbox"
+                            checked={filters.hideEmpty}
+                            onChange={toggleHideEmpty}
+                            className="sr-only"
+                        />
                         <div className={cn(
                             "size-4 rounded border flex items-center justify-center transition-colors",
                             filters.hideEmpty
@@ -94,7 +106,13 @@ export function ServerBrowserSidebar({
                         </span>
                     </label>
 
-                    <label className="flex items-center gap-3 cursor-pointer group" onClick={toggleHideFull}>
+                    <label className="flex items-center gap-3 cursor-pointer group">
+                        <input
+                            type="checkbox"
+                            checked={filters.hideFull}
+                            onChange={toggleHideFull}
+                            className="sr-only"
+                        />
                         <div className={cn(
                             "size-4 rounded border flex items-center justify-center transition-colors",
                             filters.hideFull
@@ -123,7 +141,13 @@ export function ServerBrowserSidebar({
                         <p className="text-xs text-muted-foreground italic">No regions found</p>
                     )}
                     {availableRegions.map(region => (
-                        <label key={region} className="flex items-center gap-3 cursor-pointer group" onClick={() => toggleRegion(region)}>
+                        <label key={region} className="flex items-center gap-3 cursor-pointer group">
+                            <input
+                                type="checkbox"
+                                checked={filters.regions[region] !== false}
+                                onChange={() => toggleRegion(region)}
+                                className="sr-only"
+                            />
                             <div className={cn(
                                 "size-4 rounded border flex items-center justify-center transition-colors",
                                 filters.regions[region] !== false
