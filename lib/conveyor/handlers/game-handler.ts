@@ -28,7 +28,7 @@ export const registerGameHandlers = (_window: BrowserWindow) => {
         if (asSpectator) params.push('Class=Botpack.CHSpectator')
 
         if (params.length > 0) {
-            url += `?${params.join('?')}`
+            url += `?${params.join('&')}`
         }
         loggingService.info(`Launching game with URL: ${url}`, 'GameHandler')
 
