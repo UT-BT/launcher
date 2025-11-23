@@ -62,7 +62,7 @@ export const registerGameHandlers = (_window: BrowserWindow) => {
             }
 
             const platform = process.platform
-            const pingCommand = platform === 'win32' ? 'ping' : 'ping'
+            const pingCommand = 'ping'
             const args = platform === 'win32'
                 ? ['-n', '1', '-w', '1000', ip]
                 : ['-c', '1', '-W', '1', ip]
