@@ -184,7 +184,7 @@ export function ServerBrowserPage() {
 
             logger.info('Joining server', { server: selectedServer, asSpectator })
 
-            await window.conveyor.game.launchGame(selectedServer.ip, selectedServer.hostport, undefined, asSpectator)
+            await window.conveyor.game.launchGame(selectedServer.ip, selectedServer.hostport)
             setSelectedServer(null)
         } catch (err) {
             logger.error('Failed to launch game', { error: err })
