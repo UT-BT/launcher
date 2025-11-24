@@ -55,7 +55,7 @@ export function Settings() {
                             <Joystick className="size-6" />
                         </div>
                         <div>
-                            <h3 className="text-lg font-semibold">Unreal Tournament 1999</h3>
+                            <h3 className="text-lg font-semibold">Game</h3>
                         </div>
                     </div>
                 </div>

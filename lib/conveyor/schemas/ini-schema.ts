@@ -18,4 +18,11 @@ export const iniIpcSchema = {
         ]),
         return: z.void(),
     },
+    readIniSection: {
+        args: z.tuple([
+            z.string().describe('Path to the INI file (relative to UT99 System folder or absolute)'),
+            z.string().describe('Section name'),
+        ]),
+        return: z.any().optional().describe('The entire section as a key-value pair, or undefined if not found'),
+    },
 } as const

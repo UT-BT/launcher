@@ -4,7 +4,53 @@ import { getUt99InstallPath } from '@/lib/main/config'
 import { loggingService } from '@/lib/main/logging-service'
 import { join, isAbsolute } from 'path'
 import { existsSync, readFileSync, writeFileSync } from 'fs'
-import * as ini from 'ini'
+
+// Custom INI parser that preserves section names exactly (doesn't escape dots)
+const parseIni = (content: string): Record<string, Record<string, string>> => {
+    const lines = content.split(/\r?\n/)
+    const config: Record<string, Record<string, string>> = {}
+    let currentSection = ''
+
+    for (const line of lines) {
+        const trimmed = line.trim()
+
+        if (!trimmed || trimmed.startsWith(';') || trimmed.startsWith('#')) {
+            continue
+        }
+
+        const sectionMatch = trimmed.match(/^\[(.+)\]$/)
+        if (sectionMatch) {
+            currentSection = sectionMatch[1]
+            if (!config[currentSection]) {
+                config[currentSection] = {}
+            }
+            continue
+        }
+
+        const kvMatch = trimmed.match(/^([^=]+)=(.*)$/)
+        if (kvMatch && currentSection) {
+            const key = kvMatch[1].trim()
+            const value = kvMatch[2].trim()
+            config[currentSection][key] = value
+        }
+    }
+
+    return config
+}
+
+const stringifyIni = (config: Record<string, Record<string, string>>): string => {
+    let result = ''
+
+    for (const [section, pairs] of Object.entries(config)) {
+        result += `[${section}]\n`
+        for (const [key, value] of Object.entries(pairs)) {
+            result += `${key}=${value}\n`
+        }
+        result += '\n'
+    }
+
+    return result
+}
 
 export const registerIniHandlers = (_window: BrowserWindow) => {
     loggingService.info('Registering INI IPC handlers', 'MainProcess')
@@ -31,7 +77,7 @@ export const registerIniHandlers = (_window: BrowserWindow) => {
             }
 
             const content = readFileSync(iniPath, 'utf-8')
-            const config = ini.parse(content)
+            const config = parseIni(content)
 
             if (config[section] && config[section][key] !== undefined) {
                 return String(config[section][key])
@@ -52,7 +98,7 @@ export const registerIniHandlers = (_window: BrowserWindow) => {
             }
 
             const content = readFileSync(iniPath, 'utf-8')
-            const config = ini.parse(content)
+            const config = parseIni(content)
 
             if (!config[section]) {
                 config[section] = {}
@@ -60,12 +106,34 @@ export const registerIniHandlers = (_window: BrowserWindow) => {
 
             config[section][key] = value
 
-            const newContent = ini.stringify(config)
+            const newContent = stringifyIni(config)
             writeFileSync(iniPath, newContent, 'utf-8')
 
             loggingService.info(`Updated INI value [${section}] ${key}=${value} in ${path}`, 'IniHandler')
         } catch (error) {
             loggingService.error(`Failed to write INI value to ${path}`, 'IniHandler', error)
+            throw error
+        }
+    })
+
+    handle('readIniSection', async (path: string, section: string) => {
+        try {
+            const iniPath = resolveIniPath(path)
+            if (!existsSync(iniPath)) {
+                loggingService.warn(`INI file not found: ${iniPath}`, 'IniHandler')
+                return undefined
+            }
+
+            const content = readFileSync(iniPath, 'utf-8')
+            const config = parseIni(content)
+
+            if (config[section]) {
+                return config[section]
+            }
+
+            return undefined
+        } catch (error) {
+            loggingService.error(`Failed to read INI section from ${path}`, 'IniHandler', error)
             throw error
         }
     })
