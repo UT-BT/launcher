@@ -170,17 +170,23 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
             setNetspeed(parseInt(speed || '10000', 10))
 
             // Binds
-            const inputSection = await window.conveyor.ini.readIniSection('User.ini', 'Engine.Input') as Record<string, string> | undefined
+            const inputSection = await window.conveyor.ini.readIniSection('User.ini', 'Engine.Input') as Record<string, string | string[]> | undefined
             if (inputSection) {
                 const newBinds: Record<string, string[]> = {}
-                Object.entries(inputSection).forEach(([key, command]) => {
-                    const normalizedCommand = command.toLowerCase()
-                    if (!newBinds[normalizedCommand]) {
-                        newBinds[normalizedCommand] = []
-                    }
-                    if (newBinds[normalizedCommand].length < 2) {
-                        newBinds[normalizedCommand].push(key)
-                    }
+                Object.entries(inputSection).forEach(([key, commandValue]) => {
+                    const commands = Array.isArray(commandValue) ? commandValue : [commandValue]
+
+                    commands.forEach(command => {
+                        if (!command) return
+
+                        const normalizedCommand = command.toLowerCase()
+                        if (!newBinds[normalizedCommand]) {
+                            newBinds[normalizedCommand] = []
+                        }
+                        if (newBinds[normalizedCommand].length < 2) {
+                            newBinds[normalizedCommand].push(key)
+                        }
+                    })
                 })
                 setBinds(newBinds)
             }
@@ -435,7 +441,7 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
                     return
                 }
 
-                const inputSection = await window.conveyor.ini.readIniSection('User.ini', 'Engine.Input') as Record<string, string> | undefined
+                const inputSection = await window.conveyor.ini.readIniSection('User.ini', 'Engine.Input') as Record<string, string | string[]> | undefined
                 if (inputSection) {
                     for (const key of Object.keys(inputSection)) {
                         await window.conveyor.ini.writeIniValue('User.ini', 'Engine.Input', key, '')
