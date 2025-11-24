@@ -6,9 +6,9 @@ import { join, isAbsolute } from 'path'
 import { existsSync, readFileSync, writeFileSync } from 'fs'
 
 // Custom INI parser that preserves section names exactly (doesn't escape dots)
-const parseIni = (content: string): Record<string, Record<string, string>> => {
+const parseIni = (content: string): Record<string, Record<string, string | string[]>> => {
     const lines = content.split(/\r?\n/)
-    const config: Record<string, Record<string, string>> = {}
+    const config: Record<string, Record<string, string | string[]>> = {}
     let currentSection = ''
 
     for (const line of lines) {
@@ -31,20 +31,36 @@ const parseIni = (content: string): Record<string, Record<string, string>> => {
         if (kvMatch && currentSection) {
             const key = kvMatch[1].trim()
             const value = kvMatch[2].trim()
-            config[currentSection][key] = value
+
+            const existing = config[currentSection][key]
+            if (existing !== undefined) {
+                if (Array.isArray(existing)) {
+                    existing.push(value)
+                } else {
+                    config[currentSection][key] = [existing, value]
+                }
+            } else {
+                config[currentSection][key] = value
+            }
         }
     }
 
     return config
 }
 
-const stringifyIni = (config: Record<string, Record<string, string>>): string => {
+const stringifyIni = (config: Record<string, Record<string, string | string[]>>): string => {
     let result = ''
 
     for (const [section, pairs] of Object.entries(config)) {
         result += `[${section}]\n`
         for (const [key, value] of Object.entries(pairs)) {
-            result += `${key}=${value}\n`
+            if (Array.isArray(value)) {
+                for (const v of value) {
+                    result += `${key}=${v}\n`
+                }
+            } else {
+                result += `${key}=${value}\n`
+            }
         }
         result += '\n'
     }
@@ -80,7 +96,8 @@ export const registerIniHandlers = (_window: BrowserWindow) => {
             const config = parseIni(content)
 
             if (config[section] && config[section][key] !== undefined) {
-                return String(config[section][key])
+                const value = config[section][key]
+                return Array.isArray(value) ? value[0] : String(value)
             }
 
             return undefined
@@ -104,7 +121,12 @@ export const registerIniHandlers = (_window: BrowserWindow) => {
                 config[section] = {}
             }
 
-            config[section][key] = value
+            const existing = config[section][key]
+            if (Array.isArray(existing)) {
+                existing[0] = value
+            } else {
+                config[section][key] = value
+            }
 
             const newContent = stringifyIni(config)
             writeFileSync(iniPath, newContent, 'utf-8')
