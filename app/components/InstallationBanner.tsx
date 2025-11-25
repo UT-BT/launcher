@@ -13,7 +13,7 @@ export function InstallationBanner({ type, onClick }: InstallationBannerProps) {
     return (
         <div
             onClick={onClick}
-            className="w-full bg-destructive/10 border-b border-destructive/20 px-6 py-3 cursor-pointer hover:bg-destructive/20 transition-colors"
+            className="relative z-[60] w-full bg-destructive/100 border-b border-destructive/100 px-6 py-3 cursor-pointer hover:bg-destructive/80 transition-colors"
         >
             <div className="flex items-center gap-3 text-destructive">
                 <AlertTriangle className="size-5 flex-shrink-0 text-yellow-500" />

@@ -60,7 +60,11 @@ const MapThumbnail = ({ mapName }: { mapName: string }) => {
     )
 }
 
-export function ServerBrowserPage() {
+interface ServerBrowserPageProps {
+    installationStatus: 'valid' | 'no-install' | 'unsupported' | null
+}
+
+export function ServerBrowserPage({ installationStatus }: ServerBrowserPageProps) {
     const logger = useLogger('ServerBrowserPage')
     const [servers, setServers] = useState<Server[]>([])
     const [loading, setLoading] = useState(false)
@@ -414,6 +418,7 @@ export function ServerBrowserPage() {
                 isOpen={!!selectedServer}
                 onClose={() => setSelectedServer(null)}
                 onJoin={handleConfirmJoin}
+                installationStatus={installationStatus}
             />
 
             <ErrorModal
