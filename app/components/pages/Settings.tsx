@@ -1,12 +1,19 @@
 import { useState, useEffect } from 'react'
-import { Settings as SettingsIcon, Joystick } from 'lucide-react'
+import { Settings as SettingsIcon, Joystick, HardDrive } from 'lucide-react'
 import { LauncherSettings } from './LauncherSettings'
 import { UnrealTournamentSettings } from './UnrealTournamentSettings'
+import { GameInstallationSettings } from './GameInstallationSettings'
 
-type SettingsView = 'main' | 'launcher' | 'game'
+type SettingsView = 'main' | 'launcher' | 'game' | 'installation'
 
-export function Settings() {
-    const [view, setView] = useState<SettingsView>('main')
+interface SettingsProps {
+    initialSection?: 'game-installation'
+}
+
+export function Settings({ initialSection }: SettingsProps = {}) {
+    const [view, setView] = useState<SettingsView>(
+        initialSection === 'game-installation' ? 'installation' : 'main'
+    )
     const [launcherVersion, setLauncherVersion] = useState('')
     const [utVersion, setUtVersion] = useState('')
 
@@ -23,6 +30,10 @@ export function Settings() {
 
     if (view === 'game') {
         return <UnrealTournamentSettings onBack={() => setView('main')} />
+    }
+
+    if (view === 'installation') {
+        return <GameInstallationSettings onBack={() => setView('main')} />
     }
 
     return (
@@ -56,6 +67,20 @@ export function Settings() {
                         </div>
                         <div>
                             <h3 className="text-lg font-semibold">Game</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <div
+                    onClick={() => setView('installation')}
+                    className="p-6 rounded-xl bg-card border border-border hover:bg-accent/50 transition-colors cursor-pointer group"
+                >
+                    <div className="flex items-center gap-4 mb-2">
+                        <div className="p-3 rounded-lg bg-blue-500/10 text-blue-500 group-hover:bg-blue-500/20 transition-colors">
+                            <HardDrive className="size-6" />
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-semibold">Game Installation</h3>
                         </div>
                     </div>
                 </div>

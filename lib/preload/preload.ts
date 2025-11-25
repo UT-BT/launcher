@@ -29,6 +29,11 @@ if (process.contextIsolated) {
       respondConfirm: (id: string, accepted: boolean) => {
         ipcRenderer.send('ut-install-confirm-response', { id, accepted })
       },
+      onIsoDownloadProgress: (cb: (data: { progress: number; totalBytes: number; downloadedBytes: number }) => void) => {
+        const listener = (_: unknown, data: { progress: number; totalBytes: number; downloadedBytes: number }) => cb(data)
+        ipcRenderer.on('iso-download-progress', listener)
+        return () => ipcRenderer.removeListener('iso-download-progress', listener)
+      },
     })
     contextBridge.exposeInMainWorld('utPatch', {
       onStatus: (cb: (data: { status: string; message?: string; tag?: string }) => void) => {
@@ -38,6 +43,31 @@ if (process.contextIsolated) {
         ) => cb(data)
         ipcRenderer.on('ut-patch-status', listener)
         return () => ipcRenderer.removeListener('ut-patch-status', listener)
+      },
+      onPatchInstallStatus: (cb: (data: { status: string; tag?: string; message?: string }) => void) => {
+        const listener = (_: unknown, data: { status: string; tag?: string; message?: string }) => cb(data)
+        ipcRenderer.on('patch-install-status', listener)
+        return () => ipcRenderer.removeListener('patch-install-status', listener)
+      },
+      onPatchInstallProgress: (cb: (data: { progress: number }) => void) => {
+        const listener = (_: unknown, data: { progress: number }) => cb(data)
+        ipcRenderer.on('patch-install-progress', listener)
+        return () => ipcRenderer.removeListener('patch-install-progress', listener)
+      },
+      onInstallationPathUpdated: (cb: (data: { version: string }) => void) => {
+        const listener = (_: unknown, data: { version: string }) => cb(data)
+        ipcRenderer.on('installation-path-updated', listener)
+        return () => ipcRenderer.removeListener('installation-path-updated', listener)
+      },
+      onAnnouncerInstallProgress: (cb: (data: { progress: number }) => void) => {
+        const listener = (_: unknown, data: { progress: number }) => cb(data)
+        ipcRenderer.on('announcer-install-progress', listener)
+        return () => ipcRenderer.removeListener('announcer-install-progress', listener)
+      },
+      onAnnouncerInstallComplete: (cb: () => void) => {
+        const listener = () => cb()
+        ipcRenderer.on('announcer-install-complete', listener)
+        return () => ipcRenderer.removeListener('announcer-install-complete', listener)
       },
     })
     contextBridge.exposeInMainWorld('logging', {
@@ -86,6 +116,11 @@ if (process.contextIsolated) {
     respondConfirm: (id: string, accepted: boolean) => {
       ipcRenderer.send('ut-install-confirm-response', { id, accepted })
     },
+    onIsoDownloadProgress: (cb: (data: { progress: number; totalBytes: number; downloadedBytes: number }) => void) => {
+      const listener = (_: unknown, data: { progress: number; totalBytes: number; downloadedBytes: number }) => cb(data)
+      ipcRenderer.on('iso-download-progress', listener)
+      return () => ipcRenderer.removeListener('iso-download-progress', listener)
+    },
   }
   window.utPatch = {
     onStatus: (cb: (data: { status: string; message?: string; tag?: string }) => void) => {
@@ -95,6 +130,31 @@ if (process.contextIsolated) {
       ) => cb(data)
       ipcRenderer.on('ut-patch-status', listener)
       return () => ipcRenderer.removeListener('ut-patch-status', listener)
+    },
+    onPatchInstallStatus: (cb: (data: { status: string; tag?: string; message?: string }) => void) => {
+      const listener = (_: unknown, data: { status: string; tag?: string; message?: string }) => cb(data)
+      ipcRenderer.on('patch-install-status', listener)
+      return () => ipcRenderer.removeListener('patch-install-status', listener)
+    },
+    onPatchInstallProgress: (cb: (data: { progress: number }) => void) => {
+      const listener = (_: unknown, data: { progress: number }) => cb(data)
+      ipcRenderer.on('patch-install-progress', listener)
+      return () => ipcRenderer.removeListener('patch-install-progress', listener)
+    },
+    onInstallationPathUpdated: (cb: (data: { version: string }) => void) => {
+      const listener = (_: unknown, data: { version: string }) => cb(data)
+      ipcRenderer.on('installation-path-updated', listener)
+      return () => ipcRenderer.removeListener('installation-path-updated', listener)
+    },
+    onAnnouncerInstallProgress: (cb: (data: { progress: number }) => void) => {
+      const listener = (_: unknown, data: { progress: number }) => cb(data)
+      ipcRenderer.on('announcer-install-progress', listener)
+      return () => ipcRenderer.removeListener('announcer-install-progress', listener)
+    },
+    onAnnouncerInstallComplete: (cb: () => void) => {
+      const listener = () => cb()
+      ipcRenderer.on('announcer-install-complete', listener)
+      return () => ipcRenderer.removeListener('announcer-install-complete', listener)
     },
   }
   window.logging = {

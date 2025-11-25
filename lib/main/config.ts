@@ -2,12 +2,9 @@ import { app } from 'electron'
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs'
 import { join } from 'path'
 
-type PatchChannel = 'stable' | 'rc'
-
 type InstalledPatch = {
   tag: string
   sha256: string
-  channel: PatchChannel
   installedAt: string
 }
 
@@ -18,8 +15,6 @@ type GatewayConfig = {
 
 type LauncherConfig = {
   ut99InstallPath?: string
-  patchChannel?: PatchChannel
-  baseVersion?: string
   installedPatch?: InstalledPatch
   gateway?: GatewayConfig
 }
@@ -67,19 +62,8 @@ export function setUt99InstallPath(path: string | undefined): void {
   const next: LauncherConfig = {
     ...current,
     ut99InstallPath: path,
-    ...(pathChanged ? { baseVersion: undefined, installedPatch: undefined, patchChannel: 'stable' } : {}),
+    ...(pathChanged ? { installedPatch: undefined } : {}),
   }
-  writeConfig(next)
-}
-
-export function getPatchChannel(): PatchChannel {
-  const cfg = readConfig()
-  return cfg.patchChannel ?? 'stable'
-}
-
-export function setPatchChannel(channel: PatchChannel): void {
-  const current = readConfig()
-  const next: LauncherConfig = { ...current, patchChannel: channel }
   writeConfig(next)
 }
 
@@ -89,29 +73,19 @@ export function setInstalledPatch(patch: InstalledPatch | undefined): void {
   writeConfig(next)
 }
 
+export function markFreshInstall(): void {
+  const current = readConfig()
+  const next: LauncherConfig = { ...current, installedPatch: undefined }
+  writeConfig(next)
+}
+
 export function getInstalledPatch(): InstalledPatch | undefined {
   return readConfig().installedPatch
 }
 
-export function setBaseVersion(version: string | undefined): void {
-  const current = readConfig()
-  const next: LauncherConfig = { ...current, baseVersion: version }
-  writeConfig(next)
-}
-
-export function getBaseVersion(): string | undefined {
-  return readConfig().baseVersion
-}
-
-export function markFreshInstall(baseVersion: string = 'v432'): void {
-  const current = readConfig()
-  const next: LauncherConfig = { ...current, baseVersion, installedPatch: undefined }
-  writeConfig(next)
-}
-
 export function getGatewayConfig(): GatewayConfig {
   const config = readConfig()
-  return config.gateway ?? { 
+  return config.gateway ?? {
     baseUrl: 'https://gateway.utbt.net',
   }
 }
@@ -119,8 +93,8 @@ export function getGatewayConfig(): GatewayConfig {
 export function setGatewayConfig(gateway: Partial<GatewayConfig>): void {
   const current = readConfig()
   const currentGateway = current.gateway ?? { baseUrl: 'https://gateway.utbt.net' }
-  const next: LauncherConfig = { 
-    ...current, 
+  const next: LauncherConfig = {
+    ...current,
     gateway: { ...currentGateway, ...gateway }
   }
   writeConfig(next)
@@ -141,5 +115,4 @@ export function getGatewayApiKey(): string | undefined {
 export function setGatewayApiKey(apiKey: string | undefined): void {
   setGatewayConfig({ apiKey })
 }
-
 
