@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { ArrowLeft, User, Monitor, Keyboard, Download, Upload, Loader2, CheckCircle, XCircle } from 'lucide-react'
+import { ArrowLeft, User, Monitor, Keyboard, Download, Upload, Loader2, CheckCircle, XCircle, ChevronDown, ChevronUp } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Input } from '@/app/components/ui/input'
 import { Slider } from '@/app/components/ui/slider'
@@ -114,6 +114,51 @@ const getAvailableResolutions = (nativeWidth: number, nativeHeight: number): str
     })
 
     return filteredResolutions
+}
+
+interface SettingsSectionProps {
+    title: string
+    icon: React.ReactNode
+    children: React.ReactNode
+    defaultOpen?: boolean
+    headerAction?: React.ReactNode
+    activeIconClassName?: string
+}
+
+function SettingsSection({ title, icon, children, defaultOpen = false, headerAction, activeIconClassName }: SettingsSectionProps) {
+    const [isOpen, setIsOpen] = useState(defaultOpen)
+
+    return (
+        <div className="rounded-xl bg-card border border-border overflow-hidden">
+            <div
+                className="flex items-center justify-between p-6 cursor-pointer hover:bg-accent/50 transition-colors"
+                onClick={() => setIsOpen(!isOpen)}
+            >
+                <div className="flex items-center gap-4">
+                    <div className={cn("p-3 rounded-lg transition-colors", activeIconClassName || (isOpen ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"))}>
+                        {icon}
+                    </div>
+                    <h3 className="text-lg font-semibold">{title}</h3>
+                </div>
+                <div className="flex items-center gap-4">
+                    {headerAction && (
+                        <div onClick={e => e.stopPropagation()}>
+                            {headerAction}
+                        </div>
+                    )}
+                    {isOpen ? <ChevronUp className="size-5 text-muted-foreground" /> : <ChevronDown className="size-5 text-muted-foreground" />}
+                </div>
+            </div>
+
+            {isOpen && (
+                <div className="px-6 pb-6 animate-in slide-in-from-top-2 duration-200">
+                    <div className="pt-6 border-t border-border">
+                        {children}
+                    </div>
+                </div>
+            )}
+        </div>
+    )
 }
 
 export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsProps) {
@@ -589,14 +634,12 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
 
             <div className="grid grid-cols-1 gap-6">
                 {/* Player Settings */}
-                <div className="p-6 rounded-xl bg-card border border-border">
-                    <div className="flex items-center gap-4 mb-6">
-                        <div className="p-3 rounded-lg bg-blue-500/10 text-blue-500">
-                            <User className="size-6" />
-                        </div>
-                        <h3 className="text-lg font-semibold">Player Details</h3>
-                    </div>
-
+                <SettingsSection
+                    title="Player Details"
+                    icon={<User className="size-6" />}
+                    defaultOpen={true}
+                    activeIconClassName="bg-blue-500/10 text-blue-500"
+                >
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
                             <label className="text-sm font-medium">Name</label>
@@ -638,17 +681,14 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
                             </select>
                         </div>
                     </div>
-                </div>
+                </SettingsSection>
 
                 {/* Video Settings */}
-                <div className="p-6 rounded-xl bg-card border border-border">
-                    <div className="flex items-center gap-4 mb-6">
-                        <div className="p-3 rounded-lg bg-green-500/10 text-green-500">
-                            <Monitor className="size-6" />
-                        </div>
-                        <h3 className="text-lg font-semibold">Video Options</h3>
-                    </div>
-
+                <SettingsSection
+                    title="Video Options"
+                    icon={<Monitor className="size-6" />}
+                    activeIconClassName="bg-green-500/10 text-green-500"
+                >
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
                             <label className="text-sm font-medium">Render Device</label>
@@ -722,17 +762,14 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
                             />
                         </div>
                     </div>
-                </div>
+                </SettingsSection>
 
                 {/* Binds */}
-                <div className="p-6 rounded-xl bg-card border border-border">
-                    <div className="flex items-center justify-between mb-6">
-                        <div className="flex items-center gap-4">
-                            <div className="p-3 rounded-lg bg-purple-500/10 text-purple-500">
-                                <Keyboard className="size-6" />
-                            </div>
-                            <h3 className="text-lg font-semibold">Binds</h3>
-                        </div>
+                <SettingsSection
+                    title="Binds"
+                    icon={<Keyboard className="size-6" />}
+                    activeIconClassName="bg-purple-500/10 text-purple-500"
+                    headerAction={
                         <div className="flex gap-2">
                             <Button
                                 variant="outline"
@@ -753,8 +790,8 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
                                 Import
                             </Button>
                         </div>
-                    </div>
-
+                    }
+                >
                     <div className="space-y-8">
                         {BIND_CATEGORIES.map((category) => (
                             <div key={category.name}>
@@ -790,7 +827,7 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
                             </div>
                         ))}
                     </div>
-                </div>
+                </SettingsSection>
             </div>
         </div>
     )
