@@ -161,6 +161,63 @@ function SettingsSection({ title, icon, children, defaultOpen = false, headerAct
     )
 }
 
+interface RenderDeviceSetting {
+    key: string
+    label: string
+    type: 'boolean' | 'number' | 'select' | 'color'
+    options?: { label: string; value: string | number }[]
+    min?: number
+    max?: number
+    step?: number
+    tooltip?: string
+    section?: string // To group settings if needed, e.g. "Visuals", "Performance"
+}
+
+const RENDER_DEVICE_SETTINGS: Record<string, RenderDeviceSetting[]> = {
+    'D3D9Drv.D3D9RenderDevice': [
+        { key: 'SwapInterval', label: 'VSync', type: 'boolean', tooltip: 'Vertical Sync. Prevents screen tearing but may increase input lag.' },
+        { key: 'UseAA', label: 'Anti-Aliasing', type: 'boolean', tooltip: 'Smoothens jagged edges.' },
+        { key: 'NumAASamples', label: 'AA Samples', type: 'select', options: [{ label: '2x', value: 2 }, { label: '4x', value: 4 }, { label: '8x', value: 8 }, { label: '16x', value: 16 }], tooltip: 'Number of Anti-Aliasing samples. Higher is better quality but more performance intensive.' },
+        { key: 'UsePrecache', label: 'Precache', type: 'boolean', tooltip: 'Preload resources. Reduces stuttering during gameplay but increases load times.' },
+        { key: 'UseTrilinear', label: 'Trilinear Filtering', type: 'boolean', tooltip: 'Improves texture quality at oblique angles.' },
+        { key: 'MaxAnisotropy', label: 'Anisotropic Filtering', type: 'select', options: [{ label: 'Off', value: 0 }, { label: '2x', value: 2 }, { label: '4x', value: 4 }, { label: '8x', value: 8 }, { label: '16x', value: 16 }], tooltip: 'Improves texture clarity on surfaces viewed at an angle.' },
+        { key: 'Coronas', label: 'Coronas', type: 'boolean', tooltip: 'Render light coronas around light sources.' },
+        { key: 'ShinySurfaces', label: 'Shiny Surfaces', type: 'boolean', tooltip: 'Enable reflective surfaces.' },
+        { key: 'VolumetricLighting', label: 'Volumetric Lighting', type: 'boolean', tooltip: 'Enable volumetric lighting effects (fog).' },
+        { key: 'HighDetailActors', label: 'High Detail Actors', type: 'boolean', tooltip: 'Use high polygon models for players and items.' },
+        { key: 'LODBias', label: 'LOD Bias', type: 'number', min: -10, max: 10, step: 0.1, tooltip: 'Level of Detail bias. Negative values make textures sharper, positive values make them blurrier.' },
+        { key: 'GammaCorrectScreenshots', label: 'Gamma Correct Screenshots', type: 'boolean', tooltip: 'Apply gamma correction to screenshots.' },
+    ],
+    'D3D11Drv.D3D11RenderDevice': [
+        { key: 'UseVSync', label: 'VSync', type: 'boolean', tooltip: 'Vertical Sync. Prevents screen tearing but may increase input lag.' },
+        { key: 'AntialiasMode', label: 'Anti-Aliasing Mode', type: 'select', options: [{ label: 'Off', value: 'None' }, { label: '2x MSAA', value: 'MSAA_2x' }, { label: '4x MSAA', value: 'MSAA_4x' }, { label: '8x MSAA', value: 'MSAA_8x' }], tooltip: 'Anti-Aliasing method.' },
+        { key: 'Bloom', label: 'Bloom', type: 'boolean', tooltip: 'Enable light bloom effects.' },
+        { key: 'BloomAmount', label: 'Bloom Amount', type: 'number', min: 0, max: 255, step: 1, tooltip: 'Intensity of the bloom effect.' },
+        { key: 'Hdr', label: 'HDR', type: 'boolean', tooltip: 'High Dynamic Range lighting.' },
+        { key: 'UsePrecache', label: 'Precache', type: 'boolean', tooltip: 'Preload resources.' },
+        { key: 'Coronas', label: 'Coronas', type: 'boolean', tooltip: 'Render light coronas.' },
+        { key: 'ShinySurfaces', label: 'Shiny Surfaces', type: 'boolean', tooltip: 'Enable reflective surfaces.' },
+        { key: 'VolumetricLighting', label: 'Volumetric Lighting', type: 'boolean', tooltip: 'Enable volumetric lighting effects.' },
+        { key: 'HighDetailActors', label: 'High Detail Actors', type: 'boolean', tooltip: 'Use high polygon models.' },
+        { key: 'LODBias', label: 'LOD Bias', type: 'number', min: -10, max: 10, step: 0.1, tooltip: 'Level of Detail bias.' },
+        { key: 'GammaCorrectScreenshots', label: 'Gamma Correct Screenshots', type: 'boolean', tooltip: 'Apply gamma correction to screenshots.' },
+    ],
+    'OpenGLDrv.OpenGLRenderDevice': [
+        { key: 'SwapInterval', label: 'VSync', type: 'boolean', tooltip: 'Vertical Sync. Prevents screen tearing but may increase input lag.' },
+        { key: 'UseAA', label: 'Anti-Aliasing', type: 'boolean', tooltip: 'Smoothens jagged edges.' },
+        { key: 'NumAASamples', label: 'AA Samples', type: 'select', options: [{ label: '2x', value: 2 }, { label: '4x', value: 4 }, { label: '8x', value: 8 }, { label: '16x', value: 16 }], tooltip: 'Number of Anti-Aliasing samples.' },
+        { key: 'UsePrecache', label: 'Precache', type: 'boolean', tooltip: 'Preload resources.' },
+        { key: 'UseTrilinear', label: 'Trilinear Filtering', type: 'boolean', tooltip: 'Improves texture quality.' },
+        { key: 'MaxAnisotropy', label: 'Anisotropic Filtering', type: 'select', options: [{ label: 'Off', value: 0 }, { label: '2x', value: 2 }, { label: '4x', value: 4 }, { label: '8x', value: 8 }, { label: '16x', value: 16 }], tooltip: 'Improves texture clarity.' },
+        { key: 'Coronas', label: 'Coronas', type: 'boolean', tooltip: 'Render light coronas.' },
+        { key: 'ShinySurfaces', label: 'Shiny Surfaces', type: 'boolean', tooltip: 'Enable reflective surfaces.' },
+        { key: 'VolumetricLighting', label: 'Volumetric Lighting', type: 'boolean', tooltip: 'Enable volumetric lighting effects.' },
+        { key: 'HighDetailActors', label: 'High Detail Actors', type: 'boolean', tooltip: 'Use high polygon models.' },
+        { key: 'DetailTextures', label: 'Detail Textures', type: 'boolean', tooltip: 'Use high resolution detail textures when up close.' },
+        { key: 'UseHDTextures', label: 'Use HD Textures', type: 'boolean', tooltip: 'Enable support for high definition textures (S3TC).' },
+    ]
+}
+
 export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsProps) {
     // Player Settings
     const [playerName, setPlayerName] = useState('')
@@ -173,6 +230,7 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
     const [resY, setResY] = useState('1080')
     const [fpsLimit, setFpsLimit] = useState('0')
     const [netspeed, setNetspeed] = useState(10000)
+    const [deviceSettings, setDeviceSettings] = useState<Record<string, any>>({})
 
     // Binds
     const [binds, setBinds] = useState<Record<string, string[]>>({}) // command -> keys[]
@@ -214,6 +272,25 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
             const speed = await window.conveyor.ini.readIniValue('UnrealTournament.ini', 'Engine.Player', 'ConfiguredInternetSpeed')
             setNetspeed(parseInt(speed || '10000', 10))
 
+            // Device Specific Settings
+            if (device) {
+                const settingsConfig = RENDER_DEVICE_SETTINGS[device]
+                if (settingsConfig) {
+                    const currentSettings: Record<string, any> = {}
+                    for (const setting of settingsConfig) {
+                        const val = await window.conveyor.ini.readIniValue('UnrealTournament.ini', device, setting.key)
+                        if (setting.type === 'boolean') {
+                            currentSettings[setting.key] = val?.toLowerCase() === 'true' || val === '1'
+                        } else if (setting.type === 'number') {
+                            currentSettings[setting.key] = parseFloat(val || '0')
+                        } else {
+                            currentSettings[setting.key] = val
+                        }
+                    }
+                    setDeviceSettings(currentSettings)
+                }
+            }
+
             // Binds
             const inputSection = await window.conveyor.ini.readIniSection('User.ini', 'Engine.Input') as Record<string, string | string[]> | undefined
             if (inputSection) {
@@ -252,6 +329,24 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
         await window.conveyor.ini.writeIniValue('UnrealTournament.ini', 'WinDrv.WindowsClient', 'FullscreenViewportY', resY)
         await window.conveyor.ini.writeIniValue('UnrealTournament.ini', 'WinDrv.WindowsClient', 'FrameRateLimit', fpsLimit)
         await window.conveyor.ini.writeIniValue('UnrealTournament.ini', 'Engine.Player', 'ConfiguredInternetSpeed', netspeed.toString())
+    }
+
+    const updateDeviceSetting = async (key: string, value: any) => {
+        setDeviceSettings(prev => ({ ...prev, [key]: value }))
+
+        // Find the setting definition to know how to format the value
+        const settingDef = RENDER_DEVICE_SETTINGS[renderDevice]?.find(s => s.key === key)
+        let stringValue = String(value)
+
+        if (settingDef?.type === 'boolean') {
+            if (key === 'SwapInterval') {
+                stringValue = value ? '1' : '0'
+            } else {
+                stringValue = value ? 'True' : 'False'
+            }
+        }
+
+        await window.conveyor.ini.writeIniValue('UnrealTournament.ini', renderDevice, key, stringValue)
     }
 
     const handleBindClick = (command: string, slot: number) => {
@@ -695,10 +790,28 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
                             <select
                                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                                 value={renderDevice}
-                                onChange={(e) => {
+                                onChange={async (e) => {
                                     const val = e.target.value
                                     setRenderDevice(val)
                                     window.conveyor.ini.writeIniValue('UnrealTournament.ini', 'Engine.Engine', 'GameRenderDevice', val)
+                                    // Reload settings for the new device
+                                    const settingsConfig = RENDER_DEVICE_SETTINGS[val]
+                                    if (settingsConfig) {
+                                        const currentSettings: Record<string, any> = {}
+                                        for (const setting of settingsConfig) {
+                                            const v = await window.conveyor.ini.readIniValue('UnrealTournament.ini', val, setting.key)
+                                            if (setting.type === 'boolean') {
+                                                currentSettings[setting.key] = v?.toLowerCase() === 'true' || v === '1'
+                                            } else if (setting.type === 'number') {
+                                                currentSettings[setting.key] = parseFloat(v || '0')
+                                            } else {
+                                                currentSettings[setting.key] = v
+                                            }
+                                        }
+                                        setDeviceSettings(currentSettings)
+                                    } else {
+                                        setDeviceSettings({})
+                                    }
                                 }}
                             >
                                 <option value="D3D9Drv.D3D9RenderDevice">Direct3D 9</option>
@@ -762,6 +875,72 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
                             />
                         </div>
                     </div>
+
+                    {/* Dynamic Render Device Settings */}
+                    {RENDER_DEVICE_SETTINGS[renderDevice] && (
+                        <div className="col-span-1 md:col-span-2 border-t border-border pt-6 mt-2">
+                            <h4 className="text-sm font-semibold mb-4 text-muted-foreground">
+                                {renderDevice.split('.')[0]} Settings
+                            </h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {RENDER_DEVICE_SETTINGS[renderDevice].map(setting => (
+                                    <div key={setting.key} className="space-y-2">
+                                        <div className="flex items-center gap-2">
+                                            <label className="text-sm font-medium">{setting.label}</label>
+                                            {setting.tooltip && <Tooltip content={setting.tooltip} />}
+                                        </div>
+
+                                        {setting.type === 'boolean' && (
+                                            <div className="flex items-center h-10">
+                                                <label className="relative inline-flex items-center cursor-pointer">
+                                                    <input
+                                                        type="checkbox"
+                                                        className="sr-only peer"
+                                                        checked={!!deviceSettings[setting.key]}
+                                                        onChange={(e) => updateDeviceSetting(setting.key, e.target.checked)}
+                                                    />
+                                                    <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-ring rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                                                </label>
+                                            </div>
+                                        )}
+
+                                        {setting.type === 'number' && (
+                                            <div className="flex items-center gap-4">
+                                                <Slider
+                                                    min={setting.min ?? 0}
+                                                    max={setting.max ?? 100}
+                                                    step={setting.step ?? 1}
+                                                    value={deviceSettings[setting.key] ?? 0}
+                                                    onChange={(e) => {
+                                                        // Update local state immediately for smoothness
+                                                        setDeviceSettings(prev => ({ ...prev, [setting.key]: parseFloat(e.target.value) }))
+                                                    }}
+                                                    onMouseUp={() => {
+                                                        // Commit to INI on release
+                                                        updateDeviceSetting(setting.key, deviceSettings[setting.key])
+                                                    }}
+                                                    className="flex-1"
+                                                />
+                                                <span className="text-sm w-12 text-right">{deviceSettings[setting.key]}</span>
+                                            </div>
+                                        )}
+
+                                        {setting.type === 'select' && (
+                                            <select
+                                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                                value={deviceSettings[setting.key] ?? ''}
+                                                onChange={(e) => updateDeviceSetting(setting.key, e.target.value)}
+                                            >
+                                                {setting.options?.map(opt => (
+                                                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                                ))}
+                                            </select>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </SettingsSection>
 
                 {/* Binds */}
@@ -828,7 +1007,7 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
                         ))}
                     </div>
                 </SettingsSection>
-            </div>
-        </div>
+            </div >
+        </div >
     )
 }
