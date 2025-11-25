@@ -5,6 +5,7 @@ import { UnrealTournamentSettings } from './UnrealTournamentSettings'
 import { GameInstallationSettings } from './GameInstallationSettings'
 import { ErrorModal } from '../ErrorModal'
 
+
 type SettingsView = 'main' | 'launcher' | 'game' | 'installation'
 
 interface SettingsProps {
@@ -101,12 +102,15 @@ export function Settings({ initialSection }: SettingsProps = {}) {
                         </div>
                     </div>
                 </div>
+
             </div>
 
             <div className="mt-8 pt-6 border-t border-border flex justify-between text-xs text-muted-foreground">
                 <span>Launcher Version: {launcherVersion}</span>
                 <span>UT Version: {utVersion}</span>
             </div>
-        </div>
+
+
+        </div >
     )
 }

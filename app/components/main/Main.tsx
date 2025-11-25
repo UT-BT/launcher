@@ -7,7 +7,7 @@ import { MapSearch } from '@/app/components/pages/MapSearch'
 import { Settings } from '@/app/components/pages/Settings'
 import { InstallationBanner } from '@/app/components/InstallationBanner'
 
-export function Main() {
+export function Main({ userProfile }: { userProfile?: import('@/lib/main/config').AuthConfig }) {
   const [currentView, setCurrentView] = useState('home')
   const [installationStatus, setInstallationStatus] = useState<'valid' | 'no-install' | 'unsupported' | null>(null)
 
@@ -74,7 +74,7 @@ export function Main() {
         <InstallationBanner type={installationStatus} onClick={handleBannerClick} />
       )}
       <div className="flex-1 overflow-hidden">
-        <AppLayout currentView={currentView} onViewChange={setCurrentView}>
+        <AppLayout currentView={currentView} onViewChange={setCurrentView} userProfile={userProfile}>
           {renderView()}
         </AppLayout>
       </div>

@@ -40,3 +40,10 @@ app.on('window-all-closed', () => {
 
 // In this file, you can include the rest of your app's specific main process
 // code. You can also put them in separate files and import them here.
+
+import { ipcMain } from 'electron'
+import { authService } from '@/lib/main/auth-service'
+
+ipcMain.handle('auth:login', () => authService.login())
+ipcMain.handle('auth:logout', () => authService.logout())
+ipcMain.handle('auth:get-profile', () => authService.getProfile())

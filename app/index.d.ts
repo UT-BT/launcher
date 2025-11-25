@@ -56,4 +56,9 @@ interface Window {
     getLogFilePath: () => Promise<string>
     getRecentLogs: (lines?: number) => Promise<string[]>
   }
+  auth: {
+    login: () => Promise<import('@/lib/main/config').AuthConfig>
+    logout: () => Promise<void>
+    getProfile: () => Promise<import('@/lib/main/config').AuthConfig | undefined>
+  }
 }
