@@ -1,7 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { InstallationState, InstallationConfig } from '@/app/types'
-import { installationService } from '@/app/services/InstallationService'
-import { updateService } from '@/app/services/UpdateService'
 import { useLogger } from '@/app/hooks/use-logger'
 
 interface InstallationCallbacks {
@@ -50,9 +48,9 @@ export function useInstallation(callbacks?: InstallationCallbacks) {
 
   const updateSpeedAndEta = (downloadedBytes: number) => {
     const now = Date.now()
-    
+
     if (now - lastUpdateRef.current < 1000) return
-    
+
     if (lastTsRef.current === 0) {
       lastTsRef.current = now
       lastBytesRef.current = downloadedBytes
@@ -62,17 +60,17 @@ export function useInstallation(callbacks?: InstallationCallbacks) {
 
     const dt = (now - lastTsRef.current) / 1000
     const db = downloadedBytes - lastBytesRef.current
-    
+
     if (dt >= 1 && db > 0) {
       const currentSpeed = db / dt
       speedSamplesRef.current = [...speedSamplesRef.current, currentSpeed].slice(-5)
       const avgSpeed = speedSamplesRef.current.reduce((sum, speed) => sum + speed, 0) / speedSamplesRef.current.length
-      
+
       setState(prev => ({
         ...prev,
         speedText: installationService.formatSpeed(avgSpeed)
       }))
-      
+
       const remaining = Math.max(0, installationService.TOTAL_SIZE - downloadedBytes)
       if (avgSpeed > 0) {
         const eta = remaining / avgSpeed
@@ -81,7 +79,7 @@ export function useInstallation(callbacks?: InstallationCallbacks) {
           etaText: installationService.formatTime(eta)
         }))
       }
-      
+
       lastTsRef.current = now
       lastBytesRef.current = downloadedBytes
       lastUpdateRef.current = now
@@ -139,7 +137,7 @@ export function useInstallation(callbacks?: InstallationCallbacks) {
       if (data.status.startsWith('downloading')) {
         setState(prev => ({ ...prev, status: 'downloading' }))
         installationService.setWindowLocked(true)
-        
+
         if (data.status === 'downloading-cd1') {
           setState(prev => ({ ...prev, progressText: 'Downloading CD1…' }))
         } else if (data.status === 'downloading-cd2') {
@@ -164,7 +162,7 @@ export function useInstallation(callbacks?: InstallationCallbacks) {
       } else if (data.status.startsWith('installing')) {
         setState(prev => ({ ...prev, status: 'installing', progress: 100 }))
         installationService.setWindowLocked(true)
-        
+
         if (data.status === 'installing-cd1') {
           setState(prev => ({ ...prev, progressText: 'Installing UT99 • Disc 1' }))
         } else if (data.status === 'installing-cd2') {
@@ -291,7 +289,6 @@ export function useInstallation(callbacks?: InstallationCallbacks) {
         }
 
         await installationService.setPatchChannel(patchChannel)
-        await updateService.setupBaseVersion()
 
         const manifestResp = await window.conveyor.app.fetchLatestPatchManifest(patchChannel === 'stable' ? true : undefined)
         if (manifestResp?.success && manifestResp.data) {

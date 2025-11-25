@@ -32,7 +32,7 @@ export function AppLayout({ children, currentView, onViewChange }: AppLayoutProp
     }, [])
 
     return (
-        <div className="flex h-screen bg-background text-foreground overflow-hidden relative">
+        <div className="flex h-full bg-background text-foreground overflow-hidden relative">
             <div className="nebula-bg absolute inset-0 opacity-30 pointer-events-none" />
 
             {/* Sidebar */}

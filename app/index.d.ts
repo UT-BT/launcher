@@ -37,9 +37,15 @@ interface Window {
     onStatus: (cb: (data: { status: string }) => void) => () => void
     onConfirm: (cb: (data: { id: string; title: string; message: string; detail?: string }) => void) => () => void
     respondConfirm: (id: string, accepted: boolean) => void
+    onIsoDownloadProgress: (cb: (data: { progress: number; totalBytes: number; downloadedBytes: number }) => void) => () => void
   }
   utPatch: {
     onStatus: (cb: (data: { status: string; message?: string; tag?: string }) => void) => () => void
+    onPatchInstallStatus: (cb: (data: { status: string; tag?: string; message?: string }) => void) => () => void
+    onPatchInstallProgress: (cb: (data: { progress: number }) => void) => () => void
+    onInstallationPathUpdated: (cb: (data: { version: string }) => void) => () => void
+    onAnnouncerInstallProgress: (cb: (data: { progress: number }) => void) => () => void
+    onAnnouncerInstallComplete: (cb: () => void) => () => void
   }
   logging: {
     log: (level: string, message: string, context?: string, data?: any) => Promise<void>

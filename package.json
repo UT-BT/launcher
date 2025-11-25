@@ -42,6 +42,7 @@
     "react-icons": "^5.5.0",
     "tailwind-merge": "^3.3.1",
     "tw-animate-css": "^1.3.7",
+    "zip-lib": "^1.1.2",
     "zod": "^4.1.3"
   },
   "devDependencies": {
