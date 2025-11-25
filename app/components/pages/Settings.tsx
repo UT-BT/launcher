@@ -83,7 +83,7 @@ export function Settings({ initialSection }: SettingsProps = {}) {
                             <Joystick className="size-6" />
                         </div>
                         <div>
-                            <h3 className="text-lg font-semibold">Game</h3>
+                            <h3 className="text-lg font-semibold">UT99 Settings</h3>
                         </div>
                     </div>
                 </div>
@@ -97,7 +97,7 @@ export function Settings({ initialSection }: SettingsProps = {}) {
                             <HardDrive className="size-6" />
                         </div>
                         <div>
-                            <h3 className="text-lg font-semibold">Game Installation</h3>
+                            <h3 className="text-lg font-semibold">UT99 Installation/Patches</h3>
                         </div>
                     </div>
                 </div>
