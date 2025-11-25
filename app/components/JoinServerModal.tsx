@@ -10,9 +10,10 @@ interface JoinServerModalProps {
     isOpen: boolean
     onClose: () => void
     onJoin: (asSpectator: boolean) => void
+    installationStatus: 'valid' | 'no-install' | 'unsupported' | null
 }
 
-export function JoinServerModal({ server, isOpen, onClose, onJoin }: JoinServerModalProps) {
+export function JoinServerModal({ server, isOpen, onClose, onJoin, installationStatus }: JoinServerModalProps) {
     const [imgError, setImgError] = useState(false)
     const modalRef = useRef<HTMLDivElement>(null)
     const closeButtonRef = useRef<HTMLButtonElement>(null)
@@ -78,6 +79,17 @@ export function JoinServerModal({ server, isOpen, onClose, onJoin }: JoinServerM
     if (!isOpen || !server) return null
 
     const isFull = server.player_count >= server.max_players
+    const isInstallInvalid = installationStatus !== 'valid'
+    const isJoinDisabled = isFull || isInstallInvalid
+
+    const getTooltipMessage = () => {
+        if (isInstallInvalid) return 'Installation invalid or unsupported'
+        if (isFull) return 'Server is full'
+        return null
+    }
+
+    const tooltipMessage = getTooltipMessage()
+
     const region = getServerRegion(server.hostname)
     const trimmedName = `${trimServerName(server.hostname)} (${region})`
     const imgSrc = imgError
@@ -133,28 +145,37 @@ export function JoinServerModal({ server, isOpen, onClose, onJoin }: JoinServerM
                         <div className="relative group">
                             <Button
                                 onClick={() => onJoin(false)}
-                                disabled={isFull}
+                                disabled={isJoinDisabled}
                                 className="w-full h-12 text-base font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/20 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 <Play className="size-5 mr-2 fill-current" />
                                 Join as Player
                             </Button>
-                            {isFull && (
-                                <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-destructive text-destructive-foreground text-xs font-medium rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
-                                    Server is full
+                            {tooltipMessage && (
+                                <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-destructive text-destructive-foreground text-xs font-medium rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+                                    {tooltipMessage}
                                     <div className="absolute bottom-[-4px] left-1/2 -translate-x-1/2 w-2 h-2 bg-destructive rotate-45" />
                                 </div>
                             )}
                         </div>
 
-                        <Button
-                            onClick={() => onJoin(true)}
-                            variant="secondary"
-                            className="w-full h-12 text-base font-semibold bg-white/10 hover:bg-white/20 text-white border border-white/5"
-                        >
-                            <Eye className="size-5 mr-2" />
-                            Join as Spectator
-                        </Button>
+                        <div className="relative group">
+                            <Button
+                                onClick={() => onJoin(true)}
+                                variant="secondary"
+                                disabled={isInstallInvalid}
+                                className="w-full h-12 text-base font-semibold bg-white/10 hover:bg-white/20 text-white border border-white/5 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                <Eye className="size-5 mr-2" />
+                                Join as Spectator
+                            </Button>
+                            {isInstallInvalid && (
+                                <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-destructive text-destructive-foreground text-xs font-medium rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+                                    Installation invalid or unsupported
+                                    <div className="absolute bottom-[-4px] left-1/2 -translate-x-1/2 w-2 h-2 bg-destructive rotate-45" />
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>

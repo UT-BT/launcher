@@ -56,7 +56,7 @@ export function Main() {
       case 'home':
         return <ActivityFeed />
       case 'servers':
-        return <ServerBrowserPage />
+        return <ServerBrowserPage installationStatus={installationStatus} />
       case 'rankings':
         return <Rankings />
       case 'maps':
