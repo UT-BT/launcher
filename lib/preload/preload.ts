@@ -89,6 +89,11 @@ if (process.contextIsolated) {
       getLogFilePath: async () => ipcRenderer.invoke('getLogFilePath'),
       getRecentLogs: async (lines?: number) => ipcRenderer.invoke('getRecentLogs', lines),
     })
+    contextBridge.exposeInMainWorld('auth', {
+      login: async () => ipcRenderer.invoke('auth:login'),
+      logout: async () => ipcRenderer.invoke('auth:logout'),
+      getProfile: async () => ipcRenderer.invoke('auth:get-profile'),
+    })
   } catch (error) {
     console.error('Preload script error:', error)
   }
@@ -175,5 +180,10 @@ if (process.contextIsolated) {
     },
     getLogFilePath: async () => ipcRenderer.invoke('getLogFilePath'),
     getRecentLogs: async (lines?: number) => ipcRenderer.invoke('getRecentLogs', lines),
+  }
+  window.auth = {
+    login: async () => ipcRenderer.invoke('auth:login'),
+    logout: async () => ipcRenderer.invoke('auth:logout'),
+    getProfile: async () => ipcRenderer.invoke('auth:get-profile'),
   }
 }

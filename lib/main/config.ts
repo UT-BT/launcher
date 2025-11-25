@@ -17,6 +17,7 @@ type LauncherConfig = {
   ut99InstallPath?: string
   installedPatch?: InstalledPatch
   gateway?: GatewayConfig
+  auth?: AuthConfig
 }
 
 const CONFIG_FILE_NAME = 'config.json'
@@ -116,3 +117,28 @@ export function setGatewayApiKey(apiKey: string | undefined): void {
   setGatewayConfig({ apiKey })
 }
 
+
+export type AuthConfig = {
+  discordId: string
+  username: string
+  avatar: string
+  accessToken: string
+  refreshToken: string
+  expiresAt: number
+}
+
+export function getAuthConfig(): AuthConfig | undefined {
+  return readConfig().auth
+}
+
+export function setAuthConfig(auth: AuthConfig): void {
+  const current = readConfig()
+  const next: LauncherConfig = { ...current, auth }
+  writeConfig(next)
+}
+
+export function clearAuthConfig(): void {
+  const current = readConfig()
+  const { auth, ...rest } = current
+  writeConfig(rest)
+}

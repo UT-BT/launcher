@@ -1,7 +1,16 @@
-import { ReactNode, useEffect } from 'react'
-import { Home, Server, Trophy, Map as MapIcon, Settings } from 'lucide-react'
+import { ReactNode, useEffect, useState } from 'react'
+import { Home, Server, Trophy, Map as MapIcon, Settings, LogOut, User } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import logo from '@/app/assets/logo.png'
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/app/components/ui/dropdown-menu'
+import { Button } from '@/app/components/ui/button'
 
 interface NavItem {
     id: string
@@ -21,9 +30,12 @@ interface AppLayoutProps {
     children: ReactNode
     currentView: string
     onViewChange: (view: string) => void
+    userProfile?: import('@/lib/main/config').AuthConfig
 }
 
-export function AppLayout({ children, currentView, onViewChange }: AppLayoutProps) {
+export function AppLayout({ children, currentView, onViewChange, userProfile }: AppLayoutProps) {
+    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
+
     useEffect(() => {
         const saved = localStorage.getItem('ui-scale')
         if (saved) {
@@ -73,18 +85,46 @@ export function AppLayout({ children, currentView, onViewChange }: AppLayoutProp
                 </nav>
 
                 <div className="p-4 border-t border-white/10 relative z-10">
-                    <div className="flex items-center gap-3 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors cursor-pointer border border-white/5">
-                        <div className="size-8 rounded-full bg-gradient-to-br from-blue-500 to-red-500 p-[1px]">
-                            <div className="w-full h-full rounded-full bg-black/50 backdrop-blur-sm" />
-                        </div>
-                        <div className="flex flex-col">
-                            <span className="text-sm font-medium">Player</span>
-                            <span className="text-xs text-green-400 flex items-center gap-1">
-                                <span className="size-1.5 rounded-full bg-green-400 animate-pulse" />
-                                Online
-                            </span>
-                        </div>
-                    </div>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <div className="flex items-center gap-3 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors cursor-pointer border border-white/5 group relative outline-none">
+                                <div className="size-8 rounded-full bg-gradient-to-br from-blue-500 to-red-500 p-[1px]">
+                                    {userProfile?.avatar ? (
+                                        <img src={`https://cdn.discordapp.com/avatars/${userProfile.discordId}/${userProfile.avatar}.png`} alt="Avatar" className="w-full h-full rounded-full" />
+                                    ) : (
+                                        <div className="w-full h-full rounded-full bg-black/50 backdrop-blur-sm" />
+                                    )}
+                                </div>
+                                <div className="flex flex-col flex-1 min-w-0 text-left">
+                                    <span className="text-sm font-medium truncate">{userProfile?.username || 'Player'}</span>
+                                    <span className="text-xs text-green-400 flex items-center gap-1">
+                                        <span className="size-1.5 rounded-full bg-green-400 animate-pulse" />
+                                        Online
+                                    </span>
+                                </div>
+                            </div>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent side="top" align="center" className="w-56 bg-card/95 backdrop-blur-xl border-white/10">
+                            <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                            <DropdownMenuSeparator className="bg-white/10" />
+                            <DropdownMenuItem onClick={() => onViewChange('settings')} className="cursor-pointer focus:bg-white/10">
+                                <User className="mr-2 size-4" />
+                                <span>Profile</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => onViewChange('settings')} className="cursor-pointer focus:bg-white/10">
+                                <Settings className="mr-2 size-4" />
+                                <span>Settings</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator className="bg-white/10" />
+                            <DropdownMenuItem
+                                onClick={() => setShowLogoutConfirm(true)}
+                                className="text-red-500 focus:text-red-500 focus:bg-red-500/10 cursor-pointer"
+                            >
+                                <LogOut className="mr-2 size-4" />
+                                <span>Sign out</span>
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
             </aside>
 
@@ -94,6 +134,43 @@ export function AppLayout({ children, currentView, onViewChange }: AppLayoutProp
                     {children}
                 </div>
             </main>
+
+            {/* Logout Confirmation Modal */}
+            {
+                showLogoutConfirm && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                        <div className="w-full max-w-md bg-card border border-border rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                            <div className="p-6 space-y-4">
+                                <div className="flex flex-col items-center text-center gap-2">
+                                    <div className="p-3 rounded-full bg-red-500/10 text-red-500 mb-2">
+                                        <LogOut className="size-8" />
+                                    </div>
+                                    <h3 className="text-xl font-bold">Sign Out</h3>
+                                    <p className="text-muted-foreground">
+                                        Are you sure you want to sign out? You will need to sign in again to access online features.
+                                    </p>
+                                </div>
+                                <div className="flex gap-3 justify-center pt-4">
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => setShowLogoutConfirm(false)}
+                                        className="min-w-[100px]"
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        variant="destructive"
+                                        onClick={() => window.auth.logout().then(() => window.location.reload())}
+                                        className="min-w-[100px]"
+                                    >
+                                        Sign Out
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
         </div>
     )
 }
