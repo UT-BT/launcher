@@ -932,18 +932,38 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
                         </div>
                         <div className="space-y-2">
                             <label className="text-sm font-medium">Team</label>
-                            <select
-                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                value={playerTeam}
-                                onChange={(e) => {
-                                    const val = e.target.value
-                                    setPlayerTeam(val)
-                                    window.conveyor.ini.writeIniValue('User.ini', 'DefaultPlayer', 'team', val)
-                                }}
-                            >
-                                <option value="0">Red</option>
-                                <option value="1">Blue</option>
-                            </select>
+                            <div className="flex gap-2">
+                                <Button
+                                    variant={playerTeam === '0' ? 'default' : 'outline'}
+                                    className={cn(
+                                        "flex-1 transition-all duration-200",
+                                        playerTeam === '0'
+                                            ? "bg-red-600 hover:bg-red-700 text-white border-red-600"
+                                            : "hover:border-red-500 hover:text-red-500 hover:bg-red-50"
+                                    )}
+                                    onClick={() => {
+                                        setPlayerTeam('0')
+                                        window.conveyor.ini.writeIniValue('User.ini', 'DefaultPlayer', 'team', '0')
+                                    }}
+                                >
+                                    Red
+                                </Button>
+                                <Button
+                                    variant={playerTeam === '1' ? 'default' : 'outline'}
+                                    className={cn(
+                                        "flex-1 transition-all duration-200",
+                                        playerTeam === '1'
+                                            ? "bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
+                                            : "hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50"
+                                    )}
+                                    onClick={() => {
+                                        setPlayerTeam('1')
+                                        window.conveyor.ini.writeIniValue('User.ini', 'DefaultPlayer', 'team', '1')
+                                    }}
+                                >
+                                    Blue
+                                </Button>
+                            </div>
                         </div>
                         <div className="space-y-2">
                             <label className="text-sm font-medium">Join As</label>
