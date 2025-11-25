@@ -142,12 +142,12 @@ export function SplashScreen({ onReady }: SplashScreenProps) {
   }, [installPathValid, updateState.updating, updateState.forced, updateState.available, phase, startExitAnimation]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (installPathValid === true && 
-        !updateState.updating && 
-        !updateState.forced && 
-        !updateState.available && 
-        phase === 'checking' && 
-        !exitDelayRef.current) {
+    if (installPathValid === true &&
+      !updateState.updating &&
+      !updateState.forced &&
+      !updateState.available &&
+      phase === 'checking' &&
+      !exitDelayRef.current) {
       logger.info('Update completed or no update needed, starting exit animation')
       startExitAnimation()
     }
@@ -182,26 +182,27 @@ export function SplashScreen({ onReady }: SplashScreenProps) {
           draggable="false"
         />
 
-        <h1 className="gradient-title splash-title">Welcome to UTBT</h1>
+        <h1 className="gradient-title splash-title">UTBT Launcher</h1>
+        <span className="subtitle splash-version">Addicted to BunnyTrack</span>
         {getStatusText() && (
           <p className={`subtitle splash-status`}>{getStatusText()}</p>
         )}
       </div>
 
-        {updateState.available && updateState.manifest && (
-          <UpdateModal
-            manifest={updateState.manifest}
-            updating={updateState.updating}
-            updateProgress={updateState.progress}
-            updateText={updateState.progressText}
-            currentVersion={updateState.currentVersion}
-            forced={updateState.forced}
-            unsupportedBase={updateState.unsupportedBase}
-            onClose={dismissUpdate}
-            onUpdate={handleUpdate}
-            onViewReleaseNotes={() => openReleaseNotes(updateState.manifest?.release_notes_url)}
-          />
-        )}
+      {updateState.available && updateState.manifest && (
+        <UpdateModal
+          manifest={updateState.manifest}
+          updating={updateState.updating}
+          updateProgress={updateState.progress}
+          updateText={updateState.progressText}
+          currentVersion={updateState.currentVersion}
+          forced={updateState.forced}
+          unsupportedBase={updateState.unsupportedBase}
+          onClose={dismissUpdate}
+          onUpdate={handleUpdate}
+          onViewReleaseNotes={() => openReleaseNotes(updateState.manifest?.release_notes_url)}
+        />
+      )}
     </div>
   )
 }

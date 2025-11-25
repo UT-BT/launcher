@@ -27,22 +27,37 @@
 
 .nebula-bg::after {
   background: radial-gradient(800px 500px at 20% 30%, rgba(14, 165, 233, 0.35), transparent 60%),
-              radial-gradient(900px 600px at 80% 60%, rgba(239, 68, 68, 0.28), transparent 60%),
-              radial-gradient(700px 700px at 50% 80%, rgba(99, 102, 241, 0.25), transparent 65%);
+    radial-gradient(900px 600px at 80% 60%, rgba(239, 68, 68, 0.28), transparent 60%),
+    radial-gradient(700px 700px at 50% 80%, rgba(99, 102, 241, 0.25), transparent 65%);
   filter: blur(60px) saturate(140%);
   animation: float 18s ease-in-out infinite;
   opacity: 0.9;
 }
 
 @keyframes swirl {
-  0% { transform: rotate(0deg) scale(1); }
-  50% { transform: rotate(180deg) scale(1.05); }
-  100% { transform: rotate(360deg) scale(1); }
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+
+  50% {
+    transform: rotate(180deg) scale(1.05);
+  }
+
+  100% {
+    transform: rotate(360deg) scale(1);
+  }
 }
 
 @keyframes float {
-  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
-  50% { transform: translate3d(2%, -2%, 0) scale(1.03); }
+
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+
+  50% {
+    transform: translate3d(2%, -2%, 0) scale(1.03);
+  }
 }
 
 .page-container {
@@ -55,10 +70,10 @@
   position: relative;
   overflow: hidden;
   background: radial-gradient(1200px 600px at 10% 10%, rgba(30, 58, 138, 0.35), transparent 55%),
-              radial-gradient(1000px 500px at 90% 20%, rgba(2, 132, 199, 0.28), transparent 60%),
-              radial-gradient(900px 600px at 20% 90%, rgba(225, 29, 72, 0.25), transparent 55%),
-              radial-gradient(800px 400px at 85% 85%, rgba(136, 19, 55, 0.25), transparent 60%),
-              #0b0f1a;
+    radial-gradient(1000px 500px at 90% 20%, rgba(2, 132, 199, 0.28), transparent 60%),
+    radial-gradient(900px 600px at 20% 90%, rgba(225, 29, 72, 0.25), transparent 55%),
+    radial-gradient(800px 400px at 85% 85%, rgba(136, 19, 55, 0.25), transparent 60%),
+    #0b0f1a;
 }
 
 .page-content {
@@ -79,7 +94,7 @@
   border: 1px solid rgba(148, 163, 184, 0.1);
   border-radius: 24px;
   padding: 3rem 4rem;
-  box-shadow: 
+  box-shadow:
     0 25px 50px -12px rgba(0, 0, 0, 0.5),
     0 0 0 1px rgba(255, 255, 255, 0.05),
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
@@ -136,8 +151,15 @@
 }
 
 @keyframes gradientShift {
-  0%, 100% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
+
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
 }
 
 .app-logo {
@@ -191,11 +213,13 @@
   transform: scale(1.06);
 }
 
-.splash-title {
+.splash-title,
+.splash-version {
   transition: opacity 450ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
-.splash-container.splash-animating .splash-title {
+.splash-container.splash-animating .splash-title,
+.splash-container.splash-animating .splash-version {
   opacity: 0;
 }
 
@@ -215,17 +239,12 @@
 @keyframes splashGlow {
   0% {
     filter:
-      drop-shadow(0 0 10px rgba(var(--utbt-blue-rgb), 0.35))
-      drop-shadow(0 0 28px rgba(var(--utbt-blue-rgb), 0.30))
-      drop-shadow(0 0 46px rgba(var(--utbt-blue-rgb), 0.25))
-      brightness(1.05) saturate(115%);
+      drop-shadow(0 0 10px rgba(var(--utbt-blue-rgb), 0.35)) drop-shadow(0 0 28px rgba(var(--utbt-blue-rgb), 0.30)) drop-shadow(0 0 46px rgba(var(--utbt-blue-rgb), 0.25)) brightness(1.05) saturate(115%);
   }
+
   50% {
     filter:
-      drop-shadow(0 0 12px rgba(var(--utbt-red-rgb), 0.45))
-      drop-shadow(0 0 32px rgba(var(--utbt-red-rgb), 0.35))
-      drop-shadow(0 0 60px rgba(var(--utbt-red-rgb), 0.30))
-      brightness(1.12) saturate(125%);
+      drop-shadow(0 0 12px rgba(var(--utbt-red-rgb), 0.45)) drop-shadow(0 0 32px rgba(var(--utbt-red-rgb), 0.35)) drop-shadow(0 0 60px rgba(var(--utbt-red-rgb), 0.30)) brightness(1.12) saturate(125%);
   }
 }
 
@@ -240,10 +259,12 @@
   0% {
     filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.2));
   }
+
   50% {
     filter: drop-shadow(0 0 25px rgba(255, 255, 255, 0.4));
     transform: scale(1.03);
   }
+
   100% {
     filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.2));
   }
@@ -286,7 +307,7 @@
   .page-content {
     max-width: 700px;
   }
-  
+
   .glass-card {
     padding: 3rem;
   }
@@ -296,16 +317,17 @@
   .page-content {
     max-width: 600px;
   }
-  
+
   .glass-card {
     padding: 2rem;
     margin: 1rem;
   }
-  
-  .gradient-title, .section-title {
+
+  .gradient-title,
+  .section-title {
     font-size: 1.875rem;
   }
-  
+
   .back-button {
     top: 1rem;
     left: 1rem;
