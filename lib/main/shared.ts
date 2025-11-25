@@ -14,6 +14,7 @@ export const handle = <T extends keyof typeof ipcSchemas>(
     ...args: ChannelArgs<T>
   ) => ChannelReturn<T> | Promise<ChannelReturn<T>>
 ) => {
+  ipcMain.removeHandler(channel)
   ipcMain.handle(channel, async (_, ...args) => {
     try {
       const validatedArgs = validateArgs(channel, args)

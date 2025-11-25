@@ -25,4 +25,11 @@ export const gameIpcSchema = {
         ]),
         return: z.number(),
     },
+    validateCurrentInstallation: {
+        args: z.tuple([]),
+        return: z.object({
+            valid: z.boolean(),
+            version: z.string().optional(),
+        }),
+    },
 }

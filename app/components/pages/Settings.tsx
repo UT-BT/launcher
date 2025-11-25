@@ -3,6 +3,7 @@ import { Settings as SettingsIcon, Joystick, HardDrive } from 'lucide-react'
 import { LauncherSettings } from './LauncherSettings'
 import { UnrealTournamentSettings } from './UnrealTournamentSettings'
 import { GameInstallationSettings } from './GameInstallationSettings'
+import { ErrorModal } from '../ErrorModal'
 
 type SettingsView = 'main' | 'launcher' | 'game' | 'installation'
 
@@ -16,6 +17,8 @@ export function Settings({ initialSection }: SettingsProps = {}) {
     )
     const [launcherVersion, setLauncherVersion] = useState('')
     const [utVersion, setUtVersion] = useState('')
+    const [showErrorModal, setShowErrorModal] = useState(false)
+    const [errorMessage, setErrorMessage] = useState('')
 
     useEffect(() => {
         window.conveyor.app.version().then(setLauncherVersion)
@@ -38,6 +41,12 @@ export function Settings({ initialSection }: SettingsProps = {}) {
 
     return (
         <div className="space-y-6">
+            <ErrorModal
+                isOpen={showErrorModal}
+                onClose={() => setShowErrorModal(false)}
+                title="Invalid Installation"
+                message={errorMessage}
+            />
             <div>
                 <h2 className="text-3xl font-bold tracking-tight">Settings</h2>
             </div>
@@ -58,7 +67,15 @@ export function Settings({ initialSection }: SettingsProps = {}) {
                 </div>
 
                 <div
-                    onClick={() => setView('game')}
+                    onClick={async () => {
+                        const status = await window.conveyor.game.validateCurrentInstallation()
+                        if (!status.valid || status.version === 'Unsupported') {
+                            setErrorMessage('No valid UT99 installation found or the installation is unsupported. Please check your installation settings.')
+                            setShowErrorModal(true)
+                        } else {
+                            setView('game')
+                        }
+                    }}
                     className="p-6 rounded-xl bg-card border border-border hover:bg-accent/50 transition-colors cursor-pointer group"
                 >
                     <div className="flex items-center gap-4 mb-2">
