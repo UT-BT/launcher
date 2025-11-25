@@ -6,6 +6,7 @@ import { loggingService } from '@/lib/main/logging-service'
 import { spawn } from 'child_process'
 import { join } from 'path'
 import { existsSync } from 'fs'
+import { gameService } from '@/lib/main/game-service'
 
 export const registerGameHandlers = (_window: BrowserWindow) => {
     loggingService.info('Registering game IPC handlers', 'MainProcess')
@@ -42,6 +43,10 @@ export const registerGameHandlers = (_window: BrowserWindow) => {
             loggingService.error('Failed to fetch servers', 'GameHandler', error)
             throw error
         }
+    })
+
+    handle('validateCurrentInstallation', async () => {
+        return await gameService.validateCurrentInstallation()
     })
 
     handle('pingServer', async (ip: string) => {
