@@ -187,7 +187,7 @@ export function GameInstallationSettings({ onBack }: GameInstallationSettingsPro
                 <div className="p-6 rounded-xl bg-card border border-border space-y-4">
                     <h3 className="text-xl font-semibold">Install UT99</h3>
                     <p className="text-sm text-muted-foreground">
-                        Don't have the game installed? Download and install the Game of the Year Edition.
+                        Don't have Unreal Tournament 1999? Use the button below to download and install it for free!
                     </p>
 
                     {!downloading && !status ? (
@@ -258,7 +258,7 @@ export function GameInstallationSettings({ onBack }: GameInstallationSettingsPro
                 <div className="p-6 rounded-xl bg-card border border-border space-y-4">
                     <h3 className="text-xl font-semibold">Available Patches</h3>
                     <p className="text-sm text-muted-foreground">
-                        Select the version of the game that you would like to play on.<br />Installing and changing patches has <span className="italic">no</span> effect on your graphics settings, keybinds, and only changes the game engine.<br /><br /><b>Patching is completely safe.</b>
+                        Select the version of the game that you would like to play on.<br />Installing and changing patches has <span className="italic">no</span> effect on your graphics settings, keybinds, and only changes the game engine.<br /><br /><b>Patching is completely safe!</b>
                     </p>
 
                     {patches.length === 0 ? (
