@@ -25,7 +25,7 @@ export function Settings({ initialSection }: SettingsProps = {}) {
         window.conveyor.app.getInstalledPatch().then((patch) => {
             setUtVersion(patch?.tag || 'Unknown')
         })
-    }, [])
+    }, [view])
 
     if (view === 'launcher') {
         return <LauncherSettings onBack={() => setView('main')} />
