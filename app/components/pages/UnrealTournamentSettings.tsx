@@ -177,45 +177,161 @@ const RENDER_DEVICE_SETTINGS: Record<string, RenderDeviceSetting[]> = {
     'D3D9Drv.D3D9RenderDevice': [
         { key: 'SwapInterval', label: 'VSync', type: 'boolean', tooltip: 'Vertical Sync. Prevents screen tearing but may increase input lag.' },
         { key: 'UseAA', label: 'Anti-Aliasing', type: 'boolean', tooltip: 'Smoothens jagged edges.' },
-        { key: 'NumAASamples', label: 'AA Samples', type: 'select', options: [{ label: '2x', value: 2 }, { label: '4x', value: 4 }, { label: '8x', value: 8 }, { label: '16x', value: 16 }], tooltip: 'Number of Anti-Aliasing samples. Higher is better quality but more performance intensive.' },
-        { key: 'UsePrecache', label: 'Precache', type: 'boolean', tooltip: 'Preload resources. Reduces stuttering during gameplay but increases load times.' },
-        { key: 'UseTrilinear', label: 'Trilinear Filtering', type: 'boolean', tooltip: 'Improves texture quality at oblique angles.' },
-        { key: 'MaxAnisotropy', label: 'Anisotropic Filtering', type: 'select', options: [{ label: 'Off', value: 0 }, { label: '2x', value: 2 }, { label: '4x', value: 4 }, { label: '8x', value: 8 }, { label: '16x', value: 16 }], tooltip: 'Improves texture clarity on surfaces viewed at an angle.' },
-        { key: 'Coronas', label: 'Coronas', type: 'boolean', tooltip: 'Render light coronas around light sources.' },
-        { key: 'ShinySurfaces', label: 'Shiny Surfaces', type: 'boolean', tooltip: 'Enable reflective surfaces.' },
-        { key: 'VolumetricLighting', label: 'Volumetric Lighting', type: 'boolean', tooltip: 'Enable volumetric lighting effects (fog).' },
-        { key: 'HighDetailActors', label: 'High Detail Actors', type: 'boolean', tooltip: 'Use high polygon models for players and items.' },
-        { key: 'LODBias', label: 'LOD Bias', type: 'number', min: -10, max: 10, step: 0.1, tooltip: 'Level of Detail bias. Negative values make textures sharper, positive values make them blurrier.' },
-        { key: 'GammaCorrectScreenshots', label: 'Gamma Correct Screenshots', type: 'boolean', tooltip: 'Apply gamma correction to screenshots.' },
+        { key: 'NumAASamples', label: 'AA Samples', type: 'select', options: [{ label: '2x', value: 2 }, { label: '4x', value: 4 }, { label: '8x', value: 8 }, { label: '16x', value: 16 }], tooltip: 'Higher values smooth edges more but reduce performance.' },
+        { key: 'UsePrecache', label: 'Precache', type: 'boolean', tooltip: 'Preloads textures and sounds to reduce stuttering during gameplay.' },
+        { key: 'UseTrilinear', label: 'Trilinear Filtering', type: 'boolean', tooltip: 'Smoothens textures at a distance. Low performance cost.' },
+        { key: 'MaxAnisotropy', label: 'Anisotropic Filtering', type: 'select', options: [{ label: 'Off', value: 0 }, { label: '2x', value: 2 }, { label: '4x', value: 4 }, { label: '8x', value: 8 }, { label: '16x', value: 16 }], tooltip: 'Makes textures look sharp at oblique angles.' },
+        { key: 'Coronas', label: 'Coronas', type: 'boolean', tooltip: 'Draws a halo effect around light sources.' },
+        { key: 'ShinySurfaces', label: 'Shiny Surfaces', type: 'boolean', tooltip: 'Enables environment mapping on shiny surfaces like floors and weapons.' },
+        { key: 'VolumetricLighting', label: 'Volumetric Lighting', type: 'boolean', tooltip: 'Enables fog-like lighting effects.' },
+        { key: 'HighDetailActors', label: 'High Detail Actors', type: 'boolean', tooltip: 'Uses higher quality models for players and weapons if available.' },
+        { key: 'LODBias', label: 'LOD Bias', type: 'number', min: -10, max: 10, step: 0.1, tooltip: 'Adjusts texture sharpness. Negative values are sharper, positive are blurrier.' },
+        { key: 'GammaCorrectScreenshots', label: 'Gamma Correct Screenshots', type: 'boolean', tooltip: 'Ensures screenshots match the brightness of the game.' },
+        { key: 'OneXBlending', label: 'OneX Blending', type: 'boolean', tooltip: 'Adjusts brightness to match the classic Glide renderer look.' },
+        { key: 'UseS3TC', label: 'Use S3TC', type: 'boolean', tooltip: 'Required for high-resolution compressed textures.' },
+        { key: 'Use16BitTextures', label: 'Use 16-bit Textures', type: 'boolean', tooltip: 'Reduces VRAM usage but causes color banding. Not recommended.' },
+        { key: 'Use565Textures', label: 'Use 565 Textures', type: 'boolean', tooltip: 'Alternative 16-bit format. Not recommended for modern hardware.' },
+        { key: 'UsePureDevice', label: 'Use Pure Device', type: 'boolean', tooltip: 'Offloads geometry calculations to the GPU. Recommended.' },
+        { key: 'UseTripleBuffering', label: 'Triple Buffering', type: 'boolean', tooltip: 'Smoother than VSync but adds slightly more input latency.' },
+        { key: 'FrameRateLimit', label: 'Frame Rate Limit', type: 'number', min: 0, max: 1000, step: 1, tooltip: 'Limit the frame rate. 0 is unlimited.' },
     ],
     'D3D11Drv.D3D11RenderDevice': [
-        { key: 'UseVSync', label: 'VSync', type: 'boolean', tooltip: 'Vertical Sync. Prevents screen tearing but may increase input lag.' },
-        { key: 'AntialiasMode', label: 'Anti-Aliasing Mode', type: 'select', options: [{ label: 'Off', value: 'None' }, { label: '2x MSAA', value: 'MSAA_2x' }, { label: '4x MSAA', value: 'MSAA_4x' }, { label: '8x MSAA', value: 'MSAA_8x' }], tooltip: 'Anti-Aliasing method.' },
-        { key: 'Bloom', label: 'Bloom', type: 'boolean', tooltip: 'Enable light bloom effects.' },
-        { key: 'BloomAmount', label: 'Bloom Amount', type: 'number', min: 0, max: 255, step: 1, tooltip: 'Intensity of the bloom effect.' },
-        { key: 'Hdr', label: 'HDR', type: 'boolean', tooltip: 'High Dynamic Range lighting.' },
-        { key: 'UsePrecache', label: 'Precache', type: 'boolean', tooltip: 'Preload resources.' },
-        { key: 'Coronas', label: 'Coronas', type: 'boolean', tooltip: 'Render light coronas.' },
-        { key: 'ShinySurfaces', label: 'Shiny Surfaces', type: 'boolean', tooltip: 'Enable reflective surfaces.' },
-        { key: 'VolumetricLighting', label: 'Volumetric Lighting', type: 'boolean', tooltip: 'Enable volumetric lighting effects.' },
-        { key: 'HighDetailActors', label: 'High Detail Actors', type: 'boolean', tooltip: 'Use high polygon models.' },
-        { key: 'LODBias', label: 'LOD Bias', type: 'number', min: -10, max: 10, step: 0.1, tooltip: 'Level of Detail bias.' },
-        { key: 'GammaCorrectScreenshots', label: 'Gamma Correct Screenshots', type: 'boolean', tooltip: 'Apply gamma correction to screenshots.' },
+        { key: 'UseVSync', label: 'VSync', type: 'boolean', tooltip: 'Vertical Sync. Prevents screen tearing.' },
+        { key: 'AntialiasMode', label: 'Anti-Aliasing Mode', type: 'select', options: [{ label: 'Off', value: 'None' }, { label: '2x MSAA', value: 'MSAA_2x' }, { label: '4x MSAA', value: 'MSAA_4x' }, { label: '8x MSAA', value: 'MSAA_8x' }], tooltip: 'Technique used to smooth jagged edges.' },
+        { key: 'Bloom', label: 'Bloom', type: 'boolean', tooltip: 'Creates a glowing effect around bright light sources.' },
+        { key: 'BloomAmount', label: 'Bloom Amount', type: 'number', min: 0, max: 255, step: 1, tooltip: 'Controls the strength of the bloom effect.' },
+        { key: 'Hdr', label: 'HDR', type: 'boolean', tooltip: 'Enables wider color range and contrast on supported monitors.' },
+        { key: 'LightMode', label: 'Light Mode', type: 'select', options: [{ label: 'Normal', value: 'Normal' }, { label: 'One X Blending', value: 'OneXBlending' }, { label: 'Brighter Actors', value: 'BrighterActors' }], tooltip: 'Controls how light maps and actor lighting are blended.' },
+        { key: 'GammaMode', label: 'Gamma Mode', type: 'select', options: [{ label: 'D3D9', value: 'D3D9' }, { label: 'XOpenGL', value: 'XOpenGL' }], tooltip: 'Selects the algorithm used for brightness and color correction.' },
+        { key: 'OccludeLines', label: 'Occlude Lines', type: 'boolean', tooltip: 'Hides debug lines behind geometry. Mainly for development.' },
+        { key: 'LODBias', label: 'LOD Bias', type: 'number', min: -10, max: 10, step: 0.1, tooltip: 'Adjusts texture sharpness. Negative values are sharper.' },
+        { key: 'Saturation', label: 'Saturation', type: 'number', min: 0, max: 255, step: 1, tooltip: 'Adjusts color intensity. 255 is default.' },
+        { key: 'Contrast', label: 'Contrast', type: 'number', min: 0, max: 255, step: 1, tooltip: 'Adjusts the difference between light and dark areas. 128 is default.' },
+        { key: 'LinearBrightness', label: 'Linear Brightness', type: 'number', min: 0, max: 255, step: 1, tooltip: 'Adjusts overall image brightness. 128 is default.' },
+        { key: 'GammaOffset', label: 'Gamma Offset', type: 'number', min: -1, max: 1, step: 0.1, tooltip: 'Fine-tune global gamma correction.' },
+        { key: 'GammaOffsetRed', label: 'Gamma Offset Red', type: 'number', min: -1, max: 1, step: 0.1, tooltip: 'Fine-tune gamma for red channel.' },
+        { key: 'GammaOffsetGreen', label: 'Gamma Offset Green', type: 'number', min: -1, max: 1, step: 0.1, tooltip: 'Fine-tune gamma for green channel.' },
+        { key: 'GammaOffsetBlue', label: 'Gamma Offset Blue', type: 'number', min: -1, max: 1, step: 0.1, tooltip: 'Fine-tune gamma for blue channel.' },
+        { key: 'UsePrecache', label: 'Precache', type: 'boolean', tooltip: 'Preloads textures and sounds to reduce stuttering during gameplay.' },
+        { key: 'Coronas', label: 'Coronas', type: 'boolean', tooltip: 'Draws a halo effect around light sources.' },
+        { key: 'ShinySurfaces', label: 'Shiny Surfaces', type: 'boolean', tooltip: 'Enables environment mapping on shiny surfaces like floors and weapons.' },
+        { key: 'VolumetricLighting', label: 'Volumetric Lighting', type: 'boolean', tooltip: 'Enables fog-like lighting effects.' },
+        { key: 'HighDetailActors', label: 'High Detail Actors', type: 'boolean', tooltip: 'Uses higher quality models for players and weapons if available.' },
+        { key: 'GammaCorrectScreenshots', label: 'Gamma Correct Screenshots', type: 'boolean', tooltip: 'Ensures screenshots match the brightness of the game.' },
+        { key: 'UseLightmapAtlas', label: 'Use Lightmap Atlas', type: 'boolean', tooltip: 'Optimizes rendering by merging lightmaps into fewer textures.' },
+        { key: 'DetailTextures', label: 'Detail Textures', type: 'boolean', tooltip: 'Adds high-frequency noise to textures when viewed up close.' },
     ],
     'OpenGLDrv.OpenGLRenderDevice': [
-        { key: 'SwapInterval', label: 'VSync', type: 'boolean', tooltip: 'Vertical Sync. Prevents screen tearing but may increase input lag.' },
+        { key: 'SwapInterval', label: 'VSync', type: 'boolean', tooltip: 'Vertical Sync. Prevents screen tearing.' },
         { key: 'UseAA', label: 'Anti-Aliasing', type: 'boolean', tooltip: 'Smoothens jagged edges.' },
-        { key: 'NumAASamples', label: 'AA Samples', type: 'select', options: [{ label: '2x', value: 2 }, { label: '4x', value: 4 }, { label: '8x', value: 8 }, { label: '16x', value: 16 }], tooltip: 'Number of Anti-Aliasing samples.' },
-        { key: 'UsePrecache', label: 'Precache', type: 'boolean', tooltip: 'Preload resources.' },
-        { key: 'UseTrilinear', label: 'Trilinear Filtering', type: 'boolean', tooltip: 'Improves texture quality.' },
-        { key: 'MaxAnisotropy', label: 'Anisotropic Filtering', type: 'select', options: [{ label: 'Off', value: 0 }, { label: '2x', value: 2 }, { label: '4x', value: 4 }, { label: '8x', value: 8 }, { label: '16x', value: 16 }], tooltip: 'Improves texture clarity.' },
-        { key: 'Coronas', label: 'Coronas', type: 'boolean', tooltip: 'Render light coronas.' },
-        { key: 'ShinySurfaces', label: 'Shiny Surfaces', type: 'boolean', tooltip: 'Enable reflective surfaces.' },
-        { key: 'VolumetricLighting', label: 'Volumetric Lighting', type: 'boolean', tooltip: 'Enable volumetric lighting effects.' },
-        { key: 'HighDetailActors', label: 'High Detail Actors', type: 'boolean', tooltip: 'Use high polygon models.' },
-        { key: 'DetailTextures', label: 'Detail Textures', type: 'boolean', tooltip: 'Use high resolution detail textures when up close.' },
-        { key: 'UseHDTextures', label: 'Use HD Textures', type: 'boolean', tooltip: 'Enable support for high definition textures (S3TC).' },
-    ]
+        { key: 'NumAASamples', label: 'AA Samples', type: 'select', options: [{ label: '2x', value: 2 }, { label: '4x', value: 4 }, { label: '8x', value: 8 }, { label: '16x', value: 16 }], tooltip: 'Higher values smooth edges more but reduce performance.' },
+        { key: 'UsePrecache', label: 'Precache', type: 'boolean', tooltip: 'Preloads textures and sounds to reduce stuttering during gameplay.' },
+        { key: 'UseTrilinear', label: 'Trilinear Filtering', type: 'boolean', tooltip: 'Smoothens textures at a distance. Low performance cost.' },
+        { key: 'MaxAnisotropy', label: 'Anisotropic Filtering', type: 'select', options: [{ label: 'Off', value: 0 }, { label: '2x', value: 2 }, { label: '4x', value: 4 }, { label: '8x', value: 8 }, { label: '16x', value: 16 }], tooltip: 'Makes textures look sharp at oblique angles.' },
+        { key: 'Coronas', label: 'Coronas', type: 'boolean', tooltip: 'Draws a halo effect around light sources.' },
+        { key: 'ShinySurfaces', label: 'Shiny Surfaces', type: 'boolean', tooltip: 'Enables environment mapping on shiny surfaces like floors and weapons.' },
+        { key: 'VolumetricLighting', label: 'Volumetric Lighting', type: 'boolean', tooltip: 'Enables fog-like lighting effects.' },
+        { key: 'HighDetailActors', label: 'High Detail Actors', type: 'boolean', tooltip: 'Uses higher quality models for players and weapons if available.' },
+        { key: 'DetailTextures', label: 'Detail Textures', type: 'boolean', tooltip: 'Adds high-frequency noise to textures when viewed up close.' },
+        { key: 'UseHDTextures', label: 'Use HD Textures', type: 'boolean', tooltip: 'Enables support for high-resolution S3TC compressed textures.' },
+        { key: 'UseLightmapAtlas', label: 'Use Lightmap Atlas', type: 'boolean', tooltip: 'Optimizes rendering by merging lightmaps into fewer textures.' },
+        { key: 'OneXBlending', label: 'OneX Blending', type: 'boolean', tooltip: 'Adjusts brightness to match the classic Glide renderer look.' },
+        { key: 'RefreshRate', label: 'Refresh Rate', type: 'number', min: 0, max: 240, step: 1, tooltip: 'Target refresh rate for the display.' },
+        { key: 'ColorCorrectionMode', label: 'Color Correction Mode', type: 'select', options: [{ label: 'None', value: 'None' }, { label: 'Use Framebuffer', value: 'UseFramebuffer' }], tooltip: 'Method used for applying gamma correction.' },
+        { key: 'PreferDedicatedGPU', label: 'Prefer Dedicated GPU', type: 'boolean', tooltip: 'Forces the game to use the discrete GPU on laptops.' },
+        { key: 'SmoothMasking', label: 'Smooth Masking', type: 'boolean', tooltip: 'Reduces jagged edges on transparent textures like grates.' },
+    ],
+    'ICBINDx11Drv.ICBINDx11RenderDevice': [
+        { key: 'UseVSync', label: 'VSync', type: 'boolean', tooltip: 'Vertical Sync. Prevents screen tearing.' },
+        { key: 'ResolutionScale', label: 'Resolution Scale', type: 'number', min: 0.1, max: 2.0, step: 0.1, tooltip: 'Renders the game at a different resolution and scales it up/down.' },
+        { key: 'NumAASamples', label: 'AA Samples', type: 'select', options: [{ label: 'Off', value: 1 }, { label: '2x', value: 2 }, { label: '4x', value: 4 }, { label: '8x', value: 8 }], tooltip: 'Higher values smooth edges more but reduce performance.' },
+        { key: 'NumAFSamples', label: 'AF Samples', type: 'select', options: [{ label: 'Off', value: 1 }, { label: '2x', value: 2 }, { label: '4x', value: 4 }, { label: '8x', value: 8 }, { label: '16x', value: 16 }], tooltip: 'Controls the quality of texture filtering at angles.' },
+        { key: 'UseHDR', label: 'HDR', type: 'boolean', tooltip: 'Enables wider color range and contrast on supported monitors.' },
+        { key: 'HDRWhiteBalanceNits', label: 'HDR White Balance Nits', type: 'number', min: 0, max: 1000, step: 10, tooltip: 'Calibrates peak brightness for HDR displays.' },
+        { key: 'GammaMode', label: 'Gamma Mode', type: 'select', options: [{ label: 'Default', value: 'Default' }, { label: 'XOpenGL', value: 'XOpenGL' }, { label: 'D3D9', value: 'D3D9' }], tooltip: 'Selects the algorithm used for brightness and color correction.' },
+        { key: 'DetailTextures', label: 'Detail Textures', type: 'boolean', tooltip: 'Adds high-frequency noise to textures when viewed up close.' },
+        { key: 'HighDetailActors', label: 'High Detail Actors', type: 'boolean', tooltip: 'Uses higher quality models for players and weapons if available.' },
+        { key: 'Coronas', label: 'Coronas', type: 'boolean', tooltip: 'Draws a halo effect around light sources.' },
+        { key: 'ShinySurfaces', label: 'Shiny Surfaces', type: 'boolean', tooltip: 'Enables environment mapping on shiny surfaces like floors and weapons.' },
+        { key: 'VolumetricLighting', label: 'Volumetric Lighting', type: 'boolean', tooltip: 'Enables fog-like lighting effects.' },
+        { key: 'bOneXLightmaps', label: 'OneX Lightmaps', type: 'boolean', tooltip: 'Adjusts lightmap brightness to match classic rendering.' },
+        { key: 'bEnableCorrectFogging', label: 'Correct Fogging', type: 'boolean', tooltip: 'Fixes fog rendering issues found in older renderers.' },
+        { key: '3DLineThickness', label: '3D Line Thickness', type: 'number', min: 0.1, max: 10, step: 0.1, tooltip: 'Adjusts the width of wireframe lines.' },
+        { key: 'OrthoLineThickness', label: 'Ortho Line Thickness', type: 'number', min: 0.1, max: 10, step: 0.1, tooltip: 'Adjusts the width of lines in orthogonal views.' },
+        { key: 'NumAdditionalBuffers', label: 'Num Additional Buffers', type: 'number', min: 0, max: 10, step: 1, tooltip: 'Increases buffering to reduce stuttering but uses more VRAM.' },
+        { key: 'GammaOffset', label: 'Gamma Offset', type: 'number', min: -1, max: 1, step: 0.1, tooltip: 'Fine-tune global gamma correction.' },
+        { key: 'SupportsUpdateTextureRect', label: 'Supports Update Texture Rect', type: 'boolean', tooltip: 'Enables optimized texture updates. Keep enabled.' },
+        { key: 'AdditionalHDRExpansion', label: 'Additional HDR Expansion', type: 'number', min: 0, max: 10, step: 0.1, tooltip: 'Expands the dynamic range for HDR rendering.' },
+        { key: 'UseDX9FlatColor', label: 'Use DX9 Flat Color', type: 'boolean', tooltip: 'Emulates DirectX 9 color handling.' },
+        { key: 'MaskedAlphaReject', label: 'Masked Alpha Reject', type: 'number', min: 0, max: 1, step: 0.1, tooltip: 'Controls transparency cutoff for masked textures.' },
+        { key: 'GammaOffsetRed', label: 'Gamma Offset Red', type: 'number', min: -1, max: 1, step: 0.1, tooltip: 'Fine-tune gamma for red channel.' },
+        { key: 'GammaOffsetGreen', label: 'Gamma Offset Green', type: 'number', min: -1, max: 1, step: 0.1, tooltip: 'Fine-tune gamma for green channel.' },
+        { key: 'GammaOffsetBlue', label: 'Gamma Offset Blue', type: 'number', min: -1, max: 1, step: 0.1, tooltip: 'Fine-tune gamma for blue channel.' },
+        { key: 'DepthDrawZLimit', label: 'Depth Draw Z Limit', type: 'number', min: 0, max: 10000, step: 100, tooltip: 'Limits the drawing distance for depth calculations.' },
+        { key: 'bUsePrecompiledShaders', label: 'Use Precompiled Shaders', type: 'boolean', tooltip: 'Speeds up startup by using cached shaders.' },
+        { key: 'bUseForcedSampleCount', label: 'Use Forced Sample Count', type: 'boolean', tooltip: 'Forces the driver to use the specified AA sample count.' },
+        { key: 'bSmoothHudTiles', label: 'Smooth HUD Tiles', type: 'boolean', tooltip: 'Applies smoothing to HUD elements.' },
+        { key: 'SmoothMaskedAlphaReject', label: 'Smooth Masked Alpha Reject', type: 'number', min: 0, max: 1, step: 0.1, tooltip: 'Controls transparency cutoff for smoothed masked textures.' },
+        { key: 'DisableFreeGSync', label: 'Disable Free GSync', type: 'boolean', tooltip: 'Prevents G-Sync/FreeSync from engaging.' },
+        { key: 'bBicubicLightmaps', label: 'Bicubic Lightmaps', type: 'boolean', tooltip: 'Uses higher quality filtering for lightmaps.' },
+        { key: 'ScreenFormat', label: 'Screen Format', type: 'select', options: [{ label: 'HDR16', value: 'HDR16' }, { label: 'HDR8', value: 'HDR8' }], tooltip: 'Color depth format for the rendering buffer.' },
+        { key: 'AutodetectedWhiteBalance', label: 'Autodetected White Balance', type: 'number', min: 0, max: 1000, step: 10, tooltip: 'Automatically detected peak brightness.' },
+    ],
+    'VulkanDrv.VulkanRenderDevice': [
+        { key: 'UseVSync', label: 'VSync', type: 'boolean', tooltip: 'Vertical Sync. Prevents screen tearing.' },
+        { key: 'AntialiasMode', label: 'Anti-Aliasing Mode', type: 'select', options: [{ label: 'Off', value: 'Off' }, { label: 'MSAA', value: 'MSAA' }], tooltip: 'Technique used to smooth jagged edges.' },
+        { key: 'Bloom', label: 'Bloom', type: 'boolean', tooltip: 'Creates a glowing effect around bright light sources.' },
+        { key: 'BloomAmount', label: 'Bloom Amount', type: 'number', min: 0, max: 255, step: 1, tooltip: 'Controls the strength of the bloom effect.' },
+        { key: 'Hdr', label: 'HDR', type: 'boolean', tooltip: 'Enables wider color range and contrast on supported monitors.' },
+        { key: 'LightMode', label: 'Light Mode', type: 'select', options: [{ label: 'Normal', value: 'Normal' }, { label: 'One X Blending', value: 'OneXBlending' }, { label: 'Brighter Actors', value: 'BrighterActors' }], tooltip: 'Controls how light maps and actor lighting are blended.' },
+        { key: 'GammaMode', label: 'Gamma Mode', type: 'select', options: [{ label: 'Default', value: 'Default' }, { label: 'D3D9', value: 'D3D9' }], tooltip: 'Selects the algorithm used for brightness and color correction.' },
+        { key: 'OccludeLines', label: 'Occlude Lines', type: 'boolean', tooltip: 'Hides debug lines behind geometry. Mainly for development.' },
+        { key: 'LODBias', label: 'LOD Bias', type: 'number', min: -10, max: 10, step: 0.1, tooltip: 'Adjusts texture sharpness. Negative values are sharper.' },
+        { key: 'Saturation', label: 'Saturation', type: 'number', min: 0, max: 255, step: 1, tooltip: 'Adjusts color intensity. 255 is default.' },
+        { key: 'Contrast', label: 'Contrast', type: 'number', min: 0, max: 255, step: 1, tooltip: 'Adjusts the difference between light and dark areas. 128 is default.' },
+        { key: 'LinearBrightness', label: 'Linear Brightness', type: 'number', min: 0, max: 255, step: 1, tooltip: 'Adjusts overall image brightness. 128 is default.' },
+        { key: 'GammaOffset', label: 'Gamma Offset', type: 'number', min: -1, max: 1, step: 0.1, tooltip: 'Fine-tune global gamma correction.' },
+        { key: 'GammaOffsetRed', label: 'Gamma Offset Red', type: 'number', min: -1, max: 1, step: 0.1, tooltip: 'Fine-tune gamma for red channel.' },
+        { key: 'GammaOffsetGreen', label: 'Gamma Offset Green', type: 'number', min: -1, max: 1, step: 0.1, tooltip: 'Fine-tune gamma for green channel.' },
+        { key: 'GammaOffsetBlue', label: 'Gamma Offset Blue', type: 'number', min: -1, max: 1, step: 0.1, tooltip: 'Fine-tune gamma for blue channel.' },
+        { key: 'VkExclusiveFullscreen', label: 'Exclusive Fullscreen', type: 'boolean', tooltip: 'Forces exclusive fullscreen mode. Can improve performance.' },
+        { key: 'VkDeviceIndex', label: 'Vulkan Device Index', type: 'number', min: 0, max: 4, step: 1, tooltip: 'Selects the GPU to use for Vulkan rendering.' },
+    ],
+    'XOpenGLDrv.XOpenGLRenderDevice': [
+        { key: 'UseVSync', label: 'VSync', type: 'select', options: [{ label: 'Off', value: 'Off' }, { label: 'On', value: 'On' }, { label: 'Adaptive', value: 'Adaptive' }], tooltip: 'Vertical Sync. Adaptive VSync reduces tearing without capping FPS.' },
+        { key: 'OpenGLVersion', label: 'OpenGL Version', type: 'select', options: [{ label: 'Core', value: 'Core' }, { label: 'Compatibility', value: 'Compatibility' }, { label: 'ES', value: 'ES' }], tooltip: 'Selects the OpenGL profile. Core is recommended for modern GPUs.' },
+        { key: 'UseAA', label: 'Anti-Aliasing', type: 'boolean', tooltip: 'Smoothens jagged edges.' },
+        { key: 'NumAASamples', label: 'AA Samples', type: 'select', options: [{ label: 'Off', value: 0 }, { label: '2x', value: 2 }, { label: '4x', value: 4 }, { label: '8x', value: 8 }], tooltip: 'Higher values smooth edges more but reduce performance.' },
+        { key: 'MaxAnisotropy', label: 'Anisotropic Filtering', type: 'number', min: 0, max: 16, step: 1, tooltip: 'Makes textures look sharp at oblique angles.' },
+        { key: 'UseTrilinear', label: 'Trilinear Filtering', type: 'boolean', tooltip: 'Smoothens textures at a distance. Low performance cost.' },
+        { key: 'LODBias', label: 'LOD Bias', type: 'number', min: -10, max: 10, step: 0.1, tooltip: 'Adjusts texture sharpness. Negative values are sharper.' },
+        { key: 'GammaCorrectScreenshots', label: 'Gamma Correct Screenshots', type: 'boolean', tooltip: 'Ensures screenshots match the brightness of the game.' },
+        { key: 'GammaOffsetScreenshots', label: 'Gamma Offset Screenshots', type: 'number', min: -1, max: 1, step: 0.1, tooltip: 'Fine-tune gamma for screenshots.' },
+        { key: 'GammaMultiplier', label: 'Gamma Multiplier', type: 'number', min: 0, max: 2, step: 0.1, tooltip: 'Adjusts global brightness multiplier.' },
+        { key: 'DetailTextures', label: 'Detail Textures', type: 'boolean', tooltip: 'Adds high-frequency noise to textures when viewed up close.' },
+        { key: 'DetailMax', label: 'Detail Max', type: 'number', min: 0, max: 10, step: 1, tooltip: 'Limits the number of detail texture layers.' },
+        { key: 'HighDetailActors', label: 'High Detail Actors', type: 'boolean', tooltip: 'Uses higher quality models for players and weapons if available.' },
+        { key: 'Coronas', label: 'Coronas', type: 'boolean', tooltip: 'Draws a halo effect around light sources.' },
+        { key: 'ShinySurfaces', label: 'Shiny Surfaces', type: 'boolean', tooltip: 'Enables environment mapping on shiny surfaces like floors and weapons.' },
+        { key: 'VolumetricLighting', label: 'Volumetric Lighting', type: 'boolean', tooltip: 'Enables fog-like lighting effects.' },
+        { key: 'UseHWClipping', label: 'HW Clipping', type: 'boolean', tooltip: 'Uses GPU for clipping geometry. Improves performance.' },
+        { key: 'UseBindlessLightmaps', label: 'Bindless Lightmaps', type: 'boolean', tooltip: 'Optimizes lightmap rendering on modern GPUs.' },
+        { key: 'UseShaderDrawParameters', label: 'Shader Draw Parameters', type: 'boolean', tooltip: 'Optimizes draw calls using shaders.' },
+        { key: 'UseLightmapAtlas', label: 'Use Lightmap Atlas', type: 'boolean', tooltip: 'Optimizes rendering by merging lightmaps into fewer textures.' },
+        { key: 'UseSRGBTextures', label: 'Use sRGB Textures', type: 'boolean', tooltip: 'Ensures correct color space handling for textures.' },
+        { key: 'GenerateMipMaps', label: 'Generate MipMaps', type: 'boolean', tooltip: 'Automatically generates mipmaps for textures that lack them.' },
+        { key: 'AlwaysMipmap', label: 'Always Mipmap', type: 'boolean', tooltip: 'Forces mipmap generation for all textures to reduce shimmering.' },
+        { key: 'BumpMaps', label: 'Bump Maps', type: 'boolean', tooltip: 'Adds depth detail to surfaces using bump mapping.' },
+        { key: 'UseBufferInvalidation', label: 'Use Buffer Invalidation', type: 'boolean', tooltip: 'Optimizes buffer updates. Can improve performance.' },
+        { key: 'UseBindlessTextures', label: 'Bindless Textures', type: 'boolean', tooltip: 'Optimizes texture binding on supported GPUs.' },
+        { key: 'NoAATiles', label: 'No AA Tiles', type: 'boolean', tooltip: 'Prevents anti-aliasing on 2D UI elements to keep them sharp.' },
+        { key: 'MacroTextures', label: 'Macro Textures', type: 'boolean', tooltip: 'Adds large-scale texture variation to reduce repetition.' },
+        { key: 'ShareLists', label: 'Share Lists', type: 'boolean', tooltip: 'Shares resources between contexts. Saves memory.' },
+        { key: 'NoFiltering', label: 'No Filtering', type: 'boolean', tooltip: 'Disables texture filtering for a pixelated look.' },
+        { key: 'ParallaxVersion', label: 'Parallax Version', type: 'select', options: [{ label: 'None', value: 'None' }, { label: 'POM', value: 'POM' }], tooltip: 'Selects the parallax mapping technique for depth illusion.' },
+        { key: 'OneXBlending', label: 'OneX Blending', type: 'boolean', tooltip: 'Adjusts brightness to match the classic Glide renderer look.' },
+        { key: 'ActorXBlending', label: 'Actor X Blending', type: 'boolean', tooltip: 'Improves how actors are blended with the environment.' },
+    ],
 }
 
 export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsProps) {
@@ -239,6 +355,7 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
     // Import modal state
     const [importModalState, setImportModalState] = useState<'hidden' | 'loading' | 'success' | 'error'>('hidden')
     const [importErrorMessage, setImportErrorMessage] = useState('')
+    const [importType, setImportType] = useState<'binds' | 'graphics'>('binds')
 
     useEffect(() => {
         loadSettings()
@@ -347,6 +464,73 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
         }
 
         await window.conveyor.ini.writeIniValue('UnrealTournament.ini', renderDevice, key, stringValue)
+    }
+
+    const handleExportVideoSettings = () => {
+        const exportData = {
+            version: '1.0',
+            renderer: renderDevice,
+            exportedAt: new Date().toISOString(),
+            settings: deviceSettings
+        }
+
+        const jsonString = JSON.stringify(exportData, null, 2)
+        const blob = new Blob([jsonString], { type: 'application/json' })
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `ut-graphics-${renderDevice.split('.')[0]}-${new Date().toISOString().split('T')[0]}.json`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        URL.revokeObjectURL(url)
+    }
+
+    const handleImportVideoSettings = async () => {
+        const input = document.createElement('input')
+        input.type = 'file'
+        input.accept = '.json'
+
+        input.onchange = async (e) => {
+            const file = (e.target as HTMLInputElement).files?.[0]
+            if (!file) return
+
+            setImportType('graphics')
+            setImportModalState('loading')
+
+            try {
+                const text = await file.text()
+                const importData = JSON.parse(text)
+
+                if (!importData.renderer || !importData.settings) {
+                    setImportErrorMessage('Invalid graphics settings file format')
+                    setImportModalState('error')
+                    return
+                }
+
+                if (importData.renderer !== renderDevice) {
+                    setImportErrorMessage(`File is for ${importData.renderer}, but you have ${renderDevice} selected.`)
+                    setImportModalState('error')
+                    return
+                }
+
+                const newSettings = importData.settings
+                setDeviceSettings(newSettings)
+
+                // Write to INI
+                for (const [key, value] of Object.entries(newSettings)) {
+                    await updateDeviceSetting(key, value)
+                }
+
+                setImportModalState('success')
+            } catch (err) {
+                console.error('Failed to import graphics settings', err)
+                setImportErrorMessage('Failed to import graphics settings. Please check the file format.')
+                setImportModalState('error')
+            }
+        }
+
+        input.click()
     }
 
     const handleBindClick = (command: string, slot: number) => {
@@ -569,6 +753,7 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
             const file = (e.target as HTMLInputElement).files?.[0]
             if (!file) return
 
+            setImportType('binds')
             setImportModalState('loading')
 
             try {
@@ -657,9 +842,9 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
                         {importModalState === 'loading' && (
                             <>
                                 <div className="space-y-2">
-                                    <h3 className="text-xl font-bold">Importing Keybinds</h3>
+                                    <h3 className="text-xl font-bold">Importing {importType === 'binds' ? 'Keybinds' : 'Graphics Settings'}</h3>
                                     <p className="text-muted-foreground">
-                                        Please wait while we import your keybind configuration...
+                                        Please wait while we import your {importType === 'binds' ? 'keybind' : 'graphics'} configuration...
                                     </p>
                                 </div>
 
@@ -674,7 +859,7 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
                                 <div className="space-y-2">
                                     <h3 className="text-xl font-bold text-green-500">Import Successful!</h3>
                                     <p className="text-muted-foreground">
-                                        Your keybinds have been imported and applied successfully.
+                                        Your {importType === 'binds' ? 'keybinds' : 'graphics settings'} have been imported and applied successfully.
                                     </p>
                                 </div>
 
@@ -783,6 +968,28 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
                     title="Video Options"
                     icon={<Monitor className="size-6" />}
                     activeIconClassName="bg-green-500/10 text-green-500"
+                    headerAction={
+                        <div className="flex gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleExportVideoSettings}
+                                className="gap-2"
+                            >
+                                <Download className="size-4" />
+                                Export
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleImportVideoSettings}
+                                className="gap-2"
+                            >
+                                <Upload className="size-4" />
+                                Import
+                            </Button>
+                        </div>
+                    }
                 >
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
@@ -816,7 +1023,10 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
                             >
                                 <option value="D3D9Drv.D3D9RenderDevice">Direct3D 9</option>
                                 <option value="D3D11Drv.D3D11RenderDevice">Direct3D 11</option>
+                                <option value="ICBINDx11Drv.ICBINDx11RenderDevice">Direct3D 11 (ICBIND)</option>
                                 <option value="OpenGLDrv.OpenGLRenderDevice">OpenGL</option>
+                                <option value="XOpenGLDrv.XOpenGLRenderDevice">XOpenGL</option>
+                                <option value="VulkanDrv.VulkanRenderDevice">Vulkan</option>
                             </select>
                         </div>
                         <div className="space-y-2">
