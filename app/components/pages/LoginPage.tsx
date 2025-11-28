@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { FaDiscord } from 'react-icons/fa'
 import { useLogger } from '@/app/hooks/use-logger'
+import { Modal } from '@/app/components/ui/modal'
+import { TERMS_OF_SERVICE, PRIVACY_POLICY } from '@/app/constants/legal'
+import ReactMarkdown from 'react-markdown'
 
 interface LoginPageProps {
     onLoginSuccess: () => void
@@ -10,6 +13,8 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
     const logger = useLogger('LoginPage')
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    const [showTos, setShowTos] = useState(false)
+    const [showPrivacy, setShowPrivacy] = useState(false)
 
     const handleLogin = async () => {
         setIsLoading(true)
@@ -57,9 +62,61 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
                 </button>
 
                 <div className="text-xs text-center text-muted-foreground">
-                    By logging in, you agree to our Terms of Service and Privacy Policy.
+                    By logging in, you agree to our{' '}
+                    <button
+                        onClick={() => setShowTos(true)}
+                        className="underline hover:text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-primary/50 rounded-sm"
+                    >
+                        Terms of Service
+                    </button>
+                    {' '}and{' '}
+                    <button
+                        onClick={() => setShowPrivacy(true)}
+                        className="underline hover:text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-primary/50 rounded-sm"
+                    >
+                        Privacy Policy
+                    </button>
+                    .
                 </div>
             </div>
+
+            <Modal
+                isOpen={showTos}
+                onClose={() => setShowTos(false)}
+                title="Terms of Service"
+            >
+                <div className="text-sm text-muted-foreground">
+                    <ReactMarkdown
+                        components={{
+                            strong: ({ node, ...props }) => <span className="font-bold text-foreground" {...props} />,
+                            p: ({ node, ...props }) => <p className="mb-4 last:mb-0 leading-relaxed" {...props} />,
+                            ul: ({ node, ...props }) => <ul className="list-disc pl-5 mb-4 space-y-1" {...props} />,
+                            li: ({ node, ...props }) => <li className="pl-1" {...props} />,
+                        }}
+                    >
+                        {TERMS_OF_SERVICE}
+                    </ReactMarkdown>
+                </div>
+            </Modal>
+
+            <Modal
+                isOpen={showPrivacy}
+                onClose={() => setShowPrivacy(false)}
+                title="Privacy Policy"
+            >
+                <div className="text-sm text-muted-foreground">
+                    <ReactMarkdown
+                        components={{
+                            strong: ({ node, ...props }) => <span className="font-bold text-foreground" {...props} />,
+                            p: ({ node, ...props }) => <p className="mb-4 last:mb-0 leading-relaxed" {...props} />,
+                            ul: ({ node, ...props }) => <ul className="list-disc pl-5 mb-4 space-y-1" {...props} />,
+                            li: ({ node, ...props }) => <li className="pl-1" {...props} />,
+                        }}
+                    >
+                        {PRIVACY_POLICY}
+                    </ReactMarkdown>
+                </div>
+            </Modal>
         </div>
     )
 }
