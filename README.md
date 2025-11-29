@@ -4,23 +4,32 @@
 [![stable](https://img.shields.io/github/v/release/UT-BT/launcher?sort=semver&label=stable)](https://github.com/UT-BT/launcher/releases)
 [![rc](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fapi.github.com%2Frepos%2FUT-BT%2Flauncher%2Freleases&query=%24%5B%3F(%40.prerelease%3D%3Dtrue)%5D%5B0%5D.tag_name&label=rc&color=orange)](https://github.com/UT-BT/launcher/releases)
 
-The UTBT Launcher makes getting involved with the Unreal Tournament (1999) BunnyTrack community easy.
+Gone are the days of finding ISOs, manually downloading and applying patches, and trying to figure out what settings you need to get involved in the BunnyTrack community.
 
-We've streamlined downloading and installing the game, applying the latest official patches, and provides a clean and easy to use interface to interact with other BunnyTrack fans.
+The UTBT Launcher automates this whole process for you and aims to make getting up and running as seamless as possible. 
 
-## Key Features
-- One-click install of Unreal Tournament 1999 GOTY on Windows
-- Automatic patching to the latest 469 releases (stable and release candidates)
+## Features
+- Unreal Tournament 1999 downloader/mounter for Windows using Epic Games' legal distribution.
+- Patch management allowing for easy upgrade and downgrades within seconds. 
+- Discord Authentication to connect your UTBT account. 
+- Join UTBT servers directly through the UTBT Launcher's server browser. 
+- Customized homepage showing whats happened since you last logged in. 
+- User management, map reviews all through a nice UI
+- Automated demo uploads for certified runs to the UTBT backend. 
+- Set graphics and key binds through the launcher, and the ability to share your configs with the community.
+
+## Coming Soon
+- Ability to start your own local UTBT server for testing
+- Tools for streamers: start multiple clients, OBS overlays, etc. 
 
 ## Getting Started
-1. Download and run the UTBT Launcher installer for Windows.
-2. Open the launcher and click "Install Unreal Tournament 1999".
-3. Choose an install location or pick an existing installation.
-4. When prompted, apply the latest patch to ensure compatibility.
-5. Create shortcuts if you want quick access.
+1. Download and install the latest version of the UTBT Launcher from the releases page. 
+2. Login to Discord to get access to the application
+3. Configure your existing UT install, or dowload the game through the settings menu. 
+4. Patch your game if required
 
 ## Requirements
-- Windows 10/11 for automated installation and setup
+- Windows 10/11, MacOS and Linux support _may_ come in the future. 
 - Existing UT installation optional (the launcher can validate and patch it)
 
 ## Community
