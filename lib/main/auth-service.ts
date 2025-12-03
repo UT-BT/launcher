@@ -7,13 +7,20 @@ import { createServer } from 'http'
 const DISCORD_CLIENT_ID = '989441174022520842'
 
 export class AuthService {
+    private server: ReturnType<typeof createServer> | null = null
+
     async login(): Promise<AuthConfig> {
         loggingService.info('Starting Discord login flow', 'AuthService')
+
+        if (this.server) {
+            this.server.close()
+            this.server = null
+        }
 
         return new Promise((resolve, reject) => {
             const pkceState = this.generatePKCE()
 
-            const server = createServer(async (req, res) => {
+            this.server = createServer(async (req, res) => {
                 try {
                     const url = new URL(req.url!, `http://${req.headers.host}`)
 
@@ -29,7 +36,8 @@ export class AuthService {
                     if (error) {
                         res.writeHead(400, { 'Content-Type': 'text/html' })
                         res.end('<h1>Login Failed</h1><p>You can close this window.</p>')
-                        server.close()
+                        this.server?.close()
+                        this.server = null
                         reject(new Error(`Discord auth error: ${error}`))
                         return
                     }
@@ -37,7 +45,8 @@ export class AuthService {
                     if (code) {
                         res.writeHead(200, { 'Content-Type': 'text/html' })
                         res.end('<h1>Login Successful</h1><p>You can close this window and return to the launcher.</p><script>window.close()</script>')
-                        server.close()
+                        this.server?.close()
+                        this.server = null
 
                         // Focus the app window
                         const wins = BrowserWindow.getAllWindows()
@@ -76,7 +85,7 @@ export class AuthService {
                 }
             })
 
-            server.listen(54321, '127.0.0.1', () => {
+            this.server.listen(54321, '127.0.0.1', () => {
                 const redirectUri = `http://127.0.0.1:54321/callback`
                 const authUrl = `https://discord.com/api/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=identify&code_challenge=${pkceState.challenge}&code_challenge_method=S256`
 
@@ -84,7 +93,8 @@ export class AuthService {
                 shell.openExternal(authUrl)
             })
 
-            server.on('error', (err) => {
+            this.server.on('error', (err) => {
+                this.server = null
                 reject(err)
             })
         })
