@@ -107,15 +107,6 @@ export function AppLayout({ children, currentView, onViewChange, userProfile }: 
                         <DropdownMenuContent side="top" align="center" className="w-56 bg-card/95 backdrop-blur-xl border-white/10">
                             <DropdownMenuLabel>My Account</DropdownMenuLabel>
                             <DropdownMenuSeparator className="bg-white/10" />
-                            <DropdownMenuItem onClick={() => onViewChange('settings')} className="cursor-pointer focus:bg-white/10">
-                                <User className="mr-2 size-4" />
-                                <span>Profile</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => onViewChange('settings')} className="cursor-pointer focus:bg-white/10">
-                                <Settings className="mr-2 size-4" />
-                                <span>Settings</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator className="bg-white/10" />
                             <DropdownMenuItem
                                 onClick={() => setShowLogoutConfirm(true)}
                                 className="text-red-500 focus:text-red-500 focus:bg-red-500/10 cursor-pointer"
