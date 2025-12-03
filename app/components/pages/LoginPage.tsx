@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { FaDiscord } from 'react-icons/fa'
 import { useLogger } from '@/app/hooks/use-logger'
 import { Modal } from '@/app/components/ui/modal'
@@ -31,6 +31,24 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
             setIsLoading(false)
         }
     }
+
+    useEffect(() => {
+        let timeoutId: NodeJS.Timeout
+
+        if (isLoading) {
+            timeoutId = setTimeout(() => {
+                setIsLoading(false)
+                setError('Login timed out. Please check your connection and try again.')
+                logger.warn('Login timed out')
+            }, 60000)
+        }
+
+        return () => {
+            if (timeoutId) {
+                clearTimeout(timeoutId)
+            }
+        }
+    }, [isLoading, logger])
 
     return (
         <div className="page-container flex flex-col items-center justify-center min-h-screen bg-background text-foreground">
