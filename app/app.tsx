@@ -3,6 +3,7 @@ import { SplashScreen } from '@/app/components/splash/SplashScreen'
 import { Main } from '@/app/components/main/Main'
 import { LoginPage } from '@/app/components/pages/LoginPage'
 import { useLogger } from '@/app/hooks/use-logger'
+import { fetchUserProfile, UserProfile } from '@/app/utils/api'
 import './styles/index.css'
 
 let globalAppMounted = false
@@ -12,14 +13,19 @@ export default function App() {
   const logger = loggerRef.current
   const mountedRef = useRef(false)
   const [appPhase, setAppPhase] = useState<'splash' | 'login' | 'main'>('splash')
-  const [userProfile, setUserProfile] = useState<import('@/lib/main/config').AuthConfig | undefined>(undefined)
+  const [userProfile, setUserProfile] = useState<UserProfile | undefined>(undefined)
 
   const checkAuthAndProceed = async () => {
     try {
-      const profile = await window.auth.getProfile()
-      if (profile) {
+      const authConfig = await window.auth.getProfile()
+      if (authConfig) {
         logger.info('User already logged in, proceeding to main')
-        setUserProfile(profile)
+        const extendedProfile = await fetchUserProfile(authConfig.accessToken)
+        if (extendedProfile) {
+          setUserProfile({ ...authConfig, ...extendedProfile })
+        } else {
+          setUserProfile(authConfig)
+        }
         setAppPhase('main')
       } else {
         logger.info('User not logged in, proceeding to login')
@@ -38,8 +44,15 @@ export default function App() {
 
   const handleLoginSuccess = async () => {
     logger.info('Login successful, proceeding to main')
-    const profile = await window.auth.getProfile()
-    setUserProfile(profile)
+    const authConfig = await window.auth.getProfile()
+    if (authConfig) {
+      const extendedProfile = await fetchUserProfile(authConfig.accessToken)
+      if (extendedProfile) {
+        setUserProfile({ ...authConfig, ...extendedProfile })
+      } else {
+        setUserProfile(authConfig)
+      }
+    }
     setAppPhase('main')
   }
 

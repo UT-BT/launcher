@@ -26,15 +26,46 @@ const navItems: NavItem[] = [
     { id: 'settings', label: 'Settings', icon: Settings },
 ]
 
+import { UserProfile } from '@/app/utils/api'
+
 interface AppLayoutProps {
     children: ReactNode
     currentView: string
     onViewChange: (view: string) => void
-    userProfile?: import('@/lib/main/config').AuthConfig
+    userProfile?: UserProfile
+}
+
+function getRarityStyles(title: { rarity: number, color: string } | undefined | null) {
+    if (!title) return { containerStyle: {}, titleStyle: {}, containerClass: '', titleClass: '' }
+
+    const { rarity, color } = title
+    const rgb = `rgb(${color})`
+
+    let containerStyle: React.CSSProperties = {}
+    let titleStyle: React.CSSProperties = { color: rarity >= 2 ? rgb : undefined }
+    let containerClass = ''
+    let titleClass = ''
+
+    if (rarity >= 3) {
+        containerStyle.borderColor = rgb
+    }
+
+    if (rarity >= 4) {
+        titleClass = 'animate-pulse-slow'
+        titleStyle.textShadow = `0 0 10px ${rgb}`
+    }
+
+    if (rarity >= 5) {
+        containerClass = 'animate-pulse-slow'
+        containerStyle.boxShadow = `0 0 15px ${rgb}`
+    }
+
+    return { containerStyle, titleStyle, containerClass, titleClass }
 }
 
 export function AppLayout({ children, currentView, onViewChange, userProfile }: AppLayoutProps) {
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
+    const { containerStyle, titleStyle, containerClass, titleClass } = getRarityStyles(userProfile?.active_title)
 
     useEffect(() => {
         const saved = localStorage.getItem('ui-scale')
@@ -87,20 +118,33 @@ export function AppLayout({ children, currentView, onViewChange, userProfile }: 
                 <div className="p-4 border-t border-white/10 relative z-10">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <div className="flex items-center gap-3 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors cursor-pointer border border-white/5 group relative outline-none">
-                                <div className="size-8 rounded-full bg-gradient-to-br from-blue-500 to-red-500 p-[1px]">
-                                    {userProfile?.avatar ? (
-                                        <img src={`https://cdn.discordapp.com/avatars/${userProfile.discordId}/${userProfile.avatar}.png`} alt="Avatar" className="w-full h-full rounded-full" />
-                                    ) : (
-                                        <div className="w-full h-full rounded-full bg-black/50 backdrop-blur-sm" />
+                            <div className="relative group cursor-pointer outline-none">
+                                <div
+                                    className={cn(
+                                        "absolute inset-0 rounded-lg bg-white/5 border border-white/5 transition-colors group-hover:bg-white/10",
+                                        containerClass
                                     )}
-                                </div>
-                                <div className="flex flex-col flex-1 min-w-0 text-left">
-                                    <span className="text-sm font-medium truncate">{userProfile?.username || 'Player'}</span>
-                                    <span className="text-xs text-green-400 flex items-center gap-1">
-                                        <span className="size-1.5 rounded-full bg-green-400 animate-pulse" />
-                                        Online
-                                    </span>
+                                    style={containerStyle}
+                                />
+                                <div className="relative flex items-center gap-3 px-4 py-2">
+                                    <div className="size-8 rounded-full bg-gradient-to-br from-blue-500 to-red-500 p-[1px]">
+                                        {userProfile?.avatar ? (
+                                            <img src={`https://cdn.discordapp.com/avatars/${userProfile.discordId}/${userProfile.avatar}.png`} alt="Avatar" className="w-full h-full rounded-full" />
+                                        ) : (
+                                            <div className="w-full h-full rounded-full bg-black/50 backdrop-blur-sm" />
+                                        )}
+                                    </div>
+                                    <div className="flex flex-col flex-1 min-w-0 text-left">
+                                        <span className="text-sm font-medium truncate">{userProfile?.username || 'Player'}</span>
+                                        {userProfile?.active_title ? (
+                                            <span
+                                                className={cn("text-xs font-medium truncate", titleClass)}
+                                                style={titleStyle}
+                                            >
+                                                {userProfile.active_title.name}
+                                            </span>
+                                        ) : null}
+                                    </div>
                                 </div>
                             </div>
                         </DropdownMenuTrigger>
