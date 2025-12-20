@@ -20,3 +20,19 @@ body,
   margin: 0;
   line-height: 1.4;
 }
+
+@keyframes pulse-slow {
+
+  0%,
+  100% {
+    opacity: 1.0;
+  }
+
+  50% {
+    opacity: 0.75;
+  }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 3.0s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
