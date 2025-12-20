@@ -149,7 +149,7 @@ export function AppLayout({ children, currentView, onViewChange, userProfile }: 
                             </div>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent side="top" align="center" className="w-56 bg-card/95 backdrop-blur-xl border-white/10">
-                            <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                            <DropdownMenuLabel>{userProfile?.username || 'Player'}</DropdownMenuLabel>
                             <DropdownMenuSeparator className="bg-white/10" />
                             <DropdownMenuItem
                                 onClick={() => setShowLogoutConfirm(true)}
@@ -182,7 +182,10 @@ export function AppLayout({ children, currentView, onViewChange, userProfile }: 
                                     </div>
                                     <h3 className="text-xl font-bold">Sign Out</h3>
                                     <p className="text-muted-foreground">
-                                        Are you sure you want to sign out? You will need to sign in again to access online features.
+                                        Are you sure you want to sign out?
+                                        <br />
+                                        <br />
+                                        You will need to sign in again to access UTBT.
                                     </p>
                                 </div>
                                 <div className="flex gap-3 justify-center pt-4">
