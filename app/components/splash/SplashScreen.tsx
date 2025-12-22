@@ -4,9 +4,10 @@ import logo from '@/app/assets/logo.png'
 
 interface SplashScreenProps {
   onReady: () => void
+  variant?: 'intro' | 'error'
 }
 
-export function SplashScreen({ onReady }: SplashScreenProps) {
+export function SplashScreen({ onReady, variant = 'intro' }: SplashScreenProps) {
   const logger = useLogger('Splash')
   const containerRef = useRef<HTMLDivElement>(null)
   const [phase, setPhase] = useState<'checking' | 'animating' | 'complete'>('checking')
@@ -22,6 +23,8 @@ export function SplashScreen({ onReady }: SplashScreenProps) {
   }
 
   const startExitAnimation = useCallback(() => {
+    if (variant === 'error') return
+
     logger.info('Starting splash screen exit animation')
     setPhase('animating')
     setTimeout(() => {
@@ -29,22 +32,26 @@ export function SplashScreen({ onReady }: SplashScreenProps) {
       logger.info('Splash screen animation complete, calling onReady')
       onReady()
     }, 2400)
-  }, [onReady, logger])
+  }, [onReady, logger, variant])
 
   useEffect(() => {
-    // Wait for a moment before starting the exit animation
+    if (variant === 'error') {
+      setPhase('checking')
+      return
+    }
+
     const timer = setTimeout(() => {
       startExitAnimation()
     }, 2000)
 
     return () => clearTimeout(timer)
-  }, [startExitAnimation])
+  }, [startExitAnimation, variant])
 
   return (
     <div
       ref={containerRef}
       onMouseMove={handleMouseMove}
-      className={`page-container splash-container ${phase === 'animating' ? 'splash-animating' : ''} ${phase === 'complete' ? 'splash-complete' : ''}`}
+      className={`page-container splash-container ${phase === 'animating' ? 'splash-animating' : ''} ${phase === 'complete' ? 'splash-complete' : ''} ${variant === 'error' ? 'splash-error' : ''}`}
     >
       <div className="nebula-bg" aria-hidden="true" />
 
@@ -52,7 +59,7 @@ export function SplashScreen({ onReady }: SplashScreenProps) {
         <img
           src={logo}
           alt="UTBT.net Logo"
-          className="app-logo splash-logo parallax"
+          className={`app-logo splash-logo parallax ${variant === 'error' ? 'animate-pulse' : ''}`}
           draggable="false"
         />
 

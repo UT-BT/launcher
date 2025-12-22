@@ -1,81 +1,147 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { SplashScreen } from '@/app/components/splash/SplashScreen'
 import { Main } from '@/app/components/main/Main'
 import { LoginPage } from '@/app/components/pages/LoginPage'
+import { ErrorModal } from '@/app/components/ErrorModal'
 import { useLogger } from '@/app/hooks/use-logger'
 import { fetchUserProfile, UserProfile } from '@/app/utils/api'
+
 import './styles/index.css'
 
 let globalAppMounted = false
+
+type InitResult =
+  | { status: 'loggedin'; profile: UserProfile }
+  | { status: 'loggedout' }
+  | { status: 'error'; error: Error }
 
 export default function App() {
   const loggerRef = useRef(useLogger('App'))
   const logger = loggerRef.current
   const mountedRef = useRef(false)
+
   const [appPhase, setAppPhase] = useState<'splash' | 'login' | 'main'>('splash')
   const [userProfile, setUserProfile] = useState<UserProfile | undefined>(undefined)
+  const [initError, setInitError] = useState<{ message: string; retry: () => void } | null>(null)
 
-  const checkAuthAndProceed = async () => {
+  const initPromiseRef = useRef<Promise<InitResult> | null>(null)
+
+  const preloadData = useCallback(async (): Promise<InitResult> => {
     try {
+      logger.info('Starting data preload...')
       const authConfig = await window.auth.getProfile()
-      if (authConfig) {
-        logger.info('User already logged in, proceeding to main')
-        const extendedProfile = await fetchUserProfile(authConfig.accessToken)
-        if (extendedProfile) {
-          setUserProfile({ ...authConfig, ...extendedProfile })
-        } else {
-          setUserProfile(authConfig)
-        }
-        setAppPhase('main')
-      } else {
-        logger.info('User not logged in, proceeding to login')
-        setAppPhase('login')
+
+      if (!authConfig) {
+        logger.info('Preload: User not logged in')
+        return { status: 'loggedout' }
       }
-    } catch (error) {
-      logger.error('Failed to check auth status', error)
+
+      logger.info('Preload: User logged in, fetching extended profile')
+      const extendedProfile = await fetchUserProfile(authConfig.accessToken)
+
+      const fullProfile: UserProfile = { ...authConfig, ...extendedProfile }
+
+      return { status: 'loggedin', profile: fullProfile }
+
+    } catch (error: any) {
+      logger.error('Preload failed', error)
+      return { status: 'error', error: error instanceof Error ? error : new Error(String(error)) }
+    }
+  }, [logger])
+
+  // Start preloading immediately on mount
+  useEffect(() => {
+    if (!mountedRef.current) {
+      mountedRef.current = true
+      if (!globalAppMounted) {
+        globalAppMounted = true
+        logger.info('App component mounted, initiating preload')
+        initPromiseRef.current = preloadData()
+      }
+    }
+    return () => { mountedRef.current = false }
+  }, [preloadData, logger])
+
+  const handleSplashComplete = async () => {
+    logger.info('Splash screen completed, awaiting preload result')
+
+    if (!initPromiseRef.current) {
+      initPromiseRef.current = preloadData()
+    }
+
+    const result = await initPromiseRef.current
+
+    if (result.status === 'loggedin') {
+      logger.info('Preload successful: transitioning to Main')
+      setUserProfile(result.profile)
+      setAppPhase('main')
+    } else if (result.status === 'loggedout') {
+      logger.info('Preload result: Not logged in, transitioning to Login')
       setAppPhase('login')
+    } else {
+      logger.error('Preload result: Error', result.error)
+      setInitError({
+        message: 'Failed to load user data. Please check your internet connection and try again.',
+        retry: handleRetry
+      })
     }
   }
 
-  const handleSplashComplete = () => {
-    logger.info('Splash screen completed, checking auth')
-    checkAuthAndProceed()
+  const handleRetry = () => {
+    setInitError(null)
+    setAppPhase('splash')
+    initPromiseRef.current = preloadData()
+    processRetry()
+  }
+
+  const processRetry = async () => {
+    if (!initPromiseRef.current) return
+    const result = await initPromiseRef.current
+    if (result.status === 'loggedin') {
+      setUserProfile(result.profile)
+      setAppPhase('main')
+    } else if (result.status === 'loggedout') {
+      setAppPhase('login')
+    } else {
+      setInitError({
+        message: 'Failed to load user data. Please check your internet connection and try again.',
+        retry: handleRetry
+      })
+    }
   }
 
   const handleLoginSuccess = async () => {
     logger.info('Login successful, proceeding to main')
-    const authConfig = await window.auth.getProfile()
-    if (authConfig) {
-      const extendedProfile = await fetchUserProfile(authConfig.accessToken)
-      if (extendedProfile) {
-        setUserProfile({ ...authConfig, ...extendedProfile })
-      } else {
-        setUserProfile(authConfig)
-      }
+    initPromiseRef.current = preloadData()
+    const result = await initPromiseRef.current
+    if (result.status === 'loggedin') {
+      setUserProfile(result.profile)
+      setAppPhase('main')
+    } else {
+      logger.error('Login succeeded but profile fetch failed')
+      setInitError({
+        message: 'Failed to load user data. Please check your internet connection and try again.',
+        retry: handleLoginSuccess
+      })
     }
-    setAppPhase('main')
   }
-
-  useEffect(() => {
-    if (!mountedRef.current) {
-      mountedRef.current = true
-
-      if (!globalAppMounted) {
-        globalAppMounted = true
-        logger.info('App component mounted')
-      }
-    }
-
-    return () => {
-      mountedRef.current = false
-    }
-  }, [])
 
   return (
     <>
       {appPhase === 'main' && <Main userProfile={userProfile} />}
       {appPhase === 'login' && <LoginPage onLoginSuccess={handleLoginSuccess} />}
-      {appPhase === 'splash' && <SplashScreen onReady={handleSplashComplete} />}
+      {appPhase === 'splash' && <SplashScreen onReady={handleSplashComplete} variant={!!initError ? 'error' : 'intro'} />}
+
+      <ErrorModal
+        isOpen={!!initError}
+        onClose={() => setInitError(null)}
+        title="Connection Error"
+        message={initError?.message || ''}
+        actionLabel="Retry"
+        onAction={initError?.retry}
+        fullScreen={true}
+        disableClose={true}
+      />
     </>
   )
 }
