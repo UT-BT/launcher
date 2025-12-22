@@ -12,9 +12,10 @@ export interface UserTitle {
 
 export interface UserProfile extends AuthConfig {
     active_title?: UserTitle | null
+    alias?: string | null
 }
 
-const API_BASE_URL = import.meta.env.DEV ? 'http://localhost:5000' : 'https://api.utbt.net'
+const API_BASE_URL = import.meta.env.DEV ? 'http://localhost:5000' : 'http://api.utbt.net'
 
 export async function fetchUserProfile(accessToken: string): Promise<UserProfile | null> {
     try {
