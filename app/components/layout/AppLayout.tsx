@@ -135,7 +135,7 @@ export function AppLayout({ children, currentView, onViewChange, userProfile }: 
                                         )}
                                     </div>
                                     <div className="flex flex-col flex-1 min-w-0 text-left">
-                                        <span className="text-sm font-medium truncate">{userProfile?.username || 'Player'}</span>
+                                        <span className="text-sm font-medium truncate">{userProfile?.alias || userProfile?.username || 'Player'}</span>
                                         {userProfile?.active_title ? (
                                             <span
                                                 className={cn("text-xs font-medium truncate", titleClass)}
@@ -149,7 +149,7 @@ export function AppLayout({ children, currentView, onViewChange, userProfile }: 
                             </div>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent side="top" align="center" className="w-56 bg-card/95 backdrop-blur-xl border-white/10">
-                            <DropdownMenuLabel>{userProfile?.username || 'Player'}</DropdownMenuLabel>
+                            <DropdownMenuLabel>{userProfile?.alias || userProfile?.username || 'Player'}</DropdownMenuLabel>
                             <DropdownMenuSeparator className="bg-white/10" />
                             <DropdownMenuItem
                                 onClick={() => setShowLogoutConfirm(true)}
