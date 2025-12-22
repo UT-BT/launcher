@@ -7,15 +7,28 @@ interface ErrorModalProps {
     onClose: () => void
     title?: string
     message: string
+    actionLabel?: string
+    onAction?: () => void
+    fullScreen?: boolean
+    disableClose?: boolean
 }
 
-export function ErrorModal({ isOpen, onClose, title = "Error", message }: ErrorModalProps) {
+export function ErrorModal({
+    isOpen,
+    onClose,
+    title = "Error",
+    message,
+    actionLabel,
+    onAction,
+    fullScreen = false,
+    disableClose = false
+}: ErrorModalProps) {
     const modalRef = useRef<HTMLDivElement>(null)
     const closeButtonRef = useRef<HTMLButtonElement>(null)
 
     // Handle Escape key to close modal
     useEffect(() => {
-        if (!isOpen) return
+        if (!isOpen || disableClose) return
 
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'Escape') {
@@ -26,9 +39,8 @@ export function ErrorModal({ isOpen, onClose, title = "Error", message }: ErrorM
 
         document.addEventListener('keydown', handleKeyDown, true)
         return () => document.removeEventListener('keydown', handleKeyDown, true)
-    }, [isOpen, onClose])
+    }, [isOpen, onClose, disableClose])
 
-    // Focus trap: keep focus within modal
     useEffect(() => {
         if (!isOpen || !modalRef.current) return
 
@@ -67,8 +79,12 @@ export function ErrorModal({ isOpen, onClose, title = "Error", message }: ErrorM
 
     if (!isOpen) return null
 
+    const containerClasses = fullScreen
+        ? "fixed top-[var(--window-titlebar-height)] right-0 bottom-0 left-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-md p-4 animate-in fade-in duration-200"
+        : "fixed top-[var(--window-titlebar-height)] right-0 bottom-0 left-64 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+
     return (
-        <div className="fixed top-[var(--window-titlebar-height)] right-0 bottom-0 left-64 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+        <div className={containerClasses}>
             <div ref={modalRef} tabIndex={-1} className="w-full max-w-md bg-card border border-destructive/20 rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 border-b border-white/5 bg-destructive/10">
@@ -76,9 +92,11 @@ export function ErrorModal({ isOpen, onClose, title = "Error", message }: ErrorM
                         <AlertTriangle className="size-5" />
                         <h3 className="font-bold text-lg truncate">{title}</h3>
                     </div>
-                    <Button ref={closeButtonRef} variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 rounded-full hover:bg-white/10" aria-label="Close modal">
-                        <X className="size-4" />
-                    </Button>
+                    {!disableClose && (
+                        <Button ref={closeButtonRef} variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 rounded-full hover:bg-white/10" aria-label="Close modal">
+                            <X className="size-4" />
+                        </Button>
+                    )}
                 </div>
 
                 {/* Content */}
@@ -87,13 +105,24 @@ export function ErrorModal({ isOpen, onClose, title = "Error", message }: ErrorM
                         <p className="text-white/90 text-lg">{message}</p>
                     </div>
 
-                    <div className="flex justify-center">
-                        <Button
-                            onClick={onClose}
-                            className="min-w-[120px] bg-white/10 hover:bg-white/20 text-white border border-white/5"
-                        >
-                            Close
-                        </Button>
+                    <div className="flex justify-center gap-3">
+                        {!disableClose && (
+                            <Button
+                                onClick={onClose}
+                                variant="secondary"
+                                className="min-w-[100px] border border-white/5"
+                            >
+                                Close
+                            </Button>
+                        )}
+                        {onAction && actionLabel && (
+                            <Button
+                                onClick={onAction}
+                                className="min-w-[100px]"
+                            >
+                                {actionLabel}
+                            </Button>
+                        )}
                     </div>
                 </div>
             </div>

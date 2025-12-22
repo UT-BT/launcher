@@ -17,7 +17,7 @@ export interface UserProfile extends AuthConfig {
 
 const API_BASE_URL = import.meta.env.DEV ? 'http://localhost:5000' : 'http://api.utbt.net'
 
-export async function fetchUserProfile(accessToken: string): Promise<UserProfile | null> {
+export async function fetchUserProfile(accessToken: string): Promise<UserProfile> {
     try {
         const response = await fetch(`${API_BASE_URL}/users/me`, {
             headers: {
@@ -26,8 +26,7 @@ export async function fetchUserProfile(accessToken: string): Promise<UserProfile
         })
 
         if (!response.ok) {
-            console.error('Failed to fetch user profile:', response.statusText)
-            return null
+            throw new Error(`Failed to fetch user profile: ${response.statusText} (${response.status})`)
         }
 
         const json = await response.json()
@@ -35,9 +34,9 @@ export async function fetchUserProfile(accessToken: string): Promise<UserProfile
             return json.data as UserProfile
         }
 
-        return null
+        throw new Error('Invalid response format from server')
     } catch (error) {
         console.error('Error fetching user profile:', error)
-        return null
+        throw error
     }
 }
