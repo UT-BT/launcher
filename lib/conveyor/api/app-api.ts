@@ -29,4 +29,12 @@ export class AppApi extends ConveyorApi {
   fetchPatches = () => this.invoke('fetchPatches')
   installPatch = (patch: any) => this.invoke('installPatch', patch)
   getUploadLogs = () => this.invoke('getUploadLogs')
+  addUploadLog = (entry: {
+    filename: string
+    status: 'success' | 'failed' | 'uploading'
+    timestamp: string
+    error?: string
+  }) => this.invoke('addUploadLog', entry)
+  updateUploadLogStatus = (filename: string, status: 'success' | 'failed', error?: string) =>
+    this.invoke('updateUploadLogStatus', filename, status, error)
 }

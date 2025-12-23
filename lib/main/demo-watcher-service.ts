@@ -33,14 +33,14 @@ export class DemoWatcherService {
         return this.uploadLogs
     }
 
-    private addLogEntry(entry: UploadLogEntry) {
+    public addLogEntry(entry: UploadLogEntry) {
         this.uploadLogs.unshift(entry)
         if (this.uploadLogs.length > 50) {
             this.uploadLogs.pop()
         }
     }
 
-    private updateLogStatus(filename: string, status: 'success' | 'failed', error?: string) {
+    public updateLogStatus(filename: string, status: 'success' | 'failed', error?: string) {
         const entry = this.uploadLogs.find(e => e.filename === filename && e.status === 'uploading')
         if (entry) {
             entry.status = status

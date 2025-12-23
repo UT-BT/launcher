@@ -144,4 +144,17 @@ export const appIpcSchema = {
       error: z.string().optional(),
     })),
   },
+  addUploadLog: {
+    args: z.tuple([z.object({
+      filename: z.string(),
+      status: z.union([z.literal('success'), z.literal('failed'), z.literal('uploading')]),
+      timestamp: z.string(),
+      error: z.string().optional(),
+    })]),
+    return: z.void(),
+  },
+  updateUploadLogStatus: {
+    args: z.tuple([z.string(), z.union([z.literal('success'), z.literal('failed')]), z.string().optional()]),
+    return: z.void(),
+  },
 }
