@@ -23,6 +23,8 @@ export const GameProfilesModal = ({ isOpen, onClose }: GameProfilesModalProps) =
     const [isSaving, setIsSaving] = useState(false)
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
     const [profileToDelete, setProfileToDelete] = useState<string | null>(null)
+    const [showOverwriteConfirm, setShowOverwriteConfirm] = useState(false)
+    const [profileToOverwrite, setProfileToOverwrite] = useState<string | null>(null)
     const [renamingProfile, setRenamingProfile] = useState<string | null>(null)
     const [renameName, setRenameName] = useState('')
 
@@ -65,12 +67,20 @@ export const GameProfilesModal = ({ isOpen, onClose }: GameProfilesModalProps) =
         }
     }
 
-    const handleOverwriteProfile = async (name: string) => {
+    const handleOverwriteProfile = (name: string) => {
+        setProfileToOverwrite(name)
+        setShowOverwriteConfirm(true)
+    }
+
+    const handleOverwriteConfirm = async () => {
+        if (!profileToOverwrite) return
         setIsSaving(true)
         try {
             const path = await window.conveyor.app.getUt99InstallPath()
             if (path) {
-                await window.conveyor.app.createProfile(name, path)
+                await window.conveyor.app.createProfile(profileToOverwrite, path)
+                setShowOverwriteConfirm(false)
+                setProfileToOverwrite(null)
                 await fetchProfiles()
             }
         } catch (error) {
@@ -137,6 +147,16 @@ export const GameProfilesModal = ({ isOpen, onClose }: GameProfilesModalProps) =
                         >
                             <FaTimes />
                         </button>
+                    </div>
+
+                    <div className="p-4 bg-muted/30 border-b border-border text-xs text-muted-foreground space-y-2">
+                        <p>
+                            Profiles give you the ability save your current graphics settings and binds.
+                            Here you can create, switch, overwrite and delete these profiles as you wish.
+                        </p>
+                        <p>
+                            The <span className="italic text-foreground">Default</span> profile was created from your original installation.
+                        </p>
                     </div>
 
                     <div className="p-4 border-b border-border space-y-4">
@@ -260,6 +280,16 @@ export const GameProfilesModal = ({ isOpen, onClose }: GameProfilesModalProps) =
                 message={`Are you sure you want to delete the profile "${profileToDelete}"?`}
                 confirmText="Delete"
                 variant="error"
+            />
+
+            <ConfirmModal
+                isOpen={showOverwriteConfirm}
+                onClose={() => setShowOverwriteConfirm(false)}
+                onConfirm={handleOverwriteConfirm}
+                title="Overwrite Profile"
+                message={`Are you sure you want to overwrite the profile "${profileToOverwrite}" with your current settings?`}
+                confirmText="Overwrite"
+                variant="default"
             />
         </>
     )
