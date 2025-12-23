@@ -65,4 +65,18 @@ export const registerAppHandlers = (_window: BrowserWindow) => {
   handle('fetchPatches', () => patchService.fetchPatches())
   handle('installPatch', (patch: any) => patchService.installPatch(patch, _window))
   handle('getUploadLogs', () => demoWatcherService.getUploadLogs())
+  handle(
+    'addUploadLog',
+    (entry: {
+      filename: string
+      status: 'success' | 'failed' | 'uploading'
+      timestamp: string
+      error?: string
+    }) => demoWatcherService.addLogEntry(entry)
+  )
+  handle(
+    'updateUploadLogStatus',
+    (filename: string, status: 'success' | 'failed', error?: string) =>
+      demoWatcherService.updateLogStatus(filename, status, error)
+  )
 }
