@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Button } from '@/app/components/ui/button'
 import { useLogger } from '@/app/hooks/use-logger'
-import { RefreshCw, Play, Users, Clock, Trophy, Shield, Signal, Swords, Coffee, PanelLeft, User, ExternalLink, Twitch } from 'lucide-react'
+import { RefreshCw, Play, Users, Trophy, Shield, Signal, Swords, Coffee, PanelLeft, User, ExternalLink, Twitch, Eye } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { FilterState, getRegionFlag, getServerRegion, getServerType, SortOption, filterServers, sortServers, trimServerName, getGameStatusText } from '@/app/utils/server-utils'
+import { FilterState, getRegionFlag, getServerRegion, getServerType, SortOption, filterServers, sortServers } from '@/app/utils/server-utils'
 import { ServerBrowserSidebar } from '@/app/components/ServerBrowserSidebar'
 import { JoinServerModal } from '@/app/components/JoinServerModal'
 import { ErrorModal } from '@/app/components/ErrorModal'
@@ -81,59 +81,65 @@ const PlayerTag = ({ player }: { player: Player }) => {
         }
     }
 
-    return (
-        <Tooltip
-            content={isBot ? "Watch Live on Twitch" : `${player.name}${player.is_spectator ? ' (Spectator)' : ''} - ${player.ping}ms`}
+    const tagContent = (
+        <div
+            onClick={handleClick}
+            className={cn(
+                "flex items-center gap-2.5 px-2 py-1.5 rounded-lg transition-all border border-transparent hover:bg-white/5 hover:border-white/5 group/player",
+                player.is_spectator ? "opacity-60" : "",
+                isBot ? "cursor-pointer" : ""
+            )}
         >
-            <div
-                onClick={handleClick}
-                className={cn(
-                    "flex items-center gap-2.5 px-2 py-1.5 rounded-lg transition-all border border-transparent hover:bg-white/5 hover:border-white/5 group/player",
-                    player.is_spectator ? "opacity-60" : "",
-                    isBot ? "cursor-pointer" : ""
-                )}
-            >
-                <div className={cn(
-                    "size-5 rounded-md overflow-hidden bg-black/40 border border-white/5 shrink-0 transition-transform group-hover/player:scale-105 flex items-center justify-center",
-                    player.is_spectator && !isBot ? "grayscale opacity-50" : ""
-                )}>
-                    {isBot ? (
-                        <Twitch className="size-3.5 text-[#9146FF] fill-[#9146FF]/20" />
-                    ) : avatarUrl ? (
-                        <img
-                            src={avatarUrl}
-                            alt={displayName}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                                (e.target as HTMLImageElement).src = `https://cdn.discordapp.com/embed/avatars/${parseInt(player.id) % 5}.png`
-                            }}
-                        />
-                    ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-muted/20">
-                            <User className={cn("size-3", player.is_spectator ? "text-muted-foreground" : "text-white/70")} />
-                        </div>
-                    )}
-                </div>
-                <div className="flex items-center gap-1.5 min-w-0">
-                    <span className={cn(
-                        "text-xs font-semibold text-white/80 transition-colors truncate max-w-[120px]",
-                        isBot ? "group-hover/player:text-[#9146FF]" : "group-hover/player:text-blue-400"
-                    )}>
-                        {displayName}
-                    </span>
-                    {isBot && (
-                        <ExternalLink className="size-2.5 text-[#9146FF] opacity-0 group-hover/player:opacity-100 transition-opacity" />
-                    )}
-                </div>
-                {!isBot && (
-                    <div className="flex items-center gap-1.5 shrink-0 opacity-40 group-hover/player:opacity-100 transition-opacity">
-                        <div className={cn("size-1.5 rounded-full", pingColor)} />
-                        <span className="text-[10px] tabular-nums font-bold tracking-tight">{player.ping}</span>
+            <div className={cn(
+                "size-5 rounded-md overflow-hidden bg-black/40 border border-white/5 shrink-0 transition-transform group-hover/player:scale-105 flex items-center justify-center",
+                player.is_spectator && !isBot ? "grayscale opacity-50" : ""
+            )}>
+                {isBot ? (
+                    <Twitch className="size-3.5 text-[#9146FF] fill-[#9146FF]/20" />
+                ) : avatarUrl ? (
+                    <img
+                        src={avatarUrl}
+                        alt={displayName}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                            (e.target as HTMLImageElement).src = `https://cdn.discordapp.com/embed/avatars/${parseInt(player.id) % 5}.png`
+                        }}
+                    />
+                ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-muted/20">
+                        <User className={cn("size-3", player.is_spectator ? "text-muted-foreground" : "text-white/70")} />
                     </div>
                 )}
             </div>
-        </Tooltip>
+            <div className="flex items-center gap-1.5 min-w-0">
+                <span className={cn(
+                    "text-xs font-semibold text-white/80 transition-colors truncate max-w-[120px]",
+                    isBot ? "group-hover/player:text-[#9146FF]" : "group-hover/player:text-blue-400"
+                )}>
+                    {displayName}
+                </span>
+                {isBot && (
+                    <ExternalLink className="size-2.5 text-[#9146FF] opacity-0 group-hover/join:opacity-100 transition-opacity" />
+                )}
+            </div>
+            {!isBot && (
+                <div className="flex items-center gap-1.5 shrink-0 opacity-40 group-hover/player:opacity-100 transition-opacity">
+                    <div className={cn("size-1.5 rounded-full", pingColor)} />
+                    <span className="text-[10px] tabular-nums font-bold tracking-tight">{player.ping}</span>
+                </div>
+            )}
+        </div>
     )
+
+    if (isBot) {
+        return (
+            <Tooltip content="Watch Live on Twitch">
+                {tagContent}
+            </Tooltip>
+        )
+    }
+
+    return tagContent
 }
 
 const getTypeIcon = (type: string) => {
@@ -148,16 +154,8 @@ const getTypeIcon = (type: string) => {
 const ServerRow = ({ server, onJoin }: { server: Server, onJoin: (server: Server) => void }) => {
     const [isExpanded, setIsExpanded] = useState(false)
     const type = getServerType(server.hostname)
-    const trimmedName = trimServerName(server.hostname)
     const region = getServerRegion(server.hostname)
     const flag = getRegionFlag(region)
-    const statusText = getGameStatusText(
-        server.remaining_time_seconds,
-        server.certified_records,
-        type,
-        server.red_team_score,
-        server.blue_team_score
-    )
 
     const hasManyPlayers = server.players.length > 8 // Arbitrary threshold for "too many"
 
@@ -183,65 +181,70 @@ const ServerRow = ({ server, onJoin }: { server: Server, onJoin: (server: Server
             <div className="flex-1 min-w-0 flex flex-col gap-4">
                 <div className="flex items-center gap-6">
                     {/* Server Info */}
-                    <div className="flex-1 min-w-0 z-10">
-                        <div className="flex items-center gap-2 mb-1">
-                            <div title={type}>
-                                {getTypeIcon(type)}
+                    <div className="flex-1 min-w-0 z-10 px-1">
+                        <div className="flex items-center gap-4">
+                            {/* Map Name with Icon */}
+                            <div className="flex items-center gap-2 min-w-0">
+                                <span className="text-lg font-black text-white truncate tracking-tight group-hover:text-blue-400 transition-colors">
+                                    {server.map_name.replace('CTF-BT-', '🐰 ').replace('CTF-BT+', '🔑 ')}
+                                </span>
                             </div>
-                            <img
-                                src={flag}
-                                alt={region}
-                                title={region}
-                                className="h-3.5 w-5 object-cover rounded-sm shadow-sm"
-                            />
-                            <h3 className="font-bold text-lg truncate text-white group-hover:text-blue-400 transition-colors">
-                                {trimmedName}
-                            </h3>
-                            <div className="flex items-center gap-1.5 ml-2">
-                                <Signal className={cn("size-3.5",
-                                    !server.ping ? "text-muted-foreground" :
-                                        server.ping < 100 ? "text-green-500" :
-                                            server.ping < 200 ? "text-yellow-500" : "text-red-500"
-                                )} />
-                                <span className="text-sm text-muted-foreground">{server.ping ? `${server.ping}ms` : '...'}</span>
-                            </div>
-                        </div>
 
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                            <div className="flex items-center gap-1.5">
-                                <span className="text-white/80">{server.map_name.replace('CTF-BT-', '🐰 ').replace('CTF-BT+', '🔑 ')}</span>
-                            </div>
-                            <div className="w-px h-3 bg-white/10" />
-                            <div className="flex items-center gap-1.5">
-                                <Clock className="size-3.5" />
-                                <span>{statusText}</span>
+                            {/* Icons and Ping */}
+                            <div className="flex items-center gap-3 shrink-0 bg-white/5 py-1.5 px-3 rounded-full border border-white/5">
+                                <div title={type}>
+                                    {getTypeIcon(type)}
+                                </div>
+                                <img
+                                    src={flag}
+                                    alt={region}
+                                    title={region}
+                                    className="h-3 w-4.5 object-cover rounded-sm shadow-sm grayscale-[0.2]"
+                                />
+                                <div className="flex items-center gap-1.5 min-w-[60px]">
+                                    <Signal className={cn("size-3.5",
+                                        !server.ping ? "text-muted-foreground" :
+                                            server.ping < 100 ? "text-green-500" :
+                                                server.ping < 200 ? "text-yellow-500" : "text-red-500"
+                                    )} />
+                                    <span className="text-sm font-bold text-muted-foreground tabular-nums">{server.ping ? `${server.ping}ms` : '...'}</span>
+                                </div>
                             </div>
                         </div>
                     </div>
 
                     {/* Stats */}
                     <div className="flex items-center gap-6 z-10">
-
-                        {/* Players Count */}
-                        <div className="flex flex-col items-end min-w-[80px]">
-                            <div className="flex items-center gap-2 text-white">
+                        {/* Players / Spectators */}
+                        <div className="flex items-center gap-4 bg-white/5 py-1.5 px-3 rounded-lg border border-white/5">
+                            <div className="flex items-center gap-1.5">
                                 <Users className="size-4 text-blue-400" />
-                                <span className="font-bold text-lg">{server.player_count}/{server.max_players}</span>
+                                <span className={cn(
+                                    "font-bold text-base tabular-nums",
+                                    server.player_count >= server.max_players ? "text-rose-500/80" :
+                                        server.player_count > 0 ? "text-emerald-500/80" : "text-white"
+                                )}>
+                                    {server.player_count}/{server.max_players}
+                                </span>
                             </div>
                             {server.spectators > 0 && (
-                                <span className="text-xs text-muted-foreground">
-                                    {server.spectators} spectator{server.spectators === 1 ? '' : 's'}
-                                </span>
+                                <>
+                                    <div className="w-px h-3 bg-white/10" />
+                                    <div className="flex items-center gap-1.5" title={`${server.spectators} Spectator${server.spectators === 1 ? '' : 's'}`}>
+                                        <Eye className="size-3.5 text-blue-400/50" />
+                                        <span className="text-base font-bold text-muted-foreground tabular-nums">{server.spectators}</span>
+                                    </div>
+                                </>
                             )}
                         </div>
 
                         {/* Join Button */}
                         <Button
                             onClick={() => onJoin(server)}
-                            className="h-10 px-6 bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/20"
+                            className="h-10 px-6 bg-white/5 hover:bg-white/10 text-white rounded-xl shadow-lg border border-white/5 backdrop-blur-md transition-all hover:scale-[1.02] active:scale-95 group/join"
                         >
-                            <Play className="size-4 mr-2 fill-current" />
-                            Join
+                            <Play className="size-4 mr-2 fill-current transition-transform group-hover/join:translate-x-0.5" />
+                            <span className="font-bold">Join</span>
                         </Button>
                     </div>
                 </div>
