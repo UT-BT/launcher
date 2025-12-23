@@ -95,6 +95,13 @@ if (process.contextIsolated) {
       logout: async () => ipcRenderer.invoke('auth:logout'),
       getProfile: async () => ipcRenderer.invoke('auth:get-profile'),
     })
+    contextBridge.exposeInMainWorld('utProfile', {
+      onChanged: (cb: () => void) => {
+        const listener = () => cb()
+        ipcRenderer.on('profile-changed', listener)
+        return () => ipcRenderer.removeListener('profile-changed', listener)
+      }
+    })
   } catch (error) {
     console.error('Preload script error:', error)
   }
@@ -187,5 +194,12 @@ if (process.contextIsolated) {
     login: async () => ipcRenderer.invoke('auth:login'),
     logout: async () => ipcRenderer.invoke('auth:logout'),
     getProfile: async () => ipcRenderer.invoke('auth:get-profile'),
+  }
+  window.utProfile = {
+    onChanged: (cb: () => void) => {
+      const listener = () => cb()
+      ipcRenderer.on('profile-changed', listener)
+      return () => ipcRenderer.removeListener('profile-changed', listener)
+    }
   }
 }

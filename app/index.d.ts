@@ -61,4 +61,7 @@ interface Window {
     logout: () => Promise<void>
     getProfile: () => Promise<import('@/lib/main/config').AuthConfig | undefined>
   }
+  utProfile: {
+    onChanged: (cb: () => void) => () => void
+  }
 }
