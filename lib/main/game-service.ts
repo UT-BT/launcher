@@ -1,9 +1,9 @@
-import { BrowserWindow, dialog, net } from 'electron'
 import { join } from 'path'
-import { existsSync, createReadStream, createWriteStream } from 'fs'
+import { existsSync, createReadStream, createWriteStream, mkdirSync, copyFileSync, readdirSync, rmSync, renameSync, statSync } from 'fs'
+import { app, BrowserWindow, dialog, net } from 'electron'
 import { createHash } from 'crypto'
 import { gatewayService } from './gateway-service'
-import { setUt99InstallPath, setInstalledPatch, getUt99InstallPath, getInstalledPatch } from './config'
+import { setUt99InstallPath, setInstalledPatch, getUt99InstallPath, getInstalledPatch, setActiveProfile, getActiveProfile } from './config'
 import { loggingService } from './logging-service'
 
 export class GameService {
@@ -18,6 +18,122 @@ export class GameService {
         }
 
         return result.filePaths[0]
+    }
+
+    private getProfilesDir(): string {
+        const dir = join(app.getPath('userData'), 'profiles')
+        if (!existsSync(dir)) {
+            mkdirSync(dir, { recursive: true })
+        }
+        return dir
+    }
+
+    private getDefaultCount(): number {
+        const profilesDir = this.getProfilesDir()
+        return readdirSync(profilesDir, { withFileTypes: true })
+            .filter(dirent => dirent.isDirectory())
+            .filter(dirent => dirent.name === 'Default')
+            .length
+    }
+
+    async createProfile(name: string, installPath: string): Promise<void> {
+        const profilesDir = this.getProfilesDir()
+        const profilePath = join(profilesDir, name)
+
+        if (!existsSync(profilePath)) {
+            mkdirSync(profilePath, { recursive: true })
+        }
+
+        const filesToBackUp = ['UnrealTournament.ini', 'User.ini']
+        for (const file of filesToBackUp) {
+            const source = join(installPath, 'System', file)
+            const destination = join(profilePath, file)
+            if (existsSync(source)) {
+                copyFileSync(source, destination)
+                loggingService.info(`Backed up ${file} to profile ${name}`, 'GameService')
+            }
+        }
+        setActiveProfile(name)
+    }
+
+    async listProfiles(): Promise<{ name: string; modifiedAt: string }[]> {
+        const profilesDir = this.getProfilesDir()
+        if (!existsSync(profilesDir)) return []
+
+        return readdirSync(profilesDir, { withFileTypes: true })
+            .filter(dirent => dirent.isDirectory())
+            .map(dirent => {
+                const profilePath = join(profilesDir, dirent.name)
+                const stats = statSync(profilePath)
+                return {
+                    name: dirent.name,
+                    modifiedAt: stats.mtime.toISOString(),
+                }
+            })
+    }
+
+    async switchProfile(name: string): Promise<void> {
+        const installPath = getUt99InstallPath()
+        if (!installPath) {
+            throw new Error('UT99 install path not found')
+        }
+
+        const profilesDir = this.getProfilesDir()
+        const profilePath = join(profilesDir, name)
+
+        if (!existsSync(profilePath)) {
+            throw new Error(`Profile ${name} not found`)
+        }
+
+        const filesToRestore = ['UnrealTournament.ini', 'User.ini']
+        for (const file of filesToRestore) {
+            const source = join(profilePath, file)
+            const destination = join(installPath, 'System', file)
+            if (existsSync(source)) {
+                copyFileSync(source, destination)
+                loggingService.info(`Restored ${file} from profile ${name}`, 'GameService')
+            }
+        }
+        setActiveProfile(name)
+    }
+
+    async renameProfile(oldName: string, newName: string): Promise<void> {
+        const profilesDir = this.getProfilesDir()
+        const oldPath = join(profilesDir, oldName)
+        const newPath = join(profilesDir, newName)
+
+        if (!existsSync(oldPath)) {
+            throw new Error(`Profile ${oldName} not found`)
+        }
+
+        if (existsSync(newPath)) {
+            throw new Error(`Profile ${newName} already exists`)
+        }
+
+        renameSync(oldPath, newPath)
+        loggingService.info(`Renamed profile from ${oldName} to ${newName}`, 'GameService')
+
+        if (getActiveProfile() === oldName) {
+            setActiveProfile(newName)
+        }
+    }
+
+    async getActiveProfile(): Promise<string | undefined> {
+        return getActiveProfile()
+    }
+
+    async deleteProfile(name: string): Promise<void> {
+        const profilesDir = this.getProfilesDir()
+        const profilePath = join(profilesDir, name)
+
+        if (existsSync(profilePath)) {
+            rmSync(profilePath, { recursive: true, force: true })
+            loggingService.info(`Deleted profile ${name}`, 'GameService')
+
+            if (getActiveProfile() === name) {
+                setActiveProfile(undefined)
+            }
+        }
     }
 
     async validateCurrentInstallation(): Promise<{ valid: boolean; version?: string }> {
@@ -180,11 +296,19 @@ export class GameService {
             installedAt: new Date().toISOString(),
         })
 
-        // 5. Notify renderer of successful installation path update
+        // 5. Create "Default" profile if it doesn't exist
+        const defaultCount = this.getDefaultCount()
+        try {
+            await this.createProfile('Default' + (defaultCount > 0 ? ` (${defaultCount})` : ''), path)
+        } catch (error) {
+            loggingService.error('Failed to create default profile', 'GameService', error)
+        }
+
+        // 6. Notify renderer of successful installation path update
         if (window) {
             window.webContents.send('installation-path-updated', { version })
 
-            // 6. Install Custom Announcer
+            // 7. Install Custom Announcer
             this.installCustomAnnouncer(path, window).catch(err => {
                 loggingService.error('Failed to install custom announcer', 'GameService', err)
             })

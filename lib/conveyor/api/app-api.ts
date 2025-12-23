@@ -37,4 +37,10 @@ export class AppApi extends ConveyorApi {
   }) => this.invoke('addUploadLog', entry)
   updateUploadLogStatus = (filename: string, status: 'success' | 'failed', error?: string) =>
     this.invoke('updateUploadLogStatus', filename, status, error)
+  createProfile = (name: string, path: string) => this.invoke('createProfile', name, path)
+  getProfiles = () => this.invoke('getProfiles')
+  switchProfile = (name: string) => this.invoke('switchProfile', name)
+  deleteProfile = (name: string) => this.invoke('deleteProfile', name)
+  renameProfile = (oldName: string, newName: string) => this.invoke('renameProfile', oldName, newName)
+  getActiveProfile = () => this.invoke('getActiveProfile')
 }
