@@ -135,4 +135,13 @@ export const appIpcSchema = {
     })]),
     return: z.void(),
   },
+  getUploadLogs: {
+    args: z.tuple([]),
+    return: z.array(z.object({
+      filename: z.string(),
+      status: z.union([z.literal('success'), z.literal('failed'), z.literal('uploading')]),
+      timestamp: z.string(),
+      error: z.string().optional(),
+    })),
+  },
 }

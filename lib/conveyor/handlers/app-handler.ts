@@ -14,6 +14,7 @@ import { loggingService } from '@/lib/main/logging-service'
 import { installationService } from '@/lib/main/installation-service'
 import { gameService } from '@/lib/main/game-service'
 import { patchService } from '@/lib/main/patch-service'
+import { demoWatcherService } from '@/lib/main/demo-watcher-service'
 
 export const registerAppHandlers = (_window: BrowserWindow) => {
   loggingService.info('Registering app IPC handlers', 'MainProcess')
@@ -63,4 +64,5 @@ export const registerAppHandlers = (_window: BrowserWindow) => {
 
   handle('fetchPatches', () => patchService.fetchPatches())
   handle('installPatch', (patch: any) => patchService.installPatch(patch, _window))
+  handle('getUploadLogs', () => demoWatcherService.getUploadLogs())
 }

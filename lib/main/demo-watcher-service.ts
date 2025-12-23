@@ -13,12 +13,39 @@ type LeaderboardResponse = {
     success: boolean
 }
 
+export interface UploadLogEntry {
+    filename: string
+    status: 'success' | 'failed' | 'uploading'
+    timestamp: string
+    error?: string
+}
+
 export class DemoWatcherService {
     private watcher: FSWatcher | null = null
     private systemPath: string | undefined
+    private uploadLogs: UploadLogEntry[] = []
 
     constructor() {
         this.systemPath = undefined
+    }
+
+    public getUploadLogs(): UploadLogEntry[] {
+        return this.uploadLogs
+    }
+
+    private addLogEntry(entry: UploadLogEntry) {
+        this.uploadLogs.unshift(entry)
+        if (this.uploadLogs.length > 50) {
+            this.uploadLogs.pop()
+        }
+    }
+
+    private updateLogStatus(filename: string, status: 'success' | 'failed', error?: string) {
+        const entry = this.uploadLogs.find(e => e.filename === filename && e.status === 'uploading')
+        if (entry) {
+            entry.status = status
+            entry.error = error
+        }
     }
 
     public startWatching() {
@@ -102,6 +129,12 @@ export class DemoWatcherService {
                 loggingService.warn('Cannot upload demo: User not logged in', 'DemoWatcher')
             } else {
                 loggingService.info(`Uploading demo: ${filename}`, 'DemoWatcher')
+                this.addLogEntry({
+                    filename,
+                    status: 'uploading',
+                    timestamp: new Date().toISOString()
+                })
+
                 try {
                     const { readFileSync } = await import('fs')
 
@@ -111,8 +144,10 @@ export class DemoWatcherService {
                     await uploadDemo(blob, filename, auth.accessToken)
 
                     loggingService.info(`Demo uploaded successfully: ${filename}`, 'DemoWatcher')
+                    this.updateLogStatus(filename, 'success')
                 } catch (error: any) {
                     loggingService.error(`Failed to upload demo: ${error.message}`, 'DemoWatcher')
+                    this.updateLogStatus(filename, 'failed', error.message)
                     shouldUpload = false
                 }
             }
