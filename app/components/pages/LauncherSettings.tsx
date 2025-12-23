@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { ArrowLeft, Laptop, Video, ChevronDown } from 'lucide-react'
+import { ArrowLeft, Laptop, Video, ChevronDown, AlertTriangle } from 'lucide-react'
 import { Slider } from '@/app/components/ui/slider'
 import { Button } from '@/app/components/ui/button'
 import { Tooltip } from '@/app/components/ui/tooltip'
@@ -196,6 +196,17 @@ function DemoRecordingSettings() {
                         <p className={`text-xs text-muted-foreground ${disabled ? 'opacity-50' : ''}`}>
                             Choose when to automatically upload recorded demos.
                         </p>
+                        {autoDemoUpload === 'Never' && (
+                            <div className="flex items-start gap-3 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20 mt-2">
+                                <AlertTriangle className="size-4 flex-shrink-0 text-yellow-500 mt-0.5" />
+                                <div className="space-y-1">
+                                    <p className="text-xs font-semibold text-yellow-500">UPDATE ON DEMO VERIFICATION</p>
+                                    <p className="text-[10px] leading-relaxed text-yellow-500/90">
+                                        Demos are expected to be uploaded within <b>24 hours</b> of the cap being set. By disabling auto demo upload, you bare the risk of not having the ability to verify your time.
+                                    </p>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     <div className="space-y-2">
@@ -205,8 +216,8 @@ function DemoRecordingSettings() {
                             After Upload Action
                         </label>
                         <DropdownMenu>
-                            <DropdownMenuTrigger asChild disabled={disabled}>
-                                <Button variant="outline" className="w-full justify-between font-normal">
+                            <DropdownMenuTrigger asChild disabled={disabled || autoDemoUpload === 'Never'}>
+                                <Button variant="outline" className={`w-full justify-between font-normal ${(disabled || autoDemoUpload === 'Never') ? 'opacity-50' : ''}`}>
                                     {demoPostAction === 'Move to Folder' ? "Move to 'Uploaded' Folder" : demoPostAction}
                                     <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
                                 </Button>
