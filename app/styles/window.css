@@ -64,7 +64,7 @@
   position: relative;
 }
 
-.window-content > div:last-child {
+.window-content>div:last-child {
   height: 100%;
 }
 
@@ -202,6 +202,10 @@
 
 .titlebar-action-button:hover {
   background-color: #3c3c3c;
+}
+
+.titlebar-action-button.is-uploading {
+  color: #22c55e !important;
 }
 
 .titlebar-dropdown {
@@ -370,6 +374,7 @@
 .platform-darwin .window-titlebar-title {
   margin-left: var(--window-mac-titlebar-controls-margin);
 }
+
 .platform-darwin .window-titlebar-menu {
   left: var(--window-mac-titlebar-controls-margin);
 }
