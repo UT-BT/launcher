@@ -1,8 +1,8 @@
 import chokidar, { FSWatcher } from 'chokidar'
-import { join, basename } from 'path'
+import { join } from 'path'
 import { loggingService } from '@/lib/main/logging-service'
 import { getUt99InstallPath, getDemoWatcherConfig, getAuthConfig } from '@/lib/main/config'
-import { renameSync, unlinkSync, existsSync, mkdirSync } from 'fs'
+import { readFile, rename, unlink, mkdir, access } from 'fs/promises'
 import { gatewayService } from '@/lib/main/gateway-service'
 import { uploadDemo } from '@/app/utils/api'
 
@@ -136,9 +136,7 @@ export class DemoWatcherService {
                 })
 
                 try {
-                    const { readFileSync } = await import('fs')
-
-                    const buffer = readFileSync(filePath)
+                    const buffer = await readFile(filePath)
                     const blob = new Blob([buffer])
 
                     await uploadDemo(blob, filename, auth.accessToken)
@@ -157,15 +155,17 @@ export class DemoWatcherService {
                     if (config.postUploadAction === 'Move to Folder') {
                         if (this.systemPath) {
                             const uploadedDir = join(this.systemPath, 'Uploaded')
-                            if (!existsSync(uploadedDir)) {
-                                mkdirSync(uploadedDir)
+                            try {
+                                await access(uploadedDir)
+                            } catch {
+                                await mkdir(uploadedDir)
                             }
                             const newPath = join(uploadedDir, filename)
-                            renameSync(filePath, newPath)
+                            await rename(filePath, newPath)
                             loggingService.info(`Moved demo to: ${newPath}`, 'DemoWatcher')
                         }
                     } else if (config.postUploadAction === 'Delete') {
-                        unlinkSync(filePath)
+                        await unlink(filePath)
                         loggingService.info(`Deleted demo: ${filename}`, 'DemoWatcher')
                     }
                 } catch (error) {
