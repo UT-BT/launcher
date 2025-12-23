@@ -88,6 +88,7 @@ function DemoRecordingSettings() {
     const [autoDemoUpload, setAutoDemoUpload] = useState('Never')
     const [demoPostAction, setDemoPostAction] = useState('Do Nothing')
     const [utPathExists, setUtPathExists] = useState(false)
+    const [patchVersion, setPatchVersion] = useState('')
 
     useEffect(() => {
         const loadSettings = async () => {
@@ -99,6 +100,9 @@ function DemoRecordingSettings() {
                 setAutoDemoUpload(demoConfig.autoUpload)
                 setDemoPostAction(demoConfig.postUploadAction)
             }
+
+            const patch = await window.conveyor.app.getInstalledPatch()
+            setPatchVersion(patch?.tag || 'Unknown')
 
             if (!installPath) return
 
@@ -133,7 +137,7 @@ function DemoRecordingSettings() {
         saveDemoConfig(autoDemoUpload, val)
     }
 
-    const disabled = !utPathExists
+    const disabled = !utPathExists || patchVersion === 'Unsupported'
 
     return (
         <div className="p-6 rounded-xl bg-card border border-border">
@@ -143,6 +147,17 @@ function DemoRecordingSettings() {
                 </div>
                 <h3 className="text-lg font-semibold">Auto Demo Recording & Uploading</h3>
             </div>
+
+            {patchVersion === 'Unsupported' && (
+                <div className="flex items-center gap-3 p-4 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm font-medium mb-6">
+                    <AlertTriangle className="size-5 shrink-0" />
+                    <p>
+                        You are running an unsupported version of Unreal Tournament.
+                        <br />
+                        Please apply a patch in the Game Installation settings to use these features.
+                    </p>
+                </div>
+            )}
 
             <div className="space-y-6 max-w-md">
                 <div className="space-y-4">
