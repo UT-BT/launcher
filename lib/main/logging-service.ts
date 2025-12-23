@@ -85,7 +85,7 @@ export class LoggingService {
       if (level === 'error') {
         console.error(`[${level.toUpperCase()}] ${context ? `[${context}] ` : ''}${message}`, data || '')
       } else if (level === 'warn') {
-          console.warn(`[${level.toUpperCase()}] ${context ? `[${context}] ` : ''}${message}`, data || '')
+        console.warn(`[${level.toUpperCase()}] ${context ? `[${context}] ` : ''}${message}`, data || '')
       }
     }
   }

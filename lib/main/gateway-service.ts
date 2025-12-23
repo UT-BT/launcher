@@ -53,7 +53,7 @@ export class GatewayService {
 
     return new Promise((resolve, reject) => {
       const visited = new Set<string>()
-      
+
       const doRequest = (requestUrl: string) => {
         if (visited.has(requestUrl)) {
           return reject(new Error('Redirect loop detected'))
@@ -62,7 +62,7 @@ export class GatewayService {
 
         const parsed = new URL(requestUrl)
         const client = parsed.protocol === 'https:' ? https : http
-        
+
         const requestOptions = {
           method: options.method || 'GET',
           headers
@@ -70,7 +70,7 @@ export class GatewayService {
 
         const req = client.request(requestUrl, requestOptions, (res) => {
           const status = res.statusCode || 0
-          
+
           if (status >= 300 && status < 400 && res.headers.location) {
             const nextUrl = new URL(res.headers.location, requestUrl).toString()
             return doRequest(nextUrl)
@@ -84,25 +84,25 @@ export class GatewayService {
           res.on('data', (chunk) => {
             chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))
           })
-          
+
           res.on('end', () => {
             try {
               const buffer = Buffer.concat(chunks)
               const text = buffer.toString('utf-8')
-              
+
               let result: any
               try {
                 result = JSON.parse(text)
               } catch {
                 result = text
               }
-              
+
               resolve(result)
             } catch (error) {
               reject(error)
             }
           })
-          
+
           res.on('error', reject)
         })
 
@@ -111,7 +111,7 @@ export class GatewayService {
         if (options.body) {
           req.write(options.body)
         }
-        
+
         req.end()
       }
 
@@ -142,7 +142,7 @@ export class GatewayService {
 
     return new Promise((resolve, reject) => {
       const visited = new Set<string>()
-      
+
       const doGet = (requestUrl: string) => {
         if (visited.has(requestUrl)) {
           return reject(new Error('Redirect loop detected'))
@@ -151,10 +151,10 @@ export class GatewayService {
 
         const parsed = new URL(requestUrl)
         const client = parsed.protocol === 'https:' ? https : http
-        
+
         client.get(requestUrl, { headers }, (res) => {
           const status = res.statusCode || 0
-          
+
           if (status >= 300 && status < 400 && res.headers.location) {
             const nextUrl = new URL(res.headers.location, requestUrl).toString()
             return doGet(nextUrl)
@@ -168,7 +168,7 @@ export class GatewayService {
           res.on('data', (chunk) => {
             chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))
           })
-          
+
           res.on('end', () => resolve(Buffer.concat(chunks)))
           res.on('error', reject)
         }).on('error', reject)

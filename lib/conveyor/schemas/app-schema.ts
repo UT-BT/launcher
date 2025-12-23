@@ -21,6 +21,22 @@ export const appIpcSchema = {
     return: z.void(),
   },
 
+  getDemoWatcherConfig: {
+    args: z.tuple([]),
+    return: z.object({
+      autoUpload: z.union([z.literal('Never'), z.literal('Personal Bests Only'), z.literal('World Records Only'), z.literal('All Runs')]),
+      postUploadAction: z.union([z.literal('Do Nothing'), z.literal('Move to Folder'), z.literal('Delete')]),
+    }),
+  },
+  setDemoWatcherConfig: {
+    args: z.tuple([z.object({
+      autoUpload: z.union([z.literal('Never'), z.literal('Personal Bests Only'), z.literal('World Records Only'), z.literal('All Runs')]),
+      postUploadAction: z.union([z.literal('Do Nothing'), z.literal('Move to Folder'), z.literal('Delete')]),
+    })]),
+    return: z.void(),
+  },
+
+
   logMessage: {
     args: z.tuple([
       z.union([z.literal('info'), z.literal('warn'), z.literal('error'), z.literal('debug')]),
