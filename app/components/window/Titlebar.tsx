@@ -4,6 +4,7 @@ import { useConveyor } from '@/app/hooks/use-conveyor'
 import { LinksDropdown } from './LinksDropdown'
 import { AboutButton } from './AboutButton'
 import { UploadLogButton } from './UploadLogButton'
+import { GameProfilesButton } from './GameProfilesButton'
 import { TitlebarMenuItem } from './TitlebarMenu'
 import { FaMinus, FaSquare, FaTimes, FaWindowRestore } from 'react-icons/fa'
 
@@ -22,6 +23,7 @@ export const Titlebar = () => {
         <LinksDropdown />
         <AboutButton />
         <div className="titlebar-separator" />
+        <GameProfilesButton />
         <UploadLogButton />
       </div>
 
