@@ -6,7 +6,9 @@ import {
   getUt99InstallPath,
   setUt99InstallPath,
   getInstalledPatch,
-  setInstalledPatch
+  setInstalledPatch,
+  getDemoWatcherConfig,
+  setDemoWatcherConfig
 } from '@/lib/main/config'
 import { loggingService } from '@/lib/main/logging-service'
 import { installationService } from '@/lib/main/installation-service'
@@ -22,8 +24,12 @@ export const registerAppHandlers = (_window: BrowserWindow) => {
     return version
   })
 
+
   handle('getGatewayConfig', () => getGatewayConfig())
   handle('setGatewayConfig', (config: { baseUrl?: string; apiKey?: string }) => setGatewayConfig(config))
+
+  handle('getDemoWatcherConfig', () => getDemoWatcherConfig())
+  handle('setDemoWatcherConfig', (config: any) => setDemoWatcherConfig(config))
 
   handle('getUt99InstallPath', () => getUt99InstallPath())
   handle('setUt99InstallPath', (path: string | undefined) => setUt99InstallPath(path))

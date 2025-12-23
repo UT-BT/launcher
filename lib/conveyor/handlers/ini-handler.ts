@@ -107,14 +107,25 @@ export const registerIniHandlers = (_window: BrowserWindow) => {
         }
     })
 
-    handle('writeIniValue', async (path: string, section: string, key: string, value: string) => {
+    handle('writeIniValue', async (path: string, section: string, key: string, value: string, createIfMissing?: boolean) => {
         try {
             const iniPath = resolveIniPath(path)
+            let content = ''
+
             if (!existsSync(iniPath)) {
-                throw new Error(`INI file not found: ${iniPath}`)
+                if (createIfMissing) {
+                    loggingService.info(`Creating new INI file: ${iniPath}`, 'IniHandler')
+                    const dir = iniPath.substring(0, iniPath.lastIndexOf('\\'))
+                    if (!existsSync(dir)) {
+                        return
+                    }
+                } else {
+                    throw new Error(`INI file not found: ${iniPath}`)
+                }
+            } else {
+                content = readFileSync(iniPath, 'utf-8')
             }
 
-            const content = readFileSync(iniPath, 'utf-8')
             const config = parseIni(content)
 
             if (!config[section]) {

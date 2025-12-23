@@ -6,6 +6,12 @@ export class AppApi extends ConveyorApi {
   getGatewayConfig = () => this.invoke('getGatewayConfig')
   setGatewayConfig = (config: { baseUrl?: string; apiKey?: string }) => this.invoke('setGatewayConfig', config)
 
+  getDemoWatcherConfig = () => this.invoke('getDemoWatcherConfig')
+  setDemoWatcherConfig = (config: {
+    autoUpload: 'Never' | 'Personal Bests Only' | 'World Records Only' | 'All Runs',
+    postUploadAction: 'Do Nothing' | 'Move to Folder' | 'Delete'
+  }) => this.invoke('setDemoWatcherConfig', config)
+
   getUt99InstallPath = () => this.invoke('getUt99InstallPath')
   setUt99InstallPath = (path?: string) => this.invoke('setUt99InstallPath', path)
 

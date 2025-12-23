@@ -18,6 +18,7 @@ type LauncherConfig = {
   installedPatch?: InstalledPatch
   gateway?: GatewayConfig
   auth?: AuthConfig
+  demoWatcher?: DemoWatcherConfig
 }
 
 const CONFIG_FILE_NAME = 'config.json'
@@ -141,4 +142,21 @@ export function clearAuthConfig(): void {
   const current = readConfig()
   const { auth, ...rest } = current
   writeConfig(rest)
+} export type DemoWatcherConfig = {
+  autoUpload: 'Never' | 'Personal Bests Only' | 'World Records Only' | 'All Runs'
+  postUploadAction: 'Do Nothing' | 'Move to Folder' | 'Delete'
+}
+
+export function getDemoWatcherConfig(): DemoWatcherConfig {
+  const config = readConfig()
+  return config.demoWatcher ?? {
+    autoUpload: 'Never',
+    postUploadAction: 'Do Nothing'
+  }
+}
+
+export function setDemoWatcherConfig(demoWatcher: DemoWatcherConfig): void {
+  const current = readConfig()
+  const next: LauncherConfig = { ...current, demoWatcher }
+  writeConfig(next)
 }

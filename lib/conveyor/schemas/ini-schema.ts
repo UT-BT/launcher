@@ -15,6 +15,7 @@ export const iniIpcSchema = {
             z.string().describe('Section name'),
             z.string().describe('Key name'),
             z.string().describe('Value to write'),
+            z.boolean().optional().describe('If true, creates the file if it does not exist'),
         ]),
         return: z.void(),
     },

@@ -40,3 +40,37 @@ export async function fetchUserProfile(accessToken: string): Promise<UserProfile
         throw error
     }
 }
+
+export async function uploadDemo(file: Blob, filename: string, accessToken: string): Promise<{ success: boolean; message?: string; reason?: string }> {
+    try {
+        const formData = new FormData()
+        formData.append('file', file, filename)
+
+        const response = await fetch(`${API_BASE_URL}/demos/upload`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            },
+            body: formData
+        })
+
+        if (!response.ok) {
+            const errorText = await response.text()
+            let errorMessage = `Upload failed: ${response.statusText} (${response.status})`
+            try {
+                const json = JSON.parse(errorText)
+                if (json.reason) {
+                    errorMessage = json.reason
+                }
+            } catch {
+                // Use default message
+            }
+            throw new Error(errorMessage)
+        }
+
+        const json = await response.json()
+        return json
+    } catch (error) {
+        throw error
+    }
+}
