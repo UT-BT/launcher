@@ -64,6 +64,14 @@ export const registerAppHandlers = (_window: BrowserWindow) => {
 
   handle('fetchPatches', () => patchService.fetchPatches())
   handle('installPatch', (patch: any) => patchService.installPatch(patch, _window))
+
+  handle('createProfile', (name: string, path: string) => gameService.createProfile(name, path))
+  handle('getProfiles', () => gameService.listProfiles())
+  handle('switchProfile', (name: string) => gameService.switchProfile(name))
+  handle('deleteProfile', (name: string) => gameService.deleteProfile(name))
+  handle('renameProfile', (oldName: string, newName: string) => gameService.renameProfile(oldName, newName))
+  handle('getActiveProfile', () => gameService.getActiveProfile())
+
   handle('getUploadLogs', () => demoWatcherService.getUploadLogs())
   handle(
     'addUploadLog',

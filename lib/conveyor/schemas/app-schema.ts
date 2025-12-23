@@ -157,4 +157,31 @@ export const appIpcSchema = {
     args: z.tuple([z.string(), z.union([z.literal('success'), z.literal('failed')]), z.string().optional()]),
     return: z.void(),
   },
+  createProfile: {
+    args: z.tuple([z.string(), z.string()]),
+    return: z.void(),
+  },
+  getProfiles: {
+    args: z.tuple([]),
+    return: z.array(z.object({
+      name: z.string(),
+      modifiedAt: z.string(),
+    })),
+  },
+  switchProfile: {
+    args: z.tuple([z.string()]),
+    return: z.void(),
+  },
+  deleteProfile: {
+    args: z.tuple([z.string()]),
+    return: z.void(),
+  },
+  renameProfile: {
+    args: z.tuple([z.string(), z.string()]),
+    return: z.void(),
+  },
+  getActiveProfile: {
+    args: z.tuple([]),
+    return: z.string().optional(),
+  },
 }

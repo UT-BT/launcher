@@ -19,6 +19,7 @@ type LauncherConfig = {
   gateway?: GatewayConfig
   auth?: AuthConfig
   demoWatcher?: DemoWatcherConfig
+  activeProfile?: string
 }
 
 const CONFIG_FILE_NAME = 'config.json'
@@ -158,5 +159,15 @@ export function getDemoWatcherConfig(): DemoWatcherConfig {
 export function setDemoWatcherConfig(demoWatcher: DemoWatcherConfig): void {
   const current = readConfig()
   const next: LauncherConfig = { ...current, demoWatcher }
+  writeConfig(next)
+}
+
+export function getActiveProfile(): string | undefined {
+  return readConfig().activeProfile
+}
+
+export function setActiveProfile(name: string | undefined): void {
+  const current = readConfig()
+  const next: LauncherConfig = { ...current, activeProfile: name }
   writeConfig(next)
 }
