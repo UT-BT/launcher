@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, AlertTriangle } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Input } from '@/app/components/ui/input'
 import { ErrorModal } from '@/app/components/ErrorModal'
@@ -25,6 +25,7 @@ export function GameInstallationSettings({ onBack }: GameInstallationSettingsPro
     const [pendingPatch, setPendingPatch] = useState<any>(null)
     const [announcerProgress, setAnnouncerProgress] = useState(0)
     const [isInstallingAnnouncer, setIsInstallingAnnouncer] = useState(false)
+    const [showUnsupported, setShowUnsupported] = useState(false)
 
     useEffect(() => {
         loadSettings()
@@ -119,6 +120,9 @@ export function GameInstallationSettings({ onBack }: GameInstallationSettingsPro
             const result = await window.conveyor.app.validateAndSetInstallPath(path)
             if (result.success) {
                 setPatchVersion(result.version || 'Unknown')
+                if (result.version === 'Unsupported') {
+                    setShowUnsupported(true)
+                }
             } else {
                 setErrorMessage(result.error || 'Invalid Unreal Tournament 1999 directory. Please select a valid directory.')
                 setShowError(true)
@@ -257,6 +261,16 @@ export function GameInstallationSettings({ onBack }: GameInstallationSettingsPro
 
                 <div className="p-6 rounded-xl bg-card border border-border space-y-4">
                     <h3 className="text-xl font-semibold">Available Patches</h3>
+                    {patchVersion === 'Unsupported' && (
+                        <div className="flex items-center gap-3 p-4 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm font-medium">
+                            <AlertTriangle className="size-5 shrink-0" />
+                            <p>
+                                You are running an unsupported version of Unreal Tournament.
+                                <br />
+                                Please apply a patch below to use the launcher.
+                            </p>
+                        </div>
+                    )}
                     <p className="text-sm text-muted-foreground">
                         Select the version of the game that you would like to play on.<br />Installing and changing patches has <span className="italic">no</span> effect on your graphics settings, keybinds, and only changes the game engine.<br /><br /><b>Patching is completely safe!</b>
                     </p>
@@ -328,6 +342,13 @@ export function GameInstallationSettings({ onBack }: GameInstallationSettingsPro
                 onClose={() => setShowError(false)}
                 title="Installation Directory Error"
                 message={errorMessage}
+            />
+
+            <ErrorModal
+                isOpen={showUnsupported}
+                onClose={() => setShowUnsupported(false)}
+                title="Unsupported Game Version"
+                message="UTBT servers require players to be on supported versions of the 469 patch. Please use the Patch Installer to install a newer patch to be able to play."
             />
 
             <ConfirmModal
