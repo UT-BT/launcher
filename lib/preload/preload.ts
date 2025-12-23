@@ -6,6 +6,7 @@ import { conveyor } from '@/lib/conveyor/api'
 // just add to the DOM global.
 if (process.contextIsolated) {
   try {
+    conveyor.app.getUploadLogs = () => ipcRenderer.invoke('getUploadLogs')
     contextBridge.exposeInMainWorld('conveyor', conveyor)
     contextBridge.exposeInMainWorld('utInstall', {
       onProgress: (cb: (data: { stage?: string; progress?: number }) => void) => {
@@ -181,6 +182,7 @@ if (process.contextIsolated) {
     getLogFilePath: async () => ipcRenderer.invoke('getLogFilePath'),
     getRecentLogs: async (lines?: number) => ipcRenderer.invoke('getRecentLogs', lines),
   }
+  window.conveyor.app.getUploadLogs = () => ipcRenderer.invoke('getUploadLogs')
   window.auth = {
     login: async () => ipcRenderer.invoke('auth:login'),
     logout: async () => ipcRenderer.invoke('auth:logout'),

@@ -178,6 +178,13 @@
   background-color: #444;
 }
 
+.titlebar-separator {
+  width: 1px;
+  height: 16px;
+  background-color: #444;
+  margin: 0 4px;
+}
+
 .titlebar-action-button {
   display: flex;
   align-items: center;

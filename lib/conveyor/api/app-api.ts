@@ -28,4 +28,5 @@ export class AppApi extends ConveyorApi {
 
   fetchPatches = () => this.invoke('fetchPatches')
   installPatch = (patch: any) => this.invoke('installPatch', patch)
+  getUploadLogs = () => this.invoke('getUploadLogs')
 }

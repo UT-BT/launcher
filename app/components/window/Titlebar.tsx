@@ -3,6 +3,7 @@ import { useWindowContext } from './WindowContext'
 import { useConveyor } from '@/app/hooks/use-conveyor'
 import { LinksDropdown } from './LinksDropdown'
 import { AboutButton } from './AboutButton'
+import { UploadLogButton } from './UploadLogButton'
 import { TitlebarMenuItem } from './TitlebarMenu'
 import { FaMinus, FaSquare, FaTimes, FaWindowRestore } from 'react-icons/fa'
 
@@ -20,6 +21,8 @@ export const Titlebar = () => {
       <div className="window-titlebar-actions">
         <LinksDropdown />
         <AboutButton />
+        <div className="titlebar-separator" />
+        <UploadLogButton />
       </div>
 
       {wcontext?.platform === 'win32' && <TitlebarControls />}
