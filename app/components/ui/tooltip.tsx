@@ -38,7 +38,7 @@ export function Tooltip({ content, children, className }: TooltipProps) {
 
             {isVisible && createPortal(
                 <div
-                    className="fixed z-[9999] w-64 p-3 rounded-lg bg-popover text-popover-foreground text-xs shadow-md border border-border animate-in fade-in zoom-in-95 duration-200 pointer-events-none"
+                    className="fixed z-[9999] w-max max-w-[280px] px-3 py-1.5 rounded-md bg-[#0a0a0a]/95 text-white/90 text-xs font-bold tracking-tight shadow-2xl border border-white/10 animate-in fade-in zoom-in-95 duration-200 pointer-events-none backdrop-blur-sm"
                     style={{
                         top: coords.top,
                         left: coords.left,
@@ -46,7 +46,7 @@ export function Tooltip({ content, children, className }: TooltipProps) {
                     }}
                 >
                     {content}
-                    <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-popover" />
+                    <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-[5px] border-[5px] border-transparent border-t-[#0a0a0a]/95" />
                 </div>,
                 document.body
             )}
