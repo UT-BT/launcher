@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { ArrowLeft, AlertTriangle } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Input } from '@/app/components/ui/input'
@@ -26,6 +26,7 @@ export function GameInstallationSettings({ onBack }: GameInstallationSettingsPro
     const [announcerProgress, setAnnouncerProgress] = useState(0)
     const [isInstallingAnnouncer, setIsInstallingAnnouncer] = useState(false)
     const [showUnsupported, setShowUnsupported] = useState(false)
+    const downloadAttemptRef = useRef(0)
 
     useEffect(() => {
         loadSettings()
@@ -92,22 +93,29 @@ export function GameInstallationSettings({ onBack }: GameInstallationSettingsPro
     }
 
     const handleDownload = async () => {
+        const attemptId = ++downloadAttemptRef.current
         setDownloading(true)
         setStatus('Checking existing files...')
         setProgress(0)
         try {
             await window.conveyor.app.downloadUt99Iso()
+            if (downloadAttemptRef.current !== attemptId) return
+
             setStatus('Mounting ISO and starting installer...')
             await window.conveyor.app.mountAndRunUt99Iso()
+
+            if (downloadAttemptRef.current !== attemptId) return
             setStatus('Installation complete. Please select the installation directory below.')
             setDownloading(false)
         } catch (err: any) {
+            if (downloadAttemptRef.current !== attemptId) return
             setStatus('Error: ' + (err.message || 'Unknown error'))
             setDownloading(false)
         }
     }
 
     const handleCancel = async () => {
+        downloadAttemptRef.current++
         await window.conveyor.app.cancelUt99Download()
         setDownloading(false)
         setStatus('Cancelled')
