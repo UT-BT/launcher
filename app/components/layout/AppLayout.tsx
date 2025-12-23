@@ -41,8 +41,8 @@ function getRarityStyles(title: { rarity: number, color: string } | undefined | 
     const { rarity, color } = title
     const rgb = `rgb(${color})`
 
-    let containerStyle: React.CSSProperties = {}
-    let titleStyle: React.CSSProperties = { color: rarity >= 2 ? rgb : undefined }
+    const containerStyle: React.CSSProperties = {}
+    const titleStyle: React.CSSProperties = { color: rarity >= 2 ? rgb : undefined }
     let containerClass = ''
     let titleClass = ''
 

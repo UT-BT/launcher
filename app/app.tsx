@@ -130,7 +130,7 @@ export default function App() {
     <>
       {appPhase === 'main' && <Main userProfile={userProfile} />}
       {appPhase === 'login' && <LoginPage onLoginSuccess={handleLoginSuccess} />}
-      {appPhase === 'splash' && <SplashScreen onReady={handleSplashComplete} variant={!!initError ? 'error' : 'intro'} />}
+      {appPhase === 'splash' && <SplashScreen onReady={handleSplashComplete} variant={initError ? 'error' : 'intro'} />}
 
       <ErrorModal
         isOpen={!!initError}
