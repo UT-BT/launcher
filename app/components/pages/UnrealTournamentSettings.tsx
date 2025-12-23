@@ -361,6 +361,16 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
         loadSettings()
     }, [])
 
+    useEffect(() => {
+        if (window.utProfile) {
+            const cleanup = window.utProfile.onChanged(() => {
+                loadSettings()
+            })
+            return cleanup
+        }
+        return undefined
+    }, [])
+
     const loadSettings = async () => {
         try {
             // Player
@@ -686,6 +696,7 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
                 window.removeEventListener('wheel', handleWheel, { capture: true })
             }
         }
+        return undefined
     }, [editingBind, handleKeyDown, handleMouseDown, handleWheel])
 
     const handleClearBind = async () => {
