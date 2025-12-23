@@ -111,7 +111,7 @@ export const UploadLogModal = ({ isOpen, onClose }: UploadLogModalProps) => {
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
         >
-            <div className="w-full max-w-2xl bg-card border border-border rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[80vh]">
+            <div className="w-full max-w-5xl bg-card border border-border rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[80vh]">
                 <div className="p-4 border-b border-border flex items-center justify-between bg-card/50">
                     <h3 className="text-xl font-bold flex items-center gap-2">
                         Demo Uploads
