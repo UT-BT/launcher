@@ -69,11 +69,47 @@ jobs:
             dist/latest.yml
           if-no-files-found: error
 
+      - name: VirusTotal Scan
+        id: vt
+        uses: crazy-max/ghaction-virustotal@v4
+        with:
+          vt_api_key: ${{ secrets.VIRUSTOTAL_API_KEY }}
+          files: |
+            dist/*.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Prepare Release Notes
+        id: notes
+        shell: pwsh
+        run: |
+          $analysis = @"
+          ${{ steps.vt.outputs.analysis }}
+          "@
+          if ($analysis) {
+            $lines = $analysis -split "`n" | Where-Object { $_ -match '=' }
+            $vtLinks = $lines | ForEach-Object {
+                $parts = $_ -split '=', 2
+                $fileName = Split-Path $parts[0] -Leaf
+                "- [VirusTotal Scan Report for $fileName]($($parts[1]))"
+            }
+            $vtSection = "### Security Scan Results`n" + ($vtLinks -join "`n") + "`n`n"
+            
+            # Using multiline output syntax for GITHUB_OUTPUT
+            $delimiter = [System.Guid]::NewGuid().ToString()
+            Add-Content -Path $env:GITHUB_OUTPUT -Value "body<<$delimiter"
+            Add-Content -Path $env:GITHUB_OUTPUT -Value $vtSection
+            Add-Content -Path $env:GITHUB_OUTPUT -Value $delimiter
+          } else {
+            Add-Content -Path $env:GITHUB_OUTPUT -Value "body="
+          }
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           name: UTBT Launcher v${{ steps.meta.outputs.version }}
+          body: ${{ steps.notes.outputs.body }}
           generate_release_notes: true
           prerelease: ${{ steps.meta.outputs.prerelease == 'true' }}
           make_latest: ${{ steps.meta.outputs.prerelease == 'true' && 'false' || 'true' }}
@@ -83,41 +119,3 @@ jobs:
             dist/latest.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: VirusTotal Scan
-        id: vt
-        uses: crazy-max/ghaction-virustotal@v4
-        with:
-          vt_api_key: ${{ secrets.VIRUSTOTAL_API_KEY }}
-          update_release_body: true
-          files: |
-            dist/*.exe
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Update Release Notes with VirusTotal Link
-        shell: pwsh
-        run: |
-          $analysis = @"
-          ${{ steps.vt.outputs.analysis }}
-          "@
-          if (-not $analysis) {
-            Write-Host "No VirusTotal analysis found."
-            exit 0
-          }
-          $lines = $analysis -split "`n" | Where-Object { $_ -match '=' }
-          $vtLinks = $lines | ForEach-Object {
-              $parts = $_ -split '='
-              $fileName = Split-Path $parts[0] -Leaf
-              "- [VirusTotal Scan Report for $fileName]($($parts[1]))"
-          }
-          $vtSection = "`n`n### Security Scan Results`n" + ($vtLinks -join "`n")
-          
-          $tagName = "${{ github.ref_name }}"
-          # Get current body
-          $currentBody = gh release view $tagName --json body -q .body
-          # Update body
-          $newBody = "$currentBody$vtSection"
-          gh release edit $tagName --notes "$newBody"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
