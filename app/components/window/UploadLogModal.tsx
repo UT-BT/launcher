@@ -88,13 +88,19 @@ export const UploadLogModal = ({ isOpen, onClose }: UploadLogModalProps) => {
                 })
 
                 fetchLogs()
+                const filePath = window.conveyor.app.getPathForFile(file)
+                const btpogId = await window.conveyor.app.extractBtpogId(filePath)
+
+                if (!btpogId) {
+                    throw new Error('Not a valid UTBT cap')
+                }
 
                 const blob = new Blob([await file.arrayBuffer()])
                 await uploadDemo(blob, filename, auth.accessToken)
 
                 await window.conveyor.app.updateUploadLogStatus(filename, 'success')
             } catch (error: any) {
-                console.error('Manual upload failed:', error)
+                window.logging.warn('Demo upload for ' + filename + ' failed', 'DemoUploadModal', error.message)
                 await window.conveyor.app.updateUploadLogStatus(filename, 'failed', error.message)
             }
         }

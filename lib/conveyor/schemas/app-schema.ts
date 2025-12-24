@@ -188,4 +188,8 @@ export const appIpcSchema = {
     args: z.tuple([z.string()]),
     return: z.boolean(),
   },
+  extractBtpogId: {
+    args: z.tuple([z.string()]),
+    return: z.string(),
+  },
 }

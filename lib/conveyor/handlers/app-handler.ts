@@ -94,4 +94,5 @@ export const registerAppHandlers = (_window: BrowserWindow) => {
     (filename: string, status: 'success' | 'failed', error?: string) =>
       demoWatcherService.updateLogStatus(filename, status, error)
   )
+  handle('extractBtpogId', (filePath: string) => demoWatcherService.extractBtpogId(filePath))
 }

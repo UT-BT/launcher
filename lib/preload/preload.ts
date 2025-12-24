@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import { conveyor } from '@/lib/conveyor/api'
 
 // Use `contextBridge` APIs to expose APIs to
@@ -7,6 +7,7 @@ import { conveyor } from '@/lib/conveyor/api'
 if (process.contextIsolated) {
   try {
     conveyor.app.getUploadLogs = () => ipcRenderer.invoke('getUploadLogs')
+    conveyor.app.getPathForFile = (file: File) => webUtils.getPathForFile(file)
     contextBridge.exposeInMainWorld('conveyor', conveyor)
     contextBridge.exposeInMainWorld('utInstall', {
       onProgress: (cb: (data: { stage?: string; progress?: number }) => void) => {
