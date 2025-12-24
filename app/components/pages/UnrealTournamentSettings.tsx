@@ -357,6 +357,14 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
     const [importErrorMessage, setImportErrorMessage] = useState('')
     const [importType, setImportType] = useState<'binds' | 'graphics'>('binds')
 
+    // Conflict confirmation state
+    const [conflictInfo, setConflictInfo] = useState<{
+        key: string,
+        newCommand: string,
+        newSlot: number,
+        existingCommand: string
+    } | null>(null)
+
     useEffect(() => {
         loadSettings()
     }, [])
@@ -596,10 +604,7 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
         return code
     }
 
-    const handleInput = useCallback(async (key: string) => {
-        if (!editingBind) return
-
-        const { command, slot } = editingBind
+    const applyBind = async (key: string, command: string, slot: number) => {
         const normalizedCommand = command.toLowerCase()
 
         const val = binds[normalizedCommand]
@@ -619,7 +624,6 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
                 if (Array.isArray(cmdBinds)) {
                     newBinds[cmd] = cmdBinds.filter(k => k.toLowerCase() !== key.toLowerCase())
                 } else {
-                    // Handle legacy state or unexpected type
                     newBinds[cmd] = []
                 }
             })
@@ -636,6 +640,33 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
         })
 
         setEditingBind(null)
+        setConflictInfo(null)
+    }
+
+    const handleInput = useCallback(async (key: string) => {
+        if (!editingBind) return
+
+        const { command, slot } = editingBind
+
+        let existingCommand = ''
+        Object.entries(binds).forEach(([cmd, keys]) => {
+            if (keys.some(k => k.toLowerCase() === key.toLowerCase()) && cmd.toLowerCase() !== command.toLowerCase()) {
+                existingCommand = cmd
+            }
+        })
+
+        if (existingCommand) {
+            setConflictInfo({
+                key,
+                newCommand: command,
+                newSlot: slot,
+                existingCommand
+            })
+            setEditingBind(null)
+            return
+        }
+
+        await applyBind(key, command, slot)
     }, [editingBind, binds])
 
     const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -838,6 +869,41 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
                             <Button
                                 variant="secondary"
                                 onClick={() => setEditingBind(null)}
+                            >
+                                Cancel
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {conflictInfo && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+                    <div className="bg-card border border-border p-8 rounded-xl shadow-2xl max-w-md w-full text-center space-y-6 animate-in fade-in zoom-in duration-200">
+                        <div className="space-y-2">
+                            <h3 className="text-xl font-bold flex items-center justify-center gap-2">
+                                <XCircle className="size-6 text-yellow-500" />
+                                Binding Conflict
+                            </h3>
+                            <p className="text-muted-foreground">
+                                <span className="text-foreground font-semibold">"{conflictInfo.key}"</span> is already bound to <span className="text-foreground font-semibold">"{BIND_CATEGORIES.flatMap(c => c.binds).find(b => b.command.toLowerCase() === conflictInfo.existingCommand.toLowerCase())?.label || conflictInfo.existingCommand}"</span>.
+                            </p>
+                            <p className="text-muted-foreground">
+                                Do you want to replace it?
+                            </p>
+                        </div>
+
+                        <div className="flex gap-3 justify-center">
+                            <Button
+                                variant="default"
+                                className="bg-yellow-600 hover:bg-yellow-700 text-white border-yellow-600"
+                                onClick={() => applyBind(conflictInfo.key, conflictInfo.newCommand, conflictInfo.newSlot)}
+                            >
+                                Replace
+                            </Button>
+                            <Button
+                                variant="secondary"
+                                onClick={() => setConflictInfo(null)}
                             >
                                 Cancel
                             </Button>
