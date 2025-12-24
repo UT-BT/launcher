@@ -187,9 +187,6 @@ export class GameService {
 
     private getTrackedUserSections(config: Record<string, any>): string[] {
         const sections = ['DefaultPlayer', 'Engine.Player']
-        // Also track all sections that look like keybinds (usually [Engine.Input] but UT has many)
-        // Actually in UT, binds are usually in [Engine.Input] or scattered if using custom aliases
-        // For simplicity and user intent, let's track [Engine.Input] and [Aliases] if they exist
         if (config['Engine.Input']) sections.push('Engine.Input')
         if (config['Aliases']) sections.push('Aliases')
         return sections
@@ -198,7 +195,6 @@ export class GameService {
     private getTrackedUtSections(config: Record<string, any>): string[] {
         const sections = ['Engine.Engine', 'Engine.GameEngine', 'WinDrv.WindowsClient', 'Engine.Player']
 
-        // Add all render device sections
         for (const section of Object.keys(config)) {
             if (section.endsWith('RenderDevice')) {
                 sections.push(section)
