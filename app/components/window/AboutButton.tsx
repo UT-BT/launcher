@@ -1,4 +1,5 @@
-import { FaInfo } from 'react-icons/fa'
+import { FaInfoCircle } from 'react-icons/fa'
+import { Tooltip } from '@/app/components/ui/tooltip'
 
 interface AboutButtonProps {
   onClick?: () => void
@@ -18,12 +19,14 @@ export const AboutButton = ({ onClick }: AboutButtonProps = {}) => {
   }
 
   return (
-    <button
-      className="titlebar-action-button"
-      onClick={handleClick}
-      aria-label="About"
-    >
-      <FaInfo />
-    </button>
+    <Tooltip content="About" side="bottom">
+      <button
+        className="titlebar-action-button"
+        onClick={handleClick}
+        aria-label="About"
+      >
+        <FaInfoCircle />
+      </button>
+    </Tooltip>
   )
 }

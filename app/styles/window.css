@@ -196,8 +196,13 @@
   color: #ffffffc8;
   cursor: pointer;
   border-radius: 3px;
-  font-size: 12px;
+  font-size: 14px;
   transition: background-color 0.2s ease;
+}
+
+.titlebar-action-button svg {
+  width: 14px;
+  height: 14px;
 }
 
 .titlebar-action-button:hover {

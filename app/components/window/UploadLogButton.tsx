@@ -1,6 +1,7 @@
 import { FaCloudUploadAlt } from 'react-icons/fa'
 import { useState, useEffect } from 'react'
 import { UploadLogModal } from './UploadLogModal'
+import { Tooltip } from '@/app/components/ui/tooltip'
 
 export const UploadLogButton = () => {
     const [isModalOpen, setIsModalOpen] = useState(false)
@@ -24,13 +25,15 @@ export const UploadLogButton = () => {
 
     return (
         <>
-            <button
-                className={`titlebar-action-button ${isUploading ? 'is-uploading' : ''}`}
-                onClick={() => setIsModalOpen(true)}
-                aria-label="Demo Uploads"
-            >
-                <FaCloudUploadAlt className={isUploading ? 'animate-pulse' : ''} />
-            </button>
+            <Tooltip content="Demo Uploads" side="bottom">
+                <button
+                    className={`titlebar-action-button ${isUploading ? 'is-uploading' : ''}`}
+                    onClick={() => setIsModalOpen(true)}
+                    aria-label="Demo Uploads"
+                >
+                    <FaCloudUploadAlt className={isUploading ? 'animate-pulse' : ''} />
+                </button>
+            </Tooltip>
             <UploadLogModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
         </>
     )
