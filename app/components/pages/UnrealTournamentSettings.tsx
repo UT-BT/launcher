@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { ArrowLeft, User, Monitor, Keyboard, Download, Upload, Loader2, CheckCircle, XCircle, ChevronDown, ChevronUp } from 'lucide-react'
+import { ArrowLeft, User, Monitor, Keyboard, Download, Upload, Loader2, CheckCircle, XCircle, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Input } from '@/app/components/ui/input'
 import { Slider } from '@/app/components/ui/slider'
@@ -332,6 +332,42 @@ const RENDER_DEVICE_SETTINGS: Record<string, RenderDeviceSetting[]> = {
         { key: 'OneXBlending', label: 'OneX Blending', type: 'boolean', tooltip: 'Adjusts brightness to match the classic Glide renderer look.' },
         { key: 'ActorXBlending', label: 'Actor X Blending', type: 'boolean', tooltip: 'Improves how actors are blended with the environment.' },
     ],
+    'SoftDrv.SoftwareRenderDevice': [
+        { key: 'Translucency', label: 'Translucency', type: 'boolean', tooltip: 'Enables transparency effects.' },
+        { key: 'VolumetricLighting', label: 'Volumetric Lighting', type: 'boolean', tooltip: 'Enables fog-like lighting effects.' },
+        { key: 'ShinySurfaces', label: 'Shiny Surfaces', type: 'boolean', tooltip: 'Enables environment mapping on shiny surfaces.' },
+        { key: 'Coronas', label: 'Coronas', type: 'boolean', tooltip: 'Draws a halo effect around light sources.' },
+        { key: 'HighDetailActors', label: 'High Detail Actors', type: 'boolean', tooltip: 'Uses higher quality models for players and weapons.' },
+        { key: 'HighResTextureSmooth', label: 'High Res Texture Smooth', type: 'boolean', tooltip: 'Smoothens high resolution textures.' },
+        { key: 'LowResTextureSmooth', label: 'Low Res Texture Smooth', type: 'boolean', tooltip: 'Smoothens low resolution textures.' },
+        { key: 'FastTranslucency', label: 'Fast Translucency', type: 'boolean', tooltip: 'Optimized translucency for software rendering.' },
+    ],
+    'GlideDrv.GlideRenderDevice': [
+        { key: 'Translucency', label: 'Translucency', type: 'boolean', tooltip: 'Enables transparency effects.' },
+        { key: 'VolumetricLighting', label: 'Volumetric Lighting', type: 'boolean', tooltip: 'Enables fog-like lighting effects.' },
+        { key: 'ShinySurfaces', label: 'Shiny Surfaces', type: 'boolean', tooltip: 'Enables environment mapping on shiny surfaces.' },
+        { key: 'Coronas', label: 'Coronas', type: 'boolean', tooltip: 'Draws a halo effect around light sources.' },
+        { key: 'HighDetailActors', label: 'High Detail Actors', type: 'boolean', tooltip: 'Uses higher quality models for players and weapons.' },
+        { key: 'DetailBias', label: 'Detail Bias', type: 'number', min: -10, max: 10, step: 0.1, tooltip: 'Adjusts the detail level of the world.' },
+        { key: 'RefreshRate', label: 'Refresh Rate', type: 'select', options: [{ label: '60Hz', value: '60Hz' }, { label: '75Hz', value: '75Hz' }, { label: '85Hz', value: '85Hz' }, { label: '100Hz', value: '100Hz' }], tooltip: 'The refresh rate of the monitor when in Glide mode.' },
+        { key: 'DetailTextures', label: 'Detail Textures', type: 'boolean', tooltip: 'Adds high-frequency noise to textures when viewed up close.' },
+        { key: 'FastUglyRefresh', label: 'Fast Ugly Refresh', type: 'boolean', tooltip: 'Improves performance by sacrificing some visual quality during refreshes.' },
+        { key: 'ScreenSmoothing', label: 'Screen Smoothing', type: 'boolean', tooltip: 'Smoothens the final image output.' },
+    ],
+    'MetalDrv.MetalRenderDevice': [
+        { key: 'Translucency', label: 'Translucency', type: 'boolean', tooltip: 'Enables transparency effects.' },
+        { key: 'VolumetricLighting', label: 'Volumetric Lighting', type: 'boolean', tooltip: 'Enables fog-like lighting effects.' },
+        { key: 'ShinySurfaces', label: 'Shiny Surfaces', type: 'boolean', tooltip: 'Enables environment mapping on shiny surfaces.' },
+        { key: 'Coronas', label: 'Coronas', type: 'boolean', tooltip: 'Draws a halo effect around light sources.' },
+        { key: 'HighDetailActors', label: 'High Detail Actors', type: 'boolean', tooltip: 'Uses higher quality models for players and weapons.' },
+        { key: 'DetailTextures', label: 'Detail Textures', type: 'boolean', tooltip: 'Adds high-frequency noise to textures when viewed up close.' },
+    ],
+}
+
+const LEGACY_RENDERERS: Record<string, string> = {
+    'SoftDrv.SoftwareRenderDevice': 'Software Rendering',
+    'GlideDrv.GlideRenderDevice': '3dfx Glide',
+    'MetalDrv.MetalRenderDevice': 'S3 Metal',
 }
 
 export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsProps) {
@@ -1124,7 +1160,19 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
                                 <option value="OpenGLDrv.OpenGLRenderDevice">OpenGL</option>
                                 <option value="XOpenGLDrv.XOpenGLRenderDevice">XOpenGL</option>
                                 <option value="VulkanDrv.VulkanRenderDevice">Vulkan</option>
+                                <option value="SoftDrv.SoftwareRenderDevice">Software Rendering</option>
+                                <option value="GlideDrv.GlideRenderDevice">3dfx Glide</option>
+                                <option value="MetalDrv.MetalRenderDevice">S3 Metal</option>
                             </select>
+
+                            {LEGACY_RENDERERS[renderDevice] && (
+                                <div className="mt-2 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20 flex items-start gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
+                                    <AlertTriangle className="size-5 text-yellow-500 shrink-0 mt-0.5" />
+                                    <p className="text-sm text-yellow-500/90 italic">
+                                        <span className="font-semibold">{LEGACY_RENDERERS[renderDevice]}</span> is a legacy renderer and not recommended for use on modern systems.
+                                    </p>
+                                </div>
+                            )}
                         </div>
                         <div className="space-y-2">
                             <label className="text-sm font-medium">Resolution</label>
