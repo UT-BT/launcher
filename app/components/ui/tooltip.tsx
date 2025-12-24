@@ -7,9 +7,10 @@ interface TooltipProps {
     content: string
     children?: ReactNode
     className?: string
+    side?: 'top' | 'bottom'
 }
 
-export function Tooltip({ content, children, className }: TooltipProps) {
+export function Tooltip({ content, children, className, side = 'top' }: TooltipProps) {
     const [isVisible, setIsVisible] = useState(false)
     const [coords, setCoords] = useState({ top: 0, left: 0 })
     const triggerRef = useRef<HTMLDivElement>(null)
@@ -17,10 +18,17 @@ export function Tooltip({ content, children, className }: TooltipProps) {
     const handleMouseEnter = () => {
         if (triggerRef.current) {
             const rect = triggerRef.current.getBoundingClientRect()
-            setCoords({
-                top: rect.top - 10, // 10px offset above
-                left: rect.left + rect.width / 2
-            })
+            if (side === 'bottom') {
+                setCoords({
+                    top: rect.bottom + 10,
+                    left: rect.left + rect.width / 2
+                })
+            } else {
+                setCoords({
+                    top: rect.top - 10,
+                    left: rect.left + rect.width / 2
+                })
+            }
             setIsVisible(true)
         }
     }
@@ -42,11 +50,15 @@ export function Tooltip({ content, children, className }: TooltipProps) {
                     style={{
                         top: coords.top,
                         left: coords.left,
-                        transform: 'translate(-50%, -100%)'
+                        transform: side === 'bottom' ? 'translate(-50%, 0)' : 'translate(-50%, -100%)'
                     }}
                 >
                     {content}
-                    <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-[5px] border-[5px] border-transparent border-t-[#0a0a0a]/95" />
+                    {side === 'bottom' ? (
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 -mb-[5px] border-[5px] border-transparent border-b-[#0a0a0a]/95" />
+                    ) : (
+                        <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-[5px] border-[5px] border-transparent border-t-[#0a0a0a]/95" />
+                    )}
                 </div>,
                 document.body
             )}

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { FaDiscord, FaPatreon, FaTwitch, FaYoutube, FaLink } from 'react-icons/fa'
 import { BiWorld } from 'react-icons/bi'
 import { useConveyor } from '@/app/hooks/use-conveyor'
+import { Tooltip } from '@/app/components/ui/tooltip'
 
 const links = [
   {
@@ -54,13 +55,15 @@ export const LinksDropdown = () => {
 
   return (
     <div className="titlebar-dropdown align-left" ref={dropdownRef}>
-      <button
-        className="titlebar-action-button"
-        onClick={() => setIsOpen(!isOpen)}
-        aria-label="Links"
-      >
-        <FaLink />
-      </button>
+      <Tooltip content="Quick Links" side="bottom">
+        <button
+          className="titlebar-action-button"
+          onClick={() => setIsOpen(!isOpen)}
+          aria-label="Links"
+        >
+          <FaLink />
+        </button>
+      </Tooltip>
 
       {isOpen && (
         <div className="titlebar-dropdown-menu">
