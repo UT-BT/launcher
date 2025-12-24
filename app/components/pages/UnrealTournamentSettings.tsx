@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { ArrowLeft, User, Monitor, Keyboard, Download, Upload, Loader2, CheckCircle, XCircle, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react'
+import { ArrowLeft, User, Monitor, Keyboard, Download, Upload, Loader2, CheckCircle, XCircle, ChevronDown, ChevronUp, AlertTriangle, Music } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Input } from '@/app/components/ui/input'
 import { Slider } from '@/app/components/ui/slider'
@@ -364,10 +364,86 @@ const RENDER_DEVICE_SETTINGS: Record<string, RenderDeviceSetting[]> = {
     ],
 }
 
+const AUDIO_DEVICE_SETTINGS: Record<string, RenderDeviceSetting[]> = {
+    'Cluster.ClusterAudioSubsystem': [
+        { key: 'UseCDMusic', label: 'Use CD Music', type: 'boolean', tooltip: 'Enables playback of music from the CD-ROM drive.' },
+        { key: 'UseDigitalMusic', label: 'Use Digital Music', type: 'boolean', tooltip: 'Enables playback of digital music files (UTMs, trackers).' },
+        { key: 'EmulateGalaxyMusic', label: 'Emulate Galaxy Music', type: 'boolean', tooltip: 'Emulates the behavior of the original Galaxy audio system.' },
+        { key: 'MusicVolume', label: 'Music Volume', type: 'number', min: 0, max: 255, step: 1, tooltip: 'Volume level for music.' },
+        { key: 'SoundVolume', label: 'Sound Volume', type: 'number', min: 0, max: 255, step: 1, tooltip: 'Volume level for sound effects.' },
+        { key: 'CDMusicVolumeFactor', label: 'CD Music Volume Factor', type: 'number', min: 0, max: 1, step: 0.01, tooltip: 'Multiplier for CD music volume.' },
+        { key: 'EffectsChannels', label: 'Effects Channels', type: 'number', min: 1, max: 128, step: 1, tooltip: 'Number of simultaneous sound effect channels.' },
+        { key: 'AudioDeviceGuid', label: 'Audio Device GUID', type: 'select', options: [{ label: 'Default', value: '' }], tooltip: 'Specific hardware identifier for the audio device.' },
+    ],
+    'ALAudio.ALAudioSubsystem': [
+        { key: 'UseDigitalMusic', label: 'Use Digital Music', type: 'boolean', tooltip: 'Enables playback of digital music files.' },
+        { key: 'MusicVolume', label: 'Music Volume', type: 'number', min: 0, max: 255, step: 1, tooltip: 'Volume level for music.' },
+        { key: 'SoundVolume', label: 'Sound Volume', type: 'number', min: 0, max: 255, step: 1, tooltip: 'Volume level for sound effects.' },
+        { key: 'SpeechVolume', label: 'Speech Volume', type: 'number', min: 0, max: 255, step: 1, tooltip: 'Volume level for voice messages.' },
+        { key: 'UseSpeechVolume', label: 'Use Speech Volume', type: 'boolean', tooltip: 'Enables separate volume control for speech.' },
+        { key: 'UseHRTF', label: 'Use HRTF', type: 'select', options: [{ label: 'Autodetect', value: 'Autodetect' }, { label: 'Enabled', value: 'Enabled' }, { label: 'Disabled', value: 'Disabled' }], tooltip: 'Head-Related Transfer Function. Provides 3D audio processing for headphones.' },
+        { key: 'UseReverb', label: 'Use Reverb', type: 'boolean', tooltip: 'Enables environmental reverb effects.' },
+        { key: 'ReverbIntensity', label: 'Reverb Intensity', type: 'number', min: 0, max: 2, step: 0.1, tooltip: 'Controls the strength of environmental reverb.' },
+        { key: 'EmulateOldReverb', label: 'Emulate Old Reverb', type: 'boolean', tooltip: 'Emulates the reverb behavior of the original Galaxy system.' },
+        { key: 'OldReverbIntensity', label: 'Old Reverb Intensity', type: 'number', min: 0, max: 2, step: 0.1, tooltip: 'Intensity level for legacy reverb emulation.' },
+        { key: 'MusicAmplify', label: 'Music Amplify', type: 'number', min: 0, max: 10, step: 1, tooltip: 'Boosts the music volume beyond the default range.' },
+        { key: 'MusicStereoAngle', label: 'Music Stereo Angle', type: 'number', min: 0, max: 360, step: 1, tooltip: 'Controls the stereo width of music.' },
+        { key: 'MusicStereoMix', label: 'Music Stereo Mix', type: 'number', min: 0, max: 100, step: 1, tooltip: 'Percentage of stereo mixing for music.' },
+        { key: 'MusicPanSeparation', label: 'Music Pan Separation', type: 'number', min: 0, max: 100, step: 1, tooltip: 'Controls left/right channel separation.' },
+        { key: 'MusicDsp', label: 'Music DSP', type: 'select', options: [{ label: 'All', value: 'DSP_ALL' }, { label: 'Internal', value: 'DSP_INTERNAL' }, { label: 'None', value: 'DSP_NONE' }], tooltip: 'Digital Signal Processing mode for music.' },
+        { key: 'MusicInterpolation', label: 'Music Interpolation', type: 'select', options: [{ label: 'Spline', value: 'SPLINE' }, { label: 'Linear', value: 'LINEAR' }, { label: 'None', value: 'NONE' }], tooltip: 'Sample interpolation method for music playback quality.' },
+        { key: 'OutputRate', label: 'Output Rate', type: 'select', options: [{ label: '44100Hz', value: '44100Hz' }, { label: '48000Hz', value: '48000Hz' }, { label: '96000Hz', value: '96000Hz' }], tooltip: 'Sampling frequency of the audio output.' },
+        { key: 'UseAutoSampleRate', label: 'Auto Sample Rate', type: 'boolean', tooltip: 'Automatically selects the sample rate based on the hardware.' },
+        { key: 'DopplerFactor', label: 'Doppler Factor', type: 'number', min: 0, max: 10, step: 0.01, tooltip: 'Intensity of the Doppler shift effect for moving sounds.' },
+        { key: 'bSoundAttenuate', label: 'Sound Attenuate', type: 'boolean', tooltip: 'Enables volume attenuation based on distance.' },
+        { key: 'EffectsChannels', label: 'Effects Channels', type: 'number', min: 1, max: 128, step: 1, tooltip: 'Number of simultaneous sound effect channels.' },
+        { key: 'ViewportVolumeIntensity', label: 'Viewport Volume Intensity', type: 'number', min: 0, max: 1, step: 0.1, tooltip: 'Adjusts volume based on viewport focus.' },
+        { key: 'ProbeDevicesOnly', label: 'Probe Devices Only', type: 'boolean', tooltip: 'Attempts to detect audio devices without initializing them.' },
+        { key: 'DetailStats', label: 'Detail Stats', type: 'boolean', tooltip: 'Enables detailed audio performance logging.' },
+    ],
+    'Galaxy.GalaxyAudioSubsystem': [
+        { key: 'UseDigitalMusic', label: 'Use Digital Music', type: 'boolean', tooltip: 'Enables playback of digital music files.' },
+        { key: 'UseCDMusic', label: 'Use CD Music', type: 'boolean', tooltip: 'Enables playback of music from the CD-ROM drive.' },
+        { key: 'MusicVolume', label: 'Music Volume', type: 'number', min: 0, max: 255, step: 1, tooltip: 'Volume level for music.' },
+        { key: 'SoundVolume', label: 'Sound Volume', type: 'number', min: 0, max: 255, step: 1, tooltip: 'Volume level for sound effects.' },
+        { key: 'UseDirectSound', label: 'Use DirectSound', type: 'boolean', tooltip: 'Uses Microsoft DirectSound for audio output.' },
+        { key: 'Use3dHardware', label: 'Use 3D Hardware', type: 'boolean', tooltip: 'Enables hardware acceleration for 3D sounds.' },
+        { key: 'UseSurround', label: 'Use Surround', type: 'boolean', tooltip: 'Enables surround sound processing.' },
+        { key: 'UseStereo', label: 'Use Stereo', type: 'boolean', tooltip: 'Enables stereo sound output.' },
+        { key: 'UseFilter', label: 'Use Filter', type: 'boolean', tooltip: 'Applies frequency filtering to sounds.' },
+        { key: 'UseSpatial', label: 'Use Spatial', type: 'boolean', tooltip: 'Enables spatial positioning of sounds.' },
+        { key: 'UseReverb', label: 'Use Reverb', type: 'boolean', tooltip: 'Enables environmental reverb effects.' },
+        { key: 'LowSoundQuality', label: 'Low Sound Quality', type: 'boolean', tooltip: 'Reduces sample rates to improve performance on old hardware.' },
+        { key: 'ReverseStereo', label: 'Reverse Stereo', type: 'boolean', tooltip: 'Swaps the left and right audio channels.' },
+        { key: 'Latency', label: 'Latency', type: 'number', min: 1, max: 200, step: 1, tooltip: 'Audio buffer size in milliseconds. Lower is more responsive but may crackle.' },
+        { key: 'OutputRate', label: 'Output Rate', type: 'select', options: [{ label: '11025Hz', value: '11025Hz' }, { label: '22050Hz', value: '22050Hz' }, { label: '44100Hz', value: '44100Hz' }], tooltip: 'Sampling frequency of the audio output.' },
+        { key: 'EffectsChannels', label: 'Effects Channels', type: 'number', min: 8, max: 64, step: 1, tooltip: 'Number of simultaneous sound effect channels.' },
+        { key: 'DopplerSpeed', label: 'Doppler Speed', type: 'number', min: 0, max: 20000, step: 100, tooltip: 'Reference speed for calculating Doppler shift.' },
+        { key: 'AmbientFactor', label: 'Ambient Factor', type: 'number', min: 0, max: 1, step: 0.1, tooltip: 'Adjusts the volume of ambient world sounds.' },
+        { key: 'DetailStats', label: 'Detail Stats', type: 'boolean', tooltip: 'Enables detailed audio performance logging.' },
+    ],
+}
+
 const LEGACY_RENDERERS: Record<string, string> = {
     'SoftDrv.SoftwareRenderDevice': 'Software Rendering',
     'GlideDrv.GlideRenderDevice': '3dfx Glide',
     'MetalDrv.MetalRenderDevice': 'S3 Metal',
+}
+
+const AUDIO_DEVICE_INFO: Record<string, { label: string; description: string; recommended?: boolean }> = {
+    'ALAudio.ALAudioSubsystem': {
+        label: 'OpenAL 3D',
+        description: "OldUnreal's advanced OpenAL-based audio driver. Recommended for modern systems",
+        recommended: true
+    },
+    'Cluster.ClusterAudioSubsystem': {
+        label: 'Cluster Audio',
+        description: 'Similar sounding subsitute for the legacy Galaxy Audio.'
+    },
+    'Galaxy.GalaxyAudioSubsystem': {
+        label: 'Galaxy Audio',
+        description: 'The original sound renderer for Unreal Tournament 1999. Not recommended for modern systems'
+    }
 }
 
 export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsProps) {
@@ -384,6 +460,10 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
     const [netspeed, setNetspeed] = useState(10000)
     const [deviceSettings, setDeviceSettings] = useState<Record<string, any>>({})
 
+    // Audio Settings
+    const [audioDevice, setAudioDevice] = useState('')
+    const [audioSettings, setAudioSettings] = useState<Record<string, any>>({})
+
     // Binds
     const [binds, setBinds] = useState<Record<string, string[]>>({}) // command -> keys[]
     const [editingBind, setEditingBind] = useState<{ command: string, slot: number } | null>(null)
@@ -391,7 +471,7 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
     // Import modal state
     const [importModalState, setImportModalState] = useState<'hidden' | 'loading' | 'success' | 'error'>('hidden')
     const [importErrorMessage, setImportErrorMessage] = useState('')
-    const [importType, setImportType] = useState<'binds' | 'graphics'>('binds')
+    const [importType, setImportType] = useState<'binds' | 'graphics' | 'music'>('binds')
 
     // Conflict confirmation state
     const [conflictInfo, setConflictInfo] = useState<{
@@ -462,6 +542,28 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
                 }
             }
 
+            // Audio
+            const aDevice = await window.conveyor.ini.readIniValue('UnrealTournament.ini', 'Engine.Engine', 'AudioDevice')
+            setAudioDevice(aDevice || 'Galaxy.GalaxyAudioSubsystem')
+
+            if (aDevice) {
+                const settingsConfig = AUDIO_DEVICE_SETTINGS[aDevice]
+                if (settingsConfig) {
+                    const currentSettings: Record<string, any> = {}
+                    for (const setting of settingsConfig) {
+                        const val = await window.conveyor.ini.readIniValue('UnrealTournament.ini', aDevice, setting.key)
+                        if (setting.type === 'boolean') {
+                            currentSettings[setting.key] = val?.toLowerCase() === 'true' || val === '1'
+                        } else if (setting.type === 'number') {
+                            currentSettings[setting.key] = parseFloat(val || '0')
+                        } else {
+                            currentSettings[setting.key] = val
+                        }
+                    }
+                    setAudioSettings(currentSettings)
+                }
+            }
+
             // Binds
             const inputSection = await window.conveyor.ini.readIniSection('User.ini', 'Engine.Input') as Record<string, string | string[]> | undefined
             if (inputSection) {
@@ -518,6 +620,19 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
         }
 
         await window.conveyor.ini.writeIniValue('UnrealTournament.ini', renderDevice, key, stringValue)
+    }
+
+    const updateAudioSetting = async (key: string, value: any) => {
+        setAudioSettings(prev => ({ ...prev, [key]: value }))
+
+        const settingDef = AUDIO_DEVICE_SETTINGS[audioDevice]?.find(s => s.key === key)
+        let stringValue = String(value)
+
+        if (settingDef?.type === 'boolean') {
+            stringValue = value ? 'True' : 'False'
+        }
+
+        await window.conveyor.ini.writeIniValue('UnrealTournament.ini', audioDevice, key, stringValue)
     }
 
     const handleExportVideoSettings = () => {
@@ -580,6 +695,73 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
             } catch (err) {
                 console.error('Failed to import graphics settings', err)
                 setImportErrorMessage('Failed to import graphics settings. Please check the file format.')
+                setImportModalState('error')
+            }
+        }
+
+        input.click()
+    }
+
+    const handleExportMusicSettings = () => {
+        const exportData = {
+            version: '1.0',
+            device: audioDevice,
+            exportedAt: new Date().toISOString(),
+            settings: audioSettings
+        }
+
+        const jsonString = JSON.stringify(exportData, null, 2)
+        const blob = new Blob([jsonString], { type: 'application/json' })
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `ut-audio-${audioDevice.split('.')[0]}-${new Date().toISOString().split('T')[0]}.json`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        URL.revokeObjectURL(url)
+    }
+
+    const handleImportMusicSettings = async () => {
+        const input = document.createElement('input')
+        input.type = 'file'
+        input.accept = '.json'
+
+        input.onchange = async (e) => {
+            const file = (e.target as HTMLInputElement).files?.[0]
+            if (!file) return
+
+            setImportType('music')
+            setImportModalState('loading')
+
+            try {
+                const text = await file.text()
+                const importData = JSON.parse(text)
+
+                if (!importData.device || !importData.settings) {
+                    setImportErrorMessage('Invalid audio settings file format')
+                    setImportModalState('error')
+                    return
+                }
+
+                if (importData.device !== audioDevice) {
+                    setImportErrorMessage(`File is for ${importData.device}, but you have ${audioDevice} selected.`)
+                    setImportModalState('error')
+                    return
+                }
+
+                const newSettings = importData.settings
+                setAudioSettings(newSettings)
+
+                // Write to INI
+                for (const [key, value] of Object.entries(newSettings)) {
+                    await updateAudioSetting(key, value)
+                }
+
+                setImportModalState('success')
+            } catch (err) {
+                console.error('Failed to import audio settings', err)
+                setImportErrorMessage('Failed to import audio settings. Please check the file format.')
                 setImportModalState('error')
             }
         }
@@ -955,9 +1137,9 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
                         {importModalState === 'loading' && (
                             <>
                                 <div className="space-y-2">
-                                    <h3 className="text-xl font-bold">Importing {importType === 'binds' ? 'Keybinds' : 'Graphics Settings'}</h3>
+                                    <h3 className="text-xl font-bold">Importing {importType === 'binds' ? 'Keybinds' : importType === 'graphics' ? 'Graphics Settings' : 'Audio Settings'}</h3>
                                     <p className="text-muted-foreground">
-                                        Please wait while we import your {importType === 'binds' ? 'keybind' : 'graphics'} configuration...
+                                        Please wait while we import your {importType === 'binds' ? 'keybind' : importType === 'graphics' ? 'graphics' : 'audio'} configuration...
                                     </p>
                                 </div>
 
@@ -972,7 +1154,7 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
                                 <div className="space-y-2">
                                     <h3 className="text-xl font-bold text-green-500">Import Successful!</h3>
                                     <p className="text-muted-foreground">
-                                        Your {importType === 'binds' ? 'keybinds' : 'graphics settings'} have been imported and applied successfully.
+                                        Your {importType === 'binds' ? 'keybinds' : importType === 'graphics' ? 'graphics settings' : 'audio settings'} have been imported and applied successfully.
                                     </p>
                                 </div>
 
@@ -1285,6 +1467,171 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
                                                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                                                 value={deviceSettings[setting.key] ?? ''}
                                                 onChange={(e) => updateDeviceSetting(setting.key, e.target.value)}
+                                            >
+                                                {setting.options?.map(opt => (
+                                                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                                ))}
+                                            </select>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </SettingsSection>
+
+                {/* Music Settings */}
+                <SettingsSection
+                    title="Music Settings"
+                    icon={<Music className="size-6" />}
+                    activeIconClassName="bg-amber-500/10 text-amber-500"
+                    headerAction={
+                        <div className="flex gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleExportMusicSettings()
+                                }}
+                                className="gap-2"
+                            >
+                                <Download className="size-4" />
+                                Export
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleImportMusicSettings()
+                                }}
+                                className="gap-2"
+                            >
+                                <Upload className="size-4" />
+                                Import
+                            </Button>
+                        </div>
+                    }
+                >
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Audio Device</label>
+                            <select
+                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                value={audioDevice}
+                                onChange={async (e) => {
+                                    const val = e.target.value
+                                    setAudioDevice(val)
+                                    window.conveyor.ini.writeIniValue('UnrealTournament.ini', 'Engine.Engine', 'AudioDevice', val)
+                                    // Reload settings for the new device
+                                    const settingsConfig = AUDIO_DEVICE_SETTINGS[val]
+                                    if (settingsConfig) {
+                                        const currentSettings: Record<string, any> = {}
+                                        for (const setting of settingsConfig) {
+                                            const v = await window.conveyor.ini.readIniValue('UnrealTournament.ini', val, setting.key)
+                                            if (setting.type === 'boolean') {
+                                                currentSettings[setting.key] = v?.toLowerCase() === 'true' || v === '1'
+                                            } else if (setting.type === 'number') {
+                                                currentSettings[setting.key] = parseFloat(v || '0')
+                                            } else {
+                                                currentSettings[setting.key] = v
+                                            }
+                                        }
+                                        setAudioSettings(currentSettings)
+                                    } else {
+                                        setAudioSettings({})
+                                    }
+                                }}
+                            >
+                                <option value="ALAudio.ALAudioSubsystem">{AUDIO_DEVICE_INFO['ALAudio.ALAudioSubsystem'].label}</option>
+                                <option value="Cluster.ClusterAudioSubsystem">{AUDIO_DEVICE_INFO['Cluster.ClusterAudioSubsystem'].label}</option>
+                                <option value="Galaxy.GalaxyAudioSubsystem">{AUDIO_DEVICE_INFO['Galaxy.GalaxyAudioSubsystem'].label}</option>
+                            </select>
+
+                            {AUDIO_DEVICE_INFO[audioDevice] && (
+                                <div className={cn(
+                                    "mt-2 p-3 rounded-lg flex items-start gap-3 animate-in fade-in slide-in-from-top-1 duration-200",
+                                    AUDIO_DEVICE_INFO[audioDevice].recommended
+                                        ? "bg-green-500/10 border border-green-500/20"
+                                        : audioDevice === 'Galaxy.GalaxyAudioSubsystem'
+                                            ? "bg-yellow-500/10 border border-yellow-500/20"
+                                            : "bg-blue-500/10 border border-blue-500/20"
+                                )}>
+                                    {AUDIO_DEVICE_INFO[audioDevice].recommended ? (
+                                        <CheckCircle className="size-5 text-green-500 shrink-0 mt-0.5" />
+                                    ) : audioDevice === 'Galaxy.GalaxyAudioSubsystem' ? (
+                                        <AlertTriangle className="size-5 text-yellow-500 shrink-0 mt-0.5" />
+                                    ) : (
+                                        <Music className="size-5 text-blue-500 shrink-0 mt-0.5" />
+                                    )}
+                                    <p className={cn(
+                                        "text-sm italic",
+                                        AUDIO_DEVICE_INFO[audioDevice].recommended
+                                            ? "text-green-500/90"
+                                            : audioDevice === 'Galaxy.GalaxyAudioSubsystem'
+                                                ? "text-yellow-500/90"
+                                                : "text-blue-500/90"
+                                    )}>
+                                        {AUDIO_DEVICE_INFO[audioDevice].description}
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Dynamic Audio Device Settings */}
+                    {AUDIO_DEVICE_SETTINGS[audioDevice] && (
+                        <div className="col-span-1 md:col-span-2 border-t border-border pt-6 mt-6">
+                            <h4 className="text-sm font-semibold mb-4 text-muted-foreground">
+                                {audioDevice.split('.')[0]} Settings
+                            </h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {AUDIO_DEVICE_SETTINGS[audioDevice].map(setting => (
+                                    <div key={setting.key} className="space-y-2">
+                                        <div className="flex items-center gap-2">
+                                            <label className="text-sm font-medium">{setting.label}</label>
+                                            {setting.tooltip && <Tooltip content={setting.tooltip} />}
+                                        </div>
+
+                                        {setting.type === 'boolean' && (
+                                            <div className="flex items-center h-10">
+                                                <label className="relative inline-flex items-center cursor-pointer">
+                                                    <input
+                                                        type="checkbox"
+                                                        className="sr-only peer"
+                                                        checked={!!audioSettings[setting.key]}
+                                                        onChange={(e) => updateAudioSetting(setting.key, e.target.checked)}
+                                                    />
+                                                    <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-ring rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                                                </label>
+                                            </div>
+                                        )}
+
+                                        {setting.type === 'number' && (
+                                            <div className="flex items-center gap-4">
+                                                <Slider
+                                                    min={setting.min ?? 0}
+                                                    max={setting.max ?? 100}
+                                                    step={setting.step ?? 1}
+                                                    value={audioSettings[setting.key] ?? 0}
+                                                    onChange={(e) => {
+                                                        setAudioSettings(prev => ({ ...prev, [setting.key]: parseFloat(e.target.value) }))
+                                                    }}
+                                                    onMouseUp={() => {
+                                                        updateAudioSetting(setting.key, audioSettings[setting.key])
+                                                    }}
+                                                    className="flex-1"
+                                                />
+                                                <span className="text-sm w-12 text-right">{audioSettings[setting.key]}</span>
+                                            </div>
+                                        )}
+
+                                        {setting.type === 'select' && (
+                                            <select
+                                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                                value={audioSettings[setting.key] ?? ''}
+                                                onChange={(e) => updateAudioSetting(setting.key, e.target.value)}
                                             >
                                                 {setting.options?.map(opt => (
                                                     <option key={opt.value} value={opt.value}>{opt.label}</option>
