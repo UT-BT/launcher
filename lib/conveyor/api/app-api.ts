@@ -43,4 +43,5 @@ export class AppApi extends ConveyorApi {
   deleteProfile = (name: string) => this.invoke('deleteProfile', name)
   renameProfile = (oldName: string, newName: string) => this.invoke('renameProfile', oldName, newName)
   getActiveProfile = () => this.invoke('getActiveProfile')
+  checkProfileSync = (name: string) => this.invoke('checkProfileSync', name)
 }

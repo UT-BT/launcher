@@ -184,4 +184,8 @@ export const appIpcSchema = {
     args: z.tuple([]),
     return: z.string().optional(),
   },
+  checkProfileSync: {
+    args: z.tuple([z.string()]),
+    return: z.boolean(),
+  },
 }

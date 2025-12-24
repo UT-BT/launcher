@@ -77,6 +77,7 @@ export const registerAppHandlers = (_window: BrowserWindow) => {
   handle('deleteProfile', (name: string) => gameService.deleteProfile(name))
   handle('renameProfile', (oldName: string, newName: string) => gameService.renameProfile(oldName, newName))
   handle('getActiveProfile', () => gameService.getActiveProfile())
+  handle('checkProfileSync', (name: string) => gameService.checkProfileSync(name))
 
   handle('getUploadLogs', () => demoWatcherService.getUploadLogs())
   handle(

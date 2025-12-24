@@ -27,6 +27,9 @@ export const GameProfilesModal = ({ isOpen, onClose }: GameProfilesModalProps) =
     const [profileToOverwrite, setProfileToOverwrite] = useState<string | null>(null)
     const [renamingProfile, setRenamingProfile] = useState<string | null>(null)
     const [renameName, setRenameName] = useState('')
+    const [isActiveDirty, setIsActiveDirty] = useState(false)
+    const [pendingSwitchProfile, setPendingSwitchProfile] = useState<string | null>(null)
+    const [showDiscardConfirm, setShowDiscardConfirm] = useState(false)
 
     const fetchProfiles = async () => {
         try {
@@ -38,6 +41,13 @@ export const GameProfilesModal = ({ isOpen, onClose }: GameProfilesModalProps) =
 
             if (list.length > 0 && !selectedProfile) {
                 setSelectedProfile(active || list[0].name)
+            }
+
+            if (active) {
+                const isDirty = await window.conveyor.app.checkProfileSync(active)
+                setIsActiveDirty(isDirty)
+            } else {
+                setIsActiveDirty(false)
             }
         } catch (error) {
             console.error('Failed to fetch profiles:', error)
@@ -91,8 +101,19 @@ export const GameProfilesModal = ({ isOpen, onClose }: GameProfilesModalProps) =
     }
 
     const handleSwitchProfile = async (name: string) => {
+        if (isActiveDirty && name !== activeProfile) {
+            setPendingSwitchProfile(name)
+            setShowDiscardConfirm(true)
+            return
+        }
+        await performSwitch(name)
+    }
+
+    const performSwitch = async (name: string) => {
         try {
             await window.conveyor.app.switchProfile(name)
+            setShowDiscardConfirm(false)
+            setPendingSwitchProfile(null)
             onClose()
         } catch (error) {
             console.error('Failed to switch profile:', error)
@@ -155,7 +176,7 @@ export const GameProfilesModal = ({ isOpen, onClose }: GameProfilesModalProps) =
                             Here you can create, switch, overwrite and delete these profiles as you wish.
                         </p>
                         <p>
-                            The <span className="italic text-foreground">Default</span> profile was created from your original installation.
+                            The <span className="italic text-foreground">Original</span> profile is a permanent backup of your game's first-seen settings and cannot be edited.
                         </p>
                     </div>
 
@@ -210,7 +231,18 @@ export const GameProfilesModal = ({ isOpen, onClose }: GameProfilesModalProps) =
                                                 <div className="flex items-center gap-2">
                                                     <div className="text-sm font-medium truncate">{profile.name}</div>
                                                     {activeProfile === profile.name && (
-                                                        <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded uppercase font-bold">Active</span>
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded uppercase font-bold">Active</span>
+                                                            {isActiveDirty && (
+                                                                <span
+                                                                    className="flex items-center gap-1 text-[10px] bg-yellow-500/20 text-yellow-500 px-1.5 py-0.5 rounded font-medium border border-yellow-500/30 animate-pulse"
+                                                                    title="You have changes in the game folder that are not saved to this profile."
+                                                                >
+                                                                    <div className="size-1.5 rounded-full bg-yellow-500" />
+                                                                    Unsaved Changes
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                     )}
                                                 </div>
                                                 <div className="text-[10px] text-muted-foreground">
@@ -233,6 +265,7 @@ export const GameProfilesModal = ({ isOpen, onClose }: GameProfilesModalProps) =
                                             variant="ghost"
                                             onClick={() => handleOverwriteProfile(profile.name)}
                                             title="Overwrite with Current"
+                                            disabled={profile.name === 'Original' || profile.name.startsWith('Original (')}
                                         >
                                             <FaSave />
                                         </Button>
@@ -241,7 +274,7 @@ export const GameProfilesModal = ({ isOpen, onClose }: GameProfilesModalProps) =
                                             variant="ghost"
                                             onClick={() => startRenaming(profile.name)}
                                             title="Rename Profile"
-                                            disabled={profile.name === 'Default' || profile.name.startsWith('Default (')}
+                                            disabled={profile.name === 'Original' || profile.name.startsWith('Original (')}
                                         >
                                             <FaEdit />
                                         </Button>
@@ -254,7 +287,7 @@ export const GameProfilesModal = ({ isOpen, onClose }: GameProfilesModalProps) =
                                                 setShowDeleteConfirm(true)
                                             }}
                                             title="Delete Profile"
-                                            disabled={profile.name === 'Default' || profile.name.startsWith('Default (')}
+                                            disabled={profile.name === 'Original' || profile.name.startsWith('Original (')}
                                         >
                                             <FaTrash />
                                         </Button>
@@ -290,6 +323,16 @@ export const GameProfilesModal = ({ isOpen, onClose }: GameProfilesModalProps) =
                 message={`Are you sure you want to overwrite the profile "${profileToOverwrite}" with your current settings?`}
                 confirmText="Overwrite"
                 variant="default"
+            />
+
+            <ConfirmModal
+                isOpen={showDiscardConfirm}
+                onClose={() => setShowDiscardConfirm(false)}
+                onConfirm={() => pendingSwitchProfile && performSwitch(pendingSwitchProfile)}
+                title="Discard Changes?"
+                message={`You have unsaved changes in your active profile. Switching to "${pendingSwitchProfile}" will discard these changes. Are you sure?`}
+                confirmText="Discard & Switch"
+                variant="error"
             />
         </>
     )
