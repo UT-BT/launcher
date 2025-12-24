@@ -3,8 +3,14 @@ import { join } from 'path'
 import { loggingService } from '@/lib/main/logging-service'
 import { getUt99InstallPath, getDemoWatcherConfig, getAuthConfig } from '@/lib/main/config'
 import { readFile, rename, unlink, mkdir, access } from 'fs/promises'
+import { existsSync } from 'fs'
 import { gatewayService } from '@/lib/main/gateway-service'
 import { uploadDemo } from '@/app/utils/api'
+import { execFile } from 'child_process'
+import { promisify } from 'util'
+import { app } from 'electron'
+
+const execFilePromise = promisify(execFile)
 
 type LeaderboardResponse = {
     data: Array<{
@@ -129,6 +135,16 @@ export class DemoWatcherService {
                 loggingService.warn('Cannot upload demo: User not logged in', 'DemoWatcher')
             } else {
                 loggingService.info(`Uploading demo: ${filename}`, 'DemoWatcher')
+
+                // Verify demo before uploading
+                const btpogId = await this.extractBtpogId(filePath)
+                if (!btpogId) {
+                    loggingService.warn(`Ignoring demo ${filename}: No BTPog ID found`, 'DemoWatcher')
+                    return
+                }
+
+                loggingService.info(`Verified demo ${filename} (BTPog ID: ${btpogId}). Proceeding with upload.`, 'DemoWatcher')
+
                 this.addLogEntry({
                     filename,
                     status: 'uploading',
@@ -238,6 +254,51 @@ export class DemoWatcherService {
                 const multiplier = multipliers[index] || 0;
                 return total + (value * multiplier);
             }, 0);
+    }
+
+    public async extractBtpogId(demoFp: string): Promise<string> {
+        let scriptPath: string
+        if (app.isPackaged) {
+            scriptPath = join(process.resourcesPath, 'bin', 'ut99-strings.exe')
+        } else {
+            scriptPath = join(app.getAppPath(), 'resources', 'bin', 'ut99-strings.exe')
+        }
+
+        if (!existsSync(scriptPath)) {
+            loggingService.error(`Binary tool not found at ${scriptPath}`, 'DemoWatcher')
+            return ''
+        }
+
+        try {
+            const { stdout } = await execFilePromise(scriptPath, ['--length', '40', demoFp])
+            const idCount: Record<string, number> = {}
+
+            if (stdout) {
+                const lines = stdout.split('\n')
+                for (const line of lines) {
+                    if (line.includes('BTPOG')) {
+                        const parts = line.split(':')
+                        if (parts.length >= 2) {
+                            const id = parts[1].trim()
+                            idCount[id] = (idCount[id] || 0) + 1
+                        }
+                    }
+                }
+            }
+
+            const ids = Object.keys(idCount)
+            if (ids.length > 0) {
+                const maximum = ids.reduce((a, b) => idCount[a] > idCount[b] ? a : b)
+                if (idCount[maximum] < 2) {
+                    return ''
+                }
+                return maximum
+            }
+        } catch (error) {
+            loggingService.error('Error running strings tool', 'DemoWatcher', error)
+        }
+
+        return ''
     }
 }
 

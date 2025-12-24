@@ -44,4 +44,8 @@ export class AppApi extends ConveyorApi {
   renameProfile = (oldName: string, newName: string) => this.invoke('renameProfile', oldName, newName)
   getActiveProfile = () => this.invoke('getActiveProfile')
   checkProfileSync = (name: string) => this.invoke('checkProfileSync', name)
+  extractBtpogId = (filePath: string) => this.invoke('extractBtpogId', filePath)
+  getPathForFile = (file: File): string => {
+    return (file as any).path
+  }
 }
