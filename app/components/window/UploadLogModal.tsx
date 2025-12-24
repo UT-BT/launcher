@@ -149,7 +149,7 @@ export const UploadLogModal = ({ isOpen, onClose }: UploadLogModalProps) => {
                             <FaCloudUploadAlt className="size-8" />
                         </div>
                         <div className="text-sm font-medium">Click to select or drag and drop</div>
-                        <div className="text-xs text-muted-foreground">UT99 Demo files (.dem) only</div>
+                        <div className="text-xs text-muted-foreground"><b>Accepted file types:</b> <span className="italic">.dem</span></div>
                     </div>
                 </div>
 
