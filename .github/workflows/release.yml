@@ -83,9 +83,15 @@ jobs:
         id: notes
         shell: pwsh
         run: |
+          $tagName = "${{ github.ref_name }}"
+          # Generate base notes from GitHub
+          $changelog = gh release generate-notes --tag $tagName
+          
           $analysis = @"
           ${{ steps.vt.outputs.analysis }}
           "@
+          
+          $vtSection = ""
           if ($analysis) {
             $lines = $analysis -split "`n" | Where-Object { $_ -match '=' }
             $vtLinks = $lines | ForEach-Object {
@@ -93,16 +99,18 @@ jobs:
                 $fileName = Split-Path $parts[0] -Leaf
                 "- [VirusTotal Scan Report for $fileName]($($parts[1]))"
             }
-            $vtSection = "### Security Scan Results`n" + ($vtLinks -join "`n") + "`n`n"
-            
-            # Using multiline output syntax for GITHUB_OUTPUT
-            $delimiter = [System.Guid]::NewGuid().ToString()
-            Add-Content -Path $env:GITHUB_OUTPUT -Value "body<<$delimiter"
-            Add-Content -Path $env:GITHUB_OUTPUT -Value $vtSection
-            Add-Content -Path $env:GITHUB_OUTPUT -Value $delimiter
-          } else {
-            Add-Content -Path $env:GITHUB_OUTPUT -Value "body="
+            $vtSection = "`n`n### Security Scan Results`n" + ($vtLinks -join "`n")
           }
+          
+          $fullBody = $changelog + $vtSection
+          
+          # Using multiline output syntax for GITHUB_OUTPUT
+          $delimiter = [System.Guid]::NewGuid().ToString()
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "body<<$delimiter"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value $fullBody
+          Add-Content -Path $env:GITHUB_OUTPUT -Value $delimiter
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -110,7 +118,7 @@ jobs:
           tag_name: ${{ github.ref_name }}
           name: UTBT Launcher v${{ steps.meta.outputs.version }}
           body: ${{ steps.notes.outputs.body }}
-          generate_release_notes: true
+          generate_release_notes: false
           prerelease: ${{ steps.meta.outputs.prerelease == 'true' }}
           make_latest: ${{ steps.meta.outputs.prerelease == 'true' && 'false' || 'true' }}
           files: |
