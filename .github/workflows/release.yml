@@ -85,6 +85,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: VirusTotal Scan
+        id: vt
         uses: crazy-max/ghaction-virustotal@v4
         with:
           vt_api_key: ${{ secrets.VIRUSTOTAL_API_KEY }}
@@ -93,3 +94,30 @@ jobs:
             dist/*.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update Release Notes with VirusTotal Link
+        shell: pwsh
+        run: |
+          $analysis = @"
+          ${{ steps.vt.outputs.analysis }}
+          "@
+          if (-not $analysis) {
+            Write-Host "No VirusTotal analysis found."
+            exit 0
+          }
+          $lines = $analysis -split "`n" | Where-Object { $_ -match '=' }
+          $vtLinks = $lines | ForEach-Object {
+              $parts = $_ -split '='
+              $fileName = Split-Path $parts[0] -Leaf
+              "- [VirusTotal Scan Report for $fileName]($($parts[1]))"
+          }
+          $vtSection = "`n`n### Security Scan Results`n" + ($vtLinks -join "`n")
+          
+          $tagName = "${{ github.ref_name }}"
+          # Get current body
+          $currentBody = gh release view $tagName --json body -q .body
+          # Update body
+          $newBody = "$currentBody$vtSection"
+          gh release edit $tagName --notes "$newBody"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
