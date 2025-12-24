@@ -259,7 +259,7 @@ export class DemoWatcherService {
     public async extractBtpogId(demoFp: string): Promise<string> {
         let scriptPath: string
         if (app.isPackaged) {
-            scriptPath = join(process.resourcesPath, 'bin', 'ut99-strings.exe')
+            scriptPath = join(process.resourcesPath, 'app.asar.unpacked', 'resources', 'bin', 'ut99-strings.exe')
         } else {
             scriptPath = join(app.getAppPath(), 'resources', 'bin', 'ut99-strings.exe')
         }
