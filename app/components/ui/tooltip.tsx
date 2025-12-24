@@ -15,18 +15,24 @@ export function Tooltip({ content, children, className, side = 'top' }: TooltipP
     const [coords, setCoords] = useState({ top: 0, left: 0 })
     const triggerRef = useRef<HTMLDivElement>(null)
 
+    const getZoom = () => {
+        const zoom = parseFloat(document.documentElement.style.zoom)
+        return isNaN(zoom) ? 1 : zoom / 100
+    }
+
     const handleMouseEnter = () => {
         if (triggerRef.current) {
+            const zoom = getZoom()
             const rect = triggerRef.current.getBoundingClientRect()
             if (side === 'bottom') {
                 setCoords({
-                    top: rect.bottom + 10,
-                    left: rect.left + rect.width / 2
+                    top: (rect.bottom / zoom) + 10,
+                    left: (rect.left / zoom) + (rect.width / zoom) / 2
                 })
             } else {
                 setCoords({
-                    top: rect.top - 10,
-                    left: rect.left + rect.width / 2
+                    top: (rect.top / zoom) - 10,
+                    left: (rect.left / zoom) + (rect.width / zoom) / 2
                 })
             }
             setIsVisible(true)

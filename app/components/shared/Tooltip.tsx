@@ -13,25 +13,31 @@ export function Tooltip({ content, children, delay = 200 }: TooltipProps) {
   const tooltipRef = useRef<HTMLDivElement>(null)
   const timerRef = useRef<number | null>(null)
 
+  const getZoom = () => {
+    const zoom = parseFloat(document.documentElement.style.zoom)
+    return isNaN(zoom) ? 1 : zoom / 100
+  }
+
   const calculatePosition = () => {
     const trigger = triggerRef.current
     const tooltip = tooltipRef.current
     if (!trigger || !tooltip) return
 
+    const zoom = getZoom()
     const rect = trigger.getBoundingClientRect()
     const padding = 8
-    const vw = window.innerWidth
-    const vh = window.innerHeight
+    const vw = window.innerWidth / zoom
+    const vh = window.innerHeight / zoom
     const tipWidth = tooltip.offsetWidth || 300
     const tipHeight = tooltip.offsetHeight || 80
 
-    let top = rect.top - tipHeight - 8
-    let left = rect.left + (rect.width / 2) - (tipWidth / 2)
+    let top = (rect.top / zoom) - tipHeight - 8
+    let left = (rect.left / zoom) + (rect.width / zoom / 2) - (tipWidth / 2)
 
     // Boundary checks
     if (left < padding) left = padding
     if (left + tipWidth + padding > vw) left = vw - tipWidth - padding
-    if (top < padding) top = rect.bottom + 8
+    if (top < padding) top = (rect.bottom / zoom) + 8
     if (top + tipHeight + padding > vh) top = Math.max(padding, vh - tipHeight - padding)
 
     setPosition({ top, left })
@@ -65,7 +71,7 @@ export function Tooltip({ content, children, delay = 200 }: TooltipProps) {
       >
         {children}
       </span>
-      
+
       <div
         ref={tooltipRef}
         className={`custom-tooltip${isVisible ? ' visible' : ''}`}
