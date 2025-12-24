@@ -1,10 +1,11 @@
 import { join } from 'path'
-import { existsSync, createReadStream, createWriteStream, mkdirSync, copyFileSync, readdirSync, rmSync, renameSync, statSync } from 'fs'
+import { existsSync, createReadStream, createWriteStream, mkdirSync, copyFileSync, readdirSync, rmSync, renameSync, statSync, readFileSync } from 'fs'
 import { app, BrowserWindow, dialog, net } from 'electron'
 import { createHash } from 'crypto'
 import { gatewayService } from './gateway-service'
 import { setUt99InstallPath, setInstalledPatch, getUt99InstallPath, getInstalledPatch, setActiveProfile, getActiveProfile } from './config'
 import { loggingService } from './logging-service'
+import { parseIni } from '../conveyor/handlers/ini-handler'
 
 export class GameService {
     async selectInstallDirectory(window: BrowserWindow): Promise<string | undefined> {
@@ -28,11 +29,11 @@ export class GameService {
         return dir
     }
 
-    private getDefaultCount(): number {
+    private getProfileCount(baseName: string): number {
         const profilesDir = this.getProfilesDir()
         return readdirSync(profilesDir, { withFileTypes: true })
             .filter(dirent => dirent.isDirectory())
-            .filter(dirent => dirent.name === 'Default')
+            .filter(dirent => dirent.name === baseName || dirent.name.startsWith(`${baseName} (`))
             .length
     }
 
@@ -134,6 +135,77 @@ export class GameService {
                 setActiveProfile(undefined)
             }
         }
+    }
+
+    async checkProfileSync(name: string): Promise<boolean> {
+        const installPath = getUt99InstallPath()
+        if (!installPath) return false
+
+        const profilesDir = this.getProfilesDir()
+        const profilePath = join(profilesDir, name)
+        if (!existsSync(profilePath)) return false
+
+        const filesToCheck = ['User.ini', 'UnrealTournament.ini']
+
+        for (const file of filesToCheck) {
+            const gameFile = join(installPath, 'System', file)
+            const profileFile = join(profilePath, file)
+
+            if (!existsSync(gameFile) || !existsSync(profileFile)) continue
+
+            const gameConfig = parseIni(readFileSync(gameFile, 'utf-8'))
+            const profileConfig = parseIni(readFileSync(profileFile, 'utf-8'))
+
+            const sectionsToTrack = file === 'User.ini'
+                ? this.getTrackedUserSections(gameConfig)
+                : this.getTrackedUtSections(gameConfig)
+
+            for (const section of sectionsToTrack) {
+                const gameSection = gameConfig[section] || {}
+                const profileSection = profileConfig[section] || {}
+
+                // Compare all keys in this section
+                const allKeys = new Set([...Object.keys(gameSection), ...Object.keys(profileSection)])
+
+                for (const key of allKeys) {
+                    // Ignore specific noisy keys
+                    if (file === 'UnrealTournament.ini' && (key === 'RunCount' || key === 'LocalTime')) continue
+
+                    const gameVal = JSON.stringify(gameSection[key])
+                    const profileVal = JSON.stringify(profileSection[key])
+
+                    if (gameVal !== profileVal) {
+                        loggingService.debug(`Sync mismatch in ${file} [${section}] ${key}: ${gameVal} vs ${profileVal}`, 'GameService')
+                        return true // Found a difference
+                    }
+                }
+            }
+        }
+
+        return false // No differences found in tracked sections
+    }
+
+    private getTrackedUserSections(config: Record<string, any>): string[] {
+        const sections = ['DefaultPlayer', 'Engine.Player']
+        // Also track all sections that look like keybinds (usually [Engine.Input] but UT has many)
+        // Actually in UT, binds are usually in [Engine.Input] or scattered if using custom aliases
+        // For simplicity and user intent, let's track [Engine.Input] and [Aliases] if they exist
+        if (config['Engine.Input']) sections.push('Engine.Input')
+        if (config['Aliases']) sections.push('Aliases')
+        return sections
+    }
+
+    private getTrackedUtSections(config: Record<string, any>): string[] {
+        const sections = ['Engine.Engine', 'Engine.GameEngine', 'WinDrv.WindowsClient', 'Engine.Player']
+
+        // Add all render device sections
+        for (const section of Object.keys(config)) {
+            if (section.endsWith('RenderDevice')) {
+                sections.push(section)
+            }
+        }
+
+        return sections
     }
 
     async validateCurrentInstallation(): Promise<{ valid: boolean; version?: string }> {
@@ -296,12 +368,19 @@ export class GameService {
             installedAt: new Date().toISOString(),
         })
 
-        // 5. Create "Default" profile if it doesn't exist
-        const defaultCount = this.getDefaultCount()
+        // 5. Create "Original" and "Default" profiles if needed
         try {
-            await this.createProfile('Default' + (defaultCount > 0 ? ` (${defaultCount})` : ''), path)
+            const originalCount = this.getProfileCount('Original')
+            const originalName = 'Original' + (originalCount > 0 ? ` (${originalCount})` : '')
+            await this.createProfile(originalName, path)
+
+            const defaultCount = this.getProfileCount('Default')
+            const defaultName = 'Default' + (defaultCount > 0 ? ` (${defaultCount})` : '')
+            await this.createProfile(defaultName, path)
+
+            loggingService.info('Created Original and Default profiles', 'GameService', { originalName, defaultName })
         } catch (error) {
-            loggingService.error('Failed to create default profile', 'GameService', error)
+            loggingService.error('Failed to create initial profiles', 'GameService', error)
         }
 
         // 6. Notify renderer of successful installation path update

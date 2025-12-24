@@ -6,7 +6,7 @@ import { join, isAbsolute } from 'path'
 import { existsSync, readFileSync, writeFileSync } from 'fs'
 
 // Custom INI parser that preserves section names exactly (doesn't escape dots)
-const parseIni = (content: string): Record<string, Record<string, string | string[]>> => {
+export const parseIni = (content: string): Record<string, Record<string, string | string[]>> => {
     const lines = content.split(/\r?\n/)
     const config: Record<string, Record<string, string | string[]>> = {}
     let currentSection = ''
@@ -48,7 +48,7 @@ const parseIni = (content: string): Record<string, Record<string, string | strin
     return config
 }
 
-const stringifyIni = (config: Record<string, Record<string, string | string[]>>): string => {
+export const stringifyIni = (config: Record<string, Record<string, string | string[]>>): string => {
     let result = ''
 
     for (const [section, pairs] of Object.entries(config)) {
