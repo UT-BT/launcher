@@ -1892,12 +1892,9 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
                             </select>
 
                             {LEGACY_RENDERERS[renderDevice] && (
-                                <div className="mt-2 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20 flex items-start gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
-                                    <AlertTriangle className="size-5 text-yellow-500 shrink-0 mt-0.5" />
-                                    <p className="text-sm text-yellow-500/90 italic">
-                                        <span className="font-semibold">{LEGACY_RENDERERS[renderDevice]}</span> is a legacy renderer and not recommended for use on modern systems.
-                                    </p>
-                                </div>
+                                <p className="text-xs text-red-500 italic px-0.5 mt-2 transition-colors duration-200">
+                                    <span className="font-semibold">{LEGACY_RENDERERS[renderDevice]}</span> is a legacy renderer and not recommended for use on modern systems.
+                                </p>
                             )}
                         </div>
                         <div className="space-y-2">
@@ -1942,12 +1939,9 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
                             </select>
 
                             {colorBits === '16' && (
-                                <div className="mt-2 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20 flex items-start gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
-                                    <AlertTriangle className="size-5 text-yellow-500 shrink-0 mt-0.5" />
-                                    <p className="text-sm text-yellow-500/90 italic">
-                                        16-bit color is not recommended for modern systems. 32-bit is highly recommended for better visual quality and compatibility.
-                                    </p>
-                                </div>
+                                <p className="text-xs text-yellow-500 italic px-0.5 mt-2 transition-colors duration-200">
+                                    16-bit color is not recommended for modern systems. 32-bit is highly recommended for better visual quality and compatibility.
+                                </p>
                             )}
                         </div>
                         <div className="space-y-2">
@@ -2118,32 +2112,16 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
                             </select>
 
                             {AUDIO_DEVICE_INFO[audioDevice] && (
-                                <div className={cn(
-                                    "mt-2 p-3 rounded-lg flex items-start gap-3 animate-in fade-in slide-in-from-top-1 duration-200",
+                                <p className={cn(
+                                    "text-xs italic px-0.5 mt-2 transition-colors duration-200",
                                     AUDIO_DEVICE_INFO[audioDevice].recommended
-                                        ? "bg-green-500/10 border border-green-500/20"
+                                        ? "text-green-500"
                                         : audioDevice === 'Galaxy.GalaxyAudioSubsystem'
-                                            ? "bg-yellow-500/10 border border-yellow-500/20"
-                                            : "bg-blue-500/10 border border-blue-500/20"
+                                            ? "text-yellow-500"
+                                            : "text-blue-500"
                                 )}>
-                                    {AUDIO_DEVICE_INFO[audioDevice].recommended ? (
-                                        <CheckCircle className="size-5 text-green-500 shrink-0 mt-0.5" />
-                                    ) : audioDevice === 'Galaxy.GalaxyAudioSubsystem' ? (
-                                        <AlertTriangle className="size-5 text-yellow-500 shrink-0 mt-0.5" />
-                                    ) : (
-                                        <Music className="size-5 text-blue-500 shrink-0 mt-0.5" />
-                                    )}
-                                    <p className={cn(
-                                        "text-sm italic",
-                                        AUDIO_DEVICE_INFO[audioDevice].recommended
-                                            ? "text-green-500/90"
-                                            : audioDevice === 'Galaxy.GalaxyAudioSubsystem'
-                                                ? "text-yellow-500/90"
-                                                : "text-blue-500/90"
-                                    )}>
-                                        {AUDIO_DEVICE_INFO[audioDevice].description}
-                                    </p>
-                                </div>
+                                    {AUDIO_DEVICE_INFO[audioDevice].description}
+                                </p>
                             )}
                         </div>
                     </div>
