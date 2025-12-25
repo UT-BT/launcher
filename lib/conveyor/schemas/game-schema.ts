@@ -32,4 +32,8 @@ export const gameIpcSchema = {
             version: z.string().optional(),
         }),
     },
+    isGameRunning: {
+        args: z.tuple([]),
+        return: z.boolean(),
+    },
 }

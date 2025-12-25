@@ -496,6 +496,10 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
     const [disableMacroDodging, setDisableMacroDodging] = useState(false)
     const [mouseInput, setMouseInput] = useState<'raw' | 'direct' | 'cursor'>('cursor')
 
+    // Game status
+    const [isGameRunning, setIsGameRunning] = useState(false)
+    const [isCheckingGame, setIsCheckingGame] = useState(false)
+
     // Conflict confirmation state
     const [conflictInfo, setConflictInfo] = useState<{
         key: string,
@@ -516,6 +520,22 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
             return cleanup
         }
         return undefined
+    }, [])
+
+    useEffect(() => {
+        const checkStatus = async () => {
+            if (isCheckingGame) return
+            try {
+                const running = await window.conveyor.game.isGameRunning()
+                setIsGameRunning(running)
+            } catch (err) {
+                console.error('Failed to check game status', err)
+            }
+        }
+
+        checkStatus()
+        const interval = setInterval(checkStatus, 3000)
+        return () => clearInterval(interval)
     }, [])
 
     const loadSettings = async () => {
@@ -1511,6 +1531,49 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
                                 </Button>
                             </>
                         )}
+                    </div>
+                </div>
+            )}
+
+            {isGameRunning && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-6 bg-background/80 backdrop-blur-sm animate-in fade-in duration-300">
+                    <div className="max-w-md w-full bg-card border border-border rounded-2xl p-8 shadow-2xl text-center space-y-6">
+                        <div className="flex justify-center">
+                            <div className="p-4 rounded-full bg-primary/10 text-primary animate-pulse">
+                                <Joystick className="size-12" />
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <h2 className="text-2xl font-bold">Game is Running</h2>
+                            <p className="text-muted-foreground">
+                                Settings cannot be modified while Unreal Tournament is active. Please close the game to make changes.
+                            </p>
+                        </div>
+                        <div className="pt-4">
+                            <Button
+                                className="w-full"
+                                size="lg"
+                                onClick={async () => {
+                                    setIsCheckingGame(true)
+                                    try {
+                                        const running = await window.conveyor.game.isGameRunning()
+                                        setIsGameRunning(running)
+                                    } finally {
+                                        setIsCheckingGame(false)
+                                    }
+                                }}
+                                disabled={isCheckingGame}
+                            >
+                                {isCheckingGame ? (
+                                    <>
+                                        <Loader2 className="mr-2 size-4 animate-spin" />
+                                        Checking...
+                                    </>
+                                ) : (
+                                    'Retry'
+                                )}
+                            </Button>
+                        </div>
                     </div>
                 </div>
             )}

@@ -1,4 +1,5 @@
 import { join } from 'path'
+import { exec } from 'child_process'
 import { existsSync, createReadStream, createWriteStream, mkdirSync, copyFileSync, readdirSync, rmSync, renameSync, statSync, readFileSync } from 'fs'
 import { app, BrowserWindow, dialog, net } from 'electron'
 import { createHash } from 'crypto'
@@ -463,6 +464,24 @@ export class GameService {
             stream.on('data', (data) => hash.update(data))
             stream.on('end', () => resolve(hash.digest('hex')))
             stream.on('error', reject)
+        })
+    }
+
+    async isGameRunning(): Promise<boolean> {
+        return new Promise((resolve) => {
+            const isWin = process.platform === 'win32'
+            const command = isWin
+                ? 'tasklist /FI "IMAGENAME eq UnrealTournament.exe" /NH'
+                : 'pgrep -x UnrealTournament'
+
+            exec(command, (err, stdout) => {
+                if (isWin) {
+                    resolve(stdout.toLowerCase().includes('unrealtournament.exe'))
+                } else {
+                    // pgrep returns 0 if found, >0 if not found
+                    resolve(!err && stdout.trim().length > 0)
+                }
+            })
         })
     }
 }
