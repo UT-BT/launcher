@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { ArrowLeft, User, Monitor, Keyboard, Download, Upload, Loader2, CheckCircle, XCircle, ChevronDown, ChevronUp, AlertTriangle, Music, Joystick, Volume2 } from 'lucide-react'
+import { ArrowLeft, User, Monitor, Keyboard, Download, Upload, Loader2, CheckCircle, XCircle, ChevronDown, ChevronUp, Joystick, Volume2 } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Input } from '@/app/components/ui/input'
 import { Slider } from '@/app/components/ui/slider'
@@ -494,6 +494,7 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
     const [goreLevel, setGoreLevel] = useState<'normal' | 'reduced' | 'ultra-low'>('normal')
     const [weaponHand, setWeaponHand] = useState('0.000000')
     const [disableMacroDodging, setDisableMacroDodging] = useState(false)
+    const [mouseInput, setMouseInput] = useState<'raw' | 'direct' | 'cursor'>('cursor')
 
     // Conflict confirmation state
     const [conflictInfo, setConflictInfo] = useState<{
@@ -633,6 +634,17 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
 
             const handVal = await window.conveyor.ini.readIniValue('User.ini', 'Engine.PlayerPawn', 'Handedness')
             setWeaponHand(handVal || '0.000000')
+
+            const useRaw = await window.conveyor.ini.readIniValue('UnrealTournament.ini', 'WinDrv.WindowsClient', 'UseRawHIDInput')
+            const useDirect = await window.conveyor.ini.readIniValue('UnrealTournament.ini', 'WinDrv.WindowsClient', 'UseDirectInput')
+
+            if (useRaw?.toLowerCase() === 'true') {
+                setMouseInput('raw')
+            } else if (useDirect?.toLowerCase() === 'true') {
+                setMouseInput('direct')
+            } else {
+                setMouseInput('cursor')
+            }
 
             // Detect Macro Dodging state
             if (inputSection) {
@@ -787,6 +799,12 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
     const updateWeaponHand = async (value: string) => {
         setWeaponHand(value)
         await window.conveyor.ini.writeIniValue('User.ini', 'Engine.PlayerPawn', 'Handedness', value)
+    }
+
+    const updateMouseInput = async (value: 'raw' | 'direct' | 'cursor') => {
+        setMouseInput(value)
+        await window.conveyor.ini.writeIniValue('UnrealTournament.ini', 'WinDrv.WindowsClient', 'UseRawHIDInput', value === 'raw' ? 'True' : 'False')
+        await window.conveyor.ini.writeIniValue('UnrealTournament.ini', 'WinDrv.WindowsClient', 'UseDirectInput', value === 'direct' ? 'True' : 'False')
     }
 
     const updateDisableMacroDodging = async (enabled: boolean) => {
@@ -1672,6 +1690,31 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
                     }
                 >
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                                <label className="text-sm font-medium">Mouse Input</label>
+                            </div>
+                            <select
+                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                value={mouseInput}
+                                onChange={(e) => updateMouseInput(e.target.value as any)}
+                            >
+                                <option value="raw">Raw Input</option>
+                                <option value="direct">Direct Input</option>
+                                <option value="cursor">Cursor</option>
+                            </select>
+                            <p className={cn(
+                                "text-xs italic px-0.5 transition-colors duration-200",
+                                mouseInput === 'raw' && "text-green-500",
+                                mouseInput === 'direct' && "text-orange-500",
+                                mouseInput === 'cursor' && "text-red-500"
+                            )}>
+                                {mouseInput === 'raw' && "The recommended input method for modern systems. New in v469"}
+                                {mouseInput === 'direct' && "Successor to the legacy cursor input. Recommended if Raw Input feels wrong"}
+                                {mouseInput === 'cursor' && "Legacy input method, not recommended on modern systems"}
+                            </p>
+                        </div>
+
                         <div className="space-y-2">
                             <div className="flex justify-between">
                                 <div className="flex items-center gap-2">
