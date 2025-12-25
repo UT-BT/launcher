@@ -456,6 +456,7 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
     const [renderDevice, setRenderDevice] = useState('')
     const [resX, setResX] = useState('1920')
     const [resY, setResY] = useState('1080')
+    const [colorBits, setColorBits] = useState('32')
     const [fpsLimit, setFpsLimit] = useState('0')
     const [netspeed, setNetspeed] = useState(10000)
     const [deviceSettings, setDeviceSettings] = useState<Record<string, any>>({})
@@ -523,6 +524,9 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
 
             const y = await window.conveyor.ini.readIniValue('UnrealTournament.ini', 'WinDrv.WindowsClient', 'FullscreenViewportY')
             setResY(y || '1080')
+
+            const bits = await window.conveyor.ini.readIniValue('UnrealTournament.ini', 'WinDrv.WindowsClient', 'FullscreenColorBits')
+            setColorBits(bits || '32')
 
             const fps = await window.conveyor.ini.readIniValue('UnrealTournament.ini', 'WinDrv.WindowsClient', 'FrameRateLimit')
             setFpsLimit(fps || '0')
@@ -684,6 +688,7 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
         await window.conveyor.ini.writeIniValue('UnrealTournament.ini', 'Engine.Engine', 'GameRenderDevice', renderDevice)
         await window.conveyor.ini.writeIniValue('UnrealTournament.ini', 'WinDrv.WindowsClient', 'FullscreenViewportX', resX)
         await window.conveyor.ini.writeIniValue('UnrealTournament.ini', 'WinDrv.WindowsClient', 'FullscreenViewportY', resY)
+        await window.conveyor.ini.writeIniValue('UnrealTournament.ini', 'WinDrv.WindowsClient', 'FullscreenColorBits', colorBits)
         await window.conveyor.ini.writeIniValue('UnrealTournament.ini', 'WinDrv.WindowsClient', 'FrameRateLimit', fpsLimit)
         await window.conveyor.ini.writeIniValue('UnrealTournament.ini', 'Engine.Player', 'ConfiguredInternetSpeed', netspeed.toString())
     }
@@ -1672,6 +1677,30 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
                                     <option value={`${resX}x${resY}`}>{resX}x{resY} (Custom)</option>
                                 )}
                             </select>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Color Depth</label>
+                            <select
+                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                value={colorBits}
+                                onChange={(e) => {
+                                    const val = e.target.value
+                                    setColorBits(val)
+                                    window.conveyor.ini.writeIniValue('UnrealTournament.ini', 'WinDrv.WindowsClient', 'FullscreenColorBits', val)
+                                }}
+                            >
+                                <option value="16">16-bit</option>
+                                <option value="32">32-bit</option>
+                            </select>
+
+                            {colorBits === '16' && (
+                                <div className="mt-2 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20 flex items-start gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
+                                    <AlertTriangle className="size-5 text-yellow-500 shrink-0 mt-0.5" />
+                                    <p className="text-sm text-yellow-500/90 italic">
+                                        16-bit color is not recommended for modern systems. 32-bit is highly recommended for better visual quality and compatibility.
+                                    </p>
+                                </div>
+                            )}
                         </div>
                         <div className="space-y-2">
                             <div className="flex items-center gap-2">
