@@ -15,6 +15,14 @@ interface BindCategory {
     binds: { label: string; command: string; tooltip?: string }[]
 }
 
+const ALIAS_DEFINITIONS: Record<string, string> = {
+    'cpsuicide': 'suicide|mutate loadcp|onrelease mutate nocp|onrelease suicide',
+    'rocketjump': 'switchweapon 9 | button bfire | fire | onrelease jump',
+    'hammerjump': 'getweapon ImpactHammer | Button bFire | Fire | OnRelease Jump',
+    'slidejump': 'Button bRun | OnRelease Jump',
+    'walkjump': 'Button bRun | Jump'
+}
+
 const BIND_CATEGORIES: BindCategory[] = [
     {
         name: 'Essentials',
@@ -26,11 +34,7 @@ const BIND_CATEGORIES: BindCategory[] = [
             { label: 'Move Left', command: 'strafeleft' },
             { label: 'Move Right', command: 'straferight' },
             { label: 'Jump', command: 'jump' },
-            {
-                label: 'Walk Jump',
-                command: 'walking|jump',
-                tooltip: 'Walk Jumps are a special bind in Unreal Tournament that let you jump with less height than a regular jump, which can be useful for gaining time on maps. If you have jumpboots, then walk jump will allow you to jump without using a boot jump.'
-            },
+            { label: 'Walk Jump', command: 'walkjump', tooltip: 'Walk Jumps are a special bind in Unreal Tournament that let you jump with less height than a regular jump, which can be useful for gaining time on maps. If you have jumpboots, then walk jump will allow you to jump without using a boot jump.' },
             { label: 'Walk', command: 'walking' },
             { label: 'Crouch', command: 'duck' },
             { label: 'Suicide', command: 'suicide' },
@@ -45,6 +49,15 @@ const BIND_CATEGORIES: BindCategory[] = [
             { label: 'Dodge Backward', command: 'utbtbackdodge', tooltip: 'Allows you to dodge backward with one button' },
             { label: 'Dodge Left', command: 'utbtleftdodge', tooltip: 'Allows you to dodge left with one button' },
             { label: 'Dodge Right', command: 'utbtrightdodge', tooltip: 'Allows you to dodge right with one button' },
+        ]
+    },
+    {
+        name: 'Custom Aliases',
+        binds: [
+            { label: 'Hammer Jump', command: 'hammerjump', tooltip: 'Perfect imapct hammer jump height every time.' },
+            { label: 'Rocket Jump', command: 'rocketjump', tooltip: 'Perfect rocket jump every time.' },
+            { label: 'Slide Jump', command: 'slidejump', tooltip: 'Special bind to allow you to get a normal jump during an ice slide' },
+            { label: 'Load CP, Spawn, Remove CP', command: 'cpsuicide', tooltip: 'Allows you to load your CP but remove them after you spawn. Useful for setting up obstacles quickly. Usage: hold the bind to suicide, respawn, set up the mover and release to suicide.' },
         ]
     },
     {
@@ -948,8 +961,56 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
         return code
     }
 
+    const ensureAliasExists = async (aliasName: string, command: string) => {
+        const inputSection = await window.conveyor.ini.readIniSection('User.ini', 'Engine.Input') as Record<string, string> | undefined
+        if (!inputSection) return
+
+        const existingAlias = Object.entries(inputSection).find(([_, value]) => {
+            const match = value.match(/\(Command="(.*?)",Alias="?(.*?)"?\)/)
+            return match && match[2].toLowerCase() === aliasName.toLowerCase()
+        })
+
+        if (existingAlias) {
+            const match = existingAlias[1].match(/\(Command="(.*?)",Alias="?(.*?)"?\)/)
+            if (match && match[1] === command) {
+                return
+            }
+            await window.conveyor.ini.writeIniValue('User.ini', 'Engine.Input', existingAlias[0], `(Command="${command}",Alias="${aliasName}")`)
+            return
+        }
+
+        let targetKey = ''
+
+        const emptySlot = Object.entries(inputSection).find(([key, value]) => {
+            if (!key.startsWith('Aliases[')) return false
+            const match = value.match(/\(Command="",Alias="?None"?\)/i)
+            return !!match
+        })
+
+        if (emptySlot) {
+            targetKey = emptySlot[0]
+        } else {
+            let nextIndex = 0
+            const indices = Object.keys(inputSection).map(k => {
+                const m = k.match(/Aliases\[(\d+)\]/)
+                return m ? parseInt(m[1], 10) : -1
+            }).filter(i => i !== -1)
+
+            if (indices.length > 0) {
+                nextIndex = Math.max(...indices) + 1
+            }
+            targetKey = `Aliases[${nextIndex}]`
+        }
+
+        await window.conveyor.ini.writeIniValue('User.ini', 'Engine.Input', targetKey, `(Command="${command}",Alias="${aliasName}")`)
+    }
+
     const applyBind = async (key: string, command: string, slot: number) => {
         const normalizedCommand = command.toLowerCase()
+
+        if (ALIAS_DEFINITIONS[normalizedCommand]) {
+            await ensureAliasExists(normalizedCommand, ALIAS_DEFINITIONS[normalizedCommand])
+        }
 
         const val = binds[normalizedCommand]
         const currentBinds = Array.isArray(val) ? val : []
