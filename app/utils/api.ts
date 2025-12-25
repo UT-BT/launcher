@@ -10,9 +10,20 @@ export interface UserTitle {
     rarity: number
 }
 
+export interface LauncherActivity {
+    id: number
+    user_id: number
+    launcher_version: string
+    os_platform: string
+    os_release: string
+    os_arch: string
+    created_at: string
+}
+
 export interface UserProfile extends AuthConfig {
     active_title?: UserTitle | null
     alias?: string | null
+    latest_activity?: LauncherActivity | null
 }
 
 export interface Map {
@@ -157,5 +168,29 @@ export async function fetchMapsCount(accessToken: string): Promise<number> {
     } catch (error) {
         console.error('Error fetching maps count:', error)
         throw error
+    }
+}
+export async function fetchLatestActivity(accessToken: string): Promise<LauncherActivity | null> {
+    try {
+        const response = await fetch(`${API_BASE_URL}/launcher/activity/latest`, {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        })
+
+        if (!response.ok) {
+            if (response.status === 404) return null
+            throw new Error(`Failed to fetch latest activity: ${response.statusText} (${response.status})`)
+        }
+
+        const json = await response.json()
+        if (json.success) {
+            return json.data as LauncherActivity
+        }
+
+        return null
+    } catch (error) {
+        console.error('Error fetching latest activity:', error)
+        return null
     }
 }

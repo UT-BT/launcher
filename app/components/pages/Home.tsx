@@ -126,6 +126,25 @@ export function Home({ userProfile }: HomeProps) {
     const handlePrevPage = () => setCurrentPage(prev => Math.max(1, prev - 1))
     const handleNextPage = () => setCurrentPage(prev => Math.min(totalPages, prev + 1))
 
+    const lastSeenDate = useMemo(() => {
+        if (!userProfile?.latest_activity?.created_at) return 'Never! Welcome to UTBT 💕'
+
+        try {
+            const date = new Date(userProfile.latest_activity.created_at)
+            return new Intl.DateTimeFormat('en-US', {
+                month: 'long',
+                day: 'numeric',
+                year: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+            }).format(date)
+        } catch (e) {
+            console.error('Failed to format last seen date:', e)
+            return 'Unknown'
+        }
+    }, [userProfile?.latest_activity?.created_at])
+
     return (
         <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Header / Greeting */}
@@ -134,8 +153,7 @@ export function Home({ userProfile }: HomeProps) {
                     Good evening, <span className="text-neutral-400">{username}</span>
                 </h1>
                 <div className="flex items-center gap-2 text-muted-foreground">
-                    <Calendar className="size-4" />
-                    <span className="text-sm">Last seen: 2 hours ago</span>
+                    <span className="text-sm"><b>Last seen:</b> {lastSeenDate}</span>
                 </div>
             </div>
 

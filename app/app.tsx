@@ -4,7 +4,7 @@ import { Main } from '@/app/components/main/Main'
 import { LoginPage } from '@/app/components/pages/LoginPage'
 import { ErrorModal } from '@/app/components/ErrorModal'
 import { useLogger } from '@/app/hooks/use-logger'
-import { fetchUserProfile, UserProfile, logLauncherStartup } from '@/app/utils/api'
+import { fetchUserProfile, UserProfile, logLauncherStartup, fetchLatestActivity } from '@/app/utils/api'
 
 import './styles/index.css'
 
@@ -37,9 +37,16 @@ export default function App() {
       }
 
       logger.info('Preload: User logged in, fetching extended profile')
-      const extendedProfile = await fetchUserProfile(authConfig.accessToken)
+      const [extendedProfile, latestActivity] = await Promise.all([
+        fetchUserProfile(authConfig.accessToken),
+        fetchLatestActivity(authConfig.accessToken)
+      ])
 
-      const fullProfile: UserProfile = { ...authConfig, ...extendedProfile }
+      const fullProfile: UserProfile = {
+        ...authConfig,
+        ...extendedProfile,
+        latest_activity: latestActivity
+      }
 
       return { status: 'loggedin', profile: fullProfile }
 
