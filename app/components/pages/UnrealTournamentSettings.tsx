@@ -493,6 +493,7 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
     const [screenFlashes, setScreenFlashes] = useState(true)
     const [goreLevel, setGoreLevel] = useState<'normal' | 'reduced' | 'ultra-low'>('normal')
     const [weaponHand, setWeaponHand] = useState('0.000000')
+    const [disableMacroDodging, setDisableMacroDodging] = useState(false)
 
     // Conflict confirmation state
     const [conflictInfo, setConflictInfo] = useState<{
@@ -632,6 +633,20 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
 
             const handVal = await window.conveyor.ini.readIniValue('User.ini', 'Engine.PlayerPawn', 'Handedness')
             setWeaponHand(handVal || '0.000000')
+
+            // Detect Macro Dodging state
+            if (inputSection) {
+                const moveForwardAlias = Object.values(inputSection).find(v => {
+                    const val = Array.isArray(v) ? v[0] : v
+                    if (!val) return false
+                    const match = val.match(/\(Command="(.*?)",Alias="?(.*?)"?\)/)
+                    return match && match[2].toLowerCase() === 'moveforward'
+                })
+                const val = Array.isArray(moveForwardAlias) ? moveForwardAlias[0] : moveForwardAlias
+                if (val) {
+                    setDisableMacroDodging(val.includes('Speed=+') && val.includes('.1"'))
+                }
+            }
         } catch (err) {
             console.error('Failed to load settings', err)
         }
@@ -772,6 +787,52 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
     const updateWeaponHand = async (value: string) => {
         setWeaponHand(value)
         await window.conveyor.ini.writeIniValue('User.ini', 'Engine.PlayerPawn', 'Handedness', value)
+    }
+
+    const updateDisableMacroDodging = async (enabled: boolean) => {
+        setDisableMacroDodging(enabled)
+
+        const inputSection = await window.conveyor.ini.readIniSection('User.ini', 'Engine.Input') as Record<string, string | string[]> | undefined
+        if (!inputSection) return
+
+        const targets = ['moveforward', 'strafeleft']
+
+        for (const [key, value] of Object.entries(inputSection)) {
+            const val = Array.isArray(value) ? value[0] : value
+            if (!val) continue
+
+            const match = val.match(/\(Command="(.*?)",Alias="?(.*?)"?\)/)
+            if (match && targets.includes(match[2].toLowerCase())) {
+                const command = match[1]
+                const aliasName = match[2]
+
+                // Extract speed
+                const speedMatch = command.match(/Speed=([+-]?\d+\.?\d*)/)
+                if (speedMatch) {
+                    const currentSpeed = speedMatch[1]
+                    let newSpeed = currentSpeed
+
+                    if (enabled) {
+                        if (!currentSpeed.endsWith('.1')) {
+                            if (currentSpeed.includes('.')) {
+                                newSpeed = currentSpeed.split('.')[0] + '.1'
+                            } else {
+                                newSpeed = currentSpeed + '.1'
+                            }
+                        }
+                    } else {
+                        if (currentSpeed.endsWith('.1')) {
+                            newSpeed = currentSpeed.slice(0, -2) + '.0'
+                        }
+                    }
+
+                    if (newSpeed !== currentSpeed) {
+                        const newCommand = command.replace(`Speed=${currentSpeed}`, `Speed=${newSpeed}`)
+                        await window.conveyor.ini.writeIniValue('User.ini', 'Engine.Input', key, `(Command="${newCommand}",Alias="${aliasName}")`)
+                    }
+                }
+            }
+        }
     }
 
     const handleExportVideoSettings = () => {
@@ -1566,6 +1627,24 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
 
                         <div className="space-y-2">
                             <div className="flex items-center gap-2">
+                                <label className="text-sm font-medium">Screen Flashes</label>
+                                <Tooltip content="Enables screen flashes when taking damage or picking up items." />
+                            </div>
+                            <div className="flex items-center h-10">
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        className="sr-only peer"
+                                        checked={screenFlashes}
+                                        onChange={(e) => updateScreenFlashes(e.target.checked)}
+                                    />
+                                    <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-ring rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <div className="flex items-center gap-2">
                                 <label className="text-sm font-medium">Dodging</label>
                                 <Tooltip content="Double-tap a movement key to dodge." />
                             </div>
@@ -1584,16 +1663,16 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
 
                         <div className="space-y-2">
                             <div className="flex items-center gap-2">
-                                <label className="text-sm font-medium">Screen Flashes</label>
-                                <Tooltip content="Enables screen flashes when taking damage or picking up items." />
+                                <label className="text-sm font-medium">Disable Macro Dodging</label>
+                                <Tooltip content="When enabled, prevents accidental dodges that can happen with a set stream of key presses" />
                             </div>
                             <div className="flex items-center h-10">
                                 <label className="relative inline-flex items-center cursor-pointer">
                                     <input
                                         type="checkbox"
                                         className="sr-only peer"
-                                        checked={screenFlashes}
-                                        onChange={(e) => updateScreenFlashes(e.target.checked)}
+                                        checked={disableMacroDodging}
+                                        onChange={(e) => updateDisableMacroDodging(e.target.checked)}
                                     />
                                     <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-ring rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                                 </label>
