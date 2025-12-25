@@ -61,16 +61,29 @@ export class GameService {
         const profilesDir = this.getProfilesDir()
         if (!existsSync(profilesDir)) return []
 
-        return readdirSync(profilesDir, { withFileTypes: true })
+        const profiles = readdirSync(profilesDir, { withFileTypes: true })
             .filter(dirent => dirent.isDirectory())
             .map(dirent => {
                 const profilePath = join(profilesDir, dirent.name)
-                const stats = statSync(profilePath)
+                let stats = statSync(profilePath)
+                let latestMtime = stats.mtimeMs
+
+                const files = readdirSync(profilePath)
+                for (const file of files) {
+                    const filePath = join(profilePath, file)
+                    const fileStats = statSync(filePath)
+                    if (fileStats.mtimeMs > latestMtime) {
+                        latestMtime = fileStats.mtimeMs
+                    }
+                }
+
                 return {
                     name: dirent.name,
-                    modifiedAt: stats.mtime.toISOString(),
+                    modifiedAt: new Date(latestMtime).toISOString(),
                 }
             })
+
+        return profiles.sort((a, b) => new Date(b.modifiedAt).getTime() - new Date(a.modifiedAt).getTime())
     }
 
     async switchProfile(name: string): Promise<void> {
