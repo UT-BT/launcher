@@ -34,13 +34,14 @@ export const GameProfilesModal = ({ isOpen, onClose }: GameProfilesModalProps) =
     const fetchProfiles = async () => {
         try {
             const list = await window.conveyor.app.getProfiles()
-            setProfiles(list)
+            const sortedList = list.sort((a, b) => new Date(b.modifiedAt).getTime() - new Date(a.modifiedAt).getTime())
+            setProfiles(sortedList)
 
             const active = await window.conveyor.app.getActiveProfile()
             setActiveProfileName(active ?? null)
 
-            if (list.length > 0 && !selectedProfile) {
-                setSelectedProfile(active || list[0].name)
+            if (sortedList.length > 0 && !selectedProfile) {
+                setSelectedProfile(active || sortedList[0].name)
             }
 
             if (active) {
