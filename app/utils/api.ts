@@ -74,3 +74,29 @@ export async function uploadDemo(file: Blob, filename: string, accessToken: stri
         throw error
     }
 }
+export async function logLauncherStartup(accessToken: string): Promise<void> {
+    try {
+        const version = await window.conveyor.app.version()
+        const osInfo = await window.conveyor.app.getOSInfo()
+
+        const response = await fetch(`${API_BASE_URL}/launcher/activity/`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                launcher_version: version,
+                os_platform: osInfo.platform,
+                os_release: osInfo.release,
+                os_arch: osInfo.arch
+            })
+        })
+
+        if (!response.ok) {
+            console.warn(`Failed to log launcher startup: ${response.statusText} (${response.status})`)
+        }
+    } catch (error) {
+        console.error('Error logging launcher startup:', error)
+    }
+}

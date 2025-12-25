@@ -2,6 +2,7 @@ import { ConveyorApi } from '@/lib/preload/shared'
 
 export class AppApi extends ConveyorApi {
   version = () => this.invoke('version')
+  getOSInfo = () => this.invoke('getOSInfo')
 
   getGatewayConfig = () => this.invoke('getGatewayConfig')
   setGatewayConfig = (config: { baseUrl?: string; apiKey?: string }) => this.invoke('setGatewayConfig', config)
