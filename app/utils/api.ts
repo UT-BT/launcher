@@ -35,6 +35,18 @@ export interface Map {
     author: string | number
 }
 
+export interface Record {
+    cap_id: string
+    user_id: number
+    map: string
+    added: string
+    cap_time_seconds: number
+    alias: string
+    color_r?: number
+    color_g?: number
+    color_b?: number
+}
+
 const API_BASE_URL = import.meta.env.DEV ? 'http://localhost:5000' : 'http://api.utbt.net'
 
 export async function fetchUserProfile(accessToken: string): Promise<UserProfile> {
@@ -193,5 +205,55 @@ export async function fetchLatestActivity(accessToken: string): Promise<Launcher
     } catch (error) {
         console.error('Error fetching latest activity:', error)
         return null
+    }
+}
+
+export async function fetchRecords(accessToken: string, limit: number, offset: number, sort?: string): Promise<Record[]> {
+    try {
+        const sortParam = sort ? `&sort=${sort}` : ''
+        const response = await fetch(`${API_BASE_URL}/v2/world_records/?limit=${limit}&offset=${offset}${sortParam}`, {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        })
+
+        if (!response.ok) {
+            throw new Error(`Failed to fetch records: ${response.statusText} (${response.status})`)
+        }
+
+        const json = await response.json()
+        if (json.success && json.data) {
+            return json.data as Record[]
+        }
+
+        throw new Error('Invalid response format from server')
+    } catch (error) {
+        console.error('Error fetching records:', error)
+        throw error
+    }
+}
+
+export async function fetchRecordsCount(accessToken: string, addedSince?: string): Promise<number> {
+    try {
+        const addedSinceParam = addedSince ? `&added_since=${encodeURIComponent(addedSince)}` : ''
+        const response = await fetch(`${API_BASE_URL}/v2/world_records/?count=true${addedSinceParam}`, {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        })
+
+        if (!response.ok) {
+            throw new Error(`Failed to fetch records count: ${response.statusText} (${response.status})`)
+        }
+
+        const json = await response.json()
+        if (json.success && json.data) {
+            return json.data.count as number
+        }
+
+        throw new Error('Invalid response format from server')
+    } catch (error) {
+        console.error('Error fetching records count:', error)
+        throw error
     }
 }
