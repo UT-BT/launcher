@@ -20,10 +20,11 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-    { id: 'home', label: 'Activity', icon: Home },
+    { id: 'home', label: 'Home', icon: Home },
     { id: 'servers', label: 'Servers', icon: Server },
-    { id: 'rankings', label: 'Rankings', icon: Trophy },
-    { id: 'maps', label: 'Maps', icon: MapIcon },
+    // { id: 'rankings', label: 'Rankings', icon: Trophy },
+    // { id: 'maps', label: 'Maps', icon: MapIcon },
+    // { id: 'settings', label: 'Settings', icon: Settings },
 ]
 
 import { UserProfile } from '@/app/utils/api'
