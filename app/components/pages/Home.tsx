@@ -1,5 +1,5 @@
-import { UserProfile, fetchMaps, fetchMapsCount, Map as MapData } from '@/app/utils/api'
-import { Activity, Calendar, ChevronLeft, ChevronRight, Star, TrendingUp, User as UserIcon, Loader2 } from 'lucide-react'
+import { UserProfile, fetchMaps, fetchMapsCount, Map as MapData, Record as RecordData, fetchRecords, fetchRecordsCount } from '@/app/utils/api'
+import { Activity, ChevronLeft, ChevronRight, Star, TrendingUp, User as UserIcon, Loader2 } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useState, useEffect, useMemo } from 'react'
@@ -91,15 +91,23 @@ export function Home({ userProfile }: HomeProps) {
     const [maps, setMaps] = useState<MapData[]>([])
     const [mapsCount, setMapsCount] = useState(0)
     const [newMapsCount, setNewMapsCount] = useState(0)
+    const [records, setRecords] = useState<RecordData[]>([])
+    const [recordsCount, setRecordsCount] = useState(0)
+    const [newRecordsCount, setNewRecordsCount] = useState(0)
     const [isLoadingMaps, setIsLoadingMaps] = useState(false)
+    const [isLoadingRecords, setIsLoadingRecords] = useState(false)
 
     const username = userProfile?.alias || userProfile?.username || 'Player'
 
     useEffect(() => {
         if (userProfile?.accessToken && userProfile?.latest_activity?.created_at) {
-            fetchMapsCount(userProfile.accessToken, userProfile.latest_activity.created_at)
-                .then(setNewMapsCount)
-                .catch(err => console.error('Failed to fetch new maps count:', err))
+            Promise.all([
+                fetchMapsCount(userProfile.accessToken, userProfile.latest_activity.created_at),
+                fetchRecordsCount(userProfile.accessToken, userProfile.latest_activity.created_at)
+            ]).then(([maps, recordsCount]) => {
+                setNewMapsCount(maps)
+                setNewRecordsCount(recordsCount)
+            }).catch(err => console.error('Failed to fetch new counts:', err))
         }
     }, [userProfile?.accessToken, userProfile?.latest_activity?.created_at])
 
@@ -108,6 +116,11 @@ export function Home({ userProfile }: HomeProps) {
             setNewMapsCount(0)
             if (userProfile?.accessToken) {
                 loadMaps()
+            }
+        } else if (activeTab === 'Records') {
+            setNewRecordsCount(0)
+            if (userProfile?.accessToken) {
+                loadRecords()
             }
         }
     }, [activeTab, userProfile?.accessToken, pageSize, currentPage])
@@ -130,10 +143,29 @@ export function Home({ userProfile }: HomeProps) {
         }
     }
 
+    const loadRecords = async () => {
+        if (!userProfile?.accessToken) return
+
+        setIsLoadingRecords(true)
+        try {
+            const [recordsData, count] = await Promise.all([
+                fetchRecords(userProfile.accessToken, pageSize, (currentPage - 1) * pageSize, 'newest'),
+                fetchRecordsCount(userProfile.accessToken)
+            ])
+            setRecords(recordsData)
+            setRecordsCount(count)
+        } catch (error) {
+            console.error('Failed to load records:', error)
+        } finally {
+            setIsLoadingRecords(false)
+        }
+    }
+
     const totalPages = useMemo(() => {
         if (activeTab === 'Maps') return Math.ceil(mapsCount / pageSize)
+        if (activeTab === 'Records') return Math.ceil(recordsCount / pageSize)
         return 1
-    }, [activeTab, mapsCount, pageSize])
+    }, [activeTab, mapsCount, recordsCount, pageSize])
 
     const handlePrevPage = () => setCurrentPage(prev => Math.max(1, prev - 1))
     const handleNextPage = () => setCurrentPage(prev => Math.min(totalPages, prev + 1))
@@ -207,6 +239,11 @@ export function Home({ userProfile }: HomeProps) {
                                                 {newMapsCount > 99 ? '99+' : newMapsCount}
                                             </span>
                                         )}
+                                        {tab === 'Records' && newRecordsCount > 0 && (
+                                            <span className="absolute -top-1.5 -right-1 text-white bg-red-600 text-[10px] font-black rounded-full h-4 min-w-[1rem] px-1 flex items-center justify-center border border-[#09090b] shadow-[0_0_10px_rgba(220,38,38,0.5)] animate-in zoom-in duration-300">
+                                                {newRecordsCount > 99 ? '99+' : newRecordsCount}
+                                            </span>
+                                        )}
                                     </button>
                                 ))}
                             </div>
@@ -261,7 +298,7 @@ export function Home({ userProfile }: HomeProps) {
                     </div>
 
                     <div className="space-y-3 relative min-h-[300px]">
-                        {isLoadingMaps ? (
+                        {(isLoadingMaps || isLoadingRecords) ? (
                             <div className="absolute inset-0 flex items-center justify-center bg-background/20 backdrop-blur-sm z-10 rounded-xl">
                                 <Loader2 className="size-8 animate-spin text-primary" />
                             </div>
@@ -326,6 +363,70 @@ export function Home({ userProfile }: HomeProps) {
                                 {maps.length === 0 && !isLoadingMaps && (
                                     <div className="text-center py-12 text-muted-foreground">
                                         No maps found.
+                                    </div>
+                                )}
+                            </>
+                        ) : activeTab === 'Records' ? (
+                            <>
+                                {records.map((record) => (
+                                    <div
+                                        key={record.cap_id}
+                                        className="group relative bg-card/30 backdrop-blur-sm border border-white/5 rounded-xl p-3 flex items-center gap-4 transition-all hover:bg-card/50 hover:border-white/10"
+                                    >
+                                        <div className="size-16 rounded-lg bg-white/5 overflow-hidden flex-shrink-0 border border-white/5 relative">
+                                            <img
+                                                src={`https://utbt.net/images/screenshots/${record.map}.png`}
+                                                alt={record.map}
+                                                className="w-full h-full object-cover"
+                                                onError={(e) => {
+                                                    (e.target as HTMLImageElement).src = 'https://utbt.net/images/screenshots/default.png'
+                                                }}
+                                            />
+                                        </div>
+
+                                        <div className="flex-1 min-w-0 flex flex-col justify-center gap-1.5">
+                                            <div className="flex items-center justify-between gap-2">
+                                                <div className="flex items-baseline gap-1.5 min-w-0">
+                                                    <span className="font-bold text-foreground text-sm truncate">
+                                                        {record.map}
+                                                    </span>
+                                                    <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">by</span>
+                                                    <span
+                                                        className="font-bold text-sm truncate"
+                                                        style={record.color_r !== undefined ? { color: `rgb(${record.color_r}, ${record.color_g}, ${record.color_b})` } : {}}
+                                                    >
+                                                        {record.alias}
+                                                    </span>
+                                                    {lastSeenTime && new Date(record.added).getTime() > lastSeenTime && (
+                                                        <span className="shrink-0 bg-red-500/20 text-red-500 text-[9px] font-black px-1.5 py-0.5 rounded border border-red-500/30 animate-pulse uppercase tracking-tight shadow-[0_0_8px_rgba(239,68,68,0.2)]">
+                                                            New
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <span className="text-[10px] font-medium text-muted-foreground whitespace-nowrap">
+                                                    {new Date(record.added).toUTCString()}
+                                                </span>
+                                            </div>
+
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <div className="flex items-center gap-1.5 bg-green-500/10 border border-green-500/20 px-2 py-0.5 rounded shadow-[0_0_10px_rgba(34,197,94,0.1)]">
+                                                    <span className="font-mono text-green-400 text-[11px] font-black">
+                                                        {(() => {
+                                                            const totalMs = Math.floor(record.cap_time_seconds * 100);
+                                                            const minutes = Math.floor(totalMs / 6000);
+                                                            const seconds = Math.floor((totalMs % 6000) / 100);
+                                                            const centiseconds = totalMs % 100;
+                                                            return `${minutes}:${seconds.toString().padStart(2, '0')}.${centiseconds.toString().padStart(2, '0')}`;
+                                                        })()}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                                {records.length === 0 && !isLoadingRecords && (
+                                    <div className="text-center py-12 text-muted-foreground">
+                                        No records found.
                                     </div>
                                 )}
                             </>
