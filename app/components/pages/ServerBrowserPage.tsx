@@ -185,7 +185,7 @@ const ServerRow = ({ server, onJoin }: { server: Server, onJoin: (server: Server
                         <div className="flex items-center gap-4">
                             {/* Map Name with Icon */}
                             <div className="flex items-center gap-2 min-w-0">
-                                <span className="text-lg font-black text-white truncate tracking-tight group-hover:text-blue-400 transition-colors">
+                                <span className="text-lg font-bold text-white truncate tracking-tight group-hover:text-blue-400 transition-colors">
                                     {server.map_name.replace('CTF-BT-', '🐰 ').replace('CTF-BT+', '🔑 ')}
                                 </span>
                             </div>
