@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { AppLayout } from '@/app/components/layout/AppLayout'
-import { ActivityFeed } from '@/app/components/pages/ActivityFeed'
+import { Home } from '@/app/components/pages/Home'
 import { ServerBrowserPage } from '@/app/components/pages/ServerBrowserPage'
 import { Rankings } from '@/app/components/pages/Rankings'
 import { MapSearch } from '@/app/components/pages/MapSearch'
@@ -54,7 +54,7 @@ export function Main({ userProfile }: { userProfile?: import('@/lib/main/config'
   const renderView = () => {
     switch (currentView) {
       case 'home':
-        return <ActivityFeed />
+        return <Home userProfile={userProfile as any} />
       case 'servers':
         return <ServerBrowserPage installationStatus={installationStatus} />
       case 'rankings':
@@ -64,7 +64,7 @@ export function Main({ userProfile }: { userProfile?: import('@/lib/main/config'
       case 'settings':
         return <Settings initialSection={installationStatus !== 'valid' ? 'game-installation' : undefined} />
       default:
-        return <ActivityFeed />
+        return <Home userProfile={userProfile as any} />
     }
   }
 

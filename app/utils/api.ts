@@ -15,6 +15,15 @@ export interface UserProfile extends AuthConfig {
     alias?: string | null
 }
 
+export interface Map {
+    name: string
+    added: string
+    difficulty: number
+    active: boolean
+    tags?: string
+    author: string | number
+}
+
 const API_BASE_URL = import.meta.env.DEV ? 'http://localhost:5000' : 'http://api.utbt.net'
 
 export async function fetchUserProfile(accessToken: string): Promise<UserProfile> {
@@ -98,5 +107,55 @@ export async function logLauncherStartup(accessToken: string): Promise<void> {
         }
     } catch (error) {
         console.error('Error logging launcher startup:', error)
+    }
+}
+
+export async function fetchMaps(accessToken: string, limit: number, offset: number, sort?: string): Promise<Map[]> {
+    try {
+        const columns = "name,added,difficulty,tags,author"
+        const sortParam = sort ? `&sort=${sort}` : ''
+        const response = await fetch(`${API_BASE_URL}/maps/?active=true&limit=${limit}&offset=${offset}&columns=${columns}&${sortParam}`, {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        })
+
+        if (!response.ok) {
+            throw new Error(`Failed to fetch maps: ${response.statusText} (${response.status})`)
+        }
+
+        const json = await response.json()
+        if (json.success && json.data) {
+            return json.data as Map[]
+        }
+
+        throw new Error('Invalid response format from server')
+    } catch (error) {
+        console.error('Error fetching maps:', error)
+        throw error
+    }
+}
+
+export async function fetchMapsCount(accessToken: string): Promise<number> {
+    try {
+        const response = await fetch(`${API_BASE_URL}/maps/count/?active=true`, {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        })
+
+        if (!response.ok) {
+            throw new Error(`Failed to fetch maps count: ${response.statusText} (${response.status})`)
+        }
+
+        const json = await response.json()
+        if (json.success && json.data) {
+            return json.data.count as number
+        }
+
+        throw new Error('Invalid response format from server')
+    } catch (error) {
+        console.error('Error fetching maps count:', error)
+        throw error
     }
 }
