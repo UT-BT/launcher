@@ -49,6 +49,10 @@ export const registerGameHandlers = (_window: BrowserWindow) => {
         return await gameService.validateCurrentInstallation()
     })
 
+    handle('isGameRunning', async () => {
+        return await gameService.isGameRunning()
+    })
+
     handle('pingServer', async (ip: string) => {
         return new Promise((resolve) => {
             // Validate IP address format to prevent command injection

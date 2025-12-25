@@ -5,4 +5,5 @@ export class GameApi extends ConveyorApi {
     fetchServers = () => this.invoke('fetchServers')
     pingServer = (ip: string) => this.invoke('pingServer', ip)
     validateCurrentInstallation = () => this.invoke('validateCurrentInstallation')
+    isGameRunning = () => this.invoke('isGameRunning')
 }
