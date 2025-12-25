@@ -1,4 +1,5 @@
 import { app, type BrowserWindow } from 'electron'
+import os from 'os'
 import { handle } from '@/lib/main/shared'
 import {
   getGatewayConfig,
@@ -23,6 +24,14 @@ export const registerAppHandlers = (_window: BrowserWindow) => {
     const version = app.getVersion()
     loggingService.debug('Version requested', 'MainProcess', { version })
     return version
+  })
+
+  handle('getOSInfo', () => {
+    return {
+      platform: os.platform(),
+      release: os.release(),
+      arch: os.arch()
+    }
   })
 
 

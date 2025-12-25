@@ -5,6 +5,14 @@ export const appIpcSchema = {
     args: z.tuple([]),
     return: z.string(),
   },
+  getOSInfo: {
+    args: z.tuple([]),
+    return: z.object({
+      platform: z.string(),
+      release: z.string(),
+      arch: z.string(),
+    }),
+  },
 
   getGatewayConfig: {
     args: z.tuple([]),

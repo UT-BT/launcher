@@ -4,7 +4,7 @@ import { Main } from '@/app/components/main/Main'
 import { LoginPage } from '@/app/components/pages/LoginPage'
 import { ErrorModal } from '@/app/components/ErrorModal'
 import { useLogger } from '@/app/hooks/use-logger'
-import { fetchUserProfile, UserProfile } from '@/app/utils/api'
+import { fetchUserProfile, UserProfile, logLauncherStartup } from '@/app/utils/api'
 
 import './styles/index.css'
 
@@ -125,6 +125,12 @@ export default function App() {
       })
     }
   }
+
+  useEffect(() => {
+    if (userProfile?.accessToken) {
+      logLauncherStartup(userProfile.accessToken)
+    }
+  }, [userProfile?.accessToken])
 
   return (
     <>
