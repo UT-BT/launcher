@@ -147,9 +147,10 @@ export async function fetchMaps(accessToken: string, limit: number, offset: numb
     }
 }
 
-export async function fetchMapsCount(accessToken: string): Promise<number> {
+export async function fetchMapsCount(accessToken: string, addedSince?: string): Promise<number> {
     try {
-        const response = await fetch(`${API_BASE_URL}/maps/count/?active=true`, {
+        const addedSinceParam = addedSince ? `&added_since=${encodeURIComponent(addedSince)}` : ''
+        const response = await fetch(`${API_BASE_URL}/maps/count/?active=true${addedSinceParam}`, {
             headers: {
                 'Authorization': `Bearer ${accessToken}`
             }
