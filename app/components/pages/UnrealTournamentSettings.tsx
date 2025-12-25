@@ -1578,6 +1578,71 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
                     </div>
                 </SettingsSection>
 
+                {/* Binds */}
+                <SettingsSection
+                    title="Binds"
+                    icon={<Keyboard className="size-6" />}
+                    activeIconClassName="bg-purple-500/10 text-purple-500"
+                    headerAction={
+                        <div className="flex gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleExportBinds}
+                                className="gap-2"
+                            >
+                                <Download className="size-4" />
+                                Export
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleImportBinds}
+                                className="gap-2"
+                            >
+                                <Upload className="size-4" />
+                                Import
+                            </Button>
+                        </div>
+                    }
+                >
+                    <div className="space-y-8">
+                        {BIND_CATEGORIES.map((category) => (
+                            <div key={category.name}>
+                                <h4 className="text-md font-medium mb-4 text-muted-foreground">{category.name}</h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {category.binds.map((bind) => (
+                                        <div key={bind.command} className="flex items-center justify-between p-3 rounded-lg bg-accent/30 border border-border">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-sm">{bind.label}</span>
+                                                {bind.tooltip && <Tooltip content={bind.tooltip} />}
+                                            </div>
+                                            <div className="flex gap-2">
+                                                {[0, 1].map(slot => (
+                                                    <Button
+                                                        key={slot}
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className={cn(
+                                                            "min-w-[80px] font-mono",
+                                                            editingBind?.command === bind.command && editingBind?.slot === slot && "border-blue-500 text-blue-500 animate-pulse"
+                                                        )}
+                                                        onClick={() => handleBindClick(bind.command, slot)}
+                                                    >
+                                                        {editingBind?.command === bind.command && editingBind?.slot === slot
+                                                            ? 'Press Key...'
+                                                            : ((Array.isArray(binds[bind.command.toLowerCase()]) ? binds[bind.command.toLowerCase()] : [])[slot] || 'None')}
+                                                    </Button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </SettingsSection>
+
                 {/* Game Options */}
                 <SettingsSection
                     title="Game Options"
@@ -2103,71 +2168,6 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
                             </div>
                         </div>
                     )}
-                </SettingsSection>
-
-                {/* Binds */}
-                <SettingsSection
-                    title="Binds"
-                    icon={<Keyboard className="size-6" />}
-                    activeIconClassName="bg-purple-500/10 text-purple-500"
-                    headerAction={
-                        <div className="flex gap-2">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={handleExportBinds}
-                                className="gap-2"
-                            >
-                                <Download className="size-4" />
-                                Export
-                            </Button>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={handleImportBinds}
-                                className="gap-2"
-                            >
-                                <Upload className="size-4" />
-                                Import
-                            </Button>
-                        </div>
-                    }
-                >
-                    <div className="space-y-8">
-                        {BIND_CATEGORIES.map((category) => (
-                            <div key={category.name}>
-                                <h4 className="text-md font-medium mb-4 text-muted-foreground">{category.name}</h4>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {category.binds.map((bind) => (
-                                        <div key={bind.command} className="flex items-center justify-between p-3 rounded-lg bg-accent/30 border border-border">
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-sm">{bind.label}</span>
-                                                {bind.tooltip && <Tooltip content={bind.tooltip} />}
-                                            </div>
-                                            <div className="flex gap-2">
-                                                {[0, 1].map(slot => (
-                                                    <Button
-                                                        key={slot}
-                                                        variant="outline"
-                                                        size="sm"
-                                                        className={cn(
-                                                            "min-w-[80px] font-mono",
-                                                            editingBind?.command === bind.command && editingBind?.slot === slot && "border-blue-500 text-blue-500 animate-pulse"
-                                                        )}
-                                                        onClick={() => handleBindClick(bind.command, slot)}
-                                                    >
-                                                        {editingBind?.command === bind.command && editingBind?.slot === slot
-                                                            ? 'Press Key...'
-                                                            : ((Array.isArray(binds[bind.command.toLowerCase()]) ? binds[bind.command.toLowerCase()] : [])[slot] || 'None')}
-                                                    </Button>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
                 </SettingsSection>
             </div >
         </div >
