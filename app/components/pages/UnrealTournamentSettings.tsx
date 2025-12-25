@@ -1735,24 +1735,6 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
 
                         <div className="space-y-2">
                             <div className="flex items-center gap-2">
-                                <label className="text-sm font-medium">Screen Flashes</label>
-                                <Tooltip content="Enables screen flashes when taking damage or picking up items." />
-                            </div>
-                            <div className="flex items-center h-10">
-                                <label className="relative inline-flex items-center cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        className="sr-only peer"
-                                        checked={screenFlashes}
-                                        onChange={(e) => updateScreenFlashes(e.target.checked)}
-                                    />
-                                    <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-ring rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-                                </label>
-                            </div>
-                        </div>
-
-                        <div className="space-y-2">
-                            <div className="flex items-center gap-2">
                                 <label className="text-sm font-medium">Dodging</label>
                                 <Tooltip content="Double-tap a movement key to dodge." />
                             </div>
@@ -1781,6 +1763,24 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
                                         className="sr-only peer"
                                         checked={disableMacroDodging}
                                         onChange={(e) => updateDisableMacroDodging(e.target.checked)}
+                                    />
+                                    <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-ring rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                                <label className="text-sm font-medium">Screen Flashes</label>
+                                <Tooltip content="Enables screen flashes when taking damage or picking up items." />
+                            </div>
+                            <div className="flex items-center h-10">
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        className="sr-only peer"
+                                        checked={screenFlashes}
+                                        onChange={(e) => updateScreenFlashes(e.target.checked)}
                                     />
                                     <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-ring rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                                 </label>
