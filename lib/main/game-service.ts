@@ -186,17 +186,17 @@ export class GameService {
     }
 
     private getTrackedUserSections(config: Record<string, any>): string[] {
-        const sections = ['DefaultPlayer', 'Engine.Player']
+        const sections = ['DefaultPlayer', 'Engine.Player', 'Engine.PlayerPawn']
         if (config['Engine.Input']) sections.push('Engine.Input')
         if (config['Aliases']) sections.push('Aliases')
         return sections
     }
 
     private getTrackedUtSections(config: Record<string, any>): string[] {
-        const sections = ['Engine.Engine', 'Engine.GameEngine', 'WinDrv.WindowsClient', 'Engine.Player']
+        const sections = ['Engine.Engine', 'Engine.GameEngine', 'WinDrv.WindowsClient', 'Engine.Player', 'Engine.GameInfo']
 
         for (const section of Object.keys(config)) {
-            if (section.endsWith('RenderDevice')) {
+            if (section.endsWith('RenderDevice') || section.endsWith('AudioSubsystem')) {
                 sections.push(section)
             }
         }

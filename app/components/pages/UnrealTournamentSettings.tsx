@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { ArrowLeft, User, Monitor, Keyboard, Download, Upload, Loader2, CheckCircle, XCircle, ChevronDown, ChevronUp, AlertTriangle, Music } from 'lucide-react'
+import { ArrowLeft, User, Monitor, Keyboard, Download, Upload, Loader2, CheckCircle, XCircle, ChevronDown, ChevronUp, AlertTriangle, Music, Joystick } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Input } from '@/app/components/ui/input'
 import { Slider } from '@/app/components/ui/slider'
@@ -471,7 +471,14 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
     // Import modal state
     const [importModalState, setImportModalState] = useState<'hidden' | 'loading' | 'success' | 'error'>('hidden')
     const [importErrorMessage, setImportErrorMessage] = useState('')
-    const [importType, setImportType] = useState<'binds' | 'graphics' | 'music'>('binds')
+    const [importType, setImportType] = useState<'binds' | 'graphics' | 'music' | 'game'>('binds')
+
+    // Game Options Settings
+    const [fov, setFov] = useState('90.000000')
+    const [dodging, setDodging] = useState(true)
+    const [screenFlashes, setScreenFlashes] = useState(true)
+    const [goreLevel, setGoreLevel] = useState<'normal' | 'reduced' | 'ultra-low'>('normal')
+    const [weaponHand, setWeaponHand] = useState('0.000000') // Default to Center/Right? Let's check docs: -1 right, 1 left, 0 center, 2 hidden. User says -1 right, 1 left, 0 center, 2 hidden.
 
     // Conflict confirmation state
     const [conflictInfo, setConflictInfo] = useState<{
@@ -585,6 +592,29 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
                 })
                 setBinds(newBinds)
             }
+
+            // Game Options
+            const fovVal = await window.conveyor.ini.readIniValue('User.ini', 'Engine.PlayerPawn', 'DesiredFOV')
+            setFov(fovVal || '90.000000')
+
+            const dodgeVal = await window.conveyor.ini.readIniValue('User.ini', 'Engine.PlayerPawn', 'DodgeClickTime')
+            setDodging(dodgeVal !== '-1.000000')
+
+            const flashesVal = await window.conveyor.ini.readIniValue('UnrealTournament.ini', 'WinDrv.WindowsClient', 'ScreenFlashes')
+            setScreenFlashes(flashesVal?.toLowerCase() === 'true')
+
+            const lowGore = await window.conveyor.ini.readIniValue('UnrealTournament.ini', 'Engine.GameInfo', 'bLowGore')
+            const veryLowGore = await window.conveyor.ini.readIniValue('UnrealTournament.ini', 'Engine.GameInfo', 'bVeryLowGore')
+            if (lowGore?.toLowerCase() === 'true' && veryLowGore?.toLowerCase() === 'true') {
+                setGoreLevel('ultra-low')
+            } else if (lowGore?.toLowerCase() === 'true') {
+                setGoreLevel('reduced')
+            } else {
+                setGoreLevel('normal')
+            }
+
+            const handVal = await window.conveyor.ini.readIniValue('User.ini', 'Engine.PlayerPawn', 'Handedness')
+            setWeaponHand(handVal || '0.000000')
         } catch (err) {
             console.error('Failed to load settings', err)
         }
@@ -594,6 +624,60 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
         await window.conveyor.ini.writeIniValue('User.ini', 'DefaultPlayer', 'Name', playerName)
         await window.conveyor.ini.writeIniValue('User.ini', 'DefaultPlayer', 'team', playerTeam)
         await window.conveyor.ini.writeIniValue('User.ini', 'DefaultPlayer', 'OverrideClass', isSpectator ? 'Botpack.CHSpectator' : '')
+    }
+
+    const handleExportGameSettings = () => {
+        const exportData = {
+            version: '1.0',
+            type: 'game',
+            settings: {
+                fov,
+                dodging,
+                screenFlashes,
+                goreLevel,
+                weaponHand
+            }
+        }
+
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `ut99-game-settings-${new Date().toISOString().split('T')[0]}.json`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+    }
+
+    const handleImportGameSettings = async () => {
+        const input = document.createElement('input')
+        input.type = 'file'
+        input.accept = '.json'
+        input.onchange = async (e) => {
+            const file = (e.target as HTMLInputElement).files?.[0]
+            if (!file) return
+
+            try {
+                const text = await file.text()
+                const data = JSON.parse(text)
+
+                if (data.type !== 'game' || !data.settings) {
+                    setImportErrorMessage('Invalid game settings file.')
+                    setImportModalState('error')
+                    return
+                }
+
+                setImportType('game')
+                    // Store the data somewhere to use in confirming
+                    ; (window as any)._pendingImportData = data.settings
+                setImportModalState('success')
+            } catch (err) {
+                setImportErrorMessage('Failed to parse settings file.')
+                setImportModalState('error')
+            }
+        }
+        input.click()
     }
 
     const saveVideoSettings = async () => {
@@ -633,6 +717,43 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
         }
 
         await window.conveyor.ini.writeIniValue('UnrealTournament.ini', audioDevice, key, stringValue)
+    }
+
+    const updateFov = async (value: string) => {
+        setFov(value)
+        await window.conveyor.ini.writeIniValue('User.ini', 'Engine.PlayerPawn', 'DesiredFOV', value)
+    }
+
+    const updateDodging = async (enabled: boolean) => {
+        setDodging(enabled)
+        const value = enabled ? '0.250000' : '-1.000000'
+        await window.conveyor.ini.writeIniValue('User.ini', 'Engine.PlayerPawn', 'DodgeClickTime', value)
+    }
+
+    const updateScreenFlashes = async (enabled: boolean) => {
+        setScreenFlashes(enabled)
+        await window.conveyor.ini.writeIniValue('UnrealTournament.ini', 'WinDrv.WindowsClient', 'ScreenFlashes', enabled ? 'True' : 'False')
+    }
+
+    const updateGoreLevel = async (level: 'normal' | 'reduced' | 'ultra-low') => {
+        setGoreLevel(level)
+        let lowGore = 'False'
+        let veryLowGore = 'False'
+
+        if (level === 'reduced') {
+            lowGore = 'True'
+        } else if (level === 'ultra-low') {
+            lowGore = 'True'
+            veryLowGore = 'True'
+        }
+
+        await window.conveyor.ini.writeIniValue('UnrealTournament.ini', 'Engine.GameInfo', 'bLowGore', lowGore)
+        await window.conveyor.ini.writeIniValue('UnrealTournament.ini', 'Engine.GameInfo', 'bVeryLowGore', veryLowGore)
+    }
+
+    const updateWeaponHand = async (value: string) => {
+        setWeaponHand(value)
+        await window.conveyor.ini.writeIniValue('User.ini', 'Engine.PlayerPawn', 'Handedness', value)
     }
 
     const handleExportVideoSettings = () => {
@@ -1026,30 +1147,8 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
                     return
                 }
 
-                const inputSection = await window.conveyor.ini.readIniSection('User.ini', 'Engine.Input') as Record<string, string | string[]> | undefined
-                if (inputSection) {
-                    for (const key of Object.keys(inputSection)) {
-                        await window.conveyor.ini.writeIniValue('User.ini', 'Engine.Input', key, '')
-                    }
-                }
-
-                const importedBinds: Record<string, string[]> = importData.binds
-                for (const [command, keys] of Object.entries(importedBinds)) {
-                    if (Array.isArray(keys)) {
-                        for (const key of keys) {
-                            if (key) {
-                                const originalCommand = BIND_CATEGORIES
-                                    .flatMap(c => c.binds)
-                                    .find(b => b.command.toLowerCase() === command)?.command || command
-
-                                await window.conveyor.ini.writeIniValue('User.ini', 'Engine.Input', key, originalCommand)
-                            }
-                        }
-                    }
-                }
-
-                setBinds(importedBinds)
-
+                // Store the data somewhere to use in confirming
+                ; (window as any)._pendingImportData = importData.binds
                 setImportModalState('success')
             } catch (err) {
                 console.error('Failed to import keybinds', err)
@@ -1059,6 +1158,80 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
         }
 
         input.click()
+    }
+
+    const handleImportConfirm = async () => {
+        try {
+            if (importType === 'binds') {
+                const importedBinds: Record<string, string[]> = (window as any)._pendingImportData
+                if (importedBinds) {
+                    // Clear existing binds in INI
+                    const inputSection = await window.conveyor.ini.readIniSection('User.ini', 'Engine.Input') as Record<string, string | string[]> | undefined
+                    if (inputSection) {
+                        for (const key of Object.keys(inputSection)) {
+                            await window.conveyor.ini.writeIniValue('User.ini', 'Engine.Input', key, '')
+                        }
+                    }
+
+                    // Apply imported binds
+                    for (const [command, keys] of Object.entries(importedBinds)) {
+                        if (Array.isArray(keys)) {
+                            for (const key of keys) {
+                                if (key) {
+                                    const originalCommand = BIND_CATEGORIES
+                                        .flatMap(c => c.binds)
+                                        .find(b => b.command.toLowerCase() === command)?.command || command
+
+                                    await window.conveyor.ini.writeIniValue('User.ini', 'Engine.Input', key, originalCommand)
+                                }
+                            }
+                        }
+                    }
+                    setBinds(importedBinds)
+                }
+                setImportModalState('hidden')
+                delete (window as any)._pendingImportData
+                await loadSettings()
+            } else if (importType === 'graphics') {
+                const newSettings = (window as any)._pendingImportData
+                if (newSettings) {
+                    setDeviceSettings(newSettings)
+                    for (const [key, value] of Object.entries(newSettings)) {
+                        await updateDeviceSetting(key, value)
+                    }
+                }
+                setImportModalState('hidden')
+                delete (window as any)._pendingImportData
+                await loadSettings()
+            } else if (importType === 'music') {
+                const newSettings = (window as any)._pendingImportData
+                if (newSettings) {
+                    setAudioSettings(newSettings)
+                    for (const [key, value] of Object.entries(newSettings)) {
+                        await updateAudioSetting(key, value)
+                    }
+                }
+                setImportModalState('hidden')
+                delete (window as any)._pendingImportData
+                await loadSettings()
+            } else if (importType === 'game') {
+                const settings = (window as any)._pendingImportData
+                if (settings) {
+                    if (settings.fov !== undefined) await updateFov(settings.fov)
+                    if (settings.dodging !== undefined) await updateDodging(settings.dodging)
+                    if (settings.screenFlashes !== undefined) await updateScreenFlashes(settings.screenFlashes)
+                    if (settings.goreLevel !== undefined) await updateGoreLevel(settings.goreLevel)
+                    if (settings.weaponHand !== undefined) await updateWeaponHand(settings.weaponHand)
+                }
+                setImportModalState('hidden')
+                delete (window as any)._pendingImportData
+                await loadSettings()
+            }
+        } catch (err) {
+            console.error('Failed to confirm import', err)
+            setImportErrorMessage('Failed to apply imported settings.')
+            setImportModalState('error')
+        }
     }
 
     return (
@@ -1137,9 +1310,9 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
                         {importModalState === 'loading' && (
                             <>
                                 <div className="space-y-2">
-                                    <h3 className="text-xl font-bold">Importing {importType === 'binds' ? 'Keybinds' : importType === 'graphics' ? 'Graphics Settings' : 'Audio Settings'}</h3>
+                                    <h3 className="text-xl font-bold">Importing {importType === 'binds' ? 'Keybinds' : importType === 'graphics' ? 'Graphics Settings' : importType === 'music' ? 'Audio Settings' : 'Game Settings'}</h3>
                                     <p className="text-muted-foreground">
-                                        Please wait while we import your {importType === 'binds' ? 'keybind' : importType === 'graphics' ? 'graphics' : 'audio'} configuration...
+                                        Please wait while we import your {importType === 'binds' ? 'keybind' : importType === 'graphics' ? 'graphics' : importType === 'music' ? 'audio' : 'game'} configuration...
                                     </p>
                                 </div>
 
@@ -1154,7 +1327,7 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
                                 <div className="space-y-2">
                                     <h3 className="text-xl font-bold text-green-500">Import Successful!</h3>
                                     <p className="text-muted-foreground">
-                                        Your {importType === 'binds' ? 'keybinds' : importType === 'graphics' ? 'graphics settings' : 'audio settings'} have been imported and applied successfully.
+                                        Your {importType === 'binds' ? 'keybinds' : importType === 'graphics' ? 'graphics settings' : importType === 'music' ? 'audio settings' : 'game settings'} have been imported and applied successfully.
                                     </p>
                                 </div>
 
@@ -1163,7 +1336,7 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
                                 </div>
 
                                 <Button
-                                    onClick={() => setImportModalState('hidden')}
+                                    onClick={handleImportConfirm}
                                     className="w-full"
                                 >
                                     Close
@@ -1273,6 +1446,124 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
                             >
                                 <option value="no">Player</option>
                                 <option value="yes">Spectator</option>
+                            </select>
+                        </div>
+                    </div>
+                </SettingsSection>
+
+                {/* Game Options */}
+                <SettingsSection
+                    title="Game Options"
+                    icon={<Joystick className="size-6" />}
+                    activeIconClassName="bg-cyan-500/10 text-cyan-500"
+                    headerAction={
+                        <div className="flex gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleExportGameSettings}
+                                className="gap-2"
+                            >
+                                <Download className="size-4" />
+                                Export
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleImportGameSettings}
+                                className="gap-2"
+                            >
+                                <Upload className="size-4" />
+                                Import
+                            </Button>
+                        </div>
+                    }
+                >
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                            <div className="flex justify-between">
+                                <div className="flex items-center gap-2">
+                                    <label className="text-sm font-medium">FOV</label>
+                                    <Tooltip content="Field of View. Higher values allow you to see more of your surroundings." />
+                                </div>
+                                <span className="text-sm text-muted-foreground">{parseFloat(fov).toFixed(0)}</span>
+                            </div>
+                            <Slider
+                                min={60}
+                                max={120}
+                                step={1}
+                                value={parseFloat(fov)}
+                                onChange={(e) => setFov(parseFloat(e.target.value).toFixed(6))}
+                                onMouseUp={() => updateFov(fov)}
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                                <label className="text-sm font-medium">Dodging</label>
+                                <Tooltip content="Double-tap a movement key to dodge." />
+                            </div>
+                            <div className="flex items-center h-10">
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        className="sr-only peer"
+                                        checked={dodging}
+                                        onChange={(e) => updateDodging(e.target.checked)}
+                                    />
+                                    <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-ring rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                                <label className="text-sm font-medium">Screen Flashes</label>
+                                <Tooltip content="Enables screen flashes when taking damage or picking up items." />
+                            </div>
+                            <div className="flex items-center h-10">
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        className="sr-only peer"
+                                        checked={screenFlashes}
+                                        onChange={(e) => updateScreenFlashes(e.target.checked)}
+                                    />
+                                    <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-ring rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                                <label className="text-sm font-medium">Gore Level</label>
+                                <Tooltip content="Controls the level of blood and gibs in the game." />
+                            </div>
+                            <select
+                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                value={goreLevel}
+                                onChange={(e) => updateGoreLevel(e.target.value as any)}
+                            >
+                                <option value="normal">Normal</option>
+                                <option value="reduced">Reduced</option>
+                                <option value="ultra-low">Ultra-Low</option>
+                            </select>
+                        </div>
+
+                        <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                                <label className="text-sm font-medium">Weapon Hand</label>
+                                <Tooltip content="Which hand your character holds their weapon in." />
+                            </div>
+                            <select
+                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                value={weaponHand}
+                                onChange={(e) => updateWeaponHand(e.target.value)}
+                            >
+                                <option value="-1.000000">Right</option>
+                                <option value="1.000000">Left</option>
+                                <option value="0.000000">Center</option>
+                                <option value="2.000000">Hidden</option>
                             </select>
                         </div>
                     </div>
