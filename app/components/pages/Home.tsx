@@ -90,13 +90,25 @@ export function Home({ userProfile }: HomeProps) {
     const [currentPage, setCurrentPage] = useState(1)
     const [maps, setMaps] = useState<MapData[]>([])
     const [mapsCount, setMapsCount] = useState(0)
+    const [newMapsCount, setNewMapsCount] = useState(0)
     const [isLoadingMaps, setIsLoadingMaps] = useState(false)
 
     const username = userProfile?.alias || userProfile?.username || 'Player'
 
     useEffect(() => {
-        if (activeTab === 'Maps' && userProfile?.accessToken) {
-            loadMaps()
+        if (userProfile?.accessToken && userProfile?.latest_activity?.created_at) {
+            fetchMapsCount(userProfile.accessToken, userProfile.latest_activity.created_at)
+                .then(setNewMapsCount)
+                .catch(err => console.error('Failed to fetch new maps count:', err))
+        }
+    }, [userProfile?.accessToken, userProfile?.latest_activity?.created_at])
+
+    useEffect(() => {
+        if (activeTab === 'Maps') {
+            setNewMapsCount(0)
+            if (userProfile?.accessToken) {
+                loadMaps()
+            }
         }
     }, [activeTab, userProfile?.accessToken, pageSize, currentPage])
 
@@ -126,11 +138,18 @@ export function Home({ userProfile }: HomeProps) {
     const handlePrevPage = () => setCurrentPage(prev => Math.max(1, prev - 1))
     const handleNextPage = () => setCurrentPage(prev => Math.min(totalPages, prev + 1))
 
+    const lastSeenTime = useMemo(() => {
+        if (!userProfile?.latest_activity?.created_at) return null
+        const date = new Date(userProfile.latest_activity.created_at)
+        return isNaN(date.getTime()) ? null : date.getTime()
+    }, [userProfile?.latest_activity?.created_at])
+
     const lastSeenDate = useMemo(() => {
         if (!userProfile?.latest_activity?.created_at) return 'Never! Welcome to UTBT 💕'
 
         try {
             const date = new Date(userProfile.latest_activity.created_at)
+            if (isNaN(date.getTime())) return 'Unknown'
             return new Intl.DateTimeFormat('en-US', {
                 month: 'long',
                 day: 'numeric',
@@ -176,13 +195,18 @@ export function Home({ userProfile }: HomeProps) {
                                             setCurrentPage(1)
                                         }}
                                         className={cn(
-                                            "px-3 py-1 rounded-full text-xs font-medium transition-all",
+                                            "px-3 py-1 rounded-full text-xs font-medium transition-all relative",
                                             activeTab === tab
                                                 ? "bg-white text-black shadow-lg"
                                                 : "text-muted-foreground hover:text-foreground"
                                         )}
                                     >
                                         {tab}
+                                        {tab === 'Maps' && newMapsCount > 0 && (
+                                            <span className="absolute -top-1.5 -right-1 text-white bg-red-600 text-[10px] font-black rounded-full h-4 min-w-[1rem] px-1 flex items-center justify-center border border-[#09090b] shadow-[0_0_10px_rgba(220,38,38,0.5)] animate-in zoom-in duration-300">
+                                                {newMapsCount > 99 ? '99+' : newMapsCount}
+                                            </span>
+                                        )}
                                     </button>
                                 ))}
                             </div>
@@ -267,6 +291,11 @@ export function Home({ userProfile }: HomeProps) {
                                                     <span className="font-bold text-foreground text-sm truncate">
                                                         {map.name}
                                                     </span>
+                                                    {lastSeenTime && new Date(map.added).getTime() > lastSeenTime && (
+                                                        <span className="shrink-0 bg-red-500/20 text-red-500 text-[9px] font-black px-1.5 py-0.5 rounded border border-red-500/30 animate-pulse uppercase tracking-tight shadow-[0_0_8px_rgba(239,68,68,0.2)]">
+                                                            New
+                                                        </span>
+                                                    )}
                                                 </div>
                                                 <span className="text-[10px] font-medium text-muted-foreground whitespace-nowrap">
                                                     {new Date(map.added).toUTCString()}
