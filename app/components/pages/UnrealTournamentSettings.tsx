@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { ArrowLeft, User, Monitor, Keyboard, Download, Upload, Loader2, CheckCircle, XCircle, ChevronDown, ChevronUp, AlertTriangle, Music, Joystick } from 'lucide-react'
+import { ArrowLeft, User, Monitor, Keyboard, Download, Upload, Loader2, CheckCircle, XCircle, ChevronDown, ChevronUp, AlertTriangle, Music, Joystick, Volume2 } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Input } from '@/app/components/ui/input'
 import { Slider } from '@/app/components/ui/slider'
@@ -1940,10 +1940,10 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
                     )}
                 </SettingsSection>
 
-                {/* Music Settings */}
+                {/* Audio Settings */}
                 <SettingsSection
-                    title="Music Settings"
-                    icon={<Music className="size-6" />}
+                    title="Audio Settings"
+                    icon={<Volume2 className="size-6" />}
                     activeIconClassName="bg-amber-500/10 text-amber-500"
                     headerAction={
                         <div className="flex gap-2">
