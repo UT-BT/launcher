@@ -478,7 +478,7 @@ export function UnrealTournamentSettings({ onBack }: UnrealTournamentSettingsPro
     const [dodging, setDodging] = useState(true)
     const [screenFlashes, setScreenFlashes] = useState(true)
     const [goreLevel, setGoreLevel] = useState<'normal' | 'reduced' | 'ultra-low'>('normal')
-    const [weaponHand, setWeaponHand] = useState('0.000000') // Default to Center/Right? Let's check docs: -1 right, 1 left, 0 center, 2 hidden. User says -1 right, 1 left, 0 center, 2 hidden.
+    const [weaponHand, setWeaponHand] = useState('0.000000')
 
     // Conflict confirmation state
     const [conflictInfo, setConflictInfo] = useState<{
