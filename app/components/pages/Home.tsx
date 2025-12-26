@@ -442,7 +442,7 @@ export function Home({ userProfile }: HomeProps) {
                                                             const minutes = Math.floor(totalMs / 6000);
                                                             const seconds = Math.floor((totalMs % 6000) / 100);
                                                             const centiseconds = totalMs % 100;
-                                                            return `${minutes}:${seconds.toString().padStart(2, '0')}.${centiseconds.toString().padStart(2, '0')}`;
+                                                            return `${minutes}:${seconds.toString().padStart(2, '0')}.${centiseconds.toString().padStart(3, '0')}`;
                                                         })()}
                                                     </span>
                                                 </div>
