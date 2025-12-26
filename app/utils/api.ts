@@ -1,4 +1,10 @@
-import { AuthConfig } from '@/lib/main/config'
+import type { AuthConfig } from '@/lib/main/config'
+
+const GATEWAY_BASE_URL = import.meta.env.DEV ? 'https://gateway.utbt.net' : 'https://gateway.utbt.net'
+
+export function getAvatarUrl(userId: string | number): string {
+    return `${GATEWAY_BASE_URL}/users/${userId}/avatar`
+}
 
 export interface UserTitle {
     id: string
@@ -10,9 +16,23 @@ export interface UserTitle {
     rarity: number
 }
 
+export interface AssignedTitleV2 {
+    id: number
+    user_id: string
+    assigned_at: string
+    selected: boolean
+    alias: string
+    title_id: number
+    name: string
+    rarity: number
+    color_r: number
+    color_g: number
+    color_b: number
+}
+
 export interface LauncherActivity {
     id: number
-    user_id: number
+    user_id: string
     launcher_version: string
     os_platform: string
     os_release: string
@@ -23,6 +43,7 @@ export interface LauncherActivity {
 export interface UserProfile extends AuthConfig {
     active_title?: UserTitle | null
     alias?: string | null
+    id?: string | null
     latest_activity?: LauncherActivity | null
 }
 
@@ -37,7 +58,7 @@ export interface Map {
 
 export interface Record {
     cap_id: string
-    user_id: number
+    user_id: string
     map: string
     added: string
     cap_time_seconds: number
@@ -255,5 +276,55 @@ export async function fetchRecordsCount(accessToken: string, addedSince?: string
     } catch (error) {
         console.error('Error fetching records count:', error)
         throw error
+    }
+}
+
+export async function fetchTitles(accessToken: string, limit: number, offset: number, userId?: number): Promise<AssignedTitleV2[]> {
+    try {
+        const userParam = userId ? `&user=${userId}` : ''
+        const response = await fetch(`${API_BASE_URL}/v2/titles/?limit=${limit}&offset=${offset}${userParam}`, {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        })
+
+        if (!response.ok) {
+            throw new Error(`Failed to fetch titles: ${response.statusText} (${response.status})`)
+        }
+
+        const json = await response.json()
+        if (json.success && json.data) {
+            return json.data as AssignedTitleV2[]
+        }
+
+        throw new Error('Invalid response format from server')
+    } catch (error) {
+        console.error('Error fetching titles:', error)
+        throw error
+    }
+}
+
+export async function fetchTitlesCount(accessToken: string, userId?: number): Promise<number> {
+    try {
+        const userParam = userId ? `&user=${userId}` : ''
+        const response = await fetch(`${API_BASE_URL}/v2/titles/?count=true${userParam}`, {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        })
+
+        if (!response.ok) {
+            throw new Error(`Failed to fetch titles count: ${response.statusText} (${response.status})`)
+        }
+
+        const json = await response.json()
+        if (json.success && json.data) {
+            return json.data.count as number
+        }
+
+        throw new Error('Invalid response format from server')
+    } catch (error) {
+        console.error('Error fetching titles count:', error)
+        return 0
     }
 }

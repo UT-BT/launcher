@@ -1,4 +1,4 @@
-import { UserProfile, fetchMaps, fetchMapsCount, Map as MapData, Record as RecordData, fetchRecords, fetchRecordsCount } from '@/app/utils/api'
+import { UserProfile, fetchMaps, fetchMapsCount, Map as MapData, Record as RecordData, fetchRecords, fetchRecordsCount, fetchTitles, fetchTitlesCount, getAvatarUrl } from '@/app/utils/api'
 import { Activity, ChevronLeft, ChevronRight, Star, TrendingUp, User as UserIcon, Loader2 } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -96,6 +96,9 @@ export function Home({ userProfile }: HomeProps) {
     const [newRecordsCount, setNewRecordsCount] = useState(0)
     const [isLoadingMaps, setIsLoadingMaps] = useState(false)
     const [isLoadingRecords, setIsLoadingRecords] = useState(false)
+    const [titles, setTitles] = useState<any[]>([])
+    const [titlesCount, setTitlesCount] = useState(0)
+    const [isLoadingTitles, setIsLoadingTitles] = useState(false)
 
     const username = userProfile?.alias || userProfile?.username || 'Player'
 
@@ -121,6 +124,10 @@ export function Home({ userProfile }: HomeProps) {
             setNewRecordsCount(0)
             if (userProfile?.accessToken) {
                 loadRecords()
+            }
+        } else if (activeTab === 'Titles') {
+            if (userProfile?.accessToken) {
+                loadTitles()
             }
         }
     }, [activeTab, userProfile?.accessToken, pageSize, currentPage])
@@ -161,11 +168,30 @@ export function Home({ userProfile }: HomeProps) {
         }
     }
 
+    const loadTitles = async () => {
+        if (!userProfile?.accessToken) return
+
+        setIsLoadingTitles(true)
+        try {
+            const [titlesData, count] = await Promise.all([
+                fetchTitles(userProfile.accessToken, pageSize, (currentPage - 1) * pageSize),
+                fetchTitlesCount(userProfile.accessToken)
+            ])
+            setTitles(titlesData)
+            setTitlesCount(count)
+        } catch (error) {
+            console.error('Failed to load titles:', error)
+        } finally {
+            setIsLoadingTitles(false)
+        }
+    }
+
     const totalPages = useMemo(() => {
         if (activeTab === 'Maps') return Math.ceil(mapsCount / pageSize)
         if (activeTab === 'Records') return Math.ceil(recordsCount / pageSize)
+        if (activeTab === 'Titles') return Math.ceil(titlesCount / pageSize)
         return 1
-    }, [activeTab, mapsCount, recordsCount, pageSize])
+    }, [activeTab, mapsCount, recordsCount, titlesCount, pageSize])
 
     const handlePrevPage = () => setCurrentPage(prev => Math.max(1, prev - 1))
     const handleNextPage = () => setCurrentPage(prev => Math.min(totalPages, prev + 1))
@@ -298,7 +324,7 @@ export function Home({ userProfile }: HomeProps) {
                     </div>
 
                     <div className="space-y-3 relative min-h-[300px]">
-                        {(isLoadingMaps || isLoadingRecords) ? (
+                        {(isLoadingMaps || isLoadingRecords || isLoadingTitles) ? (
                             <div className="absolute inset-0 flex items-center justify-center bg-background/20 backdrop-blur-sm z-10 rounded-xl">
                                 <Loader2 className="size-8 animate-spin text-primary" />
                             </div>
@@ -430,6 +456,60 @@ export function Home({ userProfile }: HomeProps) {
                                     </div>
                                 )}
                             </>
+                        ) : activeTab === 'Titles' ? (
+                            <>
+                                {titles.map((title) => (
+                                    <div
+                                        key={title.id}
+                                        className="group relative bg-card/30 backdrop-blur-sm border border-white/5 rounded-xl p-3 flex items-center gap-4 transition-all hover:bg-card/50 hover:border-white/10"
+                                    >
+                                        <div className="size-16 rounded-lg bg-white/5 overflow-hidden flex-shrink-0 border border-white/5 flex items-center justify-center relative group-hover:bg-white/10 transition-colors">
+                                            <img
+                                                src={getAvatarUrl(title.user_id)}
+                                                alt={title.alias}
+                                                className="size-full object-cover transition-transform duration-500 group-hover:scale-110"
+                                            />
+                                        </div>
+
+                                        <div className="flex-1 min-w-0 flex flex-col justify-center gap-1.5">
+                                            <div className="flex items-center justify-between gap-2">
+                                                <h3
+                                                    className="font-bold text-sm tracking-tight truncate"
+                                                    style={{ color: title.rarity === 1 ? 'white' : `rgb(${title.color_r}, ${title.color_g}, ${title.color_b})` }}
+                                                >
+                                                    {title.name}
+                                                </h3>
+                                                <span className="text-[10px] font-medium text-muted-foreground whitespace-nowrap opacity-60">
+                                                    {new Date(title.assigned_at).toUTCString()}
+                                                </span>
+                                            </div>
+
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <div className="flex items-center gap-1.5 bg-white/5 px-2 py-0.5 rounded-md border border-white/5 transition-colors hover:bg-white/10">
+                                                    <UserIcon className="size-3 text-muted-foreground/60" />
+                                                    <span className="font-bold text-[11px] text-foreground/90">{title.alias}</span>
+                                                </div>
+
+                                                <div className={cn(
+                                                    "px-2 py-0.5 rounded border text-[9px] font-black uppercase tracking-widest transition-all duration-300",
+                                                    title.rarity === 1 ? "text-white bg-white/5 border-white/10" :
+                                                        title.rarity === 2 ? "text-slate-300 bg-slate-400/10 border-slate-400/20 shadow-[0_0_10px_rgba(203,213,225,0.05)]" :
+                                                            title.rarity === 3 ? "text-yellow-500 bg-yellow-500/10 border-yellow-500/20 shadow-[0_0_15px_rgba(234,179,8,0.1)]" :
+                                                                title.rarity === 4 ? "text-red-500 bg-red-500/10 border-red-500/20 shadow-[0_0_15px_rgba(239,68,68,0.1)]" :
+                                                                    "text-blue-500 bg-blue-500/10 border-blue-500/20 shadow-[0_0_20px_rgba(59,130,246,0.2)]"
+                                                )}>
+                                                    Rarity {title.rarity}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                                {titles.length === 0 && !isLoadingTitles && (
+                                    <div className="text-center py-12 text-muted-foreground">
+                                        No titles found.
+                                    </div>
+                                )}
+                            </>
                         ) : (
                             // Fallback to mock community activities for other tabs
                             communityActivities.slice(0, pageSize).map((activity) => (
@@ -535,7 +615,7 @@ export function Home({ userProfile }: HomeProps) {
                         ))}
                     </div>
                 </div>
-            </div>
-        </div>
+            </div >
+        </div >
     )
 }
