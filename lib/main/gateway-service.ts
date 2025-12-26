@@ -28,6 +28,10 @@ export class GatewayService {
     return `${baseUrl}${cleanEndpoint}`
   }
 
+  public getAvatarUrl(userId: string | number): string {
+    return this.getUrl(`/users/${userId}/avatar`)
+  }
+
   public getHeaders(requiresAuth: boolean = false): Record<string, string> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
