@@ -39,10 +39,16 @@ export const registerAppHandlers = (_window: BrowserWindow) => {
   handle('setGatewayConfig', (config: { baseUrl?: string; apiKey?: string }) => setGatewayConfig(config))
 
   handle('getDemoWatcherConfig', () => getDemoWatcherConfig())
-  handle('setDemoWatcherConfig', (config: any) => setDemoWatcherConfig(config))
+  handle('setDemoWatcherConfig', (config: any) => {
+    setDemoWatcherConfig(config)
+    demoWatcherService.restart()
+  })
 
   handle('getUt99InstallPath', () => getUt99InstallPath())
-  handle('setUt99InstallPath', (path: string | undefined) => setUt99InstallPath(path))
+  handle('setUt99InstallPath', (path: string | undefined) => {
+    setUt99InstallPath(path)
+    demoWatcherService.restart()
+  })
 
   handle('getInstalledPatch', () => getInstalledPatch())
   handle('setInstalledPatch', (patch: any) => setInstalledPatch(patch))

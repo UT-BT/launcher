@@ -56,6 +56,8 @@ export class DemoWatcherService {
 
     public startWatching() {
         try {
+            this.stopWatching()
+
             const installPath = getUt99InstallPath()
             if (!installPath) {
                 loggingService.warn('UT99 Install Path not found. Demo watcher will not start.', 'DemoWatcher')
@@ -89,6 +91,12 @@ export class DemoWatcherService {
             this.watcher = null
             loggingService.info('Demo watcher stopped', 'DemoWatcher')
         }
+    }
+
+    public restart() {
+        loggingService.info('Restarting demo watcher...', 'DemoWatcher')
+        this.stopWatching()
+        this.startWatching()
     }
 
     private async handleNewFile(filePath: string) {

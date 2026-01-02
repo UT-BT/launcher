@@ -3,6 +3,7 @@ import { exec } from 'child_process'
 import { existsSync, createReadStream, createWriteStream, mkdirSync, copyFileSync, readdirSync, rmSync, renameSync, statSync, readFileSync } from 'fs'
 import { app, BrowserWindow, dialog, net } from 'electron'
 import { createHash } from 'crypto'
+import { demoWatcherService } from '@/lib/main/demo-watcher-service'
 import { gatewayService } from './gateway-service'
 import { setUt99InstallPath, setInstalledPatch, getUt99InstallPath, getInstalledPatch, setActiveProfile, getActiveProfile } from './config'
 import { loggingService } from './logging-service'
@@ -377,6 +378,10 @@ export class GameService {
             sha256: hash,
             installedAt: new Date().toISOString(),
         })
+
+        // Restart watcher with new path
+        demoWatcherService.restart()
+
 
         // 5. Create "Original" and "Default" profiles if needed
         try {
