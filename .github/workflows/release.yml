@@ -85,7 +85,7 @@ jobs:
         run: |
           $tagName = "${{ github.ref_name }}"
           # Generate base notes from GitHub
-          $changelog = gh release generate-notes $tagName
+          $changelog = gh release generate-notes --tag $tagName
           
           $analysis = @"
           ${{ steps.vt.outputs.analysis }}
@@ -127,3 +127,4 @@ jobs:
             dist/latest.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
