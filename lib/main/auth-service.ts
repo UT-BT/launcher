@@ -105,8 +105,34 @@ export class AuthService {
         clearAuthConfig()
     }
 
-    getProfile(): AuthConfig | undefined {
-        return getAuthConfig()
+    async getProfile(): Promise<AuthConfig | undefined> {
+        const config = getAuthConfig()
+        if (!config) {
+            return undefined
+        }
+
+        if (Date.now() > config.expiresAt - 5 * 60 * 1000) {
+            try {
+                loggingService.info('Access token expired or expiring, refreshing...', 'AuthService')
+                const tokens = await this.refreshAccessToken(config.refreshToken)
+
+                const newConfig: AuthConfig = {
+                    ...config,
+                    accessToken: tokens.access_token,
+                    refreshToken: tokens.refresh_token,
+                    expiresAt: Date.now() + tokens.expires_in * 1000,
+                }
+
+                setAuthConfig(newConfig)
+                loggingService.info('Access token refreshed successfully', 'AuthService')
+                return newConfig
+            } catch (error) {
+                loggingService.error('Failed to refresh access token', 'AuthService', error)
+                return config
+            }
+        }
+
+        return config
     }
 
     private generatePKCE() {
@@ -133,6 +159,27 @@ export class AuthService {
 
         if (!response.ok) {
             throw new Error(`Token exchange failed: ${response.statusText}`)
+        }
+
+        return response.json()
+    }
+
+    private async refreshAccessToken(refreshToken: string): Promise<any> {
+        const params = new URLSearchParams()
+        params.append('client_id', DISCORD_CLIENT_ID)
+        params.append('grant_type', 'refresh_token')
+        params.append('refresh_token', refreshToken)
+
+        const response = await fetch('https://discord.com/api/oauth2/token', {
+            method: 'POST',
+            body: params,
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+        })
+
+        if (!response.ok) {
+            throw new Error(`Token refresh failed: ${response.statusText}`)
         }
 
         return response.json()
