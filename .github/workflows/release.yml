@@ -85,7 +85,7 @@ jobs:
         run: |
           $tagName = "${{ github.ref_name }}"
           # Generate base notes from GitHub
-          $changelog = gh release generate-notes --tag $tagName
+          $changelog = gh release generate-notes $tagName
           
           $analysis = @"
           ${{ steps.vt.outputs.analysis }}
