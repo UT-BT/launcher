@@ -257,7 +257,7 @@ export class DemoWatcherService {
             const previousBest = response.data[0].cap_time_seconds
             const isPb = timeSeconds < previousBest
 
-            loggingService.info(`PB check: ${timeSeconds} < ${previousBest} = ${isPb}`, 'DemoWatcher')
+            loggingService.debug(`PB check: ${timeSeconds} < ${previousBest} = ${isPb}`, 'DemoWatcher')
             return isPb
 
         } catch (error) {
@@ -284,7 +284,7 @@ export class DemoWatcherService {
             const currentWR = response.data[0].cap_time_seconds
             const isWr = timeSeconds < currentWR
 
-            loggingService.info(`WR check: ${timeSeconds} < ${currentWR} = ${isWr}`, 'DemoWatcher')
+            loggingService.debug(`WR check: ${timeSeconds} < ${currentWR} = ${isWr}`, 'DemoWatcher')
             return isWr
 
         } catch (error) {
