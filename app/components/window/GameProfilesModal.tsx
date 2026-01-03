@@ -179,6 +179,9 @@ export const GameProfilesModal = ({ isOpen, onClose }: GameProfilesModalProps) =
                         <p>
                             The <span className="italic text-foreground">Original</span> profile is a permanent backup of your game's first-seen settings and cannot be edited.
                         </p>
+                        <p>
+                            If you ever need to restore your original settings, you can switch to this profile.
+                        </p>
                     </div>
 
                     <div className="p-4 border-b border-border space-y-4">
@@ -216,7 +219,7 @@ export const GameProfilesModal = ({ isOpen, onClose }: GameProfilesModalProps) =
                                                 <Input
                                                     value={renameName}
                                                     onChange={(e) => setRenameName(e.target.value)}
-                                                    size="sm"
+                                                    className="h-8"
                                                     autoFocus
                                                     onKeyDown={(e) => {
                                                         if (e.key === 'Enter') handleRenameProfile(profile.name)
