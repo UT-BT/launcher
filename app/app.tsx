@@ -132,6 +132,16 @@ export default function App() {
     }
   }, [userProfile?.accessToken])
 
+  useEffect(() => {
+    const titlebarContext = document.getElementById('titlebar-context')
+    if (titlebarContext) {
+      const disabled = appPhase !== 'main'
+      titlebarContext.dispatchEvent(new CustomEvent('set-titlebar-global-disabled', {
+        detail: { disabled }
+      }))
+    }
+  }, [appPhase])
+
   return (
     <>
       {appPhase === 'main' && <Main userProfile={userProfile} />}
