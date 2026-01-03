@@ -94,6 +94,39 @@ export function AppLayout({ children, currentView, onViewChange, userProfile, in
                     />
                 </div>
 
+                <div className="px-4 mb-6 relative z-10">
+                    <h3 className="px-4 text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider mb-2">
+                        Quick Actions
+                    </h3>
+                    {isInstallValid ? (
+                        <Button
+                            variant="default"
+                            className="w-full bg-gradient-to-r from-red-800 to-blue-800 hover:from-red-900 hover:to-blue-900 text-white shadow-lg shadow-purple-500/20"
+                            onClick={() => window.conveyor.game.launchGameStandalone()}
+                        >
+                            <Play className="mr-2 size-4 fill-current" />
+                            Launch Game
+                        </Button>
+                    ) : (
+                        <Tooltip content="No valid UT99 installation found" side="top" className="w-full">
+                            <Button
+                                variant="default"
+                                disabled
+                                className="w-full bg-white/5 text-muted-foreground cursor-not-allowed opacity-50"
+                            >
+                                <Play className="mr-2 size-4 fill-current" />
+                                Launch Game
+                            </Button>
+                        </Tooltip>
+                    )}
+                </div>
+
+                <div className="px-4 mb-2 relative z-10">
+                    <h3 className="px-4 text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider">
+                        Navigation
+                    </h3>
+                </div>
+
                 <nav className="flex-1 px-4 space-y-2 relative z-10">
                     {navItems.map((item) => (
                         <button
@@ -119,29 +152,7 @@ export function AppLayout({ children, currentView, onViewChange, userProfile, in
                     ))}
                 </nav>
 
-                <div className="p-4 relative z-10">
-                    {isInstallValid ? (
-                        <Button
-                            variant="default"
-                            className="w-full bg-gradient-to-r from-red-800 to-blue-800 hover:from-red-900 hover:to-blue-900 text-white shadow-lg shadow-purple-500/20"
-                            onClick={() => window.conveyor.game.launchGameStandalone()}
-                        >
-                            <Play className="mr-2 size-4 fill-current" />
-                            Launch Game
-                        </Button>
-                    ) : (
-                        <Tooltip content="No valid UT99 installation found" side="top" className="w-full">
-                            <Button
-                                variant="default"
-                                disabled
-                                className="w-full bg-white/5 text-muted-foreground cursor-not-allowed opacity-50"
-                            >
-                                <Play className="mr-2 size-4 fill-current" />
-                                Launch Game
-                            </Button>
-                        </Tooltip>
-                    )}
-                </div>
+
 
                 <div className="p-4 border-t border-white/10 relative z-10">
                     <DropdownMenu>
