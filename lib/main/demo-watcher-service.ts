@@ -295,13 +295,14 @@ export class DemoWatcherService {
 
     private getTimeInSeconds(time: string): number {
         const multipliers = [0.001, 1, 60, 3600];
-        return time.split('_')
+        const result = time.split('_')
             .reverse()
             .reduce((total, part, index) => {
                 const value = parseInt(part, 10) || 0;
                 const multiplier = multipliers[index] || 0;
                 return total + (value * multiplier);
             }, 0);
+        return parseFloat(result.toFixed(3));
     }
 
     public async extractBtpogId(demoFp: string): Promise<string> {
