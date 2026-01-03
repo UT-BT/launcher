@@ -84,7 +84,7 @@ export function Main({ userProfile }: { userProfile?: import('@/lib/main/config'
         <InstallationBanner type={installationStatus} onClick={handleBannerClick} />
       )}
       <div className="flex-1 overflow-hidden">
-        <AppLayout currentView={currentView} onViewChange={setCurrentView} userProfile={userProfile}>
+        <AppLayout currentView={currentView} onViewChange={setCurrentView} userProfile={userProfile} installationStatus={installationStatus}>
           {renderView()}
         </AppLayout>
       </div>

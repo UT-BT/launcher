@@ -8,6 +8,10 @@ export const gameIpcSchema = {
         ]),
         return: z.void(),
     },
+    launchGameStandalone: {
+        args: z.tuple([]),
+        return: z.void(),
+    },
     fetchServers: {
         args: z.tuple([]),
         return: z.array(z.any()), // Using z.any() for flexibility with backend response
