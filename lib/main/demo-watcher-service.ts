@@ -24,7 +24,10 @@ export interface UploadLogEntry {
     status: 'success' | 'failed' | 'uploading'
     timestamp: string
     error?: string
+    attempt?: number
+    maxAttempts?: number
 }
+
 
 export class DemoWatcherService {
     private watcher: FSWatcher | null = null
@@ -53,6 +56,15 @@ export class DemoWatcherService {
             entry.error = error
         }
     }
+
+    public updateLogAttempt(filename: string, attempt: number, maxAttempts: number) {
+        const entry = this.uploadLogs.find(e => e.filename === filename && e.status === 'uploading')
+        if (entry) {
+            entry.attempt = attempt
+            entry.maxAttempts = maxAttempts
+        }
+    }
+
 
     public startWatching() {
         try {
@@ -156,22 +168,50 @@ export class DemoWatcherService {
                 this.addLogEntry({
                     filename,
                     status: 'uploading',
-                    timestamp: new Date().toISOString()
+                    timestamp: new Date().toISOString(),
+                    attempt: 1,
+                    maxAttempts: 5
                 })
 
-                try {
-                    const buffer = await readFile(filePath)
-                    const blob = new Blob([buffer])
+                let attempts = 0
+                const maxAttempts = 5
+                let success = false
 
-                    await uploadDemo(blob, filename, auth.accessToken)
+                while (attempts < maxAttempts && !success) {
+                    attempts++
+                    if (attempts > 1) {
+                        this.updateLogAttempt(filename, attempts, maxAttempts)
+                    }
 
-                    loggingService.info(`Demo uploaded successfully: ${filename}`, 'DemoWatcher')
-                    this.updateLogStatus(filename, 'success')
-                } catch (error: any) {
-                    loggingService.error(`Failed to upload demo: ${error.message}`, 'DemoWatcher')
-                    this.updateLogStatus(filename, 'failed', error.message)
-                    shouldUpload = false
+                    try {
+                        const buffer = await readFile(filePath)
+                        const blob = new Blob([buffer])
+
+                        await uploadDemo(blob, filename, auth.accessToken)
+                        success = true
+
+                        loggingService.info(`Demo uploaded successfully: ${filename}`, 'DemoWatcher')
+                        this.updateLogStatus(filename, 'success')
+                    } catch (error: any) {
+                        const isLastAttempt = attempts === maxAttempts
+                        const errorMessage = error.message || 'Unknown error'
+                        const shouldRetry = errorMessage.includes('No matching cap found') || errorMessage.includes('Network Error')
+
+                        if (!shouldRetry || isLastAttempt) {
+                            loggingService.error(`Failed to upload demo ${filename}: ${errorMessage}`, 'DemoWatcher')
+                            this.updateLogStatus(filename, 'failed', errorMessage)
+                            break
+                        }
+
+                        const delay = attempts * 2000
+                        loggingService.warn(`Upload failed for ${filename}, retrying in ${delay}ms... (Attempt ${attempts}/${maxAttempts})`, 'DemoWatcher')
+
+                        await new Promise(resolve => setTimeout(resolve, delay))
+                    }
                 }
+
+                if (!success) shouldUpload = false
+
             }
 
             if (shouldUpload) {
