@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useState } from 'react'
-import { Home, Server, Trophy, Map as MapIcon, Settings, LogOut, User } from 'lucide-react'
+import { Home, Server, Trophy, Map as MapIcon, Settings, LogOut, User, Play } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import logo from '@/app/assets/logo.png'
 import {
@@ -27,12 +27,14 @@ const navItems: NavItem[] = [
 ]
 
 import { UserProfile } from '@/app/utils/api'
+import { Tooltip } from '@/app/components/ui/tooltip'
 
 interface AppLayoutProps {
     children: ReactNode
     currentView: string
     onViewChange: (view: string) => void
     userProfile?: UserProfile
+    installationStatus?: 'valid' | 'no-install' | 'unsupported' | null
 }
 
 function getRarityStyles(title: { rarity: number, color: string } | undefined | null) {
@@ -63,7 +65,7 @@ function getRarityStyles(title: { rarity: number, color: string } | undefined | 
     return { containerStyle, titleStyle, containerClass, titleClass }
 }
 
-export function AppLayout({ children, currentView, onViewChange, userProfile }: AppLayoutProps) {
+export function AppLayout({ children, currentView, onViewChange, userProfile, installationStatus }: AppLayoutProps) {
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
     const { containerStyle, titleStyle, containerClass, titleClass } = getRarityStyles(userProfile?.active_title)
 
@@ -73,6 +75,8 @@ export function AppLayout({ children, currentView, onViewChange, userProfile }: 
             document.documentElement.style.zoom = `${saved}%`
         }
     }, [])
+
+    const isInstallValid = installationStatus === 'valid'
 
     return (
         <div className="flex h-full bg-background text-foreground overflow-hidden relative">
@@ -114,6 +118,30 @@ export function AppLayout({ children, currentView, onViewChange, userProfile }: 
                         </button>
                     ))}
                 </nav>
+
+                <div className="p-4 relative z-10">
+                    {isInstallValid ? (
+                        <Button
+                            variant="default"
+                            className="w-full bg-gradient-to-r from-red-800 to-blue-800 hover:from-red-900 hover:to-blue-900 text-white shadow-lg shadow-purple-500/20"
+                            onClick={() => window.conveyor.game.launchGameStandalone()}
+                        >
+                            <Play className="mr-2 size-4 fill-current" />
+                            Launch Game
+                        </Button>
+                    ) : (
+                        <Tooltip content="No valid UT99 installation found" side="top" className="w-full">
+                            <Button
+                                variant="default"
+                                disabled
+                                className="w-full bg-white/5 text-muted-foreground cursor-not-allowed opacity-50"
+                            >
+                                <Play className="mr-2 size-4 fill-current" />
+                                Launch Game
+                            </Button>
+                        </Tooltip>
+                    )}
+                </div>
 
                 <div className="p-4 border-t border-white/10 relative z-10">
                     <DropdownMenu>
