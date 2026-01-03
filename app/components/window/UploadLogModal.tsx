@@ -177,8 +177,14 @@ export const UploadLogModal = ({ isOpen, onClose }: UploadLogModalProps) => {
                                     <div className="text-xs text-muted-foreground">
                                         {new Date(log.timestamp).toLocaleString()}
                                         {log.error && <span className="text-red-400 ml-2">— {log.error}</span>}
+                                        {log.status === 'uploading' && log.attempt && log.attempt > 1 && (
+                                            <span className="ml-2 px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-500 text-[10px] font-semibold border border-yellow-500/20">
+                                                Retry {log.attempt}/{log.maxAttempts}
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
+
                                 <div className="flex-none text-xs font-mono uppercase tracking-wider opacity-60">
                                     {log.status}
                                 </div>

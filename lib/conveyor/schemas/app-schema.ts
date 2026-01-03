@@ -150,6 +150,8 @@ export const appIpcSchema = {
       status: z.union([z.literal('success'), z.literal('failed'), z.literal('uploading')]),
       timestamp: z.string(),
       error: z.string().optional(),
+      attempt: z.number().optional(),
+      maxAttempts: z.number().optional(),
     })),
   },
   addUploadLog: {
@@ -158,6 +160,8 @@ export const appIpcSchema = {
       status: z.union([z.literal('success'), z.literal('failed'), z.literal('uploading')]),
       timestamp: z.string(),
       error: z.string().optional(),
+      attempt: z.number().optional(),
+      maxAttempts: z.number().optional(),
     })]),
     return: z.void(),
   },

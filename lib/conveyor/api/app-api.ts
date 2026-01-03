@@ -35,6 +35,9 @@ export class AppApi extends ConveyorApi {
     status: 'success' | 'failed' | 'uploading'
     timestamp: string
     error?: string
+    attempt?: number
+    maxAttempts?: number
+
   }) => this.invoke('addUploadLog', entry)
   updateUploadLogStatus = (filename: string, status: 'success' | 'failed', error?: string) =>
     this.invoke('updateUploadLogStatus', filename, status, error)
