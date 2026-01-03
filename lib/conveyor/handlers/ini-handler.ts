@@ -132,12 +132,7 @@ export const registerIniHandlers = (_window: BrowserWindow) => {
                 config[section] = {}
             }
 
-            const existing = config[section][key]
-            if (Array.isArray(existing)) {
-                existing[0] = value
-            } else {
-                config[section][key] = value
-            }
+            config[section][key] = value
 
             const newContent = stringifyIni(config)
             writeFileSync(iniPath, newContent, 'utf-8')

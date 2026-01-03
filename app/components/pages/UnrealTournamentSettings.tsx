@@ -20,7 +20,6 @@ const ALIAS_DEFINITIONS: Record<string, string> = {
     'rocketjump': 'switchweapon 9 | button bfire | fire | onrelease jump',
     'hammerjump': 'getweapon ImpactHammer | Button bFire | Fire | OnRelease Jump',
     'slidejump': 'Button bRun | OnRelease Jump',
-    'walkjump': 'Button bRun | Jump'
 }
 
 const BIND_CATEGORIES: BindCategory[] = [
@@ -34,7 +33,7 @@ const BIND_CATEGORIES: BindCategory[] = [
             { label: 'Move Left', command: 'strafeleft' },
             { label: 'Move Right', command: 'straferight' },
             { label: 'Jump', command: 'jump' },
-            { label: 'Walk Jump', command: 'walkjump', tooltip: 'Walk Jumps are a special bind in Unreal Tournament that let you jump with less height than a regular jump, which can be useful for gaining time on maps. If you have jumpboots, then walk jump will allow you to jump without using a boot jump.' },
+            { label: 'Walk Jump', command: 'walking|jump', tooltip: 'Walk Jumps are a special bind in Unreal Tournament that let you jump with less height than a regular jump, which can be useful for gaining time on maps. If you have jumpboots, then walk jump will allow you to jump without using a boot jump.' },
             { label: 'Walk', command: 'walking' },
             { label: 'Crouch', command: 'duck' },
             { label: 'Suicide', command: 'suicide' },
