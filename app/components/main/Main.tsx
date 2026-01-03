@@ -30,6 +30,16 @@ export function Main({ userProfile }: { userProfile?: import('@/lib/main/config'
     }
   }, [])
 
+  useEffect(() => {
+    const titlebarContext = document.getElementById('titlebar-context')
+    if (titlebarContext) {
+      const disabled = installationStatus !== 'valid'
+      titlebarContext.dispatchEvent(new CustomEvent('set-titlebar-game-profiles-disabled', {
+        detail: { disabled }
+      }))
+    }
+  }, [installationStatus])
+
   const validateInstallation = async () => {
     try {
       const result = await window.conveyor.app.validateCurrentInstallation()
