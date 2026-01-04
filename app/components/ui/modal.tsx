@@ -9,9 +9,11 @@ interface ModalProps {
     title?: string
     children: React.ReactNode
     className?: string
+    footer?: React.ReactNode
+    backdropClassName?: string
 }
 
-export function Modal({ isOpen, onClose, title, children, className }: ModalProps) {
+export function Modal({ isOpen, onClose, title, children, className, footer, backdropClassName }: ModalProps) {
     const modalRef = useRef<HTMLDivElement>(null)
     const closeButtonRef = useRef<HTMLButtonElement>(null)
 
@@ -72,7 +74,10 @@ export function Modal({ isOpen, onClose, title, children, className }: ModalProp
     if (!isOpen) return null
 
     return (
-        <div className="fixed top-[var(--window-titlebar-height)] right-0 bottom-0 left-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+        <div className={cn(
+            "fixed top-[var(--window-titlebar-height)] right-0 bottom-0 left-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200",
+            backdropClassName
+        )}>
             <div
                 ref={modalRef}
                 tabIndex={-1}
@@ -102,14 +107,16 @@ export function Modal({ isOpen, onClose, title, children, className }: ModalProp
                 </div>
 
                 {/* Footer */}
-                <div className="p-4 border-t border-border bg-muted/50 flex justify-end shrink-0">
-                    <Button
-                        onClick={onClose}
-                        variant="secondary"
-                    >
-                        Close
-                    </Button>
-                </div>
+                {footer === undefined ? (
+                    <div className="p-4 border-t border-border bg-muted/50 flex justify-end shrink-0">
+                        <Button
+                            onClick={onClose}
+                            variant="secondary"
+                        >
+                            Close
+                        </Button>
+                    </div>
+                ) : footer}
             </div>
         </div>
     )

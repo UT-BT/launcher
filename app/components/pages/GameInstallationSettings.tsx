@@ -1,15 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
-import { ArrowLeft, AlertTriangle } from 'lucide-react'
+import { AlertTriangle, Download, Folder, Package } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Input } from '@/app/components/ui/input'
 import { ErrorModal } from '@/app/components/ErrorModal'
 import { ConfirmModal } from '@/app/components/shared/ConfirmModal'
+import { SettingsSection, SettingsRow } from './settings/SettingsComponents'
 
-interface GameInstallationSettingsProps {
-    onBack: () => void
-}
-
-export function GameInstallationSettings({ onBack }: GameInstallationSettingsProps) {
+export function GameInstallationSettings() {
     const [installPath, setInstallPath] = useState('')
     const [patchVersion, setPatchVersion] = useState('')
     const [downloading, setDownloading] = useState(false)
@@ -185,145 +182,134 @@ export function GameInstallationSettings({ onBack }: GameInstallationSettingsPro
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center gap-4">
-                <button
-                    onClick={onBack}
-                    className="p-2 rounded-lg hover:bg-accent/50 transition-colors"
-                >
-                    <ArrowLeft className="size-6" />
-                </button>
-                <h2 className="text-3xl font-bold tracking-tight">Game Installation</h2>
+            <div className="pl-1">
+                <h2 className="text-2xl font-bold tracking-tight">Game Installation</h2>
+                <p className="text-muted-foreground">Manage your Unreal Tournament installation and patches.</p>
             </div>
 
-            <div className="space-y-6">
-                <div className="p-6 rounded-xl bg-card border border-border space-y-4">
-                    <h3 className="text-xl font-semibold">Install UT99</h3>
-                    <p className="text-sm text-muted-foreground">
-                        Don't have Unreal Tournament 1999? Use the button below to download and install it for free!
-                    </p>
-
+            <SettingsSection title="Install UT99" icon={Download}>
+                <SettingsRow
+                    label="Game Installer"
+                    description="Don't have Unreal Tournament 1999? Download and install it for free!"
+                >
                     {!downloading && !status ? (
                         <Button onClick={handleDownload} disabled={downloading}>
                             Download & Install UT99
                         </Button>
                     ) : (
-                        <div className="space-y-2">
-                            <div className="flex justify-between text-sm">
-                                <span>{status}</span>
-                                {downloading && <span>{Math.round(progress)}%</span>}
-                            </div>
-                            {downloading && (
-                                <>
-                                    <div className="h-2 bg-secondary rounded-full overflow-hidden">
-                                        <div
-                                            className="h-full bg-primary transition-all duration-300"
-                                            style={{ width: `${progress}%` }}
-                                        />
-                                    </div>
+                        !downloading && status && (
+                            <Button onClick={handleDownload} variant="outline" size="sm">
+                                Install Again
+                            </Button>
+                        )
+                    )}
+                </SettingsRow>
+
+                {(downloading || status) && (downloading || (!downloading && status && status !== 'Installation complete. Please select the installation directory below.')) && (
+                    <div className="px-6 pb-6 pt-2 space-y-2">
+                        <div className="flex justify-between text-sm">
+                            <span>{status}</span>
+                            {downloading && <span>{Math.round(progress)}%</span>}
+                        </div>
+                        {downloading && (
+                            <>
+                                <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                                    <div
+                                        className="h-full bg-primary transition-all duration-300"
+                                        style={{ width: `${progress}%` }}
+                                    />
+                                </div>
+                                <div className="flex justify-end pt-2">
                                     <Button variant="destructive" size="sm" onClick={handleCancel}>
                                         Cancel
                                     </Button>
-                                </>
-                            )}
-                            {!downloading && status && (
-                                <Button onClick={handleDownload} variant="outline" size="sm">
-                                    Install Again
-                                </Button>
-                            )}
-                        </div>
-                    )}
-                </div>
+                                </div>
+                            </>
+                        )}
+                    </div>
+                )}
+            </SettingsSection>
 
-                <div className="p-6 rounded-xl bg-card border border-border space-y-4">
-                    <h3 className="text-xl font-semibold">Installation Directory</h3>
-                    <p className="text-sm text-muted-foreground">
-                        Select the directory where Unreal Tournament is installed.
-                    </p>
-                    <div className="flex gap-4">
+            <SettingsSection title="Installation Directory" icon={Folder}>
+                <SettingsRow
+                    label="Path"
+                    description="Select the directory where Unreal Tournament is installed."
+                >
+                    <div className="flex gap-2 w-full max-w-md">
                         <Input
                             value={installPath}
                             readOnly
                             placeholder="No directory selected"
                             className="flex-1"
                         />
-                        <Button onClick={handleBrowse}>
-                            Browse...
+                        <Button onClick={handleBrowse} variant="secondary">
+                            Browse
                         </Button>
                     </div>
-
-                    {isInstallingAnnouncer && (
-                        <div className="space-y-2 pt-2 border-t border-border/50">
-                            <div className="flex justify-between text-sm text-muted-foreground">
-                                <span>Installing custom announcer...</span>
-                                <span>{Math.round(announcerProgress)}%</span>
-                            </div>
-                            <div className="h-2 bg-secondary rounded-full overflow-hidden">
-                                <div
-                                    className="h-full bg-primary transition-all duration-300"
-                                    style={{ width: `${announcerProgress}%` }}
-                                />
-                            </div>
+                </SettingsRow>
+                {isInstallingAnnouncer && (
+                    <div className="px-6 pb-6 pt-2 space-y-2 border-t border-border/50">
+                        <div className="flex justify-between text-sm text-muted-foreground">
+                            <span>Installing custom announcer...</span>
+                            <span>{Math.round(announcerProgress)}%</span>
                         </div>
-                    )}
+                        <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                            <div
+                                className="h-full bg-primary transition-all duration-300"
+                                style={{ width: `${announcerProgress}%` }}
+                            />
+                        </div>
+                    </div>
+                )}
+            </SettingsSection>
+
+            <SettingsSection title="Available Patches" icon={Package}>
+                {patchVersion === 'Unsupported' && (
+                    <div className="flex items-center gap-3 p-4 bg-destructive/10 text-destructive text-sm border-b border-border/50">
+                        <AlertTriangle className="size-5 shrink-0" />
+                        <p>
+                            You are running an unsupported version of Unreal Tournament.
+                            <br />
+                            Please apply a patch below to use the launcher.
+                        </p>
+                    </div>
+                )}
+
+                <div className="p-4 text-sm text-muted-foreground border-b border-border/50 bg-muted/20">
+                    Select the version of the game that you would like to play on.<br />Installing and changing patches has <span className="italic">no</span> effect on your graphics settings, keybinds, and only changes the game engine.<br /><br /><b>Patching is completely safe!</b>
                 </div>
 
-                <div className="p-6 rounded-xl bg-card border border-border space-y-4">
-                    <h3 className="text-xl font-semibold">Available Patches</h3>
-                    {patchVersion === 'Unsupported' && (
-                        <div className="flex items-center gap-3 p-4 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm font-medium">
-                            <AlertTriangle className="size-5 shrink-0" />
-                            <p>
-                                You are running an unsupported version of Unreal Tournament.
-                                <br />
-                                Please apply a patch below to use the launcher.
-                            </p>
-                        </div>
-                    )}
-                    <p className="text-sm text-muted-foreground">
-                        Select the version of the game that you would like to play on.<br />Installing and changing patches has <span className="italic">no</span> effect on your graphics settings, keybinds, and only changes the game engine.<br /><br /><b>Patching is completely safe!</b>
-                    </p>
+                {patches.length === 0 ? (
+                    <div className="p-6 text-sm text-muted-foreground text-center">Loading patches...</div>
+                ) : (
+                    patches.map((patch) => {
+                        const isInstalled = patchVersion === patch.tag
+                        const isInstalling = installingPatch === patch.tag
 
-                    {patches.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">Loading patches...</p>
-                    ) : (
-                        <div className="space-y-2">
-                            {patches.map((patch) => {
-                                const isInstalled = patchVersion === patch.tag
-                                const isInstalling = installingPatch === patch.tag
-
-                                return (
-                                    <div key={patch.tag} className="p-4 rounded-lg bg-secondary/30 border border-border space-y-2">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-3">
-                                                <div>
-                                                    <div className="font-semibold">{patch.tag}</div>
-                                                </div>
-                                                {isInstalled && !isInstalling && (
-                                                    <span className="text-xs px-2 py-1 rounded bg-primary/20 text-primary">Installed</span>
-                                                )}
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <a
-                                                    href={patch.release_notes_url}
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                    className="text-xs text-primary hover:underline"
-                                                >
-                                                    Release Notes
-                                                </a>
-                                                <Button
-                                                    size="sm"
-                                                    onClick={() => handleInstallPatch(patch)}
-                                                    disabled={isInstalling || !installPath}
-                                                >
-                                                    {isInstalling ? 'Installing...' : isInstalled ? 'Reinstall' : 'Install'}
-                                                </Button>
-                                            </div>
-                                        </div>
-
+                        return (
+                            <SettingsRow
+                                key={patch.tag}
+                                label={
+                                    <div className="flex items-center gap-2">
+                                        {patch.tag}
+                                        {isInstalled && !isInstalling && (
+                                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/20 text-primary uppercase font-bold tracking-wider">Installed</span>
+                                        )}
+                                    </div>
+                                }
+                                description={
+                                    <div className="flex flex-col gap-1">
+                                        <a
+                                            href={patch.release_notes_url}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="text-xs text-primary hover:underline w-fit"
+                                        >
+                                            View Release Notes
+                                        </a>
                                         {isInstalling && (
-                                            <div className="space-y-1">
-                                                <div className="flex justify-between text-xs text-muted-foreground">
+                                            <div className="space-y-1 mt-1 w-full max-w-[200px]">
+                                                <div className="flex justify-between text-[10px] text-muted-foreground">
                                                     <span>{patchInstallStatus}</span>
                                                     {patchProgress > 0 && <span>{Math.round(patchProgress)}%</span>}
                                                 </div>
@@ -338,12 +324,22 @@ export function GameInstallationSettings({ onBack }: GameInstallationSettingsPro
                                             </div>
                                         )}
                                     </div>
-                                )
-                            })}
-                        </div>
-                    )}
-                </div>
-            </div>
+                                }
+                            >
+                                <Button
+                                    size="sm"
+                                    onClick={() => handleInstallPatch(patch)}
+                                    disabled={isInstalling || !installPath}
+                                    variant={isInstalled ? 'outline' : 'default'}
+                                >
+                                    {isInstalling ? 'Installing...' : isInstalled ? 'Reinstall' : 'Install'}
+                                </Button>
+                            </SettingsRow>
+                        )
+                    })
+                )}
+            </SettingsSection>
+
 
             <ErrorModal
                 isOpen={showError}
@@ -369,6 +365,6 @@ export function GameInstallationSettings({ onBack }: GameInstallationSettingsPro
                 cancelText="Cancel"
                 variant="error"
             />
-        </div>
+        </div >
     )
 }
