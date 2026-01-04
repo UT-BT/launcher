@@ -107,7 +107,7 @@ export const registerIniHandlers = (_window: BrowserWindow) => {
         }
     })
 
-    handle('writeIniValue', async (path: string, section: string, key: string, value: string, createIfMissing?: boolean) => {
+    handle('writeIniValue', async (path: string, section: string, key: string, value: string | null, createIfMissing?: boolean) => {
         try {
             const iniPath = resolveIniPath(path)
             let content = ''
@@ -132,12 +132,17 @@ export const registerIniHandlers = (_window: BrowserWindow) => {
                 config[section] = {}
             }
 
-            config[section][key] = value
+            if (value === null) {
+                delete config[section][key]
+                loggingService.info(`Deleted INI key [${section}] ${key} in ${path}`, 'IniHandler')
+            } else {
+                config[section][key] = value
+                loggingService.info(`Updated INI value [${section}] ${key}=${value} in ${path}`, 'IniHandler')
+            }
 
             const newContent = stringifyIni(config)
             writeFileSync(iniPath, newContent, 'utf-8')
 
-            loggingService.info(`Updated INI value [${section}] ${key}=${value} in ${path}`, 'IniHandler')
         } catch (error) {
             loggingService.error(`Failed to write INI value to ${path}`, 'IniHandler', error)
             throw error
