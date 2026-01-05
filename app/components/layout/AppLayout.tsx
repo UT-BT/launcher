@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useState } from 'react'
-import { Home, Server, Trophy, Map as MapIcon, Settings, LogOut, Play, Crown, Clock } from 'lucide-react'
+import { Home, Server, Settings, LogOut, Play } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import logo from '@/app/assets/logo.png'
 import {

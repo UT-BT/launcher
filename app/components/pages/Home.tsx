@@ -225,13 +225,8 @@ export function Home({ userProfile }: HomeProps) {
 
             <div className="grid grid-cols-1 xl:grid-cols-12 gap-12">
                 <div className="xl:col-span-7 space-y-6">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2.5">
-                            <div className="size-8 rounded-lg bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
-                                <Flag className="size-4 text-blue-400" />
-                            </div>
-                            <h2 className="text-lg font-black uppercase tracking-widest text-white/80">Recent Caps</h2>
-                        </div>
+                    <div className="flex items-center justify-between px-3">
+                        <h2 className="text-lg font-black uppercase tracking-widest text-white/80">Recent Caps</h2>
                         <Button
                             variant="ghost"
                             size="sm"
@@ -291,11 +286,8 @@ export function Home({ userProfile }: HomeProps) {
                 </div>
 
                 <div className="xl:col-span-5 space-y-6">
-                    <div className="flex items-center gap-2.5">
-                        <div className="size-8 rounded-lg bg-orange-500/10 flex items-center justify-center border border-orange-500/20">
-                            <MessageSquare className="size-4 text-orange-400" />
-                        </div>
-                        <h2 className="text-lg font-black uppercase tracking-widest text-white/80">Pending Reviews</h2>
+                    <div className="flex items-center px-3">
+                        <h2 className="text-lg font-black uppercase tracking-widest text-white/80">Unreviewed Maps</h2>
                     </div>
 
                     <div className="space-y-4">
