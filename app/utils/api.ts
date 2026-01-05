@@ -524,7 +524,7 @@ export async function submitSummaryReview(accessToken: string, review: {
     return json.data
 }
 
-export async function assignTitle(accessToken: string, titleId: string): Promise<void> {
+export async function assignTitle(accessToken: string, titleId?: string | null): Promise<void> {
     try {
         const response = await fetch(`${API_BASE_URL}/v2/titles/assign`, {
             method: 'POST',
@@ -532,7 +532,7 @@ export async function assignTitle(accessToken: string, titleId: string): Promise
                 'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ title_id: titleId })
+            body: JSON.stringify({ title_id: titleId ?? null })
         })
 
         if (!response.ok) {
