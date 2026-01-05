@@ -22,8 +22,15 @@ export function Modal({ isOpen, onClose, title, children, className, footer, bac
 
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'Escape') {
-                e.stopPropagation()
-                onClose()
+                // Check if this is the top-most modal
+                const backdrops = document.querySelectorAll('[data-modal-backdrop]')
+                const isTopMost = backdrops[backdrops.length - 1] === modalRef.current?.parentElement
+
+                if (isTopMost) {
+                    e.preventDefault()
+                    e.stopImmediatePropagation()
+                    onClose()
+                }
             }
         }
 
@@ -74,10 +81,13 @@ export function Modal({ isOpen, onClose, title, children, className, footer, bac
     if (!isOpen) return null
 
     return (
-        <div className={cn(
-            "fixed top-[var(--window-titlebar-height)] right-0 bottom-0 left-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200",
-            backdropClassName
-        )}>
+        <div
+            data-modal-backdrop
+            className={cn(
+                "fixed top-[var(--window-titlebar-height)] right-0 bottom-0 left-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200",
+                backdropClassName
+            )}
+        >
             <div
                 ref={modalRef}
                 tabIndex={-1}

@@ -394,7 +394,7 @@ export function GameInputSettings() {
 
             {/* Editing Overlay */}
             {editingBind && (
-                <div className="fixed top-[var(--window-titlebar-height)] right-0 bottom-0 left-64 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center animate-in fade-in duration-200">
+                <div data-modal-backdrop className="fixed top-[var(--window-titlebar-height)] right-0 bottom-0 left-64 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center animate-in fade-in duration-200">
                     <div className="bg-card border border-border p-6 rounded-lg shadow-lg max-w-sm w-full text-center space-y-4 animate-in zoom-in-95 duration-200">
                         <h3 className="text-lg font-bold">Press any key</h3>
                         <p className="text-muted-foreground">Press a key to bind to <b>{BIND_CATEGORIES.flatMap(c => c.binds).find(b => b.command === editingBind.command)?.label}</b></p>
