@@ -329,11 +329,11 @@ export async function fetchTitles(accessToken: string, limit: number, offset: nu
         }
 
         const json = await response.json()
-        if (json.success && json.data) {
-            return json.data as AssignedTitleV2[]
+        if (json.success) {
+            return (json.data || []) as AssignedTitleV2[]
         }
 
-        throw new Error('Invalid response format from server')
+        throw new Error(json.error || 'Invalid response format from server')
     } catch (error) {
         console.error('Error fetching titles:', error)
         throw error
