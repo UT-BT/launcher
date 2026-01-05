@@ -1,6 +1,6 @@
 import { FilterState, ServerType } from '@/app/utils/server-utils'
 import { cn } from '@/lib/utils'
-import { Check, Filter, Globe, Server as ServerIcon, Users } from 'lucide-react'
+import { Check } from 'lucide-react'
 
 interface ServerBrowserSidebarProps {
     filters: FilterState
@@ -40,21 +40,15 @@ export function ServerBrowserSidebar({
     }
 
     return (
-        <div className={cn("w-64 bg-card/30 border-r border-white/5 p-4 flex flex-col gap-6 overflow-y-auto", className)}>
-            <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                <Filter className="size-4" />
-                <span className="font-semibold text-sm uppercase tracking-wider">Filters</span>
-            </div>
-
+        <div className={cn("w-full p-2 flex flex-col gap-8 overflow-y-auto", className)}>
             {/* Server Type */}
             <div className="space-y-3">
-                <h3 className="text-sm font-medium text-white flex items-center gap-2">
-                    <ServerIcon className="size-4 text-blue-400" />
+                <h3 className="px-2 text-[10px] font-bold text-muted-foreground/60 uppercase tracking-[0.2em] flex items-center gap-2">
                     Server Type
                 </h3>
-                <div className="space-y-2">
+                <div className="space-y-1">
                     {(['Certified', 'Duel', 'Casual'] as ServerType[]).map(type => (
-                        <label key={type} className="flex items-center gap-3 cursor-pointer group">
+                        <label key={type} className="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer group hover:bg-muted/50 transition-colors">
                             <input
                                 type="checkbox"
                                 checked={filters.types[type]}
@@ -62,14 +56,14 @@ export function ServerBrowserSidebar({
                                 className="sr-only"
                             />
                             <div className={cn(
-                                "size-4 rounded border flex items-center justify-center transition-colors",
+                                "size-4 rounded border flex items-center justify-center transition-all duration-200",
                                 filters.types[type]
-                                    ? "bg-blue-600 border-blue-600"
-                                    : "border-white/20 group-hover:border-white/40 bg-transparent"
+                                    ? "bg-primary border-primary text-primary-foreground"
+                                    : "border-muted-foreground/30 group-hover:border-primary/50 bg-transparent"
                             )}>
-                                {filters.types[type] && <Check className="size-3 text-white" />}
+                                {filters.types[type] && <Check className="size-3" />}
                             </div>
-                            <span className={cn("text-sm transition-colors", filters.types[type] ? "text-white" : "text-muted-foreground group-hover:text-white/80")}>
+                            <span className={cn("text-sm font-medium transition-colors", filters.types[type] ? "text-foreground" : "text-muted-foreground group-hover:text-foreground")}>
                                 {type}
                             </span>
                         </label>
@@ -77,16 +71,13 @@ export function ServerBrowserSidebar({
                 </div>
             </div>
 
-            <div className="h-px bg-white/5" />
-
             {/* Availability */}
             <div className="space-y-3">
-                <h3 className="text-sm font-medium text-white flex items-center gap-2">
-                    <Users className="size-4 text-green-400" />
+                <h3 className="px-2 text-[10px] font-bold text-muted-foreground/60 uppercase tracking-[0.2em] flex items-center gap-2">
                     Availability
                 </h3>
-                <div className="space-y-2">
-                    <label className="flex items-center gap-3 cursor-pointer group">
+                <div className="space-y-1">
+                    <label className="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer group hover:bg-muted/50 transition-colors">
                         <input
                             type="checkbox"
                             checked={filters.hideEmpty}
@@ -94,19 +85,19 @@ export function ServerBrowserSidebar({
                             className="sr-only"
                         />
                         <div className={cn(
-                            "size-4 rounded border flex items-center justify-center transition-colors",
+                            "size-4 rounded border flex items-center justify-center transition-all duration-200",
                             filters.hideEmpty
-                                ? "bg-blue-600 border-blue-600"
-                                : "border-white/20 group-hover:border-white/40 bg-transparent"
+                                ? "bg-primary border-primary text-primary-foreground"
+                                : "border-muted-foreground/30 group-hover:border-primary/50 bg-transparent"
                         )}>
-                            {filters.hideEmpty && <Check className="size-3 text-white" />}
+                            {filters.hideEmpty && <Check className="size-3" />}
                         </div>
-                        <span className={cn("text-sm transition-colors", filters.hideEmpty ? "text-white" : "text-muted-foreground group-hover:text-white/80")}>
+                        <span className={cn("text-sm font-medium transition-colors", filters.hideEmpty ? "text-foreground" : "text-muted-foreground group-hover:text-foreground")}>
                             Hide Empty
                         </span>
                     </label>
 
-                    <label className="flex items-center gap-3 cursor-pointer group">
+                    <label className="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer group hover:bg-muted/50 transition-colors">
                         <input
                             type="checkbox"
                             checked={filters.hideFull}
@@ -114,34 +105,31 @@ export function ServerBrowserSidebar({
                             className="sr-only"
                         />
                         <div className={cn(
-                            "size-4 rounded border flex items-center justify-center transition-colors",
+                            "size-4 rounded border flex items-center justify-center transition-all duration-200",
                             filters.hideFull
-                                ? "bg-blue-600 border-blue-600"
-                                : "border-white/20 group-hover:border-white/40 bg-transparent"
+                                ? "bg-primary border-primary text-primary-foreground"
+                                : "border-muted-foreground/30 group-hover:border-primary/50 bg-transparent"
                         )}>
-                            {filters.hideFull && <Check className="size-3 text-white" />}
+                            {filters.hideFull && <Check className="size-3" />}
                         </div>
-                        <span className={cn("text-sm transition-colors", filters.hideFull ? "text-white" : "text-muted-foreground group-hover:text-white/80")}>
+                        <span className={cn("text-sm font-medium transition-colors", filters.hideFull ? "text-foreground" : "text-muted-foreground group-hover:text-foreground")}>
                             Hide Full
                         </span>
                     </label>
                 </div>
             </div>
 
-            <div className="h-px bg-white/5" />
-
             {/* Regions */}
             <div className="space-y-3">
-                <h3 className="text-sm font-medium text-white flex items-center gap-2">
-                    <Globe className="size-4 text-purple-400" />
+                <h3 className="px-2 text-[10px] font-bold text-muted-foreground/60 uppercase tracking-[0.2em] flex items-center gap-2">
                     Regions
                 </h3>
-                <div className="space-y-2">
+                <div className="space-y-1">
                     {availableRegions.length === 0 && (
-                        <p className="text-xs text-muted-foreground italic">No regions found</p>
+                        <p className="px-3 text-xs text-muted-foreground italic">No regions found</p>
                     )}
                     {availableRegions.map(region => (
-                        <label key={region} className="flex items-center gap-3 cursor-pointer group">
+                        <label key={region} className="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer group hover:bg-muted/50 transition-colors">
                             <input
                                 type="checkbox"
                                 checked={filters.regions[region] !== false}
@@ -149,14 +137,14 @@ export function ServerBrowserSidebar({
                                 className="sr-only"
                             />
                             <div className={cn(
-                                "size-4 rounded border flex items-center justify-center transition-colors",
+                                "size-4 rounded border flex items-center justify-center transition-all duration-200",
                                 filters.regions[region] !== false
-                                    ? "bg-blue-600 border-blue-600"
-                                    : "border-white/20 group-hover:border-white/40 bg-transparent"
+                                    ? "bg-primary border-primary text-primary-foreground"
+                                    : "border-muted-foreground/30 group-hover:border-primary/50 bg-transparent"
                             )}>
-                                {filters.regions[region] !== false && <Check className="size-3 text-white" />}
+                                {filters.regions[region] !== false && <Check className="size-3" />}
                             </div>
-                            <span className={cn("text-sm transition-colors", filters.regions[region] !== false ? "text-white" : "text-muted-foreground group-hover:text-white/80")}>
+                            <span className={cn("text-sm font-medium transition-colors", filters.regions[region] !== false ? "text-foreground" : "text-muted-foreground group-hover:text-foreground")}>
                                 {region}
                             </span>
                         </label>
