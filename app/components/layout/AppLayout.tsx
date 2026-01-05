@@ -24,7 +24,11 @@ const navItems: NavItem[] = [
     { id: 'servers', label: 'Servers', icon: Server },
     // { id: 'rankings', label: 'Rankings', icon: Trophy },
     // { id: 'maps', label: 'Maps', icon: MapIcon },
+<<<<<<< HEAD
     // { id: 'settings', label: 'Settings', icon: Settings },
+=======
+    { id: 'settings', label: 'Settings', icon: Settings },
+>>>>>>> 80e2077d02403ae03555e85f503e8fc349447631
 ]
 
 import { UserProfile } from '@/app/utils/api'
