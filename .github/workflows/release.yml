@@ -107,7 +107,7 @@ jobs:
           }
           $lines = $analysis -split "`n" | Where-Object { $_ -match '=' }
           $vtLinks = $lines | ForEach-Object {
-              $parts = $_ -split '='
+              $parts = $_ -split '=', 2
               $fileName = Split-Path $parts[0] -Leaf
               "- [VirusTotal Scan Report for $fileName]($($parts[1]))"
           }
