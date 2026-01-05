@@ -22,7 +22,7 @@ export interface AssignedTitleV2 {
     assigned_at: string
     selected: boolean
     alias: string
-    title_id: number
+    title_id: string
     name: string
     rarity: number
     color_r: number
@@ -315,7 +315,7 @@ export async function fetchRecordsCount(accessToken: string, addedSince?: string
     }
 }
 
-export async function fetchTitles(accessToken: string, limit: number, offset: number, userId?: number): Promise<AssignedTitleV2[]> {
+export async function fetchTitles(accessToken: string, limit: number, offset: number, userId?: string | number): Promise<AssignedTitleV2[]> {
     try {
         const userParam = userId ? `&user=${userId}` : ''
         const response = await fetch(`${API_BASE_URL}/v2/titles/?limit=${limit}&offset=${offset}${userParam}`, {
@@ -522,4 +522,29 @@ export async function submitSummaryReview(accessToken: string, review: {
     if (!response.ok) throw new Error('Failed to submit review')
     const json = await response.json()
     return json.data
+}
+
+export async function assignTitle(accessToken: string, titleId: string): Promise<void> {
+    try {
+        const response = await fetch(`${API_BASE_URL}/v2/titles/assign`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ title_id: titleId })
+        })
+
+        if (!response.ok) {
+            throw new Error(`Failed to assign title: ${response.statusText} (${response.status})`)
+        }
+
+        const json = await response.json()
+        if (!json.success) {
+            throw new Error(json.reason || 'Failed to assign title')
+        }
+    } catch (error) {
+        console.error('Error assigning title:', error)
+        throw error
+    }
 }

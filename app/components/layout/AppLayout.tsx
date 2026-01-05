@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useState } from 'react'
-import { Home, Server, Trophy, Map as MapIcon, Settings, LogOut, Play } from 'lucide-react'
+import { Home, Server, Trophy, Settings, LogOut, Play } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import logo from '@/app/assets/logo.png'
 import {
@@ -12,6 +12,7 @@ import {
 } from '@/app/components/ui/dropdown-menu'
 import { Button } from '@/app/components/ui/button'
 import { SettingsModal } from '@/app/components/modals/SettingsModal'
+import { ChangeTitleModal } from '@/app/components/modals/ChangeTitleModal'
 
 interface NavItem {
     id: string
@@ -66,6 +67,7 @@ function getRarityStyles(title: { rarity: number, color: string } | undefined | 
 export function AppLayout({ children, currentView, onViewChange, userProfile, installationStatus }: AppLayoutProps) {
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
     const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+    const [isChangeTitleOpen, setIsChangeTitleOpen] = useState(false)
     const [settingsInitialSection, setSettingsInitialSection] = useState<string | undefined>(undefined)
     const { containerStyle, titleStyle, containerClass, titleClass } = getRarityStyles(userProfile?.active_title)
 
@@ -209,6 +211,13 @@ export function AppLayout({ children, currentView, onViewChange, userProfile, in
                             <DropdownMenuLabel>{userProfile?.alias || userProfile?.username || 'Player'}</DropdownMenuLabel>
                             <DropdownMenuSeparator className="bg-white/10" />
                             <DropdownMenuItem
+                                onClick={() => setIsChangeTitleOpen(true)}
+                                className="text-muted-foreground focus:text-white focus:bg-white/10 cursor-pointer mb-1"
+                            >
+                                <Trophy className="mr-2 size-4" />
+                                <span>Change Title</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
                                 onClick={() => setIsSettingsOpen(true)}
                                 className="text-muted-foreground focus:text-white focus:bg-white/10 cursor-pointer mb-1"
                             >
@@ -233,6 +242,15 @@ export function AppLayout({ children, currentView, onViewChange, userProfile, in
                 <div className="p-8 min-h-full">
                     {children}
                 </div>
+
+                <ChangeTitleModal
+                    isOpen={isChangeTitleOpen}
+                    onClose={() => setIsChangeTitleOpen(false)}
+                    accessToken={userProfile?.accessToken}
+                    userId={userProfile?.id || undefined}
+                    currentTitleId={userProfile?.active_title?.id || undefined}
+                    onTitleChanged={() => window.dispatchEvent(new CustomEvent('refresh-user-profile'))}
+                />
             </main>
 
             {/* Logout Confirmation Modal */}
@@ -280,6 +298,7 @@ export function AppLayout({ children, currentView, onViewChange, userProfile, in
                 onClose={() => setIsSettingsOpen(false)}
                 initialSection={settingsInitialSection}
             />
+
         </div>
     )
 }

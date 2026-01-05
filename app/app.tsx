@@ -140,6 +140,22 @@ export default function App() {
   }, [userProfile?.accessToken])
 
   useEffect(() => {
+    const handleRefreshProfile = async () => {
+      if (!userProfile?.accessToken) return;
+      logger.info('Refreshing user profile...');
+      try {
+        const extendedProfile = await fetchUserProfile(userProfile.accessToken);
+        setUserProfile((prev) => (prev ? { ...prev, ...extendedProfile } : prev));
+      } catch (e) {
+        logger.error('Failed to refresh profile', e);
+      }
+    };
+
+    window.addEventListener('refresh-user-profile', handleRefreshProfile);
+    return () => window.removeEventListener('refresh-user-profile', handleRefreshProfile);
+  }, [userProfile?.accessToken, logger]);
+
+  useEffect(() => {
     const titlebarContext = document.getElementById('titlebar-context')
     if (titlebarContext) {
       const disabled = appPhase !== 'main'
