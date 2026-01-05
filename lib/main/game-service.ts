@@ -67,7 +67,7 @@ export class GameService {
             .filter(dirent => dirent.isDirectory())
             .map(dirent => {
                 const profilePath = join(profilesDir, dirent.name)
-                let stats = statSync(profilePath)
+                const stats = statSync(profilePath)
                 let latestMtime = stats.mtimeMs
 
                 const files = readdirSync(profilePath)

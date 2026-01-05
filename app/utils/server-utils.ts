@@ -1,12 +1,19 @@
 import { Server } from '@/app/components/pages/ServerBrowserPage'
 
-export type ServerType = 'Certified' | 'Duel' | 'Casual' | 'Other'
+export type ServerType = 'Certified' | 'Duel' | 'Casual' | 'Unknown'
 export type SortOption = 'Players' | 'Ping'
 export type FilterState = {
     types: Record<ServerType, boolean>
     hideEmpty: boolean
     hideFull: boolean
     regions: Record<string, boolean>
+}
+
+export const DEFAULT_FILTERS: FilterState = {
+    types: { Certified: true, Duel: true, Casual: true, Unknown: true },
+    hideEmpty: false,
+    hideFull: false,
+    regions: {}
 }
 
 export const trimServerName = (originalName: string): string => {
@@ -23,7 +30,7 @@ export const getServerType = (name: string): ServerType => {
     if (lowerName.includes('certified')) return 'Certified'
     if (lowerName.includes('duel')) return 'Duel'
     if (lowerName.includes('casual')) return 'Casual'
-    return 'Other'
+    return 'Unknown'
 }
 
 export const getServerRegion = (name: string): string => {
