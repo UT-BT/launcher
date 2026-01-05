@@ -1,7 +1,7 @@
 import { Server } from '@/app/components/pages/ServerBrowserPage'
 
 export type ServerType = 'Certified' | 'Duel' | 'Casual' | 'Other'
-export type SortOption = 'Name' | 'Players' | 'Ping'
+export type SortOption = 'Players' | 'Ping'
 export type FilterState = {
     types: Record<ServerType, boolean>
     hideEmpty: boolean
@@ -34,8 +34,6 @@ export const getServerRegion = (name: string): string => {
 export const sortServers = (servers: Server[], option: SortOption): Server[] => {
     return [...servers].sort((a, b) => {
         switch (option) {
-            case 'Name':
-                return a.hostname.localeCompare(b.hostname)
             case 'Players':
                 if (a.player_count !== b.player_count) return b.player_count - a.player_count
                 return b.max_players - a.max_players

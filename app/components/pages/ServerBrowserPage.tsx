@@ -1,11 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useCallback } from 'react'
 import { Button } from '@/app/components/ui/button'
 import { useLogger } from '@/app/hooks/use-logger'
 import { RefreshCw, Play, Users, Trophy, Shield, Signal, Swords, Coffee, PanelLeft, User, ExternalLink, Twitch, Eye } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { FilterState, getRegionFlag, getServerRegion, getServerType, SortOption, filterServers, sortServers } from '@/app/utils/server-utils'
 import { ServerBrowserSidebar } from '@/app/components/ServerBrowserSidebar'
-import { JoinServerModal } from '@/app/components/JoinServerModal'
 import { ErrorModal } from '@/app/components/ErrorModal'
 import { Tooltip } from '@/app/components/ui/tooltip'
 
@@ -46,11 +45,15 @@ export interface Server {
     ping?: number
 }
 
-const MapThumbnail = ({ mapName }: { mapName: string }) => {
+const MapThumbnail = ({ mapName, className }: { mapName: string, className?: string }) => {
     const [imgSrc, setImgSrc] = useState(`https://utbt.net/images/screenshots/${mapName}.png`)
 
+    useEffect(() => {
+        setImgSrc(`https://utbt.net/images/screenshots/${mapName}.png`)
+    }, [mapName])
+
     return (
-        <div className="size-20 rounded-lg overflow-hidden bg-muted relative shrink-0 border border-white/10 shadow-lg shadow-black/20 group-hover:shadow-blue-900/20 transition-shadow">
+        <div className={cn("overflow-hidden bg-muted relative shrink-0 border border-white/10 shadow-lg shadow-black/20 group-hover:shadow-blue-900/20 transition-shadow", className)}>
             <img
                 src={imgSrc}
                 alt={mapName}
@@ -151,13 +154,10 @@ const getTypeIcon = (type: string) => {
     }
 }
 
-const ServerRow = ({ server, onJoin }: { server: Server, onJoin: (server: Server) => void }) => {
-    const [isExpanded, setIsExpanded] = useState(false)
+const ServerRow = ({ server, onJoin }: { server: Server, onJoin: (server: Server, asSpectator: boolean) => void }) => {
     const type = getServerType(server.hostname)
     const region = getServerRegion(server.hostname)
     const flag = getRegionFlag(region)
-
-    const hasManyPlayers = server.players.length > 8 // Arbitrary threshold for "too many"
 
     const sortedPlayers = useMemo(() => {
         return [...server.players].sort((a, b) => {
@@ -170,130 +170,120 @@ const ServerRow = ({ server, onJoin }: { server: Server, onJoin: (server: Server
 
     return (
         <div
-            className="group relative bg-card/50 hover:bg-card/80 border border-white/5 hover:border-white/10 rounded-xl p-4 transition-all duration-200 flex items-center gap-6 overflow-hidden"
+            className="group relative bg-card/50 hover:bg-card/80 border border-transparent hover:border-white/5 rounded-xl p-3 transition-all duration-200 flex items-start gap-4 overflow-hidden"
         >
             {/* Hover Gradient */}
             <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
 
             {/* Map Image */}
-            <MapThumbnail mapName={server.map_name} />
+            <div className="relative shrink-0 self-center">
+                <MapThumbnail mapName={server.map_name} className="w-48 aspect-video rounded-md shadow-sm" />
+                <div className="absolute top-1.5 left-1.5 rounded bg-black/60 backdrop-blur-sm px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow-sm flex items-center gap-1">
+                    {getTypeIcon(type)}
+                    {type}
+                </div>
+            </div>
 
-            <div className="flex-1 min-w-0 flex flex-col gap-4">
-                <div className="flex items-center gap-6">
-                    {/* Server Info */}
-                    <div className="flex-1 min-w-0 z-10 px-1">
-                        <div className="flex items-center gap-4">
-                            {/* Map Name with Icon */}
-                            <div className="flex items-center gap-2 min-w-0">
-                                <span className="text-lg font-black text-white truncate tracking-tight group-hover:text-blue-400 transition-colors">
-                                    {server.map_name.replace('CTF-BT-', '🐰 ').replace('CTF-BT+', '🔑 ')}
-                                </span>
-                            </div>
-
-                            {/* Icons and Ping */}
-                            <div className="flex items-center gap-3 shrink-0 bg-white/5 py-1.5 px-3 rounded-full border border-white/5">
-                                <div title={type}>
-                                    {getTypeIcon(type)}
-                                </div>
-                                <img
-                                    src={flag}
-                                    alt={region}
-                                    title={region}
-                                    className="h-3 w-4.5 object-cover rounded-sm shadow-sm grayscale-[0.2]"
-                                />
-                                <div className="flex items-center gap-1.5 min-w-[60px]">
-                                    <Signal className={cn("size-3.5",
-                                        !server.ping ? "text-muted-foreground" :
-                                            server.ping < 100 ? "text-green-500" :
-                                                server.ping < 200 ? "text-yellow-500" : "text-red-500"
-                                    )} />
-                                    <span className="text-sm font-bold text-muted-foreground tabular-nums">{server.ping ? `${server.ping}ms` : '...'}</span>
-                                </div>
-                            </div>
-                        </div>
+            <div className="flex-1 min-w-0 flex flex-col gap-3 py-1">
+                {/* Header Line */}
+                <div className="flex items-center gap-4 flex-wrap">
+                    {/* Map Name */}
+                    <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-lg font-black text-white truncate tracking-tight group-hover:text-blue-400 transition-colors">
+                            {server.map_name.replace('CTF-BT-', '🐰 ').replace('CTF-BT+', '🔑 ')}
+                        </span>
                     </div>
 
-                    {/* Stats */}
-                    <div className="flex items-center gap-6 z-10">
-                        {/* Players / Spectators */}
-                        <div className="flex items-center gap-4 bg-white/5 py-1.5 px-3 rounded-lg border border-white/5">
-                            <div className="flex items-center gap-1.5">
-                                <Users className="size-4 text-blue-400" />
-                                <span className={cn(
-                                    "font-bold text-base tabular-nums",
-                                    server.player_count >= server.max_players ? "text-rose-500/80" :
-                                        server.player_count > 0 ? "text-emerald-500/80" : "text-white"
-                                )}>
-                                    {server.player_count}/{server.max_players}
-                                </span>
-                            </div>
-                            {server.spectators > 0 && (
-                                <>
-                                    <div className="w-px h-3 bg-white/10" />
-                                    <div className="flex items-center gap-1.5" title={`${server.spectators} Spectator${server.spectators === 1 ? '' : 's'}`}>
-                                        <Eye className="size-3.5 text-blue-400/50" />
-                                        <span className="text-base font-bold text-muted-foreground tabular-nums">{server.spectators}</span>
-                                    </div>
-                                </>
-                            )}
+                    {/* Metadata Badges */}
+                    <div className="flex items-center gap-2">
+                        {/* Region */}
+                        <div className="flex items-center gap-1.5 bg-white/5 px-2 py-1 rounded text-xs font-bold text-muted-foreground uppercase tracking-wider border border-white/5" title={region}>
+                            <img
+                                src={flag}
+                                alt={region}
+                                className="h-2.5 w-4 object-cover rounded-[1px] opacity-70"
+                            />
+                            {region}
                         </div>
 
-                        {/* Join Button */}
-                        <Button
-                            onClick={() => onJoin(server)}
-                            className="h-10 px-6 bg-white/5 hover:bg-white/10 text-white rounded-xl shadow-lg border border-white/5 backdrop-blur-md transition-all hover:scale-[1.02] active:scale-95 group/join"
-                        >
-                            <Play className="size-4 mr-2 fill-current transition-transform group-hover/join:translate-x-0.5" />
-                            <span className="font-bold">Join</span>
-                        </Button>
+                        {/* Ping */}
+                        <div className="flex items-center gap-1 bg-white/5 px-2 py-1 rounded text-xs font-bold text-muted-foreground tabular-nums border border-white/5">
+                            <Signal className={cn("size-3",
+                                !server.ping ? "text-muted-foreground" :
+                                    server.ping < 100 ? "text-green-500" :
+                                        server.ping < 200 ? "text-yellow-500" : "text-red-500"
+                            )} />
+                            {server.ping ? `${server.ping}ms` : '...'}
+                        </div>
+
+                        {/* Player Count */}
+                        <div className={cn(
+                            "flex items-center gap-1.5 bg-white/5 px-2 py-1 rounded text-xs font-bold tabular-nums border border-white/5",
+                            server.player_count >= server.max_players ? "text-rose-400" :
+                                server.player_count > 0 ? "text-emerald-400" : "text-muted-foreground"
+                        )}>
+                            <Users className="size-3" />
+                            {server.player_count}/{server.max_players}
+                        </div>
+
+                        {server.spectators > 0 && (
+                            <div className="flex items-center gap-1.5 bg-white/5 px-2 py-1 rounded text-xs font-bold text-muted-foreground tabular-nums border border-white/5">
+                                <Eye className="size-3" />
+                                {server.spectators}
+                            </div>
+                        )}
                     </div>
                 </div>
 
-                {/* Players List */}
-                {server.players && server.players.length > 0 && (
-                    <div className="flex flex-col gap-2 border-t border-white/5 pt-3 mt-1.5 z-10 relative">
-                        <div className={cn(
-                            "flex flex-wrap gap-2.5 transition-all duration-500 ease-in-out overflow-hidden relative",
-                            !isExpanded && hasManyPlayers ? "max-h-[44px]" : "max-h-[500px]"
-                        )}>
-                            {sortedPlayers.map(player => (
-                                <PlayerTag key={`${player.id}-${player.name}`} player={player} />
-                            ))}
+                {/* Player List (Inline) */}
+                <div className="flex flex-wrap gap-2 items-start content-start min-h-[28px]">
+                    {sortedPlayers.length > 0 ? (
+                        sortedPlayers.map(player => (
+                            <PlayerTag key={`${player.id}-${player.name}`} player={player} />
+                        ))
+                    ) : null}
+                </div>
+            </div>
 
-                            {!isExpanded && hasManyPlayers && (
-                                <div className="absolute inset-x-0 bottom-0 h-6 bg-gradient-to-t from-card/80 to-transparent pointer-events-none" />
-                            )}
-                        </div>
-
-                        {hasManyPlayers && (
-                            <button
-                                onClick={() => setIsExpanded(!isExpanded)}
-                                className="self-start text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-blue-400 transition-colors flex items-center gap-1.5 mt-1"
-                            >
-                                <div className="w-8 h-px bg-white/5" />
-                                {isExpanded ? 'Show Less' : `Show all ${server.players.length} players`}
-                                <div className="w-8 h-px bg-white/5" />
-                            </button>
-                        )}
+            {/* Actions */}
+            <div className="flex flex-col gap-2 shrink-0 self-center pl-2 items-center">
+                <Tooltip content={server.player_count >= server.max_players ? "Server is full" : "Join Server"}>
+                    <div className="inline-flex">
+                        <Button
+                            onClick={() => onJoin(server, false)}
+                            size="sm"
+                            disabled={server.player_count >= server.max_players}
+                            className="h-9 px-6 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg shadow-lg hover:shadow-primary/20 transition-all active:scale-95 group/join uppercase text-[10px] font-bold tracking-widest disabled:opacity-50"
+                        >
+                            <Play className="size-3 mr-2 fill-current transition-transform group-hover/join:translate-x-0.5" />
+                            Join
+                        </Button>
                     </div>
-                )}
+                </Tooltip>
+                <Button
+                    onClick={() => onJoin(server, true)}
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 px-4 text-muted-foreground hover:text-foreground rounded-lg hover:bg-white/5 transition-all text-[10px] font-bold uppercase tracking-widest gap-2"
+                >
+                    <Eye className="size-3" />
+                    Spectate
+                </Button>
             </div>
         </div>
     )
 }
 
-interface ServerBrowserPageProps {
-    installationStatus: 'valid' | 'no-install' | 'unsupported' | null
-}
+interface ServerBrowserPageProps { }
 
-export function ServerBrowserPage({ installationStatus }: ServerBrowserPageProps) {
+export function ServerBrowserPage({ }: ServerBrowserPageProps) {
     const logger = useLogger('ServerBrowserPage')
     const [servers, setServers] = useState<Server[]>([])
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
-    const [selectedServer, setSelectedServer] = useState<Server | null>(null)
     const [launchError, setLaunchError] = useState<string | null>(null)
     const [isErrorModalOpen, setIsErrorModalOpen] = useState(false)
+    const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
 
     // Helper to load settings synchronously
     const getInitialSettings = (): SavedSettings | null => {
@@ -309,7 +299,7 @@ export function ServerBrowserPage({ installationStatus }: ServerBrowserPageProps
     // Initialize state from localStorage if available
     const [initialSettings] = useState(() => getInitialSettings())
 
-    const [sortOption, setSortOption] = useState<SortOption>(initialSettings?.sortOption ?? 'Name')
+    const [sortOption, setSortOption] = useState<SortOption>(initialSettings?.sortOption ?? 'Players')
     const [isSidebarOpen, setIsSidebarOpen] = useState(initialSettings?.isSidebarOpen ?? true)
     const [filters, setFilters] = useState<FilterState>(initialSettings?.filters ?? {
         types: { Certified: true, Duel: true, Casual: true, Other: true },
@@ -331,7 +321,7 @@ export function ServerBrowserPage({ installationStatus }: ServerBrowserPageProps
         }
     }, [filters, sortOption, isSidebarOpen])
 
-    const pingAllServers = async (serversToPing: Server[]) => {
+    const pingAllServers = useCallback(async (serversToPing: Server[]) => {
         const uniqueIps = Array.from(new Set(serversToPing.map(s => s.ip)))
 
         uniqueIps.forEach(async (ip) => {
@@ -342,15 +332,16 @@ export function ServerBrowserPage({ installationStatus }: ServerBrowserPageProps
                 logger.error('Failed to ping server', { ip, error: err })
             }
         })
-    }
+    }, [logger])
 
-    const fetchServers = async () => {
+    const fetchServers = useCallback(async () => {
         setLoading(true)
         setError(null)
         try {
             logger.info('Fetching servers...')
             const data = await window.conveyor.game.fetchServers()
             setServers(data)
+            setLastRefresh(new Date())
             logger.info('Servers fetched', { count: data.length })
             pingAllServers(data)
         } catch (err) {
@@ -359,11 +350,24 @@ export function ServerBrowserPage({ installationStatus }: ServerBrowserPageProps
         } finally {
             setLoading(false)
         }
-    }
+    }, [logger, pingAllServers])
 
     useEffect(() => {
         fetchServers()
-    }, [logger])
+
+        const interval = setInterval(async () => {
+            try {
+                const isRunning = await window.conveyor.game.isGameRunning()
+                if (!isRunning) {
+                    fetchServers()
+                }
+            } catch (err) {
+                console.error('Failed to check game status during auto-refresh', err)
+            }
+        }, 60000)
+
+        return () => clearInterval(interval)
+    }, [fetchServers])
 
     const availableRegions = useMemo(() => {
         const regions = new Set<string>()
@@ -380,13 +384,7 @@ export function ServerBrowserPage({ installationStatus }: ServerBrowserPageProps
         return result
     }, [servers, filters, sortOption])
 
-    const handleJoin = (server: Server) => {
-        setSelectedServer(server)
-    }
-
-    const handleConfirmJoin = async (asSpectator: boolean) => {
-        if (!selectedServer) return
-
+    const handleJoin = async (server: Server, asSpectator: boolean) => {
         try {
             logger.info('Configuring player settings...', { asSpectator })
 
@@ -407,18 +405,15 @@ export function ServerBrowserPage({ installationStatus }: ServerBrowserPageProps
                 logger.warn('INI API not available, skipping configuration')
             }
 
-            logger.info('Joining server', { server: selectedServer, asSpectator })
+            logger.info('Joining server', { server, asSpectator })
 
-            await window.conveyor.game.launchGame(selectedServer.ip, selectedServer.hostport)
-            setSelectedServer(null)
+            await window.conveyor.game.launchGame(server.ip, server.hostport)
         } catch (err) {
             logger.error('Failed to launch game', { error: err })
             setLaunchError(err instanceof Error ? err.message : 'An unknown error occurred while trying to launch the game.')
             setIsErrorModalOpen(true)
         }
     }
-
-
 
     return (
         <div className="h-full flex flex-col relative">
@@ -436,6 +431,11 @@ export function ServerBrowserPage({ installationStatus }: ServerBrowserPageProps
                     </Button>
                     <div>
                         <h2 className="text-3xl font-bold tracking-tight">Server Browser</h2>
+                        {lastRefresh && (
+                            <p className="text-[10px] font-bold text-muted-foreground/25 uppercase tracking-[0.2em] mt-0.5 ml-0.5">
+                                Last refreshed: {lastRefresh.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
+                            </p>
+                        )}
                     </div>
                 </div>
                 <div className="flex items-center gap-4">
@@ -443,22 +443,6 @@ export function ServerBrowserPage({ installationStatus }: ServerBrowserPageProps
                     <div className="flex items-center gap-2">
                         <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider mr-1">Sort by</span>
                         <div className="flex items-center bg-background/50 rounded-lg p-1 border border-white/5 shadow-inner">
-                            <Button
-                                onClick={() => setSortOption('Name')}
-                                variant={sortOption === 'Name' ? "secondary" : "ghost"}
-                                size="sm"
-                                className={cn(
-                                    "h-8 gap-2 text-xs font-medium transition-all",
-                                    sortOption === 'Name'
-                                        ? "bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-900/20"
-                                        : "text-muted-foreground hover:text-white hover:bg-white/5"
-                                )}
-                            >
-                                <div className="flex items-center gap-1.5">
-                                    <span className="font-bold text-[10px] leading-none">A-Z</span>
-                                    Name
-                                </div>
-                            </Button>
                             <Button
                                 onClick={() => setSortOption('Players')}
                                 variant={sortOption === 'Players' ? "secondary" : "ghost"}
@@ -490,7 +474,7 @@ export function ServerBrowserPage({ installationStatus }: ServerBrowserPageProps
                         </div>
                     </div>
 
-                    <Button onClick={fetchServers} disabled={loading} variant="outline" size="sm" className="gap-2 h-10">
+                    <Button onClick={fetchServers} disabled={loading} variant="outline" size="sm" className="gap-2 h-10 min-w-[120px]">
                         <RefreshCw className={cn("size-4", loading && "animate-spin")} />
                         Refresh
                     </Button>
@@ -509,14 +493,14 @@ export function ServerBrowserPage({ installationStatus }: ServerBrowserPageProps
                 <div
                     className={cn(
                         "transition-all duration-300 ease-in-out overflow-hidden",
-                        isSidebarOpen ? "w-64 opacity-100 mr-0" : "w-0 opacity-0 -mr-6"
+                        isSidebarOpen ? "w-72 opacity-100 mr-0" : "w-0 opacity-0 -mr-6"
                     )}
                 >
                     <ServerBrowserSidebar
                         filters={filters}
                         setFilters={setFilters}
                         availableRegions={availableRegions}
-                        className="rounded-xl border border-white/5 h-full"
+                        className="h-full"
                     />
                 </div>
 
@@ -545,14 +529,6 @@ export function ServerBrowserPage({ installationStatus }: ServerBrowserPageProps
                     )}
                 </div>
             </div>
-
-            <JoinServerModal
-                server={selectedServer}
-                isOpen={!!selectedServer}
-                onClose={() => setSelectedServer(null)}
-                onJoin={handleConfirmJoin}
-                installationStatus={installationStatus}
-            />
 
             <ErrorModal
                 isOpen={isErrorModalOpen}
