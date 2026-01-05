@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useState } from 'react'
-import { Home, Server, Trophy, Map as MapIcon, Settings, LogOut, Play } from 'lucide-react'
+import { Home, Server, Trophy, Map as MapIcon, Settings, LogOut, Play, Crown, Clock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import logo from '@/app/assets/logo.png'
 import {
@@ -21,14 +21,11 @@ interface NavItem {
 
 const navItems: NavItem[] = [
     { id: 'home', label: 'Home', icon: Home },
-    { id: 'servers', label: 'Servers', icon: Server },
-    // { id: 'rankings', label: 'Rankings', icon: Trophy },
     // { id: 'maps', label: 'Maps', icon: MapIcon },
-<<<<<<< HEAD
-    // { id: 'settings', label: 'Settings', icon: Settings },
-=======
-    { id: 'settings', label: 'Settings', icon: Settings },
->>>>>>> 80e2077d02403ae03555e85f503e8fc349447631
+    // { id: 'records', label: 'Records', icon: Trophy },
+    // { id: 'titles', label: 'Titles', icon: Crown },
+    // { id: 'playtime', label: 'Activity', icon: Clock },
+    { id: 'servers', label: 'Servers', icon: Server },
 ]
 
 import { UserProfile } from '@/app/utils/api'
@@ -245,8 +242,8 @@ export function AppLayout({ children, currentView, onViewChange, userProfile, in
             {/* Logout Confirmation Modal */}
             {
                 showLogoutConfirm && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                        <div className="w-full max-w-md bg-card border border-border rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm pl-64 p-4 animate-in fade-in duration-200">
+                        <div className="w-[90%] lg:w-[40%] max-w-md bg-card border border-border rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
                             <div className="p-6 space-y-4">
                                 <div className="flex flex-col items-center text-center gap-2">
                                     <div className="p-3 rounded-full bg-red-500/10 text-red-500 mb-2">

@@ -11,9 +11,23 @@ interface ModalProps {
     className?: string
     footer?: React.ReactNode
     backdropClassName?: string
+    offsetSidebar?: boolean
+    maxWidth?: string
+    maxHeight?: string
 }
 
-export function Modal({ isOpen, onClose, title, children, className, footer, backdropClassName }: ModalProps) {
+export function Modal({
+    isOpen,
+    onClose,
+    title,
+    children,
+    className,
+    footer,
+    backdropClassName,
+    offsetSidebar,
+    maxWidth,
+    maxHeight
+}: ModalProps) {
     const modalRef = useRef<HTMLDivElement>(null)
     const closeButtonRef = useRef<HTMLButtonElement>(null)
 
@@ -85,14 +99,19 @@ export function Modal({ isOpen, onClose, title, children, className, footer, bac
             data-modal-backdrop
             className={cn(
                 "fixed top-[var(--window-titlebar-height)] right-0 bottom-0 left-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200",
+                offsetSidebar && "pl-64",
                 backdropClassName
             )}
         >
             <div
                 ref={modalRef}
                 tabIndex={-1}
+                style={{
+                    maxWidth: maxWidth,
+                    maxHeight: maxHeight || 'calc(90vh / var(--app-scale, 1))'
+                } as React.CSSProperties}
                 className={cn(
-                    "w-full max-w-4xl bg-card border border-border rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[85vh]",
+                    "w-[95%] lg:w-[70%] max-w-7xl bg-card border border-border rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col",
                     className
                 )}
             >
@@ -112,7 +131,7 @@ export function Modal({ isOpen, onClose, title, children, className, footer, bac
                 </div>
 
                 {/* Content */}
-                <div className="p-6 overflow-y-auto custom-scrollbar flex-1 h-full">
+                <div className="p-6 overflow-y-auto custom-scrollbar flex-1">
                     {children}
                 </div>
 

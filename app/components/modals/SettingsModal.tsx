@@ -13,8 +13,9 @@ export function SettingsModal({ isOpen, onClose, initialSection }: SettingsModal
             isOpen={isOpen}
             onClose={onClose}
             title="Settings"
+            offsetSidebar
             backdropClassName="z-[100]"
-            className="max-w-[calc(95vw/var(--app-scale,1))] 2xl:max-w-[calc(70vw/var(--app-scale,1))] max-h-[calc(90vh/var(--app-scale,1))] h-full p-0 overflow-hidden"
+            className="w-[95%] lg:w-[90%] max-w-7xl h-full p-0 overflow-hidden"
         >
             <div className="h-full overflow-hidden">
                 <Settings initialSection={initialSection} />
