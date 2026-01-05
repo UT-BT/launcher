@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useState } from 'react'
-import { Home, Server, Trophy, Map as MapIcon, Settings, LogOut, User, Play } from 'lucide-react'
+import { Home, Server, Trophy, Map as MapIcon, Settings, LogOut, Play } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import logo from '@/app/assets/logo.png'
 import {
@@ -11,6 +11,7 @@ import {
     DropdownMenuTrigger,
 } from '@/app/components/ui/dropdown-menu'
 import { Button } from '@/app/components/ui/button'
+import { SettingsModal } from '@/app/components/modals/SettingsModal'
 
 interface NavItem {
     id: string
@@ -23,7 +24,6 @@ const navItems: NavItem[] = [
     { id: 'servers', label: 'Servers', icon: Server },
     { id: 'rankings', label: 'Rankings', icon: Trophy },
     { id: 'maps', label: 'Maps', icon: MapIcon },
-    { id: 'settings', label: 'Settings', icon: Settings },
 ]
 
 import { UserProfile } from '@/app/utils/api'
@@ -67,13 +67,31 @@ function getRarityStyles(title: { rarity: number, color: string } | undefined | 
 
 export function AppLayout({ children, currentView, onViewChange, userProfile, installationStatus }: AppLayoutProps) {
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+    const [settingsInitialSection, setSettingsInitialSection] = useState<string | undefined>(undefined)
     const { containerStyle, titleStyle, containerClass, titleClass } = getRarityStyles(userProfile?.active_title)
 
     useEffect(() => {
         const saved = localStorage.getItem('ui-scale')
         if (saved) {
             document.documentElement.style.zoom = `${saved}%`
+            document.documentElement.style.setProperty('--app-scale', (parseInt(saved, 10) / 100).toString())
+        } else {
+            document.documentElement.style.setProperty('--app-scale', '1')
         }
+
+        const handleOpenSettings = (e: Event) => {
+            const customEvent = e as CustomEvent
+            if (customEvent.detail?.section) {
+                setSettingsInitialSection(customEvent.detail.section)
+            } else {
+                setSettingsInitialSection(undefined)
+
+            }
+            setIsSettingsOpen(true)
+        }
+        window.addEventListener('open-settings', handleOpenSettings)
+        return () => window.removeEventListener('open-settings', handleOpenSettings)
     }, [])
 
     const isInstallValid = installationStatus === 'valid'
@@ -154,6 +172,8 @@ export function AppLayout({ children, currentView, onViewChange, userProfile, in
 
 
 
+
+
                 <div className="p-4 border-t border-white/10 relative z-10">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -189,6 +209,14 @@ export function AppLayout({ children, currentView, onViewChange, userProfile, in
                         </DropdownMenuTrigger>
                         <DropdownMenuContent side="top" align="center" className="w-56 bg-card/95 backdrop-blur-xl border-white/10">
                             <DropdownMenuLabel>{userProfile?.alias || userProfile?.username || 'Player'}</DropdownMenuLabel>
+                            <DropdownMenuSeparator className="bg-white/10" />
+                            <DropdownMenuItem
+                                onClick={() => setIsSettingsOpen(true)}
+                                className="text-muted-foreground focus:text-white focus:bg-white/10 cursor-pointer mb-1"
+                            >
+                                <Settings className="mr-2 size-4" />
+                                <span>Settings</span>
+                            </DropdownMenuItem>
                             <DropdownMenuSeparator className="bg-white/10" />
                             <DropdownMenuItem
                                 onClick={() => setShowLogoutConfirm(true)}
@@ -248,6 +276,12 @@ export function AppLayout({ children, currentView, onViewChange, userProfile, in
                     </div>
                 )
             }
+
+            <SettingsModal
+                isOpen={isSettingsOpen}
+                onClose={() => setIsSettingsOpen(false)}
+                initialSection={settingsInitialSection}
+            />
         </div>
     )
 }

@@ -154,7 +154,15 @@ const getTypeIcon = (type: string) => {
     }
 }
 
-const ServerRow = ({ server, onJoin }: { server: Server, onJoin: (server: Server, asSpectator: boolean) => void }) => {
+const ServerRow = ({
+    server,
+    onJoin,
+    installationStatus
+}: {
+    server: Server,
+    onJoin: (server: Server, asSpectator: boolean) => void,
+    installationStatus?: 'valid' | 'no-install' | 'unsupported' | null
+}) => {
     const type = getServerType(server.hostname)
     const region = getServerRegion(server.hostname)
     const flag = getRegionFlag(region)
@@ -247,12 +255,17 @@ const ServerRow = ({ server, onJoin }: { server: Server, onJoin: (server: Server
 
             {/* Actions */}
             <div className="flex flex-col gap-2 shrink-0 self-center pl-2 items-center">
-                <Tooltip content={server.player_count >= server.max_players ? "Server is full" : "Join Server"}>
+                <Tooltip content={
+                    installationStatus === 'no-install' ? "No valid UT99 installation found" :
+                        installationStatus === 'unsupported' ? "Unsupported game version" :
+                            server.player_count >= server.max_players ? "Server is full" :
+                                "Join Server"
+                }>
                     <div className="inline-flex">
                         <Button
                             onClick={() => onJoin(server, false)}
                             size="sm"
-                            disabled={server.player_count >= server.max_players}
+                            disabled={server.player_count >= server.max_players || installationStatus !== 'valid'}
                             className="h-9 px-6 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg shadow-lg hover:shadow-primary/20 transition-all active:scale-95 group/join uppercase text-[10px] font-bold tracking-widest disabled:opacity-50"
                         >
                             <Play className="size-3 mr-2 fill-current transition-transform group-hover/join:translate-x-0.5" />
@@ -260,23 +273,35 @@ const ServerRow = ({ server, onJoin }: { server: Server, onJoin: (server: Server
                         </Button>
                     </div>
                 </Tooltip>
-                <Button
-                    onClick={() => onJoin(server, true)}
-                    size="sm"
-                    variant="ghost"
-                    className="h-8 px-4 text-muted-foreground hover:text-foreground rounded-lg hover:bg-white/5 transition-all text-[10px] font-bold uppercase tracking-widest gap-2"
-                >
-                    <Eye className="size-3" />
-                    Spectate
-                </Button>
+
+                <Tooltip content={
+                    installationStatus === 'no-install' ? "No valid UT99 installation found" :
+                        installationStatus === 'unsupported' ? "Unsupported game version" :
+                            "Spectate"
+                }>
+                    <div className="inline-flex">
+                        <Button
+                            onClick={() => onJoin(server, true)}
+                            size="sm"
+                            variant="ghost"
+                            disabled={installationStatus !== 'valid'}
+                            className="h-8 px-4 text-muted-foreground hover:text-foreground rounded-lg hover:bg-white/5 transition-all text-[10px] font-bold uppercase tracking-widest gap-2 disabled:opacity-50"
+                        >
+                            <Eye className="size-3" />
+                            Spectate
+                        </Button>
+                    </div>
+                </Tooltip>
             </div>
         </div>
     )
 }
 
-interface ServerBrowserPageProps { }
+interface ServerBrowserPageProps {
+    installationStatus?: 'valid' | 'no-install' | 'unsupported' | null
+}
 
-export function ServerBrowserPage({ }: ServerBrowserPageProps) {
+export function ServerBrowserPage({ installationStatus }: ServerBrowserPageProps) {
     const logger = useLogger('ServerBrowserPage')
     const [servers, setServers] = useState<Server[]>([])
     const [loading, setLoading] = useState(false)
@@ -511,6 +536,7 @@ export function ServerBrowserPage({ }: ServerBrowserPageProps) {
                             key={server.id}
                             server={server}
                             onJoin={handleJoin}
+                            installationStatus={installationStatus}
                         />
                     ))}
 

@@ -4,7 +4,6 @@ import { ActivityFeed } from '@/app/components/pages/ActivityFeed'
 import { ServerBrowserPage } from '@/app/components/pages/ServerBrowserPage'
 import { Rankings } from '@/app/components/pages/Rankings'
 import { MapSearch } from '@/app/components/pages/MapSearch'
-import { Settings } from '@/app/components/pages/Settings'
 import { InstallationBanner } from '@/app/components/InstallationBanner'
 
 export function Main({ userProfile }: { userProfile?: import('@/lib/main/config').AuthConfig }) {
@@ -57,9 +56,6 @@ export function Main({ userProfile }: { userProfile?: import('@/lib/main/config'
     }
   }
 
-  const handleBannerClick = () => {
-    setCurrentView('settings')
-  }
 
   const renderView = () => {
     switch (currentView) {
@@ -71,8 +67,6 @@ export function Main({ userProfile }: { userProfile?: import('@/lib/main/config'
         return <Rankings />
       case 'maps':
         return <MapSearch />
-      case 'settings':
-        return <Settings initialSection={installationStatus !== 'valid' ? 'game-installation' : undefined} />
       default:
         return <ActivityFeed />
     }
@@ -81,7 +75,10 @@ export function Main({ userProfile }: { userProfile?: import('@/lib/main/config'
   return (
     <div className="h-screen flex flex-col overflow-hidden">
       {installationStatus && installationStatus !== 'valid' && (
-        <InstallationBanner type={installationStatus} onClick={handleBannerClick} />
+        <InstallationBanner
+          type={installationStatus}
+          onClick={() => window.dispatchEvent(new CustomEvent('open-settings', { detail: { section: 'game-installation' } }))}
+        />
       )}
       <div className="flex-1 overflow-hidden">
         <AppLayout currentView={currentView} onViewChange={setCurrentView} userProfile={userProfile} installationStatus={installationStatus}>
