@@ -327,7 +327,7 @@ export function ServerBrowserPage({ installationStatus }: ServerBrowserPageProps
     const [sortOption, setSortOption] = useState<SortOption>(initialSettings?.sortOption ?? 'Players')
     const [isSidebarOpen, setIsSidebarOpen] = useState(initialSettings?.isSidebarOpen ?? true)
     const [filters, setFilters] = useState<FilterState>(initialSettings?.filters ?? {
-        types: { Certified: true, Duel: true, Casual: true, Other: true },
+        types: { Certified: true, Duel: true, Casual: true, Unknown: true },
         hideEmpty: false,
         hideFull: false,
         regions: {}
@@ -517,7 +517,7 @@ export function ServerBrowserPage({ installationStatus }: ServerBrowserPageProps
                 {/* Sidebar */}
                 <div
                     className={cn(
-                        "transition-all duration-300 ease-in-out overflow-hidden",
+                        "transition-all duration-300 ease-in-out overflow-hidden h-full",
                         isSidebarOpen ? "w-72 opacity-100 mr-0" : "w-0 opacity-0 -mr-6"
                     )}
                 >
