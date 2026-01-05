@@ -18,11 +18,11 @@ type MetricKey = 'aesthetics' | 'learning' | 'luck' | 'difficulty' | 'overall'
 
 const MapThumbnail = ({ mapName, className }: { mapName: string, className?: string }) => {
     return (
-        <div className={cn("overflow-hidden bg-muted/20 border border-white/5 rounded-2xl shrink-0", className)}>
+        <div className={cn("overflow-hidden bg-muted/20 border border-white/5 rounded-xl shrink-0", className)}>
             <img
                 src={`https://utbt.net/images/screenshots/${mapName}.png`}
                 alt={mapName}
-                className="w-full h-48 md:h-64 object-cover opacity-90"
+                className="w-full h-full object-cover opacity-90"
                 onError={(e) => { (e.target as HTMLImageElement).src = 'https://utbt.net/images/screenshots/default.png' }}
             />
         </div>
@@ -197,11 +197,11 @@ export function ReviewModal({ open, onOpenChange, accessToken, mapName, onSucces
             onClose={() => onOpenChange(false)}
             title={mapName?.replace('CTF-BT-', '') || 'Review Map'}
             offsetSidebar
-            maxWidth="672px"
+            maxWidth="480px"
             className="bg-[#0a0a0b]/98 border-white/5 backdrop-blur-3xl mx-auto"
             footer={null}
         >
-            <div className="space-y-8 pb-6">
+            <div className="space-y-5 pb-2">
                 {/* Pronounced Screenshot */}
                 {mapName && <MapThumbnail mapName={mapName} className="w-full aspect-video shadow-2xl shadow-black" />}
 
@@ -211,9 +211,9 @@ export function ReviewModal({ open, onOpenChange, accessToken, mapName, onSucces
                     </div>
                 )}
 
-                <div className="space-y-7 px-1">
+                <div className="space-y-4 px-1">
                     {metrics.map((m) => (
-                        <div key={m.key} className="space-y-3 group/metric">
+                        <div key={m.key} className="space-y-2 group/metric">
                             <div className="flex justify-between items-baseline">
                                 <div className="space-y-0.5">
                                     <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/60 group-hover/metric:text-white/90 transition-colors">
@@ -227,7 +227,7 @@ export function ReviewModal({ open, onOpenChange, accessToken, mapName, onSucces
                                     </p>
                                 </div>
                                 <span className={cn(
-                                    "text-2xl font-black font-mono tracking-tighter transition-colors",
+                                    "text-xl font-black font-mono tracking-tighter transition-colors",
                                     getScoreColor(m.key, currentScores[m.key])
                                 )}>
                                     {currentScores[m.key]}<span className="text-[10px] opacity-20 ml-0.5">/10</span>
@@ -248,7 +248,7 @@ export function ReviewModal({ open, onOpenChange, accessToken, mapName, onSucces
                 <Button
                     onClick={handleSubmit}
                     disabled={loading}
-                    className="w-full h-14 bg-white/[0.03] hover:bg-white/[0.08] border border-white/5 hover:border-white/10 text-white font-black uppercase tracking-[0.2em] rounded-2xl transition-all mt-4"
+                    className="w-full h-11 bg-white/[0.03] hover:bg-white/[0.08] border border-white/5 hover:border-white/10 text-white font-black uppercase tracking-[0.2em] rounded-xl transition-all mt-4"
                 >
                     {loading ? (
                         <Loader2 className="size-5 animate-spin" />
