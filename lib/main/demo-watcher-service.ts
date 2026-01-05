@@ -19,6 +19,13 @@ type LeaderboardResponse = {
     success: boolean
 }
 
+type CapResponse = {
+    data: Array<{
+        cap_type: number
+    }>
+    success: boolean
+}
+
 export interface UploadLogEntry {
     filename: string
     status: 'success' | 'failed' | 'uploading'
@@ -163,6 +170,12 @@ export class DemoWatcherService {
                     return
                 }
 
+                const isCertified = await this.checkIsCertified(btpogId)
+                if (!isCertified) {
+                    loggingService.info(`Ignoring demo ${filename}: Run is not certified (BTPog ID: ${btpogId})`, 'DemoWatcher')
+                    return
+                }
+
                 loggingService.info(`Verified demo ${filename} (BTPog ID: ${btpogId}). Proceeding with upload.`, 'DemoWatcher')
 
                 this.addLogEntry({
@@ -289,6 +302,29 @@ export class DemoWatcherService {
 
         } catch (error) {
             loggingService.error('WR Check API error', 'DemoWatcher', error)
+            return false
+        }
+    }
+
+    private async checkIsCertified(btpogId: string): Promise<boolean> {
+        try {
+            const endpoint = `/caps?btpog_ids=${btpogId}&columns=cap_type`
+            const response = await gatewayService.get<CapResponse>(endpoint)
+
+            if (!response.success) {
+                loggingService.warn(`Certification check failed for ${btpogId}: API returned success=false`, 'DemoWatcher')
+                return false
+            }
+
+            if (!response.data || response.data.length === 0) {
+                loggingService.warn(`Certification check failed for ${btpogId}: No cap data found`, 'DemoWatcher')
+                return false
+            }
+
+            const isCertified = response.data.some((cap) => cap.cap_type === 2)
+            return isCertified
+        } catch (error) {
+            loggingService.error(`Certification check API error for ${btpogId}`, 'DemoWatcher', error)
             return false
         }
     }
