@@ -67,12 +67,17 @@ export function GameInstallationSettings() {
             setAnnouncerProgress(0)
         })
 
+        const removePathUpdateListener = window.utPatch?.onInstallationPathUpdated(() => {
+            loadSettings()
+        })
+
         return () => {
             removeListener?.()
             removePatchStatusListener?.()
             removePatchProgressListener?.()
             removeAnnouncerProgressListener?.()
             removeAnnouncerCompleteListener?.()
+            removePathUpdateListener?.()
         }
     }, [])
 

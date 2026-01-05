@@ -3,6 +3,7 @@ import { useWindowContext } from './WindowContext'
 import { useConveyor } from '@/app/hooks/use-conveyor'
 import { LinksDropdown } from './LinksDropdown'
 import { AboutButton } from './AboutButton'
+import { SettingsButton } from './SettingsButton'
 import { UploadLogButton } from './UploadLogButton'
 import { GameProfilesButton } from './GameProfilesButton'
 import { TitlebarMenuItem } from './TitlebarMenu'
@@ -22,6 +23,7 @@ export const Titlebar = () => {
       <div className="window-titlebar-actions">
         <LinksDropdown />
         <AboutButton />
+        <SettingsButton />
         <div className="titlebar-separator" />
         <GameProfilesButton />
         <UploadLogButton />

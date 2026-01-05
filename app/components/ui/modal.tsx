@@ -102,7 +102,7 @@ export function Modal({ isOpen, onClose, title, children, className, footer, bac
                 </div>
 
                 {/* Content */}
-                <div className="p-6 overflow-y-auto custom-scrollbar">
+                <div className="p-6 overflow-y-auto custom-scrollbar flex-1 h-full">
                     {children}
                 </div>
 

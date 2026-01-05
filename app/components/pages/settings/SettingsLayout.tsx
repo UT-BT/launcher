@@ -44,13 +44,9 @@ export function SettingsLayout({ currentSection, onSectionChange, children, isGa
     ] as const
 
     return (
-        <div className="flex h-[calc(100vh-80px)] overflow-hidden">
+        <div className="flex h-full overflow-hidden">
             {/* Sidebar */}
             <aside className="w-72 flex flex-col pt-4">
-                <div className="px-8 pb-4">
-                    <h2 className="text-2xl font-bold tracking-tight">Settings</h2>
-                </div>
-
                 <div className="flex-1 overflow-y-auto pt-6 px-6 space-y-8">
                     {sidebarItems.map((group) => (
                         <div key={group.group}>
