@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Video, ChevronDown, AlertTriangle } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
+import { Switch } from '@/app/components/ui/switch'
 import { SettingsSection, SettingsRow } from './SettingsComponents'
 import {
     DropdownMenu,
@@ -89,16 +90,16 @@ export function LauncherDemoSettings() {
                     label="Auto Demo Recording"
                     description="Automatically record demos of your caps when you play on UTBT servers."
                 >
-                    <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                            type="checkbox"
-                            checked={autoDemoRec}
-                            onChange={handleAutoDemoRecChange}
-                            disabled={disabled}
-                            className="sr-only peer"
-                        />
-                        <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-ring rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary opacity-100 peer-disabled:opacity-50"></div>
-                    </label>
+                    <Switch
+                        checked={autoDemoRec}
+                        onCheckedChange={(checked) => {
+                            setAutoDemoRec(checked)
+                            if (utPathExists) {
+                                window.conveyor.ini.writeIniValue('UTBT_UserSettings.ini', 'UserSettings', 'AutoDemoRec', checked ? 'True' : 'False', true)
+                            }
+                        }}
+                        disabled={disabled}
+                    />
                 </SettingsRow>
 
                 <SettingsRow

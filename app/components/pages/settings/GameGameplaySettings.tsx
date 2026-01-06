@@ -3,6 +3,7 @@ import { Joystick, Download, Upload, Zap, Eye } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Slider } from '@/app/components/ui/slider'
 import { Modal } from '@/app/components/ui/modal'
+import { Switch } from '@/app/components/ui/switch'
 import { SettingsSection, SettingsRow } from './SettingsComponents'
 
 export function GameGameplaySettings() {
@@ -328,30 +329,20 @@ export function GameGameplaySettings() {
                     label="Dodging"
                     description="Enable dodging in game (double tap movement key)."
                 >
-                    <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                            type="checkbox"
-                            className="sr-only peer"
-                            checked={dodging}
-                            onChange={(e) => updateDodging(e.target.checked)}
-                        />
-                        <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-ring rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-                    </label>
+                    <Switch
+                        checked={dodging}
+                        onCheckedChange={updateDodging}
+                    />
                 </SettingsRow>
 
                 <SettingsRow
                     label="Disable Macro Dodging"
                     description="Prevents accidental dodges when fat-fingering inputs."
                 >
-                    <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                            type="checkbox"
-                            className="sr-only peer"
-                            checked={disableMacroDodging}
-                            onChange={(e) => updateDisableMacroDodging(e.target.checked)}
-                        />
-                        <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-ring rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-                    </label>
+                    <Switch
+                        checked={disableMacroDodging}
+                        onCheckedChange={updateDisableMacroDodging}
+                    />
                 </SettingsRow>
             </SettingsSection>
 
@@ -360,15 +351,10 @@ export function GameGameplaySettings() {
                     label="Screen Flashes"
                     description="Flash screen when taking damage or picking up items."
                 >
-                    <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                            type="checkbox"
-                            className="sr-only peer"
-                            checked={screenFlashes}
-                            onChange={(e) => updateScreenFlashes(e.target.checked)}
-                        />
-                        <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-ring rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-                    </label>
+                    <Switch
+                        checked={screenFlashes}
+                        onCheckedChange={updateScreenFlashes}
+                    />
                 </SettingsRow>
 
                 <SettingsRow
