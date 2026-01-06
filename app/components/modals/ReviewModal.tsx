@@ -33,6 +33,7 @@ export function ReviewModal({ open, onOpenChange, accessToken, mapName, onSucces
     const [persistedScores, setPersistedScores] = useState<Record<string, Record<MetricKey, number>>>({})
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    const [submitted, setSubmitted] = useState(false)
 
     const defaultScores: Record<MetricKey, number> = {
         aesthetics: 5,
@@ -64,7 +65,7 @@ export function ReviewModal({ open, onOpenChange, accessToken, mapName, onSucces
                 map_name: mapName,
                 ...currentScores
             })
-            onOpenChange(false)
+            setSubmitted(true)
             onSuccess?.()
         } catch (err) {
             console.error('Failed to submit review:', err)
@@ -72,6 +73,11 @@ export function ReviewModal({ open, onOpenChange, accessToken, mapName, onSucces
         } finally {
             setLoading(false)
         }
+    }
+
+    const handleClose = () => {
+        onOpenChange(false)
+        setTimeout(() => setSubmitted(false), 300)
     }
 
     const metrics: { key: MetricKey; label: string; description: string; inverseColor?: boolean; labels: Record<number, string> }[] = [
@@ -194,68 +200,91 @@ export function ReviewModal({ open, onOpenChange, accessToken, mapName, onSucces
     return (
         <Modal
             isOpen={open}
-            onClose={() => onOpenChange(false)}
-            title={mapName?.replace('CTF-BT-', '') || 'Review Map'}
+            onClose={handleClose}
+            title={submitted ? "Review Published" : (mapName?.replace('CTF-BT-', '') || 'Review Map')}
             offsetSidebar
             maxWidth="480px"
             className="bg-[#0a0a0b]/98 border-white/5 backdrop-blur-3xl mx-auto"
             footer={null}
         >
             <div className="space-y-5 pb-2">
-                {/* Pronounced Screenshot */}
-                {mapName && <MapThumbnail mapName={mapName} className="w-full aspect-video shadow-2xl shadow-black" />}
-
-                {error && (
-                    <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-xs font-bold text-center">
-                        {error}
-                    </div>
-                )}
-
-                <div className="space-y-4 px-1">
-                    {metrics.map((m) => (
-                        <div key={m.key} className="space-y-2 group/metric">
-                            <div className="flex justify-between items-baseline">
-                                <div className="space-y-0.5">
-                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/60 group-hover/metric:text-white/90 transition-colors">
-                                        {m.label}
-                                    </span>
-                                    <p className={cn(
-                                        "text-[10px] font-bold transition-colors duration-300",
-                                        getScoreColor(m.key, currentScores[m.key])
-                                    )}>
-                                        {m.labels[currentScores[m.key]]}
-                                    </p>
-                                </div>
-                                <span className={cn(
-                                    "text-xl font-black font-mono tracking-tighter transition-colors",
-                                    getScoreColor(m.key, currentScores[m.key])
-                                )}>
-                                    {currentScores[m.key]}<span className="text-[10px] opacity-20 ml-0.5">/10</span>
-                                </span>
-                            </div>
-                            <Slider
-                                min={1}
-                                max={10}
-                                step={1}
-                                value={currentScores[m.key]}
-                                onChange={(e) => setScore(m.key, parseInt((e.target as HTMLInputElement).value))}
-                                className={cn("h-1.5 transition-all", getSliderAccent(m.key, currentScores[m.key]))}
-                            />
+                {submitted ? (
+                    <div className="space-y-6 py-4 px-2">
+                        <div className="space-y-4">
+                            <p className="text-white/90 font-medium leading-relaxed">
+                                Your review for <span className="text-orange-400 font-bold">{mapName?.replace('CTF-BT-', '')}</span> has been published.
+                            </p>
+                            <p className="text-muted-foreground text-xs leading-relaxed">
+                                Reviews help other players find good quality maps, balance the difficulty ratings, and determines what maps we put into special events.
+                            </p>
+                            <p className="text-white/90 font-bold text-sm">
+                                Thank you!
+                            </p>
                         </div>
-                    ))}
-                </div>
+                        <Button
+                            onClick={handleClose}
+                            className="w-full h-11 bg-white/[0.03] hover:bg-white/[0.08] border border-white/5 hover:border-white/10 text-white font-black uppercase tracking-[0.2em] rounded-xl transition-all"
+                        >
+                            Close
+                        </Button>
+                    </div>
+                ) : (
+                    <>
+                        {mapName && <MapThumbnail mapName={mapName} className="w-full aspect-video shadow-2xl shadow-black" />}
 
-                <Button
-                    onClick={handleSubmit}
-                    disabled={loading}
-                    className="w-full h-11 bg-white/[0.03] hover:bg-white/[0.08] border border-white/5 hover:border-white/10 text-white font-black uppercase tracking-[0.2em] rounded-xl transition-all mt-4"
-                >
-                    {loading ? (
-                        <Loader2 className="size-5 animate-spin" />
-                    ) : (
-                        'Submit Review'
-                    )}
-                </Button>
+                        {error && (
+                            <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-xs font-bold text-center">
+                                {error}
+                            </div>
+                        )}
+
+                        <div className="space-y-4 px-1">
+                            {metrics.map((m) => (
+                                <div key={m.key} className="space-y-2 group/metric">
+                                    <div className="flex justify-between items-baseline">
+                                        <div className="space-y-0.5">
+                                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/60 group-hover/metric:text-white/90 transition-colors">
+                                                {m.label}
+                                            </span>
+                                            <p className={cn(
+                                                "text-[10px] font-bold transition-colors duration-300",
+                                                getScoreColor(m.key, currentScores[m.key])
+                                            )}>
+                                                {m.labels[currentScores[m.key]]}
+                                            </p>
+                                        </div>
+                                        <span className={cn(
+                                            "text-xl font-black font-mono tracking-tighter transition-colors",
+                                            getScoreColor(m.key, currentScores[m.key])
+                                        )}>
+                                            {currentScores[m.key]}<span className="text-[10px] opacity-20 ml-0.5">/10</span>
+                                        </span>
+                                    </div>
+                                    <Slider
+                                        min={1}
+                                        max={10}
+                                        step={1}
+                                        value={currentScores[m.key]}
+                                        onChange={(e) => setScore(m.key, parseInt((e.target as HTMLInputElement).value))}
+                                        className={cn("h-1.5 transition-all", getSliderAccent(m.key, currentScores[m.key]))}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+
+                        <Button
+                            onClick={handleSubmit}
+                            disabled={loading}
+                            className="w-full h-11 bg-white/[0.03] hover:bg-white/[0.08] border border-white/5 hover:border-white/10 text-white font-black uppercase tracking-[0.2em] rounded-xl transition-all mt-4"
+                        >
+                            {loading ? (
+                                <Loader2 className="size-5 animate-spin" />
+                            ) : (
+                                'Submit Review'
+                            )}
+                        </Button>
+                    </>
+                )}
             </div>
         </Modal>
     )
