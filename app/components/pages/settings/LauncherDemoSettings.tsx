@@ -40,14 +40,6 @@ export function LauncherDemoSettings() {
         loadSettings()
     }, [])
 
-    const handleAutoDemoRecChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const newValue = e.target.checked
-        setAutoDemoRec(newValue)
-        if (utPathExists) {
-            await window.conveyor.ini.writeIniValue('UTBT_UserSettings.ini', 'UserSettings', 'AutoDemoRec', newValue ? 'True' : 'False', true)
-        }
-    }
-
     const saveDemoConfig = async (uploadVal: string, actionVal: string) => {
         await window.conveyor.app.setDemoWatcherConfig({
             autoUpload: uploadVal as any,
