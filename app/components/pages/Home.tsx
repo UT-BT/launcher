@@ -1,6 +1,6 @@
 import { UserProfile, fetchSummary, Summary } from '@/app/utils/api'
 import { useMemo, useState, useEffect } from 'react'
-import { Trophy, TrendingUp, Zap, ChevronRight, MessageSquare, Plus, Activity, AlertTriangle, RefreshCw, Flag } from 'lucide-react'
+import { Trophy, TrendingUp, Zap, ChevronRight, MessageSquare, Plus, Activity, AlertTriangle, RefreshCw, Flag, Download, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/app/components/ui/button'
 import { Tooltip } from '@/app/components/ui/tooltip'
@@ -73,14 +73,42 @@ export function Home({ userProfile }: HomeProps) {
     const [historyOpen, setHistoryOpen] = useState(false)
     const [reviewOpen, setReviewOpen] = useState(false)
     const [activeReviewMap, setActiveReviewMap] = useState<string | null>(null)
+    const [dismissedPatch, setDismissedPatch] = useState<string | null>(localStorage.getItem('dismissed-patch'))
+    const [installedPatch, setInstalledPatch] = useState<string | null>(null)
+
+    const handleDismissPatch = (tag: string) => {
+        setDismissedPatch(tag)
+        localStorage.setItem('dismissed-patch', tag)
+    }
+
+    const latestPatch = summary?.latestPatch
+    const lastLoginStr = userProfile?.latest_activity?.created_at
+
+    const showPatchBanner = useMemo(() => {
+        if (!latestPatch || !lastLoginStr) return false
+        if (dismissedPatch === latestPatch.tag) return false
+        if (installedPatch === latestPatch.tag) return false
+
+        try {
+            const patchDate = new Date(latestPatch.added)
+            const loginDate = new Date(lastLoginStr)
+            return patchDate > loginDate
+        } catch (e) {
+            return false
+        }
+    }, [latestPatch, lastLoginStr, dismissedPatch, installedPatch])
 
     const loadData = async () => {
         if (!userProfile?.accessToken) return
         setLoading(true)
         setError(null)
         try {
-            const data = await fetchSummary(userProfile.accessToken)
-            setSummary(data)
+            const [summaryData, currentPatch] = await Promise.all([
+                fetchSummary(userProfile.accessToken),
+                window.conveyor.app.getInstalledPatch()
+            ])
+            setSummary(summaryData)
+            setInstalledPatch(currentPatch?.tag || null)
         } catch (err) {
             console.error('Failed to load summary:', err)
             setError('Failed to load personalized feed.')
@@ -169,6 +197,42 @@ export function Home({ userProfile }: HomeProps) {
 
     return (
         <div className="max-w-[1400px] mx-auto space-y-12 animate-in fade-in slide-in-from-bottom-2 duration-700 pb-20">
+            {showPatchBanner && latestPatch && (
+                <div className="mt-6 animate-in slide-in-from-top-4 duration-500">
+                    <div className="relative group overflow-hidden bg-gradient-to-r from-blue-600/20 to-purple-600/20 border border-blue-500/30 rounded-2xl backdrop-blur-xl p-6 flex flex-col md:flex-row items-center justify-between gap-6">
+                        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-transparent to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+
+                        <div className="flex items-center gap-5 relative z-10">
+                            <div className="size-14 rounded-2xl bg-blue-500/20 flex items-center justify-center shadow-lg shadow-blue-500/10 group-hover:scale-110 transition-transform duration-500">
+                                <Download className="size-7 text-blue-400" />
+                            </div>
+                            <div className="space-y-1">
+                                <h3 className="text-xl font-black text-white/90 tracking-tight">
+                                    Unreal Tournament <span className="text-blue-400">{latestPatch.tag}</span> is now available
+                                </h3>
+                                <p className="text-sm text-muted-foreground font-medium">
+                                    Install it now to get the latest features and fixes. Release notes are available <a href={latestPatch.release_notes_url} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">here</a>.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-3 relative z-10">
+                            <Button
+                                onClick={() => window.dispatchEvent(new CustomEvent('open-settings', { detail: { section: 'game-installation' } }))}
+                                className="bg-blue-600 hover:bg-blue-500 text-white font-black uppercase tracking-widest text-[10px] px-8 py-6 rounded-xl shadow-xl shadow-blue-600/20 transition-all hover:scale-105 active:scale-95"
+                            >
+                                Install
+                            </Button>
+                            <button
+                                onClick={() => handleDismissPatch(latestPatch.tag)}
+                                className="size-12 rounded-xl bg-white/5 flex items-center justify-center text-muted-foreground hover:bg-white/10 hover:text-white transition-all"
+                            >
+                                <X className="size-5" />
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 pt-4">
                 <div className="space-y-1">
                     <div className="flex items-center gap-3">
