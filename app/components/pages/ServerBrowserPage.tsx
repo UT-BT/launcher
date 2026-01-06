@@ -297,6 +297,34 @@ const ServerRow = ({
     )
 }
 
+const ServerRowSkeleton = () => (
+    <div className="bg-card/30 border border-white/5 rounded-xl p-3 flex items-start gap-4 overflow-hidden animate-pulse">
+        <div className="w-48 aspect-video rounded-md bg-white/5 shrink-0" />
+
+        <div className="flex-1 py-1 space-y-4">
+            <div className="flex items-center gap-4">
+                <div className="h-6 w-48 bg-white/5 rounded" />
+                <div className="flex gap-2">
+                    <div className="h-6 w-20 bg-white/5 rounded" />
+                    <div className="h-6 w-20 bg-white/5 rounded" />
+                    <div className="h-6 w-20 bg-white/5 rounded" />
+                </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+                <div className="h-6 w-24 bg-white/5 rounded-lg opacity-60" />
+                <div className="h-6 w-32 bg-white/5 rounded-lg opacity-40" />
+                <div className="h-6 w-20 bg-white/5 rounded-lg opacity-50" />
+            </div>
+        </div>
+
+        <div className="flex flex-col gap-2 shrink-0 self-center pl-2 items-center">
+            <div className="h-9 w-24 bg-white/5 rounded-lg" />
+            <div className="h-8 w-24 bg-white/5 rounded-lg opacity-50" />
+        </div>
+    </div>
+)
+
 interface ServerBrowserPageProps {
     installationStatus?: 'valid' | 'no-install' | 'unsupported' | null
 }
@@ -441,9 +469,9 @@ export function ServerBrowserPage({ installationStatus }: ServerBrowserPageProps
     }
 
     return (
-        <div className="h-full flex flex-col relative">
+        <div className="h-full flex flex-col relative animate-in fade-in slide-in-from-bottom-0 duration-500">
             {/* Header */}
-            <div className="flex justify-between items-center shrink-0 mb-6 px-1">
+            <div className="flex justify-between items-center shrink-0 mb-6 px-1 pt-0">
                 <div className="flex items-center gap-4">
                     <Button
                         variant="ghost"
@@ -456,10 +484,12 @@ export function ServerBrowserPage({ installationStatus }: ServerBrowserPageProps
                     </Button>
                     <div>
                         <h2 className="text-3xl font-bold tracking-tight">Server Browser</h2>
-                        {lastRefresh && (
+                        {lastRefresh ? (
                             <p className="text-[10px] font-bold text-muted-foreground/25 uppercase tracking-[0.2em] mt-0.5 ml-0.5">
                                 Last refreshed: {lastRefresh.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
                             </p>
+                        ) : (
+                            <div className="h-3 w-32 bg-white/5 rounded mt-1.5 animate-pulse" />
                         )}
                     </div>
                 </div>
@@ -525,6 +555,7 @@ export function ServerBrowserPage({ installationStatus }: ServerBrowserPageProps
                         filters={filters}
                         setFilters={setFilters}
                         availableRegions={availableRegions}
+                        loading={loading}
                         className="h-full"
                     />
                 </div>
@@ -548,9 +579,12 @@ export function ServerBrowserPage({ installationStatus }: ServerBrowserPageProps
                     )}
 
                     {loading && servers.length === 0 && (
-                        <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
-                            <RefreshCw className="size-8 animate-spin mb-4 opacity-50" />
-                            <p>Searching for servers...</p>
+                        <div className="space-y-3">
+                            <ServerRowSkeleton />
+                            <ServerRowSkeleton />
+                            <ServerRowSkeleton />
+                            <ServerRowSkeleton />
+                            <ServerRowSkeleton />
                         </div>
                     )}
                 </div>

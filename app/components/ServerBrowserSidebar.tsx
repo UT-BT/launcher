@@ -6,6 +6,7 @@ interface ServerBrowserSidebarProps {
     filters: FilterState
     setFilters: (filters: FilterState) => void
     availableRegions: string[]
+    loading?: boolean
     className?: string
 }
 
@@ -13,6 +14,7 @@ export function ServerBrowserSidebar({
     filters,
     setFilters,
     availableRegions,
+    loading,
     className
 }: ServerBrowserSidebarProps) {
 
@@ -209,30 +211,37 @@ export function ServerBrowserSidebar({
                         noneSelected={noneRegionsSelected}
                     />
                     <div className="space-y-1">
-                        {availableRegions.length === 0 && (
+                        {loading ? (
+                            <div className="space-y-2 px-3">
+                                <div className="h-8 bg-white/5 rounded-lg animate-pulse" />
+                                <div className="h-8 bg-white/5 rounded-lg animate-pulse w-[80%]" />
+                                <div className="h-8 bg-white/5 rounded-lg animate-pulse w-[90%]" />
+                            </div>
+                        ) : availableRegions.length === 0 ? (
                             <p className="px-3 text-xs text-muted-foreground italic">No regions found</p>
+                        ) : (
+                            availableRegions.map(region => (
+                                <label key={region} className="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer group hover:bg-muted/50 transition-colors">
+                                    <input
+                                        type="checkbox"
+                                        checked={filters.regions[region] !== false}
+                                        onChange={() => toggleRegion(region)}
+                                        className="sr-only"
+                                    />
+                                    <div className={cn(
+                                        "size-4 rounded border flex items-center justify-center transition-all duration-200",
+                                        filters.regions[region] !== false
+                                            ? "bg-primary border-primary text-primary-foreground"
+                                            : "border-muted-foreground/30 group-hover:border-primary/50 bg-transparent"
+                                    )}>
+                                        {filters.regions[region] !== false && <Check className="size-3" />}
+                                    </div>
+                                    <span className={cn("text-sm font-medium transition-colors", filters.regions[region] !== false ? "text-foreground" : "text-muted-foreground group-hover:text-foreground")}>
+                                        {region}
+                                    </span>
+                                </label>
+                            ))
                         )}
-                        {availableRegions.map(region => (
-                            <label key={region} className="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer group hover:bg-muted/50 transition-colors">
-                                <input
-                                    type="checkbox"
-                                    checked={filters.regions[region] !== false}
-                                    onChange={() => toggleRegion(region)}
-                                    className="sr-only"
-                                />
-                                <div className={cn(
-                                    "size-4 rounded border flex items-center justify-center transition-all duration-200",
-                                    filters.regions[region] !== false
-                                        ? "bg-primary border-primary text-primary-foreground"
-                                        : "border-muted-foreground/30 group-hover:border-primary/50 bg-transparent"
-                                )}>
-                                    {filters.regions[region] !== false && <Check className="size-3" />}
-                                </div>
-                                <span className={cn("text-sm font-medium transition-colors", filters.regions[region] !== false ? "text-foreground" : "text-muted-foreground group-hover:text-foreground")}>
-                                    {region}
-                                </span>
-                            </label>
-                        ))}
                     </div>
                 </div>
             </div>
