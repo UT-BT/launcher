@@ -4,6 +4,7 @@ import { Button } from '@/app/components/ui/button'
 import { Slider } from '@/app/components/ui/slider'
 import { cn } from '@/lib/utils'
 import { Modal } from '@/app/components/ui/modal'
+import { Switch } from '@/app/components/ui/switch'
 import { SettingsSection, SettingsRow } from './SettingsComponents'
 import { AUDIO_DEVICE_SETTINGS, AUDIO_DEVICE_INFO } from './constants'
 
@@ -215,15 +216,10 @@ export function GameAudioSettings() {
                             description={setting.tooltip}
                         >
                             {setting.type === 'boolean' && (
-                                <label className="relative inline-flex items-center cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        className="sr-only peer"
-                                        checked={!!audioSettings[setting.key]}
-                                        onChange={(e) => updateAudioSetting(setting.key, e.target.checked)}
-                                    />
-                                    <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-ring rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-                                </label>
+                                <Switch
+                                    checked={!!audioSettings[setting.key]}
+                                    onCheckedChange={(checked) => updateAudioSetting(setting.key, checked)}
+                                />
                             )}
 
                             {setting.type === 'number' && (
