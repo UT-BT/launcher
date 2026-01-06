@@ -485,8 +485,8 @@ export function ServerBrowserPage({ installationStatus }: ServerBrowserPageProps
                     <div>
                         <h2 className="text-3xl font-bold tracking-tight">Server Browser</h2>
                         {lastRefresh ? (
-                            <p className="text-[10px] font-bold text-muted-foreground/25 uppercase tracking-[0.2em] mt-0.5 ml-0.5">
-                                Last refreshed: {lastRefresh.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
+                            <p className="text-[10px] font-bold text-muted-foreground/50 uppercase tracking-[0.2em] mt-0.5 ml-0.5">
+                                Last refreshed at {lastRefresh.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
                             </p>
                         ) : (
                             <div className="h-3 w-32 bg-white/5 rounded mt-1.5 animate-pulse" />
