@@ -469,6 +469,12 @@ export interface Summary {
         timeAgo: string
         metrics: { label: string, value: number }[]
     }[]
+    latestPatch?: {
+        tag: string
+        channel: string
+        added: string
+        release_notes_url: string
+    } | null
 }
 
 export interface SummaryCap {
