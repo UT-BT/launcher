@@ -295,9 +295,9 @@ export function Home({ userProfile }: HomeProps) {
                             variant="ghost"
                             size="sm"
                             onClick={() => setHistoryOpen(true)}
-                            className="text-[10px] font-bold text-muted-foreground hover:text-white uppercase tracking-widest gap-2"
+                            className="text-[10px] font-bold text-muted-foreground hover:text-white uppercase tracking-widest gap-2 bg-white/5 border border-white/5 shadow-lg shadow-black/20"
                         >
-                            History <ChevronRight className="size-3" />
+                            See More <ChevronRight className="size-3" />
                         </Button>
                     </div>
 
