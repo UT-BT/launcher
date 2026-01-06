@@ -155,15 +155,18 @@ export function Home({ userProfile }: HomeProps) {
 
     if (loading && !summary) {
         return (
-            <div className="max-w-[1400px] mx-auto space-y-12 pb-20 pt-10">
-                <div className="flex justify-between items-center animate-pulse">
-                    <div className="h-10 w-64 bg-white/5 rounded-lg" />
-                    <div className="h-8 w-32 bg-white/5 rounded-full" />
+            <div className="max-w-[1400px] mx-auto space-y-12 pb-20 pt-0">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 pt-4">
+                    <div className="space-y-1 animate-pulse">
+                        <div className="h-10 w-64 bg-white/5 rounded-lg" />
+                        <div className="h-4 w-32 bg-white/5 rounded-lg opacity-50" />
+                    </div>
+                    <div className="h-10 w-48 bg-white/5 rounded-full animate-pulse" />
                 </div>
-                <div className="grid grid-cols-3 gap-1 h-32 bg-white/5 rounded-2xl animate-pulse" />
-                <div className="grid grid-cols-12 gap-12">
-                    <div className="col-span-7 h-64 bg-white/5 rounded-2xl animate-pulse" />
-                    <div className="col-span-5 h-64 bg-white/5 rounded-2xl animate-pulse" />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-1 h-32 bg-white/5 rounded-2xl animate-pulse" />
+                <div className="grid grid-cols-1 xl:grid-cols-12 gap-12">
+                    <div className="col-span-7 h-[500px] bg-white/5 rounded-2xl animate-pulse" />
+                    <div className="col-span-5 h-[500px] bg-white/5 rounded-2xl animate-pulse" />
                 </div>
             </div>
         )
@@ -196,7 +199,7 @@ export function Home({ userProfile }: HomeProps) {
     }
 
     return (
-        <div className="max-w-[1400px] mx-auto space-y-12 animate-in fade-in slide-in-from-bottom-2 duration-700 pb-20">
+        <div className="max-w-[1400px] mx-auto space-y-12 animate-in fade-in slide-in-from-bottom-0 duration-500 pb-20">
             {showPatchBanner && latestPatch && (
                 <div className="mt-6 animate-in slide-in-from-top-4 duration-500">
                     <div className="relative group overflow-hidden bg-gradient-to-r from-blue-600/20 to-purple-600/20 border border-blue-500/30 rounded-2xl backdrop-blur-xl p-6 flex flex-col md:flex-row items-center justify-between gap-6">
