@@ -130,14 +130,7 @@ export function GameAudioSettings() {
                     return
                 }
 
-                if (data.device !== audioDevice) {
-                    setImportError(`File is for ${data.device}, but you have ${audioDevice} selected.`)
-                    setPendingImportData(null)
-                    setShowImportModal(true)
-                    return
-                }
-
-                setPendingImportData(data.settings)
+                setPendingImportData(data)
                 setImportError('')
                 setShowImportModal(true)
             } catch (err) {
@@ -151,12 +144,35 @@ export function GameAudioSettings() {
 
     const confirmImport = async () => {
         if (!pendingImportData) return
-        setAudioSettings(pendingImportData)
-        for (const [key, value] of Object.entries(pendingImportData)) {
-            await updateAudioSetting(key, value)
+
+        const { settings, device: impDevice } = pendingImportData
+
+        // Switch device if needed
+        let targetDevice = audioDevice
+        if (impDevice && impDevice !== audioDevice) {
+            targetDevice = impDevice
+            setAudioDevice(impDevice)
+            await window.conveyor.ini.writeIniValue('UnrealTournament.ini', 'Engine.Engine', 'AudioDevice', impDevice)
         }
+
+        // Apply device settings
+        if (settings) {
+            setAudioSettings(settings)
+            const settingsConfig = AUDIO_DEVICE_SETTINGS[targetDevice]
+            for (const [key, value] of Object.entries(settings)) {
+                const settingDef = settingsConfig?.find(s => s.key === key)
+                let stringValue = String(value)
+
+                if (settingDef?.type === 'boolean') {
+                    stringValue = value ? 'True' : 'False'
+                }
+                await window.conveyor.ini.writeIniValue('UnrealTournament.ini', targetDevice, key, stringValue)
+            }
+        }
+
         setShowImportModal(false)
         setPendingImportData(null)
+        loadSettings()
     }
 
     return (
@@ -257,7 +273,7 @@ export function GameAudioSettings() {
                 </SettingsSection>
             )}
 
-            <Modal isOpen={showImportModal} onClose={() => setShowImportModal(false)} title="Import Audio Settings">
+            <Modal isOpen={showImportModal} onClose={() => setShowImportModal(false)} title="Import Audio Settings" footer={null}>
                 <div className="space-y-4">
                     <p className="text-sm text-muted-foreground">
                         {importError ? <span className="text-red-500">{importError}</span> : "Are you sure you want to import these settings? This will overwrite your current configuration."}

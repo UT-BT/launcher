@@ -395,7 +395,7 @@ export function GameGameplaySettings() {
                 </SettingsRow>
             </SettingsSection>
 
-            <Modal isOpen={showImportModal} onClose={() => setShowImportModal(false)} title="Import Game Settings">
+            <Modal isOpen={showImportModal} onClose={() => setShowImportModal(false)} title="Import Game Settings" footer={null}>
                 <div className="space-y-4">
                     <p className="text-sm text-muted-foreground">
                         {importError ? (

@@ -129,9 +129,13 @@ export function GameVideoSettings() {
 
     const handleExportVideoSettings = () => {
         const exportData = {
-            version: '1.0',
+            version: '1.1',
             renderer: renderDevice,
             exportedAt: new Date().toISOString(),
+            resX,
+            resY,
+            colorBits,
+            fpsLimit,
             settings: deviceSettings
         }
         const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' })
@@ -162,14 +166,8 @@ export function GameVideoSettings() {
                     setShowImportModal(true)
                     return
                 }
-                if (data.renderer !== renderDevice) {
-                    setImportError(`File is for ${data.renderer}, but checking ${renderDevice}. Please switch renderer first if you wish to import this.`)
-                    setPendingImportData(null)
-                    setShowImportModal(true)
-                    return
-                }
 
-                setPendingImportData(data.settings)
+                setPendingImportData(data)
                 setImportError('')
                 setShowImportModal(true)
             } catch (err) {
@@ -184,13 +182,54 @@ export function GameVideoSettings() {
     const confirmImport = async () => {
         if (!pendingImportData) return
 
-        setDeviceSettings(pendingImportData)
-        for (const [key, value] of Object.entries(pendingImportData)) {
-            await updateDeviceSetting(key, value)
+        const { settings, renderer: impRenderer, resX: impX, impY: impY, colorBits: impBits, fpsLimit: impFps } = pendingImportData
+
+        // Apply display settings
+        if (impX && impY) {
+            setResX(String(impX))
+            setResY(String(impY))
+            await window.conveyor.ini.writeIniValue('UnrealTournament.ini', 'WinDrv.WindowsClient', 'FullscreenViewportX', String(impX))
+            await window.conveyor.ini.writeIniValue('UnrealTournament.ini', 'WinDrv.WindowsClient', 'FullscreenViewportY', String(impY))
+        }
+        if (impBits) {
+            setColorBits(String(impBits))
+            await window.conveyor.ini.writeIniValue('UnrealTournament.ini', 'WinDrv.WindowsClient', 'FullscreenColorBits', String(impBits))
+        }
+        if (impFps) {
+            setFpsLimit(String(impFps))
+            await window.conveyor.ini.writeIniValue('UnrealTournament.ini', 'WinDrv.WindowsClient', 'FrameRateLimit', String(impFps))
+        }
+
+        // Switch renderer if needed
+        let targetRenderer = renderDevice
+        if (impRenderer && impRenderer !== renderDevice) {
+            targetRenderer = impRenderer
+            setRenderDevice(impRenderer)
+            await window.conveyor.ini.writeIniValue('UnrealTournament.ini', 'Engine.Engine', 'GameRenderDevice', impRenderer)
+        }
+
+        // Apply device settings
+        if (settings) {
+            setDeviceSettings(settings)
+            const settingsConfig = RENDER_DEVICE_SETTINGS[targetRenderer]
+            for (const [key, value] of Object.entries(settings)) {
+                const settingDef = settingsConfig?.find(s => s.key === key)
+                let stringValue = String(value)
+
+                if (settingDef?.type === 'boolean') {
+                    if (key === 'SwapInterval') {
+                        stringValue = value ? '1' : '0'
+                    } else {
+                        stringValue = value ? 'True' : 'False'
+                    }
+                }
+                await window.conveyor.ini.writeIniValue('UnrealTournament.ini', targetRenderer, key, stringValue)
+            }
         }
 
         setShowImportModal(false)
         setPendingImportData(null)
+        loadSettings()
     }
 
     return (
@@ -347,7 +386,7 @@ export function GameVideoSettings() {
                 </SettingsSection>
             )}
 
-            <Modal isOpen={showImportModal} onClose={() => setShowImportModal(false)} title="Import Video Settings">
+            <Modal isOpen={showImportModal} onClose={() => setShowImportModal(false)} title="Import Video Settings" footer={null}>
                 <div className="space-y-4">
                     <p className="text-sm text-muted-foreground">
                         {importError ? <span className="text-red-500">{importError}</span> : "Are you sure you want to import these settings? This will overwrite your current configuration."}

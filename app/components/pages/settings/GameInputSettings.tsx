@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Keyboard, Download, Upload, AlertTriangle, Zap, Star, Wand2, Gamepad2, Layout } from 'lucide-react'
+import { Keyboard, Download, Upload, AlertTriangle, Zap, Star, Wand2, Layout } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { cn } from '@/lib/utils'
 import { Modal } from '@/app/components/ui/modal'
@@ -60,17 +60,27 @@ export function GameInputSettings() {
     }
 
     const ensureAliasExists = async (aliasName: string, command: string) => {
-        const inputSection = await window.conveyor.ini.readIniSection('User.ini', 'Engine.Input') as Record<string, string> | undefined
+        const inputSection = await window.conveyor.ini.readIniSection('User.ini', 'Engine.Input') as Record<string, string | string[]> | undefined
         if (!inputSection) return
 
+        const aliasMatchRegex = /\(.*?Alias="?(.*?)"?.*?\)/i
+        const commandMatchRegex = /\(.*?Command="(.*?)"?.*?\)/i
+
         const existingAlias = Object.entries(inputSection).find(([_, value]) => {
-            const match = value.match(/\(Command="(.*?)",Alias="?(.*?)"?\)/)
-            return match && match[2].toLowerCase() === aliasName.toLowerCase()
+            const values = Array.isArray(value) ? value : [value]
+            return values.some(v => {
+                if (typeof v !== 'string') return false
+                const match = v.match(aliasMatchRegex)
+                return match && match[1].toLowerCase() === aliasName.toLowerCase()
+            })
         })
 
         if (existingAlias) {
-            const match = existingAlias[1].match(/\(Command="(.*?)",Alias="?(.*?)"?\)/)
-            if (match && match[1] === command) return
+            const val = Array.isArray(existingAlias[1]) ? existingAlias[1][0] : existingAlias[1]
+            if (typeof val === 'string') {
+                const match = val.match(commandMatchRegex)
+                if (match && match[1] === command) return
+            }
             await window.conveyor.ini.writeIniValue('User.ini', 'Engine.Input', existingAlias[0], `(Command="${command}",Alias="${aliasName}")`)
             return
         }
@@ -78,8 +88,8 @@ export function GameInputSettings() {
         let targetKey = ''
         const emptySlot = Object.entries(inputSection).find(([key, value]) => {
             if (!key.startsWith('Aliases[')) return false
-            const match = value.match(/\(Command="",Alias="?None"?\)/i)
-            return !!match
+            const values = Array.isArray(value) ? value : [value]
+            return values.some(v => typeof v === 'string' && v.match(/\(Command="",\s*Alias="?None"?\)/i))
         })
 
         if (emptySlot) {
@@ -98,13 +108,13 @@ export function GameInputSettings() {
     }
 
     const applyBind = async (key: string, command: string, slot: number) => {
-        const normalizedCommand = command.toLowerCase()
-
-        if (ALIAS_DEFINITIONS[normalizedCommand]) {
-            await ensureAliasExists(normalizedCommand, ALIAS_DEFINITIONS[normalizedCommand])
-        }
-
         try {
+            const normalizedCommand = command.toLowerCase()
+
+            if (ALIAS_DEFINITIONS[normalizedCommand]) {
+                await ensureAliasExists(normalizedCommand, ALIAS_DEFINITIONS[normalizedCommand])
+            }
+
             const inputSection = await window.conveyor.ini.readIniSection('User.ini', 'Engine.Input') as Record<string, string | string[]> | undefined
             if (inputSection) {
                 const keysToRemove: string[] = []
@@ -123,33 +133,33 @@ export function GameInputSettings() {
                     await window.conveyor.ini.writeIniValue('User.ini', 'Engine.Input', k, null)
                 }
             }
-        } catch (err) {
-            console.error('Failed to clean up old binds', err)
-        }
 
-        // Write the new bind
-        await window.conveyor.ini.writeIniValue('User.ini', 'Engine.Input', key, command)
+            // Write the new bind
+            await window.conveyor.ini.writeIniValue('User.ini', 'Engine.Input', key, command)
 
-        setBinds(prev => {
-            const newBinds = { ...prev }
+            setBinds(prev => {
+                const newBinds = { ...prev }
 
-            Object.keys(newBinds).forEach(cmd => {
-                const cmdBinds = newBinds[cmd]
-                if (Array.isArray(cmdBinds)) {
-                    newBinds[cmd] = cmdBinds.map(k => k.toLowerCase() === key.toLowerCase() ? '' : k)
-                }
+                Object.keys(newBinds).forEach(cmd => {
+                    const cmdBinds = newBinds[cmd]
+                    if (Array.isArray(cmdBinds)) {
+                        newBinds[cmd] = cmdBinds.map(k => k.toLowerCase() === key.toLowerCase() ? '' : k)
+                    }
+                })
+
+                // Add 'key' to target command
+                if (!newBinds[normalizedCommand]) newBinds[normalizedCommand] = []
+                while (newBinds[normalizedCommand].length <= slot) newBinds[normalizedCommand].push('')
+                newBinds[normalizedCommand][slot] = key
+
+                return newBinds
             })
-
-            // Add 'key' to target command
-            if (!newBinds[normalizedCommand]) newBinds[normalizedCommand] = []
-            while (newBinds[normalizedCommand].length <= slot) newBinds[normalizedCommand].push('')
-            newBinds[normalizedCommand][slot] = key
-
-            return newBinds
-        })
-
-        setEditingBind(null)
-        setConflictInfo(null)
+        } catch (err) {
+            console.error('Failed to apply bind', err)
+        } finally {
+            setEditingBind(null)
+            setConflictInfo(null)
+        }
     }
 
     const handleInput = useCallback(async (key: string) => {
@@ -228,6 +238,7 @@ export function GameInputSettings() {
                 window.removeEventListener('wheel', handleWheel, { capture: true })
             }
         }
+        return undefined
     }, [editingBind, handleKeyDown, handleMouseDown, handleWheel])
 
     const handleBindClick = (command: string, slot: number) => {
@@ -301,14 +312,18 @@ export function GameInputSettings() {
     const confirmImport = async () => {
         if (!pendingImportData) return
         try {
-            // Clear existing binds
             const inputSection = await window.conveyor.ini.readIniSection('User.ini', 'Engine.Input') as Record<string, string | string[]> | undefined
             if (inputSection) {
                 for (const key of Object.keys(inputSection)) {
-                    await window.conveyor.ini.writeIniValue('User.ini', 'Engine.Input', key, '')
+                    if (key.match(/Aliases\[(\d+)\]/i)) continue
+                    await window.conveyor.ini.writeIniValue('User.ini', 'Engine.Input', key, null)
                 }
             }
-            // Apply new
+
+            for (const [name, command] of Object.entries(ALIAS_DEFINITIONS)) {
+                await ensureAliasExists(name, command)
+            }
+
             for (const [command, keys] of Object.entries(pendingImportData)) {
                 if (Array.isArray(keys)) {
                     for (const key of keys) {
@@ -316,6 +331,11 @@ export function GameInputSettings() {
                             // Map command to original case from definitions if possible
                             const originalCommand = BIND_CATEGORIES.flatMap(c => c.binds).find(b => b.command.toLowerCase() === command)?.command || command
                             await window.conveyor.ini.writeIniValue('User.ini', 'Engine.Input', key, originalCommand)
+
+                            // If it's an alias command, ensure it exists in Aliases[]
+                            if (ALIAS_DEFINITIONS[command.toLowerCase()]) {
+                                await ensureAliasExists(command.toLowerCase(), ALIAS_DEFINITIONS[command.toLowerCase()])
+                            }
                         }
                     }
                 }
@@ -430,7 +450,7 @@ export function GameInputSettings() {
                 </div>
             </Modal>
 
-            <Modal isOpen={showImportModal} onClose={() => setShowImportModal(false)} title="Import Binds">
+            <Modal isOpen={showImportModal} onClose={() => setShowImportModal(false)} title="Import Binds" footer={null}>
                 <div className="space-y-4">
                     <p className="text-sm text-muted-foreground">
                         {importError ? <span className="text-red-500">{importError}</span> : "Are you sure you want to import these binds? exact existing binds will be wiped and replaced."}
