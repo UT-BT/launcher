@@ -9,7 +9,7 @@ export class AppApi extends ConveyorApi {
 
   getDemoWatcherConfig = () => this.invoke('getDemoWatcherConfig')
   setDemoWatcherConfig = (config: {
-    autoUpload: 'Never' | 'Personal Bests Only' | 'World Records Only' | 'All Runs',
+    autoUpload: 'Never' | 'Personal Bests Only' | 'World Records Only',
     postUploadAction: 'Do Nothing' | 'Move to Folder' | 'Delete'
   }) => this.invoke('setDemoWatcherConfig', config)
 

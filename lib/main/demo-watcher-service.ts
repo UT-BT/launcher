@@ -140,9 +140,7 @@ export class DemoWatcherService {
         let shouldUpload = false
 
         try {
-            if (config.autoUpload === 'All Runs') {
-                shouldUpload = true
-            } else if (config.autoUpload === 'Personal Bests Only') {
+            if (config.autoUpload === 'Personal Bests Only') {
                 const auth = getAuthConfig()
                 if (auth?.discordId) {
                     shouldUpload = await this.checkIsPB(map, timeInSeconds, auth.discordId)

@@ -120,7 +120,6 @@ export function LauncherDemoSettings() {
                                 <DropdownMenuRadioItem value="Never">Never</DropdownMenuRadioItem>
                                 <DropdownMenuRadioItem value="World Records Only">World Records Only</DropdownMenuRadioItem>
                                 <DropdownMenuRadioItem value="Personal Bests Only">Personal Bests Only</DropdownMenuRadioItem>
-                                <DropdownMenuRadioItem value="All Runs">All Runs</DropdownMenuRadioItem>
                             </DropdownMenuRadioGroup>
                         </DropdownMenuContent>
                     </DropdownMenu>
