@@ -9,6 +9,7 @@ import { SettingsSection, SettingsRow } from './SettingsComponents'
 export function GameGameplaySettings() {
     const [fov, setFov] = useState('90.000000')
     const [dodging, setDodging] = useState(true)
+    const [netspeed, setNetspeed] = useState(10000)
     const [screenFlashes, setScreenFlashes] = useState(true)
     const [goreLevel, setGoreLevel] = useState<'normal' | 'reduced' | 'ultra-low'>('normal')
     const [weaponHand, setWeaponHand] = useState('0.000000')
@@ -40,6 +41,9 @@ export function GameGameplaySettings() {
 
             const flashesVal = await window.conveyor.ini.readIniValue('UnrealTournament.ini', 'WinDrv.WindowsClient', 'ScreenFlashes')
             setScreenFlashes(flashesVal?.toLowerCase() === 'true')
+
+            const speed = await window.conveyor.ini.readIniValue('UnrealTournament.ini', 'Engine.Player', 'ConfiguredInternetSpeed')
+            setNetspeed(parseInt(speed || '10000', 10))
 
             const lowGore = await window.conveyor.ini.readIniValue('UnrealTournament.ini', 'Engine.GameInfo', 'bLowGore')
             const veryLowGore = await window.conveyor.ini.readIniValue('UnrealTournament.ini', 'Engine.GameInfo', 'bVeryLowGore')
@@ -304,6 +308,24 @@ export function GameGameplaySettings() {
                             onMouseUp={() => updateFov(fov)}
                             className="flex-1"
                         />
+                    </div>
+                </SettingsRow>
+
+                <SettingsRow
+                    label="Netspeed"
+                    description={`Control connection speed. Recommended: 25000.`}
+                >
+                    <div className="flex items-center gap-4 w-48">
+                        <Slider
+                            min={3850}
+                            max={25000}
+                            step={50}
+                            value={netspeed}
+                            onChange={(e) => setNetspeed(parseInt(e.target.value))}
+                            onMouseUp={() => window.conveyor.ini.writeIniValue('UnrealTournament.ini', 'Engine.Player', 'ConfiguredInternetSpeed', netspeed.toString())}
+                            className="flex-1"
+                        />
+                        <span className="text-xs font-mono w-10 text-right">{netspeed}</span>
                     </div>
                 </SettingsRow>
 

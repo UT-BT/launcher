@@ -14,7 +14,6 @@ export function GameVideoSettings() {
     const [resY, setResY] = useState('1080')
     const [colorBits, setColorBits] = useState('32')
     const [fpsLimit, setFpsLimit] = useState('0')
-    const [netspeed, setNetspeed] = useState(10000)
     const [deviceSettings, setDeviceSettings] = useState<Record<string, any>>({})
 
     // Import/Export state
@@ -49,9 +48,6 @@ export function GameVideoSettings() {
 
             const fps = await window.conveyor.ini.readIniValue('UnrealTournament.ini', 'WinDrv.WindowsClient', 'FrameRateLimit')
             setFpsLimit(fps || '0')
-
-            const speed = await window.conveyor.ini.readIniValue('UnrealTournament.ini', 'Engine.Player', 'ConfiguredInternetSpeed')
-            setNetspeed(parseInt(speed || '10000', 10))
 
             if (device) {
                 const settingsConfig = RENDER_DEVICE_SETTINGS[device]
@@ -297,24 +293,6 @@ export function GameVideoSettings() {
                         type="number"
                         className="w-32 h-9"
                     />
-                </SettingsRow>
-
-                <SettingsRow
-                    label="Netspeed"
-                    description={`Control connection speed. Recommended: 25000. Current: ${netspeed}`}
-                >
-                    <div className="flex items-center gap-4 w-48">
-                        <Slider
-                            min={3850}
-                            max={25000}
-                            step={50}
-                            value={netspeed}
-                            onChange={(e) => setNetspeed(parseInt(e.target.value))}
-                            onMouseUp={() => window.conveyor.ini.writeIniValue('UnrealTournament.ini', 'Engine.Player', 'ConfiguredInternetSpeed', netspeed.toString())}
-                            className="flex-1"
-                        />
-                        <span className="text-xs font-mono w-10 text-right">{netspeed}</span>
-                    </div>
                 </SettingsRow>
             </SettingsSection>
 
