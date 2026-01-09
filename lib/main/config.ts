@@ -144,7 +144,7 @@ export function clearAuthConfig(): void {
   const { auth, ...rest } = current
   writeConfig(rest)
 } export type DemoWatcherConfig = {
-  autoUpload: 'Never' | 'Personal Bests Only' | 'World Records Only' | 'All Runs'
+  autoUpload: 'Never' | 'Personal Bests Only' | 'World Records Only'
   postUploadAction: 'Do Nothing' | 'Move to Folder' | 'Delete'
 }
 
