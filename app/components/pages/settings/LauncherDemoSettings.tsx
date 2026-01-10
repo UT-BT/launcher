@@ -15,6 +15,7 @@ export function LauncherDemoSettings() {
     const [autoDemoRec, setAutoDemoRec] = useState(false)
     const [autoDemoUpload, setAutoDemoUpload] = useState('Never')
     const [demoPostAction, setDemoPostAction] = useState('Do Nothing')
+    const [discardedDemoAction, setDiscardedDemoAction] = useState('Do Nothing')
     const [utPathExists, setUtPathExists] = useState(false)
     const [patchVersion, setPatchVersion] = useState('')
 
@@ -40,21 +41,27 @@ export function LauncherDemoSettings() {
         loadSettings()
     }, [])
 
-    const saveDemoConfig = async (uploadVal: string, actionVal: string) => {
+    const saveDemoConfig = async (uploadVal: string, actionVal: string, discardVal) => {
         await window.conveyor.app.setDemoWatcherConfig({
             autoUpload: uploadVal as any,
-            postUploadAction: actionVal as any
+            postUploadAction: actionVal as any,
+            discardDemoAction: discardVal as any
         })
     }
 
     const handleAutoDemoUploadChange = (val: string) => {
         setAutoDemoUpload(val)
-        saveDemoConfig(val, demoPostAction)
+        saveDemoConfig(val, demoPostAction, discardedDemoAction)
     }
 
     const handleDemoPostActionChange = (val: string) => {
         setDemoPostAction(val)
-        saveDemoConfig(autoDemoUpload, val)
+        saveDemoConfig(autoDemoUpload, val, discardedDemoAction)
+    }
+
+    const handleDiscardedDemoActionChange = (val: string) => {
+        setDiscardedDemoAction(val)
+        saveDemoConfig(autoDemoUpload, demoPostAction, val)
     }
 
     const disabled = !utPathExists || patchVersion === 'Unsupported'
@@ -120,6 +127,27 @@ export function LauncherDemoSettings() {
                                 <DropdownMenuRadioItem value="Never">Never</DropdownMenuRadioItem>
                                 <DropdownMenuRadioItem value="World Records Only">World Records Only</DropdownMenuRadioItem>
                                 <DropdownMenuRadioItem value="Personal Bests Only">Personal Bests Only</DropdownMenuRadioItem>
+                            </DropdownMenuRadioGroup>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </SettingsRow>
+
+                <SettingsRow
+                    label="Discarded Demos"
+                    description="Choose what to do with demos that aren't personal bests or world records"
+                >
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild disabled={disabled || autoDemoUpload === 'Never'}>
+                            <Button variant="outline" className={`w-[200px] justify-between font-normal ${disabled || autoDemoUpload === 'Never' ? 'opacity-50' : ''}`}>
+                                {discardedDemoAction === 'Move to Folder' ? "Move to 'Discarded' Folder" : discardedDemoAction}
+                                <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="w-[200px]" align="end">
+                            <DropdownMenuRadioGroup value={discardedDemoAction} onValueChange={handleDiscardedDemoActionChange}>
+                                <DropdownMenuRadioItem value="Do Nothing">Do Nothing</DropdownMenuRadioItem>
+                                <DropdownMenuRadioItem value="Move to Folder">Move to 'Discarded' Folder</DropdownMenuRadioItem>
+                                <DropdownMenuRadioItem value="Delete">Delete</DropdownMenuRadioItem>
                             </DropdownMenuRadioGroup>
                         </DropdownMenuContent>
                     </DropdownMenu>
