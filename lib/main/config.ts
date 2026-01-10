@@ -146,13 +146,15 @@ export function clearAuthConfig(): void {
 } export type DemoWatcherConfig = {
   autoUpload: 'Never' | 'Personal Bests Only' | 'World Records Only'
   postUploadAction: 'Do Nothing' | 'Move to Folder' | 'Delete'
+  discardDemoAction: 'Do Nothing' | 'Move to Folder' | 'Delete'
 }
 
 export function getDemoWatcherConfig(): DemoWatcherConfig {
   const config = readConfig()
   return config.demoWatcher ?? {
     autoUpload: 'Never',
-    postUploadAction: 'Do Nothing'
+    postUploadAction: 'Do Nothing',
+    discardDemoAction: 'Do Nothing',
   }
 }
 
