@@ -40,6 +40,7 @@ export class DemoWatcherService {
     private watcher: FSWatcher | null = null
     private systemPath: string | undefined
     private uploadLogs: UploadLogEntry[] = []
+    private processingFiles = new Set<string>()
 
     constructor() {
         this.systemPath = undefined
@@ -129,124 +130,141 @@ export class DemoWatcherService {
 
         loggingService.info(`New demo detected: ${filename}`, 'DemoWatcher')
 
-        const parts = filename.split('__');
-        const map = parts[0];
-        const time = parts[1];
-        const timeInSeconds = this.getTimeInSeconds(time);
-
-        loggingService.debug(`Map: ${map}, Time: ${time} (${timeInSeconds} seconds)`, 'DemoWatcher')
-
-        const config = getDemoWatcherConfig()
-        let shouldUpload = false
-
-        try {
-            if (config.autoUpload === 'Personal Bests Only') {
-                const auth = getAuthConfig()
-                if (auth?.discordId) {
-                    shouldUpload = await this.checkIsPB(map, timeInSeconds, auth.discordId)
-                } else {
-                    loggingService.warn('Cannot check PB: User not logged in', 'DemoWatcher')
-                }
-            } else if (config.autoUpload === 'World Records Only') {
-                shouldUpload = await this.checkIsWR(map, timeInSeconds)
-            }
-        } catch (error) {
-            loggingService.error('Failed to check PB/WR status', 'DemoWatcher', error)
+        if (this.processingFiles.has(filename)) {
+            loggingService.debug(`File ${filename} is already being processed, skipping.`, 'DemoWatcher')
+            return
         }
 
-        if (shouldUpload) {
-            const auth = getAuthConfig()
-            if (!auth) {
-                loggingService.warn('Cannot upload demo: User not logged in', 'DemoWatcher')
-            } else {
-                loggingService.info(`Uploading demo: ${filename}`, 'DemoWatcher')
+        this.processingFiles.add(filename)
 
-                // Verify demo before uploading
-                const btpogId = await this.extractBtpogId(filePath)
-                if (!btpogId) {
-                    loggingService.warn(`Ignoring demo ${filename}: No BTPog ID found`, 'DemoWatcher')
-                    return
-                }
+        try {
+            // Small delay to let the OS release file locks if it was just moved/renamed
+            await new Promise(resolve => setTimeout(resolve, 500))
 
-                const isCertified = await this.checkIsCertified(btpogId)
-                if (!isCertified) {
-                    loggingService.info(`Ignoring demo ${filename}: Run is not certified (BTPog ID: ${btpogId})`, 'DemoWatcher')
-                    return
-                }
+            const parts = filename.split('__');
+            const map = parts[0];
+            const time = parts[1];
+            const timeInSeconds = this.getTimeInSeconds(time);
 
-                loggingService.info(`Verified demo ${filename} (BTPog ID: ${btpogId}). Proceeding with upload.`, 'DemoWatcher')
+            loggingService.debug(`Map: ${map}, Time: ${time} (${timeInSeconds} seconds)`, 'DemoWatcher')
 
-                this.addLogEntry({
-                    filename,
-                    status: 'uploading',
-                    timestamp: new Date().toISOString(),
-                    attempt: 1,
-                    maxAttempts: 5
-                })
+            const config = getDemoWatcherConfig()
+            let shouldUpload = false
 
-                let attempts = 0
-                const maxAttempts = 5
-                let success = false
-
-                while (attempts < maxAttempts && !success) {
-                    attempts++
-                    if (attempts > 1) {
-                        this.updateLogAttempt(filename, attempts, maxAttempts)
+            try {
+                if (config.autoUpload === 'Personal Bests Only') {
+                    const auth = getAuthConfig()
+                    if (auth?.discordId) {
+                        shouldUpload = await this.checkIsPB(map, timeInSeconds, auth.discordId)
+                    } else {
+                        loggingService.warn('Cannot check PB: User not logged in', 'DemoWatcher')
                     }
-
-                    try {
-                        const buffer = await readFile(filePath)
-                        const blob = new Blob([buffer])
-
-                        await uploadDemo(blob, filename, auth.accessToken)
-                        success = true
-
-                        loggingService.info(`Demo uploaded successfully: ${filename}`, 'DemoWatcher')
-                        this.updateLogStatus(filename, 'success')
-                    } catch (error: any) {
-                        const isLastAttempt = attempts === maxAttempts
-                        const errorMessage = error.message || 'Unknown error'
-                        const shouldRetry = errorMessage.includes('No matching cap found') || errorMessage.includes('Network Error')
-
-                        if (!shouldRetry || isLastAttempt) {
-                            loggingService.error(`Failed to upload demo ${filename}: ${errorMessage}`, 'DemoWatcher')
-                            this.updateLogStatus(filename, 'failed', errorMessage)
-                            break
-                        }
-
-                        const delay = attempts * 2000
-                        loggingService.warn(`Upload failed for ${filename}, retrying in ${delay}ms... (Attempt ${attempts}/${maxAttempts})`, 'DemoWatcher')
-
-                        await new Promise(resolve => setTimeout(resolve, delay))
-                    }
+                } else if (config.autoUpload === 'World Records Only') {
+                    shouldUpload = await this.checkIsWR(map, timeInSeconds)
                 }
-
-                if (!success) shouldUpload = false
-
+            } catch (error) {
+                loggingService.error('Failed to check PB/WR status', 'DemoWatcher', error)
             }
 
             if (shouldUpload) {
-                try {
-                    if (config.postUploadAction === 'Move to Folder') {
-                        if (this.systemPath) {
-                            const uploadedDir = join(this.systemPath, 'Uploaded')
-                            try {
-                                await access(uploadedDir)
-                            } catch {
-                                await mkdir(uploadedDir)
-                            }
-                            const newPath = join(uploadedDir, filename)
-                            await rename(filePath, newPath)
-                            loggingService.info(`Moved demo to: ${newPath}`, 'DemoWatcher')
-                        }
-                    } else if (config.postUploadAction === 'Delete') {
-                        await unlink(filePath)
-                        loggingService.info(`Deleted demo: ${filename}`, 'DemoWatcher')
+                const auth = getAuthConfig()
+                if (!auth) {
+                    loggingService.warn('Cannot upload demo: User not logged in', 'DemoWatcher')
+                } else {
+                    loggingService.info(`Uploading demo: ${filename}`, 'DemoWatcher')
+
+                    // Verify demo before uploading
+                    const btpogId = await this.extractBtpogId(filePath)
+                    if (!btpogId) {
+                        loggingService.warn(`Ignoring demo ${filename}: No BTPog ID found`, 'DemoWatcher')
+                        return
                     }
-                } catch (error) {
-                    loggingService.error('Failed to perform post-upload action', 'DemoWatcher', error)
+
+                    const isCertified = await this.checkIsCertified(btpogId)
+                    if (!isCertified) {
+                        loggingService.info(`Ignoring demo ${filename}: Run is not certified (BTPog ID: ${btpogId})`, 'DemoWatcher')
+                        return
+                    }
+
+                    loggingService.info(`Verified demo ${filename} (BTPog ID: ${btpogId}). Proceeding with upload.`, 'DemoWatcher')
+
+                    this.addLogEntry({
+                        filename,
+                        status: 'uploading',
+                        timestamp: new Date().toISOString(),
+                        attempt: 1,
+                        maxAttempts: 5
+                    })
+
+                    let attempts = 0
+                    const maxAttempts = 5
+                    let success = false
+
+                    while (attempts < maxAttempts && !success) {
+                        attempts++
+                        if (attempts > 1) {
+                            this.updateLogAttempt(filename, attempts, maxAttempts)
+                        }
+
+                        try {
+                            const buffer = await readFile(filePath)
+                            const blob = new Blob([buffer])
+
+                            await uploadDemo(blob, filename, auth.accessToken)
+                            success = true
+
+                            loggingService.info(`Demo uploaded successfully: ${filename}`, 'DemoWatcher')
+                            this.updateLogStatus(filename, 'success')
+                        } catch (error: any) {
+                            const isLastAttempt = attempts === maxAttempts
+                            const errorMessage = error.message || 'Unknown error'
+
+                            // Check for common file system lock/access errors
+                            const isFileSystemError = error.code === 'EBUSY' || error.code === 'EPERM' || error.code === 'EACCES'
+                            const shouldRetry = isFileSystemError || errorMessage.includes('No matching cap found') || errorMessage.includes('Network Error')
+
+                            if (!shouldRetry || isLastAttempt) {
+                                loggingService.error(`Failed to upload demo ${filename}: ${errorMessage}`, 'DemoWatcher')
+                                this.updateLogStatus(filename, 'failed', errorMessage)
+                                break
+                            }
+
+                            const delay = attempts * 2000
+                            loggingService.warn(`Upload failed for ${filename} (${error.code || 'API Error'}), retrying in ${delay}ms... (Attempt ${attempts}/${maxAttempts})`, 'DemoWatcher')
+
+                            await new Promise(resolve => setTimeout(resolve, delay))
+                        }
+                    }
+
+                    if (!success) shouldUpload = false
+
+                }
+
+                if (shouldUpload) {
+                    try {
+                        if (config.postUploadAction === 'Move to Folder') {
+                            if (this.systemPath) {
+                                const uploadedDir = join(this.systemPath, 'Uploaded')
+                                try {
+                                    await access(uploadedDir)
+                                } catch {
+                                    await mkdir(uploadedDir)
+                                }
+                                const newPath = join(uploadedDir, filename)
+                                await rename(filePath, newPath)
+                                loggingService.info(`Moved demo to: ${newPath}`, 'DemoWatcher')
+                            }
+                        } else if (config.postUploadAction === 'Delete') {
+                            await unlink(filePath)
+                            loggingService.info(`Deleted demo: ${filename}`, 'DemoWatcher')
+                        }
+                    } catch (error) {
+                        loggingService.error('Failed to perform post-upload action', 'DemoWatcher', error)
+                    }
                 }
             }
+        } finally {
+            this.processingFiles.delete(filename)
         }
     }
 
