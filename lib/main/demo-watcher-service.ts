@@ -150,20 +150,46 @@ export class DemoWatcherService {
 
             const config = getDemoWatcherConfig()
             let shouldUpload = false
+            let shouldDiscard = false
 
             try {
                 if (config.autoUpload === 'Personal Bests Only') {
                     const auth = getAuthConfig()
                     if (auth?.discordId) {
                         shouldUpload = await this.checkIsPB(map, timeInSeconds, auth.discordId)
+                        shouldDiscard = !shouldUpload
                     } else {
                         loggingService.warn('Cannot check PB: User not logged in', 'DemoWatcher')
                     }
                 } else if (config.autoUpload === 'World Records Only') {
                     shouldUpload = await this.checkIsWR(map, timeInSeconds)
+                    shouldDiscard = !shouldUpload
                 }
             } catch (error) {
                 loggingService.error('Failed to check PB/WR status', 'DemoWatcher', error)
+            }
+
+            if (shouldDiscard) {
+                try {
+                    if (config.discardDemoAction === 'Move to Folder') {
+                        if (this.systemPath) {
+                            const discardedDir = join(this.systemPath, 'Discarded')
+                            try {
+                                await access(discardedDir)
+                            } catch {
+                                await mkdir(discardedDir)
+                            }
+                            const newPath = join(discardedDir, filename)
+                            await rename(filePath, newPath)
+                            loggingService.info(`Moved demo to: ${newPath}`, 'DemoWatcher')
+                        }
+                    } else if (config.discardDemoAction == 'Delete') {
+                        await unlink(filePath)
+                        loggingService.info(`Deleted demo: ${filename}`, 'DemoWatcher')
+                    }
+                } catch (error) {
+                    loggingService.error('Failed to perform discard action', 'DemoWatcher', error)
+                }
             }
 
             if (shouldUpload) {
