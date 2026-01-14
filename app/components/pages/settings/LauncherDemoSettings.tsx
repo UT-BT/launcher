@@ -28,6 +28,7 @@ export function LauncherDemoSettings() {
             if (demoConfig) {
                 setAutoDemoUpload(demoConfig.autoUpload)
                 setDemoPostAction(demoConfig.postUploadAction)
+                setDiscardedDemoAction(demoConfig.discardDemoAction || 'Do Nothing')
             }
 
             const patch = await window.conveyor.app.getInstalledPatch()
@@ -41,7 +42,7 @@ export function LauncherDemoSettings() {
         loadSettings()
     }, [])
 
-    const saveDemoConfig = async (uploadVal: string, actionVal: string, discardVal) => {
+    const saveDemoConfig = async (uploadVal: string, actionVal: string, discardVal: string) => {
         await window.conveyor.app.setDemoWatcherConfig({
             autoUpload: uploadVal as any,
             postUploadAction: actionVal as any,
