@@ -11,7 +11,7 @@ You must be at least 13 years old to use this Service, in compliance with Discor
 UTBT.net is a community project, not a registered business entity. The Service is provided "AS IS" and "AS AVAILABLE" without warranties of any kind, express or implied. We are not liable for any damages arising from your use of the Service, including but not limited to data loss, game file corruption, or bans from third-party services.
 
 **4. Game Files & Intellectual Property**
-*   **Unreal Tournament 1999:** You acknowledge that this Service facilitates the installation of Unreal Tournament 1999. We rely on the permissions granted by Epic Games regarding the distribution of the game via archive.org. You agree to use these files in accordance with applicable laws and archive.org's policies.
+*   **Unreal Tournament 1999:** You acknowledge that this Service facilitates the installation of Unreal Tournament 1999. The game is **Epic Games' property** and is distributed **free of charge for personal use only**. The **Epic Games Terms of Service** apply to the use and distribution of Unreal Tournament. These terms supersede any other end user agreement that may accompany the game. We rely on the permissions granted by Epic Games regarding the distribution of the game via archive.org. You agree to use these files in accordance with applicable laws and archive.org's policies.
 *   **Custom Content:** Mods, maps, and other custom content provided by us are hosted on our servers. You retain no ownership rights to the Service's underlying code or infrastructure.
 
 **5. User Content & Conduct**
