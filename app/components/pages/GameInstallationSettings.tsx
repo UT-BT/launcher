@@ -4,6 +4,7 @@ import { Button } from '@/app/components/ui/button'
 import { Input } from '@/app/components/ui/input'
 import { ErrorModal } from '@/app/components/ErrorModal'
 import { ConfirmModal } from '@/app/components/shared/ConfirmModal'
+import { GameInstallLegalModal } from '@/app/components/modals/GameInstallLegalModal'
 import { SettingsSection, SettingsRow } from './settings/SettingsComponents'
 
 export function GameInstallationSettings() {
@@ -14,6 +15,7 @@ export function GameInstallationSettings() {
     const [status, setStatus] = useState('')
     const [errorMessage, setErrorMessage] = useState('')
     const [showError, setShowError] = useState(false)
+    const [showLegalModal, setShowLegalModal] = useState(false)
     const [patches, setPatches] = useState<any[]>([])
     const [installingPatch, setInstallingPatch] = useState<string | null>(null)
     const [patchInstallStatus, setPatchInstallStatus] = useState('')
@@ -94,7 +96,12 @@ export function GameInstallationSettings() {
         setPatchVersion(patch?.tag || 'Unknown')
     }
 
-    const handleDownload = async () => {
+    const handleDownload = () => {
+        setShowLegalModal(true)
+    }
+
+    const performDownload = async () => {
+        setShowLegalModal(false)
         const attemptId = ++downloadAttemptRef.current
         setDownloading(true)
         setStatus('Checking existing files...')
@@ -267,6 +274,12 @@ export function GameInstallationSettings() {
                     </div>
                 )}
             </SettingsSection>
+
+            <GameInstallLegalModal
+                isOpen={showLegalModal}
+                onClose={() => setShowLegalModal(false)}
+                onConfirm={performDownload}
+            />
 
             <SettingsSection title="Available Patches" icon={Package}>
                 {patchVersion === 'Unsupported' && (
