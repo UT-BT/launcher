@@ -2,7 +2,7 @@
 
 # UTBT Launcher
 [![stable](https://img.shields.io/github/v/release/UT-BT/launcher?sort=semver&label=stable)](https://github.com/UT-BT/launcher/releases)
-[![rc](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fapi.github.com%2Frepos%2FUT-BT%2Flauncher%2Freleases&query=%24%5B%3F(%40.prerelease%3D%3Dtrue)%5D%5B0%5D.tag_name&label=rc&color=orange)](https://github.com/UT-BT/launcher/releases)
+[![rc](https://img.shields.io/github/v/release/UT-BT/launcher?include_prereleases&sort=semver&label=rc&color=orange)](https://github.com/UT-BT/launcher/releases)
 
 Gone are the days of finding ISOs, manually downloading and applying patches, and trying to figure out what settings you need to get involved in the BunnyTrack community.
 
