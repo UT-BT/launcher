@@ -121,3 +121,30 @@ jobs:
           gh release edit $tagName --notes "$newBody"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update README with RC Link
+        if: steps.meta.outputs.prerelease == 'true'
+        shell: pwsh
+        run: |
+          $tagName = "${{ github.ref_name }}"
+          $readmePath = "README.md"
+          $content = Get-Content -Path $readmePath -Raw
+          
+          $badgeUrlStart = "https://img.shields.io/github/v/release/UT-BT/launcher?include_prereleases"
+          $pattern = "\[!\[rc\]\(.*$([regex]::Escape($badgeUrlStart)).*\)\]\(.*\)"
+          
+          $newLink = "https://github.com/UT-BT/launcher/releases/tag/$tagName"
+          $replacement = "[![rc](https://img.shields.io/github/v/release/UT-BT/launcher?include_prereleases&sort=semver&label=rc&color=orange)]($newLink)"
+          
+          if ($content -match $pattern) {
+              $newContent = $content -replace $pattern, $replacement
+              Set-Content -Path $readmePath -Value $newContent
+              
+              git config --global user.name "github-actions[bot]"
+              git config --global user.email "github-actions[bot]@users.noreply.github.com"
+              git add $readmePath
+              git commit -m "chore: update readme with latest rc link [skip ci]"
+              git push origin HEAD:main
+          } else {
+              Write-Warning "Could not find RC badge pattern in README.md"
+          }
