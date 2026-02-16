@@ -8,6 +8,8 @@ Gone are the days of finding ISOs, manually downloading and applying patches, an
 
 The UTBT Launcher automates this whole process for you and aims to make getting up and running as seamless as possible. 
 
+Our launcher is intended for use by the [UTBT](https://utbt.net) community, but obviously, you're free to use it even if you don't play BT - but it's optimized for what our community runs.
+
 ## Features
 - Unreal Tournament 1999 downloader/mounter for Windows using Epic Games' legal distribution.
 - Patch management allowing for easy upgrade and downgrades within seconds. 
@@ -39,4 +41,5 @@ The UTBT Launcher automates this whole process for you and aims to make getting 
 - Twitch: [UTBT on Twitch](https://twitch.tv/utbt)
 
 ## Contributing
+
 Developer setup and build instructions are available in [CONTRIBUTING.md](./CONTRIBUTING.md).
