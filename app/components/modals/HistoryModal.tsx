@@ -3,6 +3,7 @@ import { Modal } from '@/app/components/ui/modal'
 import { fetchSummaryCaps, SummaryCap } from '@/app/utils/api'
 import { Clock } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 
 import worldRecordIcon from '@/app/assets/world_record.png'
 import championIcon from '@/app/assets/champion.png'
@@ -131,7 +132,7 @@ export function HistoryModal({ open, onOpenChange, accessToken }: HistoryModalPr
                                             <span className="text-[10px] font-medium">{dateStr}</span>
                                         </div>
                                         <div className="size-1 rounded-full bg-white/5" />
-                                        <span className="text-[10px] font-medium text-muted-foreground/40">{cap.author}</span>
+                                        <PlayerInfo alias={cap.author} size="sm" className="text-[10px] text-muted-foreground/40" />
                                         <div className="size-1 rounded-full bg-white/5" />
                                         <span className="text-[10px] font-bold text-orange-400/60 uppercase tracking-widest">Difficulty {cap.difficulty}</span>
                                     </div>

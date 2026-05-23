@@ -11,7 +11,8 @@ interface ReviewModalProps {
     onOpenChange: (open: boolean) => void
     accessToken?: string
     mapName: string | null
-    onSuccess?: () => void
+    initialScores?: Partial<Record<'aesthetics' | 'learning' | 'luck' | 'difficulty' | 'overall', number>>
+    onSuccess?: () => void | Promise<void>
 }
 
 type MetricKey = 'aesthetics' | 'learning' | 'luck' | 'difficulty' | 'overall'
@@ -29,7 +30,7 @@ const MapThumbnail = ({ mapName, className }: { mapName: string, className?: str
     )
 }
 
-export function ReviewModal({ open, onOpenChange, accessToken, mapName, onSuccess }: ReviewModalProps) {
+export function ReviewModal({ open, onOpenChange, accessToken, mapName, initialScores, onSuccess }: ReviewModalProps) {
     const [persistedScores, setPersistedScores] = useState<Record<string, Record<MetricKey, number>>>({})
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
@@ -43,7 +44,12 @@ export function ReviewModal({ open, onOpenChange, accessToken, mapName, onSucces
         overall: 5
     }
 
-    const currentScores = mapName ? (persistedScores[mapName] || defaultScores) : defaultScores
+    const seededScores: Record<MetricKey, number> = {
+        ...defaultScores,
+        ...(initialScores ?? {}),
+    }
+
+    const currentScores = mapName ? (persistedScores[mapName] || seededScores) : seededScores
 
     const setScore = (key: MetricKey, value: number) => {
         if (!mapName) return
@@ -66,7 +72,10 @@ export function ReviewModal({ open, onOpenChange, accessToken, mapName, onSucces
                 ...currentScores
             })
             setSubmitted(true)
-            onSuccess?.()
+            // Await caller refresh so the modal underneath has fresh data
+            // by the time auto-close reveals it.
+            await onSuccess?.()
+            setTimeout(() => onOpenChange(false), 900)
         } catch (err) {
             console.error('Failed to submit review:', err)
             setError('Failed to submit review. Please try again.')

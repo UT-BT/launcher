@@ -6,6 +6,7 @@ import { Button } from '@/app/components/ui/button'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import { HistoryModal } from '@/app/components/modals/HistoryModal'
 import { ReviewModal } from '@/app/components/modals/ReviewModal'
+import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 
 import worldRecordIcon from '@/app/assets/world_record.png'
 import championIcon from '@/app/assets/champion.png'
@@ -336,7 +337,7 @@ export function Home({ userProfile }: HomeProps) {
                                                     Capped {ach.timeAgo}
                                                 </span>
                                                 <div className="size-1 rounded-full bg-white/5" />
-                                                <span className="text-[10px] font-medium text-muted-foreground/40">{ach.author}</span>
+                                                <PlayerInfo alias={ach.author} size="sm" className="text-[10px] text-muted-foreground/40" />
                                                 <div className="size-1 rounded-full bg-white/5" />
                                                 <span className="text-[10px] font-bold text-orange-400/60 uppercase tracking-widest">Difficulty {ach.difficulty}</span>
                                             </div>

@@ -61,3 +61,12 @@
     --radius: 0.5rem;
   }
 }
+@keyframes legendaryAvatarPulse {
+  0%, 100% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(1.02); filter: brightness(1.1); }
+}
+
+@keyframes legendaryTitlePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}

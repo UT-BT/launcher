@@ -4,7 +4,7 @@ import { Info } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface TooltipProps {
-    content: string
+    content: ReactNode
     children?: ReactNode
     className?: string
     side?: 'top' | 'bottom'

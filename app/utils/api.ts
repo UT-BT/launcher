@@ -64,10 +64,63 @@ export interface Map {
     bronze_medal?: number
 }
 
+export interface MapMetadata {
+    name: string
+    added: string
+    difficulty: number
+    tags?: string
+    author?: string | number
+    author_str?: string
+    author_ref?: number
+    world_record?: number
+    champion_medal?: number
+    gold_medal?: number
+    silver_medal?: number
+    bronze_medal?: number
+}
+
+export interface BestCap {
+    map: string
+    cap_time_seconds: number
+    cap_type: number
+    verified: boolean
+}
+
+export interface MapListParams {
+    limit?: number
+    offset?: number
+    name?: string
+    author?: string
+    tag?: string
+    difficulty?: number
+    difficultyMin?: number
+    difficultyMax?: number
+    addedSince?: string
+    addedUntil?: string
+    active?: boolean
+    sort?: 'newest' | 'name' | 'added' | 'difficulty'
+    order?: 'asc' | 'desc'
+    randomize?: boolean
+    exclude?: string[]
+    columns?: string[]
+}
+
+export type MapCountParams = Omit<MapListParams, 'limit' | 'offset' | 'sort' | 'order' | 'columns' | 'randomize' | 'exclude'>
+
+export interface ActiveTitle {
+    name: string
+    rarity: 1 | 2 | 3 | 4 | 5
+    color_r: number
+    color_g: number
+    color_b: number
+}
+
 export interface MapReview {
     id: number
     map_name: string
-    user: string
+    user: string | number
+    alias?: string
+    active_title?: ActiveTitle | null
     aesthetics: number
     learning: number
     luck: number
@@ -146,7 +199,7 @@ export async function uploadDemo(file: Blob, filename: string, accessToken: stri
                     errorMessage = json.reason
                 }
             } catch {
-                // Use default message
+                // If response isn't JSON, we'll just use the generic error message
             }
             throw new Error(errorMessage)
         }
@@ -184,17 +237,49 @@ export async function logLauncherStartup(accessToken: string): Promise<void> {
     }
 }
 
-export async function fetchMaps(accessToken: string, limit: number, offset: number, sort?: string, difficulty?: number, active?: boolean): Promise<Map[]> {
+const DEFAULT_MAP_COLUMNS = [
+    'name', 'added', 'difficulty', 'tags',
+    'author', 'author_str', 'author_ref',
+    'world_record', 'champion_medal', 'gold_medal', 'silver_medal', 'bronze_medal',
+    'active',
+]
+
+const MAP_METADATA_COLUMNS = [
+    'name', 'added', 'difficulty', 'tags', 'author', 'author_str', 'author_ref',
+    'world_record', 'champion_medal', 'gold_medal', 'silver_medal', 'bronze_medal',
+]
+
+function buildMapQuery(params: MapListParams, defaultActive = true): string {
+    const usp = new URLSearchParams()
+
+    if (params.limit !== undefined) usp.set('limit', String(params.limit))
+    if (params.offset !== undefined) usp.set('offset', String(params.offset))
+    if (params.name) usp.set('name', params.name)
+    if (params.author) usp.set('author', params.author)
+    if (params.tag) usp.set('tag', params.tag)
+    if (params.difficulty !== undefined) usp.set('difficulty', String(params.difficulty))
+    if (params.difficultyMin !== undefined) usp.set('difficulty_min', String(params.difficultyMin))
+    if (params.difficultyMax !== undefined) usp.set('difficulty_max', String(params.difficultyMax))
+    if (params.addedSince) usp.set('added_since', params.addedSince)
+    if (params.addedUntil) usp.set('added_until', params.addedUntil)
+    if (params.active !== undefined) usp.set('active', String(params.active))
+    else if (defaultActive) usp.set('active', 'true')
+    if (params.sort) usp.set('sort', params.sort)
+    if (params.order) usp.set('order', params.order)
+    if (params.randomize) usp.set('randomize', 'true')
+    if (params.exclude?.length) usp.set('exclude', params.exclude.join(','))
+
+    const cols = params.columns ?? DEFAULT_MAP_COLUMNS
+    usp.set('columns', cols.join(','))
+
+    return usp.toString()
+}
+
+export async function fetchMaps(accessToken: string, params: MapListParams = {}): Promise<Map[]> {
     try {
-        const columns = "name,added,difficulty,tags,author,author_str,author_ref,world_record,champion_medal,gold_medal,silver_medal,bronze_medal,active"
-        let queryParams = `limit=${limit}&offset=${offset}&columns=${columns}`
+        const qs = buildMapQuery(params)
 
-        if (sort) queryParams += `&sort=${sort}`
-        if (difficulty !== undefined) queryParams += `&difficulty=${difficulty}`
-        if (active !== undefined) queryParams += `&active=${active}`
-        else queryParams += `&active=true` // Default to active true if not specified, matching original logic but allowing override
-
-        const response = await fetch(`${API_BASE_URL}/maps/?${queryParams}`, {
+        const response = await fetch(`${API_BASE_URL}/maps/?${qs}`, {
             headers: {
                 'Authorization': `Bearer ${accessToken}`
             }
@@ -216,10 +301,76 @@ export async function fetchMaps(accessToken: string, limit: number, offset: numb
     }
 }
 
-export async function fetchMapsCount(accessToken: string, addedSince?: string): Promise<number> {
+export async function fetchMapsMetadata(accessToken: string): Promise<MapMetadata[]> {
+    const rows = await fetchMaps(accessToken, {
+        columns: MAP_METADATA_COLUMNS,
+        active: true,
+    })
+    return rows as unknown as MapMetadata[]
+}
+
+export async function fetchBestCaps(accessToken: string, userId: string | number): Promise<BestCap[]> {
     try {
-        const addedSinceParam = addedSince ? `&added_since=${encodeURIComponent(addedSince)}` : ''
-        const response = await fetch(`${API_BASE_URL}/maps/count/?active=true${addedSinceParam}`, {
+        const response = await fetch(`${API_BASE_URL}/caps/capped_maps/${userId}`, {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        })
+
+        if (!response.ok) {
+            throw new Error(`Failed to fetch best caps: ${response.statusText} (${response.status})`)
+        }
+
+        const json = await response.json()
+        if (json.success && Array.isArray(json.data)) {
+            return json.data as BestCap[]
+        }
+
+        return []
+    } catch (error) {
+        console.error('Error fetching best caps:', error)
+        return []
+    }
+}
+
+export async function fetchMapAuthors(accessToken: string, activeOnly = true): Promise<string[]> {
+    try {
+        const response = await fetch(`${API_BASE_URL}/maps/authors/?active=${activeOnly}`, {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        })
+
+        if (!response.ok) {
+            throw new Error(`Failed to fetch map authors: ${response.statusText} (${response.status})`)
+        }
+
+        const json = await response.json()
+        if (json.success && Array.isArray(json.data)) {
+            return json.data as string[]
+        }
+
+        return []
+    } catch (error) {
+        console.error('Error fetching map authors:', error)
+        return []
+    }
+}
+
+export async function fetchMapsCount(accessToken: string, params: MapCountParams = {}): Promise<number> {
+    try {
+        const usp = new URLSearchParams()
+        if (params.name) usp.set('name', params.name)
+        if (params.author) usp.set('author', params.author)
+        if (params.tag) usp.set('tag', params.tag)
+        if (params.difficulty !== undefined) usp.set('difficulty', String(params.difficulty))
+        if (params.difficultyMin !== undefined) usp.set('difficulty_min', String(params.difficultyMin))
+        if (params.difficultyMax !== undefined) usp.set('difficulty_max', String(params.difficultyMax))
+        if (params.addedSince) usp.set('added_since', params.addedSince)
+        if (params.addedUntil) usp.set('added_until', params.addedUntil)
+        usp.set('active', params.active === undefined ? 'true' : String(params.active))
+
+        const response = await fetch(`${API_BASE_URL}/maps/count/?${usp.toString()}`, {
             headers: {
                 'Authorization': `Bearer ${accessToken}`
             }
@@ -389,12 +540,14 @@ export async function fetchRecentPlaytime(accessToken: string, limit: number, of
     }
 }
 
-export async function fetchMapsFuzzy(accessToken: string, partialName: string, limit: number = 10): Promise<Map[]> {
+export async function fetchMapsFuzzy(accessToken: string, partialName: string, limit?: number, signal?: AbortSignal): Promise<Map[]> {
     try {
-        const response = await fetch(`${API_BASE_URL}/maps/fuzzy/${encodeURIComponent(partialName)}?limit=${limit}`, {
+        const limitParam = limit !== undefined ? `?limit=${limit}` : ''
+        const response = await fetch(`${API_BASE_URL}/maps/fuzzy/${encodeURIComponent(partialName)}${limitParam}`, {
             headers: {
                 'Authorization': `Bearer ${accessToken}`
-            }
+            },
+            signal,
         })
 
         if (!response.ok) {
@@ -408,7 +561,32 @@ export async function fetchMapsFuzzy(accessToken: string, partialName: string, l
 
         throw new Error('Invalid response format from server')
     } catch (error) {
+        if ((error as { name?: string })?.name === 'AbortError') throw error
         console.error('Error fetching fuzzy maps:', error)
+        return []
+    }
+}
+
+export async function fetchAllMapReviews(accessToken: string): Promise<MapReview[]> {
+    try {
+        const response = await fetch(`${API_BASE_URL}/map_reviews/?columns=aesthetics,learning,luck,overall,map_name,user`, {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        })
+
+        if (!response.ok) {
+            throw new Error(`Failed to fetch map reviews: ${response.statusText} (${response.status})`)
+        }
+
+        const json = await response.json()
+        if (json.success && json.data) {
+            return json.data as MapReview[]
+        }
+
+        throw new Error('Invalid response format from server')
+    } catch (error) {
+        console.error('Error fetching all map reviews:', error)
         return []
     }
 }
