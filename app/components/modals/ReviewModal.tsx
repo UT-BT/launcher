@@ -72,10 +72,7 @@ export function ReviewModal({ open, onOpenChange, accessToken, mapName, initialS
                 ...currentScores
             })
             setSubmitted(true)
-            // Await caller refresh so the modal underneath has fresh data
-            // by the time auto-close reveals it.
             await onSuccess?.()
-            setTimeout(() => onOpenChange(false), 900)
         } catch (err) {
             console.error('Failed to submit review:', err)
             setError('Failed to submit review. Please try again.')
