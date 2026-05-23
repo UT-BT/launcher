@@ -1,8 +1,12 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
-import { createPortal } from 'react-dom'
-import { Search, RefreshCw, ChevronUp, ChevronDown, ArrowUpDown, SlidersHorizontal, X } from 'lucide-react'
+import { Search, RefreshCw, ChevronUp, ChevronDown, ArrowUpDown, SlidersHorizontal, X, Bookmark, BookmarkPlus, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/app/components/ui/button'
+import {
+    DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
+    DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator,
+} from '@/app/components/ui/dropdown-menu'
+import { Modal } from '@/app/components/ui/modal'
 import {
     UserProfile, Map, MapMetadata, MapReview, BestCap,
     fetchMaps, fetchMapsCount, fetchMapsMetadata, fetchMapsFuzzy, fetchAllMapReviews, fetchMapAuthors,
@@ -106,6 +110,47 @@ export const DEFAULT_MAPS_CACHES: MapsPageCaches = {
     bestCapsLoaded: false,
 }
 
+const PRESETS_KEY = 'utbt:mapsPresets:v1'
+
+export type PresetFilters = Pick<MapsPageState,
+    'search' | 'authorFilter' | 'tagFilter' | 'yearFilter' |
+    'difficultyFilter' | 'ratingFilter' | 'aestheticsFilter' | 'learningFilter' |
+    'luckFilter' | 'recordTimeFilter' | 'cappedFilter' | 'newOnly' |
+    'sortBy' | 'sortDir'>
+
+export interface MapsPreset {
+    id: string
+    name: string
+    filters: PresetFilters
+}
+
+const loadPresets = (): MapsPreset[] => {
+    try {
+        const raw = localStorage.getItem(PRESETS_KEY)
+        if (!raw) return []
+        const parsed = JSON.parse(raw)
+        return Array.isArray(parsed) ? parsed : []
+    } catch {
+        return []
+    }
+}
+
+const persistPresets = (presets: MapsPreset[]): void => {
+    try {
+        localStorage.setItem(PRESETS_KEY, JSON.stringify(presets))
+    } catch {
+        // ignore quota / serialization errors
+    }
+}
+
+const newPresetId = (): string => {
+    try {
+        return crypto.randomUUID()
+    } catch {
+        return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+    }
+}
+
 const DIFFICULTY_RANGES: Record<Exclude<DifficultyTier, 'all'>, [number, number]> = {
     beginner: [1, 3],
     intermediate: [4, 6],
@@ -205,64 +250,17 @@ const ratingTextColor = (r: number): string => {
 const MapThumbnail = ({ mapName }: { mapName: string }) => {
     const url = `https://utbt.net/images/screenshots/${mapName}.png`
     const [imgSrc, setImgSrc] = useState(url)
-    const [preview, setPreview] = useState<{ top: number; left: number } | null>(null)
-    const wrapperRef = useRef<HTMLDivElement>(null)
     useEffect(() => { setImgSrc(url) }, [url])
 
-    const PREVIEW_W = 256
-    const PREVIEW_H = 256
-
-    const handleEnter = () => {
-        const el = wrapperRef.current
-        if (!el) return
-        const rect = el.getBoundingClientRect()
-        const margin = 8
-        const vw = window.innerWidth
-        const vh = window.innerHeight
-        const wouldOverflowRight = rect.right + margin + PREVIEW_W > vw
-        const wouldOverflowBottom = rect.top + PREVIEW_H > vh
-        setPreview({
-            top: wouldOverflowBottom ? rect.bottom - PREVIEW_H : rect.top,
-            left: wouldOverflowRight ? rect.left - margin - PREVIEW_W : rect.right + margin,
-        })
-    }
-
-    const handleLeave = () => setPreview(null)
-
     return (
-        <>
-            <div
-                ref={wrapperRef}
-                onMouseEnter={handleEnter}
-                onMouseLeave={handleLeave}
-                className="w-12 h-12 overflow-hidden bg-muted/20 border border-white/10 rounded shrink-0"
-            >
-                <img
-                    src={imgSrc}
-                    alt={mapName}
-                    className="w-full h-full object-cover"
-                    onError={() => setImgSrc('https://utbt.net/images/screenshots/default.png')}
-                />
-            </div>
-            {preview && createPortal(
-                <div
-                    className="fixed z-[9999] rounded-lg overflow-hidden border border-white/15 shadow-2xl bg-black/95 backdrop-blur pointer-events-none animate-in fade-in zoom-in-95 duration-150"
-                    style={{
-                        top: preview.top,
-                        left: preview.left,
-                        width: PREVIEW_W,
-                    }}
-                >
-                    <img
-                        src={imgSrc}
-                        alt={mapName}
-                        style={{ width: PREVIEW_W, height: PREVIEW_H }}
-                        className="object-cover"
-                    />
-                </div>,
-                document.body
-            )}
-        </>
+        <div className="w-12 h-12 overflow-hidden bg-muted/20 border border-white/10 rounded shrink-0">
+            <img
+                src={imgSrc}
+                alt={mapName}
+                className="w-full h-full object-cover"
+                onError={() => setImgSrc('https://utbt.net/images/screenshots/default.png')}
+            />
+        </div>
     )
 }
 
@@ -436,6 +434,11 @@ export function MapsPage({
     const [error, setError] = useState<string | null>(null)
     const [searchResults, setSearchResults] = useState<Map[]>([])
     const [reviewsModalMap, setReviewsModalMap] = useState<string | null>(null)
+    const [presets, setPresets] = useState<MapsPreset[]>(() => loadPresets())
+    const [savePresetOpen, setSavePresetOpen] = useState(false)
+    const [presetNameInput, setPresetNameInput] = useState('')
+    const [presetPendingDelete, setPresetPendingDelete] = useState<MapsPreset | null>(null)
+    const [presetsMenuOpen, setPresetsMenuOpen] = useState(false)
     const searchAbortRef = useRef<AbortController | null>(null)
     const scrollContainerRef = useRef<HTMLDivElement | null>(null)
 
@@ -485,6 +488,11 @@ export function MapsPage({
     ])
 
     const userId = (userProfile as any)?.id
+
+    const newMapCount = useMemo(() => {
+        if (!caches.metadata) return 0
+        return caches.metadata.reduce((n, m) => n + (isNew(m.added) ? 1 : 0), 0)
+    }, [caches.metadata])
 
     // --- Initial caches load ---
     const loadCaches = useCallback(async (force = false) => {
@@ -858,7 +866,55 @@ export function MapsPage({
 
 
     const resetFilters = () => {
-        onStateChange(() => ({ ...DEFAULT_MAPS_STATE }))
+        onStateChange(prev => ({ ...DEFAULT_MAPS_STATE, filtersPanelOpen: prev.filtersPanelOpen }))
+    }
+
+    const captureFilters = (): PresetFilters => ({
+        search: state.search,
+        authorFilter: state.authorFilter,
+        tagFilter: state.tagFilter,
+        yearFilter: state.yearFilter,
+        difficultyFilter: state.difficultyFilter,
+        ratingFilter: state.ratingFilter,
+        aestheticsFilter: state.aestheticsFilter,
+        learningFilter: state.learningFilter,
+        luckFilter: state.luckFilter,
+        recordTimeFilter: state.recordTimeFilter,
+        cappedFilter: state.cappedFilter,
+        newOnly: state.newOnly,
+        sortBy: state.sortBy,
+        sortDir: state.sortDir,
+    })
+
+    const handleSavePreset = () => {
+        const name = presetNameInput.trim()
+        if (!name) return
+        const next = [...presets, { id: newPresetId(), name, filters: captureFilters() }]
+        setPresets(next)
+        persistPresets(next)
+        setSavePresetOpen(false)
+        setPresetNameInput('')
+    }
+
+    const handleLoadPreset = (p: MapsPreset) => {
+        onStateChange(prev => ({
+            ...prev,
+            ...p.filters,
+            currentPage: 1,
+            scrollTop: 0,
+        }))
+    }
+
+    const handleDeletePreset = (id: string) => {
+        const next = presets.filter(p => p.id !== id)
+        setPresets(next)
+        persistPresets(next)
+    }
+
+    const confirmDeletePreset = () => {
+        if (!presetPendingDelete) return
+        handleDeletePreset(presetPendingDelete.id)
+        setPresetPendingDelete(null)
     }
 
     const refresh = () => {
@@ -889,6 +945,8 @@ export function MapsPage({
         state.cappedFilter !== 'all',
         state.newOnly,
     ].filter(Boolean).length
+
+    const hasActiveFilters = activeFilterCount > 0 || state.search.trim() !== ''
 
     const showSkeleton =
         (loading && pageItems.length === 0) ||
@@ -923,7 +981,7 @@ export function MapsPage({
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
                     <input
                         type="text"
-                        placeholder="Search maps, authors, tags..."
+                        placeholder="Search for a map name..."
                         value={state.search}
                         onChange={e => updateFilter('search', e.target.value)}
                         className="w-full pl-9 pr-4 py-2 bg-card/50 border border-white/10 rounded-lg text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:border-blue-500/50 focus:bg-card/80 transition-colors"
@@ -951,14 +1009,89 @@ export function MapsPage({
                 <button
                     onClick={() => updateFilter('newOnly', !state.newOnly)}
                     className={cn(
-                        "px-3 py-2 rounded-lg text-sm font-medium border transition-colors cursor-pointer",
+                        "px-3 py-2 rounded-lg text-sm font-medium border transition-colors cursor-pointer flex items-center gap-2",
                         state.newOnly
                             ? "bg-blue-500/20 border-blue-500/50 text-blue-300"
                             : "bg-card/50 border-white/10 text-muted-foreground hover:text-white hover:border-white/20"
                     )}
                 >
                     New Only
+                    {newMapCount > 0 && (
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-500 text-white">
+                            {newMapCount}
+                        </span>
+                    )}
                 </button>
+
+                <DropdownMenu open={presetsMenuOpen} onOpenChange={setPresetsMenuOpen}>
+                    <DropdownMenuTrigger asChild>
+                        <button
+                            className="px-3 py-2 rounded-lg text-sm font-medium border transition-colors cursor-pointer flex items-center gap-2 bg-card/50 border-white/10 text-muted-foreground hover:text-white hover:border-white/20"
+                        >
+                            <Bookmark className="size-4" />
+                            Presets
+                            {presets.length > 0 && (
+                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-white/10 text-muted-foreground">
+                                    {presets.length}
+                                </span>
+                            )}
+                        </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="min-w-56 max-w-80">
+                        <DropdownMenuLabel>Saved presets</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        {presets.length === 0 ? (
+                            <div className="px-2 py-2 text-xs text-muted-foreground">
+                                No saved presets. Configure filters, then click "Save preset".
+                            </div>
+                        ) : (
+                            presets.map(p => (
+                                <DropdownMenuItem
+                                    key={p.id}
+                                    onSelect={() => handleLoadPreset(p)}
+                                    className="flex items-center gap-2 pr-1"
+                                >
+                                    <span className="flex-1 truncate">{p.name}</span>
+                                    <button
+                                        onClick={(e) => {
+                                            e.preventDefault()
+                                            e.stopPropagation()
+                                            setPresetsMenuOpen(false)
+                                            setPresetPendingDelete(p)
+                                        }}
+                                        className="p-1 rounded hover:bg-red-500/20 text-muted-foreground hover:text-red-300 transition-colors cursor-pointer"
+                                        aria-label={`Delete preset ${p.name}`}
+                                    >
+                                        <Trash2 className="size-3.5" />
+                                    </button>
+                                </DropdownMenuItem>
+                            ))
+                        )}
+                    </DropdownMenuContent>
+                </DropdownMenu>
+
+                {hasActiveFilters && (
+                    <button
+                        onClick={() => {
+                            setPresetNameInput('')
+                            setSavePresetOpen(true)
+                        }}
+                        className="px-3 py-2 rounded-lg text-sm font-medium border transition-colors cursor-pointer flex items-center gap-2 bg-card/50 border-white/10 text-muted-foreground hover:text-white hover:border-white/20"
+                    >
+                        <BookmarkPlus className="size-4" />
+                        Save preset
+                    </button>
+                )}
+
+                {hasActiveFilters && (
+                    <button
+                        onClick={resetFilters}
+                        className="px-3 py-2 rounded-lg text-sm font-medium border transition-colors cursor-pointer flex items-center gap-2 bg-card/50 border-white/10 text-muted-foreground hover:text-red-300 hover:border-red-500/30"
+                    >
+                        <X className="size-4" />
+                        Clear filters
+                    </button>
+                )}
             </div>
 
             {/* Inline filter panel */}
@@ -1037,13 +1170,6 @@ export function MapsPage({
                             onChange={v => updateFilter('cappedFilter', v as CappedFilter)}
                             options={cappedOptions}
                         />
-                        <div className="flex items-end gap-2 ml-auto">
-                            {activeFilterCount > 0 && (
-                                <Button variant="ghost" size="sm" onClick={resetFilters} className="text-muted-foreground hover:text-white">
-                                    <X className="size-3 mr-1" /> Reset all
-                                </Button>
-                            )}
-                        </div>
                     </FilterPanelRow>
                 </div>
             )}
@@ -1290,6 +1416,69 @@ export function MapsPage({
                     } catch {}
                 }}
             />
+
+            <Modal
+                isOpen={savePresetOpen}
+                onClose={() => setSavePresetOpen(false)}
+                title="Save filter preset"
+                className="w-[95%] sm:w-[480px] max-w-md"
+                offsetSidebar
+                footer={
+                    <div className="p-4 border-t border-border bg-muted/50 flex justify-end gap-2 shrink-0">
+                        <Button variant="ghost" onClick={() => setSavePresetOpen(false)}>
+                            Cancel
+                        </Button>
+                        <Button onClick={handleSavePreset} disabled={!presetNameInput.trim()}>
+                            Save preset
+                        </Button>
+                    </div>
+                }
+            >
+                <div className="space-y-3">
+                    <label className="text-sm font-medium text-white">Preset name</label>
+                    <input
+                        autoFocus
+                        type="text"
+                        value={presetNameInput}
+                        onChange={e => setPresetNameInput(e.target.value)}
+                        onKeyDown={e => {
+                            if (e.key === 'Enter' && presetNameInput.trim()) {
+                                e.preventDefault()
+                                handleSavePreset()
+                            }
+                        }}
+                        placeholder="e.g. Easy maps from 2024"
+                        className="w-full px-3 py-2 bg-card/50 border border-white/10 rounded-lg text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:border-blue-500/50"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                        Saves current search, filters, and sort. Loadable from the Presets menu.
+                    </p>
+                </div>
+            </Modal>
+
+            <Modal
+                isOpen={presetPendingDelete !== null}
+                onClose={() => setPresetPendingDelete(null)}
+                title="Delete preset?"
+                className="w-[95%] sm:w-[420px] max-w-md"
+                offsetSidebar
+                footer={
+                    <div className="p-4 border-t border-border bg-muted/50 flex justify-end gap-2 shrink-0">
+                        <Button variant="ghost" onClick={() => setPresetPendingDelete(null)}>
+                            Cancel
+                        </Button>
+                        <Button variant="destructive" onClick={confirmDeletePreset}>
+                            Delete
+                        </Button>
+                    </div>
+                }
+            >
+                <p className="text-sm text-muted-foreground">
+                    Delete preset{' '}
+                    <span className="font-semibold text-white">"{presetPendingDelete?.name}"</span>?
+                    This cannot be undone.
+                </p>
+            </Modal>
         </div>
     )
 }
