@@ -7,6 +7,7 @@ import { Tooltip } from '@/app/components/ui/tooltip'
 import { HistoryModal } from '@/app/components/modals/HistoryModal'
 import { ReviewModal } from '@/app/components/modals/ReviewModal'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
+import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
 
 import worldRecordIcon from '@/app/assets/world_record.png'
 import championIcon from '@/app/assets/champion.png'
@@ -18,6 +19,8 @@ import casualIcon from '@/app/assets/casual.png'
 
 interface HomeProps {
     userProfile?: UserProfile
+    favoriteMapNames: Set<string>
+    onToggleFavorite: (mapName: string) => void
 }
 
 const formatSeconds = (seconds: number) => {
@@ -66,7 +69,7 @@ const MapThumbnail = ({ mapName, className }: { mapName: string, className?: str
     )
 }
 
-export function Home({ userProfile }: HomeProps) {
+export function Home({ userProfile, favoriteMapNames, onToggleFavorite }: HomeProps) {
     const username = userProfile?.alias || userProfile?.username || 'Player'
     const [summary, setSummary] = useState<Summary | null>(null)
     const [loading, setLoading] = useState(true)
@@ -331,6 +334,12 @@ export function Home({ userProfile }: HomeProps) {
                                                 {medalIcon && (
                                                     <img src={medalIcon} alt={ach.medal} className="h-5 w-auto object-contain" title={ach.medal} />
                                                 )}
+                                                <FavoriteStar
+                                                    mapName={ach.mapName}
+                                                    isFavorited={favoriteMapNames.has(ach.mapName)}
+                                                    onToggle={onToggleFavorite}
+                                                    size="sm"
+                                                />
                                             </div>
                                             <div className="flex items-center gap-2 mt-0.5">
                                                 <span className="text-[10px] font-bold text-muted-foreground/30 uppercase tracking-widest">
@@ -403,6 +412,8 @@ export function Home({ userProfile }: HomeProps) {
                 open={historyOpen}
                 onOpenChange={setHistoryOpen}
                 accessToken={userProfile.accessToken}
+                favoriteMapNames={favoriteMapNames}
+                onToggleFavorite={onToggleFavorite}
             />
 
             <ReviewModal

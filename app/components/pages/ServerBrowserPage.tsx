@@ -7,6 +7,7 @@ import { FilterState, getRegionFlag, getServerRegion, getServerType, SortOption,
 import { ServerBrowserSidebar } from '@/app/components/ServerBrowserSidebar'
 import { ErrorModal } from '@/app/components/ErrorModal'
 import { Tooltip } from '@/app/components/ui/tooltip'
+import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
 
 const STORAGE_KEY = 'utbt-server-browser-settings'
 
@@ -157,11 +158,15 @@ const getTypeIcon = (type: string) => {
 const ServerRow = ({
     server,
     onJoin,
-    installationStatus
+    installationStatus,
+    favoriteMapNames,
+    onToggleFavorite,
 }: {
     server: Server,
     onJoin: (server: Server, asSpectator: boolean) => void,
     installationStatus?: 'valid' | 'no-install' | 'unsupported' | null
+    favoriteMapNames: Set<string>
+    onToggleFavorite: (mapName: string) => void
 }) => {
     const type = getServerType(server.hostname)
     const region = getServerRegion(server.hostname)
@@ -200,6 +205,12 @@ const ServerRow = ({
                         <span className="text-lg font-black text-white truncate tracking-tight group-hover:text-blue-400 transition-colors">
                             {server.map_name.replace('CTF-BT-', '🐰 ').replace('CTF-BT+', '🔑 ')}
                         </span>
+                        <FavoriteStar
+                            mapName={server.map_name}
+                            isFavorited={favoriteMapNames.has(server.map_name)}
+                            onToggle={onToggleFavorite}
+                            size="sm"
+                        />
                     </div>
 
                     {/* Metadata Badges */}
@@ -327,9 +338,11 @@ const ServerRowSkeleton = () => (
 
 interface ServerBrowserPageProps {
     installationStatus?: 'valid' | 'no-install' | 'unsupported' | null
+    favoriteMapNames: Set<string>
+    onToggleFavorite: (mapName: string) => void
 }
 
-export function ServerBrowserPage({ installationStatus }: ServerBrowserPageProps) {
+export function ServerBrowserPage({ installationStatus, favoriteMapNames, onToggleFavorite }: ServerBrowserPageProps) {
     const logger = useLogger('ServerBrowserPage')
     const [servers, setServers] = useState<Server[]>([])
     const [loading, setLoading] = useState(false)
@@ -568,6 +581,8 @@ export function ServerBrowserPage({ installationStatus }: ServerBrowserPageProps
                             server={server}
                             onJoin={handleJoin}
                             installationStatus={installationStatus}
+                            favoriteMapNames={favoriteMapNames}
+                            onToggleFavorite={onToggleFavorite}
                         />
                     ))}
 

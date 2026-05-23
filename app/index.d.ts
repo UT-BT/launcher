@@ -64,4 +64,7 @@ interface Window {
   utProfile: {
     onChanged: (cb: () => void) => () => void
   }
+  utFavorites: {
+    onGameClosed: (cb: () => void) => () => void
+  }
 }

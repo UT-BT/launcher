@@ -4,6 +4,7 @@ import { fetchSummaryCaps, SummaryCap } from '@/app/utils/api'
 import { Clock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
+import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
 
 import worldRecordIcon from '@/app/assets/world_record.png'
 import championIcon from '@/app/assets/champion.png'
@@ -59,9 +60,11 @@ interface HistoryModalProps {
     open: boolean
     onOpenChange: (open: boolean) => void
     accessToken?: string
+    favoriteMapNames: Set<string>
+    onToggleFavorite: (mapName: string) => void
 }
 
-export function HistoryModal({ open, onOpenChange, accessToken }: HistoryModalProps) {
+export function HistoryModal({ open, onOpenChange, accessToken, favoriteMapNames, onToggleFavorite }: HistoryModalProps) {
     const [caps, setCaps] = useState<SummaryCap[]>([])
     const [loading, setLoading] = useState(true)
 
@@ -125,6 +128,12 @@ export function HistoryModal({ open, onOpenChange, accessToken }: HistoryModalPr
                                         {medalIcon && (
                                             <img src={medalIcon} alt={cap.medal} className="h-4 w-auto object-contain" title={cap.medal} />
                                         )}
+                                        <FavoriteStar
+                                            mapName={cap.mapName}
+                                            isFavorited={favoriteMapNames.has(cap.mapName)}
+                                            onToggle={onToggleFavorite}
+                                            size="sm"
+                                        />
                                     </div>
                                     <div className="flex items-center gap-3 mt-0.5">
                                         <div className="flex items-center gap-1.5 opacity-40">

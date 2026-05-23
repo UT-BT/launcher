@@ -791,6 +791,81 @@ export async function submitSummaryReview(accessToken: string, review: {
     return json.data
 }
 
+export interface UserFavoriteMap {
+    user: number
+    map_name: string
+    created_at: string
+}
+
+export async function fetchUserFavorites(accessToken: string, userId?: string | number): Promise<string[]> {
+    try {
+        const url = userId !== undefined && userId !== null && userId !== ''
+            ? `${API_BASE_URL}/user_favorite_maps/?user=${encodeURIComponent(String(userId))}`
+            : `${API_BASE_URL}/user_favorite_maps/`
+        const response = await fetch(url, {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        })
+        if (!response.ok) {
+            throw new Error(`Failed to fetch favorites: ${response.statusText} (${response.status})`)
+        }
+        const json = await response.json()
+        if (json.success && Array.isArray(json.data)) {
+            return (json.data as UserFavoriteMap[]).map((row) => row.map_name)
+        }
+        return []
+    } catch (error) {
+        console.error('Error fetching favorites:', error)
+        return []
+    }
+}
+
+export async function addFavoriteMap(accessToken: string, mapName: string): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/user_favorite_maps/`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ map_name: mapName })
+    })
+    if (!response.ok) {
+        throw new Error(`Failed to add favorite: ${response.statusText} (${response.status})`)
+    }
+}
+
+export async function removeFavoriteMap(accessToken: string, mapName: string): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/user_favorite_maps/${encodeURIComponent(mapName)}`, {
+        method: 'DELETE',
+        headers: {
+            'Authorization': `Bearer ${accessToken}`
+        }
+    })
+    if (!response.ok) {
+        throw new Error(`Failed to remove favorite: ${response.statusText} (${response.status})`)
+    }
+}
+
+export async function replaceFavoriteMaps(accessToken: string, mapNames: string[]): Promise<string[]> {
+    const response = await fetch(`${API_BASE_URL}/user_favorite_maps/replace`, {
+        method: 'PUT',
+        headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ map_names: mapNames })
+    })
+    if (!response.ok) {
+        throw new Error(`Failed to replace favorites: ${response.statusText} (${response.status})`)
+    }
+    const json = await response.json()
+    if (json.success && Array.isArray(json.data)) {
+        return (json.data as UserFavoriteMap[]).map((row) => row.map_name)
+    }
+    return []
+}
+
 export async function assignTitle(accessToken: string, titleId?: string | null): Promise<void> {
     try {
         const response = await fetch(`${API_BASE_URL}/v2/titles/assign`, {
