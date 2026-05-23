@@ -16,12 +16,37 @@ import { InstallationBanner } from '@/app/components/InstallationBanner'
 
 const MAPS_STATE_STORAGE_KEY = 'utbt:mapsPageState:v1'
 
+const SINGLE_TO_MULTI_FILTER_KEYS: Array<[string, string]> = [
+  ['authorFilter', 'authorFilters'],
+  ['tagFilter', 'tagFilters'],
+  ['yearFilter', 'yearFilters'],
+  ['difficultyFilter', 'difficultyFilters'],
+  ['ratingFilter', 'ratingFilters'],
+  ['aestheticsFilter', 'aestheticsFilters'],
+  ['learningFilter', 'learningFilters'],
+  ['luckFilter', 'luckFilters'],
+  ['recordTimeFilter', 'recordTimeFilters'],
+  ['cappedFilter', 'cappedFilters'],
+]
+
+function migrateSingleToMulti(parsed: any): void {
+  if (!parsed || typeof parsed !== 'object') return
+  for (const [oldKey, newKey] of SINGLE_TO_MULTI_FILTER_KEYS) {
+    if (oldKey in parsed && !(newKey in parsed)) {
+      const v = parsed[oldKey]
+      parsed[newKey] = v && v !== 'all' ? [v] : []
+      delete parsed[oldKey]
+    }
+  }
+}
+
 function loadPersistedMapsState(): MapsPageState {
   if (typeof window === 'undefined') return DEFAULT_MAPS_STATE
   try {
     const raw = window.localStorage.getItem(MAPS_STATE_STORAGE_KEY)
     if (!raw) return DEFAULT_MAPS_STATE
     const parsed = JSON.parse(raw)
+    migrateSingleToMulti(parsed)
     // Merge over defaults so any newly-added state keys still get sane values.
     return { ...DEFAULT_MAPS_STATE, ...parsed, scrollTop: 0 }
   } catch {

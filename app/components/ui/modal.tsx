@@ -14,6 +14,7 @@ interface ModalProps {
     offsetSidebar?: boolean
     maxWidth?: string
     maxHeight?: string
+    leftAction?: React.ReactNode
 }
 
 export function Modal({
@@ -26,7 +27,8 @@ export function Modal({
     backdropClassName,
     offsetSidebar,
     maxWidth,
-    maxHeight
+    maxHeight,
+    leftAction,
 }: ModalProps) {
     const modalRef = useRef<HTMLDivElement>(null)
     const closeButtonRef = useRef<HTMLButtonElement>(null)
@@ -116,14 +118,17 @@ export function Modal({
                 )}
             >
                 {/* Header */}
-                <div className="flex items-center justify-between p-4 border-b border-border bg-muted/50 shrink-0">
-                    <h3 className="font-bold text-lg truncate">{title}</h3>
+                <div className="flex items-center justify-between p-4 border-b border-border bg-muted/50 shrink-0 gap-3">
+                    <div className="flex items-center gap-2 min-w-0">
+                        {leftAction}
+                        <h3 className="font-bold text-lg truncate">{title}</h3>
+                    </div>
                     <Button
                         ref={closeButtonRef}
                         variant="ghost"
                         size="icon"
                         onClick={onClose}
-                        className="h-8 w-8 rounded-full hover:bg-background/80"
+                        className="h-8 w-8 rounded-full hover:bg-background/80 shrink-0"
                         aria-label="Close modal"
                     >
                         <X className="size-4" />

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Modal } from '@/app/components/ui/modal'
 import { Button } from '@/app/components/ui/button'
-import { Loader2, Star, Pencil } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { fetchMapReviews, MapReview } from '@/app/utils/api'
 import { ReviewModal } from './ReviewModal'
@@ -141,31 +141,15 @@ export function MapReviewsModal({
             <Modal
                 isOpen={open}
                 onClose={onClose}
-                title={mapName ? mapName.replace('CTF-BT-', '').replace('CTF-BT+', '') : 'Reviews'}
+                title={mapName
+                    ? `${mapName.replace('CTF-BT-', '').replace('CTF-BT+', '')} (${reviews.length} ${reviews.length === 1 ? 'review' : 'reviews'})`
+                    : 'Reviews'}
                 offsetSidebar
                 maxWidth="880px"
                 className="bg-[#0a0a0b]/98 border-white/5 backdrop-blur-3xl mx-auto"
                 footer={null}
             >
                 <div className="space-y-6">
-                    {/* Header: count + write button */}
-                    <div className="flex items-center justify-between gap-4">
-                        <div className="flex items-baseline gap-2">
-                            <span className="text-2xl font-bold text-white leading-none">{reviews.length}</span>
-                            <span className="text-sm text-muted-foreground">
-                                {reviews.length === 1 ? 'review' : 'reviews'}
-                            </span>
-                        </div>
-                        <Button
-                            onClick={() => setReviewModalOpen(true)}
-                            disabled={!accessToken || !mapName}
-                            className="bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/40 text-blue-200 font-medium"
-                        >
-                            {myReview ? <Pencil className="size-4 mr-2" /> : <Star className="size-4 mr-2" />}
-                            {myReview ? 'Update your review' : 'Write a review'}
-                        </Button>
-                    </div>
-
                     {error && (
                         <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
                             {error}
@@ -177,9 +161,20 @@ export function MapReviewsModal({
                             <Loader2 className="size-6 animate-spin text-muted-foreground" />
                         </div>
                     ) : reviews.length === 0 ? (
-                        <div className="text-center py-16 space-y-2">
+                        <div className="text-center py-4 space-y-3">
                             <div className="text-base text-white/80 font-medium">No reviews yet</div>
                             <div className="text-sm text-muted-foreground">Be the first to share your thoughts.</div>
+                            <div className="pt-2 flex justify-center">
+                                <Button
+                                    onClick={() => setReviewModalOpen(true)}
+                                    disabled={!accessToken || !mapName}
+                                    size="sm"
+                                    variant="outline"
+                                    className="bg-white/[0.03] border-white/10 text-white/90 hover:bg-blue-500/10 hover:border-blue-500/40 hover:text-blue-100 transition-colors"
+                                >
+                                    Write a Review
+                                </Button>
+                            </div>
                         </div>
                     ) : (
                         <>
@@ -219,6 +214,19 @@ export function MapReviewsModal({
                                     </div>
                                 </div>
                             )}
+
+                            {/* Write / update review button */}
+                            <div className="flex justify-center">
+                                <Button
+                                    onClick={() => setReviewModalOpen(true)}
+                                    disabled={!accessToken || !mapName}
+                                    size="sm"
+                                    variant="outline"
+                                    className="bg-white/[0.03] border-white/10 text-white/90 hover:bg-blue-500/10 hover:border-blue-500/40 hover:text-blue-100 transition-colors"
+                                >
+                                    {myReview ? 'Update Your Review' : 'Write a Review'}
+                                </Button>
+                            </div>
 
                             {/* Sort controls */}
                             {(otherReviews.length > 0 || myReview) && (

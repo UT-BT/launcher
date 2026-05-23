@@ -26,7 +26,7 @@ const navItems: NavItem[] = [
     { id: 'maps', label: 'Maps', icon: MapIcon },
 ]
 
-import { UserProfile } from '@/app/utils/api'
+import { UserProfile, getAvatarUrl } from '@/app/utils/api'
 import { Tooltip } from '@/app/components/ui/tooltip'
 
 interface AppLayoutProps {
@@ -188,8 +188,18 @@ export function AppLayout({ children, currentView, onViewChange, userProfile, in
                                 />
                                 <div className="relative flex items-center gap-3 px-4 py-2">
                                     <div className="size-8 rounded-full bg-gradient-to-br from-blue-500 to-red-500 p-[1px]">
-                                        {userProfile?.avatar ? (
-                                            <img src={`https://cdn.discordapp.com/avatars/${userProfile.discordId}/${userProfile.avatar}.png`} alt="Avatar" className="w-full h-full rounded-full" />
+                                        {userProfile?.id ? (
+                                            <img
+                                                src={getAvatarUrl(userProfile.id)}
+                                                alt="Avatar"
+                                                className="w-full h-full rounded-full object-cover"
+                                                onError={e => {
+                                                    const fallbackIdx = userProfile.discordId
+                                                        ? Number(userProfile.discordId) % 5
+                                                        : 0
+                                                    ;(e.target as HTMLImageElement).src = `https://cdn.discordapp.com/embed/avatars/${fallbackIdx}.png`
+                                                }}
+                                            />
                                         ) : (
                                             <div className="w-full h-full rounded-full bg-black/50 backdrop-blur-sm" />
                                         )}

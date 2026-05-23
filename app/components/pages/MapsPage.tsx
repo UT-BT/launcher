@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
-import { Search, RefreshCw, ChevronUp, ChevronDown, ArrowUpDown, SlidersHorizontal, X, Bookmark, BookmarkPlus, Trash2 } from 'lucide-react'
+import { useState, useEffect, useMemo, useRef, useCallback, Fragment } from 'react'
+import { Search, RefreshCw, ChevronUp, ChevronDown, ArrowUpDown, SlidersHorizontal, X, Bookmark, BookmarkPlus, Trash2, Columns3, Play, ArrowLeft, GripVertical } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/app/components/ui/button'
 import {
@@ -7,13 +7,15 @@ import {
     DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator,
 } from '@/app/components/ui/dropdown-menu'
 import { Modal } from '@/app/components/ui/modal'
+import { Tooltip } from '@/app/components/ui/tooltip'
 import {
     UserProfile, Map, MapMetadata, MapReview, BestCap,
     fetchMaps, fetchMapsCount, fetchMapsMetadata, fetchMapsFuzzy, fetchAllMapReviews, fetchMapAuthors,
-    fetchBestCaps,
+    fetchBestCaps, fetchWorldRecordsForMaps, fetchDemoStatus, getFirstPersonVideoUrl,
 } from '@/app/utils/api'
 
 import { MapReviewsModal } from '@/app/components/modals/MapReviewsModal'
+import { ReplayPickerModal } from '@/app/components/modals/ReplayPickerModal'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 
 import championIcon from '@/app/assets/champion.png'
@@ -22,6 +24,7 @@ import silverIcon from '@/app/assets/silver.png'
 import bronzeIcon from '@/app/assets/bronze.png'
 import certifiedIcon from '@/app/assets/certified.png'
 import casualIcon from '@/app/assets/casual.png'
+import worldRecordIcon from '@/app/assets/world_record.png'
 
 export type RatingTier = 'all' | 'excellent' | 'good' | 'average' | 'poor'
 export type LuckTier = 'all' | 'low' | 'fair' | 'some' | 'high'
@@ -29,8 +32,14 @@ export type RecordTimeTier = 'all' | 'sub15' | 'sub30' | 'sub45' | 'sub60' | 'su
 export type DifficultyTier = 'all' | 'beginner' | 'intermediate' | 'advanced' | 'expert'
 export type CappedFilter =
     | 'all' | 'uncapped' | 'capped' | 'verified' | 'casual'
-    | 'bronze' | 'silver' | 'gold' | 'champion'
-export type SortField = 'name' | 'author' | 'added' | 'difficulty' | 'world_record' | 'rating' | 'my_rating' | 'medal'
+    | 'bronze' | 'silver' | 'gold' | 'champion' | 'world_record'
+
+export type CappedFilterValue = Exclude<CappedFilter, 'all'>
+export type DifficultyValue = Exclude<DifficultyTier, 'all'>
+export type RatingValue = Exclude<RatingTier, 'all'>
+export type LuckValue = Exclude<LuckTier, 'all'>
+export type RecordTimeValue = Exclude<RecordTimeTier, 'all'>
+export type SortField = 'name' | 'author' | 'added' | 'difficulty' | 'world_record' | 'pb' | 'rating' | 'my_rating' | 'medal'
 export type SortDir = 'asc' | 'desc'
 
 export interface AvgRatings {
@@ -42,16 +51,16 @@ export interface AvgRatings {
 
 export interface MapsPageState {
     search: string
-    authorFilter: string
-    tagFilter: string
-    yearFilter: string
-    difficultyFilter: DifficultyTier
-    ratingFilter: RatingTier
-    aestheticsFilter: RatingTier
-    learningFilter: RatingTier
-    luckFilter: LuckTier
-    recordTimeFilter: RecordTimeTier
-    cappedFilter: CappedFilter
+    authorFilters: string[]
+    tagFilters: string[]
+    yearFilters: string[]
+    difficultyFilters: DifficultyValue[]
+    ratingFilters: RatingValue[]
+    aestheticsFilters: RatingValue[]
+    learningFilters: RatingValue[]
+    luckFilters: LuckValue[]
+    recordTimeFilters: RecordTimeValue[]
+    cappedFilters: CappedFilterValue[]
     newOnly: boolean
     sortBy: SortField
     sortDir: SortDir
@@ -61,12 +70,23 @@ export interface MapsPageState {
     scrollTop: number
 }
 
+export interface WRHolder {
+    user_id: string
+    alias: string
+    cap_id?: string
+    color_r?: number
+    color_g?: number
+    color_b?: number
+}
+
 export interface MapsPageCaches {
     metadata: MapMetadata[] | null
     avgRatings: Record<string, AvgRatings>
     myReviews: Record<string, MapReview>
     authors: string[]
     bestCaps: Record<string, BestCap>
+    wrHolders: Record<string, WRHolder>
+    wrHoldersFetched: string[]
     pageMaps: Map[]
     totalCount: number
     metadataLoaded: boolean
@@ -77,16 +97,16 @@ export interface MapsPageCaches {
 
 export const DEFAULT_MAPS_STATE: MapsPageState = {
     search: '',
-    authorFilter: 'all',
-    tagFilter: 'all',
-    yearFilter: 'all',
-    difficultyFilter: 'all',
-    ratingFilter: 'all',
-    aestheticsFilter: 'all',
-    learningFilter: 'all',
-    luckFilter: 'all',
-    recordTimeFilter: 'all',
-    cappedFilter: 'all',
+    authorFilters: [],
+    tagFilters: [],
+    yearFilters: [],
+    difficultyFilters: [],
+    ratingFilters: [],
+    aestheticsFilters: [],
+    learningFilters: [],
+    luckFilters: [],
+    recordTimeFilters: [],
+    cappedFilters: [],
     newOnly: false,
     sortBy: 'name',
     sortDir: 'asc',
@@ -102,6 +122,8 @@ export const DEFAULT_MAPS_CACHES: MapsPageCaches = {
     myReviews: {},
     authors: [],
     bestCaps: {},
+    wrHolders: {},
+    wrHoldersFetched: [],
     pageMaps: [],
     totalCount: 0,
     metadataLoaded: false,
@@ -111,11 +133,112 @@ export const DEFAULT_MAPS_CACHES: MapsPageCaches = {
 }
 
 const PRESETS_KEY = 'utbt:mapsPresets:v1'
+const COLUMNS_KEY = 'utbt:mapsColumns:v1'
+
+export type ColumnId =
+    | 'thumbnail' | 'name' | 'tags' | 'medal' | 'author' | 'difficulty' | 'added'
+    | 'world_record' | 'pb' | 'replay' | 'community_rating' | 'my_rating'
+
+const COLUMN_LABELS: Record<ColumnId, string> = {
+    thumbnail: 'Thumbnail',
+    name: 'Map',
+    tags: 'Tags',
+    medal: 'Medal',
+    author: 'Author',
+    difficulty: 'Difficulty',
+    added: 'Added',
+    world_record: 'World Record',
+    pb: 'Your PB',
+    replay: 'Replay',
+    community_rating: 'Community Rating',
+    my_rating: 'Your Rating',
+}
+
+const DEFAULT_COLUMN_ORDER: ColumnId[] = [
+    'thumbnail', 'name', 'tags', 'author', 'difficulty', 'added',
+    'world_record', 'medal', 'pb', 'replay',
+    'community_rating', 'my_rating',
+]
+
+const NON_TABLE_COLUMNS: ReadonlySet<ColumnId> = new Set(['tags'])
+const REQUIRED_COLUMNS: ReadonlySet<ColumnId> = new Set(['name'])
+
+const DEFAULT_COLUMN_VISIBILITY: Record<ColumnId, boolean> = {
+    thumbnail: true,
+    name: true,
+    tags: true,
+    medal: true,
+    author: true,
+    difficulty: true,
+    added: true,
+    world_record: true,
+    pb: true,
+    replay: true,
+    community_rating: true,
+    my_rating: true,
+}
+
+const loadColumnVisibility = (): Record<ColumnId, boolean> => {
+    try {
+        const raw = localStorage.getItem(COLUMNS_KEY)
+        if (!raw) return { ...DEFAULT_COLUMN_VISIBILITY }
+        const parsed = JSON.parse(raw)
+        if (!parsed || typeof parsed !== 'object') return { ...DEFAULT_COLUMN_VISIBILITY }
+        return { ...DEFAULT_COLUMN_VISIBILITY, ...parsed }
+    } catch {
+        return { ...DEFAULT_COLUMN_VISIBILITY }
+    }
+}
+
+const persistColumnVisibility = (cols: Record<ColumnId, boolean>): void => {
+    try { localStorage.setItem(COLUMNS_KEY, JSON.stringify(cols)) } catch { /* ignore */ }
+}
+
+const COLUMN_ORDER_KEY = 'utbt:mapsColumnOrder:v1'
+
+const loadColumnOrder = (): ColumnId[] => {
+    try {
+        const raw = localStorage.getItem(COLUMN_ORDER_KEY)
+        if (!raw) return [...DEFAULT_COLUMN_ORDER]
+        const parsed = JSON.parse(raw)
+        if (!Array.isArray(parsed)) return [...DEFAULT_COLUMN_ORDER]
+        const valid = new Set<ColumnId>(DEFAULT_COLUMN_ORDER)
+        const seen = new Set<ColumnId>()
+        const out: ColumnId[] = []
+        for (const id of parsed) {
+            if (valid.has(id) && !seen.has(id)) {
+                out.push(id)
+                seen.add(id)
+            }
+        }
+        for (const id of DEFAULT_COLUMN_ORDER) {
+            if (!seen.has(id)) out.push(id)
+        }
+        return out
+    } catch {
+        return [...DEFAULT_COLUMN_ORDER]
+    }
+}
+
+const persistColumnOrder = (order: ColumnId[]): void => {
+    try { localStorage.setItem(COLUMN_ORDER_KEY, JSON.stringify(order)) } catch { /* ignore */ }
+}
+
+const normalizeColumnOrder = (order: ColumnId[]): ColumnId[] => {
+    const nameIdx = order.indexOf('name')
+    const tagsIdx = order.indexOf('tags')
+    if (nameIdx === -1 || tagsIdx === -1) return order
+    if (tagsIdx === nameIdx + 1) return order
+    const next = order.filter(id => id !== 'tags')
+    const newNameIdx = next.indexOf('name')
+    next.splice(newNameIdx + 1, 0, 'tags')
+    return next
+}
 
 export type PresetFilters = Pick<MapsPageState,
-    'search' | 'authorFilter' | 'tagFilter' | 'yearFilter' |
-    'difficultyFilter' | 'ratingFilter' | 'aestheticsFilter' | 'learningFilter' |
-    'luckFilter' | 'recordTimeFilter' | 'cappedFilter' | 'newOnly' |
+    'search' | 'authorFilters' | 'tagFilters' | 'yearFilters' |
+    'difficultyFilters' | 'ratingFilters' | 'aestheticsFilters' | 'learningFilters' |
+    'luckFilters' | 'recordTimeFilters' | 'cappedFilters' | 'newOnly' |
     'sortBy' | 'sortDir'>
 
 export interface MapsPreset {
@@ -124,12 +247,37 @@ export interface MapsPreset {
     filters: PresetFilters
 }
 
+const SINGLE_TO_MULTI_PRESET_KEYS: Array<[string, string]> = [
+    ['authorFilter', 'authorFilters'],
+    ['tagFilter', 'tagFilters'],
+    ['yearFilter', 'yearFilters'],
+    ['difficultyFilter', 'difficultyFilters'],
+    ['ratingFilter', 'ratingFilters'],
+    ['aestheticsFilter', 'aestheticsFilters'],
+    ['learningFilter', 'learningFilters'],
+    ['luckFilter', 'luckFilters'],
+    ['recordTimeFilter', 'recordTimeFilters'],
+    ['cappedFilter', 'cappedFilters'],
+]
+
 const loadPresets = (): MapsPreset[] => {
     try {
         const raw = localStorage.getItem(PRESETS_KEY)
         if (!raw) return []
         const parsed = JSON.parse(raw)
-        return Array.isArray(parsed) ? parsed : []
+        if (!Array.isArray(parsed)) return []
+        return parsed.map((p: any) => {
+            if (p?.filters) {
+                for (const [oldKey, newKey] of SINGLE_TO_MULTI_PRESET_KEYS) {
+                    if (oldKey in p.filters && !(newKey in p.filters)) {
+                        const v = p.filters[oldKey]
+                        p.filters[newKey] = v && v !== 'all' ? [v] : []
+                        delete p.filters[oldKey]
+                    }
+                }
+            }
+            return p as MapsPreset
+        })
     } catch {
         return []
     }
@@ -205,6 +353,11 @@ interface MapsPageProps {
     onMapSelect: (mapName: string) => void
 }
 
+const formatDelta = (seconds: number): string => {
+    if (seconds < 60) return `${seconds.toFixed(3)}s`
+    return formatCapTime(seconds)
+}
+
 const formatCapTime = (seconds: number): string => {
     const hours = Math.floor(seconds / 3600)
     const minutes = Math.floor((seconds % 3600) / 60)
@@ -215,6 +368,12 @@ const formatCapTime = (seconds: number): string => {
     const minsStr = minutes.toString().padStart(2, '0')
     if (hours > 0) return `${hours}:${minsStr}:${secsStr}.${msStr}`
     return `${minsStr}:${secsStr}.${msStr}`
+}
+
+const formatAddedDate = (added: string): string => {
+    const d = new Date(added)
+    if (isNaN(d.getTime())) return '—'
+    return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: '2-digit' })
 }
 
 const isNew = (added: string): boolean => {
@@ -264,18 +423,19 @@ const MapThumbnail = ({ mapName }: { mapName: string }) => {
     )
 }
 
-export type MedalTier = 'uncapped' | 'casual' | 'verified' | 'bronze' | 'silver' | 'gold' | 'champion'
+export type MedalTier = 'uncapped' | 'casual' | 'verified' | 'bronze' | 'silver' | 'gold' | 'champion' | 'world_record'
 
-const TIER_ICONS: Record<Exclude<MedalTier, 'uncapped'>, string> = {
+export const TIER_ICONS: Record<Exclude<MedalTier, 'uncapped'>, string> = {
     casual: casualIcon,
     verified: certifiedIcon,
     bronze: bronzeIcon,
     silver: silverIcon,
     gold: goldIcon,
     champion: championIcon,
+    world_record: worldRecordIcon,
 }
 
-const TIER_LABELS: Record<MedalTier, string> = {
+export const TIER_LABELS: Record<MedalTier, string> = {
     uncapped: 'Uncapped',
     casual: 'Casual',
     verified: 'Verified',
@@ -283,6 +443,7 @@ const TIER_LABELS: Record<MedalTier, string> = {
     silver: 'Silver',
     gold: 'Gold',
     champion: 'Champion',
+    world_record: 'World Record',
 }
 
 const TIER_RANK: Record<MedalTier, number> = {
@@ -293,21 +454,36 @@ const TIER_RANK: Record<MedalTier, number> = {
     silver: 4,
     gold: 5,
     champion: 6,
+    world_record: 7,
 }
 
-function computeMedalTier(
+export function computeMedalTier(
     bestCap: BestCap | undefined,
-    map: Pick<MapMetadata, 'bronze_medal' | 'silver_medal' | 'gold_medal' | 'champion_medal'> | undefined,
+    map: (Pick<MapMetadata, 'bronze_medal' | 'silver_medal' | 'gold_medal' | 'champion_medal'> & { world_record?: number }) | undefined,
 ): MedalTier {
     if (!bestCap) return 'uncapped'
     if (bestCap.cap_type !== 2) return 'casual'
     if (!map) return 'verified'
     const t = bestCap.cap_time_seconds
+    if (map.world_record != null && map.world_record > 0 && t - map.world_record <= 0.0005) return 'world_record'
     if (map.champion_medal != null && t <= map.champion_medal) return 'champion'
     if (map.gold_medal != null && t <= map.gold_medal) return 'gold'
     if (map.silver_medal != null && t <= map.silver_medal) return 'silver'
     if (map.bronze_medal != null && t <= map.bronze_medal) return 'bronze'
     return 'verified'
+}
+
+const pbTextColor = (tier: MedalTier, isWR: boolean): string => {
+    if (isWR || tier === 'world_record') return 'text-blue-400'
+    switch (tier) {
+        case 'champion': return 'text-red-400'
+        case 'gold': return 'text-yellow-400'
+        case 'silver': return 'text-slate-300'
+        case 'bronze': return 'text-amber-600'
+        case 'verified': return 'text-zinc-400'
+        case 'casual': return 'text-zinc-300'
+        default: return 'text-emerald-300'
+    }
 }
 
 const MedalIndicator = ({ tier, bestCap }: { tier: MedalTier; bestCap?: BestCap }) => {
@@ -327,17 +503,29 @@ const MedalIndicator = ({ tier, bestCap }: { tier: MedalTier; bestCap?: BestCap 
     )
 }
 
-const SkeletonRow = () => (
+const SKELETON_CELL: Partial<Record<ColumnId, React.ReactNode>> = {
+    thumbnail: <td className="px-4 py-3"><div className="w-12 h-12 rounded bg-white/5 animate-pulse" /></td>,
+    name: <td className="px-4 py-3"><div className="h-4 w-32 rounded bg-white/5 animate-pulse" /></td>,
+    author: <td className="px-4 py-3"><div className="h-4 w-20 rounded bg-white/5 animate-pulse" /></td>,
+    difficulty: <td className="px-4 py-3"><div className="h-4 w-16 rounded bg-white/5 animate-pulse" /></td>,
+    added: <td className="px-4 py-3"><div className="h-4 w-20 rounded bg-white/5 animate-pulse" /></td>,
+    world_record: <td className="px-4 py-3"><div className="h-4 w-20 rounded bg-white/5 animate-pulse" /></td>,
+    medal: <td className="px-2 py-3 text-center"><div className="inline-block size-5 rounded-full bg-white/5 animate-pulse" /></td>,
+    pb: <td className="px-4 py-3"><div className="h-4 w-20 rounded bg-white/5 animate-pulse" /></td>,
+    replay: <td className="px-2 py-3 text-center"><div className="inline-block w-16 h-6 rounded-md bg-white/5 animate-pulse" /></td>,
+    community_rating: <td className="px-4 py-3"><div className="h-4 w-16 rounded bg-white/5 animate-pulse" /></td>,
+    my_rating: <td className="px-4 py-3"><div className="h-4 w-16 rounded bg-white/5 animate-pulse" /></td>,
+}
+
+const SkeletonRow = ({ order, visibility }: { order: ColumnId[]; visibility: Record<ColumnId, boolean> }) => (
     <tr className="border-b border-white/5">
-        <td className="px-4 py-3"><div className="w-12 h-12 rounded bg-white/5 animate-pulse" /></td>
-        <td className="px-2 py-3 text-center"><div className="inline-block size-5 rounded-full bg-white/5 animate-pulse" /></td>
-        <td className="px-4 py-3"><div className="h-4 w-32 rounded bg-white/5 animate-pulse" /></td>
-        <td className="px-4 py-3"><div className="h-4 w-20 rounded bg-white/5 animate-pulse" /></td>
-        <td className="px-4 py-3"><div className="h-4 w-16 rounded bg-white/5 animate-pulse" /></td>
-        <td className="px-4 py-3"><div className="h-4 w-20 rounded bg-white/5 animate-pulse" /></td>
-        <td className="px-4 py-3"><div className="h-4 w-24 rounded bg-white/5 animate-pulse" /></td>
-        <td className="px-4 py-3"><div className="h-4 w-16 rounded bg-white/5 animate-pulse" /></td>
-        <td className="px-4 py-3"><div className="h-4 w-16 rounded bg-white/5 animate-pulse" /></td>
+        {order.map(id => {
+            if (NON_TABLE_COLUMNS.has(id)) return null
+            if (!REQUIRED_COLUMNS.has(id) && !visibility[id]) return null
+            const cell = SKELETON_CELL[id]
+            if (!cell) return null
+            return <Fragment key={id}>{cell}</Fragment>
+        })}
     </tr>
 )
 
@@ -439,6 +627,84 @@ export function MapsPage({
     const [presetNameInput, setPresetNameInput] = useState('')
     const [presetPendingDelete, setPresetPendingDelete] = useState<MapsPreset | null>(null)
     const [presetsMenuOpen, setPresetsMenuOpen] = useState(false)
+    const [columnVisibility, setColumnVisibility] = useState<Record<ColumnId, boolean>>(() => loadColumnVisibility())
+    const [expandedTagMaps, setExpandedTagMaps] = useState<Set<string>>(() => new Set())
+    const [videoModal, setVideoModal] = useState<{
+        url: string
+        mapName: string
+        time?: number
+        alias?: string
+        fromPicker?: boolean
+    } | null>(null)
+    const [replayPickerMap, setReplayPickerMap] = useState<string | null>(null)
+    const [wrLoadingMap, setWrLoadingMap] = useState<string | null>(null)
+
+    const openWrReplay = async (mapName: string, capId: string | undefined, wrSeconds: number | undefined, alias: string | undefined) => {
+        if (!capId) return
+        setWrLoadingMap(mapName)
+        try {
+            const status = await fetchDemoStatus(capId)
+            const url = getFirstPersonVideoUrl(status)
+            if (url) {
+                setVideoModal({
+                    url,
+                    mapName,
+                    time: wrSeconds,
+                    alias,
+                    fromPicker: true,
+                })
+            }
+        } finally {
+            setWrLoadingMap(null)
+        }
+    }
+
+    const toggleTagExpansion = (mapName: string) => {
+        setExpandedTagMaps(prev => {
+            const next = new Set(prev)
+            if (next.has(mapName)) next.delete(mapName)
+            else next.add(mapName)
+            return next
+        })
+    }
+
+    const [columnOrder, setColumnOrder] = useState<ColumnId[]>(() => normalizeColumnOrder(loadColumnOrder()))
+
+    const toggleColumn = (id: ColumnId) => {
+        if (REQUIRED_COLUMNS.has(id)) return
+        setColumnVisibility(prev => {
+            const next = { ...prev, [id]: !prev[id] }
+            persistColumnVisibility(next)
+            return next
+        })
+    }
+
+    const [draggingColumn, setDraggingColumn] = useState<ColumnId | null>(null)
+    const [dragOverColumn, setDragOverColumn] = useState<ColumnId | null>(null)
+
+    const reorderColumn = (sourceId: ColumnId, targetId: ColumnId) => {
+        if (sourceId === targetId) return
+        setColumnOrder(prev => {
+            const fromIdx = prev.indexOf(sourceId)
+            const toIdx = prev.indexOf(targetId)
+            if (fromIdx === -1 || toIdx === -1) return prev
+            const next = [...prev]
+            const [moved] = next.splice(fromIdx, 1)
+            const insertAt = next.indexOf(targetId)
+            next.splice(insertAt + (fromIdx < toIdx ? 1 : 0), 0, moved)
+            const normalized = normalizeColumnOrder(next)
+            persistColumnOrder(normalized)
+            return normalized
+        })
+    }
+
+    const isColumnVisible = (id: ColumnId): boolean =>
+        REQUIRED_COLUMNS.has(id) || columnVisibility[id]
+
+    const visibleColumnCount = columnOrder.reduce(
+        (n, id) => n + (!NON_TABLE_COLUMNS.has(id) && isColumnVisible(id) ? 1 : 0),
+        0,
+    )
     const searchAbortRef = useRef<AbortController | null>(null)
     const scrollContainerRef = useRef<HTMLDivElement | null>(null)
 
@@ -447,16 +713,20 @@ export function MapsPage({
     // --- Mode derivation ---
     const isSearchMode = state.search.trim().length > 0
     const usesClientOnlyFilter =
-        state.ratingFilter !== 'all' ||
-        state.aestheticsFilter !== 'all' ||
-        state.learningFilter !== 'all' ||
-        state.luckFilter !== 'all' ||
-        state.recordTimeFilter !== 'all' ||
-        state.yearFilter !== 'all' ||
-        state.cappedFilter !== 'all' ||
+        state.ratingFilters.length > 0 ||
+        state.aestheticsFilters.length > 0 ||
+        state.learningFilters.length > 0 ||
+        state.luckFilters.length > 0 ||
+        state.recordTimeFilters.length > 0 ||
+        state.yearFilters.length > 0 ||
+        state.cappedFilters.length > 0 ||
+        state.authorFilters.length > 0 ||
+        state.tagFilters.length > 0 ||
+        state.difficultyFilters.length > 0 ||
         state.sortBy === 'rating' ||
         state.sortBy === 'my_rating' ||
         state.sortBy === 'world_record' ||
+        state.sortBy === 'pb' ||
         state.sortBy === 'author' ||
         state.sortBy === 'medal'
     const mode: 'browse' | 'search' | 'fullload' =
@@ -465,13 +735,6 @@ export function MapsPage({
     // --- Server-side filter object (used in browse mode) ---
     const browseServerFilters = useMemo(() => {
         const filters: Parameters<typeof fetchMaps>[1] = { active: true }
-        if (state.authorFilter !== 'all') filters.author = state.authorFilter
-        if (state.tagFilter !== 'all') filters.tag = state.tagFilter
-        if (state.difficultyFilter !== 'all') {
-            const [min, max] = DIFFICULTY_RANGES[state.difficultyFilter]
-            filters.difficultyMin = min
-            filters.difficultyMax = max
-        }
         if (state.newOnly) {
             const thirty = new Date()
             thirty.setDate(thirty.getDate() - 30)
@@ -482,10 +745,7 @@ export function MapsPage({
             filters.order = state.sortDir
         }
         return filters
-    }, [
-        state.authorFilter, state.tagFilter, state.difficultyFilter,
-        state.newOnly, state.sortBy, state.sortDir,
-    ])
+    }, [state.newOnly, state.sortBy, state.sortDir])
 
     const userId = (userProfile as any)?.id
 
@@ -495,25 +755,37 @@ export function MapsPage({
     }, [caches.metadata])
 
     // --- Initial caches load ---
+    const loadCachesInFlightRef = useRef({
+        metadata: false,
+        reviews: false,
+        authors: false,
+        bestCaps: false,
+    })
     const loadCaches = useCallback(async (force = false) => {
         if (!accessToken) return
-        const needsMetadata = force || !caches.metadataLoaded
-        const needsReviews = force || !caches.reviewsLoaded
-        const needsAuthors = force || !caches.authorsLoaded
-        const needsBestCaps = (force || !caches.bestCapsLoaded) && !!userId
+        const inFlight = loadCachesInFlightRef.current
+        const needsMetadata = (force || !caches.metadataLoaded) && !inFlight.metadata
+        const needsReviews = (force || !caches.reviewsLoaded) && !inFlight.reviews
+        const needsAuthors = (force || !caches.authorsLoaded) && !inFlight.authors
+        const needsBestCaps = (force || !caches.bestCapsLoaded) && !!userId && !inFlight.bestCaps
         if (!needsMetadata && !needsReviews && !needsAuthors && !needsBestCaps) return
+
+        if (needsMetadata) inFlight.metadata = true
+        if (needsReviews) inFlight.reviews = true
+        if (needsAuthors) inFlight.authors = true
+        if (needsBestCaps) inFlight.bestCaps = true
 
         setError(null)
         try {
             const [metadataData, reviewsData, authorsData, bestCapsData] = await Promise.all([
-                needsMetadata ? fetchMapsMetadata(accessToken) : Promise.resolve(caches.metadata),
+                needsMetadata ? fetchMapsMetadata(accessToken) : Promise.resolve(null),
                 needsReviews ? fetchAllMapReviews(accessToken) : Promise.resolve(null),
                 needsAuthors ? fetchMapAuthors(accessToken) : Promise.resolve(null),
                 needsBestCaps ? fetchBestCaps(accessToken, userId) : Promise.resolve(null),
             ])
             onCachesChange(prev => ({
                 ...prev,
-                metadata: needsMetadata ? metadataData as MapMetadata[] : prev.metadata,
+                metadata: needsMetadata ? (metadataData as MapMetadata[]) : prev.metadata,
                 metadataLoaded: needsMetadata ? true : prev.metadataLoaded,
                 avgRatings: needsReviews ? aggregateReviews(reviewsData as MapReview[]) : prev.avgRatings,
                 myReviews: needsReviews ? indexMyReviews(reviewsData as MapReview[], userId) : prev.myReviews,
@@ -527,14 +799,21 @@ export function MapsPage({
             }))
         } catch (e) {
             setError('Failed to load maps. Check your connection and try again.')
+        } finally {
+            if (needsMetadata) inFlight.metadata = false
+            if (needsReviews) inFlight.reviews = false
+            if (needsAuthors) inFlight.authors = false
+            if (needsBestCaps) inFlight.bestCaps = false
         }
-    }, [accessToken, userId, caches.metadataLoaded, caches.reviewsLoaded, caches.authorsLoaded, caches.bestCapsLoaded, caches.metadata, onCachesChange])
+    }, [accessToken, userId, caches.metadataLoaded, caches.reviewsLoaded, caches.authorsLoaded, caches.bestCapsLoaded, onCachesChange])
 
     useEffect(() => { loadCaches() }, [loadCaches])
 
     // --- Browse-mode page fetch + adjacent prefetch ---
-    const pageCacheRef = useRef<Record<string, Map[]>>({})
-    const countCacheRef = useRef<Record<string, number>>({})
+    type PageEntry = Map[] | Promise<Map[] | null>
+    type CountEntry = number | Promise<number | null>
+    const pageCacheRef = useRef<Record<string, PageEntry>>({})
+    const countCacheRef = useRef<Record<string, CountEntry>>({})
 
     const keyFor = useCallback((p: number) =>
         JSON.stringify({ f: browseServerFilters, s: pageSize, p }),
@@ -549,37 +828,55 @@ export function MapsPage({
         countCacheRef.current = {}
     }, [browseServerFilters, pageSize])
 
-    const fetchPage = useCallback(async (p: number): Promise<Map[] | null> => {
-        if (!accessToken) return null
-        const offset = (p - 1) * pageSize
-        try {
-            const maps = await fetchMaps(accessToken, { ...browseServerFilters, limit: pageSize, offset })
-            pageCacheRef.current[keyFor(p)] = maps
-            return maps
-        } catch {
-            return null
+    const fetchPage = useCallback((p: number): Promise<Map[] | null> => {
+        if (!accessToken) return Promise.resolve(null)
+        const key = keyFor(p)
+        const existing = pageCacheRef.current[key]
+        if (existing !== undefined) {
+            return Array.isArray(existing) ? Promise.resolve(existing) : existing
         }
+        const offset = (p - 1) * pageSize
+        const promise = fetchMaps(accessToken, { ...browseServerFilters, limit: pageSize, offset })
+            .then(maps => {
+                pageCacheRef.current[key] = maps
+                return maps
+            })
+            .catch(() => {
+                delete pageCacheRef.current[key]
+                return null
+            })
+        pageCacheRef.current[key] = promise
+        return promise
     }, [accessToken, browseServerFilters, pageSize, keyFor])
 
-    const fetchCount = useCallback(async (): Promise<number | null> => {
-        if (!accessToken) return null
+    const fetchCount = useCallback((): Promise<number | null> => {
+        if (!accessToken) return Promise.resolve(null)
         const ck = countKeyFor()
-        if (ck in countCacheRef.current) return countCacheRef.current[ck]
-        try {
-            const count = await fetchMapsCount(accessToken, browseServerFilters)
-            countCacheRef.current[ck] = count
-            return count
-        } catch {
-            return null
+        const existing = countCacheRef.current[ck]
+        if (existing !== undefined) {
+            return typeof existing === 'number' ? Promise.resolve(existing) : existing
         }
+        const promise = fetchMapsCount(accessToken, browseServerFilters)
+            .then(count => {
+                countCacheRef.current[ck] = count
+                return count
+            })
+            .catch(() => {
+                delete countCacheRef.current[ck]
+                return null
+            })
+        countCacheRef.current[ck] = promise
+        return promise
     }, [accessToken, browseServerFilters, countKeyFor])
 
     const loadBrowsePage = useCallback(async () => {
         if (!accessToken || mode !== 'browse') return
 
         const currentKey = keyFor(state.currentPage)
-        const cachedPage = pageCacheRef.current[currentKey]
-        const cachedCount = countCacheRef.current[countKeyFor()]
+        const cachedPageEntry = pageCacheRef.current[currentKey]
+        const cachedCountEntry = countCacheRef.current[countKeyFor()]
+        const cachedPage = Array.isArray(cachedPageEntry) ? cachedPageEntry : undefined
+        const cachedCount = typeof cachedCountEntry === 'number' ? cachedCountEntry : undefined
 
         if (cachedPage) {
             onCachesChange(prev => ({
@@ -689,46 +986,62 @@ export function MapsPage({
     // --- Client-side filter pipeline (used in search & fullload modes) ---
     const applyAllClientFilters = useCallback(<T extends Map | MapMetadata>(rows: T[]): T[] => {
         return rows.filter(m => {
-            if (state.authorFilter !== 'all') {
-                const a = getAuthorString(m as Map)
-                if (a.toLowerCase() !== state.authorFilter.toLowerCase()) return false
+            if (state.authorFilters.length > 0) {
+                const a = getAuthorString(m as Map).toLowerCase()
+                if (!state.authorFilters.some(f => f.toLowerCase() === a)) return false
             }
-            if (state.tagFilter !== 'all') {
-                const tags = (m.tags ?? '').toLowerCase()
-                if (!tags.split(',').map(t => t.trim()).includes(state.tagFilter.toLowerCase())) return false
+            if (state.tagFilters.length > 0) {
+                const tags = (m.tags ?? '').toLowerCase().split(',').map(t => t.trim()).filter(Boolean)
+                if (!state.tagFilters.some(f => tags.includes(f.toLowerCase()))) return false
             }
-            if (state.yearFilter !== 'all') {
+            if (state.yearFilters.length > 0) {
                 const y = String(new Date(m.added).getFullYear())
-                if (y !== state.yearFilter) return false
+                if (!state.yearFilters.includes(y)) return false
             }
-            if (!isMapInDifficultyTier(m.difficulty, state.difficultyFilter)) return false
+            if (state.difficultyFilters.length > 0) {
+                if (!state.difficultyFilters.some(t => isMapInDifficultyTier(m.difficulty, t))) return false
+            }
             if (state.newOnly && !isNew(m.added)) return false
 
             const ratings = caches.avgRatings[m.name]
-            if (!isInRatingTier(ratingScale100(ratings?.overall), state.ratingFilter)) return false
-            if (!isInRatingTier(ratingScale100(ratings?.aesthetics), state.aestheticsFilter)) return false
-            if (!isInRatingTier(ratingScale100(ratings?.learning), state.learningFilter)) return false
-            if (!isInLuckTier(ratingScale100(ratings?.luck), state.luckFilter)) return false
+            if (state.ratingFilters.length > 0) {
+                const v = ratingScale100(ratings?.overall)
+                if (!state.ratingFilters.some(t => isInRatingTier(v, t))) return false
+            }
+            if (state.aestheticsFilters.length > 0) {
+                const v = ratingScale100(ratings?.aesthetics)
+                if (!state.aestheticsFilters.some(t => isInRatingTier(v, t))) return false
+            }
+            if (state.learningFilters.length > 0) {
+                const v = ratingScale100(ratings?.learning)
+                if (!state.learningFilters.some(t => isInRatingTier(v, t))) return false
+            }
+            if (state.luckFilters.length > 0) {
+                const v = ratingScale100(ratings?.luck)
+                if (!state.luckFilters.some(t => isInLuckTier(v, t))) return false
+            }
 
             const wr = (m as Map).world_record
-            if (!isInRecordTimeTier(wr, state.recordTimeFilter)) return false
+            if (state.recordTimeFilters.length > 0) {
+                if (!state.recordTimeFilters.some(t => isInRecordTimeTier(wr, t))) return false
+            }
 
-            if (state.cappedFilter !== 'all') {
+            if (state.cappedFilters.length > 0) {
                 const bestCap = caches.bestCaps[m.name]
                 const tier = computeMedalTier(bestCap, m as MapMetadata)
-                if (state.cappedFilter === 'capped') {
-                    if (!bestCap) return false
-                } else if (state.cappedFilter !== tier) {
-                    return false
-                }
+                const matches =
+                    (state.cappedFilters.includes('uncapped') && tier === 'uncapped') ||
+                    (state.cappedFilters.includes('capped') && !!bestCap) ||
+                    (tier !== 'uncapped' && state.cappedFilters.includes(tier as CappedFilterValue))
+                if (!matches) return false
             }
 
             return true
         })
     }, [
-        state.authorFilter, state.tagFilter, state.yearFilter, state.difficultyFilter,
-        state.newOnly, state.ratingFilter, state.aestheticsFilter, state.learningFilter,
-        state.luckFilter, state.recordTimeFilter, state.cappedFilter,
+        state.authorFilters, state.tagFilters, state.yearFilters, state.difficultyFilters,
+        state.newOnly, state.ratingFilters, state.aestheticsFilters, state.learningFilters,
+        state.luckFilters, state.recordTimeFilters, state.cappedFilters,
         caches.avgRatings, caches.bestCaps,
     ])
 
@@ -745,6 +1058,19 @@ export function MapsPage({
                 if (aEmpty) return 1
                 if (bEmpty) return -1
                 const cmp = (aWR as number) - (bWR as number)
+                return state.sortDir === 'asc' ? cmp : -cmp
+            }
+
+            // PB sort: missing PBs always pushed to end regardless of direction.
+            if (state.sortBy === 'pb') {
+                const aPB = caches.bestCaps[a.name]?.cap_time_seconds
+                const bPB = caches.bestCaps[b.name]?.cap_time_seconds
+                const aEmpty = !(aPB != null && aPB > 0)
+                const bEmpty = !(bPB != null && bPB > 0)
+                if (aEmpty && bEmpty) return 0
+                if (aEmpty) return 1
+                if (bEmpty) return -1
+                const cmp = (aPB as number) - (bPB as number)
                 return state.sortDir === 'asc' ? cmp : -cmp
             }
 
@@ -828,6 +1154,50 @@ export function MapsPage({
         }
     }, [mode, caches.pageMaps, caches.totalCount, caches.metadata, searchResults, applyAllClientFilters, sortRows, pageSize, state.currentPage])
 
+    // --- Lazy WR-holder fetch: only for currently visible map names ---
+    const wrHoldersInFlightRef = useRef<Set<string>>(new Set())
+    useEffect(() => {
+        if (!accessToken) return
+        const fetchedSet = new Set(caches.wrHoldersFetched)
+        const inFlight = wrHoldersInFlightRef.current
+        const missing: string[] = []
+        for (const m of pageItems) {
+            if (fetchedSet.has(m.name)) continue
+            if (inFlight.has(m.name)) continue
+            missing.push(m.name)
+        }
+        if (missing.length === 0) return
+        missing.forEach(name => inFlight.add(name))
+        let cancelled = false
+        ;(async () => {
+            try {
+                const records = await fetchWorldRecordsForMaps(accessToken, missing)
+                if (cancelled) return
+                const additions: Record<string, WRHolder> = {}
+                for (const r of records) {
+                    additions[r.map] = {
+                        user_id: r.user_id,
+                        alias: r.alias,
+                        cap_id: r.cap_id,
+                        color_r: r.color_r,
+                        color_g: r.color_g,
+                        color_b: r.color_b,
+                    }
+                }
+                onCachesChange(prev => ({
+                    ...prev,
+                    wrHolders: { ...prev.wrHolders, ...additions },
+                    wrHoldersFetched: Array.from(new Set([...prev.wrHoldersFetched, ...missing])),
+                }))
+            } finally {
+                missing.forEach(name => inFlight.delete(name))
+            }
+        })()
+        return () => {
+            cancelled = true
+        }
+    }, [pageItems, accessToken, caches.wrHoldersFetched, onCachesChange])
+
     // --- Dropdown options (derived from metadata) ---
     const uniqueAuthors = caches.authors
 
@@ -866,37 +1236,46 @@ export function MapsPage({
 
 
     const resetFilters = () => {
-        onStateChange(prev => ({ ...DEFAULT_MAPS_STATE, filtersPanelOpen: prev.filtersPanelOpen }))
+        onStateChange(prev => ({
+            ...DEFAULT_MAPS_STATE,
+            filtersPanelOpen: prev.filtersPanelOpen,
+            pageSizePreference: prev.pageSizePreference,
+        }))
     }
 
     const captureFilters = (): PresetFilters => ({
         search: state.search,
-        authorFilter: state.authorFilter,
-        tagFilter: state.tagFilter,
-        yearFilter: state.yearFilter,
-        difficultyFilter: state.difficultyFilter,
-        ratingFilter: state.ratingFilter,
-        aestheticsFilter: state.aestheticsFilter,
-        learningFilter: state.learningFilter,
-        luckFilter: state.luckFilter,
-        recordTimeFilter: state.recordTimeFilter,
-        cappedFilter: state.cappedFilter,
+        authorFilters: state.authorFilters,
+        tagFilters: state.tagFilters,
+        yearFilters: state.yearFilters,
+        difficultyFilters: state.difficultyFilters,
+        ratingFilters: state.ratingFilters,
+        aestheticsFilters: state.aestheticsFilters,
+        learningFilters: state.learningFilters,
+        luckFilters: state.luckFilters,
+        recordTimeFilters: state.recordTimeFilters,
+        cappedFilters: state.cappedFilters,
         newOnly: state.newOnly,
         sortBy: state.sortBy,
         sortDir: state.sortDir,
     })
 
+    const [activePresetId, setActivePresetId] = useState<string | null>(null)
+
     const handleSavePreset = () => {
         const name = presetNameInput.trim()
         if (!name) return
-        const next = [...presets, { id: newPresetId(), name, filters: captureFilters() }]
+        const id = newPresetId()
+        const next = [...presets, { id, name, filters: captureFilters() }]
         setPresets(next)
         persistPresets(next)
+        setActivePresetId(id)
         setSavePresetOpen(false)
         setPresetNameInput('')
     }
 
     const handleLoadPreset = (p: MapsPreset) => {
+        setActivePresetId(p.id)
         onStateChange(prev => ({
             ...prev,
             ...p.filters,
@@ -909,6 +1288,7 @@ export function MapsPage({
         const next = presets.filter(p => p.id !== id)
         setPresets(next)
         persistPresets(next)
+        if (activePresetId === id) setActivePresetId(null)
     }
 
     const confirmDeletePreset = () => {
@@ -933,24 +1313,407 @@ export function MapsPage({
 
     // --- Active filter count for badge ---
     const activeFilterCount = [
-        state.authorFilter !== 'all',
-        state.tagFilter !== 'all',
-        state.yearFilter !== 'all',
-        state.difficultyFilter !== 'all',
-        state.ratingFilter !== 'all',
-        state.aestheticsFilter !== 'all',
-        state.learningFilter !== 'all',
-        state.luckFilter !== 'all',
-        state.recordTimeFilter !== 'all',
-        state.cappedFilter !== 'all',
+        state.authorFilters.length > 0,
+        state.tagFilters.length > 0,
+        state.yearFilters.length > 0,
+        state.difficultyFilters.length > 0,
+        state.ratingFilters.length > 0,
+        state.aestheticsFilters.length > 0,
+        state.learningFilters.length > 0,
+        state.luckFilters.length > 0,
+        state.recordTimeFilters.length > 0,
+        state.cappedFilters.length > 0,
         state.newOnly,
     ].filter(Boolean).length
 
     const hasActiveFilters = activeFilterCount > 0 || state.search.trim() !== ''
 
+    const activePreset = activePresetId ? presets.find(p => p.id === activePresetId) ?? null : null
+    useEffect(() => {
+        if (!activePreset) return
+        const current = captureFilters()
+        const target = activePreset.filters
+        const matches = (Object.keys(target) as (keyof PresetFilters)[]).every(k => {
+            const a = current[k]
+            const b = target[k]
+            if (Array.isArray(a) && Array.isArray(b)) {
+                if (a.length !== b.length) return false
+                const sa = [...a].sort()
+                const sb = [...b].sort()
+                return sa.every((v, i) => v === sb[i])
+            }
+            return a === b
+        })
+        if (!matches) setActivePresetId(null)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [
+        activePreset,
+        state.search, state.authorFilters, state.tagFilters, state.yearFilters,
+        state.difficultyFilters, state.ratingFilters, state.aestheticsFilters,
+        state.learningFilters, state.luckFilters, state.recordTimeFilters,
+        state.cappedFilters, state.newOnly, state.sortBy, state.sortDir,
+    ])
+
     const showSkeleton =
         (loading && pageItems.length === 0) ||
         (mode === 'search' && searchLoading)
+
+    const renderColumnHeader = (id: ColumnId): React.ReactNode => {
+        if (NON_TABLE_COLUMNS.has(id)) return null
+        if (!isColumnVisible(id)) return null
+        switch (id) {
+            case 'thumbnail':
+                return <th key={id} className="px-4 py-3 text-left w-20 text-muted-foreground font-medium text-xs uppercase tracking-wider"></th>
+            case 'name':
+                return (
+                    <th key={id} className="px-4 py-3 text-left text-muted-foreground font-medium text-xs uppercase tracking-wider">
+                        <button onClick={() => handleSort('name')} className="flex items-center gap-1 hover:text-white transition-colors cursor-pointer">
+                            Map <SortIcon field="name" />
+                        </button>
+                    </th>
+                )
+            case 'author':
+                return (
+                    <th key={id} className="px-4 py-3 text-left text-muted-foreground font-medium text-xs uppercase tracking-wider">
+                        <button onClick={() => handleSort('author')} className="flex items-center gap-1 hover:text-white transition-colors cursor-pointer">
+                            Author <SortIcon field="author" />
+                        </button>
+                    </th>
+                )
+            case 'difficulty':
+                return (
+                    <th key={id} className="px-4 py-3 text-left text-muted-foreground font-medium text-xs uppercase tracking-wider">
+                        <button onClick={() => handleSort('difficulty')} className="flex items-center gap-1 hover:text-white transition-colors cursor-pointer">
+                            Difficulty <SortIcon field="difficulty" />
+                        </button>
+                    </th>
+                )
+            case 'added':
+                return (
+                    <th key={id} className="px-4 py-3 text-left text-muted-foreground font-medium text-xs uppercase tracking-wider">
+                        <button onClick={() => handleSort('added')} className="flex items-center gap-1 hover:text-white transition-colors cursor-pointer">
+                            Added <SortIcon field="added" />
+                        </button>
+                    </th>
+                )
+            case 'world_record':
+                return (
+                    <th key={id} className="px-4 py-3 text-left text-muted-foreground font-medium text-xs uppercase tracking-wider">
+                        <button onClick={() => handleSort('world_record')} className="flex items-center gap-1 hover:text-white transition-colors cursor-pointer">
+                            World Record <SortIcon field="world_record" />
+                        </button>
+                    </th>
+                )
+            case 'medal':
+                return (
+                    <th key={id} className="px-2 py-3 text-center w-10 text-muted-foreground font-medium text-xs uppercase tracking-wider">
+                        <button
+                            onClick={() => handleSort('medal')}
+                            title="Sort by Medal"
+                            className="inline-flex items-center justify-center hover:text-white transition-colors cursor-pointer"
+                        >
+                            Medal
+                            <SortIcon field="medal" />
+                        </button>
+                    </th>
+                )
+            case 'pb':
+                return (
+                    <th key={id} className="px-4 py-3 text-left text-muted-foreground font-medium text-xs uppercase tracking-wider">
+                        <button onClick={() => handleSort('pb')} className="flex items-center gap-1 hover:text-white transition-colors cursor-pointer">
+                            Personal Best <SortIcon field="pb" />
+                        </button>
+                    </th>
+                )
+            case 'replay':
+                return <th key={id} className="px-2 py-3 text-center w-20 text-muted-foreground font-medium text-xs uppercase tracking-wider"></th>
+            case 'community_rating':
+                return (
+                    <th key={id} className="px-4 py-3 text-left text-muted-foreground font-medium text-xs uppercase tracking-wider">
+                        <button onClick={() => handleSort('rating')} className="flex items-center gap-1 hover:text-white transition-colors cursor-pointer">
+                            Community Rating <SortIcon field="rating" />
+                        </button>
+                    </th>
+                )
+            case 'my_rating':
+                return (
+                    <th key={id} className="px-4 py-3 text-left text-muted-foreground font-medium text-xs uppercase tracking-wider">
+                        <button onClick={() => handleSort('my_rating')} className="flex items-center gap-1 hover:text-white transition-colors cursor-pointer">
+                            Your Rating <SortIcon field="my_rating" />
+                        </button>
+                    </th>
+                )
+            default:
+                return null
+        }
+    }
+
+    type RowCtx = {
+        map: Map | MapMetadata
+        author: string
+        tags: string[]
+        ratings: AvgRatings | undefined
+        myReview: MapReview | undefined
+        mapNew: boolean
+        wr: number | undefined
+        bestCap: BestCap | undefined
+        wrHolder: WRHolder | undefined
+        medalTier: MedalTier
+    }
+
+    const renderColumnCell = (id: ColumnId, ctx: RowCtx): React.ReactNode => {
+        if (NON_TABLE_COLUMNS.has(id)) return null
+        if (!isColumnVisible(id)) return null
+        const { map, author, tags, ratings, myReview, mapNew, wr, bestCap, wrHolder, medalTier } = ctx
+        switch (id) {
+            case 'thumbnail':
+                return (
+                    <td key={id} className="px-4 py-3">
+                        <MapThumbnail mapName={map.name} />
+                    </td>
+                )
+            case 'name': {
+                const expanded = expandedTagMaps.has(map.name)
+                const shown = expanded ? tags : tags.slice(0, 3)
+                return (
+                    <td key={id} className="px-4 py-3">
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <button
+                                type="button"
+                                onClick={e => {
+                                    e.stopPropagation()
+                                    onMapSelect(map.name)
+                                }}
+                                title="Open map details"
+                                className="font-medium text-white hover:text-blue-300 hover:underline underline-offset-4 transition-colors cursor-pointer text-left"
+                            >
+                                {map.name}
+                            </button>
+                            {mapNew && (
+                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30 uppercase tracking-wider">
+                                    New
+                                </span>
+                            )}
+                            {columnVisibility.tags && (
+                                <>
+                                    {shown.map(tag => (
+                                        <span
+                                            key={tag}
+                                            className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-muted-foreground"
+                                        >
+                                            {tag}
+                                        </span>
+                                    ))}
+                                    {tags.length > 3 && (
+                                        <button
+                                            type="button"
+                                            onClick={e => {
+                                                e.stopPropagation()
+                                                toggleTagExpansion(map.name)
+                                            }}
+                                            title={expanded ? 'Collapse tags' : tags.slice(3).join(', ')}
+                                            className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-muted-foreground hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
+                                        >
+                                            {expanded ? '− Show less' : `+${tags.length - 3}`}
+                                        </button>
+                                    )}
+                                </>
+                            )}
+                        </div>
+                    </td>
+                )
+            }
+            case 'author':
+                return (
+                    <td key={id} className="px-4 py-3 text-muted-foreground">
+                        <PlayerInfo alias={author || '—'} size="sm" />
+                    </td>
+                )
+            case 'difficulty':
+                return (
+                    <td key={id} className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                            <span className={cn("text-sm font-bold w-4 text-center", difficultyTextColor(map.difficulty))}>
+                                {map.difficulty}
+                            </span>
+                            <div className="w-16 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                                <div
+                                    className={cn("h-full rounded-full", difficultyColor(map.difficulty))}
+                                    style={{ width: `${(map.difficulty / 10) * 100}%` }}
+                                />
+                            </div>
+                        </div>
+                    </td>
+                )
+            case 'added':
+                return (
+                    <td key={id} className="px-4 py-3 text-sm text-muted-foreground whitespace-nowrap">
+                        {formatAddedDate(map.added)}
+                    </td>
+                )
+            case 'world_record': {
+                if (!(wr != null && wr > 0)) {
+                    return (
+                        <td key={id} className="px-4 py-3 font-mono text-sm text-muted-foreground">
+                            <span className="opacity-30">—</span>
+                        </td>
+                    )
+                }
+                const capId = wrHolder?.cap_id
+                const clickable = !!capId
+                const isLoading = wrLoadingMap === map.name
+                return (
+                    <td key={id} className="px-4 py-3 font-mono text-sm text-muted-foreground">
+                        <button
+                            type="button"
+                            disabled={!clickable || isLoading}
+                            onClick={e => {
+                                e.stopPropagation()
+                                openWrReplay(map.name, capId, wr, wrHolder?.alias)
+                            }}
+                            title={clickable ? 'Watch this run' : undefined}
+                            className={cn(
+                                "flex flex-col leading-tight text-left",
+                                clickable ? "cursor-pointer group/wr" : "cursor-default",
+                            )}
+                        >
+                            <span className={cn(
+                                "text-amber-300 transition-[color,text-shadow] duration-150 w-fit",
+                                clickable && "group-hover/wr:text-amber-200 group-hover/wr:[text-shadow:0_0_6px_rgba(252,211,77,0.85),0_0_12px_rgba(252,211,77,0.45)]",
+                                isLoading && "opacity-60",
+                            )}>
+                                {formatCapTime(wr)}
+                            </span>
+                            {wrHolder && (
+                                <span
+                                    className="text-[10px] font-sans truncate max-w-[140px]"
+                                    style={wrHolder.color_r != null
+                                        ? { color: `rgb(${wrHolder.color_r}, ${wrHolder.color_g}, ${wrHolder.color_b})` }
+                                        : undefined}
+                                    title={wrHolder.alias}
+                                >
+                                    {wrHolder.alias}
+                                </span>
+                            )}
+                        </button>
+                    </td>
+                )
+            }
+            case 'medal':
+                return (
+                    <td key={id} className="px-2 py-3 text-center">
+                        <div className="inline-flex justify-center">
+                            <MedalIndicator tier={medalTier} bestCap={bestCap} />
+                        </div>
+                    </td>
+                )
+            case 'pb': {
+                if (!(bestCap && bestCap.cap_time_seconds > 0)) {
+                    return (
+                        <td key={id} className="px-4 py-3 font-mono text-sm text-muted-foreground">
+                            <span className="opacity-30">—</span>
+                        </td>
+                    )
+                }
+                const isWR = wr != null && wr > 0 && bestCap.cap_time_seconds - wr <= 0.0005
+                return (
+                    <td key={id} className="px-4 py-3 font-mono text-sm text-muted-foreground">
+                        <div className="flex flex-col leading-tight">
+                            <span className={pbTextColor(medalTier, isWR)}>{formatCapTime(bestCap.cap_time_seconds)}</span>
+                            {wr != null && wr > 0 && (
+                                isWR ? (
+                                    <span className="text-[10px] text-blue-400 font-bold uppercase tracking-wider font-sans">World Record</span>
+                                ) : (
+                                    <span className="text-[10px] text-muted-foreground/70">+{formatDelta(bestCap.cap_time_seconds - wr)}</span>
+                                )
+                            )}
+                        </div>
+                    </td>
+                )
+            }
+            case 'replay':
+                return (
+                    <td key={id} className="px-2 py-3 text-center">
+                        <button
+                            type="button"
+                            onClick={e => {
+                                e.stopPropagation()
+                                setReplayPickerMap(map.name)
+                            }}
+                            className="inline-flex items-center justify-center px-3 py-1 rounded-md text-xs font-medium border border-rose-500/30 bg-rose-500/10 text-rose-300 hover:bg-rose-500/25 hover:text-rose-100 hover:border-rose-500/50 transition-colors cursor-pointer"
+                        >
+                            Replays
+                        </button>
+                    </td>
+                )
+            case 'community_rating':
+                return (
+                    <td key={id} className="px-4 py-3">
+                        <button
+                            onClick={e => { e.stopPropagation(); setReviewsModalMap(map.name) }}
+                            title="View reviews"
+                            className="flex items-center gap-2 cursor-pointer group/rating"
+                        >
+                            {ratings ? (
+                                <>
+                                    <span className={cn(
+                                        "text-sm font-bold w-4 text-center transition-[text-shadow] duration-150",
+                                        ratingTextColor(ratings.overall),
+                                        "group-hover/rating:[text-shadow:0_0_6px_currentColor,0_0_12px_currentColor]",
+                                    )}>
+                                        {ratings.overall}
+                                    </span>
+                                    <div className="w-16 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                                        <div
+                                            className={cn("h-full rounded-full", ratingColor(ratings.overall))}
+                                            style={{ width: `${(ratings.overall / 10) * 100}%` }}
+                                        />
+                                    </div>
+                                </>
+                            ) : (
+                                <span className="opacity-50 text-muted-foreground text-xs underline-offset-2 group-hover/rating:underline group-hover/rating:text-white">
+                                    No reviews — add one
+                                </span>
+                            )}
+                        </button>
+                    </td>
+                )
+            case 'my_rating':
+                return (
+                    <td key={id} className="px-4 py-3">
+                        <button
+                            onClick={e => { e.stopPropagation(); setReviewsModalMap(map.name) }}
+                            title={myReview ? 'Update your review' : 'Add your review'}
+                            className="flex items-center gap-2 cursor-pointer group/myrating"
+                        >
+                            {myReview ? (
+                                <>
+                                    <span className={cn(
+                                        "text-sm font-bold w-4 text-center transition-[text-shadow] duration-150",
+                                        ratingTextColor(myReview.overall),
+                                        "group-hover/myrating:[text-shadow:0_0_6px_currentColor,0_0_12px_currentColor]",
+                                    )}>
+                                        {myReview.overall}
+                                    </span>
+                                    <div className="w-16 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                                        <div
+                                            className={cn("h-full rounded-full", ratingColor(myReview.overall))}
+                                            style={{ width: `${(myReview.overall / 10) * 100}%` }}
+                                        />
+                                    </div>
+                                </>
+                            ) : (
+                                <span className="opacity-50 text-muted-foreground text-xs underline-offset-2 group-hover/myrating:underline group-hover/myrating:text-white">
+                                    Rate this map
+                                </span>
+                            )}
+                        </button>
+                    </td>
+                )
+            default:
+                return null
+        }
+    }
 
     return (
         <div className="space-y-4 h-full flex flex-col overflow-hidden">
@@ -977,15 +1740,25 @@ export function MapsPage({
 
             {/* Filters toolbar */}
             <div className="flex flex-wrap items-center gap-3 shrink-0">
-                <div className="relative flex-1 min-w-48">
+                <div className="relative flex-1 min-w-48 max-w-xs">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
                     <input
                         type="text"
                         placeholder="Search for a map name..."
                         value={state.search}
                         onChange={e => updateFilter('search', e.target.value)}
-                        className="w-full pl-9 pr-4 py-2 bg-card/50 border border-white/10 rounded-lg text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:border-blue-500/50 focus:bg-card/80 transition-colors"
+                        className="w-full pl-9 pr-9 py-2 bg-card/50 border border-white/10 rounded-lg text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:border-blue-500/50 focus:bg-card/80 transition-colors"
                     />
+                    {state.search && (
+                        <button
+                            type="button"
+                            onClick={() => updateFilter('search', '')}
+                            aria-label="Clear search"
+                            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-white/10 text-muted-foreground hover:text-white transition-colors cursor-pointer"
+                        >
+                            <X className="size-3.5" />
+                        </button>
+                    )}
                 </div>
 
                 <button
@@ -1006,171 +1779,285 @@ export function MapsPage({
                     )}
                 </button>
 
-                <button
-                    onClick={() => updateFilter('newOnly', !state.newOnly)}
-                    className={cn(
-                        "px-3 py-2 rounded-lg text-sm font-medium border transition-colors cursor-pointer flex items-center gap-2",
-                        state.newOnly
-                            ? "bg-blue-500/20 border-blue-500/50 text-blue-300"
-                            : "bg-card/50 border-white/10 text-muted-foreground hover:text-white hover:border-white/20"
-                    )}
-                >
-                    New Only
-                    {newMapCount > 0 && (
-                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-500 text-white">
-                            {newMapCount}
-                        </span>
-                    )}
-                </button>
-
-                <DropdownMenu open={presetsMenuOpen} onOpenChange={setPresetsMenuOpen}>
+                <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <button
                             className="px-3 py-2 rounded-lg text-sm font-medium border transition-colors cursor-pointer flex items-center gap-2 bg-card/50 border-white/10 text-muted-foreground hover:text-white hover:border-white/20"
                         >
-                            <Bookmark className="size-4" />
-                            Presets
-                            {presets.length > 0 && (
-                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-white/10 text-muted-foreground">
-                                    {presets.length}
-                                </span>
-                            )}
+                            <Columns3 className="size-4" />
+                            Columns
                         </button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="min-w-56 max-w-80">
-                        <DropdownMenuLabel>Saved presets</DropdownMenuLabel>
+                    <DropdownMenuContent align="start" className="min-w-72">
+                        <DropdownMenuLabel>Columns</DropdownMenuLabel>
+                        <div className="px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground">
+                            Drag the handle to reorder · checkbox toggles visibility
+                        </div>
                         <DropdownMenuSeparator />
-                        {presets.length === 0 ? (
-                            <div className="px-2 py-2 text-xs text-muted-foreground">
-                                No saved presets. Configure filters, then click "Save preset".
-                            </div>
-                        ) : (
-                            presets.map(p => (
-                                <DropdownMenuItem
-                                    key={p.id}
-                                    onSelect={() => handleLoadPreset(p)}
-                                    className="flex items-center gap-2 pr-1"
-                                >
-                                    <span className="flex-1 truncate">{p.name}</span>
-                                    <button
-                                        onClick={(e) => {
-                                            e.preventDefault()
-                                            e.stopPropagation()
-                                            setPresetsMenuOpen(false)
-                                            setPresetPendingDelete(p)
+                        {columnOrder
+                            .filter(id => id !== 'tags')
+                            .map(id => {
+                                const required = REQUIRED_COLUMNS.has(id)
+                                const isDragging = draggingColumn === id
+                                const isDragOver = dragOverColumn === id && draggingColumn !== id
+                                return (
+                                    <div
+                                        key={id}
+                                        draggable
+                                        onDragStart={e => {
+                                            setDraggingColumn(id)
+                                            e.dataTransfer.effectAllowed = 'move'
+                                            e.dataTransfer.setData('text/plain', id)
                                         }}
-                                        className="p-1 rounded hover:bg-red-500/20 text-muted-foreground hover:text-red-300 transition-colors cursor-pointer"
-                                        aria-label={`Delete preset ${p.name}`}
+                                        onDragEnter={e => {
+                                            e.preventDefault()
+                                            if (draggingColumn && draggingColumn !== id) setDragOverColumn(id)
+                                        }}
+                                        onDragOver={e => {
+                                            e.preventDefault()
+                                            e.dataTransfer.dropEffect = 'move'
+                                        }}
+                                        onDragLeave={() => {
+                                            if (dragOverColumn === id) setDragOverColumn(null)
+                                        }}
+                                        onDrop={e => {
+                                            e.preventDefault()
+                                            if (draggingColumn) reorderColumn(draggingColumn, id)
+                                            setDraggingColumn(null)
+                                            setDragOverColumn(null)
+                                        }}
+                                        onDragEnd={() => {
+                                            setDraggingColumn(null)
+                                            setDragOverColumn(null)
+                                        }}
+                                        className={cn(
+                                            "flex items-center gap-2 px-2 py-1.5 text-sm select-none rounded transition-colors",
+                                            isDragging && "opacity-40",
+                                            isDragOver && "bg-blue-500/15 ring-1 ring-blue-500/40",
+                                        )}
                                     >
-                                        <Trash2 className="size-3.5" />
-                                    </button>
-                                </DropdownMenuItem>
-                            ))
-                        )}
+                                        <input
+                                            type="checkbox"
+                                            checked={isColumnVisible(id)}
+                                            disabled={required}
+                                            onChange={() => toggleColumn(id)}
+                                            aria-label={`Toggle ${COLUMN_LABELS[id]} visibility`}
+                                            className="accent-blue-500 cursor-pointer disabled:cursor-default"
+                                        />
+                                        <span className={cn("flex-1 truncate", required && "text-muted-foreground/80")}>
+                                            {COLUMN_LABELS[id]}
+                                            {required && <span className="ml-1 text-[9px] uppercase tracking-wider text-muted-foreground/60">required</span>}
+                                        </span>
+                                        {id === 'name' && (
+                                            <label className="flex items-center gap-1 text-[10px] text-muted-foreground cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isColumnVisible('tags')}
+                                                    onChange={() => toggleColumn('tags')}
+                                                    aria-label="Toggle tag chips"
+                                                    className="accent-blue-500 cursor-pointer"
+                                                />
+                                                tags
+                                            </label>
+                                        )}
+                                        <GripVertical
+                                            className="size-4 text-muted-foreground/60 cursor-grab active:cursor-grabbing"
+                                            aria-label="Drag to reorder"
+                                        />
+                                    </div>
+                                )
+                            })}
                     </DropdownMenuContent>
                 </DropdownMenu>
 
-                {hasActiveFilters && (
-                    <button
-                        onClick={() => {
-                            setPresetNameInput('')
-                            setSavePresetOpen(true)
-                        }}
-                        className="px-3 py-2 rounded-lg text-sm font-medium border transition-colors cursor-pointer flex items-center gap-2 bg-card/50 border-white/10 text-muted-foreground hover:text-white hover:border-white/20"
-                    >
-                        <BookmarkPlus className="size-4" />
-                        Save preset
-                    </button>
-                )}
-
-                {hasActiveFilters && (
-                    <button
-                        onClick={resetFilters}
-                        className="px-3 py-2 rounded-lg text-sm font-medium border transition-colors cursor-pointer flex items-center gap-2 bg-card/50 border-white/10 text-muted-foreground hover:text-red-300 hover:border-red-500/30"
-                    >
-                        <X className="size-4" />
-                        Clear filters
-                    </button>
-                )}
             </div>
 
             {/* Inline filter panel */}
             {state.filtersPanelOpen && (
                 <div className="bg-card/30 border border-white/10 rounded-xl p-4 space-y-4 shrink-0">
                     <FilterPanelRow label="Map Attributes">
-                        <FilterSelect
+                        <MultiFilterDropdown
                             label="Difficulty"
-                            value={state.difficultyFilter}
-                            onChange={v => updateFilter('difficultyFilter', v as DifficultyTier)}
+                            values={state.difficultyFilters}
+                            onChange={v => updateFilter('difficultyFilters', v as DifficultyValue[])}
                             options={[
-                                ['all', 'All'],
                                 ['beginner', 'Beginner (1–3)'],
                                 ['intermediate', 'Intermediate (4–6)'],
                                 ['advanced', 'Advanced (7–8)'],
                                 ['expert', 'Expert (9–10)'],
                             ]}
                         />
-                        <FilterSelect
+                        <MultiFilterDropdown
                             label="Author"
-                            value={state.authorFilter}
-                            onChange={v => updateFilter('authorFilter', v)}
-                            options={[['all', 'Any'], ...uniqueAuthors.map(a => [a, a] as [string, string])]}
+                            values={state.authorFilters}
+                            onChange={v => updateFilter('authorFilters', v)}
+                            options={uniqueAuthors.map(a => [a, a] as [string, string])}
+                            searchable
                         />
-                        <FilterSelect
+                        <MultiFilterDropdown
                             label="Tag"
-                            value={state.tagFilter}
-                            onChange={v => updateFilter('tagFilter', v)}
-                            options={[['all', 'Any'], ...uniqueTags.map(t => [t, t] as [string, string])]}
+                            values={state.tagFilters}
+                            onChange={v => updateFilter('tagFilters', v)}
+                            options={uniqueTags.map(t => [t, t] as [string, string])}
+                            searchable
                         />
-                        <FilterSelect
+                        <MultiFilterDropdown
                             label="Year"
-                            value={state.yearFilter}
-                            onChange={v => updateFilter('yearFilter', v)}
-                            options={[['all', 'Any'], ...uniqueYears.map(y => [String(y), String(y)] as [string, string])]}
+                            values={state.yearFilters}
+                            onChange={v => updateFilter('yearFilters', v)}
+                            options={uniqueYears.map(y => [String(y), String(y)] as [string, string])}
                         />
                     </FilterPanelRow>
 
                     <FilterPanelRow label="Map Ratings">
-                        <FilterSelect
+                        <MultiFilterDropdown
                             label="Overall"
-                            value={state.ratingFilter}
-                            onChange={v => updateFilter('ratingFilter', v as RatingTier)}
+                            values={state.ratingFilters}
+                            onChange={v => updateFilter('ratingFilters', v as RatingValue[])}
                             options={ratingTierOptions}
                         />
-                        <FilterSelect
+                        <MultiFilterDropdown
                             label="Aesthetics"
-                            value={state.aestheticsFilter}
-                            onChange={v => updateFilter('aestheticsFilter', v as RatingTier)}
-                            options={ratingTierOptions}
+                            values={state.aestheticsFilters}
+                            onChange={v => updateFilter('aestheticsFilters', v as RatingValue[])}
+                            options={aestheticsTierOptions}
                         />
-                        <FilterSelect
+                        <MultiFilterDropdown
                             label="Learning"
-                            value={state.learningFilter}
-                            onChange={v => updateFilter('learningFilter', v as RatingTier)}
-                            options={ratingTierOptions}
+                            values={state.learningFilters}
+                            onChange={v => updateFilter('learningFilters', v as RatingValue[])}
+                            options={learningTierOptions}
                         />
-                        <FilterSelect
+                        <MultiFilterDropdown
                             label="Luck"
-                            value={state.luckFilter}
-                            onChange={v => updateFilter('luckFilter', v as LuckTier)}
+                            values={state.luckFilters}
+                            onChange={v => updateFilter('luckFilters', v as LuckValue[])}
                             options={luckTierOptions}
                         />
                     </FilterPanelRow>
 
                     <FilterPanelRow label="Miscellaneous">
-                        <FilterSelect
+                        <MultiFilterDropdown
                             label="World Record Time"
-                            value={state.recordTimeFilter}
-                            onChange={v => updateFilter('recordTimeFilter', v as RecordTimeTier)}
+                            values={state.recordTimeFilters}
+                            onChange={v => updateFilter('recordTimeFilters', v as RecordTimeValue[])}
                             options={recordTimeOptions}
                         />
-                        <FilterSelect
+                        <MultiFilterDropdown
                             label="Cap Status"
-                            value={state.cappedFilter}
-                            onChange={v => updateFilter('cappedFilter', v as CappedFilter)}
+                            values={state.cappedFilters}
+                            onChange={v => updateFilter('cappedFilters', v as CappedFilterValue[])}
                             options={cappedOptions}
+                            iconFor={v => (v !== 'uncapped' && v !== 'capped')
+                                ? TIER_ICONS[v as Exclude<MedalTier, 'uncapped'>]
+                                : null}
                         />
+                        <div className="flex flex-col gap-1">
+                            <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Recency</label>
+                            <label className="flex items-center gap-2 px-2 py-2 bg-card/50 border border-white/10 rounded text-sm text-white cursor-pointer hover:border-white/20">
+                                <input
+                                    type="checkbox"
+                                    checked={state.newOnly}
+                                    onChange={e => updateFilter('newOnly', e.target.checked)}
+                                    className="accent-blue-500 cursor-pointer"
+                                />
+                                <span>New only</span>
+                                {newMapCount > 0 && (
+                                    <span className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                                        {newMapCount}
+                                    </span>
+                                )}
+                            </label>
+                        </div>
                     </FilterPanelRow>
+
+                    {/* Presets row */}
+                    <div className="flex items-center justify-between gap-3 pt-2 border-t border-white/5">
+                        <div className="flex items-center gap-2">
+                            <DropdownMenu open={presetsMenuOpen} onOpenChange={setPresetsMenuOpen}>
+                                <DropdownMenuTrigger asChild>
+                                    <button
+                                        className={cn(
+                                            "px-3 py-1.5 rounded-md text-xs font-medium border transition-colors cursor-pointer flex items-center gap-2",
+                                            activePreset
+                                                ? "bg-blue-500/15 border-blue-500/40 text-blue-200 hover:bg-blue-500/20"
+                                                : "bg-card/50 border-white/10 text-muted-foreground hover:text-white hover:border-white/20",
+                                        )}
+                                    >
+                                        <Bookmark className="size-3.5" />
+                                        Saved Filters
+                                        {activePreset ? (
+                                            <span className="text-[11px] font-semibold text-blue-200 max-w-[160px] truncate">
+                                                · {activePreset.name}
+                                            </span>
+                                        ) : presets.length > 0 && (
+                                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-white/10 text-muted-foreground">
+                                                {presets.length}
+                                            </span>
+                                        )}
+                                    </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="start" className="min-w-56 max-w-80">
+                                    <DropdownMenuLabel>Saved Filters</DropdownMenuLabel>
+                                    <DropdownMenuSeparator />
+                                    {presets.length === 0 ? (
+                                        <div className="px-2 py-2 text-xs text-muted-foreground">
+                                            No saved presets yet.
+                                        </div>
+                                    ) : (
+                                        presets.map(p => (
+                                            <DropdownMenuItem
+                                                key={p.id}
+                                                onSelect={() => handleLoadPreset(p)}
+                                                className="flex items-center gap-2 pr-1"
+                                            >
+                                                <span className="flex-1 truncate">{p.name}</span>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.preventDefault()
+                                                        e.stopPropagation()
+                                                        setPresetsMenuOpen(false)
+                                                        setPresetPendingDelete(p)
+                                                    }}
+                                                    className="p-1 rounded hover:bg-red-500/20 text-muted-foreground hover:text-red-300 transition-colors cursor-pointer"
+                                                    aria-label={`Delete preset ${p.name}`}
+                                                >
+                                                    <Trash2 className="size-3.5" />
+                                                </button>
+                                            </DropdownMenuItem>
+                                        ))
+                                    )}
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                        onSelect={e => {
+                                            e.preventDefault()
+                                            if (!hasActiveFilters) return
+                                            setPresetsMenuOpen(false)
+                                            setPresetNameInput('')
+                                            setSavePresetOpen(true)
+                                        }}
+                                        disabled={!hasActiveFilters}
+                                        className={cn(
+                                            "flex items-center gap-2 text-blue-300",
+                                            !hasActiveFilters && "opacity-40 cursor-default",
+                                        )}
+                                    >
+                                        <BookmarkPlus className="size-3.5" />
+                                        Save Current as Preset
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                            {hasActiveFilters && (
+                                <button
+                                    onClick={resetFilters}
+                                    className="px-3 py-1.5 rounded-md text-xs font-medium border transition-colors cursor-pointer flex items-center gap-2 bg-card/50 border-white/10 text-muted-foreground hover:text-red-300 hover:border-red-500/30"
+                                >
+                                    <X className="size-3.5" />
+                                    Clear Filters
+                                </button>
+                            )}
+                        </div>
+                    </div>
                 </div>
             )}
 
@@ -1193,55 +2080,15 @@ export function MapsPage({
                 <table className="w-full text-sm">
                     <thead className="sticky top-0 z-10 bg-card/95 backdrop-blur">
                         <tr className="border-b border-white/10">
-                            <th className="px-4 py-3 text-left w-20 text-muted-foreground font-medium text-xs uppercase tracking-wider"></th>
-                            <th className="px-2 py-3 text-center w-10 text-muted-foreground font-medium text-xs uppercase tracking-wider">
-                                <button
-                                    onClick={() => handleSort('medal')}
-                                    title="Sort by Medal"
-                                    className="inline-flex items-center justify-center hover:text-white transition-colors cursor-pointer"
-                                >
-                                    <SortIcon field="medal" />
-                                </button>
-                            </th>
-                            <th className="px-4 py-3 text-left text-muted-foreground font-medium text-xs uppercase tracking-wider">
-                                <button onClick={() => handleSort('name')} className="flex items-center gap-1 hover:text-white transition-colors cursor-pointer">
-                                    Map <SortIcon field="name" />
-                                </button>
-                            </th>
-                            <th className="px-4 py-3 text-left text-muted-foreground font-medium text-xs uppercase tracking-wider">
-                                <button onClick={() => handleSort('author')} className="flex items-center gap-1 hover:text-white transition-colors cursor-pointer">
-                                    Author <SortIcon field="author" />
-                                </button>
-                            </th>
-                            <th className="px-4 py-3 text-left text-muted-foreground font-medium text-xs uppercase tracking-wider">
-                                <button onClick={() => handleSort('difficulty')} className="flex items-center gap-1 hover:text-white transition-colors cursor-pointer">
-                                    Difficulty <SortIcon field="difficulty" />
-                                </button>
-                            </th>
-                            <th className="px-4 py-3 text-left text-muted-foreground font-medium text-xs uppercase tracking-wider">
-                                <button onClick={() => handleSort('world_record')} className="flex items-center gap-1 hover:text-white transition-colors cursor-pointer">
-                                    World Record <SortIcon field="world_record" />
-                                </button>
-                            </th>
-                            <th className="px-4 py-3 text-left text-muted-foreground font-medium text-xs uppercase tracking-wider">Tags</th>
-                            <th className="px-4 py-3 text-left text-muted-foreground font-medium text-xs uppercase tracking-wider">
-                                <button onClick={() => handleSort('rating')} className="flex items-center gap-1 hover:text-white transition-colors cursor-pointer">
-                                    Community Rating <SortIcon field="rating" />
-                                </button>
-                            </th>
-                            <th className="px-4 py-3 text-left text-muted-foreground font-medium text-xs uppercase tracking-wider">
-                                <button onClick={() => handleSort('my_rating')} className="flex items-center gap-1 hover:text-white transition-colors cursor-pointer">
-                                    Your Rating <SortIcon field="my_rating" />
-                                </button>
-                            </th>
+                            {columnOrder.map(id => renderColumnHeader(id))}
                         </tr>
                     </thead>
                     <tbody>
                         {showSkeleton ? (
-                            Array.from({ length: 10 }).map((_, i) => <SkeletonRow key={i} />)
+                            Array.from({ length: 10 }).map((_, i) => <SkeletonRow key={i} order={columnOrder} visibility={columnVisibility} />)
                         ) : pageItems.length === 0 ? (
                             <tr>
-                                <td colSpan={9} className="px-4 py-16 text-center text-muted-foreground">
+                                <td colSpan={visibleColumnCount} className="px-4 py-16 text-center text-muted-foreground">
                                     No maps match your filters.
                                 </td>
                             </tr>
@@ -1254,127 +2101,19 @@ export function MapsPage({
                                 const mapNew = isNew(map.added)
                                 const wr = (map as Map).world_record
                                 const bestCap = caches.bestCaps[map.name]
+                                const wrHolder = caches.wrHolders[map.name]
                                 const medalTier = computeMedalTier(bestCap, map as MapMetadata)
+                                const ctx = {
+                                    map, author, tags, ratings, myReview, mapNew,
+                                    wr, bestCap, wrHolder, medalTier,
+                                }
 
                                 return (
                                     <tr
                                         key={map.name}
-                                        onClick={() => onMapSelect(map.name)}
-                                        className="border-b border-white/5 hover:bg-white/5 cursor-pointer transition-colors group"
+                                        className="border-b border-white/5 hover:bg-white/5 transition-colors group"
                                     >
-                                        <td className="px-4 py-3">
-                                            <MapThumbnail mapName={map.name} />
-                                        </td>
-                                        <td className="px-2 py-3 text-center">
-                                            <div className="inline-flex justify-center">
-                                                <MedalIndicator tier={medalTier} bestCap={bestCap} />
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <div className="flex items-center gap-2">
-                                                <span className="font-medium text-white group-hover:text-blue-300 transition-colors">
-                                                    {map.name}
-                                                </span>
-                                                {mapNew && (
-                                                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30 uppercase tracking-wider">
-                                                        New
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3 text-muted-foreground">
-                                            <PlayerInfo alias={author || '—'} size="sm" />
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <div className="flex items-center gap-2">
-                                                <span className={cn("text-sm font-bold w-4 text-center", difficultyTextColor(map.difficulty))}>
-                                                    {map.difficulty}
-                                                </span>
-                                                <div className="w-16 h-1.5 bg-white/10 rounded-full overflow-hidden">
-                                                    <div
-                                                        className={cn("h-full rounded-full", difficultyColor(map.difficulty))}
-                                                        style={{ width: `${(map.difficulty / 10) * 100}%` }}
-                                                    />
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3 font-mono text-sm text-muted-foreground">
-                                            {wr != null && wr > 0
-                                                ? <span className="text-amber-300">{formatCapTime(wr)}</span>
-                                                : <span className="opacity-30">—</span>
-                                            }
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            {tags.length > 0 ? (
-                                                <div className="flex flex-wrap gap-1">
-                                                    {tags.slice(0, 3).map(tag => (
-                                                        <span
-                                                            key={tag}
-                                                            className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-muted-foreground"
-                                                        >
-                                                            {tag}
-                                                        </span>
-                                                    ))}
-                                                    {tags.length > 3 && (
-                                                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-muted-foreground">
-                                                            +{tags.length - 3}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            ) : (
-                                                <span className="opacity-30 text-muted-foreground">—</span>
-                                            )}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <button
-                                                onClick={e => { e.stopPropagation(); setReviewsModalMap(map.name) }}
-                                                title="View reviews"
-                                                className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer"
-                                            >
-                                                {ratings ? (
-                                                    <>
-                                                        <span className={cn("text-sm font-bold w-4 text-center", ratingTextColor(ratings.overall))}>
-                                                            {ratings.overall}
-                                                        </span>
-                                                        <div className="w-16 h-1.5 bg-white/10 rounded-full overflow-hidden">
-                                                            <div
-                                                                className={cn("h-full rounded-full", ratingColor(ratings.overall))}
-                                                                style={{ width: `${(ratings.overall / 10) * 100}%` }}
-                                                            />
-                                                        </div>
-                                                    </>
-                                                ) : (
-                                                    <span className="opacity-50 text-muted-foreground text-xs underline-offset-2 hover:underline">
-                                                        No reviews — add one
-                                                    </span>
-                                                )}
-                                            </button>
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <button
-                                                onClick={e => { e.stopPropagation(); setReviewsModalMap(map.name) }}
-                                                title={myReview ? 'Update your review' : 'Add your review'}
-                                                className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer"
-                                            >
-                                                {myReview ? (
-                                                    <>
-                                                        <span className={cn("text-sm font-bold w-4 text-center", ratingTextColor(myReview.overall))}>
-                                                            {myReview.overall}
-                                                        </span>
-                                                        <div className="w-16 h-1.5 bg-white/10 rounded-full overflow-hidden">
-                                                            <div
-                                                                className={cn("h-full rounded-full", ratingColor(myReview.overall))}
-                                                                style={{ width: `${(myReview.overall / 10) * 100}%` }}
-                                                            />
-                                                        </div>
-                                                    </>
-                                                ) : (
-                                                    <span className="opacity-50 text-muted-foreground text-xs underline-offset-2 hover:underline">
-                                                        Rate this map
-                                                    </span>
-                                                )}
-                                            </button>
-                                        </td>
+                                        {columnOrder.map(id => renderColumnCell(id, ctx))}
                                     </tr>
                                 )
                             })
@@ -1454,6 +2193,78 @@ export function MapsPage({
                         Saves current search, filters, and sort. Loadable from the Presets menu.
                     </p>
                 </div>
+            </Modal>
+
+            <ReplayPickerModal
+                open={replayPickerMap !== null}
+                onClose={() => setReplayPickerMap(null)}
+                accessToken={accessToken}
+                userId={userId}
+                mapName={replayPickerMap}
+                mapMetadata={replayPickerMap ? caches.metadata?.find(m => m.name === replayPickerMap) : undefined}
+                onSelect={(url, mapName, entry) => {
+                    setReplayPickerMap(null)
+                    setVideoModal({
+                        url,
+                        mapName,
+                        time: entry.cap_time_seconds,
+                        alias: entry.alias,
+                        fromPicker: true,
+                    })
+                }}
+            />
+
+            <Modal
+                isOpen={videoModal !== null}
+                onClose={() => setVideoModal(null)}
+                title={
+                    videoModal
+                        ? (videoModal.time != null && videoModal.alias
+                            ? `Replay — ${formatCapTime(videoModal.time)} by ${videoModal.alias} on ${videoModal.mapName.replace('CTF-BT-', '')}`
+                            : `Replay — ${videoModal.mapName.replace('CTF-BT-', '')}`)
+                        : ''
+                }
+                offsetSidebar
+                className="bg-[#0a0a0b]/98 border-white/5"
+                maxWidth="min(90vw, 1280px)"
+                leftAction={videoModal?.fromPicker ? (
+                    <button
+                        type="button"
+                        onClick={() => {
+                            const mapName = videoModal.mapName
+                            setVideoModal(null)
+                            setReplayPickerMap(mapName)
+                        }}
+                        aria-label="Back to replays"
+                        title="Back to replays"
+                        className="h-8 w-8 inline-flex items-center justify-center rounded-full hover:bg-background/80 text-muted-foreground hover:text-white transition-colors cursor-pointer shrink-0"
+                    >
+                        <ArrowLeft className="size-4" />
+                    </button>
+                ) : undefined}
+                footer={
+                    <div className="p-3 border-t border-border bg-muted/50 flex justify-center shrink-0 text-xs text-muted-foreground">
+                        Powered by{' '}
+                        <a
+                            href="https://democonverter.com"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="ml-1 text-blue-400 hover:underline"
+                        >
+                            democonverter.com
+                        </a>
+                    </div>
+                }
+            >
+                {videoModal && (
+                    <video
+                        key={videoModal.url}
+                        src={videoModal.url}
+                        controls
+                        autoPlay
+                        className="w-full aspect-video bg-black rounded"
+                    />
+                )}
             </Modal>
 
             <Modal
@@ -1643,34 +2454,46 @@ function PaginationBar({
 }
 
 const ratingTierOptions: [string, string][] = [
-    ['all', 'Any'],
     ['excellent', 'Excellent (8.0+)'],
     ['good', 'Good (6.0–7.9)'],
     ['average', 'Average (4.0–5.9)'],
     ['poor', 'Poor (0–3.9)'],
 ]
 
+const learningTierOptions: [string, string][] = [
+    ['poor', 'Quick to Learn (0–3.9)'],
+    ['average', 'Moderate (4.0–5.9)'],
+    ['good', 'Takes Effort (6.0–7.9)'],
+    ['excellent', 'Very Complex (8.0+)'],
+]
+
+const aestheticsTierOptions: [string, string][] = [
+    ['excellent', 'Stunning (8.0+)'],
+    ['good', 'Polished (6.0–7.9)'],
+    ['average', 'Decent (4.0–5.9)'],
+    ['poor', 'Plain (0–3.9)'],
+]
+
 const luckTierOptions: [string, string][] = [
-    ['all', 'Any'],
-    ['low', 'Low (0–3.9)'],
-    ['fair', 'Medium (4.0–5.9)'],
-    ['some', 'High (6.0–7.9)'],
-    ['high', 'Extreme (8.0+)'],
+    ['low', 'No Luck Required (0–3.9)'],
+    ['fair', 'Some Luck (4.0–5.9)'],
+    ['some', 'High Luck (6.0–7.9)'],
+    ['high', 'Pure Luck (8.0+)'],
 ]
 
 const recordTimeOptions: [string, string][] = (Object.keys(RECORD_TIME_LABELS) as RecordTimeTier[])
+    .filter(k => k !== 'all')
     .map(k => [k, RECORD_TIME_LABELS[k]])
 
 const cappedOptions: [string, string][] = [
-    ['all', 'All Maps'],
-    ['uncapped', 'Uncapped Maps'],
-    ['capped', 'Capped Maps (any)'],
-    ['verified', 'Verified Caps'],
-    ['casual', 'Casual Caps'],
+    ['uncapped', 'Uncapped'],
+    ['casual', 'Casual'],
+    ['verified', 'Verified'],
     ['bronze', 'Bronze'],
     ['silver', 'Silver'],
     ['gold', 'Gold'],
     ['champion', 'Champion'],
+    ['world_record', 'World Record'],
 ]
 
 function FilterPanelRow({ label, children }: { label: string; children: React.ReactNode }) {
@@ -1682,29 +2505,120 @@ function FilterPanelRow({ label, children }: { label: string; children: React.Re
     )
 }
 
-function FilterSelect({
-    label, value, onChange, options,
+function fuzzyMatch(text: string, query: string): boolean {
+    if (!query) return true
+    const t = text.toLowerCase()
+    const q = query.toLowerCase()
+    if (t.includes(q)) return true
+    let i = 0
+    for (const c of t) {
+        if (c === q[i]) i++
+        if (i >= q.length) return true
+    }
+    return i >= q.length
+}
+
+function MultiFilterDropdown({
+    label, options, values, onChange, iconFor, placeholder = 'Any', minWidth = 160, searchable,
 }: {
     label: string
-    value: string
-    onChange: (v: string) => void
     options: [string, string][]
+    values: string[]
+    onChange: (next: string[]) => void
+    iconFor?: (value: string) => string | null
+    placeholder?: string
+    minWidth?: number
+    searchable?: boolean
 }) {
+    const [open, setOpen] = useState(false)
+    const [query, setQuery] = useState('')
+    useEffect(() => {
+        if (!open) setQuery('')
+    }, [open])
+
+    const filteredOptions = !searchable || !query
+        ? options
+        : options.filter(([value, lbl]) => fuzzyMatch(lbl, query) || fuzzyMatch(value, query))
+
+    const summary = values.length === 0
+        ? placeholder
+        : values.length === 1
+            ? options.find(([v]) => v === values[0])?.[1] ?? values[0]
+            : `${values.length} selected`
     return (
-        <div className="flex flex-col gap-1 min-w-40">
+        <div className="flex flex-col gap-1">
             <label className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</label>
-            <select
-                value={value}
-                onChange={e => onChange(e.target.value)}
-                style={{ colorScheme: 'dark' }}
-                className="px-3 py-2 bg-card/50 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-blue-500/50 cursor-pointer"
-            >
-                {options.map(([val, lbl]) => (
-                    <option key={val} value={val} className="bg-[#0f1115] text-white">
-                        {lbl}
-                    </option>
-                ))}
-            </select>
+            <DropdownMenu open={open} onOpenChange={setOpen}>
+                <DropdownMenuTrigger asChild>
+                    <button
+                        style={{ minWidth }}
+                        className="px-2 py-2 bg-card/50 border border-white/10 rounded text-sm text-white text-left hover:border-white/20 cursor-pointer flex items-center justify-between gap-2"
+                    >
+                        <span className="truncate">{summary}</span>
+                        <ChevronDown className="size-3.5 opacity-60 shrink-0" />
+                    </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="min-w-56">
+                    {searchable && (
+                        <div className="px-1 pb-1 sticky top-0 bg-popover z-10">
+                            <input
+                                type="text"
+                                autoFocus
+                                value={query}
+                                onChange={e => setQuery(e.target.value)}
+                                onKeyDown={e => e.stopPropagation()}
+                                placeholder="Search..."
+                                className="w-full px-2 py-1.5 bg-card/50 border border-white/10 rounded text-xs text-white placeholder:text-muted-foreground focus:outline-none focus:border-blue-500/50"
+                            />
+                        </div>
+                    )}
+                    <div className="max-h-64 overflow-y-auto">
+                        {filteredOptions.length === 0 ? (
+                            <div className="px-2 py-2 text-xs text-muted-foreground">No matches.</div>
+                        ) : filteredOptions.map(([value, optLabel]) => {
+                            const checked = values.includes(value)
+                            const iconSrc = iconFor?.(value) ?? null
+                            return (
+                                <div
+                                    key={value}
+                                    onClick={() => {
+                                        const next = checked
+                                            ? values.filter(x => x !== value)
+                                            : [...values, value]
+                                        onChange(next)
+                                    }}
+                                    className="flex items-center gap-2 px-2 py-1.5 text-sm cursor-pointer hover:bg-white/5 rounded select-none"
+                                >
+                                    <input
+                                        type="checkbox"
+                                        checked={checked}
+                                        readOnly
+                                        className="accent-blue-500 cursor-pointer pointer-events-none"
+                                    />
+                                    <span className="flex-1 truncate">{optLabel}</span>
+                                    {iconSrc && (
+                                        <img src={iconSrc} alt="" className="size-4 object-contain shrink-0" />
+                                    )}
+                                </div>
+                            )
+                        })}
+                    </div>
+                    {values.length > 0 && (
+                        <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                                onSelect={e => {
+                                    e.preventDefault()
+                                    onChange([])
+                                }}
+                                className="text-muted-foreground"
+                            >
+                                Clear selection ({values.length})
+                            </DropdownMenuItem>
+                        </>
+                    )}
+                </DropdownMenuContent>
+            </DropdownMenu>
         </div>
     )
 }

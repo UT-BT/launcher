@@ -81,6 +81,7 @@ export interface MapMetadata {
 
 export interface BestCap {
     map: string
+    cap_id?: string | null
     cap_time_seconds: number
     cap_type: number
     verified: boolean
@@ -439,6 +440,88 @@ export async function fetchRecords(accessToken: string, limit: number, offset: n
         console.error('Error fetching records:', error)
         throw error
     }
+}
+
+export async function fetchAllWorldRecords(accessToken: string): Promise<Record[]> {
+    const pageSize = 500
+    const out: Record[] = []
+    let offset = 0
+    while (true) {
+        const batch = await fetchRecords(accessToken, pageSize, offset)
+        out.push(...batch)
+        if (batch.length < pageSize) break
+        offset += pageSize
+        if (offset > 50_000) break
+    }
+    return out
+}
+
+export async function fetchWorldRecordsForMaps(accessToken: string, mapNames: string[]): Promise<Record[]> {
+    if (mapNames.length === 0) return []
+    const mapsParam = encodeURIComponent(mapNames.join(','))
+    const url = `${API_BASE_URL}/v2/world_records/?maps=${mapsParam}&limit=${mapNames.length}`
+    try {
+        const res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } })
+        if (!res.ok) return []
+        const json = await res.json()
+        if (json.success && Array.isArray(json.data)) return json.data as Record[]
+        return []
+    } catch {
+        return []
+    }
+}
+
+export interface DemoVideo { type: string; url: string }
+export interface DemoConverterStatus {
+    response?: { status?: number }
+    videos?: DemoVideo[]
+    status?: string
+}
+
+export interface LeaderboardEntry {
+    map: string
+    user: string
+    cap_time_seconds: number
+    added: string
+    alias: string
+    cap_type: number
+    verified: boolean
+    id: string
+    active_title?: ActiveTitle | null
+}
+
+export async function fetchMapLeaderboard(accessToken: string, mapName: string, verifiedOnly = false): Promise<LeaderboardEntry[]> {
+    try {
+        const params = verifiedOnly ? '?verified=true' : ''
+        const res = await fetch(`${API_BASE_URL}/caps/leaderboard/map/${encodeURIComponent(mapName)}${params}`, {
+            headers: { 'Authorization': `Bearer ${accessToken}` },
+        })
+        if (!res.ok) return []
+        const json = await res.json()
+        if (json.success && Array.isArray(json.data)) return json.data as LeaderboardEntry[]
+        return []
+    } catch {
+        return []
+    }
+}
+
+export async function fetchDemoStatus(capId: string): Promise<DemoConverterStatus | null> {
+    try {
+        const res = await fetch(`${GATEWAY_BASE_URL}/democonverter/status/${capId}`)
+        if (!res.ok) return null
+        const data = await res.json() as DemoConverterStatus
+        if (data?.status === 'error') return null
+        return data
+    } catch {
+        return null
+    }
+}
+
+export function getFirstPersonVideoUrl(status: DemoConverterStatus | null): string | null {
+    if (!status || status.status === 'error') return null
+    if (status.response?.status !== 4) return null
+    const fp = status.videos?.find(v => v.type === 'first_person')
+    return fp?.url ?? null
 }
 
 export async function fetchRecordsCount(accessToken: string, addedSince?: string): Promise<number> {
