@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useState } from 'react'
-import { Home, Server, Trophy, Settings, LogOut, Play } from 'lucide-react'
+import { Home, Server, Map as MapIcon, Trophy, Settings, LogOut, Play } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import logo from '@/app/assets/logo.png'
 import {
@@ -23,6 +23,7 @@ interface NavItem {
 const navItems: NavItem[] = [
     { id: 'home', label: 'Home', icon: Home },
     { id: 'servers', label: 'Servers', icon: Server },
+    { id: 'maps', label: 'Maps', icon: MapIcon },
 ]
 
 import { UserProfile } from '@/app/utils/api'
