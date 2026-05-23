@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback, Fragment } from 'react'
-import { Search, RefreshCw, ChevronUp, ChevronDown, ArrowUpDown, SlidersHorizontal, X, Bookmark, BookmarkPlus, Trash2, Columns3, Play, ArrowLeft, GripVertical } from 'lucide-react'
+import { Search, RefreshCw, ChevronUp, ChevronDown, ArrowUpDown, SlidersHorizontal, X, Bookmark, BookmarkPlus, Trash2, Columns3, Play, ArrowLeft, GripVertical, HelpCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/app/components/ui/button'
 import {
@@ -17,6 +17,10 @@ import {
 import { MapReviewsModal } from '@/app/components/modals/MapReviewsModal'
 import { ReplayPickerModal } from '@/app/components/modals/ReplayPickerModal'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
+import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
+import { MapsTutorial } from '@/app/components/pages/maps/MapsTutorial'
+import { useMapsTutorialState } from '@/app/components/pages/maps/useMapsTutorialState'
+import { buildSteps } from '@/app/components/pages/maps/mapsTutorialSteps'
 
 import championIcon from '@/app/assets/champion.png'
 import goldIcon from '@/app/assets/gold.png'
@@ -34,11 +38,14 @@ export type CappedFilter =
     | 'all' | 'uncapped' | 'capped' | 'verified' | 'casual'
     | 'bronze' | 'silver' | 'gold' | 'champion' | 'world_record'
 
+export type RatedTier = 'all' | 'rated' | 'unrated'
+
 export type CappedFilterValue = Exclude<CappedFilter, 'all'>
 export type DifficultyValue = Exclude<DifficultyTier, 'all'>
 export type RatingValue = Exclude<RatingTier, 'all'>
 export type LuckValue = Exclude<LuckTier, 'all'>
 export type RecordTimeValue = Exclude<RecordTimeTier, 'all'>
+export type RatedValue = Exclude<RatedTier, 'all'>
 export type SortField = 'name' | 'author' | 'added' | 'difficulty' | 'world_record' | 'pb' | 'rating' | 'my_rating' | 'medal'
 export type SortDir = 'asc' | 'desc'
 
@@ -61,7 +68,9 @@ export interface MapsPageState {
     luckFilters: LuckValue[]
     recordTimeFilters: RecordTimeValue[]
     cappedFilters: CappedFilterValue[]
+    ratedFilters: RatedValue[]
     newOnly: boolean
+    favoritesOnly: boolean
     sortBy: SortField
     sortDir: SortDir
     currentPage: number
@@ -107,7 +116,9 @@ export const DEFAULT_MAPS_STATE: MapsPageState = {
     luckFilters: [],
     recordTimeFilters: [],
     cappedFilters: [],
+    ratedFilters: [],
     newOnly: false,
+    favoritesOnly: false,
     sortBy: 'name',
     sortDir: 'asc',
     currentPage: 1,
@@ -238,7 +249,7 @@ const normalizeColumnOrder = (order: ColumnId[]): ColumnId[] => {
 export type PresetFilters = Pick<MapsPageState,
     'search' | 'authorFilters' | 'tagFilters' | 'yearFilters' |
     'difficultyFilters' | 'ratingFilters' | 'aestheticsFilters' | 'learningFilters' |
-    'luckFilters' | 'recordTimeFilters' | 'cappedFilters' | 'newOnly' |
+    'luckFilters' | 'recordTimeFilters' | 'cappedFilters' | 'ratedFilters' | 'newOnly' | 'favoritesOnly' |
     'sortBy' | 'sortDir'>
 
 export interface MapsPreset {
@@ -351,6 +362,8 @@ interface MapsPageProps {
     caches: MapsPageCaches
     onCachesChange: (updater: (prev: MapsPageCaches) => MapsPageCaches) => void
     onMapSelect: (mapName: string) => void
+    favoriteMapNames: Set<string>
+    onToggleFavorite: (mapName: string) => void
 }
 
 const formatDelta = (seconds: number): string => {
@@ -613,6 +626,7 @@ function ratingScale100(avg: number | undefined): number | undefined {
 
 export function MapsPage({
     userProfile, state, onStateChange, caches, onCachesChange, onMapSelect,
+    favoriteMapNames, onToggleFavorite,
 }: MapsPageProps) {
     const [autoPageSize, setAutoPageSize] = useState(computePageSize)
     const pageSize = state.pageSizePreference === 'auto' ? autoPageSize : state.pageSizePreference
@@ -637,11 +651,11 @@ export function MapsPage({
         fromPicker?: boolean
     } | null>(null)
     const [replayPickerMap, setReplayPickerMap] = useState<string | null>(null)
-    const [wrLoadingMap, setWrLoadingMap] = useState<string | null>(null)
+    const [capLoadingMap, setCapLoadingMap] = useState<string | null>(null)
 
-    const openWrReplay = async (mapName: string, capId: string | undefined, wrSeconds: number | undefined, alias: string | undefined) => {
+    const openCapReplay = async (mapName: string, capId: string | undefined, seconds: number | undefined, alias: string | undefined) => {
         if (!capId) return
-        setWrLoadingMap(mapName)
+        setCapLoadingMap(mapName)
         try {
             const status = await fetchDemoStatus(capId)
             const url = getFirstPersonVideoUrl(status)
@@ -649,13 +663,13 @@ export function MapsPage({
                 setVideoModal({
                     url,
                     mapName,
-                    time: wrSeconds,
+                    time: seconds,
                     alias,
                     fromPicker: true,
                 })
             }
         } finally {
-            setWrLoadingMap(null)
+            setCapLoadingMap(null)
         }
     }
 
@@ -681,6 +695,35 @@ export function MapsPage({
 
     const [draggingColumn, setDraggingColumn] = useState<ColumnId | null>(null)
     const [dragOverColumn, setDragOverColumn] = useState<ColumnId | null>(null)
+
+    // Tutorial: first-time onboarding for the Maps page.
+    const tutorial = useMapsTutorialState()
+    const [tutorialActive, setTutorialActive] = useState(false)
+    const [tutorialStep, setTutorialStep] = useState(0)
+    const [columnsMenuOpen, setColumnsMenuOpen] = useState(false)
+    const searchRef = useRef<HTMLInputElement | null>(null)
+    const filtersButtonRef = useRef<HTMLButtonElement | null>(null)
+    const filterPanelRef = useRef<HTMLDivElement | null>(null)
+    const columnsButtonRef = useRef<HTMLButtonElement | null>(null)
+    const presetsButtonRef = useRef<HTMLButtonElement | null>(null)
+    const sortHeaderRef = useRef<HTMLButtonElement | null>(null)
+    const firstRowFavRef = useRef<HTMLSpanElement | null>(null)
+    const firstRowReplayRef = useRef<HTMLButtonElement | null>(null)
+    const firstRowRatingRef = useRef<HTMLButtonElement | null>(null)
+    const firstRowNameRef = useRef<HTMLButtonElement | null>(null)
+    const firstRowPbRef = useRef<HTMLElement | null>(null)
+
+    const startTutorial = useCallback(() => {
+        setTutorialStep(0)
+        setTutorialActive(true)
+    }, [])
+    const closeTutorial = useCallback(() => {
+        setTutorialActive(false)
+        setTutorialStep(0)
+        setPresetsMenuOpen(false)
+        setColumnsMenuOpen(false)
+        onStateChange(prev => ({ ...prev, filtersPanelOpen: false }))
+    }, [onStateChange])
 
     const reorderColumn = (sourceId: ColumnId, targetId: ColumnId) => {
         if (sourceId === targetId) return
@@ -720,9 +763,11 @@ export function MapsPage({
         state.recordTimeFilters.length > 0 ||
         state.yearFilters.length > 0 ||
         state.cappedFilters.length > 0 ||
+        state.ratedFilters.length > 0 ||
         state.authorFilters.length > 0 ||
         state.tagFilters.length > 0 ||
         state.difficultyFilters.length > 0 ||
+        state.favoritesOnly ||
         state.sortBy === 'rating' ||
         state.sortBy === 'my_rating' ||
         state.sortBy === 'world_record' ||
@@ -1002,6 +1047,7 @@ export function MapsPage({
                 if (!state.difficultyFilters.some(t => isMapInDifficultyTier(m.difficulty, t))) return false
             }
             if (state.newOnly && !isNew(m.added)) return false
+            if (state.favoritesOnly && !favoriteMapNames.has(m.name)) return false
 
             const ratings = caches.avgRatings[m.name]
             if (state.ratingFilters.length > 0) {
@@ -1036,13 +1082,21 @@ export function MapsPage({
                 if (!matches) return false
             }
 
+            if (state.ratedFilters.length > 0) {
+                const rated = !!caches.myReviews[m.name]
+                const matches =
+                    (state.ratedFilters.includes('rated') && rated) ||
+                    (state.ratedFilters.includes('unrated') && !rated)
+                if (!matches) return false
+            }
+
             return true
         })
     }, [
         state.authorFilters, state.tagFilters, state.yearFilters, state.difficultyFilters,
-        state.newOnly, state.ratingFilters, state.aestheticsFilters, state.learningFilters,
-        state.luckFilters, state.recordTimeFilters, state.cappedFilters,
-        caches.avgRatings, caches.bestCaps,
+        state.newOnly, state.favoritesOnly, state.ratingFilters, state.aestheticsFilters, state.learningFilters,
+        state.luckFilters, state.recordTimeFilters, state.cappedFilters, state.ratedFilters,
+        caches.avgRatings, caches.bestCaps, caches.myReviews, favoriteMapNames,
     ])
 
     const sortRows = useCallback(<T extends Map | MapMetadata>(rows: T[]): T[] => {
@@ -1255,7 +1309,9 @@ export function MapsPage({
         luckFilters: state.luckFilters,
         recordTimeFilters: state.recordTimeFilters,
         cappedFilters: state.cappedFilters,
+        ratedFilters: state.ratedFilters,
         newOnly: state.newOnly,
+        favoritesOnly: state.favoritesOnly,
         sortBy: state.sortBy,
         sortDir: state.sortDir,
     })
@@ -1323,7 +1379,9 @@ export function MapsPage({
         state.luckFilters.length > 0,
         state.recordTimeFilters.length > 0,
         state.cappedFilters.length > 0,
+        state.ratedFilters.length > 0,
         state.newOnly,
+        state.favoritesOnly,
     ].filter(Boolean).length
 
     const hasActiveFilters = activeFilterCount > 0 || state.search.trim() !== ''
@@ -1351,7 +1409,7 @@ export function MapsPage({
         state.search, state.authorFilters, state.tagFilters, state.yearFilters,
         state.difficultyFilters, state.ratingFilters, state.aestheticsFilters,
         state.learningFilters, state.luckFilters, state.recordTimeFilters,
-        state.cappedFilters, state.newOnly, state.sortBy, state.sortDir,
+        state.cappedFilters, state.newOnly, state.favoritesOnly, state.sortBy, state.sortDir,
     ])
 
     const showSkeleton =
@@ -1367,7 +1425,7 @@ export function MapsPage({
             case 'name':
                 return (
                     <th key={id} className="px-4 py-3 text-left text-muted-foreground font-medium text-xs uppercase tracking-wider">
-                        <button onClick={() => handleSort('name')} className="flex items-center gap-1 hover:text-white transition-colors cursor-pointer">
+                        <button ref={sortHeaderRef} onClick={() => handleSort('name')} className="flex items-center gap-1 hover:text-white transition-colors cursor-pointer">
                             Map <SortIcon field="name" />
                         </button>
                     </th>
@@ -1459,12 +1517,13 @@ export function MapsPage({
         bestCap: BestCap | undefined
         wrHolder: WRHolder | undefined
         medalTier: MedalTier
+        isFirstRow: boolean
     }
 
     const renderColumnCell = (id: ColumnId, ctx: RowCtx): React.ReactNode => {
         if (NON_TABLE_COLUMNS.has(id)) return null
         if (!isColumnVisible(id)) return null
-        const { map, author, tags, ratings, myReview, mapNew, wr, bestCap, wrHolder, medalTier } = ctx
+        const { map, author, tags, ratings, myReview, mapNew, wr, bestCap, wrHolder, medalTier, isFirstRow } = ctx
         switch (id) {
             case 'thumbnail':
                 return (
@@ -1478,7 +1537,16 @@ export function MapsPage({
                 return (
                     <td key={id} className="px-4 py-3">
                         <div className="flex items-center gap-2 flex-wrap">
+                            <span ref={isFirstRow ? firstRowFavRef : undefined} className="inline-flex">
+                                <FavoriteStar
+                                    mapName={map.name}
+                                    isFavorited={favoriteMapNames.has(map.name)}
+                                    onToggle={onToggleFavorite}
+                                    size="sm"
+                                />
+                            </span>
                             <button
+                                ref={isFirstRow ? firstRowNameRef : undefined}
                                 type="button"
                                 onClick={e => {
                                     e.stopPropagation()
@@ -1561,7 +1629,7 @@ export function MapsPage({
                 }
                 const capId = wrHolder?.cap_id
                 const clickable = !!capId
-                const isLoading = wrLoadingMap === map.name
+                const isLoading = capLoadingMap === map.name
                 return (
                     <td key={id} className="px-4 py-3 font-mono text-sm text-muted-foreground">
                         <button
@@ -1569,7 +1637,7 @@ export function MapsPage({
                             disabled={!clickable || isLoading}
                             onClick={e => {
                                 e.stopPropagation()
-                                openWrReplay(map.name, capId, wr, wrHolder?.alias)
+                                openCapReplay(map.name, capId, wr, wrHolder?.alias)
                             }}
                             title={clickable ? 'Watch this run' : undefined}
                             className={cn(
@@ -1616,18 +1684,52 @@ export function MapsPage({
                     )
                 }
                 const isWR = wr != null && wr > 0 && bestCap.cap_time_seconds - wr <= 0.0005
+                const pbCapId = bestCap.cap_id ?? undefined
+                const clickable = bestCap.cap_type === 2 && !!pbCapId
+                const isLoading = capLoadingMap === map.name
+                const myAlias = (userProfile as any)?.alias as string | undefined
+                const timeText = (
+                    <span className={cn(
+                        pbTextColor(medalTier, isWR),
+                        clickable && "transition-[text-shadow] duration-150 group-hover/pb:[text-shadow:0_0_6px_currentColor,0_0_12px_currentColor]",
+                        isLoading && "opacity-60",
+                    )}>
+                        {formatCapTime(bestCap.cap_time_seconds)}
+                    </span>
+                )
+                const deltaText = wr != null && wr > 0 && (
+                    isWR ? (
+                        <span className="text-[10px] text-blue-400 font-bold uppercase tracking-wider font-sans">World Record</span>
+                    ) : (
+                        <span className="text-[10px] text-muted-foreground/70">+{formatDelta(bestCap.cap_time_seconds - wr)}</span>
+                    )
+                )
                 return (
                     <td key={id} className="px-4 py-3 font-mono text-sm text-muted-foreground">
-                        <div className="flex flex-col leading-tight">
-                            <span className={pbTextColor(medalTier, isWR)}>{formatCapTime(bestCap.cap_time_seconds)}</span>
-                            {wr != null && wr > 0 && (
-                                isWR ? (
-                                    <span className="text-[10px] text-blue-400 font-bold uppercase tracking-wider font-sans">World Record</span>
-                                ) : (
-                                    <span className="text-[10px] text-muted-foreground/70">+{formatDelta(bestCap.cap_time_seconds - wr)}</span>
-                                )
-                            )}
-                        </div>
+                        {clickable ? (
+                            <button
+                                ref={isFirstRow ? (firstRowPbRef as React.RefObject<HTMLButtonElement | null>) : undefined}
+                                type="button"
+                                disabled={isLoading}
+                                onClick={e => {
+                                    e.stopPropagation()
+                                    openCapReplay(map.name, pbCapId, bestCap.cap_time_seconds, myAlias)
+                                }}
+                                title="Watch your run"
+                                className="flex flex-col leading-tight text-left cursor-pointer group/pb"
+                            >
+                                {timeText}
+                                {deltaText}
+                            </button>
+                        ) : (
+                            <div
+                                ref={isFirstRow ? (firstRowPbRef as React.RefObject<HTMLDivElement | null>) : undefined}
+                                className="flex flex-col leading-tight"
+                            >
+                                {timeText}
+                                {deltaText}
+                            </div>
+                        )}
                     </td>
                 )
             }
@@ -1635,6 +1737,7 @@ export function MapsPage({
                 return (
                     <td key={id} className="px-2 py-3 text-center">
                         <button
+                            ref={isFirstRow ? firstRowReplayRef : undefined}
                             type="button"
                             onClick={e => {
                                 e.stopPropagation()
@@ -1650,6 +1753,7 @@ export function MapsPage({
                 return (
                     <td key={id} className="px-4 py-3">
                         <button
+                            ref={isFirstRow ? firstRowRatingRef : undefined}
                             onClick={e => { e.stopPropagation(); setReviewsModalMap(map.name) }}
                             title="View reviews"
                             className="flex items-center gap-2 cursor-pointer group/rating"
@@ -1726,6 +1830,16 @@ export function MapsPage({
                             {totalForCount}
                         </span>
                     )}
+                    <Tooltip content="Restart tutorial" side="top">
+                        <button
+                            type="button"
+                            onClick={() => startTutorial()}
+                            aria-label="Restart Maps tutorial"
+                            className="p-1 rounded text-muted-foreground hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+                        >
+                            <HelpCircle className="size-4" />
+                        </button>
+                    </Tooltip>
                 </div>
                 <Button
                     variant="ghost"
@@ -1743,6 +1857,7 @@ export function MapsPage({
                 <div className="relative flex-1 min-w-48 max-w-xs">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
                     <input
+                        ref={searchRef}
                         type="text"
                         placeholder="Search for a map name..."
                         value={state.search}
@@ -1762,6 +1877,7 @@ export function MapsPage({
                 </div>
 
                 <button
+                    ref={filtersButtonRef}
                     onClick={() => onStateChange(prev => ({ ...prev, filtersPanelOpen: !prev.filtersPanelOpen }))}
                     className={cn(
                         "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border transition-colors cursor-pointer",
@@ -1779,9 +1895,10 @@ export function MapsPage({
                     )}
                 </button>
 
-                <DropdownMenu>
+                <DropdownMenu open={columnsMenuOpen} onOpenChange={setColumnsMenuOpen} modal={false}>
                     <DropdownMenuTrigger asChild>
                         <button
+                            ref={columnsButtonRef}
                             className="px-3 py-2 rounded-lg text-sm font-medium border transition-colors cursor-pointer flex items-center gap-2 bg-card/50 border-white/10 text-muted-foreground hover:text-white hover:border-white/20"
                         >
                             <Columns3 className="size-4" />
@@ -1791,7 +1908,9 @@ export function MapsPage({
                     <DropdownMenuContent align="start" className="min-w-72">
                         <DropdownMenuLabel>Columns</DropdownMenuLabel>
                         <div className="px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground">
-                            Drag the handle to reorder · checkbox toggles visibility
+                            Drag the handle to reorder
+                            <br />
+                            Checkbox toggles visibility
                         </div>
                         <DropdownMenuSeparator />
                         {columnOrder
@@ -1874,7 +1993,7 @@ export function MapsPage({
 
             {/* Inline filter panel */}
             {state.filtersPanelOpen && (
-                <div className="bg-card/30 border border-white/10 rounded-xl p-4 space-y-4 shrink-0">
+                <div ref={filterPanelRef} className="bg-card/30 border border-white/10 rounded-xl p-4 space-y-4 shrink-0">
                     <FilterPanelRow label="Map Attributes">
                         <MultiFilterDropdown
                             label="Difficulty"
@@ -1952,6 +2071,12 @@ export function MapsPage({
                                 ? TIER_ICONS[v as Exclude<MedalTier, 'uncapped'>]
                                 : null}
                         />
+                        <MultiFilterDropdown
+                            label="My Rating"
+                            values={state.ratedFilters}
+                            onChange={v => updateFilter('ratedFilters', v as RatedValue[])}
+                            options={ratedOptions}
+                        />
                         <div className="flex flex-col gap-1">
                             <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Recency</label>
                             <label className="flex items-center gap-2 px-2 py-2 bg-card/50 border border-white/10 rounded text-sm text-white cursor-pointer hover:border-white/20">
@@ -1969,14 +2094,32 @@ export function MapsPage({
                                 )}
                             </label>
                         </div>
+                        <div className="flex flex-col gap-1">
+                            <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Favorites</label>
+                            <label className="flex items-center gap-2 px-2 py-2 bg-card/50 border border-white/10 rounded text-sm text-white cursor-pointer hover:border-white/20">
+                                <input
+                                    type="checkbox"
+                                    checked={state.favoritesOnly}
+                                    onChange={e => updateFilter('favoritesOnly', e.target.checked)}
+                                    className="accent-yellow-400 cursor-pointer"
+                                />
+                                <span>Favorites only</span>
+                                {favoriteMapNames.size > 0 && (
+                                    <span className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-yellow-500/20 text-yellow-300 border border-yellow-500/30">
+                                        {favoriteMapNames.size}
+                                    </span>
+                                )}
+                            </label>
+                        </div>
                     </FilterPanelRow>
 
                     {/* Presets row */}
                     <div className="flex items-center justify-between gap-3 pt-2 border-t border-white/5">
                         <div className="flex items-center gap-2">
-                            <DropdownMenu open={presetsMenuOpen} onOpenChange={setPresetsMenuOpen}>
+                            <DropdownMenu open={presetsMenuOpen} onOpenChange={setPresetsMenuOpen} modal={false}>
                                 <DropdownMenuTrigger asChild>
                                     <button
+                                        ref={presetsButtonRef}
                                         className={cn(
                                             "px-3 py-1.5 rounded-md text-xs font-medium border transition-colors cursor-pointer flex items-center gap-2",
                                             activePreset
@@ -2093,7 +2236,7 @@ export function MapsPage({
                                 </td>
                             </tr>
                         ) : (
-                            pageItems.map(map => {
+                            pageItems.map((map, index) => {
                                 const author = getAuthorString(map as Map) || '—'
                                 const tags = map.tags ? map.tags.split(',').map(t => t.trim()).filter(Boolean) : []
                                 const ratings = caches.avgRatings[map.name]
@@ -2103,9 +2246,10 @@ export function MapsPage({
                                 const bestCap = caches.bestCaps[map.name]
                                 const wrHolder = caches.wrHolders[map.name]
                                 const medalTier = computeMedalTier(bestCap, map as MapMetadata)
-                                const ctx = {
+                                const ctx: RowCtx = {
                                     map, author, tags, ratings, myReview, mapNew,
                                     wr, bestCap, wrHolder, medalTier,
+                                    isFirstRow: index === 0,
                                 }
 
                                 return (
@@ -2290,6 +2434,58 @@ export function MapsPage({
                     This cannot be undone.
                 </p>
             </Modal>
+
+            <Modal
+                isOpen={!tutorial.seen && !tutorialActive}
+                onClose={tutorial.markSeen}
+                title="First time here?"
+                className="w-[95%] sm:w-[440px] max-w-md"
+                offsetSidebar
+                footer={
+                    <div className="p-4 border-t border-border bg-muted/50 flex justify-end gap-2 shrink-0">
+                        <Button variant="ghost" onClick={tutorial.markSeen}>
+                            Skip
+                        </Button>
+                        <Button onClick={() => { tutorial.markSeen(); startTutorial() }}>
+                            Start tutorial
+                        </Button>
+                    </div>
+                }
+            >
+                <p className="text-sm text-muted-foreground">
+                    Looks like it's your first time visiting! Would you like to take a quick tutorial of the Maps page features? <br /><br />
+                    It takes about 30 seconds and you can reopen it anytime using the <HelpCircle className="inline size-3.5 align-text-bottom" /> icon next to the page heading.
+                </p>
+            </Modal>
+
+            {tutorialActive && (
+                <MapsTutorial
+                    steps={buildSteps(
+                        {
+                            searchRef,
+                            filtersButtonRef,
+                            filterPanelRef,
+                            columnsButtonRef,
+                            presetsButtonRef,
+                            sortHeaderRef,
+                            firstRowFavRef,
+                            firstRowReplayRef,
+                            firstRowRatingRef,
+                            firstRowNameRef,
+                            firstRowPbRef,
+                        },
+                        {
+                            openFilterPanel: () => onStateChange(prev => ({ ...prev, filtersPanelOpen: true })),
+                            closeFilterPanel: () => onStateChange(prev => ({ ...prev, filtersPanelOpen: false })),
+                            setPresetsMenuOpen,
+                            setColumnsMenuOpen,
+                        },
+                    )}
+                    step={tutorialStep}
+                    setStep={setTutorialStep}
+                    onClose={closeTutorial}
+                />
+            )}
         </div>
     )
 }
@@ -2484,6 +2680,11 @@ const luckTierOptions: [string, string][] = [
 const recordTimeOptions: [string, string][] = (Object.keys(RECORD_TIME_LABELS) as RecordTimeTier[])
     .filter(k => k !== 'all')
     .map(k => [k, RECORD_TIME_LABELS[k]])
+
+const ratedOptions: [string, string][] = [
+    ['rated', 'Rated by me'],
+    ['unrated', 'Not rated by me'],
+]
 
 const cappedOptions: [string, string][] = [
     ['uncapped', 'Uncapped'],

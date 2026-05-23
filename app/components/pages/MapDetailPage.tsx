@@ -1,14 +1,17 @@
 import { ArrowLeft, Map } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { UserProfile } from '@/app/utils/api'
+import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
 
 interface MapDetailPageProps {
     mapName: string
     onBack: () => void
     userProfile?: UserProfile
+    favoriteMapNames: Set<string>
+    onToggleFavorite: (mapName: string) => void
 }
 
-export function MapDetailPage({ mapName, onBack }: MapDetailPageProps) {
+export function MapDetailPage({ mapName, onBack, favoriteMapNames, onToggleFavorite }: MapDetailPageProps) {
     return (
         <div className="space-y-6">
             <div className="flex items-center gap-3">
@@ -22,10 +25,16 @@ export function MapDetailPage({ mapName, onBack }: MapDetailPageProps) {
                 <div className="p-4 rounded-full bg-white/5 border border-white/10">
                     <Map className="size-10 text-muted-foreground" />
                 </div>
-                <div>
+                <div className="flex items-center gap-3">
                     <h2 className="text-xl font-bold text-white">{mapName}</h2>
-                    <p className="text-muted-foreground mt-1">Map detail page coming soon.</p>
+                    <FavoriteStar
+                        mapName={mapName}
+                        isFavorited={favoriteMapNames.has(mapName)}
+                        onToggle={onToggleFavorite}
+                        size="lg"
+                    />
                 </div>
+                <p className="text-muted-foreground mt-1">Map detail page coming soon.</p>
             </div>
         </div>
     )
