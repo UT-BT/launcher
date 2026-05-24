@@ -70,3 +70,20 @@
   0%, 100% { opacity: 1; }
   50% { opacity: 0.6; }
 }
+
+/* Tutorial highlight target: only lifts above the dim overlay. The actual
+   ring + glow is drawn by a portaled .utbt-tutorial-ring so it can never be
+   clipped by ancestor overflow:hidden / overflow:auto containers. */
+[data-tutorial-highlight="true"] {
+  position: relative !important;
+  z-index: 60 !important;
+}
+
+@keyframes utbtTutorialPulse {
+  0%, 100% { box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.6), 0 0 8px 2px rgba(96, 165, 250, 0.18); }
+  50%      { box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.85), 0 0 12px 3px rgba(96, 165, 250, 0.28); }
+}
+
+.utbt-tutorial-ring {
+  animation: utbtTutorialPulse 2.6s ease-in-out infinite;
+}

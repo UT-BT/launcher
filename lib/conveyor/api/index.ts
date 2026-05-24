@@ -5,6 +5,7 @@ import { LoggingApi } from './logging-api'
 import { GameApi } from './game-api'
 import { IniApi } from './ini-api'
 import { FavoritesApi } from './favorites-api'
+import { DemosApi } from './demos-api'
 
 export const conveyor = {
   electron: electronAPI,
@@ -14,6 +15,7 @@ export const conveyor = {
   game: new GameApi(electronAPI),
   ini: new IniApi(electronAPI),
   favorites: new FavoritesApi(electronAPI),
+  demos: new DemosApi(electronAPI),
 }
 
 export type ConveyorApi = typeof conveyor

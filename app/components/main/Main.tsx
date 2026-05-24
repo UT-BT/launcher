@@ -61,7 +61,7 @@ function loadPersistedMapsState(): MapsPageState {
   }
 }
 
-export function Main({ userProfile }: { userProfile?: import('@/lib/main/config').AuthConfig }) {
+export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').UserProfile }) {
   const [currentView, setCurrentView] = useState('home')
   const [selectedMapName, setSelectedMapName] = useState<string | null>(null)
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | number | null>(null)
@@ -86,8 +86,8 @@ export function Main({ userProfile }: { userProfile?: import('@/lib/main/config'
     }
   }, [mapsState])
 
-  const accessToken = (userProfile as any)?.accessToken
-  const userId = (userProfile as any)?.id
+  const accessToken = userProfile?.accessToken
+  const userId = userProfile?.id ?? undefined
 
   const writeIniBestEffort = useCallback(async (mapNames: string[]) => {
     try {

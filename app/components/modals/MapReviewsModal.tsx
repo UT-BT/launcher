@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Modal } from '@/app/components/ui/modal'
-import { Button } from '@/app/components/ui/button'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Pencil, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { fetchMapReviews, MapReview } from '@/app/utils/api'
 import { ReviewModal } from './ReviewModal'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
+import { Tooltip } from '@/app/components/ui/tooltip'
+import { scoreTextColor, scoreBgColor } from '@/app/utils/scoreColors'
 
 type MetricKey = 'overall' | 'aesthetics' | 'learning' | 'luck' | 'difficulty'
 type SortKey = 'reviewer' | MetricKey
@@ -29,28 +30,6 @@ const METRICS: { key: MetricKey; label: string; inverted: boolean }[] = [
 ]
 
 const SECONDARY_METRICS: MetricKey[] = ['aesthetics', 'learning', 'luck', 'difficulty']
-
-function scoreColor(value: number, inverted: boolean): string {
-    if (inverted) {
-        if (value <= 3) return 'text-emerald-400'
-        if (value <= 7) return 'text-yellow-400'
-        return 'text-red-400'
-    }
-    if (value <= 3) return 'text-red-400'
-    if (value <= 7) return 'text-yellow-400'
-    return 'text-emerald-400'
-}
-
-function barColor(value: number, inverted: boolean): string {
-    if (inverted) {
-        if (value <= 3) return 'bg-emerald-500'
-        if (value <= 7) return 'bg-yellow-500'
-        return 'bg-red-500'
-    }
-    if (value <= 3) return 'bg-red-500'
-    if (value <= 7) return 'bg-yellow-500'
-    return 'bg-emerald-500'
-}
 
 const SORT_OPTIONS: { value: SortKey; label: string }[] = [
     { value: 'overall', label: 'Overall' },
@@ -142,7 +121,7 @@ export function MapReviewsModal({
                 isOpen={open}
                 onClose={onClose}
                 title={mapName
-                    ? `${mapName.replace('CTF-BT-', '').replace('CTF-BT+', '')} (${reviews.length} ${reviews.length === 1 ? 'review' : 'reviews'})`
+                    ? `Reviews for ${mapName.replace('CTF-BT-', '').replace('CTF-BT+', '')}`
                     : 'Reviews'}
                 offsetSidebar
                 maxWidth="880px"
@@ -161,20 +140,28 @@ export function MapReviewsModal({
                             <Loader2 className="size-6 animate-spin text-muted-foreground" />
                         </div>
                     ) : reviews.length === 0 ? (
-                        <div className="text-center py-4 space-y-3">
-                            <div className="text-base text-white/80 font-medium">No reviews yet</div>
-                            <div className="text-sm text-muted-foreground">Be the first to share your thoughts.</div>
-                            <div className="pt-2 flex justify-center">
-                                <Button
-                                    onClick={() => setReviewModalOpen(true)}
-                                    disabled={!accessToken || !mapName}
-                                    size="sm"
-                                    variant="outline"
-                                    className="bg-white/[0.03] border-white/10 text-white/90 hover:bg-blue-500/10 hover:border-blue-500/40 hover:text-blue-100 transition-colors"
-                                >
-                                    Write a Review
-                                </Button>
+                        <div className="space-y-3">
+                            <div className="text-center space-y-1">
+                                <div className="text-base text-white/80 font-medium">No reviews yet</div>
+                                <div className="text-sm text-muted-foreground">Be the first to share your thoughts.</div>
                             </div>
+                            <button
+                                type="button"
+                                onClick={() => setReviewModalOpen(true)}
+                                disabled={!accessToken || !mapName}
+                                className={cn(
+                                    "group w-full rounded-xl border border-dashed border-blue-500/30 bg-blue-500/[0.04] p-4",
+                                    "flex items-center justify-center gap-3 cursor-pointer",
+                                    "hover:bg-blue-500/10 hover:border-blue-500/60 hover:text-blue-100 transition-colors",
+                                    "text-blue-300/80 text-sm font-medium",
+                                    "disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-blue-500/[0.04] disabled:hover:border-blue-500/30",
+                                )}
+                            >
+                                <span className="inline-flex items-center justify-center size-8 rounded-full border border-blue-500/40 bg-blue-500/10 group-hover:bg-blue-500/25 group-hover:border-blue-500/70 transition-colors">
+                                    <Plus className="size-4" />
+                                </span>
+                                <span>Write your review</span>
+                            </button>
                         </div>
                     ) : (
                         <>
@@ -186,7 +173,7 @@ export function MapReviewsModal({
                                     </div>
                                     <div className="flex items-center gap-6">
                                         <div className="flex flex-col items-center shrink-0">
-                                            <div className={cn("text-5xl font-bold font-mono leading-none", scoreColor(avgRow.overall, false))}>
+                                            <div className={cn("text-5xl font-bold font-mono leading-none", scoreTextColor(avgRow.overall, false))}>
                                                 {avgRow.overall.toFixed(1)}
                                             </div>
                                             <div className="text-[10px] uppercase tracking-widest text-muted-foreground mt-2">Overall</div>
@@ -199,11 +186,11 @@ export function MapReviewsModal({
                                                     <div key={key} className="space-y-1">
                                                         <div className="flex items-baseline justify-between">
                                                             <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{m.label}</span>
-                                                            <span className={cn("text-sm font-bold font-mono", scoreColor(v, m.inverted))}>{v.toFixed(1)}</span>
+                                                            <span className={cn("text-sm font-bold font-mono", scoreTextColor(v, m.inverted))}>{v.toFixed(1)}</span>
                                                         </div>
                                                         <div className="h-1 bg-white/10 rounded-full overflow-hidden">
                                                             <div
-                                                                className={cn("h-full rounded-full transition-all", barColor(v, m.inverted))}
+                                                                className={cn("h-full rounded-full transition-all", scoreBgColor(v, m.inverted))}
                                                                 style={{ width: `${(v / 10) * 100}%` }}
                                                             />
                                                         </div>
@@ -214,19 +201,6 @@ export function MapReviewsModal({
                                     </div>
                                 </div>
                             )}
-
-                            {/* Write / update review button */}
-                            <div className="flex justify-center">
-                                <Button
-                                    onClick={() => setReviewModalOpen(true)}
-                                    disabled={!accessToken || !mapName}
-                                    size="sm"
-                                    variant="outline"
-                                    className="bg-white/[0.03] border-white/10 text-white/90 hover:bg-blue-500/10 hover:border-blue-500/40 hover:text-blue-100 transition-colors"
-                                >
-                                    {myReview ? 'Update Your Review' : 'Write a Review'}
-                                </Button>
-                            </div>
 
                             {/* Sort controls */}
                             {(otherReviews.length > 0 || myReview) && (
@@ -259,7 +233,31 @@ export function MapReviewsModal({
 
                             {/* Review cards */}
                             <div className="space-y-2.5">
-                                {myReview && <ReviewCard review={myReview} highlight />}
+                                {myReview ? (
+                                    <ReviewCard
+                                        review={myReview}
+                                        highlight
+                                        onEdit={() => setReviewModalOpen(true)}
+                                    />
+                                ) : (
+                                    <button
+                                        type="button"
+                                        onClick={() => setReviewModalOpen(true)}
+                                        disabled={!accessToken || !mapName}
+                                        className={cn(
+                                            "group w-full rounded-xl border border-dashed border-blue-500/30 bg-blue-500/[0.04] p-4",
+                                            "flex items-center justify-center gap-3 cursor-pointer",
+                                            "hover:bg-blue-500/10 hover:border-blue-500/60 hover:text-blue-100 transition-colors",
+                                            "text-blue-300/80 text-sm font-medium",
+                                            "disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-blue-500/[0.04] disabled:hover:border-blue-500/30",
+                                        )}
+                                    >
+                                        <span className="inline-flex items-center justify-center size-8 rounded-full border border-blue-500/40 bg-blue-500/10 group-hover:bg-blue-500/25 group-hover:border-blue-500/70 transition-colors">
+                                            <Plus className="size-4" />
+                                        </span>
+                                        <span>Write your review</span>
+                                    </button>
+                                )}
                                 {otherReviews.map(r => <ReviewCard key={r.id} review={r} />)}
                             </div>
                         </>
@@ -290,7 +288,7 @@ export function MapReviewsModal({
     )
 }
 
-function ReviewCard({ review, highlight }: { review: MapReview; highlight?: boolean }) {
+function ReviewCard({ review, highlight, onEdit }: { review: MapReview; highlight?: boolean; onEdit?: () => void }) {
     return (
         <div className={cn(
             "rounded-xl border p-4 transition-colors",
@@ -308,11 +306,25 @@ function ReviewCard({ review, highlight }: { review: MapReview; highlight?: bool
                     showYouBadge={highlight}
                     className="min-w-0 flex-1"
                 />
-                <div className="shrink-0">
-                    <span className={cn("text-2xl font-bold font-mono leading-none", scoreColor(review.overall, false))}>
-                        {review.overall}
-                    </span>
-                    <span className="text-xs text-muted-foreground/50 ml-1 font-mono">/10</span>
+                <div className="flex items-center gap-2 shrink-0">
+                    {onEdit && (
+                        <Tooltip content="Update your review" side="top">
+                            <button
+                                type="button"
+                                onClick={onEdit}
+                                aria-label="Update your review"
+                                className="p-1.5 rounded-md text-blue-300 hover:text-blue-200 hover:bg-blue-500/15 transition-colors cursor-pointer"
+                            >
+                                <Pencil className="size-3.5" />
+                            </button>
+                        </Tooltip>
+                    )}
+                    <div>
+                        <span className={cn("text-2xl font-bold font-mono leading-none", scoreTextColor(review.overall, false))}>
+                            {review.overall}
+                        </span>
+                        <span className="text-xs text-muted-foreground/50 ml-1 font-mono">/10</span>
+                    </div>
                 </div>
             </div>
             <div className="grid grid-cols-4 gap-3">
@@ -323,11 +335,11 @@ function ReviewCard({ review, highlight }: { review: MapReview; highlight?: bool
                         <div key={key} className="space-y-1">
                             <div className="flex items-baseline justify-between">
                                 <span className="text-[9px] uppercase tracking-wider text-muted-foreground">{m.label}</span>
-                                <span className={cn("text-xs font-bold font-mono", scoreColor(v, m.inverted))}>{v}</span>
+                                <span className={cn("text-xs font-bold font-mono", scoreTextColor(v, m.inverted))}>{v}</span>
                             </div>
                             <div className="h-1 bg-white/10 rounded-full overflow-hidden">
                                 <div
-                                    className={cn("h-full rounded-full", barColor(v, m.inverted))}
+                                    className={cn("h-full rounded-full", scoreBgColor(v, m.inverted))}
                                     style={{ width: `${(v / 10) * 100}%` }}
                                 />
                             </div>

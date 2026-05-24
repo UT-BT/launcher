@@ -19,7 +19,7 @@ export class InstallationService {
     }
 
     private async verifyIsoHash(): Promise<boolean> {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve, _reject) => {
             if (!existsSync(this.isoPath)) {
                 resolve(false)
                 return
@@ -95,7 +95,9 @@ export class InstallationService {
                     file.close()
                     try {
                         unlinkSync(this.isoPath)
-                    } catch { }
+                    } catch {
+                        // Best-effort cleanup of partial ISO; ignore unlink failure.
+                    }
                     reject(err)
                 })
             })
@@ -154,7 +156,7 @@ export class InstallationService {
                 if (!driveLetter) {
                     // Try to get drive letter again if already mounted
                     const getDriveCommand = `powershell -Command "Get-DiskImage -ImagePath '${this.isoPath}' | Get-Volume | Select-Object -ExpandProperty DriveLetter"`
-                    exec(getDriveCommand, (err, out, serr) => {
+                    exec(getDriveCommand, (err, out, _serr) => {
                         if (err || !out.trim()) {
                             reject(new Error('Could not determine drive letter for mounted ISO'))
                             return
@@ -176,7 +178,7 @@ export class InstallationService {
 
             const command = `powershell -Command "Start-Process -FilePath '${setupPath}' -Wait"`
 
-            exec(command, (error, stdout, stderr) => {
+            exec(command, (error, _stdout, stderr) => {
                 if (error) {
                     loggingService.error('Setup failed or was cancelled', 'InstallationService', { error, stderr })
                     reject(error)

@@ -44,10 +44,11 @@ export const sortServers = (servers: Server[], option: SortOption): Server[] => 
             case 'Players':
                 if (a.player_count !== b.player_count) return b.player_count - a.player_count
                 return b.max_players - a.max_players
-            case 'Ping':
+            case 'Ping': {
                 const pingA = a.ping || 9999
                 const pingB = b.ping || 9999
                 return pingA - pingB
+            }
             default:
                 return 0
         }

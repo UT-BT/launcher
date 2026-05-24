@@ -5,6 +5,8 @@ import { Slider } from '@/app/components/ui/slider'
 import { submitSummaryReview } from '@/app/utils/api'
 import { Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
+import { scoreTextColor, scoreSliderAccent } from '@/app/utils/scoreColors'
 
 interface ReviewModalProps {
     open: boolean
@@ -16,19 +18,6 @@ interface ReviewModalProps {
 }
 
 type MetricKey = 'aesthetics' | 'learning' | 'luck' | 'difficulty' | 'overall'
-
-const MapThumbnail = ({ mapName, className }: { mapName: string, className?: string }) => {
-    return (
-        <div className={cn("overflow-hidden bg-muted/20 border border-white/5 rounded-xl shrink-0", className)}>
-            <img
-                src={`https://utbt.net/images/screenshots/${mapName}.png`}
-                alt={mapName}
-                className="w-full h-full object-cover opacity-90"
-                onError={(e) => { (e.target as HTMLImageElement).src = 'https://utbt.net/images/screenshots/default.png' }}
-            />
-        </div>
-    )
-}
 
 export function ReviewModal({ open, onOpenChange, accessToken, mapName, initialScores, onSuccess }: ReviewModalProps) {
     const [persistedScores, setPersistedScores] = useState<Record<string, Record<MetricKey, number>>>({})
@@ -56,7 +45,7 @@ export function ReviewModal({ open, onOpenChange, accessToken, mapName, initialS
         setPersistedScores(prev => ({
             ...prev,
             [mapName]: {
-                ...(prev[mapName] || defaultScores),
+                ...(prev[mapName] || seededScores),
                 [key]: value
             }
         }))
@@ -177,31 +166,11 @@ export function ReviewModal({ open, onOpenChange, accessToken, mapName, initialS
         }
     ]
 
-    const getScoreColor = (key: MetricKey, value: number) => {
-        const isInverse = metrics.find(m => m.key === key)?.inverseColor
-        if (isInverse) {
-            if (value <= 3) return 'text-emerald-400'
-            if (value <= 7) return 'text-yellow-400'
-            return 'text-red-400'
-        } else {
-            if (value <= 3) return 'text-red-400'
-            if (value <= 7) return 'text-yellow-400'
-            return 'text-emerald-400'
-        }
-    }
+    const getScoreColor = (key: MetricKey, value: number) =>
+        scoreTextColor(value, metrics.find(m => m.key === key)?.inverseColor)
 
-    const getSliderAccent = (key: MetricKey, value: number) => {
-        const isInverse = metrics.find(m => m.key === key)?.inverseColor
-        if (isInverse) {
-            if (value <= 3) return 'accent-emerald-500'
-            if (value <= 7) return 'accent-yellow-500'
-            return 'accent-red-500'
-        } else {
-            if (value <= 3) return 'accent-red-500'
-            if (value <= 7) return 'accent-yellow-500'
-            return 'accent-emerald-500'
-        }
-    }
+    const getSliderAccent = (key: MetricKey, value: number) =>
+        scoreSliderAccent(value, metrics.find(m => m.key === key)?.inverseColor)
 
     return (
         <Modal
