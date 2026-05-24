@@ -107,10 +107,10 @@ export const registerGameHandlers = (_window: BrowserWindow) => {
                     let timeMatch
                     if (platform === 'win32') {
                         // Windows: e.g. "time=23ms"
-                        timeMatch = output.match(/time[=<]?([\d\.]+)ms/i)
+                        timeMatch = output.match(/time[=<]?([\d.]+)ms/i)
                     } else {
                         // Unix-like: e.g. "time=23.456 ms"
-                        timeMatch = output.match(/time[=<]?([\d\.]+)\s*ms/i)
+                        timeMatch = output.match(/time[=<]?([\d.]+)\s*ms/i)
                     }
 
                     if (timeMatch) {
@@ -119,7 +119,7 @@ export const registerGameHandlers = (_window: BrowserWindow) => {
                     }
 
                     // Fallback: try to find any number followed by "ms"
-                    const fallbackMatch = output.match(/([\d\.]+)\s*ms/i)
+                    const fallbackMatch = output.match(/([\d.]+)\s*ms/i)
                     if (fallbackMatch) {
                         resolve(Math.round(parseFloat(fallbackMatch[1])))
                         return

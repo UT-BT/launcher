@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Loader2, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Loader2, ChevronLeft, ChevronRight, Download, CheckCircle2, AlertCircle, Play } from 'lucide-react'
 import { Modal } from '@/app/components/ui/modal'
+import { Button } from '@/app/components/ui/button'
+import { Tooltip } from '@/app/components/ui/tooltip'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import {
-    fetchMapLeaderboard, fetchDemoStatus, getFirstPersonVideoUrl,
+    fetchMapLeaderboard, fetchDemoStatus, getFirstPersonVideoUrl, downloadDemo,
     LeaderboardEntry, MapMetadata,
 } from '@/app/utils/api'
 import { computeMedalTier, TIER_ICONS, TIER_LABELS, MedalTier } from '@/app/components/pages/MapsPage'
+import { formatCapTime } from '@/app/utils/format'
 
 interface ReplayPickerModalProps {
     open: boolean
@@ -43,18 +46,6 @@ function writeCache(mapName: string, rows: RunRow[]): void {
     replayCache.set(mapName, { rows, fetchedAt: Date.now() })
 }
 
-const formatTime = (seconds: number): string => {
-    const hours = Math.floor(seconds / 3600)
-    const minutes = Math.floor((seconds % 3600) / 60)
-    const secs = Math.floor(seconds % 60)
-    const ms = Math.floor((seconds % 1) * 1000)
-    const msStr = ms.toString().padStart(3, '0')
-    const secsStr = secs.toString().padStart(2, '0')
-    const minsStr = minutes.toString().padStart(2, '0')
-    if (hours > 0) return `${hours}:${minsStr}:${secsStr}.${msStr}`
-    return `${minsStr}:${secsStr}.${msStr}`
-}
-
 export function ReplayPickerModal({
     open, onClose, accessToken, userId, mapName, mapMetadata, onSelect,
 }: ReplayPickerModalProps) {
@@ -65,6 +56,35 @@ export function ReplayPickerModal({
     const requestRef = useRef(0)
     const pageRef = useRef(1)
     pageRef.current = page
+
+    // Demo download status modal.
+    type DlState =
+        | { status: 'downloading'; capId: string; filename: string }
+        | { status: 'success'; capId: string; filename: string; path: string; bytes: number }
+        | { status: 'error'; capId: string; filename: string; reason: string }
+    const [download, setDownload] = useState<DlState | null>(null)
+
+    const startDownload = async (entry: LeaderboardEntry) => {
+        if (!mapName) return
+        const cleanMap = mapName.replace(/[^a-zA-Z0-9_-]/g, '_')
+        const cleanAlias = (entry.alias || 'player').replace(/[^a-zA-Z0-9_-]/g, '_')
+        const timeStr = formatCapTime(entry.cap_time_seconds).replace(/[:.]/g, '-')
+        const filename = `${cleanMap}__${timeStr}__${cleanAlias}.dem`
+        setDownload({ status: 'downloading', capId: entry.id, filename })
+        try {
+            const buffer = await downloadDemo(entry.id)
+            const bytes = new Uint8Array(buffer)
+            const res = await window.conveyor.demos.saveToSystem(filename, bytes)
+            if (res.ok) {
+                setDownload({ status: 'success', capId: entry.id, filename, path: res.path, bytes: res.bytes })
+            } else {
+                setDownload({ status: 'error', capId: entry.id, filename, reason: res.reason })
+            }
+        } catch (err) {
+            console.error('Demo download failed:', err)
+            setDownload({ status: 'error', capId: entry.id, filename, reason: 'fetch-error' })
+        }
+    }
 
     useEffect(() => {
         if (!open || !mapName || !accessToken) {
@@ -199,34 +219,16 @@ export function ReplayPickerModal({
                                 const checking = row.videoUrl === undefined
                                 const unavailable = row.videoUrl === null
                                 const url = row.videoUrl
-                                const clickable = typeof url === 'string'
-                                const handleActivate = () => {
-                                    if (clickable && mapName) onSelect(url as string, mapName, row.entry)
-                                }
+                                const playable = typeof url === 'string'
                                 return (
                                     <div
                                         key={row.entry.id}
-                                        role="button"
-                                        tabIndex={clickable ? 0 : -1}
-                                        aria-disabled={!clickable}
-                                        onClick={handleActivate}
-                                        onKeyDown={e => {
-                                            if (!clickable) return
-                                            if (e.key === 'Enter' || e.key === ' ') {
-                                                e.preventDefault()
-                                                handleActivate()
-                                            }
-                                        }}
-                                        className={
-                                            clickable
-                                                ? 'w-full flex items-center gap-3 px-3 py-2 rounded-lg border border-white/5 bg-white/[0.02] hover:bg-white/[0.06] hover:border-white/15 transition-colors text-left cursor-pointer'
-                                                : 'w-full flex items-center gap-3 px-3 py-2 rounded-lg border border-white/5 bg-white/[0.02] opacity-60 cursor-default'
-                                        }
+                                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg border border-white/5 bg-white/[0.02] hover:bg-white/[0.04] transition-colors"
                                     >
                                         <span className="text-xs font-bold font-mono w-6 text-muted-foreground shrink-0">
                                             #{rank}
                                         </span>
-                                        <span className="flex-1 min-w-0 pointer-events-none">
+                                        <span className="flex-1 min-w-0">
                                             <PlayerInfo
                                                 userId={row.entry.user}
                                                 alias={row.entry.alias}
@@ -248,25 +250,49 @@ export function ReplayPickerModal({
                                             )
                                             if (tier === 'uncapped') return null
                                             return (
-                                                <img
-                                                    src={TIER_ICONS[tier]}
-                                                    alt={TIER_LABELS[tier]}
-                                                    title={TIER_LABELS[tier]}
-                                                    className="size-5 shrink-0 object-contain"
-                                                />
+                                                <Tooltip content={TIER_LABELS[tier]} side="top">
+                                                    <img
+                                                        src={TIER_ICONS[tier]}
+                                                        alt={TIER_LABELS[tier]}
+                                                        className="size-5 shrink-0 object-contain"
+                                                    />
+                                                </Tooltip>
                                             )
                                         })()}
                                         <span className="text-sm font-mono text-amber-300 shrink-0">
-                                            {formatTime(row.entry.cap_time_seconds)}
+                                            {formatCapTime(row.entry.cap_time_seconds)}
                                         </span>
-                                        {checking && (
+                                        {checking ? (
                                             <Loader2 className="size-4 animate-spin text-muted-foreground/60 shrink-0" />
-                                        )}
-                                        {unavailable && (
+                                        ) : unavailable ? (
                                             <span className="text-[10px] uppercase tracking-wider text-muted-foreground/60 shrink-0">
                                                 No replay
                                             </span>
+                                        ) : (
+                                            <Tooltip content="Watch" side="top">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        if (playable && mapName) onSelect(url as string, mapName, row.entry)
+                                                    }}
+                                                    disabled={!playable}
+                                                    aria-label="Watch replay"
+                                                    className="p-1.5 rounded-md text-rose-300/80 hover:text-rose-200 hover:bg-rose-500/15 transition-colors cursor-pointer shrink-0 disabled:opacity-40 disabled:cursor-default"
+                                                >
+                                                    <Play className="size-4" />
+                                                </button>
+                                            </Tooltip>
                                         )}
+                                        <Tooltip content="Download Demo" side="top">
+                                            <button
+                                                type="button"
+                                                onClick={() => startDownload(row.entry)}
+                                                aria-label="Download demo"
+                                                className="p-1.5 rounded-md text-blue-300/80 hover:text-blue-200 hover:bg-blue-500/15 transition-colors cursor-pointer shrink-0"
+                                            >
+                                                <Download className="size-4" />
+                                            </button>
+                                        </Tooltip>
                                     </div>
                                 )
                             })}
@@ -298,6 +324,91 @@ export function ReplayPickerModal({
                     </>
                 )}
             </div>
+
+            <DemoDownloadStatusModal
+                state={download}
+                onClose={() => setDownload(null)}
+            />
+        </Modal>
+    )
+}
+
+interface DemoDownloadStatusModalProps {
+    state:
+        | { status: 'downloading'; capId: string; filename: string }
+        | { status: 'success'; capId: string; filename: string; path: string; bytes: number }
+        | { status: 'error'; capId: string; filename: string; reason: string }
+        | null
+    onClose: () => void
+}
+
+function reasonText(reason: string): string {
+    if (reason === 'no-install') return 'A valid UT99 installation is required to download demos. Set one up in Settings → Game Installation.'
+    if (reason === 'empty') return 'The downloaded demo was empty. Try again, or pick a different run.'
+    if (reason.startsWith('http-')) return `The demo server responded with ${reason.replace('http-', 'status ')}. The demo may not be available.`
+    if (reason === 'fetch-error') return 'Network error while downloading. Check your connection and try again.'
+    return `Download failed (${reason}).`
+}
+
+function formatBytes(b: number): string {
+    if (b < 1024) return `${b} B`
+    if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)} KB`
+    return `${(b / (1024 * 1024)).toFixed(2)} MB`
+}
+
+function DemoDownloadStatusModal({ state, onClose }: DemoDownloadStatusModalProps) {
+    const isOpen = state !== null
+    const isDownloading = state?.status === 'downloading'
+    const title =
+        state?.status === 'success' ? 'Demo Downloaded'
+        : state?.status === 'error' ? 'Download Failed'
+        : 'Downloading Demo'
+
+    return (
+        <Modal
+            isOpen={isOpen}
+            onClose={() => { if (!isDownloading) onClose() }}
+            title={title}
+            offsetSidebar
+            maxWidth="500px"
+            className="bg-[#0a0a0b]/98 border-white/5"
+            footer={
+                <div className="p-4 border-t border-border bg-muted/50 flex justify-end shrink-0">
+                    <Button onClick={onClose} disabled={isDownloading} variant="secondary">
+                        {isDownloading ? 'Downloading…' : 'Close'}
+                    </Button>
+                </div>
+            }
+        >
+            {state?.status === 'downloading' && (
+                <div className="flex items-center gap-3 py-2">
+                    <Loader2 className="size-5 animate-spin text-blue-300 shrink-0" />
+                    <div className="text-sm text-white/80 truncate">{state.filename}</div>
+                </div>
+            )}
+            {state?.status === 'success' && (
+                <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                        <CheckCircle2 className="size-5 text-emerald-400 shrink-0" />
+                        <div className="text-sm text-white/90 font-medium truncate">{state.filename}</div>
+                    </div>
+                    <div className="text-xs text-muted-foreground space-y-1">
+                        <div>Size: {formatBytes(state.bytes)}</div>
+                        <div className="truncate" title={state.path}>
+                            Saved to: {state.path.replace(/[/\\][^/\\]+$/, '')}
+                        </div>
+                    </div>
+                </div>
+            )}
+            {state?.status === 'error' && (
+                <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                        <AlertCircle className="size-5 text-red-400 shrink-0" />
+                        <div className="text-sm text-white/90 font-medium">Could not download demo</div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">{reasonText(state.reason)}</p>
+                </div>
+            )}
         </Modal>
     )
 }

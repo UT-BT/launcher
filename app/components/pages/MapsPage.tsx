@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback, Fragment } from 'react'
-import { Search, RefreshCw, ChevronUp, ChevronDown, ArrowUpDown, SlidersHorizontal, X, Bookmark, BookmarkPlus, Trash2, Columns3, Play, ArrowLeft, GripVertical, HelpCircle } from 'lucide-react'
+import { Search, RefreshCw, ChevronUp, ChevronDown, ArrowUpDown, SlidersHorizontal, X, Bookmark, BookmarkPlus, Trash2, Columns3, ArrowLeft, GripVertical, HelpCircle, Share2, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/app/components/ui/button'
 import {
@@ -18,9 +18,15 @@ import { MapReviewsModal } from '@/app/components/modals/MapReviewsModal'
 import { ReplayPickerModal } from '@/app/components/modals/ReplayPickerModal'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
+import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { MapsTutorial } from '@/app/components/pages/maps/MapsTutorial'
 import { useMapsTutorialState } from '@/app/components/pages/maps/useMapsTutorialState'
 import { buildSteps } from '@/app/components/pages/maps/mapsTutorialSteps'
+import { PaginationBar } from '@/app/components/ui/pagination'
+import { MultiFilterDropdown } from '@/app/components/ui/multi-filter-dropdown'
+import { FilterPanelRow } from '@/app/components/ui/filter-panel-row'
+import { formatCapTime, formatDelta, formatAddedDate, isNew } from '@/app/utils/format'
+import { difficultyTextColor, difficultyBgColor, scoreTextColor, scoreBgColor } from '@/app/utils/scoreColors'
 
 import championIcon from '@/app/assets/champion.png'
 import goldIcon from '@/app/assets/gold.png'
@@ -154,15 +160,15 @@ const COLUMN_LABELS: Record<ColumnId, string> = {
     thumbnail: 'Thumbnail',
     name: 'Map',
     tags: 'Tags',
-    medal: 'Medal',
+    medal: 'Medal Earned',
     author: 'Author',
     difficulty: 'Difficulty',
     added: 'Added',
     world_record: 'World Record',
-    pb: 'Your PB',
-    replay: 'Replay',
-    community_rating: 'Community Rating',
-    my_rating: 'Your Rating',
+    pb: 'Personal Best',
+    replay: 'Demos',
+    community_rating: 'Community Review',
+    my_rating: 'Your Review',
 }
 
 const DEFAULT_COLUMN_ORDER: ColumnId[] = [
@@ -236,13 +242,23 @@ const persistColumnOrder = (order: ColumnId[]): void => {
 }
 
 const normalizeColumnOrder = (order: ColumnId[]): ColumnId[] => {
-    const nameIdx = order.indexOf('name')
-    const tagsIdx = order.indexOf('tags')
-    if (nameIdx === -1 || tagsIdx === -1) return order
-    if (tagsIdx === nameIdx + 1) return order
-    const next = order.filter(id => id !== 'tags')
-    const newNameIdx = next.indexOf('name')
-    next.splice(newNameIdx + 1, 0, 'tags')
+    let next = [...order]
+    // tags always immediately after name
+    const nameIdx = next.indexOf('name')
+    const tagsIdx = next.indexOf('tags')
+    if (nameIdx !== -1 && tagsIdx !== -1 && tagsIdx !== nameIdx + 1) {
+        next = next.filter(id => id !== 'tags')
+        const i = next.indexOf('name')
+        next.splice(i + 1, 0, 'tags')
+    }
+    // medal always immediately before pb
+    const pbIdx = next.indexOf('pb')
+    const medalIdx = next.indexOf('medal')
+    if (pbIdx !== -1 && medalIdx !== -1 && medalIdx !== pbIdx - 1) {
+        next = next.filter(id => id !== 'medal')
+        const i = next.indexOf('pb')
+        next.splice(i, 0, 'medal')
+    }
     return next
 }
 
@@ -366,75 +382,6 @@ interface MapsPageProps {
     onToggleFavorite: (mapName: string) => void
 }
 
-const formatDelta = (seconds: number): string => {
-    if (seconds < 60) return `${seconds.toFixed(3)}s`
-    return formatCapTime(seconds)
-}
-
-const formatCapTime = (seconds: number): string => {
-    const hours = Math.floor(seconds / 3600)
-    const minutes = Math.floor((seconds % 3600) / 60)
-    const secs = Math.floor(seconds % 60)
-    const ms = Math.floor((seconds % 1) * 1000)
-    const msStr = ms.toString().padStart(3, '0')
-    const secsStr = secs.toString().padStart(2, '0')
-    const minsStr = minutes.toString().padStart(2, '0')
-    if (hours > 0) return `${hours}:${minsStr}:${secsStr}.${msStr}`
-    return `${minsStr}:${secsStr}.${msStr}`
-}
-
-const formatAddedDate = (added: string): string => {
-    const d = new Date(added)
-    if (isNaN(d.getTime())) return '—'
-    return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: '2-digit' })
-}
-
-const isNew = (added: string): boolean => {
-    const thirtyDaysAgo = new Date()
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-    return new Date(added) >= thirtyDaysAgo
-}
-
-const difficultyColor = (d: number): string => {
-    if (d <= 3) return 'bg-green-500'
-    if (d <= 6) return 'bg-yellow-500'
-    return 'bg-red-500'
-}
-
-const difficultyTextColor = (d: number): string => {
-    if (d <= 3) return 'text-green-400'
-    if (d <= 6) return 'text-yellow-400'
-    return 'text-red-400'
-}
-
-const ratingColor = (r: number): string => {
-    if (r <= 3) return 'bg-red-500'
-    if (r <= 6) return 'bg-yellow-500'
-    return 'bg-green-500'
-}
-
-const ratingTextColor = (r: number): string => {
-    if (r <= 3) return 'text-red-400'
-    if (r <= 6) return 'text-yellow-400'
-    return 'text-green-400'
-}
-
-const MapThumbnail = ({ mapName }: { mapName: string }) => {
-    const url = `https://utbt.net/images/screenshots/${mapName}.png`
-    const [imgSrc, setImgSrc] = useState(url)
-    useEffect(() => { setImgSrc(url) }, [url])
-
-    return (
-        <div className="w-12 h-12 overflow-hidden bg-muted/20 border border-white/10 rounded shrink-0">
-            <img
-                src={imgSrc}
-                alt={mapName}
-                className="w-full h-full object-cover"
-                onError={() => setImgSrc('https://utbt.net/images/screenshots/default.png')}
-            />
-        </div>
-    )
-}
 
 export type MedalTier = 'uncapped' | 'casual' | 'verified' | 'bronze' | 'silver' | 'gold' | 'champion' | 'world_record'
 
@@ -470,6 +417,11 @@ const TIER_RANK: Record<MedalTier, number> = {
     world_record: 7,
 }
 
+// Epsilon for matching a PB against a world record. Cap times are reported in
+// seconds with sub-millisecond noise from server round-trips, so an exact ===
+// comparison would never trigger the world_record tier.
+const WR_TIME_EPSILON_SECONDS = 0.0005
+
 export function computeMedalTier(
     bestCap: BestCap | undefined,
     map: (Pick<MapMetadata, 'bronze_medal' | 'silver_medal' | 'gold_medal' | 'champion_medal'> & { world_record?: number }) | undefined,
@@ -478,12 +430,56 @@ export function computeMedalTier(
     if (bestCap.cap_type !== 2) return 'casual'
     if (!map) return 'verified'
     const t = bestCap.cap_time_seconds
-    if (map.world_record != null && map.world_record > 0 && t - map.world_record <= 0.0005) return 'world_record'
+    if (map.world_record != null && map.world_record > 0 && t - map.world_record <= WR_TIME_EPSILON_SECONDS) return 'world_record'
     if (map.champion_medal != null && t <= map.champion_medal) return 'champion'
     if (map.gold_medal != null && t <= map.gold_medal) return 'gold'
     if (map.silver_medal != null && t <= map.silver_medal) return 'silver'
     if (map.bronze_medal != null && t <= map.bronze_medal) return 'bronze'
     return 'verified'
+}
+
+// Mock data shown in the first row while the tutorial is active so the PB,
+// World Record, ratings, and review cells always demo something visible.
+function getTutorialMockRow(mapName: string): {
+    ratings: AvgRatings
+    review: MapReview
+    bestCap: BestCap
+    wrHolder: WRHolder
+    wr: number
+} {
+    return {
+        ratings: { overall: 9, aesthetics: 8, learning: 7, luck: 4 },
+        review: {
+            id: 0, map_name: mapName, user: 0,
+            aesthetics: 8, learning: 7, luck: 4, difficulty: 5, overall: 8,
+        },
+        bestCap: {
+            map: mapName, cap_id: 'tutorial-mock-pb',
+            cap_time_seconds: 48.234, cap_type: 2, verified: true,
+        },
+        wrHolder: {
+            user_id: '0', alias: 'TopPlayer', cap_id: 'tutorial-mock-wr',
+            color_r: 100, color_g: 200, color_b: 255,
+        },
+        wr: 42.567,
+    }
+}
+
+// Deterministic hue per tag string. Same name → same color forever.
+// djb2 hash → mod 360 → HSL with controlled saturation/lightness so every
+// tag reads well on the dark table background.
+function tagColorStyle(tag: string): React.CSSProperties {
+    let hash = 5381
+    const s = tag.toLowerCase()
+    for (let i = 0; i < s.length; i++) {
+        hash = ((hash << 5) + hash) ^ s.charCodeAt(i)
+    }
+    const hue = Math.abs(hash) % 360
+    return {
+        color: `hsl(${hue}, 75%, 78%)`,
+        backgroundColor: `hsla(${hue}, 65%, 50%, 0.14)`,
+        borderColor: `hsla(${hue}, 60%, 55%, 0.35)`,
+    }
 }
 
 const pbTextColor = (tier: MedalTier, isWR: boolean): string => {
@@ -501,18 +497,19 @@ const pbTextColor = (tier: MedalTier, isWR: boolean): string => {
 
 const MedalIndicator = ({ tier, bestCap }: { tier: MedalTier; bestCap?: BestCap }) => {
     const tip = bestCap
-        ? `${TIER_LABELS[tier]} — ${formatCapTime(bestCap.cap_time_seconds)}`
+        ? `${TIER_LABELS[tier]}`
         : 'Not capped yet'
     if (tier === 'uncapped') {
         return <span aria-hidden className="inline-block size-5 shrink-0" />
     }
     return (
-        <img
-            src={TIER_ICONS[tier]}
-            alt={TIER_LABELS[tier]}
-            title={tip}
-            className="size-5 shrink-0 object-contain"
-        />
+        <Tooltip content={tip} side="top">
+            <img
+                src={TIER_ICONS[tier]}
+                alt={TIER_LABELS[tier]}
+                className="size-5 shrink-0 object-contain"
+            />
+        </Tooltip>
     )
 }
 
@@ -576,14 +573,22 @@ function indexMyReviews(reviews: MapReview[], userId?: string | number): Record<
     return out
 }
 
+// Approximate table-row height in px; matches the py-3 padding + 56px image.
+const TABLE_ROW_HEIGHT_PX = 56
+// Approximate chrome around the table (header + filters + pagination).
+const TABLE_CHROME_PX = 320
+const AUTO_PAGE_SIZE_MIN_ROWS = 10
+const AUTO_PAGE_SIZE_MAX_ROWS = 60
+
 function computePageSize(): number {
     if (typeof window === 'undefined') return 25
-    const rowHeight = 56
-    const chrome = 320
-    const usable = Math.max(window.innerHeight - chrome, rowHeight * 10)
-    const rows = Math.floor(usable / rowHeight)
-    return Math.min(60, Math.max(10, rows))
+    const usable = Math.max(window.innerHeight - TABLE_CHROME_PX, TABLE_ROW_HEIGHT_PX * AUTO_PAGE_SIZE_MIN_ROWS)
+    const rows = Math.floor(usable / TABLE_ROW_HEIGHT_PX)
+    return Math.min(AUTO_PAGE_SIZE_MAX_ROWS, Math.max(AUTO_PAGE_SIZE_MIN_ROWS, rows))
 }
+
+const SKELETON_ROW_COUNT = 10
+const SEARCH_DEBOUNCE_MS = 200
 
 function getAuthorString(m: Partial<Pick<Map, 'author' | 'author_str'>>): string {
     const author = m.author
@@ -639,6 +644,7 @@ export function MapsPage({
     const [presets, setPresets] = useState<MapsPreset[]>(() => loadPresets())
     const [savePresetOpen, setSavePresetOpen] = useState(false)
     const [presetNameInput, setPresetNameInput] = useState('')
+    const presetNameInputRef = useRef<HTMLInputElement | null>(null)
     const [presetPendingDelete, setPresetPendingDelete] = useState<MapsPreset | null>(null)
     const [presetsMenuOpen, setPresetsMenuOpen] = useState(false)
     const [columnVisibility, setColumnVisibility] = useState<Record<ColumnId, boolean>>(() => loadColumnVisibility())
@@ -652,6 +658,21 @@ export function MapsPage({
     } | null>(null)
     const [replayPickerMap, setReplayPickerMap] = useState<string | null>(null)
     const [capLoadingMap, setCapLoadingMap] = useState<string | null>(null)
+    const [replayError, setReplayError] = useState<string | null>(null)
+    const [shareCopied, setShareCopied] = useState(false)
+    const shareTimerRef = useRef<number | null>(null)
+
+    const copyReplayLink = async () => {
+        if (!videoModal?.url) return
+        try {
+            await navigator.clipboard.writeText(videoModal.url)
+            setShareCopied(true)
+            if (shareTimerRef.current) window.clearTimeout(shareTimerRef.current)
+            shareTimerRef.current = window.setTimeout(() => setShareCopied(false), 1500)
+        } catch (err) {
+            console.error('Copy replay link failed', err)
+        }
+    }
 
     const openCapReplay = async (mapName: string, capId: string | undefined, seconds: number | undefined, alias: string | undefined) => {
         if (!capId) return
@@ -667,7 +688,11 @@ export function MapsPage({
                     alias,
                     fromPicker: true,
                 })
+            } else {
+                setReplayError('Demo is still being processed by DemoConverter. Please try again later.')
             }
+        } catch {
+            setReplayError('Could not load this replay. Please try again later.')
         } finally {
             setCapLoadingMap(null)
         }
@@ -708,8 +733,10 @@ export function MapsPage({
     const presetsButtonRef = useRef<HTMLButtonElement | null>(null)
     const sortHeaderRef = useRef<HTMLButtonElement | null>(null)
     const firstRowFavRef = useRef<HTMLSpanElement | null>(null)
+    const firstRowWrRef = useRef<HTMLButtonElement | null>(null)
     const firstRowReplayRef = useRef<HTMLButtonElement | null>(null)
     const firstRowRatingRef = useRef<HTMLButtonElement | null>(null)
+    const firstRowMyRatingRef = useRef<HTMLButtonElement | null>(null)
     const firstRowNameRef = useRef<HTMLButtonElement | null>(null)
     const firstRowPbRef = useRef<HTMLElement | null>(null)
 
@@ -725,16 +752,39 @@ export function MapsPage({
         onStateChange(prev => ({ ...prev, filtersPanelOpen: false }))
     }, [onStateChange])
 
+    // Focus the preset-name input when the save modal opens. Modal traps
+    // focus on its first focusable element (the close X) on mount, so we
+    // re-focus the input after that effect runs.
+    useEffect(() => {
+        if (!savePresetOpen) return
+        const id = window.setTimeout(() => presetNameInputRef.current?.focus(), 0)
+        return () => window.clearTimeout(id)
+    }, [savePresetOpen])
+
     const reorderColumn = (sourceId: ColumnId, targetId: ColumnId) => {
         if (sourceId === targetId) return
+        const isMedalPbPair = (id: ColumnId) => id === 'medal' || id === 'pb'
         setColumnOrder(prev => {
             const fromIdx = prev.indexOf(sourceId)
             const toIdx = prev.indexOf(targetId)
             if (fromIdx === -1 || toIdx === -1) return prev
-            const next = [...prev]
-            const [moved] = next.splice(fromIdx, 1)
-            const insertAt = next.indexOf(targetId)
-            next.splice(insertAt + (fromIdx < toIdx ? 1 : 0), 0, moved)
+
+            let next: ColumnId[]
+            if (isMedalPbPair(sourceId)) {
+                // Move medal+pb together. No-op if target is the other half.
+                if (isMedalPbPair(targetId)) return prev
+                const without: ColumnId[] = prev.filter(id => id !== 'medal' && id !== 'pb')
+                const insertAt = without.indexOf(targetId)
+                if (insertAt === -1) return prev
+                const offset = fromIdx < toIdx ? 1 : 0
+                without.splice(insertAt + offset, 0, 'medal', 'pb')
+                next = without
+            } else {
+                next = [...prev]
+                const [moved] = next.splice(fromIdx, 1)
+                const insertAt = next.indexOf(targetId)
+                next.splice(insertAt + (fromIdx < toIdx ? 1 : 0), 0, moved)
+            }
             const normalized = normalizeColumnOrder(next)
             persistColumnOrder(normalized)
             return normalized
@@ -751,7 +801,7 @@ export function MapsPage({
     const searchAbortRef = useRef<AbortController | null>(null)
     const scrollContainerRef = useRef<HTMLDivElement | null>(null)
 
-    const accessToken = (userProfile as any)?.accessToken
+    const accessToken = userProfile?.accessToken
 
     // --- Mode derivation ---
     const isSearchMode = state.search.trim().length > 0
@@ -792,7 +842,7 @@ export function MapsPage({
         return filters
     }, [state.newOnly, state.sortBy, state.sortDir])
 
-    const userId = (userProfile as any)?.id
+    const userId = userProfile?.id ?? undefined
 
     const newMapCount = useMemo(() => {
         if (!caches.metadata) return 0
@@ -996,7 +1046,7 @@ export function MapsPage({
                 if ((e as { name?: string })?.name === 'AbortError') return
                 setSearchLoading(false)
             }
-        }, 200)
+        }, SEARCH_DEBOUNCE_MS)
         return () => clearTimeout(t)
     }, [mode, state.search, accessToken])
 
@@ -1144,6 +1194,19 @@ export function MapsPage({
                 return state.sortDir === 'asc' ? cmp : -cmp
             }
 
+            // Medal sort: maps without a medal (uncapped or casual) always pushed to end.
+            if (state.sortBy === 'medal') {
+                const aT = computeMedalTier(caches.bestCaps[a.name], a as MapMetadata)
+                const bT = computeMedalTier(caches.bestCaps[b.name], b as MapMetadata)
+                const aEmpty = aT === 'uncapped' || aT === 'casual'
+                const bEmpty = bT === 'uncapped' || bT === 'casual'
+                if (aEmpty && bEmpty) return 0
+                if (aEmpty) return 1
+                if (bEmpty) return -1
+                const cmp = TIER_RANK[aT] - TIER_RANK[bT]
+                return state.sortDir === 'asc' ? cmp : -cmp
+            }
+
             // My-rating sort: same as rating but uses the current user's own review.
             if (state.sortBy === 'my_rating') {
                 const aR = caches.myReviews[a.name]
@@ -1170,11 +1233,6 @@ export function MapsPage({
             }
             else if (state.sortBy === 'added') cmp = new Date(a.added).getTime() - new Date(b.added).getTime()
             else if (state.sortBy === 'difficulty') cmp = a.difficulty - b.difficulty
-            else if (state.sortBy === 'medal') {
-                const aT = computeMedalTier(caches.bestCaps[a.name], a as MapMetadata)
-                const bT = computeMedalTier(caches.bestCaps[b.name], b as MapMetadata)
-                cmp = TIER_RANK[aT] - TIER_RANK[bT]
-            }
             return state.sortDir === 'asc' ? cmp : -cmp
         })
         return out
@@ -1403,6 +1461,9 @@ export function MapsPage({
             return a === b
         })
         if (!matches) setActivePresetId(null)
+        // captureFilters is intentionally omitted: it closes over every filter
+        // state field we already list, and including it would re-run on each
+        // render. The effect only needs to re-evaluate when a filter changes.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [
         activePreset,
@@ -1465,14 +1526,15 @@ export function MapsPage({
             case 'medal':
                 return (
                     <th key={id} className="px-2 py-3 text-center w-10 text-muted-foreground font-medium text-xs uppercase tracking-wider">
-                        <button
-                            onClick={() => handleSort('medal')}
-                            title="Sort by Medal"
-                            className="inline-flex items-center justify-center hover:text-white transition-colors cursor-pointer"
-                        >
-                            Medal
-                            <SortIcon field="medal" />
-                        </button>
+                        <Tooltip content="Sort by Medal" side="top">
+                            <button
+                                onClick={() => handleSort('medal')}
+                                className="inline-flex items-center justify-center hover:text-white transition-colors cursor-pointer"
+                            >
+                                Medal
+                                <SortIcon field="medal" />
+                            </button>
+                        </Tooltip>
                     </th>
                 )
             case 'pb':
@@ -1489,7 +1551,7 @@ export function MapsPage({
                 return (
                     <th key={id} className="px-4 py-3 text-left text-muted-foreground font-medium text-xs uppercase tracking-wider">
                         <button onClick={() => handleSort('rating')} className="flex items-center gap-1 hover:text-white transition-colors cursor-pointer">
-                            Community Rating <SortIcon field="rating" />
+                            Community Review <SortIcon field="rating" />
                         </button>
                     </th>
                 )
@@ -1497,7 +1559,7 @@ export function MapsPage({
                 return (
                     <th key={id} className="px-4 py-3 text-left text-muted-foreground font-medium text-xs uppercase tracking-wider">
                         <button onClick={() => handleSort('my_rating')} className="flex items-center gap-1 hover:text-white transition-colors cursor-pointer">
-                            Your Rating <SortIcon field="my_rating" />
+                            Your Review <SortIcon field="my_rating" />
                         </button>
                     </th>
                 )
@@ -1528,7 +1590,7 @@ export function MapsPage({
             case 'thumbnail':
                 return (
                     <td key={id} className="px-4 py-3">
-                        <MapThumbnail mapName={map.name} />
+                        <MapThumbnail mapName={map.name} className="w-12 h-12" />
                     </td>
                 )
             case 'name': {
@@ -1542,21 +1604,22 @@ export function MapsPage({
                                     mapName={map.name}
                                     isFavorited={favoriteMapNames.has(map.name)}
                                     onToggle={onToggleFavorite}
-                                    size="sm"
+                                    size="md"
                                 />
                             </span>
-                            <button
-                                ref={isFirstRow ? firstRowNameRef : undefined}
-                                type="button"
-                                onClick={e => {
-                                    e.stopPropagation()
-                                    onMapSelect(map.name)
-                                }}
-                                title="Open map details"
-                                className="font-medium text-white hover:text-blue-300 hover:underline underline-offset-4 transition-colors cursor-pointer text-left"
-                            >
-                                {map.name}
-                            </button>
+                            <Tooltip content="Open map details" side="top">
+                                <button
+                                    ref={isFirstRow ? firstRowNameRef : undefined}
+                                    type="button"
+                                    onClick={e => {
+                                        e.stopPropagation()
+                                        onMapSelect(map.name)
+                                    }}
+                                    className="font-bold text-white hover:text-blue-300 underline-offset-4 transition-colors cursor-pointer text-left text-md"
+                                >
+                                    {map.name}
+                                </button>
+                            </Tooltip>
                             {mapNew && (
                                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30 uppercase tracking-wider">
                                     New
@@ -1567,23 +1630,25 @@ export function MapsPage({
                                     {shown.map(tag => (
                                         <span
                                             key={tag}
-                                            className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-muted-foreground"
+                                            style={tagColorStyle(tag)}
+                                            className="text-[10px] font-medium px-1.5 py-0.5 rounded border"
                                         >
                                             {tag}
                                         </span>
                                     ))}
                                     {tags.length > 3 && (
-                                        <button
-                                            type="button"
-                                            onClick={e => {
-                                                e.stopPropagation()
-                                                toggleTagExpansion(map.name)
-                                            }}
-                                            title={expanded ? 'Collapse tags' : tags.slice(3).join(', ')}
-                                            className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-muted-foreground hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
-                                        >
-                                            {expanded ? '− Show less' : `+${tags.length - 3}`}
-                                        </button>
+                                        <Tooltip content={expanded ? 'Collapse tags' : tags.slice(3).join(', ')} side="top">
+                                            <button
+                                                type="button"
+                                                onClick={e => {
+                                                    e.stopPropagation()
+                                                    toggleTagExpansion(map.name)
+                                                }}
+                                                className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-muted-foreground hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
+                                            >
+                                                {expanded ? '− Show less' : `+${tags.length - 3}`}
+                                            </button>
+                                        </Tooltip>
                                     )}
                                 </>
                             )}
@@ -1594,7 +1659,7 @@ export function MapsPage({
             case 'author':
                 return (
                     <td key={id} className="px-4 py-3 text-muted-foreground">
-                        <PlayerInfo alias={author || '—'} size="sm" />
+                        <PlayerInfo alias={author || '—'} size="md" />
                     </td>
                 )
             case 'difficulty':
@@ -1606,7 +1671,7 @@ export function MapsPage({
                             </span>
                             <div className="w-16 h-1.5 bg-white/10 rounded-full overflow-hidden">
                                 <div
-                                    className={cn("h-full rounded-full", difficultyColor(map.difficulty))}
+                                    className={cn("h-full rounded-full", difficultyBgColor(map.difficulty))}
                                     style={{ width: `${(map.difficulty / 10) * 100}%` }}
                                 />
                             </div>
@@ -1630,40 +1695,63 @@ export function MapsPage({
                 const capId = wrHolder?.cap_id
                 const clickable = !!capId
                 const isLoading = capLoadingMap === map.name
-                return (
-                    <td key={id} className="px-4 py-3 font-mono text-sm text-muted-foreground">
+                const aliasStyle: React.CSSProperties | undefined = wrHolder?.color_r != null
+                    ? { color: `rgb(${wrHolder.color_r}, ${wrHolder.color_g}, ${wrHolder.color_b})` }
+                    : undefined
+                const timeNode = (
+                    <span className={cn(
+                        "text-amber-300 transition-[color,text-shadow] duration-150 w-fit",
+                        clickable && "group/wr group-hover/wr:text-amber-200 group-hover/wr:[text-shadow:0_0_6px_rgba(252,211,77,0.85),0_0_12px_rgba(252,211,77,0.45)]",
+                        isLoading && "opacity-60",
+                    )}>
+                        {formatCapTime(wr)}
+                    </span>
+                )
+                const timeButton = clickable ? (
+                    <Tooltip content="Watch run" side="top">
                         <button
+                            ref={isFirstRow ? firstRowWrRef : undefined}
                             type="button"
-                            disabled={!clickable || isLoading}
+                            disabled={isLoading}
                             onClick={e => {
                                 e.stopPropagation()
                                 openCapReplay(map.name, capId, wr, wrHolder?.alias)
                             }}
-                            title={clickable ? 'Watch this run' : undefined}
-                            className={cn(
-                                "flex flex-col leading-tight text-left",
-                                clickable ? "cursor-pointer group/wr" : "cursor-default",
-                            )}
+                            className="text-left cursor-pointer group/wr"
                         >
-                            <span className={cn(
-                                "text-amber-300 transition-[color,text-shadow] duration-150 w-fit",
-                                clickable && "group-hover/wr:text-amber-200 group-hover/wr:[text-shadow:0_0_6px_rgba(252,211,77,0.85),0_0_12px_rgba(252,211,77,0.45)]",
-                                isLoading && "opacity-60",
-                            )}>
-                                {formatCapTime(wr)}
-                            </span>
-                            {wrHolder && (
+                            {timeNode}
+                        </button>
+                    </Tooltip>
+                ) : (
+                    <div ref={isFirstRow ? (firstRowWrRef as unknown as React.RefObject<HTMLDivElement | null>) : undefined} className="text-left">{timeNode}</div>
+                )
+                return (
+                    <td key={id} className="px-4 py-3 font-mono text-sm text-muted-foreground">
+                        <div className="flex flex-col leading-tight">
+                            {timeButton}
+                            {wrHolder && (wrHolder.user_id ? (
+                                <button
+                                    type="button"
+                                    onClick={e => {
+                                        e.stopPropagation()
+                                        window.dispatchEvent(new CustomEvent('open-player', {
+                                            detail: { userId: wrHolder.user_id },
+                                        }))
+                                    }}
+                                    className="text-[12px] font-sans font-bold truncate max-w-[140px] hover:underline underline-offset-2 cursor-pointer text-left"
+                                    style={aliasStyle}
+                                >
+                                    {wrHolder.alias}
+                                </button>
+                            ) : (
                                 <span
-                                    className="text-[10px] font-sans truncate max-w-[140px]"
-                                    style={wrHolder.color_r != null
-                                        ? { color: `rgb(${wrHolder.color_r}, ${wrHolder.color_g}, ${wrHolder.color_b})` }
-                                        : undefined}
-                                    title={wrHolder.alias}
+                                    className="text-[12px] font-sans font-bold truncate max-w-[140px]"
+                                    style={aliasStyle}
                                 >
                                     {wrHolder.alias}
                                 </span>
-                            )}
-                        </button>
+                            ))}
+                        </div>
                     </td>
                 )
             }
@@ -1687,7 +1775,7 @@ export function MapsPage({
                 const pbCapId = bestCap.cap_id ?? undefined
                 const clickable = bestCap.cap_type === 2 && !!pbCapId
                 const isLoading = capLoadingMap === map.name
-                const myAlias = (userProfile as any)?.alias as string | undefined
+                const myAlias = userProfile?.alias ?? undefined
                 const timeText = (
                     <span className={cn(
                         pbTextColor(medalTier, isWR),
@@ -1699,28 +1787,29 @@ export function MapsPage({
                 )
                 const deltaText = wr != null && wr > 0 && (
                     isWR ? (
-                        <span className="text-[10px] text-blue-400 font-bold uppercase tracking-wider font-sans">World Record</span>
+                        <span className="text-[12px] text-blue-400 font-bold tracking-wider font-sans">World Record</span>
                     ) : (
-                        <span className="text-[10px] text-muted-foreground/70">+{formatDelta(bestCap.cap_time_seconds - wr)}</span>
+                        <span className="text-[12px] text-muted-foreground/70">+{formatDelta(bestCap.cap_time_seconds - wr)}</span>
                     )
                 )
                 return (
                     <td key={id} className="px-4 py-3 font-mono text-sm text-muted-foreground">
                         {clickable ? (
-                            <button
-                                ref={isFirstRow ? (firstRowPbRef as React.RefObject<HTMLButtonElement | null>) : undefined}
-                                type="button"
-                                disabled={isLoading}
-                                onClick={e => {
-                                    e.stopPropagation()
-                                    openCapReplay(map.name, pbCapId, bestCap.cap_time_seconds, myAlias)
-                                }}
-                                title="Watch your run"
-                                className="flex flex-col leading-tight text-left cursor-pointer group/pb"
-                            >
-                                {timeText}
-                                {deltaText}
-                            </button>
+                            <Tooltip content="Watch your run" side="top">
+                                <button
+                                    ref={isFirstRow ? (firstRowPbRef as React.RefObject<HTMLButtonElement | null>) : undefined}
+                                    type="button"
+                                    disabled={isLoading}
+                                    onClick={e => {
+                                        e.stopPropagation()
+                                        openCapReplay(map.name, pbCapId, bestCap.cap_time_seconds, myAlias)
+                                    }}
+                                    className="flex flex-col leading-tight text-left cursor-pointer group/pb"
+                                >
+                                    {timeText}
+                                    {deltaText}
+                                </button>
+                            </Tooltip>
                         ) : (
                             <div
                                 ref={isFirstRow ? (firstRowPbRef as React.RefObject<HTMLDivElement | null>) : undefined}
@@ -1745,73 +1834,76 @@ export function MapsPage({
                             }}
                             className="inline-flex items-center justify-center px-3 py-1 rounded-md text-xs font-medium border border-rose-500/30 bg-rose-500/10 text-rose-300 hover:bg-rose-500/25 hover:text-rose-100 hover:border-rose-500/50 transition-colors cursor-pointer"
                         >
-                            Replays
+                            Demos
                         </button>
                     </td>
                 )
             case 'community_rating':
                 return (
                     <td key={id} className="px-4 py-3">
-                        <button
-                            ref={isFirstRow ? firstRowRatingRef : undefined}
-                            onClick={e => { e.stopPropagation(); setReviewsModalMap(map.name) }}
-                            title="View reviews"
-                            className="flex items-center gap-2 cursor-pointer group/rating"
-                        >
+                        <Tooltip content="View reviews" side="top">
+                            <button
+                                ref={isFirstRow ? firstRowRatingRef : undefined}
+                                onClick={e => { e.stopPropagation(); setReviewsModalMap(map.name) }}
+                                className="flex items-center gap-2 cursor-pointer group/rating"
+                            >
                             {ratings ? (
                                 <>
                                     <span className={cn(
                                         "text-sm font-bold w-4 text-center transition-[text-shadow] duration-150",
-                                        ratingTextColor(ratings.overall),
+                                        scoreTextColor(ratings.overall),
                                         "group-hover/rating:[text-shadow:0_0_6px_currentColor,0_0_12px_currentColor]",
                                     )}>
                                         {ratings.overall}
                                     </span>
                                     <div className="w-16 h-1.5 bg-white/10 rounded-full overflow-hidden">
                                         <div
-                                            className={cn("h-full rounded-full", ratingColor(ratings.overall))}
+                                            className={cn("h-full rounded-full", scoreBgColor(ratings.overall))}
                                             style={{ width: `${(ratings.overall / 10) * 100}%` }}
                                         />
                                     </div>
                                 </>
                             ) : (
                                 <span className="opacity-50 text-muted-foreground text-xs underline-offset-2 group-hover/rating:underline group-hover/rating:text-white">
-                                    No reviews — add one
+                                    No reviews, add one?
                                 </span>
                             )}
-                        </button>
+                            </button>
+                        </Tooltip>
                     </td>
                 )
             case 'my_rating':
                 return (
                     <td key={id} className="px-4 py-3">
-                        <button
-                            onClick={e => { e.stopPropagation(); setReviewsModalMap(map.name) }}
-                            title={myReview ? 'Update your review' : 'Add your review'}
-                            className="flex items-center gap-2 cursor-pointer group/myrating"
-                        >
+                        <Tooltip content={myReview ? 'Update review' : 'Add review'} side="top">
+                            <button
+                                ref={isFirstRow ? firstRowMyRatingRef : undefined}
+                                onClick={e => { e.stopPropagation(); setReviewsModalMap(map.name) }}
+                                className="flex items-center gap-2 cursor-pointer group/myrating"
+                            >
                             {myReview ? (
                                 <>
                                     <span className={cn(
                                         "text-sm font-bold w-4 text-center transition-[text-shadow] duration-150",
-                                        ratingTextColor(myReview.overall),
+                                        scoreTextColor(myReview.overall),
                                         "group-hover/myrating:[text-shadow:0_0_6px_currentColor,0_0_12px_currentColor]",
                                     )}>
                                         {myReview.overall}
                                     </span>
                                     <div className="w-16 h-1.5 bg-white/10 rounded-full overflow-hidden">
                                         <div
-                                            className={cn("h-full rounded-full", ratingColor(myReview.overall))}
+                                            className={cn("h-full rounded-full", scoreBgColor(myReview.overall))}
                                             style={{ width: `${(myReview.overall / 10) * 100}%` }}
                                         />
                                     </div>
                                 </>
                             ) : (
                                 <span className="opacity-50 text-muted-foreground text-xs underline-offset-2 group-hover/myrating:underline group-hover/myrating:text-white">
-                                    Rate this map
+                                    Review this map
                                 </span>
                             )}
-                        </button>
+                            </button>
+                        </Tooltip>
                     </td>
                 )
             default:
@@ -1822,34 +1914,37 @@ export function MapsPage({
     return (
         <div className="space-y-4 h-full flex flex-col overflow-hidden">
             {/* Header */}
-            <div className="flex items-center justify-between shrink-0">
-                <div className="flex items-center gap-3">
-                    <h1 className="text-2xl font-bold text-white">Maps</h1>
+            <div className="flex items-end justify-between shrink-0">
+                <div>
+                    <h1 className="text-2xl font-bold text-white leading-tight">Maps</h1>
                     {!showSkeleton && (
-                        <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-white/10 text-muted-foreground">
-                            {totalForCount}
-                        </span>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                            Showing {totalForCount.toLocaleString()} of {(caches.metadata?.length ?? totalForCount).toLocaleString()} maps
+                        </p>
                     )}
-                    <Tooltip content="Restart tutorial" side="top">
+                </div>
+                <div className="flex items-center gap-1">
+                    <Tooltip content="Launch Tutorial" side="bottom">
                         <button
                             type="button"
                             onClick={() => startTutorial()}
                             aria-label="Restart Maps tutorial"
-                            className="p-1 rounded text-muted-foreground hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+                            className="p-2 rounded-md text-muted-foreground hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
                         >
                             <HelpCircle className="size-4" />
                         </button>
                     </Tooltip>
+                    <Tooltip content="Refresh Data" side="bottom">
+                        <button
+                            type="button"
+                            onClick={refresh}
+                            disabled={loading || pageLoading}
+                            className="p-2 rounded-md text-muted-foreground hover:text-white hover:bg-white/5 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            <RefreshCw className={cn("size-4", (loading || pageLoading) && "animate-spin")} />
+                        </button>
+                    </Tooltip>
                 </div>
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={refresh}
-                    disabled={loading || pageLoading}
-                    className="text-muted-foreground hover:text-white"
-                >
-                    <RefreshCw className={cn("size-4", (loading || pageLoading) && "animate-spin")} />
-                </Button>
             </div>
 
             {/* Filters toolbar */}
@@ -1976,7 +2071,7 @@ export function MapsPage({
                                                     aria-label="Toggle tag chips"
                                                     className="accent-blue-500 cursor-pointer"
                                                 />
-                                                tags
+                                                Show Tags
                                             </label>
                                         )}
                                         <GripVertical
@@ -1994,7 +2089,7 @@ export function MapsPage({
             {/* Inline filter panel */}
             {state.filtersPanelOpen && (
                 <div ref={filterPanelRef} className="bg-card/30 border border-white/10 rounded-xl p-4 space-y-4 shrink-0">
-                    <FilterPanelRow label="Map Attributes">
+                    <FilterPanelRow label="Map">
                         <MultiFilterDropdown
                             label="Difficulty"
                             values={state.difficultyFilters}
@@ -2014,7 +2109,7 @@ export function MapsPage({
                             searchable
                         />
                         <MultiFilterDropdown
-                            label="Tag"
+                            label="Category"
                             values={state.tagFilters}
                             onChange={v => updateFilter('tagFilters', v)}
                             options={uniqueTags.map(t => [t, t] as [string, string])}
@@ -2028,7 +2123,7 @@ export function MapsPage({
                         />
                     </FilterPanelRow>
 
-                    <FilterPanelRow label="Map Ratings">
+                    <FilterPanelRow label="Ratings">
                         <MultiFilterDropdown
                             label="Overall"
                             values={state.ratingFilters}
@@ -2055,13 +2150,7 @@ export function MapsPage({
                         />
                     </FilterPanelRow>
 
-                    <FilterPanelRow label="Miscellaneous">
-                        <MultiFilterDropdown
-                            label="World Record Time"
-                            values={state.recordTimeFilters}
-                            onChange={v => updateFilter('recordTimeFilters', v as RecordTimeValue[])}
-                            options={recordTimeOptions}
-                        />
+                    <FilterPanelRow label="Misc">
                         <MultiFilterDropdown
                             label="Cap Status"
                             values={state.cappedFilters}
@@ -2072,45 +2161,45 @@ export function MapsPage({
                                 : null}
                         />
                         <MultiFilterDropdown
-                            label="My Rating"
+                            label="WR Time"
+                            values={state.recordTimeFilters}
+                            onChange={v => updateFilter('recordTimeFilters', v as RecordTimeValue[])}
+                            options={recordTimeOptions}
+                        />
+                        <MultiFilterDropdown
+                            label="Reviewed"
                             values={state.ratedFilters}
                             onChange={v => updateFilter('ratedFilters', v as RatedValue[])}
                             options={ratedOptions}
                         />
-                        <div className="flex flex-col gap-1">
-                            <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Recency</label>
-                            <label className="flex items-center gap-2 px-2 py-2 bg-card/50 border border-white/10 rounded text-sm text-white cursor-pointer hover:border-white/20">
-                                <input
-                                    type="checkbox"
-                                    checked={state.newOnly}
-                                    onChange={e => updateFilter('newOnly', e.target.checked)}
-                                    className="accent-blue-500 cursor-pointer"
-                                />
-                                <span>New only</span>
-                                {newMapCount > 0 && (
-                                    <span className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
-                                        {newMapCount}
-                                    </span>
-                                )}
-                            </label>
-                        </div>
-                        <div className="flex flex-col gap-1">
-                            <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Favorites</label>
-                            <label className="flex items-center gap-2 px-2 py-2 bg-card/50 border border-white/10 rounded text-sm text-white cursor-pointer hover:border-white/20">
-                                <input
-                                    type="checkbox"
-                                    checked={state.favoritesOnly}
-                                    onChange={e => updateFilter('favoritesOnly', e.target.checked)}
-                                    className="accent-yellow-400 cursor-pointer"
-                                />
-                                <span>Favorites only</span>
-                                {favoriteMapNames.size > 0 && (
-                                    <span className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-yellow-500/20 text-yellow-300 border border-yellow-500/30">
-                                        {favoriteMapNames.size}
-                                    </span>
-                                )}
-                            </label>
-                        </div>
+                        <label className="flex items-center gap-2 px-3 py-2 bg-card/50 border border-white/10 rounded-md text-sm text-white cursor-pointer hover:border-white/20 self-end">
+                            <input
+                                type="checkbox"
+                                checked={state.newOnly}
+                                onChange={e => updateFilter('newOnly', e.target.checked)}
+                                className="accent-blue-500 cursor-pointer"
+                            />
+                            <span>New maps</span>
+                            {newMapCount > 0 && (
+                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                                    {newMapCount}
+                                </span>
+                            )}
+                        </label>
+                        <label className="flex items-center gap-2 px-3 py-2 bg-card/50 border border-white/10 rounded-md text-sm text-white cursor-pointer hover:border-white/20 self-end">
+                            <input
+                                type="checkbox"
+                                checked={state.favoritesOnly}
+                                onChange={e => updateFilter('favoritesOnly', e.target.checked)}
+                                className="accent-yellow-400 cursor-pointer"
+                            />
+                            <span>Favorites</span>
+                            {favoriteMapNames.size > 0 && (
+                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-yellow-500/20 text-yellow-300 border border-yellow-500/30">
+                                    {favoriteMapNames.size}
+                                </span>
+                            )}
+                        </label>
                     </FilterPanelRow>
 
                     {/* Presets row */}
@@ -2121,10 +2210,10 @@ export function MapsPage({
                                     <button
                                         ref={presetsButtonRef}
                                         className={cn(
-                                            "px-3 py-1.5 rounded-md text-xs font-medium border transition-colors cursor-pointer flex items-center gap-2",
+                                            "h-8 px-3 rounded-md text-xs font-medium border transition-colors cursor-pointer flex items-center gap-2",
                                             activePreset
-                                                ? "bg-blue-500/15 border-blue-500/40 text-blue-200 hover:bg-blue-500/20"
-                                                : "bg-card/50 border-white/10 text-muted-foreground hover:text-white hover:border-white/20",
+                                                ? "bg-blue-500/15 border-blue-500/40 text-blue-200 hover:bg-blue-500/25 hover:border-blue-500/60"
+                                                : "bg-emerald-500/10 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/25 hover:text-emerald-200 hover:border-emerald-500/50",
                                         )}
                                     >
                                         <Bookmark className="size-3.5" />
@@ -2193,7 +2282,7 @@ export function MapsPage({
                             {hasActiveFilters && (
                                 <button
                                     onClick={resetFilters}
-                                    className="px-3 py-1.5 rounded-md text-xs font-medium border transition-colors cursor-pointer flex items-center gap-2 bg-card/50 border-white/10 text-muted-foreground hover:text-red-300 hover:border-red-500/30"
+                                    className="h-8 px-3 rounded-md text-xs font-medium border transition-colors cursor-pointer flex items-center gap-2 bg-red-500/10 border-red-500/30 text-red-300 hover:bg-red-500/25 hover:text-red-200 hover:border-red-500/50"
                                 >
                                     <X className="size-3.5" />
                                     Clear Filters
@@ -2221,14 +2310,14 @@ export function MapsPage({
                 className="flex-1 min-h-0 bg-card/30 border border-white/5 rounded-xl overflow-auto"
             >
                 <table className="w-full text-sm">
-                    <thead className="sticky top-0 z-10 bg-card/95 backdrop-blur">
+                    <thead data-utbt-maps-thead className="sticky top-0 z-[2] bg-card/95 backdrop-blur">
                         <tr className="border-b border-white/10">
                             {columnOrder.map(id => renderColumnHeader(id))}
                         </tr>
                     </thead>
                     <tbody>
                         {showSkeleton ? (
-                            Array.from({ length: 10 }).map((_, i) => <SkeletonRow key={i} order={columnOrder} visibility={columnVisibility} />)
+                            Array.from({ length: SKELETON_ROW_COUNT }).map((_, i) => <SkeletonRow key={i} order={columnOrder} visibility={columnVisibility} />)
                         ) : pageItems.length === 0 ? (
                             <tr>
                                 <td colSpan={visibleColumnCount} className="px-4 py-16 text-center text-muted-foreground">
@@ -2238,13 +2327,23 @@ export function MapsPage({
                         ) : (
                             pageItems.map((map, index) => {
                                 const author = getAuthorString(map as Map) || '—'
-                                const tags = map.tags ? map.tags.split(',').map(t => t.trim()).filter(Boolean) : []
-                                const ratings = caches.avgRatings[map.name]
-                                const myReview = caches.myReviews[map.name]
+                                const tags = map.tags
+                                    ? map.tags.split(',').map(t => t.trim()).filter(Boolean).sort((a, b) => a.localeCompare(b))
+                                    : []
+                                let ratings = caches.avgRatings[map.name]
+                                let myReview = caches.myReviews[map.name]
                                 const mapNew = isNew(map.added)
-                                const wr = (map as Map).world_record
-                                const bestCap = caches.bestCaps[map.name]
-                                const wrHolder = caches.wrHolders[map.name]
+                                let wr = (map as Map).world_record
+                                let bestCap = caches.bestCaps[map.name]
+                                let wrHolder = caches.wrHolders[map.name]
+                                if (tutorialActive && index === 0) {
+                                    const mock = getTutorialMockRow(map.name)
+                                    ratings = mock.ratings
+                                    myReview = mock.review
+                                    wr = mock.wr
+                                    bestCap = mock.bestCap
+                                    wrHolder = mock.wrHolder
+                                }
                                 const medalTier = computeMedalTier(bestCap, map as MapMetadata)
                                 const ctx: RowCtx = {
                                     map, author, tags, ratings, myReview, mapNew,
@@ -2273,7 +2372,7 @@ export function MapsPage({
                     totalPages={totalPages}
                     pageSize={pageSize}
                     totalForCount={totalForCount}
-                    mode={mode}
+                    meta={mode === 'browse' ? undefined : mode === 'search' ? 'search' : 'filtered'}
                     pageSizePreference={state.pageSizePreference}
                     autoPageSize={autoPageSize}
                     onPageChange={p => onStateChange(prev => ({ ...prev, currentPage: p }))}
@@ -2296,7 +2395,9 @@ export function MapsPage({
                             avgRatings: aggregateReviews(reviewsData),
                             myReviews: indexMyReviews(reviewsData, userId),
                         }))
-                    } catch {}
+                    } catch (e) {
+                        console.warn('Failed to refresh review cache', e)
+                    }
                 }}
             />
 
@@ -2320,7 +2421,7 @@ export function MapsPage({
                 <div className="space-y-3">
                     <label className="text-sm font-medium text-white">Preset name</label>
                     <input
-                        autoFocus
+                        ref={presetNameInputRef}
                         type="text"
                         value={presetNameInput}
                         onChange={e => setPresetNameInput(e.target.value)}
@@ -2372,31 +2473,50 @@ export function MapsPage({
                 className="bg-[#0a0a0b]/98 border-white/5"
                 maxWidth="min(90vw, 1280px)"
                 leftAction={videoModal?.fromPicker ? (
-                    <button
-                        type="button"
-                        onClick={() => {
-                            const mapName = videoModal.mapName
-                            setVideoModal(null)
-                            setReplayPickerMap(mapName)
-                        }}
-                        aria-label="Back to replays"
-                        title="Back to replays"
-                        className="h-8 w-8 inline-flex items-center justify-center rounded-full hover:bg-background/80 text-muted-foreground hover:text-white transition-colors cursor-pointer shrink-0"
-                    >
-                        <ArrowLeft className="size-4" />
-                    </button>
+                    <Tooltip content="Back to replays" side="bottom">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                const mapName = videoModal.mapName
+                                setVideoModal(null)
+                                setReplayPickerMap(mapName)
+                            }}
+                            aria-label="Back to replays"
+                            className="h-8 w-8 inline-flex items-center justify-center rounded-full hover:bg-background/80 text-muted-foreground hover:text-white transition-colors cursor-pointer shrink-0"
+                        >
+                            <ArrowLeft className="size-4" />
+                        </button>
+                    </Tooltip>
                 ) : undefined}
                 footer={
-                    <div className="p-3 border-t border-border bg-muted/50 flex justify-center shrink-0 text-xs text-muted-foreground">
-                        Powered by{' '}
-                        <a
-                            href="https://democonverter.com"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="ml-1 text-blue-400 hover:underline"
-                        >
-                            democonverter.com
-                        </a>
+                    <div className="p-3 border-t border-border bg-muted/50 flex items-center justify-between gap-3 shrink-0">
+                        <Tooltip content={shareCopied ? 'Link copied!' : 'Copy replay link'} side="top">
+                            <button
+                                type="button"
+                                onClick={copyReplayLink}
+                                aria-label="Copy replay link"
+                                className={cn(
+                                    "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border transition-colors cursor-pointer",
+                                    shareCopied
+                                        ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-300"
+                                        : "bg-white/[0.03] border-white/10 text-muted-foreground hover:text-white hover:bg-white/[0.06] hover:border-white/20",
+                                )}
+                            >
+                                {shareCopied ? <Check className="size-3.5" /> : <Share2 className="size-3.5" />}
+                                {shareCopied ? 'Copied' : 'Share'}
+                            </button>
+                        </Tooltip>
+                        <div className="text-xs text-muted-foreground flex items-center">
+                            Powered by{' '}
+                            <a
+                                href="https://democonverter.com"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="ml-1 text-blue-400 hover:underline"
+                            >
+                                democonverter.com
+                            </a>
+                        </div>
                     </div>
                 }
             >
@@ -2436,6 +2556,18 @@ export function MapsPage({
             </Modal>
 
             <Modal
+                isOpen={replayError !== null}
+                onClose={() => setReplayError(null)}
+                title="Replay not available"
+                className="w-[95%] sm:w-[440px] max-w-md"
+                offsetSidebar
+            >
+                <p className="text-sm text-muted-foreground">
+                    {replayError}
+                </p>
+            </Modal>
+
+            <Modal
                 isOpen={!tutorial.seen && !tutorialActive}
                 onClose={tutorial.markSeen}
                 title="First time here?"
@@ -2453,8 +2585,8 @@ export function MapsPage({
                 }
             >
                 <p className="text-sm text-muted-foreground">
-                    Looks like it's your first time visiting! Would you like to take a quick tutorial of the Maps page features? <br /><br />
-                    It takes about 30 seconds and you can reopen it anytime using the <HelpCircle className="inline size-3.5 align-text-bottom" /> icon next to the page heading.
+                    Looks like it's your first time visiting! Would you like to take a quick tutorial of the maps page features? <br /><br />
+                    If not, you can reopen it anytime using the <HelpCircle className="inline size-3.5 align-text-bottom" /> icon in the top right.
                 </p>
             </Modal>
 
@@ -2469,8 +2601,10 @@ export function MapsPage({
                             presetsButtonRef,
                             sortHeaderRef,
                             firstRowFavRef,
+                            firstRowWrRef,
                             firstRowReplayRef,
                             firstRowRatingRef,
+                            firstRowMyRatingRef,
                             firstRowNameRef,
                             firstRowPbRef,
                         },
@@ -2485,165 +2619,6 @@ export function MapsPage({
                     setStep={setTutorialStep}
                     onClose={closeTutorial}
                 />
-            )}
-        </div>
-    )
-}
-
-const PAGE_SIZE_OPTIONS: (number | 'auto')[] = ['auto', 10, 25, 50, 100, 200]
-
-function buildPageList(current: number, total: number): (number | 'ellipsis')[] {
-    if (total <= 7) {
-        return Array.from({ length: total }, (_, i) => i + 1)
-    }
-    const pages: (number | 'ellipsis')[] = [1]
-    const start = Math.max(2, current - 1)
-    const end = Math.min(total - 1, current + 1)
-    if (start > 2) pages.push('ellipsis')
-    for (let i = start; i <= end; i++) pages.push(i)
-    if (end < total - 1) pages.push('ellipsis')
-    pages.push(total)
-    return pages
-}
-
-function PaginationBar({
-    page, totalPages, pageSize, totalForCount, mode,
-    pageSizePreference, autoPageSize,
-    onPageChange, onPageSizeChange,
-}: {
-    page: number
-    totalPages: number
-    pageSize: number
-    totalForCount: number
-    mode: 'browse' | 'search' | 'fullload'
-    pageSizePreference: number | 'auto'
-    autoPageSize: number
-    onPageChange: (p: number) => void
-    onPageSizeChange: (pref: number | 'auto') => void
-}) {
-    const [jumpInput, setJumpInput] = useState('')
-    const pageList = buildPageList(page, totalPages)
-
-    const handleJump = () => {
-        const n = parseInt(jumpInput, 10)
-        if (!isNaN(n) && n >= 1 && n <= totalPages) {
-            onPageChange(n)
-            setJumpInput('')
-        }
-    }
-
-    return (
-        <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground shrink-0">
-            <div className="flex items-center gap-3">
-                <span>
-                    Showing {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, totalForCount)} of {totalForCount}
-                    {mode !== 'browse' && <span className="ml-2 opacity-50">({mode === 'search' ? 'search' : 'filtered'})</span>}
-                </span>
-                <div className="flex items-center gap-2">
-                    <label className="text-xs uppercase tracking-wider">Per page</label>
-                    <select
-                        value={String(pageSizePreference)}
-                        onChange={e => {
-                            const v = e.target.value
-                            onPageSizeChange(v === 'auto' ? 'auto' : parseInt(v, 10))
-                        }}
-                        style={{ colorScheme: 'dark' }}
-                        className="px-2 py-1 bg-card/50 border border-white/10 rounded text-xs text-white focus:outline-none focus:border-blue-500/50 cursor-pointer"
-                    >
-                        {PAGE_SIZE_OPTIONS.map(opt => (
-                            <option key={String(opt)} value={String(opt)} className="bg-[#0f1115] text-white">
-                                {opt === 'auto' ? `Auto (${autoPageSize})` : opt}
-                            </option>
-                        ))}
-                    </select>
-                </div>
-            </div>
-
-            {totalPages > 1 && (
-                <div className="flex items-center gap-1.5">
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onPageChange(1)}
-                        disabled={page <= 1}
-                        title="First page"
-                        className="text-muted-foreground hover:text-white px-2"
-                    >
-                        «
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onPageChange(Math.max(1, page - 1))}
-                        disabled={page <= 1}
-                        className="text-muted-foreground hover:text-white px-2"
-                    >
-                        ‹ Prev
-                    </Button>
-
-                    <div className="flex items-center gap-1">
-                        {pageList.map((p, i) =>
-                            p === 'ellipsis' ? (
-                                <span key={`e${i}`} className="px-1 text-muted-foreground/50 select-none">…</span>
-                            ) : (
-                                <button
-                                    key={p}
-                                    onClick={() => onPageChange(p)}
-                                    className={cn(
-                                        "min-w-7 h-7 px-2 rounded border text-xs transition-colors cursor-pointer",
-                                        p === page
-                                            ? "bg-blue-500/20 border-blue-500/50 text-blue-200 font-bold"
-                                            : "bg-card/50 border-white/10 text-muted-foreground hover:text-white hover:border-white/20"
-                                    )}
-                                >
-                                    {p}
-                                </button>
-                            )
-                        )}
-                    </div>
-
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onPageChange(Math.min(totalPages, page + 1))}
-                        disabled={page >= totalPages}
-                        className="text-muted-foreground hover:text-white px-2"
-                    >
-                        Next ›
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onPageChange(totalPages)}
-                        disabled={page >= totalPages}
-                        title="Last page"
-                        className="text-muted-foreground hover:text-white px-2"
-                    >
-                        »
-                    </Button>
-
-                    <div className="flex items-center gap-1 ml-2">
-                        <input
-                            type="number"
-                            min={1}
-                            max={totalPages}
-                            value={jumpInput}
-                            onChange={e => setJumpInput(e.target.value)}
-                            onKeyDown={e => { if (e.key === 'Enter') handleJump() }}
-                            placeholder="Go to"
-                            className="w-16 px-2 py-1 bg-card/50 border border-white/10 rounded text-xs text-white placeholder:text-muted-foreground/50 focus:outline-none focus:border-blue-500/50"
-                        />
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={handleJump}
-                            disabled={!jumpInput}
-                            className="text-muted-foreground hover:text-white px-2"
-                        >
-                            Go
-                        </Button>
-                    </div>
-                </div>
             )}
         </div>
     )
@@ -2682,8 +2657,8 @@ const recordTimeOptions: [string, string][] = (Object.keys(RECORD_TIME_LABELS) a
     .map(k => [k, RECORD_TIME_LABELS[k]])
 
 const ratedOptions: [string, string][] = [
-    ['rated', 'Rated by me'],
-    ['unrated', 'Not rated by me'],
+    ['rated', 'Reviewed by me'],
+    ['unrated', 'Not reviewed by me'],
 ]
 
 const cappedOptions: [string, string][] = [
@@ -2697,129 +2672,3 @@ const cappedOptions: [string, string][] = [
     ['world_record', 'World Record'],
 ]
 
-function FilterPanelRow({ label, children }: { label: string; children: React.ReactNode }) {
-    return (
-        <div>
-            <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">{label}</div>
-            <div className="flex flex-wrap items-end gap-3">{children}</div>
-        </div>
-    )
-}
-
-function fuzzyMatch(text: string, query: string): boolean {
-    if (!query) return true
-    const t = text.toLowerCase()
-    const q = query.toLowerCase()
-    if (t.includes(q)) return true
-    let i = 0
-    for (const c of t) {
-        if (c === q[i]) i++
-        if (i >= q.length) return true
-    }
-    return i >= q.length
-}
-
-function MultiFilterDropdown({
-    label, options, values, onChange, iconFor, placeholder = 'Any', minWidth = 160, searchable,
-}: {
-    label: string
-    options: [string, string][]
-    values: string[]
-    onChange: (next: string[]) => void
-    iconFor?: (value: string) => string | null
-    placeholder?: string
-    minWidth?: number
-    searchable?: boolean
-}) {
-    const [open, setOpen] = useState(false)
-    const [query, setQuery] = useState('')
-    useEffect(() => {
-        if (!open) setQuery('')
-    }, [open])
-
-    const filteredOptions = !searchable || !query
-        ? options
-        : options.filter(([value, lbl]) => fuzzyMatch(lbl, query) || fuzzyMatch(value, query))
-
-    const summary = values.length === 0
-        ? placeholder
-        : values.length === 1
-            ? options.find(([v]) => v === values[0])?.[1] ?? values[0]
-            : `${values.length} selected`
-    return (
-        <div className="flex flex-col gap-1">
-            <label className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</label>
-            <DropdownMenu open={open} onOpenChange={setOpen}>
-                <DropdownMenuTrigger asChild>
-                    <button
-                        style={{ minWidth }}
-                        className="px-2 py-2 bg-card/50 border border-white/10 rounded text-sm text-white text-left hover:border-white/20 cursor-pointer flex items-center justify-between gap-2"
-                    >
-                        <span className="truncate">{summary}</span>
-                        <ChevronDown className="size-3.5 opacity-60 shrink-0" />
-                    </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="min-w-56">
-                    {searchable && (
-                        <div className="px-1 pb-1 sticky top-0 bg-popover z-10">
-                            <input
-                                type="text"
-                                autoFocus
-                                value={query}
-                                onChange={e => setQuery(e.target.value)}
-                                onKeyDown={e => e.stopPropagation()}
-                                placeholder="Search..."
-                                className="w-full px-2 py-1.5 bg-card/50 border border-white/10 rounded text-xs text-white placeholder:text-muted-foreground focus:outline-none focus:border-blue-500/50"
-                            />
-                        </div>
-                    )}
-                    <div className="max-h-64 overflow-y-auto">
-                        {filteredOptions.length === 0 ? (
-                            <div className="px-2 py-2 text-xs text-muted-foreground">No matches.</div>
-                        ) : filteredOptions.map(([value, optLabel]) => {
-                            const checked = values.includes(value)
-                            const iconSrc = iconFor?.(value) ?? null
-                            return (
-                                <div
-                                    key={value}
-                                    onClick={() => {
-                                        const next = checked
-                                            ? values.filter(x => x !== value)
-                                            : [...values, value]
-                                        onChange(next)
-                                    }}
-                                    className="flex items-center gap-2 px-2 py-1.5 text-sm cursor-pointer hover:bg-white/5 rounded select-none"
-                                >
-                                    <input
-                                        type="checkbox"
-                                        checked={checked}
-                                        readOnly
-                                        className="accent-blue-500 cursor-pointer pointer-events-none"
-                                    />
-                                    <span className="flex-1 truncate">{optLabel}</span>
-                                    {iconSrc && (
-                                        <img src={iconSrc} alt="" className="size-4 object-contain shrink-0" />
-                                    )}
-                                </div>
-                            )
-                        })}
-                    </div>
-                    {values.length > 0 && (
-                        <>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                                onSelect={e => {
-                                    e.preventDefault()
-                                    onChange([])
-                                }}
-                                className="text-muted-foreground"
-                            >
-                                Clear selection ({values.length})
-                            </DropdownMenuItem>
-                        </>
-                    )}
-                </DropdownMenuContent>
-            </DropdownMenu>
-        </div>
-    )
-}

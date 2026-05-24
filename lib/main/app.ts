@@ -7,6 +7,7 @@ import { registerAppHandlers } from '@/lib/conveyor/handlers/app-handler'
 import { registerGameHandlers } from '@/lib/conveyor/handlers/game-handler'
 import { registerIniHandlers } from '@/lib/conveyor/handlers/ini-handler'
 import { registerFavoritesHandlers, startBackgroundGamePoller } from '@/lib/conveyor/handlers/favorites-handler'
+import { registerDemosHandlers } from '@/lib/conveyor/handlers/demos-handler'
 import { demoWatcherService } from '@/lib/main/demo-watcher-service'
 import windowStateKeeper from 'electron-window-state'
 
@@ -51,6 +52,7 @@ export function createAppWindow(): void {
   registerGameHandlers(mainWindow)
   registerIniHandlers(mainWindow)
   registerFavoritesHandlers(mainWindow)
+  registerDemosHandlers(mainWindow)
   startBackgroundGamePoller(mainWindow)
 
   demoWatcherService.startWatching()

@@ -60,6 +60,20 @@ Extend the backend endpoint to include it (see `MapReview.json()` in `DataServic
 
 For the text-only sources, pass just `alias`; the component renders without avatar.
 
+## Shared utilities (use these instead of re-implementing)
+
+Before writing inline helpers or one-off components, check these. They were extracted from MapsPage and the modals; future pages should reuse them.
+
+| Module | Use for |
+|---|---|
+| `app/components/shared/MapThumbnail.tsx` | Any map screenshot tile. Pass `mapName` + optional `className` for size/rounding. Falls back to `default.png` on load error. |
+| `app/utils/scoreColors.ts` | `scoreTextColor` / `scoreBgColor` / `scoreSliderAccent` for any 0–10 review value (pass `inverted` for lower-is-better dimensions like luck/learning/difficulty-in-review). `difficultyTextColor` / `difficultyBgColor` for 1–10 map difficulty (different yellow band — paired with `DIFFICULTY_RANGES`). Do not re-implement these thresholds. |
+| `app/utils/format.ts` | `formatCapTime(seconds)` for `MM:SS.mmm`, `formatDelta` for short deltas, `formatAddedDate`, `isNew` (30-day window). |
+| `app/components/ui/pagination.tsx` | `PaginationBar` + `buildPageList`. Pass optional `meta` string (e.g. `"search"`, `"filtered"`) for the count badge. |
+| `app/components/ui/multi-filter-dropdown.tsx` | `MultiFilterDropdown` — multi-select with optional fuzzy search, optional per-option icon. |
+| `app/components/ui/filter-panel-row.tsx` | `FilterPanelRow` — label + flex-wrap children, used inside a filters panel. |
+| `app/utils/search.ts` | `fuzzyMatch(text, query)` — substring-first, then ordered-subsequence fallback. |
+
 ## Conventions
 
 - `cn` class merger lives in `lib/utils.ts`; always use it for conditional classes.
