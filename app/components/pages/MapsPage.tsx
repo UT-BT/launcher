@@ -721,7 +721,6 @@ export function MapsPage({
     const [draggingColumn, setDraggingColumn] = useState<ColumnId | null>(null)
     const [dragOverColumn, setDragOverColumn] = useState<ColumnId | null>(null)
 
-    // Tutorial: first-time onboarding for the Maps page.
     const tutorial = useMapsTutorialState()
     const [tutorialActive, setTutorialActive] = useState(false)
     const [tutorialStep, setTutorialStep] = useState(0)
@@ -771,7 +770,6 @@ export function MapsPage({
 
             let next: ColumnId[]
             if (isMedalPbPair(sourceId)) {
-                // Move medal+pb together. No-op if target is the other half.
                 if (isMedalPbPair(targetId)) return prev
                 const without: ColumnId[] = prev.filter(id => id !== 'medal' && id !== 'pb')
                 const insertAt = without.indexOf(targetId)
@@ -803,7 +801,6 @@ export function MapsPage({
 
     const accessToken = userProfile?.accessToken
 
-    // --- Mode derivation ---
     const isSearchMode = state.search.trim().length > 0
     const usesClientOnlyFilter =
         state.ratingFilters.length > 0 ||
@@ -827,7 +824,6 @@ export function MapsPage({
     const mode: 'browse' | 'search' | 'fullload' =
         isSearchMode ? 'search' : usesClientOnlyFilter ? 'fullload' : 'browse'
 
-    // --- Server-side filter object (used in browse mode) ---
     const browseServerFilters = useMemo(() => {
         const filters: Parameters<typeof fetchMaps>[1] = { active: true }
         if (state.newOnly) {
@@ -849,7 +845,6 @@ export function MapsPage({
         return caches.metadata.reduce((n, m) => n + (isNew(m.added) ? 1 : 0), 0)
     }, [caches.metadata])
 
-    // --- Initial caches load ---
     const loadCachesInFlightRef = useRef({
         metadata: false,
         reviews: false,
@@ -904,7 +899,6 @@ export function MapsPage({
 
     useEffect(() => { loadCaches() }, [loadCaches])
 
-    // --- Browse-mode page fetch + adjacent prefetch ---
     type PageEntry = Map[] | Promise<Map[] | null>
     type CountEntry = number | Promise<number | null>
     const pageCacheRef = useRef<Record<string, PageEntry>>({})
@@ -917,7 +911,6 @@ export function MapsPage({
         JSON.stringify(browseServerFilters),
         [browseServerFilters])
 
-    // Filters or page size changed → cache invalid; drop it.
     useEffect(() => {
         pageCacheRef.current = {}
         countCacheRef.current = {}
@@ -1023,7 +1016,6 @@ export function MapsPage({
 
     useEffect(() => { loadBrowsePage() }, [loadBrowsePage])
 
-    // --- Search-mode fetch (debounced) ---
     useEffect(() => {
         if (mode !== 'search' || !accessToken) {
             searchAbortRef.current?.abort()
@@ -1050,35 +1042,31 @@ export function MapsPage({
         return () => clearTimeout(t)
     }, [mode, state.search, accessToken])
 
-    // --- Loading flag ---
     useEffect(() => {
         setLoading(!caches.metadataLoaded || !caches.reviewsLoaded)
     }, [caches.metadataLoaded, caches.reviewsLoaded])
 
-    // --- Resize → recompute auto page size ---
     useEffect(() => {
         const onResize = () => setAutoPageSize(computePageSize())
         window.addEventListener('resize', onResize)
         return () => window.removeEventListener('resize', onResize)
     }, [])
 
-    // --- Scroll restoration ---
     useEffect(() => {
         if (scrollContainerRef.current) {
             scrollContainerRef.current.scrollTop = state.scrollTop
         }
-        // run once on mount only
+        // Restore scroll once on mount; deps intentionally empty.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
     const onScrollContainerScroll = useCallback(() => {
         if (!scrollContainerRef.current) return
         const top = scrollContainerRef.current.scrollTop
-        // throttle: only persist when changed by > 24px
+        // Skip writes for sub-24px scroll deltas to avoid spamming localStorage.
         onStateChange(prev => Math.abs(prev.scrollTop - top) > 24 ? { ...prev, scrollTop: top } : prev)
     }, [onStateChange])
 
-    // --- Client-side filter pipeline (used in search & fullload modes) ---
     const applyAllClientFilters = useCallback(<T extends Map | MapMetadata>(rows: T[]): T[] => {
         return rows.filter(m => {
             if (state.authorFilters.length > 0) {
@@ -1238,7 +1226,6 @@ export function MapsPage({
         return out
     }, [state.sortBy, state.sortDir, caches.avgRatings, caches.bestCaps, caches.myReviews])
 
-    // --- Display rows + counts ---
     const { totalForCount, pageItems, totalPages, page } = useMemo(() => {
         let allRows: (Map | MapMetadata)[]
         if (mode === 'browse') {
@@ -1266,7 +1253,6 @@ export function MapsPage({
         }
     }, [mode, caches.pageMaps, caches.totalCount, caches.metadata, searchResults, applyAllClientFilters, sortRows, pageSize, state.currentPage])
 
-    // --- Lazy WR-holder fetch: only for currently visible map names ---
     const wrHoldersInFlightRef = useRef<Set<string>>(new Set())
     useEffect(() => {
         if (!accessToken) return
@@ -1310,7 +1296,6 @@ export function MapsPage({
         }
     }, [pageItems, accessToken, caches.wrHoldersFetched, onCachesChange])
 
-    // --- Dropdown options (derived from metadata) ---
     const uniqueAuthors = caches.authors
 
     const uniqueTags = useMemo(() => {
@@ -1332,7 +1317,6 @@ export function MapsPage({
         return [...set].sort((a, b) => b - a)
     }, [caches.metadata])
 
-    // --- Setters that reset to page 1 ---
     const updateFilter = useCallback(<K extends keyof MapsPageState>(key: K, value: MapsPageState[K]) => {
         onStateChange(prev => ({ ...prev, [key]: value, currentPage: 1 }))
     }, [onStateChange])
@@ -1413,7 +1397,6 @@ export function MapsPage({
 
     const refresh = () => {
         onCachesChange(() => ({ ...DEFAULT_MAPS_CACHES }))
-        // loadCaches will trigger via useEffect when caches reset
         loadCaches(true)
         loadBrowsePage()
     }
@@ -1425,7 +1408,6 @@ export function MapsPage({
             : <ChevronDown className="size-3 text-blue-400" />
     }
 
-    // --- Active filter count for badge ---
     const activeFilterCount = [
         state.authorFilters.length > 0,
         state.tagFilters.length > 0,
@@ -1913,7 +1895,6 @@ export function MapsPage({
 
     return (
         <div className="space-y-4 h-full flex flex-col overflow-hidden">
-            {/* Header */}
             <div className="flex items-end justify-between shrink-0">
                 <div>
                     <h1 className="text-2xl font-bold text-white leading-tight">Maps</h1>
@@ -1947,7 +1928,6 @@ export function MapsPage({
                 </div>
             </div>
 
-            {/* Filters toolbar */}
             <div className="flex flex-wrap items-center gap-3 shrink-0">
                 <div className="relative flex-1 min-w-48 max-w-xs">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
@@ -2086,7 +2066,6 @@ export function MapsPage({
 
             </div>
 
-            {/* Inline filter panel */}
             {state.filtersPanelOpen && (
                 <div ref={filterPanelRef} className="bg-card/30 border border-white/10 rounded-xl p-4 space-y-4 shrink-0">
                     <FilterPanelRow label="Map">
@@ -2202,7 +2181,6 @@ export function MapsPage({
                         </label>
                     </FilterPanelRow>
 
-                    {/* Presets row */}
                     <div className="flex items-center justify-between gap-3 pt-2 border-t border-white/5">
                         <div className="flex items-center gap-2">
                             <DropdownMenu open={presetsMenuOpen} onOpenChange={setPresetsMenuOpen} modal={false}>
@@ -2293,7 +2271,6 @@ export function MapsPage({
                 </div>
             )}
 
-            {/* Error */}
             {error && (
                 <div className="flex items-center justify-between p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm shrink-0">
                     <span>{error}</span>
@@ -2303,7 +2280,6 @@ export function MapsPage({
                 </div>
             )}
 
-            {/* Table */}
             <div
                 ref={scrollContainerRef}
                 onScroll={onScrollContainerScroll}
@@ -2365,7 +2341,6 @@ export function MapsPage({
                 </table>
             </div>
 
-            {/* Pagination */}
             {!showSkeleton && totalForCount > 0 && (
                 <PaginationBar
                     page={page}

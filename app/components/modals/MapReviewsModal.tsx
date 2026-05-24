@@ -165,7 +165,6 @@ export function MapReviewsModal({
                         </div>
                     ) : (
                         <>
-                            {/* Community average panel */}
                             {avgRow && (
                                 <div className="rounded-xl bg-gradient-to-br from-blue-500/10 to-transparent border border-blue-500/20 p-5">
                                     <div className="text-[10px] font-bold uppercase tracking-widest text-blue-300 mb-4">
@@ -202,7 +201,6 @@ export function MapReviewsModal({
                                 </div>
                             )}
 
-                            {/* Sort controls */}
                             {(otherReviews.length > 0 || myReview) && (
                                 <div className="flex items-center justify-between gap-3">
                                     <div className="text-xs uppercase tracking-widest text-muted-foreground">
@@ -231,7 +229,6 @@ export function MapReviewsModal({
                                 </div>
                             )}
 
-                            {/* Review cards */}
                             <div className="space-y-2.5">
                                 {myReview ? (
                                     <ReviewCard

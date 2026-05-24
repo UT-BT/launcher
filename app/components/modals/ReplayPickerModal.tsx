@@ -57,7 +57,6 @@ export function ReplayPickerModal({
     const pageRef = useRef(1)
     pageRef.current = page
 
-    // Demo download status modal.
     type DlState =
         | { status: 'downloading'; capId: string; filename: string }
         | { status: 'success'; capId: string; filename: string; path: string; bytes: number }
@@ -128,7 +127,8 @@ export function ReplayPickerModal({
         }
     }, [open, mapName, accessToken])
 
-    // --- Priority-queue worker: fetch demo statuses, current page first ---
+    // Fetch demo statuses with a small worker pool, prioritizing the visible
+    // page so users don't wait for off-page rows before seeing playability.
     useEffect(() => {
         if (rows.length === 0) return
         const snapshotIds = rows.map(r => r.entry.id)
