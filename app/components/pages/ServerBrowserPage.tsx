@@ -113,7 +113,6 @@ const DEFAULT_COLUMN_VISIBILITY: Record<ServerColumnId, boolean> = {
 const REQUIRED_COLUMNS: ReadonlySet<ServerColumnId> = new Set(['name', 'actions'])
 
 const SORTABLE_COLUMNS: Partial<Record<ServerColumnId, ServerSortField>> = {
-    type: 'type',
     name: 'name',
     map: 'map',
     region: 'region',
@@ -311,10 +310,10 @@ const PlayerListCell = ({ players, displayText, displayColor, singular, plural }
                 ? 'bg-card/50 border-white/5 hover:border-white/20 hover:bg-card/80 cursor-pointer'
                 : 'bg-card/30 border-white/5 cursor-default',
         )}>
-            <AvatarStack players={sorted} />
             <span className={cn('text-xs font-bold tabular-nums', displayColor)}>
                 {displayText}
             </span>
+            {sorted.length > 0 && <AvatarStack players={sorted} />}
         </div>
     )
 
@@ -617,7 +616,7 @@ export function ServerBrowserPage({
                 </DataTableHeaderCell>
             )
         }
-        const showLabel = id !== 'thumbnail' && id !== 'actions'
+        const showLabel = id !== 'thumbnail' && id !== 'actions' && id !== 'type'
         return (
             <DataTableHeaderCell key={id}>
                 {showLabel ? SERVER_COLUMN_LABELS[id] : null}
@@ -673,10 +672,13 @@ export function ServerBrowserPage({
             case 'region':
                 return (
                     <DataTableCell key={id}>
-                        <div className="inline-flex items-center gap-1.5 bg-white/5 px-2 py-1 rounded text-[10px] font-bold text-muted-foreground uppercase tracking-wider border border-white/5">
-                            <img src={getRegionFlag(region)} alt={region} className="h-2.5 w-4 object-cover rounded-[1px] opacity-70" />
-                            {region}
-                        </div>
+                        <Tooltip content={region} side="top">
+                            <img
+                                src={getRegionFlag(region)}
+                                alt={region}
+                                className="h-4 w-6 object-cover rounded-[2px] border border-white/10"
+                            />
+                        </Tooltip>
                     </DataTableCell>
                 )
             case 'ping': {
@@ -686,8 +688,8 @@ export function ServerBrowserPage({
                         ping < 200 ? 'text-yellow-500' : 'text-red-500'
                 return (
                     <DataTableCell key={id}>
-                        <div className={cn('inline-flex items-center gap-1 bg-white/5 px-2 py-1 rounded text-[10px] font-bold tabular-nums border border-white/5', pingColor)}>
-                            <Signal className="size-3" />
+                        <div className={cn('inline-flex items-center gap-1.5 text-xs font-bold tabular-nums', pingColor)}>
+                            <Signal className="size-3.5" />
                             {ping ? `${ping}ms` : '...'}
                         </div>
                     </DataTableCell>
@@ -764,29 +766,28 @@ export function ServerBrowserPage({
                         <div className="inline-flex items-center gap-1.5">
                             <Tooltip content={joinTooltip} side="top">
                                 <span className="inline-flex">
-                                    <Button
+                                    <button
+                                        type="button"
                                         onClick={() => handleJoin(server, false)}
-                                        size="sm"
                                         disabled={!canJoin}
-                                        className="h-7 px-3 bg-primary hover:bg-primary/90 text-primary-foreground rounded-md uppercase text-[10px] font-bold tracking-widest disabled:opacity-40"
+                                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium border border-blue-500/30 bg-blue-500/10 text-blue-300 hover:bg-blue-500/25 hover:text-blue-100 hover:border-blue-500/50 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-blue-500/10 disabled:hover:text-blue-300 disabled:hover:border-blue-500/30"
                                     >
-                                        <Play className="size-3 mr-1 fill-current" />
+                                        <Play className="size-3 fill-current" />
                                         Join
-                                    </Button>
+                                    </button>
                                 </span>
                             </Tooltip>
                             <Tooltip content={specTooltip} side="top">
                                 <span className="inline-flex">
-                                    <Button
+                                    <button
+                                        type="button"
                                         onClick={() => handleJoin(server, true)}
-                                        size="sm"
-                                        variant="ghost"
                                         disabled={!canSpec}
-                                        className="h-7 px-2 text-muted-foreground hover:text-foreground rounded-md hover:bg-white/5 text-[10px] font-bold uppercase tracking-widest gap-1 disabled:opacity-40"
+                                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium border border-white/10 bg-white/5 text-muted-foreground hover:bg-white/10 hover:text-white hover:border-white/20 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white/5 disabled:hover:text-muted-foreground disabled:hover:border-white/10"
                                     >
                                         <Eye className="size-3" />
                                         Spec
-                                    </Button>
+                                    </button>
                                 </span>
                             </Tooltip>
                         </div>
@@ -869,6 +870,12 @@ export function ServerBrowserPage({
                     menuOpen={columnsMenuOpen}
                     onMenuOpenChange={setColumnsMenuOpen}
                 />
+
+                <div className="ml-auto flex items-center gap-3 text-[10px] uppercase tracking-wider text-muted-foreground">
+                    <span className="inline-flex items-center gap-1.5"><TypeIcon type="Certified" className="size-3.5" /> Certified</span>
+                    <span className="inline-flex items-center gap-1.5"><TypeIcon type="Duel" className="size-3.5" /> Duel</span>
+                    <span className="inline-flex items-center gap-1.5"><TypeIcon type="Casual" className="size-3.5" /> Casual</span>
+                </div>
             </div>
 
             {state.filtersPanelOpen && (
