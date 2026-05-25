@@ -1,0 +1,4 @@
+provider: github
+owner: UT-BT
+repo: launcher
+updaterCacheDirName: utbt-launcher-updater

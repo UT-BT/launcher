@@ -18,6 +18,7 @@ import {
 import { MapDetailPage } from '@/app/components/pages/MapDetailPage'
 import { PlayerDetailPage } from '@/app/components/pages/PlayerDetailPage'
 import { InstallationBanner } from '@/app/components/InstallationBanner'
+import { UpdateBanner } from '@/app/components/updater/UpdateBanner'
 import { FavoritesSyncModal, type SyncResolution } from '@/app/components/shared/FavoritesSyncModal'
 import type { ServerPreset } from '@/app/utils/server-utils'
 import {
@@ -429,6 +430,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
 
   return (
     <div className="h-screen flex flex-col overflow-hidden">
+      <UpdateBanner />
       {installationStatus && installationStatus !== 'valid' && (
         <InstallationBanner
           type={installationStatus}

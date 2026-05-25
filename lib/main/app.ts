@@ -8,7 +8,9 @@ import { registerGameHandlers } from '@/lib/conveyor/handlers/game-handler'
 import { registerIniHandlers } from '@/lib/conveyor/handlers/ini-handler'
 import { registerFavoritesHandlers, startBackgroundGamePoller } from '@/lib/conveyor/handlers/favorites-handler'
 import { registerDemosHandlers } from '@/lib/conveyor/handlers/demos-handler'
+import { registerUpdaterHandlers } from '@/lib/conveyor/handlers/updater-handler'
 import { demoWatcherService } from '@/lib/main/demo-watcher-service'
+import { updaterService } from '@/lib/main/updater-service'
 import windowStateKeeper from 'electron-window-state'
 
 export function createAppWindow(): void {
@@ -53,12 +55,17 @@ export function createAppWindow(): void {
   registerIniHandlers(mainWindow)
   registerFavoritesHandlers(mainWindow)
   registerDemosHandlers(mainWindow)
+  registerUpdaterHandlers(mainWindow)
   startBackgroundGamePoller(mainWindow)
 
   demoWatcherService.startWatching()
+  updaterService.init(mainWindow)
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
+    setTimeout(() => {
+      void updaterService.check(false)
+    }, 2000)
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {

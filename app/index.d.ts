@@ -67,4 +67,7 @@ interface Window {
   utFavorites: {
     onGameClosed: (cb: () => void) => () => void
   }
+  utbtUpdater: {
+    onStateChanged: (cb: (state: import('@/lib/conveyor/schemas/updater-schema').UpdaterStateSnapshot) => void) => () => void
+  }
 }

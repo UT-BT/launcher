@@ -3,6 +3,8 @@ import { SplashScreen } from '@/app/components/splash/SplashScreen'
 import { Main } from '@/app/components/main/Main'
 import { LoginPage } from '@/app/components/pages/LoginPage'
 import { ErrorModal } from '@/app/components/ErrorModal'
+import { UpdaterProvider } from '@/app/hooks/useUpdater'
+import { UpdateModal } from '@/app/components/updater/UpdateModal'
 import { useLogger } from '@/app/hooks/use-logger'
 import { fetchUserProfile, UserProfile, logLauncherStartup, fetchLatestActivity } from '@/app/utils/api'
 
@@ -166,10 +168,12 @@ export default function App() {
   }, [appPhase])
 
   return (
-    <>
+    <UpdaterProvider>
       {appPhase === 'main' && <Main userProfile={userProfile} />}
       {appPhase === 'login' && <LoginPage onLoginSuccess={handleLoginSuccess} />}
       {appPhase === 'splash' && <SplashScreen onReady={handleSplashComplete} variant={initError ? 'error' : 'intro'} />}
+
+      <UpdateModal />
 
       <ErrorModal
         isOpen={!!initError}
@@ -181,6 +185,6 @@ export default function App() {
         fullScreen={true}
         disableClose={true}
       />
-    </>
+    </UpdaterProvider>
   )
 }
