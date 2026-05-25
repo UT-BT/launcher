@@ -335,7 +335,7 @@ export function Home({ userProfile, favoriteMapNames, onToggleFavorite }: HomePr
                                                     <img src={medalIcon} alt={ach.medal} className="h-5 w-auto object-contain" title={ach.medal} />
                                                 )}
                                                 <FavoriteStar
-                                                    mapName={ach.mapName}
+                                                    name={ach.mapName}
                                                     isFavorited={favoriteMapNames.has(ach.mapName)}
                                                     onToggle={onToggleFavorite}
                                                     size="sm"

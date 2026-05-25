@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
 
-const KEY = 'utbt:mapsPageTutorial:v1'
-
 interface TutorialState {
     seen: boolean
     version: 1
@@ -9,10 +7,10 @@ interface TutorialState {
 
 const DEFAULT: TutorialState = { seen: false, version: 1 }
 
-function load(): TutorialState {
+function load(key: string): TutorialState {
     if (typeof window === 'undefined') return DEFAULT
     try {
-        const raw = window.localStorage.getItem(KEY)
+        const raw = window.localStorage.getItem(key)
         if (!raw) return DEFAULT
         const parsed = JSON.parse(raw)
         return { ...DEFAULT, ...parsed }
@@ -21,16 +19,16 @@ function load(): TutorialState {
     }
 }
 
-export function useMapsTutorialState() {
-    const [state, setState] = useState<TutorialState>(load)
+export function useTutorialState(storageKey: string) {
+    const [state, setState] = useState<TutorialState>(() => load(storageKey))
 
     useEffect(() => {
         try {
-            window.localStorage.setItem(KEY, JSON.stringify(state))
+            window.localStorage.setItem(storageKey, JSON.stringify(state))
         } catch {
             // localStorage may be full or unavailable; swallow.
         }
-    }, [state])
+    }, [state, storageKey])
 
     const markSeen = useCallback(() => setState(s => ({ ...s, seen: true })), [])
     const resetSeen = useCallback(() => setState(s => ({ ...s, seen: false })), [])

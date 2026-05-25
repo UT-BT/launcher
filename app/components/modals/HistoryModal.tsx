@@ -129,7 +129,7 @@ export function HistoryModal({ open, onOpenChange, accessToken, favoriteMapNames
                                             <img src={medalIcon} alt={cap.medal} className="h-4 w-auto object-contain" title={cap.medal} />
                                         )}
                                         <FavoriteStar
-                                            mapName={cap.mapName}
+                                            name={cap.mapName}
                                             isFavorited={favoriteMapNames.has(cap.mapName)}
                                             onToggle={onToggleFavorite}
                                             size="sm"

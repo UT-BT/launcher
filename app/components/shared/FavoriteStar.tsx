@@ -3,9 +3,9 @@ import { Tooltip } from '@/app/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 
 interface FavoriteStarProps {
-    mapName: string
+    name: string
     isFavorited: boolean
-    onToggle: (mapName: string) => void
+    onToggle: (name: string) => void
     size?: 'sm' | 'md' | 'lg'
     className?: string
     disabled?: boolean
@@ -24,7 +24,7 @@ const PADDING: Record<NonNullable<FavoriteStarProps['size']>, string> = {
 }
 
 export function FavoriteStar({
-    mapName,
+    name,
     isFavorited,
     onToggle,
     size = 'md',
@@ -35,13 +35,13 @@ export function FavoriteStar({
         <Tooltip content={isFavorited ? 'Remove favorite' : 'Add to favorites'} side="top">
             <button
                 type="button"
-                aria-label={isFavorited ? `Unfavorite ${mapName}` : `Favorite ${mapName}`}
+                aria-label={isFavorited ? `Unfavorite ${name}` : `Favorite ${name}`}
                 aria-pressed={isFavorited}
                 disabled={disabled}
                 onClick={(e) => {
                     e.stopPropagation()
                     if (disabled) return
-                    onToggle(mapName)
+                    onToggle(name)
                 }}
                 className={cn(
                     'inline-flex items-center justify-center rounded transition-colors',

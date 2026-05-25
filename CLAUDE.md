@@ -4,84 +4,50 @@ Guidance for Claude Code (claude.ai/code) working in the UTBT launcher repo.
 
 ## Project
 
-Electron desktop launcher for UTBT (UT99 Bunny Track). React 19 + Vite 7 + TypeScript + Tailwind 4. Built with `electron-vite`. Renderer code lives under `app/`; main-process code under `lib/main/`. Data is fetched from the DataService backend (`api.utbt.net`, `localhost:5000` in dev) via the helpers in `app/utils/api.ts`. User avatars come from `https://gateway.utbt.net/users/{userId}/avatar`.
+Electron desktop launcher for UTBT (UT99 Bunny Track). React 19 + Vite 7 +
+TypeScript + Tailwind 4. Built with `electron-vite`. Renderer code lives under
+`app/`; main-process code under `lib/main/`.
 
-## Build / dev
+## Topic docs (`agents/`)
 
-- `npm run dev` — start dev server (Node 20+ required, Vite 7 calls `crypto.hash`).
-- `npm run lint` — ESLint.
-- `npx tsc --noEmit -p tsconfig.web.json` — typecheck renderer code only.
-- `npm run build:win` — production build.
+Read the relevant one before working in that area. Don't duplicate their
+content here.
 
-## Shared components
+- **`agents/build.md`** — npm scripts, node version, pre-commit checklist.
+- **`agents/shared-components.md`** — every shared component + when to use
+  it. **Required reading before adding JSX or extracting a new component.**
+- **`agents/styling.md`** — locked design tokens (table styling, button
+  variants, card backgrounds, color palette). **Required reading before
+  styling anything.**
+- **`agents/data-sources.md`** — DataService endpoints, avatar / map / flag
+  URLs, Electron IPC bridge, favorites sync model.
+- **`agents/state-patterns.md`** — controlled-page pattern, localStorage
+  versioned keys, presets, tutorial state.
 
-### `PlayerInfo` — MANDATORY for every player display
+## Hard rules (don't break these)
 
-`app/components/shared/PlayerInfo.tsx`.
+1. **`PlayerInfo` is mandatory for every player display.** Never render `alias`
+   as raw text or hand-roll an avatar `<img>`. See `agents/shared-components.md`.
+2. **Tables use `DataTable.*` primitives.** Don't write inline `<th>` / `<td>`
+   styling. See `agents/styling.md`.
+3. **Use `cn` from `lib/utils.ts`** for any conditional class composition. It
+   handles Tailwind conflicts via tailwind-merge.
+4. **Native `<select>` needs `style={{ colorScheme: 'dark' }}`** so Chromium
+   renders dark form chrome on Windows.
+5. **Modals use `app/components/ui/modal.tsx`** with `offsetSidebar` when the
+   modal should respect the navigation rail.
+6. **Persist UI state via the hoisted-state-in-`Main.tsx` pattern** with a
+   versioned `utbt:<thing>:v<n>` key and merge-over-defaults loader. See
+   `agents/state-patterns.md`.
+7. **Don't `text-gray-*` / `bg-gray-*` / `border-gray-*`.** Use the
+   `muted-foreground` / `white/<n>` / `card/<n>` tokens. See
+   `agents/styling.md`.
+8. **Extend the backend** when launcher needs exceed the API rather than
+   working around in the renderer (see `MapReview.json()` pattern in
+   `DataService/data_service/endpoints/map_review/model.py`).
 
-Any time the UI lists a player (reviewer in a review card, map author, achievement attribution, leaderboard row, cap history, etc.), render them through `PlayerInfo`. Do not output `alias` / `username` as raw text and do not write a one-off avatar `<img>`. The component handles:
+## When you change something covered by an agents doc
 
-- Discord avatar via `getAvatarUrl(userId)` with fallback to Discord default on load error
-- Skipping the avatar entirely when `userId` is missing or short (string-only authors, bots)
-- Active title display + per-rarity styling (color, weight, glow, legendary pulse animation)
-- "You" highlight (emerald tint + badge)
-- Horizontal or vertical layout, `sm` / `md` / `lg` sizing
-
-The props are flat primitives — `userId`, `alias`, `title` — never nested user/record shapes. If your data is in a different structure, destructure at the call site:
-
-```tsx
-<PlayerInfo
-  userId={review.user}
-  alias={review.alias}
-  title={review.active_title}
-  size="md"
-  highlight={isOwn}
-  showYouBadge={isOwn}
-/>
-```
-
-#### Rarity styling (1–5)
-
-Defined inside `PlayerInfo` as two tables (`getAvatarBorderStyle` / `getTitleStyle`) ported from `UTBT_FrontEnd/src/components/UTBT/PlayerInfo.js`. Do not re-implement rarity logic elsewhere. Rarity 5 uses `legendaryAvatarPulse` and `legendaryTitlePulse` keyframes defined in `app/styles/globals.css`.
-
-#### If your backend payload lacks `active_title`
-
-Extend the backend endpoint to include it (see `MapReview.json()` in `DataService/data_service/endpoints/map_review/model.py` for the pattern: relationship to `AssignedTitle` filtered by `selected=True`, chained to `TitleCatalogue`, injected as `active_title` dict in an overridden `json()`). Don't work around it in the launcher.
-
-## Player data shapes
-
-| Source | Fields available |
-|---|---|
-| `MapReview` | `user` (id), `alias`, `active_title` |
-| `Record` | `user_id`, `alias`, `color_r/g/b` (no rarity yet) |
-| `Summary.achievements[]` | `author` only (text-only `PlayerInfo` usage) |
-| `SummaryCap` | `author` only (text-only `PlayerInfo` usage) |
-| `UserProfile` | `id`, `alias`, `active_title` |
-
-For the text-only sources, pass just `alias`; the component renders without avatar.
-
-## Shared utilities (use these instead of re-implementing)
-
-Before writing inline helpers or one-off components, check these. They were extracted from MapsPage and the modals; future pages should reuse them.
-
-| Module | Use for |
-|---|---|
-| `app/components/shared/MapThumbnail.tsx` | Any map screenshot tile. Pass `mapName` + optional `className` for size/rounding. Falls back to `default.png` on load error. |
-| `app/utils/scoreColors.ts` | `scoreTextColor` / `scoreBgColor` / `scoreSliderAccent` for any 0–10 review value (pass `inverted` for lower-is-better dimensions like luck/learning/difficulty-in-review). `difficultyTextColor` / `difficultyBgColor` for 1–10 map difficulty (different yellow band — paired with `DIFFICULTY_RANGES`). Do not re-implement these thresholds. |
-| `app/utils/format.ts` | `formatCapTime(seconds)` for `MM:SS.mmm`, `formatDelta` for short deltas, `formatAddedDate`, `isNew` (30-day window). |
-| `app/components/ui/pagination.tsx` | `PaginationBar` + `buildPageList`. Pass optional `meta` string (e.g. `"search"`, `"filtered"`) for the count badge. |
-| `app/components/ui/multi-filter-dropdown.tsx` | `MultiFilterDropdown` — multi-select with optional fuzzy search, optional per-option icon. |
-| `app/components/ui/filter-panel-row.tsx` | `FilterPanelRow` — label + flex-wrap children, used inside a filters panel. |
-| `app/utils/search.ts` | `fuzzyMatch(text, query)` — substring-first, then ordered-subsequence fallback. |
-
-## Conventions
-
-- `cn` class merger lives in `lib/utils.ts`; always use it for conditional classes.
-- Selects need `style={{ colorScheme: 'dark' }}` so Chromium renders dark form chrome on Windows.
-- Modals use `app/components/ui/modal.tsx` with `offsetSidebar` when the modal should respect the navigation rail.
-- Persist user-facing UI state (filters, sort, page) in `localStorage` via the pattern used by `Main.tsx` for `mapsState` — versioned key (`utbt:thing:v1`), merge-over-defaults on load.
-
-## Where the maps page state lives
-
-- `MapsPage` is a controlled component. State + data caches are hoisted to `Main.tsx` so they survive navigation to `MapDetailPage` and back.
-- Filters/sort/page persisted to `localStorage`; data caches are not (they re-fetch on launcher start).
+If you change a shared component's API, lock a new design token, or change a
+state-persistence pattern, **update the relevant `agents/*.md` in the same
+change**. Docs that lag behind code stop being trustworthy.

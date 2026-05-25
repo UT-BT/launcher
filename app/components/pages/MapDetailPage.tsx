@@ -28,7 +28,7 @@ export function MapDetailPage({ mapName, onBack, favoriteMapNames, onToggleFavor
                 <div className="flex items-center gap-3">
                     <h2 className="text-xl font-bold text-white">{mapName}</h2>
                     <FavoriteStar
-                        mapName={mapName}
+                        name={mapName}
                         isFavorited={favoriteMapNames.has(mapName)}
                         onToggle={onToggleFavorite}
                         size="lg"

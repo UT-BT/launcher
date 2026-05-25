@@ -1,7 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { AppLayout } from '@/app/components/layout/AppLayout'
 import { Home } from '@/app/components/pages/Home'
-import { ServerBrowserPage } from '@/app/components/pages/ServerBrowserPage'
+import {
+  ServerBrowserPage,
+  DEFAULT_SERVERS_STATE,
+  DEFAULT_SERVERS_CACHES,
+  type ServerBrowserState,
+  type ServerBrowserCaches,
+} from '@/app/components/pages/ServerBrowserPage'
 import {
   MapsPage,
   DEFAULT_MAPS_STATE,
@@ -13,6 +19,7 @@ import { MapDetailPage } from '@/app/components/pages/MapDetailPage'
 import { PlayerDetailPage } from '@/app/components/pages/PlayerDetailPage'
 import { InstallationBanner } from '@/app/components/InstallationBanner'
 import { FavoritesSyncModal, type SyncResolution } from '@/app/components/shared/FavoritesSyncModal'
+import type { ServerPreset } from '@/app/utils/server-utils'
 import {
   addFavoriteMap,
   fetchUserFavorites,
@@ -22,6 +29,9 @@ import {
 
 
 const MAPS_STATE_STORAGE_KEY = 'utbt:mapsPageState:v1'
+const SERVERS_STATE_STORAGE_KEY = 'utbt:serversState:v1'
+const SERVER_PRESETS_STORAGE_KEY = 'utbt:serverPresets:v1'
+const SERVER_FAVORITES_STORAGE_KEY = 'utbt:serverFavorites:v2'
 
 const SINGLE_TO_MULTI_FILTER_KEYS: Array<[string, string]> = [
   ['authorFilter', 'authorFilters'],
@@ -61,6 +71,54 @@ function loadPersistedMapsState(): MapsPageState {
   }
 }
 
+function loadPersistedServersState(): ServerBrowserState {
+  if (typeof window === 'undefined') return DEFAULT_SERVERS_STATE
+  try {
+    const raw = window.localStorage.getItem(SERVERS_STATE_STORAGE_KEY)
+    if (!raw) return DEFAULT_SERVERS_STATE
+    const parsed = JSON.parse(raw)
+    return {
+      ...DEFAULT_SERVERS_STATE,
+      ...parsed,
+      filters: { ...DEFAULT_SERVERS_STATE.filters, ...(parsed?.filters ?? {}) },
+      columnVisibility: {
+        ...DEFAULT_SERVERS_STATE.columnVisibility,
+        ...(parsed?.columnVisibility ?? {}),
+      },
+      columnOrder: Array.isArray(parsed?.columnOrder) && parsed.columnOrder.length > 0
+        ? parsed.columnOrder
+        : DEFAULT_SERVERS_STATE.columnOrder,
+      scrollTop: 0,
+    }
+  } catch {
+    return DEFAULT_SERVERS_STATE
+  }
+}
+
+function loadPersistedServerPresets(): ServerPreset[] {
+  if (typeof window === 'undefined') return []
+  try {
+    const raw = window.localStorage.getItem(SERVER_PRESETS_STORAGE_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) ? parsed as ServerPreset[] : []
+  } catch {
+    return []
+  }
+}
+
+function loadPersistedServerFavorites(): Set<string> {
+  if (typeof window === 'undefined') return new Set()
+  try {
+    const raw = window.localStorage.getItem(SERVER_FAVORITES_STORAGE_KEY)
+    if (!raw) return new Set()
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) ? new Set(parsed as string[]) : new Set()
+  } catch {
+    return new Set()
+  }
+}
+
 export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').UserProfile }) {
   const [currentView, setCurrentView] = useState('home')
   const [selectedMapName, setSelectedMapName] = useState<string | null>(null)
@@ -69,6 +127,10 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
   const [installationStatus, setInstallationStatus] = useState<'valid' | 'no-install' | 'unsupported' | null>(null)
   const [mapsState, setMapsState] = useState<MapsPageState>(loadPersistedMapsState)
   const [mapsCaches, setMapsCaches] = useState<MapsPageCaches>(DEFAULT_MAPS_CACHES)
+  const [serversState, setServersState] = useState<ServerBrowserState>(loadPersistedServersState)
+  const [serversCaches, setServersCaches] = useState<ServerBrowserCaches>(DEFAULT_SERVERS_CACHES)
+  const [serverPresets, setServerPresets] = useState<ServerPreset[]>(loadPersistedServerPresets)
+  const [favoriteServerIds, setFavoriteServerIds] = useState<Set<string>>(loadPersistedServerFavorites)
   const [favoriteMapNames, setFavoriteMapNames] = useState<Set<string>>(() => new Set())
   const favoriteOrderRef = useRef<string[]>([])
   const [syncModalState, setSyncModalState] = useState<{ open: boolean; db: string[]; ini: string[] }>({
@@ -85,6 +147,31 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
       // localStorage may be full or unavailable; swallow.
     }
   }, [mapsState])
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(SERVERS_STATE_STORAGE_KEY, JSON.stringify(serversState))
+    } catch { /* ignore */ }
+  }, [serversState])
+
+  const updateServerPresets = useCallback((next: ServerPreset[]) => {
+    setServerPresets(next)
+    try {
+      window.localStorage.setItem(SERVER_PRESETS_STORAGE_KEY, JSON.stringify(next))
+    } catch { /* ignore */ }
+  }, [])
+
+  const toggleServerFavorite = useCallback((serverId: string) => {
+    setFavoriteServerIds(prev => {
+      const next = new Set(prev)
+      if (next.has(serverId)) next.delete(serverId)
+      else next.add(serverId)
+      try {
+        window.localStorage.setItem(SERVER_FAVORITES_STORAGE_KEY, JSON.stringify(Array.from(next)))
+      } catch { /* ignore */ }
+      return next
+    })
+  }, [])
 
   const accessToken = userProfile?.accessToken
   const userId = userProfile?.id ?? undefined
@@ -291,8 +378,14 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
       case 'servers':
         return <ServerBrowserPage
           installationStatus={installationStatus}
-          favoriteMapNames={favoriteMapNames}
-          onToggleFavorite={toggleFavorite}
+          state={serversState}
+          onStateChange={setServersState}
+          caches={serversCaches}
+          onCachesChange={setServersCaches}
+          favoriteServerIds={favoriteServerIds}
+          onToggleServerFavorite={toggleServerFavorite}
+          presets={serverPresets}
+          onPresetsChange={updateServerPresets}
         />
       case 'maps':
         return <MapsPage
