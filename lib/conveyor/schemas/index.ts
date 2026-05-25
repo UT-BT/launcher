@@ -5,6 +5,7 @@ import { gameIpcSchema } from './game-schema'
 import { iniIpcSchema } from './ini-schema'
 import { favoritesIpcSchema } from './favorites-schema'
 import { demosIpcSchema } from './demos-schema'
+import { updaterIpcSchema } from './updater-schema'
 
 // Define all IPC channel schemas in one place
 export const ipcSchemas = {
@@ -14,6 +15,7 @@ export const ipcSchemas = {
   ...iniIpcSchema,
   ...favoritesIpcSchema,
   ...demosIpcSchema,
+  ...updaterIpcSchema,
 } as const
 
 // Extract types from Zod schemas

@@ -20,6 +20,11 @@ type LauncherConfig = {
   auth?: AuthConfig
   demoWatcher?: DemoWatcherConfig
   activeProfile?: string
+  updater?: UpdaterConfig
+}
+
+export type UpdaterConfig = {
+  allowPrerelease: boolean
 }
 
 const CONFIG_FILE_NAME = 'config.json'
@@ -161,6 +166,21 @@ export function getDemoWatcherConfig(): DemoWatcherConfig {
 export function setDemoWatcherConfig(demoWatcher: DemoWatcherConfig): void {
   const current = readConfig()
   const next: LauncherConfig = { ...current, demoWatcher }
+  writeConfig(next)
+}
+
+export function getUpdaterConfig(): UpdaterConfig {
+  const config = readConfig()
+  return config.updater ?? { allowPrerelease: false }
+}
+
+export function setUpdaterConfig(updater: Partial<UpdaterConfig>): void {
+  const current = readConfig()
+  const currentUpdater = current.updater ?? { allowPrerelease: false }
+  const next: LauncherConfig = {
+    ...current,
+    updater: { ...currentUpdater, ...updater },
+  }
   writeConfig(next)
 }
 

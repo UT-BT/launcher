@@ -110,6 +110,13 @@ if (process.contextIsolated) {
         return () => ipcRenderer.removeListener('favorites:game-closed', listener)
       }
     })
+    contextBridge.exposeInMainWorld('utbtUpdater', {
+      onStateChanged: (cb: (state: unknown) => void) => {
+        const listener = (_: unknown, state: unknown) => cb(state)
+        ipcRenderer.on('updater:state-changed', listener)
+        return () => ipcRenderer.removeListener('updater:state-changed', listener)
+      }
+    })
   } catch (error) {
     console.error('Preload script error:', error)
   }
@@ -215,6 +222,13 @@ if (process.contextIsolated) {
       const listener = () => cb()
       ipcRenderer.on('favorites:game-closed', listener)
       return () => ipcRenderer.removeListener('favorites:game-closed', listener)
+    }
+  }
+  window.utbtUpdater = {
+    onStateChanged: (cb: (state: any) => void) => {
+      const listener = (_: unknown, state: unknown) => cb(state)
+      ipcRenderer.on('updater:state-changed', listener)
+      return () => ipcRenderer.removeListener('updater:state-changed', listener)
     }
   }
 }
