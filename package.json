@@ -15,7 +15,7 @@
     "start": "electron-vite preview",
     "postinstall": "electron-builder install-app-deps",
     "vite:build:app": "electron-vite build",
-    "electron:build:win": "electron-builder --win",
+    "electron:build:win": "electron-builder --win --publish never",
     "build:win": "run-s vite:build:app electron:build:win"
   },
   "repository": {
