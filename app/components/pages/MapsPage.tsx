@@ -1596,7 +1596,7 @@ export function MapsPage({
                                     }}
                                     className="font-bold text-white hover:text-blue-300 underline-offset-4 transition-colors cursor-pointer text-left text-md"
                                 >
-                                    {map.name}
+                                    {displayMapName(map.name)}
                                 </button>
                             </Tooltip>
                             {mapNew && (
