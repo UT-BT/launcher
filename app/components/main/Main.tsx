@@ -374,6 +374,10 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
           userProfile={userProfile as any}
           favoriteMapNames={favoriteMapNames}
           onToggleFavorite={toggleFavorite}
+          installationStatus={installationStatus}
+          onMapSelect={(name) => { setSelectedMapName(name); setCurrentView('maps-detail') }}
+          onViewServers={() => setCurrentView('servers')}
+          onViewMaps={() => setCurrentView('maps')}
         />
       case 'servers':
         return <ServerBrowserPage
@@ -417,6 +421,10 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
           userProfile={userProfile as any}
           favoriteMapNames={favoriteMapNames}
           onToggleFavorite={toggleFavorite}
+          installationStatus={installationStatus}
+          onMapSelect={(name) => { setSelectedMapName(name); setCurrentView('maps-detail') }}
+          onViewServers={() => setCurrentView('servers')}
+          onViewMaps={() => setCurrentView('maps')}
         />
     }
   }

@@ -704,6 +704,38 @@ export async function fetchMapReviews(accessToken: string, mapName: string): Pro
     }
 }
 
+export interface SummaryTopServer {
+    id: string
+    ip: string
+    hostname: string
+    hostport: number
+    map_name: string
+    player_count: number
+    max_players: number
+    spectators: number
+    certified_records: boolean
+}
+
+export interface SummaryWorldRecord {
+    id: string
+    mapName: string
+    userId: string | null
+    alias: string | null
+    activeTitle?: ActiveTitle | null
+    time: number
+    added: string | null
+    timeAgo: string
+}
+
+export interface SummaryNewMap {
+    name: string
+    author: string
+    difficulty: number
+    tags?: string | null
+    added: string | null
+    timeAgo: string
+}
+
 export interface Summary {
     playtime: {
         weekly: number
@@ -733,6 +765,9 @@ export interface Summary {
         timeAgo: string
         metrics: { label: string, value: number }[]
     }[]
+    topServers?: SummaryTopServer[]
+    recentWorldRecords?: SummaryWorldRecord[]
+    newMaps?: SummaryNewMap[]
     latestPatch?: {
         tag: string
         channel: string
@@ -749,6 +784,7 @@ export interface SummaryCap {
     time: number
     medal: string
     added: string
+    verified: boolean
 }
 
 export async function fetchSummary(accessToken: string): Promise<Summary> {
@@ -758,6 +794,31 @@ export async function fetchSummary(accessToken: string): Promise<Summary> {
         }
     })
     if (!response.ok) throw new Error('Failed to fetch summary')
+    const json = await response.json()
+    return json.data
+}
+
+export interface PendingReview {
+    id: string
+    mapName: string
+    timeAgo: string
+}
+
+export interface PendingReviewsPage {
+    total: number
+    items: PendingReview[]
+}
+
+export async function fetchPendingReviews(
+    accessToken: string,
+    limit = 10,
+    offset = 0,
+): Promise<PendingReviewsPage> {
+    const response = await fetch(
+        `${API_BASE_URL}/v2/summary/pending_reviews?limit=${limit}&offset=${offset}`,
+        { headers: { 'Authorization': `Bearer ${accessToken}` } },
+    )
+    if (!response.ok) throw new Error('Failed to fetch pending reviews')
     const json = await response.json()
     return json.data
 }

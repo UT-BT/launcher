@@ -8,11 +8,6 @@ interface ActiveFilterChipProps {
     className?: string
 }
 
-/**
- * Removable filter chip shown above the data table when a filter is active.
- * Click X to clear that single filter value. Pages compose a row of these
- * from their own filter state.
- */
 export function ActiveFilterChip({ label, value, onClear, className }: ActiveFilterChipProps) {
     return (
         <span

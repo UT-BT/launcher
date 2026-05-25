@@ -1,167 +1,238 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import { ChevronLeft, ChevronRight, Loader2, Play } from 'lucide-react'
 import { Modal } from '@/app/components/ui/modal'
+import { Button } from '@/app/components/ui/button'
+import { Tooltip } from '@/app/components/ui/tooltip'
 import { fetchSummaryCaps, SummaryCap } from '@/app/utils/api'
-import { Clock } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import {
+    DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow,
+    DataTableCell, DataTableEmpty, DataTableSkeletonRow,
+} from '@/app/components/shared/DataTable'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
+import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
+import { ReplayVideoModal } from '@/app/components/shared/ReplayVideoModal'
+import { useReplayWatch } from '@/app/hooks/useReplayWatch'
+import { formatCapTime, formatAddedDate } from '@/app/utils/format'
+import { getMedalIcon } from '@/app/utils/medals'
+import { difficultyTextColor, difficultyBgColor } from '@/app/utils/scoreColors'
+import { cn } from '@/lib/utils'
 
-import worldRecordIcon from '@/app/assets/world_record.png'
-import championIcon from '@/app/assets/champion.png'
-import goldIcon from '@/app/assets/gold.png'
-import silverIcon from '@/app/assets/silver.png'
-import bronzeIcon from '@/app/assets/bronze.png'
-import certifiedIcon from '@/app/assets/certified.png'
-import casualIcon from '@/app/assets/casual.png'
-
-const getMedalIcon = (medal: string) => {
-    switch (medal?.toLowerCase()) {
-        case 'world record': return worldRecordIcon
-        case 'champion medal': return championIcon
-        case 'gold medal': return goldIcon
-        case 'silver medal': return silverIcon
-        case 'bronze medal': return bronzeIcon
-        case 'certified': return certifiedIcon
-        case 'casual': return casualIcon
-        default: return null
-    }
-}
-
-const MapThumbnail = ({ mapName, className }: { mapName: string, className?: string }) => {
-    return (
-        <div className={cn("overflow-hidden bg-muted/20 border border-white/5 rounded-lg shrink-0", className)}>
-            <img
-                src={`https://utbt.net/images/screenshots/${mapName}.png`}
-                alt={mapName}
-                className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
-                onError={(e) => { (e.target as HTMLImageElement).src = 'https://utbt.net/images/screenshots/default.png' }}
-            />
-        </div>
-    )
-}
-
-const formatCapTime = (seconds: number) => {
-    const hours = Math.floor(seconds / 3600)
-    const minutes = Math.floor((seconds % 3600) / 60)
-    const secs = Math.floor(seconds % 60)
-    const ms = Math.floor((seconds % 1) * 1000)
-
-    const msStr = ms.toString().padStart(3, '0')
-    const secsStr = secs.toString().padStart(2, '0')
-    const minsStr = minutes.toString().padStart(2, '0')
-
-    if (hours > 0) {
-        return `${hours}:${minsStr}:${secsStr}.${msStr}`
-    }
-    return `${minsStr}:${secsStr}.${msStr}`
-}
+const PAGE_SIZE = 10
 
 interface HistoryModalProps {
     open: boolean
     onOpenChange: (open: boolean) => void
     accessToken?: string
+    userAlias?: string | null
     favoriteMapNames: Set<string>
     onToggleFavorite: (mapName: string) => void
 }
 
-export function HistoryModal({ open, onOpenChange, accessToken, favoriteMapNames, onToggleFavorite }: HistoryModalProps) {
+export function HistoryModal({
+    open, onOpenChange, accessToken, userAlias, favoriteMapNames, onToggleFavorite,
+}: HistoryModalProps) {
     const [caps, setCaps] = useState<SummaryCap[]>([])
-    const [loading, setLoading] = useState(true)
+    const [page, setPage] = useState(1)
+    const [loading, setLoading] = useState(false)
+    const [hasMore, setHasMore] = useState(false)
 
-    useEffect(() => {
-        if (open && accessToken) {
-            loadCaps()
-        }
-    }, [open, accessToken])
+    const replay = useReplayWatch()
 
-    const loadCaps = async () => {
+    const load = useCallback(async (targetPage: number) => {
         if (!accessToken) return
         setLoading(true)
         try {
-            const data = await fetchSummaryCaps(accessToken)
-            setCaps(data)
+            // Fetch one extra row to detect whether a next page exists.
+            const data = await fetchSummaryCaps(accessToken, PAGE_SIZE + 1, (targetPage - 1) * PAGE_SIZE)
+            setHasMore(data.length > PAGE_SIZE)
+            setCaps(data.slice(0, PAGE_SIZE))
         } catch (err) {
             console.error('Failed to load history:', err)
+            setCaps([])
+            setHasMore(false)
         } finally {
             setLoading(false)
         }
-    }
+    }, [accessToken])
+
+    useEffect(() => {
+        if (open && accessToken) load(page)
+    }, [open, accessToken, page, load])
+
+    useEffect(() => {
+        if (!open) {
+            setPage(1)
+            setCaps([])
+            setHasMore(false)
+        }
+    }, [open])
 
     return (
-        <Modal
-            isOpen={open}
-            onClose={() => onOpenChange(false)}
-            title="Recent Caps History"
-            offsetSidebar
-            maxWidth="896px"
-            className="bg-[#0a0a0b]/95 border-white/5 backdrop-blur-2xl"
-        >
-            <div className="space-y-2">
-                {loading ? (
-                    Array.from({ length: 8 }).map((_, i) => (
-                        <div key={i} className="h-16 bg-white/5 rounded-xl animate-pulse" />
-                    ))
-                ) : caps.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-20 px-4 rounded-3xl bg-white/[0.02] border border-dashed border-white/5 gap-3">
-                        <div className="size-12 rounded-full bg-blue-500/10 flex items-center justify-center">
-                            <Clock className="size-6 text-blue-400" />
-                        </div>
-                        <div className="text-center">
-                            <p className="text-sm font-bold text-white/90">No Cap History</p>
-                            <p className="text-[10px] text-muted-foreground/50 font-medium">Your personal bests will appear here once you start capping.</p>
+        <>
+            <Modal
+                isOpen={open}
+                onClose={() => onOpenChange(false)}
+                title="Recent Caps History"
+                offsetSidebar
+                maxWidth="min(95vw, 1100px)"
+                className="bg-[#0a0a0b]/95 border-white/5 backdrop-blur-2xl"
+            >
+                <div className="flex flex-col gap-3">
+                    <DataTableShell className="flex-none">
+                        <DataTableHeaderRow>
+                            <DataTableHeaderCell width="3.5rem"> </DataTableHeaderCell>
+                            <DataTableHeaderCell>Map</DataTableHeaderCell>
+                            <DataTableHeaderCell>Author</DataTableHeaderCell>
+                            <DataTableHeaderCell align="left" width="6rem">Difficulty</DataTableHeaderCell>
+                            <DataTableHeaderCell align="right">Time</DataTableHeaderCell>
+                            <DataTableHeaderCell align="right" width="8rem">Capped</DataTableHeaderCell>
+                            <DataTableHeaderCell align="center" width="3rem"> </DataTableHeaderCell>
+                        </DataTableHeaderRow>
+                        <tbody>
+                            {loading && caps.length === 0 ? (
+                                Array.from({ length: PAGE_SIZE }).map((_, i) => (
+                                    <DataTableSkeletonRow key={i} columnCount={7} />
+                                ))
+                            ) : caps.length === 0 ? (
+                                <DataTableEmpty colSpan={7} message="No cap history yet. Start capping!" />
+                            ) : (
+                                caps.map(cap => {
+                                    const medalIcon = getMedalIcon(cap.medal)
+                                    const isLoadingReplay = replay.loadingCapId === cap.id
+
+                                    return (
+                                        <DataTableRow key={cap.id}>
+                                            <DataTableCell>
+                                                <MapThumbnail mapName={cap.mapName} className="w-12 h-12" />
+                                            </DataTableCell>
+                                            <DataTableCell>
+                                                <div className="flex items-center gap-2 min-w-0">
+                                                    <span className="font-bold text-white/90 truncate">
+                                                        {cap.mapName.replace('CTF-BT-', '')}
+                                                    </span>
+                                                    {medalIcon && (
+                                                        <img
+                                                            src={medalIcon}
+                                                            alt={cap.medal}
+                                                            title={cap.medal}
+                                                            className="h-4 w-auto object-contain shrink-0"
+                                                        />
+                                                    )}
+                                                    <FavoriteStar
+                                                        name={cap.mapName}
+                                                        isFavorited={favoriteMapNames.has(cap.mapName)}
+                                                        onToggle={onToggleFavorite}
+                                                        size="sm"
+                                                    />
+                                                </div>
+                                            </DataTableCell>
+                                            <DataTableCell>
+                                                <PlayerInfo alias={cap.author} size="sm" />
+                                            </DataTableCell>
+                                            <DataTableCell>
+                                                {cap.difficulty > 0 ? (
+                                                    <div className="flex items-center gap-2">
+                                                        <span className={cn('text-sm font-bold w-4 text-center', difficultyTextColor(cap.difficulty))}>
+                                                            {cap.difficulty}
+                                                        </span>
+                                                        <div className="w-12 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                                                            <div
+                                                                className={cn('h-full rounded-full', difficultyBgColor(cap.difficulty))}
+                                                                style={{ width: `${(cap.difficulty / 10) * 100}%` }}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-muted-foreground/40">—</span>
+                                                )}
+                                            </DataTableCell>
+                                            <DataTableCell align="right">
+                                                <span className="font-mono font-black text-white/90 tracking-tight">
+                                                    {formatCapTime(cap.time)}
+                                                </span>
+                                            </DataTableCell>
+                                            <DataTableCell align="right">
+                                                <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest whitespace-nowrap">
+                                                    {formatAddedDate(cap.added)}
+                                                </span>
+                                            </DataTableCell>
+                                            <DataTableCell align="center" className="px-2">
+                                                <Tooltip
+                                                    content={!cap.verified
+                                                        ? 'No replay — cap not verified'
+                                                        : isLoadingReplay
+                                                            ? 'Loading…'
+                                                            : 'Watch run'}
+                                                    side="top"
+                                                >
+                                                    <button
+                                                        type="button"
+                                                        disabled={!cap.verified || isLoadingReplay}
+                                                        onClick={() => replay.openReplay({
+                                                            capId: cap.id,
+                                                            mapName: cap.mapName,
+                                                            time: cap.time,
+                                                            alias: userAlias ?? undefined,
+                                                        })}
+                                                        className="inline-flex items-center justify-center size-7 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-300 hover:bg-amber-500/25 hover:border-amber-500/60 transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-amber-500/10 disabled:hover:border-amber-500/30 cursor-pointer"
+                                                    >
+                                                        {isLoadingReplay
+                                                            ? <Loader2 className="size-3 animate-spin" />
+                                                            : <Play className="size-3 fill-current" />
+                                                        }
+                                                    </button>
+                                                </Tooltip>
+                                            </DataTableCell>
+                                        </DataTableRow>
+                                    )
+                                })
+                            )}
+                        </tbody>
+                    </DataTableShell>
+
+                    <div className="flex items-center justify-between gap-3 px-1">
+                        <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">
+                            {loading
+                                ? <Loader2 className="inline size-3 animate-spin" />
+                                : `Page ${page}`
+                            }
+                        </span>
+                        <div className="flex items-center gap-1">
+                            <Button
+                                size="icon"
+                                variant="ghost"
+                                disabled={page <= 1 || loading}
+                                onClick={() => setPage(p => Math.max(1, p - 1))}
+                                className="size-7 bg-white/5 border border-white/5 hover:bg-white/10 disabled:opacity-30"
+                            >
+                                <ChevronLeft className="size-3" />
+                            </Button>
+                            <Button
+                                size="icon"
+                                variant="ghost"
+                                disabled={!hasMore || loading}
+                                onClick={() => setPage(p => p + 1)}
+                                className="size-7 bg-white/5 border border-white/5 hover:bg-white/10 disabled:opacity-30"
+                            >
+                                <ChevronRight className="size-3" />
+                            </Button>
                         </div>
                     </div>
-                ) : (
-                    caps.map((cap) => {
-                        const medalIcon = getMedalIcon(cap.medal)
-                        const date = new Date(cap.added)
-                        const dateStr = date.toLocaleDateString(undefined, {
-                            month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'
-                        })
+                </div>
+            </Modal>
 
-                        return (
-                            <div key={cap.id} className="group flex items-center gap-4 p-3 rounded-xl hover:bg-white/[0.03] border border-transparent hover:border-white/5 transition-all">
-                                <MapThumbnail mapName={cap.mapName} className="w-20 aspect-video" />
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2">
-                                        <h3 className="font-bold text-white/90 truncate">{cap.mapName.replace('CTF-BT-', '')}</h3>
-                                        {medalIcon && (
-                                            <img src={medalIcon} alt={cap.medal} className="h-4 w-auto object-contain" title={cap.medal} />
-                                        )}
-                                        <FavoriteStar
-                                            name={cap.mapName}
-                                            isFavorited={favoriteMapNames.has(cap.mapName)}
-                                            onToggle={onToggleFavorite}
-                                            size="sm"
-                                        />
-                                    </div>
-                                    <div className="flex items-center gap-3 mt-0.5">
-                                        <div className="flex items-center gap-1.5 opacity-40">
-                                            <Clock className="size-3" />
-                                            <span className="text-[10px] font-medium">{dateStr}</span>
-                                        </div>
-                                        <div className="size-1 rounded-full bg-white/5" />
-                                        <PlayerInfo alias={cap.author} size="sm" className="text-[10px] text-muted-foreground/40" />
-                                        <div className="size-1 rounded-full bg-white/5" />
-                                        <span className="text-[10px] font-bold text-orange-400/60 uppercase tracking-widest">Difficulty {cap.difficulty}</span>
-                                    </div>
-                                </div>
-                                <div className="flex flex-col items-end">
-                                    <span className="text-lg font-black font-mono text-white/90 tracking-tighter">
-                                        {formatCapTime(cap.time)}
-                                    </span>
-                                </div>
-                            </div>
-                        )
-                    })
-                )}
-            </div>
+            <ReplayVideoModal state={replay.video} onClose={replay.clearVideo} />
 
-            <div className="p-4 mt-4 border-t border-white/5 bg-white/[0.02] rounded-b-xl">
-                <p className="text-[10px] text-center font-bold text-muted-foreground/30 uppercase tracking-[0.2em]">
-                    Showing last {caps.length} Caps
-                </p>
-            </div>
-        </Modal>
+            <Modal
+                isOpen={replay.error !== null}
+                onClose={replay.clearError}
+                title="Replay not available"
+                className="w-[95%] sm:w-[440px] max-w-md"
+                offsetSidebar
+            >
+                <p className="text-sm text-muted-foreground">{replay.error}</p>
+            </Modal>
+        </>
     )
 }
