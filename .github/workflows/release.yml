@@ -127,9 +127,8 @@ jobs:
           }
 
           $tagName = $env:TAG_NAME
-          $currentBody = gh release view $tagName --json body -q .body
-          if ($null -eq $currentBody) { $currentBody = "" }
-          $currentBody = $currentBody.TrimEnd()
+          $currentBodyLines = @(gh release view $tagName --json body -q .body)
+          $currentBody = ($currentBodyLines -join "`n").TrimEnd()
 
           $vtSection = "`n`n### Security Scan Results`n`n" + ($vtLinks -join "`n")
           $newBody = $currentBody + $vtSection
