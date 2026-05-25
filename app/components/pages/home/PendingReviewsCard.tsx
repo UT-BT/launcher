@@ -67,7 +67,7 @@ export function PendingReviewsCard({ accessToken, refreshKey = 0, onReview }: Pe
                                 </DataTableCell>
                                 <DataTableCell>
                                     <span className="font-bold text-white/90 truncate">
-                                        {rev.mapName.replace('CTF-BT-', '')}
+                                        {rev.mapName.replace('CTF-BT-', '').replace('CTF-BT+', '')}
                                     </span>
                                 </DataTableCell>
                                 <DataTableCell align="right">

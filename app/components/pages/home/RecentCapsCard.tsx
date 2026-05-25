@@ -56,7 +56,7 @@ export function RecentCapsCard({
                                 <DataTableCell>
                                     <div className="flex items-center gap-2">
                                         <span className="font-bold text-white/90 truncate">
-                                            {ach.mapName.replace('CTF-BT-', '')}
+                                            {ach.mapName.replace('CTF-BT-', '').replace('CTF-BT+', '')}
                                         </span>
                                         {medalIcon && (
                                             <img

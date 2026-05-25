@@ -20,7 +20,7 @@ interface ReplayVideoModalProps {
 
 function buildTitle(s: ReplayVideoState | null): string {
     if (!s) return ''
-    const cleanMap = s.mapName.replace('CTF-BT-', '')
+    const cleanMap = s.mapName.replace('CTF-BT-', '').replace('CTF-BT+', '')
     if (s.time != null && s.alias) {
         return `Replay — ${formatCapTime(s.time)} by ${s.alias} on ${cleanMap}`
     }

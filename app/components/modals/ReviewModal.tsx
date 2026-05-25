@@ -176,7 +176,7 @@ export function ReviewModal({ open, onOpenChange, accessToken, mapName, initialS
         <Modal
             isOpen={open}
             onClose={handleClose}
-            title={submitted ? "Review Published" : (mapName?.replace('CTF-BT-', '') || 'Review Map')}
+            title={submitted ? "Review Published" : (mapName?.replace('CTF-BT-', '').replace('CTF-BT+', '') || 'Review Map')}
             offsetSidebar
             maxWidth="480px"
             className="bg-[#0a0a0b]/98 border-white/5 backdrop-blur-3xl mx-auto"
@@ -187,7 +187,7 @@ export function ReviewModal({ open, onOpenChange, accessToken, mapName, initialS
                     <div className="space-y-6 py-4 px-2">
                         <div className="space-y-4">
                             <p className="text-white/90 font-medium leading-relaxed">
-                                Your review for <span className="text-orange-400 font-bold">{mapName?.replace('CTF-BT-', '')}</span> has been published.
+                                Your review for <span className="text-orange-400 font-bold">{mapName?.replace('CTF-BT-', '').replace('CTF-BT+', '')}</span> has been published.
                             </p>
                             <p className="text-muted-foreground text-xs leading-relaxed">
                                 Reviews help other players find good quality maps, balance the difficulty ratings, and determines what maps we put into special events.

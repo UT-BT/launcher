@@ -1,5 +1,5 @@
 import { CSSProperties, useMemo } from 'react'
-import { Clock, Zap, TrendingUp, Trophy, Map as MapIcon, Flag } from 'lucide-react'
+import { Clock, Zap, TrendingUp, Trophy, Map as MapIcon, Flag, RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import { getAvatarUrl } from '@/app/utils/api'
@@ -20,8 +20,10 @@ interface ProfileHeroProps {
     newMaps: number
     newRecords: number
     livePlayers: number
+    refreshing?: boolean
     onChangeTitle?: () => void
     onBrowseServers?: () => void
+    onRefresh?: () => void
 }
 
 const formatHours = (seconds: number) => `${(seconds / 3600).toFixed(1)}h`
@@ -123,7 +125,8 @@ function SinceStat({ label, value, icon: Icon, accent }: SinceStatProps) {
 export function ProfileHero({
     userId, username, alias, title, lastLoginIso,
     weekly, weeklyTop, monthly, monthlyTop, yearly, yearlyTop,
-    newMaps, newRecords, livePlayers, onChangeTitle, onBrowseServers,
+    newMaps, newRecords, livePlayers, refreshing,
+    onChangeTitle, onBrowseServers, onRefresh,
 }: ProfileHeroProps) {
     const lastLoginLabel = useMemo(() => {
         if (!lastLoginIso) return 'First visit'
@@ -143,6 +146,20 @@ export function ProfileHero({
     return (
         <div className="relative overflow-hidden bg-card/30 border border-white/5 rounded-2xl backdrop-blur-xl">
             <div className="absolute inset-0 bg-gradient-to-r from-blue-500/[0.04] via-transparent to-purple-500/[0.04] pointer-events-none" />
+
+            {onRefresh && (
+                <Tooltip content="Refresh" side="bottom" className="absolute top-3 right-3 z-10">
+                    <button
+                        type="button"
+                        onClick={onRefresh}
+                        disabled={refreshing}
+                        aria-label="Refresh homepage"
+                        className="p-2 rounded-md text-muted-foreground hover:text-white hover:bg-white/5 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <RefreshCw className={cn('size-4', refreshing && 'animate-spin')} />
+                    </button>
+                </Tooltip>
+            )}
 
             <div className="relative flex items-center gap-4 p-5">
                 <div

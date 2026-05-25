@@ -45,7 +45,7 @@ export function RecentWorldRecords({
                                     <MapThumbnail mapName={r.mapName} className="w-12 h-12" />
                                 </DataTableCell>
                                 <DataTableCell>
-                                    <span className="font-bold text-white/90">{r.mapName.replace('CTF-BT-', '')}</span>
+                                    <span className="font-bold text-white/90">{r.mapName.replace('CTF-BT-', '').replace('CTF-BT+', '')}</span>
                                 </DataTableCell>
                                 <DataTableCell>
                                     <PlayerInfo
