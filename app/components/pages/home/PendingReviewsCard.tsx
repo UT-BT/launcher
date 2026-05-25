@@ -1,12 +1,13 @@
 import { useEffect, useState, useCallback } from 'react'
-import { MessageSquarePlus, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
+import { MessageSquarePlus, ChevronLeft, ChevronRight, Loader2, AlertTriangle, RefreshCw } from 'lucide-react'
 import {
     DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow,
     DataTableCell, DataTableEmpty, DataTableSkeletonRow,
 } from '@/app/components/shared/DataTable'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
+import { IconActionButton } from '@/app/components/shared/IconActionButton'
 import { Button } from '@/app/components/ui/button'
-import { Tooltip } from '@/app/components/ui/tooltip'
+import { displayMapName } from '@/app/utils/format'
 import { fetchPendingReviews, PendingReview } from '@/app/utils/api'
 
 const PAGE_SIZE = 5
@@ -22,18 +23,21 @@ export function PendingReviewsCard({ accessToken, refreshKey = 0, onReview }: Pe
     const [items, setItems] = useState<PendingReview[]>([])
     const [total, setTotal] = useState(0)
     const [loading, setLoading] = useState(false)
+    const [error, setError] = useState<string | null>(null)
 
     const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
     const load = useCallback(async (targetPage: number) => {
         if (!accessToken) return
         setLoading(true)
+        setError(null)
         try {
             const data = await fetchPendingReviews(accessToken, PAGE_SIZE, (targetPage - 1) * PAGE_SIZE)
             setItems(data.items)
             setTotal(data.total)
         } catch (err) {
             console.error('Failed to load pending reviews', err)
+            setError('Failed to load pending reviews.')
         } finally {
             setLoading(false)
         }
@@ -53,7 +57,19 @@ export function PendingReviewsCard({ accessToken, refreshKey = 0, onReview }: Pe
                     <DataTableHeaderCell align="center" width="3rem"> </DataTableHeaderCell>
                 </DataTableHeaderRow>
                 <tbody>
-                    {loading && items.length === 0 ? (
+                    {error && items.length === 0 ? (
+                        <tr>
+                            <td colSpan={4} className="px-4 py-8">
+                                <div className="flex flex-col items-center gap-3 text-center">
+                                    <AlertTriangle className="size-6 text-red-500/50" />
+                                    <p className="text-sm text-red-400 font-medium">{error}</p>
+                                    <Button onClick={() => load(page)} variant="outline" size="sm" className="gap-2">
+                                        <RefreshCw className="size-3" /> Try Again
+                                    </Button>
+                                </div>
+                            </td>
+                        </tr>
+                    ) : loading && items.length === 0 ? (
                         Array.from({ length: PAGE_SIZE }).map((_, i) => (
                             <DataTableSkeletonRow key={i} columnCount={4} />
                         ))
@@ -67,7 +83,7 @@ export function PendingReviewsCard({ accessToken, refreshKey = 0, onReview }: Pe
                                 </DataTableCell>
                                 <DataTableCell>
                                     <span className="font-bold text-white/90 truncate">
-                                        {rev.mapName.replace('CTF-BT-', '').replace('CTF-BT+', '')}
+                                        {displayMapName(rev.mapName)}
                                     </span>
                                 </DataTableCell>
                                 <DataTableCell align="right">
@@ -76,16 +92,12 @@ export function PendingReviewsCard({ accessToken, refreshKey = 0, onReview }: Pe
                                     </span>
                                 </DataTableCell>
                                 <DataTableCell align="center" className="px-2">
-                                    <Tooltip content="Review this map" side="top">
-                                        <Button
-                                            size="icon"
-                                            variant="ghost"
-                                            onClick={() => onReview(rev.mapName)}
-                                            className="inline-flex items-center justify-center size-7 rounded-md bg-orange-500/10 border border-orange-500/30 text-orange-300 hover:bg-orange-500/25 hover:border-orange-500/60 transition-colors cursor-pointer"
-                                        >
-                                            <MessageSquarePlus className="size-3" />
-                                        </Button>
-                                    </Tooltip>
+                                    <IconActionButton
+                                        variant="review"
+                                        icon={MessageSquarePlus}
+                                        tooltip="Review this map"
+                                        onClick={() => onReview(rev.mapName)}
+                                    />
                                 </DataTableCell>
                             </DataTableRow>
                         ))

@@ -36,9 +36,11 @@ If your backend payload lacks `active_title`: extend the backend endpoint
 (`MapReview.json()` in `DataService/data_service/endpoints/map_review/model.py`
 is the canonical pattern). Don't work around it in the launcher.
 
-Rarity styling (1–5) is defined inside `PlayerInfo` (`getAvatarBorderStyle` /
-`getTitleStyle`). Don't re-implement elsewhere. Rarity 5 uses
-`legendaryAvatarPulse` / `legendaryTitlePulse` keyframes in
+Rarity styling (1–5) lives in `app/utils/titleStyles.ts`
+(`getAvatarBorderStyle`, `getTitleTextStyle`, `getReadableTitleColor`, `hasTitle`).
+`PlayerInfo` consumes those helpers; if you need title styling outside
+`PlayerInfo` (e.g. a hero panel), import from `titleStyles.ts` — don't re-implement.
+Rarity 5 uses `legendaryAvatarPulse` / `legendaryTitlePulse` keyframes in
 `app/styles/globals.css`.
 
 ## Tables — `DataTable.*` primitives
@@ -163,6 +165,7 @@ the whole thead during the step:
 | `app/components/shared/MapThumbnail.tsx` | Any map screenshot tile. Pass `mapName` + `className` for sizing. Falls back to `default.png` on error. |
 | `app/components/shared/ActiveFilterChip.tsx` | Removable blue-tinted chip for active filter pills shown above the data table. Props: `label`, `value`, `onClear`. Pages compose a row of these from their own filter state (one chip per filter value). |
 | `app/components/shared/FavoriteStar.tsx` | Generic favorite toggle. Prop is `name: string` (not `mapName`); pass whatever identifier you store (map name, server ID, etc.). |
+| `app/components/shared/IconActionButton.tsx` | Locked-style icon button used in table action cells. `variant: 'review' \| 'replay'` (orange for review, amber for replay). Props: `icon` (lucide), `tooltip`, `onClick`, optional `loading`, `disabled`, `iconFill`. Stops click propagation by default so it works inside clickable rows. |
 | `app/components/shared/Modal.tsx` | Generic modal shell. Use `offsetSidebar` when modal should respect the navigation rail. |
 | `app/components/shared/ConfirmModal.tsx` | Yes/no confirmation dialog, wraps `Modal`. |
 | `app/components/shared/BackButton.tsx` | "← Back" button. |
@@ -184,7 +187,8 @@ the whole thead during the step:
 |---|---|
 | `lib/utils.ts` | `cn(...inputs)` — clsx + tailwind-merge. Use for all conditional classes. |
 | `app/utils/scoreColors.ts` | `scoreTextColor`, `scoreBgColor`, `scoreSliderAccent` (pass `inverted` for lower-is-better dims). `difficultyTextColor`, `difficultyBgColor` for 1–10 map difficulty (paired with `DIFFICULTY_RANGES`). Don't re-implement thresholds. |
-| `app/utils/format.ts` | `formatCapTime` (`MM:SS.mmm`), `formatDelta`, `formatAddedDate`, `isNew` (30-day window). |
+| `app/utils/format.ts` | `formatCapTime` (`MM:SS.mmm`), `formatDelta`, `formatAddedDate`, `isNew` (30-day window), `displayMapName` (strips `CTF-BT-` / `CTF-BT+` prefix). |
+| `app/utils/titleStyles.ts` | `hasTitle`, `getReadableTitleColor`, `getAvatarBorderStyle`, `getTitleTextStyle`. Use when rendering title-aware UI outside `PlayerInfo`. |
 | `app/utils/search.ts` | `fuzzyMatch(text, query)` — substring-first, ordered-subsequence fallback. |
 | `app/utils/server-utils.ts` | Server-specific: `trimServerName`, `getServerType`, `getServerRegion`, `getRegionFlag`, `getGameStatusText`, `sortServers`, `filterServers`. Types: `ServerType`, `FilterState`, `ServerSortField`, `SortDir`, `ServerPreset`, `ServerPresetFilters`. |
 | `app/utils/api.ts` | Data fetching + URL builders. See `data-sources.md`. |

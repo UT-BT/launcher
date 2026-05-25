@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import { getAvatarUrl } from '@/app/utils/api'
 import type { ActiveTitle } from '@/app/utils/api'
+import { hasTitle, getReadableTitleColor, getAvatarBorderStyle } from '@/app/utils/titleStyles'
 
 interface ProfileHeroProps {
     userId?: string | number
@@ -28,38 +29,9 @@ interface ProfileHeroProps {
 
 const formatHours = (seconds: number) => `${(seconds / 3600).toFixed(1)}h`
 
-function getReadableColor(r: number, g: number, b: number): string {
-    const brightness = (r * 299 + g * 587 + b * 114) / 1000
-    if (brightness < 100) return `rgb(${Math.min(255, r + 80)}, ${Math.min(255, g + 80)}, ${Math.min(255, b + 80)})`
-    if (brightness > 200) return `rgb(${Math.max(0, r - 40)}, ${Math.max(0, g - 40)}, ${Math.max(0, b - 40)})`
-    return `rgb(${r}, ${g}, ${b})`
-}
-
-function hasTitle(title?: ActiveTitle | null): title is ActiveTitle {
-    return !!title && !!title.name
-}
-
 function titleStyle(title?: ActiveTitle | null): CSSProperties {
     if (!hasTitle(title)) return { color: 'rgba(255,255,255,0.4)' }
-    return { color: getReadableColor(title.color_r, title.color_g, title.color_b) }
-}
-
-function avatarBorderStyle(title?: ActiveTitle | null): CSSProperties {
-    if (!hasTitle(title) || !title.rarity || title.rarity < 3) {
-        return { border: '1px solid rgba(255,255,255,0.15)' }
-    }
-    const { rarity, color_r, color_g, color_b } = title
-    const c = getReadableColor(color_r, color_g, color_b)
-    switch (rarity) {
-        case 3: return { border: `1px solid ${c}`, boxShadow: `0 0 2px rgba(${color_r}, ${color_g}, ${color_b}, 0.15)` }
-        case 4: return { border: `1px solid ${c}`, boxShadow: `0 0 3px rgba(${color_r}, ${color_g}, ${color_b}, 0.2)` }
-        case 5: return {
-            border: `1px solid ${c}`,
-            boxShadow: `0 0 4px rgba(${color_r}, ${color_g}, ${color_b}, 0.3), 0 0 8px rgba(${color_r}, ${color_g}, ${color_b}, 0.15)`,
-            animation: 'legendaryAvatarPulse 2s ease-in-out infinite',
-        }
-        default: return { border: '1px solid rgba(255,255,255,0.15)' }
-    }
+    return { color: getReadableTitleColor(title.color_r, title.color_g, title.color_b) }
 }
 
 interface PlaytimeCellProps {
@@ -164,7 +136,7 @@ export function ProfileHero({
             <div className="relative flex items-center gap-4 p-5">
                 <div
                     className="rounded-full overflow-hidden bg-card flex items-center justify-center shrink-0"
-                    style={{ width: 64, height: 64, ...avatarBorderStyle(title) }}
+                    style={{ width: 64, height: 64, ...getAvatarBorderStyle(title) }}
                 >
                     {avatarSrc ? (
                         <img

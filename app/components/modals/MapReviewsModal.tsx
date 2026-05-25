@@ -7,6 +7,7 @@ import { ReviewModal } from './ReviewModal'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import { scoreTextColor, scoreBgColor } from '@/app/utils/scoreColors'
+import { displayMapName } from '@/app/utils/format'
 
 type MetricKey = 'overall' | 'aesthetics' | 'learning' | 'luck' | 'difficulty'
 type SortKey = 'reviewer' | MetricKey
@@ -120,9 +121,7 @@ export function MapReviewsModal({
             <Modal
                 isOpen={open}
                 onClose={onClose}
-                title={mapName
-                    ? `Reviews for ${mapName.replace('CTF-BT-', '').replace('CTF-BT+', '')}`
-                    : 'Reviews'}
+                title={mapName ? `Reviews for ${displayMapName(mapName)}` : 'Reviews'}
                 offsetSidebar
                 maxWidth="880px"
                 className="bg-[#0a0a0b]/98 border-white/5 backdrop-blur-3xl mx-auto"

@@ -6,9 +6,8 @@ import {
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
-import { Button } from '@/app/components/ui/button'
-import { Tooltip } from '@/app/components/ui/tooltip'
-import { formatCapTime } from '@/app/utils/format'
+import { IconActionButton } from '@/app/components/shared/IconActionButton'
+import { formatCapTime, displayMapName } from '@/app/utils/format'
 import { getMedalIcon } from '@/app/utils/medals'
 import type { Summary } from '@/app/utils/api'
 
@@ -56,7 +55,7 @@ export function RecentCapsCard({
                                 <DataTableCell>
                                     <div className="flex items-center gap-2">
                                         <span className="font-bold text-white/90 truncate">
-                                            {ach.mapName.replace('CTF-BT-', '').replace('CTF-BT+', '')}
+                                            {displayMapName(ach.mapName)}
                                         </span>
                                         {medalIcon && (
                                             <img
@@ -89,19 +88,12 @@ export function RecentCapsCard({
                                 </DataTableCell>
                                 <DataTableCell align="center" className="px-2">
                                     {onReview && (
-                                        <Tooltip content="Review this map" side="top">
-                                            <Button
-                                                size="icon"
-                                                variant="ghost"
-                                                onClick={e => {
-                                                    e.stopPropagation()
-                                                    onReview(ach.mapName)
-                                                }}
-                                                className="inline-flex items-center justify-center size-7 rounded-md bg-orange-500/10 border border-orange-500/30 text-orange-300 hover:bg-orange-500/25 hover:border-orange-500/60 transition-colors cursor-pointer"
-                                            >
-                                                <MessageSquarePlus className="size-3" />
-                                            </Button>
-                                        </Tooltip>
+                                        <IconActionButton
+                                            variant="review"
+                                            icon={MessageSquarePlus}
+                                            tooltip="Review this map"
+                                            onClick={() => onReview(ach.mapName)}
+                                        />
                                     )}
                                 </DataTableCell>
                             </DataTableRow>

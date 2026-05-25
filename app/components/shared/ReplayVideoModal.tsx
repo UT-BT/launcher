@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Share2, Check } from 'lucide-react'
 import { Modal } from '@/app/components/ui/modal'
 import { Tooltip } from '@/app/components/ui/tooltip'
-import { formatCapTime } from '@/app/utils/format'
+import { formatCapTime, displayMapName } from '@/app/utils/format'
 import { cn } from '@/lib/utils'
 
 export interface ReplayVideoState {
@@ -20,7 +20,7 @@ interface ReplayVideoModalProps {
 
 function buildTitle(s: ReplayVideoState | null): string {
     if (!s) return ''
-    const cleanMap = s.mapName.replace('CTF-BT-', '').replace('CTF-BT+', '')
+    const cleanMap = displayMapName(s.mapName)
     if (s.time != null && s.alias) {
         return `Replay — ${formatCapTime(s.time)} by ${s.alias} on ${cleanMap}`
     }

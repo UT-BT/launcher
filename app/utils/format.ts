@@ -28,3 +28,7 @@ export function isNew(added: string): boolean {
     cutoff.setDate(cutoff.getDate() - NEW_MAP_WINDOW_DAYS)
     return new Date(added) >= cutoff
 }
+
+export function displayMapName(name: string): string {
+    return name.replace('CTF-BT-', '').replace('CTF-BT+', '')
+}

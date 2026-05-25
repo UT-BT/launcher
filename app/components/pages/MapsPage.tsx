@@ -28,7 +28,7 @@ import {
     DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow,
     DataTableCell, DataTableEmpty,
 } from '@/app/components/shared/DataTable'
-import { formatCapTime, formatDelta, formatAddedDate, isNew } from '@/app/utils/format'
+import { formatCapTime, formatDelta, formatAddedDate, isNew, displayMapName } from '@/app/utils/format'
 import { difficultyTextColor, difficultyBgColor, scoreTextColor, scoreBgColor } from '@/app/utils/scoreColors'
 
 import championIcon from '@/app/assets/champion.png'
@@ -2357,8 +2357,8 @@ export function MapsPage({
                 title={
                     videoModal
                         ? (videoModal.time != null && videoModal.alias
-                            ? `Replay — ${formatCapTime(videoModal.time)} by ${videoModal.alias} on ${videoModal.mapName.replace('CTF-BT-', '').replace('CTF-BT+', '')}`
-                            : `Replay — ${videoModal.mapName.replace('CTF-BT-', '').replace('CTF-BT+', '')}`)
+                            ? `Replay — ${formatCapTime(videoModal.time)} by ${videoModal.alias} on ${displayMapName(videoModal.mapName)}`
+                            : `Replay — ${displayMapName(videoModal.mapName)}`)
                         : ''
                 }
                 offsetSidebar

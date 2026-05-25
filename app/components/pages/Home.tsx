@@ -19,6 +19,8 @@ import { RecentCapsCard } from './home/RecentCapsCard'
 import { PendingReviewsCard } from './home/PendingReviewsCard'
 import { SectionHeader } from './home/SectionHeader'
 
+const DISMISSED_PATCH_KEY = 'utbt:dismissedPatch:v1'
+
 interface HomeProps {
     userProfile?: UserProfile
     favoriteMapNames: Set<string>
@@ -26,7 +28,6 @@ interface HomeProps {
     onMapSelect?: (mapName: string) => void
     onViewServers?: () => void
     onViewMaps?: () => void
-    installationStatus?: 'valid' | 'no-install' | 'unsupported' | null
 }
 
 const EMPTY_SUMMARY: Summary = {
@@ -53,7 +54,7 @@ export function Home({
     const [pendingReviewsRefreshKey, setPendingReviewsRefreshKey] = useState(0)
     const [changeTitleOpen, setChangeTitleOpen] = useState(false)
     const [dismissedPatch, setDismissedPatch] = useState<string | null>(
-        typeof window !== 'undefined' ? localStorage.getItem('dismissed-patch') : null,
+        typeof window !== 'undefined' ? localStorage.getItem(DISMISSED_PATCH_KEY) : null,
     )
     const [installedPatch, setInstalledPatch] = useState<string | null>(null)
 
@@ -102,7 +103,7 @@ export function Home({
 
     const handleDismissPatch = (tag: string) => {
         setDismissedPatch(tag)
-        localStorage.setItem('dismissed-patch', tag)
+        localStorage.setItem(DISMISSED_PATCH_KEY, tag)
     }
 
     const handleInstallPatch = () => {
@@ -260,6 +261,7 @@ export function Home({
                 userAlias={userProfile.alias}
                 favoriteMapNames={favoriteMapNames}
                 onToggleFavorite={onToggleFavorite}
+                onReview={handleReviewMap}
             />
 
             <ReviewModal

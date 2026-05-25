@@ -1,12 +1,12 @@
-import { Play, Loader2 } from 'lucide-react'
+import { Play } from 'lucide-react'
 import {
     DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow,
     DataTableCell, DataTableEmpty,
 } from '@/app/components/shared/DataTable'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
-import { Tooltip } from '@/app/components/ui/tooltip'
-import { formatCapTime } from '@/app/utils/format'
+import { IconActionButton } from '@/app/components/shared/IconActionButton'
+import { formatCapTime, displayMapName } from '@/app/utils/format'
 import type { SummaryWorldRecord } from '@/app/utils/api'
 
 interface RecentWorldRecordsProps {
@@ -45,7 +45,7 @@ export function RecentWorldRecords({
                                     <MapThumbnail mapName={r.mapName} className="w-12 h-12" />
                                 </DataTableCell>
                                 <DataTableCell>
-                                    <span className="font-bold text-white/90">{r.mapName.replace('CTF-BT-', '').replace('CTF-BT+', '')}</span>
+                                    <span className="font-bold text-white/90">{displayMapName(r.mapName)}</span>
                                 </DataTableCell>
                                 <DataTableCell>
                                     <PlayerInfo
@@ -66,22 +66,14 @@ export function RecentWorldRecords({
                                     </span>
                                 </DataTableCell>
                                 <DataTableCell align="center" className="px-2">
-                                    <Tooltip content={isLoading ? 'Loading…' : 'Watch run'} side="top">
-                                        <button
-                                            type="button"
-                                            disabled={isLoading}
-                                            onClick={e => {
-                                                e.stopPropagation()
-                                                onWatchReplay(r)
-                                            }}
-                                            className="inline-flex items-center justify-center size-7 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-300 hover:bg-amber-500/25 hover:border-amber-500/60 transition-colors disabled:opacity-40 cursor-pointer"
-                                        >
-                                            {isLoading
-                                                ? <Loader2 className="size-3 animate-spin" />
-                                                : <Play className="size-3 fill-current" />
-                                            }
-                                        </button>
-                                    </Tooltip>
+                                    <IconActionButton
+                                        variant="replay"
+                                        icon={Play}
+                                        iconFill
+                                        tooltip="Watch run"
+                                        loading={isLoading}
+                                        onClick={() => onWatchReplay(r)}
+                                    />
                                 </DataTableCell>
                             </DataTableRow>
                         )
