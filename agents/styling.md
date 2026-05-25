@@ -112,6 +112,20 @@ Secondary action (muted):
 "h-7 px-2 text-muted-foreground hover:text-foreground rounded-md hover:bg-white/5 text-[10px] font-bold uppercase tracking-widest gap-1"
 ```
 
+### Active filter chips
+
+For "what's filtered right now" pills above a data table, use
+`<ActiveFilterChip>` (`app/components/shared/ActiveFilterChip.tsx`). One chip
+per filter value. Pattern:
+
+```
+[LABEL: value ×]
+```
+
+Styling locked inside the component (blue-tinted, removable via X button).
+Page composes the chip row from its own filter state and renders it between
+the toolbar and the filter panel — only when `hasActiveFilters`.
+
 ### Color-tinted button family
 
 | Intent | bg / border / text | Hover |

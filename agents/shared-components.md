@@ -161,6 +161,7 @@ the whole thead during the step:
 | Component | Use for |
 |---|---|
 | `app/components/shared/MapThumbnail.tsx` | Any map screenshot tile. Pass `mapName` + `className` for sizing. Falls back to `default.png` on error. |
+| `app/components/shared/ActiveFilterChip.tsx` | Removable blue-tinted chip for active filter pills shown above the data table. Props: `label`, `value`, `onClear`. Pages compose a row of these from their own filter state (one chip per filter value). |
 | `app/components/shared/FavoriteStar.tsx` | Generic favorite toggle. Prop is `name: string` (not `mapName`); pass whatever identifier you store (map name, server ID, etc.). |
 | `app/components/shared/Modal.tsx` | Generic modal shell. Use `offsetSidebar` when modal should respect the navigation rail. |
 | `app/components/shared/ConfirmModal.tsx` | Yes/no confirmation dialog, wraps `Modal`. |

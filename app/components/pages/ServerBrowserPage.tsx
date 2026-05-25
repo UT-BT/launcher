@@ -4,6 +4,7 @@ import {
     Twitch, Eye, SlidersHorizontal, AlertCircle,
     Clock, Flag,
 } from 'lucide-react'
+import type { ActiveTitle } from '@/app/utils/api'
 import { Modal } from '@/app/components/ui/modal'
 import { Tutorial } from '@/app/components/shared/Tutorial'
 import { useTutorialState } from '@/app/components/shared/useTutorialState'
@@ -24,6 +25,8 @@ import { MultiFilterDropdown } from '@/app/components/ui/multi-filter-dropdown'
 import { FilterPanelRow } from '@/app/components/ui/filter-panel-row'
 import { FilterPresetsMenu } from '@/app/components/shared/FilterPresetsMenu'
 import { ColumnsMenu } from '@/app/components/shared/ColumnsMenu'
+import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
+import { ActiveFilterChip } from '@/app/components/shared/ActiveFilterChip'
 import {
     DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow,
     DataTableCell, DataTableEmpty, DataTableSkeletonRow,
@@ -40,6 +43,8 @@ interface Player {
     team: number
     deaths: number
     is_spectator: boolean
+    alias?: string | null
+    active_title?: ActiveTitle | null
 }
 
 export interface Server {
@@ -187,11 +192,9 @@ const avatarUrlFor = (player: Player): string | null =>
 
 const PlayerRow = ({ player }: { player: Player }) => {
     const isBot = player.id === SPECTATOR_BOT_ID
-    const displayName = isBot ? 'UTBT Spectator Bot' : player.name
-    const avatar = avatarUrlFor(player)
-    const pingColor = !player.ping ? 'bg-muted-foreground/30' :
-        player.ping < 100 ? 'bg-green-500' :
-            player.ping < 200 ? 'bg-yellow-500' : 'bg-red-500'
+    const pingColor = !player.ping ? 'text-muted-foreground' :
+        player.ping < 100 ? 'text-green-500' :
+            player.ping < 200 ? 'text-yellow-500' : 'text-red-500'
 
     const onClick = (e: React.MouseEvent) => {
         e.stopPropagation()
@@ -203,43 +206,34 @@ const PlayerRow = ({ player }: { player: Player }) => {
             onClick={onClick}
             className={cn(
                 'flex items-center gap-2.5 px-2 py-1.5 rounded-md transition-colors group/player',
-                isBot ? 'cursor-pointer hover:bg-[#9146FF]/10' : 'cursor-default hover:bg-white/5',
-                player.is_spectator && 'opacity-60',
+                isBot ? 'cursor-pointer hover:bg-[#9146FF]/10' : 'hover:bg-white/5',
+                player.is_spectator && !isBot && 'opacity-60',
             )}
         >
-            <div className={cn(
-                'size-6 rounded-md overflow-hidden bg-black/40 border border-white/5 shrink-0 flex items-center justify-center',
-                player.is_spectator && !isBot && 'grayscale opacity-50',
-            )}>
+            <span className="flex-1 min-w-0">
                 {isBot ? (
-                    <Twitch className="size-3.5 text-[#9146FF] fill-[#9146FF]/20" />
-                ) : avatar ? (
-                    <img
-                        src={avatar}
-                        alt={displayName}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                            (e.target as HTMLImageElement).src =
-                                `https://cdn.discordapp.com/embed/avatars/${parseInt(player.id) % 5}.png`
-                        }}
-                    />
+                    <span className="flex items-center gap-2.5 min-w-0">
+                        <span className="size-6 rounded-md overflow-hidden bg-black/40 border border-white/5 shrink-0 flex items-center justify-center">
+                            <Twitch className="size-3.5 text-[#9146FF] fill-[#9146FF]/20" />
+                        </span>
+                        <span className="text-xs font-semibold text-white truncate group-hover/player:text-[#9146FF]">
+                            UTBT Spectator Bot
+                        </span>
+                    </span>
                 ) : (
-                    <User className={cn('size-3.5', player.is_spectator ? 'text-muted-foreground' : 'text-white/70')} />
+                    <PlayerInfo
+                        userId={player.id}
+                        alias={player.alias ?? player.name}
+                        title={player.active_title}
+                        size="sm"
+                    />
                 )}
-            </div>
-            <span className={cn(
-                'text-xs font-semibold text-white/90 truncate flex-1 min-w-0',
-                isBot && 'group-hover/player:text-[#9146FF]',
-            )}>
-                {displayName}
             </span>
             {isBot && <ExternalLink className="size-3 text-[#9146FF] opacity-60 shrink-0" />}
             {!isBot && (
-                <div className="flex items-center gap-1 shrink-0">
-                    <div className={cn('size-1.5 rounded-full', pingColor)} />
-                    <span className="text-[10px] tabular-nums font-bold tracking-tight text-muted-foreground w-6 text-right">
-                        {player.ping}
-                    </span>
+                <div className={cn('inline-flex items-center gap-1 text-xs font-bold tabular-nums shrink-0', pingColor)}>
+                    <Signal className="size-3.5" />
+                    {player.ping ? `${player.ping}ms` : '...'}
                 </div>
             )}
         </div>
@@ -412,7 +406,7 @@ export function ServerBrowserPage({
         setLoading(true)
         setError(null)
         try {
-            const data = await window.conveyor.game.fetchServers()
+            const data = await window.conveyor.game.fetchServers() as Server[]
             onCachesChange(() => ({
                 servers: data,
                 lastRefreshIso: new Date().toISOString(),
@@ -877,6 +871,51 @@ export function ServerBrowserPage({
                     <span className="inline-flex items-center gap-1.5"><TypeIcon type="Casual" className="size-3.5" /> Casual</span>
                 </div>
             </div>
+
+            {hasActiveFilters && (
+                <div className="flex flex-wrap items-center gap-2 shrink-0">
+                    {state.filters.types.map(t => (
+                        <ActiveFilterChip
+                            key={`type-${t}`}
+                            label="Type"
+                            value={t}
+                            onClear={() => updateFilters({
+                                ...state.filters,
+                                types: state.filters.types.filter(x => x !== t),
+                            })}
+                        />
+                    ))}
+                    {state.filters.regions.map(r => (
+                        <ActiveFilterChip
+                            key={`region-${r}`}
+                            label="Region"
+                            value={r}
+                            onClear={() => updateFilters({
+                                ...state.filters,
+                                regions: state.filters.regions.filter(x => x !== r),
+                            })}
+                        />
+                    ))}
+                    {state.filters.capacity.map(c => (
+                        <ActiveFilterChip
+                            key={`capacity-${c}`}
+                            label="Capacity"
+                            value={CAPACITY_OPTIONS.find(([v]) => v === c)?.[1] ?? c}
+                            onClear={() => updateFilters({
+                                ...state.filters,
+                                capacity: state.filters.capacity.filter(x => x !== c),
+                            })}
+                        />
+                    ))}
+                    {state.filters.favoritesOnly && (
+                        <ActiveFilterChip
+                            label="Favorites only"
+                            value="On"
+                            onClear={() => updateFilters({ ...state.filters, favoritesOnly: false })}
+                        />
+                    )}
+                </div>
+            )}
 
             {state.filtersPanelOpen && (
                 <div className="bg-card/30 border border-white/10 rounded-xl p-4 space-y-4 shrink-0">
