@@ -192,8 +192,13 @@ export function Home({
                 newMaps={data.global.newMaps}
                 newRecords={data.global.newRecords}
                 livePlayers={topServers.reduce((sum, s) => sum + s.player_count, 0)}
+                refreshing={loading}
                 onChangeTitle={() => setChangeTitleOpen(true)}
                 onBrowseServers={onViewServers}
+                onRefresh={() => {
+                    loadData()
+                    setPendingReviewsRefreshKey(k => k + 1)
+                }}
             />
 
             <div className="grid grid-cols-1 2xl:grid-cols-12 gap-6 items-start">

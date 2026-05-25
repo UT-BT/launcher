@@ -109,7 +109,7 @@ export function HistoryModal({
                                             <DataTableCell>
                                                 <div className="flex items-center gap-2 min-w-0">
                                                     <span className="font-bold text-white/90 truncate">
-                                                        {cap.mapName.replace('CTF-BT-', '')}
+                                                        {cap.mapName.replace('CTF-BT-', '').replace('CTF-BT+', '')}
                                                     </span>
                                                     {medalIcon && (
                                                         <img

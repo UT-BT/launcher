@@ -2357,8 +2357,8 @@ export function MapsPage({
                 title={
                     videoModal
                         ? (videoModal.time != null && videoModal.alias
-                            ? `Replay — ${formatCapTime(videoModal.time)} by ${videoModal.alias} on ${videoModal.mapName.replace('CTF-BT-', '')}`
-                            : `Replay — ${videoModal.mapName.replace('CTF-BT-', '')}`)
+                            ? `Replay — ${formatCapTime(videoModal.time)} by ${videoModal.alias} on ${videoModal.mapName.replace('CTF-BT-', '').replace('CTF-BT+', '')}`
+                            : `Replay — ${videoModal.mapName.replace('CTF-BT-', '').replace('CTF-BT+', '')}`)
                         : ''
                 }
                 offsetSidebar

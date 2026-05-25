@@ -756,8 +756,8 @@ export interface Summary {
         difficulty: number
         time: number
         medal: string
-        diff: string
         timeAgo: string
+        verified: boolean
     }[]
     pendingReviews: {
         id: string

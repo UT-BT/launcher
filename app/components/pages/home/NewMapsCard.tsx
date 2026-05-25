@@ -42,7 +42,7 @@ export function NewMapsCard({ maps, favoriteMapNames, onToggleFavorite, onMapSel
                                 <div className="flex flex-col min-w-0 gap-0.5">
                                     <div className="flex items-center gap-2 min-w-0">
                                         <span className="font-bold text-white/90 truncate">
-                                            {map.name.replace('CTF-BT-', '')}
+                                            {map.name.replace('CTF-BT-', '').replace('CTF-BT+', '')}
                                         </span>
                                         <FavoriteStar
                                             name={map.name}

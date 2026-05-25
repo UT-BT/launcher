@@ -186,7 +186,7 @@ export function ReplayPickerModal({
         <Modal
             isOpen={open}
             onClose={onClose}
-            title={mapName ? `Replays — ${mapName.replace('CTF-BT-', '')}` : 'Replays'}
+            title={mapName ? `Replays — ${mapName.replace('CTF-BT-', '').replace('CTF-BT+', '')}` : 'Replays'}
             offsetSidebar
             maxWidth="640px"
             className="bg-[#0a0a0b]/98 border-white/5"
