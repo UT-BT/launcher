@@ -23,6 +23,7 @@ import { MultiFilterDropdown } from '@/app/components/ui/multi-filter-dropdown'
 import { FilterPanelRow } from '@/app/components/ui/filter-panel-row'
 import { FilterPresetsMenu } from '@/app/components/shared/FilterPresetsMenu'
 import { ColumnsMenu } from '@/app/components/shared/ColumnsMenu'
+import { ActiveFilterChip } from '@/app/components/shared/ActiveFilterChip'
 import {
     DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow,
     DataTableCell, DataTableEmpty,
@@ -1993,6 +1994,120 @@ export function MapsPage({
 
             </div>
 
+            {hasActiveFilters && (
+                <div className="flex flex-wrap items-center gap-2 shrink-0">
+                    {state.search.trim() !== '' && (
+                        <ActiveFilterChip
+                            label="Search"
+                            value={state.search}
+                            onClear={() => updateFilter('search', '')}
+                        />
+                    )}
+                    {state.authorFilters.map(a => (
+                        <ActiveFilterChip
+                            key={`author-${a}`}
+                            label="Author"
+                            value={a}
+                            onClear={() => updateFilter('authorFilters', state.authorFilters.filter(x => x !== a))}
+                        />
+                    ))}
+                    {state.tagFilters.map(t => (
+                        <ActiveFilterChip
+                            key={`tag-${t}`}
+                            label="Category"
+                            value={t}
+                            onClear={() => updateFilter('tagFilters', state.tagFilters.filter(x => x !== t))}
+                        />
+                    ))}
+                    {state.yearFilters.map(y => (
+                        <ActiveFilterChip
+                            key={`year-${y}`}
+                            label="Year"
+                            value={y}
+                            onClear={() => updateFilter('yearFilters', state.yearFilters.filter(x => x !== y))}
+                        />
+                    ))}
+                    {state.difficultyFilters.map(d => (
+                        <ActiveFilterChip
+                            key={`diff-${d}`}
+                            label="Difficulty"
+                            value={difficultyOptions.find(([v]) => v === d)?.[1] ?? d}
+                            onClear={() => updateFilter('difficultyFilters', state.difficultyFilters.filter(x => x !== d) as DifficultyValue[])}
+                        />
+                    ))}
+                    {state.ratingFilters.map(r => (
+                        <ActiveFilterChip
+                            key={`rating-${r}`}
+                            label="Overall"
+                            value={ratingTierOptions.find(([v]) => v === r)?.[1] ?? r}
+                            onClear={() => updateFilter('ratingFilters', state.ratingFilters.filter(x => x !== r) as RatingValue[])}
+                        />
+                    ))}
+                    {state.aestheticsFilters.map(r => (
+                        <ActiveFilterChip
+                            key={`aest-${r}`}
+                            label="Aesthetics"
+                            value={aestheticsTierOptions.find(([v]) => v === r)?.[1] ?? r}
+                            onClear={() => updateFilter('aestheticsFilters', state.aestheticsFilters.filter(x => x !== r) as RatingValue[])}
+                        />
+                    ))}
+                    {state.learningFilters.map(r => (
+                        <ActiveFilterChip
+                            key={`learn-${r}`}
+                            label="Learning"
+                            value={learningTierOptions.find(([v]) => v === r)?.[1] ?? r}
+                            onClear={() => updateFilter('learningFilters', state.learningFilters.filter(x => x !== r) as RatingValue[])}
+                        />
+                    ))}
+                    {state.luckFilters.map(r => (
+                        <ActiveFilterChip
+                            key={`luck-${r}`}
+                            label="Luck"
+                            value={luckTierOptions.find(([v]) => v === r)?.[1] ?? r}
+                            onClear={() => updateFilter('luckFilters', state.luckFilters.filter(x => x !== r) as LuckValue[])}
+                        />
+                    ))}
+                    {state.recordTimeFilters.map(r => (
+                        <ActiveFilterChip
+                            key={`wr-${r}`}
+                            label="WR Time"
+                            value={recordTimeOptions.find(([v]) => v === r)?.[1] ?? r}
+                            onClear={() => updateFilter('recordTimeFilters', state.recordTimeFilters.filter(x => x !== r) as RecordTimeValue[])}
+                        />
+                    ))}
+                    {state.cappedFilters.map(c => (
+                        <ActiveFilterChip
+                            key={`cap-${c}`}
+                            label="Cap Status"
+                            value={cappedOptions.find(([v]) => v === c)?.[1] ?? c}
+                            onClear={() => updateFilter('cappedFilters', state.cappedFilters.filter(x => x !== c) as CappedFilterValue[])}
+                        />
+                    ))}
+                    {state.ratedFilters.map(r => (
+                        <ActiveFilterChip
+                            key={`rated-${r}`}
+                            label="Reviewed"
+                            value={ratedOptions.find(([v]) => v === r)?.[1] ?? r}
+                            onClear={() => updateFilter('ratedFilters', state.ratedFilters.filter(x => x !== r) as RatedValue[])}
+                        />
+                    ))}
+                    {state.newOnly && (
+                        <ActiveFilterChip
+                            label="New maps"
+                            value="On"
+                            onClear={() => updateFilter('newOnly', false)}
+                        />
+                    )}
+                    {state.favoritesOnly && (
+                        <ActiveFilterChip
+                            label="Favorites"
+                            value="On"
+                            onClear={() => updateFilter('favoritesOnly', false)}
+                        />
+                    )}
+                </div>
+            )}
+
             {state.filtersPanelOpen && (
                 <div ref={filterPanelRef} className="bg-card/30 border border-white/10 rounded-xl p-4 space-y-4 shrink-0">
                     <FilterPanelRow label="Map">
@@ -2377,6 +2492,13 @@ export function MapsPage({
         </div>
     )
 }
+
+const difficultyOptions: [string, string][] = [
+    ['beginner', 'Beginner (1–3)'],
+    ['intermediate', 'Intermediate (4–6)'],
+    ['advanced', 'Advanced (7–8)'],
+    ['expert', 'Expert (9–10)'],
+]
 
 const ratingTierOptions: [string, string][] = [
     ['excellent', 'Excellent (8.0+)'],

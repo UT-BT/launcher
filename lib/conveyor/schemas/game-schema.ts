@@ -14,7 +14,7 @@ export const gameIpcSchema = {
     },
     fetchServers: {
         args: z.tuple([]),
-        return: z.array(z.any()), // Using z.any() for flexibility with backend response
+        return: z.array(z.any()),
     },
     pingServer: {
         args: z.tuple([

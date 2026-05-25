@@ -21,9 +21,7 @@ working around in the renderer.
 | Demos | `fetchDemoStatus`, `getFirstPersonVideoUrl` |
 | Profile | `UserProfile` type, `getAvatarUrl(userId)` |
 
-Most fetchers take `accessToken` first (Discord OAuth bearer). Server-list
-fetching does NOT go through this module — it uses the Electron IPC bridge
-(see below) since it pings a game-server gateway, not the DataService.
+Most fetchers take `accessToken` first (Discord OAuth bearer).
 
 ## Avatar URLs
 
@@ -60,7 +58,7 @@ generated from `lib/main/...`. Common usage:
 
 | API | Purpose |
 |---|---|
-| `window.conveyor.game.fetchServers()` | Server list (UTBT gateway). |
+| `window.conveyor.game.fetchServers()` | Server list. Main process calls gateway `/server-info`; gateway proxies to DataService and returns enriched payload (each player has `alias` + `active_title`). |
 | `window.conveyor.game.pingServer(ip)` | Latency measurement per IP. |
 | `window.conveyor.game.launchGame(ip, port)` | Launch UT99 + auto-join server. |
 | `window.conveyor.game.launchGameStandalone()` | Launch UT99 without auto-join. |
