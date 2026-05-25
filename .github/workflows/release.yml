@@ -97,27 +97,45 @@ jobs:
 
       - name: Update Release Notes with VirusTotal Link
         shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VT_ANALYSIS: ${{ steps.vt.outputs.analysis }}
+          TAG_NAME: ${{ github.ref_name }}
         run: |
-          $analysis = @"
-          ${{ steps.vt.outputs.analysis }}
-          "@
-          if (-not $analysis) {
+          $analysis = $env:VT_ANALYSIS
+          if (-not $analysis -or -not $analysis.Trim()) {
             Write-Host "No VirusTotal analysis found."
             exit 0
           }
-          $lines = $analysis -split "`n" | Where-Object { $_ -match '=' }
-          $vtLinks = $lines | ForEach-Object {
-              $parts = $_ -split '=', 2
-              $fileName = Split-Path $parts[0] -Leaf
-              "- [VirusTotal Scan Report for $fileName]($($parts[1]))"
+
+          $vtLinks = @()
+          foreach ($entry in ($analysis -split "[`r`n,]+")) {
+            $entry = $entry.Trim()
+            if (-not $entry) { continue }
+            $sep = $entry.IndexOf('=')
+            if ($sep -lt 0) { continue }
+            $filePath = $entry.Substring(0, $sep).Trim()
+            $url = $entry.Substring($sep + 1).Trim()
+            if (-not $url) { continue }
+            $fileName = Split-Path $filePath -Leaf
+            $vtLinks += "- [VirusTotal Scan Report for $fileName]($url)"
           }
-          $vtSection = "`n`n### Security Scan Results`n" + ($vtLinks -join "`n")
-          
-          $tagName = "${{ github.ref_name }}"
-          # Get current body
+
+          if ($vtLinks.Count -eq 0) {
+            Write-Host "No VirusTotal links parsed."
+            exit 0
+          }
+
+          $tagName = $env:TAG_NAME
           $currentBody = gh release view $tagName --json body -q .body
-          # Update body
-          $newBody = "$currentBody$vtSection"
-          gh release edit $tagName --notes "$newBody"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          if ($null -eq $currentBody) { $currentBody = "" }
+          $currentBody = $currentBody.TrimEnd()
+
+          $vtSection = "`n`n### Security Scan Results`n`n" + ($vtLinks -join "`n")
+          $newBody = $currentBody + $vtSection
+
+          $tempFile = [System.IO.Path]::Combine($env:RUNNER_TEMP, "release-notes.md")
+          [System.IO.File]::WriteAllText($tempFile, $newBody, (New-Object System.Text.UTF8Encoding($false)))
+
+          gh release edit $tagName --notes-file $tempFile
+          Remove-Item $tempFile -Force

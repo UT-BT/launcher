@@ -1,6 +1,6 @@
 {
   "name": "utbt-launcher",
-  "version": "1.4.1-rc.2",
+  "version": "1.4.1-rc.3",
   "description": "UTBT.net Launcher",
   "main": "./out/main/main.js",
   "license": "MIT",
