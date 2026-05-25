@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ArrowLeftRight, Check, GitMerge, Monitor, Gamepad2, AlertTriangle } from 'lucide-react'
 
 import { Modal } from '@/app/components/ui/modal'
@@ -40,7 +40,9 @@ export function FavoritesSyncModal({
     onResolve,
     onDismiss,
 }: FavoritesSyncModalProps) {
-    const [busy, setBusy] = useState<SyncResolution | null>(null)
+    const [busy, setBusy] = useState(false)
+    const [selected, setSelected] = useState<SyncResolution | null>(null)
+    const [onlyDiffs, setOnlyDiffs] = useState(false)
 
     const dbSet = useMemo(() => new Set(dbFavorites), [dbFavorites])
     const iniSet = useMemo(() => new Set(iniFavorites), [iniFavorites])
@@ -63,12 +65,17 @@ export function FavoritesSyncModal({
         [dbSet, iniSet],
     )
 
-    const handlePick = async (resolution: SyncResolution) => {
-        setBusy(resolution)
+    useEffect(() => {
+        if (open) setSelected(recommended)
+    }, [open, recommended])
+
+    const handleProceed = async () => {
+        if (!selected) return
+        setBusy(true)
         try {
-            await onResolve(resolution)
+            await onResolve(selected)
         } finally {
-            setBusy(null)
+            setBusy(false)
         }
     }
 
@@ -79,46 +86,53 @@ export function FavoritesSyncModal({
         onlyHere: string[],
         sharedTint: string,
         onlyHereTint: string,
-    ) => (
-        <div className="flex flex-col gap-3 min-w-0">
-            <div className="flex items-center gap-2 text-white/80">
-                {icon}
-                <span className="text-sm font-bold uppercase tracking-wider">{title}</span>
-                <span className="ml-auto text-xs text-muted-foreground">{total} {total === 1 ? 'map' : 'maps'}</span>
+    ) => {
+        const visibleCount = onlyDiffs ? onlyHere.length : total
+        return (
+            <div className="flex flex-col gap-3 min-w-0">
+                <div className="flex items-center gap-2 text-white/80">
+                    {icon}
+                    <span className="text-sm font-bold uppercase tracking-wider">{title}</span>
+                    <span className="ml-auto text-xs text-muted-foreground">
+                        {onlyDiffs
+                            ? `${visibleCount} of ${total}`
+                            : `${total} ${total === 1 ? 'map' : 'maps'}`}
+                    </span>
+                </div>
+                <div className="flex flex-col gap-1 max-h-64 overflow-y-auto custom-scrollbar pr-1">
+                    {visibleCount === 0 && (
+                        <div className="flex items-center justify-between gap-2 px-2 py-1 rounded text-xs font-mono border border-dashed border-white/10 text-muted-foreground italic leading-5">
+                            <span>{onlyDiffs && total > 0 ? 'No differences' : 'Empty'}</span>
+                        </div>
+                    )}
+                    {onlyHere.map((name) => (
+                        <div
+                            key={`only-${name}`}
+                            className={cn(
+                                'flex items-center justify-between gap-2 px-2 py-1 rounded text-xs font-mono border',
+                                onlyHereTint,
+                            )}
+                        >
+                            <span className="truncate">{name}</span>
+                            <span className="text-[9px] uppercase tracking-wider font-bold shrink-0">only here</span>
+                        </div>
+                    ))}
+                    {!onlyDiffs && inBoth.map((name) => (
+                        <div
+                            key={`both-${name}`}
+                            className={cn(
+                                'flex items-center justify-between gap-2 px-2 py-1 rounded text-xs font-mono border',
+                                sharedTint,
+                            )}
+                        >
+                            <span className="truncate">{name}</span>
+                            <Check className="size-3 shrink-0 text-emerald-400/60" />
+                        </div>
+                    ))}
+                </div>
             </div>
-            <div className="flex flex-col gap-1 max-h-64 overflow-y-auto custom-scrollbar pr-1">
-                {total === 0 && (
-                    <div className="flex items-center justify-between gap-2 px-2 py-1 rounded text-xs font-mono border border-dashed border-white/10 text-muted-foreground italic leading-5">
-                        <span>Empty</span>
-                    </div>
-                )}
-                {onlyHere.map((name) => (
-                    <div
-                        key={`only-${name}`}
-                        className={cn(
-                            'flex items-center justify-between gap-2 px-2 py-1 rounded text-xs font-mono border',
-                            onlyHereTint,
-                        )}
-                    >
-                        <span className="truncate">{name}</span>
-                        <span className="text-[9px] uppercase tracking-wider font-bold shrink-0">only here</span>
-                    </div>
-                ))}
-                {inBoth.map((name) => (
-                    <div
-                        key={`both-${name}`}
-                        className={cn(
-                            'flex items-center justify-between gap-2 px-2 py-1 rounded text-xs font-mono border',
-                            sharedTint,
-                        )}
-                    >
-                        <span className="truncate">{name}</span>
-                        <Check className="size-3 shrink-0 text-emerald-400/60" />
-                    </div>
-                ))}
-            </div>
-        </div>
-    )
+        )
+    }
 
     return (
         <Modal
@@ -128,29 +142,13 @@ export function FavoritesSyncModal({
             maxWidth="900px"
             leftAction={<AlertTriangle className="size-4 text-amber-400" />}
             footer={
-                <div className="p-4 border-t border-border bg-muted/50 flex flex-wrap justify-end items-center gap-2 shrink-0">
-                    {(['ini-wins', 'merge', 'db-wins'] as SyncResolution[]).map((resolution) => {
-                        const isRecommended = resolution === recommended
-                        return (
-                            <Button
-                                key={resolution}
-                                onClick={() => handlePick(resolution)}
-                                disabled={busy !== null}
-                                variant="secondary"
-                                className={cn(
-                                    isRecommended &&
-                                        'bg-emerald-500/15 border border-emerald-500/40 text-emerald-100 hover:bg-emerald-500/25',
-                                )}
-                            >
-                                {busy === resolution ? 'Working…' : RESOLUTION_LABELS[resolution]}
-                                {isRecommended && (
-                                    <span className="ml-2 text-[9px] font-bold uppercase tracking-widest text-emerald-300/80">
-                                        Recommended
-                                    </span>
-                                )}
-                            </Button>
-                        )
-                    })}
+                <div className="p-4 border-t border-border bg-muted/50 flex justify-end items-center gap-2 shrink-0">
+                    <Button
+                        onClick={handleProceed}
+                        disabled={busy || !selected}
+                    >
+                        {busy ? 'Working…' : 'Proceed'}
+                    </Button>
                 </div>
             }
         >
@@ -161,6 +159,18 @@ export function FavoritesSyncModal({
                         Pick how to resolve.
                     </p>
                 </p>
+
+                <div className="flex justify-end">
+                    <label className="inline-flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
+                        <input
+                            type="checkbox"
+                            checked={onlyDiffs}
+                            onChange={(e) => setOnlyDiffs(e.target.checked)}
+                            className="size-3.5 accent-emerald-500 cursor-pointer"
+                        />
+                        Only show differences
+                    </label>
+                </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-4 items-start">
                     {renderColumn(
@@ -184,28 +194,48 @@ export function FavoritesSyncModal({
                     )}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
-                    {(['ini-wins', 'merge', 'db-wins'] as SyncResolution[]).map((r) => (
-                        <div
-                            key={r}
-                            className={cn(
-                                'rounded-lg border p-3 transition-colors',
-                                r === recommended
-                                    ? 'border-emerald-500/40 bg-emerald-500/5'
-                                    : 'border-white/10 bg-white/[0.02]',
-                            )}
-                        >
-                            <div className="flex items-center gap-2 font-bold text-white/90">
-                                {r === 'merge' && <GitMerge className="size-3.5" />}
-                                {r === 'db-wins' && <Monitor className="size-3.5" />}
-                                {r === 'ini-wins' && <Gamepad2 className="size-3.5" />}
-                                {RESOLUTION_LABELS[r]}
-                            </div>
-                            <p className="text-muted-foreground mt-1 leading-relaxed">
-                                {RESOLUTION_DESCRIPTIONS[r]}
-                            </p>
-                        </div>
-                    ))}
+                <div
+                    role="radiogroup"
+                    aria-label="Resolution strategy"
+                    className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs"
+                >
+                    {(['db-wins', 'merge', 'ini-wins'] as SyncResolution[]).map((r) => {
+                        const isSelected = r === selected
+                        const isRecommended = r === recommended
+                        return (
+                            <button
+                                key={r}
+                                type="button"
+                                role="radio"
+                                aria-checked={isSelected}
+                                disabled={busy}
+                                onClick={() => setSelected(r)}
+                                className={cn(
+                                    'text-left rounded-lg border p-3 transition-colors cursor-pointer outline-none',
+                                    'focus-visible:ring-2 focus-visible:ring-ring/50',
+                                    'disabled:cursor-not-allowed disabled:opacity-60',
+                                    isSelected
+                                        ? 'border-emerald-500/60 bg-emerald-500/10 ring-1 ring-emerald-500/40'
+                                        : 'border-white/10 bg-white/[0.02] hover:border-white/25 hover:bg-white/[0.04]',
+                                )}
+                            >
+                                <div className="flex items-center gap-2 font-bold text-white/90">
+                                    {r === 'merge' && <GitMerge className="size-3.5" />}
+                                    {r === 'db-wins' && <Monitor className="size-3.5" />}
+                                    {r === 'ini-wins' && <Gamepad2 className="size-3.5" />}
+                                    {RESOLUTION_LABELS[r]}
+                                    {isRecommended && (
+                                        <span className="ml-auto text-[9px] font-bold uppercase tracking-widest text-emerald-300/80">
+                                            Recommended
+                                        </span>
+                                    )}
+                                </div>
+                                <p className="text-muted-foreground mt-1 leading-relaxed">
+                                    {RESOLUTION_DESCRIPTIONS[r]}
+                                </p>
+                            </button>
+                        )
+                    })}
                 </div>
             </div>
         </Modal>
