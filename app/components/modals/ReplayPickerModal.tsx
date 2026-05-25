@@ -9,7 +9,7 @@ import {
     LeaderboardEntry, MapMetadata,
 } from '@/app/utils/api'
 import { computeMedalTier, TIER_ICONS, TIER_LABELS, MedalTier } from '@/app/components/pages/MapsPage'
-import { formatCapTime } from '@/app/utils/format'
+import { formatCapTime, displayMapName } from '@/app/utils/format'
 
 interface ReplayPickerModalProps {
     open: boolean
@@ -186,7 +186,7 @@ export function ReplayPickerModal({
         <Modal
             isOpen={open}
             onClose={onClose}
-            title={mapName ? `Replays — ${mapName.replace('CTF-BT-', '').replace('CTF-BT+', '')}` : 'Replays'}
+            title={mapName ? `Replays — ${displayMapName(mapName)}` : 'Replays'}
             offsetSidebar
             maxWidth="640px"
             className="bg-[#0a0a0b]/98 border-white/5"

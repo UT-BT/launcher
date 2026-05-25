@@ -27,6 +27,7 @@ import { FilterPresetsMenu } from '@/app/components/shared/FilterPresetsMenu'
 import { ColumnsMenu } from '@/app/components/shared/ColumnsMenu'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { ActiveFilterChip } from '@/app/components/shared/ActiveFilterChip'
+import { displayMapName } from '@/app/utils/format'
 import {
     DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow,
     DataTableCell, DataTableEmpty, DataTableSkeletonRow,
@@ -659,7 +660,7 @@ export function ServerBrowserPage({
                 return (
                     <DataTableCell key={id}>
                         <span className="text-sm font-semibold text-white truncate inline-block max-w-[220px] align-middle">
-                            {server.map_name.replace('CTF-BT-', '🐰 ').replace('CTF-BT+', '🔑 ')}
+                            {displayMapName(server.map_name)}
                         </span>
                     </DataTableCell>
                 )

@@ -112,6 +112,7 @@ function loadPersistedFooState(): FooPageState {
 | `utbt:serverPresets:v1` | `Main.tsx` | `ServerPreset[]` |
 | `utbt:serverFavorites:v2` | `Main.tsx` | `string[]` (server IDs) |
 | `utbt:serversPageTutorial:v1` | `ServerBrowserPage` (via hook) | `{ seen, version }` |
+| `utbt:dismissedPatch:v1` | `Home` | `string` (patch tag the user dismissed) |
 | `utbt-server-browser-settings` | DEPRECATED | (old shape — can ignore) |
 
 ## Filter presets

@@ -6,6 +6,7 @@ import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { difficultyTextColor, difficultyBgColor } from '@/app/utils/scoreColors'
+import { displayMapName } from '@/app/utils/format'
 import { cn } from '@/lib/utils'
 import type { SummaryNewMap } from '@/app/utils/api'
 
@@ -42,7 +43,7 @@ export function NewMapsCard({ maps, favoriteMapNames, onToggleFavorite, onMapSel
                                 <div className="flex flex-col min-w-0 gap-0.5">
                                     <div className="flex items-center gap-2 min-w-0">
                                         <span className="font-bold text-white/90 truncate">
-                                            {map.name.replace('CTF-BT-', '').replace('CTF-BT+', '')}
+                                            {displayMapName(map.name)}
                                         </span>
                                         <FavoriteStar
                                             name={map.name}

@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
-import { ChevronLeft, ChevronRight, Loader2, Play } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Loader2, MessageSquarePlus, Play } from 'lucide-react'
 import { Modal } from '@/app/components/ui/modal'
 import { Button } from '@/app/components/ui/button'
-import { Tooltip } from '@/app/components/ui/tooltip'
 import { fetchSummaryCaps, SummaryCap } from '@/app/utils/api'
 import {
     DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow,
@@ -11,12 +10,11 @@ import {
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
+import { IconActionButton } from '@/app/components/shared/IconActionButton'
 import { ReplayVideoModal } from '@/app/components/shared/ReplayVideoModal'
 import { useReplayWatch } from '@/app/hooks/useReplayWatch'
-import { formatCapTime, formatAddedDate } from '@/app/utils/format'
+import { formatCapTime, formatAddedDate, displayMapName } from '@/app/utils/format'
 import { getMedalIcon } from '@/app/utils/medals'
-import { difficultyTextColor, difficultyBgColor } from '@/app/utils/scoreColors'
-import { cn } from '@/lib/utils'
 
 const PAGE_SIZE = 10
 
@@ -27,10 +25,11 @@ interface HistoryModalProps {
     userAlias?: string | null
     favoriteMapNames: Set<string>
     onToggleFavorite: (mapName: string) => void
+    onReview?: (mapName: string) => void
 }
 
 export function HistoryModal({
-    open, onOpenChange, accessToken, userAlias, favoriteMapNames, onToggleFavorite,
+    open, onOpenChange, accessToken, userAlias, favoriteMapNames, onToggleFavorite, onReview,
 }: HistoryModalProps) {
     const [caps, setCaps] = useState<SummaryCap[]>([])
     const [page, setPage] = useState(1)
@@ -84,9 +83,9 @@ export function HistoryModal({
                             <DataTableHeaderCell width="3.5rem"> </DataTableHeaderCell>
                             <DataTableHeaderCell>Map</DataTableHeaderCell>
                             <DataTableHeaderCell>Author</DataTableHeaderCell>
-                            <DataTableHeaderCell align="left" width="6rem">Difficulty</DataTableHeaderCell>
                             <DataTableHeaderCell align="right">Time</DataTableHeaderCell>
                             <DataTableHeaderCell align="right" width="8rem">Capped</DataTableHeaderCell>
+                            <DataTableHeaderCell align="center" width="3rem"> </DataTableHeaderCell>
                             <DataTableHeaderCell align="center" width="3rem"> </DataTableHeaderCell>
                         </DataTableHeaderRow>
                         <tbody>
@@ -108,8 +107,14 @@ export function HistoryModal({
                                             </DataTableCell>
                                             <DataTableCell>
                                                 <div className="flex items-center gap-2 min-w-0">
+                                                    <FavoriteStar
+                                                        name={cap.mapName}
+                                                        isFavorited={favoriteMapNames.has(cap.mapName)}
+                                                        onToggle={onToggleFavorite}
+                                                        size="sm"
+                                                    />
                                                     <span className="font-bold text-white/90 truncate">
-                                                        {cap.mapName.replace('CTF-BT-', '').replace('CTF-BT+', '')}
+                                                        {displayMapName(cap.mapName)}
                                                     </span>
                                                     {medalIcon && (
                                                         <img
@@ -119,33 +124,10 @@ export function HistoryModal({
                                                             className="h-4 w-auto object-contain shrink-0"
                                                         />
                                                     )}
-                                                    <FavoriteStar
-                                                        name={cap.mapName}
-                                                        isFavorited={favoriteMapNames.has(cap.mapName)}
-                                                        onToggle={onToggleFavorite}
-                                                        size="sm"
-                                                    />
                                                 </div>
                                             </DataTableCell>
                                             <DataTableCell>
                                                 <PlayerInfo alias={cap.author} size="sm" />
-                                            </DataTableCell>
-                                            <DataTableCell>
-                                                {cap.difficulty > 0 ? (
-                                                    <div className="flex items-center gap-2">
-                                                        <span className={cn('text-sm font-bold w-4 text-center', difficultyTextColor(cap.difficulty))}>
-                                                            {cap.difficulty}
-                                                        </span>
-                                                        <div className="w-12 h-1.5 bg-white/10 rounded-full overflow-hidden">
-                                                            <div
-                                                                className={cn('h-full rounded-full', difficultyBgColor(cap.difficulty))}
-                                                                style={{ width: `${(cap.difficulty / 10) * 100}%` }}
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                ) : (
-                                                    <span className="text-muted-foreground/40">—</span>
-                                                )}
                                             </DataTableCell>
                                             <DataTableCell align="right">
                                                 <span className="font-mono font-black text-white/90 tracking-tight">
@@ -158,31 +140,30 @@ export function HistoryModal({
                                                 </span>
                                             </DataTableCell>
                                             <DataTableCell align="center" className="px-2">
-                                                <Tooltip
-                                                    content={!cap.verified
-                                                        ? 'No replay — cap not verified'
-                                                        : isLoadingReplay
-                                                            ? 'Loading…'
-                                                            : 'Watch run'}
-                                                    side="top"
-                                                >
-                                                    <button
-                                                        type="button"
-                                                        disabled={!cap.verified || isLoadingReplay}
-                                                        onClick={() => replay.openReplay({
-                                                            capId: cap.id,
-                                                            mapName: cap.mapName,
-                                                            time: cap.time,
-                                                            alias: userAlias ?? undefined,
-                                                        })}
-                                                        className="inline-flex items-center justify-center size-7 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-300 hover:bg-amber-500/25 hover:border-amber-500/60 transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-amber-500/10 disabled:hover:border-amber-500/30 cursor-pointer"
-                                                    >
-                                                        {isLoadingReplay
-                                                            ? <Loader2 className="size-3 animate-spin" />
-                                                            : <Play className="size-3 fill-current" />
-                                                        }
-                                                    </button>
-                                                </Tooltip>
+                                                <IconActionButton
+                                                    variant="replay"
+                                                    icon={Play}
+                                                    iconFill
+                                                    tooltip={!cap.verified ? 'No replay — cap not verified' : 'Watch run'}
+                                                    disabled={!cap.verified}
+                                                    loading={isLoadingReplay}
+                                                    onClick={() => replay.openReplay({
+                                                        capId: cap.id,
+                                                        mapName: cap.mapName,
+                                                        time: cap.time,
+                                                        alias: userAlias ?? undefined,
+                                                    })}
+                                                />
+                                            </DataTableCell>
+                                            <DataTableCell align="center" className="px-2">
+                                                {onReview && (
+                                                    <IconActionButton
+                                                        variant="review"
+                                                        icon={MessageSquarePlus}
+                                                        tooltip="Review this map"
+                                                        onClick={() => onReview(cap.mapName)}
+                                                    />
+                                                )}
                                             </DataTableCell>
                                         </DataTableRow>
                                     )
