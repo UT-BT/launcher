@@ -22,7 +22,6 @@ interface NavItem {
 
 const navItems: NavItem[] = [
     { id: 'home', label: 'Home', icon: Home },
-    { id: 'servers', label: 'Servers', icon: Server },
     { id: 'maps', label: 'Maps', icon: MapIcon },
 ]
 
@@ -113,27 +112,32 @@ export function AppLayout({ children, currentView, onViewChange, userProfile, in
                     />
                 </div>
 
-                <div className="px-4 mb-6 relative z-10">
-                    <h3 className="px-4 text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider mb-2">
-                        Quick Actions
-                    </h3>
+                <div className="px-4 mb-6 relative z-10 space-y-2">
+                    <Button
+                        variant="ghost"
+                        className="w-full h-11 bg-blue-500/15 border border-blue-500/40 text-blue-200 hover:bg-blue-500/25 hover:text-white hover:border-blue-500/60 hover:shadow-[0_0_20px_rgba(59,130,246,0.25)] transition-all font-semibold rounded-lg"
+                        onClick={() => onViewChange('servers')}
+                    >
+                        <Server className="size-4" />
+                        Join UTBT Server
+                    </Button>
                     {isInstallValid ? (
                         <Button
-                            variant="default"
-                            className="w-full bg-gradient-to-r from-red-800 to-blue-800 hover:from-red-900 hover:to-blue-900 text-white shadow-lg shadow-purple-500/20"
+                            variant="ghost"
+                            className="w-full h-9 bg-card/50 border border-white/10 text-muted-foreground hover:text-white hover:bg-card/80 hover:border-white/20 transition-colors rounded-lg font-medium"
                             onClick={() => window.conveyor.game.launchGameStandalone()}
                         >
-                            <Play className="mr-2 size-4 fill-current" />
+                            <Play className="size-4 fill-current" />
                             Launch Game
                         </Button>
                     ) : (
                         <Tooltip content="No valid UT99 installation found" side="top" className="w-full">
                             <Button
-                                variant="default"
+                                variant="ghost"
                                 disabled
-                                className="w-full bg-white/5 text-muted-foreground cursor-not-allowed opacity-50"
+                                className="w-full h-9 bg-card/30 border border-white/5 text-muted-foreground/60 cursor-not-allowed rounded-lg font-medium"
                             >
-                                <Play className="mr-2 size-4 fill-current" />
+                                <Play className="size-4 fill-current" />
                                 Launch Game
                             </Button>
                         </Tooltip>

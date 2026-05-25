@@ -1,19 +1,42 @@
 import { Server } from '@/app/components/pages/ServerBrowserPage'
 
 export type ServerType = 'Certified' | 'Duel' | 'Casual' | 'Unknown'
-export type SortOption = 'Players' | 'Ping'
-export type FilterState = {
-    types: Record<ServerType, boolean>
-    hideEmpty: boolean
-    hideFull: boolean
-    regions: Record<string, boolean>
+export type ServerSortField =
+    | 'type' | 'name' | 'map' | 'region' | 'ping' | 'players' | 'spectators'
+export type SortDir = 'asc' | 'desc'
+export type CapacityValue = 'empty' | 'full' | 'has-players'
+
+export interface FilterState {
+    types: ServerType[]
+    regions: string[]
+    capacity: CapacityValue[]
+    favoritesOnly: boolean
 }
 
 export const DEFAULT_FILTERS: FilterState = {
-    types: { Certified: true, Duel: true, Casual: true, Unknown: true },
-    hideEmpty: false,
-    hideFull: false,
-    regions: {}
+    types: [],
+    regions: [],
+    capacity: [],
+    favoritesOnly: false,
+}
+
+export interface ServerPresetFilters {
+    filters: FilterState
+    sortBy: ServerSortField
+    sortDir: SortDir
+}
+
+export interface ServerPreset {
+    id: string
+    name: string
+    filters: ServerPresetFilters
+}
+
+const TYPE_RANK: Record<ServerType, number> = {
+    Certified: 0,
+    Duel: 1,
+    Casual: 2,
+    Unknown: 3,
 }
 
 export const trimServerName = (originalName: string): string => {
@@ -38,33 +61,74 @@ export const getServerRegion = (name: string): string => {
     return match ? match[1] : 'Unknown'
 }
 
-export const sortServers = (servers: Server[], option: SortOption): Server[] => {
+export const sortServers = (
+    servers: Server[],
+    sortBy: ServerSortField,
+    sortDir: SortDir,
+): Server[] => {
+    const dir = sortDir === 'asc' ? 1 : -1
     return [...servers].sort((a, b) => {
-        switch (option) {
-            case 'Players':
-                if (a.player_count !== b.player_count) return b.player_count - a.player_count
-                return b.max_players - a.max_players
-            case 'Ping': {
-                const pingA = a.ping || 9999
-                const pingB = b.ping || 9999
-                return pingA - pingB
+        let cmp = 0
+        switch (sortBy) {
+            case 'type': {
+                cmp = TYPE_RANK[getServerType(a.hostname)] - TYPE_RANK[getServerType(b.hostname)]
+                break
             }
-            default:
-                return 0
+            case 'name':
+                cmp = trimServerName(a.hostname).localeCompare(trimServerName(b.hostname))
+                break
+            case 'map':
+                cmp = a.map_name.localeCompare(b.map_name)
+                break
+            case 'region':
+                cmp = getServerRegion(a.hostname).localeCompare(getServerRegion(b.hostname))
+                break
+            case 'ping':
+                cmp = (a.ping ?? Number.POSITIVE_INFINITY) - (b.ping ?? Number.POSITIVE_INFINITY)
+                break
+            case 'players':
+                cmp = a.player_count - b.player_count
+                if (cmp === 0) cmp = a.max_players - b.max_players
+                break
+            case 'spectators':
+                cmp = a.spectators - b.spectators
+                break
         }
+        if (cmp === 0) cmp = trimServerName(a.hostname).localeCompare(trimServerName(b.hostname))
+        return cmp * dir
     })
 }
 
-export const filterServers = (servers: Server[], filters: FilterState): Server[] => {
+export const filterServers = (
+    servers: Server[],
+    filters: FilterState,
+    favoriteServerIds: Set<string>,
+): Server[] => {
     return servers.filter(server => {
-        const type = getServerType(server.hostname)
-        if (!filters.types[type]) return false
+        if (filters.types.length > 0) {
+            const type = getServerType(server.hostname)
+            if (!filters.types.includes(type)) return false
+        }
 
-        if (filters.hideEmpty && server.player_count === 0) return false
-        if (filters.hideFull && server.player_count >= server.max_players) return false
+        if (filters.regions.length > 0) {
+            const region = getServerRegion(server.hostname)
+            if (!filters.regions.includes(region)) return false
+        }
 
-        const region = getServerRegion(server.hostname)
-        if (filters.regions[region] === false) return false
+        if (filters.capacity.length > 0) {
+            const isEmpty = server.player_count === 0
+            const isFull = server.player_count >= server.max_players
+            const hasPlayers = server.player_count > 0 && !isFull
+            const matches =
+                (filters.capacity.includes('empty') && isEmpty) ||
+                (filters.capacity.includes('full') && isFull) ||
+                (filters.capacity.includes('has-players') && hasPlayers)
+            if (!matches) return false
+        }
+
+        if (filters.favoritesOnly && !favoriteServerIds.has(server.id)) {
+            return false
+        }
 
         return true
     })

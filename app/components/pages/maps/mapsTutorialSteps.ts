@@ -1,14 +1,7 @@
 import type React from 'react'
+import type { TutorialStep } from '@/app/components/shared/Tutorial'
 
-export interface TutorialStep {
-    id: string
-    title: string
-    body: React.ReactNode
-    targetRef?: React.RefObject<HTMLElement | null>
-    targetRefs?: React.RefObject<HTMLElement | null>[]
-    onEnter?: () => void
-    onExit?: () => void
-}
+export type { TutorialStep }
 
 export interface StepRefs {
     searchRef: React.RefObject<HTMLInputElement | null>

@@ -1,11 +1,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback, Fragment } from 'react'
-import { Search, RefreshCw, ChevronUp, ChevronDown, ArrowUpDown, SlidersHorizontal, X, Bookmark, BookmarkPlus, Trash2, Columns3, ArrowLeft, GripVertical, HelpCircle, Share2, Check } from 'lucide-react'
+import { Search, RefreshCw, SlidersHorizontal, X, ArrowLeft, HelpCircle, Share2, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/app/components/ui/button'
-import {
-    DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
-    DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator,
-} from '@/app/components/ui/dropdown-menu'
 import { Modal } from '@/app/components/ui/modal'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import {
@@ -19,12 +15,18 @@ import { ReplayPickerModal } from '@/app/components/modals/ReplayPickerModal'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
-import { MapsTutorial } from '@/app/components/pages/maps/MapsTutorial'
-import { useMapsTutorialState } from '@/app/components/pages/maps/useMapsTutorialState'
+import { Tutorial } from '@/app/components/shared/Tutorial'
+import { useTutorialState } from '@/app/components/shared/useTutorialState'
 import { buildSteps } from '@/app/components/pages/maps/mapsTutorialSteps'
 import { PaginationBar } from '@/app/components/ui/pagination'
 import { MultiFilterDropdown } from '@/app/components/ui/multi-filter-dropdown'
 import { FilterPanelRow } from '@/app/components/ui/filter-panel-row'
+import { FilterPresetsMenu } from '@/app/components/shared/FilterPresetsMenu'
+import { ColumnsMenu } from '@/app/components/shared/ColumnsMenu'
+import {
+    DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow,
+    DataTableCell, DataTableEmpty,
+} from '@/app/components/shared/DataTable'
 import { formatCapTime, formatDelta, formatAddedDate, isNew } from '@/app/utils/format'
 import { difficultyTextColor, difficultyBgColor, scoreTextColor, scoreBgColor } from '@/app/utils/scoreColors'
 
@@ -642,10 +644,6 @@ export function MapsPage({
     const [searchResults, setSearchResults] = useState<Map[]>([])
     const [reviewsModalMap, setReviewsModalMap] = useState<string | null>(null)
     const [presets, setPresets] = useState<MapsPreset[]>(() => loadPresets())
-    const [savePresetOpen, setSavePresetOpen] = useState(false)
-    const [presetNameInput, setPresetNameInput] = useState('')
-    const presetNameInputRef = useRef<HTMLInputElement | null>(null)
-    const [presetPendingDelete, setPresetPendingDelete] = useState<MapsPreset | null>(null)
     const [presetsMenuOpen, setPresetsMenuOpen] = useState(false)
     const [columnVisibility, setColumnVisibility] = useState<Record<ColumnId, boolean>>(() => loadColumnVisibility())
     const [expandedTagMaps, setExpandedTagMaps] = useState<Set<string>>(() => new Set())
@@ -718,10 +716,7 @@ export function MapsPage({
         })
     }
 
-    const [draggingColumn, setDraggingColumn] = useState<ColumnId | null>(null)
-    const [dragOverColumn, setDragOverColumn] = useState<ColumnId | null>(null)
-
-    const tutorial = useMapsTutorialState()
+    const tutorial = useTutorialState('utbt:mapsPageTutorial:v1')
     const [tutorialActive, setTutorialActive] = useState(false)
     const [tutorialStep, setTutorialStep] = useState(0)
     const [columnsMenuOpen, setColumnsMenuOpen] = useState(false)
@@ -750,15 +745,6 @@ export function MapsPage({
         setColumnsMenuOpen(false)
         onStateChange(prev => ({ ...prev, filtersPanelOpen: false }))
     }, [onStateChange])
-
-    // Focus the preset-name input when the save modal opens. Modal traps
-    // focus on its first focusable element (the close X) on mount, so we
-    // re-focus the input after that effect runs.
-    useEffect(() => {
-        if (!savePresetOpen) return
-        const id = window.setTimeout(() => presetNameInputRef.current?.focus(), 0)
-        return () => window.clearTimeout(id)
-    }, [savePresetOpen])
 
     const reorderColumn = (sourceId: ColumnId, targetId: ColumnId) => {
         if (sourceId === targetId) return
@@ -1360,16 +1346,12 @@ export function MapsPage({
 
     const [activePresetId, setActivePresetId] = useState<string | null>(null)
 
-    const handleSavePreset = () => {
-        const name = presetNameInput.trim()
-        if (!name) return
+    const handleSavePreset = (name: string, filters: PresetFilters) => {
         const id = newPresetId()
-        const next = [...presets, { id, name, filters: captureFilters() }]
+        const next = [...presets, { id, name, filters }]
         setPresets(next)
         persistPresets(next)
         setActivePresetId(id)
-        setSavePresetOpen(false)
-        setPresetNameInput('')
     }
 
     const handleLoadPreset = (p: MapsPreset) => {
@@ -1389,24 +1371,13 @@ export function MapsPage({
         if (activePresetId === id) setActivePresetId(null)
     }
 
-    const confirmDeletePreset = () => {
-        if (!presetPendingDelete) return
-        handleDeletePreset(presetPendingDelete.id)
-        setPresetPendingDelete(null)
-    }
-
     const refresh = () => {
         onCachesChange(() => ({ ...DEFAULT_MAPS_CACHES }))
         loadCaches(true)
         loadBrowsePage()
     }
 
-    const SortIcon = ({ field }: { field: SortField }) => {
-        if (state.sortBy !== field) return <ArrowUpDown className="size-3 opacity-30" />
-        return state.sortDir === 'asc'
-            ? <ChevronUp className="size-3 text-blue-400" />
-            : <ChevronDown className="size-3 text-blue-400" />
-    }
+    const directionFor = (field: SortField) => state.sortBy === field ? state.sortDir : null
 
     const activeFilterCount = [
         state.authorFilters.length > 0,
@@ -1464,86 +1435,111 @@ export function MapsPage({
         if (!isColumnVisible(id)) return null
         switch (id) {
             case 'thumbnail':
-                return <th key={id} className="px-4 py-3 text-left w-20 text-muted-foreground font-medium text-xs uppercase tracking-wider"></th>
+                return <DataTableHeaderCell key={id} width="5rem" />
             case 'name':
                 return (
-                    <th key={id} className="px-4 py-3 text-left text-muted-foreground font-medium text-xs uppercase tracking-wider">
-                        <button ref={sortHeaderRef} onClick={() => handleSort('name')} className="flex items-center gap-1 hover:text-white transition-colors cursor-pointer">
-                            Map <SortIcon field="name" />
-                        </button>
-                    </th>
+                    <DataTableHeaderCell
+                        key={id}
+                        sortable
+                        sortDirection={directionFor('name')}
+                        onSort={() => handleSort('name')}
+                        buttonRef={sortHeaderRef}
+                    >
+                        Map
+                    </DataTableHeaderCell>
                 )
             case 'author':
                 return (
-                    <th key={id} className="px-4 py-3 text-left text-muted-foreground font-medium text-xs uppercase tracking-wider">
-                        <button onClick={() => handleSort('author')} className="flex items-center gap-1 hover:text-white transition-colors cursor-pointer">
-                            Author <SortIcon field="author" />
-                        </button>
-                    </th>
+                    <DataTableHeaderCell
+                        key={id}
+                        sortable
+                        sortDirection={directionFor('author')}
+                        onSort={() => handleSort('author')}
+                    >
+                        Author
+                    </DataTableHeaderCell>
                 )
             case 'difficulty':
                 return (
-                    <th key={id} className="px-4 py-3 text-left text-muted-foreground font-medium text-xs uppercase tracking-wider">
-                        <button onClick={() => handleSort('difficulty')} className="flex items-center gap-1 hover:text-white transition-colors cursor-pointer">
-                            Difficulty <SortIcon field="difficulty" />
-                        </button>
-                    </th>
+                    <DataTableHeaderCell
+                        key={id}
+                        sortable
+                        sortDirection={directionFor('difficulty')}
+                        onSort={() => handleSort('difficulty')}
+                    >
+                        Difficulty
+                    </DataTableHeaderCell>
                 )
             case 'added':
                 return (
-                    <th key={id} className="px-4 py-3 text-left text-muted-foreground font-medium text-xs uppercase tracking-wider">
-                        <button onClick={() => handleSort('added')} className="flex items-center gap-1 hover:text-white transition-colors cursor-pointer">
-                            Added <SortIcon field="added" />
-                        </button>
-                    </th>
+                    <DataTableHeaderCell
+                        key={id}
+                        sortable
+                        sortDirection={directionFor('added')}
+                        onSort={() => handleSort('added')}
+                    >
+                        Added
+                    </DataTableHeaderCell>
                 )
             case 'world_record':
                 return (
-                    <th key={id} className="px-4 py-3 text-left text-muted-foreground font-medium text-xs uppercase tracking-wider">
-                        <button onClick={() => handleSort('world_record')} className="flex items-center gap-1 hover:text-white transition-colors cursor-pointer">
-                            World Record <SortIcon field="world_record" />
-                        </button>
-                    </th>
+                    <DataTableHeaderCell
+                        key={id}
+                        sortable
+                        sortDirection={directionFor('world_record')}
+                        onSort={() => handleSort('world_record')}
+                    >
+                        World Record
+                    </DataTableHeaderCell>
                 )
             case 'medal':
                 return (
-                    <th key={id} className="px-2 py-3 text-center w-10 text-muted-foreground font-medium text-xs uppercase tracking-wider">
-                        <Tooltip content="Sort by Medal" side="top">
-                            <button
-                                onClick={() => handleSort('medal')}
-                                className="inline-flex items-center justify-center hover:text-white transition-colors cursor-pointer"
-                            >
-                                Medal
-                                <SortIcon field="medal" />
-                            </button>
-                        </Tooltip>
-                    </th>
+                    <DataTableHeaderCell
+                        key={id}
+                        align="center"
+                        width="2.5rem"
+                        className="px-2"
+                        sortable
+                        sortDirection={directionFor('medal')}
+                        onSort={() => handleSort('medal')}
+                    >
+                        <Tooltip content="Sort by Medal" side="top"><span>Medal</span></Tooltip>
+                    </DataTableHeaderCell>
                 )
             case 'pb':
                 return (
-                    <th key={id} className="px-4 py-3 text-left text-muted-foreground font-medium text-xs uppercase tracking-wider">
-                        <button onClick={() => handleSort('pb')} className="flex items-center gap-1 hover:text-white transition-colors cursor-pointer">
-                            Personal Best <SortIcon field="pb" />
-                        </button>
-                    </th>
+                    <DataTableHeaderCell
+                        key={id}
+                        sortable
+                        sortDirection={directionFor('pb')}
+                        onSort={() => handleSort('pb')}
+                    >
+                        Personal Best
+                    </DataTableHeaderCell>
                 )
             case 'replay':
-                return <th key={id} className="px-2 py-3 text-center w-20 text-muted-foreground font-medium text-xs uppercase tracking-wider"></th>
+                return <DataTableHeaderCell key={id} align="center" width="5rem" className="px-2" />
             case 'community_rating':
                 return (
-                    <th key={id} className="px-4 py-3 text-left text-muted-foreground font-medium text-xs uppercase tracking-wider">
-                        <button onClick={() => handleSort('rating')} className="flex items-center gap-1 hover:text-white transition-colors cursor-pointer">
-                            Community Review <SortIcon field="rating" />
-                        </button>
-                    </th>
+                    <DataTableHeaderCell
+                        key={id}
+                        sortable
+                        sortDirection={directionFor('rating')}
+                        onSort={() => handleSort('rating')}
+                    >
+                        Community Review
+                    </DataTableHeaderCell>
                 )
             case 'my_rating':
                 return (
-                    <th key={id} className="px-4 py-3 text-left text-muted-foreground font-medium text-xs uppercase tracking-wider">
-                        <button onClick={() => handleSort('my_rating')} className="flex items-center gap-1 hover:text-white transition-colors cursor-pointer">
-                            Your Review <SortIcon field="my_rating" />
-                        </button>
-                    </th>
+                    <DataTableHeaderCell
+                        key={id}
+                        sortable
+                        sortDirection={directionFor('my_rating')}
+                        onSort={() => handleSort('my_rating')}
+                    >
+                        Your Review
+                    </DataTableHeaderCell>
                 )
             default:
                 return null
@@ -1571,19 +1567,19 @@ export function MapsPage({
         switch (id) {
             case 'thumbnail':
                 return (
-                    <td key={id} className="px-4 py-3">
+                    <DataTableCell key={id}>
                         <MapThumbnail mapName={map.name} className="w-12 h-12" />
-                    </td>
+                    </DataTableCell>
                 )
             case 'name': {
                 const expanded = expandedTagMaps.has(map.name)
                 const shown = expanded ? tags : tags.slice(0, 3)
                 return (
-                    <td key={id} className="px-4 py-3">
+                    <DataTableCell key={id}>
                         <div className="flex items-center gap-2 flex-wrap">
                             <span ref={isFirstRow ? firstRowFavRef : undefined} className="inline-flex">
                                 <FavoriteStar
-                                    mapName={map.name}
+                                    name={map.name}
                                     isFavorited={favoriteMapNames.has(map.name)}
                                     onToggle={onToggleFavorite}
                                     size="md"
@@ -1635,18 +1631,18 @@ export function MapsPage({
                                 </>
                             )}
                         </div>
-                    </td>
+                    </DataTableCell>
                 )
             }
             case 'author':
                 return (
-                    <td key={id} className="px-4 py-3 text-muted-foreground">
+                    <DataTableCell key={id} className="text-muted-foreground">
                         <PlayerInfo alias={author || '—'} size="md" />
-                    </td>
+                    </DataTableCell>
                 )
             case 'difficulty':
                 return (
-                    <td key={id} className="px-4 py-3">
+                    <DataTableCell key={id}>
                         <div className="flex items-center gap-2">
                             <span className={cn("text-sm font-bold w-4 text-center", difficultyTextColor(map.difficulty))}>
                                 {map.difficulty}
@@ -1658,20 +1654,20 @@ export function MapsPage({
                                 />
                             </div>
                         </div>
-                    </td>
+                    </DataTableCell>
                 )
             case 'added':
                 return (
-                    <td key={id} className="px-4 py-3 text-sm text-muted-foreground whitespace-nowrap">
+                    <DataTableCell key={id} className="text-sm text-muted-foreground whitespace-nowrap">
                         {formatAddedDate(map.added)}
-                    </td>
+                    </DataTableCell>
                 )
             case 'world_record': {
                 if (!(wr != null && wr > 0)) {
                     return (
-                        <td key={id} className="px-4 py-3 font-mono text-sm text-muted-foreground">
+                        <DataTableCell key={id} className="font-mono text-sm text-muted-foreground">
                             <span className="opacity-30">—</span>
-                        </td>
+                        </DataTableCell>
                     )
                 }
                 const capId = wrHolder?.cap_id
@@ -1708,7 +1704,7 @@ export function MapsPage({
                     <div ref={isFirstRow ? (firstRowWrRef as unknown as React.RefObject<HTMLDivElement | null>) : undefined} className="text-left">{timeNode}</div>
                 )
                 return (
-                    <td key={id} className="px-4 py-3 font-mono text-sm text-muted-foreground">
+                    <DataTableCell key={id} className="font-mono text-sm text-muted-foreground">
                         <div className="flex flex-col leading-tight">
                             {timeButton}
                             {wrHolder && (wrHolder.user_id ? (
@@ -1734,23 +1730,23 @@ export function MapsPage({
                                 </span>
                             ))}
                         </div>
-                    </td>
+                    </DataTableCell>
                 )
             }
             case 'medal':
                 return (
-                    <td key={id} className="px-2 py-3 text-center">
+                    <DataTableCell key={id} align="center" className="px-2">
                         <div className="inline-flex justify-center">
                             <MedalIndicator tier={medalTier} bestCap={bestCap} />
                         </div>
-                    </td>
+                    </DataTableCell>
                 )
             case 'pb': {
                 if (!(bestCap && bestCap.cap_time_seconds > 0)) {
                     return (
-                        <td key={id} className="px-4 py-3 font-mono text-sm text-muted-foreground">
+                        <DataTableCell key={id} className="font-mono text-sm text-muted-foreground">
                             <span className="opacity-30">—</span>
-                        </td>
+                        </DataTableCell>
                     )
                 }
                 const isWR = wr != null && wr > 0 && bestCap.cap_time_seconds - wr <= 0.0005
@@ -1775,7 +1771,7 @@ export function MapsPage({
                     )
                 )
                 return (
-                    <td key={id} className="px-4 py-3 font-mono text-sm text-muted-foreground">
+                    <DataTableCell key={id} className="font-mono text-sm text-muted-foreground">
                         {clickable ? (
                             <Tooltip content="Watch your run" side="top">
                                 <button
@@ -1801,12 +1797,12 @@ export function MapsPage({
                                 {deltaText}
                             </div>
                         )}
-                    </td>
+                    </DataTableCell>
                 )
             }
             case 'replay':
                 return (
-                    <td key={id} className="px-2 py-3 text-center">
+                    <DataTableCell key={id} align="center" className="px-2">
                         <button
                             ref={isFirstRow ? firstRowReplayRef : undefined}
                             type="button"
@@ -1818,11 +1814,11 @@ export function MapsPage({
                         >
                             Demos
                         </button>
-                    </td>
+                    </DataTableCell>
                 )
             case 'community_rating':
                 return (
-                    <td key={id} className="px-4 py-3">
+                    <DataTableCell key={id}>
                         <Tooltip content="View reviews" side="top">
                             <button
                                 ref={isFirstRow ? firstRowRatingRef : undefined}
@@ -1852,11 +1848,11 @@ export function MapsPage({
                             )}
                             </button>
                         </Tooltip>
-                    </td>
+                    </DataTableCell>
                 )
             case 'my_rating':
                 return (
-                    <td key={id} className="px-4 py-3">
+                    <DataTableCell key={id}>
                         <Tooltip content={myReview ? 'Update review' : 'Add review'} side="top">
                             <button
                                 ref={isFirstRow ? firstRowMyRatingRef : undefined}
@@ -1886,7 +1882,7 @@ export function MapsPage({
                             )}
                             </button>
                         </Tooltip>
-                    </td>
+                    </DataTableCell>
                 )
             default:
                 return null
@@ -1970,99 +1966,30 @@ export function MapsPage({
                     )}
                 </button>
 
-                <DropdownMenu open={columnsMenuOpen} onOpenChange={setColumnsMenuOpen} modal={false}>
-                    <DropdownMenuTrigger asChild>
-                        <button
-                            ref={columnsButtonRef}
-                            className="px-3 py-2 rounded-lg text-sm font-medium border transition-colors cursor-pointer flex items-center gap-2 bg-card/50 border-white/10 text-muted-foreground hover:text-white hover:border-white/20"
-                        >
-                            <Columns3 className="size-4" />
-                            Columns
-                        </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="min-w-72">
-                        <DropdownMenuLabel>Columns</DropdownMenuLabel>
-                        <div className="px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground">
-                            Drag the handle to reorder
-                            <br />
-                            Checkbox toggles visibility
-                        </div>
-                        <DropdownMenuSeparator />
-                        {columnOrder
-                            .filter(id => id !== 'tags')
-                            .map(id => {
-                                const required = REQUIRED_COLUMNS.has(id)
-                                const isDragging = draggingColumn === id
-                                const isDragOver = dragOverColumn === id && draggingColumn !== id
-                                return (
-                                    <div
-                                        key={id}
-                                        draggable
-                                        onDragStart={e => {
-                                            setDraggingColumn(id)
-                                            e.dataTransfer.effectAllowed = 'move'
-                                            e.dataTransfer.setData('text/plain', id)
-                                        }}
-                                        onDragEnter={e => {
-                                            e.preventDefault()
-                                            if (draggingColumn && draggingColumn !== id) setDragOverColumn(id)
-                                        }}
-                                        onDragOver={e => {
-                                            e.preventDefault()
-                                            e.dataTransfer.dropEffect = 'move'
-                                        }}
-                                        onDragLeave={() => {
-                                            if (dragOverColumn === id) setDragOverColumn(null)
-                                        }}
-                                        onDrop={e => {
-                                            e.preventDefault()
-                                            if (draggingColumn) reorderColumn(draggingColumn, id)
-                                            setDraggingColumn(null)
-                                            setDragOverColumn(null)
-                                        }}
-                                        onDragEnd={() => {
-                                            setDraggingColumn(null)
-                                            setDragOverColumn(null)
-                                        }}
-                                        className={cn(
-                                            "flex items-center gap-2 px-2 py-1.5 text-sm select-none rounded transition-colors",
-                                            isDragging && "opacity-40",
-                                            isDragOver && "bg-blue-500/15 ring-1 ring-blue-500/40",
-                                        )}
-                                    >
-                                        <input
-                                            type="checkbox"
-                                            checked={isColumnVisible(id)}
-                                            disabled={required}
-                                            onChange={() => toggleColumn(id)}
-                                            aria-label={`Toggle ${COLUMN_LABELS[id]} visibility`}
-                                            className="accent-blue-500 cursor-pointer disabled:cursor-default"
-                                        />
-                                        <span className={cn("flex-1 truncate", required && "text-muted-foreground/80")}>
-                                            {COLUMN_LABELS[id]}
-                                            {required && <span className="ml-1 text-[9px] uppercase tracking-wider text-muted-foreground/60">required</span>}
-                                        </span>
-                                        {id === 'name' && (
-                                            <label className="flex items-center gap-1 text-[10px] text-muted-foreground cursor-pointer">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={isColumnVisible('tags')}
-                                                    onChange={() => toggleColumn('tags')}
-                                                    aria-label="Toggle tag chips"
-                                                    className="accent-blue-500 cursor-pointer"
-                                                />
-                                                Show Tags
-                                            </label>
-                                        )}
-                                        <GripVertical
-                                            className="size-4 text-muted-foreground/60 cursor-grab active:cursor-grabbing"
-                                            aria-label="Drag to reorder"
-                                        />
-                                    </div>
-                                )
-                            })}
-                    </DropdownMenuContent>
-                </DropdownMenu>
+                <ColumnsMenu<ColumnId>
+                    columnOrder={columnOrder}
+                    columnVisibility={columnVisibility}
+                    columnLabels={COLUMN_LABELS}
+                    onToggle={toggleColumn}
+                    onReorder={reorderColumn}
+                    requiredColumns={REQUIRED_COLUMNS}
+                    excludeFromList={NON_TABLE_COLUMNS}
+                    triggerRef={columnsButtonRef}
+                    menuOpen={columnsMenuOpen}
+                    onMenuOpenChange={setColumnsMenuOpen}
+                    renderExtra={id => id === 'name' ? (
+                        <label className="flex items-center gap-1 text-[10px] text-muted-foreground cursor-pointer">
+                            <input
+                                type="checkbox"
+                                checked={isColumnVisible('tags')}
+                                onChange={() => toggleColumn('tags')}
+                                aria-label="Toggle tag chips"
+                                className="accent-blue-500 cursor-pointer"
+                            />
+                            Show Tags
+                        </label>
+                    ) : null}
+                />
 
             </div>
 
@@ -2182,91 +2109,20 @@ export function MapsPage({
                     </FilterPanelRow>
 
                     <div className="flex items-center justify-between gap-3 pt-2 border-t border-white/5">
-                        <div className="flex items-center gap-2">
-                            <DropdownMenu open={presetsMenuOpen} onOpenChange={setPresetsMenuOpen} modal={false}>
-                                <DropdownMenuTrigger asChild>
-                                    <button
-                                        ref={presetsButtonRef}
-                                        className={cn(
-                                            "h-8 px-3 rounded-md text-xs font-medium border transition-colors cursor-pointer flex items-center gap-2",
-                                            activePreset
-                                                ? "bg-blue-500/15 border-blue-500/40 text-blue-200 hover:bg-blue-500/25 hover:border-blue-500/60"
-                                                : "bg-emerald-500/10 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/25 hover:text-emerald-200 hover:border-emerald-500/50",
-                                        )}
-                                    >
-                                        <Bookmark className="size-3.5" />
-                                        Saved Filters
-                                        {activePreset ? (
-                                            <span className="text-[11px] font-semibold text-blue-200 max-w-[160px] truncate">
-                                                · {activePreset.name}
-                                            </span>
-                                        ) : presets.length > 0 && (
-                                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-white/10 text-muted-foreground">
-                                                {presets.length}
-                                            </span>
-                                        )}
-                                    </button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="start" className="min-w-56 max-w-80">
-                                    <DropdownMenuLabel>Saved Filters</DropdownMenuLabel>
-                                    <DropdownMenuSeparator />
-                                    {presets.length === 0 ? (
-                                        <div className="px-2 py-2 text-xs text-muted-foreground">
-                                            No saved presets yet.
-                                        </div>
-                                    ) : (
-                                        presets.map(p => (
-                                            <DropdownMenuItem
-                                                key={p.id}
-                                                onSelect={() => handleLoadPreset(p)}
-                                                className="flex items-center gap-2 pr-1"
-                                            >
-                                                <span className="flex-1 truncate">{p.name}</span>
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.preventDefault()
-                                                        e.stopPropagation()
-                                                        setPresetsMenuOpen(false)
-                                                        setPresetPendingDelete(p)
-                                                    }}
-                                                    className="p-1 rounded hover:bg-red-500/20 text-muted-foreground hover:text-red-300 transition-colors cursor-pointer"
-                                                    aria-label={`Delete preset ${p.name}`}
-                                                >
-                                                    <Trash2 className="size-3.5" />
-                                                </button>
-                                            </DropdownMenuItem>
-                                        ))
-                                    )}
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem
-                                        onSelect={e => {
-                                            e.preventDefault()
-                                            if (!hasActiveFilters) return
-                                            setPresetsMenuOpen(false)
-                                            setPresetNameInput('')
-                                            setSavePresetOpen(true)
-                                        }}
-                                        disabled={!hasActiveFilters}
-                                        className={cn(
-                                            "flex items-center gap-2 text-blue-300",
-                                            !hasActiveFilters && "opacity-40 cursor-default",
-                                        )}
-                                    >
-                                        <BookmarkPlus className="size-3.5" />
-                                        Save Current as Preset
-                                    </DropdownMenuItem>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                            {hasActiveFilters && (
-                                <button
-                                    onClick={resetFilters}
-                                    className="h-8 px-3 rounded-md text-xs font-medium border transition-colors cursor-pointer flex items-center gap-2 bg-red-500/10 border-red-500/30 text-red-300 hover:bg-red-500/25 hover:text-red-200 hover:border-red-500/50"
-                                >
-                                    <X className="size-3.5" />
-                                    Clear Filters
-                                </button>
-                            )}
-                        </div>
+                        <FilterPresetsMenu<PresetFilters>
+                            presets={presets}
+                            activePreset={activePreset}
+                            hasActiveFilters={hasActiveFilters}
+                            onSave={handleSavePreset}
+                            onLoad={handleLoadPreset}
+                            onDelete={p => handleDeletePreset(p.id)}
+                            captureCurrentFilters={captureFilters}
+                            onResetFilters={resetFilters}
+                            placeholderExample="e.g. Easy maps from 2024"
+                            triggerRef={presetsButtonRef}
+                            menuOpen={presetsMenuOpen}
+                            onMenuOpenChange={setPresetsMenuOpen}
+                        />
                     </div>
                 </div>
             )}
@@ -2280,27 +2136,16 @@ export function MapsPage({
                 </div>
             )}
 
-            <div
-                ref={scrollContainerRef}
-                onScroll={onScrollContainerScroll}
-                className="flex-1 min-h-0 bg-card/30 border border-white/5 rounded-xl overflow-auto"
-            >
-                <table className="w-full text-sm">
-                    <thead data-utbt-maps-thead className="sticky top-0 z-[2] bg-card/95 backdrop-blur">
-                        <tr className="border-b border-white/10">
-                            {columnOrder.map(id => renderColumnHeader(id))}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {showSkeleton ? (
-                            Array.from({ length: SKELETON_ROW_COUNT }).map((_, i) => <SkeletonRow key={i} order={columnOrder} visibility={columnVisibility} />)
-                        ) : pageItems.length === 0 ? (
-                            <tr>
-                                <td colSpan={visibleColumnCount} className="px-4 py-16 text-center text-muted-foreground">
-                                    No maps match your filters.
-                                </td>
-                            </tr>
-                        ) : (
+            <DataTableShell scrollRef={scrollContainerRef} onScroll={onScrollContainerScroll}>
+                <DataTableHeaderRow theadDataAttr="data-utbt-maps-thead">
+                    {columnOrder.map(id => renderColumnHeader(id))}
+                </DataTableHeaderRow>
+                <tbody>
+                    {showSkeleton ? (
+                        Array.from({ length: SKELETON_ROW_COUNT }).map((_, i) => <SkeletonRow key={i} order={columnOrder} visibility={columnVisibility} />)
+                    ) : pageItems.length === 0 ? (
+                        <DataTableEmpty colSpan={visibleColumnCount} message="No maps match your filters." />
+                    ) : (
                             pageItems.map((map, index) => {
                                 const author = getAuthorString(map as Map) || '—'
                                 const tags = map.tags
@@ -2328,18 +2173,14 @@ export function MapsPage({
                                 }
 
                                 return (
-                                    <tr
-                                        key={map.name}
-                                        className="border-b border-white/5 hover:bg-white/5 transition-colors group"
-                                    >
+                                    <DataTableRow key={map.name}>
                                         {columnOrder.map(id => renderColumnCell(id, ctx))}
-                                    </tr>
+                                    </DataTableRow>
                                 )
                             })
-                        )}
-                    </tbody>
-                </table>
-            </div>
+                    )}
+                </tbody>
+            </DataTableShell>
 
             {!showSkeleton && totalForCount > 0 && (
                 <PaginationBar
@@ -2375,45 +2216,6 @@ export function MapsPage({
                     }
                 }}
             />
-
-            <Modal
-                isOpen={savePresetOpen}
-                onClose={() => setSavePresetOpen(false)}
-                title="Save filter preset"
-                className="w-[95%] sm:w-[480px] max-w-md"
-                offsetSidebar
-                footer={
-                    <div className="p-4 border-t border-border bg-muted/50 flex justify-end gap-2 shrink-0">
-                        <Button variant="ghost" onClick={() => setSavePresetOpen(false)}>
-                            Cancel
-                        </Button>
-                        <Button onClick={handleSavePreset} disabled={!presetNameInput.trim()}>
-                            Save preset
-                        </Button>
-                    </div>
-                }
-            >
-                <div className="space-y-3">
-                    <label className="text-sm font-medium text-white">Preset name</label>
-                    <input
-                        ref={presetNameInputRef}
-                        type="text"
-                        value={presetNameInput}
-                        onChange={e => setPresetNameInput(e.target.value)}
-                        onKeyDown={e => {
-                            if (e.key === 'Enter' && presetNameInput.trim()) {
-                                e.preventDefault()
-                                handleSavePreset()
-                            }
-                        }}
-                        placeholder="e.g. Easy maps from 2024"
-                        className="w-full px-3 py-2 bg-card/50 border border-white/10 rounded-lg text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:border-blue-500/50"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                        Saves current search, filters, and sort. Loadable from the Presets menu.
-                    </p>
-                </div>
-            </Modal>
 
             <ReplayPickerModal
                 open={replayPickerMap !== null}
@@ -2507,30 +2309,6 @@ export function MapsPage({
             </Modal>
 
             <Modal
-                isOpen={presetPendingDelete !== null}
-                onClose={() => setPresetPendingDelete(null)}
-                title="Delete preset?"
-                className="w-[95%] sm:w-[420px] max-w-md"
-                offsetSidebar
-                footer={
-                    <div className="p-4 border-t border-border bg-muted/50 flex justify-end gap-2 shrink-0">
-                        <Button variant="ghost" onClick={() => setPresetPendingDelete(null)}>
-                            Cancel
-                        </Button>
-                        <Button variant="destructive" onClick={confirmDeletePreset}>
-                            Delete
-                        </Button>
-                    </div>
-                }
-            >
-                <p className="text-sm text-muted-foreground">
-                    Delete preset{' '}
-                    <span className="font-semibold text-white">"{presetPendingDelete?.name}"</span>?
-                    This cannot be undone.
-                </p>
-            </Modal>
-
-            <Modal
                 isOpen={replayError !== null}
                 onClose={() => setReplayError(null)}
                 title="Replay not available"
@@ -2566,7 +2344,8 @@ export function MapsPage({
             </Modal>
 
             {tutorialActive && (
-                <MapsTutorial
+                <Tutorial
+                    ariaLabel="Maps page tutorial"
                     steps={buildSteps(
                         {
                             searchRef,
