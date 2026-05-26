@@ -4,7 +4,7 @@ import { Modal } from '@/app/components/ui/modal'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { cn } from '@/lib/utils'
 import { displayMapName } from '@/app/utils/format'
-import type { Playtime } from '@/app/utils/api'
+import type { ActiveTitle, Playtime } from '@/app/utils/api'
 
 interface PlaytimeBreakdownModalProps {
     open: boolean
@@ -17,6 +17,7 @@ interface PlaytimeBreakdownModalProps {
 interface PlayerRow {
     userId: number
     alias?: string
+    activeTitle?: ActiveTitle | null
     totalSeconds: number
     sessions: number
 }
@@ -44,10 +45,12 @@ export function PlaytimeBreakdownModal({
                 existing.totalSeconds += secs
                 existing.sessions += 1
                 if (!existing.alias && p.alias) existing.alias = p.alias
+                if (!existing.activeTitle && p.active_title) existing.activeTitle = p.active_title
             } else {
                 byUser.set(p.user, {
                     userId: p.user,
                     alias: p.alias,
+                    activeTitle: p.active_title ?? null,
                     totalSeconds: secs,
                     sessions: 1,
                 })
@@ -118,6 +121,7 @@ export function PlaytimeBreakdownModal({
                                         <PlayerInfo
                                             userId={r.userId}
                                             alias={r.alias}
+                                            title={r.activeTitle}
                                             size="sm"
                                             highlight={isOwn}
                                             showYouBadge={isOwn}
