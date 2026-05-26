@@ -10,6 +10,7 @@ import { ReviewModal } from '@/app/components/modals/ReviewModal'
 import { ChangeTitleModal } from '@/app/components/modals/ChangeTitleModal'
 import { ReplayVideoModal } from '@/app/components/shared/ReplayVideoModal'
 import { useReplayWatch } from '@/app/hooks/useReplayWatch'
+import { useRefreshCooldown } from '@/app/hooks/useRefreshCooldown'
 
 import { ProfileHero } from './home/ProfileHero'
 import { PatchBanner } from './home/PatchBanner'
@@ -45,6 +46,7 @@ export function Home({
     onViewServers, onViewMaps,
 }: HomeProps) {
     const username = userProfile?.alias || userProfile?.username || 'Player'
+    const refreshCooldown = useRefreshCooldown()
     const [summary, setSummary] = useState<Summary | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -194,12 +196,14 @@ export function Home({
                 newRecords={data.global.newRecords}
                 livePlayers={topServers.reduce((sum, s) => sum + s.player_count, 0)}
                 refreshing={loading}
+                refreshDisabled={!refreshCooldown.canRefresh}
+                refreshTooltip={refreshCooldown.canRefresh ? 'Refresh' : `Wait ${refreshCooldown.remainingSeconds}s`}
                 onChangeTitle={() => setChangeTitleOpen(true)}
                 onBrowseServers={onViewServers}
-                onRefresh={() => {
+                onRefresh={() => refreshCooldown.trigger(() => {
                     loadData()
                     setPendingReviewsRefreshKey(k => k + 1)
-                }}
+                })}
             />
 
             <div className="grid grid-cols-1 2xl:grid-cols-12 gap-6 items-start">
