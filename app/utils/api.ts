@@ -72,6 +72,7 @@ export interface MapMetadata {
     author?: string | number
     author_str?: string
     author_ref?: number
+    url?: string
     world_record?: number
     champion_medal?: number
     gold_medal?: number
@@ -623,6 +624,24 @@ export async function fetchRecentPlaytime(accessToken: string, limit: number, of
     } catch (error) {
         console.error('Error fetching playtime:', error)
         throw error
+    }
+}
+
+export async function fetchPlaytimeForMap(accessToken: string, mapName: string): Promise<Playtime[]> {
+    try {
+        const response = await fetch(`${API_BASE_URL}/playtime/?map=${encodeURIComponent(mapName)}`, {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        })
+        if (!response.ok) return []
+        const json = await response.json()
+        if (Array.isArray(json)) return json as Playtime[]
+        if (json?.success && Array.isArray(json.data)) return json.data as Playtime[]
+        return []
+    } catch (error) {
+        console.error('Error fetching playtime for map:', error)
+        return []
     }
 }
 

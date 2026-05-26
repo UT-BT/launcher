@@ -321,6 +321,12 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
     return () => window.removeEventListener('open-player', onOpenPlayer as EventListener)
   }, [currentView])
 
+  const openMap = useCallback((name: string) => {
+    setPreviousView(prev => currentView === 'maps-detail' ? prev : currentView)
+    setSelectedMapName(name)
+    setCurrentView('maps-detail')
+  }, [currentView])
+
   useEffect(() => {
     validateInstallation()
 
@@ -375,7 +381,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
           userProfile={userProfile as any}
           favoriteMapNames={favoriteMapNames}
           onToggleFavorite={toggleFavorite}
-          onMapSelect={(name) => { setSelectedMapName(name); setCurrentView('maps-detail') }}
+          onMapSelect={openMap}
           onViewServers={() => setCurrentView('servers')}
           onViewMaps={() => setCurrentView('maps')}
         />
@@ -390,6 +396,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
           onToggleServerFavorite={toggleServerFavorite}
           presets={serverPresets}
           onPresetsChange={updateServerPresets}
+          onMapSelect={openMap}
         />
       case 'maps':
         return <MapsPage
@@ -398,14 +405,14 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
           onStateChange={setMapsState}
           caches={mapsCaches}
           onCachesChange={setMapsCaches}
-          onMapSelect={(name) => { setSelectedMapName(name); setCurrentView('maps-detail') }}
+          onMapSelect={openMap}
           favoriteMapNames={favoriteMapNames}
           onToggleFavorite={toggleFavorite}
         />
       case 'maps-detail':
         return <MapDetailPage
           mapName={selectedMapName!}
-          onBack={() => setCurrentView('maps')}
+          onBack={() => setCurrentView(previousView)}
           userProfile={userProfile as any}
           favoriteMapNames={favoriteMapNames}
           onToggleFavorite={toggleFavorite}
@@ -421,7 +428,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
           userProfile={userProfile as any}
           favoriteMapNames={favoriteMapNames}
           onToggleFavorite={toggleFavorite}
-          onMapSelect={(name) => { setSelectedMapName(name); setCurrentView('maps-detail') }}
+          onMapSelect={openMap}
           onViewServers={() => setCurrentView('servers')}
           onViewMaps={() => setCurrentView('maps')}
         />
