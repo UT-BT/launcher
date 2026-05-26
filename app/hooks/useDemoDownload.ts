@@ -1,0 +1,39 @@
+import { useState } from 'react'
+import { downloadDemo, type LeaderboardEntry } from '@/app/utils/api'
+import { formatCapTime } from '@/app/utils/format'
+
+export type DemoDownloadState =
+    | { status: 'downloading'; capId: string; filename: string }
+    | { status: 'success'; capId: string; filename: string; path: string; bytes: number }
+    | { status: 'error'; capId: string; filename: string; reason: string }
+
+export function useDemoDownload() {
+    const [download, setDownload] = useState<DemoDownloadState | null>(null)
+
+    const start = async (entry: LeaderboardEntry, mapName: string) => {
+        const cleanMap = mapName.replace(/[^a-zA-Z0-9_-]/g, '_')
+        const cleanAlias = (entry.alias || 'player').replace(/[^a-zA-Z0-9_-]/g, '_')
+        const timeStr = formatCapTime(entry.cap_time_seconds).replace(/[:.]/g, '-')
+        const filename = `${cleanMap}__${timeStr}__${cleanAlias}.dem`
+        setDownload({ status: 'downloading', capId: entry.id, filename })
+        try {
+            const buffer = await downloadDemo(entry.id)
+            const bytes = new Uint8Array(buffer)
+            const res = await window.conveyor.demos.saveToSystem(filename, bytes)
+            if (res.ok) {
+                setDownload({ status: 'success', capId: entry.id, filename, path: res.path, bytes: res.bytes })
+            } else {
+                setDownload({ status: 'error', capId: entry.id, filename, reason: res.reason })
+            }
+        } catch (err) {
+            console.error('Demo download failed:', err)
+            setDownload({ status: 'error', capId: entry.id, filename, reason: 'fetch-error' })
+        }
+    }
+
+    return {
+        download,
+        start,
+        clear: () => setDownload(null),
+    }
+}

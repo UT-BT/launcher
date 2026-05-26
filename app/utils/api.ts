@@ -78,6 +78,9 @@ export interface MapMetadata {
     gold_medal?: number
     silver_medal?: number
     bronze_medal?: number
+    preceded_by?: string | null
+    superseded_by?: string | null
+    changelog?: string | null
 }
 
 export interface BestCap {
@@ -153,7 +156,8 @@ export interface Playtime {
     alias?: string
 }
 
-const API_BASE_URL = import.meta.env.DEV ? 'http://localhost:5000' : 'http://api.utbt.net'
+// TEMP (local Mac dev): point dev at prod API. Revert before committing.
+const API_BASE_URL = 'http://api.utbt.net'
 
 export async function fetchUserProfile(accessToken: string): Promise<UserProfile> {
     try {
@@ -458,6 +462,45 @@ export async function fetchAllWorldRecords(accessToken: string): Promise<Record[
         if (offset > 50_000) break
     }
     return out
+}
+
+export interface WorldRecordProgressionEntry {
+    cap_id: string
+    user_id: string | null
+    alias: string | null
+    cap_time_seconds: number
+    added: string | null
+    active_title: ActiveTitle | null
+}
+
+export async function fetchWorldRecordProgression(accessToken: string, mapName: string): Promise<WorldRecordProgressionEntry[]> {
+    const url = `${API_BASE_URL}/v2/world_records/progression/${encodeURIComponent(mapName)}`
+    try {
+        const res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } })
+        if (!res.ok) return []
+        const json = await res.json()
+        if (json.success && Array.isArray(json.data)) {
+            return json.data as WorldRecordProgressionEntry[]
+        }
+        return []
+    } catch {
+        return []
+    }
+}
+
+export async function fetchUserCapCountForMap(accessToken: string, userId: string | number, mapName: string): Promise<number> {
+    const url = `${API_BASE_URL}/caps/count/?user=${encodeURIComponent(String(userId))}&map=${encodeURIComponent(mapName)}`
+    try {
+        const res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } })
+        if (!res.ok) return 0
+        const json = await res.json()
+        if (json.success && json.data && typeof json.data.count === 'number') {
+            return json.data.count
+        }
+        return 0
+    } catch {
+        return 0
+    }
 }
 
 export async function fetchWorldRecordsForMaps(accessToken: string, mapNames: string[]): Promise<Record[]> {

@@ -9,8 +9,8 @@ interface MedalCardProps {
 }
 
 const ROWS: { key: keyof MapMetadata; label: string; medal: string; accent: string }[] = [
-    { key: 'world_record', label: 'World Record', medal: 'world record', accent: 'text-red-300' },
-    { key: 'champion_medal', label: 'Champion', medal: 'champion medal', accent: 'text-purple-300' },
+    { key: 'world_record', label: 'World Record', medal: 'world record', accent: 'text-blue-300' },
+    { key: 'champion_medal', label: 'Champion', medal: 'champion medal', accent: 'text-red-300' },
     { key: 'gold_medal', label: 'Gold', medal: 'gold medal', accent: 'text-yellow-300' },
     { key: 'silver_medal', label: 'Silver', medal: 'silver medal', accent: 'text-slate-200' },
     { key: 'bronze_medal', label: 'Bronze', medal: 'bronze medal', accent: 'text-amber-500' },

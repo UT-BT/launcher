@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Loader2, ChevronLeft, ChevronRight, Download, CheckCircle2, AlertCircle, Play } from 'lucide-react'
+import { Loader2, ChevronLeft, ChevronRight, Download, Play } from 'lucide-react'
 import { Modal } from '@/app/components/ui/modal'
-import { Button } from '@/app/components/ui/button'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
+import { DemoDownloadStatusModal } from '@/app/components/shared/DemoDownloadStatusModal'
+import { useDemoDownload } from '@/app/hooks/useDemoDownload'
 import {
-    fetchMapLeaderboard, fetchDemoStatus, getFirstPersonVideoUrl, downloadDemo,
+    fetchMapLeaderboard, fetchDemoStatus, getFirstPersonVideoUrl,
     LeaderboardEntry, MapMetadata,
 } from '@/app/utils/api'
 import { computeMedalTier, TIER_ICONS, TIER_LABELS, MedalTier } from '@/app/components/pages/MapsPage'
@@ -57,33 +58,7 @@ export function ReplayPickerModal({
     const pageRef = useRef(1)
     pageRef.current = page
 
-    type DlState =
-        | { status: 'downloading'; capId: string; filename: string }
-        | { status: 'success'; capId: string; filename: string; path: string; bytes: number }
-        | { status: 'error'; capId: string; filename: string; reason: string }
-    const [download, setDownload] = useState<DlState | null>(null)
-
-    const startDownload = async (entry: LeaderboardEntry) => {
-        if (!mapName) return
-        const cleanMap = mapName.replace(/[^a-zA-Z0-9_-]/g, '_')
-        const cleanAlias = (entry.alias || 'player').replace(/[^a-zA-Z0-9_-]/g, '_')
-        const timeStr = formatCapTime(entry.cap_time_seconds).replace(/[:.]/g, '-')
-        const filename = `${cleanMap}__${timeStr}__${cleanAlias}.dem`
-        setDownload({ status: 'downloading', capId: entry.id, filename })
-        try {
-            const buffer = await downloadDemo(entry.id)
-            const bytes = new Uint8Array(buffer)
-            const res = await window.conveyor.demos.saveToSystem(filename, bytes)
-            if (res.ok) {
-                setDownload({ status: 'success', capId: entry.id, filename, path: res.path, bytes: res.bytes })
-            } else {
-                setDownload({ status: 'error', capId: entry.id, filename, reason: res.reason })
-            }
-        } catch (err) {
-            console.error('Demo download failed:', err)
-            setDownload({ status: 'error', capId: entry.id, filename, reason: 'fetch-error' })
-        }
-    }
+    const demoDownload = useDemoDownload()
 
     useEffect(() => {
         if (!open || !mapName || !accessToken) {
@@ -286,7 +261,7 @@ export function ReplayPickerModal({
                                         <Tooltip content="Download Demo" side="top">
                                             <button
                                                 type="button"
-                                                onClick={() => startDownload(row.entry)}
+                                                onClick={() => mapName && demoDownload.start(row.entry, mapName)}
                                                 aria-label="Download demo"
                                                 className="p-1.5 rounded-md text-blue-300/80 hover:text-blue-200 hover:bg-blue-500/15 transition-colors cursor-pointer shrink-0"
                                             >
@@ -326,89 +301,9 @@ export function ReplayPickerModal({
             </div>
 
             <DemoDownloadStatusModal
-                state={download}
-                onClose={() => setDownload(null)}
+                state={demoDownload.download}
+                onClose={demoDownload.clear}
             />
-        </Modal>
-    )
-}
-
-interface DemoDownloadStatusModalProps {
-    state:
-        | { status: 'downloading'; capId: string; filename: string }
-        | { status: 'success'; capId: string; filename: string; path: string; bytes: number }
-        | { status: 'error'; capId: string; filename: string; reason: string }
-        | null
-    onClose: () => void
-}
-
-function reasonText(reason: string): string {
-    if (reason === 'no-install') return 'A valid UT99 installation is required to download demos. Set one up in Settings → Game Installation.'
-    if (reason === 'empty') return 'The downloaded demo was empty. Try again, or pick a different run.'
-    if (reason.startsWith('http-')) return `The demo server responded with ${reason.replace('http-', 'status ')}. The demo may not be available.`
-    if (reason === 'fetch-error') return 'Network error while downloading. Check your connection and try again.'
-    return `Download failed (${reason}).`
-}
-
-function formatBytes(b: number): string {
-    if (b < 1024) return `${b} B`
-    if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)} KB`
-    return `${(b / (1024 * 1024)).toFixed(2)} MB`
-}
-
-function DemoDownloadStatusModal({ state, onClose }: DemoDownloadStatusModalProps) {
-    const isOpen = state !== null
-    const isDownloading = state?.status === 'downloading'
-    const title =
-        state?.status === 'success' ? 'Demo Downloaded'
-        : state?.status === 'error' ? 'Download Failed'
-        : 'Downloading Demo'
-
-    return (
-        <Modal
-            isOpen={isOpen}
-            onClose={() => { if (!isDownloading) onClose() }}
-            title={title}
-            offsetSidebar
-            maxWidth="500px"
-            className="bg-[#0a0a0b]/98 border-white/5"
-            footer={
-                <div className="p-4 border-t border-border bg-muted/50 flex justify-end shrink-0">
-                    <Button onClick={onClose} disabled={isDownloading} variant="secondary">
-                        {isDownloading ? 'Downloading…' : 'Close'}
-                    </Button>
-                </div>
-            }
-        >
-            {state?.status === 'downloading' && (
-                <div className="flex items-center gap-3 py-2">
-                    <Loader2 className="size-5 animate-spin text-blue-300 shrink-0" />
-                    <div className="text-sm text-white/80 truncate">{state.filename}</div>
-                </div>
-            )}
-            {state?.status === 'success' && (
-                <div className="space-y-3">
-                    <div className="flex items-center gap-3">
-                        <CheckCircle2 className="size-5 text-emerald-400 shrink-0" />
-                        <div className="text-sm text-white/90 font-medium truncate">{state.filename}</div>
-                    </div>
-                    <div className="text-xs text-muted-foreground space-y-1">
-                        <div>Size: {formatBytes(state.bytes)}</div>
-                        <div className="truncate" title={state.path}>
-                            Saved to: {state.path.replace(/[/\\][^/\\]+$/, '')}
-                        </div>
-                    </div>
-                </div>
-            )}
-            {state?.status === 'error' && (
-                <div className="space-y-3">
-                    <div className="flex items-center gap-3">
-                        <AlertCircle className="size-5 text-red-400 shrink-0" />
-                        <div className="text-sm text-white/90 font-medium">Could not download demo</div>
-                    </div>
-                    <p className="text-xs text-muted-foreground">{reasonText(state.reason)}</p>
-                </div>
-            )}
         </Modal>
     )
 }
