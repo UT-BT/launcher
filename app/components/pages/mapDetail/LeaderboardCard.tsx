@@ -1,9 +1,18 @@
 import { useMemo, useState } from 'react'
+import { Play, Download, MessageSquareOff } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatCapTime, formatAddedDate } from '@/app/utils/format'
 import { getMedalIcon } from '@/app/utils/medals'
 import { computeMedalTier, TIER_LABELS, type MedalTier } from '@/app/components/pages/MapsPage'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
+import { IconActionButton } from '@/app/components/shared/IconActionButton'
+import { ReplayVideoModal } from '@/app/components/shared/ReplayVideoModal'
+import { DemoDownloadStatusModal } from '@/app/components/shared/DemoDownloadStatusModal'
+import { WorldRecordHistoryTrigger } from '@/app/components/modals/WorldRecordProgressionModal'
+import { useReplayWatch } from '@/app/hooks/useReplayWatch'
+import { useDemoDownload } from '@/app/hooks/useDemoDownload'
+import { Tooltip } from '@/app/components/ui/tooltip'
+import { Modal } from '@/app/components/ui/modal'
 import {
     DataTableShell,
     DataTableHeaderRow,
@@ -25,6 +34,8 @@ interface LeaderboardCardProps {
     map: MapMetadata | null
     loading: boolean
     currentUserId?: string | number
+    wrCapId?: string | null
+    onShowWrHistory?: () => void
 }
 
 const TABS: { value: Tab; label: string }[] = [
@@ -33,22 +44,19 @@ const TABS: { value: Tab; label: string }[] = [
     { value: 'all', label: 'All' },
 ]
 
-const TIER_TEXT_COLOR: Record<Exclude<MedalTier, 'uncapped'>, string> = {
-    casual: 'text-muted-foreground',
-    verified: 'text-blue-300',
-    bronze: 'text-amber-500',
-    silver: 'text-slate-200',
-    gold: 'text-yellow-300',
-    champion: 'text-purple-300',
-    world_record: 'text-red-300',
-}
+const SKELETON_COL_COUNT = 7
 
-export function LeaderboardCard({ leaderboard, map, loading, currentUserId }: LeaderboardCardProps) {
+export function LeaderboardCard({
+    leaderboard, map, loading, currentUserId, wrCapId, onShowWrHistory,
+}: LeaderboardCardProps) {
     const [tab, setTab] = useState<Tab>('verified')
     const [sortBy, setSortBy] = useState<SortField>('rank')
     const [sortDir, setSortDir] = useState<SortDir>('asc')
     const [page, setPage] = useState(1)
     const [pageSize, setPageSize] = useState(10)
+
+    const replay = useReplayWatch()
+    const demoDownload = useDemoDownload()
 
     const filtered = useMemo(() => {
         if (tab === 'verified') return leaderboard.filter(e => e.verified)
@@ -144,6 +152,7 @@ export function LeaderboardCard({ leaderboard, map, loading, currentUserId }: Le
                         >
                             Player
                         </DataTableHeaderCell>
+                        <DataTableHeaderCell align="center" width="3rem"><span className="sr-only">Medal</span></DataTableHeaderCell>
                         <DataTableHeaderCell
                             sortable
                             sortDirection={dir('time')}
@@ -153,7 +162,6 @@ export function LeaderboardCard({ leaderboard, map, loading, currentUserId }: Le
                         >
                             Time
                         </DataTableHeaderCell>
-                        <DataTableHeaderCell align="center" width="9rem">Medal</DataTableHeaderCell>
                         <DataTableHeaderCell
                             sortable
                             sortDirection={dir('date')}
@@ -163,17 +171,19 @@ export function LeaderboardCard({ leaderboard, map, loading, currentUserId }: Le
                         >
                             Date
                         </DataTableHeaderCell>
+                        <DataTableHeaderCell align="center" width="3rem"><span className="sr-only">Watch</span></DataTableHeaderCell>
+                        <DataTableHeaderCell align="center" width="3rem"><span className="sr-only">Download</span></DataTableHeaderCell>
                     </DataTableHeaderRow>
                     <tbody>
                         {loading ? (
                             Array.from({ length: 5 }).map((_, i) => (
-                                <DataTableSkeletonRow key={i} columnCount={5} />
+                                <DataTableSkeletonRow key={i} columnCount={SKELETON_COL_COUNT} />
                             ))
                         ) : pageRows.length === 0 ? (
-                            <DataTableEmpty colSpan={5} message="No caps yet." />
+                            <DataTableEmpty colSpan={SKELETON_COL_COUNT} message="No caps yet." />
                         ) : (
                             pageRows.map(({ entry, rank }) => {
-                                const tier = computeMedalTier(
+                                const tier: MedalTier = computeMedalTier(
                                     { map: entry.map, cap_time_seconds: entry.cap_time_seconds, cap_type: entry.cap_type, verified: entry.verified },
                                     map ?? undefined,
                                 )
@@ -186,29 +196,38 @@ export function LeaderboardCard({ leaderboard, map, loading, currentUserId }: Le
                                                     tier === 'verified' ? 'certified' :
                                                         tier === 'casual' ? 'casual' : ''
                                 const medalIcon = medalIconKey ? getMedalIcon(medalIconKey) : null
-                                const tierAccent = tier === 'uncapped' ? 'text-muted-foreground' : TIER_TEXT_COLOR[tier]
+                                const exactTimestamp = (() => {
+                                    const d = new Date(entry.added)
+                                    return isNaN(d.getTime()) ? entry.added : d.toLocaleString()
+                                })()
                                 return (
                                     <DataTableRow key={entry.id} className={cn(isOwn && 'bg-emerald-500/[0.05]')}>
                                         <DataTableCell align="center">
-                                            <span className={cn(
-                                                'inline-flex items-center justify-center min-w-7 h-6 px-2 rounded font-mono tabular-nums text-xs font-bold',
-                                                rank === 1 ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/40' :
-                                                    rank === 2 ? 'bg-slate-300/15 text-slate-200 border border-slate-300/30' :
-                                                        rank === 3 ? 'bg-amber-600/15 text-amber-400 border border-amber-600/30' :
-                                                            'bg-white/5 text-muted-foreground border border-white/5',
-                                            )}>
-                                                {rank}
+                                            <span className="text-xs font-bold font-mono text-muted-foreground tabular-nums">
+                                                #{rank}
                                             </span>
                                         </DataTableCell>
                                         <DataTableCell>
-                                            <PlayerInfo
-                                                userId={entry.user}
-                                                alias={entry.alias}
-                                                title={entry.active_title}
-                                                size="sm"
-                                                highlight={isOwn}
-                                                showYouBadge={isOwn}
-                                            />
+                                            <div className="flex items-center gap-1.5 min-w-0">
+                                                <PlayerInfo
+                                                    userId={entry.user}
+                                                    alias={entry.alias}
+                                                    title={entry.active_title}
+                                                    size="sm"
+                                                    highlight={isOwn}
+                                                    showYouBadge={isOwn}
+                                                />
+                                                {wrCapId && entry.id === wrCapId && onShowWrHistory && (
+                                                    <WorldRecordHistoryTrigger onClick={onShowWrHistory} />
+                                                )}
+                                            </div>
+                                        </DataTableCell>
+                                        <DataTableCell align="center">
+                                            {medalIcon && (
+                                                <Tooltip content={TIER_LABELS[tier]} side="top">
+                                                    <img src={medalIcon} alt={TIER_LABELS[tier]} className="size-4 inline-block" />
+                                                </Tooltip>
+                                            )}
                                         </DataTableCell>
                                         <DataTableCell align="right">
                                             <span className={cn(
@@ -218,18 +237,36 @@ export function LeaderboardCard({ leaderboard, map, loading, currentUserId }: Le
                                                 {formatCapTime(entry.cap_time_seconds)}
                                             </span>
                                         </DataTableCell>
-                                        <DataTableCell align="center">
-                                            <div className="inline-flex items-center gap-1.5">
-                                                {medalIcon && <img src={medalIcon} alt="" className="size-4" />}
-                                                <span className={cn('text-xs font-semibold', tierAccent)}>
-                                                    {TIER_LABELS[tier]}
-                                                </span>
-                                            </div>
-                                        </DataTableCell>
                                         <DataTableCell align="right">
-                                            <span className="text-xs text-muted-foreground tabular-nums">
-                                                {formatAddedDate(entry.added)}
-                                            </span>
+                                            <Tooltip content={exactTimestamp} side="top">
+                                                <span className="text-xs text-muted-foreground tabular-nums">
+                                                    {formatAddedDate(entry.added)}
+                                                </span>
+                                            </Tooltip>
+                                        </DataTableCell>
+                                        <DataTableCell align="center" className="px-2">
+                                            <IconActionButton
+                                                variant="replay"
+                                                icon={entry.verified ? Play : MessageSquareOff}
+                                                iconFill={entry.verified}
+                                                tooltip={entry.verified ? 'Watch run' : 'No replay — cap not verified'}
+                                                disabled={!entry.verified}
+                                                loading={replay.loadingCapId === entry.id}
+                                                onClick={() => replay.openReplay({
+                                                    capId: entry.id,
+                                                    mapName: entry.map,
+                                                    time: entry.cap_time_seconds,
+                                                    alias: entry.alias ?? undefined,
+                                                })}
+                                            />
+                                        </DataTableCell>
+                                        <DataTableCell align="center" className="px-2">
+                                            <IconActionButton
+                                                variant="download"
+                                                icon={Download}
+                                                tooltip="Download demo"
+                                                onClick={() => demoDownload.start(entry, entry.map)}
+                                            />
                                         </DataTableCell>
                                     </DataTableRow>
                                 )
@@ -253,6 +290,23 @@ export function LeaderboardCard({ leaderboard, map, loading, currentUserId }: Le
                     </div>
                 )}
             </div>
+
+            <ReplayVideoModal state={replay.video} onClose={replay.clearVideo} />
+
+            <Modal
+                isOpen={replay.error !== null}
+                onClose={replay.clearError}
+                title="Replay not available"
+                className="w-[95%] sm:w-[440px] max-w-md"
+                offsetSidebar
+            >
+                <p className="text-sm text-muted-foreground">{replay.error}</p>
+            </Modal>
+
+            <DemoDownloadStatusModal
+                state={demoDownload.download}
+                onClose={demoDownload.clear}
+            />
         </div>
     )
 }

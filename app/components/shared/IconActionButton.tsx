@@ -2,11 +2,12 @@ import { Loader2, LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Tooltip } from '@/app/components/ui/tooltip'
 
-type Variant = 'review' | 'replay'
+type Variant = 'review' | 'replay' | 'download'
 
 const VARIANT_CLASSES: Record<Variant, string> = {
     review: 'bg-orange-500/10 border-orange-500/30 text-orange-300 hover:bg-orange-500/25 hover:border-orange-500/60',
     replay: 'bg-amber-500/10 border-amber-500/30 text-amber-300 hover:bg-amber-500/25 hover:border-amber-500/60',
+    download: 'bg-blue-500/10 border-blue-500/30 text-blue-300 hover:bg-blue-500/25 hover:border-blue-500/60',
 }
 
 interface IconActionButtonProps {
