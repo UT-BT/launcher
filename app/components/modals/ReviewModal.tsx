@@ -76,11 +76,10 @@ export function ReviewModal({ open, onOpenChange, accessToken, mapName, initialS
         setTimeout(() => setSubmitted(false), 300)
     }
 
-    const metrics: { key: MetricKey; label: string; description: string; inverseColor?: boolean; labels: Record<number, string> }[] = [
+    const metrics: { key: MetricKey; label: string; inverseColor?: boolean; labels: Record<number, string> }[] = [
         {
             key: 'aesthetics',
             label: 'Aesthetics',
-            description: 'Visual quality and theme',
             labels: {
                 1: "Very poor visuals",
                 2: "You didn't like the visuals of this map",
@@ -97,7 +96,6 @@ export function ReviewModal({ open, onOpenChange, accessToken, mapName, initialS
         {
             key: 'learning',
             label: 'Learning',
-            description: 'Ease of learning and flow',
             inverseColor: true,
             labels: {
                 1: "Instantly mastered",
@@ -115,7 +113,6 @@ export function ReviewModal({ open, onOpenChange, accessToken, mapName, initialS
         {
             key: 'luck',
             label: 'Luck',
-            description: 'Impact of luck vs skill',
             inverseColor: true,
             labels: {
                 1: "Absolute skill",
@@ -133,7 +130,6 @@ export function ReviewModal({ open, onOpenChange, accessToken, mapName, initialS
         {
             key: 'difficulty',
             label: 'Difficulty',
-            description: 'Technical map difficulty',
             inverseColor: true,
             labels: {
                 1: "Trivial difficulty",
@@ -151,7 +147,6 @@ export function ReviewModal({ open, onOpenChange, accessToken, mapName, initialS
         {
             key: 'overall',
             label: 'Overall',
-            description: 'Your final personal rating',
             labels: {
                 1: "Avoid this map",
                 2: "You didn't enjoy this map",
@@ -167,6 +162,9 @@ export function ReviewModal({ open, onOpenChange, accessToken, mapName, initialS
         }
     ]
 
+    const overallMetric = metrics.find(m => m.key === 'overall')!
+    const secondaryMetrics = metrics.filter(m => m.key !== 'overall')
+
     const getScoreColor = (key: MetricKey, value: number) =>
         scoreTextColor(value, metrics.find(m => m.key === key)?.inverseColor)
 
@@ -179,61 +177,100 @@ export function ReviewModal({ open, onOpenChange, accessToken, mapName, initialS
             onClose={handleClose}
             title={submitted ? "Review Published" : (mapName ? displayMapName(mapName) : 'Review Map')}
             offsetSidebar
-            maxWidth="480px"
+            maxWidth="520px"
             className="bg-[#0a0a0b]/98 border-white/5 backdrop-blur-3xl mx-auto"
             footer={null}
         >
-            <div className="space-y-5 pb-2">
+            <div className="space-y-5">
                 {submitted ? (
-                    <div className="space-y-6 py-4 px-2">
-                        <div className="space-y-4">
-                            <p className="text-white/90 font-medium leading-relaxed">
-                                Your review for <span className="text-orange-400 font-bold">{mapName ? displayMapName(mapName) : ''}</span> has been published.
-                            </p>
-                            <p className="text-muted-foreground text-xs leading-relaxed">
-                                Reviews help other players find good quality maps, balance the difficulty ratings, and determines what maps we put into special events.
-                            </p>
-                            <p className="text-white/90 font-bold text-sm">
-                                Thank you!
-                            </p>
-                        </div>
+                    <div className="space-y-5 py-2">
+                        <p className="text-white/90 text-sm leading-relaxed">
+                            Your review for <span className="text-blue-300 font-semibold">{mapName ? displayMapName(mapName) : ''}</span> has been published.
+                        </p>
+                        <p className="text-muted-foreground text-xs leading-relaxed">
+                            Reviews help other players find good quality maps, balance the difficulty ratings, and determine what maps we put into special events.
+                        </p>
+                        <p className="text-white/90 font-semibold text-sm">
+                            Thank you!
+                        </p>
                         <Button
                             onClick={handleClose}
-                            className="w-full h-11 bg-white/[0.03] hover:bg-white/[0.08] border border-white/5 hover:border-white/10 text-white font-black uppercase tracking-[0.2em] rounded-xl transition-all"
+                            className="w-full h-10 bg-blue-500/15 border border-blue-500/40 text-blue-200 hover:bg-blue-500/25 hover:text-white hover:border-blue-500/60 hover:shadow-[0_0_20px_rgba(59,130,246,0.25)] transition-all font-semibold rounded-lg"
                         >
                             Close
                         </Button>
                     </div>
                 ) : (
                     <>
-                        {mapName && <MapThumbnail mapName={mapName} className="w-full aspect-video shadow-2xl shadow-black" />}
-
                         {error && (
-                            <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-xs font-bold text-center">
+                            <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-300 text-xs font-medium">
                                 {error}
                             </div>
                         )}
 
-                        <div className="space-y-4 px-1">
-                            {metrics.map((m) => (
-                                <div key={m.key} className="space-y-2 group/metric">
-                                    <div className="flex justify-between items-baseline">
-                                        <div className="space-y-0.5">
-                                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/60 group-hover/metric:text-white/90 transition-colors">
+                        {/* Hero: Overall over map screenshot bg */}
+                        <div className="relative overflow-hidden rounded-xl border border-blue-500/20">
+                            {mapName && (
+                                <MapThumbnail
+                                    mapName={mapName}
+                                    className="absolute inset-0 w-full h-full rounded-none border-0 opacity-70"
+                                />
+                            )}
+                            <div className="absolute inset-0 bg-gradient-to-br from-blue-950/70 via-black/80 to-black/90" />
+                            <div className="relative p-5 space-y-4">
+                                <div className="flex items-end justify-between gap-4">
+                                    <div className="space-y-1 min-w-0">
+                                        <div className="text-[10px] uppercase tracking-widest text-blue-300 font-bold">
+                                            Your overall rating
+                                        </div>
+                                        <div className={cn(
+                                            "text-xs font-semibold transition-colors duration-200",
+                                            getScoreColor('overall', currentScores.overall)
+                                        )}>
+                                            {overallMetric.labels[currentScores.overall]}
+                                        </div>
+                                    </div>
+                                    <span className={cn(
+                                        "text-5xl font-bold font-mono leading-none tracking-tighter shrink-0 transition-colors",
+                                        getScoreColor('overall', currentScores.overall)
+                                    )}>
+                                        {currentScores.overall}
+                                        <span className="text-base text-muted-foreground/40 ml-0.5">/10</span>
+                                    </span>
+                                </div>
+                                <Slider
+                                    min={1}
+                                    max={10}
+                                    step={1}
+                                    value={currentScores.overall}
+                                    onChange={(e) => setScore('overall', parseInt((e.target as HTMLInputElement).value))}
+                                    className={cn("h-1.5 transition-all", getSliderAccent('overall', currentScores.overall))}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Secondary metrics */}
+                        <div className="space-y-4">
+                            {secondaryMetrics.map((m) => (
+                                <div key={m.key} className="space-y-1.5">
+                                    <div className="flex items-baseline justify-between gap-3">
+                                        <div className="space-y-0.5 min-w-0">
+                                            <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                                                 {m.label}
-                                            </span>
-                                            <p className={cn(
-                                                "text-[10px] font-bold transition-colors duration-300",
+                                            </div>
+                                            <div className={cn(
+                                                "text-[11px] font-semibold transition-colors duration-200",
                                                 getScoreColor(m.key, currentScores[m.key])
                                             )}>
                                                 {m.labels[currentScores[m.key]]}
-                                            </p>
+                                            </div>
                                         </div>
                                         <span className={cn(
-                                            "text-xl font-black font-mono tracking-tighter transition-colors",
+                                            "text-xl font-bold font-mono leading-none shrink-0 transition-colors",
                                             getScoreColor(m.key, currentScores[m.key])
                                         )}>
-                                            {currentScores[m.key]}<span className="text-[10px] opacity-20 ml-0.5">/10</span>
+                                            {currentScores[m.key]}
+                                            <span className="text-[10px] text-muted-foreground/40 ml-0.5">/10</span>
                                         </span>
                                     </div>
                                     <Slider
@@ -251,10 +288,10 @@ export function ReviewModal({ open, onOpenChange, accessToken, mapName, initialS
                         <Button
                             onClick={handleSubmit}
                             disabled={loading}
-                            className="w-full h-11 bg-white/[0.03] hover:bg-white/[0.08] border border-white/5 hover:border-white/10 text-white font-black uppercase tracking-[0.2em] rounded-xl transition-all mt-4"
+                            className="w-full h-10 bg-blue-500/15 border border-blue-500/40 text-blue-200 hover:bg-blue-500/25 hover:text-white hover:border-blue-500/60 hover:shadow-[0_0_20px_rgba(59,130,246,0.25)] transition-all font-semibold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {loading ? (
-                                <Loader2 className="size-5 animate-spin" />
+                                <Loader2 className="size-4 animate-spin" />
                             ) : (
                                 'Submit Review'
                             )}
