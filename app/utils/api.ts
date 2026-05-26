@@ -1,6 +1,6 @@
 import type { AuthConfig } from '@/lib/main/config'
 
-const GATEWAY_BASE_URL = import.meta.env.DEV ? 'https://gateway.utbt.net' : 'https://gateway.utbt.net'
+const GATEWAY_BASE_URL = import.meta.env.DEV ? 'http://127.0.0.1:5000' : 'https://gateway.utbt.net'
 
 export function getAvatarUrl(userId: string | number): string {
     return `${GATEWAY_BASE_URL}/users/${userId}/avatar`
@@ -156,7 +156,8 @@ export interface Playtime {
     alias?: string
 }
 
-// TEMP (local Mac dev): point dev at prod API. Revert before committing.
+
+// const API_BASE_URL = import.meta.env.DEV ? 'http://localhost:5000' : 'https://api.utbt.net'
 const API_BASE_URL = 'http://api.utbt.net'
 
 export async function fetchUserProfile(accessToken: string): Promise<UserProfile> {

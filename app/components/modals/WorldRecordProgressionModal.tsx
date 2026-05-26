@@ -131,9 +131,6 @@ export function WorldRecordProgressionModal({
                         ? 'bg-emerald-500/[0.08] border-emerald-500/30'
                         : 'bg-gradient-to-br from-blue-500/[0.10] via-blue-500/[0.04] to-transparent border-blue-500/30',
                 )}>
-                    <div className="inline-flex items-center justify-center size-10 rounded-full bg-blue-500/20 border border-blue-500/40 shrink-0">
-                        <Crown className="size-4 text-blue-200 fill-blue-300/40" />
-                    </div>
                     <div className="flex-1 min-w-0 space-y-1">
                         <div className="text-[9px] uppercase tracking-widest text-blue-200/70 font-bold">
                             Current World Record
@@ -175,8 +172,8 @@ export function WorldRecordProgressionModal({
                     </div>
                     <div className="bg-card/50 border border-white/5 rounded-lg px-3 py-2">
                         <div className="text-[9px] uppercase tracking-wider text-muted-foreground">First record</div>
-                        <div className="text-base font-bold font-mono text-white">
-                            {first.added ? new Date(first.added).getFullYear() : '—'}
+                        <div className="text-base font-bold font-mono text-white tabular-nums">
+                            {first.added ? formatAddedDate(first.added) : '—'}
                         </div>
                     </div>
                 </div>
