@@ -18,6 +18,8 @@ import {
 } from '@/app/utils/api'
 import { ReviewModal } from '@/app/components/modals/ReviewModal'
 import { WorldRecordProgressionModal } from '@/app/components/modals/WorldRecordProgressionModal'
+import { PlaytimeBreakdownModal } from '@/app/components/modals/PlaytimeBreakdownModal'
+import { CapTimeDistributionModal } from '@/app/components/modals/CapTimeDistributionModal'
 import { HeroSection } from './mapDetail/HeroSection'
 import { StatsRow } from './mapDetail/StatsRow'
 import { YourStatsCard } from './mapDetail/YourStatsCard'
@@ -59,6 +61,8 @@ export function MapDetailPage({
     const [error, setError] = useState<string | null>(null)
     const [reviewModalOpen, setReviewModalOpen] = useState(false)
     const [wrModalOpen, setWrModalOpen] = useState(false)
+    const [playtimeModalOpen, setPlaytimeModalOpen] = useState(false)
+    const [distributionModalOpen, setDistributionModalOpen] = useState(false)
     const [refreshKey, setRefreshKey] = useState(0)
 
     const wrHolder = wrProgression.length > 0 ? wrProgression[wrProgression.length - 1] : null
@@ -163,7 +167,13 @@ export function MapDetailPage({
             )}
 
             <div className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-4">
-                <StatsRow leaderboard={leaderboard} playtime={playtime} loading={loading} />
+                <StatsRow
+                    leaderboard={leaderboard}
+                    playtime={playtime}
+                    loading={loading}
+                    onShowPlaytimeBreakdown={() => setPlaytimeModalOpen(true)}
+                    onShowCapDistribution={() => setDistributionModalOpen(true)}
+                />
 
                 {currentUserId != null && (
                     <YourStatsCard
@@ -172,6 +182,7 @@ export function MapDetailPage({
                         playtime={playtime}
                         totalCaps={userCapCount}
                         loading={loading}
+                        onShowPlaytimeBreakdown={() => setPlaytimeModalOpen(true)}
                     />
                 )}
 
@@ -218,6 +229,23 @@ export function MapDetailPage({
                 onClose={() => setWrModalOpen(false)}
                 mapName={mapName}
                 entries={wrProgression}
+                currentUserId={currentUserId ?? undefined}
+            />
+
+            <PlaytimeBreakdownModal
+                open={playtimeModalOpen}
+                onClose={() => setPlaytimeModalOpen(false)}
+                mapName={mapName}
+                playtime={playtime}
+                currentUserId={currentUserId ?? undefined}
+            />
+
+            <CapTimeDistributionModal
+                open={distributionModalOpen}
+                onClose={() => setDistributionModalOpen(false)}
+                mapName={mapName}
+                leaderboard={leaderboard}
+                map={map}
                 currentUserId={currentUserId ?? undefined}
             />
         </div>

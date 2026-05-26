@@ -10,6 +10,7 @@ interface YourStatsCardProps {
     playtime: Playtime[]
     totalCaps: number | null
     loading: boolean
+    onShowPlaytimeBreakdown?: () => void
 }
 
 function formatHours(seconds: number): string {
@@ -21,7 +22,7 @@ function formatHours(seconds: number): string {
 }
 
 export function YourStatsCard({
-    currentUserId, leaderboard, playtime, totalCaps, loading,
+    currentUserId, leaderboard, playtime, totalCaps, loading, onShowPlaytimeBreakdown,
 }: YourStatsCardProps) {
     const userIdStr = currentUserId != null ? String(currentUserId) : null
 
@@ -59,28 +60,40 @@ export function YourStatsCard({
 
     const tiles = [
         {
+            key: 'pb',
             label: 'Personal Best',
             value: computed?.pbTime != null ? formatCapTime(computed.pbTime) : '—',
             icon: Trophy,
+            onClick: undefined as (() => void) | undefined,
+            hint: undefined as string | undefined,
         },
         {
+            key: 'rank',
             label: 'Your Rank',
             value: computed?.rank != null
                 ? `#${computed.rank}${computed.totalRanks ? ` / ${computed.totalRanks}` : ''}`
                 : '—',
             icon: Hash,
+            onClick: undefined,
+            hint: undefined,
         },
         {
+            key: 'caps',
             label: 'Total Caps',
             value: totalCaps != null ? totalCaps.toLocaleString() : '—',
             icon: Repeat,
+            onClick: undefined,
+            hint: undefined,
         },
         {
+            key: 'playtime',
             label: 'Your Playtime',
             value: computed?.playtimeSeconds && computed.playtimeSeconds > 0
                 ? formatHours(computed.playtimeSeconds)
                 : '—',
             icon: Clock,
+            onClick: onShowPlaytimeBreakdown,
+            hint: onShowPlaytimeBreakdown ? 'View all players →' : undefined,
         },
     ]
 
@@ -90,28 +103,38 @@ export function YourStatsCard({
                 Your Stats
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                {tiles.map(t => (
-                    <div
-                        key={t.label}
-                        className="bg-white/[0.02] border border-white/5 rounded-lg px-3 py-2 flex items-center gap-2.5"
-                    >
-                        <div className="p-1.5 rounded-md bg-emerald-500/10 text-emerald-300">
-                            <t.icon className="size-3.5" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                            <div className="text-[9px] uppercase tracking-wider text-muted-foreground">
-                                {t.label}
-                            </div>
-                            {isLoading ? (
-                                <div className="mt-0.5 h-4 w-14 bg-white/5 rounded animate-pulse" />
-                            ) : (
-                                <div className={cn('text-sm font-bold font-mono tabular-nums leading-tight text-emerald-300')}>
-                                    {t.value}
-                                </div>
+                {tiles.map(t => {
+                    const Wrapper: any = t.onClick ? 'button' : 'div'
+                    return (
+                        <Wrapper
+                            key={t.key}
+                            type={t.onClick ? 'button' : undefined}
+                            onClick={t.onClick}
+                            title={t.hint}
+                            className={cn(
+                                'bg-white/[0.02] border border-white/5 rounded-lg px-3 py-2 flex items-center gap-2.5 text-left w-full',
+                                t.onClick && 'cursor-pointer hover:bg-white/[0.05] hover:border-emerald-500/30 transition-colors',
                             )}
-                        </div>
-                    </div>
-                ))}
+                        >
+                            <div className="p-1.5 rounded-md bg-emerald-500/10 text-emerald-300">
+                                <t.icon className="size-3.5" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                                <div className="text-[9px] uppercase tracking-wider text-muted-foreground flex items-center justify-between gap-1">
+                                    <span>{t.label}</span>
+                                    {t.hint && <span className="text-emerald-300/60 normal-case tracking-normal text-[9px]">↗</span>}
+                                </div>
+                                {isLoading ? (
+                                    <div className="mt-0.5 h-4 w-14 bg-white/5 rounded animate-pulse" />
+                                ) : (
+                                    <div className={cn('text-sm font-bold font-mono tabular-nums leading-tight text-emerald-300')}>
+                                        {t.value}
+                                    </div>
+                                )}
+                            </div>
+                        </Wrapper>
+                    )
+                })}
             </div>
         </div>
     )

@@ -17,11 +17,16 @@ interface HeroSectionProps {
     chart?: React.ReactNode
 }
 
-function difficultyLabel(d: number): string {
-    if (d <= 3) return 'Beginner'
-    if (d <= 6) return 'Intermediate'
-    if (d <= 8) return 'Advanced'
-    return 'Expert'
+function difficultyBorderClass(d: number): string {
+    if (d <= 3) return 'border-green-500/40'
+    if (d <= 6) return 'border-yellow-500/40'
+    return 'border-red-500/40'
+}
+
+function difficultyTintBgClass(d: number): string {
+    if (d <= 3) return 'bg-green-500/10'
+    if (d <= 6) return 'bg-yellow-500/10'
+    return 'bg-red-500/10'
 }
 
 export function HeroSection({
@@ -39,10 +44,10 @@ export function HeroSection({
     return (
         <div className="bg-card/30 border border-white/5 rounded-xl overflow-hidden shrink-0">
             <div className="flex flex-col lg:flex-row">
-                <div className="lg:w-64 lg:h-64 shrink-0">
+                <div className="lg:w-64 lg:h-64 shrink-0 p-2">
                     <MapThumbnail
                         mapName={mapName}
-                        className="w-full h-full aspect-video lg:aspect-square !rounded-none border-0 border-r border-white/5"
+                        className="w-full h-full aspect-video lg:aspect-square rounded-lg border border-white/10"
                     />
                 </div>
                 <div className="flex-1 p-4 flex flex-col gap-3 min-w-0">
@@ -87,22 +92,6 @@ export function HeroSection({
                     </div>
 
                     <div className="flex items-center gap-2 flex-wrap text-xs">
-                        {difficulty != null && (
-                            <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-white/5 border border-white/5">
-                                <span className={cn('inline-flex items-center justify-center size-4 rounded text-[10px] font-bold text-white', difficultyBgColor(difficulty))}>
-                                    {difficulty}
-                                </span>
-                                <span className={cn('font-semibold text-xs', difficultyTextColor(difficulty))}>
-                                    {difficultyLabel(difficulty)}
-                                </span>
-                            </span>
-                        )}
-                        {added && (
-                            <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-white/5 border border-white/5 text-white">
-                                <Calendar className="size-3 text-muted-foreground" />
-                                <span className="font-semibold">{formatAddedDate(added)}</span>
-                            </span>
-                        )}
                         {(authorRef && author) ? (
                             <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-white/5 border border-white/5">
                                 <PlayerInfo
@@ -117,6 +106,30 @@ export function HeroSection({
                                 <span className="font-semibold text-xs">{author}</span>
                             </span>
                         ) : null}
+                        {added && (
+                            <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-white/5 border border-white/5 text-white">
+                                <Calendar className="size-3 text-muted-foreground" />
+                                <span className="font-semibold">{formatAddedDate(added)}</span>
+                            </span>
+                        )}
+                        {difficulty != null && (
+                            <span className={cn(
+                                'inline-flex items-stretch overflow-hidden rounded-md border',
+                                difficultyBorderClass(difficulty),
+                            )}>
+                                <span className="inline-flex items-center px-2 py-1 bg-white/5 text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
+                                    Difficulty
+                                </span>
+                                <span className={cn(
+                                    'inline-flex items-center gap-1.5 px-2 py-1',
+                                    difficultyTintBgClass(difficulty),
+                                )}>
+                                    <span className={cn('inline-flex items-center justify-center size-4 rounded text-[10px] font-bold text-white', difficultyBgColor(difficulty))}>
+                                        {difficulty}
+                                    </span>
+                                </span>
+                            </span>
+                        )}
                         {tags.map(t => (
                             <span
                                 key={t}
