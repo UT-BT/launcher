@@ -22,6 +22,8 @@ interface ProfileHeroProps {
     newRecords: number
     livePlayers: number
     refreshing?: boolean
+    refreshDisabled?: boolean
+    refreshTooltip?: string
     onChangeTitle?: () => void
     onBrowseServers?: () => void
     onRefresh?: () => void
@@ -97,7 +99,7 @@ function SinceStat({ label, value, icon: Icon, accent }: SinceStatProps) {
 export function ProfileHero({
     userId, username, alias, title, lastLoginIso,
     weekly, weeklyTop, monthly, monthlyTop, yearly, yearlyTop,
-    newMaps, newRecords, livePlayers, refreshing,
+    newMaps, newRecords, livePlayers, refreshing, refreshDisabled, refreshTooltip,
     onChangeTitle, onBrowseServers, onRefresh,
 }: ProfileHeroProps) {
     const lastLoginLabel = useMemo(() => {
@@ -120,11 +122,11 @@ export function ProfileHero({
             <div className="absolute inset-0 bg-gradient-to-r from-blue-500/[0.04] via-transparent to-purple-500/[0.04] pointer-events-none" />
 
             {onRefresh && (
-                <Tooltip content="Refresh" side="bottom" className="absolute top-3 right-3 z-10">
+                <Tooltip content={refreshTooltip ?? 'Refresh'} side="bottom" className="absolute top-3 right-3 z-10">
                     <button
                         type="button"
                         onClick={onRefresh}
-                        disabled={refreshing}
+                        disabled={refreshing || refreshDisabled}
                         aria-label="Refresh homepage"
                         className="p-2 rounded-md text-muted-foreground hover:text-white hover:bg-white/5 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     >

@@ -16,6 +16,7 @@ import {
     type WorldRecordProgressionEntry,
     type UserProfile,
 } from '@/app/utils/api'
+import { useRefreshCooldown } from '@/app/hooks/useRefreshCooldown'
 import { ReviewModal } from '@/app/components/modals/ReviewModal'
 import { WorldRecordProgressionModal } from '@/app/components/modals/WorldRecordProgressionModal'
 import { PlaytimeBreakdownModal } from '@/app/components/modals/PlaytimeBreakdownModal'
@@ -64,6 +65,7 @@ export function MapDetailPage({
     const [playtimeModalOpen, setPlaytimeModalOpen] = useState(false)
     const [distributionModalOpen, setDistributionModalOpen] = useState(false)
     const [refreshKey, setRefreshKey] = useState(0)
+    const refreshCooldown = useRefreshCooldown()
 
     const wrHolder = wrProgression.length > 0 ? wrProgression[wrProgression.length - 1] : null
 
@@ -133,11 +135,11 @@ export function MapDetailPage({
                     <ArrowLeft className="size-4 mr-1" />
                     Back
                 </Button>
-                <Tooltip content="Refresh" side="top">
+                <Tooltip content={refreshCooldown.canRefresh ? 'Refresh' : `Wait ${refreshCooldown.remainingSeconds}s`} side="top">
                     <button
                         type="button"
-                        onClick={() => setRefreshKey(k => k + 1)}
-                        disabled={loading}
+                        onClick={() => refreshCooldown.trigger(() => setRefreshKey(k => k + 1))}
+                        disabled={loading || !refreshCooldown.canRefresh}
                         className="p-2 rounded-md text-muted-foreground hover:text-white hover:bg-white/5 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
                         aria-label="Refresh"
                     >

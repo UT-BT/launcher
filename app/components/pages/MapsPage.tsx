@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback, Fragment } from 'react'
+import { useRefreshCooldown } from '@/app/hooks/useRefreshCooldown'
 import { Search, RefreshCw, SlidersHorizontal, X, ArrowLeft, HelpCircle, Share2, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/app/components/ui/button'
@@ -1372,10 +1373,14 @@ export function MapsPage({
         if (activePresetId === id) setActivePresetId(null)
     }
 
+    const refreshCooldown = useRefreshCooldown()
+
     const refresh = () => {
-        onCachesChange(() => ({ ...DEFAULT_MAPS_CACHES }))
-        loadCaches(true)
-        loadBrowsePage()
+        refreshCooldown.trigger(() => {
+            onCachesChange(() => ({ ...DEFAULT_MAPS_CACHES }))
+            loadCaches(true)
+            loadBrowsePage()
+        })
     }
 
     const directionFor = (field: SortField) => state.sortBy === field ? state.sortDir : null
@@ -1912,11 +1917,11 @@ export function MapsPage({
                             <HelpCircle className="size-4" />
                         </button>
                     </Tooltip>
-                    <Tooltip content="Refresh Data" side="bottom">
+                    <Tooltip content={refreshCooldown.canRefresh ? 'Refresh Data' : `Wait ${refreshCooldown.remainingSeconds}s`} side="bottom">
                         <button
                             type="button"
                             onClick={refresh}
-                            disabled={loading || pageLoading}
+                            disabled={loading || pageLoading || !refreshCooldown.canRefresh}
                             className="p-2 rounded-md text-muted-foreground hover:text-white hover:bg-white/5 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             <RefreshCw className={cn("size-4", (loading || pageLoading) && "animate-spin")} />

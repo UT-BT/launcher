@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useRefreshCooldown } from '@/app/hooks/useRefreshCooldown'
 import {
     RefreshCw, Play, BadgeCheck, Signal, Swords, Gamepad2, HelpCircle, User, ExternalLink,
     Twitch, Eye, SlidersHorizontal, AlertCircle,
@@ -354,6 +355,7 @@ export function ServerBrowserPage({
     onMapSelect,
 }: ServerBrowserPageProps) {
     const logger = useLogger('ServerBrowserPage')
+    const refreshCooldown = useRefreshCooldown()
     const [loading, setLoading] = useState(caches.servers.length === 0)
     const [error, setError] = useState<string | null>(null)
     const [launchError, setLaunchError] = useState<string | null>(null)
@@ -831,12 +833,12 @@ export function ServerBrowserPage({
                             <HelpCircle className="size-4" />
                         </button>
                     </Tooltip>
-                    <Tooltip content="Refresh servers" side="bottom">
+                    <Tooltip content={refreshCooldown.canRefresh ? 'Refresh servers' : `Wait ${refreshCooldown.remainingSeconds}s`} side="bottom">
                         <button
                             ref={refreshButtonRef}
                             type="button"
-                            onClick={fetchServers}
-                            disabled={loading}
+                            onClick={() => refreshCooldown.trigger(fetchServers)}
+                            disabled={loading || !refreshCooldown.canRefresh}
                             className="p-2 rounded-md text-muted-foreground hover:text-white hover:bg-white/5 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             <RefreshCw className={cn('size-4', loading && 'animate-spin')} />
