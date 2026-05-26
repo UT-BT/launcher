@@ -345,11 +345,13 @@ interface ServerBrowserPageProps {
     onToggleServerFavorite: (serverId: string) => void
     presets: ServerPreset[]
     onPresetsChange: (next: ServerPreset[]) => void
+    onMapSelect?: (mapName: string) => void
 }
 
 export function ServerBrowserPage({
     installationStatus, state, onStateChange, caches, onCachesChange,
     favoriteServerIds, onToggleServerFavorite, presets, onPresetsChange,
+    onMapSelect,
 }: ServerBrowserPageProps) {
     const logger = useLogger('ServerBrowserPage')
     const [loading, setLoading] = useState(caches.servers.length === 0)
@@ -659,9 +661,19 @@ export function ServerBrowserPage({
             case 'map':
                 return (
                     <DataTableCell key={id}>
-                        <span className="text-sm font-semibold text-white truncate inline-block max-w-[220px] align-middle">
-                            {displayMapName(server.map_name)}
-                        </span>
+                        {onMapSelect ? (
+                            <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); onMapSelect(server.map_name) }}
+                                className="text-sm font-semibold text-white truncate inline-block max-w-[220px] align-middle text-left hover:text-blue-300 hover:underline underline-offset-2 transition-colors cursor-pointer"
+                            >
+                                {displayMapName(server.map_name)}
+                            </button>
+                        ) : (
+                            <span className="text-sm font-semibold text-white truncate inline-block max-w-[220px] align-middle">
+                                {displayMapName(server.map_name)}
+                            </span>
+                        )}
                     </DataTableCell>
                 )
             case 'region':
