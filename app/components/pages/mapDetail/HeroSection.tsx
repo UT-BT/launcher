@@ -1,4 +1,4 @@
-import { Download, Calendar, Star, Sparkles } from 'lucide-react'
+import { Download, Calendar, Star, Sparkles, Loader2 } from 'lucide-react'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
@@ -15,11 +15,13 @@ interface HeroSectionProps {
     reviewCount: number
     isFavorited: boolean
     onToggleFavorite: (mapName: string) => void
+    onDownload: () => void
+    isDownloading: boolean
     chart?: React.ReactNode
 }
 
 export function HeroSection({
-    mapName, map, avgOverall, reviewCount, isFavorited, onToggleFavorite, chart,
+    mapName, map, avgOverall, reviewCount, isFavorited, onToggleFavorite, onDownload, isDownloading, chart,
 }: HeroSectionProps) {
     const difficulty = map?.difficulty
     const author = map?.author_str ?? (map?.author != null ? String(map.author) : null)
@@ -28,7 +30,6 @@ export function HeroSection({
     const added = map?.added
     const showNew = added ? isNew(added) : false
     const showTopRated = avgOverall !== null && reviewCount >= 3 && avgOverall >= 8
-    const downloadUrl = map?.url
 
     return (
         <div className="bg-card/30 border border-white/5 rounded-xl overflow-hidden shrink-0">
@@ -66,17 +67,19 @@ export function HeroSection({
                                     Top Rated
                                 </span>
                             )}
-                            {downloadUrl && (
-                                <a
-                                    href={downloadUrl}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-500/15 border border-blue-500/40 text-blue-200 hover:bg-blue-500/25 hover:text-white hover:border-blue-500/60 transition-colors text-xs font-semibold"
-                                >
+                            <button
+                                type="button"
+                                onClick={onDownload}
+                                disabled={isDownloading}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-500/15 border border-blue-500/40 text-blue-200 hover:bg-blue-500/25 hover:text-white hover:border-blue-500/60 disabled:opacity-60 disabled:cursor-not-allowed transition-colors text-xs font-semibold cursor-pointer"
+                            >
+                                {isDownloading ? (
+                                    <Loader2 className="size-3.5 animate-spin" />
+                                ) : (
                                     <Download className="size-3.5" />
-                                    Download
-                                </a>
-                            )}
+                                )}
+                                {isDownloading ? 'Downloading…' : 'Download Map'}
+                            </button>
                         </div>
                     </div>
 

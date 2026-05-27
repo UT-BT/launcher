@@ -17,6 +17,8 @@ import {
     type UserProfile,
 } from '@/app/utils/api'
 import { useRefreshCooldown } from '@/app/hooks/useRefreshCooldown'
+import { useMapDownload } from '@/app/hooks/useMapDownload'
+import { MapDownloadStatusModal } from '@/app/components/shared/MapDownloadStatusModal'
 import { ReviewModal } from '@/app/components/modals/ReviewModal'
 import { WorldRecordProgressionModal } from '@/app/components/modals/WorldRecordProgressionModal'
 import { PlaytimeBreakdownModal } from '@/app/components/modals/PlaytimeBreakdownModal'
@@ -66,6 +68,7 @@ export function MapDetailPage({
     const [distributionModalOpen, setDistributionModalOpen] = useState(false)
     const [refreshKey, setRefreshKey] = useState(0)
     const refreshCooldown = useRefreshCooldown()
+    const mapDownload = useMapDownload()
 
     const wrHolder = wrProgression.length > 0 ? wrProgression[wrProgression.length - 1] : null
 
@@ -155,6 +158,8 @@ export function MapDetailPage({
                 reviewCount={reviews.length}
                 isFavorited={favoriteMapNames.has(mapName)}
                 onToggleFavorite={onToggleFavorite}
+                onDownload={() => mapDownload.start(mapName)}
+                isDownloading={mapDownload.download?.status === 'downloading'}
                 chart={
                     <Suspense fallback={<div className="h-full min-h-[100px] bg-white/[0.02] border border-white/5 rounded-lg animate-pulse" />}>
                         <ActivityChart leaderboard={leaderboard} playtime={playtime} />
@@ -249,6 +254,11 @@ export function MapDetailPage({
                 leaderboard={leaderboard}
                 map={map}
                 currentUserId={currentUserId ?? undefined}
+            />
+
+            <MapDownloadStatusModal
+                state={mapDownload.download}
+                onClose={mapDownload.clear}
             />
         </div>
     )

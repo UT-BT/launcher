@@ -6,6 +6,7 @@ import { GameApi } from './game-api'
 import { IniApi } from './ini-api'
 import { FavoritesApi } from './favorites-api'
 import { DemosApi } from './demos-api'
+import { MapsApi } from './maps-api'
 import { UpdaterApi } from './updater-api'
 
 export const conveyor = {
@@ -17,6 +18,7 @@ export const conveyor = {
   ini: new IniApi(electronAPI),
   favorites: new FavoritesApi(electronAPI),
   demos: new DemosApi(electronAPI),
+  maps: new MapsApi(electronAPI),
   updater: new UpdaterApi(electronAPI),
 }
 
