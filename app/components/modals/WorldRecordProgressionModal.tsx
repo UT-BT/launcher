@@ -1,9 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip,
-    ResponsiveContainer,
+    ResponsiveContainer, Brush,
 } from 'recharts'
-import { Crown, History } from 'lucide-react'
+import { History, ZoomOut } from 'lucide-react'
 import { Modal } from '@/app/components/ui/modal'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import { Button } from '@/app/components/ui/button'
@@ -53,6 +53,9 @@ export function WorldRecordProgressionModal({
     isOpen, onClose, mapName, entries, currentUserId,
 }: WorldRecordProgressionModalProps) {
     const [hoverIdx, setHoverIdx] = useState<number | null>(null)
+    const [brushRange, setBrushRange] = useState<{ start: number; end: number } | null>(null)
+    const brushRef = useRef(brushRange)
+    brushRef.current = brushRange
 
     const sorted = useMemo(() => {
         return [...entries].sort((a, b) => {
@@ -179,7 +182,18 @@ export function WorldRecordProgressionModal({
                 </div>
 
                 {sorted.length >= 2 && (
-                    <div className="bg-white/[0.02] border border-white/5 rounded-lg p-2 h-56">
+                    <div className="bg-white/[0.02] border border-white/5 rounded-lg p-2 h-64 relative [&_.recharts-surface]:outline-none [&_.recharts-wrapper]:outline-none">
+                        {brushRange && (
+                            <button
+                                type="button"
+                                onClick={() => setBrushRange(null)}
+                                className="absolute top-2 right-2 z-10 inline-flex items-center gap-1 h-5 px-1.5 rounded text-[9px] font-bold uppercase tracking-wider border bg-card/80 border-white/10 text-muted-foreground hover:text-white hover:border-white/20 transition-colors cursor-pointer"
+                                title="Reset zoom"
+                            >
+                                <ZoomOut className="size-2.5" />
+                                Reset
+                            </button>
+                        )}
                         <ResponsiveContainer width="100%" height="100%">
                             <LineChart
                                 data={chartData}
@@ -233,6 +247,29 @@ export function WorldRecordProgressionModal({
                                     activeDot={{ r: 5, fill: '#93c5fd', stroke: '#60a5fa', strokeWidth: 2 }}
                                     isAnimationActive={false}
                                 />
+                                {chartData.length > 4 && (
+                                    <Brush
+                                        dataKey="timestamp"
+                                        height={18}
+                                        travellerWidth={8}
+                                        stroke="rgba(255,255,255,0.2)"
+                                        fill="rgba(255,255,255,0.03)"
+                                        tickFormatter={() => ''}
+                                        startIndex={brushRange?.start}
+                                        endIndex={brushRange?.end}
+                                        onChange={(r) => {
+                                            const { startIndex, endIndex } = r as { startIndex?: number; endIndex?: number }
+                                            if (startIndex == null || endIndex == null) return
+                                            if (startIndex === 0 && endIndex === chartData.length - 1) {
+                                                if (brushRef.current) setBrushRange(null)
+                                                return
+                                            }
+                                            const current = brushRef.current
+                                            if (current && current.start === startIndex && current.end === endIndex) return
+                                            setBrushRange({ start: startIndex, end: endIndex })
+                                        }}
+                                    />
+                                )}
                             </LineChart>
                         </ResponsiveContainer>
                     </div>

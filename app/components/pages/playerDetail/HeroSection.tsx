@@ -219,19 +219,19 @@ export function HeroSection({ userId, summary, loading, isSelf, chart, onChangeT
                     accent="text-white"
                 />
                 <HeroStat
-                    icon={Clock}
-                    label="Total Playtime"
-                    value={loading ? null : counts ? formatHoursShort(counts.total_playtime_seconds) : '—'}
-                    subtext={counts && counts.spectator_playtime_seconds > 0
-                        ? `${formatHoursShort(counts.spectator_playtime_seconds)} spec`
-                        : undefined}
-                    accent="text-amber-300"
-                />
-                <HeroStat
                     icon={Trophy}
                     label="World Records"
                     value={loading ? null : counts ? counts.wr_count.toLocaleString() : '—'}
                     accent="text-yellow-300"
+                />
+                <HeroStat
+                    icon={Clock}
+                    label="Total Playtime"
+                    value={loading ? null : counts ? `${Math.round(counts.total_playtime_seconds / 3600).toLocaleString()} h` : '—'}
+                    subtext={counts && counts.spectator_playtime_seconds > 0
+                        ? `${formatHoursShort(counts.spectator_playtime_seconds)} spec`
+                        : undefined}
+                    accent="text-amber-300"
                 />
                 <HeroStat
                     icon={MessageSquare}

@@ -18,7 +18,7 @@ interface UncappedMapsCardProps {
     tabsSlot?: React.ReactNode
 }
 
-const SKELETON_COL_COUNT = 4
+const SKELETON_COL_COUNT = 3
 const DEBOUNCE_MS = 250
 
 type SortField = 'name' | 'difficulty' | 'added'
@@ -96,20 +96,19 @@ export function UncappedMapsCard({ accessToken, userId, onMapSelect, tabsSlot }:
 
     return (
         <div className="bg-card/30 border border-white/5 rounded-xl flex flex-col overflow-hidden">
-            <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-white/5 flex-wrap">
+            <div className="flex items-center justify-between gap-3 gap-y-2 px-4 py-3 border-b border-white/5 flex-wrap">
                 <div className="flex items-center gap-3 flex-wrap">
                     {tabsSlot}
-                    {total > 0 && <span className="text-[10px] text-white/40 font-mono tabular-nums">{total.toLocaleString()}</span>}
                 </div>
-                <div className="flex items-center gap-2 ml-auto">
-                    <div className="relative">
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <div className="relative flex-1 sm:flex-none">
                         <Search className="size-3.5 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
                         <input
                             type="text"
                             value={queryRaw}
                             onChange={e => setQueryRaw(e.target.value)}
                             placeholder="Search map…"
-                            className="w-44 pl-7 pr-2 py-1 bg-card/50 border border-white/10 rounded text-xs text-white placeholder:text-muted-foreground focus:outline-none focus:border-blue-500/50"
+                            className="w-full sm:w-44 pl-7 pr-2 py-1 bg-card/50 border border-white/10 rounded text-xs text-white placeholder:text-muted-foreground focus:outline-none focus:border-blue-500/50"
                         />
                     </div>
                     <select
@@ -132,7 +131,6 @@ export function UncappedMapsCard({ accessToken, userId, onMapSelect, tabsSlot }:
                     <DataTableHeaderCell sortable sortDirection={dir('name')} onSort={() => handleSort('name')}>Map</DataTableHeaderCell>
                     <DataTableHeaderCell>Author</DataTableHeaderCell>
                     <DataTableHeaderCell align="center" width="7rem" sortable sortDirection={dir('difficulty')} onSort={() => handleSort('difficulty')}>Difficulty</DataTableHeaderCell>
-                    <DataTableHeaderCell width="14rem">Tags</DataTableHeaderCell>
                 </DataTableHeaderRow>
                 <tbody>
                     {loading ? (
@@ -142,51 +140,36 @@ export function UncappedMapsCard({ accessToken, userId, onMapSelect, tabsSlot }:
                     ) : items.length === 0 ? (
                         <DataTableEmpty colSpan={SKELETON_COL_COUNT} message={query ? 'No uncapped maps match that search.' : 'All caught up — no uncapped maps.'} />
                     ) : (
-                        items.map(m => {
-                            const tags = (m.tags ?? '').split(',').map(t => t.trim()).filter(Boolean)
-                            return (
-                                <DataTableRow
-                                    key={m.name}
-                                    className="cursor-pointer"
-                                    onClick={() => onMapSelect?.(m.name)}
-                                >
-                                    <DataTableCell>
-                                        <div className="flex items-center gap-2 min-w-0">
-                                            <MapThumbnail mapName={m.name} className="size-8 shrink-0" />
-                                            <span className="text-sm font-semibold text-white truncate">
-                                                {displayMapName(m.name)}
-                                            </span>
-                                        </div>
-                                    </DataTableCell>
-                                    <DataTableCell>
-                                        <span className="text-xs text-muted-foreground truncate">
-                                            {m.author_str ?? String(m.author ?? '—')}
+                        items.map(m => (
+                            <DataTableRow
+                                key={m.name}
+                                className="cursor-pointer"
+                                onClick={() => onMapSelect?.(m.name)}
+                            >
+                                <DataTableCell>
+                                    <div className="flex items-center gap-2 min-w-0">
+                                        <MapThumbnail mapName={m.name} className="size-8 shrink-0" />
+                                        <span className="text-sm font-semibold text-white truncate">
+                                            {displayMapName(m.name)}
                                         </span>
-                                    </DataTableCell>
-                                    <DataTableCell align="center">
-                                        {m.difficulty != null ? (
-                                            <span className={`inline-flex items-center justify-center size-5 rounded text-[10px] font-bold text-white ${difficultyBgColor(m.difficulty)}`}>
-                                                {m.difficulty}
-                                            </span>
-                                        ) : (
-                                            <span className="text-xs text-muted-foreground">—</span>
-                                        )}
-                                    </DataTableCell>
-                                    <DataTableCell>
-                                        <div className="flex items-center gap-1 flex-wrap">
-                                            {tags.slice(0, 3).map(t => (
-                                                <span
-                                                    key={t}
-                                                    className="inline-flex items-center px-1.5 py-0.5 rounded bg-white/[0.03] border border-white/5 text-[9px] font-medium text-muted-foreground uppercase tracking-wider"
-                                                >
-                                                    {t}
-                                                </span>
-                                            ))}
-                                        </div>
-                                    </DataTableCell>
-                                </DataTableRow>
-                            )
-                        })
+                                    </div>
+                                </DataTableCell>
+                                <DataTableCell>
+                                    <span className="text-xs text-muted-foreground truncate">
+                                        {m.author_str ?? String(m.author ?? '—')}
+                                    </span>
+                                </DataTableCell>
+                                <DataTableCell align="center">
+                                    {m.difficulty != null ? (
+                                        <span className={`inline-flex items-center justify-center size-5 rounded text-[10px] font-bold text-white ${difficultyBgColor(m.difficulty)}`}>
+                                            {m.difficulty}
+                                        </span>
+                                    ) : (
+                                        <span className="text-xs text-muted-foreground">—</span>
+                                    )}
+                                </DataTableCell>
+                            </DataTableRow>
+                        ))
                     )}
                 </tbody>
             </DataTableShell>

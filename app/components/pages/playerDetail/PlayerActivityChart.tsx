@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
-import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { Area, AreaChart, Brush, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { cn } from '@/lib/utils'
 import { Activity } from 'lucide-react'
 import type { UserActivityBucket } from '@/app/utils/api'
+import { WEEK_MS, formatWeekRange } from '@/app/utils/chartBuckets'
 
 type Mode = 'caps' | 'playtime'
 
@@ -14,24 +15,28 @@ interface PlayerActivityChartProps {
 function formatWeekLabel(iso: string): string {
     const d = new Date(iso)
     if (isNaN(d.getTime())) return iso
-    return d.toLocaleDateString(undefined, { month: 'short', day: '2-digit' })
+    return d.toLocaleDateString(undefined, { month: 'short', day: '2-digit', year: 'numeric' })
 }
 
 export default function PlayerActivityChart({ activity, loading }: PlayerActivityChartProps) {
     const [mode, setMode] = useState<Mode>('caps')
 
     const data = useMemo(() => {
-        return activity.map(b => ({
-            label: formatWeekLabel(b.week),
-            value: mode === 'caps' ? b.caps : b.hours,
-        }))
+        return activity.map(b => {
+            const start = new Date(b.week).getTime()
+            return {
+                label: formatWeekLabel(b.week),
+                rangeLabel: isNaN(start) ? b.week : formatWeekRange(start, start + WEEK_MS - 1),
+                value: mode === 'caps' ? b.caps : b.hours,
+            }
+        })
     }, [activity, mode])
 
     const yLabel = mode === 'caps' ? 'Caps' : 'Hours'
     const accent = mode === 'caps' ? '#60a5fa' : '#fbbf24'
 
     return (
-        <div className="bg-white/[0.02] border border-white/5 rounded-lg p-2 flex flex-col gap-1.5 h-full min-h-[160px]">
+        <div className="bg-white/[0.02] border border-white/5 rounded-lg p-2 flex flex-col gap-1.5 h-full min-h-[160px] [&_.recharts-surface]:outline-none [&_.recharts-wrapper]:outline-none">
             <div className="flex items-center justify-between gap-3 shrink-0">
                 <div className="flex items-center gap-1.5">
                     <Activity className="size-3 text-muted-foreground" />
@@ -98,6 +103,7 @@ export default function PlayerActivityChart({ activity, loading }: PlayerActivit
                                     color: 'white',
                                 }}
                                 labelStyle={{ color: '#9ca3af', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}
+                                labelFormatter={(_label, payload) => payload?.[0]?.payload?.rangeLabel ?? _label}
                                 formatter={(v) => {
                                     const n = Number(v ?? 0)
                                     return [mode === 'playtime' ? `${n.toFixed(1)} h` : String(n), yLabel] as [string, string]
@@ -110,6 +116,16 @@ export default function PlayerActivityChart({ activity, loading }: PlayerActivit
                                 strokeWidth={2}
                                 fill="url(#playerActivityFill)"
                             />
+                            {data.length > 8 && (
+                                <Brush
+                                    dataKey="label"
+                                    height={18}
+                                    travellerWidth={8}
+                                    stroke="rgba(255,255,255,0.2)"
+                                    fill="rgba(255,255,255,0.03)"
+                                    tickFormatter={() => ''}
+                                />
+                            )}
                         </AreaChart>
                     </ResponsiveContainer>
                 )}
