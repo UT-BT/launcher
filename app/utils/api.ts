@@ -691,8 +691,9 @@ export async function fetchPlaytimeForMap(accessToken: string, mapName: string):
 
 export async function fetchMapsFuzzy(accessToken: string, partialName: string, limit?: number, signal?: AbortSignal): Promise<Map[]> {
     try {
-        const limitParam = limit !== undefined ? `?limit=${limit}` : ''
-        const response = await fetch(`${API_BASE_URL}/maps/fuzzy/${encodeURIComponent(partialName)}${limitParam}`, {
+        const usp = new URLSearchParams({ active: 'true' })
+        if (limit !== undefined) usp.set('limit', String(limit))
+        const response = await fetch(`${API_BASE_URL}/maps/fuzzy/${encodeURIComponent(partialName)}?${usp.toString()}`, {
             headers: {
                 'Authorization': `Bearer ${accessToken}`
             },
