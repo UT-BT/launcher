@@ -131,20 +131,19 @@ export function PersonalBestsCard({
 
     return (
         <div className="bg-card/30 border border-white/5 rounded-xl flex flex-col overflow-hidden">
-            <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-white/5 flex-wrap">
+            <div className="flex items-center justify-between gap-3 gap-y-2 px-4 py-3 border-b border-white/5 flex-wrap">
                 <div className="flex items-center gap-3 flex-wrap">
                     {tabsSlot}
-                    {total > 0 && <span className="text-[10px] text-white/40 font-mono tabular-nums">{total.toLocaleString()}</span>}
                 </div>
-                <div className="flex items-center gap-2 ml-auto">
-                    <div className="relative">
+                <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
+                    <div className="relative flex-1 sm:flex-none">
                         <Search className="size-3.5 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
                         <input
                             type="text"
                             value={queryRaw}
                             onChange={e => setQueryRaw(e.target.value)}
                             placeholder="Search map…"
-                            className="w-44 pl-7 pr-2 py-1 bg-card/50 border border-white/10 rounded text-xs text-white placeholder:text-muted-foreground focus:outline-none focus:border-blue-500/50"
+                            className="w-full sm:w-44 pl-7 pr-2 py-1 bg-card/50 border border-white/10 rounded text-xs text-white placeholder:text-muted-foreground focus:outline-none focus:border-blue-500/50"
                         />
                     </div>
                     <select

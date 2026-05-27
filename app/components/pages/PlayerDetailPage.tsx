@@ -96,7 +96,7 @@ export function PlayerDetailPage({
         { value: 'pbs', label: 'Personal Bests', count: counts?.unique_maps },
         { value: 'wrs', label: 'World Records', count: counts?.wr_count },
         { value: 'playtime', label: 'Playtime by Map' },
-        { value: 'uncapped', label: 'Uncapped Maps', count: counts?.uncapped_maps, hidden: !isSelf },
+        { value: 'uncapped', label: 'Uncapped Maps', count: counts?.uncapped_maps },
     ]
 
     return (
@@ -209,7 +209,7 @@ export function PlayerDetailPage({
                             />
                         )}
 
-                        {activeTab === 'uncapped' && isSelf && (
+                        {activeTab === 'uncapped' && (
                             <UncappedMapsCard
                                 accessToken={accessToken}
                                 userId={userId}

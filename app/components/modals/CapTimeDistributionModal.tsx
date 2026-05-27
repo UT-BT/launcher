@@ -330,7 +330,7 @@ export function CapTimeDistributionModal({
                                 </div>
                             </div>
 
-                            <div className="bg-white/[0.02] border border-white/5 rounded-lg pt-5 pb-2 pl-2 pr-3 h-72 select-none">
+                            <div className="bg-white/[0.02] border border-white/5 rounded-lg pt-5 pb-2 pl-2 pr-3 h-72 select-none [&_.recharts-surface]:outline-none [&_.recharts-wrapper]:outline-none">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <BarChart
                                         data={buckets}
