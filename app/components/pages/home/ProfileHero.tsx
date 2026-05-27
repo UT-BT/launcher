@@ -155,9 +155,21 @@ export function ProfileHero({
                 </div>
 
                 <div className="flex flex-col min-w-0 gap-1 flex-1">
-                    <h1 className="text-2xl font-black tracking-tight text-white/95 truncate">
-                        {displayName}
-                    </h1>
+                    {userId != null && String(userId).length > 5 ? (
+                        <Tooltip content="View your profile" side="bottom" className="self-start max-w-full">
+                            <button
+                                type="button"
+                                onClick={() => window.dispatchEvent(new CustomEvent('open-player', { detail: { userId } }))}
+                                className="text-2xl font-black tracking-tight text-white/95 truncate cursor-pointer hover:opacity-80 hover:underline underline-offset-4 transition-opacity text-left"
+                            >
+                                {displayName}
+                            </button>
+                        </Tooltip>
+                    ) : (
+                        <h1 className="text-2xl font-black tracking-tight text-white/95 truncate">
+                            {displayName}
+                        </h1>
+                    )}
                     <Tooltip content={hasTitle(title) ? 'Change title' : 'Pick a title'} side="bottom" className="self-start max-w-full">
                         <button
                             type="button"

@@ -993,6 +993,410 @@ export async function replaceFavoriteMaps(accessToken: string, mapNames: string[
     return []
 }
 
+export interface UserSummaryProfile {
+    id: string
+    alias: string | null
+    registered_at: string | null
+    twitch_url: string | null
+    flag: string | null
+    utbt_role: number
+    active_title: ActiveTitle | null
+    active_ban: { reason?: string; end?: string; start?: string; active?: boolean } | null
+}
+
+export interface UserSummaryMedals {
+    user_id: string
+    world_records: number
+    champion_medals: number
+    gold_medals: number
+    silver_medals: number
+    bronze_medals: number
+    certified_caps: number
+    points: number
+    rank: number
+}
+
+export interface UserSummaryCounts {
+    total_caps: number
+    verified_caps: number
+    certified_caps: number
+    unique_maps: number
+    uncapped_maps: number
+    total_playtime_seconds: number
+    spectator_playtime_seconds: number
+    map_review_count: number
+    wr_count: number
+    favorite_count: number
+}
+
+export interface UserSummaryRecentWr {
+    cap_id: string | null
+    mapName: string
+    time: number
+    added: string | null
+}
+
+export interface UserSummary {
+    profile: UserSummaryProfile
+    medals: UserSummaryMedals
+    counts: UserSummaryCounts
+    recentCaps: SummaryCap[]
+    recentWrs: UserSummaryRecentWr[]
+}
+
+function normaliseActiveTitle(raw: any): ActiveTitle | null {
+    if (!raw || typeof raw !== 'object') return null
+    if (!raw.name) return null
+    return {
+        name: raw.name,
+        rarity: raw.rarity,
+        color_r: raw.color_r ?? 255,
+        color_g: raw.color_g ?? 255,
+        color_b: raw.color_b ?? 255,
+    }
+}
+
+export async function fetchUserSummary(accessToken: string, userId: string | number): Promise<UserSummary> {
+    const response = await fetch(`${API_BASE_URL}/v2/summary/user/${encodeURIComponent(String(userId))}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+    })
+    if (!response.ok) {
+        throw new Error(`Failed to fetch user summary: ${response.statusText} (${response.status})`)
+    }
+    const json = await response.json()
+    if (!json.success || !json.data) {
+        throw new Error('Invalid response format from server')
+    }
+    const data = json.data
+    const profile = data.profile ?? {}
+    const activeBan = profile.active_ban && Object.keys(profile.active_ban).length ? profile.active_ban : null
+    const normalisedProfile: UserSummaryProfile = {
+        id: profile.id != null ? String(profile.id) : String(userId),
+        alias: profile.alias ?? null,
+        registered_at: profile.registered_at ?? null,
+        twitch_url: profile.twitch_url ?? null,
+        flag: profile.flag ?? null,
+        utbt_role: typeof profile.utbt_role === 'number' ? profile.utbt_role : 0,
+        active_title: normaliseActiveTitle(profile.active_title),
+        active_ban: activeBan,
+    }
+    return {
+        profile: normalisedProfile,
+        medals: data.medals,
+        counts: data.counts,
+        recentCaps: data.recentCaps ?? [],
+        recentWrs: data.recentWrs ?? [],
+    }
+}
+
+export interface UserCapRow {
+    id: string
+    mapName: string
+    author: string
+    difficulty: number
+    time: number
+    medal: string
+    added: string | null
+    timeAgo?: string
+    verified: boolean
+    disallowed: boolean
+    cap_type: number
+}
+
+export interface UserCapsPage {
+    total: number
+    items: UserCapRow[]
+}
+
+export type CapFilter = 'all' | 'verified' | 'certified' | 'casual'
+
+export interface UserPersonalBestRow {
+    id: string
+    mapName: string
+    author: string
+    difficulty: number
+    time: number
+    medal: string
+    added: string | null
+    verified: boolean
+    cap_type: number
+}
+
+export interface UserPersonalBestsPage {
+    total: number
+    items: UserPersonalBestRow[]
+}
+
+export interface PersonalBestsParams {
+    limit?: number
+    offset?: number
+    mapFuzzy?: string
+    capFilter?: CapFilter
+    favoritesOnly?: boolean
+    sort?: 'added' | 'time' | 'map'
+    order?: 'asc' | 'desc'
+}
+
+export async function fetchPersonalBestsForUser(
+    accessToken: string,
+    userId: string | number,
+    params: PersonalBestsParams = {},
+): Promise<UserPersonalBestsPage> {
+    const usp = new URLSearchParams({
+        limit: String(params.limit ?? 25),
+        offset: String(params.offset ?? 0),
+    })
+    if (params.mapFuzzy) usp.set('map_fuzzy', params.mapFuzzy)
+    if (params.capFilter && params.capFilter !== 'all') usp.set('cap_filter', params.capFilter)
+    if (params.favoritesOnly) usp.set('favorites_only', 'true')
+    if (params.sort) usp.set('sort', params.sort)
+    if (params.order) usp.set('order', params.order)
+    const response = await fetch(`${API_BASE_URL}/v2/summary/user/${encodeURIComponent(String(userId))}/personal_bests?${usp.toString()}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+    })
+    if (!response.ok) return { total: 0, items: [] }
+    const json = await response.json()
+    if (json?.success && json.data && Array.isArray(json.data.items)) return json.data as UserPersonalBestsPage
+    return { total: 0, items: [] }
+}
+
+export interface UserCapsParams {
+    limit?: number
+    offset?: number
+    mapFuzzy?: string
+    capFilter?: CapFilter
+    favoritesOnly?: boolean
+    sort?: 'added' | 'time' | 'map'
+    order?: 'asc' | 'desc'
+}
+
+export async function fetchCapsForUser(
+    accessToken: string,
+    userId: string | number,
+    params: UserCapsParams = {},
+): Promise<UserCapsPage> {
+    const usp = new URLSearchParams({
+        limit: String(params.limit ?? 25),
+        offset: String(params.offset ?? 0),
+    })
+    if (params.mapFuzzy) usp.set('map_fuzzy', params.mapFuzzy)
+    if (params.capFilter && params.capFilter !== 'all') usp.set('cap_filter', params.capFilter)
+    if (params.favoritesOnly) usp.set('favorites_only', 'true')
+    if (params.sort) usp.set('sort', params.sort)
+    if (params.order) usp.set('order', params.order)
+    const response = await fetch(`${API_BASE_URL}/v2/summary/user/${encodeURIComponent(String(userId))}/caps?${usp.toString()}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+    })
+    if (!response.ok) return { total: 0, items: [] }
+    const json = await response.json()
+    if (json?.success && json.data && Array.isArray(json.data.items)) return json.data as UserCapsPage
+    return { total: 0, items: [] }
+}
+
+export async function fetchCapsCountForUser(
+    accessToken: string,
+    userId: string | number,
+    extra: { verified?: boolean } = {},
+): Promise<number> {
+    const usp = new URLSearchParams({ user: String(userId) })
+    if (extra.verified !== undefined) usp.set('verified', String(extra.verified))
+    const response = await fetch(`${API_BASE_URL}/caps/count/?${usp.toString()}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+    })
+    if (!response.ok) return 0
+    const json = await response.json()
+    if (json?.success && json.data && typeof json.data.count === 'number') return json.data.count
+    return 0
+}
+
+export interface UserWorldRecordsParams {
+    limit?: number
+    offset?: number
+    sort?: 'asc' | 'desc'
+    sortBy?: 'added' | 'time' | 'map'
+    mapFuzzy?: string
+}
+
+export async function fetchUserWorldRecords(
+    accessToken: string,
+    userId: string | number,
+    params: UserWorldRecordsParams = {},
+): Promise<Record[]> {
+    const usp = new URLSearchParams({
+        user: String(userId),
+        limit: String(params.limit ?? 25),
+        offset: String(params.offset ?? 0),
+        sort: params.sort ?? 'desc',
+    })
+    if (params.sortBy) usp.set('sort_by', params.sortBy)
+    if (params.mapFuzzy) usp.set('map', params.mapFuzzy)
+    const response = await fetch(`${API_BASE_URL}/v2/world_records/?${usp.toString()}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+    })
+    if (!response.ok) return []
+    const json = await response.json()
+    if (json?.success && Array.isArray(json.data)) return json.data as Record[]
+    return []
+}
+
+export async function fetchUserWorldRecordsCount(
+    accessToken: string,
+    userId: string | number,
+): Promise<number> {
+    const usp = new URLSearchParams({ user: String(userId), count: 'true' })
+    const response = await fetch(`${API_BASE_URL}/v2/world_records/?${usp.toString()}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+    })
+    if (!response.ok) return 0
+    const json = await response.json()
+    if (json?.success && json.data && typeof json.data.count === 'number') return json.data.count
+    return 0
+}
+
+export interface PlaytimeByMapRow {
+    map: string
+    total_seconds: number
+    sessions: number
+    last_played: string | null
+}
+
+export interface PlaytimeByMapPage {
+    total: number
+    items: PlaytimeByMapRow[]
+}
+
+export interface PlaytimeByMapParams {
+    limit?: number
+    offset?: number
+    includeSpectator?: boolean
+    mapFuzzy?: string
+    favoritesOnly?: boolean
+    sort?: 'hours' | 'sessions' | 'last_played' | 'map'
+    order?: 'asc' | 'desc'
+}
+
+export async function fetchPlaytimeByMap(
+    accessToken: string,
+    userId: string | number,
+    params: PlaytimeByMapParams = {},
+): Promise<PlaytimeByMapPage> {
+    const usp = new URLSearchParams({
+        limit: String(params.limit ?? 25),
+        offset: String(params.offset ?? 0),
+    })
+    if (params.includeSpectator) usp.set('include_spectator', 'true')
+    if (params.mapFuzzy) usp.set('map_fuzzy', params.mapFuzzy)
+    if (params.favoritesOnly) usp.set('favorites_only', 'true')
+    if (params.sort) usp.set('sort', params.sort)
+    if (params.order) usp.set('order', params.order)
+    const response = await fetch(`${API_BASE_URL}/playtime/by_map/${encodeURIComponent(String(userId))}?${usp.toString()}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+    })
+    if (!response.ok) return { total: 0, items: [] }
+    const json = await response.json()
+    if (json?.success && json.data && Array.isArray(json.data.items)) {
+        return json.data as PlaytimeByMapPage
+    }
+    return { total: 0, items: [] }
+}
+
+export interface UncappedMapsParams {
+    limit?: number
+    offset?: number
+    mapFuzzy?: string
+    sort?: 'name' | 'difficulty' | 'added'
+    order?: 'asc' | 'desc'
+    difficultyMin?: number
+    difficultyMax?: number
+}
+
+export async function fetchUncappedMaps(
+    accessToken: string,
+    userId: string | number,
+    params: UncappedMapsParams = {},
+): Promise<Map[]> {
+    const usp = new URLSearchParams({
+        limit: String(params.limit ?? 25),
+        offset: String(params.offset ?? 0),
+    })
+    if (params.mapFuzzy) usp.set('map_fuzzy', params.mapFuzzy)
+    if (params.sort) usp.set('sort', params.sort)
+    if (params.order) usp.set('order', params.order)
+    if (params.difficultyMin !== undefined) usp.set('difficulty_min', String(params.difficultyMin))
+    if (params.difficultyMax !== undefined) usp.set('difficulty_max', String(params.difficultyMax))
+    const response = await fetch(`${API_BASE_URL}/caps/uncapped/${encodeURIComponent(String(userId))}?${usp.toString()}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+    })
+    if (!response.ok) return []
+    const json = await response.json()
+    if (json?.success && Array.isArray(json.data)) return json.data as Map[]
+    return []
+}
+
+export async function fetchUncappedMapsCount(
+    accessToken: string,
+    userId: string | number,
+): Promise<number> {
+    const usp = new URLSearchParams({ count: 'true' })
+    const response = await fetch(`${API_BASE_URL}/caps/uncapped/${encodeURIComponent(String(userId))}?${usp.toString()}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+    })
+    if (!response.ok) return 0
+    const json = await response.json()
+    if (json?.success && json.data && typeof json.data.count === 'number') return json.data.count
+    return 0
+}
+
+export async function fetchMapReviewsByUser(
+    accessToken: string,
+    userId: string | number,
+): Promise<MapReview[]> {
+    const response = await fetch(`${API_BASE_URL}/map_reviews/?user=${encodeURIComponent(String(userId))}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+    })
+    if (!response.ok) return []
+    const json = await response.json()
+    if (json?.success && Array.isArray(json.data)) return json.data as MapReview[]
+    if (Array.isArray(json)) return json as MapReview[]
+    return []
+}
+
+export interface UserActivityBucket {
+    week: string
+    caps: number
+    hours: number
+}
+
+export async function fetchUserActivity(
+    accessToken: string,
+    userId: string | number,
+): Promise<UserActivityBucket[]> {
+    const response = await fetch(`${API_BASE_URL}/v2/summary/user/${encodeURIComponent(String(userId))}/activity`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+    })
+    if (!response.ok) return []
+    const json = await response.json()
+    if (json?.success && json.data && Array.isArray(json.data.items)) {
+        return json.data.items as UserActivityBucket[]
+    }
+    return []
+}
+
+export async function fetchPlaytimeForUser(
+    accessToken: string,
+    userId: string | number,
+    { limit = 500 }: { limit?: number } = {},
+): Promise<Playtime[]> {
+    const response = await fetch(`${API_BASE_URL}/playtime/?user=${encodeURIComponent(String(userId))}&limit=${limit}&order=desc`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+    })
+    if (!response.ok) return []
+    const json = await response.json()
+    if (Array.isArray(json)) return json as Playtime[]
+    if (json?.success && Array.isArray(json.data)) return json.data as Playtime[]
+    return []
+}
+
 export async function assignTitle(accessToken: string, titleId?: string | null): Promise<void> {
     try {
         const response = await fetch(`${API_BASE_URL}/v2/titles/assign`, {

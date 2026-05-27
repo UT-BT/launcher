@@ -16,9 +16,10 @@ interface PendingReviewsCardProps {
     accessToken?: string
     refreshKey?: number
     onReview: (mapName: string) => void
+    onMapSelect?: (mapName: string) => void
 }
 
-export function PendingReviewsCard({ accessToken, refreshKey = 0, onReview }: PendingReviewsCardProps) {
+export function PendingReviewsCard({ accessToken, refreshKey = 0, onReview, onMapSelect }: PendingReviewsCardProps) {
     const [page, setPage] = useState(1)
     const [items, setItems] = useState<PendingReview[]>([])
     const [total, setTotal] = useState(0)
@@ -77,12 +78,16 @@ export function PendingReviewsCard({ accessToken, refreshKey = 0, onReview }: Pe
                         <DataTableEmpty colSpan={4} message="All caught up! No pending map reviews." />
                     ) : (
                         items.map(rev => (
-                            <DataTableRow key={rev.id}>
+                            <DataTableRow
+                                key={rev.id}
+                                className={onMapSelect ? 'cursor-pointer' : undefined}
+                                onClick={onMapSelect ? () => onMapSelect(rev.mapName) : undefined}
+                            >
                                 <DataTableCell>
                                     <MapThumbnail mapName={rev.mapName} className="w-12 h-12" />
                                 </DataTableCell>
                                 <DataTableCell>
-                                    <span className="font-bold text-white/90 truncate">
+                                    <span className="font-bold text-white/90 truncate hover:underline underline-offset-2">
                                         {displayMapName(rev.mapName)}
                                     </span>
                                 </DataTableCell>

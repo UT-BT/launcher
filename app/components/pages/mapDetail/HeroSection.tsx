@@ -2,9 +2,10 @@ import { Download, Calendar, Star, Sparkles } from 'lucide-react'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
+import { MetaPill } from '@/app/components/shared/MetaPill'
 import { cn } from '@/lib/utils'
 import { displayMapName, formatAddedDate, isNew } from '@/app/utils/format'
-import { difficultyTextColor, difficultyBgColor } from '@/app/utils/scoreColors'
+import { difficultyBgColor } from '@/app/utils/scoreColors'
 import type { MapMetadata } from '@/app/utils/api'
 
 interface HeroSectionProps {
@@ -15,18 +16,6 @@ interface HeroSectionProps {
     isFavorited: boolean
     onToggleFavorite: (mapName: string) => void
     chart?: React.ReactNode
-}
-
-function difficultyBorderClass(d: number): string {
-    if (d <= 3) return 'border-green-500/40'
-    if (d <= 6) return 'border-yellow-500/40'
-    return 'border-red-500/40'
-}
-
-function difficultyTintBgClass(d: number): string {
-    if (d <= 3) return 'bg-green-500/10'
-    if (d <= 6) return 'bg-yellow-500/10'
-    return 'bg-red-500/10'
 }
 
 export function HeroSection({
@@ -91,9 +80,9 @@ export function HeroSection({
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2 flex-wrap text-xs">
+                    <div className="flex items-center gap-2 flex-wrap">
                         {(authorRef && author) ? (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-white/5 border border-white/5">
+                            <span className="inline-flex items-center h-7 px-2 rounded-md bg-white/5 border border-white/5">
                                 <PlayerInfo
                                     userId={authorRef}
                                     alias={author}
@@ -101,42 +90,23 @@ export function HeroSection({
                                 />
                             </span>
                         ) : author ? (
-                            <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-white/5 border border-white/5 text-white">
-                                <span className="text-[10px] uppercase tracking-wider text-muted-foreground">by</span>
-                                <span className="font-semibold text-xs">{author}</span>
-                            </span>
+                            <MetaPill label="By" value={author} />
                         ) : null}
                         {added && (
-                            <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-white/5 border border-white/5 text-white">
-                                <Calendar className="size-3 text-muted-foreground" />
-                                <span className="font-semibold">{formatAddedDate(added)}</span>
-                            </span>
+                            <MetaPill icon={Calendar} value={formatAddedDate(added)} />
                         )}
                         {difficulty != null && (
-                            <span className={cn(
-                                'inline-flex items-stretch overflow-hidden rounded-md border',
-                                difficultyBorderClass(difficulty),
-                            )}>
-                                <span className="inline-flex items-center px-2 py-1 bg-white/5 text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
-                                    Difficulty
-                                </span>
+                            <MetaPill label="Difficulty">
                                 <span className={cn(
-                                    'inline-flex items-center gap-1.5 px-2 py-1',
-                                    difficultyTintBgClass(difficulty),
+                                    'inline-flex items-center justify-center size-4 rounded text-[10px] font-bold text-white',
+                                    difficultyBgColor(difficulty),
                                 )}>
-                                    <span className={cn('inline-flex items-center justify-center size-4 rounded text-[10px] font-bold text-white', difficultyBgColor(difficulty))}>
-                                        {difficulty}
-                                    </span>
+                                    {difficulty}
                                 </span>
-                            </span>
+                            </MetaPill>
                         )}
                         {tags.map(t => (
-                            <span
-                                key={t}
-                                className="inline-flex items-center px-2 py-1 rounded-md bg-white/[0.03] border border-white/5 text-[10px] font-medium text-muted-foreground uppercase tracking-wider"
-                            >
-                                {t}
-                            </span>
+                            <MetaPill key={t} value={t.toUpperCase()} className="!text-[10px]" />
                         ))}
                     </div>
 

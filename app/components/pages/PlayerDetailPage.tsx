@@ -1,42 +1,237 @@
-import { ArrowLeft, User } from 'lucide-react'
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
+import { ArrowLeft, RefreshCw } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
-import { UserProfile, getAvatarUrl } from '@/app/utils/api'
+import { Tooltip } from '@/app/components/ui/tooltip'
+import {
+    fetchUserSummary,
+    fetchUserActivity,
+    type UserSummary,
+    type UserProfile,
+    type UserActivityBucket,
+} from '@/app/utils/api'
+import { useRefreshCooldown } from '@/app/hooks/useRefreshCooldown'
+import { ChangeTitleModal } from '@/app/components/modals/ChangeTitleModal'
+import { HeroSection } from './playerDetail/HeroSection'
+import { MedalShowcaseCard } from './playerDetail/MedalShowcaseCard'
+import { RecentCapsCard } from './playerDetail/RecentCapsCard'
+import { PersonalBestsCard } from './playerDetail/PersonalBestsCard'
+import { WorldRecordsCard } from './playerDetail/WorldRecordsCard'
+import { PlaytimeBreakdownCard } from './playerDetail/PlaytimeBreakdownCard'
+import { ReviewsAuthoredCard } from './playerDetail/ReviewsAuthoredCard'
+import { FavoriteMapsCard } from './playerDetail/FavoriteMapsCard'
+import { UncappedMapsCard } from './playerDetail/UncappedMapsCard'
+import { MainSectionTabs, type PlayerDetailTab } from './playerDetail/MainSectionTabs'
+
+const PlayerActivityChart = lazy(() => import('./playerDetail/PlayerActivityChart'))
 
 interface PlayerDetailPageProps {
     userId: string | number
     onBack: () => void
     userProfile?: UserProfile
+    favoriteMapNames: Set<string>
+    onToggleFavorite: (mapName: string) => void
+    onMapSelect?: (mapName: string) => void
 }
 
-export function PlayerDetailPage({ userId, onBack }: PlayerDetailPageProps) {
-    const fallback = `https://cdn.discordapp.com/embed/avatars/${Number(userId) % 5}.png`
+export function PlayerDetailPage({
+    userId, onBack, userProfile, favoriteMapNames, onToggleFavorite, onMapSelect,
+}: PlayerDetailPageProps) {
+    const accessToken = userProfile?.accessToken
+    const currentUserId = userProfile?.id ?? undefined
+    const isSelf = currentUserId != null && String(currentUserId) === String(userId)
+
+    const [summary, setSummary] = useState<UserSummary | null>(null)
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
+    const [refreshKey, setRefreshKey] = useState(0)
+    const refreshCooldown = useRefreshCooldown()
+
+    const [activeTab, setActiveTab] = useState<PlayerDetailTab>('caps')
+    const [changeTitleOpen, setChangeTitleOpen] = useState(false)
+
+    const [activity, setActivity] = useState<UserActivityBucket[]>([])
+    const [chartLoading, setChartLoading] = useState(true)
+
+    const load = useCallback(async () => {
+        if (!accessToken) return
+        setLoading(true)
+        setError(null)
+        try {
+            const result = await fetchUserSummary(accessToken, userId)
+            setSummary(result)
+        } catch (e) {
+            console.error('Failed to load user detail:', e)
+            setError('Failed to load player data.')
+        } finally {
+            setLoading(false)
+        }
+    }, [accessToken, userId])
+
+    useEffect(() => { load() }, [load, refreshKey])
+
+    // Reset tab + chart caches when switching players.
+    useEffect(() => {
+        setActiveTab('caps')
+        setActivity([])
+        setChartLoading(true)
+    }, [userId])
+
+    // Lazy-load aggregated lifetime activity once initial summary is in.
+    useEffect(() => {
+        let cancelled = false
+        if (!accessToken || !summary) return
+        setChartLoading(true)
+        fetchUserActivity(accessToken, userId)
+            .then(rows => { if (!cancelled) setActivity(rows) })
+            .catch(err => console.error('Failed to load activity chart data:', err))
+            .finally(() => { if (!cancelled) setChartLoading(false) })
+        return () => { cancelled = true }
+    }, [accessToken, userId, summary, refreshKey])
+
+    const counts = summary?.counts ?? null
+    const medals = summary?.medals ?? null
+
+    const tabs: { value: PlayerDetailTab; label: string; count?: number; hidden?: boolean }[] = [
+        { value: 'caps', label: 'All Caps', count: counts?.total_caps },
+        { value: 'pbs', label: 'Personal Bests', count: counts?.unique_maps },
+        { value: 'wrs', label: 'World Records', count: counts?.wr_count },
+        { value: 'playtime', label: 'Playtime by Map' },
+        { value: 'uncapped', label: 'Uncapped Maps', count: counts?.uncapped_maps, hidden: !isSelf },
+    ]
+
     return (
-        <div className="space-y-6">
-            <div className="flex items-center gap-3">
-                <Button variant="ghost" size="sm" onClick={onBack} className="text-muted-foreground hover:text-white -ml-2">
+        <div className="space-y-4 h-full flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-0 duration-500">
+            <div className="flex items-center justify-between gap-3 shrink-0">
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={onBack}
+                    className="text-muted-foreground hover:text-white -ml-2"
+                >
                     <ArrowLeft className="size-4 mr-1" />
                     Back
                 </Button>
+                <Tooltip content={refreshCooldown.canRefresh ? 'Refresh' : `Wait ${refreshCooldown.remainingSeconds}s`} side="top">
+                    <button
+                        type="button"
+                        onClick={() => refreshCooldown.trigger(() => setRefreshKey(k => k + 1))}
+                        disabled={loading || !refreshCooldown.canRefresh}
+                        className="p-2 rounded-md text-muted-foreground hover:text-white hover:bg-white/5 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                        aria-label="Refresh"
+                    >
+                        <RefreshCw className={`size-4 ${loading ? 'animate-spin' : ''}`} />
+                    </button>
+                </Tooltip>
             </div>
 
-            <div className="flex flex-col items-center justify-center py-24 gap-4 text-center">
-                {String(userId).length > 5 ? (
-                    <img
-                        src={getAvatarUrl(userId)}
-                        alt={String(userId)}
-                        className="size-24 rounded-full object-cover border border-white/10"
-                        onError={e => { (e.target as HTMLImageElement).src = fallback }}
-                    />
-                ) : (
-                    <div className="p-4 rounded-full bg-white/5 border border-white/10">
-                        <User className="size-10 text-muted-foreground" />
+            <HeroSection
+                userId={userId}
+                summary={summary}
+                loading={loading}
+                isSelf={isSelf}
+                onChangeTitle={isSelf ? () => setChangeTitleOpen(true) : undefined}
+                chart={
+                    <Suspense fallback={<div className="h-full min-h-[140px] bg-white/[0.02] border border-white/5 rounded-lg animate-pulse" />}>
+                        <PlayerActivityChart activity={activity} loading={chartLoading} />
+                    </Suspense>
+                }
+            />
+
+            {error && (
+                <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm shrink-0">
+                    {error}
+                </div>
+            )}
+
+            <div className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-4">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                    <div className="lg:col-span-4 space-y-4">
+                        <MedalShowcaseCard medals={medals} loading={loading} />
+                        <ReviewsAuthoredCard
+                            accessToken={accessToken}
+                            userId={userId}
+                            isSelf={isSelf}
+                            totalCount={counts?.map_review_count}
+                            onMapSelect={onMapSelect}
+                        />
+                        <FavoriteMapsCard
+                            accessToken={accessToken}
+                            userId={userId}
+                            isSelf={isSelf}
+                            favoriteMapNames={favoriteMapNames}
+                            onToggleFavorite={isSelf ? onToggleFavorite : undefined}
+                            onMapSelect={onMapSelect}
+                            totalCount={counts?.favorite_count}
+                        />
                     </div>
-                )}
-                <div>
-                    <h2 className="text-xl font-bold text-white">Player {userId}</h2>
-                    <p className="text-muted-foreground mt-1">Player detail page coming soon.</p>
+
+                    <div className="lg:col-span-8">
+                        {activeTab === 'caps' && (
+                            <RecentCapsCard
+                                accessToken={accessToken}
+                                userId={userId}
+                                favoriteMapNames={favoriteMapNames}
+                                onToggleFavorite={isSelf ? onToggleFavorite : undefined}
+                                canEditFavorites={isSelf}
+                                onMapSelect={onMapSelect}
+                                tabsSlot={<MainSectionTabs tabs={tabs} active={activeTab} onChange={setActiveTab} />}
+                            />
+                        )}
+
+                        {activeTab === 'pbs' && (
+                            <PersonalBestsCard
+                                accessToken={accessToken}
+                                userId={userId}
+                                favoriteMapNames={favoriteMapNames}
+                                onToggleFavorite={isSelf ? onToggleFavorite : undefined}
+                                canEditFavorites={isSelf}
+                                onMapSelect={onMapSelect}
+                                tabsSlot={<MainSectionTabs tabs={tabs} active={activeTab} onChange={setActiveTab} />}
+                            />
+                        )}
+
+                        {activeTab === 'wrs' && (
+                            <WorldRecordsCard
+                                accessToken={accessToken}
+                                userId={userId}
+                                totalCount={counts?.wr_count ?? 0}
+                                onMapSelect={onMapSelect}
+                                tabsSlot={<MainSectionTabs tabs={tabs} active={activeTab} onChange={setActiveTab} />}
+                            />
+                        )}
+
+                        {activeTab === 'playtime' && (
+                            <PlaytimeBreakdownCard
+                                accessToken={accessToken}
+                                userId={userId}
+                                onMapSelect={onMapSelect}
+                                tabsSlot={<MainSectionTabs tabs={tabs} active={activeTab} onChange={setActiveTab} />}
+                            />
+                        )}
+
+                        {activeTab === 'uncapped' && isSelf && (
+                            <UncappedMapsCard
+                                accessToken={accessToken}
+                                userId={userId}
+                                onMapSelect={onMapSelect}
+                                tabsSlot={<MainSectionTabs tabs={tabs} active={activeTab} onChange={setActiveTab} />}
+                            />
+                        )}
+                    </div>
                 </div>
             </div>
+
+            <ChangeTitleModal
+                isOpen={changeTitleOpen}
+                onClose={() => setChangeTitleOpen(false)}
+                accessToken={accessToken}
+                userId={currentUserId != null ? String(currentUserId) : undefined}
+                currentTitleId={userProfile?.active_title?.id ?? undefined}
+                onTitleChanged={() => {
+                    window.dispatchEvent(new CustomEvent('refresh-user-profile'))
+                    setRefreshKey(k => k + 1)
+                }}
+            />
         </div>
     )
 }

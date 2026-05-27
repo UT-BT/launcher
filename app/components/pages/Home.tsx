@@ -254,6 +254,7 @@ export function Home({
                         accessToken={userProfile.accessToken}
                         refreshKey={pendingReviewsRefreshKey}
                         onReview={handleReviewMap}
+                        onMapSelect={onMapSelect}
                     />
                 </section>
             </div>

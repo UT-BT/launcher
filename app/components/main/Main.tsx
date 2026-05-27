@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { AppLayout } from '@/app/components/layout/AppLayout'
 import { Home } from '@/app/components/pages/Home'
 import {
@@ -19,14 +19,9 @@ import { MapDetailPage } from '@/app/components/pages/MapDetailPage'
 import { PlayerDetailPage } from '@/app/components/pages/PlayerDetailPage'
 import { InstallationBanner } from '@/app/components/InstallationBanner'
 import { UpdateBanner } from '@/app/components/updater/UpdateBanner'
-import { FavoritesSyncModal, type SyncResolution } from '@/app/components/shared/FavoritesSyncModal'
+import { FavoritesSyncModal } from '@/app/components/shared/FavoritesSyncModal'
 import type { ServerPreset } from '@/app/utils/server-utils'
-import {
-  addFavoriteMap,
-  fetchUserFavorites,
-  removeFavoriteMap,
-  replaceFavoriteMaps,
-} from '@/app/utils/api'
+import { useFavorites } from '@/app/hooks/useFavorites'
 
 
 const MAPS_STATE_STORAGE_KEY = 'utbt:mapsPageState:v1'
@@ -132,14 +127,6 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
   const [serversCaches, setServersCaches] = useState<ServerBrowserCaches>(DEFAULT_SERVERS_CACHES)
   const [serverPresets, setServerPresets] = useState<ServerPreset[]>(loadPersistedServerPresets)
   const [favoriteServerIds, setFavoriteServerIds] = useState<Set<string>>(loadPersistedServerFavorites)
-  const [favoriteMapNames, setFavoriteMapNames] = useState<Set<string>>(() => new Set())
-  const favoriteOrderRef = useRef<string[]>([])
-  const [syncModalState, setSyncModalState] = useState<{ open: boolean; db: string[]; ini: string[] }>({
-    open: false,
-    db: [],
-    ini: [],
-  })
-  const startupSyncCheckedRef = useRef(false)
 
   useEffect(() => {
     try {
@@ -177,137 +164,14 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
   const accessToken = userProfile?.accessToken
   const userId = userProfile?.id ?? undefined
 
-  const writeIniBestEffort = useCallback(async (mapNames: string[]) => {
-    try {
-      await window.conveyor.favorites.writeIni(mapNames)
-    } catch (err) {
-      console.warn('writeIni failed (ignored)', err)
-    }
-  }, [])
-
-  const applyFavorites = useCallback((names: string[]) => {
-    favoriteOrderRef.current = names.slice()
-    setFavoriteMapNames(new Set(names))
-  }, [])
-
-  // Initial load + startup sync diff check.
-  useEffect(() => {
-    let cancelled = false
-    if (!accessToken || !userId) {
-      favoriteOrderRef.current = []
-      setFavoriteMapNames(new Set())
-      startupSyncCheckedRef.current = false
-      return
-    }
-    ;(async () => {
-      try {
-        const dbNames = await fetchUserFavorites(accessToken, userId)
-        if (cancelled) return
-        applyFavorites(dbNames)
-
-        if (startupSyncCheckedRef.current) return
-        const ini = await window.conveyor.favorites.readIni()
-        if (cancelled) return
-        if (!ini.ok) {
-          // No valid install — nothing to sync against.
-          startupSyncCheckedRef.current = true
-          return
-        }
-        startupSyncCheckedRef.current = true
-
-        const dbSet = new Set(dbNames)
-        const iniSet = new Set(ini.mapNames)
-        const sameSize = dbSet.size === iniSet.size
-        const sameContents = sameSize && [...dbSet].every((n) => iniSet.has(n))
-        if (sameContents) return
-
-        setSyncModalState({ open: true, db: dbNames, ini: ini.mapNames })
-      } catch (err) {
-        console.error('Failed to load / sync favorites', err)
-      }
-    })()
-    return () => { cancelled = true }
-  }, [accessToken, userId, applyFavorites])
-
-  const toggleFavorite = useCallback(async (mapName: string) => {
-    if (!accessToken) return
-    const wasFavorited = favoriteOrderRef.current.includes(mapName)
-    const nextOrder = wasFavorited
-      ? favoriteOrderRef.current.filter((n) => n !== mapName)
-      : [...favoriteOrderRef.current, mapName]
-    applyFavorites(nextOrder)
-
-    try {
-      if (wasFavorited) {
-        await removeFavoriteMap(accessToken, mapName)
-      } else {
-        await addFavoriteMap(accessToken, mapName)
-      }
-      // Keep ini in lockstep so an out-of-launcher game start picks up the change.
-      void writeIniBestEffort(nextOrder)
-    } catch (err) {
-      console.error('Favorite toggle failed; rolling back', err)
-      applyFavorites(
-        wasFavorited
-          ? [...favoriteOrderRef.current, mapName]
-          : favoriteOrderRef.current.filter((n) => n !== mapName),
-      )
-    }
-  }, [accessToken, applyFavorites, writeIniBestEffort])
-
-  // Game-close: read ini → replace DB favorites → refresh local cache.
-  useEffect(() => {
-    if (!accessToken) return
-    const remove = window.utFavorites?.onGameClosed(async () => {
-      try {
-        const ini = await window.conveyor.favorites.readIni()
-        if (!ini.ok) return
-        const updated = await replaceFavoriteMaps(accessToken, ini.mapNames)
-        applyFavorites(updated)
-      } catch (err) {
-        console.error('Failed to sync favorites from ini after game close', err)
-      }
-    })
-    return () => { remove?.() }
-  }, [accessToken, applyFavorites])
-
-  const handleSyncResolve = useCallback(async (resolution: SyncResolution) => {
-    if (!accessToken) return
-    const { db, ini } = syncModalState
-    let result: string[] = []
-    try {
-      if (resolution === 'db-wins') {
-        await writeIniBestEffort(db)
-        result = db
-      } else if (resolution === 'ini-wins') {
-        const updated = await replaceFavoriteMaps(accessToken, ini)
-        result = updated
-        await writeIniBestEffort(updated)
-      } else {
-        // merge — union, preserving db order then any ini-only entries
-        const merged: string[] = [...db]
-        const seen = new Set(db)
-        for (const name of ini) {
-          if (!seen.has(name)) {
-            seen.add(name)
-            merged.push(name)
-          }
-        }
-        const updated = await replaceFavoriteMaps(accessToken, merged)
-        result = updated
-        await writeIniBestEffort(updated)
-      }
-      applyFavorites(result)
-    } catch (err) {
-      console.error('Sync resolution failed', err)
-    } finally {
-      setSyncModalState({ open: false, db: [], ini: [] })
-    }
-  }, [accessToken, syncModalState, applyFavorites, writeIniBestEffort])
-
-  const dismissSyncModal = useCallback(() => {
-    setSyncModalState({ open: false, db: [], ini: [] })
-  }, [])
+  // Single source of truth for map favorites. See app/hooks/useFavorites.ts.
+  const {
+    favoriteMapNames,
+    toggle: toggleFavorite,
+    syncModal,
+    resolveSync,
+    dismissSync,
+  } = useFavorites(accessToken, userId)
 
   useEffect(() => {
     const onOpenPlayer = (e: Event) => {
@@ -423,6 +287,9 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
           userId={selectedPlayerId!}
           onBack={() => setCurrentView(previousView)}
           userProfile={userProfile as any}
+          favoriteMapNames={favoriteMapNames}
+          onToggleFavorite={toggleFavorite}
+          onMapSelect={openMap}
         />
       default:
         return <Home
@@ -451,11 +318,11 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
         </AppLayout>
       </div>
       <FavoritesSyncModal
-        open={syncModalState.open}
-        dbFavorites={syncModalState.db}
-        iniFavorites={syncModalState.ini}
-        onResolve={handleSyncResolve}
-        onDismiss={dismissSyncModal}
+        open={syncModal.open}
+        dbFavorites={syncModal.db}
+        iniFavorites={syncModal.ini}
+        onResolve={resolveSync}
+        onDismiss={dismissSync}
       />
     </div>
   )
