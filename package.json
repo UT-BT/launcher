@@ -62,6 +62,7 @@
     "@types/react": "^19.1.11",
     "@types/react-dom": "^19.1.8",
     "@vitejs/plugin-react": "^5.0.1",
+    "baseline-browser-mapping": "^2.10.32",
     "cross-env": "^10.0.0",
     "electron": "^42.2.0",
     "electron-builder": "^26.0.12",
