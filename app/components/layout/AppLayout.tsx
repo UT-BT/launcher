@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useState } from 'react'
-import { Home, Server, Map as MapIcon, Trophy, Settings, LogOut, Play } from 'lucide-react'
+import { Home, Server, Map as MapIcon, Trophy, Settings, LogOut, Play, User } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import logo from '@/app/assets/logo.png'
 import {
@@ -220,6 +220,15 @@ export function AppLayout({ children, currentView, onViewChange, userProfile, in
                         <DropdownMenuContent side="top" align="center" className="w-56 bg-card/95 backdrop-blur-xl border-white/10">
                             <DropdownMenuLabel>{userProfile?.alias || userProfile?.username || 'Player'}</DropdownMenuLabel>
                             <DropdownMenuSeparator className="bg-white/10" />
+                            {userProfile?.id != null && String(userProfile.id).length > 5 && (
+                                <DropdownMenuItem
+                                    onClick={() => window.dispatchEvent(new CustomEvent('open-player', { detail: { userId: userProfile.id } }))}
+                                    className="text-muted-foreground focus:text-white focus:bg-white/10 cursor-pointer mb-1"
+                                >
+                                    <User className="mr-2 size-4" />
+                                    <span>View Profile</span>
+                                </DropdownMenuItem>
+                            )}
                             <DropdownMenuItem
                                 onClick={() => setIsChangeTitleOpen(true)}
                                 className="text-muted-foreground focus:text-white focus:bg-white/10 cursor-pointer mb-1"
