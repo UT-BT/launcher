@@ -271,6 +271,7 @@ export function Home({
                 favoriteMapNames={favoriteMapNames}
                 onToggleFavorite={onToggleFavorite}
                 onReview={handleReviewMap}
+                onMapSelect={onMapSelect}
             />
 
             <ReviewModal
