@@ -2,8 +2,9 @@ import { BrowserWindow } from 'electron'
 import { handle } from '@/lib/main/shared'
 import { getUt99InstallPath } from '@/lib/main/config'
 import { loggingService } from '@/lib/main/logging-service'
-import { join, isAbsolute } from 'path'
+import { join } from 'path'
 import { existsSync, readFileSync, writeFileSync } from 'fs'
+import { resolveWithin } from '@/lib/main/path-safety'
 
 // Custom INI parser that preserves section names exactly (doesn't escape dots)
 export const parseIni = (content: string): Record<string, Record<string, string | string[]>> => {
@@ -77,11 +78,7 @@ export const registerIniHandlers = (_window: BrowserWindow) => {
             throw new Error('UT99 install path not found')
         }
 
-        if (isAbsolute(path)) {
-            return path
-        }
-
-        return join(installPath, 'System', path)
+        return resolveWithin(join(installPath, 'System'), path)
     }
 
     handle('readIniValue', async (path: string, section: string, key: string) => {

@@ -8,6 +8,7 @@ import { gatewayService } from './gateway-service'
 import { setUt99InstallPath, setInstalledPatch, getUt99InstallPath, getInstalledPatch, setActiveProfile, getActiveProfile } from './config'
 import { loggingService } from './logging-service'
 import { parseIni } from '../conveyor/handlers/ini-handler'
+import { resolveWithin } from '@/lib/main/path-safety'
 
 export class GameService {
     async selectInstallDirectory(window: BrowserWindow): Promise<string | undefined> {
@@ -41,7 +42,7 @@ export class GameService {
 
     async createProfile(name: string, installPath: string): Promise<void> {
         const profilesDir = this.getProfilesDir()
-        const profilePath = join(profilesDir, name)
+        const profilePath = resolveWithin(profilesDir, name)
 
         if (!existsSync(profilePath)) {
             mkdirSync(profilePath, { recursive: true })
@@ -95,7 +96,7 @@ export class GameService {
         }
 
         const profilesDir = this.getProfilesDir()
-        const profilePath = join(profilesDir, name)
+        const profilePath = resolveWithin(profilesDir, name)
 
         if (!existsSync(profilePath)) {
             throw new Error(`Profile ${name} not found`)
@@ -115,8 +116,8 @@ export class GameService {
 
     async renameProfile(oldName: string, newName: string): Promise<void> {
         const profilesDir = this.getProfilesDir()
-        const oldPath = join(profilesDir, oldName)
-        const newPath = join(profilesDir, newName)
+        const oldPath = resolveWithin(profilesDir, oldName)
+        const newPath = resolveWithin(profilesDir, newName)
 
         if (!existsSync(oldPath)) {
             throw new Error(`Profile ${oldName} not found`)
@@ -140,7 +141,7 @@ export class GameService {
 
     async deleteProfile(name: string): Promise<void> {
         const profilesDir = this.getProfilesDir()
-        const profilePath = join(profilesDir, name)
+        const profilePath = resolveWithin(profilesDir, name)
 
         if (existsSync(profilePath)) {
             rmSync(profilePath, { recursive: true, force: true })
@@ -157,7 +158,7 @@ export class GameService {
         if (!installPath) return false
 
         const profilesDir = this.getProfilesDir()
-        const profilePath = join(profilesDir, name)
+        const profilePath = resolveWithin(profilesDir, name)
         if (!existsSync(profilePath)) return false
 
         const filesToCheck = ['User.ini', 'UnrealTournament.ini']

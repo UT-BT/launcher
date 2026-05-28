@@ -2,6 +2,7 @@ import { BrowserWindow, net, app } from 'electron'
 import { join } from 'path'
 import { createWriteStream, existsSync, mkdirSync, createReadStream } from 'fs'
 import { extract } from 'zip-lib'
+import { isWithin } from './path-safety'
 import { gatewayService } from './gateway-service'
 import { getUt99InstallPath, setInstalledPatch } from './config'
 import { loggingService } from './logging-service'
@@ -84,7 +85,20 @@ export class PatchService {
             }
 
             window.webContents.send('patch-install-status', { status: 'extracting', tag: patch.tag })
-            await extract(cachedPatchPath, installPath)
+
+            let zipSlip = false
+            await extract(cachedPatchPath, installPath, {
+                safeSymlinksOnly: true,
+                onEntry: (entry) => {
+                    if (!isWithin(installPath, join(installPath, entry.entryName))) {
+                        zipSlip = true
+                        entry.preventDefault()
+                    }
+                },
+            })
+            if (zipSlip) {
+                throw new Error('Patch archive contains entries outside the install directory')
+            }
 
             const exePath = join(installPath, 'System', 'UnrealTournament.exe')
             const exeHash = await this.calculateFileMD5Hash(exePath)

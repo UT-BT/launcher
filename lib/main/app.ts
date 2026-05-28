@@ -96,8 +96,15 @@ export function createAppWindow(): void {
   })
 
   mainWindow.webContents.on('will-navigate', (event, url) => {
-    const devUrl = process.env['ELECTRON_RENDERER_URL']
-    if (!app.isPackaged && devUrl && url.startsWith(devUrl)) return
+    // Allow same-origin navigation (reloads, in-app routing); only divert
+    // navigations to a different (external web) origin out to the browser.
+    try {
+      if (new URL(url).origin === new URL(mainWindow.webContents.getURL()).origin) {
+        return
+      }
+    } catch {
+      // fall through and block unparseable targets
+    }
     event.preventDefault()
     shell.openExternal(url)
   })

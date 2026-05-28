@@ -1,6 +1,27 @@
-import { app } from 'electron'
+import { app, safeStorage } from 'electron'
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs'
 import { join } from 'path'
+
+const ENC_PREFIX = 'enc:'
+
+function encryptSecret(value: string): string {
+  if (value && safeStorage.isEncryptionAvailable()) {
+    return ENC_PREFIX + safeStorage.encryptString(value).toString('base64')
+  }
+  return value
+}
+
+function decryptSecret(value: string): string {
+  if (value.startsWith(ENC_PREFIX)) {
+    if (!safeStorage.isEncryptionAvailable()) return ''
+    try {
+      return safeStorage.decryptString(Buffer.from(value.slice(ENC_PREFIX.length), 'base64'))
+    } catch {
+      return ''
+    }
+  }
+  return value
+}
 
 type InstalledPatch = {
   tag: string
@@ -135,13 +156,23 @@ export type AuthConfig = {
 }
 
 export function getAuthConfig(): AuthConfig | undefined {
-  return readConfig().auth
+  const auth = readConfig().auth
+  if (!auth) return undefined
+  return {
+    ...auth,
+    accessToken: decryptSecret(auth.accessToken),
+    refreshToken: decryptSecret(auth.refreshToken),
+  }
 }
 
 export function setAuthConfig(auth: AuthConfig): void {
   const current = readConfig()
-  const next: LauncherConfig = { ...current, auth }
-  writeConfig(next)
+  const stored: AuthConfig = {
+    ...auth,
+    accessToken: encryptSecret(auth.accessToken),
+    refreshToken: encryptSecret(auth.refreshToken),
+  }
+  writeConfig({ ...current, auth: stored })
 }
 
 export function clearAuthConfig(): void {
