@@ -106,10 +106,10 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
                 <div className="text-sm text-muted-foreground">
                     <ReactMarkdown
                         components={{
-                            strong: ({ node, ...props }) => <span className="font-bold text-foreground" {...props} />,
-                            p: ({ node, ...props }) => <p className="mb-4 last:mb-0 leading-relaxed" {...props} />,
-                            ul: ({ node, ...props }) => <ul className="list-disc pl-5 mb-4 space-y-1" {...props} />,
-                            li: ({ node, ...props }) => <li className="pl-1" {...props} />,
+                            strong: ({ node: _node, ...props }) => <span className="font-bold text-foreground" {...props} />,
+                            p: ({ node: _node, ...props }) => <p className="mb-4 last:mb-0 leading-relaxed" {...props} />,
+                            ul: ({ node: _node, ...props }) => <ul className="list-disc pl-5 mb-4 space-y-1" {...props} />,
+                            li: ({ node: _node, ...props }) => <li className="pl-1" {...props} />,
                         }}
                     >
                         {TERMS_OF_SERVICE}
@@ -125,10 +125,10 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
                 <div className="text-sm text-muted-foreground">
                     <ReactMarkdown
                         components={{
-                            strong: ({ node, ...props }) => <span className="font-bold text-foreground" {...props} />,
-                            p: ({ node, ...props }) => <p className="mb-4 last:mb-0 leading-relaxed" {...props} />,
-                            ul: ({ node, ...props }) => <ul className="list-disc pl-5 mb-4 space-y-1" {...props} />,
-                            li: ({ node, ...props }) => <li className="pl-1" {...props} />,
+                            strong: ({ node: _node, ...props }) => <span className="font-bold text-foreground" {...props} />,
+                            p: ({ node: _node, ...props }) => <p className="mb-4 last:mb-0 leading-relaxed" {...props} />,
+                            ul: ({ node: _node, ...props }) => <ul className="list-disc pl-5 mb-4 space-y-1" {...props} />,
+                            li: ({ node: _node, ...props }) => <li className="pl-1" {...props} />,
                         }}
                     >
                         {PRIVACY_POLICY}

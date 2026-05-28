@@ -58,7 +58,7 @@ export function MapReviewsModal({
         try {
             const data = await fetchMapReviews(accessToken, mapName)
             setReviews(data)
-        } catch (e) {
+        } catch {
             setError('Failed to load reviews.')
         } finally {
             setLoading(false)

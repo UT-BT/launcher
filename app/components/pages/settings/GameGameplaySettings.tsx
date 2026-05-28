@@ -227,7 +227,7 @@ export function GameGameplaySettings() {
                 setPendingImportData(data.settings)
                 setImportError('')
                 setShowImportModal(true)
-            } catch (err) {
+            } catch {
                 setImportError('Failed to parse settings file.')
                 setPendingImportData(null)
                 setShowImportModal(true)

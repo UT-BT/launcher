@@ -33,7 +33,6 @@ export function StatsRow({ leaderboard, playtime, loading, onShowPlaytimeBreakdo
     const totalCaps = leaderboard.length
     const verifiedEntries = leaderboard.filter(e => e.verified)
     const verifiedCaps = verifiedEntries.length
-    const verifiedUniquePlayers = new Set(verifiedEntries.map(e => String(e.user))).size
 
     const playtimeByUser = new Map<string, number>()
     let totalPlaytimeSec = 0

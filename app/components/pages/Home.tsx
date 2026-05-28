@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo, useState, useEffect, useCallback } from 'react'
 import { Activity, AlertTriangle, RefreshCw } from 'lucide-react'
 import {
     UserProfile, fetchSummary, Summary, SummaryWorldRecord, ActiveTitle,
@@ -76,7 +76,7 @@ export function Home({
         }
     }, [latestPatch, lastLoginIso, dismissedPatch, installedPatch])
 
-    const loadData = async () => {
+    const loadData = useCallback(async () => {
         if (!userProfile?.accessToken) return
         setLoading(true)
         setError(null)
@@ -93,7 +93,7 @@ export function Home({
         } finally {
             setLoading(false)
         }
-    }
+    }, [userProfile?.accessToken])
 
     useEffect(() => {
         if (userProfile?.accessToken) {
@@ -101,7 +101,7 @@ export function Home({
         } else {
             setLoading(false)
         }
-    }, [userProfile?.accessToken])
+    }, [userProfile?.accessToken, loadData])
 
     const handleDismissPatch = (tag: string) => {
         setDismissedPatch(tag)

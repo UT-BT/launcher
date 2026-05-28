@@ -170,7 +170,7 @@ export function GameVideoSettings() {
                 setPendingImportData(data)
                 setImportError('')
                 setShowImportModal(true)
-            } catch (err) {
+            } catch {
                 setImportError('Failed to parse settings file.')
                 setPendingImportData(null)
                 setShowImportModal(true)

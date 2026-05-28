@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useState } from 'react'
 import { AppInfo } from './AppInfo'
 
 interface TitlebarContextProps {
@@ -24,7 +24,7 @@ export const TitlebarContextProvider = ({ children }: { children: React.ReactNod
   const [areButtonsDisabled, setAreButtonsDisabled] = useState(true)
   const [isGameProfilesDisabled, setIsGameProfilesDisabled] = useState(true)
   const closeActiveMenu = () => setActiveMenuIndex(null)
-  const toggleAppInfo = () => setShowAppInfo(prev => !prev)
+  const toggleAppInfo = useCallback(() => setShowAppInfo(prev => !prev), [])
 
   useEffect(() => {
     const contextElement = document.getElementById('titlebar-context')

@@ -59,7 +59,7 @@ export function GameInputSettings() {
         }
     }
 
-    const ensureAliasExists = async (aliasName: string, command: string) => {
+    const ensureAliasExists = useCallback(async (aliasName: string, command: string) => {
         const inputSection = await window.conveyor.ini.readIniSection('User.ini', 'Engine.Input') as Record<string, string | string[]> | undefined
         if (!inputSection) return
 
@@ -105,9 +105,9 @@ export function GameInputSettings() {
         }
 
         await window.conveyor.ini.writeIniValue('User.ini', 'Engine.Input', targetKey, `(Command="${command}",Alias="${aliasName}")`)
-    }
+    }, [])
 
-    const applyBind = async (key: string, command: string, slot: number) => {
+    const applyBind = useCallback(async (key: string, command: string, slot: number) => {
         try {
             const normalizedCommand = command.toLowerCase()
 
@@ -160,7 +160,7 @@ export function GameInputSettings() {
             setEditingBind(null)
             setConflictInfo(null)
         }
-    }
+    }, [binds, ensureAliasExists])
 
     const handleInput = useCallback(async (key: string) => {
         if (!editingBind) return
@@ -190,7 +190,7 @@ export function GameInputSettings() {
         }
 
         await applyBind(key, command, slot)
-    }, [editingBind, binds])
+    }, [editingBind, binds, applyBind])
 
     const confirmConflict = async () => {
         if (!conflictInfo) return
@@ -300,7 +300,7 @@ export function GameInputSettings() {
                 setPendingImportData(data.binds)
                 setImportError('')
                 setShowImportModal(true)
-            } catch (err) {
+            } catch {
                 setImportError('Failed to parse keybind settings file.')
                 setPendingImportData(null)
                 setShowImportModal(true)
