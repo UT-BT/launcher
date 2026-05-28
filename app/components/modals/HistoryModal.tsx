@@ -116,6 +116,13 @@ export function HistoryModal({
                                                     <span className="font-bold text-white/90 truncate">
                                                         {displayMapName(cap.mapName)}
                                                     </span>
+                                                </div>
+                                            </DataTableCell>
+                                            <DataTableCell>
+                                                <PlayerInfo alias={cap.author} size="sm" />
+                                            </DataTableCell>
+                                            <DataTableCell align="right">
+                                                <div className="flex items-center justify-end gap-2">
                                                     {medalIcon && (
                                                         <img
                                                             src={medalIcon}
@@ -124,15 +131,10 @@ export function HistoryModal({
                                                             className="h-4 w-auto object-contain shrink-0"
                                                         />
                                                     )}
+                                                    <span className="font-mono font-black text-white/90 tracking-tight">
+                                                        {formatCapTime(cap.time)}
+                                                    </span>
                                                 </div>
-                                            </DataTableCell>
-                                            <DataTableCell>
-                                                <PlayerInfo alias={cap.author} size="sm" />
-                                            </DataTableCell>
-                                            <DataTableCell align="right">
-                                                <span className="font-mono font-black text-white/90 tracking-tight">
-                                                    {formatCapTime(cap.time)}
-                                                </span>
                                             </DataTableCell>
                                             <DataTableCell align="right">
                                                 <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest whitespace-nowrap">

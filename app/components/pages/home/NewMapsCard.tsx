@@ -42,15 +42,16 @@ export function NewMapsCard({ maps, favoriteMapNames, onToggleFavorite, onMapSel
                             <DataTableCell>
                                 <div className="flex flex-col min-w-0 gap-0.5">
                                     <div className="flex items-center gap-2 min-w-0">
-                                        <span className="font-bold text-white/90 truncate">
-                                            {displayMapName(map.name)}
-                                        </span>
                                         <FavoriteStar
                                             name={map.name}
                                             isFavorited={favoriteMapNames.has(map.name)}
                                             onToggle={onToggleFavorite}
                                             size="sm"
+                                            className="shrink-0"
                                         />
+                                        <span className="font-bold text-white/90 truncate">
+                                            {displayMapName(map.name)}
+                                        </span>
                                     </div>
                                     <PlayerInfo alias={map.author} size="sm" className="text-[10px] text-muted-foreground/60" />
                                 </div>

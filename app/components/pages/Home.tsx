@@ -226,6 +226,8 @@ export function Home({
                     <SectionHeader title="Recent World Records" />
                     <RecentWorldRecords
                         records={recentWRs}
+                        favoriteMapNames={favoriteMapNames}
+                        onToggleFavorite={onToggleFavorite}
                         onMapSelect={onMapSelect}
                         onWatchReplay={handleWatchReplay}
                         loadingCapId={replay.loadingCapId}
@@ -253,6 +255,8 @@ export function Home({
                     <PendingReviewsCard
                         accessToken={userProfile.accessToken}
                         refreshKey={pendingReviewsRefreshKey}
+                        favoriteMapNames={favoriteMapNames}
+                        onToggleFavorite={onToggleFavorite}
                         onReview={handleReviewMap}
                         onMapSelect={onMapSelect}
                     />

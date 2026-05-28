@@ -5,19 +5,22 @@ import {
 } from '@/app/components/shared/DataTable'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
+import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
 import { IconActionButton } from '@/app/components/shared/IconActionButton'
 import { formatCapTime, displayMapName } from '@/app/utils/format'
 import type { SummaryWorldRecord } from '@/app/utils/api'
 
 interface RecentWorldRecordsProps {
     records: SummaryWorldRecord[]
+    favoriteMapNames: Set<string>
+    onToggleFavorite: (mapName: string) => void
     onMapSelect?: (mapName: string) => void
     onWatchReplay: (record: SummaryWorldRecord) => void
     loadingCapId: string | null
 }
 
 export function RecentWorldRecords({
-    records, onMapSelect, onWatchReplay, loadingCapId,
+    records, favoriteMapNames, onToggleFavorite, onMapSelect, onWatchReplay, loadingCapId,
 }: RecentWorldRecordsProps) {
     return (
         <DataTableShell className="flex-none">
@@ -45,7 +48,16 @@ export function RecentWorldRecords({
                                     <MapThumbnail mapName={r.mapName} className="w-12 h-12" />
                                 </DataTableCell>
                                 <DataTableCell>
-                                    <span className="font-bold text-white/90">{displayMapName(r.mapName)}</span>
+                                    <div className="flex items-center gap-2">
+                                        <FavoriteStar
+                                            name={r.mapName}
+                                            isFavorited={favoriteMapNames.has(r.mapName)}
+                                            onToggle={onToggleFavorite}
+                                            size="sm"
+                                            className="shrink-0"
+                                        />
+                                        <span className="font-bold text-white/90 truncate">{displayMapName(r.mapName)}</span>
+                                    </div>
                                 </DataTableCell>
                                 <DataTableCell>
                                     <PlayerInfo

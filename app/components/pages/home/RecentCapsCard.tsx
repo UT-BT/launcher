@@ -54,9 +54,23 @@ export function RecentCapsCard({
                                 </DataTableCell>
                                 <DataTableCell>
                                     <div className="flex items-center gap-2">
+                                        <FavoriteStar
+                                            name={ach.mapName}
+                                            isFavorited={favoriteMapNames.has(ach.mapName)}
+                                            onToggle={onToggleFavorite}
+                                            size="sm"
+                                            className="shrink-0"
+                                        />
                                         <span className="font-bold text-white/90 truncate">
                                             {displayMapName(ach.mapName)}
                                         </span>
+                                    </div>
+                                </DataTableCell>
+                                <DataTableCell>
+                                    <PlayerInfo alias={ach.author} size="sm" />
+                                </DataTableCell>
+                                <DataTableCell align="right">
+                                    <div className="flex items-center justify-end gap-2">
                                         {medalIcon && (
                                             <img
                                                 src={medalIcon}
@@ -65,21 +79,10 @@ export function RecentCapsCard({
                                                 className="h-4 w-auto object-contain shrink-0"
                                             />
                                         )}
-                                        <FavoriteStar
-                                            name={ach.mapName}
-                                            isFavorited={favoriteMapNames.has(ach.mapName)}
-                                            onToggle={onToggleFavorite}
-                                            size="sm"
-                                        />
+                                        <span className="font-mono font-black text-white/90 tracking-tight">
+                                            {timeStr}
+                                        </span>
                                     </div>
-                                </DataTableCell>
-                                <DataTableCell>
-                                    <PlayerInfo alias={ach.author} size="sm" />
-                                </DataTableCell>
-                                <DataTableCell align="right">
-                                    <span className="font-mono font-black text-white/90 tracking-tight">
-                                        {timeStr}
-                                    </span>
                                 </DataTableCell>
                                 <DataTableCell align="right">
                                     <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">

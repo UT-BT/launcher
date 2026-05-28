@@ -5,6 +5,7 @@ import {
     DataTableCell, DataTableEmpty, DataTableSkeletonRow,
 } from '@/app/components/shared/DataTable'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
+import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
 import { IconActionButton } from '@/app/components/shared/IconActionButton'
 import { Button } from '@/app/components/ui/button'
 import { displayMapName } from '@/app/utils/format'
@@ -15,11 +16,13 @@ const PAGE_SIZE = 5
 interface PendingReviewsCardProps {
     accessToken?: string
     refreshKey?: number
+    favoriteMapNames: Set<string>
+    onToggleFavorite: (mapName: string) => void
     onReview: (mapName: string) => void
     onMapSelect?: (mapName: string) => void
 }
 
-export function PendingReviewsCard({ accessToken, refreshKey = 0, onReview, onMapSelect }: PendingReviewsCardProps) {
+export function PendingReviewsCard({ accessToken, refreshKey = 0, favoriteMapNames, onToggleFavorite, onReview, onMapSelect }: PendingReviewsCardProps) {
     const [page, setPage] = useState(1)
     const [items, setItems] = useState<PendingReview[]>([])
     const [total, setTotal] = useState(0)
@@ -87,9 +90,18 @@ export function PendingReviewsCard({ accessToken, refreshKey = 0, onReview, onMa
                                     <MapThumbnail mapName={rev.mapName} className="w-12 h-12" />
                                 </DataTableCell>
                                 <DataTableCell>
-                                    <span className="font-bold text-white/90 truncate hover:underline underline-offset-2">
-                                        {displayMapName(rev.mapName)}
-                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        <FavoriteStar
+                                            name={rev.mapName}
+                                            isFavorited={favoriteMapNames.has(rev.mapName)}
+                                            onToggle={onToggleFavorite}
+                                            size="sm"
+                                            className="shrink-0"
+                                        />
+                                        <span className="font-bold text-white/90 truncate hover:underline underline-offset-2">
+                                            {displayMapName(rev.mapName)}
+                                        </span>
+                                    </div>
                                 </DataTableCell>
                                 <DataTableCell align="right">
                                     <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">
