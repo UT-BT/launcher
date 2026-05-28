@@ -111,14 +111,14 @@ export function HeroSection({ userId, summary, loading, isSelf, chart, onChangeT
                             </h1>
                             {role && (
                                 <span className={cn(
-                                    'inline-flex items-center px-2 py-0.5 rounded-md border text-[10px] font-bold uppercase tracking-wider',
+                                    'inline-flex items-center px-2 py-0.5 rounded-md border text-[10px] font-bold uppercase tracking-wider translate-y-[3px]',
                                     role.className,
                                 )}>
                                     {role.label}
                                 </span>
                             )}
                             {isSelf && (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 text-[10px] font-bold uppercase tracking-wider">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 text-[10px] font-bold uppercase tracking-wider translate-y-[3px]">
                                     You
                                 </span>
                             )}
@@ -129,7 +129,7 @@ export function HeroSection({ userId, summary, loading, isSelf, chart, onChangeT
                                     type="button"
                                     onClick={onChangeTitle}
                                     style={getTitleTextStyle(title)}
-                                    className="text-sm truncate mt-0.5 text-left cursor-pointer hover:opacity-80 transition-opacity"
+                                    className="text-sm truncate mt-0.5 text-left self-start max-w-full cursor-pointer hover:opacity-80 transition-opacity"
                                     title="Change title"
                                 >
                                     {title.name}
@@ -143,7 +143,7 @@ export function HeroSection({ userId, summary, loading, isSelf, chart, onChangeT
                             <button
                                 type="button"
                                 onClick={onChangeTitle}
-                                className="text-sm truncate mt-0.5 text-left text-muted-foreground cursor-pointer hover:text-white underline decoration-dashed underline-offset-4 decoration-white/30 transition-colors"
+                                className="text-sm truncate mt-0.5 text-left self-start max-w-full text-muted-foreground cursor-pointer hover:text-white underline decoration-dashed underline-offset-4 decoration-white/30 transition-colors"
                             >
                                 Pick a title
                             </button>
