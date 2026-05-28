@@ -70,4 +70,8 @@ interface Window {
   utbtUpdater: {
     onStateChanged: (cb: (state: import('@/lib/conveyor/schemas/updater-schema').UpdaterStateSnapshot) => void) => () => void
   }
+  uiScale: {
+    set: (factor: number) => void
+    get: () => number
+  }
 }

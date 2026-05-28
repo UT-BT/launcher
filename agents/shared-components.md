@@ -170,7 +170,6 @@ the whole thead during the step:
 | `app/components/shared/Modal.tsx` | Generic modal shell. Use `offsetSidebar` when modal should respect the navigation rail. |
 | `app/components/shared/ConfirmModal.tsx` | Yes/no confirmation dialog, wraps `Modal`. |
 | `app/components/shared/BackButton.tsx` | "← Back" button. |
-| `app/components/shared/Tooltip.tsx` | Hover tooltip (non-interactive content). For interactive popovers, use Radix `DropdownMenu` directly. |
 
 ## UI primitives (`app/components/ui/`)
 
