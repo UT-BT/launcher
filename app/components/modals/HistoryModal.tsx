@@ -155,20 +155,21 @@ export function HistoryModal({
                                                 </span>
                                             </DataTableCell>
                                             <DataTableCell align="center" className="px-2">
-                                                <IconActionButton
-                                                    variant="replay"
-                                                    icon={Play}
-                                                    iconFill
-                                                    tooltip={!cap.verified ? 'No replay — cap not verified' : 'Watch run'}
-                                                    disabled={!cap.verified}
-                                                    loading={isLoadingReplay}
-                                                    onClick={() => replay.openReplay({
-                                                        capId: cap.id,
-                                                        mapName: cap.mapName,
-                                                        time: cap.time,
-                                                        alias: userAlias ?? undefined,
-                                                    })}
-                                                />
+                                                {cap.verified && (
+                                                    <IconActionButton
+                                                        variant="replay"
+                                                        icon={Play}
+                                                        iconFill
+                                                        tooltip="Watch run"
+                                                        loading={isLoadingReplay}
+                                                        onClick={() => replay.openReplay({
+                                                            capId: cap.id,
+                                                            mapName: cap.mapName,
+                                                            time: cap.time,
+                                                            alias: userAlias ?? undefined,
+                                                        })}
+                                                    />
+                                                )}
                                             </DataTableCell>
                                             <DataTableCell align="center" className="px-2">
                                                 {onReview && (

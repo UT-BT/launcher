@@ -126,6 +126,15 @@ export function Home({
         })
     }
 
+    const handleWatchAchievement = (achievement: Summary['achievements'][number]) => {
+        replay.openReplay({
+            capId: achievement.id,
+            mapName: achievement.mapName,
+            time: achievement.time,
+            alias: userProfile?.alias ?? undefined,
+        })
+    }
+
     if (!userProfile) {
         return (
             <div className="flex h-full items-center justify-center">
@@ -219,6 +228,8 @@ export function Home({
                         onToggleFavorite={onToggleFavorite}
                         onMapSelect={onMapSelect}
                         onReview={handleReviewMap}
+                        onWatchReplay={handleWatchAchievement}
+                        loadingCapId={replay.loadingCapId}
                     />
                 </section>
 

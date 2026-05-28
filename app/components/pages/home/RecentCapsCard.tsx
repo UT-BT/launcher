@@ -1,4 +1,4 @@
-import { MessageSquarePlus } from 'lucide-react'
+import { MessageSquarePlus, Play } from 'lucide-react'
 import {
     DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow,
     DataTableCell, DataTableEmpty,
@@ -20,10 +20,12 @@ interface RecentCapsCardProps {
     onToggleFavorite: (mapName: string) => void
     onMapSelect?: (mapName: string) => void
     onReview?: (mapName: string) => void
+    onWatchReplay?: (achievement: Achievement) => void
+    loadingCapId?: string | null
 }
 
 export function RecentCapsCard({
-    achievements, favoriteMapNames, onToggleFavorite, onMapSelect, onReview,
+    achievements, favoriteMapNames, onToggleFavorite, onMapSelect, onReview, onWatchReplay, loadingCapId,
 }: RecentCapsCardProps) {
     return (
         <DataTableShell className="flex-none">
@@ -34,10 +36,11 @@ export function RecentCapsCard({
                 <DataTableHeaderCell align="right">Time</DataTableHeaderCell>
                 <DataTableHeaderCell align="right" width="6rem">When</DataTableHeaderCell>
                 <DataTableHeaderCell align="center" width="3rem"> </DataTableHeaderCell>
+                <DataTableHeaderCell align="center" width="3rem"> </DataTableHeaderCell>
             </DataTableHeaderRow>
             <tbody>
                 {achievements.length === 0 ? (
-                    <DataTableEmpty colSpan={6} message="No recent caps. Head to a server and start capping!" />
+                    <DataTableEmpty colSpan={7} message="No recent caps. Head to a server and start capping!" />
                 ) : (
                     achievements.map(ach => {
                         const medalIcon = getMedalIcon(ach.medal)
@@ -90,6 +93,18 @@ export function RecentCapsCard({
                                     <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">
                                         {ach.timeAgo}
                                     </span>
+                                </DataTableCell>
+                                <DataTableCell align="center" className="px-2">
+                                    {onWatchReplay && ach.verified && (
+                                        <IconActionButton
+                                            variant="replay"
+                                            icon={Play}
+                                            iconFill
+                                            tooltip="Watch run"
+                                            loading={loadingCapId === ach.id}
+                                            onClick={() => onWatchReplay(ach)}
+                                        />
+                                    )}
                                 </DataTableCell>
                                 <DataTableCell align="center" className="px-2">
                                     {onReview && (
