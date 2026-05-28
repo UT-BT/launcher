@@ -22,8 +22,7 @@ export function LauncherGeneralSettings() {
     }
 
     const handleScaleCommit = () => {
-        document.documentElement.style.zoom = `${uiScale}%`
-        document.documentElement.style.setProperty('--app-scale', (uiScale / 100).toString())
+        window.uiScale?.set(uiScale / 100)
         localStorage.setItem('ui-scale', uiScale.toString())
     }
 

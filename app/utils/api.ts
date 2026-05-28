@@ -68,6 +68,7 @@ export interface MapMetadata {
     name: string
     added: string
     difficulty: number
+    active?: boolean
     tags?: string
     author?: string | number
     author_str?: string
@@ -311,6 +312,22 @@ export async function fetchMaps(accessToken: string, params: MapListParams = {})
     }
 }
 
+export async function fetchMap(accessToken: string, mapName: string, columns?: string[]): Promise<MapMetadata | null> {
+    try {
+        const qs = columns?.length ? `?columns=${columns.join(',')}` : ''
+        const response = await fetch(`${API_BASE_URL}/maps/${encodeURIComponent(mapName)}${qs}`, {
+            headers: { 'Authorization': `Bearer ${accessToken}` },
+        })
+        if (!response.ok) return null
+        const json = await response.json()
+        if (json.success && json.data) return json.data as MapMetadata
+        return null
+    } catch (error) {
+        console.error('Error fetching map:', error)
+        return null
+    }
+}
+
 export async function fetchMapsMetadata(accessToken: string): Promise<MapMetadata[]> {
     const rows = await fetchMaps(accessToken, {
         columns: MAP_METADATA_COLUMNS,
@@ -486,6 +503,21 @@ export async function fetchWorldRecordProgression(accessToken: string, mapName: 
         return []
     } catch {
         return []
+    }
+}
+
+export async function fetchMapCapsCount(accessToken: string, mapName: string): Promise<number> {
+    const url = `${API_BASE_URL}/caps/count/?map=${encodeURIComponent(mapName)}`
+    try {
+        const res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } })
+        if (!res.ok) return 0
+        const json = await res.json()
+        if (json.success && json.data && typeof json.data.count === 'number') {
+            return json.data.count
+        }
+        return 0
+    } catch {
+        return 0
     }
 }
 

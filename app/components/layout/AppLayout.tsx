@@ -73,12 +73,7 @@ export function AppLayout({ children, currentView, onViewChange, userProfile, in
 
     useEffect(() => {
         const saved = localStorage.getItem('ui-scale')
-        if (saved) {
-            document.documentElement.style.zoom = `${saved}%`
-            document.documentElement.style.setProperty('--app-scale', (parseInt(saved, 10) / 100).toString())
-        } else {
-            document.documentElement.style.setProperty('--app-scale', '1')
-        }
+        window.uiScale?.set(saved ? parseInt(saved, 10) / 100 : 1)
 
         const handleOpenSettings = (e: Event) => {
             const customEvent = e as CustomEvent

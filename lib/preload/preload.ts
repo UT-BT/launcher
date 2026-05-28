@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer, webUtils } from 'electron'
+import { contextBridge, ipcRenderer, webUtils, webFrame } from 'electron'
 import { conveyor } from '@/lib/conveyor/api'
 
 // Use `contextBridge` APIs to expose APIs to
@@ -117,6 +117,10 @@ if (process.contextIsolated) {
         return () => ipcRenderer.removeListener('updater:state-changed', listener)
       }
     })
+    contextBridge.exposeInMainWorld('uiScale', {
+      set: (factor: number) => webFrame.setZoomFactor(factor),
+      get: () => webFrame.getZoomFactor(),
+    })
   } catch (error) {
     console.error('Preload script error:', error)
   }
@@ -230,5 +234,9 @@ if (process.contextIsolated) {
       ipcRenderer.on('updater:state-changed', listener)
       return () => ipcRenderer.removeListener('updater:state-changed', listener)
     }
+  }
+  window.uiScale = {
+    set: (factor: number) => webFrame.setZoomFactor(factor),
+    get: () => webFrame.getZoomFactor(),
   }
 }

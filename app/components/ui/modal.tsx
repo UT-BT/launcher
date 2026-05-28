@@ -110,7 +110,7 @@ export function Modal({
                 tabIndex={-1}
                 style={{
                     maxWidth: maxWidth,
-                    maxHeight: maxHeight || 'calc(90vh / var(--app-scale, 1))'
+                    maxHeight: maxHeight || '90vh'
                 } as React.CSSProperties}
                 className={cn(
                     "w-[95%] lg:w-[70%] max-w-7xl bg-card border border-border rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col",

@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 import { displayMapName, formatAddedDate, isNew } from '@/app/utils/format'
 import { difficultyBgColor } from '@/app/utils/scoreColors'
 import type { MapMetadata } from '@/app/utils/api'
+import { MapVersionsBar } from './MapVersionsCard'
 
 interface HeroSectionProps {
     mapName: string
@@ -16,10 +17,13 @@ interface HeroSectionProps {
     isFavorited: boolean
     onToggleFavorite: (mapName: string) => void
     chart?: React.ReactNode
+    accessToken?: string
+    onMapSelect?: (mapName: string) => void
 }
 
 export function HeroSection({
     mapName, map, avgOverall, reviewCount, isFavorited, onToggleFavorite, chart,
+    accessToken, onMapSelect,
 }: HeroSectionProps) {
     const difficulty = map?.difficulty
     const author = map?.author_str ?? (map?.author != null ? String(map.author) : null)
@@ -108,6 +112,7 @@ export function HeroSection({
                         {tags.map(t => (
                             <MetaPill key={t} value={t.toUpperCase()} className="!text-[10px]" />
                         ))}
+                        <MapVersionsBar map={map} accessToken={accessToken} onSelect={onMapSelect} />
                     </div>
 
                     {chart && <div className="flex-1 min-h-0">{chart}</div>}

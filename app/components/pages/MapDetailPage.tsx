@@ -1,9 +1,9 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
-import { ArrowLeft, RefreshCw } from 'lucide-react'
+import { AlertTriangle, ArrowLeft, RefreshCw } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import {
-    fetchMaps,
+    fetchMap,
     fetchMapLeaderboard,
     fetchMapReviews,
     fetchPlaytimeForMap,
@@ -25,7 +25,6 @@ import { HeroSection } from './mapDetail/HeroSection'
 import { StatsRow } from './mapDetail/StatsRow'
 import { YourStatsCard } from './mapDetail/YourStatsCard'
 import { MedalCard } from './mapDetail/MedalCard'
-import { MapVersionsCard } from './mapDetail/MapVersionsCard'
 import { LeaderboardCard } from './mapDetail/LeaderboardCard'
 import { ReviewsCard } from './mapDetail/ReviewsCard'
 
@@ -41,7 +40,7 @@ interface MapDetailPageProps {
 }
 
 const MAP_METADATA_COLUMNS = [
-    'name', 'added', 'difficulty', 'tags', 'author', 'author_str', 'author_ref',
+    'name', 'added', 'difficulty', 'active', 'tags', 'author', 'author_str', 'author_ref',
     'world_record', 'champion_medal', 'gold_medal', 'silver_medal', 'bronze_medal',
     'url', 'preceded_by', 'superseded_by', 'changelog',
 ]
@@ -75,8 +74,8 @@ export function MapDetailPage({
         setError(null)
         setUserCapCount(null)
         try {
-            const [maps, lb, rv, pt, wr, capCount] = await Promise.all([
-                fetchMaps(accessToken, { name: mapName, columns: MAP_METADATA_COLUMNS, active: undefined }),
+            const [matched, lb, rv, pt, wr, capCount] = await Promise.all([
+                fetchMap(accessToken, mapName, MAP_METADATA_COLUMNS),
                 fetchMapLeaderboard(accessToken, mapName, false),
                 fetchMapReviews(accessToken, mapName),
                 fetchPlaytimeForMap(accessToken, mapName),
@@ -85,8 +84,7 @@ export function MapDetailPage({
                     ? fetchUserCapCountForMap(accessToken, currentUserId, mapName)
                     : Promise.resolve(0),
             ])
-            const matched = maps.find(m => m.name === mapName) ?? maps[0] ?? null
-            setMap(matched as MapMetadata | null)
+            setMap(matched)
             setLeaderboard(lb)
             setReviews(rv)
             setPlaytime(pt)
@@ -123,6 +121,8 @@ export function MapDetailPage({
         overall: myReview.overall,
     } : undefined
 
+    const isInactive = map?.active === false
+
     return (
         <div className="space-y-4 h-full flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-0 duration-500">
             <div className="flex items-center justify-between gap-3 shrink-0">
@@ -155,6 +155,8 @@ export function MapDetailPage({
                 reviewCount={reviews.length}
                 isFavorited={favoriteMapNames.has(mapName)}
                 onToggleFavorite={onToggleFavorite}
+                accessToken={accessToken}
+                onMapSelect={onMapSelect}
                 chart={
                     <Suspense fallback={<div className="h-full min-h-[100px] bg-white/[0.02] border border-white/5 rounded-lg animate-pulse" />}>
                         <ActivityChart leaderboard={leaderboard} playtime={playtime} />
@@ -165,6 +167,18 @@ export function MapDetailPage({
             {error && (
                 <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm shrink-0">
                     {error}
+                </div>
+            )}
+
+            {isInactive && (
+                <div className="flex items-start gap-2 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-amber-200 text-sm shrink-0">
+                    <AlertTriangle className="size-4 mt-0.5 shrink-0" />
+                    <div className="leading-snug">
+                        <div className="font-semibold">This version is no longer in rotation.</div>
+                        <div className="text-xs text-amber-200/80">
+                            A newer version supersedes it. Records and reviews are read-only.
+                        </div>
+                    </div>
                 </div>
             )}
 
@@ -190,17 +204,12 @@ export function MapDetailPage({
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
                     <div className="lg:col-span-4 space-y-4">
-                        <MapVersionsCard
-                            map={map}
-                            accessToken={accessToken}
-                            onSelect={(name) => onMapSelect?.(name)}
-                        />
                         <MedalCard map={map} loading={loading} />
                         <ReviewsCard
                             reviews={reviews}
                             currentUserId={currentUserId ?? undefined}
                             loading={loading}
-                            canSubmit={!!accessToken}
+                            canSubmit={!!accessToken && !isInactive}
                             onOpenReviewModal={() => setReviewModalOpen(true)}
                         />
                     </div>

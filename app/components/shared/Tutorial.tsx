@@ -74,19 +74,14 @@ export function Tutorial({ steps, step, setStep, onClose, ariaLabel }: TutorialP
             el.style.zIndex = '60'
         })
 
-        const getZoom = () => {
-            const z = parseFloat(document.documentElement.style.zoom)
-            return isNaN(z) ? 1 : z / 100
-        }
         const updateRects = () => {
-            const zoom = getZoom()
             setRects(els.map(el => {
                 const r = el.getBoundingClientRect()
                 return {
-                    top: r.top / zoom,
-                    left: r.left / zoom,
-                    width: r.width / zoom,
-                    height: r.height / zoom,
+                    top: r.top,
+                    left: r.left,
+                    width: r.width,
+                    height: r.height,
                 }
             }))
         }

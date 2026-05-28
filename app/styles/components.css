@@ -118,29 +118,6 @@
   margin-top: 0.25rem;
 }
 
-.custom-tooltip {
-  position: fixed;
-  max-width: 320px;
-  padding: 10px 12px;
-  background: rgba(15, 23, 42, 0.98);
-  border: 1px solid rgba(148, 163, 184, 0.25);
-  border-radius: 10px;
-  color: rgba(248, 250, 252, 0.95);
-  font-size: 0.9rem;
-  line-height: 1.35;
-  z-index: 2000;
-  box-shadow: 0 12px 28px rgba(2, 6, 23, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.06);
-  pointer-events: none;
-  opacity: 0;
-  transform: translateY(-4px);
-  transition: opacity 120ms ease, transform 120ms ease;
-}
-
-.custom-tooltip.visible {
-  opacity: 1;
-  transform: translateY(0);
-}
-
 .form-section {
   display: flex;
   flex-direction: column;
