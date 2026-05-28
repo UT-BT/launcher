@@ -384,6 +384,12 @@ export class DemoWatcherService {
     }
 
     public async extractBtpogId(demoFp: string): Promise<string> {
+        // Only ever hand an existing .dem file to the strings binary
+        if (!demoFp.toLowerCase().endsWith('.dem') || !existsSync(demoFp)) {
+            loggingService.warn('Rejected non-demo path for extractBtpogId', 'DemoWatcher')
+            return ''
+        }
+
         let scriptPath: string
         if (app.isPackaged) {
             scriptPath = join(process.resourcesPath, 'app.asar.unpacked', 'resources', 'bin', 'ut99-strings.exe')
