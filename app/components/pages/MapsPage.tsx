@@ -828,11 +828,6 @@ export function MapsPage({
 
     const userId = userProfile?.id ?? undefined
 
-    const newMapCount = useMemo(() => {
-        if (!caches.metadata) return 0
-        return caches.metadata.reduce((n, m) => n + (isNew(m.added) ? 1 : 0), 0)
-    }, [caches.metadata])
-
     const loadCachesInFlightRef = useRef({
         metadata: false,
         reviews: false,
@@ -1055,75 +1050,91 @@ export function MapsPage({
         onStateChange(prev => Math.abs(prev.scrollTop - top) > 24 ? { ...prev, scrollTop: top } : prev)
     }, [onStateChange])
 
-    const applyAllClientFilters = useCallback(<T extends Map | MapMetadata>(rows: T[]): T[] => {
-        return rows.filter(m => {
-            if (state.authorFilters.length > 0) {
-                const a = getAuthorString(m as Map).toLowerCase()
-                if (!state.authorFilters.some(f => f.toLowerCase() === a)) return false
-            }
-            if (state.tagFilters.length > 0) {
-                const tags = (m.tags ?? '').toLowerCase().split(',').map(t => t.trim()).filter(Boolean)
-                if (!state.tagFilters.some(f => tags.includes(f.toLowerCase()))) return false
-            }
-            if (state.yearFilters.length > 0) {
-                const y = String(new Date(m.added).getFullYear())
-                if (!state.yearFilters.includes(y)) return false
-            }
-            if (state.difficultyFilters.length > 0) {
-                if (!state.difficultyFilters.some(t => isMapInDifficultyTier(m.difficulty, t))) return false
-            }
-            if (state.newOnly && !isNew(m.added)) return false
-            if (state.favoritesOnly && !favoriteMapNames.has(m.name)) return false
+    const passesClientFilters = useCallback((
+        m: Map | MapMetadata,
+        opts?: { skipNew?: boolean; skipFavorites?: boolean },
+    ): boolean => {
+        if (state.authorFilters.length > 0) {
+            const a = getAuthorString(m as Map).toLowerCase()
+            if (!state.authorFilters.some(f => f.toLowerCase() === a)) return false
+        }
+        if (state.tagFilters.length > 0) {
+            const tags = (m.tags ?? '').toLowerCase().split(',').map(t => t.trim()).filter(Boolean)
+            if (!state.tagFilters.some(f => tags.includes(f.toLowerCase()))) return false
+        }
+        if (state.yearFilters.length > 0) {
+            const y = String(new Date(m.added).getFullYear())
+            if (!state.yearFilters.includes(y)) return false
+        }
+        if (state.difficultyFilters.length > 0) {
+            if (!state.difficultyFilters.some(t => isMapInDifficultyTier(m.difficulty, t))) return false
+        }
+        if (!opts?.skipNew && state.newOnly && !isNew(m.added)) return false
+        if (!opts?.skipFavorites && state.favoritesOnly && !favoriteMapNames.has(m.name)) return false
 
-            const ratings = caches.avgRatings[m.name]
-            if (state.ratingFilters.length > 0) {
-                const v = ratingScale100(ratings?.overall)
-                if (!state.ratingFilters.some(t => isInRatingTier(v, t))) return false
-            }
-            if (state.aestheticsFilters.length > 0) {
-                const v = ratingScale100(ratings?.aesthetics)
-                if (!state.aestheticsFilters.some(t => isInRatingTier(v, t))) return false
-            }
-            if (state.learningFilters.length > 0) {
-                const v = ratingScale100(ratings?.learning)
-                if (!state.learningFilters.some(t => isInRatingTier(v, t))) return false
-            }
-            if (state.luckFilters.length > 0) {
-                const v = ratingScale100(ratings?.luck)
-                if (!state.luckFilters.some(t => isInLuckTier(v, t))) return false
-            }
+        const ratings = caches.avgRatings[m.name]
+        if (state.ratingFilters.length > 0) {
+            const v = ratingScale100(ratings?.overall)
+            if (!state.ratingFilters.some(t => isInRatingTier(v, t))) return false
+        }
+        if (state.aestheticsFilters.length > 0) {
+            const v = ratingScale100(ratings?.aesthetics)
+            if (!state.aestheticsFilters.some(t => isInRatingTier(v, t))) return false
+        }
+        if (state.learningFilters.length > 0) {
+            const v = ratingScale100(ratings?.learning)
+            if (!state.learningFilters.some(t => isInRatingTier(v, t))) return false
+        }
+        if (state.luckFilters.length > 0) {
+            const v = ratingScale100(ratings?.luck)
+            if (!state.luckFilters.some(t => isInLuckTier(v, t))) return false
+        }
 
-            const wr = (m as Map).world_record
-            if (state.recordTimeFilters.length > 0) {
-                if (!state.recordTimeFilters.some(t => isInRecordTimeTier(wr, t))) return false
-            }
+        const wr = (m as Map).world_record
+        if (state.recordTimeFilters.length > 0) {
+            if (!state.recordTimeFilters.some(t => isInRecordTimeTier(wr, t))) return false
+        }
 
-            if (state.cappedFilters.length > 0) {
-                const bestCap = caches.bestCaps[m.name]
-                const tier = computeMedalTier(bestCap, m as MapMetadata)
-                const matches =
-                    (state.cappedFilters.includes('uncapped') && tier === 'uncapped') ||
-                    (state.cappedFilters.includes('capped') && !!bestCap) ||
-                    (tier !== 'uncapped' && state.cappedFilters.includes(tier as CappedFilterValue))
-                if (!matches) return false
-            }
+        if (state.cappedFilters.length > 0) {
+            const bestCap = caches.bestCaps[m.name]
+            const tier = computeMedalTier(bestCap, m as MapMetadata)
+            const matches =
+                (state.cappedFilters.includes('uncapped') && tier === 'uncapped') ||
+                (state.cappedFilters.includes('capped') && !!bestCap) ||
+                (tier !== 'uncapped' && state.cappedFilters.includes(tier as CappedFilterValue))
+            if (!matches) return false
+        }
 
-            if (state.ratedFilters.length > 0) {
-                const rated = !!caches.myReviews[m.name]
-                const matches =
-                    (state.ratedFilters.includes('rated') && rated) ||
-                    (state.ratedFilters.includes('unrated') && !rated)
-                if (!matches) return false
-            }
+        if (state.ratedFilters.length > 0) {
+            const rated = !!caches.myReviews[m.name]
+            const matches =
+                (state.ratedFilters.includes('rated') && rated) ||
+                (state.ratedFilters.includes('unrated') && !rated)
+            if (!matches) return false
+        }
 
-            return true
-        })
+        return true
     }, [
         state.authorFilters, state.tagFilters, state.yearFilters, state.difficultyFilters,
         state.newOnly, state.favoritesOnly, state.ratingFilters, state.aestheticsFilters, state.learningFilters,
         state.luckFilters, state.recordTimeFilters, state.cappedFilters, state.ratedFilters,
         caches.avgRatings, caches.bestCaps, caches.myReviews, favoriteMapNames,
     ])
+
+    const applyAllClientFilters = useCallback(<T extends Map | MapMetadata>(rows: T[]): T[] =>
+        rows.filter(m => passesClientFilters(m)), [passesClientFilters])
+
+    const newMapCount = useMemo(() => {
+        if (!caches.metadata) return 0
+        return caches.metadata.reduce(
+            (n, m) => n + (isNew(m.added) && passesClientFilters(m, { skipNew: true }) ? 1 : 0), 0)
+    }, [caches.metadata, passesClientFilters])
+
+    const favoritesCount = useMemo(() => {
+        if (!caches.metadata) return 0
+        return caches.metadata.reduce(
+            (n, m) => n + (favoriteMapNames.has(m.name) && passesClientFilters(m, { skipFavorites: true }) ? 1 : 0), 0)
+    }, [caches.metadata, favoriteMapNames, passesClientFilters])
 
     const sortRows = useCallback(<T extends Map | MapMetadata>(rows: T[]): T[] => {
         const out = [...rows]
@@ -2220,9 +2231,9 @@ export function MapsPage({
                                 className="accent-yellow-400 cursor-pointer"
                             />
                             <span>Favorites</span>
-                            {favoriteMapNames.size > 0 && (
+                            {favoritesCount > 0 && (
                                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-yellow-500/20 text-yellow-300 border border-yellow-500/30">
-                                    {favoriteMapNames.size}
+                                    {favoritesCount}
                                 </span>
                             )}
                         </label>
