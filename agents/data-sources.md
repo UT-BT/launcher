@@ -52,6 +52,21 @@ https://flagcdn.com/w40/{2letterCode}.png
 
 `getRegionFlag(region)` in `server-utils.ts` returns the URL.
 
+## Map download service
+
+External service that dynamically packages a map + its dependencies into a zip
+laid out for direct extraction into a UT99 install:
+
+```
+GET https://api.utmapdownload.com/download?mapName={mapName}
+```
+
+The server caches packages — first request for a map can take many seconds while
+it builds the zip. Use `downloadMapZip(mapName, timeoutMs?)` in `app/utils/api.ts`
+(default 30s `AbortController` timeout). Pair with
+`window.conveyor.maps.extractToInstall(mapName, bytes)` to extract into the
+configured install dir without overwriting existing files.
+
 ## Electron IPC (`window.conveyor.*`)
 
 The main process exposes APIs via a contextBridge. Type-safe wrappers are
@@ -69,6 +84,8 @@ generated from `lib/main/...`. Common usage:
 | `window.conveyor.app.validateCurrentInstallation()` | `{ valid, version }` for the configured UT99 install. |
 | `window.conveyor.favorites.readIni()` | `{ ok, mapNames }` — favorites stored in user's `UTBT.ini`. |
 | `window.conveyor.favorites.writeIni(mapNames)` | Write favorites to `UTBT.ini`. |
+| `window.conveyor.maps.extractToInstall(mapName, bytes)` | Extract a map zip into the install dir without overwriting. Returns `{ ok, installPath, extracted[], skipped[] }` or `{ ok: false, reason }`. |
+| `window.conveyor.demos.saveToSystem(filename, bytes)` | Save a demo file into `{install}/System`. |
 | `window.utFavorites.onGameClosed(cb)` | Event — fires when the game process exits (so the launcher can re-read ini favorites). |
 | `window.utPatch.onPatchInstallStatus(cb)` / `onInstallationPathUpdated(cb)` | Patch / install change events. |
 | `window.auth.logout()` | Discord logout. |

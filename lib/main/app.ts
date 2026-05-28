@@ -8,6 +8,7 @@ import { registerGameHandlers } from '@/lib/conveyor/handlers/game-handler'
 import { registerIniHandlers } from '@/lib/conveyor/handlers/ini-handler'
 import { registerFavoritesHandlers, startBackgroundGamePoller } from '@/lib/conveyor/handlers/favorites-handler'
 import { registerDemosHandlers } from '@/lib/conveyor/handlers/demos-handler'
+import { registerMapsHandlers } from '@/lib/conveyor/handlers/maps-handler'
 import { registerUpdaterHandlers } from '@/lib/conveyor/handlers/updater-handler'
 import { demoWatcherService } from '@/lib/main/demo-watcher-service'
 import { updaterService } from '@/lib/main/updater-service'
@@ -78,6 +79,7 @@ export function createAppWindow(): void {
   registerIniHandlers(mainWindow)
   registerFavoritesHandlers(mainWindow)
   registerDemosHandlers(mainWindow)
+  registerMapsHandlers(mainWindow)
   registerUpdaterHandlers(mainWindow)
   startBackgroundGamePoller(mainWindow)
 

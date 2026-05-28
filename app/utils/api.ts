@@ -193,6 +193,23 @@ export async function downloadDemo(capId: string): Promise<ArrayBuffer> {
     return await response.arrayBuffer()
 }
 
+export const MAP_DOWNLOAD_URL = 'https://api.utmapdownload.com/download'
+
+export async function downloadMapZip(mapName: string, timeoutMs = 30_000): Promise<ArrayBuffer> {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), timeoutMs)
+    try {
+        const url = `${MAP_DOWNLOAD_URL}?mapName=${encodeURIComponent(mapName)}`
+        const response = await fetch(url, { signal: controller.signal })
+        if (!response.ok) {
+            throw new Error(`http-${response.status}`)
+        }
+        return await response.arrayBuffer()
+    } finally {
+        clearTimeout(timer)
+    }
+}
+
 export async function uploadDemo(file: Blob, filename: string, accessToken: string): Promise<{ success: boolean; message?: string; reason?: string }> {
     const formData = new FormData()
     formData.append('file', file, filename)
