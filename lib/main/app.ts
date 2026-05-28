@@ -26,6 +26,7 @@ export function createAppWindow(): void {
     `script-src ${scriptSrc}`,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: res: https://utbt.net https://gateway.utbt.net https://flagcdn.com https://cdn.discordapp.com",
+    "media-src 'self' https://democonverter-com-ut99.s3.nl-ams.scw.cloud",
     `connect-src ${connectSrc}`,
   ].join('; ')
 
