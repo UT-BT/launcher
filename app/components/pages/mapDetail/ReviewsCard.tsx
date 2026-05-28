@@ -82,7 +82,7 @@ export function ReviewsCard({
                         className="inline-flex items-center gap-1 h-6 px-2 rounded-md bg-blue-500/15 border border-blue-500/40 text-blue-200 hover:bg-blue-500/25 hover:text-white hover:border-blue-500/60 transition-colors text-[10px] font-bold uppercase tracking-wider cursor-pointer shrink-0"
                     >
                         <Plus className="size-3" />
-                        Write
+                        Add a Review
                     </button>
                 )}
             </div>
