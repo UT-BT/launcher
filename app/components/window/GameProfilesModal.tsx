@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { FaTimes, FaSave, FaTrash, FaExchangeAlt, FaPlus, FaEdit, FaCheck } from 'react-icons/fa'
 import { Button } from '@/app/components/ui/button'
 import { Input } from '@/app/components/ui/input'
@@ -31,7 +31,7 @@ export const GameProfilesModal = ({ isOpen, onClose }: GameProfilesModalProps) =
     const [pendingSwitchProfile, setPendingSwitchProfile] = useState<string | null>(null)
     const [showDiscardConfirm, setShowDiscardConfirm] = useState(false)
 
-    const fetchProfiles = async () => {
+    const fetchProfiles = useCallback(async () => {
         try {
             const list = await window.conveyor.app.getProfiles()
             const sortedList = list.sort((a, b) => new Date(b.modifiedAt).getTime() - new Date(a.modifiedAt).getTime())
@@ -53,13 +53,13 @@ export const GameProfilesModal = ({ isOpen, onClose }: GameProfilesModalProps) =
         } catch (error) {
             console.error('Failed to fetch profiles:', error)
         }
-    }
+    }, [selectedProfile])
 
     useEffect(() => {
         if (isOpen) {
             fetchProfiles()
         }
-    }, [isOpen])
+    }, [isOpen, fetchProfiles])
 
     const handleCreateProfile = async () => {
         if (!newProfileName.trim()) return

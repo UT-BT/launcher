@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Modal } from '@/app/components/ui/modal'
 import { fetchTitles, assignTitle, AssignedTitleV2 } from '@/app/utils/api'
 import { Loader2, Check } from 'lucide-react'
@@ -45,13 +45,7 @@ export function ChangeTitleModal({ isOpen, onClose, accessToken, userId, current
     const [assigning, setAssigning] = useState<string | null>(null)
     const [error, setError] = useState<string | null>(null)
 
-    useEffect(() => {
-        if (isOpen && accessToken) {
-            loadTitles()
-        }
-    }, [isOpen, accessToken, userId])
-
-    const loadTitles = async () => {
+    const loadTitles = useCallback(async () => {
         if (!accessToken) return
         setLoading(true)
         setError(null)
@@ -64,7 +58,13 @@ export function ChangeTitleModal({ isOpen, onClose, accessToken, userId, current
         } finally {
             setLoading(false)
         }
-    }
+    }, [accessToken, userId])
+
+    useEffect(() => {
+        if (isOpen && accessToken) {
+            loadTitles()
+        }
+    }, [isOpen, accessToken, loadTitles])
 
     const handleSelectTitle = async (title: AssignedTitleV2 | null) => {
         if (!accessToken) return

@@ -146,7 +146,7 @@ export function setAuthConfig(auth: AuthConfig): void {
 
 export function clearAuthConfig(): void {
   const current = readConfig()
-  const { auth, ...rest } = current
+  const { auth: _auth, ...rest } = current
   writeConfig(rest)
 } export type DemoWatcherConfig = {
   autoUpload: 'Never' | 'Personal Bests Only' | 'World Records Only'

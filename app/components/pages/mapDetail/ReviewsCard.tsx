@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Pencil, Plus, MessageSquare } from 'lucide-react'
+import { Pencil, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { Tooltip } from '@/app/components/ui/tooltip'

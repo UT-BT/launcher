@@ -870,7 +870,7 @@ export function MapsPage({
                     : prev.bestCaps,
                 bestCapsLoaded: needsBestCaps ? true : prev.bestCapsLoaded,
             }))
-        } catch (e) {
+        } catch {
             setError('Failed to load maps. Check your connection and try again.')
         } finally {
             if (needsMetadata) inFlight.metadata = false
