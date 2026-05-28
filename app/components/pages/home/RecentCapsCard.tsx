@@ -7,6 +7,7 @@ import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { IconActionButton } from '@/app/components/shared/IconActionButton'
+import { Tooltip } from '@/app/components/ui/tooltip'
 import { formatCapTime, displayMapName } from '@/app/utils/format'
 import { getMedalIcon } from '@/app/utils/medals'
 import type { Summary } from '@/app/utils/api'
@@ -72,12 +73,13 @@ export function RecentCapsCard({
                                 <DataTableCell align="right">
                                     <div className="flex items-center justify-end gap-2">
                                         {medalIcon && (
-                                            <img
-                                                src={medalIcon}
-                                                alt={ach.medal}
-                                                title={ach.medal}
-                                                className="h-4 w-auto object-contain shrink-0"
-                                            />
+                                            <Tooltip content={ach.medal} side="top">
+                                                <img
+                                                    src={medalIcon}
+                                                    alt={ach.medal}
+                                                    className="h-4 w-auto object-contain shrink-0"
+                                                />
+                                            </Tooltip>
                                         )}
                                         <span className="font-mono font-black text-white/90 tracking-tight">
                                             {timeStr}
