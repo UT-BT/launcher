@@ -11,6 +11,7 @@ import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { IconActionButton } from '@/app/components/shared/IconActionButton'
+import { Tooltip } from '@/app/components/ui/tooltip'
 import { ReplayVideoModal } from '@/app/components/shared/ReplayVideoModal'
 import { useReplayWatch } from '@/app/hooks/useReplayWatch'
 import { formatCapTime, formatAddedDate, displayMapName } from '@/app/utils/format'
@@ -124,12 +125,13 @@ export function HistoryModal({
                                             <DataTableCell align="right">
                                                 <div className="flex items-center justify-end gap-2">
                                                     {medalIcon && (
-                                                        <img
-                                                            src={medalIcon}
-                                                            alt={cap.medal}
-                                                            title={cap.medal}
-                                                            className="h-4 w-auto object-contain shrink-0"
-                                                        />
+                                                        <Tooltip content={cap.medal} side="top">
+                                                            <img
+                                                                src={medalIcon}
+                                                                alt={cap.medal}
+                                                                className="h-4 w-auto object-contain shrink-0"
+                                                            />
+                                                        </Tooltip>
                                                     )}
                                                     <span className="font-mono font-black text-white/90 tracking-tight">
                                                         {formatCapTime(cap.time)}
