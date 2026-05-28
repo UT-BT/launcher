@@ -185,12 +185,21 @@ export function clearAuthConfig(): void {
   discardDemoAction: 'Do Nothing' | 'Move to Folder' | 'Delete'
 }
 
+const AUTO_UPLOAD_VALUES = ['Never', 'Personal Bests Only', 'World Records Only'] as const
+const DEMO_ACTION_VALUES = ['Do Nothing', 'Move to Folder', 'Delete'] as const
+
+function pickEnum<T extends readonly string[]>(value: unknown, allowed: T, fallback: T[number]): T[number] {
+  return typeof value === 'string' && (allowed as readonly string[]).includes(value)
+    ? (value as T[number])
+    : fallback
+}
+
 export function getDemoWatcherConfig(): DemoWatcherConfig {
-  const config = readConfig()
-  return config.demoWatcher ?? {
-    autoUpload: 'Never',
-    postUploadAction: 'Do Nothing',
-    discardDemoAction: 'Do Nothing',
+  const stored = (readConfig().demoWatcher ?? {}) as Partial<DemoWatcherConfig>
+  return {
+    autoUpload: pickEnum(stored.autoUpload, AUTO_UPLOAD_VALUES, 'Never'),
+    postUploadAction: pickEnum(stored.postUploadAction, DEMO_ACTION_VALUES, 'Do Nothing'),
+    discardDemoAction: pickEnum(stored.discardDemoAction, DEMO_ACTION_VALUES, 'Do Nothing'),
   }
 }
 
