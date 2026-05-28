@@ -27,10 +27,11 @@ interface HistoryModalProps {
     favoriteMapNames: Set<string>
     onToggleFavorite: (mapName: string) => void
     onReview?: (mapName: string) => void
+    onMapSelect?: (mapName: string) => void
 }
 
 export function HistoryModal({
-    open, onOpenChange, accessToken, userAlias, favoriteMapNames, onToggleFavorite, onReview,
+    open, onOpenChange, accessToken, userAlias, favoriteMapNames, onToggleFavorite, onReview, onMapSelect,
 }: HistoryModalProps) {
     const [caps, setCaps] = useState<SummaryCap[]>([])
     const [page, setPage] = useState(1)
@@ -114,9 +115,19 @@ export function HistoryModal({
                                                         onToggle={onToggleFavorite}
                                                         size="sm"
                                                     />
-                                                    <span className="font-bold text-white/90 truncate">
-                                                        {displayMapName(cap.mapName)}
-                                                    </span>
+                                                    {onMapSelect ? (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => { onMapSelect(cap.mapName); onOpenChange(false) }}
+                                                            className="font-bold text-white/90 truncate cursor-pointer hover:underline underline-offset-2 hover:text-white transition-colors text-left"
+                                                        >
+                                                            {displayMapName(cap.mapName)}
+                                                        </button>
+                                                    ) : (
+                                                        <span className="font-bold text-white/90 truncate">
+                                                            {displayMapName(cap.mapName)}
+                                                        </span>
+                                                    )}
                                                 </div>
                                             </DataTableCell>
                                             <DataTableCell>
