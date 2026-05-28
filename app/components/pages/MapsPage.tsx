@@ -1757,7 +1757,7 @@ export function MapsPage({
                 }
                 const isWR = wr != null && wr > 0 && bestCap.cap_time_seconds - wr <= 0.0005
                 const pbCapId = bestCap.cap_id ?? undefined
-                const clickable = bestCap.cap_type === 2 && !!pbCapId
+                const clickable = bestCap.verified && !!pbCapId
                 const isLoading = capLoadingMap === map.name
                 const myAlias = userProfile?.alias ?? undefined
                 const timeText = (
