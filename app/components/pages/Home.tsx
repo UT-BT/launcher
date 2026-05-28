@@ -273,6 +273,7 @@ export function Home({
                 open={reviewOpen}
                 onOpenChange={setReviewOpen}
                 accessToken={userProfile.accessToken}
+                userId={userProfile.id ?? undefined}
                 mapName={activeReviewMap}
                 onSuccess={() => {
                     loadData()
