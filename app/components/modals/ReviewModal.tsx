@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Modal } from '@/app/components/ui/modal'
 import { Button } from '@/app/components/ui/button'
 import { Slider } from '@/app/components/ui/slider'
-import { submitSummaryReview } from '@/app/utils/api'
+import { submitSummaryReview, fetchMapReviews } from '@/app/utils/api'
 import { Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
@@ -13,6 +13,7 @@ interface ReviewModalProps {
     open: boolean
     onOpenChange: (open: boolean) => void
     accessToken?: string
+    userId?: string | number
     mapName: string | null
     initialScores?: Partial<Record<'aesthetics' | 'learning' | 'luck' | 'difficulty' | 'overall', number>>
     onSuccess?: () => void | Promise<void>
@@ -20,11 +21,36 @@ interface ReviewModalProps {
 
 type MetricKey = 'aesthetics' | 'learning' | 'luck' | 'difficulty' | 'overall'
 
-export function ReviewModal({ open, onOpenChange, accessToken, mapName, initialScores, onSuccess }: ReviewModalProps) {
+export function ReviewModal({ open, onOpenChange, accessToken, userId, mapName, initialScores, onSuccess }: ReviewModalProps) {
     const [persistedScores, setPersistedScores] = useState<Record<string, Record<MetricKey, number>>>({})
+    const [fetchedScores, setFetchedScores] = useState<Record<MetricKey, number> | null>(null)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [submitted, setSubmitted] = useState(false)
+
+    // When opened without explicit initialScores, load the user's existing
+    // review for the map so it preloads everywhere the modal is used.
+    useEffect(() => {
+        if (!open || initialScores || !accessToken || !mapName || userId == null) {
+            setFetchedScores(null)
+            return
+        }
+        let cancelled = false
+        fetchMapReviews(accessToken, mapName)
+            .then(reviews => {
+                if (cancelled) return
+                const mine = reviews.find(r => String(r.user) === String(userId))
+                setFetchedScores(mine ? {
+                    aesthetics: mine.aesthetics,
+                    learning: mine.learning,
+                    luck: mine.luck,
+                    difficulty: mine.difficulty,
+                    overall: mine.overall,
+                } : null)
+            })
+            .catch(() => { if (!cancelled) setFetchedScores(null) })
+        return () => { cancelled = true }
+    }, [open, mapName, accessToken, userId, initialScores])
 
     const defaultScores: Record<MetricKey, number> = {
         aesthetics: 5,
@@ -36,7 +62,7 @@ export function ReviewModal({ open, onOpenChange, accessToken, mapName, initialS
 
     const seededScores: Record<MetricKey, number> = {
         ...defaultScores,
-        ...(initialScores ?? {}),
+        ...(initialScores ?? fetchedScores ?? {}),
     }
 
     const currentScores = mapName ? (persistedScores[mapName] || seededScores) : seededScores
