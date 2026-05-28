@@ -20,8 +20,8 @@ export function createAppWindow(): void {
 
   const scriptSrc = app.isPackaged ? "'self'" : "'self' 'unsafe-inline' 'unsafe-eval'"
   const connectSrc = app.isPackaged
-    ? "'self' https://gateway.utbt.net https://api.utbt.net"
-    : "'self' https://gateway.utbt.net http://localhost:5000 http://127.0.0.1:5000 ws://localhost:5173"
+    ? "'self' https://gateway.utbt.net https://api.utbt.net https://api.utmapdownload.com"
+    : "'self' https://gateway.utbt.net https://api.utmapdownload.com http://localhost:5000 http://127.0.0.1:5000 ws://localhost:5173"
   const csp = [
     "default-src 'self'",
     `script-src ${scriptSrc}`,
