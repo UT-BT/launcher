@@ -21,23 +21,40 @@ export function LauncherDemoSettings() {
 
     useEffect(() => {
         const loadSettings = async () => {
-            const installPath = await window.conveyor.app.getUt99InstallPath()
-            setUtPathExists(!!installPath)
-
-            const demoConfig = await window.conveyor.app.getDemoWatcherConfig()
-            if (demoConfig) {
-                setAutoDemoUpload(demoConfig.autoUpload)
-                setDemoPostAction(demoConfig.postUploadAction)
-                setDiscardedDemoAction(demoConfig.discardDemoAction || 'Do Nothing')
+            let installPath: string | undefined
+            try {
+                installPath = await window.conveyor.app.getUt99InstallPath()
+                setUtPathExists(!!installPath)
+            } catch (error) {
+                window.logging.warn('Failed to load UT99 install path', 'LauncherDemoSettings', String(error))
             }
 
-            const patch = await window.conveyor.app.getInstalledPatch()
-            setPatchVersion(patch?.tag || 'Unknown')
+            try {
+                const demoConfig = await window.conveyor.app.getDemoWatcherConfig()
+                if (demoConfig) {
+                    setAutoDemoUpload(demoConfig.autoUpload)
+                    setDemoPostAction(demoConfig.postUploadAction)
+                    setDiscardedDemoAction(demoConfig.discardDemoAction || 'Do Nothing')
+                }
+            } catch (error) {
+                window.logging.warn('Failed to load demo watcher config', 'LauncherDemoSettings', String(error))
+            }
+
+            try {
+                const patch = await window.conveyor.app.getInstalledPatch()
+                setPatchVersion(patch?.tag || 'Unknown')
+            } catch (error) {
+                window.logging.warn('Failed to load installed patch', 'LauncherDemoSettings', String(error))
+            }
 
             if (!installPath) return
 
-            const val = await window.conveyor.ini.readIniValue('UTBT_UserSettings.ini', 'UserSettings', 'AutoDemoRec')
-            setAutoDemoRec(val?.toLowerCase() === 'true')
+            try {
+                const val = await window.conveyor.ini.readIniValue('UTBT_UserSettings.ini', 'UserSettings', 'AutoDemoRec')
+                setAutoDemoRec(val?.toLowerCase() === 'true')
+            } catch (error) {
+                window.logging.warn('Failed to read AutoDemoRec setting', 'LauncherDemoSettings', String(error))
+            }
         }
         loadSettings()
     }, [])
