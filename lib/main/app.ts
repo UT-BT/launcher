@@ -1,4 +1,4 @@
-import { BrowserWindow, shell, app } from 'electron'
+import { BrowserWindow, shell, app, session } from 'electron'
 import { join } from 'path'
 import appIcon from '@/resources/build/icon.png?asset'
 import { registerResourcesProtocol } from './protocols'
@@ -16,6 +16,27 @@ import windowStateKeeper from 'electron-window-state'
 export function createAppWindow(): void {
   // Register custom protocol for resources
   registerResourcesProtocol()
+
+  const scriptSrc = app.isPackaged ? "'self'" : "'self' 'unsafe-inline' 'unsafe-eval'"
+  const connectSrc = app.isPackaged
+    ? "'self' https://gateway.utbt.net https://api.utbt.net"
+    : "'self' https://gateway.utbt.net http://localhost:5000 http://127.0.0.1:5000 ws://localhost:5173"
+  const csp = [
+    "default-src 'self'",
+    `script-src ${scriptSrc}`,
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: res: https://utbt.net https://gateway.utbt.net https://flagcdn.com https://cdn.discordapp.com",
+    `connect-src ${connectSrc}`,
+  ].join('; ')
+
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [csp],
+      },
+    })
+  })
 
   // Create the main window.
   const mainWindowState = windowStateKeeper({
@@ -41,6 +62,7 @@ export function createAppWindow(): void {
     webPreferences: {
       preload: join(__dirname, '../preload/preload.js'),
       sandbox: false,
+      devTools: !app.isPackaged,
     },
   })
 
@@ -71,6 +93,13 @@ export function createAppWindow(): void {
   mainWindow.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
     return { action: 'deny' }
+  })
+
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    const devUrl = process.env['ELECTRON_RENDERER_URL']
+    if (!app.isPackaged && devUrl && url.startsWith(devUrl)) return
+    event.preventDefault()
+    shell.openExternal(url)
   })
 
   // Load the remote URL for development or the local html file for production.
