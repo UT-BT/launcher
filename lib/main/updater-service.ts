@@ -170,9 +170,9 @@ class UpdaterService {
 
   private normalizeReleaseNotes(notes: unknown): string | undefined {
     if (!notes) return undefined
-    if (typeof notes === 'string') return notes
+    if (typeof notes === 'string') return this.stripAttribution(notes)
     if (Array.isArray(notes)) {
-      return notes
+      const joined = notes
         .map((n) => {
           if (typeof n === 'string') return n
           if (n && typeof n === 'object' && 'note' in n) return String((n as { note?: string }).note ?? '')
@@ -180,8 +180,16 @@ class UpdaterService {
         })
         .filter(Boolean)
         .join('\n\n')
+      return this.stripAttribution(joined)
     }
     return undefined
+  }
+
+  private stripAttribution(notes: string): string {
+    return notes.replace(
+      /\s+by\s+(?:<a\b[^>]*>)?@[\w-]+(?:<\/a>)?\s+in\s+(?:<a\b[^>]*>)?(?:#\d+|https?:\/\/[^\s<]+)(?:<\/a>)?/gi,
+      '',
+    )
   }
 
   private friendlyError(raw: string): string {
