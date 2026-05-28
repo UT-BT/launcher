@@ -191,6 +191,23 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
     setCurrentView('maps-detail')
   }, [currentView])
 
+  const goBack = useCallback(() => {
+    setCurrentView(view =>
+      view === 'maps-detail' || view === 'player-detail' ? previousView : view
+    )
+  }, [previousView])
+
+  useEffect(() => {
+    const onMouseUp = (e: MouseEvent) => {
+      if (e.button === 3) {
+        e.preventDefault()
+        goBack()
+      }
+    }
+    window.addEventListener('mouseup', onMouseUp)
+    return () => window.removeEventListener('mouseup', onMouseUp)
+  }, [goBack])
+
   useEffect(() => {
     validateInstallation()
 
@@ -276,7 +293,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
       case 'maps-detail':
         return <MapDetailPage
           mapName={selectedMapName!}
-          onBack={() => setCurrentView(previousView)}
+          onBack={goBack}
           userProfile={userProfile as any}
           favoriteMapNames={favoriteMapNames}
           onToggleFavorite={toggleFavorite}
@@ -285,7 +302,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
       case 'player-detail':
         return <PlayerDetailPage
           userId={selectedPlayerId!}
-          onBack={() => setCurrentView(previousView)}
+          onBack={goBack}
           userProfile={userProfile as any}
           favoriteMapNames={favoriteMapNames}
           onToggleFavorite={toggleFavorite}
