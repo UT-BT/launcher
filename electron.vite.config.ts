@@ -11,6 +11,10 @@ const aliases = {
 
 export default defineConfig({
   main: {
+    // for issues with demo uploading, extra diagnostics
+    define: {
+      'process.env.UTBT_DEMO_DIAG': JSON.stringify(process.env.UTBT_DEMO_DIAG ?? ''),
+    },
     build: {
       rollupOptions: {
         input: {
