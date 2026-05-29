@@ -402,7 +402,7 @@ export const TIER_ICONS: Record<Exclude<MedalTier, 'uncapped'>, string> = {
 export const TIER_LABELS: Record<MedalTier, string> = {
     uncapped: 'Uncapped',
     casual: 'Casual',
-    verified: 'Verified',
+    verified: 'Certified',
     bronze: 'Bronze',
     silver: 'Silver',
     gold: 'Gold',
@@ -2556,7 +2556,7 @@ const ratedOptions: [string, string][] = [
 const cappedOptions: [string, string][] = [
     ['uncapped', 'Uncapped'],
     ['casual', 'Casual'],
-    ['verified', 'Verified'],
+    ['verified', 'Certified'],
     ['bronze', 'Bronze'],
     ['silver', 'Silver'],
     ['gold', 'Gold'],
