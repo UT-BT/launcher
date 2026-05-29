@@ -1,9 +1,9 @@
-import chokidar, { FSWatcher } from 'chokidar'
+import chokidar, { FSWatcher, type ChokidarOptions } from 'chokidar'
 import { join } from 'path'
 import { loggingService } from '@/lib/main/logging-service'
 import { getUt99InstallPath, getDemoWatcherConfig, getAuthConfig } from '@/lib/main/config'
 import { readFile, rename, unlink, mkdir, access } from 'fs/promises'
-import { existsSync } from 'fs'
+import { existsSync, type Stats } from 'fs'
 import { gatewayService } from '@/lib/main/gateway-service'
 import { uploadDemo } from '@/app/utils/api'
 import { execFile } from 'child_process'
@@ -42,6 +42,17 @@ export class DemoWatcherService {
     private uploadLogs: UploadLogEntry[] = []
     private processingFiles = new Set<string>()
 
+    private completed = new Map<string, { status: 'uploaded' | 'discarded' | 'rejected'; at: number }>()
+    private deferred = new Map<string, number>()
+    private lastAddAt = new Map<string, number>()
+    private addCounts = new Map<string, number>()
+
+    private static readonly COMPLETED_TTL_MS = 24 * 60 * 60 * 1000
+    private static readonly COMPLETED_MAX = 500
+    private static readonly DEFER_MS = 10 * 60 * 1000
+    private static readonly ADD_DEBOUNCE_MS = 3000
+    private static readonly LASTADD_TTL_MS = 60 * 1000
+
     constructor() {
         this.systemPath = undefined
     }
@@ -74,6 +85,70 @@ export class DemoWatcherService {
     }
 
 
+    private markCompleted(filename: string, status: 'uploaded' | 'discarded' | 'rejected') {
+        this.completed.set(filename, { status, at: Date.now() })
+        this.deferred.delete(filename)
+    }
+
+    private markDeferred(filename: string) {
+        this.deferred.set(filename, Date.now() + DemoWatcherService.DEFER_MS)
+    }
+
+    private pruneMaps() {
+        const now = Date.now()
+
+        for (const [name, entry] of this.completed) {
+            if (now - entry.at > DemoWatcherService.COMPLETED_TTL_MS) this.completed.delete(name)
+        }
+        if (this.completed.size > DemoWatcherService.COMPLETED_MAX) {
+            const oldestFirst = [...this.completed.entries()].sort((a, b) => a[1].at - b[1].at)
+            const excess = this.completed.size - DemoWatcherService.COMPLETED_MAX
+            for (let i = 0; i < excess; i++) this.completed.delete(oldestFirst[i][0])
+        }
+
+        for (const [name, until] of this.deferred) {
+            if (now >= until) this.deferred.delete(name)
+        }
+        for (const [name, at] of this.lastAddAt) {
+            if (now - at > DemoWatcherService.LASTADD_TTL_MS) this.lastAddAt.delete(name)
+        }
+    }
+
+    private classifyPath(p: string): { flaky: boolean; cloud?: string; placement?: string; drive: string } {
+        const lower = p.toLowerCase()
+        const result: { flaky: boolean; cloud?: string; placement?: string; drive: string } = {
+            flaky: false,
+            drive: p.slice(0, 2),
+        }
+
+        const oneDriveRoots = [process.env.OneDrive, process.env.OneDriveConsumer, process.env.OneDriveCommercial]
+            .filter((v): v is string => !!v)
+            .map((v) => v.toLowerCase())
+
+        if (oneDriveRoots.some((root) => lower.startsWith(root)) || lower.includes('\\onedrive')) {
+            result.cloud = 'OneDrive'
+            result.flaky = true
+        }
+        if (lower.includes('\\desktop\\')) {
+            result.placement = 'Desktop'
+            result.flaky = true
+        }
+        return result
+    }
+
+    /** Diagnostics-only: log a raw chokidar event with file stats + a per-file add counter. */
+    private logEvt(event: string, p: string, stats?: Stats) {
+        const name = p.split(/[/\\]/).pop() || p
+        let extra = ''
+        if (event === 'add') {
+            const count = (this.addCounts.get(name) ?? 0) + 1
+            this.addCounts.set(name, count)
+            extra += ` addCount=${count}`
+        }
+        if (stats) extra += ` size=${stats.size} mtimeMs=${Math.round(stats.mtimeMs)} ino=${stats.ino}`
+        loggingService.debug(`evt=${event} ${name}${extra}`, 'DemoDiag')
+    }
+
     public startWatching() {
         try {
             this.stopWatching()
@@ -88,17 +163,53 @@ export class DemoWatcherService {
 
             const watchPattern = join(this.systemPath, '.')
 
+            const classification = this.classifyPath(this.systemPath)
+            const diagnostics = process.env.UTBT_DEMO_DIAG === '1'
+
             loggingService.info(`Starting demo watcher on: ${watchPattern}`, 'DemoWatcher')
 
-            this.watcher = chokidar.watch(watchPattern, {
+            const options: ChokidarOptions = {
                 persistent: true,
                 ignoreInitial: true,
                 depth: 0,
-            })
+                awaitWriteFinish: { stabilityThreshold: 2000, pollInterval: 100 },
+            }
+
+            if (classification.flaky) {
+                options.usePolling = true
+                options.interval = 1000
+                options.binaryInterval = 1000
+            }
+
+            if (diagnostics) {
+                options.alwaysStat = true
+            }
+
+            loggingService.info(
+                `Demo watcher mode: polling=${!!options.usePolling}, awaitWriteFinish=on, diagnostics=${diagnostics}`,
+                'DemoWatcher',
+                classification
+            )
+
+            this.watcher = chokidar.watch(watchPattern, options)
 
             this.watcher
-                .on('add', (path) => this.handleNewFile(path))
+                .on('add', (path, stats) => {
+                    if (diagnostics) this.logEvt('add', path, stats)
+                    this.handleNewFile(path)
+                })
                 .on('error', (error) => loggingService.error('Watcher error', 'DemoWatcher', error))
+
+            if (diagnostics) {
+                this.watcher
+                    .on('change', (path, stats) => this.logEvt('change', path, stats))
+                    .on('unlink', (path) => this.logEvt('unlink', path))
+                    .on('addDir', (path) => this.logEvt('addDir', path))
+                    .on('unlinkDir', (path) => this.logEvt('unlinkDir', path))
+                    .on('raw', (event, path, details) =>
+                        loggingService.debug(`raw=${event} ${path} ${JSON.stringify(details)}`, 'DemoDiag'))
+                    .on('ready', () => loggingService.info('Watcher ready', 'DemoDiag'))
+            }
 
         } catch (error) {
             loggingService.error('Failed to start demo watcher', 'DemoWatcher', error)
@@ -128,6 +239,28 @@ export class DemoWatcherService {
             return
         }
 
+        this.pruneMaps()
+
+        const done = this.completed.get(filename)
+        if (done) {
+            loggingService.debug(`Skipping ${filename}: already ${done.status}`, 'DemoWatcher')
+            return
+        }
+
+        const deferUntil = this.deferred.get(filename)
+        if (deferUntil && Date.now() < deferUntil) {
+            loggingService.debug(`Deferring re-check of ${filename} (backoff active)`, 'DemoWatcher')
+            return
+        }
+
+        const lastAdd = this.lastAddAt.get(filename) ?? 0
+        const nowMs = Date.now()
+        if (nowMs - lastAdd < DemoWatcherService.ADD_DEBOUNCE_MS) {
+            loggingService.debug(`Debounced duplicate add for ${filename}`, 'DemoWatcher')
+            return
+        }
+        this.lastAddAt.set(filename, nowMs)
+
         loggingService.info(`New demo detected: ${filename}`, 'DemoWatcher')
 
         if (this.processingFiles.has(filename)) {
@@ -138,9 +271,6 @@ export class DemoWatcherService {
         this.processingFiles.add(filename)
 
         try {
-            // Small delay to let the OS release file locks if it was just moved/renamed
-            await new Promise(resolve => setTimeout(resolve, 500))
-
             const parts = filename.split('__');
             const map = parts[0];
             const time = parts[1];
@@ -160,13 +290,19 @@ export class DemoWatcherService {
                         shouldDiscard = !shouldUpload
                     } else {
                         loggingService.warn('Cannot check PB: User not logged in', 'DemoWatcher')
+                        this.markDeferred(filename)
+                        return
                     }
                 } else if (config.autoUpload === 'World Records Only') {
                     shouldUpload = await this.checkIsWR(map, timeInSeconds)
                     shouldDiscard = !shouldUpload
                 }
-            } catch (error) {
-                loggingService.error('Failed to check PB/WR status', 'DemoWatcher', error)
+            } catch (error: any) {
+                // PB/WR lookup failed (network/API error). Do NOT discard a potentially
+                // good demo on a transient failure — defer and retry on a later event.
+                loggingService.warn(`PB/WR check failed for ${filename}; will retry later: ${error?.message ?? error}`, 'DemoWatcher')
+                this.markDeferred(filename)
+                return
             }
 
             if (shouldDiscard) {
@@ -190,12 +326,16 @@ export class DemoWatcherService {
                 } catch (error) {
                     loggingService.error('Failed to perform discard action', 'DemoWatcher', error)
                 }
+                // A slower-than-best run will never become a PB/WR — never reprocess it.
+                this.markCompleted(filename, 'discarded')
             }
 
             if (shouldUpload) {
                 const auth = getAuthConfig()
                 if (!auth) {
                     loggingService.warn('Cannot upload demo: User not logged in', 'DemoWatcher')
+                    this.markDeferred(filename)
+                    return
                 } else {
                     loggingService.info(`Uploading demo: ${filename}`, 'DemoWatcher')
 
@@ -203,12 +343,14 @@ export class DemoWatcherService {
                     const btpogId = await this.extractBtpogId(filePath)
                     if (!btpogId) {
                         loggingService.warn(`Ignoring demo ${filename}: No BTPog ID found`, 'DemoWatcher')
+                        this.markCompleted(filename, 'rejected')
                         return
                     }
 
                     const isCertified = await this.checkIsCertified(btpogId)
                     if (!isCertified) {
                         loggingService.info(`Ignoring demo ${filename}: Run is not certified (BTPog ID: ${btpogId})`, 'DemoWatcher')
+                        this.markCompleted(filename, 'rejected')
                         return
                     }
 
@@ -242,12 +384,21 @@ export class DemoWatcherService {
                             loggingService.info(`Demo uploaded successfully: ${filename}`, 'DemoWatcher')
                             this.updateLogStatus(filename, 'success')
                         } catch (error: any) {
-                            const isLastAttempt = attempts === maxAttempts
                             const errorMessage = error.message || 'Unknown error'
+                            const lower = errorMessage.toLowerCase()
 
-                            // Check for common file system lock/access errors
-                            const isFileSystemError = error.code === 'EBUSY' || error.code === 'EPERM' || error.code === 'EACCES'
-                            const shouldRetry = isFileSystemError || errorMessage.includes('No matching cap found') || errorMessage.includes('Network Error')
+                            if (lower.includes('already verified') || lower.includes('already exists')) {
+                                loggingService.info(`Demo ${filename} already on server (${errorMessage}); treating as success`, 'DemoWatcher')
+                                success = true
+                                this.updateLogStatus(filename, 'success')
+                                break
+                            }
+
+                            const isLastAttempt = attempts === maxAttempts
+
+                            const isFileSystemError = ['EBUSY', 'EPERM', 'EACCES', 'EIO'].includes(error.code)
+                            const isCloudError = lower.includes('cloud') || (typeof error.code === 'string' && error.code.includes('CLOUD'))
+                            const shouldRetry = isFileSystemError || isCloudError || lower.includes('no matching cap found') || lower.includes('network error')
 
                             if (!shouldRetry || isLastAttempt) {
                                 loggingService.error(`Failed to upload demo ${filename}: ${errorMessage}`, 'DemoWatcher')
@@ -262,7 +413,12 @@ export class DemoWatcherService {
                         }
                     }
 
-                    if (!success) shouldUpload = false
+                    if (success) {
+                        this.markCompleted(filename, 'uploaded')
+                    } else {
+                        shouldUpload = false
+                        this.markDeferred(filename)
+                    }
 
                 }
 
@@ -295,57 +451,43 @@ export class DemoWatcherService {
     }
 
     private async checkIsPB(mapName: string, timeSeconds: number, discordId: string): Promise<boolean> {
-        try {
-            const endpoint = `/caps/leaderboard/map/${encodeURIComponent(mapName)}?user=${discordId}&unverified_limit=0&verified_limit=1&columns=cap_time_seconds`
-            const response = await gatewayService.get<LeaderboardResponse>(endpoint)
+        const endpoint = `/caps/leaderboard/map/${encodeURIComponent(mapName)}?user=${discordId}&unverified_limit=0&verified_limit=1&columns=cap_time_seconds`
+        const response = await gatewayService.get<LeaderboardResponse>(endpoint)
 
-            if (!response.success) {
-                loggingService.warn('PB check failed: API returned success=false', 'DemoWatcher')
-                return false
-            }
-
-            if (!response.data || response.data.length === 0) {
-                loggingService.info(`PB check: No previous time found for ${mapName}. New PB!`, 'DemoWatcher')
-                return true
-            }
-
-            const previousBest = response.data[0].cap_time_seconds
-            const isPb = timeSeconds < previousBest
-
-            loggingService.debug(`PB check: ${timeSeconds} < ${previousBest} = ${isPb}`, 'DemoWatcher')
-            return isPb
-
-        } catch (error) {
-            loggingService.error('PB Check API error', 'DemoWatcher', error)
-            return false
+        if (!response.success) {
+            throw new Error('PB check: API returned success=false')
         }
+
+        if (!response.data || response.data.length === 0) {
+            loggingService.info(`PB check: No previous time found for ${mapName}. New PB!`, 'DemoWatcher')
+            return true
+        }
+
+        const previousBest = response.data[0].cap_time_seconds
+        const isPb = timeSeconds < previousBest
+
+        loggingService.debug(`PB check: ${timeSeconds} < ${previousBest} = ${isPb}`, 'DemoWatcher')
+        return isPb
     }
 
     private async checkIsWR(mapName: string, timeSeconds: number): Promise<boolean> {
-        try {
-            const endpoint = `/caps/leaderboard/map/${encodeURIComponent(mapName)}?unverified_limit=0&verified_limit=1&columns=cap_time_seconds`
-            const response = await gatewayService.get<LeaderboardResponse>(endpoint)
+        const endpoint = `/caps/leaderboard/map/${encodeURIComponent(mapName)}?unverified_limit=0&verified_limit=1&columns=cap_time_seconds`
+        const response = await gatewayService.get<LeaderboardResponse>(endpoint)
 
-            if (!response.success) {
-                loggingService.warn('WR check failed: API returned success=false', 'DemoWatcher')
-                return false
-            }
-
-            if (response.data.length === 0) {
-                loggingService.info(`WR check: No previous time found for ${mapName}. New WR!`, 'DemoWatcher')
-                return true
-            }
-
-            const currentWR = response.data[0].cap_time_seconds
-            const isWr = timeSeconds < currentWR
-
-            loggingService.debug(`WR check: ${timeSeconds} < ${currentWR} = ${isWr}`, 'DemoWatcher')
-            return isWr
-
-        } catch (error) {
-            loggingService.error('WR Check API error', 'DemoWatcher', error)
-            return false
+        if (!response.success) {
+            throw new Error('WR check: API returned success=false')
         }
+
+        if (response.data.length === 0) {
+            loggingService.info(`WR check: No previous time found for ${mapName}. New WR!`, 'DemoWatcher')
+            return true
+        }
+
+        const currentWR = response.data[0].cap_time_seconds
+        const isWr = timeSeconds < currentWR
+
+        loggingService.debug(`WR check: ${timeSeconds} < ${currentWR} = ${isWr}`, 'DemoWatcher')
+        return isWr
     }
 
     private async checkIsCertified(btpogId: string): Promise<boolean> {
