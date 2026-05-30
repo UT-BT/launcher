@@ -21,7 +21,7 @@ export function buildSteps(refs: StepRefs, actions: StepActions): TutorialStep[]
         {
             id: 'welcome',
             title: 'Welcome!',
-            body: 'This is the Players page — browse everyone who plays UTBT.\n\nUse the next and previous buttons to move around. Skip anytime.',
+            body: 'This is the Players page — browse everyone who plays on UTBT.\n\nUse the next and previous buttons to move around. Skip anytime.',
         },
         {
             id: 'search',
