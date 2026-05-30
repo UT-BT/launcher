@@ -1478,6 +1478,9 @@ export interface PlayerListRow {
     registered_at: string | null
     utbt_role: number
     active_title: ActiveTitle | null
+    banned: boolean
+    ban_reason: string | null
+    ban_expires: string | null
     rank: number
     points: number
     world_records: number
