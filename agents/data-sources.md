@@ -17,6 +17,7 @@ working around in the renderer.
 | Maps | `fetchMaps`, `fetchMapsCount`, `fetchMapsMetadata`, `fetchMapsFuzzy`, `fetchMapAuthors`, `buildMapQuery` |
 | Records | `fetchRecords`, `fetchRecordsCount`, `fetchAllWorldRecords`, `fetchWorldRecordsForMaps`, `fetchWorldRecordProgression`, `fetchBestCaps`, `fetchMapLeaderboard` |
 | Per-map per-user counts | `fetchUserCapCountForMap` |
+| Players | `fetchPlayers`, `fetchPlayersCount` (→ `/v2/players`, server-side alias search/sort/pagination + medals join; row type `PlayerListRow`) |
 | Reviews | `fetchMapReviews`, `fetchAllMapReviews`, `submitSummaryReview` |
 | Favorites | `fetchUserFavorites`, `addFavoriteMap`, `removeFavoriteMap`, `replaceFavoriteMaps` |
 | Demos | `fetchDemoStatus`, `getFirstPersonVideoUrl` |

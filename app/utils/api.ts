@@ -1471,3 +1471,80 @@ export async function assignTitle(accessToken: string, titleId?: string | null):
         throw error
     }
 }
+
+export interface PlayerListRow {
+    id: string
+    alias: string | null
+    registered_at: string | null
+    utbt_role: number
+    active_title: ActiveTitle | null
+    rank: number
+    points: number
+    world_records: number
+    champion_medals: number
+    gold_medals: number
+    silver_medals: number
+    bronze_medals: number
+    certified_caps: number
+}
+
+export type PlayerSortField =
+    | 'rank' | 'points' | 'alias' | 'registered_at'
+    | 'world_records' | 'champion_medals' | 'gold_medals'
+    | 'silver_medals' | 'bronze_medals' | 'certified_caps'
+
+export interface PlayerListParams {
+    search?: string
+    sort?: PlayerSortField
+    order?: 'asc' | 'desc'
+    limit?: number
+    offset?: number
+}
+
+function buildPlayerQuery(params: PlayerListParams): string {
+    const usp = new URLSearchParams()
+    if (params.search) usp.set('search', params.search)
+    if (params.sort) usp.set('sort', params.sort)
+    if (params.order) usp.set('order', params.order)
+    if (params.limit !== undefined) usp.set('limit', String(params.limit))
+    if (params.offset !== undefined) usp.set('offset', String(params.offset))
+    return usp.toString()
+}
+
+export async function fetchPlayers(accessToken: string, params: PlayerListParams = {}): Promise<PlayerListRow[]> {
+    const qs = buildPlayerQuery(params)
+    const response = await fetch(`${API_BASE_URL}/v2/players/?${qs}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+    })
+    if (!response.ok) {
+        throw new Error(`Failed to fetch players: ${response.statusText} (${response.status})`)
+    }
+    const json = await response.json()
+    if (json.success && Array.isArray(json.data)) {
+        return (json.data as any[]).map(row => ({
+            ...row,
+            id: String(row.id),
+            active_title: normaliseActiveTitle(row.active_title),
+        })) as PlayerListRow[]
+    }
+    throw new Error('Invalid response format from server')
+}
+
+export async function fetchPlayersCount(
+    accessToken: string,
+    params: Pick<PlayerListParams, 'search'> = {},
+): Promise<number> {
+    const usp = new URLSearchParams()
+    if (params.search) usp.set('search', params.search)
+    const response = await fetch(`${API_BASE_URL}/v2/players/count/?${usp.toString()}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+    })
+    if (!response.ok) {
+        throw new Error(`Failed to fetch players count: ${response.statusText} (${response.status})`)
+    }
+    const json = await response.json()
+    if (json.success && json.data) {
+        return json.data.count as number
+    }
+    throw new Error('Invalid response format from server')
+}
