@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useRefreshCooldown } from '@/app/hooks/useRefreshCooldown'
+import { useAutoPageSize } from '@/app/hooks/useAutoPageSize'
 import { Search, RefreshCw, X, HelpCircle, ShieldAlert } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/app/components/ui/button'
@@ -128,12 +129,14 @@ const TABLE_ROW_HEIGHT_PX = 56
 const TABLE_CHROME_PX = 260
 const AUTO_PAGE_SIZE_MIN_ROWS = 10
 const AUTO_PAGE_SIZE_MAX_ROWS = 60
+const AUTO_PAGE_SIZE_STEP = 5
 
 function computePageSize(): number {
     if (typeof window === 'undefined') return 25
     const usable = Math.max(window.innerHeight - TABLE_CHROME_PX, TABLE_ROW_HEIGHT_PX * AUTO_PAGE_SIZE_MIN_ROWS)
     const rows = Math.floor(usable / TABLE_ROW_HEIGHT_PX)
-    return Math.min(AUTO_PAGE_SIZE_MAX_ROWS, Math.max(AUTO_PAGE_SIZE_MIN_ROWS, rows))
+    const stepped = Math.floor(rows / AUTO_PAGE_SIZE_STEP) * AUTO_PAGE_SIZE_STEP
+    return Math.min(AUTO_PAGE_SIZE_MAX_ROWS, Math.max(AUTO_PAGE_SIZE_MIN_ROWS, stepped))
 }
 
 const SEARCH_DEBOUNCE_MS = 200
@@ -150,7 +153,7 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
     const accessToken = userProfile?.accessToken
     const selfId = userProfile?.id ?? undefined
 
-    const [autoPageSize, setAutoPageSize] = useState(computePageSize)
+    const autoPageSize = useAutoPageSize(computePageSize)
     const pageSize = state.pageSizePreference === 'auto' ? autoPageSize : state.pageSizePreference
 
     const [pageLoading, setPageLoading] = useState(caches.players.length === 0)
@@ -201,8 +204,11 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
 
     useEffect(() => {
         pageCacheRef.current = {}
-        countCacheRef.current = {}
     }, [serverParams, pageSize])
+
+    useEffect(() => {
+        countCacheRef.current = {}
+    }, [debouncedSearch])
 
     const fetchPageData = useCallback((p: number): Promise<PlayerListRow[] | null> => {
         if (!accessToken) return Promise.resolve(null)
@@ -278,12 +284,6 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
     }, [accessToken, state.currentPage, pageSize, keyFor, countKey, fetchPageData, fetchCountData, onCachesChange])
 
     useEffect(() => { loadPage() }, [loadPage])
-
-    useEffect(() => {
-        const onResize = () => setAutoPageSize(computePageSize())
-        window.addEventListener('resize', onResize)
-        return () => window.removeEventListener('resize', onResize)
-    }, [])
 
     // Restore scroll once on mount.
     useEffect(() => {
