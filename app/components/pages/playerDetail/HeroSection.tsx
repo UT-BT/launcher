@@ -4,6 +4,7 @@ import { formatAddedDate } from '@/app/utils/format'
 import { getAvatarBorderStyle, getTitleTextStyle } from '@/app/utils/titleStyles'
 import { getAvatarUrl, type UserSummary } from '@/app/utils/api'
 import { MetaPill } from '@/app/components/shared/MetaPill'
+import { ROLE_LABELS } from '@/app/utils/roles'
 
 const AVATAR_PX = 128
 
@@ -23,12 +24,6 @@ function formatHoursShort(seconds: number): string {
     if (hours >= 1) return `${hours.toFixed(1)} h`
     const minutes = Math.round(seconds / 60)
     return `${minutes} m`
-}
-
-const ROLE_LABELS: Record<number, { label: string; className: string }> = {
-    1: { label: 'Moderator', className: 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300' },
-    2: { label: 'Admin', className: 'bg-purple-500/15 border-purple-500/40 text-purple-300' },
-    3: { label: 'Cup Admin', className: 'bg-amber-500/15 border-amber-500/40 text-amber-300' },
 }
 
 const POINTS_EXPLAINER = (
