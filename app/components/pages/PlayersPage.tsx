@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useRefreshCooldown } from '@/app/hooks/useRefreshCooldown'
-import { Search, RefreshCw, X, HelpCircle } from 'lucide-react'
+import { Search, RefreshCw, X, HelpCircle, ShieldAlert } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/app/components/ui/button'
 import { Modal } from '@/app/components/ui/modal'
@@ -390,16 +390,19 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
                 const isSelf = selfId != null && String(p.id) === String(selfId)
                 return (
                     <DataTableCell key={id}>
-                        <span ref={isFirst ? firstRowPlayerRef : undefined} className="inline-flex">
-                            <PlayerInfo
-                                userId={p.id}
-                                alias={p.alias}
-                                title={p.active_title}
-                                size="md"
-                                highlight={isSelf}
-                                showYouBadge={isSelf}
-                            />
-                        </span>
+                        <div className="flex items-center gap-2 min-w-0">
+                            <span ref={isFirst ? firstRowPlayerRef : undefined} className="inline-flex min-w-0">
+                                <PlayerInfo
+                                    userId={p.id}
+                                    alias={p.alias}
+                                    title={p.active_title}
+                                    size="md"
+                                    highlight={isSelf}
+                                    showYouBadge={isSelf}
+                                />
+                            </span>
+                            {p.banned && <BannedBadge reason={p.ban_reason} expires={p.ban_expires} />}
+                        </div>
                     </DataTableCell>
                 )
             }
@@ -622,5 +625,23 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
                 />
             )}
         </div>
+    )
+}
+
+function BannedBadge({ reason, expires }: { reason: string | null; expires: string | null }) {
+    const tooltip = (
+        <span className="block normal-case tracking-normal">
+            <span className="font-bold uppercase tracking-wider text-red-300">Banned</span>
+            {reason && <span className="block mt-0.5 font-normal">{reason}</span>}
+            {expires && <span className="block mt-0.5 font-normal text-white/60">Until {formatAddedDate(expires)}</span>}
+        </span>
+    )
+    return (
+        <Tooltip side="top" content={tooltip}>
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border border-red-500/40 bg-red-500/10 text-red-300 text-[10px] font-bold uppercase tracking-wider shrink-0 cursor-help">
+                <ShieldAlert className="size-3" />
+                Banned
+            </span>
+        </Tooltip>
     )
 }
