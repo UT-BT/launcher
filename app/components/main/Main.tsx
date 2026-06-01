@@ -27,8 +27,10 @@ import { PlayerDetailPage } from '@/app/components/pages/PlayerDetailPage'
 import { InstallationBanner } from '@/app/components/InstallationBanner'
 import { UpdateBanner } from '@/app/components/updater/UpdateBanner'
 import { FavoritesSyncModal } from '@/app/components/shared/FavoritesSyncModal'
+import { PatreonModal } from '@/app/components/modals/PatreonModal'
 import type { ServerPreset } from '@/app/utils/server-utils'
 import { useFavorites } from '@/app/hooks/useFavorites'
+import { loadPatreonMembers } from '@/app/utils/patreon'
 
 
 const MAPS_STATE_STORAGE_KEY = 'utbt:mapsPageState:v1'
@@ -160,6 +162,10 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
   const [playersCaches, setPlayersCaches] = useState<PlayersPageCaches>(DEFAULT_PLAYERS_CACHES)
   const [serverPresets, setServerPresets] = useState<ServerPreset[]>(loadPersistedServerPresets)
   const [favoriteServerIds, setFavoriteServerIds] = useState<Set<string>>(loadPersistedServerFavorites)
+
+  useEffect(() => {
+    void loadPatreonMembers()
+  }, [])
 
   useEffect(() => {
     try {
@@ -388,6 +394,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
         onResolve={resolveSync}
         onDismiss={dismissSync}
       />
+      <PatreonModal />
     </div>
   )
 }

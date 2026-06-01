@@ -80,6 +80,7 @@ generated from `lib/main/...`. Common usage:
 | `window.conveyor.game.launchGame(ip, port)` | Launch UT99 + auto-join server. |
 | `window.conveyor.game.launchGameStandalone()` | Launch UT99 without auto-join. |
 | `window.conveyor.game.isGameRunning()` | Bool — used to skip auto-refresh while in-game. |
+| `window.conveyor.game.fetchPatrons()` | Patreon members. Main process calls gateway `/patreon` (public); returns `{ tier1[], tier2[], tier3[] }` of **Discord user ids**. |
 | `window.conveyor.ini.readIniValue(file, section, key)` | Read from a UT99 ini file. |
 | `window.conveyor.ini.writeIniValue(file, section, key, val)` | Write to a UT99 ini file. |
 | `window.conveyor.app.validateCurrentInstallation()` | `{ valid, version }` for the configured UT99 install. |
@@ -110,6 +111,22 @@ Sync logic lives in `Main.tsx`:
 
 Don't bypass this dance — favorites toggles must go through `Main.tsx`'s
 `toggleFavorite`, which already wires up persistence + rollback.
+
+## Patreon members — cached tier lookup
+
+Patreon supporters are flagged by a heart next to their name everywhere
+`PlayerInfo` renders (and on the profile hero). Data comes from gateway
+`/patreon` via `window.conveyor.game.fetchPatrons()`, which returns Discord user
+ids bucketed by tier — the same id the launcher uses as `userId`, so matching is
+a direct lookup (no backend change).
+
+`app/utils/patreon.ts` owns it: a module-level store (`useSyncExternalStore`) so
+all `PlayerInfo` instances share one fetch. `loadPatreonMembers()` is
+single-flight and caches the id→tier map in `localStorage` under
+`utbt:patreon:v1` with a 1h TTL — members rarely change, so it isn't refetched
+per render. Components read it via `usePatreonTier(userId)` (returns `0|1|2|3`,
+lazy-loads on first use). `Main.tsx` warm-loads it once on mount. Clear the
+localStorage key to force a refetch.
 
 ## Server favorites — local only
 

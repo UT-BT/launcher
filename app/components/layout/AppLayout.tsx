@@ -28,6 +28,8 @@ const navItems: NavItem[] = [
 
 import { UserProfile, getAvatarUrl } from '@/app/utils/api'
 import { Tooltip } from '@/app/components/ui/tooltip'
+import { usePatreonTier } from '@/app/utils/patreon'
+import { PatreonBadge } from '@/app/components/shared/PatreonBadge'
 
 interface AppLayoutProps {
     children: ReactNode
@@ -71,6 +73,7 @@ export function AppLayout({ children, currentView, onViewChange, userProfile, in
     const [isChangeTitleOpen, setIsChangeTitleOpen] = useState(false)
     const [settingsInitialSection, setSettingsInitialSection] = useState<string | undefined>(undefined)
     const { containerStyle, titleStyle, containerClass, titleClass } = getRarityStyles(userProfile?.active_title)
+    const patreonTier = usePatreonTier(userProfile?.id ?? undefined)
 
     useEffect(() => {
         const saved = localStorage.getItem('ui-scale')
@@ -205,7 +208,10 @@ export function AppLayout({ children, currentView, onViewChange, userProfile, in
                                         )}
                                     </div>
                                     <div className="flex flex-col flex-1 min-w-0 text-left">
-                                        <span className="text-sm font-medium truncate">{userProfile?.alias || userProfile?.username || 'Player'}</span>
+                                        <div className="flex items-center gap-1.5 min-w-0">
+                                            <span className="text-sm font-medium truncate">{userProfile?.alias || userProfile?.username || 'Player'}</span>
+                                            {patreonTier !== 0 && <PatreonBadge tier={patreonTier} size="sm" />}
+                                        </div>
                                         {userProfile?.active_title ? (
                                             <span
                                                 className={cn("text-xs font-medium truncate", titleClass)}
