@@ -71,6 +71,11 @@
   50% { opacity: 0.6; }
 }
 
+@keyframes patreonPulse {
+  0%, 100% { transform: scale(1); filter: brightness(1) drop-shadow(0 0 2px rgba(252, 211, 77, 0.5)); }
+  50%      { transform: scale(1.08); filter: brightness(1.15) drop-shadow(0 0 5px rgba(252, 211, 77, 0.85)); }
+}
+
 /* Tutorial highlight target: only lifts above the dim overlay. The actual
    ring + glow is drawn by a portaled .utbt-tutorial-ring so it can never be
    clipped by ancestor overflow:hidden / overflow:auto containers. */

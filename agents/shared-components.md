@@ -43,6 +43,28 @@ Rarity styling (1–5) lives in `app/utils/titleStyles.ts`
 Rarity 5 uses `legendaryAvatarPulse` / `legendaryTitlePulse` keyframes in
 `app/styles/globals.css`.
 
+### Patreon supporters
+
+`PlayerInfo` auto-renders a `PatreonBadge` (heart) next to the name when the
+player is a Patreon member — you don't pass anything. It calls
+`usePatreonTier(userId)` (`app/utils/patreon.ts`), which resolves the member's
+tier from a cached gateway list (see `agents/data-sources.md`). Players with no
+`userId` (string-only authors) never match, so they get no badge.
+
+`app/components/shared/PatreonBadge.tsx` — `{ tier: 1|2|3; size?: 'sm'|'md'|'lg' }`.
+Per-tier flair: t1 outline rose · t2 filled rose + glow · t3 gold + star +
+`patreonPulse` keyframe. Tooltip names the tier. For surfaces that render
+identity by hand (e.g. `playerDetail/HeroSection.tsx`, which doesn't use
+`PlayerInfo`), call `usePatreonTier(userId)` and drop in `<PatreonBadge>`
+directly — don't hand-roll a heart.
+
+Clicking a badge fires the `open-patreon` window event (it `stopPropagation`s
+so it doesn't also open the player profile when nested in a clickable row).
+`PatreonModal` (`app/components/modals/PatreonModal.tsx`) is mounted once in
+`Main.tsx`, listens for that event, and shows a "Support UTBT" info modal (tiers
+preview + how to get the badge + Patreon link). Open it from elsewhere via
+`openPatreonInfo()` exported from `PatreonBadge.tsx`.
+
 ## Tables — `DataTable.*` primitives
 
 `app/components/shared/DataTable.tsx`. Use these for ANY tabular page. They

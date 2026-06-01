@@ -4,7 +4,9 @@ import { formatAddedDate } from '@/app/utils/format'
 import { getAvatarBorderStyle, getTitleTextStyle } from '@/app/utils/titleStyles'
 import { getAvatarUrl, type UserSummary } from '@/app/utils/api'
 import { MetaPill } from '@/app/components/shared/MetaPill'
+import { PatreonBadge } from '@/app/components/shared/PatreonBadge'
 import { ROLE_LABELS } from '@/app/utils/roles'
+import { usePatreonTier } from '@/app/utils/patreon'
 
 const AVATAR_PX = 128
 
@@ -72,6 +74,7 @@ export function HeroSection({ userId, summary, loading, isSelf, chart, onChangeT
     const alias = profile?.alias || (loading ? null : String(userId))
     const fallback = `https://cdn.discordapp.com/embed/avatars/${Number(userId) % 5}.png`
     const role = profile?.utbt_role ? ROLE_LABELS[profile.utbt_role] : null
+    const patreonTier = usePatreonTier(userId)
     const ban = profile?.active_ban
     const banReason = ban && typeof ban === 'object' ? (ban as { reason?: string }).reason : null
 
@@ -104,6 +107,11 @@ export function HeroSection({ userId, summary, loading, isSelf, chart, onChangeT
                             <h1 className="text-3xl font-bold text-white truncate">
                                 {alias ?? '…'}
                             </h1>
+                            {patreonTier !== 0 && (
+                                <span className="translate-y-[2px]">
+                                    <PatreonBadge tier={patreonTier} size="lg" />
+                                </span>
+                            )}
                             {role && (
                                 <span className={cn(
                                     'inline-flex items-center px-2 py-0.5 rounded-md border text-[10px] font-bold uppercase tracking-wider translate-y-[3px]',

@@ -16,6 +16,14 @@ export const gameIpcSchema = {
         args: z.tuple([]),
         return: z.array(z.any()),
     },
+    fetchPatrons: {
+        args: z.tuple([]),
+        return: z.object({
+            tier1: z.array(z.string()).optional(),
+            tier2: z.array(z.string()).optional(),
+            tier3: z.array(z.string()).optional(),
+        }),
+    },
     pingServer: {
         args: z.tuple([
             z.string().refine(ip => {

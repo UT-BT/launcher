@@ -1,6 +1,8 @@
 import { cn } from '@/lib/utils'
 import { ActiveTitle, getAvatarUrl } from '@/app/utils/api'
 import { getAvatarBorderStyle, getTitleTextStyle } from '@/app/utils/titleStyles'
+import { usePatreonTier } from '@/app/utils/patreon'
+import { PatreonBadge } from '@/app/components/shared/PatreonBadge'
 
 interface PlayerInfoProps {
     userId?: string | number
@@ -63,6 +65,7 @@ export function PlayerInfo({
     const titleStyle = getTitleTextStyle(title)
     const isAvatarable = isAvatarableUserId(userId)
     const sizePx = AVATAR_PX[size]
+    const patreonTier = usePatreonTier(userId)
 
     const nameSizeClass = size === 'lg' ? 'text-base' : size === 'sm' ? 'text-xs' : 'text-sm'
     const titleSizeClass = size === 'lg' ? 'text-xs' : 'text-[11px]'
@@ -104,6 +107,7 @@ export function PlayerInfo({
                 )}>
                     {displayName}
                 </span>
+                {patreonTier !== 0 && <PatreonBadge tier={patreonTier} size={size} />}
                 {showYouBadge && (
                     <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                         You

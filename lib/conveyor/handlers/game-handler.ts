@@ -67,6 +67,16 @@ export const registerGameHandlers = (_window: BrowserWindow) => {
         }
     })
 
+    handle('fetchPatrons', async () => {
+        try {
+            const patrons = await gatewayService.get('/patreon')
+            return patrons
+        } catch (error) {
+            loggingService.error('Failed to fetch patrons', 'GameHandler', error)
+            throw error
+        }
+    })
+
     handle('validateCurrentInstallation', async () => {
         return await gameService.validateCurrentInstallation()
     })
