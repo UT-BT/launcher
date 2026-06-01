@@ -1,7 +1,11 @@
-import { app, type BrowserWindow } from 'electron'
+import { app, net, type BrowserWindow } from 'electron'
 import { autoUpdater } from 'electron-updater'
+import * as semver from 'semver'
 import { loggingService } from './logging-service'
 import { getUpdaterConfig, setUpdaterConfig } from './config'
+
+const GITHUB_OWNER = 'UT-BT'
+const GITHUB_REPO = 'launcher'
 
 export type UpdaterPhase =
   | 'idle'
@@ -82,6 +86,11 @@ class UpdaterService {
       lastCheckTrigger: this.lastTrigger,
     })
     try {
+      if (this.state.allowPrerelease) {
+        await this.configurePrereleaseFeed()
+      } else {
+        this.useDefaultFeed()
+      }
       await autoUpdater.checkForUpdates()
     } catch (err) {
       const rawMessage = err instanceof Error ? err.message : String(err)
@@ -116,6 +125,49 @@ class UpdaterService {
     setUpdaterConfig({ allowPrerelease: value })
     autoUpdater.allowPrerelease = value
     this.update({ allowPrerelease: value })
+  }
+
+  private useDefaultFeed(): void {
+    autoUpdater.setFeedURL({ provider: 'github', owner: GITHUB_OWNER, repo: GITHUB_REPO })
+  }
+
+  private async configurePrereleaseFeed(): Promise<void> {
+    try {
+      const tag = await this.resolveHighestTag()
+      if (tag) {
+        autoUpdater.setFeedURL({
+          provider: 'generic',
+          url: `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/download/${tag}/`,
+        })
+        return
+      }
+      loggingService.warn('No installable release found in feed', 'Updater')
+    } catch (err) {
+      loggingService.warn('Release resolution failed; using default GitHub provider', 'Updater', {
+        message: err instanceof Error ? err.message : String(err),
+      })
+    }
+    this.useDefaultFeed()
+  }
+
+  private async resolveHighestTag(): Promise<string | null> {
+    const feedUrl = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases.atom`
+    const res = await net.fetch(feedUrl, { headers: { accept: 'application/atom+xml' } })
+    if (!res.ok) {
+      throw new Error(`releases.atom returned HTTP ${res.status}`)
+    }
+    const xml = await res.text()
+
+    const candidates: Array<{ tag: string; version: semver.SemVer }> = []
+    for (const match of xml.matchAll(/\/releases\/tag\/([^"<]+)/g)) {
+      const tag = match[1]
+      const version = semver.parse(tag.replace(/^v/i, ''))
+      if (version) candidates.push({ tag, version })
+    }
+    if (candidates.length === 0) return null
+
+    candidates.sort((a, b) => semver.rcompare(a.version, b.version))
+    return candidates[0].tag
   }
 
   private wireEvents(): void {
