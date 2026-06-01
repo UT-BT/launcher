@@ -1551,3 +1551,65 @@ export async function fetchPlayersCount(
     }
     throw new Error('Invalid response format from server')
 }
+
+export interface CapItAllRow {
+    user_id: string
+    alias: string | null
+    active_title: ActiveTitle | null
+    rank: number
+    certified_caps: number
+    certified_percentage: number
+    non_certified_caps: number
+    non_certified_percentage: number
+}
+
+export interface CapItAllParams {
+    search?: string
+    limit?: number
+    offset?: number
+}
+
+export interface CapItAllLeaderboardPage {
+    mapCount: number
+    total: number
+    items: CapItAllRow[]
+}
+
+function normaliseCapItAllRows(raw: any): CapItAllRow[] {
+    if (!Array.isArray(raw)) return []
+    return raw.map(row => ({
+        user_id: String(row.user_id),
+        alias: row.alias ?? null,
+        active_title: normaliseActiveTitle(row.active_title),
+        rank: Number(row.rank) || 0,
+        certified_caps: Number(row.certified_caps) || 0,
+        certified_percentage: Number(row.certified_percentage) || 0,
+        non_certified_caps: Number(row.non_certified_caps) || 0,
+        non_certified_percentage: Number(row.non_certified_percentage) || 0,
+    }))
+}
+
+export async function fetchCapItAllLeaderboard(
+    accessToken: string,
+    params: CapItAllParams = {},
+): Promise<CapItAllLeaderboardPage> {
+    const usp = new URLSearchParams()
+    if (params.search) usp.set('search', params.search)
+    if (params.limit !== undefined) usp.set('limit', String(params.limit))
+    if (params.offset !== undefined) usp.set('offset', String(params.offset))
+    const response = await fetch(`${API_BASE_URL}/v2/leaderboards/cap_it_all?${usp.toString()}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+    })
+    if (!response.ok) {
+        throw new Error(`Failed to fetch leaderboard: ${response.statusText} (${response.status})`)
+    }
+    const json = await response.json()
+    if (json.success && json.data) {
+        return {
+            mapCount: Number(json.data.map_count) || 0,
+            total: Number(json.data.total) || 0,
+            items: normaliseCapItAllRows(json.data.items),
+        }
+    }
+    throw new Error('Invalid response format from server')
+}

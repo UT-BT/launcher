@@ -22,6 +22,13 @@ import {
   type PlayersPageState,
   type PlayersPageCaches,
 } from '@/app/components/pages/PlayersPage'
+import {
+  CapItAllPage,
+  DEFAULT_CAP_IT_ALL_STATE,
+  DEFAULT_CAP_IT_ALL_CACHES,
+  type CapItAllPageState,
+  type CapItAllPageCaches,
+} from '@/app/components/pages/CapItAllPage'
 import { MapDetailPage } from '@/app/components/pages/MapDetailPage'
 import { PlayerDetailPage } from '@/app/components/pages/PlayerDetailPage'
 import { InstallationBanner } from '@/app/components/InstallationBanner'
@@ -36,6 +43,7 @@ import { loadPatreonMembers } from '@/app/utils/patreon'
 const MAPS_STATE_STORAGE_KEY = 'utbt:mapsPageState:v1'
 const SERVERS_STATE_STORAGE_KEY = 'utbt:serversState:v1'
 const PLAYERS_STATE_STORAGE_KEY = 'utbt:playersState:v1'
+const CAP_IT_ALL_STATE_STORAGE_KEY = 'utbt:capItAllState:v1'
 const SERVER_PRESETS_STORAGE_KEY = 'utbt:serverPresets:v1'
 const SERVER_FAVORITES_STORAGE_KEY = 'utbt:serverFavorites:v2'
 
@@ -124,6 +132,22 @@ function loadPersistedPlayersState(): PlayersPageState {
   }
 }
 
+function loadPersistedCapItAllState(): CapItAllPageState {
+  if (typeof window === 'undefined') return DEFAULT_CAP_IT_ALL_STATE
+  try {
+    const raw = window.localStorage.getItem(CAP_IT_ALL_STATE_STORAGE_KEY)
+    if (!raw) return DEFAULT_CAP_IT_ALL_STATE
+    const parsed = JSON.parse(raw)
+    return {
+      ...DEFAULT_CAP_IT_ALL_STATE,
+      ...parsed,
+      scrollTop: 0,
+    }
+  } catch {
+    return DEFAULT_CAP_IT_ALL_STATE
+  }
+}
+
 function loadPersistedServerPresets(): ServerPreset[] {
   if (typeof window === 'undefined') return []
   try {
@@ -160,6 +184,8 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
   const [serversCaches, setServersCaches] = useState<ServerBrowserCaches>(DEFAULT_SERVERS_CACHES)
   const [playersState, setPlayersState] = useState<PlayersPageState>(loadPersistedPlayersState)
   const [playersCaches, setPlayersCaches] = useState<PlayersPageCaches>(DEFAULT_PLAYERS_CACHES)
+  const [capItAllState, setCapItAllState] = useState<CapItAllPageState>(loadPersistedCapItAllState)
+  const [capItAllCaches, setCapItAllCaches] = useState<CapItAllPageCaches>(DEFAULT_CAP_IT_ALL_CACHES)
   const [serverPresets, setServerPresets] = useState<ServerPreset[]>(loadPersistedServerPresets)
   const [favoriteServerIds, setFavoriteServerIds] = useState<Set<string>>(loadPersistedServerFavorites)
 
@@ -186,6 +212,12 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
       window.localStorage.setItem(PLAYERS_STATE_STORAGE_KEY, JSON.stringify(playersState))
     } catch { /* ignore */ }
   }, [playersState])
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(CAP_IT_ALL_STATE_STORAGE_KEY, JSON.stringify(capItAllState))
+    } catch { /* ignore */ }
+  }, [capItAllState])
 
   const updateServerPresets = useCallback((next: ServerPreset[]) => {
     setServerPresets(next)
@@ -342,6 +374,14 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
           onStateChange={setPlayersState}
           caches={playersCaches}
           onCachesChange={setPlayersCaches}
+        />
+      case 'cap-it-all':
+        return <CapItAllPage
+          userProfile={userProfile as any}
+          state={capItAllState}
+          onStateChange={setCapItAllState}
+          caches={capItAllCaches}
+          onCachesChange={setCapItAllCaches}
         />
       case 'maps-detail':
         return <MapDetailPage

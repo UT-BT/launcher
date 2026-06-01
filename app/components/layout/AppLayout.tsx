@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useState } from 'react'
-import { Home, Server, Map as MapIcon, Trophy, Settings, LogOut, Play, User, Users } from 'lucide-react'
+import { Home, Server, Map as MapIcon, Trophy, Settings, LogOut, Play, User, Users, Flag } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import logo from '@/app/assets/logo.png'
 import {
@@ -20,10 +20,26 @@ interface NavItem {
     icon: React.ElementType
 }
 
-const navItems: NavItem[] = [
-    { id: 'home', label: 'Home', icon: Home },
-    { id: 'maps', label: 'Maps', icon: MapIcon },
-    { id: 'players', label: 'Players', icon: Users },
+interface NavSection {
+    title: string
+    items: NavItem[]
+}
+
+const navSections: NavSection[] = [
+    {
+        title: 'Navigation',
+        items: [
+            { id: 'home', label: 'Home', icon: Home },
+            { id: 'maps', label: 'Maps', icon: MapIcon },
+            { id: 'players', label: 'Players', icon: Users },
+        ],
+    },
+    {
+        title: 'Leaderboards',
+        items: [
+            { id: 'cap-it-all', label: 'Cap It All', icon: Flag },
+        ],
+    },
 ]
 
 import { UserProfile, getAvatarUrl } from '@/app/utils/api'
@@ -143,40 +159,37 @@ export function AppLayout({ children, currentView, onViewChange, userProfile, in
                     )}
                 </div>
 
-                <div className="px-4 mb-2 relative z-10">
-                    <h3 className="px-4 text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider">
-                        Navigation
-                    </h3>
-                </div>
+                <nav className="flex-1 px-4 space-y-6 relative z-10">
+                    {navSections.map((section) => (
+                        <div key={section.title} className="space-y-2">
+                            <h3 className="px-4 mb-1 text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider">
+                                {section.title}
+                            </h3>
+                            {section.items.map((item) => (
+                                <button
+                                    key={item.id}
+                                    onClick={() => onViewChange(item.id)}
+                                    className={cn(
+                                        "w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 cursor-pointer group relative overflow-hidden",
+                                        currentView === item.id
+                                            ? "text-white shadow-[0_0_20px_rgba(29,78,216,0.3)]"
+                                            : "text-muted-foreground hover:text-white hover:bg-white/5"
+                                    )}
+                                >
+                                    {currentView === item.id && (
+                                        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-red-600/20 border-l-2 border-blue-500" />
+                                    )}
 
-                <nav className="flex-1 px-4 space-y-2 relative z-10">
-                    {navItems.map((item) => (
-                        <button
-                            key={item.id}
-                            onClick={() => onViewChange(item.id)}
-                            className={cn(
-                                "w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 cursor-pointer group relative overflow-hidden",
-                                currentView === item.id
-                                    ? "text-white shadow-[0_0_20px_rgba(29,78,216,0.3)]"
-                                    : "text-muted-foreground hover:text-white hover:bg-white/5"
-                            )}
-                        >
-                            {currentView === item.id && (
-                                <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-red-600/20 border-l-2 border-blue-500" />
-                            )}
-
-                            <item.icon className={cn(
-                                "size-5 transition-colors duration-200 relative z-10",
-                                currentView === item.id ? "text-blue-400" : "group-hover:text-blue-400/80"
-                            )} />
-                            <span className="relative z-10 font-medium">{item.label}</span>
-                        </button>
+                                    <item.icon className={cn(
+                                        "size-5 transition-colors duration-200 relative z-10",
+                                        currentView === item.id ? "text-blue-400" : "group-hover:text-blue-400/80"
+                                    )} />
+                                    <span className="relative z-10 font-medium">{item.label}</span>
+                                </button>
+                            ))}
+                        </div>
                     ))}
                 </nav>
-
-
-
-
 
                 <div className="p-4 border-t border-white/10 relative z-10">
                     <DropdownMenu>
