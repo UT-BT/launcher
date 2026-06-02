@@ -20,6 +20,7 @@ import { PlaytimeBreakdownCard } from './playerDetail/PlaytimeBreakdownCard'
 import { ReviewsAuthoredCard } from './playerDetail/ReviewsAuthoredCard'
 import { FavoriteMapsCard } from './playerDetail/FavoriteMapsCard'
 import { UncappedMapsCard } from './playerDetail/UncappedMapsCard'
+import { PlayerAchievementsCard } from './playerDetail/PlayerAchievementsCard'
 import { MainSectionTabs, type PlayerDetailTab } from './playerDetail/MainSectionTabs'
 
 const PlayerActivityChart = lazy(() => import('./playerDetail/PlayerActivityChart'))
@@ -97,6 +98,7 @@ export function PlayerDetailPage({
         { value: 'wrs', label: 'World Records', count: counts?.wr_count },
         { value: 'playtime', label: 'Playtime by Map' },
         { value: 'uncapped', label: 'Uncapped Maps', count: counts?.uncapped_maps },
+        { value: 'achievements', label: 'Achievements' },
     ]
 
     return (
@@ -214,6 +216,14 @@ export function PlayerDetailPage({
                                 accessToken={accessToken}
                                 userId={userId}
                                 onMapSelect={onMapSelect}
+                                tabsSlot={<MainSectionTabs tabs={tabs} active={activeTab} onChange={setActiveTab} />}
+                            />
+                        )}
+
+                        {activeTab === 'achievements' && (
+                            <PlayerAchievementsCard
+                                accessToken={accessToken}
+                                userId={userId}
                                 tabsSlot={<MainSectionTabs tabs={tabs} active={activeTab} onChange={setActiveTab} />}
                             />
                         )}

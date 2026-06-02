@@ -29,6 +29,13 @@ import {
   type CapItAllPageState,
   type CapItAllPageCaches,
 } from '@/app/components/pages/CapItAllPage'
+import {
+  AchievementsPage,
+  DEFAULT_ACHIEVEMENTS_STATE,
+  DEFAULT_ACHIEVEMENTS_CACHES,
+  type AchievementsPageState,
+  type AchievementsPageCaches,
+} from '@/app/components/pages/AchievementsPage'
 import { MapDetailPage } from '@/app/components/pages/MapDetailPage'
 import { PlayerDetailPage } from '@/app/components/pages/PlayerDetailPage'
 import { InstallationBanner } from '@/app/components/InstallationBanner'
@@ -38,12 +45,14 @@ import { PatreonModal } from '@/app/components/modals/PatreonModal'
 import type { ServerPreset } from '@/app/utils/server-utils'
 import { useFavorites } from '@/app/hooks/useFavorites'
 import { loadPatreonMembers } from '@/app/utils/patreon'
+import { fetchAchievementDefinitions, fetchMyAchievements } from '@/app/utils/api'
 
 
 const MAPS_STATE_STORAGE_KEY = 'utbt:mapsPageState:v1'
 const SERVERS_STATE_STORAGE_KEY = 'utbt:serversState:v1'
 const PLAYERS_STATE_STORAGE_KEY = 'utbt:playersState:v1'
 const CAP_IT_ALL_STATE_STORAGE_KEY = 'utbt:capItAllState:v1'
+const ACHIEVEMENTS_STATE_STORAGE_KEY = 'utbt:achievementsState:v1'
 const SERVER_PRESETS_STORAGE_KEY = 'utbt:serverPresets:v1'
 const SERVER_FAVORITES_STORAGE_KEY = 'utbt:serverFavorites:v2'
 
@@ -148,6 +157,18 @@ function loadPersistedCapItAllState(): CapItAllPageState {
   }
 }
 
+function loadPersistedAchievementsState(): AchievementsPageState {
+  if (typeof window === 'undefined') return DEFAULT_ACHIEVEMENTS_STATE
+  try {
+    const raw = window.localStorage.getItem(ACHIEVEMENTS_STATE_STORAGE_KEY)
+    if (!raw) return DEFAULT_ACHIEVEMENTS_STATE
+    const parsed = JSON.parse(raw)
+    return { ...DEFAULT_ACHIEVEMENTS_STATE, ...parsed, scrollTop: 0 }
+  } catch {
+    return DEFAULT_ACHIEVEMENTS_STATE
+  }
+}
+
 function loadPersistedServerPresets(): ServerPreset[] {
   if (typeof window === 'undefined') return []
   try {
@@ -186,6 +207,8 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
   const [playersCaches, setPlayersCaches] = useState<PlayersPageCaches>(DEFAULT_PLAYERS_CACHES)
   const [capItAllState, setCapItAllState] = useState<CapItAllPageState>(loadPersistedCapItAllState)
   const [capItAllCaches, setCapItAllCaches] = useState<CapItAllPageCaches>(DEFAULT_CAP_IT_ALL_CACHES)
+  const [achievementsState, setAchievementsState] = useState<AchievementsPageState>(loadPersistedAchievementsState)
+  const [achievementsCaches, setAchievementsCaches] = useState<AchievementsPageCaches>(DEFAULT_ACHIEVEMENTS_CACHES)
   const [serverPresets, setServerPresets] = useState<ServerPreset[]>(loadPersistedServerPresets)
   const [favoriteServerIds, setFavoriteServerIds] = useState<Set<string>>(loadPersistedServerFavorites)
 
@@ -218,6 +241,12 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
       window.localStorage.setItem(CAP_IT_ALL_STATE_STORAGE_KEY, JSON.stringify(capItAllState))
     } catch { /* ignore */ }
   }, [capItAllState])
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(ACHIEVEMENTS_STATE_STORAGE_KEY, JSON.stringify(achievementsState))
+    } catch { /* ignore */ }
+  }, [achievementsState])
 
   const updateServerPresets = useCallback((next: ServerPreset[]) => {
     setServerPresets(next)
@@ -261,6 +290,33 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
     window.addEventListener('open-player', onOpenPlayer as EventListener)
     return () => window.removeEventListener('open-player', onOpenPlayer as EventListener)
   }, [currentView])
+
+  // Stamp achievements + grant earned titles on launcher load, even if the user
+  // never opens the Achievements page. GET /me stamps server-side and is
+  // idempotent (unique constraint + existing-set check), so it's safe to fire on
+  // every sign-in. Also warms the cache so the page opens instantly.
+  useEffect(() => {
+    if (!accessToken) return
+    let cancelled = false
+    void (async () => {
+      try {
+        const [definitions, mine] = await Promise.all([
+          fetchAchievementDefinitions(accessToken),
+          fetchMyAchievements(accessToken),
+        ])
+        if (cancelled) return
+        setAchievementsCaches(prev => ({
+          ...prev,
+          definitions,
+          progress: mine.items,
+          lastRefreshIso: new Date().toISOString(),
+        }))
+      } catch (e) {
+        console.error('Achievement stamp-on-load failed:', e)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [accessToken])
 
   const openMap = useCallback((name: string) => {
     setPreviousView(prev => currentView === 'maps-detail' ? prev : currentView)
@@ -382,6 +438,14 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
           onStateChange={setCapItAllState}
           caches={capItAllCaches}
           onCachesChange={setCapItAllCaches}
+        />
+      case 'achievements':
+        return <AchievementsPage
+          userProfile={userProfile as any}
+          state={achievementsState}
+          onStateChange={setAchievementsState}
+          caches={achievementsCaches}
+          onCachesChange={setAchievementsCaches}
         />
       case 'maps-detail':
         return <MapDetailPage

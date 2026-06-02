@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useState } from 'react'
-import { Home, Server, Map as MapIcon, Trophy, Settings, LogOut, Play, User, Users, Flag } from 'lucide-react'
+import { Home, Server, Map as MapIcon, Trophy, Settings, LogOut, Play, User, Users, Flag, Award } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import logo from '@/app/assets/logo.png'
 import {
@@ -27,11 +27,18 @@ interface NavSection {
 
 const navSections: NavSection[] = [
     {
-        title: 'Navigation',
+        title: 'Main',
         items: [
             { id: 'home', label: 'Home', icon: Home },
+            { id: 'achievements', label: 'Achievements', icon: Award },
+         ],
+    },
+    {
+        title: 'UTBT.net',
+        items: [
             { id: 'maps', label: 'Maps', icon: MapIcon },
             { id: 'players', label: 'Players', icon: Users },
+            { id: 'servers', label: 'Servers', icon: Server },
         ],
     },
     {
