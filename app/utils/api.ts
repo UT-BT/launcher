@@ -1139,6 +1139,90 @@ export async function fetchUserSummary(accessToken: string, userId: string | num
     }
 }
 
+export interface AchievementTitle {
+    id: number
+    name: string
+    rarity: number
+    color_r: number
+    color_g: number
+    color_b: number
+}
+
+export interface AchievementTier {
+    index?: number
+    level: number
+    threshold: number
+    dynamic?: boolean
+    grants_title_id: number | null
+    title?: AchievementTitle | null
+    unlocked_at?: string | null
+}
+
+export interface AchievementDefinition {
+    code: string
+    name: string
+    description: string
+    metric: string
+    icon: string
+    goal: string            // requirement phrasing with {n} placeholder, e.g. "Reach {n} hours played"
+    goal_all?: string | null // phrasing for a dynamic "all" tier, e.g. "Cap every map"
+    unit?: string           // short noun for the "N <unit> to go" countdown, e.g. "hours"
+    tiers: AchievementTier[]
+}
+
+export interface AchievementProgress {
+    code: string
+    current_value: number
+    current_tier: number
+    current_level: number
+    next_threshold: number | null
+    max_threshold: number
+    percent_to_next: number
+    unlocked: boolean
+    maxed: boolean
+    unlocked_tiers: AchievementTier[]
+    current?: {
+        value: number
+        label: string
+        extra?: { value: number; label: string } | null
+    } | null
+}
+
+export interface MyAchievements {
+    items: AchievementProgress[]
+}
+
+export async function fetchAchievementDefinitions(accessToken: string): Promise<AchievementDefinition[]> {
+    const response = await fetch(`${API_BASE_URL}/v2/achievements/definitions`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+    })
+    if (!response.ok) return []
+    const json = await response.json()
+    if (json?.success && Array.isArray(json.data?.achievements)) return json.data.achievements as AchievementDefinition[]
+    return []
+}
+
+export async function fetchMyAchievements(accessToken: string): Promise<MyAchievements> {
+    const response = await fetch(`${API_BASE_URL}/v2/achievements/me`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+    })
+    if (!response.ok) return { items: [] }
+    const json = await response.json()
+    if (json?.success && json.data && Array.isArray(json.data.items)) return json.data as MyAchievements
+    return { items: [] }
+}
+
+// Another player's achievements (read-only; never stamps unlocks or grants titles).
+export async function fetchUserAchievements(accessToken: string, userId: string | number): Promise<MyAchievements> {
+    const response = await fetch(`${API_BASE_URL}/v2/achievements/user/${encodeURIComponent(String(userId))}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+    })
+    if (!response.ok) return { items: [] }
+    const json = await response.json()
+    if (json?.success && json.data && Array.isArray(json.data.items)) return json.data as MyAchievements
+    return { items: [] }
+}
+
 export interface UserCapRow {
     id: string
     mapName: string
