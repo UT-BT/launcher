@@ -394,21 +394,35 @@ export function ServerBrowserPage({
 
     const pingAllServers = useCallback(async (serversToPing: Server[]) => {
         const uniqueIps = Array.from(new Set(serversToPing.map(s => s.ip)))
-        uniqueIps.forEach(async (ip) => {
-            try {
-                const ping = await window.conveyor.game.pingServer(ip)
-                onCachesChange(prev => ({
-                    ...prev,
-                    servers: prev.servers.map(s => s.ip === ip ? { ...s, ping } : s),
-                }))
-            } catch (err) {
-                logger.error('Failed to ping server', { ip, error: err })
+        const PING_CONCURRENCY = 6
+        for (let i = 0; i < uniqueIps.length; i += PING_CONCURRENCY) {
+            const batch = uniqueIps.slice(i, i + PING_CONCURRENCY)
+            const results = await Promise.all(batch.map(async (ip) => {
+                try {
+                    return { ip, ping: await window.conveyor.game.pingServer(ip) }
+                } catch (err) {
+                    logger.error('Failed to ping server', { ip, error: err })
+                    return null
+                }
+            }))
+            const pingByIp = new Map<string, number>()
+            for (const r of results) {
+                if (r) pingByIp.set(r.ip, r.ping)
             }
-        })
+            if (pingByIp.size === 0) continue
+            onCachesChange(prev => ({
+                ...prev,
+                servers: prev.servers.map(s => {
+                    const ping = pingByIp.get(s.ip)
+                    return ping === undefined ? s : { ...s, ping }
+                }),
+            }))
+        }
     }, [logger, onCachesChange])
 
-    const fetchServers = useCallback(async () => {
-        setLoading(true)
+    const fetchServers = useCallback(async (opts?: { silent?: boolean }) => {
+        const silent = opts?.silent === true
+        if (!silent) setLoading(true)
         setError(null)
         try {
             const data = await window.conveyor.game.fetchServers() as Server[]
@@ -421,7 +435,7 @@ export function ServerBrowserPage({
             logger.error('Failed to fetch servers', { error: err })
             setError('Failed to load servers')
         } finally {
-            setLoading(false)
+            if (!silent) setLoading(false)
         }
     }, [logger, onCachesChange, pingAllServers])
 
@@ -434,7 +448,7 @@ export function ServerBrowserPage({
         const interval = setInterval(async () => {
             try {
                 const isRunning = await window.conveyor.game.isGameRunning()
-                if (!isRunning) fetchServers()
+                if (!isRunning) fetchServers({ silent: true })
             } catch (err) {
                 console.error('Failed to check game status during auto-refresh', err)
             }
@@ -531,7 +545,8 @@ export function ServerBrowserPage({
     const onScroll = useCallback(() => {
         const node = scrollContainerRef.current
         if (!node) return
-        onStateChange(prev => prev.scrollTop === node.scrollTop ? prev : { ...prev, scrollTop: node.scrollTop })
+        const top = node.scrollTop
+        onStateChange(prev => Math.abs(prev.scrollTop - top) > 24 ? { ...prev, scrollTop: top } : prev)
     }, [onStateChange])
 
     const resetFilters = useCallback(() => {
@@ -998,7 +1013,7 @@ export function ServerBrowserPage({
                         <AlertCircle className="size-4" />
                         {error}
                     </span>
-                    <Button variant="ghost" size="sm" onClick={fetchServers} className="text-red-400 hover:text-red-300">
+                    <Button variant="ghost" size="sm" onClick={() => fetchServers()} className="text-red-400 hover:text-red-300">
                         <RefreshCw className="size-4 mr-1" /> Retry
                     </Button>
                 </div>
