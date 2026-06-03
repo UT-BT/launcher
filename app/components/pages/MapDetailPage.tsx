@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { AlertTriangle, ArrowLeft, RefreshCw } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Tooltip } from '@/app/components/ui/tooltip'
@@ -71,39 +71,41 @@ export function MapDetailPage({
 
     const wrHolder = wrProgression.length > 0 ? wrProgression[wrProgression.length - 1] : null
 
-    const load = useCallback(async () => {
+    useEffect(() => {
+        let cancelled = false
         if (!accessToken) return
         setLoading(true)
         setError(null)
         setUserCapCount(null)
-        try {
-            const [matched, lb, rv, pt, wr, capCount] = await Promise.all([
-                fetchMap(accessToken, mapName, MAP_METADATA_COLUMNS),
-                fetchMapLeaderboard(accessToken, mapName, false),
-                fetchMapReviews(accessToken, mapName),
-                fetchPlaytimeForMap(accessToken, mapName),
-                fetchWorldRecordProgression(accessToken, mapName),
-                currentUserId != null
-                    ? fetchUserCapCountForMap(accessToken, currentUserId, mapName)
-                    : Promise.resolve(0),
-            ])
-            setMap(matched)
-            setLeaderboard(lb)
-            setReviews(rv)
-            setPlaytime(pt)
-            setWrProgression(wr)
-            setUserCapCount(capCount)
-        } catch (e) {
-            console.error('Failed to load map detail:', e)
-            setError('Failed to load map data.')
-        } finally {
-            setLoading(false)
-        }
-    }, [accessToken, mapName, currentUserId])
-
-    useEffect(() => {
-        load()
-    }, [load, refreshKey])
+        ;(async () => {
+            try {
+                const [matched, lb, rv, pt, wr, capCount] = await Promise.all([
+                    fetchMap(accessToken, mapName, MAP_METADATA_COLUMNS),
+                    fetchMapLeaderboard(accessToken, mapName, false),
+                    fetchMapReviews(accessToken, mapName),
+                    fetchPlaytimeForMap(accessToken, mapName),
+                    fetchWorldRecordProgression(accessToken, mapName),
+                    currentUserId != null
+                        ? fetchUserCapCountForMap(accessToken, currentUserId, mapName)
+                        : Promise.resolve(0),
+                ])
+                if (cancelled) return
+                setMap(matched)
+                setLeaderboard(lb)
+                setReviews(rv)
+                setPlaytime(pt)
+                setWrProgression(wr)
+                setUserCapCount(capCount)
+            } catch (e) {
+                if (cancelled) return
+                console.error('Failed to load map detail:', e)
+                setError('Failed to load map data.')
+            } finally {
+                if (!cancelled) setLoading(false)
+            }
+        })()
+        return () => { cancelled = true }
+    }, [accessToken, mapName, currentUserId, refreshKey])
 
     const avgOverall = useMemo(() => {
         if (reviews.length === 0) return null

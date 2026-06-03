@@ -22,6 +22,10 @@ export const registerGameHandlers = (_window: BrowserWindow) => {
             throw new Error('UnrealTournament.exe not found')
         }
 
+        if (!/^[a-zA-Z0-9.-]+$/.test(ip)) {
+            throw new Error(`Invalid server address: ${ip}`)
+        }
+
         const url = `unreal://${ip}:${port}`
 
         loggingService.info(`Launching game with URL: ${url}`, 'GameHandler')

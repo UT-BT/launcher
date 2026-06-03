@@ -1,5 +1,5 @@
 import { app, safeStorage } from 'electron'
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs'
+import { readFileSync, writeFileSync, mkdirSync, existsSync, renameSync } from 'fs'
 import { join } from 'path'
 
 const ENC_PREFIX = 'enc:'
@@ -78,7 +78,9 @@ export function readConfig(): LauncherConfig {
 export function writeConfig(config: LauncherConfig): void {
   const file = getConfigPath()
   const serialized = JSON.stringify(config, null, 2)
-  writeFileSync(file, serialized, 'utf-8')
+  const tmp = `${file}.tmp`
+  writeFileSync(tmp, serialized, 'utf-8')
+  renameSync(tmp, file)
 }
 
 export function getUt99InstallPath(): string | undefined {

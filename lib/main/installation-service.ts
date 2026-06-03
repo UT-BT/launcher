@@ -72,16 +72,17 @@ export class InstallationService {
                 let downloadedBytes = 0
                 const file = createWriteStream(this.isoPath)
 
-                response.on('data', (chunk) => {
-                    downloadedBytes += chunk.length
-                    file.write(chunk)
-                    const progress = totalBytes > 0 ? (downloadedBytes / totalBytes) * 100 : 0
-                    window.webContents.send('iso-download-progress', { progress, totalBytes, downloadedBytes })
+                file.on('error', (err) => {
+                    loggingService.error('ISO write stream error', 'InstallationService', err)
+                    try {
+                        unlinkSync(this.isoPath)
+                    } catch {
+                        // Best-effort cleanup of partial ISO; ignore unlink failure.
+                    }
+                    reject(err)
                 })
 
-                response.on('end', () => {
-                    file.end()
-                    // Verify hash after download
+                file.on('finish', () => {
                     this.verifyIsoHash().then(isValid => {
                         if (isValid) {
                             resolve()
@@ -91,8 +92,19 @@ export class InstallationService {
                     }).catch(reject)
                 })
 
+                response.on('data', (chunk) => {
+                    downloadedBytes += chunk.length
+                    file.write(chunk)
+                    const progress = totalBytes > 0 ? (downloadedBytes / totalBytes) * 100 : 0
+                    window.webContents.send('iso-download-progress', { progress, totalBytes, downloadedBytes })
+                })
+
+                response.on('end', () => {
+                    file.end()
+                })
+
                 response.on('error', (err) => {
-                    file.close()
+                    file.destroy()
                     try {
                         unlinkSync(this.isoPath)
                     } catch {
@@ -118,9 +130,13 @@ export class InstallationService {
         }
     }
 
+    private psQuote(value: string): string {
+        return value.replace(/'/g, "''")
+    }
+
     async unmountISO(): Promise<void> {
         return new Promise((resolve) => {
-            const dismountCommand = `powershell -Command "Dismount-DiskImage -ImagePath '${this.isoPath}'"`
+            const dismountCommand = `powershell -Command "Dismount-DiskImage -ImagePath '${this.psQuote(this.isoPath)}'"`
             exec(dismountCommand, (error) => {
                 if (error) {
                     loggingService.warn('Failed to unmount ISO', 'InstallationService', error)
@@ -143,7 +159,7 @@ export class InstallationService {
 
     private mountISO(): Promise<string> {
         return new Promise((resolve, reject) => {
-            const mountCommand = `powershell -Command "Mount-DiskImage -ImagePath '${this.isoPath}' -PassThru | Get-Volume | Select-Object -ExpandProperty DriveLetter"`
+            const mountCommand = `powershell -Command "Mount-DiskImage -ImagePath '${this.psQuote(this.isoPath)}' -PassThru | Get-Volume | Select-Object -ExpandProperty DriveLetter"`
 
             exec(mountCommand, (error, stdout, stderr) => {
                 if (error) {
@@ -155,7 +171,7 @@ export class InstallationService {
                 const driveLetter = stdout.trim()
                 if (!driveLetter) {
                     // Try to get drive letter again if already mounted
-                    const getDriveCommand = `powershell -Command "Get-DiskImage -ImagePath '${this.isoPath}' | Get-Volume | Select-Object -ExpandProperty DriveLetter"`
+                    const getDriveCommand = `powershell -Command "Get-DiskImage -ImagePath '${this.psQuote(this.isoPath)}' | Get-Volume | Select-Object -ExpandProperty DriveLetter"`
                     exec(getDriveCommand, (err, out, _serr) => {
                         if (err || !out.trim()) {
                             reject(new Error('Could not determine drive letter for mounted ISO'))
@@ -176,7 +192,7 @@ export class InstallationService {
             const setupPath = `${driveLetter}:\\Setup.exe`
             loggingService.info(`Running setup from ${setupPath}`, 'InstallationService')
 
-            const command = `powershell -Command "Start-Process -FilePath '${setupPath}' -Wait"`
+            const command = `powershell -Command "Start-Process -FilePath '${this.psQuote(setupPath)}' -Wait"`
 
             exec(command, (error, _stdout, stderr) => {
                 if (error) {

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { ArrowLeft, RefreshCw } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Tooltip } from '@/app/components/ui/tooltip'
@@ -53,22 +53,26 @@ export function PlayerDetailPage({
     const [activity, setActivity] = useState<UserActivityBucket[]>([])
     const [chartLoading, setChartLoading] = useState(true)
 
-    const load = useCallback(async () => {
+    useEffect(() => {
+        let cancelled = false
         if (!accessToken) return
         setLoading(true)
         setError(null)
-        try {
-            const result = await fetchUserSummary(accessToken, userId)
-            setSummary(result)
-        } catch (e) {
-            console.error('Failed to load user detail:', e)
-            setError('Failed to load player data.')
-        } finally {
-            setLoading(false)
-        }
-    }, [accessToken, userId])
-
-    useEffect(() => { load() }, [load, refreshKey])
+        ;(async () => {
+            try {
+                const result = await fetchUserSummary(accessToken, userId)
+                if (cancelled) return
+                setSummary(result)
+            } catch (e) {
+                if (cancelled) return
+                console.error('Failed to load user detail:', e)
+                setError('Failed to load player data.')
+            } finally {
+                if (!cancelled) setLoading(false)
+            }
+        })()
+        return () => { cancelled = true }
+    }, [accessToken, userId, refreshKey])
 
     // Reset tab + chart caches when switching players.
     useEffect(() => {

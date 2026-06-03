@@ -238,7 +238,7 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
         return promise
     }, [accessToken, serverParams.search, countKey])
 
-    const loadPage = useCallback(async () => {
+    const loadPage = useCallback(async (isCancelled: () => boolean = () => false) => {
         if (!accessToken) return
 
         const prefetchNeighbours = (totalPages: number) => {
@@ -266,6 +266,7 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
         setPageLoading(true)
         try {
             const [rows, count] = await Promise.all([fetchPageData(state.currentPage), fetchCountData()])
+            if (isCancelled()) return
             if (rows) {
                 onCachesChange(prev => ({
                     ...prev,
@@ -279,11 +280,15 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
                 setError('Failed to load players.')
             }
         } finally {
-            setPageLoading(false)
+            if (!isCancelled()) setPageLoading(false)
         }
     }, [accessToken, state.currentPage, pageSize, keyFor, countKey, fetchPageData, fetchCountData, onCachesChange])
 
-    useEffect(() => { loadPage() }, [loadPage])
+    useEffect(() => {
+        let cancelled = false
+        loadPage(() => cancelled)
+        return () => { cancelled = true }
+    }, [loadPage])
 
     // Restore scroll once on mount.
     useEffect(() => {

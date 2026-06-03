@@ -182,7 +182,7 @@ export function GameVideoSettings() {
     const confirmImport = async () => {
         if (!pendingImportData) return
 
-        const { settings, renderer: impRenderer, resX: impX, impY: impY, colorBits: impBits, fpsLimit: impFps } = pendingImportData
+        const { settings, renderer: impRenderer, resX: impX, resY: impY, colorBits: impBits, fpsLimit: impFps } = pendingImportData
 
         // Apply display settings
         if (impX && impY) {
