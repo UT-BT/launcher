@@ -133,7 +133,7 @@ export default function ActivityChart({ leaderboard, playtime }: ActivityChartPr
                                 }}
                                 labelStyle={{ color: '#9ca3af', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}
                                 labelFormatter={(_label, payload) => payload?.[0]?.payload?.rangeLabel ?? _label}
-                                formatter={(v: number) => [mode === 'playtime' ? `${v.toFixed(1)} h` : v, yLabel]}
+                                formatter={(v) => [mode === 'playtime' ? `${Number(v).toFixed(1)} h` : v, yLabel]}
                             />
                             <Area
                                 type="monotone"

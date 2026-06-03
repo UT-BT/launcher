@@ -3,6 +3,9 @@ import https from 'https'
 import http from 'http'
 import { URL } from 'url'
 
+const REQUEST_TIMEOUT_MS = 20_000
+const MAX_RESPONSE_BYTES = 64 * 1024 * 1024
+
 export interface GatewayRequestOptions {
   endpoint: string
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE'
@@ -65,23 +68,33 @@ export class GatewayService {
 
         const requestOptions = {
           method: options.method || 'GET',
-          headers
+          headers,
+          timeout: REQUEST_TIMEOUT_MS,
         }
 
         const req = client.request(requestUrl, requestOptions, (res) => {
           const status = res.statusCode || 0
 
           if (status >= 300 && status < 400 && res.headers.location) {
+            res.destroy()
             const nextUrl = new URL(res.headers.location, requestUrl).toString()
             return doRequest(nextUrl)
           }
 
           if (status < 200 || status >= 300) {
+            res.destroy()
             return reject(new Error(`Request failed with status ${status}`))
           }
 
           const chunks: Buffer[] = []
+          let received = 0
           res.on('data', (chunk) => {
+            received += chunk.length
+            if (received > MAX_RESPONSE_BYTES) {
+              res.destroy()
+              reject(new Error('Response exceeded maximum allowed size'))
+              return
+            }
             chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))
           })
 
@@ -107,6 +120,7 @@ export class GatewayService {
         })
 
         req.on('error', reject)
+        req.on('timeout', () => req.destroy(new Error(`Request timed out after ${REQUEST_TIMEOUT_MS}ms`)))
 
         if (options.body) {
           req.write(options.body)
