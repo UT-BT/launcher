@@ -40,6 +40,8 @@ function PlayerAvatar({ userId, alias, title, sizePx }: {
             alt={alias || String(userId)}
             width={sizePx}
             height={sizePx}
+            loading="lazy"
+            decoding="async"
             style={{
                 width: sizePx,
                 height: sizePx,

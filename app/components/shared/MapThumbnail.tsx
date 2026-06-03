@@ -20,6 +20,8 @@ export function MapThumbnail({ mapName, className, alt }: MapThumbnailProps) {
             <img
                 src={src}
                 alt={alt ?? mapName}
+                loading="lazy"
+                decoding="async"
                 className="w-full h-full object-cover"
                 onError={() => setErrored(true)}
             />

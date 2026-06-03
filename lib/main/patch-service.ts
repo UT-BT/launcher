@@ -134,6 +134,12 @@ export class PatchService {
                 let downloadedBytes = 0
                 const file = createWriteStream(destination)
 
+                file.on('error', (err) => {
+                    loggingService.error('Patch write stream error', 'PatchService', err)
+                    reject(err)
+                })
+                file.on('finish', () => resolve())
+
                 response.on('data', (chunk) => {
                     downloadedBytes += chunk.length
                     file.write(chunk)
@@ -143,11 +149,10 @@ export class PatchService {
 
                 response.on('end', () => {
                     file.end()
-                    resolve()
                 })
 
                 response.on('error', (err) => {
-                    file.close()
+                    file.destroy()
                     reject(err)
                 })
             })

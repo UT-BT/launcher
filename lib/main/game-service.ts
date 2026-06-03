@@ -432,6 +432,17 @@ export class GameService {
                 let downloadedBytes = 0
                 const file = createWriteStream(destination)
 
+                file.on('error', (err) => {
+                    loggingService.error('Error writing announcer file', 'GameService', err)
+                    resolve() // Resolve anyway
+                })
+
+                file.on('finish', () => {
+                    loggingService.info('Custom announcer installed', 'GameService')
+                    window.webContents.send('announcer-install-complete')
+                    resolve()
+                })
+
                 response.on('data', (chunk) => {
                     downloadedBytes += chunk.length
                     file.write(chunk)
@@ -441,14 +452,11 @@ export class GameService {
 
                 response.on('end', () => {
                     file.end()
-                    loggingService.info('Custom announcer installed', 'GameService')
-                    window.webContents.send('announcer-install-complete')
-                    resolve()
                 })
 
                 response.on('error', (err) => {
-                    file.close()
-                    loggingService.error('Error writing announcer file', 'GameService', err)
+                    file.destroy()
+                    loggingService.error('Error downloading announcer', 'GameService', err)
                     resolve() // Resolve anyway
                 })
             })

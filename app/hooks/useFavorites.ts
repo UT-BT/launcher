@@ -98,6 +98,7 @@ export function useFavorites(
     const toggle = useCallback(async (mapName: string) => {
         if (!accessToken) return
         const wasFavorited = favoriteOrderRef.current.includes(mapName)
+        const prevOrder = favoriteOrderRef.current.slice()
         const nextOrder = wasFavorited
             ? favoriteOrderRef.current.filter((n) => n !== mapName)
             : [...favoriteOrderRef.current, mapName]
@@ -112,11 +113,7 @@ export function useFavorites(
             await writeIniBestEffort(nextOrder)
         } catch (err) {
             console.error('Favorite toggle failed; rolling back', err)
-            applyFavorites(
-                wasFavorited
-                    ? [...favoriteOrderRef.current, mapName]
-                    : favoriteOrderRef.current.filter((n) => n !== mapName),
-            )
+            applyFavorites(prevOrder)
         }
     }, [accessToken, applyFavorites, writeIniBestEffort])
 
@@ -141,6 +138,9 @@ export function useFavorites(
             try {
                 const ini = await window.conveyor.favorites.readIni()
                 if (!ini.ok) return
+                if (ini.mapNames.length === 0 && favoriteOrderRef.current.length > 0) {
+                    return
+                }
                 const updated = await replaceFavoriteMaps(accessToken, ini.mapNames)
                 applyFavorites(updated)
             } catch (err) {

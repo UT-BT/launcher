@@ -1,6 +1,7 @@
 import type { BrowserWindow } from 'electron'
-import { shell, app } from 'electron'
+import { app } from 'electron'
 import { handle } from '@/lib/main/shared'
+import { openExternalSafe } from '@/lib/main/url-safety'
 import { electronAPI } from '@electron-toolkit/preload'
 
 export const registerWindowHandlers = (window: BrowserWindow) => {
@@ -45,7 +46,7 @@ export const registerWindowHandlers = (window: BrowserWindow) => {
   handle('web-zoom-in', () => webContents.setZoomLevel(webContents.zoomLevel + 0.5))
   handle('web-zoom-out', () => webContents.setZoomLevel(webContents.zoomLevel - 0.5))
   handle('web-toggle-fullscreen', () => window.setFullScreen(!window.fullScreen))
-  handle('web-open-url', (url: string) => shell.openExternal(url))
+  handle('web-open-url', (url: string) => openExternalSafe(url))
 
   window.webContents.on('before-input-event', (_event, input) => {
     if (!webLocked) return
