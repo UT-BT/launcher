@@ -159,30 +159,60 @@ export interface Playtime {
 }
 
 
-const API_BASE_URL = import.meta.env.DEV ? 'http://localhost:5000' : 'https://api.utbt.net'
+const API_BASE_URL = import.meta.env.DEV ? 'https://api.utbt.net' : 'https://api.utbt.net'
+
+const DEFAULT_TIMEOUT_MS = 20_000
+
+export interface ApiRequestOptions {
+    token?: string
+    method?: 'GET' | 'POST' | 'PUT' | 'DELETE'
+    body?: unknown
+    headers?: { [key: string]: string }
+    signal?: AbortSignal
+    timeoutMs?: number
+}
+
+export async function apiRequest(path: string, opts: ApiRequestOptions = {}): Promise<Response> {
+    const { token, method = 'GET', body, headers = {}, signal, timeoutMs = DEFAULT_TIMEOUT_MS } = opts
+    const controller = new AbortController()
+    const onAbort = () => controller.abort(signal?.reason)
+    if (signal) {
+        if (signal.aborted) controller.abort(signal.reason)
+        else signal.addEventListener('abort', onAbort, { once: true })
+    }
+    const timer = setTimeout(() => controller.abort(new DOMException('Request timed out', 'TimeoutError')), timeoutMs)
+    try {
+        const url = path.startsWith('http') ? path : `${API_BASE_URL}${path}`
+        return await fetch(url, {
+            method,
+            signal: controller.signal,
+            headers: {
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+                ...headers,
+            },
+            body: body !== undefined ? JSON.stringify(body) : undefined,
+        })
+    } finally {
+        clearTimeout(timer)
+        if (signal) signal.removeEventListener('abort', onAbort)
+    }
+}
+
+export async function apiGet<T>(path: string, opts: ApiRequestOptions = {}): Promise<T> {
+    const res = await apiRequest(path, opts)
+    if (!res.ok) {
+        throw new Error(`Request failed: ${res.statusText} (${res.status})`)
+    }
+    const json = await res.json()
+    if (json && json.success && json.data !== null && json.data !== undefined) {
+        return json.data as T
+    }
+    throw new Error('Invalid response format from server')
+}
 
 export async function fetchUserProfile(accessToken: string): Promise<UserProfile> {
-    try {
-        const response = await fetch(`${API_BASE_URL}/users/me`, {
-            headers: {
-                'Authorization': `Bearer ${accessToken}`
-            }
-        })
-
-        if (!response.ok) {
-            throw new Error(`Failed to fetch user profile: ${response.statusText} (${response.status})`)
-        }
-
-        const json = await response.json()
-        if (json.success && json.data) {
-            return json.data as UserProfile
-        }
-
-        throw new Error('Invalid response format from server')
-    } catch (error) {
-        console.error('Error fetching user profile:', error)
-        throw error
-    }
+    return apiGet<UserProfile>('/users/me', { token: accessToken })
 }
 
 export async function downloadDemo(capId: string): Promise<ArrayBuffer> {
@@ -304,41 +334,13 @@ function buildMapQuery(params: MapListParams, defaultActive = true): string {
 }
 
 export async function fetchMaps(accessToken: string, params: MapListParams = {}): Promise<Map[]> {
-    try {
-        const qs = buildMapQuery(params)
-
-        const response = await fetch(`${API_BASE_URL}/maps/?${qs}`, {
-            headers: {
-                'Authorization': `Bearer ${accessToken}`
-            }
-        })
-
-        if (!response.ok) {
-            throw new Error(`Failed to fetch maps: ${response.statusText} (${response.status})`)
-        }
-
-        const json = await response.json()
-        if (json.success && json.data) {
-            return json.data as Map[]
-        }
-
-        throw new Error('Invalid response format from server')
-    } catch (error) {
-        console.error('Error fetching maps:', error)
-        throw error
-    }
+    return apiGet<Map[]>(`/maps/?${buildMapQuery(params)}`, { token: accessToken })
 }
 
 export async function fetchMap(accessToken: string, mapName: string, columns?: string[]): Promise<MapMetadata | null> {
     try {
         const qs = columns?.length ? `?columns=${columns.join(',')}` : ''
-        const response = await fetch(`${API_BASE_URL}/maps/${encodeURIComponent(mapName)}${qs}`, {
-            headers: { 'Authorization': `Bearer ${accessToken}` },
-        })
-        if (!response.ok) return null
-        const json = await response.json()
-        if (json.success && json.data) return json.data as MapMetadata
-        return null
+        return await apiGet<MapMetadata>(`/maps/${encodeURIComponent(mapName)}${qs}`, { token: accessToken })
     } catch (error) {
         console.error('Error fetching map:', error)
         return null
@@ -355,22 +357,7 @@ export async function fetchMapsMetadata(accessToken: string): Promise<MapMetadat
 
 export async function fetchBestCaps(accessToken: string, userId: string | number): Promise<BestCap[]> {
     try {
-        const response = await fetch(`${API_BASE_URL}/caps/capped_maps/${userId}`, {
-            headers: {
-                'Authorization': `Bearer ${accessToken}`
-            }
-        })
-
-        if (!response.ok) {
-            throw new Error(`Failed to fetch best caps: ${response.statusText} (${response.status})`)
-        }
-
-        const json = await response.json()
-        if (json.success && Array.isArray(json.data)) {
-            return json.data as BestCap[]
-        }
-
-        return []
+        return await apiGet<BestCap[]>(`/caps/capped_maps/${userId}`, { token: accessToken })
     } catch (error) {
         console.error('Error fetching best caps:', error)
         return []
