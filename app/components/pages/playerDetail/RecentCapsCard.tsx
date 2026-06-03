@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Play, Download, MessageSquareOff, ShieldCheck, Search, Star } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { fetchCapsForUser, type UserCapRow, type CapFilter } from '@/app/utils/api'
+import { usePaginatedQuery } from '@/app/hooks/useAsync'
 import { formatCapTime, formatAddedDate, displayMapName } from '@/app/utils/format'
 import { getMedalIcon } from '@/app/utils/medals'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
@@ -75,12 +76,6 @@ function renderCapStatus(cap: UserCapRow) {
 export function RecentCapsCard({
     accessToken, userId, favoriteMapNames, onToggleFavorite, onMapSelect, canEditFavorites, tabsSlot,
 }: RecentCapsCardProps) {
-    const [page, setPage] = useState(1)
-    const [pageSize, setPageSize] = useState(10)
-    const [items, setItems] = useState<UserCapRow[]>([])
-    const [total, setTotal] = useState(0)
-    const [loading, setLoading] = useState(true)
-    const [error, setError] = useState<string | null>(null)
     const [queryRaw, setQueryRaw] = useState('')
     const [query, setQuery] = useState('')
     const [capFilter, setCapFilter] = useState<CapFilter>('all')
@@ -97,38 +92,22 @@ export function RecentCapsCard({
         return () => clearTimeout(t)
     }, [queryRaw])
 
-    // Reset to page 1 when filters change
-    useEffect(() => { setPage(1) }, [query, capFilter, favoritesOnly, sortField, sortDir])
-
-    useEffect(() => {
-        let cancelled = false
-        if (!accessToken) return
-        setLoading(true)
-        setError(null)
-        const offset = (page - 1) * pageSize
-        fetchCapsForUser(accessToken, userId, {
-            limit: pageSize, offset,
-            mapFuzzy: query || undefined,
-            capFilter,
-            favoritesOnly,
-            sort: sortField,
-            order: sortDir,
-        })
-            .then(res => {
-                if (cancelled) return
-                setItems(res.items)
-                setTotal(res.total)
-            })
-            .catch(err => {
-                if (cancelled) return
-                console.error('Failed to load caps:', err)
-                setError('Failed to load caps.')
-            })
-            .finally(() => { if (!cancelled) setLoading(false) })
-        return () => { cancelled = true }
-    }, [accessToken, userId, page, pageSize, query, capFilter, favoritesOnly, sortField, sortDir])
-
-    const totalPages = Math.max(1, Math.ceil(total / pageSize))
+    const {
+        page, pageSize, items, total, totalPages, loading, error, setPage, setPageSize,
+    } = usePaginatedQuery<UserCapRow>({
+        enabled: !!accessToken,
+        errorMessage: 'Failed to load caps.',
+        deps: [accessToken, userId, query, capFilter, favoritesOnly, sortField, sortDir],
+        fetchPage: ({ limit, offset }) =>
+            fetchCapsForUser(accessToken!, userId, {
+                limit, offset,
+                mapFuzzy: query || undefined,
+                capFilter,
+                favoritesOnly,
+                sort: sortField,
+                order: sortDir,
+            }),
+    })
 
     const handleSort = (field: SortField) => {
         if (sortField === field) {
