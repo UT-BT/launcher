@@ -10,6 +10,7 @@ import {
     type UserActivityBucket,
 } from '@/app/utils/api'
 import { useRefreshCooldown } from '@/app/hooks/useRefreshCooldown'
+import { useAsync } from '@/app/hooks/useAsync'
 import { ChangeTitleModal } from '@/app/components/modals/ChangeTitleModal'
 import { HeroSection } from './playerDetail/HeroSection'
 import { MedalShowcaseCard } from './playerDetail/MedalShowcaseCard'
@@ -41,9 +42,6 @@ export function PlayerDetailPage({
     const currentUserId = userProfile?.id ?? undefined
     const isSelf = currentUserId != null && String(currentUserId) === String(userId)
 
-    const [summary, setSummary] = useState<UserSummary | null>(null)
-    const [loading, setLoading] = useState(true)
-    const [error, setError] = useState<string | null>(null)
     const [refreshKey, setRefreshKey] = useState(0)
     const refreshCooldown = useRefreshCooldown()
 
@@ -53,26 +51,12 @@ export function PlayerDetailPage({
     const [activity, setActivity] = useState<UserActivityBucket[]>([])
     const [chartLoading, setChartLoading] = useState(true)
 
-    useEffect(() => {
-        let cancelled = false
-        if (!accessToken) return
-        setLoading(true)
-        setError(null)
-        ;(async () => {
-            try {
-                const result = await fetchUserSummary(accessToken, userId)
-                if (cancelled) return
-                setSummary(result)
-            } catch (e) {
-                if (cancelled) return
-                console.error('Failed to load user detail:', e)
-                setError('Failed to load player data.')
-            } finally {
-                if (!cancelled) setLoading(false)
-            }
-        })()
-        return () => { cancelled = true }
-    }, [accessToken, userId, refreshKey])
+    const { data: summaryData, loading, error } = useAsync<UserSummary>(
+        () => fetchUserSummary(accessToken!, userId),
+        [accessToken, userId, refreshKey],
+        { enabled: !!accessToken, errorMessage: 'Failed to load player data.' },
+    )
+    const summary = summaryData ?? null
 
     // Reset tab + chart caches when switching players.
     useEffect(() => {
