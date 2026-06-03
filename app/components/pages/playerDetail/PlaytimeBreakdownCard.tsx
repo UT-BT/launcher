@@ -3,6 +3,7 @@ import { Search, Star } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import { fetchPlaytimeByMap, type PlaytimeByMapRow } from '@/app/utils/api'
+import { usePaginatedQuery } from '@/app/hooks/useAsync'
 import { formatAddedDate, displayMapName } from '@/app/utils/format'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import {
@@ -34,12 +35,6 @@ function formatHours(seconds: number): string {
 }
 
 export function PlaytimeBreakdownCard({ accessToken, userId, onMapSelect, tabsSlot }: PlaytimeBreakdownCardProps) {
-    const [page, setPage] = useState(1)
-    const [pageSize, setPageSize] = useState(10)
-    const [items, setItems] = useState<PlaytimeByMapRow[]>([])
-    const [total, setTotal] = useState(0)
-    const [loading, setLoading] = useState(true)
-    const [error, setError] = useState<string | null>(null)
     const [queryRaw, setQueryRaw] = useState('')
     const [query, setQuery] = useState('')
     const [favoritesOnly, setFavoritesOnly] = useState(false)
@@ -51,36 +46,21 @@ export function PlaytimeBreakdownCard({ accessToken, userId, onMapSelect, tabsSl
         return () => clearTimeout(t)
     }, [queryRaw])
 
-    useEffect(() => { setPage(1) }, [query, favoritesOnly, sortField, sortDir])
-
-    useEffect(() => {
-        let cancelled = false
-        if (!accessToken) return
-        setLoading(true)
-        setError(null)
-        const offset = (page - 1) * pageSize
-        fetchPlaytimeByMap(accessToken, userId, {
-            limit: pageSize, offset,
-            mapFuzzy: query || undefined,
-            favoritesOnly,
-            sort: sortField,
-            order: sortDir,
-        })
-            .then(res => {
-                if (cancelled) return
-                setItems(res.items)
-                setTotal(res.total)
-            })
-            .catch(err => {
-                if (cancelled) return
-                console.error('Failed to load playtime by map:', err)
-                setError('Failed to load playtime breakdown.')
-            })
-            .finally(() => { if (!cancelled) setLoading(false) })
-        return () => { cancelled = true }
-    }, [accessToken, userId, page, pageSize, query, favoritesOnly, sortField, sortDir])
-
-    const totalPages = Math.max(1, Math.ceil(total / pageSize))
+    const {
+        page, pageSize, items, total, totalPages, loading, error, setPage, setPageSize,
+    } = usePaginatedQuery<PlaytimeByMapRow>({
+        enabled: !!accessToken,
+        errorMessage: 'Failed to load playtime breakdown.',
+        deps: [accessToken, userId, query, favoritesOnly, sortField, sortDir],
+        fetchPage: ({ limit, offset }) =>
+            fetchPlaytimeByMap(accessToken!, userId, {
+                limit, offset,
+                mapFuzzy: query || undefined,
+                favoritesOnly,
+                sort: sortField,
+                order: sortDir,
+            }),
+    })
 
     const handleSort = (field: SortField) => {
         if (sortField === field) {

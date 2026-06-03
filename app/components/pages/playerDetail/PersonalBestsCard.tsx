@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Play, Download, MessageSquareOff, ShieldCheck, Search, Trophy, Star } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { fetchPersonalBestsForUser, type UserPersonalBestRow, type CapFilter } from '@/app/utils/api'
+import { usePaginatedQuery } from '@/app/hooks/useAsync'
 import { formatCapTime, formatAddedDate, displayMapName } from '@/app/utils/format'
 import { getMedalIcon } from '@/app/utils/medals'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
@@ -66,12 +67,6 @@ function renderPbStatus(pb: UserPersonalBestRow) {
 export function PersonalBestsCard({
     accessToken, userId, favoriteMapNames, onToggleFavorite, onMapSelect, canEditFavorites, tabsSlot,
 }: PersonalBestsCardProps) {
-    const [page, setPage] = useState(1)
-    const [pageSize, setPageSize] = useState(10)
-    const [items, setItems] = useState<UserPersonalBestRow[]>([])
-    const [total, setTotal] = useState(0)
-    const [loading, setLoading] = useState(true)
-    const [error, setError] = useState<string | null>(null)
     const [queryRaw, setQueryRaw] = useState('')
     const [query, setQuery] = useState('')
     const [capFilter, setCapFilter] = useState<CapFilter>('all')
@@ -87,37 +82,22 @@ export function PersonalBestsCard({
         return () => clearTimeout(t)
     }, [queryRaw])
 
-    useEffect(() => { setPage(1) }, [query, capFilter, favoritesOnly, sortField, sortDir])
-
-    useEffect(() => {
-        let cancelled = false
-        if (!accessToken) return
-        setLoading(true)
-        setError(null)
-        const offset = (page - 1) * pageSize
-        fetchPersonalBestsForUser(accessToken, userId, {
-            limit: pageSize, offset,
-            mapFuzzy: query || undefined,
-            capFilter,
-            favoritesOnly,
-            sort: sortField,
-            order: sortDir,
-        })
-            .then(res => {
-                if (cancelled) return
-                setItems(res.items)
-                setTotal(res.total)
-            })
-            .catch(err => {
-                if (cancelled) return
-                console.error('Failed to load PBs:', err)
-                setError('Failed to load personal bests.')
-            })
-            .finally(() => { if (!cancelled) setLoading(false) })
-        return () => { cancelled = true }
-    }, [accessToken, userId, page, pageSize, query, capFilter, favoritesOnly, sortField, sortDir])
-
-    const totalPages = Math.max(1, Math.ceil(total / pageSize))
+    const {
+        page, pageSize, items, total, totalPages, loading, error, setPage, setPageSize,
+    } = usePaginatedQuery<UserPersonalBestRow>({
+        enabled: !!accessToken,
+        errorMessage: 'Failed to load personal bests.',
+        deps: [accessToken, userId, query, capFilter, favoritesOnly, sortField, sortDir],
+        fetchPage: ({ limit, offset }) =>
+            fetchPersonalBestsForUser(accessToken!, userId, {
+                limit, offset,
+                mapFuzzy: query || undefined,
+                capFilter,
+                favoritesOnly,
+                sort: sortField,
+                order: sortDir,
+            }),
+    })
 
     const handleSort = (field: SortField) => {
         if (sortField === field) {

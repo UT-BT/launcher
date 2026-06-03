@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { History, Search } from 'lucide-react'
 import { fetchUserWorldRecords, fetchWorldRecordProgression, type Record, type WorldRecordProgressionEntry } from '@/app/utils/api'
+import { usePaginatedQuery } from '@/app/hooks/useAsync'
 import { formatCapTime, formatAddedDate, displayMapName } from '@/app/utils/format'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { Tooltip } from '@/app/components/ui/tooltip'
@@ -26,11 +27,6 @@ const DEBOUNCE_MS = 250
 type SortField = 'added' | 'time' | 'map'
 
 export function WorldRecordsCard({ accessToken, userId, totalCount, onMapSelect, tabsSlot }: WorldRecordsCardProps) {
-    const [page, setPage] = useState(1)
-    const [pageSize, setPageSize] = useState(10)
-    const [items, setItems] = useState<Record[]>([])
-    const [loading, setLoading] = useState(true)
-    const [error, setError] = useState<string | null>(null)
     const [queryRaw, setQueryRaw] = useState('')
     const [query, setQuery] = useState('')
     const [sortField, setSortField] = useState<SortField>('added')
@@ -45,29 +41,22 @@ export function WorldRecordsCard({ accessToken, userId, totalCount, onMapSelect,
         return () => clearTimeout(t)
     }, [queryRaw])
 
-    useEffect(() => { setPage(1) }, [query, sortField, sortDir])
-
-    useEffect(() => {
-        let cancelled = false
-        if (!accessToken) return
-        setLoading(true)
-        setError(null)
-        const offset = (page - 1) * pageSize
-        fetchUserWorldRecords(accessToken, userId, {
-            limit: pageSize, offset,
-            sort: sortDir,
-            sortBy: sortField,
-            mapFuzzy: query || undefined,
-        })
-            .then(rows => { if (!cancelled) setItems(rows) })
-            .catch(err => {
-                if (cancelled) return
-                console.error('Failed to load WRs:', err)
-                setError('Failed to load world records.')
+    const {
+        page, pageSize, items, loading, error, setPage, setPageSize,
+    } = usePaginatedQuery<Record>({
+        enabled: !!accessToken,
+        errorMessage: 'Failed to load world records.',
+        deps: [accessToken, userId, query, sortField, sortDir],
+        fetchPage: async ({ limit, offset }) => {
+            const rows = await fetchUserWorldRecords(accessToken!, userId, {
+                limit, offset,
+                sort: sortDir,
+                sortBy: sortField,
+                mapFuzzy: query || undefined,
             })
-            .finally(() => { if (!cancelled) setLoading(false) })
-        return () => { cancelled = true }
-    }, [accessToken, userId, page, pageSize, query, sortField, sortDir])
+            return { items: rows, total: rows.length }
+        },
+    })
 
     // No server count for filtered WRs; fall back to total for pagination.
     const total = query ? items.length === pageSize ? page * pageSize + 1 : (page - 1) * pageSize + items.length : totalCount

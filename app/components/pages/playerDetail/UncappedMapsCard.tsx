@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Search } from 'lucide-react'
 import { fetchUncappedMaps, fetchUncappedMapsCount, type Map as ApiMap } from '@/app/utils/api'
+import { usePaginatedQuery } from '@/app/hooks/useAsync'
 import { displayMapName } from '@/app/utils/format'
 import { difficultyBgColor } from '@/app/utils/scoreColors'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
@@ -24,11 +25,7 @@ const DEBOUNCE_MS = 250
 type SortField = 'name' | 'difficulty' | 'added'
 
 export function UncappedMapsCard({ accessToken, userId, onMapSelect, tabsSlot }: UncappedMapsCardProps) {
-    const [page, setPage] = useState(1)
-    const [pageSize, setPageSize] = useState(10)
-    const [items, setItems] = useState<ApiMap[]>([])
     const [total, setTotal] = useState(0)
-    const [loading, setLoading] = useState(true)
     const [countLoaded, setCountLoaded] = useState(false)
     const [queryRaw, setQueryRaw] = useState('')
     const [query, setQuery] = useState('')
@@ -51,8 +48,6 @@ export function UncappedMapsCard({ accessToken, userId, onMapSelect, tabsSlot }:
         return () => clearTimeout(t)
     }, [queryRaw])
 
-    useEffect(() => { setPage(1) }, [query, sortField, sortDir, difficultyTier])
-
     useEffect(() => {
         let cancelled = false
         if (!accessToken) return
@@ -62,23 +57,23 @@ export function UncappedMapsCard({ accessToken, userId, onMapSelect, tabsSlot }:
         return () => { cancelled = true }
     }, [accessToken, userId, countLoaded, query, difficultyTier])
 
-    useEffect(() => {
-        let cancelled = false
-        if (!accessToken) return
-        setLoading(true)
-        const offset = (page - 1) * pageSize
-        fetchUncappedMaps(accessToken, userId, {
-            limit: pageSize, offset,
-            mapFuzzy: query || undefined,
-            sort: sortField,
-            order: sortDir,
-            difficultyMin: difficultyRange.min,
-            difficultyMax: difficultyRange.max,
-        })
-            .then(rows => { if (!cancelled) setItems(rows) })
-            .finally(() => { if (!cancelled) setLoading(false) })
-        return () => { cancelled = true }
-    }, [accessToken, userId, page, pageSize, query, sortField, sortDir, difficultyRange.min, difficultyRange.max])
+    const {
+        page, pageSize, items, loading, setPage, setPageSize,
+    } = usePaginatedQuery<ApiMap>({
+        enabled: !!accessToken,
+        deps: [accessToken, userId, query, sortField, sortDir, difficultyRange.min, difficultyRange.max],
+        fetchPage: async ({ limit, offset }) => {
+            const rows = await fetchUncappedMaps(accessToken!, userId, {
+                limit, offset,
+                mapFuzzy: query || undefined,
+                sort: sortField,
+                order: sortDir,
+                difficultyMin: difficultyRange.min,
+                difficultyMax: difficultyRange.max,
+            })
+            return { items: rows, total: rows.length }
+        },
+    })
 
     const isFiltered = !!query || difficultyTier !== 'all'
     const filteredTotal = isFiltered ? (items.length === pageSize ? page * pageSize + 1 : (page - 1) * pageSize + items.length) : total
