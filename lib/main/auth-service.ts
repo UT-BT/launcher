@@ -6,8 +6,13 @@ import { createServer } from 'http'
 
 const DISCORD_CLIENT_ID = '989441174022520842'
 
+function toRendererProfile(config: AuthConfig): AuthConfig {
+    return { ...config, refreshToken: '' }
+}
+
 export class AuthService {
     private server: ReturnType<typeof createServer> | null = null
+    private refreshPromise: Promise<AuthConfig> | null = null
 
     async login(): Promise<AuthConfig> {
         loggingService.info('Starting Discord login flow', 'AuthService')
@@ -72,7 +77,7 @@ export class AuthService {
 
                             setAuthConfig(authConfig)
                             loggingService.info('Discord login successful', 'AuthService')
-                            resolve(authConfig)
+                            resolve(toRendererProfile(authConfig))
                         } catch (error) {
                             loggingService.error('Failed to exchange code or fetch profile', 'AuthService', error)
                             reject(error)
@@ -113,26 +118,34 @@ export class AuthService {
 
         if (Date.now() > config.expiresAt - 5 * 60 * 1000) {
             try {
-                loggingService.info('Access token expired or expiring, refreshing...', 'AuthService')
-                const tokens = await this.refreshAccessToken(config.refreshToken)
-
-                const newConfig: AuthConfig = {
-                    ...config,
-                    accessToken: tokens.access_token,
-                    refreshToken: tokens.refresh_token,
-                    expiresAt: Date.now() + tokens.expires_in * 1000,
+                if (!this.refreshPromise) {
+                    loggingService.info('Access token expired or expiring, refreshing...', 'AuthService')
+                    this.refreshPromise = this.performRefresh(config).finally(() => {
+                        this.refreshPromise = null
+                    })
                 }
-
-                setAuthConfig(newConfig)
-                loggingService.info('Access token refreshed successfully', 'AuthService')
-                return newConfig
+                const refreshed = await this.refreshPromise
+                return toRendererProfile(refreshed)
             } catch (error) {
                 loggingService.error('Failed to refresh access token', 'AuthService', error)
-                return config
+                return toRendererProfile(config)
             }
         }
 
-        return config
+        return toRendererProfile(config)
+    }
+
+    private async performRefresh(config: AuthConfig): Promise<AuthConfig> {
+        const tokens = await this.refreshAccessToken(config.refreshToken)
+        const newConfig: AuthConfig = {
+            ...config,
+            accessToken: tokens.access_token,
+            refreshToken: tokens.refresh_token,
+            expiresAt: Date.now() + tokens.expires_in * 1000,
+        }
+        setAuthConfig(newConfig)
+        loggingService.info('Access token refreshed successfully', 'AuthService')
+        return newConfig
     }
 
     private generatePKCE() {

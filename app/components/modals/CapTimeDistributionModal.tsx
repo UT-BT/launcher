@@ -392,9 +392,10 @@ export function CapTimeDistributionModal({
                                                 if (!b) return ''
                                                 return `${formatCapTime(b.binStart)} – ${formatCapTime(b.binEnd)}`
                                             }}
-                                            formatter={(v: number, _n, item) => {
+                                            formatter={(v, _n, item) => {
                                                 const b = (item?.payload as Bucket | undefined)
-                                                return [`${v} cap${v === 1 ? '' : 's'} · ${b?.tierLabel ?? ''}`, '']
+                                                const n = Number(v)
+                                                return [`${n} cap${n === 1 ? '' : 's'} · ${b?.tierLabel ?? ''}`, '']
                                             }}
                                         />
                                         {tierBands.map(band => (
