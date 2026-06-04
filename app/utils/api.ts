@@ -159,7 +159,7 @@ export interface Playtime {
 }
 
 
-const API_BASE_URL = import.meta.env.DEV ? 'https://api.utbt.net' : 'https://api.utbt.net'
+const API_BASE_URL = import.meta.env.DEV ? 'http://localhost:5000' : 'https://api.utbt.net'
 
 const DEFAULT_TIMEOUT_MS = 20_000
 
