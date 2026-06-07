@@ -222,7 +222,7 @@ export function RecentCapsCard({
                                     <DataTableCell align="center">
                                         {medalIcon && (
                                             <Tooltip content={cap.medal} side="top">
-                                                <img src={medalIcon} alt={cap.medal} className="size-4 inline-block" />
+                                                <img src={medalIcon} alt={cap.medal} className="size-4 inline-block shrink-0 object-contain max-w-none" />
                                             </Tooltip>
                                         )}
                                     </DataTableCell>

@@ -140,7 +140,7 @@ export function HistoryModal({
                                                             <img
                                                                 src={medalIcon}
                                                                 alt={cap.medal}
-                                                                className="h-4 w-auto object-contain shrink-0"
+                                                                className="size-4 object-contain shrink-0 max-w-none"
                                                             />
                                                         </Tooltip>
                                                     )}

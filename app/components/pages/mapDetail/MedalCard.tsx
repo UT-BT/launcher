@@ -77,7 +77,7 @@ export function MedalCard({ map, loading }: MedalCardProps) {
                             className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg bg-white/[0.02] border border-white/5"
                         >
                             <div className="flex items-center gap-2 min-w-0">
-                                {icon && <img src={icon} alt="" className="size-5 shrink-0" />}
+                                {icon && <img src={icon} alt="" className="size-5 shrink-0 object-contain max-w-none" />}
                                 <div className="min-w-0 flex flex-col leading-tight">
                                     <span className={cn('text-sm font-semibold truncate', row.accent)}>
                                         {row.label}
