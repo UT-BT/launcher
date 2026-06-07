@@ -211,7 +211,7 @@ export function PersonalBestsCard({
                                     <DataTableCell align="center">
                                         {medalIcon && (
                                             <Tooltip content={pb.medal} side="top">
-                                                <img src={medalIcon} alt={pb.medal} className="size-4 inline-block" />
+                                                <img src={medalIcon} alt={pb.medal} className="size-4 inline-block shrink-0 object-contain max-w-none" />
                                             </Tooltip>
                                         )}
                                     </DataTableCell>

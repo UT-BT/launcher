@@ -225,7 +225,7 @@ export function LeaderboardCard({
                                         <DataTableCell align="center">
                                             {medalIcon && (
                                                 <Tooltip content={TIER_LABELS[tier]} side="top">
-                                                    <img src={medalIcon} alt={TIER_LABELS[tier]} className="size-4 inline-block" />
+                                                    <img src={medalIcon} alt={TIER_LABELS[tier]} className="size-4 inline-block shrink-0 object-contain max-w-none" />
                                                 </Tooltip>
                                             )}
                                         </DataTableCell>

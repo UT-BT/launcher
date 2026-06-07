@@ -492,7 +492,7 @@ export function CapTimeDistributionModal({
                                                 className="inline-block w-2.5 h-2.5 rounded-sm"
                                                 style={{ background: t.color }}
                                             />
-                                            {icon && <img src={icon} alt="" className="size-3" />}
+                                            {icon && <img src={icon} alt="" className="size-3 shrink-0 object-contain max-w-none" />}
                                             <span style={{ color: t.color }}>{t.label}</span>
                                             <span className="font-mono tabular-nums text-white/80 normal-case tracking-normal">
                                                 {count}
