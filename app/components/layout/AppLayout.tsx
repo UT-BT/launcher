@@ -126,15 +126,15 @@ export function AppLayout({ children, currentView, onViewChange, userProfile, in
             <aside className="w-64 bg-card/50 backdrop-blur-xl border-r border-white/10 flex flex-col z-20 relative">
                 <div className="absolute inset-0 bg-gradient-to-b from-blue-900/10 to-transparent pointer-events-none" />
 
-                <div className="p-6 flex flex-col items-center relative z-10">
+                <div className="p-6 [@media(max-height:760px)]:p-3 flex flex-col items-center relative z-10">
                     <img
                         src={logo}
                         alt="UTBT Logo"
-                        className="w-24 h-24 object-contain drop-shadow-[0_0_15px_rgba(56,189,248,0.3)] mb-4 transition-transform hover:scale-105 duration-300"
+                        className="w-24 h-24 [@media(max-height:760px)]:w-14 [@media(max-height:760px)]:h-14 object-contain drop-shadow-[0_0_15px_rgba(56,189,248,0.3)] mb-4 [@media(max-height:760px)]:mb-0 transition-all hover:scale-105 duration-300"
                     />
                 </div>
 
-                <div className="px-4 mb-6 relative z-10 space-y-2">
+                <div className="px-4 mb-6 [@media(max-height:760px)]:mb-3 relative z-10 space-y-2">
                     <Button
                         variant="ghost"
                         className="w-full h-11 bg-blue-500/15 border border-blue-500/40 text-blue-200 hover:bg-blue-500/25 hover:text-white hover:border-blue-500/60 hover:shadow-[0_0_20px_rgba(59,130,246,0.25)] transition-all font-semibold rounded-lg"
@@ -166,7 +166,7 @@ export function AppLayout({ children, currentView, onViewChange, userProfile, in
                     )}
                 </div>
 
-                <nav className="flex-1 px-4 space-y-6 relative z-10">
+                <nav className="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-4 space-y-6 [@media(max-height:760px)]:space-y-3 relative z-10">
                     {navSections.map((section) => (
                         <div key={section.title} className="space-y-2">
                             <h3 className="px-4 mb-1 text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider">
@@ -177,7 +177,7 @@ export function AppLayout({ children, currentView, onViewChange, userProfile, in
                                     key={item.id}
                                     onClick={() => onViewChange(item.id)}
                                     className={cn(
-                                        "w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 cursor-pointer group relative overflow-hidden",
+                                        "w-full flex items-center gap-3 px-4 py-3 [@media(max-height:760px)]:py-2 rounded-lg transition-all duration-200 cursor-pointer group relative overflow-hidden",
                                         currentView === item.id
                                             ? "text-white shadow-[0_0_20px_rgba(29,78,216,0.3)]"
                                             : "text-muted-foreground hover:text-white hover:bg-white/5"
