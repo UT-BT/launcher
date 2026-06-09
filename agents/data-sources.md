@@ -20,10 +20,27 @@ working around in the renderer.
 | Players | `fetchPlayers`, `fetchPlayersCount` (→ `/v2/players`, server-side alias search/sort/pagination + medals join; row type `PlayerListRow`) |
 | Reviews | `fetchMapReviews`, `fetchAllMapReviews`, `submitSummaryReview` |
 | Favorites | `fetchUserFavorites`, `addFavoriteMap`, `removeFavoriteMap`, `replaceFavoriteMaps` |
-| Demos | `fetchDemoStatus`, `getFirstPersonVideoUrl` |
+| Demos | `fetchDemoStatus`, `getFirstPersonVideoUrl`, `downloadDemo` |
+| Cap detail | `fetchCapDetail`, `fetchMovementAggregate`, `fetchCapCheckpoints` |
 | Profile | `UserProfile` type, `getAvatarUrl(userId)` |
 
 Most fetchers take `accessToken` first (Discord OAuth bearer).
+
+### Cap Detail page endpoints
+
+The Cap Detail page (`app/components/pages/CapDetailPage.tsx`, opened by clicking
+any cap time — see `CapTimeLink` / the `open-cap` event in
+`agents/shared-components.md`)
+
+- **`GET /caps/<cap_id>/detail`** → `CapDetail`. Enriched single cap: the full
+  `cap` record (movement/client fields) +
+  parsed `checkpoints` and `wr_checkpoints` (`{zone, cumulative, segment}`, parsed
+  server-side from `Cap.zone_checkpoints`) + `rank_on_map`
+  / `total_on_map` / `neighbors` (above/below) + `deltas` & `medals` (WR + each
+  medal threshold) + `server` `{name, region}`. Negative delta = faster than the
+  threshold. Used for both the page and the compare-run overlay (`fetchCapCheckpoints`).
+
+Compare-run picker reuses `fetchMapLeaderboard` (`/caps/leaderboard/map/<name>`).
 
 ## Avatar URLs
 

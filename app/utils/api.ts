@@ -608,6 +608,143 @@ export function getFirstPersonVideoUrl(status: DemoConverterStatus | null): stri
     return fp?.url ?? null
 }
 
+export interface CapCheckpoint {
+    zone: string
+    cumulative: number
+    segment: number
+}
+
+export interface CapNeighbor {
+    rank: number
+    id: string
+    user: string
+    alias: string | null
+    cap_time_seconds: number
+    active_title: ActiveTitle | null
+}
+
+export interface CapRecord {
+    id: string
+    user: string | number
+    map: string
+    alias?: string | null
+    cap_time_seconds: number
+    client_cap_delta?: number | null
+    added?: string | null
+    verified: boolean
+    disallowed: boolean
+    cap_type: number
+    medal: number
+    engine?: string | null
+    renderer?: string | null
+    spawn_count?: number | null
+    team?: number | null
+    netspeed_min?: number | null
+    netspeed_max?: number | null
+    fps_1pc?: number | null
+    fps_5pc?: number | null
+    fps_25pc?: number | null
+    fps_50pc?: number | null
+    ping_1pc?: number | null
+    ping_5pc?: number | null
+    ping_25pc?: number | null
+    ping_50pc?: number | null
+    active_title?: ActiveTitle | null
+    [key: string]: unknown
+}
+
+export interface CapDeltas {
+    wr: number | null
+    champion: number | null
+    gold: number | null
+    silver: number | null
+    bronze: number | null
+}
+
+export interface CapMedalThresholds {
+    world_record: number | null
+    champion: number | null
+    gold: number | null
+    silver: number | null
+    bronze: number | null
+}
+
+export interface CapCompareCandidate {
+    id: string
+    user: string
+    alias: string | null
+    cap_time_seconds: number
+}
+
+export interface CapDetail {
+    cap: CapRecord
+    checkpoints: CapCheckpoint[]
+    has_checkpoints: boolean
+    // Same-team caps from other players that have checkpoint data (routes only
+    // align within a team). Drives the split comparison picker.
+    compare_candidates: CapCompareCandidate[]
+    wr_checkpoints: CapCheckpoint[]
+    wr_cap_id: string | null
+    wr_time_seconds: number | null
+    rank_on_map: number
+    total_on_map: number
+    neighbors: { above: CapNeighbor | null; below: CapNeighbor | null }
+    deltas: CapDeltas
+    medals: CapMedalThresholds
+    server: { name: string | null; region: string | null }
+}
+
+export interface MovementMetricAgg {
+    label: string
+    direction: 'lower' | 'higher'
+    avg: number | null
+    p10: number | null
+    p50: number | null
+    p90: number | null
+    min: number | null
+    n: number
+}
+
+export interface MovementAggregate {
+    map: string
+    sample_size: number
+    // NB: `Record` is shadowed by a local interface in this file — use an index
+    // signature so this stays the generic map type.
+    metrics: { [key: string]: MovementMetricAgg }
+}
+
+export async function fetchCapDetail(accessToken: string, capId: string, signal?: AbortSignal): Promise<CapDetail | null> {
+    try {
+        return await apiGet<CapDetail>(`/caps/${encodeURIComponent(capId)}/detail`, { token: accessToken, signal })
+    } catch (e) {
+        console.error('fetchCapDetail failed', e)
+        return null
+    }
+}
+
+export async function fetchMovementAggregate(accessToken: string, mapName: string, signal?: AbortSignal): Promise<MovementAggregate | null> {
+    try {
+        return await apiGet<MovementAggregate>(`/caps/movement_aggregate/map/${encodeURIComponent(mapName)}`, { token: accessToken, signal })
+    } catch (e) {
+        console.error('fetchMovementAggregate failed', e)
+        return null
+    }
+}
+
+/** Checkpoints for a run to overlay in the compare picker. Reuses the detail
+ *  endpoint so the (semicolon) parsing stays server-side only. */
+export async function fetchCapCheckpoints(
+    accessToken: string, capId: string, signal?: AbortSignal,
+): Promise<{ checkpoints: CapCheckpoint[]; cap_time_seconds: number; alias: string | null } | null> {
+    const detail = await fetchCapDetail(accessToken, capId, signal)
+    if (!detail) return null
+    return {
+        checkpoints: detail.checkpoints,
+        cap_time_seconds: detail.cap.cap_time_seconds,
+        alias: detail.cap.alias ?? null,
+    }
+}
+
 export async function fetchRecordsCount(accessToken: string, addedSince?: string): Promise<number> {
     try {
         const addedSinceParam = addedSince ? `&added_since=${encodeURIComponent(addedSince)}` : ''

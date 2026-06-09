@@ -8,6 +8,7 @@ import { Modal } from '@/app/components/ui/modal'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import { Button } from '@/app/components/ui/button'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
+import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
 import { cn } from '@/lib/utils'
 import { formatCapTime, formatAddedDate, formatDelta, displayMapName } from '@/app/utils/format'
 import type { WorldRecordProgressionEntry } from '@/app/utils/api'
@@ -315,9 +316,11 @@ export function WorldRecordProgressionModal({
                                             showYouBadge={isOwn}
                                         />
                                     </span>
-                                    <span className="text-xs font-mono tabular-nums text-white/85 shrink-0">
-                                        {formatCapTime(entry.cap_time_seconds)}
-                                    </span>
+                                    <CapTimeLink
+                                        capId={entry.cap_id}
+                                        seconds={entry.cap_time_seconds}
+                                        className="text-xs font-mono tabular-nums text-white/85 shrink-0"
+                                    />
                                     <span className="text-[10px] font-mono tabular-nums shrink-0 w-16 text-right">
                                         {delta != null && delta > 0
                                             ? <span className="text-emerald-300">-{formatDelta(delta)}</span>

@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { History, Search } from 'lucide-react'
 import { fetchUserWorldRecords, fetchWorldRecordProgression, type Record, type WorldRecordProgressionEntry } from '@/app/utils/api'
 import { usePaginatedQuery } from '@/app/hooks/useAsync'
-import { formatCapTime, formatAddedDate, displayMapName } from '@/app/utils/format'
+import { formatAddedDate, displayMapName } from '@/app/utils/format'
+import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import { WorldRecordProgressionModal } from '@/app/components/modals/WorldRecordProgressionModal'
@@ -145,9 +146,11 @@ export function WorldRecordsCard({ accessToken, userId, totalCount, onMapSelect,
                                         </div>
                                     </DataTableCell>
                                     <DataTableCell align="right">
-                                        <span className="text-sm font-mono tabular-nums font-bold text-blue-200">
-                                            {formatCapTime(r.cap_time_seconds)}
-                                        </span>
+                                        <CapTimeLink
+                                            capId={r.cap_id}
+                                            seconds={r.cap_time_seconds}
+                                            className="text-sm font-mono tabular-nums font-bold text-blue-200"
+                                        />
                                     </DataTableCell>
                                     <DataTableCell align="right">
                                         <Tooltip content={exact} side="top">

@@ -9,11 +9,12 @@ import { Tooltip } from '@/app/components/ui/tooltip'
 import {
     UserProfile, Map, MapMetadata, MapReview, BestCap,
     fetchMaps, fetchMapsCount, fetchMapsMetadata, fetchMapsFuzzy, fetchAllMapReviews, fetchMapAuthors,
-    fetchBestCaps, fetchWorldRecordsForMaps, fetchDemoStatus, getFirstPersonVideoUrl,
+    fetchBestCaps, fetchWorldRecordsForMaps,
 } from '@/app/utils/api'
 
 import { MapReviewsModal } from '@/app/components/modals/MapReviewsModal'
 import { ReplayPickerModal } from '@/app/components/modals/ReplayPickerModal'
+import { openCap } from '@/app/components/shared/CapTimeLink'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
@@ -660,7 +661,6 @@ export function MapsPage({
         fromPicker?: boolean
     } | null>(null)
     const [replayPickerMap, setReplayPickerMap] = useState<string | null>(null)
-    const [capLoadingMap, setCapLoadingMap] = useState<string | null>(null)
     const [replayError, setReplayError] = useState<string | null>(null)
     const [shareCopied, setShareCopied] = useState(false)
     const shareTimerRef = useRef<number | null>(null)
@@ -674,30 +674,6 @@ export function MapsPage({
             shareTimerRef.current = window.setTimeout(() => setShareCopied(false), 1500)
         } catch (err) {
             console.error('Copy replay link failed', err)
-        }
-    }
-
-    const openCapReplay = async (mapName: string, capId: string | undefined, seconds: number | undefined, alias: string | undefined) => {
-        if (!capId) return
-        setCapLoadingMap(mapName)
-        try {
-            const status = await fetchDemoStatus(capId)
-            const url = getFirstPersonVideoUrl(status)
-            if (url) {
-                setVideoModal({
-                    url,
-                    mapName,
-                    time: seconds,
-                    alias,
-                    fromPicker: true,
-                })
-            } else {
-                setReplayError('Demo is still being processed by DemoConverter. Please try again later.')
-            }
-        } catch {
-            setReplayError('Could not load this replay. Please try again later.')
-        } finally {
-            setCapLoadingMap(null)
         }
     }
 
@@ -1689,7 +1665,6 @@ export function MapsPage({
                 }
                 const capId = wrHolder?.cap_id
                 const clickable = !!capId
-                const isLoading = capLoadingMap === map.name
                 const aliasStyle: React.CSSProperties | undefined = wrHolder?.color_r != null
                     ? { color: `rgb(${wrHolder.color_r}, ${wrHolder.color_g}, ${wrHolder.color_b})` }
                     : undefined
@@ -1697,20 +1672,18 @@ export function MapsPage({
                     <span className={cn(
                         "text-amber-300 transition-[color,text-shadow] duration-150 w-fit",
                         clickable && "group/wr group-hover/wr:text-amber-200 group-hover/wr:[text-shadow:0_0_6px_rgba(252,211,77,0.85),0_0_12px_rgba(252,211,77,0.45)]",
-                        isLoading && "opacity-60",
                     )}>
                         {formatCapTime(wr)}
                     </span>
                 )
                 const timeButton = clickable ? (
-                    <Tooltip content="Watch run" side="top">
+                    <Tooltip content="View cap details" side="top">
                         <button
                             ref={isFirstRow ? firstRowWrRef : undefined}
                             type="button"
-                            disabled={isLoading}
                             onClick={e => {
                                 e.stopPropagation()
-                                openCapReplay(map.name, capId, wr, wrHolder?.alias)
+                                if (capId) openCap(capId)
                             }}
                             className="text-left cursor-pointer group/wr"
                         >
@@ -1768,14 +1741,11 @@ export function MapsPage({
                 }
                 const isWR = wr != null && wr > 0 && bestCap.cap_time_seconds - wr <= 0.0005
                 const pbCapId = bestCap.cap_id ?? undefined
-                const clickable = bestCap.verified && !!pbCapId
-                const isLoading = capLoadingMap === map.name
-                const myAlias = userProfile?.alias ?? undefined
+                const clickable = !!pbCapId
                 const timeText = (
                     <span className={cn(
                         pbTextColor(medalTier, isWR),
                         clickable && "transition-[text-shadow] duration-150 group-hover/pb:[text-shadow:0_0_6px_currentColor,0_0_12px_currentColor]",
-                        isLoading && "opacity-60",
                     )}>
                         {formatCapTime(bestCap.cap_time_seconds)}
                     </span>
@@ -1790,14 +1760,13 @@ export function MapsPage({
                 return (
                     <DataTableCell key={id} className="font-mono text-sm text-muted-foreground">
                         {clickable ? (
-                            <Tooltip content="Watch your run" side="top">
+                            <Tooltip content="View cap details" side="top">
                                 <button
                                     ref={isFirstRow ? (firstRowPbRef as React.RefObject<HTMLButtonElement | null>) : undefined}
                                     type="button"
-                                    disabled={isLoading}
                                     onClick={e => {
                                         e.stopPropagation()
-                                        openCapReplay(map.name, pbCapId, bestCap.cap_time_seconds, myAlias)
+                                        if (pbCapId) openCap(pbCapId)
                                     }}
                                     className="flex flex-col leading-tight text-left cursor-pointer group/pb"
                                 >

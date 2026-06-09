@@ -3,8 +3,9 @@ import { Play, Download, MessageSquareOff, ShieldCheck, Search, Trophy, Star } f
 import { cn } from '@/lib/utils'
 import { fetchPersonalBestsForUser, type UserPersonalBestRow, type CapFilter } from '@/app/utils/api'
 import { usePaginatedQuery } from '@/app/hooks/useAsync'
-import { formatCapTime, formatAddedDate, displayMapName } from '@/app/utils/format'
+import { formatAddedDate, displayMapName } from '@/app/utils/format'
 import { getMedalIcon } from '@/app/utils/medals'
+import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
 import { IconActionButton } from '@/app/components/shared/IconActionButton'
@@ -216,12 +217,16 @@ export function PersonalBestsCard({
                                         )}
                                     </DataTableCell>
                                     <DataTableCell align="right">
-                                        <span className={cn(
-                                            'text-sm font-mono tabular-nums font-bold inline-flex items-center gap-1.5',
-                                            pb.medal === 'World Record' ? 'text-blue-200' : 'text-white',
-                                        )}>
+                                        <span className="inline-flex items-center gap-1.5">
                                             {pb.medal === 'World Record' && <Trophy className="size-3 text-blue-300" />}
-                                            {formatCapTime(pb.time)}
+                                            <CapTimeLink
+                                                capId={pb.id}
+                                                seconds={pb.time}
+                                                className={cn(
+                                                    'text-sm font-mono tabular-nums font-bold',
+                                                    pb.medal === 'World Record' ? 'text-blue-200' : 'text-white',
+                                                )}
+                                            />
                                         </span>
                                     </DataTableCell>
                                     <DataTableCell align="center">

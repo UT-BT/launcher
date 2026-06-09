@@ -65,6 +65,29 @@ so it doesn't also open the player profile when nested in a clickable row).
 preview + how to get the badge + Patreon link). Open it from elsewhere via
 `openPatreonInfo()` exported from `PatreonBadge.tsx`.
 
+## Navigation events — `open-player` / `open-cap`
+
+Detail pages aren't URL-routed; they're opened by dispatching a `window`
+CustomEvent that `Main.tsx` listens for and switches `currentView` (with `Back`
+returning to the previous view).
+
+- **`open-player`** `{ userId }` — `PlayerInfo` dispatches it on click; opens the
+  Player Detail page. Don't dispatch by hand — render `PlayerInfo`.
+- **`open-cap`** `{ capId }` — opens the Cap Detail page. Render every cap time
+  through **`CapTimeLink`** (`app/components/shared/CapTimeLink.tsx`):
+
+  ```tsx
+  <CapTimeLink capId={entry.id} seconds={entry.cap_time_seconds} className={...} />
+  ```
+
+  It renders `formatCapTime(seconds)` and, when `capId` is a real cap id, makes it
+  a button that `stopPropagation`s (so it works inside rows that already open the
+  map) and dispatches `open-cap`. Pass `capId={undefined}` for aggregate times
+  with no backing cap (medians, medal thresholds, distribution buckets) — it falls
+  back to plain text. Use it anywhere a cap time is shown; don't hand-roll
+  `formatCapTime` in a clickable span. `openCap(capId)` is also exported for the
+  rare non-time trigger (e.g. the movement "best run" link).
+
 ## Tables — `DataTable.*` primitives
 
 `app/components/shared/DataTable.tsx`. Use these for ANY tabular page. They

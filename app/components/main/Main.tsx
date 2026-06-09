@@ -38,6 +38,7 @@ import {
 } from '@/app/components/pages/AchievementsPage'
 import { MapDetailPage } from '@/app/components/pages/MapDetailPage'
 import { PlayerDetailPage } from '@/app/components/pages/PlayerDetailPage'
+import { CapDetailPage } from '@/app/components/pages/CapDetailPage'
 import { InstallationBanner } from '@/app/components/InstallationBanner'
 import { UpdateBanner } from '@/app/components/updater/UpdateBanner'
 import { FavoritesSyncModal } from '@/app/components/shared/FavoritesSyncModal'
@@ -197,6 +198,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
   const [currentView, setCurrentView] = useState('home')
   const [selectedMapName, setSelectedMapName] = useState<string | null>(null)
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | number | null>(null)
+  const [selectedCapId, setSelectedCapId] = useState<string | null>(null)
   const [previousView, setPreviousView] = useState<string>('home')
   const [installationStatus, setInstallationStatus] = useState<'valid' | 'no-install' | 'unsupported' | null>(null)
   const [mapsState, setMapsState] = useState<MapsPageState>(loadPersistedMapsState)
@@ -291,6 +293,18 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
     return () => window.removeEventListener('open-player', onOpenPlayer as EventListener)
   }, [currentView])
 
+  useEffect(() => {
+    const onOpenCap = (e: Event) => {
+      const ce = e as CustomEvent<{ capId: string }>
+      if (!ce.detail?.capId) return
+      setSelectedCapId(ce.detail.capId)
+      setPreviousView(prev => currentView === 'cap-detail' ? prev : currentView)
+      setCurrentView('cap-detail')
+    }
+    window.addEventListener('open-cap', onOpenCap as EventListener)
+    return () => window.removeEventListener('open-cap', onOpenCap as EventListener)
+  }, [currentView])
+
   // Stamp achievements + grant earned titles on launcher load, even if the user
   // never opens the Achievements page. GET /me stamps server-side and is
   // idempotent (unique constraint + existing-set check), so it's safe to fire on
@@ -326,7 +340,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
 
   const goBack = useCallback(() => {
     setCurrentView(view =>
-      view === 'maps-detail' || view === 'player-detail' ? previousView : view
+      view === 'maps-detail' || view === 'player-detail' || view === 'cap-detail' ? previousView : view
     )
   }, [previousView])
 
@@ -463,6 +477,16 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
           userProfile={userProfile as any}
           favoriteMapNames={favoriteMapNames}
           onToggleFavorite={toggleFavorite}
+          onMapSelect={openMap}
+        />
+      case 'cap-detail':
+        // key on capId so clicking a different time re-mounts the page fresh
+        // (no stale compare/detail state carried between caps).
+        return <CapDetailPage
+          key={selectedCapId!}
+          capId={selectedCapId!}
+          onBack={goBack}
+          userProfile={userProfile as any}
           onMapSelect={openMap}
         />
       default:

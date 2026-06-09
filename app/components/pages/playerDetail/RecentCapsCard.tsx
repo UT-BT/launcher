@@ -3,8 +3,9 @@ import { Play, Download, MessageSquareOff, ShieldCheck, Search, Star } from 'luc
 import { cn } from '@/lib/utils'
 import { fetchCapsForUser, type UserCapRow, type CapFilter } from '@/app/utils/api'
 import { usePaginatedQuery } from '@/app/hooks/useAsync'
-import { formatCapTime, formatAddedDate, displayMapName } from '@/app/utils/format'
+import { formatAddedDate, displayMapName } from '@/app/utils/format'
 import { getMedalIcon } from '@/app/utils/medals'
+import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
 import { IconActionButton } from '@/app/components/shared/IconActionButton'
@@ -227,9 +228,11 @@ export function RecentCapsCard({
                                         )}
                                     </DataTableCell>
                                     <DataTableCell align="right">
-                                        <span className="text-sm font-mono tabular-nums font-bold text-white">
-                                            {formatCapTime(cap.time)}
-                                        </span>
+                                        <CapTimeLink
+                                            capId={cap.id}
+                                            seconds={cap.time}
+                                            className="text-sm font-mono tabular-nums font-bold text-white"
+                                        />
                                     </DataTableCell>
                                     <DataTableCell align="center">
                                         {renderCapStatus(cap)}
