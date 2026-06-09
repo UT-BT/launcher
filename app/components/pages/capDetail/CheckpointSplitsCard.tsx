@@ -59,6 +59,32 @@ export function CheckpointSplitsCard({
         () => buildDeltaPoints(checkpoints, baseline, capTime, baselineTime),
         [checkpoints, baseline, capTime, baselineTime],
     )
+    const rows = useMemo(() => {
+        let prevCum = 0
+        const out = checkpoints.map((cp, i) => {
+            const baseCum = baseByZone.get(cp.zone)
+            const cumDelta = baseCum != null ? cp.cumulative - baseCum : null
+            let splitDelta: number | null = null
+            if (cumDelta != null) {
+                splitDelta = cumDelta - prevCum
+                prevCum = cumDelta
+            }
+            return { key: `${cp.zone}-${i}`, n: i + 1, segment: cp.segment, cumulative: cp.cumulative, cumDelta, splitDelta }
+        })
+        if (checkpoints.length > 0) {
+            const lastCum = checkpoints[checkpoints.length - 1].cumulative
+            const cumDelta = baselineTime != null ? capTime - baselineTime : null
+            out.push({
+                key: 'cap',
+                n: checkpoints.length + 1,
+                segment: Math.round((capTime - lastCum) * 1000) / 1000,
+                cumulative: capTime,
+                cumDelta,
+                splitDelta: cumDelta != null ? cumDelta - prevCum : null,
+            })
+        }
+        return out
+    }, [checkpoints, baseByZone, capTime, baselineTime])
 
     return (
         <div className="bg-card/30 border border-white/5 rounded-xl flex flex-col overflow-hidden">
@@ -101,38 +127,44 @@ export function CheckpointSplitsCard({
                                 <DataTableHeaderCell align="right">Split</DataTableHeaderCell>
                                 <DataTableHeaderCell align="right">Cumulative</DataTableHeaderCell>
                                 {canCompare && (
-                                    <DataTableHeaderCell align="right">Δ {baselineLabel}</DataTableHeaderCell>
+                                    <>
+                                        <DataTableHeaderCell align="right">Δ Split</DataTableHeaderCell>
+                                        <DataTableHeaderCell align="right">Δ Total</DataTableHeaderCell>
+                                    </>
                                 )}
                             </DataTableHeaderRow>
                             <tbody>
-                                {checkpoints.map((cp, i) => {
-                                    const baseCum = baseByZone.get(cp.zone)
-                                    const delta = baseCum != null ? cp.cumulative - baseCum : null
-                                    return (
-                                        <DataTableRow key={`${cp.zone}-${i}`}>
-                                            <DataTableCell align="center">
-                                                <span className="text-xs font-mono text-muted-foreground tabular-nums">{i + 1}</span>
-                                            </DataTableCell>
-                                            <DataTableCell align="right">
-                                                <span className="text-xs font-mono tabular-nums text-muted-foreground">
-                                                    {cp.segment.toFixed(3)}
-                                                </span>
-                                            </DataTableCell>
-                                            <DataTableCell align="right">
-                                                <span className="text-sm font-mono tabular-nums text-white">
-                                                    {formatCapTime(cp.cumulative)}
-                                                </span>
-                                            </DataTableCell>
-                                            {canCompare && (
+                                {rows.map(({ key, n, segment, cumulative, cumDelta, splitDelta }) => (
+                                    <DataTableRow key={key}>
+                                        <DataTableCell align="center">
+                                            <span className="text-xs font-mono text-muted-foreground tabular-nums">{n}</span>
+                                        </DataTableCell>
+                                        <DataTableCell align="right">
+                                            <span className="text-xs font-mono tabular-nums text-muted-foreground">
+                                                {segment.toFixed(3)}
+                                            </span>
+                                        </DataTableCell>
+                                        <DataTableCell align="right">
+                                            <span className="text-sm font-mono tabular-nums text-white">
+                                                {formatCapTime(cumulative)}
+                                            </span>
+                                        </DataTableCell>
+                                        {canCompare && (
+                                            <>
                                                 <DataTableCell align="right">
-                                                    <span className={cn('text-xs font-mono tabular-nums', deltaClass(delta))}>
-                                                        {delta != null ? formatSignedDelta(delta) : '—'}
+                                                    <span className={cn('text-xs font-mono tabular-nums', deltaClass(splitDelta))}>
+                                                        {splitDelta != null ? formatSignedDelta(splitDelta) : '—'}
                                                     </span>
                                                 </DataTableCell>
-                                            )}
-                                        </DataTableRow>
-                                    )
-                                })}
+                                                <DataTableCell align="right">
+                                                    <span className={cn('text-xs font-mono tabular-nums', deltaClass(cumDelta))}>
+                                                        {cumDelta != null ? formatSignedDelta(cumDelta) : '—'}
+                                                    </span>
+                                                </DataTableCell>
+                                            </>
+                                        )}
+                                    </DataTableRow>
+                                ))}
                             </tbody>
                         </DataTableShell>
                     </div>
