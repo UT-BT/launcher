@@ -8,13 +8,14 @@ import {
     DataTableCell, DataTableEmpty, DataTableSkeletonRow,
 } from '@/app/components/shared/DataTable'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
+import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
 import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { IconActionButton } from '@/app/components/shared/IconActionButton'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import { ReplayVideoModal } from '@/app/components/shared/ReplayVideoModal'
 import { useReplayWatch } from '@/app/hooks/useReplayWatch'
-import { formatCapTime, formatAddedDate, displayMapName } from '@/app/utils/format'
+import { formatAddedDate, displayMapName } from '@/app/utils/format'
 import { getMedalIcon } from '@/app/utils/medals'
 
 const PAGE_SIZE = 10
@@ -144,9 +145,12 @@ export function HistoryModal({
                                                             />
                                                         </Tooltip>
                                                     )}
-                                                    <span className="font-mono font-black text-white/90 tracking-tight">
-                                                        {formatCapTime(cap.time)}
-                                                    </span>
+                                                    <CapTimeLink
+                                                        capId={cap.id}
+                                                        seconds={cap.time}
+                                                        onNavigate={() => onOpenChange(false)}
+                                                        className="font-mono font-black text-white/90 hover:text-white tracking-tight"
+                                                    />
                                                 </div>
                                             </DataTableCell>
                                             <DataTableCell align="right">
