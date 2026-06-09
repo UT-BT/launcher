@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils'
 import type { ActiveTitle, CapCheckpoint } from '@/app/utils/api'
 import { buildSyncAnchors, formatSignedDelta, deltaClass } from '@/app/components/pages/capDetail/capStats'
 import { CompareScrubber, type ScrubTick } from './CompareScrubber'
+import { CompareDeltaBar } from './CompareDeltaBar'
 
 export interface CompareRun {
     capId: string
@@ -193,10 +194,14 @@ export function VideoCompareModal({ open, onClose, mapName, runA, runB }: VideoC
     // Comparable checkpoints = shared zones with re-entry artifacts filtered —
     // the SAME source of truth as the cap-detail delta chart (buildSyncAnchors),
     // so the page and the modal agree on which checkpoints count.
-    const cpAnchors = useMemo(
-        () => buildSyncAnchors(runA.checkpoints, runB.checkpoints, runA.capTime, runB.capTime)
-            .filter(a => a.label !== 'SPAWN' && a.label !== 'CAP'),
+    const anchors = useMemo(
+        () => buildSyncAnchors(runA.checkpoints, runB.checkpoints, runA.capTime, runB.capTime),
         [runA.checkpoints, runB.checkpoints, runA.capTime, runB.capTime],
+    )
+    const cpAnchors = useMemo(() => anchors.filter(a => a.label !== 'SPAWN' && a.label !== 'CAP'), [anchors])
+    const deltaPoints = useMemo(
+        () => cpAnchors.length === 0 ? [] : anchors.map(a => ({ x: a.aTime + nudgeA, delta: a.aTime - a.bTime })),
+        [anchors, cpAnchors.length, nudgeA],
     )
     const aTimes = useMemo(() => cpAnchors.map(a => a.aTime), [cpAnchors])
     const bTimes = useMemo(() => cpAnchors.map(a => a.bTime), [cpAnchors])
@@ -273,6 +278,7 @@ export function VideoCompareModal({ open, onClose, mapName, runA, runB }: VideoC
                     />
                 </div>
 
+                <div className="flex flex-col gap-1.5">
                 <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
                     <PaneControls
                         cpText={labelA} delta={deltaA} ended={endedA}
@@ -317,6 +323,18 @@ export function VideoCompareModal({ open, onClose, mapName, runA, runB }: VideoC
                     aliasA={runA.alias ?? 'This run'}
                     aliasB={runB.alias ?? 'Baseline'}
                 />
+
+                {deltaPoints.length > 0 && (
+                    <CompareDeltaBar
+                        points={deltaPoints}
+                        duration={tMax}
+                        master={master}
+                        onScrub={handleScrub}
+                        onScrubStart={handleScrubStart}
+                        onScrubEnd={handleScrubEnd}
+                    />
+                )}
+                </div>
             </div>
         </Modal>
     )
@@ -375,7 +393,7 @@ function VideoPane({
                             onPlaying={() => onBufferingChange(false)}
                             onCanPlay={() => onBufferingChange(false)}
                             onError={onError}
-                            className="w-full max-h-[46vh] object-contain bg-black"
+                            className="w-full max-h-[38vh] object-contain bg-black"
                         />
                         {ended && (
                             <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-black text-muted-foreground">
