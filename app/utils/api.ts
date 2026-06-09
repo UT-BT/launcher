@@ -735,13 +735,14 @@ export async function fetchMovementAggregate(accessToken: string, mapName: strin
  *  endpoint so the (semicolon) parsing stays server-side only. */
 export async function fetchCapCheckpoints(
     accessToken: string, capId: string, signal?: AbortSignal,
-): Promise<{ checkpoints: CapCheckpoint[]; cap_time_seconds: number; alias: string | null } | null> {
+): Promise<{ checkpoints: CapCheckpoint[]; cap_time_seconds: number; alias: string | null; team: number | null } | null> {
     const detail = await fetchCapDetail(accessToken, capId, signal)
     if (!detail) return null
     return {
         checkpoints: detail.checkpoints,
         cap_time_seconds: detail.cap.cap_time_seconds,
         alias: detail.cap.alias ?? null,
+        team: detail.cap.team ?? null,
     }
 }
 

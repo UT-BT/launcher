@@ -13,6 +13,7 @@ interface PlayerInfoProps {
     highlight?: boolean
     showYouBadge?: boolean
     className?: string
+    interactive?: boolean
 }
 
 const AVATAR_PX: Record<NonNullable<PlayerInfoProps['size']>, number> = {
@@ -61,7 +62,7 @@ function openPlayer(userId: string | number) {
 export function PlayerInfo({
     userId, alias, title,
     size = 'md', layout = 'horizontal',
-    highlight, showYouBadge, className,
+    highlight, showYouBadge, className, interactive = true,
 }: PlayerInfoProps) {
     const displayName = (alias && alias.trim()) || (userId != null ? String(userId) : 'Unknown')
     const titleStyle = getTitleTextStyle(title)
@@ -72,7 +73,7 @@ export function PlayerInfo({
     const nameSizeClass = size === 'lg' ? 'text-base' : size === 'sm' ? 'text-xs' : 'text-sm'
     const titleSizeClass = size === 'lg' ? 'text-xs' : 'text-[11px]'
 
-    const isClickable = isAvatarable
+    const isClickable = isAvatarable && interactive
     const handleClick = (e: React.MouseEvent) => {
         if (!isClickable) return
         e.stopPropagation()
