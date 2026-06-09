@@ -680,8 +680,6 @@ export interface CapDetail {
     cap: CapRecord
     checkpoints: CapCheckpoint[]
     has_checkpoints: boolean
-    // Same-team caps from other players that have checkpoint data (routes only
-    // align within a team). Drives the split comparison picker.
     compare_candidates: CapCompareCandidate[]
     wr_checkpoints: CapCheckpoint[]
     wr_cap_id: string | null
@@ -694,25 +692,6 @@ export interface CapDetail {
     server: { name: string | null; region: string | null }
 }
 
-export interface MovementMetricAgg {
-    label: string
-    direction: 'lower' | 'higher'
-    avg: number | null
-    p10: number | null
-    p50: number | null
-    p90: number | null
-    min: number | null
-    n: number
-}
-
-export interface MovementAggregate {
-    map: string
-    sample_size: number
-    // NB: `Record` is shadowed by a local interface in this file — use an index
-    // signature so this stays the generic map type.
-    metrics: { [key: string]: MovementMetricAgg }
-}
-
 export async function fetchCapDetail(accessToken: string, capId: string, signal?: AbortSignal): Promise<CapDetail | null> {
     try {
         return await apiGet<CapDetail>(`/caps/${encodeURIComponent(capId)}/detail`, { token: accessToken, signal })
@@ -722,17 +701,6 @@ export async function fetchCapDetail(accessToken: string, capId: string, signal?
     }
 }
 
-export async function fetchMovementAggregate(accessToken: string, mapName: string, signal?: AbortSignal): Promise<MovementAggregate | null> {
-    try {
-        return await apiGet<MovementAggregate>(`/caps/movement_aggregate/map/${encodeURIComponent(mapName)}`, { token: accessToken, signal })
-    } catch (e) {
-        console.error('fetchMovementAggregate failed', e)
-        return null
-    }
-}
-
-/** Checkpoints for a run to overlay in the compare picker. Reuses the detail
- *  endpoint so the (semicolon) parsing stays server-side only. */
 export async function fetchCapCheckpoints(
     accessToken: string, capId: string, signal?: AbortSignal,
 ): Promise<{ checkpoints: CapCheckpoint[]; cap_time_seconds: number; alias: string | null; team: number | null } | null> {

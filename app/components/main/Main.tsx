@@ -480,8 +480,6 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
           onMapSelect={openMap}
         />
       case 'cap-detail':
-        // key on capId so clicking a different time re-mounts the page fresh
-        // (no stale compare/detail state carried between caps).
         return <CapDetailPage
           key={selectedCapId!}
           capId={selectedCapId!}

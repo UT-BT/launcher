@@ -125,7 +125,6 @@ export function CheckpointSplitsCard({
                 <NoSplits message="No checkpoint splits available for this run." />
             ) : (
                 <div className="flex flex-col lg:flex-row lg:h-[460px]">
-                    {/* Splits table — scrolls internally so the card stays bounded on long maps */}
                     <div className="lg:w-1/2 h-[320px] lg:h-full lg:border-r border-white/5 min-h-0 flex flex-col">
                         <DataTableShell className="!bg-transparent !border-0 !rounded-none">
                             <DataTableHeaderRow>
@@ -175,12 +174,9 @@ export function CheckpointSplitsCard({
                         </DataTableShell>
                     </div>
 
-                    {/* Delta chart — fills the column height */}
                     <div className="lg:w-1/2 h-[280px] lg:h-full p-3 min-h-0">
                         {canCompare && deltaPoints.length >= 2 ? (
                             <Suspense fallback={<div className="h-full bg-white/[0.02] border border-white/5 rounded-lg animate-pulse" />}>
-                                {/* key forces a fresh mount per comparison — recharts keeps stale
-                                    state when the number of <Line> segments changes between runs. */}
                                 <CheckpointDeltaChart
                                     key={selectedCompareId ?? 'cmp'}
                                     points={deltaPoints}

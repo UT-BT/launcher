@@ -58,7 +58,7 @@ export function CapDetailPage({ capId, onBack, userProfile, onMapSelect }: CapDe
     const demoDownload = useDemoDownload()
 
     const { data: detail, loading, error } = useAsync<CapDetail | null>(
-        () => fetchCapDetail(accessToken!, capId),
+        (signal) => fetchCapDetail(accessToken!, capId, signal),
         [accessToken, capId, refreshKey],
         { enabled: !!accessToken && !!capId, errorMessage: 'Failed to load cap data.' },
     )
@@ -82,8 +82,6 @@ export function CapDetailPage({ capId, onBack, userProfile, onMapSelect }: CapDe
     }, [capId])
 
     useEffect(() => {
-        // Only default once the loaded detail belongs to THIS cap — otherwise a
-        // stale (previous cap's) detail would seed the wrong comparison.
         if (!detail || detail.cap.id !== capId || defaultedFor.current === capId) return
         defaultedFor.current = capId
         setCompareCapId(nearestByTime(detail.compare_candidates, detail.cap.cap_time_seconds)?.id ?? null)
@@ -94,12 +92,13 @@ export function CapDetailPage({ capId, onBack, userProfile, onMapSelect }: CapDe
             setCompareData(null)
             return
         }
+        const controller = new AbortController()
         let cancelled = false
         setComparing(true)
-        fetchCapCheckpoints(accessToken, compareCapId)
+        fetchCapCheckpoints(accessToken, compareCapId, controller.signal)
             .then(d => { if (!cancelled) setCompareData(d) })
             .finally(() => { if (!cancelled) setComparing(false) })
-        return () => { cancelled = true }
+        return () => { cancelled = true; controller.abort() }
     }, [compareCapId, accessToken])
 
     const compareOptions = useMemo(
@@ -122,10 +121,11 @@ export function CapDetailPage({ capId, onBack, userProfile, onMapSelect }: CapDe
 
     useEffect(() => {
         if (!videoOpponent?.id || !accessToken) { setVideoOpponentData(null); return }
+        const controller = new AbortController()
         let cancelled = false
-        fetchCapCheckpoints(accessToken, videoOpponent.id)
+        fetchCapCheckpoints(accessToken, videoOpponent.id, controller.signal)
             .then(d => { if (!cancelled) setVideoOpponentData(d ? { checkpoints: d.checkpoints, team: d.team } : null) })
-        return () => { cancelled = true }
+        return () => { cancelled = true; controller.abort() }
     }, [videoOpponent, accessToken])
 
     const videoAvail = useVideoCompareAvailability(cap?.id, videoOpponent?.id ?? null, !!videoOpponent)
