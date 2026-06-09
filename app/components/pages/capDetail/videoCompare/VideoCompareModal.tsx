@@ -123,7 +123,8 @@ export function VideoCompareModal({ open, onClose, mapName, runA, runB }: VideoC
         setState: (n: number) => void,
         v: number,
     ) => {
-        const clamped = Math.round(Math.min(10, Math.max(-10, v)) * 100) / 100
+        const limit = Math.max(60, tMax)
+        const clamped = Math.round(Math.min(limit, Math.max(-limit, v)) * 100) / 100
         ref.current = clamped
         setState(clamped)
         if (!playing) seekToMaster(masterRef.current)
@@ -258,7 +259,7 @@ export function VideoCompareModal({ open, onClose, mapName, runA, runB }: VideoC
                 <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
                     <PaneControls
                         cpText={labelA} delta={deltaA} ended={endedA}
-                        nudge={nudgeA} onStep={stepNudgeA} onReset={() => setNudgeA(0)}
+                        nudge={nudgeA} onStep={stepNudgeA} onSet={setNudgeA} onReset={() => setNudgeA(0)}
                     />
                     <div className="flex items-center gap-2">
                         <MuteButton muted={mutedA} onToggle={() => setMutedA(m => !m)} who={runA.alias ?? 'this run'} />
@@ -284,7 +285,7 @@ export function VideoCompareModal({ open, onClose, mapName, runA, runB }: VideoC
                     </div>
                     <PaneControls
                         cpText={labelB} delta={deltaB} ended={endedB}
-                        nudge={nudgeB} onStep={stepNudgeB} onReset={() => setNudgeB(0)}
+                        nudge={nudgeB} onStep={stepNudgeB} onSet={setNudgeB} onReset={() => setNudgeB(0)}
                     />
                 </div>
 
@@ -415,10 +416,11 @@ interface PaneControlsProps {
     ended: boolean
     nudge: number
     onStep: (dir: number) => void
+    onSet: (v: number) => void
     onReset: () => void
 }
 
-function PaneControls({ cpText, delta, ended, nudge, onStep, onReset }: PaneControlsProps) {
+function PaneControls({ cpText, delta, ended, nudge, onStep, onSet, onReset }: PaneControlsProps) {
     return (
         <div className="flex flex-col items-center gap-1.5">
             <div className="flex items-center justify-center gap-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">
@@ -435,9 +437,7 @@ function PaneControls({ cpText, delta, ended, nudge, onStep, onReset }: PaneCont
                     <NudgeButton onStep={() => onStep(-1)} aria="Nudge earlier (hold to repeat)">
                         <Minus className="size-3" />
                     </NudgeButton>
-                    <span className="font-mono tabular-nums w-14 text-center text-white/80">
-                        {nudge > 0 ? '+' : nudge < 0 ? '−' : '±'}{Math.abs(nudge).toFixed(2)}s
-                    </span>
+                    <NudgeInput value={nudge} onCommit={onSet} />
                     <NudgeButton onStep={() => onStep(1)} aria="Nudge later (hold to repeat)">
                         <Plus className="size-3" />
                     </NudgeButton>
@@ -452,6 +452,41 @@ function PaneControls({ cpText, delta, ended, nudge, onStep, onReset }: PaneCont
                 </NudgeButton>
             </div>
         </div>
+    )
+}
+
+function NudgeInput({ value, onCommit }: { value: number; onCommit: (n: number) => void }) {
+    const [text, setText] = useState(() => value.toFixed(2))
+    const focusedRef = useRef(false)
+
+    useEffect(() => {
+        if (!focusedRef.current) setText(value.toFixed(2))
+    }, [value])
+
+    const commit = () => {
+        const n = Number(text)
+        if (Number.isFinite(n)) onCommit(n)
+        else setText(value.toFixed(2))
+    }
+
+    return (
+        <span className="inline-flex items-baseline gap-0.5 font-mono tabular-nums text-white/80">
+            <input
+                type="text"
+                inputMode="decimal"
+                value={text}
+                onFocus={e => { focusedRef.current = true; e.currentTarget.select() }}
+                onChange={e => setText(e.target.value)}
+                onBlur={() => { focusedRef.current = false; commit() }}
+                onKeyDown={e => {
+                    if (e.key === 'Enter') e.currentTarget.blur()
+                    else if (e.key === 'Escape') { setText(value.toFixed(2)); e.currentTarget.blur() }
+                }}
+                aria-label="Sync offset in seconds"
+                className="w-16 bg-transparent text-center tabular-nums outline-none rounded border border-white/10 hover:border-white/20 focus:border-blue-400/60 transition-colors py-px"
+            />
+            <span>s</span>
+        </span>
     )
 }
 
