@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
 import { Play, Download, MessageSquareOff } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { formatCapTime, formatAddedDate } from '@/app/utils/format'
+import { formatAddedDate } from '@/app/utils/format'
 import { getMedalIcon } from '@/app/utils/medals'
+import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
 import { computeMedalTier, TIER_LABELS, type MedalTier } from '@/app/components/pages/MapsPage'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { IconActionButton } from '@/app/components/shared/IconActionButton'
@@ -230,12 +231,14 @@ export function LeaderboardCard({
                                             )}
                                         </DataTableCell>
                                         <DataTableCell align="right">
-                                            <span className={cn(
-                                                'text-sm font-mono tabular-nums font-bold',
-                                                rank === 1 ? 'text-red-300' : 'text-white',
-                                            )}>
-                                                {formatCapTime(entry.cap_time_seconds)}
-                                            </span>
+                                            <CapTimeLink
+                                                capId={entry.id}
+                                                seconds={entry.cap_time_seconds}
+                                                className={cn(
+                                                    'text-sm font-mono tabular-nums font-bold',
+                                                    rank === 1 ? 'text-red-300' : 'text-white',
+                                                )}
+                                            />
                                         </DataTableCell>
                                         <DataTableCell align="right">
                                             <Tooltip content={exactTimestamp} side="top">

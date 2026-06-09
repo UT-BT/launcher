@@ -9,6 +9,7 @@ import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { IconActionButton } from '@/app/components/shared/IconActionButton'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import { formatCapTime, displayMapName } from '@/app/utils/format'
+import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
 import { getMedalIcon } from '@/app/utils/medals'
 import type { Summary } from '@/app/utils/api'
 
@@ -84,9 +85,17 @@ export function RecentCapsCard({
                                                 />
                                             </Tooltip>
                                         )}
-                                        <span className="font-mono font-black text-white/90 tracking-tight">
-                                            {timeStr}
-                                        </span>
+                                        {!isNaN(timeVal) ? (
+                                            <CapTimeLink
+                                                capId={ach.id}
+                                                seconds={timeVal}
+                                                className="font-mono font-black text-white/90 tracking-tight"
+                                            />
+                                        ) : (
+                                            <span className="font-mono font-black text-white/90 tracking-tight">
+                                                {timeStr}
+                                            </span>
+                                        )}
                                     </div>
                                 </DataTableCell>
                                 <DataTableCell align="right">

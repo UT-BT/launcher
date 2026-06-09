@@ -7,7 +7,8 @@ import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
 import { IconActionButton } from '@/app/components/shared/IconActionButton'
-import { formatCapTime, displayMapName } from '@/app/utils/format'
+import { displayMapName } from '@/app/utils/format'
+import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
 import type { SummaryWorldRecord } from '@/app/utils/api'
 
 interface RecentWorldRecordsProps {
@@ -68,9 +69,11 @@ export function RecentWorldRecords({
                                     />
                                 </DataTableCell>
                                 <DataTableCell align="right">
-                                    <span className="font-mono font-black text-white/90 tracking-tight">
-                                        {formatCapTime(r.time)}
-                                    </span>
+                                    <CapTimeLink
+                                        capId={r.id}
+                                        seconds={r.time}
+                                        className="font-mono font-black text-white/90 tracking-tight"
+                                    />
                                 </DataTableCell>
                                 <DataTableCell align="right">
                                     <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">
