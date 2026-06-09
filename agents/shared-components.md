@@ -32,6 +32,10 @@ user/record shapes; destructure at the call site.
 />
 ```
 
+Pass `interactive={false}` to suppress the click-through to the player profile when
+the whole row is itself a button/clickable (e.g. the compare-run picker), so a click
+on the name compares/selects instead of navigating away.
+
 If your backend payload lacks `active_title`: extend the backend endpoint
 (`MapReview.json()` in `DataService/data_service/endpoints/map_review/model.py`
 is the canonical pattern). Don't work around it in the launcher.

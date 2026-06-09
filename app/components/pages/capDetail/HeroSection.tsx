@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Play, Download, Loader2, ShieldCheck, BadgeCheck, Users, Calendar } from 'lucide-react'
+import { Play, Download, Loader2, ShieldCheck, BadgeCheck, Users, Calendar, Columns2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
@@ -21,12 +21,23 @@ interface HeroSectionProps {
     watching: boolean
     canWatch: boolean
     onDownload: () => void
+    onCompareRun: () => void
+    canCompareRun: boolean
 }
 
-function exactTimestamp(iso: string | null | undefined): string {
+function ordinal(n: number): string {
+    const s = ['th', 'st', 'nd', 'rd']
+    const v = n % 100
+    return `${n}${s[(v - 20) % 10] || s[v] || s[0]}`
+}
+
+function friendlyDate(iso: string | null | undefined): string {
     if (!iso) return ''
     const d = new Date(iso)
-    return isNaN(d.getTime()) ? iso : d.toLocaleString()
+    if (isNaN(d.getTime())) return iso
+    const month = d.toLocaleDateString('en-US', { month: 'long' })
+    const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' })
+    return `${month} ${ordinal(d.getDate())}, ${d.getFullYear()} at ${time}`
 }
 
 function CapTypeBadge({ capType }: { capType: number | null | undefined }) {
@@ -64,7 +75,7 @@ function MiniStat({ label, children }: { label: string; children: ReactNode }) {
 
 export function HeroSection({
     cap, mapName, rank, total, deltaWr, gapToNext, isWr,
-    onMapSelect, onWatch, watching, canWatch, onDownload,
+    onMapSelect, onWatch, watching, canWatch, onDownload, onCompareRun, canCompareRun,
 }: HeroSectionProps) {
     const medalIcon = medalIconForInt(cap.medal)
     const medalLabel = medalLabelForInt(cap.medal)
@@ -110,6 +121,20 @@ export function HeroSection({
                             >
                                 {watching ? <Loader2 className="size-3.5 animate-spin" /> : <Play className="size-3.5" />}
                                 Watch replay
+                            </button>
+                            <button
+                                type="button"
+                                onClick={onCompareRun}
+                                disabled={!canCompareRun}
+                                className={cn(
+                                    'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border transition-colors text-xs font-semibold cursor-pointer',
+                                    'bg-rose-500/15 border-rose-500/40 text-rose-200 hover:bg-rose-500/25 hover:text-white hover:border-rose-500/60',
+                                    'disabled:opacity-50 disabled:cursor-not-allowed',
+                                )}
+                                title={canCompareRun ? 'Compare this run against another, side by side' : 'No replay — cap not verified'}
+                            >
+                                <Columns2 className="size-3.5" />
+                                Compare Run
                             </button>
                             <button
                                 type="button"
@@ -166,7 +191,7 @@ export function HeroSection({
                         </span>
                         <CapTypeBadge capType={cap.cap_type} />
                         {cap.added && (
-                            <Tooltip content={exactTimestamp(cap.added)} side="top">
+                            <Tooltip content={friendlyDate(cap.added)} side="top">
                                 <span className="inline-flex items-center gap-1.5 h-7 px-2 rounded-md bg-white/5 border border-white/5 text-xs text-muted-foreground">
                                     <Calendar className="size-3.5" />
                                     {formatAddedDate(cap.added)}

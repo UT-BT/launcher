@@ -68,28 +68,55 @@ export interface DeltaPoint {
     delta: number
 }
 
+export interface SyncAnchor {
+    label: string
+    aTime: number
+    bTime: number
+}
+
+const MISMATCH_FLOOR = 0.06 
+const MISMATCH_RATIO = 4
+
+export function buildSyncAnchors(
+    checkpoints: CapCheckpoint[],
+    baseline: CapCheckpoint[],
+    capTime: number,
+    baselineTime: number | null,
+): SyncAnchor[] {
+    const baseByZone = new Map(baseline.map(c => [c.zone, c.cumulative]))
+    const canNorm = baselineTime != null && capTime > 0 && baselineTime > 0
+
+    const cands = checkpoints
+        .map(cp => {
+            const base = baseByZone.get(cp.zone)
+            if (base == null) return null
+            const mismatch = canNorm ? Math.abs(cp.cumulative / capTime - base / baselineTime!) : 0
+            return { aTime: cp.cumulative, bTime: base, mismatch }
+        })
+        .filter((c): c is { aTime: number; bTime: number; mismatch: number } => c != null)
+
+    const kept = cands.filter((c, i) => {
+        if (c.mismatch <= MISMATCH_FLOOR) return true
+        const neighbour = Math.max(cands[i - 1]?.mismatch ?? 0, cands[i + 1]?.mismatch ?? 0)
+        return c.mismatch <= MISMATCH_RATIO * neighbour
+    })
+
+    const anchors: SyncAnchor[] = [{ label: 'SPAWN', aTime: 0, bTime: 0 }]
+    kept.forEach((c, i) => anchors.push({ label: `CP${i + 1}`, aTime: c.aTime, bTime: c.bTime }))
+    if (baselineTime != null) {
+        anchors.push({ label: 'CAP', aTime: capTime, bTime: baselineTime })
+    }
+    return anchors
+}
+
 export function buildDeltaPoints(
     checkpoints: CapCheckpoint[],
     baseline: CapCheckpoint[],
     capTime: number,
     baselineTime: number | null,
 ): DeltaPoint[] {
-    const baseByZone = new Map(baseline.map(c => [c.zone, c.cumulative]))
-    const points: DeltaPoint[] = [{ label: 'SPAWN', delta: 0 }]
-
-    let i = 0
-    for (const cp of checkpoints) {
-        const base = baseByZone.get(cp.zone)
-        if (base == null) continue
-        i += 1
-        points.push({ label: `CP${i}`, delta: round3(cp.cumulative - base) })
-    }
-
-    if (baselineTime != null) {
-        points.push({ label: 'CAP', delta: round3(capTime - baselineTime) })
-    }
-
-    return points
+    return buildSyncAnchors(checkpoints, baseline, capTime, baselineTime)
+        .map(a => ({ label: a.label, delta: round3(a.aTime - a.bTime) }))
 }
 
 function round3(n: number): number {

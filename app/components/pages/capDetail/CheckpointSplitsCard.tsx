@@ -10,7 +10,7 @@ import {
     DataTableRow,
     DataTableCell,
 } from '@/app/components/shared/DataTable'
-import { buildDeltaPoints, formatSignedDelta, deltaClass } from './capStats'
+import { buildDeltaPoints, buildSyncAnchors, formatSignedDelta, deltaClass } from './capStats'
 import type { CapCheckpoint } from '@/app/utils/api'
 
 const CheckpointDeltaChart = lazy(() => import('./CheckpointDeltaChart'))
@@ -27,7 +27,7 @@ interface CheckpointSplitsCardProps {
     baseline: CapCheckpoint[]
     baselineTime: number | null
     baselineLabel: string
-    compareOptions: CompareOption[]      // same-team caps with checkpoints
+    compareOptions: CompareOption[]
     selectedCompareId: string | null
     onSelectCompare: (id: string | null) => void
     comparing: boolean
@@ -59,32 +59,38 @@ export function CheckpointSplitsCard({
         () => buildDeltaPoints(checkpoints, baseline, capTime, baselineTime),
         [checkpoints, baseline, capTime, baselineTime],
     )
+    const round3 = (n: number) => Math.round(n * 1000) / 1000
     const rows = useMemo(() => {
-        let prevCum = 0
-        const out = checkpoints.map((cp, i) => {
-            const baseCum = baseByZone.get(cp.zone)
-            const cumDelta = baseCum != null ? cp.cumulative - baseCum : null
-            let splitDelta: number | null = null
-            if (cumDelta != null) {
-                splitDelta = cumDelta - prevCum
-                prevCum = cumDelta
-            }
-            return { key: `${cp.zone}-${i}`, n: i + 1, segment: cp.segment, cumulative: cp.cumulative, cumDelta, splitDelta }
-        })
+        if (canCompare) {
+            const anchors = buildSyncAnchors(checkpoints, baseline, capTime, baselineTime)
+            return anchors.slice(1).map((anc, i) => {
+                const prev = anchors[i]
+                const cumDelta = anc.aTime - anc.bTime
+                const prevDelta = prev.aTime - prev.bTime
+                return {
+                    key: `${anc.label}-${i}`,
+                    n: i + 1,
+                    segment: round3(anc.aTime - prev.aTime),
+                    cumulative: anc.aTime,
+                    cumDelta: round3(cumDelta),
+                    splitDelta: round3(cumDelta - prevDelta),
+                }
+            })
+        }
+        const out = checkpoints.map((cp, i) => ({
+            key: `${cp.zone}-${i}`, n: i + 1, segment: cp.segment, cumulative: cp.cumulative,
+            cumDelta: null as number | null, splitDelta: null as number | null,
+        }))
         if (checkpoints.length > 0) {
             const lastCum = checkpoints[checkpoints.length - 1].cumulative
-            const cumDelta = baselineTime != null ? capTime - baselineTime : null
             out.push({
-                key: 'cap',
-                n: checkpoints.length + 1,
-                segment: Math.round((capTime - lastCum) * 1000) / 1000,
-                cumulative: capTime,
-                cumDelta,
-                splitDelta: cumDelta != null ? cumDelta - prevCum : null,
+                key: 'cap', n: checkpoints.length + 1,
+                segment: round3(capTime - lastCum), cumulative: capTime,
+                cumDelta: null, splitDelta: null,
             })
         }
         return out
-    }, [checkpoints, baseByZone, capTime, baselineTime])
+    }, [canCompare, checkpoints, baseline, capTime, baselineTime])
 
     return (
         <div className="bg-card/30 border border-white/5 rounded-xl flex flex-col overflow-hidden">
@@ -184,7 +190,7 @@ export function CheckpointSplitsCard({
                         ) : (
                             <NoSplits message={
                                 hasCandidates
-                                    ? "No shared checkpoints with this run — likely the other team or a different route, so the splits don't line up."
+                                    ? "No shared checkpoints with this run."
                                     : 'No same-team run with checkpoints to compare against.'
                             } />
                         )}
