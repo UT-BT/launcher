@@ -24,21 +24,18 @@ interface VideoCompareModalProps {
     open: boolean
     onClose: () => void
     mapName: string
-    runA: CompareRun   // the cap whose detail page we're on
-    runB: CompareRun   // the comparison baseline
+    runA: CompareRun
+    runB: CompareRun
 }
 
 const NUDGE_STEP = 0.1
 const END_EPS = 0.06
-// DemoConverter renders at ~30fps; one frame ≈ 1/30s. Arrow keys step by this.
 const FRAME_STEP = 1 / 30
 
 function isFiniteDuration(d: number | undefined | null): d is number {
     return d != null && Number.isFinite(d) && d > 0
 }
 
-/** Index of the last shared checkpoint a run has passed by video-time `vt` (real
- *  seconds from spawn), or -1 if none yet. */
 function lastPassedIdx(cpTimes: number[], vt: number): number {
     let idx = -1
     for (let i = 0; i < cpTimes.length; i++) if (cpTimes[i] <= vt) idx = i
@@ -63,7 +60,6 @@ export function VideoCompareModal({ open, onClose, mapName, runA, runB }: VideoC
     const [bufferingB, setBufferingB] = useState(false)
     const [durationA, setDurationA] = useState<number | null>(null)
     const [durationB, setDurationB] = useState<number | null>(null)
-    // Both start muted (no cacophony); the user unmutes either/both.
     const [mutedA, setMutedA] = useState(true)
     const [mutedB, setMutedB] = useState(true)
 
@@ -71,8 +67,6 @@ export function VideoCompareModal({ open, onClose, mapName, runA, runB }: VideoC
 
     const tMax = Math.max(durationA ?? 0, durationB ?? 0)
 
-    // Seek a video to the frame that belongs at master time T (its own video time
-    // is `T - nudge`, clamped into the video).
     const seekVideo = (video: HTMLVideoElement | null, nudge: number, T: number) => {
         if (!video) return
         const dur = video.duration
@@ -85,8 +79,6 @@ export function VideoCompareModal({ open, onClose, mapName, runA, runB }: VideoC
         seekVideo(videoBRef.current, nudgeBRef.current, T)
     }
 
-    // Durations for streamed MP4s often land late (durationchange). Record them
-    // and, while paused, re-seek so each pane sits at the right second.
     const onDurationKnown = (video: HTMLVideoElement | null, setDuration: (d: number | null) => void) => {
         if (!video) return
         setDuration(isFiniteDuration(video.duration) ? video.duration : null)
@@ -101,9 +93,6 @@ export function VideoCompareModal({ open, onClose, mapName, runA, runB }: VideoC
         setPlaying(false)
     }
 
-    // Ghost race: both play at native speed and drift apart. The cursor tracks
-    // whichever side is further along (max), so it keeps moving after the shorter
-    // video ends; a finished side just goes blank.
     const startPlay = () => {
         const va = videoARef.current, vb = videoBRef.current
         if (!va || !vb || errorA || errorB) return
@@ -125,12 +114,10 @@ export function VideoCompareModal({ open, onClose, mapName, runA, runB }: VideoC
         rafRef.current = requestAnimationFrame(loop)
     }
 
-    // --- scrub handlers ---
     const handleScrubStart = () => { if (playing) stopPlay() }
     const handleScrub = (t: number) => { setMaster(t); seekToMaster(t) }
     const handleScrubEnd = () => { seekToMaster(masterRef.current) }
 
-    // --- nudge handlers (shift a video along the shared timeline) ---
     const applyNudge = (
         ref: React.MutableRefObject<number>,
         setState: (n: number) => void,
@@ -143,11 +130,9 @@ export function VideoCompareModal({ open, onClose, mapName, runA, runB }: VideoC
     }
     const setNudgeA = (v: number) => applyNudge(nudgeARef, setNudgeAState, v)
     const setNudgeB = (v: number) => applyNudge(nudgeBRef, setNudgeBState, v)
-    // Read the live ref so a held button keeps accumulating from the latest value.
     const stepNudgeA = (dir: number) => applyNudge(nudgeARef, setNudgeAState, nudgeARef.current + dir * NUDGE_STEP)
     const stepNudgeB = (dir: number) => applyNudge(nudgeBRef, setNudgeBState, nudgeBRef.current + dir * NUDGE_STEP)
 
-    // Reset transport whenever the modal (re)opens.
     useEffect(() => {
         if (!open) return
         setPlaying(false)
@@ -160,18 +145,15 @@ export function VideoCompareModal({ open, onClose, mapName, runA, runB }: VideoC
         setMutedA(true); setMutedB(true)
     }, [open, runA.capId, runB.capId])
 
-    // muted is unreliable as a React prop across updates — set it imperatively.
     useEffect(() => { if (videoARef.current) videoARef.current.muted = mutedA }, [mutedA])
     useEffect(() => { if (videoBRef.current) videoBRef.current.muted = mutedB }, [mutedB])
 
-    // Teardown: stop the rAF loop and pause both videos before unmount.
     useEffect(() => () => {
         if (rafRef.current != null) cancelAnimationFrame(rafRef.current)
         videoARef.current?.pause()
         videoBRef.current?.pause()
     }, [])
 
-    // ←/→ anywhere in the open modal nudge BOTH videos one frame (pausing first).
     useEffect(() => {
         if (!open) return
         const onKey = (e: KeyboardEvent) => {
@@ -191,9 +173,6 @@ export function VideoCompareModal({ open, onClose, mapName, runA, runB }: VideoC
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, tMax])
 
-    // Comparable checkpoints = shared zones with re-entry artifacts filtered —
-    // the SAME source of truth as the cap-detail delta chart (buildSyncAnchors),
-    // so the page and the modal agree on which checkpoints count.
     const anchors = useMemo(
         () => buildSyncAnchors(runA.checkpoints, runB.checkpoints, runA.capTime, runB.capTime),
         [runA.checkpoints, runB.checkpoints, runA.capTime, runB.capTime],
@@ -201,7 +180,7 @@ export function VideoCompareModal({ open, onClose, mapName, runA, runB }: VideoC
     const cpAnchors = useMemo(() => anchors.filter(a => a.label !== 'SPAWN' && a.label !== 'CAP'), [anchors])
     const deltaPoints = useMemo(
         () => cpAnchors.length === 0 ? [] : anchors.map(a => ({ x: a.aTime + nudgeA, delta: a.aTime - a.bTime })),
-        [anchors, cpAnchors.length, nudgeA],
+        [anchors, cpAnchors, nudgeA],
     )
     const aTimes = useMemo(() => cpAnchors.map(a => a.aTime), [cpAnchors])
     const bTimes = useMemo(() => cpAnchors.map(a => a.bTime), [cpAnchors])
@@ -219,9 +198,6 @@ export function VideoCompareModal({ open, onClose, mapName, runA, runB }: VideoC
     const endedA = durationA != null && vtA >= durationA - END_EPS
     const endedB = durationB != null && vtB >= durationB - END_EPS
 
-    // Cumulative checkpoint delta (A − B) per shared checkpoint, the label + delta
-    // each run shows at the cursor, and the head-to-head delta at the last
-    // checkpoint BOTH have reached.
     const deltas = useMemo(() => cpAnchors.map(a => a.aTime - a.bTime), [cpAnchors])
     const idxA = lastPassedIdx(aTimes, vtA)
     const idxB = lastPassedIdx(bTimes, vtB)

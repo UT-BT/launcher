@@ -3,22 +3,14 @@ import {
     LineChart, Line, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, ResponsiveContainer,
 } from 'recharts'
 import { cn } from '@/lib/utils'
-import { formatSignedDelta } from './capStats'
+import { formatSignedDelta, segmentColor, DELTA_COLORS } from './capStats'
 import type { DeltaPoint } from './capStats'
 
-const GREEN = '#10B981'  // gained time (ahead of / faster than the baseline)
-const RED = '#EF4444'    // lost time
-const SLATE = '#64748B'  // no change
+const { gained: GREEN, lost: RED, neutral: SLATE } = DELTA_COLORS
 
 interface CheckpointDeltaChartProps {
     points: DeltaPoint[]
     baselineLabel: string
-}
-
-function segmentColor(change: number): string {
-    if (change < -1e-6) return GREEN
-    if (change > 1e-6) return RED
-    return SLATE
 }
 
 function ColoredDot(props: any) {

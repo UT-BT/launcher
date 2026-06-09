@@ -1,6 +1,6 @@
-import { useRef } from 'react'
 import { cn } from '@/lib/utils'
 import { formatCapTime } from '@/app/utils/format'
+import { usePointerScrub } from '@/app/hooks/usePointerScrub'
 
 export interface ScrubTick { t: number; isCap: boolean }
 
@@ -19,38 +19,11 @@ interface CompareScrubberProps {
 export function CompareScrubber({
     master, duration, ticksA, ticksB, onScrub, onScrubStart, onScrubEnd, aliasA, aliasB,
 }: CompareScrubberProps) {
-    const trackRef = useRef<HTMLDivElement>(null)
-    const draggingRef = useRef(false)
+    const { trackRef, dur, pointerHandlers } = usePointerScrub(duration, { onScrub, onScrubStart, onScrubEnd })
 
-    const dur = duration > 0 ? duration : 1
     const pct = (t: number) => Math.min(100, Math.max(0, (t / dur) * 100))
     const cursorPct = pct(master)
 
-    const timeFromClientX = (clientX: number): number => {
-        const el = trackRef.current
-        if (!el) return 0
-        const r = el.getBoundingClientRect()
-        if (r.width <= 0) return 0
-        const p = Math.min(1, Math.max(0, (clientX - r.left) / r.width))
-        return p * dur
-    }
-
-    const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-        draggingRef.current = true
-        e.currentTarget.setPointerCapture(e.pointerId)
-        onScrubStart?.()
-        onScrub(timeFromClientX(e.clientX))
-    }
-    const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-        if (!draggingRef.current) return
-        onScrub(timeFromClientX(e.clientX))
-    }
-    const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
-        if (!draggingRef.current) return
-        draggingRef.current = false
-        try { e.currentTarget.releasePointerCapture(e.pointerId) } catch { /* ignore */ }
-        onScrubEnd?.()
-    }
     const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
         let next: number | null = null
         if (e.key === 'Home') next = 0
@@ -78,7 +51,7 @@ export function CompareScrubber({
                         className={cn(
                             'absolute -left-[2px] size-[5px] rounded-full',
                             side === 'top' ? 'top-0' : 'bottom-0',
-                            capColor.replace('bg-', 'bg-'),
+                            capColor,
                         )}
                     />
                 )}
@@ -104,9 +77,7 @@ export function CompareScrubber({
                 aria-valuemin={0}
                 aria-valuemax={Math.round(dur)}
                 aria-valuenow={Math.round(master)}
-                onPointerDown={onPointerDown}
-                onPointerMove={onPointerMove}
-                onPointerUp={onPointerUp}
+                {...pointerHandlers}
                 onKeyDown={onKeyDown}
                 className="relative h-12 rounded-lg bg-white/[0.02] border border-white/5 overflow-hidden touch-none cursor-pointer focus:outline-none focus:border-blue-500/40"
             >
