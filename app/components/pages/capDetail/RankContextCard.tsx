@@ -11,7 +11,7 @@ interface RankContextCardProps {
     capUser: string | number
     capAlias?: string | null
     capTitle?: ActiveTitle | null
-    neighbors: { above: CapNeighbor | null; below: CapNeighbor | null }
+    neighbors: { above: CapNeighbor[]; below: CapNeighbor[] }
     currentUserId?: string | number
 }
 
@@ -47,6 +47,35 @@ function NeighborRow({ rank, userId, alias, title, time, capId, highlight, curre
 export function RankContextCard({
     rank, total, capTime, capUser, capAlias, capTitle, neighbors, currentUserId,
 }: RankContextCardProps) {
+    const above = neighbors.above ?? []
+    const below = neighbors.below ?? []
+
+    let topRows: CapNeighbor[]
+    let bottomRows: CapNeighbor[]
+    if (above.length === 0) {
+        topRows = []
+        bottomRows = below.slice(0, 2)
+    } else if (below.length === 0) {
+        topRows = [...above.slice(0, 2)].reverse()
+        bottomRows = []
+    } else {
+        topRows = [above[0]]
+        bottomRows = [below[0]]
+    }
+
+    const renderNeighbor = (n: CapNeighbor) => (
+        <NeighborRow
+            key={n.id}
+            rank={n.rank}
+            userId={n.user}
+            alias={n.alias}
+            title={n.active_title}
+            time={n.cap_time_seconds}
+            capId={n.id}
+            currentUserId={currentUserId}
+        />
+    )
+
     return (
         <div className="bg-card/30 border border-white/5 rounded-xl">
             <div className="px-4 py-3 border-b border-white/5 text-[10px] uppercase tracking-wider text-muted-foreground font-medium text-center">
@@ -59,17 +88,7 @@ export function RankContextCard({
             </div>
 
             <div className="px-2 pb-3 space-y-1">
-                {neighbors.above && (
-                    <NeighborRow
-                        rank={neighbors.above.rank}
-                        userId={neighbors.above.user}
-                        alias={neighbors.above.alias}
-                        title={neighbors.above.active_title}
-                        time={neighbors.above.cap_time_seconds}
-                        capId={neighbors.above.id}
-                        currentUserId={currentUserId}
-                    />
-                )}
+                {topRows.map(renderNeighbor)}
                 <NeighborRow
                     rank={rank}
                     userId={capUser}
@@ -79,17 +98,7 @@ export function RankContextCard({
                     highlight
                     currentUserId={currentUserId}
                 />
-                {neighbors.below && (
-                    <NeighborRow
-                        rank={neighbors.below.rank}
-                        userId={neighbors.below.user}
-                        alias={neighbors.below.alias}
-                        title={neighbors.below.active_title}
-                        time={neighbors.below.cap_time_seconds}
-                        capId={neighbors.below.id}
-                        currentUserId={currentUserId}
-                    />
-                )}
+                {bottomRows.map(renderNeighbor)}
             </div>
         </div>
     )

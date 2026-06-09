@@ -100,8 +100,9 @@ export function CapDetailPage({ capId, onBack, userProfile, onMapSelect }: CapDe
     )
 
     const cap = detail?.cap
-    const gapToNext = detail?.neighbors.above && cap
-        ? cap.cap_time_seconds - detail.neighbors.above.cap_time_seconds
+    const nextFaster = detail?.neighbors.above?.[0]
+    const gapToNext = nextFaster && cap
+        ? cap.cap_time_seconds - nextFaster.cap_time_seconds
         : null
 
     const isWr = !!detail && (detail.wr_cap_id === capId || detail.rank_on_map === 1)

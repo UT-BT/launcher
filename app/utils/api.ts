@@ -688,7 +688,7 @@ export interface CapDetail {
     wr_time_seconds: number | null
     rank_on_map: number
     total_on_map: number
-    neighbors: { above: CapNeighbor | null; below: CapNeighbor | null }
+    neighbors: { above: CapNeighbor[]; below: CapNeighbor[] }
     deltas: CapDeltas
     medals: CapMedalThresholds
     server: { name: string | null; region: string | null }
