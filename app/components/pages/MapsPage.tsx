@@ -183,7 +183,7 @@ const DEFAULT_COLUMN_ORDER: ColumnId[] = [
     'community_rating', 'my_rating',
 ]
 
-const NON_TABLE_COLUMNS: ReadonlySet<ColumnId> = new Set(['tags'])
+const NON_TABLE_COLUMNS: ReadonlySet<ColumnId> = new Set()
 const REQUIRED_COLUMNS: ReadonlySet<ColumnId> = new Set(['name'])
 
 const DEFAULT_COLUMN_VISIBILITY: Record<ColumnId, boolean> = {
@@ -1428,13 +1428,13 @@ export function MapsPage({
         if (!isColumnVisible(id)) return null
         switch (id) {
             case 'thumbnail':
-                return <DataTableHeaderCell key={id} width="5rem" />
+                return <DataTableHeaderCell key={id} width="3.5rem" />
             case 'name':
                 return (
                     <DataTableHeaderCell
                         key={id}
                         align="center"
-                        width="18rem"
+                        width="16rem"
                         sortable
                         sortDirection={directionFor('name')}
                         onSort={() => handleSort('name')}
@@ -1443,12 +1443,23 @@ export function MapsPage({
                         Map
                     </DataTableHeaderCell>
                 )
-            case 'author':
+            case 'tags':
                 return (
                     <DataTableHeaderCell
                         key={id}
                         align="center"
                         width="12rem"
+                        className="normal-case"
+                    >
+                        Events & Tags
+                    </DataTableHeaderCell>
+                )
+            case 'author':
+                return (
+                    <DataTableHeaderCell
+                        key={id}
+                        align="center"
+                        width="8rem"
                         sortable
                         sortDirection={directionFor('author')}
                         onSort={() => handleSort('author')}
@@ -1461,7 +1472,7 @@ export function MapsPage({
                     <DataTableHeaderCell
                         key={id}
                         align="center"
-                        width="8rem"
+                        width="6rem"
                         sortable
                         sortDirection={directionFor('difficulty')}
                         onSort={() => handleSort('difficulty')}
@@ -1474,7 +1485,7 @@ export function MapsPage({
                     <DataTableHeaderCell
                         key={id}
                         align="center"
-                        width="8rem"
+                        width="7rem"
                         sortable
                         sortDirection={directionFor('added')}
                         onSort={() => handleSort('added')}
@@ -1487,7 +1498,7 @@ export function MapsPage({
                     <DataTableHeaderCell
                         key={id}
                         align="center"
-                        width="8rem"
+                        width="9rem"
                         sortable
                         sortDirection={directionFor('world_record')}
                         onSort={() => handleSort('world_record')}
@@ -1500,7 +1511,7 @@ export function MapsPage({
                     <DataTableHeaderCell
                         key={id}
                         align="center"
-                        width="4rem"
+                        width="3rem"
                         className="px-2"
                         sortable
                         sortDirection={directionFor('medal')}
@@ -1514,7 +1525,7 @@ export function MapsPage({
                     <DataTableHeaderCell
                         key={id}
                         align="center"
-                        width="10rem"
+                        width="9rem"
                         sortable
                         sortDirection={directionFor('pb')}
                         onSort={() => handleSort('pb')}
@@ -1523,13 +1534,13 @@ export function MapsPage({
                     </DataTableHeaderCell>
                 )
             case 'replay':
-                return <DataTableHeaderCell key={id} align="center" width="5rem" className="px-2" />
+                return <DataTableHeaderCell key={id} width="5rem" className="px-2" />
             case 'community_rating':
                 return (
                     <DataTableHeaderCell
                         key={id}
                         align="center"
-                        width="10rem"
+                        width="11rem"
                         sortable
                         sortDirection={directionFor('rating')}
                         onSort={() => handleSort('rating')}
@@ -1585,59 +1596,71 @@ export function MapsPage({
                 const shown = expanded ? tags : tags.slice(0, 3)
                 return (
                     <DataTableCell key={id}>
-                        <div className="flex items-center gap-2 flex-wrap">
-                            <span ref={isFirstRow ? firstRowFavRef : undefined} className="inline-flex">
-                                <FavoriteStar
-                                    name={map.name}
-                                    isFavorited={favoriteMapNames.has(map.name)}
-                                    onToggle={onToggleFavorite}
-                                    size="md"
-                                />
-                            </span>
-                            <Tooltip content="Open map details" side="top">
-                                <button
-                                    ref={isFirstRow ? firstRowNameRef : undefined}
-                                    type="button"
-                                    onClick={e => {
-                                        e.stopPropagation()
-                                        onMapSelect(map.name)
-                                    }}
-                                    className="font-bold text-white hover:text-blue-300 underline-offset-4 transition-colors cursor-pointer text-left text-md"
-                                >
-                                    {displayMapName(map.name)}
-                                </button>
-                            </Tooltip>
-                            {mapNew && (
-                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30 uppercase tracking-wider">
-                                    New
+                        <div className="flex items-center gap-3 min-w-0">
+                            <div className="flex items-center gap-1 min-w-0">
+                                <span ref={isFirstRow ? firstRowFavRef : undefined} className="inline-flex shrink-0">
+                                    <FavoriteStar
+                                        name={map.name}
+                                        isFavorited={favoriteMapNames.has(map.name)}
+                                        onToggle={onToggleFavorite}
+                                        size="md"
+                                    />
                                 </span>
-                            )}
-                            {columnVisibility.tags && (
-                                <>
-                                    {shown.map(tag => (
-                                        <span
-                                            key={tag}
-                                            style={tagColorStyle(tag)}
-                                            className="text-[10px] font-medium px-1.5 py-0.5 rounded border"
-                                        >
-                                            {tag}
-                                        </span>
-                                    ))}
-                                    {tags.length > 3 && (
-                                        <Tooltip content={expanded ? 'Collapse tags' : tags.slice(3).join(', ')} side="top">
-                                            <button
-                                                type="button"
-                                                onClick={e => {
-                                                    e.stopPropagation()
-                                                    toggleTagExpansion(map.name)
-                                                }}
-                                                className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-muted-foreground hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
-                                            >
-                                                {expanded ? '− Show less' : `+${tags.length - 3}`}
-                                            </button>
-                                        </Tooltip>
-                                    )}
-                                </>
+
+                                <Tooltip content="Open map details" side="top">
+                                    <button
+                                        ref={isFirstRow ? firstRowNameRef : undefined}
+                                        type="button"
+                                        onClick={e => {
+                                            e.stopPropagation()
+                                            onMapSelect(map.name)
+                                        }}
+                                        className="font-bold text-white hover:text-blue-300 underline-offset-4 transition-colors cursor-pointer text-left text-md truncate"
+                                    >
+                                        {displayMapName(map.name)}
+                                    </button>
+                                </Tooltip>
+
+                                {mapNew && (
+                                    <span className="shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30 uppercase tracking-wider">
+                                        New
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                    </DataTableCell>
+                )
+            }
+            case 'tags': {
+                const expanded = expandedTagMaps.has(map.name)
+                const shown = expanded ? tags : tags.slice(0, 3)
+
+                return (
+                    <DataTableCell key={id} align="center" className="align-middle">
+                        <div className="flex flex-col items-center gap-0.5">
+                            {shown.map(tag => (
+                                <span
+                                    key={tag}
+                                    style={tagColorStyle(tag)}
+                                    className="w-fit text-[10px] font-medium px-1.5 py-0.5 rounded border leading-tight"
+                                >
+                                    {tag}
+                                </span>
+                            ))}
+
+                            {tags.length > 3 && (
+                                <Tooltip content={expanded ? 'Collapse tags' : tags.slice(3).join(', ')} side="top">
+                                    <button
+                                        type="button"
+                                        onClick={e => {
+                                            e.stopPropagation()
+                                            toggleTagExpansion(map.name)
+                                        }}
+                                        className="w-fit text-[10px] px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-muted-foreground hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
+                                    >
+                                        {expanded ? '- Show less' : `+${tags.length - 3}`}
+                                    </button>
+                                </Tooltip>
                             )}
                         </div>
                     </DataTableCell>
@@ -1784,7 +1807,7 @@ export function MapsPage({
                                         e.stopPropagation()
                                         if (pbCapId) openCap(pbCapId)
                                     }}
-                                    className="flex flex-col leading-tight text-left cursor-pointer group/pb"
+                                    className="flex flex-col leading-tight text-center cursor-pointer group/pb"
                                 >
                                     {timeText}
                                     {deltaText}
