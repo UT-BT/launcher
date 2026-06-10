@@ -23,6 +23,14 @@ npm run dev
 
 This will start the Electron app with hot-reload enabled.
 
+If `npm run dev` fails with an Electron install/uninstall error after a fresh clone,
+reinstall Electron with:
+
+```bash
+npx install-electron --no
+npm run dev
+```
+
 ## Building for Production
 Windows is the only supported target:
 
