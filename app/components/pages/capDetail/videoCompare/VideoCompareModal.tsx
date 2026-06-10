@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Play, Pause, Minus, Plus, RotateCcw, Loader2, Flag, Volume2, VolumeX } from 'lucide-react'
+import { Play, Pause, Minus, Plus, RotateCcw, Loader2, Flag, Volume2, VolumeX, ChevronsLeft, ChevronsRight } from 'lucide-react'
 import { Modal } from '@/app/components/ui/modal'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
@@ -31,6 +31,8 @@ interface VideoCompareModalProps {
 const NUDGE_STEP = 0.1
 const END_EPS = 0.06
 const FRAME_STEP = 1 / 30
+const SKIP_SECONDS = 5
+const RATES = [0.25, 0.5, 1, 1.5, 2] as const
 
 function isFiniteDuration(d: number | undefined | null): d is number {
     return d != null && Number.isFinite(d) && d > 0
@@ -62,6 +64,7 @@ export function VideoCompareModal({ open, onClose, mapName, runA, runB }: VideoC
     const [durationB, setDurationB] = useState<number | null>(null)
     const [mutedA, setMutedA] = useState(true)
     const [mutedB, setMutedB] = useState(true)
+    const [rate, setRate] = useState(1)
 
     const setMaster = (t: number) => { masterRef.current = t; setMasterState(t) }
 
@@ -82,6 +85,7 @@ export function VideoCompareModal({ open, onClose, mapName, runA, runB }: VideoC
     const onDurationKnown = (video: HTMLVideoElement | null, setDuration: (d: number | null) => void) => {
         if (!video) return
         setDuration(isFiniteDuration(video.duration) ? video.duration : null)
+        video.playbackRate = rate
         if (!playing) seekToMaster(masterRef.current)
     }
 
@@ -98,6 +102,8 @@ export function VideoCompareModal({ open, onClose, mapName, runA, runB }: VideoC
         if (!va || !vb || errorA || errorB) return
         if (!isFiniteDuration(va.duration) || !isFiniteDuration(vb.duration)) return
         seekToMaster(masterRef.current)
+        va.playbackRate = rate
+        vb.playbackRate = rate
         setPlaying(true)
         va.play().catch(() => {})
         vb.play().catch(() => {})
@@ -117,6 +123,13 @@ export function VideoCompareModal({ open, onClose, mapName, runA, runB }: VideoC
     const handleScrubStart = () => { if (playing) stopPlay() }
     const handleScrub = (t: number) => { setMaster(t); seekToMaster(t) }
     const handleScrubEnd = () => { seekToMaster(masterRef.current) }
+
+    const skip = (sec: number) => {
+        if (tMax <= 0) return
+        const next = Math.min(tMax, Math.max(0, masterRef.current + sec))
+        setMaster(next)
+        seekToMaster(next)
+    }
 
     const applyNudge = (
         ref: React.MutableRefObject<number>,
@@ -144,10 +157,15 @@ export function VideoCompareModal({ open, onClose, mapName, runA, runB }: VideoC
         setBufferingA(false); setBufferingB(false)
         setDurationA(null); setDurationB(null)
         setMutedA(true); setMutedB(true)
+        setRate(1)
     }, [open, runA.capId, runB.capId])
 
     useEffect(() => { if (videoARef.current) videoARef.current.muted = mutedA }, [mutedA])
     useEffect(() => { if (videoBRef.current) videoBRef.current.muted = mutedB }, [mutedB])
+    useEffect(() => {
+        if (videoARef.current) videoARef.current.playbackRate = rate
+        if (videoBRef.current) videoBRef.current.playbackRate = rate
+    }, [rate])
 
     useEffect(() => () => {
         if (rafRef.current != null) cancelAnimationFrame(rafRef.current)
@@ -158,16 +176,24 @@ export function VideoCompareModal({ open, onClose, mapName, runA, runB }: VideoC
     useEffect(() => {
         if (!open) return
         const onKey = (e: KeyboardEvent) => {
-            if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
             const t = e.target as HTMLElement | null
             if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return
             if (tMax <= 0) return
-            e.preventDefault()
-            if (rafRef.current != null) stopPlay()
-            const dir = e.key === 'ArrowRight' ? 1 : -1
-            const next = Math.min(tMax, Math.max(0, masterRef.current + dir * FRAME_STEP))
-            setMaster(next)
-            seekToMaster(next)
+            const k = e.key
+            if (k === 'ArrowLeft' || k === 'ArrowRight') {
+                e.preventDefault()
+                if (rafRef.current != null) stopPlay()
+                const dir = k === 'ArrowRight' ? 1 : -1
+                const next = Math.min(tMax, Math.max(0, masterRef.current + dir * FRAME_STEP))
+                setMaster(next)
+                seekToMaster(next)
+            } else if (k === 'j' || k === 'J') {
+                e.preventDefault()
+                skip(-SKIP_SECONDS)
+            } else if (k === 'l' || k === 'L') {
+                e.preventDefault()
+                skip(SKIP_SECONDS)
+            }
         }
         window.addEventListener('keydown', onKey)
         return () => window.removeEventListener('keydown', onKey)
@@ -261,10 +287,12 @@ export function VideoCompareModal({ open, onClose, mapName, runA, runB }: VideoC
                         cpText={labelA} delta={deltaA} ended={endedA}
                         nudge={nudgeA} onStep={stepNudgeA} onSet={setNudgeA} onReset={() => setNudgeA(0)}
                     />
+                    <div className="flex flex-col items-center gap-1.5 self-start">
                     <div className="flex items-center gap-2">
                         <MuteButton muted={mutedA} onToggle={() => setMutedA(m => !m)} who={runA.alias ?? 'this run'} />
+                        <SkipButton dir={-1} seconds={SKIP_SECONDS} disabled={tMax <= 0} onSkip={skip} />
                         <Tooltip
-                            content={canPlay ? 'Play both at real speed from the cursor' : 'Preparing videos…'}
+                            content={canPlay ? 'Play both from the cursor' : 'Preparing videos…'}
                             side="top"
                         >
                             <button
@@ -281,7 +309,10 @@ export function VideoCompareModal({ open, onClose, mapName, runA, runB }: VideoC
                                 {playing ? 'Pause' : 'Play'}
                             </button>
                         </Tooltip>
+                        <SkipButton dir={1} seconds={SKIP_SECONDS} disabled={tMax <= 0} onSkip={skip} />
                         <MuteButton muted={mutedB} onToggle={() => setMutedB(m => !m)} who={runB.alias ?? 'baseline'} />
+                    </div>
+                        <SpeedControl rate={rate} onRate={setRate} />
                     </div>
                     <PaneControls
                         cpText={labelB} delta={deltaB} ended={endedB}
@@ -410,6 +441,59 @@ function MuteButton({ muted, onToggle, who }: { muted: boolean; onToggle: () => 
     )
 }
 
+function SkipButton({ dir, seconds, disabled, onSkip }: {
+    dir: 1 | -1
+    seconds: number
+    disabled: boolean
+    onSkip: (sec: number) => void
+}) {
+    const Icon = dir < 0 ? ChevronsLeft : ChevronsRight
+    const label = dir < 0 ? `Back ${seconds}s (J)` : `Forward ${seconds}s (L)`
+    return (
+        <Tooltip content={label} side="top">
+            <button
+                type="button"
+                onClick={() => onSkip(dir * seconds)}
+                disabled={disabled}
+                aria-label={label}
+                className={cn(
+                    'inline-flex items-center justify-center gap-0.5 h-9 px-2.5 rounded-md border transition-colors cursor-pointer',
+                    'bg-white/[0.03] border-white/10 text-muted-foreground hover:text-white hover:border-white/20',
+                    'disabled:opacity-40 disabled:cursor-default disabled:hover:text-muted-foreground disabled:hover:border-white/10',
+                )}
+            >
+                {dir < 0 && <Icon className="size-3.5" />}
+                <span className="text-[11px] font-mono tabular-nums">{seconds}</span>
+                {dir > 0 && <Icon className="size-3.5" />}
+            </button>
+        </Tooltip>
+    )
+}
+
+function SpeedControl({ rate, onRate }: { rate: number; onRate: (r: number) => void }) {
+    return (
+        <div className="inline-flex items-center gap-0.5 rounded-md border border-white/10 bg-white/[0.03] p-0.5">
+            {RATES.map(r => (
+                <button
+                    key={r}
+                    type="button"
+                    onClick={() => onRate(r)}
+                    aria-pressed={rate === r}
+                    aria-label={`Playback speed ${r}×`}
+                    className={cn(
+                        'px-2 h-6 rounded text-[11px] font-mono tabular-nums transition-colors cursor-pointer',
+                        rate === r
+                            ? 'bg-blue-500/25 text-blue-100'
+                            : 'text-muted-foreground hover:text-white',
+                    )}
+                >
+                    {r}×
+                </button>
+            ))}
+        </div>
+    )
+}
+
 interface PaneControlsProps {
     cpText: string
     delta: number | null
@@ -471,6 +555,7 @@ function NudgeInput({ value, onCommit }: { value: number; onCommit: (n: number) 
 
     return (
         <span className="inline-flex items-baseline gap-0.5 font-mono tabular-nums text-white/80">
+            <span aria-hidden className="invisible select-none">s</span>
             <input
                 type="text"
                 inputMode="decimal"
