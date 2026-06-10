@@ -42,7 +42,7 @@ export function DataTableShell({
             )}
             data-utbt-table-thead={theadDataAttr}
         >
-            <table className="w-full text-sm">
+            <table className="w-full table-fixed text-sm">
                 {children}
             </table>
         </div>
