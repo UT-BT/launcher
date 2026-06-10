@@ -1632,8 +1632,9 @@ export function MapsPage({
                 )
             }
             case 'tags': {
+                const visibleTagCount = 1
                 const expanded = expandedTagMaps.has(map.name)
-                const shown = expanded ? tags : tags.slice(0, 3)
+                const shown = expanded ? tags : tags.slice(0, visibleTagCount)
 
                 return (
                     <DataTableCell key={id} align="center" className="align-middle">
@@ -1648,8 +1649,8 @@ export function MapsPage({
                                 </span>
                             ))}
 
-                            {tags.length > 3 && (
-                                <Tooltip content={expanded ? 'Collapse tags' : tags.slice(3).join(', ')} side="top">
+                            {tags.length > visibleTagCount && (
+                                <Tooltip content={expanded ? 'Collapse tags' : tags.slice(visibleTagCount).join(', ')} side="top">
                                     <button
                                         type="button"
                                         onClick={e => {
@@ -1658,7 +1659,7 @@ export function MapsPage({
                                         }}
                                         className="w-fit text-[10px] px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-muted-foreground hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
                                     >
-                                        {expanded ? '- Show less' : `+${tags.length - 3}`}
+                                        {expanded ? '- Show less' : `+${tags.length - visibleTagCount}`}
                                     </button>
                                 </Tooltip>
                             )}
