@@ -1433,6 +1433,8 @@ export function MapsPage({
                 return (
                     <DataTableHeaderCell
                         key={id}
+                        align="center"
+                        width="18rem"
                         sortable
                         sortDirection={directionFor('name')}
                         onSort={() => handleSort('name')}
@@ -1445,6 +1447,8 @@ export function MapsPage({
                 return (
                     <DataTableHeaderCell
                         key={id}
+                        align="center"
+                        width="12rem"
                         sortable
                         sortDirection={directionFor('author')}
                         onSort={() => handleSort('author')}
@@ -1456,6 +1460,8 @@ export function MapsPage({
                 return (
                     <DataTableHeaderCell
                         key={id}
+                        align="center"
+                        width="8rem"
                         sortable
                         sortDirection={directionFor('difficulty')}
                         onSort={() => handleSort('difficulty')}
@@ -1467,6 +1473,8 @@ export function MapsPage({
                 return (
                     <DataTableHeaderCell
                         key={id}
+                        align="center"
+                        width="8rem"
                         sortable
                         sortDirection={directionFor('added')}
                         onSort={() => handleSort('added')}
@@ -1478,6 +1486,8 @@ export function MapsPage({
                 return (
                     <DataTableHeaderCell
                         key={id}
+                        align="center"
+                        width="8rem"
                         sortable
                         sortDirection={directionFor('world_record')}
                         onSort={() => handleSort('world_record')}
@@ -1490,7 +1500,7 @@ export function MapsPage({
                     <DataTableHeaderCell
                         key={id}
                         align="center"
-                        width="2.5rem"
+                        width="4rem"
                         className="px-2"
                         sortable
                         sortDirection={directionFor('medal')}
@@ -1503,6 +1513,8 @@ export function MapsPage({
                 return (
                     <DataTableHeaderCell
                         key={id}
+                        align="center"
+                        width="10rem"
                         sortable
                         sortDirection={directionFor('pb')}
                         onSort={() => handleSort('pb')}
@@ -1516,6 +1528,8 @@ export function MapsPage({
                 return (
                     <DataTableHeaderCell
                         key={id}
+                        align="center"
+                        width="10rem"
                         sortable
                         sortDirection={directionFor('rating')}
                         onSort={() => handleSort('rating')}
@@ -1527,6 +1541,8 @@ export function MapsPage({
                 return (
                     <DataTableHeaderCell
                         key={id}
+                        align="center"
+                        width="8rem"
                         sortable
                         sortDirection={directionFor('my_rating')}
                         onSort={() => handleSort('my_rating')}
@@ -1630,7 +1646,7 @@ export function MapsPage({
             case 'author':
                 return (
                     <DataTableCell key={id} className="text-muted-foreground">
-                        <PlayerInfo alias={author || '—'} size="md" />
+                        <PlayerInfo alias={author || '—'} size="md" className="justify-center" />
                     </DataTableCell>
                 )
             case 'difficulty':
@@ -1694,8 +1710,8 @@ export function MapsPage({
                     <div ref={isFirstRow ? (firstRowWrRef as unknown as React.RefObject<HTMLDivElement | null>) : undefined} className="text-left">{timeNode}</div>
                 )
                 return (
-                    <DataTableCell key={id} className="font-mono text-sm text-muted-foreground">
-                        <div className="flex flex-col leading-tight">
+                    <DataTableCell key={id} align="center" className="font-mono text-sm text-muted-foreground">
+                        <div className="inline-flex flex-col items-center leading-tight">
                             {timeButton}
                             {wrHolder && (wrHolder.user_id ? (
                                 <button
@@ -1734,7 +1750,7 @@ export function MapsPage({
             case 'pb': {
                 if (!(bestCap && bestCap.cap_time_seconds > 0)) {
                     return (
-                        <DataTableCell key={id} className="font-mono text-sm text-muted-foreground">
+                        <DataTableCell key={id} align="center" className="font-mono text-sm text-muted-foreground">
                             <span className="opacity-30">—</span>
                         </DataTableCell>
                     )
@@ -1758,7 +1774,7 @@ export function MapsPage({
                     )
                 )
                 return (
-                    <DataTableCell key={id} className="font-mono text-sm text-muted-foreground">
+                    <DataTableCell key={id} align="center" className="font-mono text-sm text-muted-foreground">
                         {clickable ? (
                             <Tooltip content="View cap details" side="top">
                                 <button
@@ -1804,7 +1820,7 @@ export function MapsPage({
                 )
             case 'community_rating':
                 return (
-                    <DataTableCell key={id}>
+                    <DataTableCell key={id} align="center">
                         <Tooltip content="View reviews" side="top">
                             <button
                                 ref={isFirstRow ? firstRowRatingRef : undefined}
