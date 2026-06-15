@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import { fetchPlaytimeByMap, type PlaytimeByMapRow } from '@/app/utils/api'
 import { usePaginatedQuery } from '@/app/hooks/useAsync'
+import { useNavState } from '@/app/components/navigation/useNavState'
 import { formatAddedDate, displayMapName } from '@/app/utils/format'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import {
@@ -35,16 +36,18 @@ function formatHours(seconds: number): string {
 }
 
 export function PlaytimeBreakdownCard({ accessToken, userId, onMapSelect, tabsSlot }: PlaytimeBreakdownCardProps) {
-    const [queryRaw, setQueryRaw] = useState('')
-    const [query, setQuery] = useState('')
-    const [favoritesOnly, setFavoritesOnly] = useState(false)
-    const [sortField, setSortField] = useState<SortField>('hours')
-    const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+    const [query, setQuery] = useNavState('playtime.query', '')
+    const [queryRaw, setQueryRaw] = useState(query)
+    const [favoritesOnly, setFavoritesOnly] = useNavState('playtime.favoritesOnly', false)
+    const [sortField, setSortField] = useNavState<SortField>('playtime.sortField', 'hours')
+    const [sortDir, setSortDir] = useNavState<'asc' | 'desc'>('playtime.sortDir', 'desc')
+    const [playtimePage, setPlaytimePage] = useNavState('playtime.page', 1)
+    const [playtimePageSize, setPlaytimePageSize] = useNavState('playtime.pageSize', 10)
 
     useEffect(() => {
         const t = setTimeout(() => setQuery(queryRaw), DEBOUNCE_MS)
         return () => clearTimeout(t)
-    }, [queryRaw])
+    }, [queryRaw, setQuery])
 
     const {
         page, pageSize, items, total, totalPages, loading, error, setPage, setPageSize,
@@ -52,6 +55,10 @@ export function PlaytimeBreakdownCard({ accessToken, userId, onMapSelect, tabsSl
         enabled: !!accessToken,
         errorMessage: 'Failed to load playtime breakdown.',
         deps: [accessToken, userId, query, favoritesOnly, sortField, sortDir],
+        page: playtimePage,
+        pageSize: playtimePageSize,
+        onPageChange: setPlaytimePage,
+        onPageSizeChange: setPlaytimePageSize,
         fetchPage: ({ limit, offset }) =>
             fetchPlaytimeByMap(accessToken!, userId, {
                 limit, offset,
@@ -64,7 +71,7 @@ export function PlaytimeBreakdownCard({ accessToken, userId, onMapSelect, tabsSl
 
     const handleSort = (field: SortField) => {
         if (sortField === field) {
-            setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+            setSortDir(sortDir === 'asc' ? 'desc' : 'asc')
         } else {
             setSortField(field)
             setSortDir(field === 'map' ? 'asc' : 'desc')
@@ -92,7 +99,7 @@ export function PlaytimeBreakdownCard({ accessToken, userId, onMapSelect, tabsSl
                     <Tooltip content={favoritesOnly ? 'Showing favorites only' : 'Show favorites only'} side="top">
                         <button
                             type="button"
-                            onClick={() => setFavoritesOnly(v => !v)}
+                            onClick={() => setFavoritesOnly(!favoritesOnly)}
                             aria-pressed={favoritesOnly}
                             className={cn(
                                 'inline-flex items-center justify-center size-7 rounded-md border transition-colors cursor-pointer',

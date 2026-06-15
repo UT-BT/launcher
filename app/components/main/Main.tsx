@@ -1,5 +1,12 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef, type Dispatch, type SetStateAction } from 'react'
 import { AppLayout } from '@/app/components/layout/AppLayout'
+import {
+  NavigationContext,
+  paramsEqual,
+  type NavEntry,
+  type NavParams,
+  type NavigationContextValue,
+} from '@/app/components/navigation/NavigationContext'
 import { Home } from '@/app/components/pages/Home'
 import {
   ServerBrowserPage,
@@ -65,140 +72,76 @@ const ACHIEVEMENTS_STATE_STORAGE_KEY = 'utbt:achievementsState:v1'
 const SERVER_PRESETS_STORAGE_KEY = 'utbt:serverPresets:v1'
 const SERVER_FAVORITES_STORAGE_KEY = 'utbt:serverFavorites:v2'
 
-const SINGLE_TO_MULTI_FILTER_KEYS: Array<[string, string]> = [
-  ['authorFilter', 'authorFilters'],
-  ['tagFilter', 'tagFilters'],
-  ['yearFilter', 'yearFilters'],
-  ['difficultyFilter', 'difficultyFilters'],
-  ['ratingFilter', 'ratingFilters'],
-  ['aestheticsFilter', 'aestheticsFilters'],
-  ['learningFilter', 'learningFilters'],
-  ['luckFilter', 'luckFilters'],
-  ['recordTimeFilter', 'recordTimeFilters'],
-  ['cappedFilter', 'cappedFilters'],
-]
+const HISTORY_CAP = 50
 
-function migrateSingleToMulti(parsed: any): void {
-  if (!parsed || typeof parsed !== 'object') return
-  for (const [oldKey, newKey] of SINGLE_TO_MULTI_FILTER_KEYS) {
-    if (oldKey in parsed && !(newKey in parsed)) {
-      const v = parsed[oldKey]
-      parsed[newKey] = v && v !== 'all' ? [v] : []
-      delete parsed[oldKey]
+const MAPS_PREF_KEYS: readonly (keyof MapsPageState)[] = ['filtersPanelOpen', 'pageSizePreference']
+const SERVERS_PREF_KEYS: readonly (keyof ServerBrowserState)[] = ['columnVisibility', 'columnOrder', 'filtersPanelOpen']
+const PLAYERS_PREF_KEYS: readonly (keyof PlayersPageState)[] = ['columnVisibility', 'columnOrder', 'pageSizePreference']
+const CAP_IT_ALL_PREF_KEYS: readonly (keyof CapItAllPageState)[] = ['pageSizePreference']
+const WORLD_RECORDS_PREF_KEYS: readonly (keyof WorldRecordsPageState)[] = ['columnVisibility', 'columnOrder', 'pageSizePreference']
+const ACHIEVEMENTS_PREF_KEYS: readonly (keyof AchievementsPageState)[] = []
+
+function pickKeys<T extends object>(o: T, keys: readonly (keyof T)[]): Partial<T> {
+  const r: Partial<T> = {}
+  for (const k of keys) r[k] = o[k]
+  return r
+}
+
+function loadPrefs<T extends object>(storageKey: string, def: T, prefKeys: readonly (keyof T)[]): Partial<T> {
+  const result = pickKeys(def, prefKeys)
+  if (typeof window === 'undefined' || prefKeys.length === 0) return result
+  try {
+    const raw = window.localStorage.getItem(storageKey)
+    if (!raw) return result
+    const parsed = JSON.parse(raw) as any
+    for (const k of prefKeys) {
+      if (parsed?.[k] !== undefined) (result as any)[k] = parsed[k]
     }
-  }
-}
-
-function loadPersistedMapsState(): MapsPageState {
-  if (typeof window === 'undefined') return DEFAULT_MAPS_STATE
-  try {
-    const raw = window.localStorage.getItem(MAPS_STATE_STORAGE_KEY)
-    if (!raw) return DEFAULT_MAPS_STATE
-    const parsed = JSON.parse(raw)
-    migrateSingleToMulti(parsed)
-    // Merge over defaults so any newly-added state keys still get sane values.
-    return { ...DEFAULT_MAPS_STATE, ...parsed, scrollTop: 0 }
+    return result
   } catch {
-    return DEFAULT_MAPS_STATE
+    return result
   }
 }
 
-function loadPersistedServersState(): ServerBrowserState {
-  if (typeof window === 'undefined') return DEFAULT_SERVERS_STATE
-  try {
-    const raw = window.localStorage.getItem(SERVERS_STATE_STORAGE_KEY)
-    if (!raw) return DEFAULT_SERVERS_STATE
-    const parsed = JSON.parse(raw)
-    return {
-      ...DEFAULT_SERVERS_STATE,
-      ...parsed,
-      filters: { ...DEFAULT_SERVERS_STATE.filters, ...(parsed?.filters ?? {}) },
-      columnVisibility: {
-        ...DEFAULT_SERVERS_STATE.columnVisibility,
-        ...(parsed?.columnVisibility ?? {}),
-      },
-      columnOrder: Array.isArray(parsed?.columnOrder) && parsed.columnOrder.length > 0
-        ? parsed.columnOrder
-        : DEFAULT_SERVERS_STATE.columnOrder,
-      scrollTop: 0,
+// Binds a controlled page's state to the active navigation-history entry (transient
+// query fields) while mirroring its preference fields to localStorage. A fresh entry
+// initializes from defaults + persisted prefs; Back/Forward restores the entry's
+// snapshot. Drop-in replacement for the old `useState` wiring (same [state, setState]
+// shape), so renderView wiring is unchanged.
+function usePageState<T extends object>(
+  storageKey: string,
+  def: T,
+  prefKeys: readonly (keyof T)[],
+  getEntryState: <V>(key: string, d: V) => V,
+  updateEntryState: <V>(key: string, updater: (prev: V | undefined) => V) => void,
+): [T, Dispatch<SetStateAction<T>>] {
+  const [prefs, setPrefs] = useState<Partial<T>>(() => loadPrefs(storageKey, def, prefKeys))
+
+  useEffect(() => {
+    if (prefKeys.length === 0) return
+    try { window.localStorage.setItem(storageKey, JSON.stringify(prefs)) } catch { /* ignore */ }
+  }, [storageKey, prefKeys, prefs])
+
+  const initial = useMemo(() => ({ ...def, ...prefs } as T), [def, prefs])
+  const initialRef = useRef(initial)
+  initialRef.current = initial
+
+  const entryKey = `page:${storageKey}`
+  const state = getEntryState<T>(entryKey, initial)
+
+  const onChange = useCallback<Dispatch<SetStateAction<T>>>((action) => {
+    const apply = (prev: T): T => typeof action === 'function' ? (action as (p: T) => T)(prev) : action
+    if (prefKeys.length > 0) {
+      const next = apply(state)
+      setPrefs(prev => {
+        const changed = prefKeys.some(k => next[k] !== prev[k])
+        return changed ? { ...prev, ...pickKeys(next, prefKeys) } : prev
+      })
     }
-  } catch {
-    return DEFAULT_SERVERS_STATE
-  }
-}
+    updateEntryState<T>(entryKey, prev => apply(prev ?? initialRef.current))
+  }, [state, entryKey, prefKeys, setPrefs, updateEntryState])
 
-function loadPersistedPlayersState(): PlayersPageState {
-  if (typeof window === 'undefined') return DEFAULT_PLAYERS_STATE
-  try {
-    const raw = window.localStorage.getItem(PLAYERS_STATE_STORAGE_KEY)
-    if (!raw) return DEFAULT_PLAYERS_STATE
-    const parsed = JSON.parse(raw)
-    return {
-      ...DEFAULT_PLAYERS_STATE,
-      ...parsed,
-      columnVisibility: {
-        ...DEFAULT_PLAYERS_STATE.columnVisibility,
-        ...(parsed?.columnVisibility ?? {}),
-      },
-      columnOrder: Array.isArray(parsed?.columnOrder) && parsed.columnOrder.length > 0
-        ? parsed.columnOrder
-        : DEFAULT_PLAYERS_STATE.columnOrder,
-      scrollTop: 0,
-    }
-  } catch {
-    return DEFAULT_PLAYERS_STATE
-  }
-}
-
-function loadPersistedCapItAllState(): CapItAllPageState {
-  if (typeof window === 'undefined') return DEFAULT_CAP_IT_ALL_STATE
-  try {
-    const raw = window.localStorage.getItem(CAP_IT_ALL_STATE_STORAGE_KEY)
-    if (!raw) return DEFAULT_CAP_IT_ALL_STATE
-    const parsed = JSON.parse(raw)
-    return {
-      ...DEFAULT_CAP_IT_ALL_STATE,
-      ...parsed,
-      scrollTop: 0,
-    }
-  } catch {
-    return DEFAULT_CAP_IT_ALL_STATE
-  }
-}
-
-function loadPersistedWorldRecordsState(): WorldRecordsPageState {
-  if (typeof window === 'undefined') return DEFAULT_WORLD_RECORDS_STATE
-  try {
-    const raw = window.localStorage.getItem(WORLD_RECORDS_STATE_STORAGE_KEY)
-    if (!raw) return DEFAULT_WORLD_RECORDS_STATE
-    const parsed = JSON.parse(raw)
-    return {
-      ...DEFAULT_WORLD_RECORDS_STATE,
-      ...parsed,
-      columnVisibility: {
-        ...DEFAULT_WORLD_RECORDS_STATE.columnVisibility,
-        ...(parsed?.columnVisibility ?? {}),
-      },
-      columnOrder: Array.isArray(parsed?.columnOrder) && parsed.columnOrder.length > 0
-        ? parsed.columnOrder
-        : DEFAULT_WORLD_RECORDS_STATE.columnOrder,
-      scrollTop: 0,
-    }
-  } catch {
-    return DEFAULT_WORLD_RECORDS_STATE
-  }
-}
-
-function loadPersistedAchievementsState(): AchievementsPageState {
-  if (typeof window === 'undefined') return DEFAULT_ACHIEVEMENTS_STATE
-  try {
-    const raw = window.localStorage.getItem(ACHIEVEMENTS_STATE_STORAGE_KEY)
-    if (!raw) return DEFAULT_ACHIEVEMENTS_STATE
-    const parsed = JSON.parse(raw)
-    return { ...DEFAULT_ACHIEVEMENTS_STATE, ...parsed, scrollTop: 0 }
-  } catch {
-    return DEFAULT_ACHIEVEMENTS_STATE
-  }
+  return [state, onChange]
 }
 
 function loadPersistedServerPresets(): ServerPreset[] {
@@ -226,23 +169,19 @@ function loadPersistedServerFavorites(): Set<string> {
 }
 
 export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').UserProfile }) {
-  const [currentView, setCurrentView] = useState('home')
-  const [selectedMapName, setSelectedMapName] = useState<string | null>(null)
-  const [selectedPlayerId, setSelectedPlayerId] = useState<string | number | null>(null)
-  const [selectedCapId, setSelectedCapId] = useState<string | null>(null)
-  const [previousView, setPreviousView] = useState<string>('home')
+  const [entries, setEntries] = useState<NavEntry[]>(() => [{ id: 0, view: 'home', params: {}, state: {} }])
+  const [cursor, setCursor] = useState(0)
+  const nextIdRef = useRef(1)
+  const stackRef = useRef({ entries, cursor })
+  stackRef.current = { entries, cursor }
   const [installationStatus, setInstallationStatus] = useState<'valid' | 'no-install' | 'unsupported' | null>(null)
-  const [mapsState, setMapsState] = useState<MapsPageState>(loadPersistedMapsState)
+  // Page query state is per-history-entry (see usePageState calls after the nav
+  // core below). Caches stay shared singletons so revisiting a page doesn't refetch.
   const [mapsCaches, setMapsCaches] = useState<MapsPageCaches>(DEFAULT_MAPS_CACHES)
-  const [serversState, setServersState] = useState<ServerBrowserState>(loadPersistedServersState)
   const [serversCaches, setServersCaches] = useState<ServerBrowserCaches>(DEFAULT_SERVERS_CACHES)
-  const [playersState, setPlayersState] = useState<PlayersPageState>(loadPersistedPlayersState)
   const [playersCaches, setPlayersCaches] = useState<PlayersPageCaches>(DEFAULT_PLAYERS_CACHES)
-  const [capItAllState, setCapItAllState] = useState<CapItAllPageState>(loadPersistedCapItAllState)
   const [capItAllCaches, setCapItAllCaches] = useState<CapItAllPageCaches>(DEFAULT_CAP_IT_ALL_CACHES)
-  const [worldRecordsState, setWorldRecordsState] = useState<WorldRecordsPageState>(loadPersistedWorldRecordsState)
   const [worldRecordsCaches, setWorldRecordsCaches] = useState<WorldRecordsPageCaches>(DEFAULT_WORLD_RECORDS_CACHES)
-  const [achievementsState, setAchievementsState] = useState<AchievementsPageState>(loadPersistedAchievementsState)
   const [achievementsCaches, setAchievementsCaches] = useState<AchievementsPageCaches>(DEFAULT_ACHIEVEMENTS_CACHES)
   const [serverPresets, setServerPresets] = useState<ServerPreset[]>(loadPersistedServerPresets)
   const [favoriteServerIds, setFavoriteServerIds] = useState<Set<string>>(loadPersistedServerFavorites)
@@ -250,44 +189,6 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
   useEffect(() => {
     void loadPatreonMembers()
   }, [])
-
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(MAPS_STATE_STORAGE_KEY, JSON.stringify(mapsState))
-    } catch {
-      // localStorage may be full or unavailable; swallow.
-    }
-  }, [mapsState])
-
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(SERVERS_STATE_STORAGE_KEY, JSON.stringify(serversState))
-    } catch { /* ignore */ }
-  }, [serversState])
-
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(PLAYERS_STATE_STORAGE_KEY, JSON.stringify(playersState))
-    } catch { /* ignore */ }
-  }, [playersState])
-
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(CAP_IT_ALL_STATE_STORAGE_KEY, JSON.stringify(capItAllState))
-    } catch { /* ignore */ }
-  }, [capItAllState])
-
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(WORLD_RECORDS_STATE_STORAGE_KEY, JSON.stringify(worldRecordsState))
-    } catch { /* ignore */ }
-  }, [worldRecordsState])
-
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(ACHIEVEMENTS_STATE_STORAGE_KEY, JSON.stringify(achievementsState))
-    } catch { /* ignore */ }
-  }, [achievementsState])
 
   const updateServerPresets = useCallback((next: ServerPreset[]) => {
     setServerPresets(next)
@@ -320,29 +221,86 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
     dismissSync,
   } = useFavorites(accessToken, userId)
 
+  // --- Navigation history ---------------------------------------------------
+  // All navigation funnels through navigate(). Listeners read the live stack via
+  // stackRef so the callbacks stay reference-stable (no re-subscribe churn).
+  const navigate = useCallback((view: string, params: NavParams = {}) => {
+    const { entries: cur, cursor: curIdx } = stackRef.current
+    const active = cur[curIdx]
+    if (active.view === view && paramsEqual(active.params, params)) return
+    let next = [...cur.slice(0, curIdx + 1), { id: nextIdRef.current++, view, params, state: {} }]
+    let nextCursor = next.length - 1
+    if (next.length > HISTORY_CAP) {
+      const drop = next.length - HISTORY_CAP
+      next = next.slice(drop)
+      nextCursor -= drop
+    }
+    setEntries(next)
+    setCursor(nextCursor)
+  }, [])
+
+  const back = useCallback(() => setCursor(c => Math.max(0, c - 1)), [])
+  const forward = useCallback(() => setCursor(c => Math.min(stackRef.current.entries.length - 1, c + 1)), [])
+
+  const getEntryState = useCallback(<T,>(key: string, def: T): T => {
+    const { entries: cur, cursor: curIdx } = stackRef.current
+    const v = cur[curIdx]?.state[key]
+    return (v === undefined ? def : v) as T
+  }, [])
+
+  const setEntryState = useCallback((key: string, value: unknown) => {
+    const { entries: cur, cursor: curIdx } = stackRef.current
+    const targetId = cur[curIdx]?.id
+    setEntries(prev => prev.map(e => e.id === targetId ? { ...e, state: { ...e.state, [key]: value } } : e))
+  }, [])
+
+  // Like setEntryState but composes via a functional updater, so rapid successive
+  // writes in one tick (e.g. a fast-typed search) don't clobber each other.
+  const updateEntryState = useCallback(<V,>(key: string, updater: (prev: V | undefined) => V) => {
+    const { entries: cur, cursor: curIdx } = stackRef.current
+    const targetId = cur[curIdx]?.id
+    setEntries(prev => prev.map(e => e.id === targetId
+      ? { ...e, state: { ...e.state, [key]: updater(e.state[key] as V | undefined) } }
+      : e))
+  }, [])
+
+  const entry = entries[cursor]
+  const currentView = entry.view
+  const canBack = cursor > 0
+  const canForward = cursor < entries.length - 1
+
+  const navValue = useMemo<NavigationContextValue>(() => ({
+    entry, currentView, navigate, back, forward, canBack, canForward, getEntryState, setEntryState,
+  }), [entry, currentView, navigate, back, forward, canBack, canForward, getEntryState, setEntryState])
+
+  // Per-entry page query state (resets on a fresh open, restores on Back/Forward);
+  // prefs (columns/page-size/panel) mirror to localStorage. See usePageState.
+  const [mapsState, setMapsState] = usePageState(MAPS_STATE_STORAGE_KEY, DEFAULT_MAPS_STATE, MAPS_PREF_KEYS, getEntryState, updateEntryState)
+  const [serversState, setServersState] = usePageState(SERVERS_STATE_STORAGE_KEY, DEFAULT_SERVERS_STATE, SERVERS_PREF_KEYS, getEntryState, updateEntryState)
+  const [playersState, setPlayersState] = usePageState(PLAYERS_STATE_STORAGE_KEY, DEFAULT_PLAYERS_STATE, PLAYERS_PREF_KEYS, getEntryState, updateEntryState)
+  const [capItAllState, setCapItAllState] = usePageState(CAP_IT_ALL_STATE_STORAGE_KEY, DEFAULT_CAP_IT_ALL_STATE, CAP_IT_ALL_PREF_KEYS, getEntryState, updateEntryState)
+  const [worldRecordsState, setWorldRecordsState] = usePageState(WORLD_RECORDS_STATE_STORAGE_KEY, DEFAULT_WORLD_RECORDS_STATE, WORLD_RECORDS_PREF_KEYS, getEntryState, updateEntryState)
+  const [achievementsState, setAchievementsState] = usePageState(ACHIEVEMENTS_STATE_STORAGE_KEY, DEFAULT_ACHIEVEMENTS_STATE, ACHIEVEMENTS_PREF_KEYS, getEntryState, updateEntryState)
+
   useEffect(() => {
     const onOpenPlayer = (e: Event) => {
       const ce = e as CustomEvent<{ userId: string | number }>
       if (ce.detail?.userId == null) return
-      setSelectedPlayerId(ce.detail.userId)
-      setPreviousView(prev => currentView === 'player-detail' ? prev : currentView)
-      setCurrentView('player-detail')
+      navigate('player-detail', { playerId: ce.detail.userId })
     }
     window.addEventListener('open-player', onOpenPlayer as EventListener)
     return () => window.removeEventListener('open-player', onOpenPlayer as EventListener)
-  }, [currentView])
+  }, [navigate])
 
   useEffect(() => {
     const onOpenCap = (e: Event) => {
       const ce = e as CustomEvent<{ capId: string }>
       if (!ce.detail?.capId) return
-      setSelectedCapId(ce.detail.capId)
-      setPreviousView(prev => currentView === 'cap-detail' ? prev : currentView)
-      setCurrentView('cap-detail')
+      navigate('cap-detail', { capId: ce.detail.capId })
     }
     window.addEventListener('open-cap', onOpenCap as EventListener)
     return () => window.removeEventListener('open-cap', onOpenCap as EventListener)
-  }, [currentView])
+  }, [navigate])
 
   // Stamp achievements + grant earned titles on launcher load, even if the user
   // never opens the Achievements page. GET /me stamps server-side and is
@@ -371,28 +329,25 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
     return () => { cancelled = true }
   }, [accessToken])
 
-  const openMap = useCallback((name: string) => {
-    setPreviousView(prev => currentView === 'maps-detail' ? prev : currentView)
-    setSelectedMapName(name)
-    setCurrentView('maps-detail')
-  }, [currentView])
-
-  const goBack = useCallback(() => {
-    setCurrentView(view =>
-      view === 'maps-detail' || view === 'player-detail' || view === 'cap-detail' ? previousView : view
-    )
-  }, [previousView])
+  const openMap = useCallback((name: string) => navigate('maps-detail', { mapName: name }), [navigate])
 
   useEffect(() => {
     const onMouseUp = (e: MouseEvent) => {
-      if (e.button === 3) {
-        e.preventDefault()
-        goBack()
-      }
+      if (e.button === 3) { e.preventDefault(); back() }
+      else if (e.button === 4) { e.preventDefault(); forward() }
+    }
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!e.altKey) return
+      if (e.key === 'ArrowLeft') { e.preventDefault(); back() }
+      else if (e.key === 'ArrowRight') { e.preventDefault(); forward() }
     }
     window.addEventListener('mouseup', onMouseUp)
-    return () => window.removeEventListener('mouseup', onMouseUp)
-  }, [goBack])
+    window.addEventListener('keydown', onKeyDown)
+    return () => {
+      window.removeEventListener('mouseup', onMouseUp)
+      window.removeEventListener('keydown', onKeyDown)
+    }
+  }, [back, forward])
 
   useEffect(() => {
     validateInstallation()
@@ -449,8 +404,8 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
           favoriteMapNames={favoriteMapNames}
           onToggleFavorite={toggleFavorite}
           onMapSelect={openMap}
-          onViewServers={() => setCurrentView('servers')}
-          onViewMaps={() => setCurrentView('maps')}
+          onViewServers={() => navigate('servers')}
+          onViewMaps={() => navigate('maps')}
         />
       case 'servers':
         return <ServerBrowserPage
@@ -513,8 +468,8 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
         />
       case 'maps-detail':
         return <MapDetailPage
-          mapName={selectedMapName!}
-          onBack={goBack}
+          key={entry.id}
+          mapName={entry.params.mapName!}
           userProfile={userProfile as any}
           favoriteMapNames={favoriteMapNames}
           onToggleFavorite={toggleFavorite}
@@ -522,8 +477,8 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
         />
       case 'player-detail':
         return <PlayerDetailPage
-          userId={selectedPlayerId!}
-          onBack={goBack}
+          key={entry.id}
+          userId={entry.params.playerId!}
           userProfile={userProfile as any}
           favoriteMapNames={favoriteMapNames}
           onToggleFavorite={toggleFavorite}
@@ -531,9 +486,8 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
         />
       case 'cap-detail':
         return <CapDetailPage
-          key={selectedCapId!}
-          capId={selectedCapId!}
-          onBack={goBack}
+          key={entry.id}
+          capId={entry.params.capId!}
           userProfile={userProfile as any}
           onMapSelect={openMap}
         />
@@ -543,8 +497,8 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
           favoriteMapNames={favoriteMapNames}
           onToggleFavorite={toggleFavorite}
           onMapSelect={openMap}
-          onViewServers={() => setCurrentView('servers')}
-          onViewMaps={() => setCurrentView('maps')}
+          onViewServers={() => navigate('servers')}
+          onViewMaps={() => navigate('maps')}
         />
     }
   }
@@ -559,9 +513,11 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
         />
       )}
       <div className="flex-1 overflow-hidden">
-        <AppLayout currentView={currentView} onViewChange={setCurrentView} userProfile={userProfile} installationStatus={installationStatus}>
-          {renderView()}
-        </AppLayout>
+        <NavigationContext.Provider value={navValue}>
+          <AppLayout currentView={currentView} onViewChange={navigate} userProfile={userProfile} installationStatus={installationStatus}>
+            {renderView()}
+          </AppLayout>
+        </NavigationContext.Provider>
       </div>
       <FavoritesSyncModal
         open={syncModal.open}

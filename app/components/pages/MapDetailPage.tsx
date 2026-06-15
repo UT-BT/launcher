@@ -1,7 +1,7 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
-import { AlertTriangle, ArrowLeft, RefreshCw } from 'lucide-react'
-import { Button } from '@/app/components/ui/button'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { AlertTriangle, RefreshCw } from 'lucide-react'
 import { Tooltip } from '@/app/components/ui/tooltip'
+import { useNavScrollRestore } from '@/app/components/navigation/useNavScrollRestore'
 import {
     fetchMap,
     fetchMapLeaderboard,
@@ -34,7 +34,6 @@ const ActivityChart = lazy(() => import('./mapDetail/ActivityChart'))
 
 interface MapDetailPageProps {
     mapName: string
-    onBack: () => void
     userProfile?: UserProfile
     favoriteMapNames: Set<string>
     onToggleFavorite: (mapName: string) => void
@@ -48,7 +47,7 @@ const MAP_METADATA_COLUMNS = [
 ]
 
 export function MapDetailPage({
-    mapName, onBack, userProfile, favoriteMapNames, onToggleFavorite, onMapSelect,
+    mapName, userProfile, favoriteMapNames, onToggleFavorite, onMapSelect,
 }: MapDetailPageProps) {
     const accessToken = userProfile?.accessToken
     const currentUserId = userProfile?.id ?? undefined
@@ -128,18 +127,12 @@ export function MapDetailPage({
 
     const isInactive = map?.active === false
 
+    const scrollRef = useRef<HTMLDivElement>(null)
+    const onScroll = useNavScrollRestore(scrollRef, !loading)
+
     return (
         <div className="space-y-4 h-full flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-0 duration-500">
-            <div className="flex items-center justify-between gap-3 shrink-0">
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={onBack}
-                    className="text-muted-foreground hover:text-white -ml-2"
-                >
-                    <ArrowLeft className="size-4 mr-1" />
-                    Back
-                </Button>
+            <div className="flex items-center justify-end gap-3 shrink-0">
                 <Tooltip content={refreshCooldown.canRefresh ? 'Refresh' : `Wait ${refreshCooldown.remainingSeconds}s`} side="top">
                     <button
                         type="button"
@@ -189,7 +182,7 @@ export function MapDetailPage({
                 </div>
             )}
 
-            <div className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-4">
+            <div ref={scrollRef} onScroll={onScroll} className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-4">
                 <StatsRow
                     leaderboard={leaderboard}
                     playtime={playtime}

@@ -11,6 +11,7 @@ import {
     STATUS_FILTERS,
     type AchievementStatusFilter,
 } from '@/app/components/pages/achievements/AchievementsShowcase'
+import { useNavState } from '@/app/components/navigation/useNavState'
 
 interface PlayerAchievementsCardProps {
     accessToken: string | undefined
@@ -23,7 +24,7 @@ export function PlayerAchievementsCard({ accessToken, userId, tabsSlot }: Player
     const [progress, setProgress] = useState<AchievementProgress[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
-    const [statusFilter, setStatusFilter] = useState<AchievementStatusFilter>('all')
+    const [statusFilter, setStatusFilter] = useNavState<AchievementStatusFilter>('achievements.statusFilter', 'all')
 
     useEffect(() => {
         let cancelled = false

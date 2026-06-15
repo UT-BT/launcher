@@ -3,6 +3,7 @@ import { Play, Download, MessageSquareOff, ShieldCheck, Search, Star } from 'luc
 import { cn } from '@/lib/utils'
 import { fetchCapsForUser, type UserCapRow, type CapFilter } from '@/app/utils/api'
 import { usePaginatedQuery } from '@/app/hooks/useAsync'
+import { useNavState } from '@/app/components/navigation/useNavState'
 import { formatAddedDate, displayMapName } from '@/app/utils/format'
 import { getMedalIcon } from '@/app/utils/medals'
 import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
@@ -77,12 +78,14 @@ function renderCapStatus(cap: UserCapRow) {
 export function RecentCapsCard({
     accessToken, userId, favoriteMapNames, onToggleFavorite, onMapSelect, canEditFavorites, tabsSlot,
 }: RecentCapsCardProps) {
-    const [queryRaw, setQueryRaw] = useState('')
-    const [query, setQuery] = useState('')
-    const [capFilter, setCapFilter] = useState<CapFilter>('all')
-    const [favoritesOnly, setFavoritesOnly] = useState(false)
-    const [sortField, setSortField] = useState<SortField>('added')
-    const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+    const [query, setQuery] = useNavState('caps.query', '')
+    const [queryRaw, setQueryRaw] = useState(query)
+    const [capFilter, setCapFilter] = useNavState<CapFilter>('caps.capFilter', 'all')
+    const [favoritesOnly, setFavoritesOnly] = useNavState('caps.favoritesOnly', false)
+    const [sortField, setSortField] = useNavState<SortField>('caps.sortField', 'added')
+    const [sortDir, setSortDir] = useNavState<'asc' | 'desc'>('caps.sortDir', 'desc')
+    const [capsPage, setCapsPage] = useNavState('caps.page', 1)
+    const [capsPageSize, setCapsPageSize] = useNavState('caps.pageSize', 10)
 
     const replay = useReplayWatch()
     const demoDownload = useDemoDownload()
@@ -91,7 +94,7 @@ export function RecentCapsCard({
     useEffect(() => {
         const t = setTimeout(() => setQuery(queryRaw), DEBOUNCE_MS)
         return () => clearTimeout(t)
-    }, [queryRaw])
+    }, [queryRaw, setQuery])
 
     const {
         page, pageSize, items, total, totalPages, loading, error, setPage, setPageSize,
@@ -99,6 +102,10 @@ export function RecentCapsCard({
         enabled: !!accessToken,
         errorMessage: 'Failed to load caps.',
         deps: [accessToken, userId, query, capFilter, favoritesOnly, sortField, sortDir],
+        page: capsPage,
+        pageSize: capsPageSize,
+        onPageChange: setCapsPage,
+        onPageSizeChange: setCapsPageSize,
         fetchPage: ({ limit, offset }) =>
             fetchCapsForUser(accessToken!, userId, {
                 limit, offset,
@@ -112,7 +119,7 @@ export function RecentCapsCard({
 
     const handleSort = (field: SortField) => {
         if (sortField === field) {
-            setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+            setSortDir(sortDir === 'asc' ? 'desc' : 'asc')
         } else {
             setSortField(field)
             setSortDir(field === 'map' ? 'asc' : 'desc')
@@ -152,7 +159,7 @@ export function RecentCapsCard({
                     <Tooltip content={favoritesOnly ? 'Showing favorites only' : 'Show favorites only'} side="top">
                         <button
                             type="button"
-                            onClick={() => setFavoritesOnly(v => !v)}
+                            onClick={() => setFavoritesOnly(!favoritesOnly)}
                             aria-pressed={favoritesOnly}
                             className={cn(
                                 'inline-flex items-center justify-center size-7 rounded-md border transition-colors cursor-pointer',

@@ -27,6 +27,9 @@ export interface CapItAllPageCaches {
     total: number
     mapCount: number
     lastRefreshIso: string | null
+    // Signature of the query the cached `items` were fetched for; when it != the
+    // current query the rows are stale, so we show a skeleton instead of stale rows.
+    querySig: string | null
 }
 
 export const DEFAULT_CAP_IT_ALL_STATE: CapItAllPageState = {
@@ -41,6 +44,7 @@ export const DEFAULT_CAP_IT_ALL_CACHES: CapItAllPageCaches = {
     total: 0,
     mapCount: 0,
     lastRefreshIso: null,
+    querySig: null,
 }
 
 const TABLE_ROW_HEIGHT_PX = 56
@@ -95,6 +99,8 @@ export function CapItAllPage({ userProfile, state, onStateChange, caches, onCach
     const keyFor = useCallback((p: number) =>
         JSON.stringify({ f: serverParams, s: pageSize, p }),
         [serverParams, pageSize])
+    // Query-level signature (excludes page — paginating keeps rows, doesn't skeleton).
+    const querySig = useMemo(() => JSON.stringify({ f: serverParams, s: pageSize }), [serverParams, pageSize])
 
     useEffect(() => {
         pageCacheRef.current = {}
@@ -131,7 +137,7 @@ export function CapItAllPage({ userProfile, state, onStateChange, caches, onCach
         const cached = cachedEntry && !(cachedEntry instanceof Promise) ? cachedEntry : undefined
 
         if (cached) {
-            onCachesChange(prev => ({ ...prev, items: cached.items, total: cached.total, mapCount: cached.mapCount }))
+            onCachesChange(prev => ({ ...prev, items: cached.items, total: cached.total, mapCount: cached.mapCount, querySig }))
             setPageLoading(false)
             setError(null)
             prefetchNeighbours(Math.max(1, Math.ceil(cached.total / pageSize)))
@@ -148,6 +154,7 @@ export function CapItAllPage({ userProfile, state, onStateChange, caches, onCach
                     total: res.total,
                     mapCount: res.mapCount,
                     lastRefreshIso: new Date().toISOString(),
+                    querySig,
                 }))
                 setError(null)
                 prefetchNeighbours(Math.max(1, Math.ceil(res.total / pageSize)))
@@ -157,7 +164,7 @@ export function CapItAllPage({ userProfile, state, onStateChange, caches, onCach
         } finally {
             setPageLoading(false)
         }
-    }, [accessToken, state.currentPage, pageSize, keyFor, fetchPageData, onCachesChange])
+    }, [accessToken, state.currentPage, pageSize, keyFor, querySig, fetchPageData, onCachesChange])
 
     useEffect(() => { loadPage() }, [loadPage])
 
@@ -194,7 +201,10 @@ export function CapItAllPage({ userProfile, state, onStateChange, caches, onCach
     }, [totalCount, totalPages, state.currentPage, onStateChange])
 
     const items = caches.items
-    const showSkeleton = pageLoading && items.length === 0
+    // Show skeleton while the shared cache holds another query's rows (stale), or on
+    // a genuine empty load — never flash stale rows after a fresh navigation.
+    const cacheFresh = caches.querySig === querySig
+    const showSkeleton = !cacheFresh || (pageLoading && items.length === 0)
 
     return (
         <div className="space-y-4 h-full flex flex-col overflow-hidden">

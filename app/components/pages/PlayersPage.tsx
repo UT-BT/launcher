@@ -106,6 +106,10 @@ export interface PlayersPageCaches {
     players: PlayerListRow[]
     totalCount: number
     lastRefreshIso: string | null
+    // Signature of the query the cached `players` were fetched for. Shared caches
+    // hold only the last query's rows; when this != the current query, the rows are
+    // stale (e.g. fresh visit after a search) and we show a skeleton, not stale rows.
+    querySig: string | null
 }
 
 export const DEFAULT_PLAYERS_STATE: PlayersPageState = {
@@ -123,6 +127,7 @@ export const DEFAULT_PLAYERS_CACHES: PlayersPageCaches = {
     players: [],
     totalCount: 0,
     lastRefreshIso: null,
+    querySig: null,
 }
 
 const TABLE_ROW_HEIGHT_PX = 56
@@ -201,6 +206,8 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
         JSON.stringify({ f: serverParams, s: pageSize, p }),
         [serverParams, pageSize])
     const countKey = useMemo(() => JSON.stringify(serverParams.search ?? ''), [serverParams.search])
+    // Query-level signature (excludes page number — paginating keeps rows, doesn't skeleton).
+    const querySig = useMemo(() => JSON.stringify({ f: serverParams, s: pageSize }), [serverParams, pageSize])
 
     useEffect(() => {
         pageCacheRef.current = {}
@@ -256,7 +263,7 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
         const cachedCount = typeof cachedCountEntry === 'number' ? cachedCountEntry : undefined
 
         if (cachedPage) {
-            onCachesChange(prev => ({ ...prev, players: cachedPage, totalCount: cachedCount ?? prev.totalCount }))
+            onCachesChange(prev => ({ ...prev, players: cachedPage, totalCount: cachedCount ?? prev.totalCount, querySig }))
             setPageLoading(false)
             setError(null)
             prefetchNeighbours(cachedCount ? Math.max(1, Math.ceil(cachedCount / pageSize)) : Infinity)
@@ -273,6 +280,7 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
                     players: rows,
                     totalCount: count ?? prev.totalCount,
                     lastRefreshIso: new Date().toISOString(),
+                    querySig,
                 }))
                 setError(null)
                 prefetchNeighbours(count ? Math.max(1, Math.ceil(count / pageSize)) : Infinity)
@@ -282,7 +290,7 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
         } finally {
             if (!isCancelled()) setPageLoading(false)
         }
-    }, [accessToken, state.currentPage, pageSize, keyFor, countKey, fetchPageData, fetchCountData, onCachesChange])
+    }, [accessToken, state.currentPage, pageSize, keyFor, countKey, querySig, fetchPageData, fetchCountData, onCachesChange])
 
     useEffect(() => {
         let cancelled = false
@@ -365,7 +373,10 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
     const visibleColumnCount = visibleColumns.length
 
     const players = caches.players
-    const showSkeleton = pageLoading && players.length === 0
+    // Show skeleton while the shared cache holds another query's rows (stale), or on
+    // a genuine empty load — never flash stale rows after a fresh navigation.
+    const cacheFresh = caches.querySig === querySig
+    const showSkeleton = !cacheFresh || (pageLoading && players.length === 0)
 
     const headerAlign = (id: PlayerColumnId): 'left' | 'center' | 'right' => {
         if (id === 'player' || id === 'role' || id === 'registered_at') return 'left'
