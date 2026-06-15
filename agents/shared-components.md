@@ -1,3 +1,20 @@
+---
+doc: shared-components
+read_when:
+  - "writing JSX that shows a player, a table, a modal, a filter/columns menu, or a tutorial"
+  - "about to hand-roll UI that might already be a shared component"
+  - "deciding whether to extract a new shared component"
+keywords: [PlayerInfo, DataTable, Modal, ColumnsMenu, FilterPresetsMenu, Tutorial, CapTimeLink, MapThumbnail, PatreonBadge, shared]
+provides: "the inventory of reusable components + when to use each"
+not_here:
+  - "the class strings / design tokens → styling.md"
+  - "how detail pages open via events (open-player / open-cap) → navigation.md"
+  - "page/query state + persistence → state-patterns.md"
+sections: [hard-rule-playerinfo, player-cap-links, tables-datatable-primitives, columns-columnsmenu, filter-presets, tutorial, visual-primitives, ui-primitives, utilities, when-to-extract]
+last_verified: 2026-06-16
+verify_against: [app/components/shared/PlayerInfo.tsx, app/components/shared/DataTable.tsx, app/components/shared/CapTimeLink.tsx, app/components/shared/ColumnsMenu.tsx, app/components/shared/FilterPresetsMenu.tsx]
+---
+
 # Shared components reference
 
 Single source of truth for reusable UI. **Before writing inline JSX or a one-off
@@ -36,9 +53,9 @@ Pass `interactive={false}` to suppress the click-through to the player profile w
 the whole row is itself a button/clickable (e.g. the compare-run picker), so a click
 on the name compares/selects instead of navigating away.
 
-If your backend payload lacks `active_title`: extend the backend endpoint
-(`MapReview.json()` in `DataService/data_service/endpoints/map_review/model.py`
-is the canonical pattern). Don't work around it in the launcher.
+If the API payload you're rendering lacks `active_title`, get the field added to
+the API endpoint rather than working around it in the launcher (see the
+`consume-api-data` skill).
 
 Rarity styling (1–5) lives in `app/utils/titleStyles.ts`
 (`getAvatarBorderStyle`, `getTitleTextStyle`, `getReadableTitleColor`, `hasTitle`).
@@ -69,16 +86,16 @@ so it doesn't also open the player profile when nested in a clickable row).
 preview + how to get the badge + Patreon link). Open it from elsewhere via
 `openPatreonInfo()` exported from `PatreonBadge.tsx`.
 
-## Navigation events — `open-player` / `open-cap`
+## Player + cap links
 
-Detail pages aren't URL-routed; they're opened by dispatching a `window`
-CustomEvent that `Main.tsx` listens for and switches `currentView` (with `Back`
-returning to the previous view).
+Detail pages aren't URL-routed; clicking identity/time UI dispatches a `window`
+event that `Main.tsx` turns into navigation. The **event architecture lives in
+`agents/navigation.md`** — here are the two components you render so it happens:
 
-- **`open-player`** `{ userId }` — `PlayerInfo` dispatches it on click; opens the
-  Player Detail page. Don't dispatch by hand — render `PlayerInfo`.
-- **`open-cap`** `{ capId }` — opens the Cap Detail page. Render every cap time
-  through **`CapTimeLink`** (`app/components/shared/CapTimeLink.tsx`):
+- **`PlayerInfo`** opens the Player Detail page on click (dispatches `open-player`).
+  Don't dispatch by hand — render `PlayerInfo` (above).
+- **`CapTimeLink`** (`app/components/shared/CapTimeLink.tsx`) — render every cap
+  time through it:
 
   ```tsx
   <CapTimeLink capId={entry.id} seconds={entry.cap_time_seconds} className={...} />
@@ -86,11 +103,11 @@ returning to the previous view).
 
   It renders `formatCapTime(seconds)` and, when `capId` is a real cap id, makes it
   a button that `stopPropagation`s (so it works inside rows that already open the
-  map) and dispatches `open-cap`. Pass `capId={undefined}` for aggregate times
-  with no backing cap (medians, medal thresholds, distribution buckets) — it falls
-  back to plain text. Use it anywhere a cap time is shown; don't hand-roll
-  `formatCapTime` in a clickable span. `openCap(capId)` is also exported for the
-  rare non-time trigger (e.g. the movement "best run" link).
+  map) and dispatches `open-cap` → the Cap Detail page. Pass `capId={undefined}`
+  for aggregate times with no backing cap (medians, medal thresholds, distribution
+  buckets) — it falls back to plain text. Don't hand-roll `formatCapTime` in a
+  clickable span. `openCap(capId)` is also exported for the rare non-time trigger
+  (e.g. the movement "best run" link).
 
 ## Tables — `DataTable.*` primitives
 
@@ -220,8 +237,8 @@ the whole thead during the step:
 | `app/components/shared/FavoriteStar.tsx` | Generic favorite toggle. Prop is `name: string` (not `mapName`); pass whatever identifier you store (map name, server ID, etc.). |
 | `app/components/shared/IconActionButton.tsx` | Locked-style icon button used in table action cells. `variant: 'review' \| 'replay' \| 'download'` (orange for review, amber for replay, blue for download). Props: `icon` (lucide), `tooltip`, `onClick`, optional `loading`, `disabled`, `iconFill`. Stops click propagation by default so it works inside clickable rows. |
 | `app/components/shared/DemoDownloadStatusModal.tsx` | Modal that shows demo-download progress / success / error. Pair with the `useDemoDownload()` hook (`app/hooks/useDemoDownload.ts`) which exposes `download`, `start(entry, mapName)`, `clear()`. |
-| `app/components/shared/Modal.tsx` | Generic modal shell. Use `offsetSidebar` when modal should respect the navigation rail. |
-| `app/components/shared/ConfirmModal.tsx` | Yes/no confirmation dialog, wraps `Modal`. |
+| `app/components/ui/modal.tsx` | Primary modal shell (header/footer, focus trap, Escape, stacking). Pass `offsetSidebar` so it respects the navigation rail. (`app/components/shared/Modal.tsx` is a simpler framer-motion variant used by `ErrorModal`.) |
+| `app/components/shared/ConfirmModal.tsx` | Yes/no confirmation dialog. |
 | `app/components/shared/BackButton.tsx` | "← Back" button. |
 
 ## UI primitives (`app/components/ui/`)

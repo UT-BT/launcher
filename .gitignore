@@ -5,3 +5,4 @@ out
 *.log*
 temp
 *.tsbuildinfo
+.claude/settings.local.json

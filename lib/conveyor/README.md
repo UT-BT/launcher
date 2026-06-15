@@ -1,244 +1,129 @@
-# Conveyor System
+---
+doc: conveyor-ipc
+read_when:
+  - "calling the main process from the renderer (window.conveyor.* / window.auth / window.ut*)"
+  - "adding or changing an IPC channel"
+  - "subscribing to a main→renderer event (game closed, patch status, updater state)"
+keywords: [conveyor, ipc, window.conveyor, invoke, handle, Zod, schema, preload, contextBridge, channel]
+provides: "the renderer↔main IPC contract: the channel inventory, the api/handler/schema pattern, and the event bridges"
+not_here:
+  - "HTTP calls to the API → agents/data-sources.md"
+  - "the step-by-step add-a-channel procedure → .claude/skills/add-ipc-channel/SKILL.md"
+  - "the main-process services behind the handlers → lib/main/README.md"
+sections: [overview, the-channel-inventory, calling-from-the-renderer, adding-a-channel, event-bridges, conventions]
+last_verified: 2026-06-16
+verify_against:
+  - lib/conveyor/api/index.ts
+  - lib/conveyor/schemas/index.ts
+  - lib/main/app.ts
+  - lib/preload/preload.ts
+---
 
-A type-safe IPC communication system for Electron applications that provides end-to-end type safety between renderer and main processes.
+# Conveyor — type-safe IPC
 
-## Overview
+`request → response` calls from the renderer to the Electron main process. Each
+channel is one triple kept in three folders:
 
-The Conveyor system consists of four main components:
+- **`lib/conveyor/api/`** — renderer-side classes (`extends ConveyorApi`) whose
+  methods call `this.invoke('<channel>', ...args)`. Bundled into the `conveyor`
+  object in `api/index.ts` and exposed as `window.conveyor`.
+- **`lib/conveyor/handlers/`** — main-side implementations registered with
+  `handle('<channel>', fn)` (from `@/lib/main/shared`). `handle` validates args,
+  runs the fn, validates the return, logs errors.
+- **`lib/conveyor/schemas/`** — Zod `{ args, return }` per channel, spread into
+  `ipcSchemas` in `schemas/index.ts`. This is the single source of types; the
+  global `window.conveyor` type in `lib/conveyor/conveyor.d.ts` is **auto-derived**
+  from the `conveyor` object — no manual type updates.
 
-- **APIs**: Type-safe client interfaces for the renderer process
-- **Handlers**: Server-side implementations in the main process
-- **Schemas**: Zod-based validation and type definitions
-- **Global Types**: Type declarations for global window access
+> This is for renderer↔main calls. HTTP to the backend API does **not** go
+> through Conveyor — it lives in `app/utils/api.ts` (see `agents/data-sources.md`).
 
-<br />
+## The channel inventory
 
-## How to Use Existing Definitions
+`window.conveyor.<namespace>.<method>()` — every method returns a `Promise`.
 
-### In Renderer Process
+| Namespace | Methods (renderer name → channel) |
+|---|---|
+| `app` | `version`, `getOSInfo`; install/ISO: `selectInstallDirectory`, `validateAndSetInstallPath`, `validateCurrentInstallation`, `get/setUt99InstallPath`, `downloadUt99Iso`, `cancelUt99Download`, `mountAndRunUt99Iso`; patches: `fetchPatches`, `installPatch`, `get/setInstalledPatch`; config: `get/setGatewayConfig`, `get/setDemoWatcherConfig`; profiles: `createProfile`, `getProfiles`, `switchProfile`, `deleteProfile`, `renameProfile`, `getActiveProfile`, `checkProfileSync`; logs: `getUploadLogs`, `addUploadLog`, `updateUploadLogStatus`, `extractBtpogId` |
+| `window` | `windowInit`, `windowMinimize`, `windowMaximize`, `windowMaximizeToggle`, `windowClose`, `windowIsMinimizable`, `windowIsMaximizable`, `webSetLocked`, `web{Undo,Redo,Cut,Copy,Paste,SelectAll,Reload,ToggleDevtools,ZoomIn,ZoomOut,OpenUrl,…}` |
+| `game` | `launchGame(ip,port)`, `launchGameStandalone()`, `fetchServers()` (`/server-info`), `fetchPatrons()` (`/patreon` → `{tier1,tier2,tier3}` of Discord ids), `pingServer(ip)`, `validateCurrentInstallation()`, `isGameRunning()` |
+| `ini` | `readIniValue(path,section,key)`, `writeIniValue(path,section,key,value,createIfMissing?)`, `readIniSection(path,section)` |
+| `favorites` | `readIni()` → `{ ok, mapNames }`, `writeIni(mapNames)` — favorites in the user's `UTBT.ini` |
+| `maps` | `extractToInstall(mapName, bytes)` → extract a map zip into the install dir without overwriting |
+| `demos` | `saveToSystem(filename, bytes)` → write a demo into `{install}/System` |
+| `updater` | `check(manual?)`, `download()`, `quitAndInstall()`, `getState()`, `setAllowPrerelease(value)` |
+| `logging` | `log/info/warn/error/debug(message, context?, data?)`, `getLogFilePath()`, `getRecentLogs(lines?)` |
 
-```typescript
-// Access the conveyor APIs through the global window object
-const appVersion = await window.conveyor.app.version()
-const windowInfo = await window.conveyor.window.windowInit()
+Renderer method names and channel names sometimes differ (e.g.
+`favorites.writeIni` → channel `writeFavoritesIni`, `maps.extractToInstall` →
+`extractMapToInstall`). The channel name is what appears in the api class's
+`this.invoke(...)`, the schema key, and the handler's `handle(...)` — all three
+must match exactly.
 
-// Window operations
-await window.conveyor.window.windowMinimize()
-await window.conveyor.window.windowMaximize()
-await window.conveyor.window.windowClose()
+Don't sprinkle `window.conveyor.*` through the renderer — wrap a channel in a
+hook or thin utility if it's used in more than one place (e.g. `useDemoDownload`,
+`useFavorites`).
 
-// Web content operations
-await window.conveyor.window.webCopy()
-await window.conveyor.window.webPaste()
-await window.conveyor.window.webOpenUrl('https://example.com')
-```
+## Calling from the renderer
 
-### In React Components
-
-```typescript
+```ts
+const { valid, version } = await window.conveyor.app.validateCurrentInstallation()
+// or, in a component:
 import { useConveyor } from '@/app/hooks/use-conveyor'
-
 const conveyor = useConveyor()
-
-const appVersion = await conveyor.app.version()
-const windowInfo = await conveyor.window.windowInit()
-
-// Window operations
-await conveyor.window.windowMinimize()
-await conveyor.window.windowMaximize()
-await conveyor.window.windowClose()
+await conveyor.maps.extractToInstall(mapName, bytes)
 ```
 
-### In Main Process
+## Adding a channel
 
-Handlers are registered by importing their registrar modules in the main process. Each handler module exports a registration function that sets up the IPC listeners with runtime validation.
+The full ordered procedure (and the easy-to-miss "register in three places" step)
+is the **`add-ipc-channel` skill**. In short — for channel `doThing`:
 
-```typescript
-// lib/main/app.ts
-import { registerAppHandlers } from '@/lib/conveyor/handlers/app-handler'
+1. **Schema** — add to a file in `schemas/` and ensure that file is spread into
+   `ipcSchemas` in `schemas/index.ts`:
+   ```ts
+   doThing: { args: z.tuple([z.string()]), return: z.object({ ok: z.boolean() }) }
+   ```
+2. **API** — add a method to the relevant class in `api/` (the class must be in
+   the `conveyor` object in `api/index.ts`):
+   ```ts
+   doThing = (name: string) => this.invoke('doThing', name)
+   ```
+3. **Handler** — implement in a file in `handlers/` and make sure its
+   `register*Handlers(window)` is called in `lib/main/app.ts → createAppWindow`:
+   ```ts
+   handle('doThing', async (name: string) => ({ ok: true }))
+   ```
 
-// In your app initialization
-registerAppHandlers()
+Zod validates args + return on the main side (`handle`), so keep schema and impl
+in sync. The `window.conveyor` global type updates itself.
+
+## Event bridges (main → renderer)
+
+Push notifications (not request/response) are **separate** `contextBridge`
+exposures in `lib/preload/preload.ts`, **not** part of `conveyor`. Each `on*`
+returns an unsubscribe function — call it on cleanup.
+
+| Global | Purpose |
+|---|---|
+| `window.auth` | `login()`, `logout()`, `getProfile()` (Discord OAuth, main-driven) |
+| `window.utInstall` | `onProgress`, `onStatus`, `onConfirm`/`respondConfirm`, `onIsoDownloadProgress` |
+| `window.utPatch` | `onStatus`, `onPatchInstallStatus`, `onPatchInstallProgress`, `onInstallationPathUpdated`, `onAnnouncerInstall*` |
+| `window.utProfile` | `onChanged` — profile refreshed |
+| `window.utFavorites` | `onGameClosed` — game exited; re-read ini favorites |
+| `window.utbtUpdater` | `onStateChanged` — updater state push |
+| `window.uiScale` | `set(factor)` / `get()` — zoom |
+
+```ts
+useEffect(() => window.utFavorites.onGameClosed(() => refetchFavorites()), [])
 ```
 
-<br />
+## Conventions
 
-## How to Define New API
-
-1. **Create a new API class** in `lib/conveyor/api/`:
-
-```typescript
-// lib/conveyor/api/file-api.ts
-import { ConveyorApi } from '@/lib/preload/shared'
-
-export class FileApi extends ConveyorApi {
-  readFile = (path: string) => this.invoke('file-read', path)
-  writeFile = (path: string, content: string) => this.invoke('file-write', path, content)
-  deleteFile = (path: string) => this.invoke('file-delete', path)
-}
-```
-
-2. **Add to the main conveyor export**:
-
-```typescript
-// lib/conveyor/api/index.ts
-import { FileApi } from './file-api'
-
-export const conveyor = {
-  app: new AppApi(electronAPI),
-  window: new WindowApi(electronAPI),
-  file: new FileApi(electronAPI), // Add your new API
-  electron: electronAPI,
-}
-
-export type ConveyorApi = typeof conveyor
-```
-
-The `ConveyorApi` type is automatically derived from the conveyor object structure, ensuring type safety and eliminating the need for manual type maintenance.
-
-3. **Update global types**:
-
-```typescript
-// lib/conveyor/conveyor.d.ts
-import type { ConveyorApi } from '@/lib/conveyor/api'
-
-declare global {
-  interface Window {
-    conveyor: ConveyorApi
-  }
-}
-```
-
-The global type automatically includes all APIs from the conveyor export, so no manual updates are needed when adding new APIs.
-
-## How to Define New Handler
-
-1. **Create a handler file** in `lib/conveyor/handlers/`:
-
-```typescript
-// lib/conveyor/handlers/file-handler.ts
-import { handle } from '@/lib/main/shared'
-import { readFileSync, writeFileSync, unlinkSync } from 'fs'
-
-export const registerFileHandlers = () => {
-  handle('file-read', (path: string) => {
-    return readFileSync(path, 'utf-8')
-  })
-
-  handle('file-write', (path: string, content: string) => {
-    writeFileSync(path, content, 'utf-8')
-  })
-
-  handle('file-delete', (path: string) => {
-    unlinkSync(path)
-  })
-}
-```
-
-2. **Register handlers in main process**:
-
-```typescript
-// lib/main/app.ts
-import { registerFileHandlers } from '@/lib/conveyor/handlers/file-handler'
-
-// In your app initialization
-registerFileHandlers()
-```
-
-## How to Add New Schema
-
-1. **Create a schema file** in `lib/conveyor/schemas/`:
-
-```typescript
-// lib/conveyor/schemas/file-schema.ts
-import { z } from 'zod'
-
-export const fileIpcSchema = {
-  'file-read': {
-    args: z.tuple([z.string()]),
-    return: z.string(),
-  },
-  'file-write': {
-    args: z.tuple([z.string(), z.string()]),
-    return: z.void(),
-  },
-  'file-delete': {
-    args: z.tuple([z.string()]),
-    return: z.void(),
-  },
-}
-```
-
-2. **Add to the main schemas export**:
-
-```typescript
-// lib/conveyor/schemas/index.ts
-import { fileIpcSchema } from './file-schema'
-
-export const ipcSchemas = {
-  ...windowIpcSchema,
-  ...appIpcSchema,
-  ...fileIpcSchema, // Add your new schema
-} as const
-```
-
-## How to Integrate with Global Types
-
-The Conveyor system provides type safety through global type declarations and preload integration:
-
-### Type Safety Features
-
-- **Compile-time validation**: TypeScript ensures correct method calls
-- **Runtime validation**: Zod schemas validate arguments and return values
-- **Auto-completion**: Full IntelliSense support in your IDE
-
-### Global Type Integration
-
-The system uses global type declarations in `lib/conveyor/conveyor.d.ts`:
-
-```typescript
-// Global types for window.conveyor access
-import type { ConveyorApi } from '@/lib/conveyor/api'
-
-declare global {
-  interface Window {
-    conveyor: ConveyorApi
-  }
-}
-```
-
-This approach automatically stays in sync with the actual API structure - when you add new APIs to the conveyor export, the global types are automatically updated.
-
-### Preload Integration
-
-The preload script exposes the conveyor APIs to the renderer:
-
-```typescript
-// lib/preload/preload.ts
-import { contextBridge } from 'electron'
-import { conveyor } from '@/lib/conveyor/api'
-
-if (process.contextIsolated) {
-  contextBridge.exposeInMainWorld('conveyor', conveyor)
-} else {
-  window.conveyor = conveyor
-}
-```
-
-### Global Window Access
-
-After setup, your APIs are available globally with full type safety:
-
-```typescript
-// TypeScript knows the exact types
-const result = await window.conveyor.file.readFile('/path/to/file.txt')
-// result is typed as string based on the schema
-```
-
-## Best Practices
-
-1. **Naming Convention**: Use kebab-case for channel names (e.g., `file-read`, `window-minimize`)
-2. **Schema Validation**: Always define Zod schemas for both arguments and return values
-3. **Error Handling**: The system automatically logs errors, but you can add custom error handling in handlers
-4. **Type Safety**: Leverage TypeScript's type inference - don't use `any` types
-5. **Modular Design**: Keep related functionality in separate api/handler/schema files
+- **Match the existing channel-name style in the namespace you touch.** `window`
+  uses kebab-case (`window-minimize`); `updater` uses `updater:method`; the newer
+  game/ini/maps/demos/app channels use camelCase. Don't introduce a fourth style.
+- **Always define the Zod schema** for both `args` and `return` — no `any`.
+- **Handlers are the security boundary.** File/process access happens here, not in
+  the renderer. Validate untrusted inputs (paths via `resolveWithin`, see
+  `lib/main/README.md`).
