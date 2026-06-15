@@ -106,9 +106,6 @@ export interface PlayersPageCaches {
     players: PlayerListRow[]
     totalCount: number
     lastRefreshIso: string | null
-    // Signature of the query the cached `players` were fetched for. Shared caches
-    // hold only the last query's rows; when this != the current query, the rows are
-    // stale (e.g. fresh visit after a search) and we show a skeleton, not stale rows.
     querySig: string | null
 }
 
@@ -206,8 +203,8 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
         JSON.stringify({ f: serverParams, s: pageSize, p }),
         [serverParams, pageSize])
     const countKey = useMemo(() => JSON.stringify(serverParams.search ?? ''), [serverParams.search])
-    // Query-level signature (excludes page number — paginating keeps rows, doesn't skeleton).
     const querySig = useMemo(() => JSON.stringify({ f: serverParams, s: pageSize }), [serverParams, pageSize])
+    const cacheFresh = caches.querySig === querySig
 
     useEffect(() => {
         pageCacheRef.current = {}
@@ -317,10 +314,10 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
     // If the current page falls outside range (e.g. a search shrank the list),
     // pull it back in.
     useEffect(() => {
-        if (totalCount > 0 && state.currentPage > totalPages) {
+        if (cacheFresh && totalCount > 0 && state.currentPage > totalPages) {
             onStateChange(prev => ({ ...prev, currentPage: totalPages }))
         }
-    }, [totalCount, totalPages, state.currentPage, onStateChange])
+    }, [cacheFresh, totalCount, totalPages, state.currentPage, onStateChange])
 
     const setSearch = (value: string) =>
         onStateChange(prev => ({ ...prev, search: value, currentPage: 1 }))
@@ -373,10 +370,7 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
     const visibleColumnCount = visibleColumns.length
 
     const players = caches.players
-    // Show skeleton while the shared cache holds another query's rows (stale), or on
-    // a genuine empty load — never flash stale rows after a fresh navigation.
-    const cacheFresh = caches.querySig === querySig
-    const showSkeleton = !cacheFresh || (pageLoading && players.length === 0)
+    const showSkeleton = !error && (!cacheFresh || (pageLoading && players.length === 0))
 
     const headerAlign = (id: PlayerColumnId): 'left' | 'center' | 'right' => {
         if (id === 'player' || id === 'role' || id === 'registered_at') return 'left'
