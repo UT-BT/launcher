@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import {
-    Search, RefreshCw, X, Play, Download, Star,
+    Search, RefreshCw, X, Play, Download, SlidersHorizontal,
     Trophy, Crown, ListOrdered, type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -13,11 +13,15 @@ import { useDemoDownload } from '@/app/hooks/useDemoDownload'
 import {
     type UserProfile,
     type Record as WorldRecord,
-    type ActiveTitle,
+    type RusherRow,
     type LeaderboardEntry,
     type WorldRecordProgressionEntry,
-    fetchAllWorldRecords,
+    type WorldRecordFilterOptions,
+    fetchWorldRecords,
+    fetchWorldRecordsCount,
+    fetchRushers,
     fetchWorldRecordProgression,
+    fetchWorldRecordFilterOptions,
 } from '@/app/utils/api'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
@@ -31,24 +35,37 @@ import {
 } from '@/app/components/modals/WorldRecordProgressionModal'
 import { PaginationBar } from '@/app/components/ui/pagination'
 import { ColumnsMenu } from '@/app/components/shared/ColumnsMenu'
+import { MultiFilterDropdown } from '@/app/components/ui/multi-filter-dropdown'
+import { FilterPanelRow } from '@/app/components/ui/filter-panel-row'
+import { ActiveFilterChip } from '@/app/components/shared/ActiveFilterChip'
+import { FilterPresetsMenu, type FilterPreset } from '@/app/components/shared/FilterPresetsMenu'
 import {
     DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow,
     DataTableCell, DataTableEmpty, DataTableSkeletonRow, type SortDirection,
 } from '@/app/components/shared/DataTable'
 import { formatCapTime, formatAddedDate, displayMapName } from '@/app/utils/format'
 import { difficultyTextColor } from '@/app/utils/scoreColors'
+import {
+    DIFFICULTY_TIER_OPTIONS, DIFFICULTY_TIER_LABEL, expandDifficultyTiers,
+    type DifficultyTierValue,
+} from '@/app/utils/difficulty'
+import { loadPresets, persistPresets, newPresetId, presetFiltersMatch } from '@/app/utils/filterPresets'
 
 export type WorldRecordsMode = 'records' | 'rushers'
 export type WorldRecordsSortField = 'map' | 'holder' | 'time' | 'difficulty' | 'date'
 export type WorldRecordsSortDir = 'asc' | 'desc'
-export type WrDifficultyTier = 'all' | 'beginner' | 'intermediate' | 'advanced' | 'expert'
+export type WrDifficultyTierValue = DifficultyTierValue
 export type WrTimeframe = 'all' | '7d' | '30d' | '90d' | '1y'
+export type WrTimeBucket = 'u30' | '30-60' | '60-120' | '120-300' | 'o300'
 export type WorldRecordsColumnId = 'map' | 'holder' | 'time' | 'difficulty' | 'date' | 'actions'
 
 export interface WorldRecordsPageState {
     mode: WorldRecordsMode
     search: string
-    difficulty: WrDifficultyTier
+    difficultyFilters: WrDifficultyTierValue[]
+    holderFilters: string[]
+    timeFilters: WrTimeBucket[]
+    yearFilters: string[]
     timeframe: WrTimeframe
     favoritesOnly: boolean
     sortBy: WorldRecordsSortField
@@ -57,11 +74,24 @@ export interface WorldRecordsPageState {
     columnOrder: WorldRecordsColumnId[]
     currentPage: number
     pageSizePreference: number | 'auto'
+    filtersPanelOpen: boolean
     scrollTop: number
 }
 
+export type WorldRecordsPresetFilters = Pick<WorldRecordsPageState,
+    'search' | 'difficultyFilters' | 'holderFilters' | 'timeFilters' | 'yearFilters'
+    | 'timeframe' | 'favoritesOnly' | 'sortBy' | 'sortDir'>
+
+type WorldRecordsPreset = FilterPreset<WorldRecordsPresetFilters>
+
 export interface WorldRecordsPageCaches {
-    records: WorldRecord[]
+    recordRows: WorldRecord[]
+    recordTotal: number
+    rusherRows: RusherRow[]
+    rusherTotal: number
+    totalRecords: number
+    maxRusherCount: number
+    querySig: string | null
     lastRefreshIso: string | null
 }
 
@@ -90,7 +120,10 @@ const DEFAULT_COLUMN_VISIBILITY: Record<WorldRecordsColumnId, boolean> = {
 export const DEFAULT_WORLD_RECORDS_STATE: WorldRecordsPageState = {
     mode: 'records',
     search: '',
-    difficulty: 'all',
+    difficultyFilters: [],
+    holderFilters: [],
+    timeFilters: [],
+    yearFilters: [],
     timeframe: 'all',
     favoritesOnly: false,
     sortBy: 'date',
@@ -99,32 +132,24 @@ export const DEFAULT_WORLD_RECORDS_STATE: WorldRecordsPageState = {
     columnOrder: DEFAULT_COLUMN_ORDER,
     currentPage: 1,
     pageSizePreference: 'auto',
+    filtersPanelOpen: false,
     scrollTop: 0,
 }
 
 export const DEFAULT_WORLD_RECORDS_CACHES: WorldRecordsPageCaches = {
-    records: [],
+    recordRows: [],
+    recordTotal: 0,
+    rusherRows: [],
+    rusherTotal: 0,
+    totalRecords: 0,
+    maxRusherCount: 0,
+    querySig: null,
     lastRefreshIso: null,
 }
 
 const MODES: { value: WorldRecordsMode; label: string; icon: LucideIcon }[] = [
     { value: 'records', label: 'Records', icon: ListOrdered },
     { value: 'rushers', label: 'Top Rushers', icon: Trophy },
-]
-
-const DIFFICULTY_RANGES: Record<Exclude<WrDifficultyTier, 'all'>, [number, number]> = {
-    beginner: [1, 3],
-    intermediate: [4, 6],
-    advanced: [7, 8],
-    expert: [9, 10],
-}
-
-const DIFFICULTY_OPTIONS: { value: WrDifficultyTier; label: string }[] = [
-    { value: 'all', label: 'Any difficulty' },
-    { value: 'beginner', label: 'Beginner (1–3)' },
-    { value: 'intermediate', label: 'Intermediate (4–6)' },
-    { value: 'advanced', label: 'Advanced (7–8)' },
-    { value: 'expert', label: 'Expert (9–10)' },
 ]
 
 const TIMEFRAME_DAYS: Record<Exclude<WrTimeframe, 'all'>, number> = {
@@ -142,6 +167,25 @@ const TIMEFRAME_OPTIONS: { value: WrTimeframe; label: string }[] = [
     { value: '1y', label: 'Last year' },
 ]
 
+const TIME_BUCKETS: { value: WrTimeBucket; label: string; min?: number; max?: number }[] = [
+    { value: 'u30', label: 'Under 30s', max: 30 },
+    { value: '30-60', label: '30s – 1m', min: 30, max: 60 },
+    { value: '60-120', label: '1m – 2m', min: 60, max: 120 },
+    { value: '120-300', label: '2m – 5m', min: 120, max: 300 },
+    { value: 'o300', label: 'Over 5m', min: 300 },
+]
+
+const TIME_BUCKET_OPTIONS: [WrTimeBucket, string][] = TIME_BUCKETS.map(b => [b.value, b.label])
+const TIME_BUCKET_BY_VALUE: Record<WrTimeBucket, { min?: number; max?: number }> =
+    Object.fromEntries(TIME_BUCKETS.map(b => [b.value, { min: b.min, max: b.max }])) as Record<WrTimeBucket, { min?: number; max?: number }>
+
+function timeBucketRange(v: WrTimeBucket): string {
+    const { min, max } = TIME_BUCKET_BY_VALUE[v]
+    return `${min ?? ''}-${max ?? ''}`
+}
+
+const PRESETS_KEY = 'utbt:worldRecordsPresets:v1'
+
 const TABLE_ROW_HEIGHT_PX = 56
 const TABLE_CHROME_PX = 300
 const AUTO_PAGE_SIZE_MIN_ROWS = 10
@@ -158,55 +202,32 @@ function computePageSize(): number {
 
 const SEARCH_DEBOUNCE_MS = 200
 
-function isInDifficultyTier(difficulty: number | undefined, tier: WrDifficultyTier): boolean {
-    if (tier === 'all') return true
-    if (difficulty == null) return false
-    const [min, max] = DIFFICULTY_RANGES[tier]
-    return difficulty >= min && difficulty <= max
-}
-
-function isInTimeframe(added: string, tier: WrTimeframe): boolean {
-    if (tier === 'all') return true
-    const t = new Date(added).getTime()
-    if (isNaN(t)) return false
-    const cutoff = Date.now() - TIMEFRAME_DAYS[tier] * 24 * 3600 * 1000
-    return t >= cutoff
+function isoDaysAgo(days: number): string {
+    return new Date(Date.now() - days * 24 * 3600 * 1000).toISOString()
 }
 
 const SORTABLE_FIELDS: ReadonlySet<WorldRecordsColumnId> = new Set(['map', 'holder', 'time', 'difficulty', 'date'])
 
-interface Rusher {
-    user_id: string
-    alias: string
-    active_title: ActiveTitle | null
-    count: number
-    median: number
-    average: number
-    rank: number
-}
-
-function aggregateRushers(records: WorldRecord[]): Rusher[] {
-    const acc = new Map<string, { user_id: string; alias: string; active_title: ActiveTitle | null; times: number[] }>()
-    for (const r of records) {
-        if (!r.user_id) continue
-        let cur = acc.get(r.user_id)
-        if (!cur) {
-            cur = { user_id: r.user_id, alias: r.alias, active_title: r.active_title ?? null, times: [] }
-            acc.set(r.user_id, cur)
-        }
-        cur.times.push(r.cap_time_seconds)
-        if (r.active_title && !cur.active_title) cur.active_title = r.active_title
+type WorldRecordsServerParams =
+    | { mode: 'rushers'; search?: string }
+    | {
+        mode: 'records'
+        search?: string
+        sort: WorldRecordsSortDir
+        sortBy: WorldRecordsSortField
+        addedSince?: string
+        maps?: string
+        difficulties?: string
+        users?: string
+        years?: string
+        timeRanges?: string
+        favoritesEmpty: boolean
     }
-    const arr: Rusher[] = [...acc.values()].map(c => {
-        const sorted = [...c.times].sort((a, b) => a - b)
-        const n = sorted.length
-        const median = n % 2 ? sorted[(n - 1) / 2] : (sorted[n / 2 - 1] + sorted[n / 2]) / 2
-        const average = c.times.reduce((s, t) => s + t, 0) / n
-        return { user_id: c.user_id, alias: c.alias, active_title: c.active_title, count: n, median, average, rank: 0 }
-    })
-    arr.sort((a, b) => b.count - a.count || a.median - b.median || a.alias.localeCompare(b.alias))
-    arr.forEach((r, i) => { r.rank = i + 1 })
-    return arr
+
+interface Globals {
+    total: number
+    totalRecords: number
+    maxRusherCount: number
 }
 
 function medalText(rank: number): string {
@@ -251,49 +272,222 @@ export function WorldRecordsPage({
     const autoPageSize = useAutoPageSize(computePageSize)
     const pageSize = state.pageSizePreference === 'auto' ? autoPageSize : state.pageSizePreference
 
-    const [pageLoading, setPageLoading] = useState(caches.records.length === 0)
+    const currentRows = isRushers ? caches.rusherRows : caches.recordRows
+    const [pageLoading, setPageLoading] = useState(currentRows.length === 0)
     const [error, setError] = useState<string | null>(null)
     const refreshCooldown = useRefreshCooldown()
     const scrollContainerRef = useRef<HTMLDivElement | null>(null)
-    const loadInFlight = useRef(false)
 
     const replay = useReplayWatch()
     const demoDownload = useDemoDownload()
 
     const [wrHistory, setWrHistory] = useState<{ mapName: string; entries: WorldRecordProgressionEntry[] } | null>(null)
 
-    const [debouncedSearch, setDebouncedSearch] = useState(state.search.trim().toLowerCase())
+    const [debouncedSearch, setDebouncedSearch] = useState(state.search.trim())
     useEffect(() => {
-        const t = setTimeout(() => setDebouncedSearch(state.search.trim().toLowerCase()), SEARCH_DEBOUNCE_MS)
+        const t = setTimeout(() => setDebouncedSearch(state.search.trim()), SEARCH_DEBOUNCE_MS)
         return () => clearTimeout(t)
     }, [state.search])
 
-    const load = useCallback(async (force = false) => {
+    const [filterOptions, setFilterOptions] = useState<WorldRecordFilterOptions>({ holders: [], years: [] })
+    useEffect(() => {
         if (!accessToken) return
-        if (!force && caches.records.length > 0) {
+        let cancelled = false
+        fetchWorldRecordFilterOptions(accessToken)
+            .then(o => { if (!cancelled) setFilterOptions(o) })
+            .catch(() => {})
+        return () => { cancelled = true }
+    }, [accessToken])
+
+    const holderAliasById = useMemo(
+        () => Object.fromEntries(filterOptions.holders.map(h => [h.user_id, h.alias])) as Record<string, string>,
+        [filterOptions],
+    )
+    const holderOptions = useMemo<[string, string][]>(
+        () => filterOptions.holders.map(h => [h.user_id, `${h.alias} (${h.count})`]),
+        [filterOptions],
+    )
+    const yearOptions = useMemo<[string, string][]>(
+        () => filterOptions.years.map(y => [String(y), String(y)]),
+        [filterOptions],
+    )
+
+    const [presets, setPresets] = useState<WorldRecordsPreset[]>(() => loadPresets<WorldRecordsPresetFilters>(PRESETS_KEY))
+    const [activePresetId, setActivePresetId] = useState<string | null>(null)
+
+    const serverParams = useMemo<WorldRecordsServerParams>(() => {
+        const search = debouncedSearch || undefined
+        if (isRushers) return { mode: 'rushers', search }
+        const addedSince = state.timeframe === 'all' ? undefined : isoDaysAgo(TIMEFRAME_DAYS[state.timeframe])
+        const favoritesEmpty = state.favoritesOnly && favoriteMapNames.size === 0
+        const maps = state.favoritesOnly && favoriteMapNames.size > 0
+            ? [...favoriteMapNames].sort().join(',')
+            : undefined
+        return {
+            mode: 'records',
+            search,
+            sort: state.sortDir,
+            sortBy: state.sortBy,
+            addedSince,
+            maps,
+            difficulties: expandDifficultyTiers(state.difficultyFilters).join(',') || undefined,
+            users: state.holderFilters.join(',') || undefined,
+            years: state.yearFilters.join(',') || undefined,
+            timeRanges: state.timeFilters.map(timeBucketRange).join(',') || undefined,
+            favoritesEmpty,
+        }
+    }, [isRushers, debouncedSearch, state.sortBy, state.sortDir, state.timeframe, state.difficultyFilters, state.holderFilters, state.timeFilters, state.yearFilters, state.favoritesOnly, favoriteMapNames])
+
+    type PageEntry = WorldRecord[] | RusherRow[] | Promise<WorldRecord[] | RusherRow[] | null>
+    type GlobalsEntry = Globals | Promise<Globals | null>
+    const pageCacheRef = useRef<Record<string, PageEntry>>({})
+    const globalsCacheRef = useRef<Record<string, GlobalsEntry>>({})
+
+    const keyFor = useCallback((p: number) =>
+        JSON.stringify({ s: serverParams, ps: pageSize, p }),
+        [serverParams, pageSize])
+    const querySig = useMemo(() => JSON.stringify({ s: serverParams, ps: pageSize }), [serverParams, pageSize])
+    const globalsKey = useMemo(() => {
+        if (serverParams.mode === 'rushers') return JSON.stringify({ mode: 'rushers', search: serverParams.search })
+        const { sort: _sort, sortBy: _sortBy, ...rest } = serverParams
+        return JSON.stringify(rest)
+    }, [serverParams])
+    const cacheFresh = caches.querySig === querySig
+
+    useEffect(() => { pageCacheRef.current = {} }, [querySig])
+    useEffect(() => { globalsCacheRef.current = {} }, [globalsKey])
+
+    const fetchPageData = useCallback((p: number): Promise<WorldRecord[] | RusherRow[] | null> => {
+        if (!accessToken) return Promise.resolve(null)
+        if (serverParams.mode === 'records' && serverParams.favoritesEmpty) {
+            globalsCacheRef.current[globalsKey] = { total: 0, totalRecords: 0, maxRusherCount: 0 }
+            return Promise.resolve([])
+        }
+        const key = keyFor(p)
+        const existing = pageCacheRef.current[key]
+        if (existing !== undefined) return Array.isArray(existing) ? Promise.resolve(existing) : existing
+
+        const offset = (p - 1) * pageSize
+        let promise: Promise<WorldRecord[] | RusherRow[] | null>
+        if (serverParams.mode === 'rushers') {
+            promise = fetchRushers(accessToken, { limit: pageSize, offset, search: serverParams.search })
+                .then(env => {
+                    globalsCacheRef.current[globalsKey] = {
+                        total: env.total,
+                        totalRecords: env.total_records,
+                        maxRusherCount: env.max_count,
+                    }
+                    pageCacheRef.current[key] = env.items
+                    return env.items
+                })
+                .catch(() => { delete pageCacheRef.current[key]; return null })
+        } else {
+            const { search, sort, sortBy, addedSince, maps, difficulties, users, years, timeRanges } = serverParams
+            promise = fetchWorldRecords(accessToken, { search, sort, sortBy, addedSince, maps, difficulties, users, years, timeRanges, limit: pageSize, offset })
+                .then(rows => { pageCacheRef.current[key] = rows; return rows })
+                .catch(() => { delete pageCacheRef.current[key]; return null })
+        }
+        pageCacheRef.current[key] = promise
+        return promise
+    }, [accessToken, serverParams, pageSize, keyFor, globalsKey])
+
+    const fetchGlobalsData = useCallback((): Promise<Globals | null> => {
+        if (!accessToken) return Promise.resolve(null)
+        const existing = globalsCacheRef.current[globalsKey]
+        if (existing !== undefined) return 'total' in existing ? Promise.resolve(existing) : existing
+        if (serverParams.mode === 'records' && serverParams.favoritesEmpty) {
+            const empty: Globals = { total: 0, totalRecords: 0, maxRusherCount: 0 }
+            globalsCacheRef.current[globalsKey] = empty
+            return Promise.resolve(empty)
+        }
+        if (serverParams.mode === 'rushers') return Promise.resolve(null)
+        const { search, addedSince, maps, difficulties, users, years, timeRanges } = serverParams
+        const promise = fetchWorldRecordsCount(accessToken, { search, addedSince, maps, difficulties, users, years, timeRanges })
+            .then(count => {
+                const g: Globals = { total: count, totalRecords: 0, maxRusherCount: 0 }
+                globalsCacheRef.current[globalsKey] = g
+                return g
+            })
+            .catch(() => { delete globalsCacheRef.current[globalsKey]; return null })
+        globalsCacheRef.current[globalsKey] = promise
+        return promise
+    }, [accessToken, serverParams, globalsKey])
+
+    const applyResult = useCallback((rows: WorldRecord[] | RusherRow[], g: Globals) => {
+        onCachesChange(prev => isRushers
+            ? { ...prev, rusherRows: rows as RusherRow[], rusherTotal: g.total, totalRecords: g.totalRecords, maxRusherCount: g.maxRusherCount, querySig, lastRefreshIso: new Date().toISOString() }
+            : { ...prev, recordRows: rows as WorldRecord[], recordTotal: g.total, querySig, lastRefreshIso: new Date().toISOString() })
+    }, [isRushers, onCachesChange, querySig])
+
+    const loadPage = useCallback(async (isCancelled: () => boolean = () => false) => {
+        if (!accessToken) return
+
+        const prefetchNeighbours = (totalPages: number) => {
+            if (state.currentPage > 1 && !(keyFor(state.currentPage - 1) in pageCacheRef.current)) {
+                fetchPageData(state.currentPage - 1)
+            }
+            if (state.currentPage < totalPages && !(keyFor(state.currentPage + 1) in pageCacheRef.current)) {
+                fetchPageData(state.currentPage + 1)
+            }
+        }
+
+        const cachedPageEntry = pageCacheRef.current[keyFor(state.currentPage)]
+        const cachedGlobalsEntry = globalsCacheRef.current[globalsKey]
+        const cachedPage = Array.isArray(cachedPageEntry) ? cachedPageEntry : undefined
+        const cachedGlobals = cachedGlobalsEntry && 'total' in cachedGlobalsEntry ? cachedGlobalsEntry : undefined
+
+        if (cachedPage && cachedGlobals) {
+            applyResult(cachedPage, cachedGlobals)
             setPageLoading(false)
+            setError(null)
+            prefetchNeighbours(Math.max(1, Math.ceil(cachedGlobals.total / pageSize)))
             return
         }
-        if (loadInFlight.current) return
-        loadInFlight.current = true
+
         setPageLoading(true)
         try {
-            const records = await fetchAllWorldRecords(accessToken)
-            onCachesChange(prev => ({ ...prev, records, lastRefreshIso: new Date().toISOString() }))
+            let rows: WorldRecord[] | RusherRow[] | null
+            let globalsResult: Globals | null
+            if (serverParams.mode === 'rushers') {
+                rows = await fetchPageData(state.currentPage)
+                globalsResult = await fetchGlobalsData()
+            } else {
+                const [r, g] = await Promise.all([fetchPageData(state.currentPage), fetchGlobalsData()])
+                rows = r
+                globalsResult = g
+            }
+            if (isCancelled()) return
+            if (!rows) {
+                setError('Failed to load world records. Check your connection and try again.')
+                return
+            }
+            const globals = globalsResult ?? (() => {
+                const e = globalsCacheRef.current[globalsKey]
+                return e && 'total' in e ? e : null
+            })()
+            if (globals) {
+                applyResult(rows, globals)
+                prefetchNeighbours(Math.max(1, Math.ceil(globals.total / pageSize)))
+            } else {
+                const pageRows = rows
+                onCachesChange(prev => serverParams.mode === 'rushers'
+                    ? { ...prev, rusherRows: pageRows as RusherRow[], querySig, lastRefreshIso: new Date().toISOString() }
+                    : { ...prev, recordRows: pageRows as WorldRecord[], querySig, lastRefreshIso: new Date().toISOString() })
+            }
             setError(null)
-        } catch {
-            setError('Failed to load world records. Check your connection and try again.')
         } finally {
-            setPageLoading(false)
-            loadInFlight.current = false
+            if (!isCancelled()) setPageLoading(false)
         }
-    }, [accessToken, caches.records.length, onCachesChange])
+    }, [accessToken, serverParams.mode, state.currentPage, pageSize, keyFor, globalsKey, querySig, fetchPageData, fetchGlobalsData, applyResult, onCachesChange])
 
-    useEffect(() => { load() }, [load])
+    useEffect(() => {
+        let cancelled = false
+        loadPage(() => cancelled)
+        return () => { cancelled = true }
+    }, [loadPage])
 
     useEffect(() => {
         if (scrollContainerRef.current) scrollContainerRef.current.scrollTop = state.scrollTop
-        // Restore scroll once on mount; deps intentionally empty.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
@@ -304,7 +498,11 @@ export function WorldRecordsPage({
     }, [onStateChange])
 
     const refresh = () => {
-        refreshCooldown.trigger(() => { void load(true) })
+        refreshCooldown.trigger(() => {
+            pageCacheRef.current = {}
+            globalsCacheRef.current = {}
+            void loadPage()
+        })
     }
 
     const setMode = (mode: WorldRecordsMode) =>
@@ -315,6 +513,49 @@ export function WorldRecordsPage({
 
     const updateFilter = <K extends keyof WorldRecordsPageState>(key: K, value: WorldRecordsPageState[K]) =>
         onStateChange(prev => ({ ...prev, [key]: value, currentPage: 1 }))
+
+    const captureFilters = (): WorldRecordsPresetFilters => ({
+        search: state.search,
+        difficultyFilters: state.difficultyFilters,
+        holderFilters: state.holderFilters,
+        timeFilters: state.timeFilters,
+        yearFilters: state.yearFilters,
+        timeframe: state.timeframe,
+        favoritesOnly: state.favoritesOnly,
+        sortBy: state.sortBy,
+        sortDir: state.sortDir,
+    })
+
+    const handleSavePreset = (name: string, filters: WorldRecordsPresetFilters) => {
+        const next = [...presets, { id: newPresetId(), name, filters }]
+        setPresets(next)
+        persistPresets(PRESETS_KEY, next)
+        setActivePresetId(next[next.length - 1].id)
+    }
+
+    const handleLoadPreset = (p: WorldRecordsPreset) => {
+        setActivePresetId(p.id)
+        onStateChange(prev => ({ ...prev, ...p.filters, currentPage: 1, scrollTop: 0 }))
+    }
+
+    const handleDeletePreset = (p: WorldRecordsPreset) => {
+        const next = presets.filter(x => x.id !== p.id)
+        setPresets(next)
+        persistPresets(PRESETS_KEY, next)
+        if (activePresetId === p.id) setActivePresetId(null)
+    }
+
+    const resetFilters = () => {
+        onStateChange(prev => ({
+            ...DEFAULT_WORLD_RECORDS_STATE,
+            mode: prev.mode,
+            columnVisibility: prev.columnVisibility,
+            columnOrder: prev.columnOrder,
+            filtersPanelOpen: prev.filtersPanelOpen,
+            pageSizePreference: prev.pageSizePreference,
+        }))
+        setActivePresetId(null)
+    }
 
     const handleSort = (field: WorldRecordsSortField) => {
         onStateChange(prev => {
@@ -354,79 +595,43 @@ export function WorldRecordsPage({
     const visibleColumns = state.columnOrder.filter(isColumnVisible)
     const visibleColumnCount = visibleColumns.length
 
-    const filtered = useMemo(() => {
-        return caches.records.filter(r => {
-            if (debouncedSearch) {
-                const haystack = `${displayMapName(r.map)} ${r.map} ${r.alias ?? ''}`.toLowerCase()
-                if (!haystack.includes(debouncedSearch)) return false
-            }
-            if (!isInDifficultyTier(r.difficulty, state.difficulty)) return false
-            if (!isInTimeframe(r.added, state.timeframe)) return false
-            if (state.favoritesOnly && !favoriteMapNames.has(r.map)) return false
-            return true
-        })
-    }, [caches.records, debouncedSearch, state.difficulty, state.timeframe, state.favoritesOnly, favoriteMapNames])
+    const totalRecords = caches.totalRecords
+    const maxRusherCount = caches.maxRusherCount
 
-    const sorted = useMemo(() => {
-        const out = [...filtered]
-        const dir = state.sortDir === 'asc' ? 1 : -1
-        out.sort((a, b) => {
-            let cmp = 0
-            switch (state.sortBy) {
-                case 'map':
-                    cmp = displayMapName(a.map).localeCompare(displayMapName(b.map))
-                    break
-                case 'holder':
-                    cmp = (a.alias ?? '').localeCompare(b.alias ?? '')
-                    break
-                case 'time':
-                    cmp = a.cap_time_seconds - b.cap_time_seconds
-                    break
-                case 'difficulty': {
-                    const aEmpty = a.difficulty == null
-                    const bEmpty = b.difficulty == null
-                    if (aEmpty && bEmpty) return 0
-                    if (aEmpty) return 1
-                    if (bEmpty) return -1
-                    cmp = (a.difficulty as number) - (b.difficulty as number)
-                    break
-                }
-                case 'date':
-                    cmp = new Date(a.added).getTime() - new Date(b.added).getTime()
-                    break
-            }
-            return cmp * dir
-        })
-        return out
-    }, [filtered, state.sortBy, state.sortDir])
-
-    const rushersAll = useMemo(() => aggregateRushers(caches.records), [caches.records])
-    const maxRusherCount = rushersAll[0]?.count ?? 0
-    const totalRecords = caches.records.length
-
-    const rushersFiltered = useMemo(() => {
-        if (!debouncedSearch) return rushersAll
-        return rushersAll.filter(r => r.alias.toLowerCase().includes(debouncedSearch))
-    }, [rushersAll, debouncedSearch])
-
-    const totalCount = isRushers ? rushersFiltered.length : sorted.length
+    const totalCount = isRushers ? caches.rusherTotal : caches.recordTotal
     const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
     const page = Math.min(state.currentPage, totalPages)
     const sliceStart = (page - 1) * pageSize
-    const recordPageRows = sorted.slice(sliceStart, sliceStart + pageSize)
-    const rusherPageRows = rushersFiltered.slice(sliceStart, sliceStart + pageSize)
+    const recordPageRows = caches.recordRows
+    const rusherPageRows = caches.rusherRows
 
     useEffect(() => {
-        if (totalCount > 0 && state.currentPage > totalPages) {
+        if (cacheFresh && totalCount > 0 && state.currentPage > totalPages) {
             onStateChange(prev => ({ ...prev, currentPage: totalPages }))
         }
-    }, [totalCount, totalPages, state.currentPage, onStateChange])
+    }, [cacheFresh, totalCount, totalPages, state.currentPage, onStateChange])
 
-    const showSkeleton = pageLoading && caches.records.length === 0
+    const showSkeleton = !error && (!cacheFresh || (pageLoading && currentRows.length === 0))
 
-    const recordsHaveFilter = !!debouncedSearch || state.difficulty !== 'all' || state.timeframe !== 'all' || state.favoritesOnly
+    const activeFilterCount = [
+        state.difficultyFilters.length > 0,
+        state.holderFilters.length > 0,
+        state.timeFilters.length > 0,
+        state.yearFilters.length > 0,
+        state.timeframe !== 'all',
+        state.favoritesOnly,
+    ].filter(Boolean).length
+    const recordsHaveFilter = activeFilterCount > 0 || !!debouncedSearch
+    const hasActiveFilters = activeFilterCount > 0 || state.search.trim() !== ''
     const activeHasFilter = isRushers ? !!debouncedSearch : recordsHaveFilter
-    const showPodium = isRushers && !debouncedSearch && page === 1 && rushersAll.length >= 3
+    const showPodium = isRushers && !debouncedSearch && page === 1 && caches.rusherTotal >= 3
+
+    const activePreset = activePresetId ? presets.find(p => p.id === activePresetId) ?? null : null
+    useEffect(() => {
+        if (!activePreset) return
+        if (!presetFiltersMatch(captureFilters(), activePreset.filters)) setActivePresetId(null)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activePreset, state.search, state.difficultyFilters, state.holderFilters, state.timeFilters, state.yearFilters, state.timeframe, state.favoritesOnly, state.sortBy, state.sortDir])
 
     const openHistory = useCallback(async (mapName: string) => {
         if (!accessToken) return
@@ -580,7 +785,7 @@ export function WorldRecordsPage({
                                 Who are the fastest rushers in the world?
                                 <br />
                                 {!showSkeleton && (
-                                    <span className="opacity-50"> {rushersAll.length.toLocaleString()} rushers · {totalRecords.toLocaleString()} records</span>
+                                    <span className="opacity-50"> {caches.rusherTotal.toLocaleString()} rushers · {totalRecords.toLocaleString()} records</span>
                                 )}
                             </>
                         ) : (
@@ -630,7 +835,9 @@ export function WorldRecordsPage({
                         )
                     })}
                 </div>
+            </div>
 
+            <div className="flex flex-wrap items-center gap-3 shrink-0">
                 <div className="relative flex-1 min-w-48 max-w-xs">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
                     <input
@@ -654,42 +861,23 @@ export function WorldRecordsPage({
 
                 {!isRushers && (
                     <>
-                        <select
-                            value={state.difficulty}
-                            onChange={e => updateFilter('difficulty', e.target.value as WrDifficultyTier)}
-                            style={{ colorScheme: 'dark' }}
-                            className="px-3 py-2 bg-card/50 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-blue-500/50 cursor-pointer"
-                            aria-label="Filter by difficulty"
-                        >
-                            {DIFFICULTY_OPTIONS.map(o => (
-                                <option key={o.value} value={o.value} className="bg-[#0f1115] text-white">{o.label}</option>
-                            ))}
-                        </select>
-
-                        <select
-                            value={state.timeframe}
-                            onChange={e => updateFilter('timeframe', e.target.value as WrTimeframe)}
-                            style={{ colorScheme: 'dark' }}
-                            className="px-3 py-2 bg-card/50 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-blue-500/50 cursor-pointer"
-                            aria-label="Filter by timeframe"
-                        >
-                            {TIMEFRAME_OPTIONS.map(o => (
-                                <option key={o.value} value={o.value} className="bg-[#0f1115] text-white">{o.label}</option>
-                            ))}
-                        </select>
-
                         <button
                             type="button"
-                            onClick={() => updateFilter('favoritesOnly', !state.favoritesOnly)}
+                            onClick={() => onStateChange(prev => ({ ...prev, filtersPanelOpen: !prev.filtersPanelOpen }))}
                             className={cn(
-                                'px-3 py-2 rounded-lg text-sm font-medium border transition-colors cursor-pointer flex items-center gap-2',
-                                state.favoritesOnly
-                                    ? 'bg-amber-500/15 border-amber-500/40 text-amber-300'
+                                'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border transition-colors cursor-pointer',
+                                state.filtersPanelOpen
+                                    ? 'bg-blue-500/20 border-blue-500/50 text-blue-300'
                                     : 'bg-card/50 border-white/10 text-muted-foreground hover:text-white hover:border-white/20',
                             )}
                         >
-                            <Star className={cn('size-4', state.favoritesOnly && 'fill-current')} />
-                            Favorites
+                            <SlidersHorizontal className="size-4" />
+                            Filters
+                            {activeFilterCount > 0 && (
+                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-500 text-white">
+                                    {activeFilterCount}
+                                </span>
+                            )}
                         </button>
 
                         <ColumnsMenu<WorldRecordsColumnId>
@@ -704,6 +892,129 @@ export function WorldRecordsPage({
                 )}
             </div>
 
+            {!isRushers && hasActiveFilters && (
+                <div className="flex flex-wrap items-center gap-2 shrink-0">
+                    {state.search.trim() !== '' && (
+                        <ActiveFilterChip label="Search" value={state.search} onClear={() => setSearch('')} />
+                    )}
+                    {state.difficultyFilters.map(d => (
+                        <ActiveFilterChip
+                            key={`diff-${d}`}
+                            label="Difficulty"
+                            value={DIFFICULTY_TIER_LABEL[d] ?? d}
+                            onClear={() => updateFilter('difficultyFilters', state.difficultyFilters.filter(x => x !== d))}
+                        />
+                    ))}
+                    {state.holderFilters.map(h => (
+                        <ActiveFilterChip
+                            key={`holder-${h}`}
+                            label="Holder"
+                            value={holderAliasById[h] ?? h}
+                            onClear={() => updateFilter('holderFilters', state.holderFilters.filter(x => x !== h))}
+                        />
+                    ))}
+                    {state.timeFilters.map(t => (
+                        <ActiveFilterChip
+                            key={`time-${t}`}
+                            label="Time"
+                            value={TIME_BUCKET_OPTIONS.find(([v]) => v === t)?.[1] ?? t}
+                            onClear={() => updateFilter('timeFilters', state.timeFilters.filter(x => x !== t))}
+                        />
+                    ))}
+                    {state.yearFilters.map(y => (
+                        <ActiveFilterChip
+                            key={`year-${y}`}
+                            label="Year"
+                            value={y}
+                            onClear={() => updateFilter('yearFilters', state.yearFilters.filter(x => x !== y))}
+                        />
+                    ))}
+                    {state.timeframe !== 'all' && (
+                        <ActiveFilterChip
+                            label="Added"
+                            value={TIMEFRAME_OPTIONS.find(o => o.value === state.timeframe)?.label ?? state.timeframe}
+                            onClear={() => updateFilter('timeframe', 'all')}
+                        />
+                    )}
+                    {state.favoritesOnly && (
+                        <ActiveFilterChip label="Favorites" value="On" onClear={() => updateFilter('favoritesOnly', false)} />
+                    )}
+                </div>
+            )}
+
+            {!isRushers && state.filtersPanelOpen && (
+                <div className="bg-card/30 border border-white/10 rounded-xl p-4 space-y-4 shrink-0">
+                    <FilterPanelRow label="Record">
+                        <MultiFilterDropdown
+                            label="Difficulty"
+                            values={state.difficultyFilters}
+                            onChange={v => updateFilter('difficultyFilters', v as WrDifficultyTierValue[])}
+                            options={DIFFICULTY_TIER_OPTIONS}
+                        />
+                        <MultiFilterDropdown
+                            label="Holder"
+                            values={state.holderFilters}
+                            onChange={v => updateFilter('holderFilters', v)}
+                            options={holderOptions}
+                            searchable
+                        />
+                        <MultiFilterDropdown
+                            label="Time"
+                            values={state.timeFilters}
+                            onChange={v => updateFilter('timeFilters', v as WrTimeBucket[])}
+                            options={TIME_BUCKET_OPTIONS}
+                        />
+                    </FilterPanelRow>
+
+                    <FilterPanelRow label="Date">
+                        <MultiFilterDropdown
+                            label="Year"
+                            values={state.yearFilters}
+                            onChange={v => updateFilter('yearFilters', v)}
+                            options={yearOptions}
+                            searchable
+                        />
+                        <div className="flex flex-col gap-1">
+                            <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Recent</label>
+                            <select
+                                value={state.timeframe}
+                                onChange={e => updateFilter('timeframe', e.target.value as WrTimeframe)}
+                                style={{ colorScheme: 'dark' }}
+                                className="min-w-40 px-2 py-2 bg-card/50 border border-white/10 rounded text-sm text-white hover:border-white/20 focus:outline-none focus:border-blue-500/50 cursor-pointer"
+                                aria-label="Filter by recency"
+                            >
+                                {TIMEFRAME_OPTIONS.map(o => (
+                                    <option key={o.value} value={o.value} className="bg-[#0f1115] text-white">{o.label}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <label className="flex items-center gap-2 px-3 py-2 bg-card/50 border border-white/10 rounded-md text-sm text-white cursor-pointer hover:border-white/20 self-end">
+                            <input
+                                type="checkbox"
+                                checked={state.favoritesOnly}
+                                onChange={e => updateFilter('favoritesOnly', e.target.checked)}
+                                className="accent-yellow-400 cursor-pointer"
+                            />
+                            <span>Favorites</span>
+                        </label>
+                    </FilterPanelRow>
+
+                    <div className="flex items-center justify-between gap-3 pt-2 border-t border-white/5">
+                        <FilterPresetsMenu<WorldRecordsPresetFilters>
+                            presets={presets}
+                            activePreset={activePreset}
+                            hasActiveFilters={hasActiveFilters}
+                            onSave={handleSavePreset}
+                            onLoad={handleLoadPreset}
+                            onDelete={handleDeletePreset}
+                            captureCurrentFilters={captureFilters}
+                            onResetFilters={resetFilters}
+                            placeholderExample="e.g. Sub-30s WRs from 2024"
+                        />
+                    </div>
+                </div>
+            )}
+
             {error && (
                 <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/30 text-red-300 text-sm shrink-0">
                     {error}
@@ -713,7 +1024,7 @@ export function WorldRecordsPage({
             {isRushers && showPodium && (
                 <div className="grid grid-cols-3 gap-3 shrink-0">
                     {PODIUM_SLOTS.map(slot => {
-                        const r = rushersAll[slot.rank - 1]
+                        const r = rusherPageRows[slot.rank - 1]
                         if (!r) return <div key={slot.rank} />
                         const isSelf = selfId != null && r.user_id === String(selfId)
                         return (
@@ -774,15 +1085,16 @@ export function WorldRecordsPage({
                                 message={debouncedSearch ? 'No rushers match your search.' : 'No rushers found.'}
                             />
                         ) : (
-                            rusherPageRows.map(r => {
+                            rusherPageRows.map((r, i) => {
+                                const rank = sliceStart + i + 1
                                 const isSelf = selfId != null && r.user_id === String(selfId)
                                 const share = totalRecords > 0 ? (r.count / totalRecords) * 100 : 0
                                 const barPct = maxRusherCount > 0 ? Math.max(4, (r.count / maxRusherCount) * 100) : 0
                                 return (
                                     <DataTableRow key={r.user_id}>
                                         <DataTableCell align="right">
-                                            <span className={cn('font-mono font-bold tabular-nums', medalText(r.rank))}>
-                                                #{r.rank}
+                                            <span className={cn('font-mono font-bold tabular-nums', medalText(rank))}>
+                                                #{rank}
                                             </span>
                                         </DataTableCell>
                                         <DataTableCell>
@@ -812,12 +1124,12 @@ export function WorldRecordsPage({
                                         </DataTableCell>
                                         <DataTableCell align="right">
                                             <span className="font-mono tabular-nums text-xs text-white/80">
-                                                {formatCapTime(r.median)}
+                                                {r.median != null ? formatCapTime(r.median) : '—'}
                                             </span>
                                         </DataTableCell>
                                         <DataTableCell align="right">
                                             <span className="font-mono tabular-nums text-xs text-muted-foreground">
-                                                {formatCapTime(r.average)}
+                                                {r.average != null ? formatCapTime(r.average) : '—'}
                                             </span>
                                         </DataTableCell>
                                     </DataTableRow>

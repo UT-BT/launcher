@@ -15,7 +15,7 @@ working around in the renderer.
 | Category | Functions |
 |---|---|
 | Maps | `fetchMaps`, `fetchMapsCount`, `fetchMapsMetadata`, `fetchMapsFuzzy`, `fetchMapAuthors`, `buildMapQuery` |
-| Records | `fetchRecords`, `fetchRecordsCount`, `fetchAllWorldRecords`, `fetchWorldRecordsForMaps`, `fetchWorldRecordProgression`, `fetchBestCaps`, `fetchMapLeaderboard` |
+| Records | `fetchWorldRecords`, `fetchWorldRecordsCount`, `fetchRushers`, `fetchRecordsCount`, `fetchWorldRecordsForMaps`, `fetchWorldRecordProgression`, `fetchBestCaps`, `fetchMapLeaderboard` |
 | Per-map per-user counts | `fetchUserCapCountForMap` |
 | Players | `fetchPlayers`, `fetchPlayersCount` (→ `/v2/players`, server-side alias search/sort/pagination + medals join; row type `PlayerListRow`) |
 | Reviews | `fetchMapReviews`, `fetchAllMapReviews`, `submitSummaryReview` |
@@ -48,14 +48,29 @@ The World Records page (`app/components/pages/WorldRecordsPage.tsx`) shows the
 fastest cap on every map.
 
 - **`GET /v2/world_records/`** → `Record[]`. One row per map (the WR). Supports
-  `limit`/`offset`, `sort` (`asc`/`desc`), `sort_by` (`added`/`time`/`map`),
-  `user`, `map` (fuzzy), `maps` (CSV exact), `added_since`, and `count=true`.
-  The list endpoint joins **`active_title`** (selected title, same shape as the
-  progression endpoint) and map **`difficulty`** onto each row — so `PlayerInfo`
-  gets full title styling and the page can filter by difficulty without a second
-  fetch. The page loads everything once via `fetchAllWorldRecords` then does
-  search / difficulty / timeframe / favorites filtering, sort, and pagination
-  client-side (the dataset is bounded — one WR per map).
+  `limit`/`offset` (limit clamped 1–200), `sort` (`asc`/`desc`), `sort_by`
+  (`added`/`time`/`map`/`holder`/`difficulty`), `search` (matches map **or**
+  player alias), `difficulty_min`/`difficulty_max` (joins `Map`),
+  `user` (single holder — used by the player-detail WR card),
+  `users`/`difficulties`/`years` (CSV `IN`), `time_ranges` (CSV of `min-max`
+  cap-second bands, OR'd), `map` (fuzzy), `maps` (CSV exact), `added_since`, and
+  `count=true`. The list
+  endpoint joins **`active_title`** (selected title, same shape as the
+  progression endpoint) and map **`difficulty`** onto each row. The page paginates
+  **server-side**, one page at a time, mirroring `PlayersPage` — `fetchWorldRecords`
+  for the page + `fetchWorldRecordsCount` (`count=true`) for the total, with a
+  per-page cache + neighbour prefetch. Search / difficulty / timeframe / favorites
+  are pushed to the query (favorites → `maps` CSV; timeframe → `added_since`).
+- **`GET /v2/world_records/rushers/`** → `{ total, total_records, max_count, items }`
+  (`fetchRushers` / `fetchRushersCount`). Per-player WR aggregation (count, median,
+  average WR time) grouped in Postgres, replacing the old client-side
+  `aggregateRushers` over the full set. Powers the page's "Top Rushers" mode;
+  `total_records` + `max_count` are global (unfiltered) and drive share-% + bar
+  widths. Supports `limit`/`offset`, `search` (alias), `count=true`.
+- **`GET /v2/world_records/filter_options/`** → `{ holders: [{user_id, alias, count}], years }`
+  (`fetchWorldRecordFilterOptions`). Option lists for the records-list filters —
+  every WR holder (most prolific first, value = `user_id` → passed back as `user`)
+  and every year a WR was set. Fetched once on page mount.
 - **`GET /v2/world_records/progression/<map>`** → `WorldRecordProgressionEntry[]`
   (`fetchWorldRecordProgression`). Chronological history of every cap that set a
   new WR on that map. Powers the `WorldRecordProgressionModal` drill-down (the

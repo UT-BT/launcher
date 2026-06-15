@@ -78,7 +78,7 @@ const MAPS_PREF_KEYS: readonly (keyof MapsPageState)[] = ['filtersPanelOpen', 'p
 const SERVERS_PREF_KEYS: readonly (keyof ServerBrowserState)[] = ['columnVisibility', 'columnOrder', 'filtersPanelOpen']
 const PLAYERS_PREF_KEYS: readonly (keyof PlayersPageState)[] = ['columnVisibility', 'columnOrder', 'pageSizePreference']
 const CAP_IT_ALL_PREF_KEYS: readonly (keyof CapItAllPageState)[] = ['pageSizePreference']
-const WORLD_RECORDS_PREF_KEYS: readonly (keyof WorldRecordsPageState)[] = ['columnVisibility', 'columnOrder', 'pageSizePreference']
+const WORLD_RECORDS_PREF_KEYS: readonly (keyof WorldRecordsPageState)[] = ['columnVisibility', 'columnOrder', 'pageSizePreference', 'filtersPanelOpen']
 const ACHIEVEMENTS_PREF_KEYS: readonly (keyof AchievementsPageState)[] = []
 
 function pickKeys<T extends object>(o: T, keys: readonly (keyof T)[]): Partial<T> {

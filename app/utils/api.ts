@@ -336,7 +336,11 @@ function buildMapQuery(params: MapListParams, defaultActive = true): string {
 }
 
 export async function fetchMaps(accessToken: string, params: MapListParams = {}): Promise<Map[]> {
-    return apiGet<Map[]>(`/maps/?${buildMapQuery(params)}`, { token: accessToken })
+    const response = await apiRequest(`/maps/?${buildMapQuery(params)}`, { token: accessToken })
+    if (!response.ok) throw new Error(`Failed to fetch maps: ${response.statusText} (${response.status})`)
+    const json = await response.json()
+    if (json?.success && Array.isArray(json.data)) return json.data as Map[]
+    return []
 }
 
 export async function fetchMap(accessToken: string, mapName: string, columns?: string[]): Promise<MapMetadata | null> {
@@ -449,43 +453,99 @@ export async function fetchLatestActivity(accessToken: string): Promise<Launcher
     }
 }
 
-export async function fetchRecords(accessToken: string, limit: number, offset: number, sort?: string): Promise<Record[]> {
-    try {
-        const sortParam = sort ? `&sort=${sort}` : ''
-        const response = await fetch(`${API_BASE_URL}/v2/world_records/?limit=${limit}&offset=${offset}${sortParam}`, {
-            headers: {
-                'Authorization': `Bearer ${accessToken}`
-            }
-        })
-
-        if (!response.ok) {
-            throw new Error(`Failed to fetch records: ${response.statusText} (${response.status})`)
-        }
-
-        const json = await response.json()
-        if (json.success && json.data) {
-            return json.data as Record[]
-        }
-
-        throw new Error('Invalid response format from server')
-    } catch (error) {
-        console.error('Error fetching records:', error)
-        throw error
-    }
+export interface WorldRecordsParams {
+    limit?: number
+    offset?: number
+    search?: string
+    sort?: 'asc' | 'desc'
+    sortBy?: 'map' | 'holder' | 'time' | 'difficulty' | 'date'
+    addedSince?: string
+    maps?: string
+    users?: string
+    difficulties?: string
+    years?: string
+    timeRanges?: string
 }
 
-export async function fetchAllWorldRecords(accessToken: string): Promise<Record[]> {
-    const pageSize = 500
-    const out: Record[] = []
-    let offset = 0
-    while (true) {
-        const batch = await fetchRecords(accessToken, pageSize, offset)
-        out.push(...batch)
-        if (batch.length < pageSize) break
-        offset += pageSize
-        if (offset > 50_000) break
-    }
-    return out
+const WR_SORT_BY_PARAM: { [K in NonNullable<WorldRecordsParams['sortBy']>]: string } = {
+    map: 'map',
+    holder: 'holder',
+    time: 'time',
+    difficulty: 'difficulty',
+    date: 'added',
+}
+
+function buildWorldRecordsQuery(params: WorldRecordsParams): URLSearchParams {
+    const usp = new URLSearchParams()
+    if (params.limit !== undefined) usp.set('limit', String(params.limit))
+    if (params.offset !== undefined) usp.set('offset', String(params.offset))
+    if (params.search) usp.set('search', params.search)
+    if (params.sort) usp.set('sort', params.sort)
+    if (params.sortBy) usp.set('sort_by', WR_SORT_BY_PARAM[params.sortBy])
+    if (params.addedSince) usp.set('added_since', params.addedSince)
+    if (params.maps) usp.set('maps', params.maps)
+    if (params.users) usp.set('users', params.users)
+    if (params.difficulties) usp.set('difficulties', params.difficulties)
+    if (params.years) usp.set('years', params.years)
+    if (params.timeRanges) usp.set('time_ranges', params.timeRanges)
+    return usp
+}
+
+export async function fetchWorldRecords(accessToken: string, params: WorldRecordsParams = {}): Promise<Record[]> {
+    const response = await apiRequest(`/v2/world_records/?${buildWorldRecordsQuery(params).toString()}`, { token: accessToken })
+    if (!response.ok) throw new Error(`Failed to fetch world records: ${response.statusText} (${response.status})`)
+    const json = await response.json()
+    if (json?.success && Array.isArray(json.data)) return json.data as Record[]
+    return []
+}
+
+export async function fetchWorldRecordsCount(accessToken: string, params: WorldRecordsParams = {}): Promise<number> {
+    const usp = buildWorldRecordsQuery({ ...params, limit: undefined, offset: undefined, sort: undefined, sortBy: undefined })
+    usp.set('count', 'true')
+    const data = await apiGet<{ count: number }>(`/v2/world_records/?${usp.toString()}`, { token: accessToken })
+    return data.count
+}
+
+export interface RusherRow {
+    user_id: string
+    alias: string
+    active_title?: ActiveTitle | null
+    count: number
+    median: number | null
+    average: number | null
+}
+
+export interface RushersPage {
+    total: number
+    total_records: number
+    max_count: number
+    items: RusherRow[]
+}
+
+export async function fetchRushers(
+    accessToken: string,
+    params: { limit?: number; offset?: number; search?: string } = {},
+): Promise<RushersPage> {
+    const usp = new URLSearchParams()
+    if (params.limit !== undefined) usp.set('limit', String(params.limit))
+    if (params.offset !== undefined) usp.set('offset', String(params.offset))
+    if (params.search) usp.set('search', params.search)
+    return apiGet<RushersPage>(`/v2/world_records/rushers/?${usp.toString()}`, { token: accessToken })
+}
+
+export interface WorldRecordHolderOption {
+    user_id: string
+    alias: string
+    count: number
+}
+
+export interface WorldRecordFilterOptions {
+    holders: WorldRecordHolderOption[]
+    years: number[]
+}
+
+export async function fetchWorldRecordFilterOptions(accessToken: string): Promise<WorldRecordFilterOptions> {
+    return apiGet<WorldRecordFilterOptions>('/v2/world_records/filter_options/', { token: accessToken })
 }
 
 export interface WorldRecordProgressionEntry {
