@@ -143,7 +143,7 @@ export function LeaderboardCard({
                             sortDirection={dir('rank')}
                             onSort={() => handleSort('rank')}
                             width="4rem"
-                            align="center"
+                            align="right"
                         >
                             #
                         </DataTableHeaderCell>
@@ -204,7 +204,7 @@ export function LeaderboardCard({
                                 })()
                                 return (
                                     <DataTableRow key={entry.id} className={cn(isOwn && 'bg-emerald-500/[0.05]')}>
-                                        <DataTableCell align="center">
+                                        <DataTableCell align="right">
                                             <span className="text-xs font-bold font-mono text-muted-foreground tabular-nums">
                                                 #{rank}
                                             </span>

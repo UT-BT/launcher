@@ -100,7 +100,7 @@ own their column definitions and cell content; primitives own the shell.
 
 | Component | Purpose |
 |---|---|
-| `DataTableShell` | Scroll container + `<table>`. Pass `scrollRef`, `onScroll` for persisted scroll state. |
+| `DataTableShell` | Scroll container + `<table>`. Pass `scrollRef`, `onScroll` for persisted scroll state. `minWidth` floors the table width so a flex column scrolls instead of collapsing at small sizes. |
 | `DataTableHeaderRow` | Sticky `<thead>` + bordered `<tr>`. `theadDataAttr` writes a data-attr for tutorial z-lift. |
 | `DataTableHeaderCell` | `<th>` with locked padding/font. `sortable` + `sortDirection` + `onSort` for sortable headers. `align`, `width`, `className`, `buttonRef` overrides. |
 | `DataTableRow` | Body `<tr>` with locked hover/border styling. Spread-through tr props. |
@@ -110,7 +110,11 @@ own their column definitions and cell content; primitives own the shell.
 | `SortIcon` | Standalone sort-direction icon (`asc` / `desc` / `null`). Rarely needed — `DataTableHeaderCell` renders it via `sortable`. |
 
 Locked styling defined in `styling.md`. Don't override padding/font/hover
-inline — use the primitives or extend them.
+inline — use the primitives or extend them. See **Column layout** in
+`styling.md` for the width/alignment convention: one width-less flex text
+column, an explicit `width` on every other column (else right-aligned numerics
+float under `table-fixed`); numbers right + `tabular-nums`, text left,
+icons/badges/actions center.
 
 Example:
 

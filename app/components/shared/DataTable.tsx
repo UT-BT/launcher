@@ -17,6 +17,7 @@ interface DataTableShellProps {
     children: React.ReactNode
     className?: string
     theadDataAttr?: string
+    minWidth?: string
 }
 
 /**
@@ -30,7 +31,7 @@ interface DataTableShellProps {
  *   </DataTableShell>
  */
 export function DataTableShell({
-    scrollRef, onScroll, children, className, theadDataAttr,
+    scrollRef, onScroll, children, className, theadDataAttr, minWidth,
 }: DataTableShellProps) {
     return (
         <div
@@ -42,7 +43,7 @@ export function DataTableShell({
             )}
             data-utbt-table-thead={theadDataAttr}
         >
-            <table className="w-full table-fixed text-sm">
+            <table className="w-full table-fixed text-sm" style={minWidth ? { minWidth } : undefined}>
                 {children}
             </table>
         </div>

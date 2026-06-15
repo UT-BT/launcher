@@ -49,7 +49,7 @@ const TABLE_ROW_HEIGHT_PX = 56
 const TABLE_CHROME_PX = 300
 const AUTO_PAGE_SIZE_MIN_ROWS = 10
 const AUTO_PAGE_SIZE_MAX_ROWS = 60
-const AUTO_PAGE_SIZE_STEP = 5
+const AUTO_PAGE_SIZE_STEP = 1
 
 function computePageSize(): number {
     if (typeof window === 'undefined') return 25

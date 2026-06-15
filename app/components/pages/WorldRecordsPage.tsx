@@ -758,7 +758,7 @@ export function WorldRecordsPage({
                     <DataTableHeaderRow theadDataAttr="data-utbt-rushers-thead">
                         <DataTableHeaderCell align="right" width="5rem">#</DataTableHeaderCell>
                         <DataTableHeaderCell align="left">Rusher</DataTableHeaderCell>
-                        <DataTableHeaderCell align="left">World Records</DataTableHeaderCell>
+                        <DataTableHeaderCell align="left" width="20rem">World Records</DataTableHeaderCell>
                         <DataTableHeaderCell align="right" width="6rem">Share</DataTableHeaderCell>
                         <DataTableHeaderCell align="right" width="8rem">Median WR</DataTableHeaderCell>
                         <DataTableHeaderCell align="right" width="8rem">Average WR</DataTableHeaderCell>

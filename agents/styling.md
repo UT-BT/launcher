@@ -32,6 +32,32 @@ Set inside `app/components/shared/DataTable.tsx`. Don't override inline.
 Sort icons: `ArrowUpDown` (size-3 opacity-30) when not sorted; `ChevronUp` /
 `ChevronDown` (size-3 text-blue-400) when active.
 
+### Column layout
+
+`<table>` is `table-fixed` — **column widths come from the header row**. Give
+every `DataTableHeaderCell` an explicit `width` *except* the one primary text
+column (Player / Name / Map / Rusher), which stays width-less to absorb the
+slack. Skip this and `table-fixed` splits every column evenly: a right-aligned
+numeric column then floats its value to the far edge (the Players "rank" bug).
+
+When the flex column can be squeezed below its content (many columns + small
+window), pass `minWidth` to `DataTableShell` (sum of column widths + a floor for
+the flex column) so the table scrolls horizontally instead of collapsing the
+flex column into its neighbour. See `tableMinWidth` in `ServerBrowserPage.tsx`.
+
+Align by content type:
+
+| Content | `align` | Notes |
+|---|---|---|
+| Numbers — rank, points, ping, times, %, counts | `right` | + `font-mono tabular-nums` so digits line up |
+| Text — name, author, role, dates | `left` (default) | |
+| Icon / status badge / action buttons / difficulty / medal icon+count | `center` | reads as a unit |
+
+Body cells inherit the column width from the header under `table-fixed`, so they
+only need a matching `align`. Exception: a deliberately all-centered table with
+composite stacked cells (Maps WR/PB = time + sub-label) keeps everything
+`center` — internal consistency within that table wins over the cross-table rule.
+
 ## Page layout
 
 ```tsx

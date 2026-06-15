@@ -100,6 +100,19 @@ const SERVER_COLUMN_LABELS: Record<ServerColumnId, string> = {
     actions: 'Actions',
 }
 
+const COLUMN_LAYOUT: Record<ServerColumnId, { width?: string; align?: 'left' | 'center' | 'right' }> = {
+    thumbnail: { width: '4.5rem', align: 'center' },
+    type: { width: '3.5rem', align: 'center' },
+    name: { align: 'left' },
+    map: { width: '14rem', align: 'left' },
+    region: { width: '5rem', align: 'center' },
+    ping: { width: '6rem', align: 'right' },
+    players: { width: '7rem', align: 'center' },
+    spectators: { width: '7rem', align: 'center' },
+    status: { width: '9rem', align: 'center' },
+    actions: { width: '12rem', align: 'center' },
+}
+
 const DEFAULT_COLUMN_ORDER: ServerColumnId[] = [
     'thumbnail', 'type', 'name', 'map', 'region', 'ping', 'players', 'spectators', 'status', 'actions',
 ]
@@ -616,6 +629,7 @@ export function ServerBrowserPage({
 
     const renderHeader = (id: ServerColumnId): React.ReactNode => {
         if (!isVisible(id)) return null
+        const layout = COLUMN_LAYOUT[id]
         const sortField = SORTABLE_COLUMNS[id]
         if (sortField) {
             return (
@@ -625,6 +639,8 @@ export function ServerBrowserPage({
                     sortDirection={state.sortBy === sortField ? state.sortDir : null}
                     onSort={() => handleSort(sortField)}
                     buttonRef={id === 'name' ? sortHeaderRef : undefined}
+                    width={layout.width}
+                    align={layout.align}
                 >
                     {SERVER_COLUMN_LABELS[id]}
                 </DataTableHeaderCell>
@@ -632,7 +648,7 @@ export function ServerBrowserPage({
         }
         const showLabel = id !== 'thumbnail' && id !== 'actions' && id !== 'type'
         return (
-            <DataTableHeaderCell key={id}>
+            <DataTableHeaderCell key={id} width={layout.width} align={layout.align}>
                 {showLabel ? SERVER_COLUMN_LABELS[id] : null}
             </DataTableHeaderCell>
         )
@@ -640,18 +656,19 @@ export function ServerBrowserPage({
 
     const renderCell = (id: ServerColumnId, server: Server, isFirstRow: boolean): React.ReactNode => {
         if (!isVisible(id)) return null
+        const align = COLUMN_LAYOUT[id].align
         const type = getServerType(server.hostname)
         const region = getServerRegion(server.hostname)
         switch (id) {
             case 'thumbnail':
                 return (
-                    <DataTableCell key={id}>
+                    <DataTableCell key={id} align={align}>
                         <MapThumbnail mapName={server.map_name} className="w-12 h-12 rounded shadow-sm" />
                     </DataTableCell>
                 )
             case 'type':
                 return (
-                    <DataTableCell key={id}>
+                    <DataTableCell key={id} align={align}>
                         <Tooltip content={type} side="top">
                             <span className="inline-flex"><TypeIcon type={type} /></span>
                         </Tooltip>
@@ -660,7 +677,7 @@ export function ServerBrowserPage({
             case 'name': {
                 const trimmed = trimServerName(server.hostname).replace(/\s*\([^)]+\)\s*$/, '')
                 return (
-                    <DataTableCell key={id}>
+                    <DataTableCell key={id} align={align}>
                         <div className="flex items-center gap-2">
                             <span ref={isFirstRow ? firstRowFavRef : undefined} className="inline-flex">
                                 <FavoriteStar
@@ -677,7 +694,7 @@ export function ServerBrowserPage({
             }
             case 'map':
                 return (
-                    <DataTableCell key={id}>
+                    <DataTableCell key={id} align={align}>
                         {onMapSelect ? (
                             <button
                                 type="button"
@@ -695,7 +712,7 @@ export function ServerBrowserPage({
                 )
             case 'region':
                 return (
-                    <DataTableCell key={id}>
+                    <DataTableCell key={id} align={align}>
                         <Tooltip content={region} side="top">
                             <img
                                 src={getRegionFlag(region)}
@@ -711,7 +728,7 @@ export function ServerBrowserPage({
                     ping < 100 ? 'text-green-500' :
                         ping < 200 ? 'text-yellow-500' : 'text-red-500'
                 return (
-                    <DataTableCell key={id}>
+                    <DataTableCell key={id} align={align}>
                         <div className={cn('inline-flex items-center gap-1.5 text-xs font-bold tabular-nums', pingColor)}>
                             <Signal className="size-3.5" />
                             {ping ? `${ping}ms` : '...'}
@@ -725,7 +742,7 @@ export function ServerBrowserPage({
                     server.player_count >= server.max_players ? 'text-rose-400' :
                         server.player_count > 0 ? 'text-emerald-400' : 'text-muted-foreground'
                 return (
-                    <DataTableCell key={id} ref={isFirstRow ? (firstRowPlayersRef as React.RefObject<HTMLTableCellElement>) : undefined}>
+                    <DataTableCell key={id} align={align} ref={isFirstRow ? (firstRowPlayersRef as React.RefObject<HTMLTableCellElement>) : undefined}>
                         <PlayerListCell
                             players={activePlayers}
                             displayText={`${server.player_count}/${server.max_players}`}
@@ -739,7 +756,7 @@ export function ServerBrowserPage({
             case 'spectators': {
                 const specPlayers = server.players.filter(p => p.is_spectator)
                 return (
-                    <DataTableCell key={id} ref={isFirstRow ? (firstRowSpectatorsRef as React.RefObject<HTMLTableCellElement>) : undefined}>
+                    <DataTableCell key={id} align={align} ref={isFirstRow ? (firstRowSpectatorsRef as React.RefObject<HTMLTableCellElement>) : undefined}>
                         <PlayerListCell
                             players={specPlayers}
                             displayText={String(server.spectators)}
@@ -760,7 +777,7 @@ export function ServerBrowserPage({
                 )
                 const isEnded = text === 'Match Ended' || text === 'Overtime'
                 return (
-                    <DataTableCell key={id} ref={isFirstRow ? (firstRowStatusRef as React.RefObject<HTMLTableCellElement>) : undefined}>
+                    <DataTableCell key={id} align={align} ref={isFirstRow ? (firstRowStatusRef as React.RefObject<HTMLTableCellElement>) : undefined}>
                         <div className={cn(
                             'inline-flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider border',
                             isEnded
@@ -786,7 +803,7 @@ export function ServerBrowserPage({
                         installationStatus === 'unsupported' ? 'Unsupported game version' :
                             'Spectate'
                 return (
-                    <DataTableCell key={id} align="right" ref={isFirstRow ? (firstRowJoinRef as React.RefObject<HTMLTableCellElement>) : undefined}>
+                    <DataTableCell key={id} align={align} ref={isFirstRow ? (firstRowJoinRef as React.RefObject<HTMLTableCellElement>) : undefined}>
                         <div className="inline-flex items-center gap-1.5">
                             <Tooltip content={joinTooltip} side="top">
                                 <span className="inline-flex">
@@ -822,6 +839,14 @@ export function ServerBrowserPage({
     }
 
     const visibleColumnCount = state.columnOrder.filter(isVisible).length
+
+    const NAME_MIN_WIDTH_REM = 12
+    const tableMinWidth = `${state.columnOrder
+        .filter(isVisible)
+        .reduce((sum, id) => {
+            const w = COLUMN_LAYOUT[id].width
+            return sum + (w ? parseFloat(w) : NAME_MIN_WIDTH_REM)
+        }, 0)}rem`
 
     return (
         <div className="space-y-4 h-full flex flex-col overflow-hidden">
@@ -1019,7 +1044,7 @@ export function ServerBrowserPage({
                 </div>
             )}
 
-            <DataTableShell scrollRef={scrollContainerRef} onScroll={onScroll}>
+            <DataTableShell scrollRef={scrollContainerRef} onScroll={onScroll} minWidth={tableMinWidth}>
                 <DataTableHeaderRow theadDataAttr="data-utbt-servers-thead">
                     {state.columnOrder.map(id => renderHeader(id))}
                 </DataTableHeaderRow>

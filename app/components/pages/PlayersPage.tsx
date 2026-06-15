@@ -54,6 +54,18 @@ const DEFAULT_COLUMN_ORDER: PlayerColumnId[] = [
     'champion_medals', 'gold_medals', 'silver_medals', 'bronze_medals', 'registered_at',
 ]
 
+const COLUMN_WIDTH: Partial<Record<PlayerColumnId, string>> = {
+    rank: '5rem',
+    role: '7rem',
+    points: '7rem',
+    world_records: '7.5rem',
+    champion_medals: '6rem',
+    gold_medals: '5.5rem',
+    silver_medals: '5.5rem',
+    bronze_medals: '5.5rem',
+    registered_at: '9rem',
+}
+
 const DEFAULT_COLUMN_VISIBILITY: Record<PlayerColumnId, boolean> = {
     rank: true,
     player: true,
@@ -384,6 +396,7 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
             <DataTableHeaderCell
                 key={id}
                 align={headerAlign(id)}
+                width={COLUMN_WIDTH[id]}
                 sortable={!!sortField}
                 sortDirection={sortField ? directionFor(sortField) : null}
                 onSort={sortField ? () => handleSort(sortField) : undefined}
