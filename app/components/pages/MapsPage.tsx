@@ -606,6 +606,11 @@ function getAuthorString(m: Partial<Pick<Map, 'author' | 'author_str'>>): string
     return ''
 }
 
+function mapHasMatchingTag(m: Map | MapMetadata, term: string): boolean {
+    const tags = (m.tags ?? '').toLowerCase().split(',').map(t => t.trim()).filter(Boolean)
+    return tags.some(t => t.includes(term))
+}
+
 function isMapInDifficultyTier(difficulty: number, tier: DifficultyTier): boolean {
     if (tier === 'all') return true
     const [min, max] = DIFFICULTY_RANGES[tier]
@@ -1100,6 +1105,21 @@ export function MapsPage({
     const applyAllClientFilters = useCallback(<T extends Map | MapMetadata>(rows: T[]): T[] =>
         rows.filter(m => passesClientFilters(m)), [passesClientFilters])
 
+    const tagSearchMatches = useMemo(() => {
+        const term = state.search.trim().toLowerCase()
+        if (!term || !caches.metadata) return []
+        return caches.metadata.filter(m => mapHasMatchingTag(m, term))
+    }, [state.search, caches.metadata])
+
+    const mergedSearchResults = useMemo(() => {
+        const byName: Record<string, Map | MapMetadata> = {}
+        for (const m of searchResults) byName[m.name] = m
+        for (const m of tagSearchMatches) {
+            if (!(m.name in byName)) byName[m.name] = m
+        }
+        return Object.values(byName)
+    }, [searchResults, tagSearchMatches])
+
     const newMapCount = useMemo(() => {
         if (!caches.metadata) return 0
         return caches.metadata.reduce(
@@ -1212,7 +1232,7 @@ export function MapsPage({
                 page: state.currentPage,
             }
         } else if (mode === 'search') {
-            allRows = applyAllClientFilters(searchResults)
+            allRows = applyAllClientFilters(mergedSearchResults)
         } else {
             allRows = applyAllClientFilters((caches.metadata ?? []) as MapMetadata[])
         }
@@ -1226,7 +1246,7 @@ export function MapsPage({
             totalPages,
             page,
         }
-    }, [mode, caches.pageMaps, caches.totalCount, caches.metadata, searchResults, applyAllClientFilters, sortRows, pageSize, state.currentPage])
+    }, [mode, caches.pageMaps, caches.totalCount, caches.metadata, mergedSearchResults, applyAllClientFilters, sortRows, pageSize, state.currentPage])
 
     const wrHoldersInFlightRef = useRef<Set<string>>(new Set())
     useEffect(() => {
@@ -1954,7 +1974,7 @@ export function MapsPage({
                     <input
                         ref={searchRef}
                         type="text"
-                        placeholder="Search for a map name..."
+                        placeholder="Search for a map name or tag..."
                         value={state.search}
                         onChange={e => updateFilter('search', e.target.value)}
                         className="w-full pl-9 pr-9 py-2 bg-card/50 border border-white/10 rounded-lg text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:border-blue-500/50 focus:bg-card/80 transition-colors"
