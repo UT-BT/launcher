@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowLeft, RefreshCw, Loader2 } from 'lucide-react'
-import { Button } from '@/app/components/ui/button'
+import { RefreshCw, Loader2 } from 'lucide-react'
 import { Tooltip } from '@/app/components/ui/tooltip'
+import { useNavScrollRestore } from '@/app/components/navigation/useNavScrollRestore'
 import { Modal } from '@/app/components/ui/modal'
 import { ReplayVideoModal } from '@/app/components/shared/ReplayVideoModal'
 import { DemoDownloadStatusModal } from '@/app/components/shared/DemoDownloadStatusModal'
@@ -29,7 +29,6 @@ import { VideoCompareModal } from './capDetail/videoCompare/VideoCompareModal'
 
 interface CapDetailPageProps {
     capId: string
-    onBack: () => void
     userProfile?: UserProfile
     onMapSelect?: (mapName: string) => void
 }
@@ -48,7 +47,7 @@ function nearestByTime<T extends { id: string; cap_time_seconds: number }>(items
     return faster ?? slower ?? items[0] ?? null
 }
 
-export function CapDetailPage({ capId, onBack, userProfile, onMapSelect }: CapDetailPageProps) {
+export function CapDetailPage({ capId, userProfile, onMapSelect }: CapDetailPageProps) {
     const accessToken = userProfile?.accessToken
     const currentUserId = userProfile?.id ?? undefined
     const refreshCooldown = useRefreshCooldown()
@@ -132,18 +131,12 @@ export function CapDetailPage({ capId, onBack, userProfile, onMapSelect }: CapDe
     const videoSameTeam = cap?.team != null && videoOpponentData?.team != null && cap.team === videoOpponentData.team
     const videoReady = videoAvail.bothReady && videoOpponentData != null
 
+    const scrollRef = useRef<HTMLDivElement>(null)
+    const onScroll = useNavScrollRestore(scrollRef, !loading && !!detail)
+
     return (
         <div className="space-y-4 h-full flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-0 duration-500">
-            <div className="flex items-center justify-between gap-3 shrink-0">
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={onBack}
-                    className="text-muted-foreground hover:text-white -ml-2"
-                >
-                    <ArrowLeft className="size-4 mr-1" />
-                    Back
-                </Button>
+            <div className="flex items-center justify-end gap-3 shrink-0">
                 <Tooltip content={refreshCooldown.canRefresh ? 'Refresh' : `Wait ${refreshCooldown.remainingSeconds}s`} side="top">
                     <button
                         type="button"
@@ -204,7 +197,7 @@ export function CapDetailPage({ capId, onBack, userProfile, onMapSelect }: CapDe
                         </div>
                     )}
 
-                    <div className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-4">
+                    <div ref={scrollRef} onScroll={onScroll} className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-4">
                         <ClientSettingsGrid cap={cap} server={detail.server} />
 
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">

@@ -1,7 +1,8 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
-import { ArrowLeft, RefreshCw } from 'lucide-react'
-import { Button } from '@/app/components/ui/button'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { RefreshCw } from 'lucide-react'
 import { Tooltip } from '@/app/components/ui/tooltip'
+import { useNavState } from '@/app/components/navigation/useNavState'
+import { useNavScrollRestore } from '@/app/components/navigation/useNavScrollRestore'
 import {
     fetchUserSummary,
     fetchUserActivity,
@@ -28,7 +29,6 @@ const PlayerActivityChart = lazy(() => import('./playerDetail/PlayerActivityChar
 
 interface PlayerDetailPageProps {
     userId: string | number
-    onBack: () => void
     userProfile?: UserProfile
     favoriteMapNames: Set<string>
     onToggleFavorite: (mapName: string) => void
@@ -36,7 +36,7 @@ interface PlayerDetailPageProps {
 }
 
 export function PlayerDetailPage({
-    userId, onBack, userProfile, favoriteMapNames, onToggleFavorite, onMapSelect,
+    userId, userProfile, favoriteMapNames, onToggleFavorite, onMapSelect,
 }: PlayerDetailPageProps) {
     const accessToken = userProfile?.accessToken
     const currentUserId = userProfile?.id ?? undefined
@@ -45,11 +45,13 @@ export function PlayerDetailPage({
     const [refreshKey, setRefreshKey] = useState(0)
     const refreshCooldown = useRefreshCooldown()
 
-    const [activeTab, setActiveTab] = useState<PlayerDetailTab>('caps')
+    const [activeTab, setActiveTab] = useNavState<PlayerDetailTab>('player.activeTab', 'caps')
     const [changeTitleOpen, setChangeTitleOpen] = useState(false)
 
     const [activity, setActivity] = useState<UserActivityBucket[]>([])
     const [chartLoading, setChartLoading] = useState(true)
+
+    const scrollRef = useRef<HTMLDivElement>(null)
 
     const { data: summaryData, loading, error } = useAsync<UserSummary>(
         () => fetchUserSummary(accessToken!, userId),
@@ -58,12 +60,7 @@ export function PlayerDetailPage({
     )
     const summary = summaryData ?? null
 
-    // Reset tab + chart caches when switching players.
-    useEffect(() => {
-        setActiveTab('caps')
-        setActivity([])
-        setChartLoading(true)
-    }, [userId])
+    const onScroll = useNavScrollRestore(scrollRef, !loading)
 
     // Lazy-load aggregated lifetime activity once initial summary is in.
     useEffect(() => {
@@ -91,16 +88,7 @@ export function PlayerDetailPage({
 
     return (
         <div className="space-y-4 h-full flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-0 duration-500">
-            <div className="flex items-center justify-between gap-3 shrink-0">
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={onBack}
-                    className="text-muted-foreground hover:text-white -ml-2"
-                >
-                    <ArrowLeft className="size-4 mr-1" />
-                    Back
-                </Button>
+            <div className="flex items-center justify-end gap-3 shrink-0">
                 <Tooltip content={refreshCooldown.canRefresh ? 'Refresh' : `Wait ${refreshCooldown.remainingSeconds}s`} side="top">
                     <button
                         type="button"
@@ -133,7 +121,7 @@ export function PlayerDetailPage({
                 </div>
             )}
 
-            <div className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-4">
+            <div ref={scrollRef} onScroll={onScroll} className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-4">
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
                     <div className="lg:col-span-4 space-y-4">
                         <MedalShowcaseCard medals={medals} loading={loading} />

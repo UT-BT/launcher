@@ -13,6 +13,7 @@ import {
 import { Button } from '@/app/components/ui/button'
 import { SettingsModal } from '@/app/components/modals/SettingsModal'
 import { ChangeTitleModal } from '@/app/components/modals/ChangeTitleModal'
+import { NavHistoryBar } from '@/app/components/navigation/NavHistoryBar'
 
 interface NavItem {
     id: string
@@ -287,6 +288,7 @@ export function AppLayout({ children, currentView, onViewChange, userProfile, in
             {/* Main Content */}
             <main className="flex-1 overflow-y-auto relative z-10">
                 <div className="p-8 min-h-full">
+                    <NavHistoryBar />
                     {children}
                 </div>
 

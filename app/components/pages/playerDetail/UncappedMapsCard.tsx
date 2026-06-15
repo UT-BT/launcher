@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Search } from 'lucide-react'
 import { fetchUncappedMaps, fetchUncappedMapsCount, type Map as ApiMap } from '@/app/utils/api'
 import { usePaginatedQuery } from '@/app/hooks/useAsync'
+import { useNavState } from '@/app/components/navigation/useNavState'
 import { displayMapName } from '@/app/utils/format'
 import { difficultyBgColor } from '@/app/utils/scoreColors'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
@@ -27,11 +28,13 @@ type SortField = 'name' | 'difficulty' | 'added'
 export function UncappedMapsCard({ accessToken, userId, onMapSelect, tabsSlot }: UncappedMapsCardProps) {
     const [total, setTotal] = useState(0)
     const [countLoaded, setCountLoaded] = useState(false)
-    const [queryRaw, setQueryRaw] = useState('')
-    const [query, setQuery] = useState('')
-    const [sortField, setSortField] = useState<SortField>('name')
-    const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
-    const [difficultyTier, setDifficultyTier] = useState<'all' | 'beginner' | 'intermediate' | 'advanced' | 'expert'>('all')
+    const [query, setQuery] = useNavState('uncapped.query', '')
+    const [queryRaw, setQueryRaw] = useState(query)
+    const [sortField, setSortField] = useNavState<SortField>('uncapped.sortField', 'name')
+    const [sortDir, setSortDir] = useNavState<'asc' | 'desc'>('uncapped.sortDir', 'asc')
+    const [difficultyTier, setDifficultyTier] = useNavState<'all' | 'beginner' | 'intermediate' | 'advanced' | 'expert'>('uncapped.difficultyTier', 'all')
+    const [uncappedPage, setUncappedPage] = useNavState('uncapped.page', 1)
+    const [uncappedPageSize, setUncappedPageSize] = useNavState('uncapped.pageSize', 10)
 
     const difficultyRange = (() => {
         switch (difficultyTier) {
@@ -46,7 +49,7 @@ export function UncappedMapsCard({ accessToken, userId, onMapSelect, tabsSlot }:
     useEffect(() => {
         const t = setTimeout(() => setQuery(queryRaw), DEBOUNCE_MS)
         return () => clearTimeout(t)
-    }, [queryRaw])
+    }, [queryRaw, setQuery])
 
     useEffect(() => {
         let cancelled = false
@@ -62,6 +65,10 @@ export function UncappedMapsCard({ accessToken, userId, onMapSelect, tabsSlot }:
     } = usePaginatedQuery<ApiMap>({
         enabled: !!accessToken,
         deps: [accessToken, userId, query, sortField, sortDir, difficultyRange.min, difficultyRange.max],
+        page: uncappedPage,
+        pageSize: uncappedPageSize,
+        onPageChange: setUncappedPage,
+        onPageSizeChange: setUncappedPageSize,
         fetchPage: async ({ limit, offset }) => {
             const rows = await fetchUncappedMaps(accessToken!, userId, {
                 limit, offset,
@@ -81,7 +88,7 @@ export function UncappedMapsCard({ accessToken, userId, onMapSelect, tabsSlot }:
 
     const handleSort = (field: SortField) => {
         if (sortField === field) {
-            setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+            setSortDir(sortDir === 'asc' ? 'desc' : 'asc')
         } else {
             setSortField(field)
             setSortDir(field === 'name' ? 'asc' : 'desc')

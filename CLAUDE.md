@@ -36,8 +36,12 @@ content here.
    renders dark form chrome on Windows.
 5. **Modals use `app/components/ui/modal.tsx`** with `offsetSidebar` when the
    modal should respect the navigation rail.
-6. **Persist UI state via the hoisted-state-in-`Main.tsx` pattern** with a
-   versioned `utbt:<thing>:v<n>` key and merge-over-defaults loader. See
+6. **Persist UI state in the right tier.** Primary-page state → hoisted-state-in-
+   `Main.tsx` with a versioned `utbt:<thing>:v<n>` key and merge-over-defaults
+   loader. Detail-page transient UI state (tab/search/sort/pagination/scroll/
+   expansion) → `useNavState` (per navigation-history entry, NOT localStorage).
+   **All navigation goes through `navigate()` in `Main.tsx`** — never a raw
+   `setCurrentView`, never a second back/forward mechanism. See
    `agents/state-patterns.md`.
 7. **Don't `text-gray-*` / `bg-gray-*` / `border-gray-*`.** Use the
    `muted-foreground` / `white/<n>` / `card/<n>` tokens. See

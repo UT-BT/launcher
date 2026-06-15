@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { Play, Download, MessageSquareOff } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useNavState } from '@/app/components/navigation/useNavState'
 import { formatAddedDate } from '@/app/utils/format'
 import { getMedalIcon } from '@/app/utils/medals'
 import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
@@ -50,11 +51,11 @@ const SKELETON_COL_COUNT = 7
 export function LeaderboardCard({
     leaderboard, map, loading, currentUserId, wrCapId, onShowWrHistory,
 }: LeaderboardCardProps) {
-    const [tab, setTab] = useState<Tab>('verified')
-    const [sortBy, setSortBy] = useState<SortField>('rank')
-    const [sortDir, setSortDir] = useState<SortDir>('asc')
-    const [page, setPage] = useState(1)
-    const [pageSize, setPageSize] = useState(10)
+    const [tab, setTab] = useNavState<Tab>('leaderboard.tab', 'verified')
+    const [sortBy, setSortBy] = useNavState<SortField>('leaderboard.sortBy', 'rank')
+    const [sortDir, setSortDir] = useNavState<SortDir>('leaderboard.sortDir', 'asc')
+    const [page, setPage] = useNavState('leaderboard.page', 1)
+    const [pageSize, setPageSize] = useNavState('leaderboard.pageSize', 10)
 
     const replay = useReplayWatch()
     const demoDownload = useDemoDownload()
@@ -99,7 +100,7 @@ export function LeaderboardCard({
 
     const handleSort = (field: SortField) => {
         if (sortBy === field) {
-            setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+            setSortDir(sortDir === 'asc' ? 'desc' : 'asc')
         } else {
             setSortBy(field)
             setSortDir(field === 'player' ? 'asc' : (field === 'time' || field === 'rank') ? 'asc' : 'desc')

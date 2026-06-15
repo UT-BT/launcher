@@ -3,6 +3,7 @@ import { Play, Download, MessageSquareOff, ShieldCheck, Search, Trophy, Star } f
 import { cn } from '@/lib/utils'
 import { fetchPersonalBestsForUser, type UserPersonalBestRow, type CapFilter } from '@/app/utils/api'
 import { usePaginatedQuery } from '@/app/hooks/useAsync'
+import { useNavState } from '@/app/components/navigation/useNavState'
 import { formatAddedDate, displayMapName } from '@/app/utils/format'
 import { getMedalIcon } from '@/app/utils/medals'
 import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
@@ -68,12 +69,14 @@ function renderPbStatus(pb: UserPersonalBestRow) {
 export function PersonalBestsCard({
     accessToken, userId, favoriteMapNames, onToggleFavorite, onMapSelect, canEditFavorites, tabsSlot,
 }: PersonalBestsCardProps) {
-    const [queryRaw, setQueryRaw] = useState('')
-    const [query, setQuery] = useState('')
-    const [capFilter, setCapFilter] = useState<CapFilter>('all')
-    const [favoritesOnly, setFavoritesOnly] = useState(false)
-    const [sortField, setSortField] = useState<SortField>('time')
-    const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
+    const [query, setQuery] = useNavState('pbs.query', '')
+    const [queryRaw, setQueryRaw] = useState(query)
+    const [capFilter, setCapFilter] = useNavState<CapFilter>('pbs.capFilter', 'all')
+    const [favoritesOnly, setFavoritesOnly] = useNavState('pbs.favoritesOnly', false)
+    const [sortField, setSortField] = useNavState<SortField>('pbs.sortField', 'time')
+    const [sortDir, setSortDir] = useNavState<'asc' | 'desc'>('pbs.sortDir', 'asc')
+    const [pbsPage, setPbsPage] = useNavState('pbs.page', 1)
+    const [pbsPageSize, setPbsPageSize] = useNavState('pbs.pageSize', 10)
 
     const replay = useReplayWatch()
     const demoDownload = useDemoDownload()
@@ -81,7 +84,7 @@ export function PersonalBestsCard({
     useEffect(() => {
         const t = setTimeout(() => setQuery(queryRaw), DEBOUNCE_MS)
         return () => clearTimeout(t)
-    }, [queryRaw])
+    }, [queryRaw, setQuery])
 
     const {
         page, pageSize, items, total, totalPages, loading, error, setPage, setPageSize,
@@ -89,6 +92,10 @@ export function PersonalBestsCard({
         enabled: !!accessToken,
         errorMessage: 'Failed to load personal bests.',
         deps: [accessToken, userId, query, capFilter, favoritesOnly, sortField, sortDir],
+        page: pbsPage,
+        pageSize: pbsPageSize,
+        onPageChange: setPbsPage,
+        onPageSizeChange: setPbsPageSize,
         fetchPage: ({ limit, offset }) =>
             fetchPersonalBestsForUser(accessToken!, userId, {
                 limit, offset,
@@ -102,7 +109,7 @@ export function PersonalBestsCard({
 
     const handleSort = (field: SortField) => {
         if (sortField === field) {
-            setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+            setSortDir(sortDir === 'asc' ? 'desc' : 'asc')
         } else {
             setSortField(field)
             setSortDir(field === 'map' || field === 'time' ? 'asc' : 'desc')
@@ -141,7 +148,7 @@ export function PersonalBestsCard({
                     <Tooltip content={favoritesOnly ? 'Showing favorites only' : 'Show favorites only'} side="top">
                         <button
                             type="button"
-                            onClick={() => setFavoritesOnly(v => !v)}
+                            onClick={() => setFavoritesOnly(!favoritesOnly)}
                             aria-pressed={favoritesOnly}
                             className={cn(
                                 'inline-flex items-center justify-center size-7 rounded-md border transition-colors cursor-pointer',

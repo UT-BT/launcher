@@ -70,10 +70,20 @@ export function usePaginatedQuery<T>(opts: {
     initialPageSize?: number
     enabled?: boolean
     errorMessage?: string
+    // Optional controlled mode: pass these (e.g. from useNavState) so page/pageSize
+    // survive Back/Forward. Omit for the default uncontrolled (internal state) behavior.
+    page?: number
+    pageSize?: number
+    onPageChange?: (p: number) => void
+    onPageSizeChange?: (n: number) => void
 }): UsePaginatedQueryResult<T> {
     const { fetchPage, deps, initialPageSize = 10, enabled = true, errorMessage = 'Failed to load data.' } = opts
-    const [page, setPage] = useState(1)
-    const [pageSize, setPageSize] = useState(initialPageSize)
+    const [pageInternal, setPageInternal] = useState(1)
+    const [pageSizeInternal, setPageSizeInternal] = useState(initialPageSize)
+    const page = opts.page ?? pageInternal
+    const pageSize = opts.pageSize ?? pageSizeInternal
+    const setPage = opts.onPageChange ?? setPageInternal
+    const setPageSize = opts.onPageSizeChange ?? setPageSizeInternal
     const [items, setItems] = useState<T[]>([])
     const [total, setTotal] = useState(0)
     const [loading, setLoading] = useState(true)
@@ -82,8 +92,14 @@ export function usePaginatedQuery<T>(opts: {
     const fetchPageRef = useRef(fetchPage)
     fetchPageRef.current = fetchPage
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    useEffect(() => { setPage(1) }, deps)
+    // Reset to page 1 when the query deps change — but NOT on the first run, or a
+    // restored (controlled) page would be clobbered to 1 on every remount.
+    const firstResetRef = useRef(true)
+    useEffect(() => {
+        if (firstResetRef.current) { firstResetRef.current = false; return }
+        setPage(1)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, deps)
 
     useEffect(() => {
         if (!enabled) return

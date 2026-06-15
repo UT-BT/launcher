@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { Pencil, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useNavState } from '@/app/components/navigation/useNavState'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import { scoreTextColor, scoreBgColor } from '@/app/utils/scoreColors'
@@ -30,7 +31,7 @@ interface ReviewsCardProps {
 export function ReviewsCard({
     reviews, currentUserId, loading, canSubmit, onOpenReviewModal,
 }: ReviewsCardProps) {
-    const [showAll, setShowAll] = useState(false)
+    const [showAll, setShowAll] = useNavState('reviews.showAll', false)
 
     const myReview = useMemo(() => {
         if (!currentUserId) return undefined

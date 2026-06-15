@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { History, Search } from 'lucide-react'
 import { fetchUserWorldRecords, fetchWorldRecordProgression, type Record, type WorldRecordProgressionEntry } from '@/app/utils/api'
 import { usePaginatedQuery } from '@/app/hooks/useAsync'
+import { useNavState } from '@/app/components/navigation/useNavState'
 import { formatAddedDate, displayMapName } from '@/app/utils/format'
 import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
@@ -28,10 +29,12 @@ const DEBOUNCE_MS = 250
 type SortField = 'added' | 'time' | 'map'
 
 export function WorldRecordsCard({ accessToken, userId, totalCount, onMapSelect, tabsSlot }: WorldRecordsCardProps) {
-    const [queryRaw, setQueryRaw] = useState('')
-    const [query, setQuery] = useState('')
-    const [sortField, setSortField] = useState<SortField>('added')
-    const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+    const [query, setQuery] = useNavState('wrs.query', '')
+    const [queryRaw, setQueryRaw] = useState(query)
+    const [sortField, setSortField] = useNavState<SortField>('wrs.sortField', 'added')
+    const [sortDir, setSortDir] = useNavState<'asc' | 'desc'>('wrs.sortDir', 'desc')
+    const [wrsPage, setWrsPage] = useNavState('wrs.page', 1)
+    const [wrsPageSize, setWrsPageSize] = useNavState('wrs.pageSize', 10)
 
     const [progressionMap, setProgressionMap] = useState<string | null>(null)
     const [progressionEntries, setProgressionEntries] = useState<WorldRecordProgressionEntry[]>([])
@@ -40,7 +43,7 @@ export function WorldRecordsCard({ accessToken, userId, totalCount, onMapSelect,
     useEffect(() => {
         const t = setTimeout(() => setQuery(queryRaw), DEBOUNCE_MS)
         return () => clearTimeout(t)
-    }, [queryRaw])
+    }, [queryRaw, setQuery])
 
     const {
         page, pageSize, items, loading, error, setPage, setPageSize,
@@ -48,6 +51,10 @@ export function WorldRecordsCard({ accessToken, userId, totalCount, onMapSelect,
         enabled: !!accessToken,
         errorMessage: 'Failed to load world records.',
         deps: [accessToken, userId, query, sortField, sortDir],
+        page: wrsPage,
+        pageSize: wrsPageSize,
+        onPageChange: setWrsPage,
+        onPageSizeChange: setWrsPageSize,
         fetchPage: async ({ limit, offset }) => {
             const rows = await fetchUserWorldRecords(accessToken!, userId, {
                 limit, offset,
@@ -65,7 +72,7 @@ export function WorldRecordsCard({ accessToken, userId, totalCount, onMapSelect,
 
     const handleSort = (field: SortField) => {
         if (sortField === field) {
-            setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+            setSortDir(sortDir === 'asc' ? 'desc' : 'asc')
         } else {
             setSortField(field)
             setSortDir(field === 'map' ? 'asc' : 'desc')
