@@ -1,7 +1,7 @@
 # UTBT Launcher
 ## Prerequisites
 - Node.js (v20 or higher)
-- npm, yarn, pnpm, or bun
+- npm
 
 ## Installation
 Clone the repository and install dependencies:
@@ -17,7 +17,6 @@ npm install
 Starting the dev server:
 
 ```bash
-# Can use any package manager (npm, yarn, pnpm, bun)
 npm run dev
 ```
 
