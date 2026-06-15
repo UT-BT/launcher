@@ -1,3 +1,19 @@
+---
+doc: styling
+read_when:
+  - "styling a new page, button, table, form, chip, card, or modal"
+  - "choosing a color, radius, spacing, or animation"
+  - "you see drift from a token and are tempted to add a variant"
+keywords: [tailwind, cn, DataTable, tokens, colors, button, card, white/5, bg-card, animation, table-fixed, align]
+provides: "the locked design tokens + the canonical class strings"
+not_here:
+  - "which component to use → shared-components.md"
+  - "state / persistence → state-patterns.md"
+sections: [class-merging, tables-locked, page-layout, filter-panel, buttons-toggle-states, form-inputs, card-backgrounds-borders, text, color-palette, animation, donts]
+last_verified: 2026-06-16
+verify_against: [app/components/shared/DataTable.tsx, app/styles/globals.css, lib/utils.ts]
+---
+
 # Styling reference
 
 Design tokens + locked styling decisions. Future pages must use these patterns

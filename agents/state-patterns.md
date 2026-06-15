@@ -1,3 +1,20 @@
+---
+doc: state-patterns
+read_when:
+  - "adding or changing a primary page's state, filters, sort, columns, or pagination"
+  - "deciding where a piece of UI state lives (per-visit vs persisted vs cache)"
+  - "adding a localStorage key, a filter preset, or tutorial state"
+  - "wiring detail-page transient UI (tabs/search/scroll) that must survive Back/Forward"
+keywords: [usePageState, useNavState, localStorage, PREF_KEYS, caches, querySig, presets, tutorial, persistence, controlled-page]
+provides: "the three state tiers, the localStorage key convention, and how pages are controlled + hoisted"
+not_here:
+  - "the navigation stack / navigate() / renderView wiring → navigation.md"
+  - "the shared components used (FilterPresetsMenu, ColumnsMenu, Tutorial) → shared-components.md"
+sections: [controlled-pages-with-hoisted-state, navigation-history-per-entry-ui-state, localstorage-persistence, filter-presets, tutorial-state, favorites, naming-conventions]
+last_verified: 2026-06-16
+verify_against: [app/components/main/Main.tsx, app/components/navigation/useNavState.ts, app/hooks/useAsync.ts]
+---
+
 # State patterns
 
 How user-facing UI state is structured, hoisted, and persisted across the app.
@@ -87,12 +104,12 @@ There are **three** state tiers. Know which one a given piece of state belongs i
    (search/filters/sort/page/scroll) lives in the active history entry — fresh open
    resets, Back/Forward restores. Only pref fields (columns/page-size/panel) persist
    to `utbt:*:v1`. Caches are shared singletons in `Main.tsx`.
-2. **Navigation history stack** — `entries: NavEntry[]` + `cursor` in `Main.tsx`.
-   In-memory only (NOT persisted across app restart; boots to a single `home`
-   entry). **All** navigation funnels through one `navigate(view, params?)`:
-   sidebar clicks, `openMap`, the `open-player` / `open-cap` events. `back()` /
-   `forward()` move the cursor. Capped at `HISTORY_CAP` (drops from the front).
-   Never call a raw `setCurrentView` or add a second back mechanism.
+2. **Navigation history stack** — `entries: NavEntry[]` + `cursor` in `Main.tsx`,
+   in-memory only. This is the *navigation* tier; its mechanics (the single
+   `navigate()` funnel, `back()`/`forward()`, `HISTORY_CAP`, detail keying) live in
+   `agents/navigation.md`. What matters for state: tier 1 (per-entry page state)
+   and tier 3 (per-entry UI bag) are both keyed to the active entry, so
+   Back/Forward restore them; a fresh `navigate()` starts from defaults.
 3. **Per-entry UI-state bag** — `useNavState(key, default)` from
    `app/components/navigation/useNavState.ts`. Reads/writes a key on the **active
    history entry's** `state` bag, so the value survives Back/Forward to that entry
@@ -217,7 +234,7 @@ Tutorial steps live in a per-page file:
 ### Map favorites — dual sync (DB + ini)
 
 Driven by `Main.tsx`:
-- Source of truth: DataService DB.
+- Source of truth: the backend (via the API).
 - Mirror: `UTBT.ini` (so the game itself sees them).
 - On login: diff DB vs ini, prompt user via `FavoritesSyncModal` on mismatch.
 - On toggle: optimistic DB write + mirror to ini, rollback on failure.
