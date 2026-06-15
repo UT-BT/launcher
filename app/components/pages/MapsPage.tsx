@@ -25,6 +25,8 @@ import { PaginationBar } from '@/app/components/ui/pagination'
 import { MultiFilterDropdown } from '@/app/components/ui/multi-filter-dropdown'
 import { FilterPanelRow } from '@/app/components/ui/filter-panel-row'
 import { FilterPresetsMenu } from '@/app/components/shared/FilterPresetsMenu'
+import { loadPresets, persistPresets, newPresetId, presetFiltersMatch } from '@/app/utils/filterPresets'
+import { DIFFICULTY_TIER_RANGES as DIFFICULTY_RANGES } from '@/app/utils/difficulty'
 import { ColumnsMenu } from '@/app/components/shared/ColumnsMenu'
 import { ActiveFilterChip } from '@/app/components/shared/ActiveFilterChip'
 import {
@@ -293,50 +295,15 @@ const SINGLE_TO_MULTI_PRESET_KEYS: Array<[string, string]> = [
     ['cappedFilter', 'cappedFilters'],
 ]
 
-const loadPresets = (): MapsPreset[] => {
-    try {
-        const raw = localStorage.getItem(PRESETS_KEY)
-        if (!raw) return []
-        const parsed = JSON.parse(raw)
-        if (!Array.isArray(parsed)) return []
-        return parsed.map((p: any) => {
-            if (p?.filters) {
-                for (const [oldKey, newKey] of SINGLE_TO_MULTI_PRESET_KEYS) {
-                    if (oldKey in p.filters && !(newKey in p.filters)) {
-                        const v = p.filters[oldKey]
-                        p.filters[newKey] = v && v !== 'all' ? [v] : []
-                        delete p.filters[oldKey]
-                    }
-                }
-            }
-            return p as MapsPreset
-        })
-    } catch {
-        return []
+const migratePresetFilters = (filters: Record<string, unknown>): Record<string, unknown> => {
+    for (const [oldKey, newKey] of SINGLE_TO_MULTI_PRESET_KEYS) {
+        if (oldKey in filters && !(newKey in filters)) {
+            const v = filters[oldKey]
+            filters[newKey] = v && v !== 'all' ? [v] : []
+            delete filters[oldKey]
+        }
     }
-}
-
-const persistPresets = (presets: MapsPreset[]): void => {
-    try {
-        localStorage.setItem(PRESETS_KEY, JSON.stringify(presets))
-    } catch {
-        // ignore quota / serialization errors
-    }
-}
-
-const newPresetId = (): string => {
-    try {
-        return crypto.randomUUID()
-    } catch {
-        return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
-    }
-}
-
-const DIFFICULTY_RANGES: Record<Exclude<DifficultyTier, 'all'>, [number, number]> = {
-    beginner: [1, 3],
-    intermediate: [4, 6],
-    advanced: [7, 8],
-    expert: [9, 10],
+    return filters
 }
 
 const RATING_RANGES: Record<Exclude<RatingTier, 'all'>, [number, number]> = {
@@ -654,7 +621,7 @@ export function MapsPage({
     const [error, setError] = useState<string | null>(null)
     const [searchResults, setSearchResults] = useState<Map[]>([])
     const [reviewsModalMap, setReviewsModalMap] = useState<string | null>(null)
-    const [presets, setPresets] = useState<MapsPreset[]>(() => loadPresets())
+    const [presets, setPresets] = useState<MapsPreset[]>(() => loadPresets<PresetFilters>(PRESETS_KEY, migratePresetFilters))
     const [presetsMenuOpen, setPresetsMenuOpen] = useState(false)
     const [columnVisibility, setColumnVisibility] = useState<Record<ColumnId, boolean>>(() => loadColumnVisibility())
     const [expandedTagMaps, setExpandedTagMaps] = useState<Set<string>>(() => new Set())
@@ -1359,7 +1326,7 @@ export function MapsPage({
         const id = newPresetId()
         const next = [...presets, { id, name, filters }]
         setPresets(next)
-        persistPresets(next)
+        persistPresets(PRESETS_KEY, next)
         setActivePresetId(id)
     }
 
@@ -1376,7 +1343,7 @@ export function MapsPage({
     const handleDeletePreset = (id: string) => {
         const next = presets.filter(p => p.id !== id)
         setPresets(next)
-        persistPresets(next)
+        persistPresets(PRESETS_KEY, next)
         if (activePresetId === id) setActivePresetId(null)
     }
 
@@ -1413,20 +1380,7 @@ export function MapsPage({
     const activePreset = activePresetId ? presets.find(p => p.id === activePresetId) ?? null : null
     useEffect(() => {
         if (!activePreset) return
-        const current = captureFilters()
-        const target = activePreset.filters
-        const matches = (Object.keys(target) as (keyof PresetFilters)[]).every(k => {
-            const a = current[k]
-            const b = target[k]
-            if (Array.isArray(a) && Array.isArray(b)) {
-                if (a.length !== b.length) return false
-                const sa = [...a].sort()
-                const sb = [...b].sort()
-                return sa.every((v, i) => v === sb[i])
-            }
-            return a === b
-        })
-        if (!matches) setActivePresetId(null)
+        if (!presetFiltersMatch(captureFilters(), activePreset.filters)) setActivePresetId(null)
         // captureFilters is intentionally omitted: it closes over every filter
         // state field we already list, and including it would re-run on each
         // render. The effect only needs to re-evaluate when a filter changes.

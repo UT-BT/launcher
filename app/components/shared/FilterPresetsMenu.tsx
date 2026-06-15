@@ -7,12 +7,9 @@ import {
     DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
     DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator,
 } from '@/app/components/ui/dropdown-menu'
+import type { FilterPreset } from '@/app/utils/filterPresets'
 
-export interface FilterPreset<TFilters> {
-    id: string
-    name: string
-    filters: TFilters
-}
+export type { FilterPreset }
 
 interface FilterPresetsMenuProps<TFilters> {
     presets: FilterPreset<TFilters>[]
