@@ -103,11 +103,6 @@ function loadPrefs<T extends object>(storageKey: string, def: T, prefKeys: reado
   }
 }
 
-// Binds a controlled page's state to the active navigation-history entry (transient
-// query fields) while mirroring its preference fields to localStorage. A fresh entry
-// initializes from defaults + persisted prefs; Back/Forward restores the entry's
-// snapshot. Drop-in replacement for the old `useState` wiring (same [state, setState]
-// shape), so renderView wiring is unchanged.
 function usePageState<T extends object>(
   storageKey: string,
   def: T,
@@ -175,8 +170,6 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
   const stackRef = useRef({ entries, cursor })
   stackRef.current = { entries, cursor }
   const [installationStatus, setInstallationStatus] = useState<'valid' | 'no-install' | 'unsupported' | null>(null)
-  // Page query state is per-history-entry (see usePageState calls after the nav
-  // core below). Caches stay shared singletons so revisiting a page doesn't refetch.
   const [mapsCaches, setMapsCaches] = useState<MapsPageCaches>(DEFAULT_MAPS_CACHES)
   const [serversCaches, setServersCaches] = useState<ServerBrowserCaches>(DEFAULT_SERVERS_CACHES)
   const [playersCaches, setPlayersCaches] = useState<PlayersPageCaches>(DEFAULT_PLAYERS_CACHES)
@@ -221,9 +214,6 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
     dismissSync,
   } = useFavorites(accessToken, userId)
 
-  // --- Navigation history ---------------------------------------------------
-  // All navigation funnels through navigate(). Listeners read the live stack via
-  // stackRef so the callbacks stay reference-stable (no re-subscribe churn).
   const navigate = useCallback((view: string, params: NavParams = {}) => {
     const { entries: cur, cursor: curIdx } = stackRef.current
     const active = cur[curIdx]
@@ -254,8 +244,6 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
     setEntries(prev => prev.map(e => e.id === targetId ? { ...e, state: { ...e.state, [key]: value } } : e))
   }, [])
 
-  // Like setEntryState but composes via a functional updater, so rapid successive
-  // writes in one tick (e.g. a fast-typed search) don't clobber each other.
   const updateEntryState = useCallback(<V,>(key: string, updater: (prev: V | undefined) => V) => {
     const { entries: cur, cursor: curIdx } = stackRef.current
     const targetId = cur[curIdx]?.id
@@ -273,8 +261,6 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
     entry, currentView, navigate, back, forward, canBack, canForward, getEntryState, setEntryState,
   }), [entry, currentView, navigate, back, forward, canBack, canForward, getEntryState, setEntryState])
 
-  // Per-entry page query state (resets on a fresh open, restores on Back/Forward);
-  // prefs (columns/page-size/panel) mirror to localStorage. See usePageState.
   const [mapsState, setMapsState] = usePageState(MAPS_STATE_STORAGE_KEY, DEFAULT_MAPS_STATE, MAPS_PREF_KEYS, getEntryState, updateEntryState)
   const [serversState, setServersState] = usePageState(SERVERS_STATE_STORAGE_KEY, DEFAULT_SERVERS_STATE, SERVERS_PREF_KEYS, getEntryState, updateEntryState)
   const [playersState, setPlayersState] = usePageState(PLAYERS_STATE_STORAGE_KEY, DEFAULT_PLAYERS_STATE, PLAYERS_PREF_KEYS, getEntryState, updateEntryState)
@@ -338,6 +324,8 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
     }
     const onKeyDown = (e: KeyboardEvent) => {
       if (!e.altKey) return
+      const t = e.target as HTMLElement | null
+      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return
       if (e.key === 'ArrowLeft') { e.preventDefault(); back() }
       else if (e.key === 'ArrowRight') { e.preventDefault(); forward() }
     }

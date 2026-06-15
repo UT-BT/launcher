@@ -70,8 +70,6 @@ export function usePaginatedQuery<T>(opts: {
     initialPageSize?: number
     enabled?: boolean
     errorMessage?: string
-    // Optional controlled mode: pass these (e.g. from useNavState) so page/pageSize
-    // survive Back/Forward. Omit for the default uncontrolled (internal state) behavior.
     page?: number
     pageSize?: number
     onPageChange?: (p: number) => void
@@ -92,12 +90,13 @@ export function usePaginatedQuery<T>(opts: {
     const fetchPageRef = useRef(fetchPage)
     fetchPageRef.current = fetchPage
 
-    // Reset to page 1 when the query deps change — but NOT on the first run, or a
-    // restored (controlled) page would be clobbered to 1 on every remount.
-    const firstResetRef = useRef(true)
+    const prevDepsRef = useRef<unknown[] | null>(null)
     useEffect(() => {
-        if (firstResetRef.current) { firstResetRef.current = false; return }
-        setPage(1)
+        const prev = prevDepsRef.current
+        prevDepsRef.current = deps
+        if (prev && (prev.length !== deps.length || prev.some((d, i) => !Object.is(d, deps[i])))) {
+            setPage(1)
+        }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, deps)
 

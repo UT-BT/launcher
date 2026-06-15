@@ -27,8 +27,6 @@ export interface CapItAllPageCaches {
     total: number
     mapCount: number
     lastRefreshIso: string | null
-    // Signature of the query the cached `items` were fetched for; when it != the
-    // current query the rows are stale, so we show a skeleton instead of stale rows.
     querySig: string | null
 }
 
@@ -99,8 +97,8 @@ export function CapItAllPage({ userProfile, state, onStateChange, caches, onCach
     const keyFor = useCallback((p: number) =>
         JSON.stringify({ f: serverParams, s: pageSize, p }),
         [serverParams, pageSize])
-    // Query-level signature (excludes page — paginating keeps rows, doesn't skeleton).
     const querySig = useMemo(() => JSON.stringify({ f: serverParams, s: pageSize }), [serverParams, pageSize])
+    const cacheFresh = caches.querySig === querySig
 
     useEffect(() => {
         pageCacheRef.current = {}
@@ -195,16 +193,13 @@ export function CapItAllPage({ userProfile, state, onStateChange, caches, onCach
     const page = Math.min(state.currentPage, totalPages)
 
     useEffect(() => {
-        if (totalCount > 0 && state.currentPage > totalPages) {
+        if (cacheFresh && totalCount > 0 && state.currentPage > totalPages) {
             onStateChange(prev => ({ ...prev, currentPage: totalPages }))
         }
-    }, [totalCount, totalPages, state.currentPage, onStateChange])
+    }, [cacheFresh, totalCount, totalPages, state.currentPage, onStateChange])
 
     const items = caches.items
-    // Show skeleton while the shared cache holds another query's rows (stale), or on
-    // a genuine empty load — never flash stale rows after a fresh navigation.
-    const cacheFresh = caches.querySig === querySig
-    const showSkeleton = !cacheFresh || (pageLoading && items.length === 0)
+    const showSkeleton = !error && (!cacheFresh || (pageLoading && items.length === 0))
 
     return (
         <div className="space-y-4 h-full flex flex-col overflow-hidden">

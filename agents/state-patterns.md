@@ -69,8 +69,9 @@ interface FooPageProps {
 ### Main.tsx wiring
 
 ```tsx
+const FOO_STATE_STORAGE_KEY = 'utbt:fooState:v1'
 const FOO_PREF_KEYS: readonly (keyof FooPageState)[] = ['columnVisibility', 'columnOrder']
-const [fooState, setFooState] = usePageState('utbt:fooState:v1', DEFAULT_FOO_STATE, FOO_PREF_KEYS, getEntryState, updateEntryState)
+const [fooState, setFooState] = usePageState(FOO_STATE_STORAGE_KEY, DEFAULT_FOO_STATE, FOO_PREF_KEYS, getEntryState, updateEntryState)
 const [fooCaches, setFooCaches] = useState<FooPageCaches>(DEFAULT_FOO_CACHES)
 
 // in renderView (unchanged — usePageState returns a useState-shaped tuple):
