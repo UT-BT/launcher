@@ -114,6 +114,7 @@ function loadPersistedFooState(): FooPageState {
 | `utbt:serversPageTutorial:v1` | `ServerBrowserPage` (via hook) | `{ seen, version }` |
 | `utbt:playersState:v1` | `Main.tsx` | `PlayersPageState` |
 | `utbt:playersPageTutorial:v1` | `PlayersPage` (via hook) | `{ seen, version }` |
+| `utbt:worldRecordsState:v1` | `Main.tsx` | `WorldRecordsPageState` (incl. column visibility/order) |
 | `utbt:dismissedPatch:v1` | `Home` | `string` (patch tag the user dismissed) |
 | `utbt-server-browser-settings` | DEPRECATED | (old shape — can ignore) |
 

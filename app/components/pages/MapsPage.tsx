@@ -1592,8 +1592,6 @@ export function MapsPage({
                     </DataTableCell>
                 )
             case 'name': {
-                const expanded = expandedTagMaps.has(map.name)
-                const shown = expanded ? tags : tags.slice(0, 3)
                 return (
                     <DataTableCell key={id}>
                         <div className="flex items-center gap-3 min-w-0">

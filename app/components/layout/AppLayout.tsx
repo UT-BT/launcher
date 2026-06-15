@@ -45,6 +45,7 @@ const navSections: NavSection[] = [
         title: 'Leaderboards',
         items: [
             { id: 'cap-it-all', label: 'Cap It All', icon: Flag },
+            { id: 'world-records', label: 'World Records', icon: Trophy },
         ],
     },
 ]

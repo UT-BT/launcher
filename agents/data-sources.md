@@ -42,6 +42,25 @@ any cap time — see `CapTimeLink` / the `open-cap` event in
 
 Compare-run picker reuses `fetchMapLeaderboard` (`/caps/leaderboard/map/<name>`).
 
+### World Records page endpoints
+
+The World Records page (`app/components/pages/WorldRecordsPage.tsx`) shows the
+fastest cap on every map.
+
+- **`GET /v2/world_records/`** → `Record[]`. One row per map (the WR). Supports
+  `limit`/`offset`, `sort` (`asc`/`desc`), `sort_by` (`added`/`time`/`map`),
+  `user`, `map` (fuzzy), `maps` (CSV exact), `added_since`, and `count=true`.
+  The list endpoint joins **`active_title`** (selected title, same shape as the
+  progression endpoint) and map **`difficulty`** onto each row — so `PlayerInfo`
+  gets full title styling and the page can filter by difficulty without a second
+  fetch. The page loads everything once via `fetchAllWorldRecords` then does
+  search / difficulty / timeframe / favorites filtering, sort, and pagination
+  client-side (the dataset is bounded — one WR per map).
+- **`GET /v2/world_records/progression/<map>`** → `WorldRecordProgressionEntry[]`
+  (`fetchWorldRecordProgression`). Chronological history of every cap that set a
+  new WR on that map. Powers the `WorldRecordProgressionModal` drill-down (the
+  `WorldRecordHistoryTrigger` "History" button on each row).
+
 ## Avatar URLs
 
 Discord avatars proxied at:

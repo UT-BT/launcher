@@ -30,6 +30,13 @@ import {
   type CapItAllPageCaches,
 } from '@/app/components/pages/CapItAllPage'
 import {
+  WorldRecordsPage,
+  DEFAULT_WORLD_RECORDS_STATE,
+  DEFAULT_WORLD_RECORDS_CACHES,
+  type WorldRecordsPageState,
+  type WorldRecordsPageCaches,
+} from '@/app/components/pages/WorldRecordsPage'
+import {
   AchievementsPage,
   DEFAULT_ACHIEVEMENTS_STATE,
   DEFAULT_ACHIEVEMENTS_CACHES,
@@ -53,6 +60,7 @@ const MAPS_STATE_STORAGE_KEY = 'utbt:mapsPageState:v1'
 const SERVERS_STATE_STORAGE_KEY = 'utbt:serversState:v1'
 const PLAYERS_STATE_STORAGE_KEY = 'utbt:playersState:v1'
 const CAP_IT_ALL_STATE_STORAGE_KEY = 'utbt:capItAllState:v1'
+const WORLD_RECORDS_STATE_STORAGE_KEY = 'utbt:worldRecordsState:v1'
 const ACHIEVEMENTS_STATE_STORAGE_KEY = 'utbt:achievementsState:v1'
 const SERVER_PRESETS_STORAGE_KEY = 'utbt:serverPresets:v1'
 const SERVER_FAVORITES_STORAGE_KEY = 'utbt:serverFavorites:v2'
@@ -158,6 +166,29 @@ function loadPersistedCapItAllState(): CapItAllPageState {
   }
 }
 
+function loadPersistedWorldRecordsState(): WorldRecordsPageState {
+  if (typeof window === 'undefined') return DEFAULT_WORLD_RECORDS_STATE
+  try {
+    const raw = window.localStorage.getItem(WORLD_RECORDS_STATE_STORAGE_KEY)
+    if (!raw) return DEFAULT_WORLD_RECORDS_STATE
+    const parsed = JSON.parse(raw)
+    return {
+      ...DEFAULT_WORLD_RECORDS_STATE,
+      ...parsed,
+      columnVisibility: {
+        ...DEFAULT_WORLD_RECORDS_STATE.columnVisibility,
+        ...(parsed?.columnVisibility ?? {}),
+      },
+      columnOrder: Array.isArray(parsed?.columnOrder) && parsed.columnOrder.length > 0
+        ? parsed.columnOrder
+        : DEFAULT_WORLD_RECORDS_STATE.columnOrder,
+      scrollTop: 0,
+    }
+  } catch {
+    return DEFAULT_WORLD_RECORDS_STATE
+  }
+}
+
 function loadPersistedAchievementsState(): AchievementsPageState {
   if (typeof window === 'undefined') return DEFAULT_ACHIEVEMENTS_STATE
   try {
@@ -209,6 +240,8 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
   const [playersCaches, setPlayersCaches] = useState<PlayersPageCaches>(DEFAULT_PLAYERS_CACHES)
   const [capItAllState, setCapItAllState] = useState<CapItAllPageState>(loadPersistedCapItAllState)
   const [capItAllCaches, setCapItAllCaches] = useState<CapItAllPageCaches>(DEFAULT_CAP_IT_ALL_CACHES)
+  const [worldRecordsState, setWorldRecordsState] = useState<WorldRecordsPageState>(loadPersistedWorldRecordsState)
+  const [worldRecordsCaches, setWorldRecordsCaches] = useState<WorldRecordsPageCaches>(DEFAULT_WORLD_RECORDS_CACHES)
   const [achievementsState, setAchievementsState] = useState<AchievementsPageState>(loadPersistedAchievementsState)
   const [achievementsCaches, setAchievementsCaches] = useState<AchievementsPageCaches>(DEFAULT_ACHIEVEMENTS_CACHES)
   const [serverPresets, setServerPresets] = useState<ServerPreset[]>(loadPersistedServerPresets)
@@ -243,6 +276,12 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
       window.localStorage.setItem(CAP_IT_ALL_STATE_STORAGE_KEY, JSON.stringify(capItAllState))
     } catch { /* ignore */ }
   }, [capItAllState])
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(WORLD_RECORDS_STATE_STORAGE_KEY, JSON.stringify(worldRecordsState))
+    } catch { /* ignore */ }
+  }, [worldRecordsState])
 
   useEffect(() => {
     try {
@@ -452,6 +491,17 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
           onStateChange={setCapItAllState}
           caches={capItAllCaches}
           onCachesChange={setCapItAllCaches}
+        />
+      case 'world-records':
+        return <WorldRecordsPage
+          userProfile={userProfile as any}
+          state={worldRecordsState}
+          onStateChange={setWorldRecordsState}
+          caches={worldRecordsCaches}
+          onCachesChange={setWorldRecordsCaches}
+          favoriteMapNames={favoriteMapNames}
+          onToggleFavorite={toggleFavorite}
+          onMapSelect={openMap}
         />
       case 'achievements':
         return <AchievementsPage

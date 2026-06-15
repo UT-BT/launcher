@@ -144,6 +144,8 @@ export interface Record {
     color_r?: number
     color_g?: number
     color_b?: number
+    active_title?: ActiveTitle | null
+    difficulty?: number
 }
 
 export interface Playtime {
