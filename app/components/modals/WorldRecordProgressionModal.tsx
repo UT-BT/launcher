@@ -11,7 +11,7 @@ import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
 import { cn } from '@/lib/utils'
 import { formatCapTime, formatAddedDate, formatDelta, displayMapName } from '@/app/utils/format'
-import type { WorldRecordProgressionEntry } from '@/app/utils/api'
+import type { ActiveTitle, WorldRecordProgressionEntry } from '@/app/utils/api'
 
 interface WorldRecordProgressionModalProps {
     isOpen: boolean
@@ -48,6 +48,38 @@ interface ChartPoint {
     seconds: number
     alias: string
     delta: number | null
+    userId: string | null
+    title: ActiveTitle | null
+}
+
+function ProgressionTooltip({ active, payload }: {
+    active?: boolean
+    payload?: Array<{ payload: ChartPoint }>
+}) {
+    if (!active || !payload || payload.length === 0) return null
+    const p = payload[0].payload
+    return (
+        <div className="rounded-lg border border-white/10 bg-[rgba(10,10,11,0.97)] px-3 py-2.5 shadow-xl space-y-2 min-w-44">
+            <PlayerInfo
+                userId={p.userId ?? undefined}
+                alias={p.alias}
+                title={p.title}
+                size="sm"
+                interactive={false}
+            />
+            <div className="flex items-baseline justify-between gap-3 border-t border-white/5 pt-1.5">
+                <span className="font-mono font-bold tabular-nums text-white text-sm">{formatCapTime(p.seconds)}</span>
+                {p.delta != null && p.delta > 0
+                    ? <span className="font-mono tabular-nums text-emerald-300 text-xs">-{formatDelta(p.delta)}</span>
+                    : <span className="text-[10px] uppercase tracking-wider text-muted-foreground/60">first</span>}
+            </div>
+            {p.timestamp > 0 && (
+                <div className="text-[10px] text-muted-foreground tabular-nums">
+                    {formatAddedDate(new Date(p.timestamp).toISOString())}
+                </div>
+            )}
+        </div>
+    )
 }
 
 export function WorldRecordProgressionModal({
@@ -76,6 +108,8 @@ export function WorldRecordProgressionModal({
                 seconds: e.cap_time_seconds,
                 alias: e.alias ?? 'Unknown',
                 delta: prev ? prev.cap_time_seconds - e.cap_time_seconds : null,
+                userId: e.user_id ?? null,
+                title: e.active_title ?? null,
             }
         })
     }, [sorted])
@@ -107,10 +141,13 @@ export function WorldRecordProgressionModal({
         : null
     const currentIsOwn = currentUserId != null && current.user_id != null && String(current.user_id) === String(currentUserId)
 
-    // Y axis range with light padding so points aren't pinned to the edges.
-    const minSec = Math.min(...sorted.map(e => e.cap_time_seconds))
-    const maxSec = Math.max(...sorted.map(e => e.cap_time_seconds))
-    const padding = Math.max((maxSec - minSec) * 0.08, 0.5)
+    const visibleForScale = brushRange
+        ? sorted.slice(brushRange.start, brushRange.end + 1)
+        : sorted
+    const scaleSource = visibleForScale.length > 0 ? visibleForScale : sorted
+    const minSec = Math.min(...scaleSource.map(e => e.cap_time_seconds))
+    const maxSec = Math.max(...scaleSource.map(e => e.cap_time_seconds))
+    const padding = Math.max((maxSec - minSec) * 0.05, 0.05)
 
     const reversed = [...sorted].reverse()
 
@@ -225,19 +262,7 @@ export function WorldRecordProgressionModal({
                                 />
                                 <ChartTooltip
                                     cursor={{ stroke: 'rgba(96,165,250,0.4)', strokeDasharray: '3 3' }}
-                                    contentStyle={{
-                                        backgroundColor: 'rgba(10,10,11,0.95)',
-                                        border: '1px solid rgba(255,255,255,0.1)',
-                                        borderRadius: 8,
-                                        fontSize: 11,
-                                    }}
-                                    labelFormatter={(t) => new Date(t as number).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: '2-digit' })}
-                                    formatter={(_value, _name, payload) => {
-                                        const p = (payload as unknown as { payload: ChartPoint })?.payload
-                                        if (!p) return ['', '']
-                                        const deltaStr = p.delta != null && p.delta > 0 ? ` (-${formatDelta(p.delta)})` : ''
-                                        return [`${formatCapTime(p.seconds)}${deltaStr}`, p.alias]
-                                    }}
+                                    content={<ProgressionTooltip />}
                                 />
                                 <Line
                                     type="stepAfter"
