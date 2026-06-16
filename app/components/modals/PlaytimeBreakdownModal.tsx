@@ -70,7 +70,7 @@ export function PlaytimeBreakdownModal({
             title={`Playtime — ${displayMapName(mapName)}`}
             offsetSidebar
             maxWidth="720px"
-            className="bg-[#0a0a0b]/98 border-white/5 backdrop-blur-3xl mx-auto"
+            className="bg-card/98 border-hairline/5 backdrop-blur-3xl mx-auto"
             footer={null}
         >
             <div className="space-y-4">
@@ -78,7 +78,7 @@ export function PlaytimeBreakdownModal({
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <Clock className="size-3.5 text-amber-300" />
                         <span>
-                            <span className="text-white font-semibold tabular-nums">{rows.length}</span> player{rows.length === 1 ? '' : 's'} · total{' '}
+                            <span className="text-foreground font-semibold tabular-nums">{rows.length}</span> player{rows.length === 1 ? '' : 's'} · total{' '}
                             <span className="text-amber-300 font-semibold tabular-nums">{formatPlaytime(total)}</span>
                         </span>
                     </div>
@@ -101,7 +101,7 @@ export function PlaytimeBreakdownModal({
                                         'relative rounded-lg border px-3 py-2 transition-colors',
                                         isOwn
                                             ? 'bg-emerald-500/[0.07] border-emerald-500/30'
-                                            : 'bg-white/[0.02] border-white/5 hover:bg-white/[0.04] hover:border-white/10',
+                                            : 'bg-hairline/[0.02] border-hairline/5 hover:bg-hairline/[0.04] hover:border-hairline/10',
                                     )}
                                 >
                                     <div
@@ -114,7 +114,7 @@ export function PlaytimeBreakdownModal({
                                             i === 0 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' :
                                                 i === 1 ? 'bg-slate-300/15 text-slate-200 border border-slate-300/30' :
                                                     i === 2 ? 'bg-amber-600/15 text-amber-400 border border-amber-600/30' :
-                                                        'bg-white/5 text-muted-foreground border border-white/5',
+                                                        'bg-hairline/5 text-muted-foreground border border-hairline/5',
                                         )}>
                                             {i + 1}
                                         </span>

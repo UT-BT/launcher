@@ -73,14 +73,14 @@ export function PlayerFavoritesModal({
                         value={query}
                         onChange={e => setQuery(e.target.value)}
                         placeholder="Search by map name…"
-                        className="w-full pl-7 pr-3 py-1.5 bg-card/50 border border-white/10 rounded text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:border-accent-500/50"
+                        className="w-full pl-7 pr-3 py-1.5 bg-card/50 border border-hairline/10 rounded text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent-500/50"
                     />
                 </div>
 
                 {loading ? (
                     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
                         {Array.from({ length: 10 }).map((_, i) => (
-                            <div key={i} className="aspect-square bg-white/5 rounded animate-pulse" />
+                            <div key={i} className="aspect-square bg-hairline/5 rounded animate-pulse" />
                         ))}
                     </div>
                 ) : filtered.length === 0 ? (
@@ -99,7 +99,7 @@ export function PlayerFavoritesModal({
                                 >
                                     <MapThumbnail
                                         mapName={name}
-                                        className="aspect-square w-full rounded border border-white/10 group-hover:border-white/30 transition-colors"
+                                        className="aspect-square w-full rounded border border-hairline/10 group-hover:border-hairline/30 transition-colors"
                                     />
                                 </button>
                                 {isSelf && onToggleFavorite && (
@@ -116,7 +116,7 @@ export function PlayerFavoritesModal({
                                 <button
                                     type="button"
                                     onClick={() => { onMapSelect?.(name); onClose() }}
-                                    className="text-[10px] font-medium text-muted-foreground group-hover:text-white truncate transition-colors text-left cursor-pointer"
+                                    className="text-[10px] font-medium text-muted-foreground group-hover:text-foreground truncate transition-colors text-left cursor-pointer"
                                 >
                                     {displayMapName(name)}
                                 </button>
@@ -126,7 +126,7 @@ export function PlayerFavoritesModal({
                 )}
 
                 {!loading && filtered.length > 0 && (
-                    <div className="pt-2 border-t border-white/5">
+                    <div className="pt-2 border-t border-hairline/5">
                         <PaginationBar
                             page={safePage}
                             totalPages={totalPages}

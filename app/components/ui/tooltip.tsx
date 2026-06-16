@@ -76,16 +76,16 @@ export function Tooltip({ content, children, className, side = 'top' }: TooltipP
                 <div
                     ref={tooltipRef}
                     className={cn(
-                        "fixed z-[9999] w-max max-w-[280px] px-3 py-1.5 rounded-md bg-[#0a0a0a]/95 text-white/90 text-xs font-bold tracking-tight shadow-2xl border border-white/10 pointer-events-none backdrop-blur-sm",
+                        "fixed z-[9999] w-max max-w-[280px] px-3 py-1.5 rounded-md bg-popover/95 text-foreground/90 text-xs font-bold tracking-tight shadow-2xl border border-hairline/10 pointer-events-none backdrop-blur-sm",
                         !placed && "opacity-0"
                     )}
                     style={{ top: coords.top, left: coords.left }}
                 >
                     {content}
                     {resolvedSide === 'bottom' ? (
-                        <div className="absolute bottom-full -translate-x-1/2 -mb-[5px] border-[5px] border-transparent border-b-[#0a0a0a]/95" style={{ left: coords.arrowLeft }} />
+                        <div className="absolute bottom-full -translate-x-1/2 -mb-[5px] border-[5px] border-transparent border-b-popover/95" style={{ left: coords.arrowLeft }} />
                     ) : (
-                        <div className="absolute top-full -translate-x-1/2 -mt-[5px] border-[5px] border-transparent border-t-[#0a0a0a]/95" style={{ left: coords.arrowLeft }} />
+                        <div className="absolute top-full -translate-x-1/2 -mt-[5px] border-[5px] border-transparent border-t-popover/95" style={{ left: coords.arrowLeft }} />
                     )}
                 </div>,
                 document.body

@@ -54,7 +54,7 @@ export function ColumnsMenu<TColumnId extends string>({
                 <button
                     ref={triggerRef}
                     type="button"
-                    className="px-3 py-2 rounded-lg text-sm font-medium border transition-colors cursor-pointer flex items-center gap-2 bg-card/50 border-white/10 text-muted-foreground hover:text-white hover:border-white/20"
+                    className="px-3 py-2 rounded-lg text-sm font-medium border transition-colors cursor-pointer flex items-center gap-2 bg-card/50 border-hairline/10 text-muted-foreground hover:text-foreground hover:border-hairline/20"
                 >
                     <Columns3 className="size-4" />
                     {label}

@@ -165,7 +165,7 @@ export const GameProfilesModal = ({ isOpen, onClose }: GameProfilesModalProps) =
                         </h3>
                         <button
                             onClick={onClose}
-                            className="p-2 hover:bg-white/5 rounded-lg transition-colors"
+                            className="p-2 hover:bg-hairline/5 rounded-lg transition-colors"
                         >
                             <FaTimes />
                         </button>
@@ -210,7 +210,7 @@ export const GameProfilesModal = ({ isOpen, onClose }: GameProfilesModalProps) =
                                     key={profile.name}
                                     className={cn(
                                         "flex items-center gap-4 p-3 rounded-lg border transition-colors",
-                                        activeProfile === profile.name ? "bg-primary/10 border-primary/50" : "bg-white/5 border-white/5 hover:bg-white/10"
+                                        activeProfile === profile.name ? "bg-primary/10 border-primary/50" : "bg-hairline/5 border-hairline/5 hover:bg-hairline/10"
                                     )}
                                 >
                                     <div className="flex-1 min-w-0">

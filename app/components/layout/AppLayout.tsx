@@ -125,7 +125,7 @@ export function AppLayout({ children, currentView, onViewChange, userProfile, in
             <div className="nebula-bg absolute inset-0 opacity-30 pointer-events-none" />
 
             {/* Sidebar */}
-            <aside className="w-64 bg-card/50 backdrop-blur-xl border-r border-white/10 flex flex-col z-20 relative">
+            <aside className="w-64 bg-card/50 backdrop-blur-xl border-r border-hairline/10 flex flex-col z-20 relative">
                 <div className="absolute inset-0 bg-gradient-to-b from-accent-900/10 to-transparent pointer-events-none" />
 
                 <div className="p-6 [@media(max-height:760px)]:p-3 flex flex-col items-center relative z-10">
@@ -139,7 +139,7 @@ export function AppLayout({ children, currentView, onViewChange, userProfile, in
                 <div className="px-4 mb-6 [@media(max-height:760px)]:mb-3 relative z-10 space-y-2">
                     <Button
                         variant="ghost"
-                        className="w-full h-11 bg-accent-500/15 border border-accent-500/40 text-accent-200 hover:bg-accent-500/25 hover:text-white hover:border-accent-500/60 hover:shadow-[0_0_20px_rgba(59,130,246,0.25)] transition-all font-semibold rounded-lg"
+                        className="w-full h-11 bg-accent-500/15 border border-accent-500/40 text-accent-200 hover:bg-accent-500/25 hover:text-foreground hover:border-accent-500/60 hover:shadow-[0_0_20px_rgba(59,130,246,0.25)] transition-all font-semibold rounded-lg"
                         onClick={() => onViewChange('servers')}
                     >
                         <Server className="size-4" />
@@ -148,7 +148,7 @@ export function AppLayout({ children, currentView, onViewChange, userProfile, in
                     {isInstallValid ? (
                         <Button
                             variant="ghost"
-                            className="w-full h-9 bg-card/50 border border-white/10 text-muted-foreground hover:text-white hover:bg-card/80 hover:border-white/20 transition-colors rounded-lg font-medium"
+                            className="w-full h-9 bg-card/50 border border-hairline/10 text-muted-foreground hover:text-foreground hover:bg-card/80 hover:border-hairline/20 transition-colors rounded-lg font-medium"
                             onClick={() => window.conveyor.game.launchGameStandalone()}
                         >
                             <Play className="size-4 fill-current" />
@@ -159,7 +159,7 @@ export function AppLayout({ children, currentView, onViewChange, userProfile, in
                             <Button
                                 variant="ghost"
                                 disabled
-                                className="w-full h-9 bg-card/30 border border-white/5 text-muted-foreground/60 cursor-not-allowed rounded-lg font-medium"
+                                className="w-full h-9 bg-card/30 border border-hairline/5 text-muted-foreground/60 cursor-not-allowed rounded-lg font-medium"
                             >
                                 <Play className="size-4 fill-current" />
                                 Launch Game
@@ -181,8 +181,8 @@ export function AppLayout({ children, currentView, onViewChange, userProfile, in
                                     className={cn(
                                         "w-full flex items-center gap-3 px-4 py-3 [@media(max-height:760px)]:py-2 rounded-lg transition-all duration-200 cursor-pointer group relative overflow-hidden",
                                         currentView === item.id
-                                            ? "text-white shadow-[0_0_20px_rgba(29,78,216,0.3)]"
-                                            : "text-muted-foreground hover:text-white hover:bg-white/5"
+                                            ? "text-foreground shadow-[0_0_20px_rgba(29,78,216,0.3)]"
+                                            : "text-muted-foreground hover:text-foreground hover:bg-hairline/5"
                                     )}
                                 >
                                     {currentView === item.id && (
@@ -200,13 +200,13 @@ export function AppLayout({ children, currentView, onViewChange, userProfile, in
                     ))}
                 </nav>
 
-                <div className="p-4 border-t border-white/10 relative z-10">
+                <div className="p-4 border-t border-hairline/10 relative z-10">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <div className="relative group cursor-pointer outline-none">
                                 <div
                                     className={cn(
-                                        "absolute inset-0 rounded-lg bg-white/5 border border-white/5 transition-colors group-hover:bg-white/10",
+                                        "absolute inset-0 rounded-lg bg-hairline/5 border border-hairline/5 transition-colors group-hover:bg-hairline/10",
                                         containerClass
                                     )}
                                     style={containerStyle}
@@ -246,13 +246,13 @@ export function AppLayout({ children, currentView, onViewChange, userProfile, in
                                 </div>
                             </div>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent side="top" align="center" className="w-56 bg-card/95 backdrop-blur-xl border-white/10">
+                        <DropdownMenuContent side="top" align="center" className="w-56 bg-card/95 backdrop-blur-xl border-hairline/10">
                             <DropdownMenuLabel>{userProfile?.alias || userProfile?.username || 'Player'}</DropdownMenuLabel>
-                            <DropdownMenuSeparator className="bg-white/10" />
+                            <DropdownMenuSeparator className="bg-hairline/10" />
                             {userProfile?.id != null && String(userProfile.id).length > 5 && (
                                 <DropdownMenuItem
                                     onClick={() => window.dispatchEvent(new CustomEvent('open-player', { detail: { userId: userProfile.id } }))}
-                                    className="text-muted-foreground focus:text-white focus:bg-white/10 cursor-pointer mb-1"
+                                    className="text-muted-foreground focus:text-foreground focus:bg-hairline/10 cursor-pointer mb-1"
                                 >
                                     <User className="mr-2 size-4" />
                                     <span>View Profile</span>
@@ -260,19 +260,19 @@ export function AppLayout({ children, currentView, onViewChange, userProfile, in
                             )}
                             <DropdownMenuItem
                                 onClick={() => setIsChangeTitleOpen(true)}
-                                className="text-muted-foreground focus:text-white focus:bg-white/10 cursor-pointer mb-1"
+                                className="text-muted-foreground focus:text-foreground focus:bg-hairline/10 cursor-pointer mb-1"
                             >
                                 <Trophy className="mr-2 size-4" />
                                 <span>Change Title</span>
                             </DropdownMenuItem>
                             <DropdownMenuItem
                                 onClick={() => setIsSettingsOpen(true)}
-                                className="text-muted-foreground focus:text-white focus:bg-white/10 cursor-pointer mb-1"
+                                className="text-muted-foreground focus:text-foreground focus:bg-hairline/10 cursor-pointer mb-1"
                             >
                                 <Settings className="mr-2 size-4" />
                                 <span>Settings</span>
                             </DropdownMenuItem>
-                            <DropdownMenuSeparator className="bg-white/10" />
+                            <DropdownMenuSeparator className="bg-hairline/10" />
                             <DropdownMenuItem
                                 onClick={() => setShowLogoutConfirm(true)}
                                 className="text-red-500 focus:text-red-500 focus:bg-red-500/10 cursor-pointer"
@@ -346,6 +346,7 @@ export function AppLayout({ children, currentView, onViewChange, userProfile, in
                 isOpen={isSettingsOpen}
                 onClose={() => setIsSettingsOpen(false)}
                 initialSection={settingsInitialSection}
+                patronTier={patreonTier}
             />
 
         </div>

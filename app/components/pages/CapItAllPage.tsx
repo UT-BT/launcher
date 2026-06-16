@@ -206,7 +206,7 @@ export function CapItAllPage({ userProfile, state, onStateChange, caches, onCach
             <div className="flex items-end justify-between shrink-0">
                 <div>
                     <div className="flex items-center gap-2">
-                        <h1 className="text-2xl font-bold text-white leading-tight">Cap It All</h1>
+                        <h1 className="text-2xl font-bold text-foreground leading-tight">Cap It All</h1>
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
                         UTBT cap leaderboard.
@@ -221,7 +221,7 @@ export function CapItAllPage({ userProfile, state, onStateChange, caches, onCach
                         type="button"
                         onClick={refresh}
                         disabled={pageLoading || !refreshCooldown.canRefresh}
-                        className="p-2 rounded-md text-muted-foreground hover:text-white hover:bg-white/5 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-hairline/5 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         <RefreshCw className={cn('size-4', pageLoading && 'animate-spin')} />
                     </button>
@@ -236,14 +236,14 @@ export function CapItAllPage({ userProfile, state, onStateChange, caches, onCach
                         placeholder="Search for a player..."
                         value={state.search}
                         onChange={e => setSearch(e.target.value)}
-                        className="w-full pl-9 pr-9 py-2 bg-card/50 border border-white/10 rounded-lg text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:border-accent-500/50 focus:bg-card/80 transition-colors"
+                        className="w-full pl-9 pr-9 py-2 bg-card/50 border border-hairline/10 rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent-500/50 focus:bg-card/80 transition-colors"
                     />
                     {state.search && (
                         <button
                             type="button"
                             onClick={() => setSearch('')}
                             aria-label="Clear search"
-                            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-white/10 text-muted-foreground hover:text-white transition-colors cursor-pointer"
+                            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-hairline/10 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                         >
                             <X className="size-3.5" />
                         </button>
@@ -282,7 +282,7 @@ export function CapItAllPage({ userProfile, state, onStateChange, caches, onCach
                                     <DataTableCell align="right">
                                         <span className={cn(
                                             'font-mono tabular-nums',
-                                            row.rank <= 3 ? 'text-white font-bold' : 'text-muted-foreground',
+                                            row.rank <= 3 ? 'text-foreground font-bold' : 'text-muted-foreground',
                                         )}>
                                             #{row.rank.toLocaleString()}
                                         </span>
@@ -330,10 +330,10 @@ export function CapItAllPage({ userProfile, state, onStateChange, caches, onCach
 function MetricCell({ caps, pct, barClass }: { caps: number; pct: number; barClass: string }) {
     return (
         <div className="flex items-center gap-2">
-            <div className="flex-1 h-1.5 rounded-full bg-white/10 overflow-hidden">
+            <div className="flex-1 h-1.5 rounded-full bg-hairline/10 overflow-hidden">
                 <div className={cn('h-full rounded-full', barClass)} style={{ width: `${Math.min(100, pct)}%` }} />
             </div>
-            <span className="font-mono tabular-nums text-white w-12 text-right">{caps.toLocaleString()}</span>
+            <span className="font-mono tabular-nums text-foreground w-12 text-right">{caps.toLocaleString()}</span>
             <span className="font-mono tabular-nums text-[11px] text-muted-foreground w-14 text-right">{pct.toFixed(2)}%</span>
         </div>
     )

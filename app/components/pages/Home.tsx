@@ -149,11 +149,11 @@ export function Home({
     if (loading && !summary) {
         return (
             <div className="space-y-6 pb-12 pt-2">
-                <div className="h-28 bg-white/5 rounded-2xl animate-pulse" />
-                <div className="h-14 bg-white/5 rounded-xl animate-pulse" />
+                <div className="h-28 bg-hairline/5 rounded-2xl animate-pulse" />
+                <div className="h-14 bg-hairline/5 rounded-xl animate-pulse" />
                 <div className="grid grid-cols-1 2xl:grid-cols-12 gap-6">
-                    <div className="2xl:col-span-6 h-[420px] bg-white/5 rounded-xl animate-pulse" />
-                    <div className="2xl:col-span-6 h-[420px] bg-white/5 rounded-xl animate-pulse" />
+                    <div className="2xl:col-span-6 h-[420px] bg-hairline/5 rounded-xl animate-pulse" />
+                    <div className="2xl:col-span-6 h-[420px] bg-hairline/5 rounded-xl animate-pulse" />
                 </div>
             </div>
         )

@@ -7,6 +7,7 @@
       try {
         var t = JSON.parse(localStorage.getItem('utbt:theme:v1') || '{}').id
         if (t && t !== 'classic') document.documentElement.setAttribute('data-theme', t)
+        if (t === 'light') document.documentElement.classList.remove('dark')
       } catch {}
     </script>
   </head>

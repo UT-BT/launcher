@@ -111,8 +111,8 @@ export function LeaderboardCard({
     const dir = (field: SortField): 'asc' | 'desc' | null => (sortBy === field ? sortDir : null)
 
     return (
-        <div className="bg-card/30 border border-white/5 rounded-xl flex flex-col overflow-hidden">
-            <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-white/5">
+        <div className="bg-card/30 border border-hairline/5 rounded-xl flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-hairline/5">
                 <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
                     Leaderboard
                 </div>
@@ -126,7 +126,7 @@ export function LeaderboardCard({
                                 'h-7 px-3 rounded-md text-xs font-medium border transition-colors cursor-pointer',
                                 tab === t.value
                                     ? 'bg-accent-500/20 border-accent-500/50 text-accent-200'
-                                    : 'bg-card/50 border-white/10 text-muted-foreground hover:text-white hover:border-white/20',
+                                    : 'bg-card/50 border-hairline/10 text-muted-foreground hover:text-foreground hover:border-hairline/20',
                             )}
                         >
                             {t.label}
@@ -237,7 +237,7 @@ export function LeaderboardCard({
                                                 seconds={entry.cap_time_seconds}
                                                 className={cn(
                                                     'text-sm font-mono tabular-nums font-bold',
-                                                    rank === 1 ? 'text-red-300' : 'text-white',
+                                                    rank === 1 ? 'text-red-300' : 'text-foreground',
                                                 )}
                                             />
                                         </DataTableCell>
@@ -280,7 +280,7 @@ export function LeaderboardCard({
                 </DataTableShell>
 
                 {!loading && sorted.length > 0 && (
-                    <div className="px-4 py-3 border-t border-white/5">
+                    <div className="px-4 py-3 border-t border-hairline/5">
                         <PaginationBar
                             page={safePage}
                             totalPages={totalPages}

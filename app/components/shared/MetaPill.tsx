@@ -13,7 +13,7 @@ type Tone =
     | 'yellow'
 
 const TONE_CLASSES: Record<Tone, string> = {
-    neutral: 'bg-white/5 border-white/5 text-white',
+    neutral: 'bg-hairline/5 border-hairline/5 text-foreground',
     accent:  'bg-accent-500/15 border-accent-500/40 text-accent-200',
     blue:    'bg-blue-500/15 border-blue-500/40 text-blue-200',
     purple:  'bg-purple-500/15 border-purple-500/40 text-purple-200',

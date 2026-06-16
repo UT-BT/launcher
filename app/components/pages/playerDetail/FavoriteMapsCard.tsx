@@ -44,18 +44,18 @@ export function FavoriteMapsCard({
     const count = totalCount ?? liveList.length
 
     return (
-        <div className="bg-card/30 border border-white/5 rounded-xl p-3 space-y-2">
+        <div className="bg-card/30 border border-hairline/5 rounded-xl p-3 space-y-2">
             <div className="flex items-center gap-2">
                 <Star className="size-3.5 text-yellow-400 fill-current" />
                 <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
-                    Favorite Maps {count > 0 && <span className="text-white/60 ml-1">({count.toLocaleString()})</span>}
+                    Favorite Maps {count > 0 && <span className="text-foreground/60 ml-1">({count.toLocaleString()})</span>}
                 </div>
             </div>
 
             {loading ? (
                 <div className="grid grid-cols-4 gap-2">
                     {Array.from({ length: 4 }).map((_, i) => (
-                        <div key={i} className="aspect-square bg-white/5 rounded animate-pulse" />
+                        <div key={i} className="aspect-square bg-hairline/5 rounded animate-pulse" />
                     ))}
                 </div>
             ) : liveList.length === 0 ? (
@@ -75,9 +75,9 @@ export function FavoriteMapsCard({
                             >
                                 <MapThumbnail
                                     mapName={name}
-                                    className="aspect-square rounded border border-white/10 group-hover:border-white/30 transition-colors"
+                                    className="aspect-square rounded border border-hairline/10 group-hover:border-hairline/30 transition-colors"
                                 />
-                                <span className="text-[10px] font-medium text-muted-foreground group-hover:text-white truncate transition-colors">
+                                <span className="text-[10px] font-medium text-muted-foreground group-hover:text-foreground truncate transition-colors">
                                     {displayMapName(name)}
                                 </span>
                             </button>
@@ -86,7 +86,7 @@ export function FavoriteMapsCard({
                     <button
                         type="button"
                         onClick={() => setModalOpen(true)}
-                        className="w-full px-2 py-1 rounded-md bg-white/[0.02] border border-white/5 text-[10px] uppercase tracking-wider font-medium text-muted-foreground hover:text-white hover:border-white/20 transition-colors cursor-pointer"
+                        className="w-full px-2 py-1 rounded-md bg-hairline/[0.02] border border-hairline/5 text-[10px] uppercase tracking-wider font-medium text-muted-foreground hover:text-foreground hover:border-hairline/20 transition-colors cursor-pointer"
                     >
                         View all
                     </button>

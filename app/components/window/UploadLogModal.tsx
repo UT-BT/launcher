@@ -124,7 +124,7 @@ export const UploadLogModal = ({ isOpen, onClose }: UploadLogModalProps) => {
                     </h3>
                     <button
                         onClick={onClose}
-                        className="p-2 hover:bg-white/5 rounded-lg transition-colors"
+                        className="p-2 hover:bg-hairline/5 rounded-lg transition-colors"
                     >
                         <FaTimes />
                     </button>
@@ -145,7 +145,7 @@ export const UploadLogModal = ({ isOpen, onClose }: UploadLogModalProps) => {
                             "border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all duration-200",
                             isDragging
                                 ? "border-accent-500 bg-accent-500/10 scale-[1.02]"
-                                : "border-white/10 hover:border-white/20 hover:bg-white/5"
+                                : "border-hairline/10 hover:border-hairline/20 hover:bg-hairline/5"
                         )}
                     >
                         <div className={cn(
@@ -166,7 +166,7 @@ export const UploadLogModal = ({ isOpen, onClose }: UploadLogModalProps) => {
                         </div>
                     ) : (
                         logs.map((log, index) => (
-                            <div key={index} className="flex items-center gap-4 p-3 rounded-lg bg-white/5 border border-white/5">
+                            <div key={index} className="flex items-center gap-4 p-3 rounded-lg bg-hairline/5 border border-hairline/5">
                                 <div className="flex-none">
                                     {log.status === 'success' && <FaCheckCircle className="text-green-500 size-5" />}
                                     {log.status === 'failed' && <FaExclamationCircle className="text-red-500 size-5" />}

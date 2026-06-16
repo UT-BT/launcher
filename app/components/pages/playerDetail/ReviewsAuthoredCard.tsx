@@ -42,18 +42,18 @@ export function ReviewsAuthoredCard({
     const count = totalCount ?? reviews.length
 
     return (
-        <div className="bg-card/30 border border-white/5 rounded-xl p-3 space-y-2">
+        <div className="bg-card/30 border border-hairline/5 rounded-xl p-3 space-y-2">
             <div className="flex items-center gap-2">
                 <MessageSquare className="size-3.5 text-purple-300" />
                 <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
-                    Reviews Written {count > 0 && <span className="text-white/60 ml-1">({count.toLocaleString()})</span>}
+                    Reviews Written {count > 0 && <span className="text-foreground/60 ml-1">({count.toLocaleString()})</span>}
                 </div>
             </div>
 
             {loading ? (
                 <div className="space-y-2">
                     {Array.from({ length: 3 }).map((_, i) => (
-                        <div key={i} className="h-10 bg-white/5 rounded-lg animate-pulse" />
+                        <div key={i} className="h-10 bg-hairline/5 rounded-lg animate-pulse" />
                     ))}
                 </div>
             ) : reviews.length === 0 ? (
@@ -67,10 +67,10 @@ export function ReviewsAuthoredCard({
                             key={r.id}
                             type="button"
                             onClick={() => onMapSelect?.(r.map_name)}
-                            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] hover:border-white/15 transition-colors cursor-pointer text-left"
+                            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md bg-hairline/[0.02] border border-hairline/5 hover:bg-hairline/[0.05] hover:border-hairline/15 transition-colors cursor-pointer text-left"
                         >
                             <MapThumbnail mapName={r.map_name} className="size-7 shrink-0" />
-                            <span className="text-xs font-semibold text-white truncate flex-1 min-w-0">
+                            <span className="text-xs font-semibold text-foreground truncate flex-1 min-w-0">
                                 {displayMapName(r.map_name)}
                             </span>
                             <span className={cn(
@@ -85,7 +85,7 @@ export function ReviewsAuthoredCard({
                     <button
                         type="button"
                         onClick={() => setModalOpen(true)}
-                        className="w-full px-2 py-1 rounded-md bg-white/[0.02] border border-white/5 text-[10px] uppercase tracking-wider font-medium text-muted-foreground hover:text-white hover:border-white/20 transition-colors cursor-pointer"
+                        className="w-full px-2 py-1 rounded-md bg-hairline/[0.02] border border-hairline/5 text-[10px] uppercase tracking-wider font-medium text-muted-foreground hover:text-foreground hover:border-hairline/20 transition-colors cursor-pointer"
                     >
                         View all
                     </button>

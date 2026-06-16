@@ -54,7 +54,7 @@ function PlaytimeCell({ label, value, top, icon: Icon, accent }: PlaytimeCellPro
                 <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/70 shrink-0">
                     {label}
                 </span>
-                <span className="text-lg font-black text-white/95 tracking-tight leading-none font-mono ml-auto">
+                <span className="text-lg font-black text-foreground/95 tracking-tight leading-none font-mono ml-auto">
                     {formatHours(value)}
                 </span>
                 {top != null && (
@@ -65,7 +65,7 @@ function PlaytimeCell({ label, value, top, icon: Icon, accent }: PlaytimeCellPro
                     </Tooltip>
                 )}
             </div>
-            <div className="mt-1.5 h-0.5 bg-white/5 rounded-full overflow-hidden">
+            <div className="mt-1.5 h-0.5 bg-hairline/5 rounded-full overflow-hidden">
                 <div
                     className={cn('h-full rounded-full transition-all duration-500', accent.bar, top != null && accent.glow)}
                     style={{ width: `${fillPct}%` }}
@@ -118,7 +118,7 @@ export function ProfileHero({
     const displayName = alias || username
 
     return (
-        <div className="relative overflow-hidden bg-card/30 border border-white/5 rounded-2xl backdrop-blur-xl">
+        <div className="relative overflow-hidden bg-card/30 border border-hairline/5 rounded-2xl backdrop-blur-xl">
             <div className="absolute inset-0 bg-gradient-to-r from-blue-500/[0.04] via-transparent to-purple-500/[0.04] pointer-events-none" />
 
             {onRefresh && (
@@ -128,7 +128,7 @@ export function ProfileHero({
                         onClick={onRefresh}
                         disabled={refreshing || refreshDisabled}
                         aria-label="Refresh homepage"
-                        className="p-2 rounded-md text-muted-foreground hover:text-white hover:bg-white/5 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-hairline/5 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         <RefreshCw className={cn('size-4', refreshing && 'animate-spin')} />
                     </button>
@@ -148,7 +148,7 @@ export function ProfileHero({
                             onError={e => { (e.currentTarget as HTMLImageElement).style.visibility = 'hidden' }}
                         />
                     ) : (
-                        <span className="text-xl font-black text-white/30">
+                        <span className="text-xl font-black text-foreground/30">
                             {displayName.charAt(0).toUpperCase()}
                         </span>
                     )}
@@ -160,13 +160,13 @@ export function ProfileHero({
                             <button
                                 type="button"
                                 onClick={() => window.dispatchEvent(new CustomEvent('open-player', { detail: { userId } }))}
-                                className="text-2xl font-black tracking-tight text-white/95 truncate cursor-pointer hover:opacity-80 hover:underline underline-offset-4 transition-opacity text-left"
+                                className="text-2xl font-black tracking-tight text-foreground/95 truncate cursor-pointer hover:opacity-80 hover:underline underline-offset-4 transition-opacity text-left"
                             >
                                 {displayName}
                             </button>
                         </Tooltip>
                     ) : (
-                        <h1 className="text-2xl font-black tracking-tight text-white/95 truncate">
+                        <h1 className="text-2xl font-black tracking-tight text-foreground/95 truncate">
                             {displayName}
                         </h1>
                     )}
@@ -177,7 +177,7 @@ export function ProfileHero({
                             style={titleStyle(title)}
                             className={cn(
                                 'text-sm font-bold leading-none tracking-wide cursor-pointer hover:opacity-80 transition-opacity whitespace-nowrap truncate max-w-full',
-                                !hasTitle(title) && 'underline decoration-dashed underline-offset-4 decoration-white/30',
+                                !hasTitle(title) && 'underline decoration-dashed underline-offset-4 decoration-hairline/30',
                             )}
                         >
                             {hasTitle(title) ? title.name : '—'}
@@ -187,7 +187,7 @@ export function ProfileHero({
 
             </div>
 
-            <div className="relative flex items-stretch border-t border-white/5 divide-x divide-white/5">
+            <div className="relative flex items-stretch border-t border-hairline/5 divide-x divide-hairline/5">
                 <PlaytimeCell
                     label="7d"
                     value={weekly}
@@ -223,7 +223,7 @@ export function ProfileHero({
                 />
             </div>
 
-            <div className="relative flex items-center flex-wrap gap-x-4 gap-y-1 px-5 py-1.5 border-t border-white/5 bg-black/20">
+            <div className="relative flex items-center flex-wrap gap-x-4 gap-y-1 px-5 py-1.5 border-t border-hairline/5 bg-black/20">
                 <div className="flex items-center gap-1.5">
                     <Clock className="size-3 text-muted-foreground/40" />
                     <span className="text-[10px] font-bold text-muted-foreground/50 uppercase tracking-widest">
@@ -256,7 +256,7 @@ export function ProfileHero({
                             Currently Playing
                         </span>
                     </button>
-                    <span className="h-3 w-px bg-white/10" aria-hidden />
+                    <span className="h-3 w-px bg-hairline/10" aria-hidden />
                     <SinceStat
                         label="New Maps"
                         value={newMaps}

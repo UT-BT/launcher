@@ -267,6 +267,7 @@ Game identity, not chrome — keep these **literal**, never route through `accen
 
 The accent is the **only** themeable scale. Themes swap CSS-variable *values* only —
 identical structure and luminance, so there's nothing extra to QA between dark themes.
+**Light** is the one exception — a genuine second target (see below).
 
 - **Accent** `--accent-50…950` → Tailwind `accent-*`. Default (Classic) = Tailwind
   blue. Use `accent-*` for **all** chrome.
@@ -275,12 +276,52 @@ identical structure and luminance, so there's nothing extra to QA between dark t
 - **Glow** `--accent-glow-rgb` (space-separated RGB) for arbitrary
   `drop-shadow-[…rgb(var(--accent-glow-rgb)/<a>)]` (e.g. the sidebar logo).
 - **Hairline** `--color-hairline` (white on dark themes) backs `*-hairline/<n>`
-  borders/fills; it flips dark for the future light theme.
+  borders/fills; it flips dark in the **Light** theme.
+- **Window chrome** (titlebar) is driven by the `--window-c-*` vars in
+  `app/styles/window.css`, mapped to theme tokens (`--secondary`/`--popover`/
+  `--foreground`/`--border`), so it follows every theme — white in Light,
+  tinted-dark in the dark themes. Don't hardcode titlebar colours.
 
 Values live in `app/styles/themes.css` (`:root` = Classic, `:root[data-theme="…"]`
 for the rest). Registry + provider: `app/theme/themes.ts`, `app/theme/ThemeProvider.tsx`
 (`utbt:theme:v1`). Add a theme = one `[data-theme]` block + one registry entry. Picker:
 Settings → Appearance (`LauncherAppearanceSettings.tsx`).
+
+An `exclusive: true` registry flag gates a theme to Patreon supporters (e.g. `aurum`).
+The picker locks the card for non-patrons (lock + a Patreon tag, click opens
+patreon.com/utbt) and only lets supporters select it. Gating reuses the already-cached
+`usePatreonTier` (the current user's tier is threaded AppLayout → SettingsModal →
+Settings → Appearance) — **zero extra API calls**. It's a deliberately soft, client-side
+gate: the CSS exists for everyone, so a determined user could set it via localStorage.
+
+### Light theme
+
+`light` is a single theme (crisp white), not a per-accent mode. It's the one theme
+that also toggles the `dark` class **off** (`ThemeProvider` + the `index.html`
+pre-paint script); every dark theme keeps `.dark` on. `globals.css` defines
+`@custom-variant dark (&:where(.dark, .dark *))` so Tailwind `dark:` is class-based.
+
+`:root[data-theme="light"]` does three things and needs **no per-component colour
+edits**:
+1. flips the surface vars to light + `--hairline-rgb` to dark;
+2. uses a blue accent ramp whose *text* shades (`--accent-200/300/400`) are dark;
+3. overrides the brand/functional **text-shade** colour vars (`--color-blue-300`,
+   `--color-red-300`, `--color-emerald-300`, …) to dark, legible values. Tailwind
+   emits `text-blue-300` as `var(--color-blue-300)`, so this flips every plain
+   coloured text. (Opacity variants like `text-blue-300/40` inline to a hex and
+   don't flip — rare; fix per-spot if a light screenshot shows one.)
+
+This works only because the surface sweep moved components onto the flippable
+tokens: `*-hairline/<n>` (not `white/<n>`) for borders/fills and `text-foreground`
+(not `text-white`) for primary text. `text-white` survives **only** on solid
+coloured fills (e.g. `bg-accent-500 text-white` count badges), which stay white in
+both modes.
+
+Player **title** colours are arbitrary per-title RGB, so they're computed in JS
+(`app/utils/titleStyles.ts`), not via the CSS-var override. In Light they're mapped
+to a hue-preserving, saturation-boosted, luminance-targeted (~4:1 on white) jewel
+tone and the dark text-outline is dropped. `PlayerInfo` recomputes them on theme
+change (it reads `useTheme`), so they update live.
 
 ## Animation
 
@@ -297,6 +338,10 @@ Settings → Appearance (`LauncherAppearanceSettings.tsx`).
 - Don't `bg-gray-*` for cards — use `bg-card/<n>`.
 - Don't hardcode `blue-*` for chrome — use `accent-*` (themeable). Leave brand /
   functional colours (WR blue, champion/danger red, emerald, amber, rose) literal.
+- Don't hardcode dark hex backgrounds (`bg-[#0a0a0b]`, `bg-[#0f1115]`) — use
+  `bg-card` / `bg-popover` so modals + `<option>`s flip in the Light theme. Use
+  `*-hairline/<n>` not `white/<n>`, and `text-foreground` not `text-white` (except
+  text on a solid colour fill, which stays white).
 - Don't re-roll table styling inline — use `DataTable.*` primitives.
 - Don't re-roll preset menus, columns menus, player avatars, map thumbnails, favorite stars — use the shared components.
 - Don't put rarity/title styling outside `PlayerInfo`.

@@ -78,7 +78,7 @@ export function HistoryModal({
                 title="Recent Caps History"
                 offsetSidebar
                 maxWidth="min(95vw, 1100px)"
-                className="bg-[#0a0a0b]/95 border-white/5 backdrop-blur-2xl"
+                className="bg-card/95 border-hairline/5 backdrop-blur-2xl"
             >
                 <div className="flex flex-col gap-3">
                     <DataTableShell className="flex-none">
@@ -120,12 +120,12 @@ export function HistoryModal({
                                                         <button
                                                             type="button"
                                                             onClick={() => { onMapSelect(cap.mapName); onOpenChange(false) }}
-                                                            className="font-bold text-white/90 truncate cursor-pointer hover:underline underline-offset-2 hover:text-white transition-colors text-left"
+                                                            className="font-bold text-foreground/90 truncate cursor-pointer hover:underline underline-offset-2 hover:text-foreground transition-colors text-left"
                                                         >
                                                             {displayMapName(cap.mapName)}
                                                         </button>
                                                     ) : (
-                                                        <span className="font-bold text-white/90 truncate">
+                                                        <span className="font-bold text-foreground/90 truncate">
                                                             {displayMapName(cap.mapName)}
                                                         </span>
                                                     )}
@@ -149,7 +149,7 @@ export function HistoryModal({
                                                         capId={cap.id}
                                                         seconds={cap.time}
                                                         onNavigate={() => onOpenChange(false)}
-                                                        className="font-mono font-black text-white/90 hover:text-white tracking-tight"
+                                                        className="font-mono font-black text-foreground/90 hover:text-foreground tracking-tight"
                                                     />
                                                 </div>
                                             </DataTableCell>
@@ -205,7 +205,7 @@ export function HistoryModal({
                                 variant="ghost"
                                 disabled={page <= 1 || loading}
                                 onClick={() => setPage(p => Math.max(1, p - 1))}
-                                className="size-7 bg-white/5 border border-white/5 hover:bg-white/10 disabled:opacity-30"
+                                className="size-7 bg-hairline/5 border border-hairline/5 hover:bg-hairline/10 disabled:opacity-30"
                             >
                                 <ChevronLeft className="size-3" />
                             </Button>
@@ -214,7 +214,7 @@ export function HistoryModal({
                                 variant="ghost"
                                 disabled={!hasMore || loading}
                                 onClick={() => setPage(p => p + 1)}
-                                className="size-7 bg-white/5 border border-white/5 hover:bg-white/10 disabled:opacity-30"
+                                className="size-7 bg-hairline/5 border border-hairline/5 hover:bg-hairline/10 disabled:opacity-30"
                             >
                                 <ChevronRight className="size-3" />
                             </Button>

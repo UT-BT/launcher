@@ -30,21 +30,21 @@ const EXPLAINER = (
         <div className="text-[10px] uppercase tracking-wider font-bold text-blue-200">
             How medals are calculated
         </div>
-        <p className="text-xs text-white/85 leading-relaxed">
+        <p className="text-xs text-foreground/85 leading-relaxed">
             The World Record is the fastest verified cap.
         </p>
-        <p className="text-xs text-white/85 leading-relaxed">
+        <p className="text-xs text-foreground/85 leading-relaxed">
             Champion, Gold, Silver, and Bronze medals are calculated by multiplying the World Record by the factors shown below.
         </p>
         <div className="space-y-1 mt-2">
             {ROWS.filter(r => r.key !== 'world_record').map(r => (
                 <div key={r.key} className="flex items-center justify-between gap-3 text-xs">
                     <span className={cn('font-semibold', r.accent)}>{r.label}</span>
-                    <span className="font-mono text-white/70">{r.multiplierLabel}</span>
+                    <span className="font-mono text-foreground/70">{r.multiplierLabel}</span>
                 </div>
             ))}
         </div>
-        <p className="text-[10px] text-muted-foreground leading-relaxed pt-1 border-t border-white/5">
+        <p className="text-[10px] text-muted-foreground leading-relaxed pt-1 border-t border-hairline/5">
             Only verified caps count toward WR.
         </p>
     </div>
@@ -52,7 +52,7 @@ const EXPLAINER = (
 
 export function MedalCard({ map, loading }: MedalCardProps) {
     return (
-        <div className="bg-card/30 border border-white/5 rounded-xl p-4">
+        <div className="bg-card/30 border border-hairline/5 rounded-xl p-4">
             <div className="flex items-center justify-between mb-3">
                 <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
                     Medal Thresholds
@@ -61,7 +61,7 @@ export function MedalCard({ map, loading }: MedalCardProps) {
                     <button
                         type="button"
                         aria-label="How medal thresholds are calculated"
-                        className="p-1 rounded text-muted-foreground hover:text-white hover:bg-white/5 transition-colors cursor-help"
+                        className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-hairline/5 transition-colors cursor-help"
                     >
                         <Info className="size-3.5" />
                     </button>
@@ -74,7 +74,7 @@ export function MedalCard({ map, loading }: MedalCardProps) {
                     return (
                         <div
                             key={row.key}
-                            className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg bg-white/[0.02] border border-white/5"
+                            className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg bg-hairline/[0.02] border border-hairline/5"
                         >
                             <div className="flex items-center gap-2 min-w-0">
                                 {icon && <img src={icon} alt="" className="size-5 shrink-0 object-contain max-w-none" />}
@@ -85,9 +85,9 @@ export function MedalCard({ map, loading }: MedalCardProps) {
                                 </div>
                             </div>
                             {loading ? (
-                                <div className="h-4 w-20 bg-white/5 rounded animate-pulse" />
+                                <div className="h-4 w-20 bg-hairline/5 rounded animate-pulse" />
                             ) : value != null ? (
-                                <span className="text-sm font-mono tabular-nums font-bold text-white shrink-0">
+                                <span className="text-sm font-mono tabular-nums font-bold text-foreground shrink-0">
                                     {formatCapTime(value)}
                                 </span>
                             ) : (

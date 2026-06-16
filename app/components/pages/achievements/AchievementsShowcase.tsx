@@ -82,7 +82,7 @@ export function Segmented({ active, label, onClick }: { active: boolean; label: 
                 'px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors cursor-pointer',
                 active
                     ? 'bg-accent-500/20 border-accent-500/50 text-accent-300'
-                    : 'bg-card/50 border-white/10 text-muted-foreground hover:text-white hover:border-white/20',
+                    : 'bg-card/50 border-hairline/10 text-muted-foreground hover:text-foreground hover:border-hairline/20',
             )}
         >
             {label}
@@ -131,7 +131,7 @@ export function AchievementsShowcase({
         return (
             <>
                 {Array.from({ length: skeletonCount }).map((_, i) => (
-                    <div key={i} className="h-[88px] bg-card/30 border border-white/5 rounded-xl animate-pulse" />
+                    <div key={i} className="h-[88px] bg-card/30 border border-hairline/5 rounded-xl animate-pulse" />
                 ))}
             </>
         )
@@ -173,19 +173,19 @@ function TierBar({ def, progress }: { def: AchievementDefinition; progress: Achi
                             <div className="min-w-[190px] py-1 space-y-1.5">
                                 <div className="flex items-baseline justify-between gap-4">
                                     <span className={cn('text-sm font-bold', r.text)}>Level {tier.level}</span>
-                                    <span className="text-[10px] uppercase tracking-wider text-white/40">Rarity {tier.level}</span>
+                                    <span className="text-[10px] uppercase tracking-wider text-foreground/40">Rarity {tier.level}</span>
                                 </div>
-                                <div className="text-xs text-white/75 font-medium">{reqText}</div>
-                                <div className="pt-1.5 border-t border-white/10">
-                                    <div className="text-[10px] uppercase tracking-wider text-white/40 mb-0.5">Reward</div>
+                                <div className="text-xs text-foreground/75 font-medium">{reqText}</div>
+                                <div className="pt-1.5 border-t border-hairline/10">
+                                    <div className="text-[10px] uppercase tracking-wider text-foreground/40 mb-0.5">Reward</div>
                                     {tier.title
                                         ? <span className="text-sm font-semibold" style={tStyle}>{tier.title.name}</span>
-                                        : <span className="text-sm text-white/70">Rarity {tier.level} title</span>}
+                                        : <span className="text-sm text-foreground/70">Rarity {tier.level} title</span>}
                                 </div>
                             </div>
                         }
                     >
-                        <div className="relative h-2.5 w-full rounded-full bg-white/[0.06] overflow-hidden ring-1 ring-inset ring-white/5 cursor-help">
+                        <div className="relative h-2.5 w-full rounded-full bg-hairline/[0.06] overflow-hidden ring-1 ring-inset ring-hairline/5 cursor-help">
                             <div
                                 className="absolute inset-y-0 left-0 rounded-full transition-all duration-500"
                                 style={{
@@ -215,7 +215,7 @@ function AchievementRow({ def, progress }: { def: AchievementDefinition; progres
         <div
             className={cn(
                 'group relative overflow-hidden rounded-xl border bg-card/30 transition-colors',
-                maxed ? 'border-white/10' : 'border-white/5 hover:border-white/10 hover:bg-card/40',
+                maxed ? 'border-hairline/10' : 'border-hairline/5 hover:border-hairline/10 hover:bg-card/40',
             )}
             style={maxed && rarity ? { boxShadow: `inset 0 0 0 1px ${rarity.rgba}, 0 0 16px -4px ${rarity.rgba}` } : undefined}
         >
@@ -236,14 +236,14 @@ function AchievementRow({ def, progress }: { def: AchievementDefinition; progres
                 <div className="flex items-center gap-3 min-w-[200px] flex-1">
                     <div
                         className={cn(
-                            'size-11 rounded-xl border flex items-center justify-center shrink-0 bg-white/5 transition-colors',
-                            maxed && rarity ? rarity.border : 'border-white/5 group-hover:border-white/10',
+                            'size-11 rounded-xl border flex items-center justify-center shrink-0 bg-hairline/5 transition-colors',
+                            maxed && rarity ? rarity.border : 'border-hairline/5 group-hover:border-hairline/10',
                         )}
                     >
                         <Icon className={cn('size-5', rarity ? rarity.text : 'text-muted-foreground')} />
                     </div>
                     <div className="min-w-0">
-                        <div className="text-sm font-semibold text-white truncate">{def.name}</div>
+                        <div className="text-sm font-semibold text-foreground truncate">{def.name}</div>
                         <p className="text-xs text-muted-foreground leading-snug truncate">{def.description}</p>
                     </div>
                 </div>
@@ -251,7 +251,7 @@ function AchievementRow({ def, progress }: { def: AchievementDefinition; progres
                 <div className="flex items-center gap-4 flex-wrap">
                     <div className="flex flex-col gap-1.5 w-60">
                         <div className="flex items-center justify-between text-[11px]">
-                            <span className="font-mono tabular-nums text-white/90">
+                            <span className="font-mono tabular-nums text-foreground/90">
                                 {progress.current_value.toLocaleString()}
                                 <span className="text-muted-foreground"> / {goal.toLocaleString()}</span>
                             </span>
@@ -264,13 +264,13 @@ function AchievementRow({ def, progress }: { def: AchievementDefinition; progres
                             <div className="text-[10px] text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-0.5">
                                 <span>
                                     {progress.current.label}:{' '}
-                                    <span className="text-white/80 font-medium tabular-nums">{progress.current.value.toLocaleString()}</span>
+                                    <span className="text-foreground/80 font-medium tabular-nums">{progress.current.value.toLocaleString()}</span>
                                 </span>
                                 {progress.current.extra && (
                                     <span className="flex items-center gap-1">
                                         <Snowflake className="size-2.5 text-sky-300/80" />
                                         {progress.current.extra.label}:{' '}
-                                        <span className="text-white/80 font-medium tabular-nums">{progress.current.extra.value.toLocaleString()}</span>
+                                        <span className="text-foreground/80 font-medium tabular-nums">{progress.current.extra.value.toLocaleString()}</span>
                                     </span>
                                 )}
                             </div>
@@ -281,7 +281,7 @@ function AchievementRow({ def, progress }: { def: AchievementDefinition; progres
                         type="button"
                         onClick={() => setShowTitles(v => !v)}
                         aria-label="Show unlockable titles"
-                        className="p-1.5 rounded-md text-muted-foreground hover:text-white hover:bg-white/5 transition-colors cursor-pointer shrink-0"
+                        className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-hairline/5 transition-colors cursor-pointer shrink-0"
                     >
                         <Award className="size-4" />
                         <ChevronDown className={cn('size-3 inline ml-0.5 transition-transform', showTitles && 'rotate-180')} />
@@ -290,7 +290,7 @@ function AchievementRow({ def, progress }: { def: AchievementDefinition; progres
             </div>
 
             {showTitles && (
-                <div className="relative border-t border-white/5 px-5 py-3">
+                <div className="relative border-t border-hairline/5 px-5 py-3">
                     <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-2">Title rewards</div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-2">
                         {def.tiers.map((tier, s) => {
@@ -310,14 +310,14 @@ function AchievementRow({ def, progress }: { def: AchievementDefinition; progres
                                     content={
                                         <div className="min-w-[190px] py-1 space-y-1.5">
                                             <div className="text-base font-bold leading-tight" style={titleStyle(tier.title)}>{name}</div>
-                                            <div className="text-[10px] uppercase tracking-wider text-white/40">Rarity {tier.level} title</div>
-                                            <div className="text-xs text-white/75 font-medium pt-1.5 border-t border-white/10">{goalText}</div>
+                                            <div className="text-[10px] uppercase tracking-wider text-foreground/40">Rarity {tier.level} title</div>
+                                            <div className="text-xs text-foreground/75 font-medium pt-1.5 border-t border-hairline/10">{goalText}</div>
                                             <div className="text-xs">
                                                 {earned
                                                     ? <span className="text-emerald-400 font-semibold">Unlocked</span>
                                                     : isNext
                                                         ? <span className="font-semibold" style={{ color: r.base }}>{toGo.toLocaleString()}{def.unit ? ` ${def.unit}` : ''} to go</span>
-                                                        : <span className="text-white/45">Locked</span>}
+                                                        : <span className="text-foreground/45">Locked</span>}
                                             </div>
                                         </div>
                                     }
@@ -327,7 +327,7 @@ function AchievementRow({ def, progress }: { def: AchievementDefinition; progres
                                             'w-full rounded-lg border px-2.5 py-2 flex flex-col gap-1 min-w-0 cursor-help transition-all',
                                             earned && 'border-transparent',
                                             isNext && 'bg-card/40 border-transparent',
-                                            !earned && !isNext && 'bg-white/[0.02] border-white/5 opacity-55 hover:opacity-90',
+                                            !earned && !isNext && 'bg-hairline/[0.02] border-hairline/5 opacity-55 hover:opacity-90',
                                         )}
                                         style={
                                             earned
@@ -341,7 +341,7 @@ function AchievementRow({ def, progress }: { def: AchievementDefinition; progres
                                             <span
                                                 className={cn(
                                                     'size-4 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0',
-                                                    earned ? 'text-white' : !isNext && 'text-muted-foreground border border-white/15',
+                                                    earned ? 'text-foreground' : !isNext && 'text-muted-foreground border border-hairline/15',
                                                 )}
                                                 style={
                                                     earned ? { background: r.base }

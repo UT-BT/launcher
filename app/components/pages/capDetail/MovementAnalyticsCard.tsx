@@ -13,14 +13,14 @@ function fmtSec(v: number | null): string {
 
 function StatTile({ label, value, description }: { label: string; value: string; description: string }) {
     return (
-        <div className="bg-white/[0.02] border border-white/5 rounded-lg px-3 py-2.5 flex flex-col gap-1 h-full">
+        <div className="bg-hairline/[0.02] border border-hairline/5 rounded-lg px-3 py-2.5 flex flex-col gap-1 h-full">
             <div className="flex items-center gap-1.5">
                 <span className="text-[10px] uppercase tracking-wider text-muted-foreground truncate">{label}</span>
                 <Tooltip content={description} side="top">
                     <Info className="size-3 text-muted-foreground/60 shrink-0" />
                 </Tooltip>
             </div>
-            <div className="text-xl font-bold font-mono tabular-nums text-white">{value}</div>
+            <div className="text-xl font-bold font-mono tabular-nums text-foreground">{value}</div>
         </div>
     )
 }
@@ -37,8 +37,8 @@ export function MovementAnalyticsCard({ cap }: MovementAnalyticsCardProps) {
     const bindPct = totalDodges && totalDodges > 0 ? ((bindUses ?? 0) / totalDodges) * 100 : 0
 
     return (
-        <div className="bg-card/30 border border-white/5 rounded-xl">
-            <div className="px-4 py-3 border-b border-white/5 text-[10px] uppercase tracking-wider text-muted-foreground font-medium text-center">
+        <div className="bg-card/30 border border-hairline/5 rounded-xl">
+            <div className="px-4 py-3 border-b border-hairline/5 text-[10px] uppercase tracking-wider text-muted-foreground font-medium text-center">
                 Movement
             </div>
 
@@ -66,10 +66,10 @@ export function MovementAnalyticsCard({ cap }: MovementAnalyticsCardProps) {
 
                 <div>
                     <div className="text-[10px] uppercase tracking-wider text-muted-foreground/70 mb-2">Dodges</div>
-                    <div className="bg-white/[0.02] border border-white/5 rounded-lg px-4 py-3">
+                    <div className="bg-hairline/[0.02] border border-hairline/5 rounded-lg px-4 py-3">
                         <div className="flex items-end justify-between gap-3 flex-wrap">
                             <div className="flex items-baseline gap-1.5">
-                                <span className="text-2xl font-bold font-mono tabular-nums text-white">
+                                <span className="text-2xl font-bold font-mono tabular-nums text-foreground">
                                     {totalDodges != null ? totalDodges : '—'}
                                 </span>
                                 <span className="text-xs text-muted-foreground">total dodges</span>
@@ -77,18 +77,18 @@ export function MovementAnalyticsCard({ cap }: MovementAnalyticsCardProps) {
                             <div className="flex items-center gap-3 text-xs">
                                 <span className="flex items-center gap-1.5 text-muted-foreground">
                                     <span className="inline-block size-2 rounded-full bg-emerald-400" />
-                                    <span className="text-white font-mono tabular-nums">{normalDodges ?? '—'}</span> normal
+                                    <span className="text-foreground font-mono tabular-nums">{normalDodges ?? '—'}</span> normal
                                 </span>
                                 <Tooltip content="Dodges performed using a single-key dodge bind rather than a manual double-tap." side="top">
                                     <span className="flex items-center gap-1.5 text-muted-foreground cursor-default">
                                         <span className="inline-block size-2 rounded-full bg-blue-400" />
-                                        <span className="text-white font-mono tabular-nums">{bindUses ?? '—'}</span> bind
+                                        <span className="text-foreground font-mono tabular-nums">{bindUses ?? '—'}</span> bind
                                     </span>
                                 </Tooltip>
                             </div>
                         </div>
                         {totalDodges != null && totalDodges > 0 && (
-                            <div className="mt-2.5 h-2 rounded-full overflow-hidden flex bg-white/5">
+                            <div className="mt-2.5 h-2 rounded-full overflow-hidden flex bg-hairline/5">
                                 <div className="bg-emerald-500/70" style={{ width: `${normalPct}%` }} />
                                 <div className="bg-blue-500/70" style={{ width: `${bindPct}%` }} />
                             </div>

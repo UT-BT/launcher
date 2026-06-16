@@ -104,7 +104,7 @@ export function AchievementsPage({
         <div className="space-y-4 h-full flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-0 duration-500">
             <div className="flex flex-wrap items-end justify-between gap-3 shrink-0">
                 <div>
-                    <h1 className="text-2xl font-bold text-white leading-tight">Achievements</h1>
+                    <h1 className="text-2xl font-bold text-foreground leading-tight">Achievements</h1>
                 </div>
                 <Tooltip content="Refresh" side="bottom">
                     <button
@@ -112,7 +112,7 @@ export function AchievementsPage({
                         onClick={() => void load()}
                         disabled={loading}
                         aria-label="Refresh achievements"
-                        className="p-2 rounded-md text-muted-foreground hover:text-white hover:bg-white/5 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-default"
+                        className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-hairline/5 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-default"
                     >
                         <RefreshCw className={cn('size-4', loading && 'animate-spin')} />
                     </button>

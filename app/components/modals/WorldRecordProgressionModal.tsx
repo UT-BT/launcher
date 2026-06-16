@@ -59,7 +59,7 @@ function ProgressionTooltip({ active, payload }: {
     if (!active || !payload || payload.length === 0) return null
     const p = payload[0].payload
     return (
-        <div className="rounded-lg border border-white/10 bg-[rgba(10,10,11,0.97)] px-3 py-2.5 shadow-xl space-y-2 min-w-44">
+        <div className="rounded-lg border border-hairline/10 bg-[rgba(10,10,11,0.97)] px-3 py-2.5 shadow-xl space-y-2 min-w-44">
             <PlayerInfo
                 userId={p.userId ?? undefined}
                 alias={p.alias}
@@ -67,8 +67,8 @@ function ProgressionTooltip({ active, payload }: {
                 size="sm"
                 interactive={false}
             />
-            <div className="flex items-baseline justify-between gap-3 border-t border-white/5 pt-1.5">
-                <span className="font-mono font-bold tabular-nums text-white text-sm">{formatCapTime(p.seconds)}</span>
+            <div className="flex items-baseline justify-between gap-3 border-t border-hairline/5 pt-1.5">
+                <span className="font-mono font-bold tabular-nums text-foreground text-sm">{formatCapTime(p.seconds)}</span>
                 {p.delta != null && p.delta > 0
                     ? <span className="font-mono tabular-nums text-emerald-300 text-xs">-{formatDelta(p.delta)}</span>
                     : <span className="text-[10px] uppercase tracking-wider text-muted-foreground/60">first</span>}
@@ -123,7 +123,7 @@ export function WorldRecordProgressionModal({
                 title={`World Record Progression — ${displayMapName(mapName)}`}
                 offsetSidebar
                 maxWidth="min(90vw, 800px)"
-                className="bg-[#0a0a0b]/98 border-white/5"
+                className="bg-card/98 border-hairline/5"
                 footer={null}
             >
                 <div className="py-8 text-center text-sm text-muted-foreground">
@@ -158,7 +158,7 @@ export function WorldRecordProgressionModal({
             title={`World Record Progression — ${displayMapName(mapName)}`}
             offsetSidebar
             maxWidth="min(92vw, 880px)"
-            className="bg-[#0a0a0b]/98 border-white/5"
+            className="bg-card/98 border-hairline/5"
             footer={
                 <div className="p-3 border-t border-border bg-muted/50 flex justify-end shrink-0">
                     <Button onClick={onClose} variant="secondary">Close</Button>
@@ -186,7 +186,7 @@ export function WorldRecordProgressionModal({
                         />
                     </div>
                     <div className="text-right shrink-0">
-                        <div className="text-2xl font-mono font-bold tabular-nums text-white leading-none">
+                        <div className="text-2xl font-mono font-bold tabular-nums text-foreground leading-none">
                             {formatCapTime(current.cap_time_seconds)}
                         </div>
                         <Tooltip content={exactTimestamp(current.added)} side="top">
@@ -201,31 +201,31 @@ export function WorldRecordProgressionModal({
                 </div>
 
                 <div className="grid grid-cols-3 gap-2">
-                    <div className="bg-card/50 border border-white/5 rounded-lg px-3 py-2">
+                    <div className="bg-card/50 border border-hairline/5 rounded-lg px-3 py-2">
                         <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Records set</div>
-                        <div className="text-base font-bold font-mono text-white">{sorted.length}</div>
+                        <div className="text-base font-bold font-mono text-foreground">{sorted.length}</div>
                     </div>
-                    <div className="bg-card/50 border border-white/5 rounded-lg px-3 py-2">
+                    <div className="bg-card/50 border border-hairline/5 rounded-lg px-3 py-2">
                         <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Total improvement</div>
                         <div className="text-base font-bold font-mono text-emerald-300">
                             {totalImprovement != null && totalImprovement > 0 ? `-${formatDelta(totalImprovement)}` : '—'}
                         </div>
                     </div>
-                    <div className="bg-card/50 border border-white/5 rounded-lg px-3 py-2">
+                    <div className="bg-card/50 border border-hairline/5 rounded-lg px-3 py-2">
                         <div className="text-[9px] uppercase tracking-wider text-muted-foreground">First record</div>
-                        <div className="text-base font-bold font-mono text-white tabular-nums">
+                        <div className="text-base font-bold font-mono text-foreground tabular-nums">
                             {first.added ? formatAddedDate(first.added) : '—'}
                         </div>
                     </div>
                 </div>
 
                 {sorted.length >= 2 && (
-                    <div className="bg-white/[0.02] border border-white/5 rounded-lg p-2 h-64 relative [&_.recharts-surface]:outline-none [&_.recharts-wrapper]:outline-none">
+                    <div className="bg-hairline/[0.02] border border-hairline/5 rounded-lg p-2 h-64 relative [&_.recharts-surface]:outline-none [&_.recharts-wrapper]:outline-none">
                         {brushRange && (
                             <button
                                 type="button"
                                 onClick={() => setBrushRange(null)}
-                                className="absolute top-2 right-2 z-10 inline-flex items-center gap-1 h-5 px-1.5 rounded text-[9px] font-bold uppercase tracking-wider border bg-card/80 border-white/10 text-muted-foreground hover:text-white hover:border-white/20 transition-colors cursor-pointer"
+                                className="absolute top-2 right-2 z-10 inline-flex items-center gap-1 h-5 px-1.5 rounded text-[9px] font-bold uppercase tracking-wider border bg-card/80 border-hairline/10 text-muted-foreground hover:text-foreground hover:border-hairline/20 transition-colors cursor-pointer"
                                 title="Reset zoom"
                             >
                                 <ZoomOut className="size-2.5" />
@@ -320,14 +320,14 @@ export function WorldRecordProgressionModal({
                                         'flex items-center gap-2.5 px-2.5 py-1.5 rounded-md border transition-colors',
                                         isOwn ? 'bg-emerald-500/[0.07] border-emerald-500/30' :
                                             isCurrent ? 'bg-blue-500/[0.05] border-blue-500/25' :
-                                                isHovered ? 'bg-white/[0.04] border-white/15' :
-                                                    'bg-white/[0.02] border-white/5',
+                                                isHovered ? 'bg-hairline/[0.04] border-hairline/15' :
+                                                    'bg-hairline/[0.02] border-hairline/5',
                                     )}
                                 >
                                     <span className={cn(
                                         'inline-flex items-center justify-center min-w-8 h-5 px-1 rounded text-[10px] font-bold font-mono shrink-0',
                                         isCurrent ? 'bg-blue-500/20 text-blue-200 border border-blue-500/40' :
-                                            'bg-white/[0.04] text-muted-foreground/70 border border-white/5',
+                                            'bg-hairline/[0.04] text-muted-foreground/70 border border-hairline/5',
                                     )}>
                                         {isCurrent ? 'WR' : `#${wrIdx + 1}`}
                                     </span>
@@ -344,7 +344,7 @@ export function WorldRecordProgressionModal({
                                     <CapTimeLink
                                         capId={entry.cap_id}
                                         seconds={entry.cap_time_seconds}
-                                        className="text-xs font-mono tabular-nums text-white/85 shrink-0"
+                                        className="text-xs font-mono tabular-nums text-foreground/85 shrink-0"
                                     />
                                     <span className="text-[10px] font-mono tabular-nums shrink-0 w-16 text-right">
                                         {delta != null && delta > 0

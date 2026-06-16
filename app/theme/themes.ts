@@ -3,6 +3,7 @@ export interface ThemeMeta {
   label: string
   description: string
   swatch: string
+  exclusive?: boolean
 }
 
 export const THEMES: ThemeMeta[] = [
@@ -29,6 +30,19 @@ export const THEMES: ThemeMeta[] = [
     label: 'Gunmetal',
     description: 'Desaturated steel — the most subtle palette.',
     swatch: '#64748b',
+  },
+  {
+    id: 'aurum',
+    label: 'Aurum',
+    description: 'Liquid gold on black — a Patreon-exclusive palette.',
+    swatch: '#fbbf24',
+    exclusive: true,
+  },
+  {
+    id: 'light',
+    label: 'Light',
+    description: 'Crisp white — for when dark is too dark.',
+    swatch: '#f1f5f9',
   },
 ]
 

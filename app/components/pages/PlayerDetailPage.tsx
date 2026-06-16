@@ -94,7 +94,7 @@ export function PlayerDetailPage({
                         type="button"
                         onClick={() => refreshCooldown.trigger(() => setRefreshKey(k => k + 1))}
                         disabled={loading || !refreshCooldown.canRefresh}
-                        className="p-2 rounded-md text-muted-foreground hover:text-white hover:bg-white/5 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                        className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-hairline/5 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
                         aria-label="Refresh"
                     >
                         <RefreshCw className={`size-4 ${loading ? 'animate-spin' : ''}`} />
@@ -109,7 +109,7 @@ export function PlayerDetailPage({
                 isSelf={isSelf}
                 onChangeTitle={isSelf ? () => setChangeTitleOpen(true) : undefined}
                 chart={
-                    <Suspense fallback={<div className="h-full min-h-[140px] bg-white/[0.02] border border-white/5 rounded-lg animate-pulse" />}>
+                    <Suspense fallback={<div className="h-full min-h-[140px] bg-hairline/[0.02] border border-hairline/5 rounded-lg animate-pulse" />}>
                         <PlayerActivityChart activity={activity} loading={chartLoading} />
                     </Suspense>
                 }

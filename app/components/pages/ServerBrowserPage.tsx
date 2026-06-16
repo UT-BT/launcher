@@ -221,17 +221,17 @@ const PlayerRow = ({ player }: { player: Player }) => {
             onClick={onClick}
             className={cn(
                 'flex items-center gap-2.5 px-2 py-1.5 rounded-md transition-colors group/player',
-                isBot ? 'cursor-pointer hover:bg-[#9146FF]/10' : 'hover:bg-white/5',
+                isBot ? 'cursor-pointer hover:bg-[#9146FF]/10' : 'hover:bg-hairline/5',
                 player.is_spectator && !isBot && 'opacity-60',
             )}
         >
             <span className="flex-1 min-w-0">
                 {isBot ? (
                     <span className="flex items-center gap-2.5 min-w-0">
-                        <span className="size-6 rounded-md overflow-hidden bg-black/40 border border-white/5 shrink-0 flex items-center justify-center">
+                        <span className="size-6 rounded-md overflow-hidden bg-black/40 border border-hairline/5 shrink-0 flex items-center justify-center">
                             <Twitch className="size-3.5 text-[#9146FF] fill-[#9146FF]/20" />
                         </span>
-                        <span className="text-xs font-semibold text-white truncate group-hover/player:text-[#9146FF]">
+                        <span className="text-xs font-semibold text-foreground truncate group-hover/player:text-[#9146FF]">
                             UTBT Spectator Bot
                         </span>
                     </span>
@@ -284,13 +284,13 @@ const AvatarStack = ({ players }: { players: Player[] }) => {
                                 }}
                             />
                         ) : (
-                            <User className="size-3 text-white/70" />
+                            <User className="size-3 text-foreground/70" />
                         )}
                     </div>
                 )
             })}
             {remaining > 0 && (
-                <div className="size-5 rounded-full border-2 border-card bg-white/10 text-[9px] font-bold text-white/80 flex items-center justify-center shrink-0">
+                <div className="size-5 rounded-full border-2 border-card bg-hairline/10 text-[9px] font-bold text-foreground/80 flex items-center justify-center shrink-0">
                     +{remaining}
                 </div>
             )}
@@ -316,8 +316,8 @@ const PlayerListCell = ({ players, displayText, displayColor, singular, plural }
         <div className={cn(
             'inline-flex items-center gap-2 px-2 py-1 rounded border transition-colors',
             sorted.length > 0
-                ? 'bg-card/50 border-white/5 hover:border-white/20 hover:bg-card/80 cursor-pointer'
-                : 'bg-card/30 border-white/5 cursor-default',
+                ? 'bg-card/50 border-hairline/5 hover:border-hairline/20 hover:bg-card/80 cursor-pointer'
+                : 'bg-card/30 border-hairline/5 cursor-default',
         )}>
             <span className={cn('text-xs font-bold tabular-nums', displayColor)}>
                 {displayText}
@@ -338,7 +338,7 @@ const PlayerListCell = ({ players, displayText, displayColor, singular, plural }
                 className="min-w-64 max-w-80 max-h-[60vh] overflow-y-auto"
                 onClick={e => e.stopPropagation()}
             >
-                <div className="px-2 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground border-b border-white/5">
+                <div className="px-2 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground border-b border-hairline/5">
                     {sorted.length} {sorted.length === 1 ? singular : plural}
                 </div>
                 <div className="p-1 space-y-0.5">
@@ -687,7 +687,7 @@ export function ServerBrowserPage({
                                     size="sm"
                                 />
                             </span>
-                            <span className="text-sm font-bold text-white">{trimmed}</span>
+                            <span className="text-sm font-bold text-foreground">{trimmed}</span>
                         </div>
                     </DataTableCell>
                 )
@@ -699,12 +699,12 @@ export function ServerBrowserPage({
                             <button
                                 type="button"
                                 onClick={(e) => { e.stopPropagation(); onMapSelect(server.map_name) }}
-                                className="text-sm font-semibold text-white truncate inline-block max-w-[220px] align-middle text-left hover:text-accent-300 hover:underline underline-offset-2 transition-colors cursor-pointer"
+                                className="text-sm font-semibold text-foreground truncate inline-block max-w-[220px] align-middle text-left hover:text-accent-300 hover:underline underline-offset-2 transition-colors cursor-pointer"
                             >
                                 {displayMapName(server.map_name)}
                             </button>
                         ) : (
-                            <span className="text-sm font-semibold text-white truncate inline-block max-w-[220px] align-middle">
+                            <span className="text-sm font-semibold text-foreground truncate inline-block max-w-[220px] align-middle">
                                 {displayMapName(server.map_name)}
                             </span>
                         )}
@@ -717,7 +717,7 @@ export function ServerBrowserPage({
                             <img
                                 src={getRegionFlag(region)}
                                 alt={region}
-                                className="h-4 w-6 object-cover rounded-[2px] border border-white/10"
+                                className="h-4 w-6 object-cover rounded-[2px] border border-hairline/10"
                             />
                         </Tooltip>
                     </DataTableCell>
@@ -782,7 +782,7 @@ export function ServerBrowserPage({
                             'inline-flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider border',
                             isEnded
                                 ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
-                                : 'bg-white/5 border-white/5 text-muted-foreground',
+                                : 'bg-hairline/5 border-hairline/5 text-muted-foreground',
                         )}>
                             {isEnded ? <Flag className="size-3" /> : <Clock className="size-3" />}
                             {text}
@@ -824,7 +824,7 @@ export function ServerBrowserPage({
                                         type="button"
                                         onClick={() => handleJoin(server, true)}
                                         disabled={!canSpec}
-                                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium border border-white/10 bg-white/5 text-muted-foreground hover:bg-white/10 hover:text-white hover:border-white/20 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white/5 disabled:hover:text-muted-foreground disabled:hover:border-white/10"
+                                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium border border-hairline/10 bg-hairline/5 text-muted-foreground hover:bg-hairline/10 hover:text-foreground hover:border-hairline/20 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-hairline/5 disabled:hover:text-muted-foreground disabled:hover:border-hairline/10"
                                     >
                                         <Eye className="size-3" />
                                         Spec
@@ -852,14 +852,14 @@ export function ServerBrowserPage({
         <div className="space-y-4 h-full flex flex-col overflow-hidden">
             <div className="flex items-end justify-between shrink-0">
                 <div>
-                    <h1 className="text-2xl font-bold text-white leading-tight">Servers</h1>
+                    <h1 className="text-2xl font-bold text-foreground leading-tight">Servers</h1>
                     {!showSkeleton ? (
                         <p className="text-xs text-muted-foreground mt-0.5">
                             Currently {totalPlayerCount.toLocaleString()} {totalPlayerCount === 1 ? 'player' : 'players'} on {processedServers.length.toLocaleString()} {processedServers.length === 1 ? 'server' : 'servers'}
                             <i>{lastRefreshLabel && <> (Refreshed at {lastRefreshLabel})</>}</i>
                         </p>
                     ) : (
-                        <div className="h-3 w-40 bg-white/5 rounded mt-1.5 animate-pulse" />
+                        <div className="h-3 w-40 bg-hairline/5 rounded mt-1.5 animate-pulse" />
                     )}
                 </div>
                 <div className="flex items-center gap-1">
@@ -868,7 +868,7 @@ export function ServerBrowserPage({
                             type="button"
                             onClick={startTutorial}
                             aria-label="Restart Servers tutorial"
-                            className="p-2 rounded-md text-muted-foreground hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+                            className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-hairline/5 transition-colors cursor-pointer"
                         >
                             <HelpCircle className="size-4" />
                         </button>
@@ -879,7 +879,7 @@ export function ServerBrowserPage({
                             type="button"
                             onClick={() => refreshCooldown.trigger(fetchServers)}
                             disabled={loading || !refreshCooldown.canRefresh}
-                            className="p-2 rounded-md text-muted-foreground hover:text-white hover:bg-white/5 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-hairline/5 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             <RefreshCw className={cn('size-4', loading && 'animate-spin')} />
                         </button>
@@ -896,7 +896,7 @@ export function ServerBrowserPage({
                         'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border transition-colors cursor-pointer',
                         state.filtersPanelOpen
                             ? 'bg-accent-500/20 border-accent-500/50 text-accent-300'
-                            : 'bg-card/50 border-white/10 text-muted-foreground hover:text-white hover:border-white/20',
+                            : 'bg-card/50 border-hairline/10 text-muted-foreground hover:text-foreground hover:border-hairline/20',
                     )}
                 >
                     <SlidersHorizontal className="size-4" />
@@ -973,7 +973,7 @@ export function ServerBrowserPage({
             )}
 
             {state.filtersPanelOpen && (
-                <div className="bg-card/30 border border-white/10 rounded-xl p-4 space-y-4 shrink-0">
+                <div className="bg-card/30 border border-hairline/10 rounded-xl p-4 space-y-4 shrink-0">
                     <FilterPanelRow label="Server">
                         <MultiFilterDropdown
                             label="Type"
@@ -997,7 +997,7 @@ export function ServerBrowserPage({
                             onChange={v => updateFilters({ ...state.filters, capacity: v as CapacityValue[] })}
                             options={CAPACITY_OPTIONS}
                         />
-                        <label className="flex items-center gap-2 px-3 py-2 bg-card/50 border border-white/10 rounded-md text-sm text-white cursor-pointer hover:border-white/20 self-end">
+                        <label className="flex items-center gap-2 px-3 py-2 bg-card/50 border border-hairline/10 rounded-md text-sm text-foreground cursor-pointer hover:border-hairline/20 self-end">
                             <input
                                 type="checkbox"
                                 checked={state.filters.favoritesOnly}
@@ -1013,7 +1013,7 @@ export function ServerBrowserPage({
                         </label>
                     </FilterPanelRow>
 
-                    <div className="flex items-center justify-between gap-3 pt-2 border-t border-white/5">
+                    <div className="flex items-center justify-between gap-3 pt-2 border-t border-hairline/5">
                         <FilterPresetsMenu<ServerPresetFilters>
                             presets={presets}
                             activePreset={activePreset}

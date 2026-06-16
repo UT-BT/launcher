@@ -53,7 +53,7 @@ export function ReplayVideoModal({ state, onClose, leftAction }: ReplayVideoModa
             onClose={onClose}
             title={buildTitle(state)}
             offsetSidebar
-            className="bg-[#0a0a0b]/98 border-white/5"
+            className="bg-card/98 border-hairline/5"
             maxWidth="min(90vw, 1280px)"
             leftAction={leftAction}
             footer={
@@ -67,7 +67,7 @@ export function ReplayVideoModal({ state, onClose, leftAction }: ReplayVideoModa
                                 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border transition-colors cursor-pointer',
                                 shareCopied
                                     ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
-                                    : 'bg-white/[0.03] border-white/10 text-muted-foreground hover:text-white hover:bg-white/[0.06] hover:border-white/20',
+                                    : 'bg-hairline/[0.03] border-hairline/10 text-muted-foreground hover:text-foreground hover:bg-hairline/[0.06] hover:border-hairline/20',
                             )}
                         >
                             {shareCopied ? <Check className="size-3.5" /> : <Share2 className="size-3.5" />}

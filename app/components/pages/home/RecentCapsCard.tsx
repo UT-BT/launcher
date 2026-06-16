@@ -66,7 +66,7 @@ export function RecentCapsCard({
                                             size="sm"
                                             className="shrink-0"
                                         />
-                                        <span className="font-bold text-white/90 truncate">
+                                        <span className="font-bold text-foreground/90 truncate">
                                             {displayMapName(ach.mapName)}
                                         </span>
                                     </div>
@@ -89,10 +89,10 @@ export function RecentCapsCard({
                                             <CapTimeLink
                                                 capId={ach.id}
                                                 seconds={timeVal}
-                                                className="font-mono font-black text-white/90 tracking-tight"
+                                                className="font-mono font-black text-foreground/90 tracking-tight"
                                             />
                                         ) : (
-                                            <span className="font-mono font-black text-white/90 tracking-tight">
+                                            <span className="font-mono font-black text-foreground/90 tracking-tight">
                                                 {timeStr}
                                             </span>
                                         )}

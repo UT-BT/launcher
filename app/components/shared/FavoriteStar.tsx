@@ -48,9 +48,9 @@ export function FavoriteStar({
                     PADDING[size],
                     isFavorited
                         ? 'text-yellow-400 hover:text-yellow-300'
-                        : 'text-white/30 hover:text-white/80',
+                        : 'text-foreground/30 hover:text-foreground/80',
                     disabled && 'opacity-40 cursor-not-allowed',
-                    !disabled && 'cursor-pointer hover:bg-white/5',
+                    !disabled && 'cursor-pointer hover:bg-hairline/5',
                     className,
                 )}
             >

@@ -93,8 +93,8 @@ export function CheckpointSplitsCard({
     }, [canCompare, checkpoints, baseline, capTime, baselineTime])
 
     return (
-        <div className="bg-card/30 border border-white/5 rounded-xl flex flex-col overflow-hidden">
-            <div className="relative flex items-center px-4 py-3 border-b border-white/5 shrink-0">
+        <div className="bg-card/30 border border-hairline/5 rounded-xl flex flex-col overflow-hidden">
+            <div className="relative flex items-center px-4 py-3 border-b border-hairline/5 shrink-0">
                 <div className="flex-1 text-center text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
                     Checkpoint Deltas
                 </div>
@@ -111,7 +111,7 @@ export function CheckpointSplitsCard({
                             value={selectedCompareId ?? ''}
                             onChange={(e) => onSelectCompare(e.target.value || null)}
                             style={{ colorScheme: 'dark' }}
-                            className="h-7 rounded-md bg-card/60 border border-white/10 text-xs text-white px-2 hover:border-white/20 focus:outline-none focus:border-accent-500/50 cursor-pointer max-w-[16rem]"
+                            className="h-7 rounded-md bg-card/60 border border-hairline/10 text-xs text-foreground px-2 hover:border-hairline/20 focus:outline-none focus:border-accent-500/50 cursor-pointer max-w-[16rem]"
                         >
                             {compareOptions.map(o => (
                                 <option key={o.id} value={o.id}>{o.label}</option>
@@ -125,7 +125,7 @@ export function CheckpointSplitsCard({
                 <NoSplits message="No checkpoint splits available for this run." />
             ) : (
                 <div className="flex flex-col lg:flex-row lg:h-[460px]">
-                    <div className="lg:w-1/2 h-[320px] lg:h-full lg:border-r border-white/5 min-h-0 flex flex-col">
+                    <div className="lg:w-1/2 h-[320px] lg:h-full lg:border-r border-hairline/5 min-h-0 flex flex-col">
                         <DataTableShell className="!bg-transparent !border-0 !rounded-none">
                             <DataTableHeaderRow>
                                 <DataTableHeaderCell width="4rem" align="center">CP</DataTableHeaderCell>
@@ -150,7 +150,7 @@ export function CheckpointSplitsCard({
                                             </span>
                                         </DataTableCell>
                                         <DataTableCell align="right">
-                                            <span className="text-sm font-mono tabular-nums text-white">
+                                            <span className="text-sm font-mono tabular-nums text-foreground">
                                                 {formatCapTime(cumulative)}
                                             </span>
                                         </DataTableCell>
@@ -176,7 +176,7 @@ export function CheckpointSplitsCard({
 
                     <div className="lg:w-1/2 h-[280px] lg:h-full p-3 min-h-0">
                         {canCompare && deltaPoints.length >= 2 ? (
-                            <Suspense fallback={<div className="h-full bg-white/[0.02] border border-white/5 rounded-lg animate-pulse" />}>
+                            <Suspense fallback={<div className="h-full bg-hairline/[0.02] border border-hairline/5 rounded-lg animate-pulse" />}>
                                 <CheckpointDeltaChart
                                     key={selectedCompareId ?? 'cmp'}
                                     points={deltaPoints}

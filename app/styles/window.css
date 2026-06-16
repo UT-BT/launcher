@@ -10,12 +10,12 @@
   --window-c-popup-font-weight: normal;
 
   --window-c-background: #1c1c1c;
-  --window-c-titlebar-background: #282828;
+  --window-c-titlebar-background: var(--secondary);
   --window-c-titlebar-border: transparent;
   --window-c-text: #ffffffc8;
   --window-c-hover: #3c3c3c;
-  --window-c-popup-background: #282828;
-  --window-c-popup-border: #3c3c3c;
+  --window-c-popup-background: var(--popover);
+  --window-c-popup-border: var(--border);
   --window-c-popup-shadow: #00000080;
   --window-c-separator: #80808033;
   --window-c-control-hover: #0000003d;
@@ -81,8 +81,8 @@
 }
 
 .modern-titlebar {
-  background-color: #1a1a1a;
-  border-bottom: 1px solid #333;
+  background-color: var(--window-c-titlebar-background);
+  border-bottom: 1px solid var(--window-c-titlebar-border);
 }
 
 .window-titlebar-icon {
@@ -149,7 +149,7 @@
 .window-titlebar-brand-text {
   font-size: 11px;
   font-weight: 500;
-  color: #ffffffc8;
+  color: var(--window-c-text);
   white-space: nowrap;
   line-height: 1;
   display: flex;
@@ -175,13 +175,13 @@
   transform: translateY(-50%);
   width: 1px;
   height: 16px;
-  background-color: #444;
+  background-color: var(--window-c-separator);
 }
 
 .titlebar-separator {
   width: 1px;
   height: 16px;
-  background-color: #444;
+  background-color: var(--window-c-separator);
   margin: 0 4px;
 }
 
@@ -193,7 +193,7 @@
   height: 20px;
   background: none;
   border: none;
-  color: #ffffffc8;
+  color: var(--window-c-text);
   cursor: pointer;
   border-radius: 3px;
   font-size: 14px;
@@ -206,7 +206,7 @@
 }
 
 .titlebar-action-button:hover {
-  background-color: #3c3c3c;
+  background-color: var(--window-c-hover);
 }
 
 .titlebar-action-button.is-uploading {
@@ -226,8 +226,8 @@
   position: absolute;
   top: 100%;
   right: 0;
-  background-color: #282828;
-  border: 1px solid #3c3c3c;
+  background-color: var(--window-c-popup-background);
+  border: 1px solid var(--window-c-popup-border);
   border-radius: 6px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
   width: fit-content;
@@ -244,7 +244,7 @@
   padding: 6px 12px;
   background: none;
   border: none;
-  color: #ffffffc8;
+  color: var(--window-c-text);
   cursor: pointer;
   text-align: left;
   font-size: 12px;
@@ -253,7 +253,7 @@
 }
 
 .titlebar-dropdown-item:hover {
-  background-color: #3c3c3c;
+  background-color: var(--window-c-hover);
 }
 
 .titlebar-dropdown-icon {

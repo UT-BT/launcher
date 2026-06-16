@@ -129,8 +129,8 @@ export function RecentCapsCard({
     const dir = (field: SortField): SortDirection => sortField === field ? sortDir : null
 
     return (
-        <div className="bg-card/30 border border-white/5 rounded-xl flex flex-col overflow-hidden">
-            <div className="flex items-center justify-between gap-3 gap-y-2 px-4 py-3 border-b border-white/5 flex-wrap">
+        <div className="bg-card/30 border border-hairline/5 rounded-xl flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between gap-3 gap-y-2 px-4 py-3 border-b border-hairline/5 flex-wrap">
                 <div className="flex items-center gap-3 flex-wrap">
                     {tabsSlot}
                 </div>
@@ -142,14 +142,14 @@ export function RecentCapsCard({
                             value={queryRaw}
                             onChange={e => setQueryRaw(e.target.value)}
                             placeholder="Search map…"
-                            className="w-full sm:w-44 pl-7 pr-2 py-1 bg-card/50 border border-white/10 rounded text-xs text-white placeholder:text-muted-foreground focus:outline-none focus:border-accent-500/50"
+                            className="w-full sm:w-44 pl-7 pr-2 py-1 bg-card/50 border border-hairline/10 rounded text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent-500/50"
                         />
                     </div>
                     <select
                         value={capFilter}
                         onChange={e => setCapFilter(e.target.value as CapFilter)}
                         style={{ colorScheme: 'dark' }}
-                        className="px-2 py-1 bg-card/50 border border-white/10 rounded text-xs text-white focus:outline-none focus:border-accent-500/50 cursor-pointer"
+                        className="px-2 py-1 bg-card/50 border border-hairline/10 rounded text-xs text-foreground focus:outline-none focus:border-accent-500/50 cursor-pointer"
                     >
                         <option value="all" className="bg-[#0f1115]">All Caps</option>
                         <option value="verified" className="bg-[#0f1115]">Verified Caps</option>
@@ -165,7 +165,7 @@ export function RecentCapsCard({
                                 'inline-flex items-center justify-center size-7 rounded-md border transition-colors cursor-pointer',
                                 favoritesOnly
                                     ? 'bg-yellow-500/15 border-yellow-500/40 text-yellow-300 hover:bg-yellow-500/25'
-                                    : 'bg-card/50 border-white/10 text-muted-foreground hover:text-white hover:border-white/20',
+                                    : 'bg-card/50 border-hairline/10 text-muted-foreground hover:text-foreground hover:border-hairline/20',
                             )}
                         >
                             <Star className={cn('size-3.5', favoritesOnly && 'fill-current')} />
@@ -222,7 +222,7 @@ export function RecentCapsCard({
                                                     disabled={!canEditFavorites}
                                                 />
                                             )}
-                                            <span className="text-sm font-semibold text-white truncate min-w-0">
+                                            <span className="text-sm font-semibold text-foreground truncate min-w-0">
                                                 {displayMapName(cap.mapName)}
                                             </span>
                                         </div>
@@ -238,7 +238,7 @@ export function RecentCapsCard({
                                         <CapTimeLink
                                             capId={cap.id}
                                             seconds={cap.time}
-                                            className="text-sm font-mono tabular-nums font-bold text-white"
+                                            className="text-sm font-mono tabular-nums font-bold text-foreground"
                                         />
                                     </DataTableCell>
                                     <DataTableCell align="center">
@@ -286,7 +286,7 @@ export function RecentCapsCard({
             </DataTableShell>
 
             {!loading && total > 0 && (
-                <div className="px-4 py-3 border-t border-white/5">
+                <div className="px-4 py-3 border-t border-hairline/5">
                     <PaginationBar
                         page={page}
                         totalPages={totalPages}

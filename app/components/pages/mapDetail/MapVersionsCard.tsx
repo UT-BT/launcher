@@ -105,7 +105,7 @@ export function MapVersionsBar({ map, accessToken, onSelect }: MapVersionsBarPro
     const labels = deriveVersionLabels(chain.map(e => e.name))
 
     return (
-        <div className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-white/[0.03] border border-white/5">
+        <div className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-hairline/[0.03] border border-hairline/5">
             <GitBranch className="size-3 text-muted-foreground/70 shrink-0" />
             <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-medium mr-0.5">
                 Versions
@@ -128,8 +128,8 @@ export function MapVersionsBar({ map, accessToken, onSelect }: MapVersionsBarPro
                     entry.isCurrent
                         ? 'bg-emerald-500/15 text-emerald-200 border border-emerald-500/30'
                         : clickable
-                            ? 'bg-white/[0.04] text-white/70 border border-white/10 hover:bg-white/10 hover:text-white cursor-pointer transition-colors'
-                            : 'bg-white/[0.04] text-white/60 border border-white/10',
+                            ? 'bg-hairline/[0.04] text-foreground/70 border border-hairline/10 hover:bg-hairline/10 hover:text-foreground cursor-pointer transition-colors'
+                            : 'bg-hairline/[0.04] text-foreground/60 border border-hairline/10',
                 )
                 const pill = clickable ? (
                     <button

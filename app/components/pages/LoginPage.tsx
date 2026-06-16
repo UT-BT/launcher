@@ -69,10 +69,10 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
                 <button
                     onClick={handleLogin}
                     disabled={isLoading}
-                    className="w-full flex items-center justify-center gap-3 px-6 py-3 text-white bg-[#5865F2] hover:bg-[#4752C4] active:bg-[#3C45A5] rounded-lg transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-[#5865F2]/25"
+                    className="w-full flex items-center justify-center gap-3 px-6 py-3 text-foreground bg-[#5865F2] hover:bg-[#4752C4] active:bg-[#3C45A5] rounded-lg transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-[#5865F2]/25"
                 >
                     {isLoading ? (
-                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        <div className="w-5 h-5 border-2 border-hairline/30 border-t-white rounded-full animate-spin" />
                     ) : (
                         <FaDiscord className="w-5 h-5" />
                     )}

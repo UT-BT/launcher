@@ -75,7 +75,7 @@ export function StatsRow({ leaderboard, playtime, loading, onShowPlaytimeBreakdo
             label: 'Unique Players',
             value: loading ? null : engagedPlayers.toLocaleString(),
             icon: Users,
-            accent: 'text-white',
+            accent: 'text-foreground',
         },
         { key: 'playtime', label: 'Total Playtime', value: loading ? null : formatHours(totalPlaytimeSec), icon: Clock, accent: 'text-amber-300', onClick: onShowPlaytimeBreakdown },
         {
@@ -98,20 +98,20 @@ export function StatsRow({ leaderboard, playtime, loading, onShowPlaytimeBreakdo
                         type={t.onClick ? 'button' : undefined}
                         onClick={t.onClick}
                         className={cn(
-                            'bg-card/30 border border-white/5 rounded-xl px-4 py-3 flex items-center gap-3 text-left w-full',
-                            t.onClick && 'cursor-pointer hover:bg-card/60 hover:border-white/20 transition-colors',
+                            'bg-card/30 border border-hairline/5 rounded-xl px-4 py-3 flex items-center gap-3 text-left w-full',
+                            t.onClick && 'cursor-pointer hover:bg-card/60 hover:border-hairline/20 transition-colors',
                         )}
                     >
-                        <div className={cn('p-2 rounded-lg bg-white/5', t.accent)}>
+                        <div className={cn('p-2 rounded-lg bg-hairline/5', t.accent)}>
                             <t.icon className="size-4" />
                         </div>
                         <div className="min-w-0 flex-1">
                             <div className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center justify-between gap-1">
                                 <span>{t.label}</span>
-                                {t.onClick && <span className="text-white/40 normal-case tracking-normal">↗</span>}
+                                {t.onClick && <span className="text-foreground/40 normal-case tracking-normal">↗</span>}
                             </div>
                             {t.value === null ? (
-                                <div className="mt-1 h-5 w-16 bg-white/5 rounded animate-pulse" />
+                                <div className="mt-1 h-5 w-16 bg-hairline/5 rounded animate-pulse" />
                             ) : (
                                 <div className="flex items-baseline gap-1.5">
                                     <span className={cn('text-lg font-bold font-mono tabular-nums leading-tight', t.accent)}>

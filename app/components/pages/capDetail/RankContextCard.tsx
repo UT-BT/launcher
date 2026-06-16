@@ -31,13 +31,13 @@ function NeighborRow({ rank, userId, alias, title, time, capId, highlight, curre
     return (
         <div className={cn(
             'flex items-center gap-2 px-3 py-2 rounded-lg',
-            highlight ? 'bg-accent-500/10 border border-accent-500/30' : 'hover:bg-white/[0.03]',
+            highlight ? 'bg-accent-500/10 border border-accent-500/30' : 'hover:bg-hairline/[0.03]',
         )}>
             <span className="w-8 text-xs font-bold font-mono text-muted-foreground tabular-nums shrink-0">#{rank}</span>
             <div className="min-w-0 flex-1">
                 <PlayerInfo userId={userId} alias={alias} title={title} size="sm" highlight={isYou} showYouBadge={isYou} />
             </div>
-            <span className="text-sm font-mono tabular-nums font-bold text-white shrink-0">
+            <span className="text-sm font-mono tabular-nums font-bold text-foreground shrink-0">
                 {capId ? <CapTimeLink capId={capId} seconds={time} /> : formatCapTime(time)}
             </span>
         </div>
@@ -77,13 +77,13 @@ export function RankContextCard({
     )
 
     return (
-        <div className="bg-card/30 border border-white/5 rounded-xl">
-            <div className="px-4 py-3 border-b border-white/5 text-[10px] uppercase tracking-wider text-muted-foreground font-medium text-center">
+        <div className="bg-card/30 border border-hairline/5 rounded-xl">
+            <div className="px-4 py-3 border-b border-hairline/5 text-[10px] uppercase tracking-wider text-muted-foreground font-medium text-center">
                 Rank
             </div>
 
             <div className="px-4 py-4 flex items-baseline gap-2">
-                <span className="text-3xl font-bold font-mono tabular-nums text-white">#{rank}</span>
+                <span className="text-3xl font-bold font-mono tabular-nums text-foreground">#{rank}</span>
                 <span className="text-sm text-muted-foreground">of {total.toLocaleString()}</span>
             </div>
 

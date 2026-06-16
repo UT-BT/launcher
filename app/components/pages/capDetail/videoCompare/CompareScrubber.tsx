@@ -79,9 +79,9 @@ export function CompareScrubber({
                 aria-valuenow={Math.round(master)}
                 {...pointerHandlers}
                 onKeyDown={onKeyDown}
-                className="relative h-12 rounded-lg bg-white/[0.02] border border-white/5 overflow-hidden touch-none cursor-pointer focus:outline-none focus:border-blue-500/40"
+                className="relative h-12 rounded-lg bg-hairline/[0.02] border border-hairline/5 overflow-hidden touch-none cursor-pointer focus:outline-none focus:border-accent-500/40"
             >
-                <div className="absolute left-0 right-0 top-1/2 h-px bg-white/5" />
+                <div className="absolute left-0 right-0 top-1/2 h-px bg-hairline/5" />
                 {renderTicks(ticksA, 'top', 'bg-blue-400/40', 'bg-blue-300')}
                 {renderTicks(ticksB, 'bottom', 'bg-amber-400/40', 'bg-amber-300')}
 

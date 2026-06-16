@@ -9,14 +9,14 @@ interface ClientSettingsGridProps {
     server: { name: string | null; region: string | null }
 }
 
-function Tile({ label, value, accent = 'text-white', className }: {
+function Tile({ label, value, accent = 'text-foreground', className }: {
     label: string
     value: ReactNode
     accent?: string
     className?: string
 }) {
     return (
-        <div className={cn('bg-white/[0.02] border border-white/5 rounded-lg px-3 py-2 flex flex-col justify-center items-center text-center h-full', className)}>
+        <div className={cn('bg-hairline/[0.02] border border-hairline/5 rounded-lg px-3 py-2 flex flex-col justify-center items-center text-center h-full', className)}>
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">{label}</div>
             <div className={cn('text-sm font-semibold truncate max-w-full', accent)}>{value}</div>
         </div>
@@ -29,7 +29,7 @@ function SpreadTile({ label, accent, cells }: {
     cells: { p: string; v: number | null; suffix?: string }[]
 }) {
     return (
-        <div className="bg-white/[0.02] border border-white/5 rounded-lg px-3 py-2.5 flex flex-col justify-center h-full">
+        <div className="bg-hairline/[0.02] border border-hairline/5 rounded-lg px-3 py-2.5 flex flex-col justify-center h-full">
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground text-center mb-2">{label}</div>
             <div className="flex items-start justify-around gap-2">
                 {cells.map(c => (
@@ -71,8 +71,8 @@ export function ClientSettingsGrid({ cap, server }: ClientSettingsGridProps) {
     ]
 
     return (
-        <div className="bg-card/30 border border-white/5 rounded-xl shrink-0">
-            <div className="px-4 py-3 border-b border-white/5 text-[10px] uppercase tracking-wider text-muted-foreground font-medium text-center">
+        <div className="bg-card/30 border border-hairline/5 rounded-xl shrink-0">
+            <div className="px-4 py-3 border-b border-hairline/5 text-[10px] uppercase tracking-wider text-muted-foreground font-medium text-center">
                 Client/Server
             </div>
             <div className="p-3 space-y-2">
@@ -91,7 +91,7 @@ export function ClientSettingsGrid({ cap, server }: ClientSettingsGridProps) {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 items-stretch">
                     <SpreadTile label="FPS" accent="text-emerald-300" cells={fpsCells} />
                     <SpreadTile label="Ping" accent="text-blue-300" cells={pingCells} />
-                    <SpreadTile label="Netspeed" accent="text-white" cells={netspeedCells} />
+                    <SpreadTile label="Netspeed" accent="text-foreground" cells={netspeedCells} />
                 </div>
             </div>
         </div>

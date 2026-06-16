@@ -204,24 +204,24 @@ export function ReviewModal({ open, onOpenChange, accessToken, userId, mapName, 
             title={submitted ? "Review Published" : (mapName ? displayMapName(mapName) : 'Review Map')}
             offsetSidebar
             maxWidth="520px"
-            className="bg-[#0a0a0b]/98 border-white/5 backdrop-blur-3xl mx-auto"
+            className="bg-card/98 border-hairline/5 backdrop-blur-3xl mx-auto"
             footer={null}
         >
             <div className="space-y-5">
                 {submitted ? (
                     <div className="space-y-5 py-2">
-                        <p className="text-white/90 text-sm leading-relaxed">
+                        <p className="text-foreground/90 text-sm leading-relaxed">
                             Your review for <span className="text-accent-300 font-semibold">{mapName ? displayMapName(mapName) : ''}</span> has been published.
                         </p>
                         <p className="text-muted-foreground text-xs leading-relaxed">
                             Reviews help other players find good quality maps, balance the difficulty ratings, and determine what maps we put into special events.
                         </p>
-                        <p className="text-white/90 font-semibold text-sm">
+                        <p className="text-foreground/90 font-semibold text-sm">
                             Thank you!
                         </p>
                         <Button
                             onClick={handleClose}
-                            className="w-full h-10 bg-accent-500/15 border border-accent-500/40 text-accent-200 hover:bg-accent-500/25 hover:text-white hover:border-accent-500/60 hover:shadow-[0_0_20px_rgba(59,130,246,0.25)] transition-all font-semibold rounded-lg"
+                            className="w-full h-10 bg-accent-500/15 border border-accent-500/40 text-accent-200 hover:bg-accent-500/25 hover:text-foreground hover:border-accent-500/60 hover:shadow-[0_0_20px_rgba(59,130,246,0.25)] transition-all font-semibold rounded-lg"
                         >
                             Close
                         </Button>
@@ -314,7 +314,7 @@ export function ReviewModal({ open, onOpenChange, accessToken, userId, mapName, 
                         <Button
                             onClick={handleSubmit}
                             disabled={loading}
-                            className="w-full h-10 bg-accent-500/15 border border-accent-500/40 text-accent-200 hover:bg-accent-500/25 hover:text-white hover:border-accent-500/60 hover:shadow-[0_0_20px_rgba(59,130,246,0.25)] transition-all font-semibold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-full h-10 bg-accent-500/15 border border-accent-500/40 text-accent-200 hover:bg-accent-500/25 hover:text-foreground hover:border-accent-500/60 hover:shadow-[0_0_20px_rgba(59,130,246,0.25)] transition-all font-semibold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {loading ? (
                                 <Loader2 className="size-4 animate-spin" />

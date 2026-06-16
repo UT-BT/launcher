@@ -50,7 +50,7 @@ export function PatreonModal() {
             }
         >
             <div className="space-y-6">
-                <p className="text-sm text-white/85 leading-relaxed">
+                <p className="text-sm text-foreground/85 leading-relaxed">
                     UTBT is free and community run. Supporting us through Patreon helps keep our servers online. As a thank you, supporters get a Discord role, and a heart displayed next to their name on our website, launcher and servers.
                 </p>
 
@@ -58,13 +58,13 @@ export function PatreonModal() {
                     {TIERS.map(({ tier, label, blurb }) => (
                         <div
                             key={tier}
-                            className="flex flex-col items-center text-center gap-2 px-3 py-4 rounded-lg bg-white/[0.02] border border-white/5"
+                            className="flex flex-col items-center text-center gap-2 px-3 py-4 rounded-lg bg-hairline/[0.02] border border-hairline/5"
                         >
                             <PatreonBadge tier={tier} size="lg" />
                             <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                                 {label}
                             </span>
-                            <p className="text-xs text-white/70 leading-relaxed">{blurb}</p>
+                            <p className="text-xs text-foreground/70 leading-relaxed">{blurb}</p>
                         </div>
                     ))}
                 </div>
@@ -75,7 +75,7 @@ export function PatreonModal() {
                     </div>
                     <ol className="space-y-2.5">
                         {STEPS.map((step, i) => (
-                            <li key={i} className="flex items-start gap-3 text-sm text-white/85 leading-relaxed">
+                            <li key={i} className="flex items-start gap-3 text-sm text-foreground/85 leading-relaxed">
                                 <span className="flex items-center justify-center size-5 shrink-0 rounded-full bg-rose-500/15 border border-rose-500/40 text-rose-300 text-[11px] font-bold">
                                     {i + 1}
                                 </span>
