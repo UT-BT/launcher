@@ -1110,7 +1110,7 @@ export function WorldRecordsPage({
                                         <DataTableCell>
                                             <div className="flex items-center gap-2.5">
                                                 <div className="flex-1 h-1.5 rounded-full bg-hairline/10 overflow-hidden min-w-16">
-                                                    <div className="h-full rounded-full bg-blue-500/70" style={{ width: `${barPct}%` }} />
+                                                    <div className="h-full rounded-full bg-accent-500/70" style={{ width: `${barPct}%` }} />
                                                 </div>
                                                 <span className="font-mono tabular-nums text-foreground font-bold w-10 text-right">
                                                     {r.count}

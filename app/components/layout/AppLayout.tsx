@@ -346,7 +346,7 @@ export function AppLayout({ children, currentView, onViewChange, userProfile, in
                 isOpen={isSettingsOpen}
                 onClose={() => setIsSettingsOpen(false)}
                 initialSection={settingsInitialSection}
-                patronTier={patreonTier}
+                unlockExclusive={patreonTier > 0 || (userProfile?.utbt_role ?? 0) > 0}
             />
 
         </div>
