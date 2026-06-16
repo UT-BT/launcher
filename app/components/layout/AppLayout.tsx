@@ -143,7 +143,7 @@ export function AppLayout({ children, currentView, onViewChange, userProfile, in
                         onClick={() => onViewChange('servers')}
                     >
                         <Server className="size-4" />
-                        Join UTBT Server
+                        Join Server
                     </Button>
                     {isInstallValid ? (
                         <Button
