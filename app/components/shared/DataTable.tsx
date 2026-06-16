@@ -131,8 +131,8 @@ interface SortIconProps {
 export function SortIcon({ direction }: SortIconProps) {
     if (direction === null) return <ArrowUpDown className="size-3 opacity-30" />
     return direction === 'asc'
-        ? <ChevronUp className="size-3 text-blue-400" />
-        : <ChevronDown className="size-3 text-blue-400" />
+        ? <ChevronUp className="size-3 text-accent-400" />
+        : <ChevronDown className="size-3 text-accent-400" />
 }
 
 interface DataTableRowProps extends React.HTMLAttributes<HTMLTableRowElement> {

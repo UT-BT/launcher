@@ -59,7 +59,7 @@ export function MultiFilterDropdown({
                                 onChange={e => setQuery(e.target.value)}
                                 onKeyDown={e => e.stopPropagation()}
                                 placeholder="Search..."
-                                className="w-full px-2 py-1.5 bg-card/50 border border-white/10 rounded text-xs text-white placeholder:text-muted-foreground focus:outline-none focus:border-blue-500/50"
+                                className="w-full px-2 py-1.5 bg-card/50 border border-white/10 rounded text-xs text-white placeholder:text-muted-foreground focus:outline-none focus:border-accent-500/50"
                             />
                         </div>
                     )}
@@ -84,7 +84,7 @@ export function MultiFilterDropdown({
                                         type="checkbox"
                                         checked={checked}
                                         readOnly
-                                        className="accent-blue-500 cursor-pointer pointer-events-none"
+                                        className="accent-[var(--accent-500)] cursor-pointer pointer-events-none"
                                     />
                                     <span className="flex-1 truncate">{optLabel}</span>
                                     {iconSrc && (

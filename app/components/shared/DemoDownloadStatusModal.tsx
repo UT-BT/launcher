@@ -48,7 +48,7 @@ export function DemoDownloadStatusModal({ state, onClose }: DemoDownloadStatusMo
         >
             {state?.status === 'downloading' && (
                 <div className="flex items-center gap-3 py-2">
-                    <Loader2 className="size-5 animate-spin text-blue-300 shrink-0" />
+                    <Loader2 className="size-5 animate-spin text-accent-300 shrink-0" />
                     <div className="text-sm text-white/80 truncate">{state.filename}</div>
                 </div>
             )}

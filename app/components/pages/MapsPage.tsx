@@ -1587,14 +1587,14 @@ export function MapsPage({
                                             e.stopPropagation()
                                             onMapSelect(map.name)
                                         }}
-                                        className="font-bold text-white hover:text-blue-300 underline-offset-4 transition-colors cursor-pointer text-left text-md truncate"
+                                        className="font-bold text-white hover:text-accent-300 underline-offset-4 transition-colors cursor-pointer text-left text-md truncate"
                                     >
                                         {displayMapName(map.name)}
                                     </button>
                                 </Tooltip>
 
                                 {mapNew && (
-                                    <span className="shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30 uppercase tracking-wider">
+                                    <span className="shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded bg-accent-500/20 text-accent-300 border border-accent-500/30 uppercase tracking-wider">
                                         New
                                     </span>
                                 )}
@@ -1931,7 +1931,7 @@ export function MapsPage({
                         placeholder="Search for a map name or tag..."
                         value={state.search}
                         onChange={e => updateFilter('search', e.target.value)}
-                        className="w-full pl-9 pr-9 py-2 bg-card/50 border border-white/10 rounded-lg text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:border-blue-500/50 focus:bg-card/80 transition-colors"
+                        className="w-full pl-9 pr-9 py-2 bg-card/50 border border-white/10 rounded-lg text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:border-accent-500/50 focus:bg-card/80 transition-colors"
                     />
                     {state.search && (
                         <button
@@ -1951,14 +1951,14 @@ export function MapsPage({
                     className={cn(
                         "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border transition-colors cursor-pointer",
                         state.filtersPanelOpen
-                            ? "bg-blue-500/20 border-blue-500/50 text-blue-300"
+                            ? "bg-accent-500/20 border-accent-500/50 text-accent-300"
                             : "bg-card/50 border-white/10 text-muted-foreground hover:text-white hover:border-white/20"
                     )}
                 >
                     <SlidersHorizontal className="size-4" />
                     Filters
                     {activeFilterCount > 0 && (
-                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-500 text-white">
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-accent-500 text-white">
                             {activeFilterCount}
                         </span>
                     )}
@@ -1982,7 +1982,7 @@ export function MapsPage({
                                 checked={isColumnVisible('tags')}
                                 onChange={() => toggleColumn('tags')}
                                 aria-label="Toggle tag chips"
-                                className="accent-blue-500 cursor-pointer"
+                                className="accent-[var(--accent-500)] cursor-pointer"
                             />
                             Show Tags
                         </label>
@@ -2195,11 +2195,11 @@ export function MapsPage({
                                 type="checkbox"
                                 checked={state.newOnly}
                                 onChange={e => updateFilter('newOnly', e.target.checked)}
-                                className="accent-blue-500 cursor-pointer"
+                                className="accent-[var(--accent-500)] cursor-pointer"
                             />
                             <span>New maps</span>
                             {newMapCount > 0 && (
-                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-accent-500/20 text-accent-300 border border-accent-500/30">
                                     {newMapCount}
                                 </span>
                             )}
@@ -2401,7 +2401,7 @@ export function MapsPage({
                                 href="https://democonverter.com"
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="ml-1 text-blue-400 hover:underline"
+                                className="ml-1 text-accent-400 hover:underline"
                             >
                                 democonverter.com
                             </a>

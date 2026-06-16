@@ -64,7 +64,7 @@ export function PaginationBar({
                             onPageSizeChange(v === 'auto' ? 'auto' : parseInt(v, 10))
                         }}
                         style={{ colorScheme: 'dark' }}
-                        className="px-2 py-1 bg-card/50 border border-white/10 rounded text-xs text-white focus:outline-none focus:border-blue-500/50 cursor-pointer"
+                        className="px-2 py-1 bg-card/50 border border-white/10 rounded text-xs text-white focus:outline-none focus:border-accent-500/50 cursor-pointer"
                     >
                         {PAGE_SIZE_OPTIONS.map(opt => (
                             <option key={String(opt)} value={String(opt)} className="bg-[#0f1115] text-white">
@@ -109,7 +109,7 @@ export function PaginationBar({
                                     className={cn(
                                         "min-w-7 h-7 px-2 rounded border text-xs transition-colors cursor-pointer",
                                         p === page
-                                            ? "bg-blue-500/20 border-blue-500/50 text-blue-200 font-bold"
+                                            ? "bg-accent-500/20 border-accent-500/50 text-accent-200 font-bold"
                                             : "bg-card/50 border-white/10 text-muted-foreground hover:text-white hover:border-white/20"
                                     )}
                                 >
@@ -149,7 +149,7 @@ export function PaginationBar({
                             onChange={e => setJumpInput(e.target.value)}
                             onKeyDown={e => { if (e.key === 'Enter') handleJump() }}
                             placeholder="Go to"
-                            className="w-16 px-2 py-1 bg-card/50 border border-white/10 rounded text-xs text-white placeholder:text-muted-foreground/50 focus:outline-none focus:border-blue-500/50"
+                            className="w-16 px-2 py-1 bg-card/50 border border-white/10 rounded text-xs text-white placeholder:text-muted-foreground/50 focus:outline-none focus:border-accent-500/50"
                         />
                         <Button
                             variant="ghost"

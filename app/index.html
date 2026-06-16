@@ -3,6 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <title>UTBT.net</title>
+    <script>
+      try {
+        var t = JSON.parse(localStorage.getItem('utbt:theme:v1') || '{}').id
+        if (t && t !== 'classic') document.documentElement.setAttribute('data-theme', t)
+      } catch {}
+    </script>
   </head>
 
   <body>

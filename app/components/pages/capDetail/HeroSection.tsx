@@ -114,7 +114,7 @@ export function HeroSection({
                                 disabled={!canWatch || watching}
                                 className={cn(
                                     'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border transition-colors text-xs font-semibold cursor-pointer',
-                                    'bg-blue-500/15 border-blue-500/40 text-blue-200 hover:bg-blue-500/25 hover:text-white hover:border-blue-500/60',
+                                    'bg-accent-500/15 border-accent-500/40 text-accent-200 hover:bg-accent-500/25 hover:text-white hover:border-accent-500/60',
                                     'disabled:opacity-50 disabled:cursor-not-allowed',
                                 )}
                                 title={canWatch ? 'Watch replay' : 'No replay — cap not verified'}

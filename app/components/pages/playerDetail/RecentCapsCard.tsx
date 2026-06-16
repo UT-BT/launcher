@@ -142,14 +142,14 @@ export function RecentCapsCard({
                             value={queryRaw}
                             onChange={e => setQueryRaw(e.target.value)}
                             placeholder="Search map…"
-                            className="w-full sm:w-44 pl-7 pr-2 py-1 bg-card/50 border border-white/10 rounded text-xs text-white placeholder:text-muted-foreground focus:outline-none focus:border-blue-500/50"
+                            className="w-full sm:w-44 pl-7 pr-2 py-1 bg-card/50 border border-white/10 rounded text-xs text-white placeholder:text-muted-foreground focus:outline-none focus:border-accent-500/50"
                         />
                     </div>
                     <select
                         value={capFilter}
                         onChange={e => setCapFilter(e.target.value as CapFilter)}
                         style={{ colorScheme: 'dark' }}
-                        className="px-2 py-1 bg-card/50 border border-white/10 rounded text-xs text-white focus:outline-none focus:border-blue-500/50 cursor-pointer"
+                        className="px-2 py-1 bg-card/50 border border-white/10 rounded text-xs text-white focus:outline-none focus:border-accent-500/50 cursor-pointer"
                     >
                         <option value="all" className="bg-[#0f1115]">All Caps</option>
                         <option value="verified" className="bg-[#0f1115]">Verified Caps</option>

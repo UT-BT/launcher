@@ -144,12 +144,12 @@ export const UploadLogModal = ({ isOpen, onClose }: UploadLogModalProps) => {
                         className={cn(
                             "border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all duration-200",
                             isDragging
-                                ? "border-blue-500 bg-blue-500/10 scale-[1.02]"
+                                ? "border-accent-500 bg-accent-500/10 scale-[1.02]"
                                 : "border-white/10 hover:border-white/20 hover:bg-white/5"
                         )}
                     >
                         <div className={cn(
-                            "p-3 rounded-full bg-blue-500/10 text-blue-500 mb-2",
+                            "p-3 rounded-full bg-accent-500/10 text-accent-500 mb-2",
                             isDragging && "animate-bounce"
                         )}>
                             <FaCloudUploadAlt className="size-8" />
@@ -170,7 +170,7 @@ export const UploadLogModal = ({ isOpen, onClose }: UploadLogModalProps) => {
                                 <div className="flex-none">
                                     {log.status === 'success' && <FaCheckCircle className="text-green-500 size-5" />}
                                     {log.status === 'failed' && <FaExclamationCircle className="text-red-500 size-5" />}
-                                    {log.status === 'uploading' && <FaSpinner className="text-blue-500 size-5 animate-spin" />}
+                                    {log.status === 'uploading' && <FaSpinner className="text-accent-500 size-5 animate-spin" />}
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <div className="text-sm font-medium truncate">{log.filename}</div>

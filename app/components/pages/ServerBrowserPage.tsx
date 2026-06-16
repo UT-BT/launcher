@@ -699,7 +699,7 @@ export function ServerBrowserPage({
                             <button
                                 type="button"
                                 onClick={(e) => { e.stopPropagation(); onMapSelect(server.map_name) }}
-                                className="text-sm font-semibold text-white truncate inline-block max-w-[220px] align-middle text-left hover:text-blue-300 hover:underline underline-offset-2 transition-colors cursor-pointer"
+                                className="text-sm font-semibold text-white truncate inline-block max-w-[220px] align-middle text-left hover:text-accent-300 hover:underline underline-offset-2 transition-colors cursor-pointer"
                             >
                                 {displayMapName(server.map_name)}
                             </button>
@@ -811,7 +811,7 @@ export function ServerBrowserPage({
                                         type="button"
                                         onClick={() => handleJoin(server, false)}
                                         disabled={!canJoin}
-                                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium border border-blue-500/30 bg-blue-500/10 text-blue-300 hover:bg-blue-500/25 hover:text-blue-100 hover:border-blue-500/50 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-blue-500/10 disabled:hover:text-blue-300 disabled:hover:border-blue-500/30"
+                                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium border border-accent-500/30 bg-accent-500/10 text-accent-300 hover:bg-accent-500/25 hover:text-accent-100 hover:border-accent-500/50 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-accent-500/10 disabled:hover:text-accent-300 disabled:hover:border-accent-500/30"
                                     >
                                         <Play className="size-3 fill-current" />
                                         Join
@@ -895,14 +895,14 @@ export function ServerBrowserPage({
                     className={cn(
                         'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border transition-colors cursor-pointer',
                         state.filtersPanelOpen
-                            ? 'bg-blue-500/20 border-blue-500/50 text-blue-300'
+                            ? 'bg-accent-500/20 border-accent-500/50 text-accent-300'
                             : 'bg-card/50 border-white/10 text-muted-foreground hover:text-white hover:border-white/20',
                     )}
                 >
                     <SlidersHorizontal className="size-4" />
                     Filters
                     {activeFilterCount > 0 && (
-                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-500 text-white">
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-accent-500 text-white">
                             {activeFilterCount}
                         </span>
                     )}

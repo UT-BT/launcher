@@ -383,7 +383,7 @@ export function WorldRecordHistoryTrigger({ onClick }: WorldRecordHistoryTrigger
                     onClick()
                 }}
                 aria-label="View world record history"
-                className="inline-flex items-center justify-center size-6 rounded-md text-blue-300/80 hover:text-blue-200 hover:bg-blue-500/15 transition-colors cursor-pointer"
+                className="inline-flex items-center justify-center size-6 rounded-md text-accent-300/80 hover:text-accent-200 hover:bg-accent-500/15 transition-colors cursor-pointer"
             >
                 <History className="size-3.5" />
             </button>

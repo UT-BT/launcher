@@ -80,7 +80,7 @@ export function ReviewsCard({
                     <button
                         type="button"
                         onClick={onOpenReviewModal}
-                        className="inline-flex items-center gap-1 h-6 px-2 rounded-md bg-blue-500/15 border border-blue-500/40 text-blue-200 hover:bg-blue-500/25 hover:text-white hover:border-blue-500/60 transition-colors text-[10px] font-bold uppercase tracking-wider cursor-pointer shrink-0"
+                        className="inline-flex items-center gap-1 h-6 px-2 rounded-md bg-accent-500/15 border border-accent-500/40 text-accent-200 hover:bg-accent-500/25 hover:text-white hover:border-accent-500/60 transition-colors text-[10px] font-bold uppercase tracking-wider cursor-pointer shrink-0"
                     >
                         <Plus className="size-3" />
                         Add a Review
@@ -103,7 +103,7 @@ export function ReviewsCard({
             ) : (
                 <>
                     {avgRow && (
-                        <div className="rounded-lg bg-gradient-to-br from-blue-500/10 to-transparent border border-blue-500/20 p-3">
+                        <div className="rounded-lg bg-gradient-to-br from-accent-500/10 to-transparent border border-accent-500/20 p-3">
                             <div className="flex items-center gap-3">
                                 <div className="flex flex-col items-center shrink-0">
                                     <div className={cn('text-3xl font-bold font-mono leading-none', scoreTextColor(avgRow.overall, false))}>
@@ -188,7 +188,7 @@ function ReviewCard({ review, highlight, onEdit }: { review: MapReview; highligh
                                 type="button"
                                 onClick={onEdit}
                                 aria-label="Update your review"
-                                className="p-1 rounded text-blue-300 hover:text-blue-200 hover:bg-blue-500/15 transition-colors cursor-pointer"
+                                className="p-1 rounded text-accent-300 hover:text-accent-200 hover:bg-accent-500/15 transition-colors cursor-pointer"
                             >
                                 <Pencil className="size-3" />
                             </button>

@@ -75,7 +75,7 @@ export function HeroSection({
                                 type="button"
                                 onClick={onDownload}
                                 disabled={isDownloading}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-500/15 border border-blue-500/40 text-blue-200 hover:bg-blue-500/25 hover:text-white hover:border-blue-500/60 disabled:opacity-60 disabled:cursor-not-allowed transition-colors text-xs font-semibold cursor-pointer"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-accent-500/15 border border-accent-500/40 text-accent-200 hover:bg-accent-500/25 hover:text-white hover:border-accent-500/60 disabled:opacity-60 disabled:cursor-not-allowed transition-colors text-xs font-semibold cursor-pointer"
                             >
                                 {isDownloading ? (
                                     <Loader2 className="size-3.5 animate-spin" />

@@ -1,8 +1,9 @@
 import { cn } from "@/lib/utils"
-import { Monitor, User, Keyboard, Volume2, Gamepad2, HardDrive, Settings, FileVideo } from "lucide-react"
+import { Monitor, User, Keyboard, Volume2, Gamepad2, HardDrive, Settings, FileVideo, Palette } from "lucide-react"
 
 export type SettingsSectionId =
     | 'launcher-general'
+    | 'launcher-appearance'
     | 'launcher-demos'
     | 'game-installation'
     | 'game-player'
@@ -27,6 +28,7 @@ export function SettingsLayout({ currentSection, onSectionChange, children, isGa
             group: "Launcher",
             items: [
                 { id: 'launcher-general', label: 'General', icon: Settings },
+                { id: 'launcher-appearance', label: 'Appearance', icon: Palette },
                 { id: 'launcher-demos', label: 'Demos', icon: FileVideo },
             ]
         },

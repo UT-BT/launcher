@@ -149,14 +149,14 @@ export function MapReviewsModal({
                                 onClick={() => setReviewModalOpen(true)}
                                 disabled={!accessToken || !mapName}
                                 className={cn(
-                                    "group w-full rounded-xl border border-dashed border-blue-500/30 bg-blue-500/[0.04] p-4",
+                                    "group w-full rounded-xl border border-dashed border-accent-500/30 bg-accent-500/[0.04] p-4",
                                     "flex items-center justify-center gap-3 cursor-pointer",
-                                    "hover:bg-blue-500/10 hover:border-blue-500/60 hover:text-blue-100 transition-colors",
-                                    "text-blue-300/80 text-sm font-medium",
-                                    "disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-blue-500/[0.04] disabled:hover:border-blue-500/30",
+                                    "hover:bg-accent-500/10 hover:border-accent-500/60 hover:text-accent-100 transition-colors",
+                                    "text-accent-300/80 text-sm font-medium",
+                                    "disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-accent-500/[0.04] disabled:hover:border-accent-500/30",
                                 )}
                             >
-                                <span className="inline-flex items-center justify-center size-8 rounded-full border border-blue-500/40 bg-blue-500/10 group-hover:bg-blue-500/25 group-hover:border-blue-500/70 transition-colors">
+                                <span className="inline-flex items-center justify-center size-8 rounded-full border border-accent-500/40 bg-accent-500/10 group-hover:bg-accent-500/25 group-hover:border-accent-500/70 transition-colors">
                                     <Plus className="size-4" />
                                 </span>
                                 <span>Write your review</span>
@@ -165,8 +165,8 @@ export function MapReviewsModal({
                     ) : (
                         <>
                             {avgRow && (
-                                <div className="rounded-xl bg-gradient-to-br from-blue-500/10 to-transparent border border-blue-500/20 p-5">
-                                    <div className="text-[10px] font-bold uppercase tracking-widest text-blue-300 mb-4">
+                                <div className="rounded-xl bg-gradient-to-br from-accent-500/10 to-transparent border border-accent-500/20 p-5">
+                                    <div className="text-[10px] font-bold uppercase tracking-widest text-accent-300 mb-4">
                                         Community Average
                                     </div>
                                     <div className="flex items-center gap-6">
@@ -211,7 +211,7 @@ export function MapReviewsModal({
                                             value={sortBy}
                                             onChange={e => setSortBy(e.target.value as SortKey)}
                                             style={{ colorScheme: 'dark' }}
-                                            className="px-2 py-1 bg-card/50 border border-white/10 rounded text-xs text-white focus:outline-none focus:border-blue-500/50 cursor-pointer"
+                                            className="px-2 py-1 bg-card/50 border border-white/10 rounded text-xs text-white focus:outline-none focus:border-accent-500/50 cursor-pointer"
                                         >
                                             {SORT_OPTIONS.map(o => (
                                                 <option key={o.value} value={o.value} className="bg-[#0f1115] text-white">{o.label}</option>
@@ -241,14 +241,14 @@ export function MapReviewsModal({
                                         onClick={() => setReviewModalOpen(true)}
                                         disabled={!accessToken || !mapName}
                                         className={cn(
-                                            "group w-full rounded-xl border border-dashed border-blue-500/30 bg-blue-500/[0.04] p-4",
+                                            "group w-full rounded-xl border border-dashed border-accent-500/30 bg-accent-500/[0.04] p-4",
                                             "flex items-center justify-center gap-3 cursor-pointer",
-                                            "hover:bg-blue-500/10 hover:border-blue-500/60 hover:text-blue-100 transition-colors",
-                                            "text-blue-300/80 text-sm font-medium",
-                                            "disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-blue-500/[0.04] disabled:hover:border-blue-500/30",
+                                            "hover:bg-accent-500/10 hover:border-accent-500/60 hover:text-accent-100 transition-colors",
+                                            "text-accent-300/80 text-sm font-medium",
+                                            "disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-accent-500/[0.04] disabled:hover:border-accent-500/30",
                                         )}
                                     >
-                                        <span className="inline-flex items-center justify-center size-8 rounded-full border border-blue-500/40 bg-blue-500/10 group-hover:bg-blue-500/25 group-hover:border-blue-500/70 transition-colors">
+                                        <span className="inline-flex items-center justify-center size-8 rounded-full border border-accent-500/40 bg-accent-500/10 group-hover:bg-accent-500/25 group-hover:border-accent-500/70 transition-colors">
                                             <Plus className="size-4" />
                                         </span>
                                         <span>Write your review</span>
@@ -309,7 +309,7 @@ function ReviewCard({ review, highlight, onEdit }: { review: MapReview; highligh
                                 type="button"
                                 onClick={onEdit}
                                 aria-label="Update your review"
-                                className="p-1.5 rounded-md text-blue-300 hover:text-blue-200 hover:bg-blue-500/15 transition-colors cursor-pointer"
+                                className="p-1.5 rounded-md text-accent-300 hover:text-accent-200 hover:bg-accent-500/15 transition-colors cursor-pointer"
                             >
                                 <Pencil className="size-3.5" />
                             </button>

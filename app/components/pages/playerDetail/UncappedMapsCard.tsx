@@ -110,14 +110,14 @@ export function UncappedMapsCard({ accessToken, userId, onMapSelect, tabsSlot }:
                             value={queryRaw}
                             onChange={e => setQueryRaw(e.target.value)}
                             placeholder="Search map…"
-                            className="w-full sm:w-44 pl-7 pr-2 py-1 bg-card/50 border border-white/10 rounded text-xs text-white placeholder:text-muted-foreground focus:outline-none focus:border-blue-500/50"
+                            className="w-full sm:w-44 pl-7 pr-2 py-1 bg-card/50 border border-white/10 rounded text-xs text-white placeholder:text-muted-foreground focus:outline-none focus:border-accent-500/50"
                         />
                     </div>
                     <select
                         value={difficultyTier}
                         onChange={e => setDifficultyTier(e.target.value as 'all' | 'beginner' | 'intermediate' | 'advanced' | 'expert')}
                         style={{ colorScheme: 'dark' }}
-                        className="px-2 py-1 bg-card/50 border border-white/10 rounded text-xs text-white focus:outline-none focus:border-blue-500/50 cursor-pointer"
+                        className="px-2 py-1 bg-card/50 border border-white/10 rounded text-xs text-white focus:outline-none focus:border-accent-500/50 cursor-pointer"
                     >
                         <option value="all" className="bg-[#0f1115]">All difficulties</option>
                         <option value="beginner" className="bg-[#0f1115]">Beginner (1–3)</option>

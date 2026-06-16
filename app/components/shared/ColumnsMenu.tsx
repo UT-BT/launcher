@@ -105,7 +105,7 @@ export function ColumnsMenu<TColumnId extends string>({
                             className={cn(
                                 'flex items-center gap-2 px-2 py-1.5 text-sm select-none rounded transition-colors',
                                 dragging && 'opacity-40',
-                                dragOver && 'bg-blue-500/15 ring-1 ring-blue-500/40',
+                                dragOver && 'bg-accent-500/15 ring-1 ring-accent-500/40',
                             )}
                         >
                             <input
@@ -114,7 +114,7 @@ export function ColumnsMenu<TColumnId extends string>({
                                 disabled={required}
                                 onChange={() => onToggle(id)}
                                 aria-label={`Toggle ${columnLabels[id]} visibility`}
-                                className="accent-blue-500 cursor-pointer disabled:cursor-default"
+                                className="accent-[var(--accent-500)] cursor-pointer disabled:cursor-default"
                             />
                             <span className={cn('flex-1 truncate', required && 'text-muted-foreground/80')}>
                                 {columnLabels[id]}
