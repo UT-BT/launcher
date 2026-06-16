@@ -41,8 +41,9 @@ Each section id maps to a panel component (`GameInputSettings`,
 Two kinds of panel, different storage:
 
 - **Launcher panels** (`launcher-general`, `launcher-demos`) persist via launcher
-  config or `app` IPC (e.g. `setDemoWatcherConfig`, `ui-scale` in localStorage) —
-  not UT99 files.
+  config or `app` IPC (e.g. `setDemoWatcherConfig`, `setWindowBehavior` for the
+  System card's minimize/close-to-tray + startup options, `ui-scale` in
+  localStorage) — not UT99 files.
 - **Game panels** (player/controls/video/audio/gameplay) read and write the
   **UT99 `.ini` files** directly. They're **disabled until the install is valid**
   (`isGameValid` / `installationStatus === 'valid'`).

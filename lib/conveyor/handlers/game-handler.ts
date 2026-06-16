@@ -40,25 +40,7 @@ export const registerGameHandlers = (_window: BrowserWindow) => {
     })
 
     handle('launchGameStandalone', async () => {
-        const installPath = getUt99InstallPath()
-        if (!installPath) {
-            throw new Error('UT99 install path not found')
-        }
-
-        const exePath = join(installPath, 'System', 'UnrealTournament.exe')
-        if (!existsSync(exePath)) {
-            throw new Error('UnrealTournament.exe not found')
-        }
-
-        loggingService.info('Launching game standalone', 'GameHandler')
-
-        const gameProcess = spawn(exePath, [], {
-            cwd: join(installPath, 'System'),
-            detached: true,
-            stdio: 'ignore',
-        })
-
-        gameProcess.unref()
+        gameService.launchStandalone()
     })
 
     handle('fetchServers', async () => {

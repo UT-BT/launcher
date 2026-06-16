@@ -40,6 +40,7 @@ handlers/`) are thin and delegate to these.
 | `demo-watcher-service` | Watch the demo folder, parse `.dem` headers, auto-upload per config |
 | `patch-service` | Download + install the UTBT patch, version checks |
 | `updater-service` | Launcher auto-update (electron-updater), prerelease channel |
+| `tray-service` | System-tray icon + right-click menu, minimize/close-to-tray interception (window `close`/`minimize` events + `before-quit` flag), start-on-startup login item |
 | `gateway-service` | HTTP client for the gateway host (avatars, patrons, server list) |
 | `installation-service` | Install detection/validation, ISO download orchestration |
 | `logging-service` | File logger → `{userData}/logs/utbt.log` (mirrors warn/error to console in dev); `getRecentLogs` |
@@ -78,7 +79,8 @@ external links and stray navigations leave the app safely.
 `config.ts` persists `config.json` under `app.getPath('userData')/config`, written
 atomically (tmp + rename). Typed accessors only — don't read the file directly:
 `getUt99InstallPath` / `setUt99InstallPath`, `getGatewayConfig`, `getInstalledPatch`,
-`getDemoWatcherConfig`, `getUpdaterConfig`, `getActiveProfile`, `getAuthConfig`.
+`getDemoWatcherConfig`, `getUpdaterConfig`, `getActiveProfile`, `getAuthConfig`,
+`getWindowBehavior` (minimize/close-to-tray + start-on-startup, applied by `tray-service`).
 
 **Secrets are encrypted at rest.** Auth access/refresh tokens go through Electron
 `safeStorage` (`enc:` prefix) in `set/getAuthConfig`. Never log them or store

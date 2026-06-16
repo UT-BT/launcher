@@ -14,6 +14,14 @@ export class AppApi extends ConveyorApi {
     discardDemoAction: 'Do Nothing' | 'Move to Folder' | 'Delete'
   }) => this.invoke('setDemoWatcherConfig', config)
 
+  getWindowBehavior = () => this.invoke('getWindowBehavior')
+  setWindowBehavior = (config: {
+    minimizeAction: 'taskbar' | 'tray',
+    closeAction: 'quit' | 'tray',
+    startOnStartup: boolean,
+    startMinimized: boolean
+  }) => this.invoke('setWindowBehavior', config)
+
   getUt99InstallPath = () => this.invoke('getUt99InstallPath')
   setUt99InstallPath = (path?: string) => this.invoke('setUt99InstallPath', path)
 

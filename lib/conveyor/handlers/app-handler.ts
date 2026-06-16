@@ -9,13 +9,16 @@ import {
   getInstalledPatch,
   setInstalledPatch,
   getDemoWatcherConfig,
-  setDemoWatcherConfig
+  setDemoWatcherConfig,
+  getWindowBehavior,
+  setWindowBehavior
 } from '@/lib/main/config'
 import { loggingService } from '@/lib/main/logging-service'
 import { installationService } from '@/lib/main/installation-service'
 import { gameService } from '@/lib/main/game-service'
 import { patchService } from '@/lib/main/patch-service'
 import { demoWatcherService } from '@/lib/main/demo-watcher-service'
+import { trayService } from '@/lib/main/tray-service'
 
 export const registerAppHandlers = (_window: BrowserWindow) => {
   loggingService.info('Registering app IPC handlers', 'MainProcess')
@@ -42,6 +45,12 @@ export const registerAppHandlers = (_window: BrowserWindow) => {
   handle('setDemoWatcherConfig', (config: any) => {
     setDemoWatcherConfig(config)
     demoWatcherService.restart()
+  })
+
+  handle('getWindowBehavior', () => getWindowBehavior())
+  handle('setWindowBehavior', (config) => {
+    setWindowBehavior(config)
+    trayService.applyConfig(getWindowBehavior())
   })
 
   handle('getUt99InstallPath', () => getUt99InstallPath())

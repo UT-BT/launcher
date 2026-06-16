@@ -46,6 +46,25 @@ export const appIpcSchema = {
     return: z.void(),
   },
 
+  getWindowBehavior: {
+    args: z.tuple([]),
+    return: z.object({
+      minimizeAction: z.enum(['taskbar', 'tray']),
+      closeAction: z.enum(['quit', 'tray']),
+      startOnStartup: z.boolean(),
+      startMinimized: z.boolean(),
+    }),
+  },
+  setWindowBehavior: {
+    args: z.tuple([z.object({
+      minimizeAction: z.enum(['taskbar', 'tray']),
+      closeAction: z.enum(['quit', 'tray']),
+      startOnStartup: z.boolean(),
+      startMinimized: z.boolean(),
+    })]),
+    return: z.void(),
+  },
+
 
   logMessage: {
     args: z.tuple([

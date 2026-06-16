@@ -13,6 +13,7 @@ import { registerMapsHandlers } from '@/lib/conveyor/handlers/maps-handler'
 import { registerUpdaterHandlers } from '@/lib/conveyor/handlers/updater-handler'
 import { demoWatcherService } from '@/lib/main/demo-watcher-service'
 import { updaterService } from '@/lib/main/updater-service'
+import { trayService } from '@/lib/main/tray-service'
 import windowStateKeeper from 'electron-window-state'
 
 export function createAppWindow(): void {
@@ -47,12 +48,14 @@ export function createAppWindow(): void {
     defaultHeight: 720,
   })
 
+  const startHidden = trayService.shouldStartHidden()
+
   const mainWindow = new BrowserWindow({
     x: mainWindowState.x,
     y: mainWindowState.y,
     width: mainWindowState.width,
     height: mainWindowState.height,
-    show: true,
+    show: !startHidden,
     backgroundColor: '#1c1c1c',
     icon: appIcon,
     frame: false,
@@ -86,9 +89,12 @@ export function createAppWindow(): void {
 
   demoWatcherService.startWatching()
   updaterService.init(mainWindow)
+  trayService.init(mainWindow)
 
   mainWindow.on('ready-to-show', () => {
-    mainWindow.show()
+    if (!startHidden) {
+      mainWindow.show()
+    }
     setTimeout(() => {
       void updaterService.check(false)
     }, 2000)

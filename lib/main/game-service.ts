@@ -1,5 +1,5 @@
 import { join } from 'path'
-import { exec } from 'child_process'
+import { exec, spawn } from 'child_process'
 import { existsSync, createReadStream, createWriteStream, mkdirSync, copyFileSync, readdirSync, rmSync, renameSync, statSync, readFileSync } from 'fs'
 import { app, BrowserWindow, dialog, net } from 'electron'
 import { createHash } from 'crypto'
@@ -479,6 +479,34 @@ export class GameService {
             stream.on('end', () => resolve(hash.digest('hex')))
             stream.on('error', reject)
         })
+    }
+
+    canLaunch(): boolean {
+        const installPath = getUt99InstallPath()
+        if (!installPath) return false
+        return existsSync(join(installPath, 'System', 'UnrealTournament.exe'))
+    }
+
+    launchStandalone(): void {
+        const installPath = getUt99InstallPath()
+        if (!installPath) {
+            throw new Error('UT99 install path not found')
+        }
+
+        const exePath = join(installPath, 'System', 'UnrealTournament.exe')
+        if (!existsSync(exePath)) {
+            throw new Error('UnrealTournament.exe not found')
+        }
+
+        loggingService.info('Launching game standalone', 'GameService')
+
+        const gameProcess = spawn(exePath, [], {
+            cwd: join(installPath, 'System'),
+            detached: true,
+            stdio: 'ignore',
+        })
+
+        gameProcess.unref()
     }
 
     async isGameRunning(): Promise<boolean> {
