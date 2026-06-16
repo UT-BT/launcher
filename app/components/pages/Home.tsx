@@ -29,6 +29,7 @@ interface HomeProps {
     onMapSelect?: (mapName: string) => void
     onViewServers?: () => void
     onViewMaps?: () => void
+    onViewWorldRecords?: () => void
 }
 
 const EMPTY_SUMMARY: Summary = {
@@ -43,7 +44,7 @@ const EMPTY_SUMMARY: Summary = {
 
 export function Home({
     userProfile, favoriteMapNames, onToggleFavorite, onMapSelect,
-    onViewServers, onViewMaps,
+    onViewServers, onViewMaps, onViewWorldRecords,
 }: HomeProps) {
     const username = userProfile?.alias || userProfile?.username || 'Player'
     const refreshCooldown = useRefreshCooldown()
@@ -234,7 +235,11 @@ export function Home({
                 </section>
 
                 <section className="2xl:col-span-6 flex flex-col gap-3">
-                    <SectionHeader title="Recent World Records" />
+                    <SectionHeader
+                        title="Recent World Records"
+                        actionLabel={onViewWorldRecords ? 'See All' : undefined}
+                        onAction={onViewWorldRecords}
+                    />
                     <RecentWorldRecords
                         records={recentWRs}
                         favoriteMapNames={favoriteMapNames}
