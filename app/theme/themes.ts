@@ -3,46 +3,70 @@ export interface ThemeMeta {
   label: string
   description: string
   swatch: string
+  group: 'gradients' | 'solid'
   exclusive?: boolean
 }
 
 export const THEMES: ThemeMeta[] = [
   {
     id: 'classic',
-    label: 'Classic Blue',
-    description: 'The original UTBT palette.',
+    label: 'UTBT Blue',
+    description: 'Blue team supporters',
     swatch: '#3b82f6',
+    group: 'gradients',
   },
   {
-    id: 'amethyst',
-    label: 'Amethyst',
-    description: 'Violet accent over a faintly purple dark.',
-    swatch: '#8b5cf6',
-  },
-  {
-    id: 'hydro',
-    label: 'Hydro',
-    description: 'Cyan accent over a faintly teal dark.',
-    swatch: '#06b6d4',
-  },
-  {
-    id: 'gunmetal',
-    label: 'Gunmetal',
-    description: 'Desaturated steel — the most subtle palette.',
-    swatch: '#64748b',
+    id: 'red',
+    label: 'UTBT Red',
+    description: 'Red team supporters',
+    swatch: '#dc2626',
+    group: 'gradients',
   },
   {
     id: 'aurum',
     label: 'Aurum',
-    description: 'Liquid gold on black — a Patreon-exclusive palette.',
+    description: 'Liquid Gold (Patreon exclusive style)',
     swatch: '#fbbf24',
+    group: 'gradients',
+    exclusive: true,
+  },
+  {
+    id: 'amethyst',
+    label: 'Amethyst',
+    description: 'Royal Violet (Patreon exclusive style)',
+    swatch: '#8b5cf6',
+    group: 'gradients',
+    exclusive: true,
+  },
+  {
+    id: 'emerald',
+    label: 'Emerald',
+    description: 'Emerald green (Patreon exclusive style)',
+    swatch: '#10b981',
+    group: 'gradients',
+    exclusive: true,
+  },
+  {
+    id: 'rose',
+    label: 'Rosé',
+    description: 'Rosé pink (Patreon exclusive style)',
+    swatch: '#ec4899',
+    group: 'gradients',
     exclusive: true,
   },
   {
     id: 'light',
-    label: 'Light',
-    description: 'Crisp white — for when dark is too dark.',
+    label: 'White',
+    description: "It'll burn your retinas out",
     swatch: '#f1f5f9',
+    group: 'solid',
+  },
+  {
+    id: 'black',
+    label: 'Black',
+    description: "No colours allowed",
+    swatch: '#000000',
+    group: 'solid',
   },
 ]
 

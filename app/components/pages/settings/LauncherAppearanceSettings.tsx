@@ -1,16 +1,63 @@
-import { Palette, Check, Lock, Heart } from 'lucide-react'
+import { Palette, Contrast, Check, Lock, Heart } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { SettingsSection } from './SettingsComponents'
 import { useTheme } from '@/app/theme/ThemeProvider'
-import { THEMES } from '@/app/theme/themes'
+import { THEMES, type ThemeMeta } from '@/app/theme/themes'
 
 interface LauncherAppearanceSettingsProps {
-    patronTier?: number
+    unlockExclusive?: boolean
 }
 
-export function LauncherAppearanceSettings({ patronTier }: LauncherAppearanceSettingsProps) {
+export function LauncherAppearanceSettings({ unlockExclusive }: LauncherAppearanceSettingsProps) {
     const { themeId, setThemeId } = useTheme()
-    const isPatron = (patronTier ?? 0) > 0
+
+    const renderCard = (theme: ThemeMeta) => {
+        const active = theme.id === themeId
+        const locked = !!theme.exclusive && !unlockExclusive
+        return (
+            <button
+                key={theme.id}
+                onClick={() => {
+                    if (locked) window.conveyor.window.webOpenUrl('https://patreon.com/utbt')
+                    else setThemeId(theme.id)
+                }}
+                aria-pressed={active}
+                title={locked ? 'Exclusive to Patreon supporters — click to learn more' : undefined}
+                className={cn(
+                    "relative flex items-center gap-3 rounded-lg border p-3 text-left transition-colors cursor-pointer",
+                    active
+                        ? "bg-accent-500/15 border-accent-500/50"
+                        : "bg-card/50 border-hairline/10 hover:border-hairline/20 hover:bg-card/80",
+                    locked && "opacity-65",
+                )}
+            >
+                <span
+                    className="size-9 shrink-0 rounded-md border border-hairline/10"
+                    style={{ background: theme.swatch }}
+                />
+                <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                        <span className="text-sm font-semibold text-foreground truncate">{theme.label}</span>
+                        {theme.exclusive && (
+                            <span className="inline-flex items-center gap-0.5 text-[9px] font-bold uppercase tracking-wider px-1 py-0.5 rounded bg-amber-400/15 border border-amber-400/40 text-amber-300 shrink-0">
+                                <Heart className="size-2.5 fill-current" />
+                                Patreon
+                            </span>
+                        )}
+                    </div>
+                    <div className="text-xs text-muted-foreground truncate">
+                        {locked ? 'Patreon supporters only. Click to join' : theme.description}
+                    </div>
+                </div>
+                {locked
+                    ? <Lock className="size-3.5 text-muted-foreground absolute top-2 right-2" />
+                    : active && <Check className="size-4 text-accent-300 absolute top-2 right-2" />}
+            </button>
+        )
+    }
+
+    const gradients = THEMES.filter((t) => t.group === 'gradients')
+    const solid = THEMES.filter((t) => t.group === 'solid')
 
     return (
         <div className="space-y-6">
@@ -19,52 +66,15 @@ export function LauncherAppearanceSettings({ patronTier }: LauncherAppearanceSet
                 <p className="text-muted-foreground">Choose a colour palette for the launcher.</p>
             </div>
 
-            <SettingsSection title="Theme" icon={Palette}>
+            <SettingsSection title="Gradients" icon={Palette}>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4">
-                    {THEMES.map((theme) => {
-                        const active = theme.id === themeId
-                        const locked = !!theme.exclusive && !isPatron
-                        return (
-                            <button
-                                key={theme.id}
-                                onClick={() => {
-                                    if (locked) window.conveyor.window.webOpenUrl('https://patreon.com/utbt')
-                                    else setThemeId(theme.id)
-                                }}
-                                aria-pressed={active}
-                                title={locked ? 'Exclusive to Patreon supporters — click to learn more' : undefined}
-                                className={cn(
-                                    "relative flex items-center gap-3 rounded-lg border p-3 text-left transition-colors cursor-pointer",
-                                    active
-                                        ? "bg-accent-500/15 border-accent-500/50"
-                                        : "bg-card/50 border-hairline/10 hover:border-hairline/20 hover:bg-card/80",
-                                    locked && "opacity-65",
-                                )}
-                            >
-                                <span
-                                    className="size-9 shrink-0 rounded-md border border-hairline/10"
-                                    style={{ background: theme.swatch }}
-                                />
-                                <div className="min-w-0">
-                                    <div className="flex items-center gap-1.5">
-                                        <span className="text-sm font-semibold text-foreground truncate">{theme.label}</span>
-                                        {theme.exclusive && (
-                                            <span className="inline-flex items-center gap-0.5 text-[9px] font-bold uppercase tracking-wider px-1 py-0.5 rounded bg-amber-400/15 border border-amber-400/40 text-amber-300 shrink-0">
-                                                <Heart className="size-2.5 fill-current" />
-                                                Patreon
-                                            </span>
-                                        )}
-                                    </div>
-                                    <div className="text-xs text-muted-foreground truncate">
-                                        {locked ? 'Patreon supporters only — click to join' : theme.description}
-                                    </div>
-                                </div>
-                                {locked
-                                    ? <Lock className="size-3.5 text-muted-foreground absolute top-2 right-2" />
-                                    : active && <Check className="size-4 text-accent-300 absolute top-2 right-2" />}
-                            </button>
-                        )
-                    })}
+                    {gradients.map(renderCard)}
+                </div>
+            </SettingsSection>
+
+            <SettingsSection title="Solid Colours" icon={Contrast}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4">
+                    {solid.map(renderCard)}
                 </div>
             </SettingsSection>
         </div>

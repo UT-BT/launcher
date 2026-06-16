@@ -44,6 +44,7 @@ export interface UserProfile extends AuthConfig {
     active_title?: UserTitle | null
     alias?: string | null
     id?: string | null
+    utbt_role?: number
     latest_activity?: LauncherActivity | null
 }
 

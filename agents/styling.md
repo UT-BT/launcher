@@ -275,6 +275,12 @@ identical structure and luminance, so there's nothing extra to QA between dark t
   at the *same* lightness as Classic (subtle, never "in your face").
 - **Glow** `--accent-glow-rgb` (space-separated RGB) for arbitrary
   `drop-shadow-[…rgb(var(--accent-glow-rgb)/<a>)]` (e.g. the sidebar logo).
+- **Nebula** `--nebula-1…4` (comma-separated RGB triples) are the animated
+  `.nebula-bg` backdrop's gradient stops (`app/styles/shared.css` consumes them via
+  `rgba(var(--nebula-N), <a>)`). Each gradient theme overrides them with its own
+  hue family so the backdrop matches the accent (Classic = the blue/cyan/red brand
+  swirl; UTBT Red = crimson; jewel themes = their gem hue). A new gradient theme
+  **must** set all four or it inherits Classic's blue swirl.
 - **Hairline** `--color-hairline` (white on dark themes) backs `*-hairline/<n>`
   borders/fills; it flips dark in the **Light** theme.
 - **Window chrome** (titlebar) is driven by the `--window-c-*` vars in
@@ -287,12 +293,21 @@ for the rest). Registry + provider: `app/theme/themes.ts`, `app/theme/ThemeProvi
 (`utbt:theme:v1`). Add a theme = one `[data-theme]` block + one registry entry. Picker:
 Settings → Appearance (`LauncherAppearanceSettings.tsx`).
 
-An `exclusive: true` registry flag gates a theme to Patreon supporters (e.g. `aurum`).
-The picker locks the card for non-patrons (lock + a Patreon tag, click opens
-patreon.com/utbt) and only lets supporters select it. Gating reuses the already-cached
-`usePatreonTier` (the current user's tier is threaded AppLayout → SettingsModal →
-Settings → Appearance) — **zero extra API calls**. It's a deliberately soft, client-side
+An `exclusive: true` registry flag gates a theme to Patreon supporters (the four jewel
+themes: `aurum`, `amethyst`, `emerald`, `rose`). The picker locks the card for ungated
+users (lock + a Patreon tag, click opens patreon.com/utbt). Unlock = **patron OR staff**:
+AppLayout computes `unlockExclusive = patreonTier > 0 || utbt_role > 0` (Moderator/Admin/
+Cup Admin) and threads the boolean → SettingsModal → Settings → Appearance. Both signals
+are already loaded (`usePatreonTier` cache + `/users/me` profile) — **zero extra API
+calls**. Staff unlock is **silent** — the card never mentions roles (you can't sign up to
+be staff); they just see it unlocked like a patron. It's a deliberately soft, client-side
 gate: the CSS exists for everyone, so a determined user could set it via localStorage.
+
+A `group: 'gradients' | 'solid'` registry field splits the picker into **Gradients**
+(the colour themes — these keep the animated `.nebula-bg` backdrop and a tinted surface)
+and **Solid Colours** (White/Black — `.nebula-bg` is hidden via
+`:root[data-theme='light'|'black'] .nebula-bg { display:none }`, so the background is a
+flat surface colour).
 
 ### Light theme
 

@@ -5,10 +5,10 @@ interface SettingsModalProps {
     isOpen: boolean
     onClose: () => void
     initialSection?: string
-    patronTier?: number
+    unlockExclusive?: boolean
 }
 
-export function SettingsModal({ isOpen, onClose, initialSection, patronTier }: SettingsModalProps) {
+export function SettingsModal({ isOpen, onClose, initialSection, unlockExclusive }: SettingsModalProps) {
     return (
         <Modal
             isOpen={isOpen}
@@ -18,7 +18,7 @@ export function SettingsModal({ isOpen, onClose, initialSection, patronTier }: S
             className="max-w-[95vw] 2xl:max-w-[70vw] max-h-[90vh] h-full p-0 overflow-hidden"
         >
             <div className="h-full overflow-hidden">
-                <Settings initialSection={initialSection} patronTier={patronTier} />
+                <Settings initialSection={initialSection} unlockExclusive={unlockExclusive} />
             </div>
         </Modal>
     )

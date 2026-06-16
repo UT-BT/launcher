@@ -29,14 +29,16 @@ function isAvatarableUserId(userId?: string | number): userId is string | number
     return String(userId).length > 5
 }
 
-function PlayerAvatar({ userId, alias, title, sizePx }: {
+function PlayerAvatar({ userId, alias, title, sizePx, isLight }: {
     userId: string | number
     alias?: string | null
     title?: ActiveTitle | null
     sizePx: number
+    isLight: boolean
 }) {
     const src = getAvatarUrl(userId)
     const fallback = `https://cdn.discordapp.com/embed/avatars/${Number(userId) % 5}.png`
+    const borderStyle = useMemo(() => getAvatarBorderStyle(title, isLight), [title, isLight])
     return (
         <img
             src={src}
@@ -49,7 +51,7 @@ function PlayerAvatar({ userId, alias, title, sizePx }: {
                 width: sizePx,
                 height: sizePx,
                 objectFit: 'cover',
-                ...getAvatarBorderStyle(title),
+                ...borderStyle,
             }}
             className="rounded-full shrink-0"
             onError={e => { (e.target as HTMLImageElement).src = fallback }}
@@ -132,7 +134,7 @@ export function PlayerInfo({
     return (
         <div className={wrapperClass} {...interactiveProps}>
             {isAvatarable && (
-                <PlayerAvatar userId={userId!} alias={alias} title={title} sizePx={sizePx} />
+                <PlayerAvatar userId={userId!} alias={alias} title={title} sizePx={sizePx} isLight={isLight} />
             )}
             {nameBlock}
         </div>
