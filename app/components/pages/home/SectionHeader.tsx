@@ -10,13 +10,13 @@ interface SectionHeaderProps {
 export function SectionHeader({ title, actionLabel, onAction }: SectionHeaderProps) {
     return (
         <div className="flex items-center justify-between px-1 h-8">
-            <h2 className="text-lg font-black uppercase tracking-widest text-white/80 leading-none">{title}</h2>
+            <h2 className="text-lg font-black uppercase tracking-widest text-foreground/80 leading-none">{title}</h2>
             {actionLabel && onAction && (
                 <Button
                     variant="ghost"
                     size="sm"
                     onClick={onAction}
-                    className="h-7 text-[10px] font-bold text-muted-foreground hover:text-white uppercase tracking-widest gap-2 bg-white/5 border border-white/5"
+                    className="h-7 text-[10px] font-bold text-muted-foreground hover:text-foreground uppercase tracking-widest gap-2 bg-hairline/5 border border-hairline/5"
                 >
                     {actionLabel} <ChevronRight className="size-3" />
                 </Button>

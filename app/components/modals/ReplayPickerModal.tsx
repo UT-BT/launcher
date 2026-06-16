@@ -170,7 +170,7 @@ export function ReplayPickerModal({
                 : (mapName ? `Replays — ${displayMapName(mapName)}` : 'Replays')}
             offsetSidebar
             maxWidth="640px"
-            className="bg-[#0a0a0b]/98 border-white/5"
+            className="bg-card/98 border-hairline/5"
             footer={null}
         >
             <div className="space-y-3">
@@ -212,8 +212,8 @@ export function ReplayPickerModal({
                                             onClick={onPick}
                                             onKeyDown={(e) => { if (playable && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onPick() } }}
                                             className={cn(
-                                                'w-full flex items-center gap-3 px-3 py-2 rounded-lg border border-white/5 bg-white/[0.02] transition-colors',
-                                                playable ? 'cursor-pointer hover:bg-white/[0.06] hover:border-white/15' : 'opacity-60 cursor-default',
+                                                'w-full flex items-center gap-3 px-3 py-2 rounded-lg border border-hairline/5 bg-hairline/[0.02] transition-colors',
+                                                playable ? 'cursor-pointer hover:bg-hairline/[0.06] hover:border-hairline/15' : 'opacity-60 cursor-default',
                                             )}
                                         >
                                             <span className="text-xs font-bold font-mono w-6 text-muted-foreground shrink-0">#{rank}</span>
@@ -234,7 +234,7 @@ export function ReplayPickerModal({
                                 return (
                                     <div
                                         key={row.entry.id}
-                                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg border border-white/5 bg-white/[0.02] hover:bg-white/[0.04] transition-colors"
+                                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg border border-hairline/5 bg-hairline/[0.02] hover:bg-hairline/[0.04] transition-colors"
                                     >
                                         <span className="text-xs font-bold font-mono w-6 text-muted-foreground shrink-0">
                                             #{rank}
@@ -315,12 +315,12 @@ export function ReplayPickerModal({
                         </div>
 
                         {totalPages > 1 && (
-                            <div className="flex items-center justify-between pt-2 border-t border-white/5">
+                            <div className="flex items-center justify-between pt-2 border-t border-hairline/5">
                                 <button
                                     type="button"
                                     onClick={() => setPage(p => Math.max(1, p - 1))}
                                     disabled={clampedPage <= 1}
-                                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border border-white/10 bg-white/5 text-muted-foreground hover:text-white hover:bg-white/10 hover:border-white/20 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-default disabled:hover:bg-white/5 disabled:hover:border-white/10 disabled:hover:text-muted-foreground"
+                                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border border-hairline/10 bg-hairline/5 text-muted-foreground hover:text-foreground hover:bg-hairline/10 hover:border-hairline/20 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-default disabled:hover:bg-hairline/5 disabled:hover:border-hairline/10 disabled:hover:text-muted-foreground"
                                 >
                                     <ChevronLeft className="size-3.5" /> Prev
                                 </button>
@@ -331,7 +331,7 @@ export function ReplayPickerModal({
                                     type="button"
                                     onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                                     disabled={clampedPage >= totalPages}
-                                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border border-white/10 bg-white/5 text-muted-foreground hover:text-white hover:bg-white/10 hover:border-white/20 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-default disabled:hover:bg-white/5 disabled:hover:border-white/10 disabled:hover:text-muted-foreground"
+                                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border border-hairline/10 bg-hairline/5 text-muted-foreground hover:text-foreground hover:bg-hairline/10 hover:border-hairline/20 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-default disabled:hover:bg-hairline/5 disabled:hover:border-hairline/10 disabled:hover:text-muted-foreground"
                                 >
                                     Next <ChevronRight className="size-3.5" />
                                 </button>

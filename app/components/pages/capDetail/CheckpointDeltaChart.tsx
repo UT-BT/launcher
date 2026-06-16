@@ -80,7 +80,7 @@ export default function CheckpointDeltaChart({ points, baselineLabel }: Checkpoi
     }))
 
     return (
-        <div className="bg-white/[0.02] border border-white/5 rounded-lg p-2 h-full flex flex-col min-h-0 [&_.recharts-surface]:outline-none [&_.recharts-wrapper]:outline-none">
+        <div className="bg-hairline/[0.02] border border-hairline/5 rounded-lg p-2 h-full flex flex-col min-h-0 [&_.recharts-surface]:outline-none [&_.recharts-wrapper]:outline-none">
             <div className="flex items-center justify-between gap-2 px-1 pb-1.5 shrink-0">
                 <span className="text-[10px] uppercase tracking-wider text-muted-foreground truncate">
                     {mode === 'cumulative' ? 'Cumulative' : 'Per split'} · vs {baselineLabel}
@@ -95,7 +95,7 @@ export default function CheckpointDeltaChart({ points, baselineLabel }: Checkpoi
                                 'h-6 px-2 rounded text-[10px] font-medium border transition-colors cursor-pointer',
                                 mode === m
                                     ? 'bg-accent-500/20 border-accent-500/50 text-accent-200'
-                                    : 'bg-card/50 border-white/10 text-muted-foreground hover:text-white hover:border-white/20',
+                                    : 'bg-card/50 border-hairline/10 text-muted-foreground hover:text-foreground hover:border-hairline/20',
                             )}
                         >
                             {m === 'cumulative' ? 'Cumulative' : 'Per split'}

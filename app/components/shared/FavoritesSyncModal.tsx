@@ -90,7 +90,7 @@ export function FavoritesSyncModal({
         const visibleCount = onlyDiffs ? onlyHere.length : total
         return (
             <div className="flex flex-col gap-3 min-w-0">
-                <div className="flex items-center gap-2 text-white/80">
+                <div className="flex items-center gap-2 text-foreground/80">
                     {icon}
                     <span className="text-sm font-bold uppercase tracking-wider">{title}</span>
                     <span className="ml-auto text-xs text-muted-foreground">
@@ -101,7 +101,7 @@ export function FavoritesSyncModal({
                 </div>
                 <div className="flex flex-col gap-1 max-h-64 overflow-y-auto custom-scrollbar pr-1">
                     {visibleCount === 0 && (
-                        <div className="flex items-center justify-between gap-2 px-2 py-1 rounded text-xs font-mono border border-dashed border-white/10 text-muted-foreground italic leading-5">
+                        <div className="flex items-center justify-between gap-2 px-2 py-1 rounded text-xs font-mono border border-dashed border-hairline/10 text-muted-foreground italic leading-5">
                             <span>{onlyDiffs && total > 0 ? 'No differences' : 'Empty'}</span>
                         </div>
                     )}
@@ -178,7 +178,7 @@ export function FavoritesSyncModal({
                         <Monitor className="size-4 text-blue-400" />,
                         dbFavorites.length,
                         onlyInDb,
-                        'bg-white/5 border-white/10 text-white/70',
+                        'bg-hairline/5 border-hairline/10 text-foreground/70',
                         'bg-blue-500/10 border-blue-500/30 text-blue-200',
                     )}
                     <div className="hidden md:flex items-center justify-center pt-8">
@@ -189,7 +189,7 @@ export function FavoritesSyncModal({
                         <Gamepad2 className="size-4 text-purple-400" />,
                         iniFavorites.length,
                         onlyInIni,
-                        'bg-white/5 border-white/10 text-white/70',
+                        'bg-hairline/5 border-hairline/10 text-foreground/70',
                         'bg-purple-500/10 border-purple-500/30 text-purple-200',
                     )}
                 </div>
@@ -216,10 +216,10 @@ export function FavoritesSyncModal({
                                     'disabled:cursor-not-allowed disabled:opacity-60',
                                     isSelected
                                         ? 'border-emerald-500/60 bg-emerald-500/10 ring-1 ring-emerald-500/40'
-                                        : 'border-white/10 bg-white/[0.02] hover:border-white/25 hover:bg-white/[0.04]',
+                                        : 'border-hairline/10 bg-hairline/[0.02] hover:border-hairline/25 hover:bg-hairline/[0.04]',
                                 )}
                             >
-                                <div className="flex items-center gap-2 font-bold text-white/90">
+                                <div className="flex items-center gap-2 font-bold text-foreground/90">
                                     {r === 'merge' && <GitMerge className="size-3.5" />}
                                     {r === 'db-wins' && <Monitor className="size-3.5" />}
                                     {r === 'ini-wins' && <Gamepad2 className="size-3.5" />}

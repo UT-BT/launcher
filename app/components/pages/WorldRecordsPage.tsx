@@ -686,7 +686,7 @@ export function WorldRecordsPage({
                                 <button
                                     type="button"
                                     onClick={() => onMapSelect(r.map)}
-                                    className="font-bold text-white/90 truncate hover:text-white hover:underline underline-offset-2 cursor-pointer text-left"
+                                    className="font-bold text-foreground/90 truncate hover:text-foreground hover:underline underline-offset-2 cursor-pointer text-left"
                                 >
                                     {displayMapName(r.map)}
                                 </button>
@@ -778,7 +778,7 @@ export function WorldRecordsPage({
         <div className="space-y-4 h-full flex flex-col overflow-hidden">
             <div className="flex items-end justify-between shrink-0">
                 <div>
-                    <h1 className="text-2xl font-bold text-white leading-tight">World Records</h1>
+                    <h1 className="text-2xl font-bold text-foreground leading-tight">World Records</h1>
                     <p className="text-xs text-muted-foreground mt-0.5">
                         {isRushers ? (
                             <>
@@ -805,7 +805,7 @@ export function WorldRecordsPage({
                         type="button"
                         onClick={refresh}
                         disabled={pageLoading || !refreshCooldown.canRefresh}
-                        className="p-2 rounded-md text-muted-foreground hover:text-white hover:bg-white/5 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-hairline/5 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         <RefreshCw className={cn('size-4', pageLoading && 'animate-spin')} />
                     </button>
@@ -813,7 +813,7 @@ export function WorldRecordsPage({
             </div>
 
             <div className="flex flex-wrap items-center gap-3 shrink-0">
-                <div className="inline-flex items-center gap-1 p-1 rounded-lg bg-card/50 border border-white/10">
+                <div className="inline-flex items-center gap-1 p-1 rounded-lg bg-card/50 border border-hairline/10">
                     {MODES.map(m => {
                         const Icon = m.icon
                         const active = state.mode === m.value
@@ -826,7 +826,7 @@ export function WorldRecordsPage({
                                     'inline-flex items-center gap-2 h-8 px-3 rounded-md text-sm font-medium transition-colors cursor-pointer border',
                                     active
                                         ? 'bg-accent-500/20 text-accent-200 border-accent-500/40'
-                                        : 'text-muted-foreground hover:text-white border-transparent',
+                                        : 'text-muted-foreground hover:text-foreground border-transparent',
                                 )}
                             >
                                 <Icon className="size-4" />
@@ -845,14 +845,14 @@ export function WorldRecordsPage({
                         placeholder={isRushers ? 'Search rushers...' : 'Search maps or players...'}
                         value={state.search}
                         onChange={e => setSearch(e.target.value)}
-                        className="w-full pl-9 pr-9 py-2 bg-card/50 border border-white/10 rounded-lg text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:border-accent-500/50 focus:bg-card/80 transition-colors"
+                        className="w-full pl-9 pr-9 py-2 bg-card/50 border border-hairline/10 rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent-500/50 focus:bg-card/80 transition-colors"
                     />
                     {state.search && (
                         <button
                             type="button"
                             onClick={() => setSearch('')}
                             aria-label="Clear search"
-                            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-white/10 text-muted-foreground hover:text-white transition-colors cursor-pointer"
+                            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-hairline/10 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                         >
                             <X className="size-3.5" />
                         </button>
@@ -868,7 +868,7 @@ export function WorldRecordsPage({
                                 'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border transition-colors cursor-pointer',
                                 state.filtersPanelOpen
                                     ? 'bg-accent-500/20 border-accent-500/50 text-accent-300'
-                                    : 'bg-card/50 border-white/10 text-muted-foreground hover:text-white hover:border-white/20',
+                                    : 'bg-card/50 border-hairline/10 text-muted-foreground hover:text-foreground hover:border-hairline/20',
                             )}
                         >
                             <SlidersHorizontal className="size-4" />
@@ -943,7 +943,7 @@ export function WorldRecordsPage({
             )}
 
             {!isRushers && state.filtersPanelOpen && (
-                <div className="bg-card/30 border border-white/10 rounded-xl p-4 space-y-4 shrink-0">
+                <div className="bg-card/30 border border-hairline/10 rounded-xl p-4 space-y-4 shrink-0">
                     <FilterPanelRow label="Record">
                         <MultiFilterDropdown
                             label="Difficulty"
@@ -980,15 +980,15 @@ export function WorldRecordsPage({
                                 value={state.timeframe}
                                 onChange={e => updateFilter('timeframe', e.target.value as WrTimeframe)}
                                 style={{ colorScheme: 'dark' }}
-                                className="min-w-40 px-2 py-2 bg-card/50 border border-white/10 rounded text-sm text-white hover:border-white/20 focus:outline-none focus:border-accent-500/50 cursor-pointer"
+                                className="min-w-40 px-2 py-2 bg-card/50 border border-hairline/10 rounded text-sm text-foreground hover:border-hairline/20 focus:outline-none focus:border-accent-500/50 cursor-pointer"
                                 aria-label="Filter by recency"
                             >
                                 {TIMEFRAME_OPTIONS.map(o => (
-                                    <option key={o.value} value={o.value} className="bg-[#0f1115] text-white">{o.label}</option>
+                                    <option key={o.value} value={o.value} className="bg-[#0f1115] text-foreground">{o.label}</option>
                                 ))}
                             </select>
                         </div>
-                        <label className="flex items-center gap-2 px-3 py-2 bg-card/50 border border-white/10 rounded-md text-sm text-white cursor-pointer hover:border-white/20 self-end">
+                        <label className="flex items-center gap-2 px-3 py-2 bg-card/50 border border-hairline/10 rounded-md text-sm text-foreground cursor-pointer hover:border-hairline/20 self-end">
                             <input
                                 type="checkbox"
                                 checked={state.favoritesOnly}
@@ -999,7 +999,7 @@ export function WorldRecordsPage({
                         </label>
                     </FilterPanelRow>
 
-                    <div className="flex items-center justify-between gap-3 pt-2 border-t border-white/5">
+                    <div className="flex items-center justify-between gap-3 pt-2 border-t border-hairline/5">
                         <FilterPresetsMenu<WorldRecordsPresetFilters>
                             presets={presets}
                             activePreset={activePreset}
@@ -1031,7 +1031,7 @@ export function WorldRecordsPage({
                             <div
                                 key={slot.rank}
                                 className={cn(
-                                    'relative flex items-center gap-3 rounded-xl border border-white/5 px-4 py-3 overflow-hidden',
+                                    'relative flex items-center gap-3 rounded-xl border border-hairline/5 px-4 py-3 overflow-hidden',
                                     slot.surface, slot.ring,
                                 )}
                             >
@@ -1109,10 +1109,10 @@ export function WorldRecordsPage({
                                         </DataTableCell>
                                         <DataTableCell>
                                             <div className="flex items-center gap-2.5">
-                                                <div className="flex-1 h-1.5 rounded-full bg-white/10 overflow-hidden min-w-16">
+                                                <div className="flex-1 h-1.5 rounded-full bg-hairline/10 overflow-hidden min-w-16">
                                                     <div className="h-full rounded-full bg-blue-500/70" style={{ width: `${barPct}%` }} />
                                                 </div>
-                                                <span className="font-mono tabular-nums text-white font-bold w-10 text-right">
+                                                <span className="font-mono tabular-nums text-foreground font-bold w-10 text-right">
                                                     {r.count}
                                                 </span>
                                             </div>
@@ -1123,7 +1123,7 @@ export function WorldRecordsPage({
                                             </span>
                                         </DataTableCell>
                                         <DataTableCell align="right">
-                                            <span className="font-mono tabular-nums text-xs text-white/80">
+                                            <span className="font-mono tabular-nums text-xs text-foreground/80">
                                                 {r.median != null ? formatCapTime(r.median) : '—'}
                                             </span>
                                         </DataTableCell>

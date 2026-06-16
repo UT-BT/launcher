@@ -25,10 +25,10 @@ function Chip({ icon, label, threshold, delta }: {
     if (threshold == null) return null
     const met = delta != null && delta <= 0
     return (
-        <div className="bg-white/[0.02] border border-white/5 rounded-lg px-2 py-2.5 flex flex-col items-center text-center gap-1 h-full">
+        <div className="bg-hairline/[0.02] border border-hairline/5 rounded-lg px-2 py-2.5 flex flex-col items-center text-center gap-1 h-full">
             {icon && <img src={icon} alt={label} className="size-5 object-contain" />}
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground truncate max-w-full">{label}</div>
-            <div className="text-sm font-mono tabular-nums text-white">{formatCapTime(threshold)}</div>
+            <div className="text-sm font-mono tabular-nums text-foreground">{formatCapTime(threshold)}</div>
             <div className={cn(
                 'text-xs font-mono tabular-nums font-semibold',
                 met ? 'text-emerald-300' : 'text-red-300',
@@ -41,8 +41,8 @@ function Chip({ icon, label, threshold, delta }: {
 
 export function MedalThresholdsStrip({ medals, deltas }: MedalThresholdsStripProps) {
     return (
-        <div className="bg-card/30 border border-white/5 rounded-xl shrink-0">
-            <div className="px-4 py-3 border-b border-white/5 text-[10px] uppercase tracking-wider text-muted-foreground font-medium text-center">
+        <div className="bg-card/30 border border-hairline/5 rounded-xl shrink-0">
+            <div className="px-4 py-3 border-b border-hairline/5 text-[10px] uppercase tracking-wider text-muted-foreground font-medium text-center">
                 Medal Thresholds
             </div>
             <div className="p-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 items-stretch">

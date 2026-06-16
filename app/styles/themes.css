@@ -89,3 +89,97 @@
   --border: hsl(215 12% 14.9%);
   --input: hsl(215 12% 14.9%);
 }
+
+:root[data-theme='aurum'] {
+  --accent-50: oklch(0.987 0.022 95.277);
+  --accent-100: oklch(0.962 0.059 95.617);
+  --accent-200: oklch(0.924 0.12 95.746);
+  --accent-300: oklch(0.879 0.169 91.605);
+  --accent-400: oklch(0.828 0.189 84.429);
+  --accent-500: oklch(0.769 0.188 70.08);
+  --accent-600: oklch(0.666 0.179 58.318);
+  --accent-700: oklch(0.555 0.163 48.998);
+  --accent-800: oklch(0.473 0.137 46.201);
+  --accent-900: oklch(0.414 0.112 45.904);
+  --accent-950: oklch(0.279 0.077 45.635);
+
+  --accent-glow-rgb: 251 191 36;
+
+  --background: hsl(38 22% 4%);
+  --card: hsl(38 22% 4%);
+  --popover: hsl(38 22% 4%);
+  --secondary: hsl(38 14% 15%);
+  --muted: hsl(38 14% 15%);
+  --accent: hsl(38 14% 15%);
+  --border: hsl(38 14% 15%);
+  --input: hsl(38 14% 15%);
+}
+
+:root[data-theme='light'] {
+  --background: hsl(210 25% 98%);
+  --foreground: hsl(222 47% 11%);
+  --card: hsl(0 0% 100%);
+  --card-foreground: hsl(222 47% 11%);
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(222 47% 11%);
+  --primary: hsl(222 47% 11%);
+  --primary-foreground: hsl(0 0% 100%);
+  --secondary: hsl(210 20% 93%);
+  --secondary-foreground: hsl(222 47% 11%);
+  --muted: hsl(210 20% 93%);
+  --muted-foreground: hsl(215 16% 38%);
+  --accent: hsl(210 20% 93%);
+  --accent-foreground: hsl(222 47% 11%);
+  --destructive: hsl(0 72% 45%);
+  --destructive-foreground: hsl(0 0% 100%);
+  --border: hsl(214 20% 88%);
+  --input: hsl(214 20% 88%);
+  --ring: hsl(222 30% 30%);
+
+  --hairline-rgb: 15 23 42;
+
+  --accent-50: oklch(0.379 0.146 265.522);
+  --accent-100: oklch(0.379 0.146 265.522);
+  --accent-200: oklch(0.424 0.199 265.638);
+  --accent-300: oklch(0.488 0.243 264.376);
+  --accent-400: oklch(0.488 0.243 264.376);
+  --accent-500: oklch(0.623 0.214 259.815);
+  --accent-600: oklch(0.546 0.245 262.881);
+  --accent-700: oklch(0.488 0.243 264.376);
+  --accent-800: oklch(0.424 0.199 265.638);
+  --accent-900: oklch(0.379 0.146 265.522);
+  --accent-950: oklch(0.282 0.091 267.935);
+  --accent-glow-rgb: 37 99 235;
+
+  --color-blue-200: oklch(0.424 0.199 265.638);
+  --color-blue-300: oklch(0.488 0.243 264.376);
+  --color-blue-400: oklch(0.488 0.243 264.376);
+  --color-red-200: oklch(0.444 0.177 26.899);
+  --color-red-300: oklch(0.505 0.213 27.518);
+  --color-red-400: oklch(0.505 0.213 27.518);
+  --color-emerald-200: oklch(0.432 0.095 166.913);
+  --color-emerald-300: oklch(0.508 0.118 165.612);
+  --color-emerald-400: oklch(0.508 0.118 165.612);
+  --color-amber-300: oklch(0.473 0.137 46.201);
+  --color-amber-400: oklch(0.473 0.137 46.201);
+  --color-yellow-300: oklch(0.476 0.114 61.907);
+  --color-yellow-400: oklch(0.476 0.114 61.907);
+  --color-rose-200: oklch(0.455 0.188 13.697);
+  --color-rose-300: oklch(0.514 0.222 16.935);
+  --color-rose-400: oklch(0.514 0.222 16.935);
+  --color-slate-200: oklch(0.446 0.043 257.281);
+  --color-purple-200: oklch(0.438 0.218 303.724);
+  --color-purple-300: oklch(0.496 0.265 301.924);
+  --color-purple-400: oklch(0.496 0.265 301.924);
+  --color-orange-300: oklch(0.553 0.195 38.402);
+  --color-green-400: oklch(0.527 0.154 150.069);
+}
+
+:root[data-theme='light'] select {
+  color-scheme: light !important;
+}
+
+:root[data-theme='light'] option {
+  background-color: #fff;
+  color: hsl(222 47% 11%);
+}

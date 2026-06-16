@@ -37,7 +37,7 @@ export function DemoDownloadStatusModal({ state, onClose }: DemoDownloadStatusMo
             title={title}
             offsetSidebar
             maxWidth="500px"
-            className="bg-[#0a0a0b]/98 border-white/5"
+            className="bg-card/98 border-hairline/5"
             footer={
                 <div className="p-4 border-t border-border bg-muted/50 flex justify-end shrink-0">
                     <Button onClick={onClose} disabled={isDownloading} variant="secondary">
@@ -49,14 +49,14 @@ export function DemoDownloadStatusModal({ state, onClose }: DemoDownloadStatusMo
             {state?.status === 'downloading' && (
                 <div className="flex items-center gap-3 py-2">
                     <Loader2 className="size-5 animate-spin text-accent-300 shrink-0" />
-                    <div className="text-sm text-white/80 truncate">{state.filename}</div>
+                    <div className="text-sm text-foreground/80 truncate">{state.filename}</div>
                 </div>
             )}
             {state?.status === 'success' && (
                 <div className="space-y-3">
                     <div className="flex items-center gap-3">
                         <CheckCircle2 className="size-5 text-emerald-400 shrink-0" />
-                        <div className="text-sm text-white/90 font-medium truncate">{state.filename}</div>
+                        <div className="text-sm text-foreground/90 font-medium truncate">{state.filename}</div>
                     </div>
                     <div className="text-xs text-muted-foreground space-y-1">
                         <div>Size: {formatBytes(state.bytes)}</div>
@@ -70,7 +70,7 @@ export function DemoDownloadStatusModal({ state, onClose }: DemoDownloadStatusMo
                 <div className="space-y-3">
                     <div className="flex items-center gap-3">
                         <AlertCircle className="size-5 text-red-400 shrink-0" />
-                        <div className="text-sm text-white/90 font-medium">Could not download demo</div>
+                        <div className="text-sm text-foreground/90 font-medium">Could not download demo</div>
                     </div>
                     <p className="text-xs text-muted-foreground">{reasonText(state.reason)}</p>
                 </div>

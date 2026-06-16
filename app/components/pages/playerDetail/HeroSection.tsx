@@ -33,36 +33,36 @@ const POINTS_EXPLAINER = (
         <div className="text-[10px] uppercase tracking-wider font-bold text-blue-200">
             How points are calculated
         </div>
-        <p className="text-xs text-white/85 leading-relaxed">
+        <p className="text-xs text-foreground/85 leading-relaxed">
             Points are awarded per map for your best verified cap. Higher medal tiers earn more.
         </p>
         <div className="space-y-1 mt-2 text-xs">
             <div className="flex items-center justify-between gap-3">
                 <span className="font-semibold text-blue-300">World Record</span>
-                <span className="font-mono text-white/70">10 pts</span>
+                <span className="font-mono text-foreground/70">10 pts</span>
             </div>
             <div className="flex items-center justify-between gap-3">
                 <span className="font-semibold text-red-300">Champion</span>
-                <span className="font-mono text-white/70">8 pts</span>
+                <span className="font-mono text-foreground/70">8 pts</span>
             </div>
             <div className="flex items-center justify-between gap-3">
                 <span className="font-semibold text-yellow-300">Gold</span>
-                <span className="font-mono text-white/70">6 pts</span>
+                <span className="font-mono text-foreground/70">6 pts</span>
             </div>
             <div className="flex items-center justify-between gap-3">
                 <span className="font-semibold text-slate-200">Silver</span>
-                <span className="font-mono text-white/70">4 pts</span>
+                <span className="font-mono text-foreground/70">4 pts</span>
             </div>
             <div className="flex items-center justify-between gap-3">
                 <span className="font-semibold text-amber-500">Bronze</span>
-                <span className="font-mono text-white/70">2 pts</span>
+                <span className="font-mono text-foreground/70">2 pts</span>
             </div>
             <div className="flex items-center justify-between gap-3">
                 <span className="font-semibold text-emerald-300">Certified</span>
-                <span className="font-mono text-white/70">1 pt</span>
+                <span className="font-mono text-foreground/70">1 pt</span>
             </div>
         </div>
-        <p className="text-[10px] text-muted-foreground leading-relaxed pt-1 border-t border-white/5">
+        <p className="text-[10px] text-muted-foreground leading-relaxed pt-1 border-t border-hairline/5">
             Rank is global, sorted by total points.
         </p>
     </div>
@@ -84,7 +84,7 @@ export function HeroSection({ userId, summary, loading, isSelf, chart, onChangeT
     const points = medals?.points ?? 0
 
     return (
-        <div className="bg-card/30 border border-white/5 rounded-xl p-5 space-y-4 shrink-0">
+        <div className="bg-card/30 border border-hairline/5 rounded-xl p-5 space-y-4 shrink-0">
             <div className="flex items-center gap-5 min-w-0">
                 <img
                     src={getAvatarUrl(userId)}
@@ -104,7 +104,7 @@ export function HeroSection({ userId, summary, loading, isSelf, chart, onChangeT
                 <div className="flex-1 min-w-0 flex flex-col gap-2">
                     <div className="flex flex-col leading-tight min-w-0">
                         <div className="flex items-center gap-2 flex-wrap min-w-0">
-                            <h1 className="text-3xl font-bold text-white truncate">
+                            <h1 className="text-3xl font-bold text-foreground truncate">
                                 {alias ?? '…'}
                             </h1>
                             {patreonTier !== 0 && (
@@ -146,7 +146,7 @@ export function HeroSection({ userId, summary, loading, isSelf, chart, onChangeT
                             <button
                                 type="button"
                                 onClick={onChangeTitle}
-                                className="text-sm truncate mt-0.5 text-left self-start max-w-full text-muted-foreground cursor-pointer hover:text-white underline decoration-dashed underline-offset-4 decoration-white/30 transition-colors"
+                                className="text-sm truncate mt-0.5 text-left self-start max-w-full text-muted-foreground cursor-pointer hover:text-foreground underline decoration-dashed underline-offset-4 decoration-hairline/30 transition-colors"
                             >
                                 Pick a title
                             </button>
@@ -219,7 +219,7 @@ export function HeroSection({ userId, summary, loading, isSelf, chart, onChangeT
                     label="Maps Capped"
                     value={loading ? null : counts ? counts.unique_maps.toLocaleString() : '—'}
                     subtext={counts ? `${counts.uncapped_maps.toLocaleString()} left` : undefined}
-                    accent="text-white"
+                    accent="text-foreground"
                 />
                 <HeroStat
                     icon={Trophy}
@@ -257,12 +257,12 @@ function HeroStat({ icon: Icon, label, value, subtext, accent }: {
     accent: string
 }) {
     return (
-        <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-white/[0.02] border border-white/5">
+        <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-hairline/[0.02] border border-hairline/5">
             <Icon className={cn('size-4 shrink-0', accent)} />
             <div className="min-w-0 flex flex-col leading-tight">
                 <span className="text-[10px] uppercase tracking-wider text-muted-foreground truncate">{label}</span>
                 {value === null ? (
-                    <span className="h-4 w-14 bg-white/5 rounded animate-pulse mt-0.5" />
+                    <span className="h-4 w-14 bg-hairline/5 rounded animate-pulse mt-0.5" />
                 ) : (
                     <span className={cn('font-mono tabular-nums font-bold text-base leading-none mt-0.5', accent)}>{value}</span>
                 )}

@@ -38,7 +38,7 @@ export function DataTableShell({
             ref={scrollRef}
             onScroll={onScroll}
             className={cn(
-                'flex-1 min-h-0 bg-card/30 border border-white/5 rounded-xl overflow-auto',
+                'flex-1 min-h-0 bg-card/30 border border-hairline/5 rounded-xl overflow-auto',
                 className,
             )}
             data-utbt-table-thead={theadDataAttr}
@@ -66,7 +66,7 @@ export function DataTableHeaderRow({ children, theadDataAttr }: DataTableHeaderR
     const dataProps = theadDataAttr ? { [theadDataAttr]: true } : {}
     return (
         <thead className="sticky top-0 z-[2] bg-card/95 backdrop-blur" {...dataProps}>
-            <tr className="border-b border-white/10">{children}</tr>
+            <tr className="border-b border-hairline/10">{children}</tr>
         </thead>
     )
 }
@@ -113,7 +113,7 @@ export function DataTableHeaderCell({
                 type="button"
                 onClick={onSort}
                 className={cn(
-                    'inline-flex items-center gap-1 hover:text-white transition-colors cursor-pointer',
+                    'inline-flex items-center gap-1 hover:text-foreground transition-colors cursor-pointer',
                     justify,
                 )}
             >
@@ -147,7 +147,7 @@ export function DataTableRow({ children, className, ...rest }: DataTableRowProps
     return (
         <tr
             className={cn(
-                'border-b border-white/5 hover:bg-white/[0.03] transition-colors group',
+                'border-b border-hairline/5 hover:bg-hairline/[0.03] transition-colors group',
                 className,
             )}
             {...rest}
@@ -213,10 +213,10 @@ interface DataTableSkeletonRowProps {
  */
 export function DataTableSkeletonRow({ columnCount }: DataTableSkeletonRowProps) {
     return (
-        <tr className="border-b border-white/5 animate-pulse">
+        <tr className="border-b border-hairline/5 animate-pulse">
             {Array.from({ length: columnCount }).map((_, i) => (
                 <td key={i} className="px-4 py-3">
-                    <div className="h-6 w-full bg-white/5 rounded" />
+                    <div className="h-6 w-full bg-hairline/5 rounded" />
                 </td>
             ))}
         </tr>

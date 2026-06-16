@@ -97,8 +97,8 @@ export function UncappedMapsCard({ accessToken, userId, onMapSelect, tabsSlot }:
     const dir = (field: SortField): SortDirection => sortField === field ? sortDir : null
 
     return (
-        <div className="bg-card/30 border border-white/5 rounded-xl flex flex-col overflow-hidden">
-            <div className="flex items-center justify-between gap-3 gap-y-2 px-4 py-3 border-b border-white/5 flex-wrap">
+        <div className="bg-card/30 border border-hairline/5 rounded-xl flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between gap-3 gap-y-2 px-4 py-3 border-b border-hairline/5 flex-wrap">
                 <div className="flex items-center gap-3 flex-wrap">
                     {tabsSlot}
                 </div>
@@ -110,14 +110,14 @@ export function UncappedMapsCard({ accessToken, userId, onMapSelect, tabsSlot }:
                             value={queryRaw}
                             onChange={e => setQueryRaw(e.target.value)}
                             placeholder="Search map…"
-                            className="w-full sm:w-44 pl-7 pr-2 py-1 bg-card/50 border border-white/10 rounded text-xs text-white placeholder:text-muted-foreground focus:outline-none focus:border-accent-500/50"
+                            className="w-full sm:w-44 pl-7 pr-2 py-1 bg-card/50 border border-hairline/10 rounded text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent-500/50"
                         />
                     </div>
                     <select
                         value={difficultyTier}
                         onChange={e => setDifficultyTier(e.target.value as 'all' | 'beginner' | 'intermediate' | 'advanced' | 'expert')}
                         style={{ colorScheme: 'dark' }}
-                        className="px-2 py-1 bg-card/50 border border-white/10 rounded text-xs text-white focus:outline-none focus:border-accent-500/50 cursor-pointer"
+                        className="px-2 py-1 bg-card/50 border border-hairline/10 rounded text-xs text-foreground focus:outline-none focus:border-accent-500/50 cursor-pointer"
                     >
                         <option value="all" className="bg-[#0f1115]">All difficulties</option>
                         <option value="beginner" className="bg-[#0f1115]">Beginner (1–3)</option>
@@ -151,7 +151,7 @@ export function UncappedMapsCard({ accessToken, userId, onMapSelect, tabsSlot }:
                                 <DataTableCell>
                                     <div className="flex items-center gap-2 min-w-0">
                                         <MapThumbnail mapName={m.name} className="size-8 shrink-0" />
-                                        <span className="text-sm font-semibold text-white truncate">
+                                        <span className="text-sm font-semibold text-foreground truncate">
                                             {displayMapName(m.name)}
                                         </span>
                                     </div>
@@ -163,7 +163,7 @@ export function UncappedMapsCard({ accessToken, userId, onMapSelect, tabsSlot }:
                                 </DataTableCell>
                                 <DataTableCell align="center">
                                     {m.difficulty != null ? (
-                                        <span className={`inline-flex items-center justify-center size-5 rounded text-[10px] font-bold text-white ${difficultyBgColor(m.difficulty)}`}>
+                                        <span className={`inline-flex items-center justify-center size-5 rounded text-[10px] font-bold text-foreground ${difficultyBgColor(m.difficulty)}`}>
                                             {m.difficulty}
                                         </span>
                                     ) : (
@@ -177,7 +177,7 @@ export function UncappedMapsCard({ accessToken, userId, onMapSelect, tabsSlot }:
             </DataTableShell>
 
             {!loading && filteredTotal > 0 && (
-                <div className="px-4 py-3 border-t border-white/5">
+                <div className="px-4 py-3 border-t border-hairline/5">
                     <PaginationBar
                         page={page}
                         totalPages={totalPages}

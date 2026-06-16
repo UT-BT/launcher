@@ -142,7 +142,7 @@ export function CapDetailPage({ capId, userProfile, onMapSelect }: CapDetailPage
                         type="button"
                         onClick={() => refreshCooldown.trigger(() => setRefreshKey(k => k + 1))}
                         disabled={loading || !refreshCooldown.canRefresh}
-                        className="p-2 rounded-md text-muted-foreground hover:text-white hover:bg-white/5 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                        className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-hairline/5 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
                         aria-label="Refresh"
                     >
                         <RefreshCw className={`size-4 ${loading ? 'animate-spin' : ''}`} />
@@ -151,11 +151,11 @@ export function CapDetailPage({ capId, userProfile, onMapSelect }: CapDetailPage
             </div>
 
             {loading && !detail ? (
-                <div className="bg-card/30 border border-white/5 rounded-xl h-56 animate-pulse shrink-0" />
+                <div className="bg-card/30 border border-hairline/5 rounded-xl h-56 animate-pulse shrink-0" />
             ) : !detail || !cap ? (
                 <div className="flex-1 flex items-center justify-center">
                     <div className="text-center text-muted-foreground">
-                        <div className="text-lg font-semibold text-white mb-1">Cap not found</div>
+                        <div className="text-lg font-semibold text-foreground mb-1">Cap not found</div>
                         <div className="text-sm">{error ?? 'This run could not be loaded.'}</div>
                     </div>
                 </div>

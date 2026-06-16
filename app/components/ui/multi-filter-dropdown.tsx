@@ -43,7 +43,7 @@ export function MultiFilterDropdown({
                 <DropdownMenuTrigger asChild>
                     <button
                         style={{ minWidth }}
-                        className="px-2 py-2 bg-card/50 border border-white/10 rounded text-sm text-white text-left hover:border-white/20 cursor-pointer flex items-center justify-between gap-2"
+                        className="px-2 py-2 bg-card/50 border border-hairline/10 rounded text-sm text-foreground text-left hover:border-hairline/20 cursor-pointer flex items-center justify-between gap-2"
                     >
                         <span className="truncate">{summary}</span>
                         <ChevronDown className="size-3.5 opacity-60 shrink-0" />
@@ -59,7 +59,7 @@ export function MultiFilterDropdown({
                                 onChange={e => setQuery(e.target.value)}
                                 onKeyDown={e => e.stopPropagation()}
                                 placeholder="Search..."
-                                className="w-full px-2 py-1.5 bg-card/50 border border-white/10 rounded text-xs text-white placeholder:text-muted-foreground focus:outline-none focus:border-accent-500/50"
+                                className="w-full px-2 py-1.5 bg-card/50 border border-hairline/10 rounded text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent-500/50"
                             />
                         </div>
                     )}
@@ -78,7 +78,7 @@ export function MultiFilterDropdown({
                                             : [...values, value]
                                         onChange(next)
                                     }}
-                                    className="flex items-center gap-2 px-2 py-1.5 text-sm cursor-pointer hover:bg-white/5 rounded select-none"
+                                    className="flex items-center gap-2 px-2 py-1.5 text-sm cursor-pointer hover:bg-hairline/5 rounded select-none"
                                 >
                                     <input
                                         type="checkbox"

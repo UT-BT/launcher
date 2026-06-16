@@ -98,7 +98,7 @@ export function PendingReviewsCard({ accessToken, refreshKey = 0, favoriteMapNam
                                             size="sm"
                                             className="shrink-0"
                                         />
-                                        <span className="font-bold text-white/90 truncate hover:underline underline-offset-2">
+                                        <span className="font-bold text-foreground/90 truncate hover:underline underline-offset-2">
                                             {displayMapName(rev.mapName)}
                                         </span>
                                     </div>
@@ -136,7 +136,7 @@ export function PendingReviewsCard({ accessToken, refreshKey = 0, favoriteMapNam
                             variant="ghost"
                             disabled={page <= 1 || loading}
                             onClick={() => setPage(p => Math.max(1, p - 1))}
-                            className="size-7 bg-white/5 border border-white/5 hover:bg-white/10 disabled:opacity-30"
+                            className="size-7 bg-hairline/5 border border-hairline/5 hover:bg-hairline/10 disabled:opacity-30"
                         >
                             <ChevronLeft className="size-3" />
                         </Button>
@@ -145,7 +145,7 @@ export function PendingReviewsCard({ accessToken, refreshKey = 0, favoriteMapNam
                             variant="ghost"
                             disabled={page >= totalPages || loading}
                             onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                            className="size-7 bg-white/5 border border-white/5 hover:bg-white/10 disabled:opacity-30"
+                            className="size-7 bg-hairline/5 border border-hairline/5 hover:bg-hairline/10 disabled:opacity-30"
                         >
                             <ChevronRight className="size-3" />
                         </Button>

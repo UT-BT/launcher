@@ -24,7 +24,7 @@ export function ActiveFilterChip({ label, value, onClear, className }: ActiveFil
                 type="button"
                 onClick={onClear}
                 aria-label={`Remove ${label} filter ${value}`}
-                className="p-0.5 rounded hover:bg-accent-500/30 text-accent-200 hover:text-white transition-colors cursor-pointer"
+                className="p-0.5 rounded hover:bg-accent-500/30 text-accent-200 hover:text-foreground transition-colors cursor-pointer"
             >
                 <X className="size-3" />
             </button>

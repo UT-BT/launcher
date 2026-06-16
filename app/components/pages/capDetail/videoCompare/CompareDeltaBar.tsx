@@ -37,7 +37,7 @@ export function CompareDeltaBar({ points, duration, master, onScrub, onScrubStar
                 aria-valuemax={Math.round(dur)}
                 aria-valuenow={Math.round(master)}
                 {...pointerHandlers}
-                className="relative h-24 rounded-lg bg-white/[0.02] border border-white/5 overflow-hidden touch-none cursor-pointer focus:outline-none focus:border-blue-500/40"
+                className="relative h-24 rounded-lg bg-hairline/[0.02] border border-hairline/5 overflow-hidden touch-none cursor-pointer focus:outline-none focus:border-accent-500/40"
             >
                 <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 w-full h-full pointer-events-none">
                     {areaPath && <path d={areaPath} fill="rgba(255,255,255,0.035)" />}
@@ -60,7 +60,7 @@ export function CompareDeltaBar({ points, duration, master, onScrub, onScrubStar
                 </svg>
 
                 <div
-                    className="absolute top-0 bottom-0 w-px bg-white/80 pointer-events-none"
+                    className="absolute top-0 bottom-0 w-px bg-hairline/80 pointer-events-none"
                     style={{ left: `${cursorPct}%` }}
                 />
             </div>

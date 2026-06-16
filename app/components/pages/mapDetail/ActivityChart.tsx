@@ -56,7 +56,7 @@ export default function ActivityChart({ leaderboard, playtime }: ActivityChartPr
     const accent = mode === 'caps' ? '#60a5fa' : '#fbbf24'
 
     return (
-        <div className="bg-white/[0.02] border border-white/5 rounded-lg p-2 flex flex-col gap-1.5 h-full min-h-0 [&_.recharts-surface]:outline-none [&_.recharts-wrapper]:outline-none">
+        <div className="bg-hairline/[0.02] border border-hairline/5 rounded-lg p-2 flex flex-col gap-1.5 h-full min-h-0 [&_.recharts-surface]:outline-none [&_.recharts-wrapper]:outline-none">
             <div className="flex items-center justify-between gap-3 shrink-0">
                 <div className="flex items-center gap-1.5">
                     <Activity className="size-3 text-muted-foreground" />
@@ -69,7 +69,7 @@ export default function ActivityChart({ leaderboard, playtime }: ActivityChartPr
                         <button
                             type="button"
                             onClick={() => setZoom(null)}
-                            className="inline-flex items-center gap-1 h-5 px-1.5 rounded text-[9px] font-bold uppercase tracking-wider border bg-card/50 border-white/10 text-muted-foreground hover:text-white hover:border-white/20 transition-colors cursor-pointer"
+                            className="inline-flex items-center gap-1 h-5 px-1.5 rounded text-[9px] font-bold uppercase tracking-wider border bg-card/50 border-hairline/10 text-muted-foreground hover:text-foreground hover:border-hairline/20 transition-colors cursor-pointer"
                             title="Reset zoom"
                         >
                             <ZoomOut className="size-2.5" />
@@ -85,7 +85,7 @@ export default function ActivityChart({ leaderboard, playtime }: ActivityChartPr
                                 'h-5 px-1.5 rounded text-[9px] font-bold uppercase tracking-wider border transition-colors cursor-pointer',
                                 mode === m
                                     ? 'bg-accent-500/20 border-accent-500/50 text-accent-200'
-                                    : 'bg-card/50 border-white/10 text-muted-foreground hover:text-white hover:border-white/20',
+                                    : 'bg-card/50 border-hairline/10 text-muted-foreground hover:text-foreground hover:border-hairline/20',
                             )}
                         >
                             {m}

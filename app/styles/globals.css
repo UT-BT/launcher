@@ -2,6 +2,8 @@
 @source '@/app';
 @source '@/lib';
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -50,7 +52,7 @@
 @layer base {
   :root {
     --background: var(--color-neutral-950);
-    --foreground: var(--color-neutral-100);
+    --foreground: hsl(0 0% 100%);
     --card: hsl(0, 0%, 3.9%);
     --card-foreground: hsl(0 0% 98%);
     --popover: hsl(0 0% 3.9%);

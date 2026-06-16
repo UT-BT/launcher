@@ -487,21 +487,21 @@ const MedalIndicator = ({ tier, bestCap }: { tier: MedalTier; bestCap?: BestCap 
 }
 
 const SKELETON_CELL: Partial<Record<ColumnId, React.ReactNode>> = {
-    thumbnail: <td className="px-4 py-3"><div className="w-12 h-12 rounded bg-white/5 animate-pulse" /></td>,
-    name: <td className="px-4 py-3"><div className="h-4 w-32 rounded bg-white/5 animate-pulse" /></td>,
-    author: <td className="px-4 py-3"><div className="h-4 w-20 rounded bg-white/5 animate-pulse" /></td>,
-    difficulty: <td className="px-4 py-3"><div className="h-4 w-16 rounded bg-white/5 animate-pulse" /></td>,
-    added: <td className="px-4 py-3"><div className="h-4 w-20 rounded bg-white/5 animate-pulse" /></td>,
-    world_record: <td className="px-4 py-3"><div className="h-4 w-20 rounded bg-white/5 animate-pulse" /></td>,
-    medal: <td className="px-2 py-3 text-center"><div className="inline-block size-5 rounded-full bg-white/5 animate-pulse" /></td>,
-    pb: <td className="px-4 py-3"><div className="h-4 w-20 rounded bg-white/5 animate-pulse" /></td>,
-    replay: <td className="px-2 py-3 text-center"><div className="inline-block w-16 h-6 rounded-md bg-white/5 animate-pulse" /></td>,
-    community_rating: <td className="px-4 py-3"><div className="h-4 w-16 rounded bg-white/5 animate-pulse" /></td>,
-    my_rating: <td className="px-4 py-3"><div className="h-4 w-16 rounded bg-white/5 animate-pulse" /></td>,
+    thumbnail: <td className="px-4 py-3"><div className="w-12 h-12 rounded bg-hairline/5 animate-pulse" /></td>,
+    name: <td className="px-4 py-3"><div className="h-4 w-32 rounded bg-hairline/5 animate-pulse" /></td>,
+    author: <td className="px-4 py-3"><div className="h-4 w-20 rounded bg-hairline/5 animate-pulse" /></td>,
+    difficulty: <td className="px-4 py-3"><div className="h-4 w-16 rounded bg-hairline/5 animate-pulse" /></td>,
+    added: <td className="px-4 py-3"><div className="h-4 w-20 rounded bg-hairline/5 animate-pulse" /></td>,
+    world_record: <td className="px-4 py-3"><div className="h-4 w-20 rounded bg-hairline/5 animate-pulse" /></td>,
+    medal: <td className="px-2 py-3 text-center"><div className="inline-block size-5 rounded-full bg-hairline/5 animate-pulse" /></td>,
+    pb: <td className="px-4 py-3"><div className="h-4 w-20 rounded bg-hairline/5 animate-pulse" /></td>,
+    replay: <td className="px-2 py-3 text-center"><div className="inline-block w-16 h-6 rounded-md bg-hairline/5 animate-pulse" /></td>,
+    community_rating: <td className="px-4 py-3"><div className="h-4 w-16 rounded bg-hairline/5 animate-pulse" /></td>,
+    my_rating: <td className="px-4 py-3"><div className="h-4 w-16 rounded bg-hairline/5 animate-pulse" /></td>,
 }
 
 const SkeletonRow = ({ order, visibility }: { order: ColumnId[]; visibility: Record<ColumnId, boolean> }) => (
-    <tr className="border-b border-white/5">
+    <tr className="border-b border-hairline/5">
         {order.map(id => {
             if (NON_TABLE_COLUMNS.has(id)) return null
             if (!REQUIRED_COLUMNS.has(id) && !visibility[id]) return null
@@ -1587,7 +1587,7 @@ export function MapsPage({
                                             e.stopPropagation()
                                             onMapSelect(map.name)
                                         }}
-                                        className="font-bold text-white hover:text-accent-300 underline-offset-4 transition-colors cursor-pointer text-left text-md truncate"
+                                        className="font-bold text-foreground hover:text-accent-300 underline-offset-4 transition-colors cursor-pointer text-left text-md truncate"
                                     >
                                         {displayMapName(map.name)}
                                     </button>
@@ -1629,7 +1629,7 @@ export function MapsPage({
                                             e.stopPropagation()
                                             toggleTagExpansion(map.name)
                                         }}
-                                        className="w-fit text-[10px] px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-muted-foreground hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
+                                        className="w-fit text-[10px] px-1.5 py-0.5 rounded bg-hairline/5 border border-hairline/10 text-muted-foreground hover:bg-hairline/10 hover:text-foreground transition-colors cursor-pointer"
                                     >
                                         {expanded ? '- Show less' : `+${tags.length - visibleTagCount}`}
                                     </button>
@@ -1652,7 +1652,7 @@ export function MapsPage({
                             <span className={cn("text-sm font-bold w-4 text-center", difficultyTextColor(map.difficulty))}>
                                 {map.difficulty}
                             </span>
-                            <div className="w-16 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                            <div className="w-16 h-1.5 bg-hairline/10 rounded-full overflow-hidden">
                                 <div
                                     className={cn("h-full rounded-full", difficultyBgColor(map.difficulty))}
                                     style={{ width: `${(map.difficulty / 10) * 100}%` }}
@@ -1832,7 +1832,7 @@ export function MapsPage({
                                     )}>
                                         {ratings.overall}
                                     </span>
-                                    <div className="w-16 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                                    <div className="w-16 h-1.5 bg-hairline/10 rounded-full overflow-hidden">
                                         <div
                                             className={cn("h-full rounded-full", scoreBgColor(ratings.overall))}
                                             style={{ width: `${(ratings.overall / 10) * 100}%` }}
@@ -1840,7 +1840,7 @@ export function MapsPage({
                                     </div>
                                 </>
                             ) : (
-                                <span className="opacity-50 text-muted-foreground text-xs underline-offset-2 group-hover/rating:underline group-hover/rating:text-white">
+                                <span className="opacity-50 text-muted-foreground text-xs underline-offset-2 group-hover/rating:underline group-hover/rating:text-foreground">
                                     No reviews, add one?
                                 </span>
                             )}
@@ -1866,7 +1866,7 @@ export function MapsPage({
                                     )}>
                                         {myReview.overall}
                                     </span>
-                                    <div className="w-16 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                                    <div className="w-16 h-1.5 bg-hairline/10 rounded-full overflow-hidden">
                                         <div
                                             className={cn("h-full rounded-full", scoreBgColor(myReview.overall))}
                                             style={{ width: `${(myReview.overall / 10) * 100}%` }}
@@ -1874,7 +1874,7 @@ export function MapsPage({
                                     </div>
                                 </>
                             ) : (
-                                <span className="opacity-50 text-muted-foreground text-xs underline-offset-2 group-hover/myrating:underline group-hover/myrating:text-white">
+                                <span className="opacity-50 text-muted-foreground text-xs underline-offset-2 group-hover/myrating:underline group-hover/myrating:text-foreground">
                                     Review this map
                                 </span>
                             )}
@@ -1891,7 +1891,7 @@ export function MapsPage({
         <div className="space-y-4 h-full flex flex-col overflow-hidden">
             <div className="flex items-end justify-between shrink-0">
                 <div>
-                    <h1 className="text-2xl font-bold text-white leading-tight">Maps</h1>
+                    <h1 className="text-2xl font-bold text-foreground leading-tight">Maps</h1>
                     {!showSkeleton && (
                         <p className="text-xs text-muted-foreground mt-0.5">
                             Showing {totalForCount.toLocaleString()} of {(caches.metadata?.length ?? totalForCount).toLocaleString()} maps
@@ -1904,7 +1904,7 @@ export function MapsPage({
                             type="button"
                             onClick={() => startTutorial()}
                             aria-label="Restart Maps tutorial"
-                            className="p-2 rounded-md text-muted-foreground hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+                            className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-hairline/5 transition-colors cursor-pointer"
                         >
                             <HelpCircle className="size-4" />
                         </button>
@@ -1914,7 +1914,7 @@ export function MapsPage({
                             type="button"
                             onClick={refresh}
                             disabled={loading || pageLoading || !refreshCooldown.canRefresh}
-                            className="p-2 rounded-md text-muted-foreground hover:text-white hover:bg-white/5 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-hairline/5 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             <RefreshCw className={cn("size-4", (loading || pageLoading) && "animate-spin")} />
                         </button>
@@ -1931,14 +1931,14 @@ export function MapsPage({
                         placeholder="Search for a map name or tag..."
                         value={state.search}
                         onChange={e => updateFilter('search', e.target.value)}
-                        className="w-full pl-9 pr-9 py-2 bg-card/50 border border-white/10 rounded-lg text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:border-accent-500/50 focus:bg-card/80 transition-colors"
+                        className="w-full pl-9 pr-9 py-2 bg-card/50 border border-hairline/10 rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent-500/50 focus:bg-card/80 transition-colors"
                     />
                     {state.search && (
                         <button
                             type="button"
                             onClick={() => updateFilter('search', '')}
                             aria-label="Clear search"
-                            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-white/10 text-muted-foreground hover:text-white transition-colors cursor-pointer"
+                            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-hairline/10 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                         >
                             <X className="size-3.5" />
                         </button>
@@ -1952,7 +1952,7 @@ export function MapsPage({
                         "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border transition-colors cursor-pointer",
                         state.filtersPanelOpen
                             ? "bg-accent-500/20 border-accent-500/50 text-accent-300"
-                            : "bg-card/50 border-white/10 text-muted-foreground hover:text-white hover:border-white/20"
+                            : "bg-card/50 border-hairline/10 text-muted-foreground hover:text-foreground hover:border-hairline/20"
                     )}
                 >
                     <SlidersHorizontal className="size-4" />
@@ -2106,7 +2106,7 @@ export function MapsPage({
             )}
 
             {state.filtersPanelOpen && (
-                <div ref={filterPanelRef} className="bg-card/30 border border-white/10 rounded-xl p-4 space-y-4 shrink-0">
+                <div ref={filterPanelRef} className="bg-card/30 border border-hairline/10 rounded-xl p-4 space-y-4 shrink-0">
                     <FilterPanelRow label="Map">
                         <MultiFilterDropdown
                             label="Difficulty"
@@ -2190,7 +2190,7 @@ export function MapsPage({
                             onChange={v => updateFilter('ratedFilters', v as RatedValue[])}
                             options={ratedOptions}
                         />
-                        <label className="flex items-center gap-2 px-3 py-2 bg-card/50 border border-white/10 rounded-md text-sm text-white cursor-pointer hover:border-white/20 self-end">
+                        <label className="flex items-center gap-2 px-3 py-2 bg-card/50 border border-hairline/10 rounded-md text-sm text-foreground cursor-pointer hover:border-hairline/20 self-end">
                             <input
                                 type="checkbox"
                                 checked={state.newOnly}
@@ -2204,7 +2204,7 @@ export function MapsPage({
                                 </span>
                             )}
                         </label>
-                        <label className="flex items-center gap-2 px-3 py-2 bg-card/50 border border-white/10 rounded-md text-sm text-white cursor-pointer hover:border-white/20 self-end">
+                        <label className="flex items-center gap-2 px-3 py-2 bg-card/50 border border-hairline/10 rounded-md text-sm text-foreground cursor-pointer hover:border-hairline/20 self-end">
                             <input
                                 type="checkbox"
                                 checked={state.favoritesOnly}
@@ -2220,7 +2220,7 @@ export function MapsPage({
                         </label>
                     </FilterPanelRow>
 
-                    <div className="flex items-center justify-between gap-3 pt-2 border-t border-white/5">
+                    <div className="flex items-center justify-between gap-3 pt-2 border-t border-hairline/5">
                         <FilterPresetsMenu<PresetFilters>
                             presets={presets}
                             activePreset={activePreset}
@@ -2359,7 +2359,7 @@ export function MapsPage({
                         : ''
                 }
                 offsetSidebar
-                className="bg-[#0a0a0b]/98 border-white/5"
+                className="bg-card/98 border-hairline/5"
                 maxWidth="min(90vw, 1280px)"
                 leftAction={videoModal?.fromPicker ? (
                     <Tooltip content="Back to replays" side="bottom">
@@ -2371,7 +2371,7 @@ export function MapsPage({
                                 setReplayPickerMap(mapName)
                             }}
                             aria-label="Back to replays"
-                            className="h-8 w-8 inline-flex items-center justify-center rounded-full hover:bg-background/80 text-muted-foreground hover:text-white transition-colors cursor-pointer shrink-0"
+                            className="h-8 w-8 inline-flex items-center justify-center rounded-full hover:bg-background/80 text-muted-foreground hover:text-foreground transition-colors cursor-pointer shrink-0"
                         >
                             <ArrowLeft className="size-4" />
                         </button>
@@ -2388,7 +2388,7 @@ export function MapsPage({
                                     "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border transition-colors cursor-pointer",
                                     shareCopied
                                         ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-300"
-                                        : "bg-white/[0.03] border-white/10 text-muted-foreground hover:text-white hover:bg-white/[0.06] hover:border-white/20",
+                                        : "bg-hairline/[0.03] border-hairline/10 text-muted-foreground hover:text-foreground hover:bg-hairline/[0.06] hover:border-hairline/20",
                                 )}
                             >
                                 {shareCopied ? <Check className="size-3.5" /> : <Share2 className="size-3.5" />}

@@ -16,7 +16,7 @@ export function NavHistoryBar() {
                     onClick={back}
                     disabled={!canBack}
                     aria-label="Back"
-                    className={cn('size-8 text-muted-foreground hover:text-white', !canBack && 'opacity-30')}
+                    className={cn('size-8 text-muted-foreground hover:text-foreground', !canBack && 'opacity-30')}
                 >
                     <ArrowLeft className="size-4" />
                 </Button>
@@ -28,7 +28,7 @@ export function NavHistoryBar() {
                     onClick={forward}
                     disabled={!canForward}
                     aria-label="Forward"
-                    className={cn('size-8 text-muted-foreground hover:text-white', !canForward && 'opacity-30')}
+                    className={cn('size-8 text-muted-foreground hover:text-foreground', !canForward && 'opacity-30')}
                 >
                     <ArrowRight className="size-4" />
                 </Button>

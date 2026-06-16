@@ -14,7 +14,7 @@ export function MapThumbnail({ mapName, className, alt }: MapThumbnailProps) {
     const src = errored ? FALLBACK_URL : `https://utbt.net/images/screenshots/${mapName}.png`
     return (
         <div className={cn(
-            "overflow-hidden bg-muted/20 border border-white/10 rounded shrink-0",
+            "overflow-hidden bg-muted/20 border border-hairline/10 rounded shrink-0",
             className,
         )}>
             <img

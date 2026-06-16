@@ -112,8 +112,8 @@ export function YourStatsCard({
                             onClick={t.onClick}
                             title={t.hint}
                             className={cn(
-                                'bg-white/[0.02] border border-white/5 rounded-lg px-3 py-2 flex items-center gap-2.5 text-left w-full',
-                                t.onClick && 'cursor-pointer hover:bg-white/[0.05] hover:border-emerald-500/30 transition-colors',
+                                'bg-hairline/[0.02] border border-hairline/5 rounded-lg px-3 py-2 flex items-center gap-2.5 text-left w-full',
+                                t.onClick && 'cursor-pointer hover:bg-hairline/[0.05] hover:border-emerald-500/30 transition-colors',
                             )}
                         >
                             <div className="p-1.5 rounded-md bg-emerald-500/10 text-emerald-300">
@@ -125,7 +125,7 @@ export function YourStatsCard({
                                     {t.hint && <span className="text-emerald-300/60 normal-case tracking-normal text-[9px]">↗</span>}
                                 </div>
                                 {isLoading ? (
-                                    <div className="mt-0.5 h-4 w-14 bg-white/5 rounded animate-pulse" />
+                                    <div className="mt-0.5 h-4 w-14 bg-hairline/5 rounded animate-pulse" />
                                 ) : (
                                     <div className={cn('text-sm font-bold font-mono tabular-nums leading-tight text-emerald-300')}>
                                         {t.value}

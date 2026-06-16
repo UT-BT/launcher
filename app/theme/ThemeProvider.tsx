@@ -28,6 +28,7 @@ function applyThemeId(id: string) {
   } else {
     root.setAttribute('data-theme', id)
   }
+  root.classList.toggle('dark', id !== 'light')
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
@@ -39,6 +40,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const setThemeId = useCallback((id: string) => {
     const next = isThemeId(id) ? id : DEFAULT_THEME_ID
+    applyThemeId(next)
     setThemeIdState(next)
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ id: next }))

@@ -245,7 +245,7 @@ export function VideoCompareModal({ open, onClose, mapName, runA, runB }: VideoC
             onClose={onClose}
             title={`Replay Comparison — ${displayMapName(mapName)}`}
             offsetSidebar
-            className="bg-[#0a0a0b]/98 border-white/5"
+            className="bg-card/98 border-hairline/5"
             maxWidth="min(95vw, 1500px)"
             footer={
                 <div className="p-3 border-t border-border bg-muted/50 flex items-center justify-end shrink-0">
@@ -255,7 +255,7 @@ export function VideoCompareModal({ open, onClose, mapName, runA, runB }: VideoC
                             href="https://democonverter.com"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="ml-1 text-blue-400 hover:underline"
+                            className="ml-1 text-accent-400 hover:underline"
                         >
                             democonverter.com
                         </a>
@@ -301,8 +301,8 @@ export function VideoCompareModal({ open, onClose, mapName, runA, runB }: VideoC
                                 disabled={!canPlay}
                                 className={cn(
                                     'inline-flex items-center gap-2 h-9 px-5 rounded-md text-xs font-medium border transition-colors cursor-pointer',
-                                    'bg-blue-500/15 border-blue-500/40 text-blue-200 hover:bg-blue-500/25',
-                                    'disabled:opacity-40 disabled:cursor-default disabled:hover:bg-blue-500/15',
+                                    'bg-accent-500/15 border-accent-500/40 text-accent-200 hover:bg-accent-500/25',
+                                    'disabled:opacity-40 disabled:cursor-default disabled:hover:bg-accent-500/15',
                                 )}
                             >
                                 {playing ? <Pause className="size-4" /> : <Play className="size-4" />}
@@ -411,7 +411,7 @@ function VideoPane({
                         )}
                         {buffering && !ended && (
                             <div className="absolute inset-0 flex items-center justify-center bg-black/30 pointer-events-none">
-                                <Loader2 className="size-6 animate-spin text-white/70" />
+                                <Loader2 className="size-6 animate-spin text-foreground/70" />
                             </div>
                         )}
                     </>
@@ -431,8 +431,8 @@ function MuteButton({ muted, onToggle, who }: { muted: boolean; onToggle: () => 
                 className={cn(
                     'inline-flex items-center justify-center size-9 rounded-md border transition-colors cursor-pointer',
                     muted
-                        ? 'bg-white/[0.03] border-white/10 text-muted-foreground hover:text-white hover:border-white/20'
-                        : 'bg-blue-500/20 border-blue-500/50 text-blue-100 hover:bg-blue-500/30',
+                        ? 'bg-hairline/[0.03] border-hairline/10 text-muted-foreground hover:text-foreground hover:border-hairline/20'
+                        : 'bg-accent-500/20 border-accent-500/50 text-accent-100 hover:bg-accent-500/30',
                 )}
             >
                 {muted ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}
@@ -458,8 +458,8 @@ function SkipButton({ dir, seconds, disabled, onSkip }: {
                 aria-label={label}
                 className={cn(
                     'inline-flex items-center justify-center gap-0.5 h-9 px-2.5 rounded-md border transition-colors cursor-pointer',
-                    'bg-white/[0.03] border-white/10 text-muted-foreground hover:text-white hover:border-white/20',
-                    'disabled:opacity-40 disabled:cursor-default disabled:hover:text-muted-foreground disabled:hover:border-white/10',
+                    'bg-hairline/[0.03] border-hairline/10 text-muted-foreground hover:text-foreground hover:border-hairline/20',
+                    'disabled:opacity-40 disabled:cursor-default disabled:hover:text-muted-foreground disabled:hover:border-hairline/10',
                 )}
             >
                 {dir < 0 && <Icon className="size-3.5" />}
@@ -472,7 +472,7 @@ function SkipButton({ dir, seconds, disabled, onSkip }: {
 
 function SpeedControl({ rate, onRate }: { rate: number; onRate: (r: number) => void }) {
     return (
-        <div className="inline-flex items-center gap-0.5 rounded-md border border-white/10 bg-white/[0.03] p-0.5">
+        <div className="inline-flex items-center gap-0.5 rounded-md border border-hairline/10 bg-hairline/[0.03] p-0.5">
             {RATES.map(r => (
                 <button
                     key={r}
@@ -483,8 +483,8 @@ function SpeedControl({ rate, onRate }: { rate: number; onRate: (r: number) => v
                     className={cn(
                         'px-2 h-6 rounded text-[11px] font-mono tabular-nums transition-colors cursor-pointer',
                         rate === r
-                            ? 'bg-blue-500/25 text-blue-100'
-                            : 'text-muted-foreground hover:text-white',
+                            ? 'bg-accent-500/25 text-accent-100'
+                            : 'text-muted-foreground hover:text-foreground',
                     )}
                 >
                     {r}×
@@ -554,7 +554,7 @@ function NudgeInput({ value, onCommit }: { value: number; onCommit: (n: number) 
     }
 
     return (
-        <span className="inline-flex items-baseline gap-0.5 font-mono tabular-nums text-white/80">
+        <span className="inline-flex items-baseline gap-0.5 font-mono tabular-nums text-foreground/80">
             <span aria-hidden className="invisible select-none">s</span>
             <input
                 type="text"
@@ -568,7 +568,7 @@ function NudgeInput({ value, onCommit }: { value: number; onCommit: (n: number) 
                     else if (e.key === 'Escape') { setText(value.toFixed(2)); e.currentTarget.blur() }
                 }}
                 aria-label="Sync offset in seconds"
-                className="w-16 bg-transparent text-center tabular-nums outline-none rounded border border-white/10 hover:border-white/20 focus:border-blue-400/60 transition-colors py-px"
+                className="w-16 bg-transparent text-center tabular-nums outline-none rounded border border-hairline/10 hover:border-hairline/20 focus:border-accent-400/60 transition-colors py-px"
             />
             <span>s</span>
         </span>
@@ -611,7 +611,7 @@ function NudgeButton({ onStep, aria, repeat = true, className, children }: {
             onPointerLeave={stop}
             onPointerCancel={stop}
             className={cn(
-                'inline-flex items-center justify-center size-5 rounded border border-white/10 bg-white/[0.03] text-muted-foreground hover:text-white hover:border-white/20 transition-colors cursor-pointer touch-none select-none',
+                'inline-flex items-center justify-center size-5 rounded border border-hairline/10 bg-hairline/[0.03] text-muted-foreground hover:text-foreground hover:border-hairline/20 transition-colors cursor-pointer touch-none select-none',
                 className,
             )}
         >

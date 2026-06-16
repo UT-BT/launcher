@@ -38,8 +38,8 @@ function TitleRow({ label, titleStyle, selected, assigning, disabled, onSelect }
             disabled={disabled}
             className={cn(
                 "group flex items-center justify-between gap-3 px-4 py-3 rounded-lg border text-left transition-colors",
-                "bg-card/40 border-white/5",
-                !disabled && "cursor-pointer hover:bg-card/80 hover:border-white/20",
+                "bg-card/40 border-hairline/5",
+                !disabled && "cursor-pointer hover:bg-card/80 hover:border-hairline/20",
                 selected && "bg-accent-500/15 border-accent-500/40",
                 selected && !disabled && "hover:bg-accent-500/20 hover:border-accent-500/50",
                 disabled && "cursor-not-allowed opacity-60",
@@ -128,7 +128,7 @@ export function ChangeTitleModal({ isOpen, onClose, accessToken, userId, current
             title="Change Title"
             offsetSidebar
             maxWidth="480px"
-            className="bg-[#0a0a0b]/98 border-white/5 backdrop-blur-3xl mx-auto"
+            className="bg-card/98 border-hairline/5 backdrop-blur-3xl mx-auto"
             footer={null}
         >
             {loading ? (

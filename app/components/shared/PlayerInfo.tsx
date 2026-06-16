@@ -1,6 +1,8 @@
+import { useMemo } from 'react'
 import { cn } from '@/lib/utils'
 import { ActiveTitle, getAvatarUrl } from '@/app/utils/api'
 import { getAvatarBorderStyle, getTitleTextStyle } from '@/app/utils/titleStyles'
+import { useTheme } from '@/app/theme/ThemeProvider'
 import { usePatreonTier } from '@/app/utils/patreon'
 import { PatreonBadge } from '@/app/components/shared/PatreonBadge'
 
@@ -64,8 +66,10 @@ export function PlayerInfo({
     size = 'md', layout = 'horizontal',
     highlight, showYouBadge, className, interactive = true,
 }: PlayerInfoProps) {
+    const { themeId } = useTheme()
+    const isLight = themeId === 'light'
     const displayName = (alias && alias.trim()) || (userId != null ? String(userId) : 'Unknown')
-    const titleStyle = getTitleTextStyle(title)
+    const titleStyle = useMemo(() => getTitleTextStyle(title, isLight), [title, isLight])
     const isAvatarable = isAvatarableUserId(userId)
     const sizePx = AVATAR_PX[size]
     const patreonTier = usePatreonTier(userId)
@@ -105,7 +109,7 @@ export function PlayerInfo({
                 <span className={cn(
                     'font-semibold truncate',
                     nameSizeClass,
-                    highlight ? 'text-emerald-200' : 'text-white',
+                    highlight ? 'text-emerald-200' : 'text-foreground',
                     isClickable && 'hover:underline underline-offset-2',
                 )}>
                     {displayName}

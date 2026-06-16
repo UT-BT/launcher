@@ -13,9 +13,10 @@ import { GameGameplaySettings } from './settings/GameGameplaySettings'
 
 export interface SettingsProps {
     initialSection?: string
+    patronTier?: number
 }
 
-export function Settings({ initialSection }: SettingsProps = {}) {
+export function Settings({ initialSection, patronTier }: SettingsProps = {}) {
     const [currentSection, setCurrentSection] = useState<SettingsSectionId>((initialSection as SettingsSectionId) || 'launcher-general')
     const [isGameValid, setIsGameValid] = useState(false)
     const [gameVersion, setGameVersion] = useState<string>('')
@@ -63,7 +64,7 @@ export function Settings({ initialSection }: SettingsProps = {}) {
             case 'launcher-general':
                 return <LauncherGeneralSettings />
             case 'launcher-appearance':
-                return <LauncherAppearanceSettings />
+                return <LauncherAppearanceSettings patronTier={patronTier} />
             case 'launcher-demos':
                 return <LauncherDemoSettings />
             case 'game-installation':

@@ -57,7 +57,7 @@ function CapTypeBadge({ capType }: { capType: number | null | undefined }) {
         )
     }
     return (
-        <span className="inline-flex items-center gap-1.5 h-7 px-2 rounded-md border text-xs font-semibold bg-white/5 border-white/10 text-muted-foreground">
+        <span className="inline-flex items-center gap-1.5 h-7 px-2 rounded-md border text-xs font-semibold bg-hairline/5 border-hairline/10 text-muted-foreground">
             <Users className="size-3.5" />
             Casual
         </span>
@@ -82,7 +82,7 @@ export function HeroSection({
     const showMedal = cap.medal != null && cap.medal >= 1
 
     return (
-        <div className="bg-card/30 border border-white/5 rounded-xl overflow-hidden shrink-0">
+        <div className="bg-card/30 border border-hairline/5 rounded-xl overflow-hidden shrink-0">
             <div className="flex flex-col lg:flex-row items-stretch">
                 <div className="lg:w-64 lg:h-64 shrink-0 p-2">
                     <button
@@ -93,7 +93,7 @@ export function HeroSection({
                     >
                         <MapThumbnail
                             mapName={mapName}
-                            className="w-full h-full aspect-video lg:aspect-square rounded-lg border border-white/10"
+                            className="w-full h-full aspect-video lg:aspect-square rounded-lg border border-hairline/10"
                         />
                     </button>
                 </div>
@@ -103,7 +103,7 @@ export function HeroSection({
                         <button
                             type="button"
                             onClick={() => onMapSelect?.(mapName)}
-                            className="text-3xl font-bold text-white leading-tight truncate hover:underline decoration-dotted underline-offset-4 cursor-pointer text-left min-w-0"
+                            className="text-3xl font-bold text-foreground leading-tight truncate hover:underline decoration-dotted underline-offset-4 cursor-pointer text-left min-w-0"
                         >
                             {displayMapName(mapName)}
                         </button>
@@ -114,7 +114,7 @@ export function HeroSection({
                                 disabled={!canWatch || watching}
                                 className={cn(
                                     'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border transition-colors text-xs font-semibold cursor-pointer',
-                                    'bg-accent-500/15 border-accent-500/40 text-accent-200 hover:bg-accent-500/25 hover:text-white hover:border-accent-500/60',
+                                    'bg-accent-500/15 border-accent-500/40 text-accent-200 hover:bg-accent-500/25 hover:text-foreground hover:border-accent-500/60',
                                     'disabled:opacity-50 disabled:cursor-not-allowed',
                                 )}
                                 title={canWatch ? 'Watch replay' : 'No replay — cap not verified'}
@@ -128,7 +128,7 @@ export function HeroSection({
                                 disabled={!canCompareRun}
                                 className={cn(
                                     'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border transition-colors text-xs font-semibold cursor-pointer',
-                                    'bg-rose-500/15 border-rose-500/40 text-rose-200 hover:bg-rose-500/25 hover:text-white hover:border-rose-500/60',
+                                    'bg-rose-500/15 border-rose-500/40 text-rose-200 hover:bg-rose-500/25 hover:text-foreground hover:border-rose-500/60',
                                     'disabled:opacity-50 disabled:cursor-not-allowed',
                                 )}
                                 title={canCompareRun ? 'Compare this run against another, side by side' : 'No replay — cap not verified'}
@@ -139,7 +139,7 @@ export function HeroSection({
                             <button
                                 type="button"
                                 onClick={onDownload}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white/[0.03] border border-white/10 text-muted-foreground hover:text-white hover:bg-white/[0.06] hover:border-white/20 transition-colors text-xs font-semibold cursor-pointer"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-hairline/[0.03] border border-hairline/10 text-muted-foreground hover:text-foreground hover:bg-hairline/[0.06] hover:border-hairline/20 transition-colors text-xs font-semibold cursor-pointer"
                             >
                                 <Download className="size-3.5" />
                                 Demo
@@ -149,16 +149,16 @@ export function HeroSection({
 
                     <PlayerInfo userId={cap.user} alias={cap.alias} title={cap.active_title} size="lg" />
 
-                    <div className="flex items-stretch gap-5 pt-3 border-t border-white/5">
+                    <div className="flex items-stretch gap-5 pt-3 border-t border-hairline/5">
                         <div className="flex flex-col justify-between">
                             <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Cap Time</div>
-                            <div className="text-4xl font-bold font-mono tabular-nums text-white leading-none">
+                            <div className="text-4xl font-bold font-mono tabular-nums text-foreground leading-none">
                                 {formatCapTime(cap.cap_time_seconds)}
                             </div>
                         </div>
-                        <div className="self-stretch w-px bg-white/10" />
+                        <div className="self-stretch w-px bg-hairline/10" />
                         <MiniStat label="Rank">
-                            <span className="text-white">#{rank}</span>{' '}
+                            <span className="text-foreground">#{rank}</span>{' '}
                             <span className="text-[10px] text-muted-foreground font-normal">of {total.toLocaleString()}</span>
                         </MiniStat>
                         <MiniStat label="Δ WR">
@@ -175,7 +175,7 @@ export function HeroSection({
 
                     <div className="flex items-center gap-2 flex-wrap">
                         {showMedal && medalIcon && (
-                            <span className="inline-flex items-center gap-1.5 h-7 px-2 rounded-md bg-white/5 border border-white/10 text-xs font-semibold text-white">
+                            <span className="inline-flex items-center gap-1.5 h-7 px-2 rounded-md bg-hairline/5 border border-hairline/10 text-xs font-semibold text-foreground">
                                 <img src={medalIcon} alt={medalLabel} className="size-4 object-contain" />
                                 {medalLabel}
                             </span>
@@ -184,7 +184,7 @@ export function HeroSection({
                             'inline-flex items-center gap-1.5 h-7 px-2 rounded-md border text-xs font-semibold',
                             cap.verified
                                 ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
-                                : 'bg-white/5 border-white/10 text-muted-foreground',
+                                : 'bg-hairline/5 border-hairline/10 text-muted-foreground',
                         )}>
                             <ShieldCheck className="size-3.5" />
                             {cap.verified ? 'Verified' : 'Unverified'}
@@ -192,7 +192,7 @@ export function HeroSection({
                         <CapTypeBadge capType={cap.cap_type} />
                         {cap.added && (
                             <Tooltip content={friendlyDate(cap.added)} side="top">
-                                <span className="inline-flex items-center gap-1.5 h-7 px-2 rounded-md bg-white/5 border border-white/5 text-xs text-muted-foreground">
+                                <span className="inline-flex items-center gap-1.5 h-7 px-2 rounded-md bg-hairline/5 border border-hairline/5 text-xs text-muted-foreground">
                                     <Calendar className="size-3.5" />
                                     {formatAddedDate(cap.added)}
                                 </span>

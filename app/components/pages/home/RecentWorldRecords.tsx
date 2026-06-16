@@ -57,7 +57,7 @@ export function RecentWorldRecords({
                                             size="sm"
                                             className="shrink-0"
                                         />
-                                        <span className="font-bold text-white/90 truncate">{displayMapName(r.mapName)}</span>
+                                        <span className="font-bold text-foreground/90 truncate">{displayMapName(r.mapName)}</span>
                                     </div>
                                 </DataTableCell>
                                 <DataTableCell>
@@ -72,7 +72,7 @@ export function RecentWorldRecords({
                                     <CapTimeLink
                                         capId={r.id}
                                         seconds={r.time}
-                                        className="font-mono font-black text-white/90 tracking-tight"
+                                        className="font-mono font-black text-foreground/90 tracking-tight"
                                     />
                                 </DataTableCell>
                                 <DataTableCell align="right">

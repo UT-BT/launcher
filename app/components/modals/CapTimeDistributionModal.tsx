@@ -295,7 +295,7 @@ export function CapTimeDistributionModal({
             title={`Certified Cap Distribution — ${displayMapName(mapName)}`}
             offsetSidebar
             maxWidth="min(92vw, 880px)"
-            className="bg-[#0a0a0b]/98 border-white/5"
+            className="bg-card/98 border-hairline/5"
             footer={null}
         >
             <div className="space-y-4">
@@ -311,7 +311,7 @@ export function CapTimeDistributionModal({
                         )}>
                             <StatTile label="Certified Caps" value={stats.count.toLocaleString()} accent="text-blue-300" />
                             <StatTile label="Median" value={formatCapTime(stats.median)} accent="text-yellow-300" />
-                            <StatTile label="Mean" value={formatCapTime(stats.mean)} accent="text-white" />
+                            <StatTile label="Mean" value={formatCapTime(stats.mean)} accent="text-foreground" />
                             {userBest != null && userPercentile != null && (
                                 <StatTile
                                     label="Your Standing"
@@ -325,12 +325,12 @@ export function CapTimeDistributionModal({
 
                         <div className="space-y-2">
                             <div className="flex items-baseline justify-between px-1">
-                                <div className="text-[11px] uppercase tracking-wider text-white/85 font-semibold">
+                                <div className="text-[11px] uppercase tracking-wider text-foreground/85 font-semibold">
                                     Distribution of Cap Times
                                 </div>
                             </div>
 
-                            <div className="bg-white/[0.02] border border-white/5 rounded-lg pt-5 pb-2 pl-2 pr-3 h-72 select-none [&_.recharts-surface]:outline-none [&_.recharts-wrapper]:outline-none">
+                            <div className="bg-hairline/[0.02] border border-hairline/5 rounded-lg pt-5 pb-2 pl-2 pr-3 h-72 select-none [&_.recharts-surface]:outline-none [&_.recharts-wrapper]:outline-none">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <BarChart
                                         data={buckets}
@@ -485,7 +485,7 @@ export function CapTimeDistributionModal({
                                                 'inline-flex items-center gap-1.5 px-2 py-1 rounded-md border text-[10px] font-bold uppercase tracking-wider',
                                                 isUserTier
                                                     ? 'bg-emerald-500/10 border-emerald-500/40'
-                                                    : 'bg-white/[0.03] border-white/10',
+                                                    : 'bg-hairline/[0.03] border-hairline/10',
                                             )}
                                         >
                                             <span
@@ -494,7 +494,7 @@ export function CapTimeDistributionModal({
                                             />
                                             {icon && <img src={icon} alt="" className="size-3 shrink-0 object-contain max-w-none" />}
                                             <span style={{ color: t.color }}>{t.label}</span>
-                                            <span className="font-mono tabular-nums text-white/80 normal-case tracking-normal">
+                                            <span className="font-mono tabular-nums text-foreground/80 normal-case tracking-normal">
                                                 {count}
                                             </span>
                                         </span>
@@ -504,7 +504,7 @@ export function CapTimeDistributionModal({
 
                             {overflowCount > 0 && xRange && (
                                 <div className="text-[10px] text-muted-foreground italic px-1">
-                                    <span className="tabular-nums text-white/70 font-mono">{overflowCount}</span> cap{overflowCount === 1 ? '' : 's'} slower than {formatCapTime(xRange.xMax)} not shown.
+                                    <span className="tabular-nums text-foreground/70 font-mono">{overflowCount}</span> cap{overflowCount === 1 ? '' : 's'} slower than {formatCapTime(xRange.xMax)} not shown.
                                 </div>
                             )}
                         </div>
@@ -535,7 +535,7 @@ function StatTile({
     return (
         <div className={cn(
             'rounded-lg px-3 py-2 border',
-            highlight ? 'bg-emerald-500/[0.07] border-emerald-500/30' : 'bg-card/50 border-white/5',
+            highlight ? 'bg-emerald-500/[0.07] border-emerald-500/30' : 'bg-card/50 border-hairline/5',
         )}>
             <div className="text-[9px] uppercase tracking-wider text-muted-foreground flex items-center gap-1">
                 {highlight && <Trophy className="size-3 text-emerald-300" />}
@@ -554,7 +554,7 @@ function StatTile({
 function PosTile({ label, value, total, tint }: { label: string; value: number; total: number; tint: string }) {
     const pct = total > 0 ? (value / total) * 100 : 0
     return (
-        <div className="bg-white/[0.03] border border-white/5 rounded px-2.5 py-2">
+        <div className="bg-hairline/[0.03] border border-hairline/5 rounded px-2.5 py-2">
             <div className="text-[9px] uppercase tracking-wider text-muted-foreground">{label}</div>
             <div className="flex items-baseline gap-1.5 mt-0.5">
                 <span className={cn('text-sm font-bold font-mono tabular-nums', tint)}>{value.toLocaleString()}</span>

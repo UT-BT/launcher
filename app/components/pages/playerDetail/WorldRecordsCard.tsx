@@ -93,8 +93,8 @@ export function WorldRecordsCard({ accessToken, userId, totalCount, onMapSelect,
     }
 
     return (
-        <div className="bg-card/30 border border-white/5 rounded-xl flex flex-col overflow-hidden">
-            <div className="flex items-center justify-between gap-3 gap-y-2 px-4 py-3 border-b border-white/5 flex-wrap">
+        <div className="bg-card/30 border border-hairline/5 rounded-xl flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between gap-3 gap-y-2 px-4 py-3 border-b border-hairline/5 flex-wrap">
                 <div className="flex items-center gap-3 flex-wrap">
                     {tabsSlot}
                 </div>
@@ -106,7 +106,7 @@ export function WorldRecordsCard({ accessToken, userId, totalCount, onMapSelect,
                             value={queryRaw}
                             onChange={e => setQueryRaw(e.target.value)}
                             placeholder="Search map…"
-                            className="w-full sm:w-44 pl-7 pr-2 py-1 bg-card/50 border border-white/10 rounded text-xs text-white placeholder:text-muted-foreground focus:outline-none focus:border-accent-500/50"
+                            className="w-full sm:w-44 pl-7 pr-2 py-1 bg-card/50 border border-hairline/10 rounded text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent-500/50"
                         />
                     </div>
                 </div>
@@ -147,7 +147,7 @@ export function WorldRecordsCard({ accessToken, userId, totalCount, onMapSelect,
                                     <DataTableCell>
                                         <div className="flex items-center gap-2 min-w-0">
                                             <MapThumbnail mapName={r.map} className="size-8 shrink-0" />
-                                            <span className="text-sm font-semibold text-white truncate">
+                                            <span className="text-sm font-semibold text-foreground truncate">
                                                 {displayMapName(r.map)}
                                             </span>
                                         </div>
@@ -171,7 +171,7 @@ export function WorldRecordsCard({ accessToken, userId, totalCount, onMapSelect,
                                             <button
                                                 type="button"
                                                 onClick={(e) => { e.stopPropagation(); openProgression(r.map) }}
-                                                className="p-1.5 rounded-md text-muted-foreground hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+                                                className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-hairline/5 transition-colors cursor-pointer"
                                                 aria-label="View WR progression"
                                             >
                                                 <History className="size-3.5" />
@@ -186,7 +186,7 @@ export function WorldRecordsCard({ accessToken, userId, totalCount, onMapSelect,
             </DataTableShell>
 
             {!loading && (items.length > 0 || page > 1) && (
-                <div className="px-4 py-3 border-t border-white/5">
+                <div className="px-4 py-3 border-t border-hairline/5">
                     <PaginationBar
                         page={page}
                         totalPages={totalPages}

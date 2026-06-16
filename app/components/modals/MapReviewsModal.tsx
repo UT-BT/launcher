@@ -124,7 +124,7 @@ export function MapReviewsModal({
                 title={mapName ? `Reviews for ${displayMapName(mapName)}` : 'Reviews'}
                 offsetSidebar
                 maxWidth="880px"
-                className="bg-[#0a0a0b]/98 border-white/5 backdrop-blur-3xl mx-auto"
+                className="bg-card/98 border-hairline/5 backdrop-blur-3xl mx-auto"
                 footer={null}
             >
                 <div className="space-y-6">
@@ -141,7 +141,7 @@ export function MapReviewsModal({
                     ) : reviews.length === 0 ? (
                         <div className="space-y-3">
                             <div className="text-center space-y-1">
-                                <div className="text-base text-white/80 font-medium">No reviews yet</div>
+                                <div className="text-base text-foreground/80 font-medium">No reviews yet</div>
                                 <div className="text-sm text-muted-foreground">Be the first to share your thoughts.</div>
                             </div>
                             <button
@@ -186,7 +186,7 @@ export function MapReviewsModal({
                                                             <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{m.label}</span>
                                                             <span className={cn("text-sm font-bold font-mono", scoreTextColor(v, m.inverted))}>{v.toFixed(1)}</span>
                                                         </div>
-                                                        <div className="h-1 bg-white/10 rounded-full overflow-hidden">
+                                                        <div className="h-1 bg-hairline/10 rounded-full overflow-hidden">
                                                             <div
                                                                 className={cn("h-full rounded-full transition-all", scoreBgColor(v, m.inverted))}
                                                                 style={{ width: `${(v / 10) * 100}%` }}
@@ -211,16 +211,16 @@ export function MapReviewsModal({
                                             value={sortBy}
                                             onChange={e => setSortBy(e.target.value as SortKey)}
                                             style={{ colorScheme: 'dark' }}
-                                            className="px-2 py-1 bg-card/50 border border-white/10 rounded text-xs text-white focus:outline-none focus:border-accent-500/50 cursor-pointer"
+                                            className="px-2 py-1 bg-card/50 border border-hairline/10 rounded text-xs text-foreground focus:outline-none focus:border-accent-500/50 cursor-pointer"
                                         >
                                             {SORT_OPTIONS.map(o => (
-                                                <option key={o.value} value={o.value} className="bg-[#0f1115] text-white">{o.label}</option>
+                                                <option key={o.value} value={o.value} className="bg-[#0f1115] text-foreground">{o.label}</option>
                                             ))}
                                         </select>
                                         <button
                                             onClick={() => setSortDir(d => d === 'asc' ? 'desc' : 'asc')}
                                             title={sortDir === 'asc' ? 'Ascending' : 'Descending'}
-                                            className="px-2 py-1 bg-card/50 border border-white/10 rounded text-xs text-white hover:border-white/30 cursor-pointer"
+                                            className="px-2 py-1 bg-card/50 border border-hairline/10 rounded text-xs text-foreground hover:border-hairline/30 cursor-pointer"
                                         >
                                             {sortDir === 'asc' ? '↑' : '↓'}
                                         </button>
@@ -290,7 +290,7 @@ function ReviewCard({ review, highlight, onEdit }: { review: MapReview; highligh
             "rounded-xl border p-4 transition-colors",
             highlight
                 ? "bg-emerald-500/[0.07] border-emerald-500/30"
-                : "bg-white/[0.02] border-white/5"
+                : "bg-hairline/[0.02] border-hairline/5"
         )}>
             <div className="flex items-center justify-between mb-3 gap-3">
                 <PlayerInfo
@@ -333,7 +333,7 @@ function ReviewCard({ review, highlight, onEdit }: { review: MapReview; highligh
                                 <span className="text-[9px] uppercase tracking-wider text-muted-foreground">{m.label}</span>
                                 <span className={cn("text-xs font-bold font-mono", scoreTextColor(v, m.inverted))}>{v}</span>
                             </div>
-                            <div className="h-1 bg-white/10 rounded-full overflow-hidden">
+                            <div className="h-1 bg-hairline/10 rounded-full overflow-hidden">
                                 <div
                                     className={cn("h-full rounded-full", scoreBgColor(v, m.inverted))}
                                     style={{ width: `${(v / 10) * 100}%` }}

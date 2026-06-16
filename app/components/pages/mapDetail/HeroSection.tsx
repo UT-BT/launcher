@@ -36,12 +36,12 @@ export function HeroSection({
     const showTopRated = avgOverall !== null && reviewCount >= 3 && avgOverall >= 8
 
     return (
-        <div className="bg-card/30 border border-white/5 rounded-xl overflow-hidden shrink-0">
+        <div className="bg-card/30 border border-hairline/5 rounded-xl overflow-hidden shrink-0">
             <div className="flex flex-col lg:flex-row">
                 <div className="lg:w-64 lg:h-64 shrink-0 p-2">
                     <MapThumbnail
                         mapName={mapName}
-                        className="w-full h-full aspect-video lg:aspect-square rounded-lg border border-white/10"
+                        className="w-full h-full aspect-video lg:aspect-square rounded-lg border border-hairline/10"
                     />
                 </div>
                 <div className="flex-1 p-4 flex flex-col gap-3 min-w-0">
@@ -54,7 +54,7 @@ export function HeroSection({
                                 size="lg"
                                 className="translate-y-px"
                             />
-                            <h1 className="text-2xl font-bold text-white leading-tight truncate">
+                            <h1 className="text-2xl font-bold text-foreground leading-tight truncate">
                                 {displayMapName(mapName)}
                             </h1>
                         </div>
@@ -75,7 +75,7 @@ export function HeroSection({
                                 type="button"
                                 onClick={onDownload}
                                 disabled={isDownloading}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-accent-500/15 border border-accent-500/40 text-accent-200 hover:bg-accent-500/25 hover:text-white hover:border-accent-500/60 disabled:opacity-60 disabled:cursor-not-allowed transition-colors text-xs font-semibold cursor-pointer"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-accent-500/15 border border-accent-500/40 text-accent-200 hover:bg-accent-500/25 hover:text-foreground hover:border-accent-500/60 disabled:opacity-60 disabled:cursor-not-allowed transition-colors text-xs font-semibold cursor-pointer"
                             >
                                 {isDownloading ? (
                                     <Loader2 className="size-3.5 animate-spin" />
@@ -89,7 +89,7 @@ export function HeroSection({
 
                     <div className="flex items-center gap-2 flex-wrap">
                         {(authorRef && author) ? (
-                            <span className="inline-flex items-center h-7 px-2 rounded-md bg-white/5 border border-white/5">
+                            <span className="inline-flex items-center h-7 px-2 rounded-md bg-hairline/5 border border-hairline/5">
                                 <PlayerInfo
                                     userId={authorRef}
                                     alias={author}
@@ -105,7 +105,7 @@ export function HeroSection({
                         {difficulty != null && (
                             <MetaPill label="Difficulty">
                                 <span className={cn(
-                                    'inline-flex items-center justify-center size-4 rounded text-[10px] font-bold text-white',
+                                    'inline-flex items-center justify-center size-4 rounded text-[10px] font-bold text-foreground',
                                     difficultyBgColor(difficulty),
                                 )}>
                                     {difficulty}

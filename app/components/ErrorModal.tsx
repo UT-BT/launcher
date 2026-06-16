@@ -94,13 +94,13 @@ export function ErrorModal({
         <div data-modal-backdrop className={containerClasses}>
             <div ref={modalRef} tabIndex={-1} className="w-full max-w-md bg-card border border-destructive/20 rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
                 {/* Header */}
-                <div className="flex items-center justify-between p-4 border-b border-white/5 bg-destructive/10">
+                <div className="flex items-center justify-between p-4 border-b border-hairline/5 bg-destructive/10">
                     <div className="flex items-center gap-2 text-destructive">
                         <AlertTriangle className="size-5" />
                         <h3 className="font-bold text-lg truncate">{title}</h3>
                     </div>
                     {!disableClose && (
-                        <Button ref={closeButtonRef} variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 rounded-full hover:bg-white/10" aria-label="Close modal">
+                        <Button ref={closeButtonRef} variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 rounded-full hover:bg-hairline/10" aria-label="Close modal">
                             <X className="size-4" />
                         </Button>
                     )}
@@ -109,7 +109,7 @@ export function ErrorModal({
                 {/* Content */}
                 <div className="p-6 space-y-6">
                     <div className="text-center">
-                        <p className="text-white/90 text-lg">{message}</p>
+                        <p className="text-foreground/90 text-lg">{message}</p>
                     </div>
 
                     <div className="flex justify-center gap-3">
@@ -117,7 +117,7 @@ export function ErrorModal({
                             <Button
                                 onClick={onClose}
                                 variant="secondary"
-                                className="min-w-[100px] border border-white/5"
+                                className="min-w-[100px] border border-hairline/5"
                             >
                                 Close
                             </Button>

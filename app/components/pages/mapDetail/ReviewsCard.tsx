@@ -69,18 +69,18 @@ export function ReviewsCard({
     const hiddenCount = otherReviews.length - visibleOthers.length
 
     return (
-        <div className="bg-card/30 border border-white/5 rounded-xl p-3 space-y-3">
+        <div className="bg-card/30 border border-hairline/5 rounded-xl p-3 space-y-3">
             <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0">
                     <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium truncate">
-                        Reviews {reviews.length > 0 && <span className="text-white/60 ml-1">({reviews.length})</span>}
+                        Reviews {reviews.length > 0 && <span className="text-foreground/60 ml-1">({reviews.length})</span>}
                     </div>
                 </div>
                 {canSubmit && !myReview && (
                     <button
                         type="button"
                         onClick={onOpenReviewModal}
-                        className="inline-flex items-center gap-1 h-6 px-2 rounded-md bg-accent-500/15 border border-accent-500/40 text-accent-200 hover:bg-accent-500/25 hover:text-white hover:border-accent-500/60 transition-colors text-[10px] font-bold uppercase tracking-wider cursor-pointer shrink-0"
+                        className="inline-flex items-center gap-1 h-6 px-2 rounded-md bg-accent-500/15 border border-accent-500/40 text-accent-200 hover:bg-accent-500/25 hover:text-foreground hover:border-accent-500/60 transition-colors text-[10px] font-bold uppercase tracking-wider cursor-pointer shrink-0"
                     >
                         <Plus className="size-3" />
                         Add a Review
@@ -90,12 +90,12 @@ export function ReviewsCard({
 
             {loading ? (
                 <div className="space-y-2">
-                    <div className="h-20 bg-white/5 rounded-lg animate-pulse" />
-                    <div className="h-14 bg-white/5 rounded-lg animate-pulse" />
+                    <div className="h-20 bg-hairline/5 rounded-lg animate-pulse" />
+                    <div className="h-14 bg-hairline/5 rounded-lg animate-pulse" />
                 </div>
             ) : reviews.length === 0 ? (
                 <div className="text-center py-6 space-y-1">
-                    <p className="text-xs text-white/70">No reviews yet.</p>
+                    <p className="text-xs text-foreground/70">No reviews yet.</p>
                     <p className="text-[10px] text-muted-foreground">
                         Share your thoughts to help others.
                     </p>
@@ -121,7 +121,7 @@ export function ReviewsCard({
                                                     <span className="text-[9px] uppercase tracking-wider text-muted-foreground truncate">{m.label}</span>
                                                     <span className={cn('text-xs font-bold font-mono', scoreTextColor(v, m.inverted))}>{v.toFixed(1)}</span>
                                                 </div>
-                                                <div className="h-0.5 bg-white/10 rounded-full overflow-hidden">
+                                                <div className="h-0.5 bg-hairline/10 rounded-full overflow-hidden">
                                                     <div
                                                         className={cn('h-full rounded-full transition-all', scoreBgColor(v, m.inverted))}
                                                         style={{ width: `${(v / 10) * 100}%` }}
@@ -144,7 +144,7 @@ export function ReviewsCard({
                             <button
                                 type="button"
                                 onClick={() => setShowAll(true)}
-                                className="w-full px-2 py-1.5 rounded-md bg-white/[0.02] border border-white/5 text-[10px] uppercase tracking-wider font-medium text-muted-foreground hover:text-white hover:border-white/20 transition-colors cursor-pointer"
+                                className="w-full px-2 py-1.5 rounded-md bg-hairline/[0.02] border border-hairline/5 text-[10px] uppercase tracking-wider font-medium text-muted-foreground hover:text-foreground hover:border-hairline/20 transition-colors cursor-pointer"
                             >
                                 Show {hiddenCount} more
                             </button>
@@ -153,7 +153,7 @@ export function ReviewsCard({
                             <button
                                 type="button"
                                 onClick={() => setShowAll(false)}
-                                className="w-full px-2 py-1.5 rounded-md bg-white/[0.02] border border-white/5 text-[10px] uppercase tracking-wider font-medium text-muted-foreground hover:text-white hover:border-white/20 transition-colors cursor-pointer"
+                                className="w-full px-2 py-1.5 rounded-md bg-hairline/[0.02] border border-hairline/5 text-[10px] uppercase tracking-wider font-medium text-muted-foreground hover:text-foreground hover:border-hairline/20 transition-colors cursor-pointer"
                             >
                                 Show less
                             </button>
@@ -169,7 +169,7 @@ function ReviewCard({ review, highlight, onEdit }: { review: MapReview; highligh
     return (
         <div className={cn(
             'rounded-lg border p-2.5 transition-colors',
-            highlight ? 'bg-emerald-500/[0.07] border-emerald-500/30' : 'bg-white/[0.02] border-white/5',
+            highlight ? 'bg-emerald-500/[0.07] border-emerald-500/30' : 'bg-hairline/[0.02] border-hairline/5',
         )}>
             <div className="flex items-center justify-between mb-2 gap-2">
                 <PlayerInfo
@@ -212,7 +212,7 @@ function ReviewCard({ review, highlight, onEdit }: { review: MapReview; highligh
                                 <span className="text-[8px] uppercase tracking-wider text-muted-foreground truncate">{m.label}</span>
                                 <span className={cn('text-[10px] font-bold font-mono', scoreTextColor(v, m.inverted))}>{v}</span>
                             </div>
-                            <div className="h-0.5 bg-white/10 rounded-full overflow-hidden">
+                            <div className="h-0.5 bg-hairline/10 rounded-full overflow-hidden">
                                 <div
                                     className={cn('h-full rounded-full', scoreBgColor(v, m.inverted))}
                                     style={{ width: `${(v / 10) * 100}%` }}

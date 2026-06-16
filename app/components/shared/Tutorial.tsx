@@ -146,7 +146,7 @@ export function Tutorial({ steps, step, setStep, onClose, ariaLabel }: TutorialP
                     'animate-in fade-in slide-in-from-bottom-4 duration-200',
                 )}
             >
-                <div className="flex items-center justify-between px-4 pt-3 pb-2 border-b border-white/10">
+                <div className="flex items-center justify-between px-4 pt-3 pb-2 border-b border-hairline/10">
                     <span className="text-[10px] font-semibold uppercase tracking-wider text-accent-300">
                         Tutorial · {step + 1} / {total}
                     </span>
@@ -154,23 +154,23 @@ export function Tutorial({ steps, step, setStep, onClose, ariaLabel }: TutorialP
                         type="button"
                         onClick={handleSkip}
                         aria-label="Close tutorial"
-                        className="p-1 rounded hover:bg-white/10 text-muted-foreground hover:text-white transition-colors cursor-pointer"
+                        className="p-1 rounded hover:bg-hairline/10 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                     >
                         <X className="size-3.5" />
                     </button>
                 </div>
 
                 <div className="px-4 py-3 space-y-2">
-                    <h3 className="text-sm font-bold text-white">{current.title}</h3>
+                    <h3 className="text-sm font-bold text-foreground">{current.title}</h3>
                     <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-line">{current.body}</p>
                 </div>
 
-                <div className="flex items-center justify-between gap-2 px-3 py-2 border-t border-white/10 bg-muted/30">
+                <div className="flex items-center justify-between gap-2 px-3 py-2 border-t border-hairline/10 bg-muted/30">
                     <Button
                         variant="ghost"
                         size="sm"
                         onClick={handleSkip}
-                        className="text-muted-foreground hover:text-white"
+                        className="text-muted-foreground hover:text-foreground"
                     >
                         Skip
                     </Button>
@@ -180,7 +180,7 @@ export function Tutorial({ steps, step, setStep, onClose, ariaLabel }: TutorialP
                             size="sm"
                             onClick={handlePrev}
                             disabled={isFirst}
-                            className="text-muted-foreground hover:text-white disabled:opacity-40"
+                            className="text-muted-foreground hover:text-foreground disabled:opacity-40"
                         >
                             <ChevronLeft className="size-4" />
                             Prev

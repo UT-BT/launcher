@@ -450,14 +450,14 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
                 return (
                     <DataTableCell key={id} align="right">
                         {p.rank > 0
-                            ? <span className="font-mono tabular-nums text-white">#{p.rank.toLocaleString()}</span>
+                            ? <span className="font-mono tabular-nums text-foreground">#{p.rank.toLocaleString()}</span>
                             : <span className="text-muted-foreground/40">—</span>}
                     </DataTableCell>
                 )
             case 'points':
                 return (
                     <DataTableCell key={id} align="right">
-                        <span className={cn('font-mono tabular-nums', p.points > 0 ? 'text-white' : 'text-muted-foreground/40')}>
+                        <span className={cn('font-mono tabular-nums', p.points > 0 ? 'text-foreground' : 'text-muted-foreground/40')}>
                             {p.points.toLocaleString()}
                         </span>
                     </DataTableCell>
@@ -477,7 +477,7 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
                     <DataTableCell key={id} align="center">
                         <span className={cn(
                             'inline-flex items-center gap-1.5 font-mono tabular-nums',
-                            value > 0 ? 'text-white' : 'text-muted-foreground/40',
+                            value > 0 ? 'text-foreground' : 'text-muted-foreground/40',
                         )}>
                             {icon && (
                                 <img
@@ -500,7 +500,7 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
         <div className="space-y-4 h-full flex flex-col overflow-hidden">
             <div className="flex items-end justify-between shrink-0">
                 <div>
-                    <h1 className="text-2xl font-bold text-white leading-tight">Players</h1>
+                    <h1 className="text-2xl font-bold text-foreground leading-tight">Players</h1>
                     {!showSkeleton && (
                         <p className="text-xs text-muted-foreground mt-0.5">
                             Showing {totalCount.toLocaleString()} {totalCount === 1 ? 'player' : 'players'}
@@ -514,7 +514,7 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
                             type="button"
                             onClick={() => startTutorial()}
                             aria-label="Restart Players tutorial"
-                            className="p-2 rounded-md text-muted-foreground hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+                            className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-hairline/5 transition-colors cursor-pointer"
                         >
                             <HelpCircle className="size-4" />
                         </button>
@@ -524,7 +524,7 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
                             type="button"
                             onClick={refresh}
                             disabled={pageLoading || !refreshCooldown.canRefresh}
-                            className="p-2 rounded-md text-muted-foreground hover:text-white hover:bg-white/5 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-hairline/5 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             <RefreshCw className={cn('size-4', pageLoading && 'animate-spin')} />
                         </button>
@@ -541,14 +541,14 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
                         placeholder="Search for a player..."
                         value={state.search}
                         onChange={e => setSearch(e.target.value)}
-                        className="w-full pl-9 pr-9 py-2 bg-card/50 border border-white/10 rounded-lg text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:border-accent-500/50 focus:bg-card/80 transition-colors"
+                        className="w-full pl-9 pr-9 py-2 bg-card/50 border border-hairline/10 rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent-500/50 focus:bg-card/80 transition-colors"
                     />
                     {state.search && (
                         <button
                             type="button"
                             onClick={() => setSearch('')}
                             aria-label="Clear search"
-                            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-white/10 text-muted-foreground hover:text-white transition-colors cursor-pointer"
+                            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-hairline/10 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                         >
                             <X className="size-3.5" />
                         </button>
@@ -656,7 +656,7 @@ function BannedBadge({ reason, expires }: { reason: string | null; expires: stri
         <span className="block normal-case tracking-normal">
             <span className="font-bold uppercase tracking-wider text-red-300">Banned</span>
             {reason && <span className="block mt-0.5 font-normal">{reason}</span>}
-            {expires && <span className="block mt-0.5 font-normal text-white/60">Until {formatAddedDate(expires)}</span>}
+            {expires && <span className="block mt-0.5 font-normal text-foreground/60">Until {formatAddedDate(expires)}</span>}
         </span>
     )
     return (

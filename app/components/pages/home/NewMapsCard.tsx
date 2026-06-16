@@ -49,7 +49,7 @@ export function NewMapsCard({ maps, favoriteMapNames, onToggleFavorite, onMapSel
                                         size="sm"
                                         className="shrink-0"
                                     />
-                                    <span className="font-bold text-white/90 truncate">
+                                    <span className="font-bold text-foreground/90 truncate">
                                         {displayMapName(map.name)}
                                     </span>
                                 </div>
@@ -63,7 +63,7 @@ export function NewMapsCard({ maps, favoriteMapNames, onToggleFavorite, onMapSel
                                         <span className={cn('text-sm font-bold w-4 text-center', difficultyTextColor(map.difficulty))}>
                                             {map.difficulty}
                                         </span>
-                                        <div className="w-12 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                                        <div className="w-12 h-1.5 bg-hairline/10 rounded-full overflow-hidden">
                                             <div
                                                 className={cn('h-full rounded-full', difficultyBgColor(map.difficulty))}
                                                 style={{ width: `${(map.difficulty / 10) * 100}%` }}

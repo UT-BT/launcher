@@ -36,7 +36,7 @@ export default function PlayerActivityChart({ activity, loading }: PlayerActivit
     const accent = mode === 'caps' ? '#60a5fa' : '#fbbf24'
 
     return (
-        <div className="bg-white/[0.02] border border-white/5 rounded-lg p-2 flex flex-col gap-1.5 h-full min-h-[160px] [&_.recharts-surface]:outline-none [&_.recharts-wrapper]:outline-none">
+        <div className="bg-hairline/[0.02] border border-hairline/5 rounded-lg p-2 flex flex-col gap-1.5 h-full min-h-[160px] [&_.recharts-surface]:outline-none [&_.recharts-wrapper]:outline-none">
             <div className="flex items-center justify-between gap-3 shrink-0">
                 <div className="flex items-center gap-1.5">
                     <Activity className="size-3 text-muted-foreground" />
@@ -54,7 +54,7 @@ export default function PlayerActivityChart({ activity, loading }: PlayerActivit
                                 'h-5 px-1.5 rounded text-[9px] font-bold uppercase tracking-wider border transition-colors cursor-pointer',
                                 mode === m
                                     ? 'bg-accent-500/20 border-accent-500/50 text-accent-200'
-                                    : 'bg-card/50 border-white/10 text-muted-foreground hover:text-white hover:border-white/20',
+                                    : 'bg-card/50 border-hairline/10 text-muted-foreground hover:text-foreground hover:border-hairline/20',
                             )}
                         >
                             {m}
@@ -65,7 +65,7 @@ export default function PlayerActivityChart({ activity, loading }: PlayerActivit
 
             <div className="flex-1 min-h-0 w-full">
                 {loading ? (
-                    <div className="h-full bg-white/5 rounded animate-pulse" />
+                    <div className="h-full bg-hairline/5 rounded animate-pulse" />
                 ) : data.length === 0 ? (
                     <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
                         No activity recorded yet.

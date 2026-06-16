@@ -89,7 +89,7 @@ export function FilterPresetsMenu<TFilters>({
                                     · {activePreset.name}
                                 </span>
                             ) : presets.length > 0 && (
-                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-white/10 text-muted-foreground">
+                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-hairline/10 text-muted-foreground">
                                     {presets.length}
                                 </span>
                             )}
@@ -175,7 +175,7 @@ export function FilterPresetsMenu<TFilters>({
                 }
             >
                 <div className="space-y-3">
-                    <label className="text-sm font-medium text-white">Preset name</label>
+                    <label className="text-sm font-medium text-foreground">Preset name</label>
                     <input
                         ref={nameInputRef}
                         type="text"
@@ -188,7 +188,7 @@ export function FilterPresetsMenu<TFilters>({
                             }
                         }}
                         placeholder={placeholderExample}
-                        className="w-full px-3 py-2 bg-card/50 border border-white/10 rounded-lg text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:border-accent-500/50"
+                        className="w-full px-3 py-2 bg-card/50 border border-hairline/10 rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent-500/50"
                     />
                     <p className="text-xs text-muted-foreground">
                         Saves current filters and sort. Loadable from the {label} menu.
@@ -221,7 +221,7 @@ export function FilterPresetsMenu<TFilters>({
             >
                 <p className="text-sm text-muted-foreground">
                     Delete preset{' '}
-                    <span className="font-semibold text-white">"{pendingDelete?.name}"</span>?
+                    <span className="font-semibold text-foreground">"{pendingDelete?.name}"</span>?
                     This cannot be undone.
                 </p>
             </Modal>

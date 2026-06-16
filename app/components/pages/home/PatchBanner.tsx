@@ -19,7 +19,7 @@ export function PatchBanner({ tag, releaseNotesUrl, onInstall, onDismiss }: Patc
                         <Download className="size-7 text-blue-400" />
                     </div>
                     <div className="space-y-1">
-                        <h3 className="text-xl font-black text-white/90 tracking-tight">
+                        <h3 className="text-xl font-black text-foreground/90 tracking-tight">
                             Unreal Tournament <span className="text-blue-400">{tag}</span> is now available
                         </h3>
                         <p className="text-sm text-muted-foreground font-medium">
@@ -38,7 +38,7 @@ export function PatchBanner({ tag, releaseNotesUrl, onInstall, onDismiss }: Patc
                     </Button>
                     <button
                         onClick={onDismiss}
-                        className="size-12 rounded-xl bg-white/5 flex items-center justify-center text-muted-foreground hover:bg-white/10 hover:text-white transition-all"
+                        className="size-12 rounded-xl bg-hairline/5 flex items-center justify-center text-muted-foreground hover:bg-hairline/10 hover:text-foreground transition-all"
                     >
                         <X className="size-5" />
                     </button>

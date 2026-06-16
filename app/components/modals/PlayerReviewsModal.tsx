@@ -96,14 +96,14 @@ export function PlayerReviewsModal({
                                 value={query}
                                 onChange={e => setQuery(e.target.value)}
                                 placeholder="Search by map name…"
-                                className="w-full pl-7 pr-3 py-1.5 bg-card/50 border border-white/10 rounded text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:border-accent-500/50"
+                                className="w-full pl-7 pr-3 py-1.5 bg-card/50 border border-hairline/10 rounded text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent-500/50"
                             />
                         </div>
                         <select
                             value={sortKey}
                             onChange={e => setSortKey(e.target.value as SortKey)}
                             style={{ colorScheme: 'dark' }}
-                            className="px-2 py-1.5 bg-card/50 border border-white/10 rounded text-xs text-white focus:outline-none focus:border-accent-500/50 cursor-pointer"
+                            className="px-2 py-1.5 bg-card/50 border border-hairline/10 rounded text-xs text-foreground focus:outline-none focus:border-accent-500/50 cursor-pointer"
                         >
                             <option value="overall" className="bg-[#0f1115]">Sort: Overall (high→low)</option>
                             <option value="map" className="bg-[#0f1115]">Sort: Map name (A→Z)</option>
@@ -113,7 +113,7 @@ export function PlayerReviewsModal({
                     <div className="space-y-1.5">
                         {loading ? (
                             Array.from({ length: 6 }).map((_, i) => (
-                                <div key={i} className="h-14 bg-white/5 rounded-lg animate-pulse" />
+                                <div key={i} className="h-14 bg-hairline/5 rounded-lg animate-pulse" />
                             ))
                         ) : filtered.length === 0 ? (
                             <div className="text-center py-12 text-sm text-muted-foreground">
@@ -123,7 +123,7 @@ export function PlayerReviewsModal({
                             pageRows.map(r => (
                                 <div
                                     key={r.id}
-                                    className="flex items-center gap-3 px-3 py-2 rounded-lg bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] hover:border-white/15 transition-colors"
+                                    className="flex items-center gap-3 px-3 py-2 rounded-lg bg-hairline/[0.02] border border-hairline/5 hover:bg-hairline/[0.05] hover:border-hairline/15 transition-colors"
                                 >
                                     <button
                                         type="button"
@@ -131,7 +131,7 @@ export function PlayerReviewsModal({
                                         className="flex items-center gap-2.5 min-w-0 flex-1 cursor-pointer text-left"
                                     >
                                         <MapThumbnail mapName={r.map_name} className="size-10 shrink-0" />
-                                        <span className="text-sm font-semibold text-white truncate min-w-0 hover:underline underline-offset-2">
+                                        <span className="text-sm font-semibold text-foreground truncate min-w-0 hover:underline underline-offset-2">
                                             {displayMapName(r.map_name)}
                                         </span>
                                     </button>
@@ -139,7 +139,7 @@ export function PlayerReviewsModal({
                                     <div className="hidden sm:flex items-center gap-1 shrink-0">
                                         {METRICS.map(m => (
                                             <Tooltip key={m.key} content={m.label} side="top">
-                                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-white/[0.04] border border-white/10">
+                                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-hairline/[0.04] border border-hairline/10">
                                                     <span className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold">{m.short}</span>
                                                     <span className={cn('text-[11px] font-bold font-mono tabular-nums', scoreTextColor(r[m.key], m.inverted))}>
                                                         {r[m.key]}
@@ -174,7 +174,7 @@ export function PlayerReviewsModal({
                     </div>
 
                     {!loading && filtered.length > 0 && (
-                        <div className="pt-2 border-t border-white/5">
+                        <div className="pt-2 border-t border-hairline/5">
                             <PaginationBar
                                 page={safePage}
                                 totalPages={totalPages}
