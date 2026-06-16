@@ -1,6 +1,7 @@
 import { app, BrowserWindow } from 'electron'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { createAppWindow } from './app'
+import { trayService } from '@/lib/main/tray-service'
 import { loggingService } from '@/lib/main/logging-service'
 
 app.setName('UTBT')
@@ -16,11 +17,7 @@ if (!app.requestSingleInstanceLock()) {
   app.quit()
 } else {
   app.on('second-instance', () => {
-    const [existingWindow] = BrowserWindow.getAllWindows()
-    if (existingWindow) {
-      if (existingWindow.isMinimized()) existingWindow.restore()
-      existingWindow.focus()
-    }
+    trayService.showWindow()
   })
 
   // This method will be called when Electron has finished

@@ -42,6 +42,7 @@ type LauncherConfig = {
   demoWatcher?: DemoWatcherConfig
   activeProfile?: string
   updater?: UpdaterConfig
+  windowBehavior?: WindowBehaviorConfig
 }
 
 export type UpdaterConfig = {
@@ -233,5 +234,36 @@ export function getActiveProfile(): string | undefined {
 export function setActiveProfile(name: string | undefined): void {
   const current = readConfig()
   const next: LauncherConfig = { ...current, activeProfile: name }
+  writeConfig(next)
+}
+
+export type WindowBehaviorConfig = {
+  minimizeAction: 'taskbar' | 'tray'
+  closeAction: 'quit' | 'tray'
+  startOnStartup: boolean
+  startMinimized: boolean
+  trayBalloonShown: boolean
+}
+
+const MINIMIZE_ACTION_VALUES = ['taskbar', 'tray'] as const
+const CLOSE_ACTION_VALUES = ['quit', 'tray'] as const
+
+export function getWindowBehavior(): WindowBehaviorConfig {
+  const stored = (readConfig().windowBehavior ?? {}) as Partial<WindowBehaviorConfig>
+  return {
+    minimizeAction: pickEnum(stored.minimizeAction, MINIMIZE_ACTION_VALUES, 'taskbar'),
+    closeAction: pickEnum(stored.closeAction, CLOSE_ACTION_VALUES, 'quit'),
+    startOnStartup: stored.startOnStartup === true,
+    startMinimized: stored.startMinimized === true,
+    trayBalloonShown: stored.trayBalloonShown === true,
+  }
+}
+
+export function setWindowBehavior(behavior: Partial<WindowBehaviorConfig>): void {
+  const current = readConfig()
+  const next: LauncherConfig = {
+    ...current,
+    windowBehavior: { ...getWindowBehavior(), ...behavior },
+  }
   writeConfig(next)
 }
