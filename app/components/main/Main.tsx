@@ -394,6 +394,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
           onMapSelect={openMap}
           onViewServers={() => navigate('servers')}
           onViewMaps={() => navigate('maps')}
+          onViewWorldRecords={() => navigate('world-records')}
         />
       case 'servers':
         return <ServerBrowserPage
@@ -487,6 +488,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
           onMapSelect={openMap}
           onViewServers={() => navigate('servers')}
           onViewMaps={() => navigate('maps')}
+          onViewWorldRecords={() => navigate('world-records')}
         />
     }
   }
