@@ -80,7 +80,7 @@ export function ReplayVideoModal({ state, onClose, leftAction }: ReplayVideoModa
                             href="https://democonverter.com"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="ml-1 text-blue-400 hover:underline"
+                            className="ml-1 text-accent-400 hover:underline"
                         >
                             democonverter.com
                         </a>

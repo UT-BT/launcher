@@ -81,7 +81,7 @@ export function Segmented({ active, label, onClick }: { active: boolean; label: 
             className={cn(
                 'px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors cursor-pointer',
                 active
-                    ? 'bg-blue-500/20 border-blue-500/50 text-blue-300'
+                    ? 'bg-accent-500/20 border-accent-500/50 text-accent-300'
                     : 'bg-card/50 border-white/10 text-muted-foreground hover:text-white hover:border-white/20',
             )}
         >

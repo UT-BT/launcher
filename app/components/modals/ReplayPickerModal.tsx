@@ -226,7 +226,7 @@ export function ReplayPickerModal({
                                             ) : unavailable ? (
                                                 <span className="text-[10px] uppercase tracking-wider text-muted-foreground/60 shrink-0">No replay</span>
                                             ) : (
-                                                <Columns2 className="size-4 text-blue-300/80 shrink-0" />
+                                                <Columns2 className="size-4 text-accent-300/80 shrink-0" />
                                             )}
                                         </div>
                                     )
@@ -291,7 +291,7 @@ export function ReplayPickerModal({
                                                     className={cn(
                                                         'p-1.5 rounded-md transition-colors cursor-pointer shrink-0 disabled:opacity-40 disabled:cursor-default',
                                                         compareMode
-                                                            ? 'text-blue-300/80 hover:text-blue-200 hover:bg-blue-500/15'
+                                                            ? 'text-accent-300/80 hover:text-accent-200 hover:bg-accent-500/15'
                                                             : 'text-rose-300/80 hover:text-rose-200 hover:bg-rose-500/15',
                                                     )}
                                                 >
@@ -304,7 +304,7 @@ export function ReplayPickerModal({
                                                 type="button"
                                                 onClick={() => mapName && demoDownload.start(row.entry, mapName)}
                                                 aria-label="Download demo"
-                                                className="p-1.5 rounded-md text-blue-300/80 hover:text-blue-200 hover:bg-blue-500/15 transition-colors cursor-pointer shrink-0"
+                                                className="p-1.5 rounded-md text-accent-300/80 hover:text-accent-200 hover:bg-accent-500/15 transition-colors cursor-pointer shrink-0"
                                             >
                                                 <Download className="size-4" />
                                             </button>

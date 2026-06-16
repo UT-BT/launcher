@@ -46,7 +46,7 @@ Set inside `app/components/shared/DataTable.tsx`. Don't override inline.
 | Empty state `<td>` | `px-4 py-16 text-center text-muted-foreground` — text only, no icon |
 
 Sort icons: `ArrowUpDown` (size-3 opacity-30) when not sorted; `ChevronUp` /
-`ChevronDown` (size-3 text-blue-400) when active.
+`ChevronDown` (size-3 text-accent-400) when active.
 
 ### Column layout
 
@@ -126,18 +126,18 @@ Icon buttons in header: `p-2 rounded-md text-muted-foreground hover:text-white h
 // Inactive
 "bg-card/50 border border-white/10 text-muted-foreground hover:text-white hover:border-white/20"
 // Active (panel open)
-"bg-blue-500/20 border border-blue-500/50 text-blue-300"
+"bg-accent-500/20 border border-accent-500/50 text-accent-300"
 // Shared shape
 "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border transition-colors cursor-pointer"
 ```
 
-Count badge inside toggle: `text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-500 text-white`.
+Count badge inside toggle: `text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-accent-500 text-white`.
 
 ### Sidebar Quick Actions
 
 Primary CTA (driving users to a key action):
 ```
-"w-full h-11 bg-blue-500/15 border border-blue-500/40 text-blue-200 hover:bg-blue-500/25 hover:text-white hover:border-blue-500/60 hover:shadow-[0_0_20px_rgba(59,130,246,0.25)] transition-all font-semibold rounded-lg"
+"w-full h-11 bg-accent-500/15 border border-accent-500/40 text-accent-200 hover:bg-accent-500/25 hover:text-white hover:border-accent-500/60 hover:shadow-[0_0_20px_rgba(59,130,246,0.25)] transition-all font-semibold rounded-lg"
 ```
 
 Secondary action (muted):
@@ -172,7 +172,7 @@ the toolbar and the filter panel — only when `hasActiveFilters`.
 
 | Intent | bg / border / text | Hover |
 |---|---|---|
-| Blue (active / primary toggle) | `bg-blue-500/15 border-blue-500/40 text-blue-200` | `bg-blue-500/25 border-blue-500/60` |
+| Accent (active / primary toggle) — themeable, swaps per theme | `bg-accent-500/15 border-accent-500/40 text-accent-200` | `bg-accent-500/25 border-accent-500/60` |
 | Emerald (positive / save) | `bg-emerald-500/10 border-emerald-500/30 text-emerald-300` | `bg-emerald-500/25 text-emerald-200 border-emerald-500/50` |
 | Red (destructive / clear) | `bg-red-500/10 border-red-500/30 text-red-300` | `bg-red-500/25 text-red-200 border-red-500/50` |
 | Rose (warning / demos) | `bg-rose-500/10 border-rose-500/30 text-rose-300` | `bg-rose-500/25 text-rose-100 border-rose-500/50` |
@@ -185,7 +185,7 @@ Shared shape for these chips: `h-8 px-3 rounded-md text-xs font-medium border tr
 ### Text input
 
 ```tsx
-"px-3 py-2 bg-card/50 border border-white/10 rounded-lg text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:border-blue-500/50"
+"px-3 py-2 bg-card/50 border border-white/10 rounded-lg text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:border-accent-500/50"
 ```
 
 Search variant: add `pl-9` and absolute-positioned `<Search>` icon at `left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground`. Clear button (when value): absolute right-2 + `<X size-3.5>`.
@@ -193,7 +193,7 @@ Search variant: add `pl-9` and absolute-positioned `<Search>` icon at `left-3 to
 ### Checkbox
 
 ```tsx
-<input type="checkbox" className="accent-blue-500 cursor-pointer" />
+<input type="checkbox" className="accent-[var(--accent-500)] cursor-pointer" />
 // Yellow-accent variant for favorites
 <input type="checkbox" className="accent-yellow-400 cursor-pointer" />
 ```
@@ -203,7 +203,7 @@ Wrapped in:
 <label className="flex items-center gap-2 px-3 py-2 bg-card/50 border border-white/10 rounded-md text-sm text-white cursor-pointer hover:border-white/20 self-end">
   <input ... />
   <span>Label</span>
-  {count > 0 && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">{count}</span>}
+  {count > 0 && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-accent-500/20 text-accent-300 border border-accent-500/30">{count}</span>}
 </label>
 ```
 
@@ -220,7 +220,7 @@ ALWAYS set `style={{ colorScheme: 'dark' }}` so Chromium renders dark form chrom
 | Card hover state | `bg-card/80` | `border-white/20` |
 | Inline chip / badge | `bg-white/5` | `border border-white/5` |
 | Sticky thead | `bg-card/95 backdrop-blur` | — |
-| Modal | `bg-card` | `border border-blue-500/40` (when interactive) |
+| Modal | `bg-card` | `border border-accent-500/40` (when interactive) |
 
 Standard radii: `rounded-xl` for big containers, `rounded-lg` for buttons / inputs, `rounded-md` for chips / small actions, `rounded` for badges.
 
@@ -238,13 +238,49 @@ Standard radii: `rounded-xl` for big containers, `rounded-lg` for buttons / inpu
 
 ## Color palette
 
-- **blue-500 / blue-400 / blue-300** — primary action, active states, links
+- **accent-500 / accent-400 / accent-300** — the one **themeable** scale (chrome:
+  primary action, active states, links, sort icons, count badges, CTAs, focus
+  rings). Default = Classic blue, so untouched it looks like the original. See
+  **Themes** below.
 - **emerald-500 / emerald-300** — positive, save, "go", populated state
 - **amber-300 / yellow-500** — warnings, certified/highlighted, favorites
 - **red-500 / red-300** — destructive, clear, errors
 - **rose-400 / rose-300** — alternate warning (full server, demos)
 - **muted-foreground** — secondary text, inactive
 - **white/10**, **white/5** — borders and subtle backgrounds (don't use `border-gray-*`)
+
+### Brand colours (fixed across every theme)
+
+Game identity, not chrome — keep these **literal**, never route through `accent-*`:
+
+- **World record** = blue (`text-blue-300`, medal `world record`)
+- **Champion** = red (`text-red-300`); rank-1 leaderboard time = red
+- **Medals** — bronze `amber-500`, silver `slate-200`, gold `yellow-300`
+- **Delta** — gained `emerald`, lost `red` (`DELTA_COLORS`, `capDetail/capStats.ts`)
+- **Roles / Patreon / verified / certified / cap-type / team & compare-runner A-B**
+  (`utils/roles.ts`, `PatreonBadge`, the `CapTypeBadge`/team/runner colours)
+- **Functional** — destructive `red`, success `emerald`, warning `amber`/`rose` are
+  usability constants and also overlap brand, so they stay fixed too.
+- Splash / login / marketing gradients (`shared.css`, `--utbt-*`) — a brand moment.
+
+## Themes
+
+The accent is the **only** themeable scale. Themes swap CSS-variable *values* only —
+identical structure and luminance, so there's nothing extra to QA between dark themes.
+
+- **Accent** `--accent-50…950` → Tailwind `accent-*`. Default (Classic) = Tailwind
+  blue. Use `accent-*` for **all** chrome.
+- **Surface tint** — each theme faintly hues `--card`/`--background`/`--muted`/`--border`
+  at the *same* lightness as Classic (subtle, never "in your face").
+- **Glow** `--accent-glow-rgb` (space-separated RGB) for arbitrary
+  `drop-shadow-[…rgb(var(--accent-glow-rgb)/<a>)]` (e.g. the sidebar logo).
+- **Hairline** `--color-hairline` (white on dark themes) backs `*-hairline/<n>`
+  borders/fills; it flips dark for the future light theme.
+
+Values live in `app/styles/themes.css` (`:root` = Classic, `:root[data-theme="…"]`
+for the rest). Registry + provider: `app/theme/themes.ts`, `app/theme/ThemeProvider.tsx`
+(`utbt:theme:v1`). Add a theme = one `[data-theme]` block + one registry entry. Picker:
+Settings → Appearance (`LauncherAppearanceSettings.tsx`).
 
 ## Animation
 
@@ -259,6 +295,8 @@ Standard radii: `rounded-xl` for big containers, `rounded-lg` for buttons / inpu
 - Don't `text-gray-*` — use `text-muted-foreground` or `text-white/*`.
 - Don't `border-gray-*` — use `border-white/5` or `border-white/10`.
 - Don't `bg-gray-*` for cards — use `bg-card/<n>`.
+- Don't hardcode `blue-*` for chrome — use `accent-*` (themeable). Leave brand /
+  functional colours (WR blue, champion/danger red, emerald, amber, rose) literal.
 - Don't re-roll table styling inline — use `DataTable.*` primitives.
 - Don't re-roll preset menus, columns menus, player avatars, map thumbnails, favorite stars — use the shared components.
 - Don't put rarity/title styling outside `PlayerInfo`.

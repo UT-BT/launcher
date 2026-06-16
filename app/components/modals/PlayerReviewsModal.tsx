@@ -96,14 +96,14 @@ export function PlayerReviewsModal({
                                 value={query}
                                 onChange={e => setQuery(e.target.value)}
                                 placeholder="Search by map name…"
-                                className="w-full pl-7 pr-3 py-1.5 bg-card/50 border border-white/10 rounded text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:border-blue-500/50"
+                                className="w-full pl-7 pr-3 py-1.5 bg-card/50 border border-white/10 rounded text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:border-accent-500/50"
                             />
                         </div>
                         <select
                             value={sortKey}
                             onChange={e => setSortKey(e.target.value as SortKey)}
                             style={{ colorScheme: 'dark' }}
-                            className="px-2 py-1.5 bg-card/50 border border-white/10 rounded text-xs text-white focus:outline-none focus:border-blue-500/50 cursor-pointer"
+                            className="px-2 py-1.5 bg-card/50 border border-white/10 rounded text-xs text-white focus:outline-none focus:border-accent-500/50 cursor-pointer"
                         >
                             <option value="overall" className="bg-[#0f1115]">Sort: Overall (high→low)</option>
                             <option value="map" className="bg-[#0f1115]">Sort: Map name (A→Z)</option>
@@ -162,7 +162,7 @@ export function PlayerReviewsModal({
                                                 type="button"
                                                 onClick={() => setReviewModalMap(r.map_name)}
                                                 aria-label="Edit review"
-                                                className="shrink-0 p-1.5 rounded text-blue-300 hover:text-blue-200 hover:bg-blue-500/15 transition-colors cursor-pointer"
+                                                className="shrink-0 p-1.5 rounded text-accent-300 hover:text-accent-200 hover:bg-accent-500/15 transition-colors cursor-pointer"
                                             >
                                                 <Pencil className="size-3.5" />
                                             </button>

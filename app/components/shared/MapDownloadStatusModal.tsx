@@ -47,7 +47,7 @@ export function MapDownloadStatusModal({ state, onClose }: MapDownloadStatusModa
             {state?.status === 'downloading' && (
                 <div className="space-y-2 py-2">
                     <div className="flex items-center gap-3">
-                        <Loader2 className="size-5 animate-spin text-blue-300 shrink-0" />
+                        <Loader2 className="size-5 animate-spin text-accent-300 shrink-0" />
                         <div className="text-sm text-white/80 truncate">{displayMapName(state.mapName)}</div>
                     </div>
                     <p className="text-xs text-muted-foreground pl-8">

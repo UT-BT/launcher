@@ -4,6 +4,7 @@ import { Tooltip } from '@/app/components/ui/tooltip'
 
 type Tone =
     | 'neutral'
+    | 'accent'
     | 'blue'
     | 'purple'
     | 'emerald'
@@ -13,6 +14,7 @@ type Tone =
 
 const TONE_CLASSES: Record<Tone, string> = {
     neutral: 'bg-white/5 border-white/5 text-white',
+    accent:  'bg-accent-500/15 border-accent-500/40 text-accent-200',
     blue:    'bg-blue-500/15 border-blue-500/40 text-blue-200',
     purple:  'bg-purple-500/15 border-purple-500/40 text-purple-200',
     emerald: 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300',
@@ -23,6 +25,7 @@ const TONE_CLASSES: Record<Tone, string> = {
 
 const TONE_ICON: Record<Tone, string> = {
     neutral: 'text-muted-foreground',
+    accent:  'text-accent-300',
     blue:    'text-blue-300',
     purple:  'text-purple-300',
     emerald: 'text-emerald-300',

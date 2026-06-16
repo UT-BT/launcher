@@ -73,7 +73,7 @@ export function PlayerFavoritesModal({
                         value={query}
                         onChange={e => setQuery(e.target.value)}
                         placeholder="Search by map name…"
-                        className="w-full pl-7 pr-3 py-1.5 bg-card/50 border border-white/10 rounded text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:border-blue-500/50"
+                        className="w-full pl-7 pr-3 py-1.5 bg-card/50 border border-white/10 rounded text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:border-accent-500/50"
                     />
                 </div>
 

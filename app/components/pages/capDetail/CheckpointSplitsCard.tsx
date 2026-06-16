@@ -111,7 +111,7 @@ export function CheckpointSplitsCard({
                             value={selectedCompareId ?? ''}
                             onChange={(e) => onSelectCompare(e.target.value || null)}
                             style={{ colorScheme: 'dark' }}
-                            className="h-7 rounded-md bg-card/60 border border-white/10 text-xs text-white px-2 hover:border-white/20 focus:outline-none focus:border-blue-500/50 cursor-pointer max-w-[16rem]"
+                            className="h-7 rounded-md bg-card/60 border border-white/10 text-xs text-white px-2 hover:border-white/20 focus:outline-none focus:border-accent-500/50 cursor-pointer max-w-[16rem]"
                         >
                             {compareOptions.map(o => (
                                 <option key={o.id} value={o.id}>{o.label}</option>

@@ -126,20 +126,20 @@ export function AppLayout({ children, currentView, onViewChange, userProfile, in
 
             {/* Sidebar */}
             <aside className="w-64 bg-card/50 backdrop-blur-xl border-r border-white/10 flex flex-col z-20 relative">
-                <div className="absolute inset-0 bg-gradient-to-b from-blue-900/10 to-transparent pointer-events-none" />
+                <div className="absolute inset-0 bg-gradient-to-b from-accent-900/10 to-transparent pointer-events-none" />
 
                 <div className="p-6 [@media(max-height:760px)]:p-3 flex flex-col items-center relative z-10">
                     <img
                         src={logo}
                         alt="UTBT Logo"
-                        className="w-24 h-24 [@media(max-height:760px)]:w-14 [@media(max-height:760px)]:h-14 object-contain drop-shadow-[0_0_15px_rgba(56,189,248,0.3)] mb-4 [@media(max-height:760px)]:mb-0 transition-all hover:scale-105 duration-300"
+                        className="w-24 h-24 [@media(max-height:760px)]:w-14 [@media(max-height:760px)]:h-14 object-contain drop-shadow-[0_0_15px_rgb(var(--accent-glow-rgb)/0.3)] mb-4 [@media(max-height:760px)]:mb-0 transition-all hover:scale-105 duration-300"
                     />
                 </div>
 
                 <div className="px-4 mb-6 [@media(max-height:760px)]:mb-3 relative z-10 space-y-2">
                     <Button
                         variant="ghost"
-                        className="w-full h-11 bg-blue-500/15 border border-blue-500/40 text-blue-200 hover:bg-blue-500/25 hover:text-white hover:border-blue-500/60 hover:shadow-[0_0_20px_rgba(59,130,246,0.25)] transition-all font-semibold rounded-lg"
+                        className="w-full h-11 bg-accent-500/15 border border-accent-500/40 text-accent-200 hover:bg-accent-500/25 hover:text-white hover:border-accent-500/60 hover:shadow-[0_0_20px_rgba(59,130,246,0.25)] transition-all font-semibold rounded-lg"
                         onClick={() => onViewChange('servers')}
                     >
                         <Server className="size-4" />
@@ -186,12 +186,12 @@ export function AppLayout({ children, currentView, onViewChange, userProfile, in
                                     )}
                                 >
                                     {currentView === item.id && (
-                                        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-red-600/20 border-l-2 border-blue-500" />
+                                        <div className="absolute inset-0 bg-gradient-to-r from-accent-600/20 to-red-600/20 border-l-2 border-accent-500" />
                                     )}
 
                                     <item.icon className={cn(
                                         "size-5 transition-colors duration-200 relative z-10",
-                                        currentView === item.id ? "text-blue-400" : "group-hover:text-blue-400/80"
+                                        currentView === item.id ? "text-accent-400" : "group-hover:text-accent-400/80"
                                     )} />
                                     <span className="relative z-10 font-medium">{item.label}</span>
                                 </button>
@@ -212,7 +212,7 @@ export function AppLayout({ children, currentView, onViewChange, userProfile, in
                                     style={containerStyle}
                                 />
                                 <div className="relative flex items-center gap-3 px-4 py-2">
-                                    <div className="size-8 rounded-full bg-gradient-to-br from-blue-500 to-red-500 p-[1px]">
+                                    <div className="size-8 rounded-full bg-gradient-to-br from-accent-500 to-red-500 p-[1px]">
                                         {userProfile?.id ? (
                                             <img
                                                 src={getAvatarUrl(userProfile.id)}

@@ -84,7 +84,7 @@ export default function ActivityChart({ leaderboard, playtime }: ActivityChartPr
                             className={cn(
                                 'h-5 px-1.5 rounded text-[9px] font-bold uppercase tracking-wider border transition-colors cursor-pointer',
                                 mode === m
-                                    ? 'bg-blue-500/20 border-blue-500/50 text-blue-200'
+                                    ? 'bg-accent-500/20 border-accent-500/50 text-accent-200'
                                     : 'bg-card/50 border-white/10 text-muted-foreground hover:text-white hover:border-white/20',
                             )}
                         >

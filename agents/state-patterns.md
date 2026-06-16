@@ -192,7 +192,13 @@ page's **preference fields only** (the `*_PREF_KEYS` subset), not full query sta
 | `utbt:worldRecordsState:v1` | `Main.tsx` (`usePageState`) | World Records prefs: column visibility/order, `pageSizePreference` |
 | `utbt:achievementsState:v1` | `Main.tsx` (`usePageState`) | none (no pref fields → nothing persisted) |
 | `utbt:dismissedPatch:v1` | `Home` | `string` (patch tag the user dismissed) |
+| `utbt:theme:v1` | `ThemeProvider` (app-global) | `{ id }` — selected accent theme (`classic`/`amethyst`/`hydro`/`gunmetal`) |
 | `utbt-server-browser-settings` | DEPRECATED | (old shape — can ignore) |
+
+`utbt:theme:v1` is an **app-global** preference (like `ui-scale`), not per-page —
+read + written directly by `app/theme/ThemeProvider.tsx` with merge-over-defaults,
+not via `usePageState`. A pre-paint inline script in `app/index.html` applies it
+before first paint to avoid a flash.
 
 ## Filter presets
 

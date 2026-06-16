@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { SettingsLayout, SettingsSectionId } from './settings/SettingsLayout'
 import { LauncherGeneralSettings } from './settings/LauncherGeneralSettings'
+import { LauncherAppearanceSettings } from './settings/LauncherAppearanceSettings'
 import { LauncherDemoSettings } from './settings/LauncherDemoSettings'
 import { GameInstallationSettings } from './GameInstallationSettings'
 import { GamePlayerSettings } from './settings/GamePlayerSettings'
@@ -61,6 +62,8 @@ export function Settings({ initialSection }: SettingsProps = {}) {
         switch (currentSection) {
             case 'launcher-general':
                 return <LauncherGeneralSettings />
+            case 'launcher-appearance':
+                return <LauncherAppearanceSettings />
             case 'launcher-demos':
                 return <LauncherDemoSettings />
             case 'game-installation':

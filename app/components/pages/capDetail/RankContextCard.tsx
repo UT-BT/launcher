@@ -31,7 +31,7 @@ function NeighborRow({ rank, userId, alias, title, time, capId, highlight, curre
     return (
         <div className={cn(
             'flex items-center gap-2 px-3 py-2 rounded-lg',
-            highlight ? 'bg-blue-500/10 border border-blue-500/30' : 'hover:bg-white/[0.03]',
+            highlight ? 'bg-accent-500/10 border border-accent-500/30' : 'hover:bg-white/[0.03]',
         )}>
             <span className="w-8 text-xs font-bold font-mono text-muted-foreground tabular-nums shrink-0">#{rank}</span>
             <div className="min-w-0 flex-1">

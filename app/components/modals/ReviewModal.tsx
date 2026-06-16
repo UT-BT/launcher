@@ -211,7 +211,7 @@ export function ReviewModal({ open, onOpenChange, accessToken, userId, mapName, 
                 {submitted ? (
                     <div className="space-y-5 py-2">
                         <p className="text-white/90 text-sm leading-relaxed">
-                            Your review for <span className="text-blue-300 font-semibold">{mapName ? displayMapName(mapName) : ''}</span> has been published.
+                            Your review for <span className="text-accent-300 font-semibold">{mapName ? displayMapName(mapName) : ''}</span> has been published.
                         </p>
                         <p className="text-muted-foreground text-xs leading-relaxed">
                             Reviews help other players find good quality maps, balance the difficulty ratings, and determine what maps we put into special events.
@@ -221,7 +221,7 @@ export function ReviewModal({ open, onOpenChange, accessToken, userId, mapName, 
                         </p>
                         <Button
                             onClick={handleClose}
-                            className="w-full h-10 bg-blue-500/15 border border-blue-500/40 text-blue-200 hover:bg-blue-500/25 hover:text-white hover:border-blue-500/60 hover:shadow-[0_0_20px_rgba(59,130,246,0.25)] transition-all font-semibold rounded-lg"
+                            className="w-full h-10 bg-accent-500/15 border border-accent-500/40 text-accent-200 hover:bg-accent-500/25 hover:text-white hover:border-accent-500/60 hover:shadow-[0_0_20px_rgba(59,130,246,0.25)] transition-all font-semibold rounded-lg"
                         >
                             Close
                         </Button>
@@ -235,18 +235,18 @@ export function ReviewModal({ open, onOpenChange, accessToken, userId, mapName, 
                         )}
 
                         {/* Hero: Overall over map screenshot bg */}
-                        <div className="relative overflow-hidden rounded-xl border border-blue-500/20">
+                        <div className="relative overflow-hidden rounded-xl border border-accent-500/20">
                             {mapName && (
                                 <MapThumbnail
                                     mapName={mapName}
                                     className="absolute inset-0 w-full h-full rounded-none border-0 opacity-70"
                                 />
                             )}
-                            <div className="absolute inset-0 bg-gradient-to-br from-blue-950/70 via-black/80 to-black/90" />
+                            <div className="absolute inset-0 bg-gradient-to-br from-accent-950/70 via-black/80 to-black/90" />
                             <div className="relative p-5 space-y-4">
                                 <div className="flex items-end justify-between gap-4">
                                     <div className="space-y-1 min-w-0">
-                                        <div className="text-[10px] uppercase tracking-widest text-blue-300 font-bold">
+                                        <div className="text-[10px] uppercase tracking-widest text-accent-300 font-bold">
                                             Your overall rating
                                         </div>
                                         <div className={cn(
@@ -314,7 +314,7 @@ export function ReviewModal({ open, onOpenChange, accessToken, userId, mapName, 
                         <Button
                             onClick={handleSubmit}
                             disabled={loading}
-                            className="w-full h-10 bg-blue-500/15 border border-blue-500/40 text-blue-200 hover:bg-blue-500/25 hover:text-white hover:border-blue-500/60 hover:shadow-[0_0_20px_rgba(59,130,246,0.25)] transition-all font-semibold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-full h-10 bg-accent-500/15 border border-accent-500/40 text-accent-200 hover:bg-accent-500/25 hover:text-white hover:border-accent-500/60 hover:shadow-[0_0_20px_rgba(59,130,246,0.25)] transition-all font-semibold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {loading ? (
                                 <Loader2 className="size-4 animate-spin" />

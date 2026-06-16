@@ -14,9 +14,9 @@ export function UpdateBanner() {
     return (
         <div
             onClick={openModal}
-            className="relative z-[60] w-full bg-blue-500/15 border-b border-blue-500/40 px-6 py-2.5 cursor-pointer hover:bg-blue-500/25 hover:border-blue-500/60 transition-colors group"
+            className="relative z-[60] w-full bg-accent-500/15 border-b border-accent-500/40 px-6 py-2.5 cursor-pointer hover:bg-accent-500/25 hover:border-accent-500/60 transition-colors group"
         >
-            <div className="flex items-center gap-3 text-blue-200">
+            <div className="flex items-center gap-3 text-accent-200">
                 <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold leading-tight text-center">
                         {headline}

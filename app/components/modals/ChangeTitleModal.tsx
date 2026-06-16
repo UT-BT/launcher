@@ -40,8 +40,8 @@ function TitleRow({ label, titleStyle, selected, assigning, disabled, onSelect }
                 "group flex items-center justify-between gap-3 px-4 py-3 rounded-lg border text-left transition-colors",
                 "bg-card/40 border-white/5",
                 !disabled && "cursor-pointer hover:bg-card/80 hover:border-white/20",
-                selected && "bg-blue-500/15 border-blue-500/40",
-                selected && !disabled && "hover:bg-blue-500/20 hover:border-blue-500/50",
+                selected && "bg-accent-500/15 border-accent-500/40",
+                selected && !disabled && "hover:bg-accent-500/20 hover:border-accent-500/50",
                 disabled && "cursor-not-allowed opacity-60",
             )}
         >
@@ -54,9 +54,9 @@ function TitleRow({ label, titleStyle, selected, assigning, disabled, onSelect }
 
             <span className="shrink-0 flex items-center">
                 {assigning ? (
-                    <Loader2 className="size-4 animate-spin text-blue-300" />
+                    <Loader2 className="size-4 animate-spin text-accent-300" />
                 ) : selected ? (
-                    <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-blue-300">
+                    <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-accent-300">
                         <Check className="size-3.5" />
                         Selected
                     </span>

@@ -398,7 +398,7 @@ export function GameInputSettings() {
                                             size="sm"
                                             className={cn(
                                                 "min-w-[100px] font-mono transition-all",
-                                                isEditing && "border-blue-500 text-blue-500 animate-pulse ring-2 ring-blue-500/20"
+                                                isEditing && "border-accent-500 text-accent-500 animate-pulse ring-2 ring-accent-500/20"
                                             )}
                                             onClick={() => handleBindClick(bind.command, slot)}
                                         >

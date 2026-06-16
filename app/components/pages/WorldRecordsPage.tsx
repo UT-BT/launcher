@@ -825,7 +825,7 @@ export function WorldRecordsPage({
                                 className={cn(
                                     'inline-flex items-center gap-2 h-8 px-3 rounded-md text-sm font-medium transition-colors cursor-pointer border',
                                     active
-                                        ? 'bg-blue-500/20 text-blue-200 border-blue-500/40'
+                                        ? 'bg-accent-500/20 text-accent-200 border-accent-500/40'
                                         : 'text-muted-foreground hover:text-white border-transparent',
                                 )}
                             >
@@ -845,7 +845,7 @@ export function WorldRecordsPage({
                         placeholder={isRushers ? 'Search rushers...' : 'Search maps or players...'}
                         value={state.search}
                         onChange={e => setSearch(e.target.value)}
-                        className="w-full pl-9 pr-9 py-2 bg-card/50 border border-white/10 rounded-lg text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:border-blue-500/50 focus:bg-card/80 transition-colors"
+                        className="w-full pl-9 pr-9 py-2 bg-card/50 border border-white/10 rounded-lg text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:border-accent-500/50 focus:bg-card/80 transition-colors"
                     />
                     {state.search && (
                         <button
@@ -867,14 +867,14 @@ export function WorldRecordsPage({
                             className={cn(
                                 'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border transition-colors cursor-pointer',
                                 state.filtersPanelOpen
-                                    ? 'bg-blue-500/20 border-blue-500/50 text-blue-300'
+                                    ? 'bg-accent-500/20 border-accent-500/50 text-accent-300'
                                     : 'bg-card/50 border-white/10 text-muted-foreground hover:text-white hover:border-white/20',
                             )}
                         >
                             <SlidersHorizontal className="size-4" />
                             Filters
                             {activeFilterCount > 0 && (
-                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-500 text-white">
+                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-accent-500 text-white">
                                     {activeFilterCount}
                                 </span>
                             )}
@@ -980,7 +980,7 @@ export function WorldRecordsPage({
                                 value={state.timeframe}
                                 onChange={e => updateFilter('timeframe', e.target.value as WrTimeframe)}
                                 style={{ colorScheme: 'dark' }}
-                                className="min-w-40 px-2 py-2 bg-card/50 border border-white/10 rounded text-sm text-white hover:border-white/20 focus:outline-none focus:border-blue-500/50 cursor-pointer"
+                                className="min-w-40 px-2 py-2 bg-card/50 border border-white/10 rounded text-sm text-white hover:border-white/20 focus:outline-none focus:border-accent-500/50 cursor-pointer"
                                 aria-label="Filter by recency"
                             >
                                 {TIMEFRAME_OPTIONS.map(o => (
