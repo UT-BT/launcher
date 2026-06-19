@@ -11,7 +11,7 @@ not_here:
   - "the navigation stack / navigate() / renderView wiring → navigation.md"
   - "the shared components used (FilterPresetsMenu, ColumnsMenu, Tutorial) → shared-components.md"
 sections: [controlled-pages-with-hoisted-state, navigation-history-per-entry-ui-state, localstorage-persistence, filter-presets, tutorial-state, favorites, naming-conventions]
-last_verified: 2026-06-16
+last_verified: 2026-06-19
 verify_against: [app/components/main/Main.tsx, app/components/navigation/useNavState.ts, app/hooks/useAsync.ts]
 ---
 
@@ -191,6 +191,7 @@ page's **preference fields only** (the `*_PREF_KEYS` subset), not full query sta
 | `utbt:capItAllState:v1` | `Main.tsx` (`usePageState`) | Cap-It-All prefs: `pageSizePreference` |
 | `utbt:worldRecordsState:v1` | `Main.tsx` (`usePageState`) | World Records prefs: column visibility/order, `pageSizePreference` |
 | `utbt:achievementsState:v1` | `Main.tsx` (`usePageState`) | none (no pref fields → nothing persisted) |
+| `utbt:adminState:v1` | `Main.tsx` (`usePageState`) | Admin page pref: `activeSection`. Each admin section owns its own table state: column visibility/order in `utbt:admin:<section>:cols:v2` + saved filters in `utbt:admin:<section>:filters:v1` (both localStorage, via `useAdminTable`/`useAdminFilterPresets`); transient sort/filter/search/page via `useNavState('admin.<section>.<field>')` so it restores on Back/Forward. No caches singleton. |
 | `utbt:dismissedPatch:v1` | `Home` | `string` (patch tag the user dismissed) |
 | `utbt:theme:v1` | `ThemeProvider` (app-global) | `{ id }` — selected theme (`classic`/`red`/`aurum`/`amethyst`/`emerald`/`rose`/`light`/`black`) |
 | `utbt-server-browser-settings` | DEPRECATED | (old shape — can ignore) |

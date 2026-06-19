@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { RefreshCw, Loader2 } from 'lucide-react'
+import { RefreshCw, Loader2, ShieldAlert } from 'lucide-react'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import { useNavScrollRestore } from '@/app/components/navigation/useNavScrollRestore'
 import { Modal } from '@/app/components/ui/modal'
@@ -190,6 +190,18 @@ export function CapDetailPage({ capId, userProfile, onMapSelect }: CapDetailPage
                             cap.map,
                         )}
                     />
+
+                    {cap.disallowed && (
+                        <div className="flex items-start gap-3 p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-red-300 shrink-0">
+                            <ShieldAlert className="size-5 shrink-0 mt-0.5" />
+                            <div className="space-y-1 min-w-0">
+                                <div className="font-bold uppercase tracking-wider text-xs">Disallowed cap</div>
+                                <p className="text-sm text-red-200/90 leading-relaxed">
+                                    This run has been disallowed by staff. It no longer counts toward leaderboards, medals, or world records.
+                                </p>
+                            </div>
+                        </div>
+                    )}
 
                     {error && (
                         <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm shrink-0">

@@ -122,6 +122,14 @@ export interface ActiveTitle {
     color_b: number
 }
 
+export function toActiveTitle(
+    t?: { name: string; rarity: number; color_r: number; color_g: number; color_b: number } | null,
+): ActiveTitle | null {
+    if (!t) return null
+    const rarity = Math.min(5, Math.max(1, Math.round(t.rarity))) as 1 | 2 | 3 | 4 | 5
+    return { name: t.name, rarity, color_r: t.color_r, color_g: t.color_g, color_b: t.color_b }
+}
+
 export interface MapReview {
     id: number
     map_name: string
@@ -168,7 +176,7 @@ const DEFAULT_TIMEOUT_MS = 20_000
 
 export interface ApiRequestOptions {
     token?: string
-    method?: 'GET' | 'POST' | 'PUT' | 'DELETE'
+    method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
     body?: unknown
     headers?: { [key: string]: string }
     signal?: AbortSignal
@@ -202,10 +210,23 @@ export async function apiRequest(path: string, opts: ApiRequestOptions = {}): Pr
     }
 }
 
+export class ApiError extends Error {
+    status: number
+    reason?: string
+    constructor(status: number, reason: string | undefined, fallback: string) {
+        super(reason || fallback)
+        this.name = 'ApiError'
+        this.status = status
+        this.reason = reason
+    }
+}
+
 export async function apiGet<T>(path: string, opts: ApiRequestOptions = {}): Promise<T> {
     const res = await apiRequest(path, opts)
     if (!res.ok) {
-        throw new Error(`Request failed: ${res.statusText} (${res.status})`)
+        let reason: string | undefined
+        try { reason = (await res.json())?.reason } catch { reason = undefined }
+        throw new ApiError(res.status, reason, `Request failed: ${res.statusText} (${res.status})`)
     }
     const json = await res.json()
     if (json && json.success && json.data !== null && json.data !== undefined) {
@@ -271,6 +292,764 @@ export async function uploadDemo(file: Blob, filename: string, accessToken: stri
 
     return await response.json()
 }
+
+export interface AuditEntry {
+    id: string
+    action: string
+    actor_id: string | null
+    actor_alias: string | null
+    actor_role: number
+    actor_title: AdminActiveTitle | null
+    target_type: string
+    target_id: string | null
+    target_alias: string | null
+    summary: string
+    details: unknown
+    reason: string | null
+    ip: string | null
+    created_at: string | null
+    reverts: string | null
+    reverted: boolean
+    can_rollback: boolean
+}
+
+export interface AdminOverview {
+    stats: {
+        active_bans: number
+        warns_24h: number
+        staff_actions_24h: number
+        total_users: number
+        total_caps: number
+        disallowed_caps: number
+        total_maps: number
+        active_maps: number
+        inactive_maps: number
+        total_titles: number
+    }
+}
+
+export interface AdminActiveTitle {
+    id: string
+    name: string
+    color: string
+    color_r: number
+    color_g: number
+    color_b: number
+    rarity: number
+}
+
+export interface AdminUserRow {
+    id: string
+    alias: string | null
+    utbt_role: number
+    registered_at: string | null
+    active_title: AdminActiveTitle | null
+    banned: boolean
+    ban_reason: string | null
+    ban_expires: string | null
+    warn_count: number
+    ban_count: number
+}
+
+export interface AdminUserDetail {
+    id: string
+    alias: string | null
+    utbt_role: number
+    registered_at: string | null
+    flag: string | null
+    twitch_url: string | null
+    cap_count: number
+    active_bans: { id: string; reason: string; start: string | null; end: string | null }[]
+    warns: { id: string; reason: string; warned_at: string | null }[]
+    titles: { title_id: string; name: string; rarity: number; color: string; color_r: number; color_g: number; color_b: number; selected: boolean }[]
+    ip_history: { value: string; count: number; last_seen: string | null }[]
+    hwid_history: { value: string; count: number; last_seen: string | null }[]
+}
+
+export type AdminUserSort = 'name' | 'id' | 'role' | 'status' | 'warnings' | 'bans'
+
+export interface AdminTitleSummary {
+    id: string
+    name: string
+    rarity: number
+    color: string
+    color_r: number
+    color_g: number
+    color_b: number
+    holders: number
+}
+
+export type AdminCapStatus = 'pending' | 'verified' | 'disallowed' | 'all'
+
+export interface AdminCapRow {
+    id: string
+    user: string
+    alias: string | null
+    active_title: AdminActiveTitle | null
+    map: string
+    cap_time_seconds: number | null
+    verified: boolean
+    disallowed: boolean
+    has_demo: boolean
+    added: string | null
+    ip: string | null
+    hwid: string | null
+    btpog_id: string | null
+}
+
+export type AdminCapSort = 'player' | 'map' | 'time' | 'status' | 'added'
+
+export interface AdminCapsParams {
+    status?: AdminCapStatus
+    search?: string
+    mapFuzzy?: string
+    capId?: string
+    sort?: AdminCapSort
+    order?: 'asc' | 'desc'
+    limit?: number
+    offset?: number
+}
+
+export interface AuditParams {
+    actor?: string
+    action?: string
+    targetType?: string
+    search?: string
+    limit?: number
+    offset?: number
+}
+
+export interface DemoVerifyResult {
+    success: boolean
+    message?: string
+    reason?: string
+    debug?: { cap_id: string; steps: string[] }
+}
+
+function capsQuery(params: AdminCapsParams): string {
+    const qs = new URLSearchParams()
+    if (params.status && params.status !== 'all') qs.set('status', params.status)
+    if (params.search) qs.set('search', params.search)
+    if (params.mapFuzzy) qs.set('map_fuzzy', params.mapFuzzy)
+    if (params.capId) qs.set('cap_id', params.capId)
+    if (params.sort) qs.set('sort', params.sort)
+    if (params.order) qs.set('order', params.order)
+    if (params.limit != null) qs.set('limit', String(params.limit))
+    if (params.offset != null) qs.set('offset', String(params.offset))
+    return qs.toString()
+}
+
+function auditQuery(params: AuditParams): string {
+    const qs = new URLSearchParams()
+    if (params.actor) qs.set('actor', params.actor)
+    if (params.action) qs.set('action', params.action)
+    if (params.targetType) qs.set('target_type', params.targetType)
+    if (params.search) qs.set('search', params.search)
+    if (params.limit != null) qs.set('limit', String(params.limit))
+    if (params.offset != null) qs.set('offset', String(params.offset))
+    return qs.toString()
+}
+
+export async function fetchAdminOverview(token: string, signal?: AbortSignal): Promise<AdminOverview> {
+    return apiGet<AdminOverview>('/admin/overview', { token, signal })
+}
+
+export type ActivityWindow = '24h' | '1w' | '1m' | '1y'
+
+export interface AdminActivityPoint {
+    t: string | null
+    caps: number
+    players: number
+    playtime_hours: number
+    new_maps: number
+    new_users: number
+    achievements: number
+    launcher_logins: number
+}
+
+export interface AdminActivity {
+    window: string
+    bucket: string
+    points: AdminActivityPoint[]
+}
+
+export async function fetchAdminActivity(token: string, window: ActivityWindow, signal?: AbortSignal): Promise<AdminActivity> {
+    return apiGet<AdminActivity>(`/admin/overview/activity?window=${window}`, { token, signal })
+}
+
+export interface AdminUsersParams {
+    search?: string
+    status?: 'active' | 'banned'
+    role?: number
+    sort?: AdminUserSort
+    order?: 'asc' | 'desc'
+    limit?: number
+    offset?: number
+}
+
+export async function fetchAdminUsers(token: string, params: AdminUsersParams = {}, signal?: AbortSignal): Promise<AdminUserRow[]> {
+    const qs = new URLSearchParams()
+    if (params.search) qs.set('search', params.search)
+    if (params.status) qs.set('status', params.status)
+    if (params.role != null) qs.set('role', String(params.role))
+    if (params.sort) qs.set('sort', params.sort)
+    if (params.order) qs.set('order', params.order)
+    qs.set('limit', String(params.limit ?? 50))
+    qs.set('offset', String(params.offset ?? 0))
+    const data = await apiGet<{ items: AdminUserRow[] }>(`/admin/users?${qs.toString()}`, { token, signal })
+    return data.items
+}
+
+export async function fetchAdminUsersCount(token: string, params: Pick<AdminUsersParams, 'search' | 'status' | 'role'> = {}, signal?: AbortSignal): Promise<number> {
+    const qs = new URLSearchParams()
+    if (params.search) qs.set('search', params.search)
+    if (params.status) qs.set('status', params.status)
+    if (params.role != null) qs.set('role', String(params.role))
+    const data = await apiGet<{ count: number }>(`/admin/users/count?${qs.toString()}`, { token, signal })
+    return data.count
+}
+
+export async function fetchAdminUser(token: string, userId: string, signal?: AbortSignal): Promise<AdminUserDetail> {
+    return apiGet<AdminUserDetail>(`/admin/users/${encodeURIComponent(userId)}`, { token, signal })
+}
+
+export async function setUserAlias(token: string, userId: string, alias: string): Promise<{ ok: boolean; alias: string }> {
+    return apiGet(`/admin/users/${encodeURIComponent(userId)}/alias`, { token, method: 'PATCH', body: { alias } })
+}
+
+export async function warnUser(token: string, userId: string, reason: string): Promise<{ ok: boolean }> {
+    return apiGet(`/admin/users/${encodeURIComponent(userId)}/warn`, { token, method: 'POST', body: { reason } })
+}
+
+export interface BanUserInput {
+    lengthMinutes: number
+    reason: string
+    banUser?: boolean
+    banHwid?: boolean
+    banIp?: boolean
+}
+
+export async function banUser(token: string, userId: string, input: BanUserInput): Promise<{ ok: boolean; targets: string[] }> {
+    return apiGet(`/admin/users/${encodeURIComponent(userId)}/ban`, {
+        token,
+        method: 'POST',
+        body: {
+            length_minutes: input.lengthMinutes,
+            reason: input.reason,
+            ban_user: input.banUser ?? true,
+            ban_hwid: input.banHwid ?? true,
+            ban_ip: input.banIp ?? true,
+        },
+    })
+}
+
+export async function unbanUser(token: string, userId: string): Promise<{ ok: boolean; lifted: number }> {
+    return apiGet(`/admin/users/${encodeURIComponent(userId)}/unban`, { token, method: 'POST' })
+}
+
+export async function assignTitleToUser(token: string, userId: string, titleId: string): Promise<{ ok: boolean }> {
+    return apiGet(`/admin/users/${encodeURIComponent(userId)}/titles/${encodeURIComponent(titleId)}`, { token, method: 'POST' })
+}
+
+export async function unassignTitleFromUser(token: string, userId: string, titleId: string): Promise<{ ok: boolean }> {
+    return apiGet(`/admin/users/${encodeURIComponent(userId)}/titles/${encodeURIComponent(titleId)}`, { token, method: 'DELETE' })
+}
+
+export async function fetchAdminTitles(token: string, signal?: AbortSignal): Promise<AdminTitleSummary[]> {
+    const data = await apiGet<{ items: AdminTitleSummary[] }>('/admin/titles', { token, signal })
+    return data.items
+}
+
+export interface TitleHolder {
+    id: string
+    alias: string | null
+}
+
+export async function fetchTitleHolders(token: string, titleId: string, signal?: AbortSignal): Promise<TitleHolder[]> {
+    const data = await apiGet<{ items: TitleHolder[] }>(`/admin/titles/${encodeURIComponent(titleId)}/holders`, { token, signal })
+    return data.items
+}
+
+export async function createTitle(token: string, input: { name: string; r: number; g: number; b: number; rarity: number }): Promise<{ ok: boolean; id: string }> {
+    return apiGet('/admin/titles', { token, method: 'POST', body: input })
+}
+
+export async function updateTitle(token: string, titleId: string, input: { name?: string; r?: number; g?: number; b?: number; rarity?: number }): Promise<{ ok: boolean }> {
+    return apiGet(`/admin/titles/${encodeURIComponent(titleId)}`, { token, method: 'PATCH', body: input })
+}
+
+export async function deleteTitle(token: string, titleId: string): Promise<{ ok: boolean; holders_removed: number }> {
+    return apiGet(`/admin/titles/${encodeURIComponent(titleId)}`, { token, method: 'DELETE' })
+}
+
+export async function fetchAdminCaps(token: string, params: AdminCapsParams = {}, signal?: AbortSignal): Promise<AdminCapRow[]> {
+    const data = await apiGet<{ items: AdminCapRow[] }>(`/admin/caps?${capsQuery(params)}`, { token, signal })
+    return data.items
+}
+
+export async function fetchAdminCapsCount(token: string, params: AdminCapsParams = {}, signal?: AbortSignal): Promise<number> {
+    const data = await apiGet<{ count: number }>(`/admin/caps/count?${capsQuery(params)}`, { token, signal })
+    return data.count
+}
+
+export async function disallowCap(token: string, capId: string, reason?: string): Promise<{ ok: boolean }> {
+    return apiGet(`/admin/caps/${encodeURIComponent(capId)}/disallow`, { token, method: 'POST', body: { reason } })
+}
+
+export async function reallowCap(token: string, capId: string, reason?: string): Promise<{ ok: boolean }> {
+    return apiGet(`/admin/caps/${encodeURIComponent(capId)}/reallow`, { token, method: 'POST', body: { reason } })
+}
+
+export interface BulkCapResult {
+    ok: boolean
+    changed: number
+    skipped: number
+    not_found: string[]
+}
+
+export async function bulkDisallowCaps(token: string, capIds: string[], reason?: string): Promise<BulkCapResult> {
+    return apiGet('/admin/caps/bulk-disallow', { token, method: 'POST', body: { cap_ids: capIds, reason } })
+}
+
+export async function bulkReallowCaps(token: string, capIds: string[], reason?: string): Promise<BulkCapResult> {
+    return apiGet('/admin/caps/bulk-reallow', { token, method: 'POST', body: { cap_ids: capIds, reason } })
+}
+
+export async function verifyCapFlag(token: string, capId: string, reason?: string): Promise<{ ok: boolean }> {
+    return apiGet(`/admin/caps/${encodeURIComponent(capId)}/verify-flag`, { token, method: 'POST', body: { reason } })
+}
+
+export async function unverifyCap(token: string, capId: string, reason?: string): Promise<{ ok: boolean }> {
+    return apiGet(`/admin/caps/${encodeURIComponent(capId)}/unverify`, { token, method: 'POST', body: { reason } })
+}
+
+export async function verifyCapWithDemo(token: string, capId: string, file: Blob, filename: string, override = false): Promise<DemoVerifyResult> {
+    const formData = new FormData()
+    formData.append('file', file, filename)
+    if (override) formData.append('override', 'true')
+    const response = await fetch(`${API_BASE_URL}/admin/caps/${encodeURIComponent(capId)}/verify`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+    })
+    try {
+        return await response.json() as DemoVerifyResult
+    } catch {
+        return { success: false, reason: `Upload failed: ${response.statusText} (${response.status})` }
+    }
+}
+
+export async function fetchAuditLog(token: string, params: AuditParams = {}, signal?: AbortSignal): Promise<AuditEntry[]> {
+    const data = await apiGet<{ items: AuditEntry[] }>(`/admin/audit?${auditQuery(params)}`, { token, signal })
+    return data.items
+}
+
+export async function fetchAuditLogCount(token: string, params: AuditParams = {}, signal?: AbortSignal): Promise<number> {
+    const data = await apiGet<{ count: number }>(`/admin/audit/count?${auditQuery(params)}`, { token, signal })
+    return data.count
+}
+
+export async function rollbackAudit(token: string, auditId: string): Promise<{ ok: boolean }> {
+    return apiGet(`/admin/audit/${encodeURIComponent(auditId)}/rollback`, { token, method: 'POST' })
+}
+
+export interface AdminMapRow {
+    name: string
+    active: boolean
+    difficulty: number | null
+    tags: string | null
+    url: string | null
+    changelog: string | null
+    author_str: string | null
+    author_ref: string | null
+    author_alias: string | null
+    superseded_by: string | null
+    preceded_by: string | null
+    added: string | null
+}
+
+export type AdminMapSort = 'name' | 'difficulty' | 'active' | 'added'
+
+export interface AdminMapsParams {
+    search?: string
+    author?: string
+    difficulty?: number
+    tag?: string
+    active?: boolean
+    sort?: AdminMapSort
+    order?: 'asc' | 'desc'
+    limit?: number
+    offset?: number
+}
+
+function mapsQuery(params: AdminMapsParams): string {
+    const qs = new URLSearchParams()
+    if (params.search) qs.set('search', params.search)
+    if (params.author) qs.set('author', params.author)
+    if (params.difficulty != null) qs.set('difficulty', String(params.difficulty))
+    if (params.tag) qs.set('tag', params.tag)
+    if (params.active != null) qs.set('active', params.active ? 'true' : 'false')
+    if (params.sort) qs.set('sort', params.sort)
+    if (params.order) qs.set('order', params.order)
+    if (params.limit != null) qs.set('limit', String(params.limit))
+    if (params.offset != null) qs.set('offset', String(params.offset))
+    return qs.toString()
+}
+
+export async function fetchAdminMaps(token: string, params: AdminMapsParams = {}, signal?: AbortSignal): Promise<AdminMapRow[]> {
+    const data = await apiGet<{ items: AdminMapRow[] }>(`/admin/maps?${mapsQuery(params)}`, { token, signal })
+    return data.items
+}
+
+export async function fetchAdminMapsCount(token: string, params: AdminMapsParams = {}, signal?: AbortSignal): Promise<number> {
+    const data = await apiGet<{ count: number }>(`/admin/maps/count?${mapsQuery(params)}`, { token, signal })
+    return data.count
+}
+
+export async function fetchAdminMapTags(token: string, signal?: AbortSignal): Promise<string[]> {
+    const data = await apiGet<{ items: string[] }>('/admin/maps/tags', { token, signal })
+    return data.items
+}
+
+export interface MapvoteStatus {
+    announcement: string
+    last_regenerated_at: string | null
+    cooldown_seconds_remaining: number
+    can_regenerate: boolean
+}
+
+export async function fetchMapvoteStatus(token: string, signal?: AbortSignal): Promise<MapvoteStatus> {
+    return apiGet<MapvoteStatus>('/admin/mapvote', { token, signal })
+}
+
+export async function setMapvoteAnnouncement(token: string, announcement: string): Promise<{ ok: boolean }> {
+    return apiGet('/admin/mapvote/announcement', { token, method: 'POST', body: { announcement } })
+}
+
+export async function regenerateMapvote(token: string, announcement?: string): Promise<{ ok: boolean; last_regenerated_at: string | null }> {
+    return apiGet('/admin/mapvote/regenerate', { token, method: 'POST', body: announcement != null ? { announcement } : {} })
+}
+
+export interface AcPlayer {
+    id: string
+    alias: string | null
+    active_title: AdminActiveTitle | null
+}
+
+export type AcSharedType = 'all' | 'hwid' | 'ip'
+
+export interface AcSharedGroup {
+    type: 'hwid' | 'ip'
+    value: string
+    player_count: number
+    cap_count: number
+    first_seen: string | null
+    last_seen: string | null
+    players: AcPlayer[]
+}
+
+export async function fetchAcShared(token: string, params: { type?: AcSharedType; limit?: number; offset?: number } = {}, signal?: AbortSignal): Promise<AcSharedGroup[]> {
+    const qs = new URLSearchParams()
+    if (params.type && params.type !== 'all') qs.set('type', params.type)
+    if (params.limit != null) qs.set('limit', String(params.limit))
+    if (params.offset != null) qs.set('offset', String(params.offset))
+    const data = await apiGet<{ items: AcSharedGroup[] }>(`/admin/anti-cheat/shared?${qs.toString()}`, { token, signal })
+    return data.items
+}
+
+export async function fetchAcSharedCount(token: string, params: { type?: AcSharedType } = {}, signal?: AbortSignal): Promise<number> {
+    const qs = new URLSearchParams()
+    if (params.type && params.type !== 'all') qs.set('type', params.type)
+    const data = await apiGet<{ count: number }>(`/admin/anti-cheat/shared/count?${qs.toString()}`, { token, signal })
+    return data.count
+}
+
+export interface AcCapDeltaRow {
+    cap_id: string
+    user: string
+    alias: string | null
+    active_title: AdminActiveTitle | null
+    map: string
+    cap_time_seconds: number | null
+    client_cap_delta: number | null
+    verified: boolean
+    ip: string | null
+    hwid: string | null
+    btpog_id: string | null
+    added: string | null
+}
+
+export type AcView = 'flagged' | 'allowed' | 'denied'
+
+export interface AcCapDeltaParams {
+    minDelta?: number
+    sort?: 'risk' | 'added'
+    view?: AcView
+    limit?: number
+    offset?: number
+}
+
+function acCapDeltaQuery(params: AcCapDeltaParams): string {
+    const qs = new URLSearchParams()
+    if (params.minDelta != null) qs.set('min_delta', String(params.minDelta))
+    if (params.sort) qs.set('sort', params.sort)
+    if (params.view) qs.set('view', params.view)
+    if (params.limit != null) qs.set('limit', String(params.limit))
+    if (params.offset != null) qs.set('offset', String(params.offset))
+    return qs.toString()
+}
+
+export async function fetchAcCapDelta(token: string, params: AcCapDeltaParams = {}, signal?: AbortSignal): Promise<AcCapDeltaRow[]> {
+    const data = await apiGet<{ items: AcCapDeltaRow[] }>(`/admin/anti-cheat/cap-delta?${acCapDeltaQuery(params)}`, { token, signal })
+    return data.items
+}
+
+export async function fetchAcCapDeltaCount(token: string, params: AcCapDeltaParams = {}, signal?: AbortSignal): Promise<number> {
+    const data = await apiGet<{ count: number }>(`/admin/anti-cheat/cap-delta/count?${acCapDeltaQuery(params)}`, { token, signal })
+    return data.count
+}
+
+export interface AcLowFpsWrRow {
+    cap_id: string
+    user: string
+    alias: string | null
+    active_title: AdminActiveTitle | null
+    map: string
+    cap_time_seconds: number | null
+    fps_1pc: number | null
+    fps_5pc: number | null
+    fps_25pc: number | null
+    fps_50pc: number | null
+    set_fps_min: number | null
+    set_fps_max: number | null
+    netspeed_min: number | null
+    netspeed_max: number | null
+    spawn_count: number | null
+    baseline_fps: number | null
+    tier: 'critical' | 'high' | 'medium' | 'low'
+    flags: string[]
+    added: string | null
+}
+
+export interface AcLowFpsWrParams {
+    view?: AcView
+    limit?: number
+    offset?: number
+}
+
+function acLowFpsWrQuery(params: AcLowFpsWrParams): string {
+    const qs = new URLSearchParams()
+    if (params.view) qs.set('view', params.view)
+    if (params.limit != null) qs.set('limit', String(params.limit))
+    if (params.offset != null) qs.set('offset', String(params.offset))
+    return qs.toString()
+}
+
+export async function fetchAcLowFpsWr(token: string, params: AcLowFpsWrParams = {}, signal?: AbortSignal): Promise<AcLowFpsWrRow[]> {
+    const data = await apiGet<{ items: AcLowFpsWrRow[] }>(`/admin/anti-cheat/low-fps-wr?${acLowFpsWrQuery(params)}`, { token, signal })
+    return data.items
+}
+
+export async function fetchAcLowFpsWrCount(token: string, params: AcLowFpsWrParams = {}, signal?: AbortSignal): Promise<number> {
+    const data = await apiGet<{ count: number }>(`/admin/anti-cheat/low-fps-wr/count?${acLowFpsWrQuery(params)}`, { token, signal })
+    return data.count
+}
+
+export async function allowCap(token: string, capId: string, reason?: string): Promise<{ ok: boolean }> {
+    return apiGet(`/admin/anti-cheat/cap/${encodeURIComponent(capId)}/allow`, { token, method: 'POST', body: { reason } })
+}
+
+export async function unallowCap(token: string, capId: string, reason?: string): Promise<{ ok: boolean }> {
+    return apiGet(`/admin/anti-cheat/cap/${encodeURIComponent(capId)}/unallow`, { token, method: 'POST', body: { reason } })
+}
+
+export async function bulkAllowCaps(token: string, capIds: string[], reason?: string): Promise<BulkCapResult> {
+    return apiGet('/admin/anti-cheat/caps/bulk-allow', { token, method: 'POST', body: { cap_ids: capIds, reason } })
+}
+
+export interface AcIdentifierCap {
+    cap_id: string
+    user: string
+    alias: string | null
+    active_title: AdminActiveTitle | null
+    map: string
+    cap_time_seconds: number | null
+    verified: boolean
+    disallowed: boolean
+    added: string | null
+}
+
+export interface AcIdentifierDetail {
+    summary: { cap_count: number; map_count: number; player_count: number }
+    total: number
+    items: AcIdentifierCap[]
+}
+
+export async function fetchAcIdentifier(token: string, params: { type: 'hwid' | 'ip'; value: string; limit?: number; offset?: number }, signal?: AbortSignal): Promise<AcIdentifierDetail> {
+    const qs = new URLSearchParams()
+    qs.set('type', params.type)
+    qs.set('value', params.value)
+    if (params.limit != null) qs.set('limit', String(params.limit))
+    if (params.offset != null) qs.set('offset', String(params.offset))
+    return apiGet<AcIdentifierDetail>(`/admin/anti-cheat/identifier?${qs.toString()}`, { token, signal })
+}
+
+export interface AcCapStats {
+    cap_id: string
+    user: string
+    alias: string | null
+    active_title: AdminActiveTitle | null
+    map: string
+    cap_time_seconds: number | null
+    client_cap_delta: number | null
+    verified: boolean
+    disallowed: boolean
+    added: string | null
+    fps_1pc: number | null
+    fps_5pc: number | null
+    fps_25pc: number | null
+    fps_50pc: number | null
+    set_fps_min: number | null
+    set_fps_max: number | null
+    ping_1pc: number | null
+    ping_5pc: number | null
+    ping_25pc: number | null
+    ping_50pc: number | null
+    spawn_count: number | null
+    team: number | null
+    netspeed_min: number | null
+    netspeed_max: number | null
+    ip: string | null
+    hwid: string | null
+    btpog_id: string | null
+}
+
+export async function fetchAcCapStats(token: string, capId: string, signal?: AbortSignal): Promise<AcCapStats> {
+    return apiGet<AcCapStats>(`/admin/anti-cheat/cap/${encodeURIComponent(capId)}`, { token, signal })
+}
+
+export type AcPopulationVerdict = 'typical' | 'below_map_normal' | 'well_below_map_normal' | 'above_map_normal' | 'insufficient_data'
+
+export interface AcMetricCmp {
+    value: number | null
+    n: number
+    sufficient: boolean
+    p10: number | null
+    p50: number | null
+    p90: number | null
+    min: number | null
+    max: number | null
+    percentile_rank: number | null
+    verdict: AcPopulationVerdict
+}
+
+export interface AcMapComparison {
+    cap_id: string
+    map: string
+    population: { n_total: number; sufficient: boolean }
+    metrics: {
+        fps_1pc: AcMetricCmp | null
+        fps_5pc: AcMetricCmp | null
+        fps_25pc: AcMetricCmp | null
+        fps_50pc: AcMetricCmp | null
+    }
+}
+
+export async function fetchAcCapMapComparison(token: string, capId: string, signal?: AbortSignal): Promise<AcMapComparison> {
+    return apiGet<AcMapComparison>(`/admin/anti-cheat/cap/${encodeURIComponent(capId)}/map-comparison`, { token, signal })
+}
+
+export interface CreateMapInput {
+    name: string
+    difficulty: number
+    active: boolean
+    author_str?: string | null
+    author_ref?: string | number | null
+    tags?: string
+    url?: string
+    changelog?: string
+    preceded_by?: string
+    transfer_records?: boolean
+}
+
+export async function createMap(token: string, input: CreateMapInput): Promise<{ ok: boolean }> {
+    return apiGet('/admin/maps', { token, method: 'POST', body: input })
+}
+
+export interface UpdateMapInput {
+    active?: boolean
+    difficulty?: number
+    tags?: string | null
+    author_str?: string | null
+    author_ref?: string | number | null
+}
+
+export async function updateMap(token: string, name: string, input: UpdateMapInput): Promise<{ ok: boolean }> {
+    return apiGet(`/admin/maps/${encodeURIComponent(name)}`, { token, method: 'PATCH', body: input })
+}
+
+export type PatchChannel = 'stable' | 'rc'
+
+export interface AdminPatch {
+    id: string
+    channel: string
+    tag: string
+    asset_name: string
+    asset_url: string
+    sha256: string
+    exe_md5: string
+    release_notes_url: string
+    active: boolean
+    added: string | null
+}
+
+export async function fetchAdminPatches(token: string, signal?: AbortSignal): Promise<AdminPatch[]> {
+    const data = await apiGet<{ items: AdminPatch[] }>('/admin/patches', { token, signal })
+    return data.items
+}
+
+export interface CreatePatchInput {
+    channel: PatchChannel
+    tag: string
+    asset_name: string
+    asset_url: string
+    sha256: string
+    exe_md5: string
+    release_notes_url: string
+    active?: boolean
+}
+
+export async function createPatch(token: string, input: CreatePatchInput): Promise<{ ok: boolean; id: string }> {
+    return apiGet('/admin/patches', { token, method: 'POST', body: input })
+}
+
+export type UpdatePatchInput = Partial<CreatePatchInput>
+
+export async function updatePatch(token: string, id: string, input: UpdatePatchInput): Promise<{ ok: boolean }> {
+    return apiGet(`/admin/patches/${encodeURIComponent(id)}`, { token, method: 'PATCH', body: input })
+}
+
+export async function setPatchActive(token: string, id: string, active: boolean): Promise<{ ok: boolean }> {
+    return apiGet(`/admin/patches/${encodeURIComponent(id)}/${active ? 'activate' : 'deactivate'}`, { token, method: 'POST' })
+}
+
+export async function deletePatch(token: string, id: string): Promise<{ ok: boolean }> {
+    return apiGet(`/admin/patches/${encodeURIComponent(id)}`, { token, method: 'DELETE' })
+}
+
+export interface DerivedPatch {
+    asset_url: string
+    asset_name: string
+    sha256: string
+    exe_md5: string
+    release_notes_url: string
+    tag: string
+}
+
+export async function derivePatch(token: string, assetUrl: string, signal?: AbortSignal): Promise<DerivedPatch> {
+    return apiGet('/admin/patches/derive', { token, method: 'POST', body: { asset_url: assetUrl }, signal, timeoutMs: 120_000 })
+}
+
 export async function logLauncherStartup(accessToken: string): Promise<void> {
     try {
         const version = await window.conveyor.app.version()

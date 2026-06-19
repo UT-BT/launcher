@@ -53,6 +53,7 @@ import {
 import { MapDetailPage } from '@/app/components/pages/MapDetailPage'
 import { PlayerDetailPage } from '@/app/components/pages/PlayerDetailPage'
 import { CapDetailPage } from '@/app/components/pages/CapDetailPage'
+import { AdminPage, DEFAULT_ADMIN_STATE, type AdminPageState } from '@/app/components/pages/admin/AdminPage'
 import { InstallationBanner } from '@/app/components/InstallationBanner'
 import { UpdateBanner } from '@/app/components/updater/UpdateBanner'
 import { FavoritesSyncModal } from '@/app/components/shared/FavoritesSyncModal'
@@ -61,6 +62,7 @@ import type { ServerPreset } from '@/app/utils/server-utils'
 import { useFavorites } from '@/app/hooks/useFavorites'
 import { loadPatreonMembers } from '@/app/utils/patreon'
 import { fetchAchievementDefinitions, fetchMyAchievements } from '@/app/utils/api'
+import { isStaff } from '@/app/utils/roles'
 
 
 const MAPS_STATE_STORAGE_KEY = 'utbt:mapsPageState:v1'
@@ -69,6 +71,7 @@ const PLAYERS_STATE_STORAGE_KEY = 'utbt:playersState:v1'
 const CAP_IT_ALL_STATE_STORAGE_KEY = 'utbt:capItAllState:v1'
 const WORLD_RECORDS_STATE_STORAGE_KEY = 'utbt:worldRecordsState:v1'
 const ACHIEVEMENTS_STATE_STORAGE_KEY = 'utbt:achievementsState:v1'
+const ADMIN_STATE_STORAGE_KEY = 'utbt:adminState:v1'
 const SERVER_PRESETS_STORAGE_KEY = 'utbt:serverPresets:v1'
 const SERVER_FAVORITES_STORAGE_KEY = 'utbt:serverFavorites:v2'
 
@@ -80,6 +83,7 @@ const PLAYERS_PREF_KEYS: readonly (keyof PlayersPageState)[] = ['columnVisibilit
 const CAP_IT_ALL_PREF_KEYS: readonly (keyof CapItAllPageState)[] = ['pageSizePreference']
 const WORLD_RECORDS_PREF_KEYS: readonly (keyof WorldRecordsPageState)[] = ['columnVisibility', 'columnOrder', 'pageSizePreference', 'filtersPanelOpen']
 const ACHIEVEMENTS_PREF_KEYS: readonly (keyof AchievementsPageState)[] = []
+const ADMIN_PREF_KEYS: readonly (keyof AdminPageState)[] = ['activeSection']
 
 function pickKeys<T extends object>(o: T, keys: readonly (keyof T)[]): Partial<T> {
   const r: Partial<T> = {}
@@ -267,6 +271,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
   const [capItAllState, setCapItAllState] = usePageState(CAP_IT_ALL_STATE_STORAGE_KEY, DEFAULT_CAP_IT_ALL_STATE, CAP_IT_ALL_PREF_KEYS, getEntryState, updateEntryState)
   const [worldRecordsState, setWorldRecordsState] = usePageState(WORLD_RECORDS_STATE_STORAGE_KEY, DEFAULT_WORLD_RECORDS_STATE, WORLD_RECORDS_PREF_KEYS, getEntryState, updateEntryState)
   const [achievementsState, setAchievementsState] = usePageState(ACHIEVEMENTS_STATE_STORAGE_KEY, DEFAULT_ACHIEVEMENTS_STATE, ACHIEVEMENTS_PREF_KEYS, getEntryState, updateEntryState)
+  const [adminState, setAdminState] = usePageState(ADMIN_STATE_STORAGE_KEY, DEFAULT_ADMIN_STATE, ADMIN_PREF_KEYS, getEntryState, updateEntryState)
 
   useEffect(() => {
     const onOpenPlayer = (e: Event) => {
@@ -454,6 +459,14 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
           onStateChange={setAchievementsState}
           caches={achievementsCaches}
           onCachesChange={setAchievementsCaches}
+        />
+      case 'admin':
+        return <AdminPage
+          state={adminState}
+          onStateChange={setAdminState}
+          userProfile={userProfile}
+          forceDenied={!isStaff(userProfile)}
+          onMapSelect={openMap}
         />
       case 'maps-detail':
         return <MapDetailPage

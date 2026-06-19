@@ -1,5 +1,5 @@
-import { ReactNode, useEffect, useState } from 'react'
-import { Home, Server, Map as MapIcon, Trophy, Settings, LogOut, Play, User, Users, Flag, Award } from 'lucide-react'
+import { ReactNode, useEffect, useMemo, useState } from 'react'
+import { Home, Server, Map as MapIcon, Trophy, Settings, LogOut, Play, User, Users, Flag, Award, ShieldAlert } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import logo from '@/app/assets/logo.png'
 import {
@@ -26,7 +26,7 @@ interface NavSection {
     items: NavItem[]
 }
 
-const navSections: NavSection[] = [
+const BASE_NAV_SECTIONS: NavSection[] = [
     {
         title: 'Main',
         items: [
@@ -55,6 +55,15 @@ import { UserProfile, getAvatarUrl } from '@/app/utils/api'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import { usePatreonTier } from '@/app/utils/patreon'
 import { PatreonBadge } from '@/app/components/shared/PatreonBadge'
+import { isStaff } from '@/app/utils/roles'
+
+function buildNavSections(userProfile?: UserProfile): NavSection[] {
+    if (!isStaff(userProfile)) return BASE_NAV_SECTIONS
+    return [
+        ...BASE_NAV_SECTIONS,
+        { title: 'Staff', items: [{ id: 'admin', label: 'Admin', icon: ShieldAlert }] },
+    ]
+}
 
 interface AppLayoutProps {
     children: ReactNode
@@ -99,6 +108,7 @@ export function AppLayout({ children, currentView, onViewChange, userProfile, in
     const [settingsInitialSection, setSettingsInitialSection] = useState<string | undefined>(undefined)
     const { containerStyle, titleStyle, containerClass, titleClass } = getRarityStyles(userProfile?.active_title)
     const patreonTier = usePatreonTier(userProfile?.id ?? undefined)
+    const navSections = useMemo(() => buildNavSections(userProfile), [userProfile])
 
     useEffect(() => {
         const saved = localStorage.getItem('ui-scale')

@@ -27,6 +27,13 @@
   --accent: hsl(217 22% 14.9%);
   --border: hsl(217 22% 14.9%);
   --input: hsl(217 22% 14.9%);
+
+  --chart-emerald: #10b981;
+  --chart-violet: #8b5cf6;
+  --chart-cyan: #06b6d4;
+  --chart-amber: #f59e0b;
+  --chart-pink: #ec4899;
+  --chart-teal: #14b8a6;
 }
 
 :root[data-theme='red'] {
@@ -264,6 +271,13 @@
   --color-purple-400: oklch(0.496 0.265 301.924);
   --color-orange-300: oklch(0.553 0.195 38.402);
   --color-green-400: oklch(0.527 0.154 150.069);
+
+  --chart-emerald: #059669;
+  --chart-violet: #7c3aed;
+  --chart-cyan: #0891b2;
+  --chart-amber: #d97706;
+  --chart-pink: #db2777;
+  --chart-teal: #0d9488;
 }
 
 :root[data-theme='light'] select {

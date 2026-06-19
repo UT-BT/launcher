@@ -10,7 +10,7 @@ not_here:
   - "where page state / persistence lives → state-patterns.md"
   - "the PlayerInfo / CapTimeLink components that trigger nav → shared-components.md"
 sections: [the-model, navigate-is-the-only-entry-point, page-views-vs-detail-pages, the-sidebar-registry, event-driven-navigation, per-entry-state]
-last_verified: 2026-06-16
+last_verified: 2026-06-19
 verify_against:
   - app/components/main/Main.tsx
   - app/components/layout/AppLayout.tsx
@@ -72,7 +72,7 @@ parallel back stack. Sidebar clicks, `openMap`, and the `open-*` events all call
 
 | Kind | Views | Keyed? | Why |
 |---|---|---|---|
-| **Page-views** | `home`, `servers`, `maps`, `players`, `cap-it-all`, `world-records`, `achievements` | **No** — one reused instance | State is hoisted per-entry via `usePageState`; the component stays mounted and reads the active entry. |
+| **Page-views** | `home`, `servers`, `maps`, `players`, `cap-it-all`, `world-records`, `achievements`, `admin` | **No** — one reused instance | State is hoisted per-entry via `usePageState`; the component stays mounted and reads the active entry. |
 | **Detail-pages** | `maps-detail`, `player-detail`, `cap-detail` | **Yes — `key={entry.id}`** | A new visit must remount so it refetches for the new param and `useNavState` re-reads the right entry's bag. |
 
 Detail cases pull their identifier from `entry.params` (`mapName!` / `playerId!` /
@@ -81,21 +81,34 @@ the previous visit's data and UI state.
 
 ## The sidebar registry
 
-The left rail is data, not markup — `navSections` in
-`app/components/layout/AppLayout.tsx`:
+The left rail is data, not markup. The base groups are a const, but the rendered
+list is **computed from `userProfile`** via `buildNavSections` in
+`app/components/layout/AppLayout.tsx` (so role-gated groups can be appended):
 
 ```ts
-const navSections: NavSection[] = [
+const BASE_NAV_SECTIONS: NavSection[] = [
   { title: 'Main', items: [{ id: 'home', label: 'Home', icon: Home }, /* … */] },
   { title: 'UTBT.net', items: [{ id: 'maps', /* … */ }] },
   // …
 ]
+
+function buildNavSections(userProfile?: UserProfile): NavSection[] {
+  if (!isStaff(userProfile)) return BASE_NAV_SECTIONS
+  return [...BASE_NAV_SECTIONS, { title: 'Staff', items: [{ id: 'admin', label: 'Admin', icon: ShieldAlert }] }]
+}
+// in the component: const navSections = useMemo(() => buildNavSections(userProfile), [userProfile])
 ```
 
 Each `item.id` must match a `renderView` case; clicking calls
 `onViewChange(item.id)` which is `navigate`. To add a sidebar page: add the
 `renderView` case **and** a `navSections` item. (Settings is **not** a view — it's
 a modal opened from the user dropdown / the `open-settings` window event.)
+
+**Gated pages** (e.g. `admin`): hide the nav item (`buildNavSections` only appends
+the Staff group when `isStaff(userProfile)`, helpers in `app/utils/roles.ts`) **and**
+guard the `renderView` case — `admin` passes `forceDenied={!isStaff(userProfile)}` so
+a forced view renders a denied card instead of the page. The `admin` page is itself a
+section hub; see `app/components/pages/admin/registry.tsx`.
 
 ## Event-driven navigation
 

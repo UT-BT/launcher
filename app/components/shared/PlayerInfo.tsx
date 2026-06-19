@@ -97,7 +97,7 @@ export function PlayerInfo({
     const wrapperClass = cn(
         layout === 'vertical' ? 'flex flex-col items-center gap-1.5' : 'flex items-center gap-2.5',
         'min-w-0',
-        isClickable && 'cursor-pointer hover:opacity-80 transition-opacity',
+        isClickable && 'w-fit max-w-full cursor-pointer hover:opacity-80 transition-opacity',
         className,
     )
 
