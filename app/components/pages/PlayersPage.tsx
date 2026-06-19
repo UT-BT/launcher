@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useRefreshCooldown } from '@/app/hooks/useRefreshCooldown'
+import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
 import { useAutoPageSize } from '@/app/hooks/useAutoPageSize'
-import { Search, RefreshCw, X, HelpCircle, ShieldAlert } from 'lucide-react'
+import { Search, X, HelpCircle, ShieldAlert } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/app/components/ui/button'
 import { Modal } from '@/app/components/ui/modal'
@@ -375,6 +376,13 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
         })
     }
 
+    useRegisterPageRefresh({
+        onRefresh: refresh,
+        refreshing: pageLoading,
+        disabled: !refreshCooldown.canRefresh,
+        tooltip: refreshCooldown.canRefresh ? 'Refresh Data' : `Wait ${refreshCooldown.remainingSeconds}s`,
+    })
+
     const visibleColumns = useMemo(
         () => state.columnOrder.filter(id => state.columnVisibility[id] || REQUIRED_COLUMNS.has(id)),
         [state.columnOrder, state.columnVisibility],
@@ -517,16 +525,6 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
                             className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-hairline/5 transition-colors cursor-pointer"
                         >
                             <HelpCircle className="size-4" />
-                        </button>
-                    </Tooltip>
-                    <Tooltip content={refreshCooldown.canRefresh ? 'Refresh Data' : `Wait ${refreshCooldown.remainingSeconds}s`} side="bottom">
-                        <button
-                            type="button"
-                            onClick={refresh}
-                            disabled={pageLoading || !refreshCooldown.canRefresh}
-                            className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-hairline/5 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            <RefreshCw className={cn('size-4', pageLoading && 'animate-spin')} />
                         </button>
                     </Tooltip>
                 </div>

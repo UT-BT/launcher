@@ -43,6 +43,7 @@ full loop).
 | Demos | `fetchDemoStatus`, `getFirstPersonVideoUrl`, `downloadDemo` |
 | Cap detail | `fetchCapDetail`, `fetchCapCheckpoints` |
 | Achievements | `fetchMyAchievements`, `fetchAchievementDefinitions` |
+| Home / summary | `fetchSummary` (homepage feed), `fetchHotMaps` (→ `GET /v2/summary/hot_maps` → `HotMap[]`), `fetchPendingReviews` |
 | Profile | `UserProfile` type, `getAvatarUrl(userId)`, `toActiveTitle` |
 | Admin (staff-only) | the moderator/admin dashboard slice — see [Admin API](#admin-api) |
 

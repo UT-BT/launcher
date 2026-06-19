@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { RefreshCw } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { Tooltip } from '@/app/components/ui/tooltip'
+import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
 import {
     fetchAchievementDefinitions,
     fetchMyAchievements,
@@ -92,6 +90,12 @@ export function AchievementsPage({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [loading])
 
+    useRegisterPageRefresh({
+        onRefresh: () => void load(),
+        refreshing: loading,
+        tooltip: 'Refresh',
+    })
+
     if (!accessToken) {
         return (
             <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
@@ -106,17 +110,6 @@ export function AchievementsPage({
                 <div>
                     <h1 className="text-2xl font-bold text-foreground leading-tight">Achievements</h1>
                 </div>
-                <Tooltip content="Refresh" side="bottom">
-                    <button
-                        type="button"
-                        onClick={() => void load()}
-                        disabled={loading}
-                        aria-label="Refresh achievements"
-                        className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-hairline/5 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-default"
-                    >
-                        <RefreshCw className={cn('size-4', loading && 'animate-spin')} />
-                    </button>
-                </Tooltip>
             </div>
 
             <div className="flex flex-wrap items-center gap-1 shrink-0">

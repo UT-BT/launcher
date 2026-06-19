@@ -1,134 +1,107 @@
-import { MessageSquarePlus, Play } from 'lucide-react'
+import { Play, Flag } from 'lucide-react'
 import {
-    DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow,
-    DataTableCell, DataTableEmpty,
+    DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow, DataTableCell,
 } from '@/app/components/shared/DataTable'
-import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
-import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
+import { MapNameCell } from '@/app/components/shared/MapNameCell'
+import { CapTimeLink, openCap } from '@/app/components/shared/CapTimeLink'
 import { IconActionButton } from '@/app/components/shared/IconActionButton'
-import { Tooltip } from '@/app/components/ui/tooltip'
-import { formatCapTime, displayMapName } from '@/app/utils/format'
-import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
 import { getMedalIcon } from '@/app/utils/medals'
-import type { Summary } from '@/app/utils/api'
+import type { Summary, ActiveTitle } from '@/app/utils/api'
 
 type Achievement = Summary['achievements'][number]
 
 interface RecentCapsCardProps {
-    achievements: Achievement[]
+    caps: Achievement[]
+    playerUserId?: string | null
+    playerAlias?: string | null
+    playerTitle?: ActiveTitle | null
     favoriteMapNames: Set<string>
     onToggleFavorite: (mapName: string) => void
     onMapSelect?: (mapName: string) => void
-    onReview?: (mapName: string) => void
-    onWatchReplay?: (achievement: Achievement) => void
-    loadingCapId?: string | null
+    onWatchReplay: (cap: Achievement) => void
+    loadingCapId: string | null
+    limit?: number
 }
 
 export function RecentCapsCard({
-    achievements, favoriteMapNames, onToggleFavorite, onMapSelect, onReview, onWatchReplay, loadingCapId,
+    caps, playerUserId, playerAlias, playerTitle, favoriteMapNames,
+    onToggleFavorite, onMapSelect, onWatchReplay, loadingCapId, limit = 5,
 }: RecentCapsCardProps) {
+    const rows = caps.slice(0, limit)
+
+    if (rows.length === 0) {
+        return (
+            <div className="bg-card/30 border border-hairline/5 rounded-xl flex flex-col items-center justify-center gap-2 py-12 text-center">
+                <Flag className="size-7 text-amber-300/70" />
+                <p className="text-sm font-semibold text-foreground/80">No recent caps yet</p>
+                <p className="text-xs text-muted-foreground">Go set a time.</p>
+            </div>
+        )
+    }
+
     return (
-        <DataTableShell className="flex-none">
+        <DataTableShell className="!flex-none">
             <DataTableHeaderRow>
-                <DataTableHeaderCell width="3.5rem"> </DataTableHeaderCell>
                 <DataTableHeaderCell>Map</DataTableHeaderCell>
-                <DataTableHeaderCell>Author</DataTableHeaderCell>
-                <DataTableHeaderCell align="right">Time</DataTableHeaderCell>
-                <DataTableHeaderCell align="right" width="6rem">When</DataTableHeaderCell>
-                <DataTableHeaderCell align="center" width="3rem"> </DataTableHeaderCell>
-                <DataTableHeaderCell align="center" width="3rem"> </DataTableHeaderCell>
+                <DataTableHeaderCell width="32%"></DataTableHeaderCell>
+                <DataTableHeaderCell width="110px" align="right">Time</DataTableHeaderCell>
+                <DataTableHeaderCell width="84px" align="right">When</DataTableHeaderCell>
+                <DataTableHeaderCell width="52px" align="center" />
             </DataTableHeaderRow>
             <tbody>
-                {achievements.length === 0 ? (
-                    <DataTableEmpty colSpan={7} message="No recent caps. Head to a server and start capping!" />
-                ) : (
-                    achievements.map(ach => {
-                        const medalIcon = getMedalIcon(ach.medal)
-                        const timeVal = Number(ach.time)
-                        const timeStr = !isNaN(timeVal) ? formatCapTime(timeVal) : String(ach.time)
-
-                        return (
-                            <DataTableRow
-                                key={ach.id}
-                                onClick={onMapSelect ? () => onMapSelect(ach.mapName) : undefined}
-                                className={onMapSelect ? 'cursor-pointer' : undefined}
-                            >
-                                <DataTableCell>
-                                    <MapThumbnail mapName={ach.mapName} className="w-12 h-12" />
-                                </DataTableCell>
-                                <DataTableCell>
-                                    <div className="flex items-center gap-2">
-                                        <FavoriteStar
-                                            name={ach.mapName}
-                                            isFavorited={favoriteMapNames.has(ach.mapName)}
-                                            onToggle={onToggleFavorite}
-                                            size="sm"
-                                            className="shrink-0"
-                                        />
-                                        <span className="font-bold text-foreground/90 truncate">
-                                            {displayMapName(ach.mapName)}
-                                        </span>
-                                    </div>
-                                </DataTableCell>
-                                <DataTableCell>
-                                    <PlayerInfo alias={ach.author} size="sm" />
-                                </DataTableCell>
-                                <DataTableCell align="right">
-                                    <div className="flex items-center justify-end gap-2">
-                                        {medalIcon && (
-                                            <Tooltip content={ach.medal} side="top">
-                                                <img
-                                                    src={medalIcon}
-                                                    alt={ach.medal}
-                                                    className="size-4 object-contain shrink-0 max-w-none"
-                                                />
-                                            </Tooltip>
-                                        )}
-                                        {!isNaN(timeVal) ? (
-                                            <CapTimeLink
-                                                capId={ach.id}
-                                                seconds={timeVal}
-                                                className="font-mono font-black text-foreground/90 tracking-tight"
-                                            />
-                                        ) : (
-                                            <span className="font-mono font-black text-foreground/90 tracking-tight">
-                                                {timeStr}
-                                            </span>
-                                        )}
-                                    </div>
-                                </DataTableCell>
-                                <DataTableCell align="right">
-                                    <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">
-                                        {ach.timeAgo}
-                                    </span>
-                                </DataTableCell>
-                                <DataTableCell align="center" className="px-2">
-                                    {onWatchReplay && ach.verified && (
-                                        <IconActionButton
-                                            variant="replay"
-                                            icon={Play}
-                                            iconFill
-                                            tooltip="Watch run"
-                                            loading={loadingCapId === ach.id}
-                                            onClick={() => onWatchReplay(ach)}
-                                        />
-                                    )}
-                                </DataTableCell>
-                                <DataTableCell align="center" className="px-2">
-                                    {onReview && (
-                                        <IconActionButton
-                                            variant="review"
-                                            icon={MessageSquarePlus}
-                                            tooltip="Review this map"
-                                            onClick={() => onReview(ach.mapName)}
-                                        />
-                                    )}
-                                </DataTableCell>
-                            </DataTableRow>
-                        )
-                    })
-                )}
+                {rows.map(cap => {
+                    const medalIcon = getMedalIcon(cap.medal)
+                    return (
+                        <DataTableRow
+                            key={cap.id}
+                            className="cursor-pointer"
+                            onClick={() => openCap(cap.id)}
+                        >
+                            <DataTableCell>
+                                <MapNameCell
+                                    mapName={cap.mapName}
+                                    favorited={favoriteMapNames.has(cap.mapName)}
+                                    onToggleFavorite={onToggleFavorite}
+                                    onMapSelect={onMapSelect}
+                                />
+                            </DataTableCell>
+                            <DataTableCell>
+                                <PlayerInfo
+                                    userId={playerUserId ?? undefined}
+                                    alias={playerAlias}
+                                    title={playerTitle ?? null}
+                                    size="sm"
+                                />
+                            </DataTableCell>
+                            <DataTableCell align="right">
+                                <div className="flex items-center justify-end gap-1.5">
+                                    {medalIcon && <img src={medalIcon} alt={cap.medal} className="size-3.5 shrink-0" />}
+                                    <CapTimeLink
+                                        capId={cap.id}
+                                        seconds={cap.time}
+                                        className="font-mono tabular-nums font-bold text-amber-300"
+                                    />
+                                </div>
+                            </DataTableCell>
+                            <DataTableCell align="right">
+                                <span className="text-xs text-muted-foreground tabular-nums">{cap.timeAgo}</span>
+                            </DataTableCell>
+                            <DataTableCell align="center">
+                                {cap.verified && (
+                                    <IconActionButton
+                                        variant="replay"
+                                        icon={Play}
+                                        iconFill
+                                        tooltip="Watch replay"
+                                        loading={loadingCapId === cap.id}
+                                        onClick={() => onWatchReplay(cap)}
+                                    />
+                                )}
+                            </DataTableCell>
+                        </DataTableRow>
+                    )
+                })}
             </tbody>
         </DataTableShell>
     )

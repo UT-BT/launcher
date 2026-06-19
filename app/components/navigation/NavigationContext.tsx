@@ -4,6 +4,7 @@ export interface NavParams {
     mapName?: string
     playerId?: string | number
     capId?: string
+    mapsNewOnly?: boolean
 }
 
 export interface NavEntry {
@@ -37,4 +38,5 @@ export function paramsEqual(a: NavParams, b: NavParams): boolean {
     return a.mapName === b.mapName
         && String(a.playerId ?? '') === String(b.playerId ?? '')
         && a.capId === b.capId
+        && !!a.mapsNewOnly === !!b.mapsNewOnly
 }

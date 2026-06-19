@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo, useRef, useCallback, Fragment } from 'react'
 import { useRefreshCooldown } from '@/app/hooks/useRefreshCooldown'
+import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
 import { useAutoPageSize } from '@/app/hooks/useAutoPageSize'
+import { useNewItemHighlight } from '@/app/hooks/useNewItemHighlight'
 import { Search, RefreshCw, SlidersHorizontal, X, ArrowLeft, HelpCircle, Share2, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/app/components/ui/button'
@@ -353,6 +355,7 @@ interface MapsPageProps {
     onMapSelect: (mapName: string) => void
     favoriteMapNames: Set<string>
     onToggleFavorite: (mapName: string) => void
+    initialNewOnly?: boolean
 }
 
 
@@ -611,7 +614,7 @@ function ratingScale100(avg: number | undefined): number | undefined {
 
 export function MapsPage({
     userProfile, state, onStateChange, caches, onCachesChange, onMapSelect,
-    favoriteMapNames, onToggleFavorite,
+    favoriteMapNames, onToggleFavorite, initialNewOnly,
 }: MapsPageProps) {
     const autoPageSize = useAutoPageSize(computePageSize)
     const pageSize = state.pageSizePreference === 'auto' ? autoPageSize : state.pageSizePreference
@@ -686,6 +689,17 @@ export function MapsPage({
     const firstRowMyRatingRef = useRef<HTMLButtonElement | null>(null)
     const firstRowNameRef = useRef<HTMLButtonElement | null>(null)
     const firstRowPbRef = useRef<HTMLElement | null>(null)
+
+    const highlight = useNewItemHighlight('maps', () =>
+        onStateChange(prev => ({ ...prev, sortBy: 'added', sortDir: 'desc', currentPage: 1 })),
+    )
+
+    const newOnlySeededRef = useRef(false)
+    useEffect(() => {
+        if (!initialNewOnly || newOnlySeededRef.current) return
+        newOnlySeededRef.current = true
+        onStateChange(prev => prev.newOnly ? prev : { ...prev, newOnly: true, currentPage: 1 })
+    }, [initialNewOnly, onStateChange])
 
     const startTutorial = useCallback(() => {
         setTutorialStep(0)
@@ -1357,6 +1371,15 @@ export function MapsPage({
         })
     }
 
+    useRegisterPageRefresh({
+        onRefresh: refresh,
+        refreshing: loading || pageLoading,
+        disabled: !refreshCooldown.canRefresh,
+        tooltip: refreshCooldown.canRefresh ? 'Refresh Data' : `Wait ${refreshCooldown.remainingSeconds}s`,
+    })
+
+    const firstHotIdx = pageItems.findIndex(m => highlight.isNew(m.added))
+
     const directionFor = (field: SortField) => state.sortBy === field ? state.sortDir : null
 
     const activeFilterCount = [
@@ -1552,6 +1575,7 @@ export function MapsPage({
         wrHolder: WRHolder | undefined
         medalTier: MedalTier
         isFirstRow: boolean
+        hotRef?: (el: HTMLTableCellElement | null) => void
     }
 
     const renderColumnCell = (id: ColumnId, ctx: RowCtx): React.ReactNode => {
@@ -1567,7 +1591,7 @@ export function MapsPage({
                 )
             case 'name': {
                 return (
-                    <DataTableCell key={id}>
+                    <DataTableCell key={id} ref={ctx.hotRef}>
                         <div className="flex items-center gap-3 min-w-0">
                             <div className="flex items-center gap-1 min-w-0">
                                 <span ref={isFirstRow ? firstRowFavRef : undefined} className="inline-flex shrink-0">
@@ -1907,16 +1931,6 @@ export function MapsPage({
                             className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-hairline/5 transition-colors cursor-pointer"
                         >
                             <HelpCircle className="size-4" />
-                        </button>
-                    </Tooltip>
-                    <Tooltip content={refreshCooldown.canRefresh ? 'Refresh Data' : `Wait ${refreshCooldown.remainingSeconds}s`} side="bottom">
-                        <button
-                            type="button"
-                            onClick={refresh}
-                            disabled={loading || pageLoading || !refreshCooldown.canRefresh}
-                            className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-hairline/5 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            <RefreshCw className={cn("size-4", (loading || pageLoading) && "animate-spin")} />
                         </button>
                     </Tooltip>
                 </div>
@@ -2278,14 +2292,20 @@ export function MapsPage({
                                     wrHolder = mock.wrHolder
                                 }
                                 const medalTier = computeMedalTier(bestCap, map as MapMetadata)
+                                const hot = highlight.isNew(map.added)
+                                const isFirstHot = index === firstHotIdx
                                 const ctx: RowCtx = {
                                     map, author, tags, ratings, myReview, mapNew,
                                     wr, bestCap, wrHolder, medalTier,
                                     isFirstRow: index === 0,
+                                    hotRef: isFirstHot ? highlight.registerFirstNew : undefined,
                                 }
 
                                 return (
-                                    <DataTableRow key={map.name}>
+                                    <DataTableRow
+                                        key={map.name}
+                                        className={hot ? 'bg-accent-500/[0.07] ring-1 ring-inset ring-accent-500/40' : undefined}
+                                    >
                                         {columnOrder.map(id => renderColumnCell(id, ctx))}
                                     </DataTableRow>
                                 )

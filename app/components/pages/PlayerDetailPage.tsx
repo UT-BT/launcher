@@ -1,6 +1,4 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
-import { RefreshCw } from 'lucide-react'
-import { Tooltip } from '@/app/components/ui/tooltip'
 import { useNavState } from '@/app/components/navigation/useNavState'
 import { useNavScrollRestore } from '@/app/components/navigation/useNavScrollRestore'
 import {
@@ -11,6 +9,7 @@ import {
     type UserActivityBucket,
 } from '@/app/utils/api'
 import { useRefreshCooldown } from '@/app/hooks/useRefreshCooldown'
+import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
 import { useAsync } from '@/app/hooks/useAsync'
 import { ChangeTitleModal } from '@/app/components/modals/ChangeTitleModal'
 import { HeroSection } from './playerDetail/HeroSection'
@@ -60,6 +59,13 @@ export function PlayerDetailPage({
     )
     const summary = summaryData ?? null
 
+    useRegisterPageRefresh({
+        onRefresh: () => refreshCooldown.trigger(() => setRefreshKey(k => k + 1)),
+        refreshing: loading,
+        disabled: !refreshCooldown.canRefresh,
+        tooltip: refreshCooldown.canRefresh ? 'Refresh' : `Wait ${refreshCooldown.remainingSeconds}s`,
+    })
+
     const onScroll = useNavScrollRestore(scrollRef, !loading)
 
     // Lazy-load aggregated lifetime activity once initial summary is in.
@@ -88,19 +94,6 @@ export function PlayerDetailPage({
 
     return (
         <div className="space-y-4 h-full flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-0 duration-500">
-            <div className="flex items-center justify-end gap-3 shrink-0">
-                <Tooltip content={refreshCooldown.canRefresh ? 'Refresh' : `Wait ${refreshCooldown.remainingSeconds}s`} side="top">
-                    <button
-                        type="button"
-                        onClick={() => refreshCooldown.trigger(() => setRefreshKey(k => k + 1))}
-                        disabled={loading || !refreshCooldown.canRefresh}
-                        className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-hairline/5 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
-                        aria-label="Refresh"
-                    >
-                        <RefreshCw className={`size-4 ${loading ? 'animate-spin' : ''}`} />
-                    </button>
-                </Tooltip>
-            </div>
 
             <HeroSection
                 userId={userId}
