@@ -15,10 +15,21 @@ import { IconActionButton } from '@/app/components/shared/IconActionButton'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import { ReplayVideoModal } from '@/app/components/shared/ReplayVideoModal'
 import { useReplayWatch } from '@/app/hooks/useReplayWatch'
+import { useAutoPageSize } from '@/app/hooks/useAutoPageSize'
 import { formatAddedDate, displayMapName } from '@/app/utils/format'
 import { getMedalIcon } from '@/app/utils/medals'
 
-const PAGE_SIZE = 9
+const TABLE_ROW_HEIGHT_PX = 72
+const MODAL_CHROME_PX = 290
+const AUTO_PAGE_SIZE_MIN_ROWS = 4
+const AUTO_PAGE_SIZE_MAX_ROWS = 20
+
+function computePageSize(): number {
+    if (typeof window === 'undefined') return 9
+    const modalHeight = window.innerHeight * 0.9
+    const usable = Math.max(modalHeight - MODAL_CHROME_PX, TABLE_ROW_HEIGHT_PX * AUTO_PAGE_SIZE_MIN_ROWS)
+    return Math.min(AUTO_PAGE_SIZE_MAX_ROWS, Math.max(AUTO_PAGE_SIZE_MIN_ROWS, Math.floor(usable / TABLE_ROW_HEIGHT_PX)))
+}
 
 interface HistoryModalProps {
     open: boolean
@@ -34,6 +45,7 @@ interface HistoryModalProps {
 export function HistoryModal({
     open, onOpenChange, accessToken, userAlias, favoriteMapNames, onToggleFavorite, onReview, onMapSelect,
 }: HistoryModalProps) {
+    const pageSize = useAutoPageSize(computePageSize)
     const [caps, setCaps] = useState<SummaryCap[]>([])
     const [page, setPage] = useState(1)
     const [loading, setLoading] = useState(false)
@@ -46,9 +58,9 @@ export function HistoryModal({
         setLoading(true)
         try {
             // Fetch one extra row to detect whether a next page exists.
-            const data = await fetchSummaryCaps(accessToken, PAGE_SIZE + 1, (targetPage - 1) * PAGE_SIZE)
-            setHasMore(data.length > PAGE_SIZE)
-            setCaps(data.slice(0, PAGE_SIZE))
+            const data = await fetchSummaryCaps(accessToken, pageSize + 1, (targetPage - 1) * pageSize)
+            setHasMore(data.length > pageSize)
+            setCaps(data.slice(0, pageSize))
         } catch (err) {
             console.error('Failed to load history:', err)
             setCaps([])
@@ -56,7 +68,7 @@ export function HistoryModal({
         } finally {
             setLoading(false)
         }
-    }, [accessToken])
+    }, [accessToken, pageSize])
 
     useEffect(() => {
         if (open && accessToken) load(page)
@@ -93,7 +105,7 @@ export function HistoryModal({
                         </DataTableHeaderRow>
                         <tbody>
                             {loading && caps.length === 0 ? (
-                                Array.from({ length: PAGE_SIZE }).map((_, i) => (
+                                Array.from({ length: pageSize }).map((_, i) => (
                                     <DataTableSkeletonRow key={i} columnCount={7} />
                                 ))
                             ) : caps.length === 0 ? (
