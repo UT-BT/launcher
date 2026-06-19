@@ -31,11 +31,11 @@ export function RecentCapsCard({
     return (
         <DataTableShell className="flex-none">
             <DataTableHeaderRow>
-                <DataTableHeaderCell width="3.5rem"> </DataTableHeaderCell>
-                <DataTableHeaderCell>Map</DataTableHeaderCell>
-                <DataTableHeaderCell>Author</DataTableHeaderCell>
-                <DataTableHeaderCell align="right">Time</DataTableHeaderCell>
-                <DataTableHeaderCell align="right" width="6rem">When</DataTableHeaderCell>
+                <DataTableHeaderCell width="4rem"> </DataTableHeaderCell>
+                <DataTableHeaderCell align="center">Map</DataTableHeaderCell>
+                <DataTableHeaderCell align="center" width="8rem">Author</DataTableHeaderCell>
+                <DataTableHeaderCell align="center" width="7rem">Time</DataTableHeaderCell>
+                <DataTableHeaderCell align="center" width="6rem">When</DataTableHeaderCell>
                 <DataTableHeaderCell align="center" width="3rem"> </DataTableHeaderCell>
                 <DataTableHeaderCell align="center" width="3rem"> </DataTableHeaderCell>
             </DataTableHeaderRow>
@@ -58,7 +58,7 @@ export function RecentCapsCard({
                                     <MapThumbnail mapName={ach.mapName} className="w-12 h-12" />
                                 </DataTableCell>
                                 <DataTableCell>
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center justify-left gap-2">
                                         <FavoriteStar
                                             name={ach.mapName}
                                             isFavorited={favoriteMapNames.has(ach.mapName)}
@@ -72,10 +72,10 @@ export function RecentCapsCard({
                                     </div>
                                 </DataTableCell>
                                 <DataTableCell>
-                                    <PlayerInfo alias={ach.author} size="sm" />
+                                    <PlayerInfo alias={ach.author} size="sm" className="flex items-center justify-center gap-2" />
                                 </DataTableCell>
-                                <DataTableCell align="right">
-                                    <div className="flex items-center justify-end gap-2">
+                                <DataTableCell align="center">
+                                    <div className="flex items-center justify-center gap-2">
                                         {medalIcon && (
                                             <Tooltip content={ach.medal} side="top">
                                                 <img
@@ -98,7 +98,7 @@ export function RecentCapsCard({
                                         )}
                                     </div>
                                 </DataTableCell>
-                                <DataTableCell align="right">
+                                <DataTableCell align="center">
                                     <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">
                                         {ach.timeAgo}
                                     </span>
