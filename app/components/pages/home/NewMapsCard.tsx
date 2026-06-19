@@ -22,10 +22,10 @@ export function NewMapsCard({ maps, favoriteMapNames, onToggleFavorite, onMapSel
         <DataTableShell className="flex-none">
             <DataTableHeaderRow>
                 <DataTableHeaderCell width="3.5rem"> </DataTableHeaderCell>
-                <DataTableHeaderCell>Map</DataTableHeaderCell>
-                <DataTableHeaderCell>Author</DataTableHeaderCell>
-                <DataTableHeaderCell align="left" width="6rem">Difficulty</DataTableHeaderCell>
-                <DataTableHeaderCell align="right" width="6rem">Added</DataTableHeaderCell>
+                <DataTableHeaderCell align="center">Map</DataTableHeaderCell>
+                <DataTableHeaderCell align="center" width="12rem">Author</DataTableHeaderCell>
+                <DataTableHeaderCell align="center" width="6rem">Difficulty</DataTableHeaderCell>
+                <DataTableHeaderCell align="center" width="6rem">Added</DataTableHeaderCell>
             </DataTableHeaderRow>
             <tbody>
                 {maps.length === 0 ? (
@@ -41,7 +41,7 @@ export function NewMapsCard({ maps, favoriteMapNames, onToggleFavorite, onMapSel
                                 <MapThumbnail mapName={map.name} className="w-12 h-12" />
                             </DataTableCell>
                             <DataTableCell>
-                                <div className="flex items-center gap-2 min-w-0">
+                                <div className="flex items-center justify-left gap-2 min-w-0">
                                     <FavoriteStar
                                         name={map.name}
                                         isFavorited={favoriteMapNames.has(map.name)}
@@ -55,7 +55,7 @@ export function NewMapsCard({ maps, favoriteMapNames, onToggleFavorite, onMapSel
                                 </div>
                             </DataTableCell>
                             <DataTableCell>
-                                <PlayerInfo alias={map.author} size="sm" />
+                                <PlayerInfo alias={map.author} size="sm" className="flex items-center justify-center gap-2" />
                             </DataTableCell>
                             <DataTableCell>
                                 {map.difficulty > 0 ? (
@@ -74,7 +74,7 @@ export function NewMapsCard({ maps, favoriteMapNames, onToggleFavorite, onMapSel
                                     <span className="text-muted-foreground/40">—</span>
                                 )}
                             </DataTableCell>
-                            <DataTableCell align="right">
+                            <DataTableCell align="center">
                                 <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">
                                     {map.timeAgo}
                                 </span>
