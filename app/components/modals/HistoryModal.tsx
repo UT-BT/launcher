@@ -18,7 +18,7 @@ import { useReplayWatch } from '@/app/hooks/useReplayWatch'
 import { formatAddedDate, displayMapName } from '@/app/utils/format'
 import { getMedalIcon } from '@/app/utils/medals'
 
-const PAGE_SIZE = 10
+const PAGE_SIZE = 9
 
 interface HistoryModalProps {
     open: boolean
