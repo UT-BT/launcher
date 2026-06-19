@@ -4,7 +4,6 @@ import type { TutorialStep } from '@/app/components/shared/Tutorial'
 export type { TutorialStep }
 
 export interface StepRefs {
-    refreshButtonRef: React.RefObject<HTMLButtonElement | null>
     filtersButtonRef: React.RefObject<HTMLButtonElement | null>
     columnsButtonRef: React.RefObject<HTMLButtonElement | null>
     presetsButtonRef: React.RefObject<HTMLButtonElement | null>
@@ -29,12 +28,6 @@ export function buildSteps(refs: StepRefs, actions: StepActions): TutorialStep[]
             id: 'welcome',
             title: 'Welcome!',
             body: 'Quick tour of the server browser.\n\nUse Next / Prev to move, or Skip to dismiss.',
-        },
-        {
-            id: 'refresh',
-            title: 'Live server list',
-            body: 'Servers refresh automatically every 60 seconds.\n\nHit this button to refresh immediately.',
-            targetRef: refs.refreshButtonRef as React.RefObject<HTMLElement | null>,
         },
         {
             id: 'filters',

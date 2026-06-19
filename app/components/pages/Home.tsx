@@ -1,26 +1,38 @@
-import { useMemo, useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Activity, AlertTriangle, RefreshCw } from 'lucide-react'
 import {
-    UserProfile, fetchSummary, Summary, SummaryWorldRecord, ActiveTitle,
+    UserProfile, fetchSummary, fetchHotMaps,
+    Summary, SummaryWorldRecord, HotMap,
 } from '@/app/utils/api'
 import { Button } from '@/app/components/ui/button'
 import { Modal } from '@/app/components/ui/modal'
-import { HistoryModal } from '@/app/components/modals/HistoryModal'
 import { ReviewModal } from '@/app/components/modals/ReviewModal'
-import { ChangeTitleModal } from '@/app/components/modals/ChangeTitleModal'
+import { HistoryModal } from '@/app/components/modals/HistoryModal'
 import { ReplayVideoModal } from '@/app/components/shared/ReplayVideoModal'
 import { useReplayWatch } from '@/app/hooks/useReplayWatch'
 import { useRefreshCooldown } from '@/app/hooks/useRefreshCooldown'
+import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
+import type { Server } from '@/app/components/pages/ServerBrowserPage'
 
-import { ProfileHero } from './home/ProfileHero'
-import { PatchBanner } from './home/PatchBanner'
-import { RecentWorldRecords } from './home/RecentWorldRecords'
-import { NewMapsCard } from './home/NewMapsCard'
+import { SpotlightSection, type SectionAccent } from './home/SpotlightSection'
+import { CommunityStatsRow } from './home/CommunityStatsRow'
+import { LatestRecordsCard } from './home/LatestRecordsCard'
+import { HottestPosterGrid } from './home/HottestPosterGrid'
+import { YouDoorway } from './home/YouDoorway'
+import { NewestMapsCard } from './home/NewestMapsCard'
 import { RecentCapsCard } from './home/RecentCapsCard'
-import { PendingReviewsCard } from './home/PendingReviewsCard'
-import { SectionHeader } from './home/SectionHeader'
+import { MapsToReviewCard } from './home/MapsToReviewCard'
+import { NewsCard } from './home/news/NewsCard'
+import { buildNewsFeed } from './home/news/mockData'
 
-const DISMISSED_PATCH_KEY = 'utbt:dismissedPatch:v1'
+const ACCENTS: Record<string, SectionAccent> = {
+    worldRecords: { tick: 'bg-blue-400' },
+    hotMaps: { tick: 'bg-accent-400' },
+    newMaps: { tick: 'bg-accent-400' },
+    news: { tick: 'bg-accent-400' },
+    reviews: { tick: 'bg-orange-300' },
+    caps: { tick: 'bg-amber-400' },
+}
 
 interface HomeProps {
     userProfile?: UserProfile
@@ -29,85 +41,94 @@ interface HomeProps {
     onMapSelect?: (mapName: string) => void
     onViewServers?: () => void
     onViewMaps?: () => void
+    onViewNewMaps?: () => void
     onViewWorldRecords?: () => void
+    onViewPlayers?: () => void
 }
 
 const EMPTY_SUMMARY: Summary = {
-    playtime: { weekly: 0, weeklyTop: null, monthly: 0, monthlyTop: null, yearly: 0, yearlyTop: null },
     global: { newMaps: 0, newRecords: 0 },
     achievements: [],
-    pendingReviews: [],
-    topServers: [],
     recentWorldRecords: [],
     newMaps: [],
 }
 
 export function Home({
     userProfile, favoriteMapNames, onToggleFavorite, onMapSelect,
-    onViewServers, onViewMaps, onViewWorldRecords,
+    onViewServers, onViewMaps, onViewNewMaps, onViewWorldRecords, onViewPlayers,
 }: HomeProps) {
-    const username = userProfile?.alias || userProfile?.username || 'Player'
     const refreshCooldown = useRefreshCooldown()
     const [summary, setSummary] = useState<Summary | null>(null)
+    const [hotMaps, setHotMaps] = useState<HotMap[]>([])
+    const [servers, setServers] = useState<Server[] | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
-    const [historyOpen, setHistoryOpen] = useState(false)
     const [reviewOpen, setReviewOpen] = useState(false)
+    const [historyOpen, setHistoryOpen] = useState(false)
     const [activeReviewMap, setActiveReviewMap] = useState<string | null>(null)
-    const [pendingReviewsRefreshKey, setPendingReviewsRefreshKey] = useState(0)
-    const [changeTitleOpen, setChangeTitleOpen] = useState(false)
-    const [dismissedPatch, setDismissedPatch] = useState<string | null>(
-        typeof window !== 'undefined' ? localStorage.getItem(DISMISSED_PATCH_KEY) : null,
-    )
-    const [installedPatch, setInstalledPatch] = useState<string | null>(null)
+    const [reviewsRefreshKey, setReviewsRefreshKey] = useState(0)
+    const [refreshKey, setRefreshKey] = useState(0)
+    const mountedRef = useRef(true)
 
     const replay = useReplayWatch()
 
-    const latestPatch = summary?.latestPatch
-    const lastLoginIso = userProfile?.latest_activity?.created_at
-
-    const showPatchBanner = useMemo(() => {
-        if (!latestPatch || !lastLoginIso) return false
-        if (dismissedPatch === latestPatch.tag) return false
-        if (installedPatch === latestPatch.tag) return false
-        try {
-            return new Date(latestPatch.added) > new Date(lastLoginIso)
-        } catch {
-            return false
-        }
-    }, [latestPatch, lastLoginIso, dismissedPatch, installedPatch])
-
-    const loadData = useCallback(async () => {
+    const loadData = useCallback(async (isActive: () => boolean = () => true) => {
         if (!userProfile?.accessToken) return
         setLoading(true)
         setError(null)
         try {
-            const [summaryData, currentPatch] = await Promise.all([
+            const [summaryData, hotMapsData, serverData] = await Promise.all([
                 fetchSummary(userProfile.accessToken),
-                window.conveyor.app.getInstalledPatch(),
+                fetchHotMaps(userProfile.accessToken).catch(() => [] as HotMap[]),
+                window.conveyor.game.fetchServers().catch(() => [] as Server[]) as Promise<Server[]>,
             ])
+            if (!isActive()) return
             setSummary(summaryData)
-            setInstalledPatch(currentPatch?.tag || null)
+            setHotMaps(hotMapsData)
+            setServers(serverData)
+            window.dispatchEvent(new CustomEvent('summary-badges', {
+                detail: {
+                    maps: {
+                        count: summaryData.global.newMaps,
+                        newestIso: summaryData.newMaps?.[0]?.added ?? null,
+                    },
+                    worldRecords: {
+                        count: summaryData.global.newRecords,
+                        newestIso: summaryData.recentWorldRecords?.[0]?.added ?? null,
+                    },
+                },
+            }))
         } catch (err) {
+            if (!isActive()) return
             console.error('Failed to load summary:', err)
-            setError('Failed to load personalized feed.')
+            setError('Failed to load the community feed.')
         } finally {
-            setLoading(false)
+            if (isActive()) setLoading(false)
         }
     }, [userProfile?.accessToken])
 
     useEffect(() => {
-        if (userProfile?.accessToken) {
-            loadData()
-        } else {
+        if (!userProfile?.accessToken) {
             setLoading(false)
+            return
         }
+        let cancelled = false
+        loadData(() => !cancelled)
+        return () => { cancelled = true }
     }, [userProfile?.accessToken, loadData])
 
-    const handleDismissPatch = (tag: string) => {
-        setDismissedPatch(tag)
-        localStorage.setItem(DISMISSED_PATCH_KEY, tag)
-    }
+    useEffect(() => () => { mountedRef.current = false }, [])
+
+    useRegisterPageRefresh({
+        onRefresh: () => refreshCooldown.trigger(() => {
+            loadData(() => mountedRef.current)
+            setReviewsRefreshKey(k => k + 1)
+            setRefreshKey(k => k + 1)
+        }),
+        refreshing: loading,
+        disabled: !refreshCooldown.canRefresh,
+        tooltip: refreshCooldown.canRefresh ? 'Refresh' : `Wait ${refreshCooldown.remainingSeconds}s`,
+    })
 
     const handleInstallPatch = () => {
         window.dispatchEvent(new CustomEvent('open-settings', { detail: { section: 'game-installation' } }))
@@ -127,21 +148,23 @@ export function Home({
         })
     }
 
-    const handleWatchAchievement = (achievement: Summary['achievements'][number]) => {
+    const handleWatchAchievement = (cap: Summary['achievements'][number]) => {
         replay.openReplay({
-            capId: achievement.id,
-            mapName: achievement.mapName,
-            time: achievement.time,
+            capId: cap.id,
+            mapName: cap.mapName,
+            time: cap.time,
             alias: userProfile?.alias ?? undefined,
         })
     }
+
+    const newsFeed = useMemo(() => buildNewsFeed(summary?.latestPatch ?? null).slice(0, 3), [summary?.latestPatch])
 
     if (!userProfile) {
         return (
             <div className="flex h-full items-center justify-center">
                 <div className="text-center space-y-4">
                     <Activity className="size-12 text-muted-foreground/20 mx-auto" />
-                    <p className="text-muted-foreground font-medium">Please log in to view your personalized feed.</p>
+                    <p className="text-muted-foreground font-medium">Please log in to view the community feed.</p>
                 </div>
             </div>
         )
@@ -150,11 +173,15 @@ export function Home({
     if (loading && !summary) {
         return (
             <div className="space-y-6 pb-12 pt-2">
-                <div className="h-28 bg-hairline/5 rounded-2xl animate-pulse" />
-                <div className="h-14 bg-hairline/5 rounded-xl animate-pulse" />
-                <div className="grid grid-cols-1 2xl:grid-cols-12 gap-6">
-                    <div className="2xl:col-span-6 h-[420px] bg-hairline/5 rounded-xl animate-pulse" />
-                    <div className="2xl:col-span-6 h-[420px] bg-hairline/5 rounded-xl animate-pulse" />
+                <div className="h-64 bg-hairline/5 rounded-2xl animate-pulse" />
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                        <div key={i} className="h-16 bg-hairline/5 rounded-xl animate-pulse" />
+                    ))}
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                    <div className="lg:col-span-4 h-72 bg-hairline/5 rounded-xl animate-pulse" />
+                    <div className="lg:col-span-8 h-72 bg-hairline/5 rounded-xl animate-pulse" />
                 </div>
             </div>
         )
@@ -166,7 +193,7 @@ export function Home({
                 <div className="text-center space-y-4">
                     <AlertTriangle className="size-12 text-red-500/50 mx-auto" />
                     <p className="text-red-400 font-medium">{error}</p>
-                    <Button onClick={loadData} variant="outline" className="gap-2">
+                    <Button onClick={() => loadData()} variant="outline" className="gap-2">
                         <RefreshCw className="size-4" /> Try Again
                     </Button>
                 </div>
@@ -175,108 +202,121 @@ export function Home({
     }
 
     const data = summary ?? EMPTY_SUMMARY
-    const topServers = data.topServers ?? []
     const recentWRs = data.recentWorldRecords ?? []
     const newMaps = data.newMaps ?? []
+    const playersOnline = servers === null ? null : servers.reduce((sum, s) => sum + s.player_count, 0)
 
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-0 duration-500 pb-12 pt-2">
-            {showPatchBanner && latestPatch && (
-                <PatchBanner
-                    tag={latestPatch.tag}
-                    releaseNotesUrl={latestPatch.release_notes_url}
-                    onInstall={handleInstallPatch}
-                    onDismiss={() => handleDismissPatch(latestPatch.tag)}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
+                <YouDoorway
+                    className="lg:col-span-5"
+                    userId={userProfile.id ?? undefined}
+                    alias={userProfile.alias}
+                    title={userProfile.active_title ?? null}
+                    accessToken={userProfile.accessToken}
+                    refreshKey={refreshKey}
                 />
-            )}
-
-            <ProfileHero
-                userId={userProfile.id ?? undefined}
-                username={username}
-                alias={userProfile.alias}
-                title={(userProfile.active_title ?? null) as ActiveTitle | null}
-                lastLoginIso={lastLoginIso}
-                weekly={data.playtime.weekly}
-                weeklyTop={data.playtime.weeklyTop}
-                monthly={data.playtime.monthly}
-                monthlyTop={data.playtime.monthlyTop}
-                yearly={data.playtime.yearly}
-                yearlyTop={data.playtime.yearlyTop}
-                newMaps={data.global.newMaps}
-                newRecords={data.global.newRecords}
-                livePlayers={topServers.reduce((sum, s) => sum + s.player_count, 0)}
-                refreshing={loading}
-                refreshDisabled={!refreshCooldown.canRefresh}
-                refreshTooltip={refreshCooldown.canRefresh ? 'Refresh' : `Wait ${refreshCooldown.remainingSeconds}s`}
-                onChangeTitle={() => setChangeTitleOpen(true)}
-                onBrowseServers={onViewServers}
-                onRefresh={() => refreshCooldown.trigger(() => {
-                    loadData()
-                    setPendingReviewsRefreshKey(k => k + 1)
-                })}
-            />
-
-            <div className="grid grid-cols-1 2xl:grid-cols-12 gap-6 items-start">
-                <section className="2xl:col-span-6 flex flex-col gap-3">
-                    <SectionHeader
-                        title="Your Recent Caps"
-                        actionLabel="See More"
-                        onAction={() => setHistoryOpen(true)}
-                    />
-                    <RecentCapsCard
-                        achievements={data.achievements}
-                        favoriteMapNames={favoriteMapNames}
-                        onToggleFavorite={onToggleFavorite}
-                        onMapSelect={onMapSelect}
-                        onReview={handleReviewMap}
-                        onWatchReplay={handleWatchAchievement}
-                        loadingCapId={replay.loadingCapId}
-                    />
-                </section>
-
-                <section className="2xl:col-span-6 flex flex-col gap-3">
-                    <SectionHeader
-                        title="Recent World Records"
-                        actionLabel={onViewWorldRecords ? 'See All' : undefined}
-                        onAction={onViewWorldRecords}
-                    />
-                    <RecentWorldRecords
-                        records={recentWRs}
-                        favoriteMapNames={favoriteMapNames}
-                        onToggleFavorite={onToggleFavorite}
-                        onMapSelect={onMapSelect}
-                        onWatchReplay={handleWatchReplay}
-                        loadingCapId={replay.loadingCapId}
-                    />
-                </section>
+                <CommunityStatsRow
+                    className="lg:col-span-7"
+                    accessToken={userProfile.accessToken}
+                    playersOnline={playersOnline}
+                    newMaps={data.global.newMaps}
+                    onViewPlayers={onViewPlayers}
+                    onViewServers={onViewServers}
+                    onViewMaps={onViewMaps}
+                    onViewNewMaps={onViewNewMaps}
+                    refreshKey={refreshKey}
+                />
             </div>
 
-            <div className="grid grid-cols-1 2xl:grid-cols-12 gap-6 items-start">
-                <section className="2xl:col-span-6 flex flex-col gap-3">
-                    <SectionHeader
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+                <div className="lg:col-span-5 space-y-4">
+                    {newsFeed.length > 0 && (
+                        <SpotlightSection title="Latest News" accent={ACCENTS.news}>
+                            <NewsCard articles={newsFeed} onInstall={handleInstallPatch} />
+                        </SpotlightSection>
+                    )}
+
+                    <SpotlightSection
                         title="Newest Maps"
+                        accent={ACCENTS.newMaps}
                         actionLabel={onViewMaps ? 'See All' : undefined}
                         onAction={onViewMaps}
-                    />
-                    <NewMapsCard
-                        maps={newMaps}
-                        favoriteMapNames={favoriteMapNames}
-                        onToggleFavorite={onToggleFavorite}
-                        onMapSelect={onMapSelect}
-                    />
-                </section>
+                    >
+                        <NewestMapsCard
+                            maps={newMaps}
+                            favoriteMapNames={favoriteMapNames}
+                            onToggleFavorite={onToggleFavorite}
+                            onMapSelect={onMapSelect}
+                        />
+                    </SpotlightSection>
 
-                <section className="2xl:col-span-6 flex flex-col gap-3">
-                    <SectionHeader title="Pending Reviews" />
-                    <PendingReviewsCard
-                        accessToken={userProfile.accessToken}
-                        refreshKey={pendingReviewsRefreshKey}
-                        favoriteMapNames={favoriteMapNames}
-                        onToggleFavorite={onToggleFavorite}
-                        onReview={handleReviewMap}
-                        onMapSelect={onMapSelect}
-                    />
-                </section>
+                    <SpotlightSection title="Maps to Review" accent={ACCENTS.reviews}>
+                        <MapsToReviewCard
+                            accessToken={userProfile.accessToken}
+                            refreshKey={reviewsRefreshKey}
+                            favoriteMapNames={favoriteMapNames}
+                            onToggleFavorite={onToggleFavorite}
+                            onReview={handleReviewMap}
+                            onMapSelect={onMapSelect}
+                        />
+                    </SpotlightSection>
+                </div>
+
+                <div className="lg:col-span-7 space-y-4">
+                    {hotMaps.length > 0 && (
+                        <SpotlightSection
+                            title="Hottest Maps"
+                            accent={ACCENTS.hotMaps}
+                            actionLabel={onViewMaps ? 'See All' : undefined}
+                            onAction={onViewMaps}
+                        >
+                            <HottestPosterGrid
+                                maps={hotMaps}
+                                favoriteMapNames={favoriteMapNames}
+                                onToggleFavorite={onToggleFavorite}
+                                onMapSelect={onMapSelect}
+                            />
+                        </SpotlightSection>
+                    )}
+
+                    <SpotlightSection
+                        title="Latest World Records"
+                        accent={ACCENTS.worldRecords}
+                        actionLabel={onViewWorldRecords ? 'See All' : undefined}
+                        onAction={onViewWorldRecords}
+                    >
+                        <LatestRecordsCard
+                            records={recentWRs}
+                            currentUserId={userProfile.id ?? undefined}
+                            favoriteMapNames={favoriteMapNames}
+                            onToggleFavorite={onToggleFavorite}
+                            onMapSelect={onMapSelect}
+                            onWatchReplay={handleWatchReplay}
+                            loadingCapId={replay.loadingCapId}
+                        />
+                    </SpotlightSection>
+
+                    <SpotlightSection
+                        title="Your Latest Caps"
+                        accent={ACCENTS.caps}
+                        actionLabel="See More"
+                        onAction={() => setHistoryOpen(true)}
+                    >
+                        <RecentCapsCard
+                            caps={data.achievements}
+                            playerUserId={userProfile.id ?? undefined}
+                            playerAlias={userProfile.alias}
+                            playerTitle={userProfile.active_title ?? null}
+                            favoriteMapNames={favoriteMapNames}
+                            onToggleFavorite={onToggleFavorite}
+                            onMapSelect={onMapSelect}
+                            onWatchReplay={handleWatchAchievement}
+                            loadingCapId={replay.loadingCapId}
+                        />
+                    </SpotlightSection>
+                </div>
             </div>
 
             <HistoryModal
@@ -298,17 +338,8 @@ export function Home({
                 mapName={activeReviewMap}
                 onSuccess={() => {
                     loadData()
-                    setPendingReviewsRefreshKey(k => k + 1)
+                    setReviewsRefreshKey(k => k + 1)
                 }}
-            />
-
-            <ChangeTitleModal
-                isOpen={changeTitleOpen}
-                onClose={() => setChangeTitleOpen(false)}
-                accessToken={userProfile.accessToken}
-                userId={userProfile.id ?? undefined}
-                currentTitleId={userProfile.active_title?.id ?? undefined}
-                onTitleChanged={() => window.dispatchEvent(new CustomEvent('refresh-user-profile'))}
             />
 
             <ReplayVideoModal state={replay.video} onClose={replay.clearVideo} />

@@ -1,6 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
-import { AlertTriangle, RefreshCw } from 'lucide-react'
-import { Tooltip } from '@/app/components/ui/tooltip'
+import { AlertTriangle } from 'lucide-react'
 import { useNavScrollRestore } from '@/app/components/navigation/useNavScrollRestore'
 import {
     fetchMap,
@@ -17,6 +16,7 @@ import {
     type UserProfile,
 } from '@/app/utils/api'
 import { useRefreshCooldown } from '@/app/hooks/useRefreshCooldown'
+import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
 import { useMapDownload } from '@/app/hooks/useMapDownload'
 import { MapDownloadStatusModal } from '@/app/components/shared/MapDownloadStatusModal'
 import { ReviewModal } from '@/app/components/modals/ReviewModal'
@@ -67,6 +67,13 @@ export function MapDetailPage({
     const [refreshKey, setRefreshKey] = useState(0)
     const refreshCooldown = useRefreshCooldown()
     const mapDownload = useMapDownload()
+
+    useRegisterPageRefresh({
+        onRefresh: () => refreshCooldown.trigger(() => setRefreshKey(k => k + 1)),
+        refreshing: loading,
+        disabled: !refreshCooldown.canRefresh,
+        tooltip: refreshCooldown.canRefresh ? 'Refresh' : `Wait ${refreshCooldown.remainingSeconds}s`,
+    })
 
     const wrHolder = wrProgression.length > 0 ? wrProgression[wrProgression.length - 1] : null
 
@@ -132,19 +139,6 @@ export function MapDetailPage({
 
     return (
         <div className="space-y-4 h-full flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-0 duration-500">
-            <div className="flex items-center justify-end gap-3 shrink-0">
-                <Tooltip content={refreshCooldown.canRefresh ? 'Refresh' : `Wait ${refreshCooldown.remainingSeconds}s`} side="top">
-                    <button
-                        type="button"
-                        onClick={() => refreshCooldown.trigger(() => setRefreshKey(k => k + 1))}
-                        disabled={loading || !refreshCooldown.canRefresh}
-                        className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-hairline/5 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
-                        aria-label="Refresh"
-                    >
-                        <RefreshCw className={`size-4 ${loading ? 'animate-spin' : ''}`} />
-                    </button>
-                </Tooltip>
-            </div>
 
             <HeroSection
                 mapName={mapName}

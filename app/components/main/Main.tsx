@@ -62,6 +62,7 @@ import type { ServerPreset } from '@/app/utils/server-utils'
 import { useFavorites } from '@/app/hooks/useFavorites'
 import { loadPatreonMembers } from '@/app/utils/patreon'
 import { fetchAchievementDefinitions, fetchMyAchievements } from '@/app/utils/api'
+import { writePendingHighlight, type HighlightView } from '@/app/hooks/useNewItemHighlight'
 import { isStaff } from '@/app/utils/roles'
 
 
@@ -76,6 +77,34 @@ const SERVER_PRESETS_STORAGE_KEY = 'utbt:serverPresets:v1'
 const SERVER_FAVORITES_STORAGE_KEY = 'utbt:serverFavorites:v2'
 
 const HISTORY_CAP = 50
+
+interface BadgeInfo {
+  count: number
+  newestIso: string | null
+}
+
+const BADGE_STORAGE_KEYS: Record<string, string> = {
+  'maps': 'utbt:newMapsSeen:v1',
+  'world-records': 'utbt:newRecordsSeen:v1',
+}
+
+function readSeen(key: string): string | null {
+  if (typeof window === 'undefined') return null
+  try {
+    return window.localStorage.getItem(key)
+  } catch {
+    return null
+  }
+}
+
+function writeSeen(key: string, value: string): void {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(key, value)
+  } catch {
+    return
+  }
+}
 
 const MAPS_PREF_KEYS: readonly (keyof MapsPageState)[] = ['filtersPanelOpen', 'pageSizePreference']
 const SERVERS_PREF_KEYS: readonly (keyof ServerBrowserState)[] = ['columnVisibility', 'columnOrder', 'filtersPanelOpen']
@@ -218,10 +247,55 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
     dismissSync,
   } = useFavorites(accessToken, userId)
 
+  const [badges, setBadges] = useState<Record<string, BadgeInfo>>({})
+  const [seen, setSeen] = useState<Record<string, string | null>>(() => ({
+    'maps': readSeen(BADGE_STORAGE_KEYS['maps']),
+    'world-records': readSeen(BADGE_STORAGE_KEYS['world-records']),
+  }))
+  const seenRef = useRef(seen)
+  seenRef.current = seen
+  const badgesRef = useRef(badges)
+  badgesRef.current = badges
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { maps?: BadgeInfo; worldRecords?: BadgeInfo } | undefined
+      setBadges({
+        'maps': detail?.maps ?? { count: 0, newestIso: null },
+        'world-records': detail?.worldRecords ?? { count: 0, newestIso: null },
+      })
+    }
+    window.addEventListener('summary-badges', handler)
+    return () => window.removeEventListener('summary-badges', handler)
+  }, [])
+
+  const badgeVisible = useCallback((view: string): boolean => {
+    const b = badges[view]
+    if (!b || b.count <= 0) return false
+    const last = seen[view]
+    if (!last) return true
+    return b.newestIso != null && Date.parse(b.newestIso) > Date.parse(last)
+  }, [badges, seen])
+
+  const markViewed = useCallback((view: string) => {
+    if (!BADGE_STORAGE_KEYS[view]) return
+    const b = badgesRef.current[view]
+    if (!b || b.count <= 0) return
+    const last = seenRef.current[view]
+    const visible = !last || (b.newestIso != null && Date.parse(b.newestIso) > Date.parse(last))
+    if (!visible) return
+    const stamp = b.newestIso ?? new Date().toISOString()
+    writeSeen(BADGE_STORAGE_KEYS[view], stamp)
+    setSeen(s => ({ ...s, [view]: stamp }))
+    writePendingHighlight(view as HighlightView, last)
+    window.dispatchEvent(new CustomEvent('highlight-new', { detail: { view, since: last } }))
+  }, [])
+
   const navigate = useCallback((view: string, params: NavParams = {}) => {
     const { entries: cur, cursor: curIdx } = stackRef.current
     const active = cur[curIdx]
     if (active.view === view && paramsEqual(active.params, params)) return
+    markViewed(view)
     let next = [...cur.slice(0, curIdx + 1), { id: nextIdRef.current++, view, params, state: {} }]
     let nextCursor = next.length - 1
     if (next.length > HISTORY_CAP) {
@@ -231,7 +305,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
     }
     setEntries(next)
     setCursor(nextCursor)
-  }, [])
+  }, [markViewed])
 
   const back = useCallback(() => setCursor(c => Math.max(0, c - 1)), [])
   const forward = useCallback(() => setCursor(c => Math.min(stackRef.current.entries.length - 1, c + 1)), [])
@@ -400,6 +474,8 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
           onViewServers={() => navigate('servers')}
           onViewMaps={() => navigate('maps')}
           onViewWorldRecords={() => navigate('world-records')}
+          onViewPlayers={() => navigate('players')}
+          onViewNewMaps={() => navigate('maps', { mapsNewOnly: true })}
         />
       case 'servers':
         return <ServerBrowserPage
@@ -424,6 +500,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
           onMapSelect={openMap}
           favoriteMapNames={favoriteMapNames}
           onToggleFavorite={toggleFavorite}
+          initialNewOnly={entry.params.mapsNewOnly}
         />
       case 'players':
         return <PlayersPage
@@ -502,6 +579,8 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
           onViewServers={() => navigate('servers')}
           onViewMaps={() => navigate('maps')}
           onViewWorldRecords={() => navigate('world-records')}
+          onViewPlayers={() => navigate('players')}
+          onViewNewMaps={() => navigate('maps', { mapsNewOnly: true })}
         />
     }
   }
@@ -517,7 +596,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
       )}
       <div className="flex-1 overflow-hidden">
         <NavigationContext.Provider value={navValue}>
-          <AppLayout currentView={currentView} onViewChange={navigate} userProfile={userProfile} installationStatus={installationStatus}>
+          <AppLayout currentView={currentView} onViewChange={navigate} getNavBadge={(view) => badgeVisible(view) ? badges[view].count : null} userProfile={userProfile} installationStatus={installationStatus}>
             {renderView()}
           </AppLayout>
         </NavigationContext.Provider>

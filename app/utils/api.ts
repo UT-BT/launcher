@@ -13,7 +13,7 @@ export interface UserTitle {
     color_r: number
     color_g: number
     color_b: number
-    rarity: number
+    rarity: 1 | 2 | 3 | 4 | 5
 }
 
 export interface AssignedTitleV2 {
@@ -1752,18 +1752,6 @@ export async function fetchMapReviews(accessToken: string, mapName: string): Pro
     }
 }
 
-export interface SummaryTopServer {
-    id: string
-    ip: string
-    hostname: string
-    hostport: number
-    map_name: string
-    player_count: number
-    max_players: number
-    spectators: number
-    certified_records: boolean
-}
-
 export interface SummaryWorldRecord {
     id: string
     mapName: string
@@ -1785,14 +1773,6 @@ export interface SummaryNewMap {
 }
 
 export interface Summary {
-    playtime: {
-        weekly: number
-        weeklyTop: number | null
-        monthly: number
-        monthlyTop: number | null
-        yearly: number
-        yearlyTop: number | null
-    }
     global: {
         newMaps: number
         newRecords: number
@@ -1807,13 +1787,6 @@ export interface Summary {
         timeAgo: string
         verified: boolean
     }[]
-    pendingReviews: {
-        id: string
-        mapName: string
-        timeAgo: string
-        metrics: { label: string, value: number }[]
-    }[]
-    topServers?: SummaryTopServer[]
     recentWorldRecords?: SummaryWorldRecord[]
     newMaps?: SummaryNewMap[]
     latestPatch?: {
@@ -1842,6 +1815,26 @@ export async function fetchSummary(accessToken: string): Promise<Summary> {
         }
     })
     if (!response.ok) throw new Error('Failed to fetch summary')
+    const json = await response.json()
+    return json.data
+}
+
+export interface HotMap {
+    name: string
+    author?: string
+    difficulty?: number
+    ingameSeconds: number
+    spectateSeconds: number
+    players: number
+}
+
+export async function fetchHotMaps(accessToken: string): Promise<HotMap[]> {
+    const response = await fetch(`${API_BASE_URL}/v2/summary/hot_maps`, {
+        headers: {
+            'Authorization': `Bearer ${accessToken}`
+        }
+    })
+    if (!response.ok) throw new Error('Failed to fetch hot maps')
     const json = await response.json()
     return json.data
 }

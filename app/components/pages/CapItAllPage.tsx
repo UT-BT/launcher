@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
-import { Search, RefreshCw, X } from 'lucide-react'
+import { Search, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { Tooltip } from '@/app/components/ui/tooltip'
 import { useAutoPageSize } from '@/app/hooks/useAutoPageSize'
 import { useRefreshCooldown } from '@/app/hooks/useRefreshCooldown'
+import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
 import {
     UserProfile, CapItAllRow, CapItAllLeaderboardPage,
     fetchCapItAllLeaderboard,
@@ -185,6 +185,13 @@ export function CapItAllPage({ userProfile, state, onStateChange, caches, onCach
         })
     }
 
+    useRegisterPageRefresh({
+        onRefresh: refresh,
+        refreshing: pageLoading,
+        disabled: !refreshCooldown.canRefresh,
+        tooltip: refreshCooldown.canRefresh ? 'Refresh Data' : `Wait ${refreshCooldown.remainingSeconds}s`,
+    })
+
     const setSearch = (value: string) =>
         onStateChange(prev => ({ ...prev, search: value, currentPage: 1 }))
 
@@ -216,16 +223,6 @@ export function CapItAllPage({ userProfile, state, onStateChange, caches, onCach
                         )}
                     </p>
                 </div>
-                <Tooltip content={refreshCooldown.canRefresh ? 'Refresh Data' : `Wait ${refreshCooldown.remainingSeconds}s`} side="bottom">
-                    <button
-                        type="button"
-                        onClick={refresh}
-                        disabled={pageLoading || !refreshCooldown.canRefresh}
-                        className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-hairline/5 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        <RefreshCw className={cn('size-4', pageLoading && 'animate-spin')} />
-                    </button>
-                </Tooltip>
             </div>
 
             <div className="flex flex-wrap items-center gap-3 shrink-0">
