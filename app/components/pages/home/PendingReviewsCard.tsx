@@ -56,9 +56,9 @@ export function PendingReviewsCard({ accessToken, refreshKey = 0, favoriteMapNam
             <DataTableShell className="flex-none">
                 <DataTableHeaderRow>
                     <DataTableHeaderCell width="3.5rem"> </DataTableHeaderCell>
-                    <DataTableHeaderCell>Map</DataTableHeaderCell>
-                    <DataTableHeaderCell align="right" width="6rem">Capped</DataTableHeaderCell>
-                    <DataTableHeaderCell align="center" width="3rem"> </DataTableHeaderCell>
+                    <DataTableHeaderCell align="center">Map</DataTableHeaderCell>
+                    <DataTableHeaderCell align="center" width="6rem">Capped</DataTableHeaderCell>
+                    <DataTableHeaderCell align="center" width="3.5rem"> </DataTableHeaderCell>
                 </DataTableHeaderRow>
                 <tbody>
                     {error && items.length === 0 ? (
@@ -103,7 +103,7 @@ export function PendingReviewsCard({ accessToken, refreshKey = 0, favoriteMapNam
                                         </span>
                                     </div>
                                 </DataTableCell>
-                                <DataTableCell align="right">
+                                <DataTableCell align="center">
                                     <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">
                                         {rev.timeAgo}
                                     </span>
