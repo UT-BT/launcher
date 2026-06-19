@@ -10,6 +10,7 @@ export type AdminSectionId =
   | 'overview'
   | 'title-management'
   | 'user-management'
+  | 'news-management'
   | 'caps-management'
   | 'maps-management'
   | 'patches-management'

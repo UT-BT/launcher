@@ -4,6 +4,7 @@ export interface NavParams {
     mapName?: string
     playerId?: string | number
     capId?: string
+    newsId?: number
     mapsNewOnly?: boolean
 }
 
@@ -38,5 +39,6 @@ export function paramsEqual(a: NavParams, b: NavParams): boolean {
     return a.mapName === b.mapName
         && String(a.playerId ?? '') === String(b.playerId ?? '')
         && a.capId === b.capId
+        && a.newsId === b.newsId
         && !!a.mapsNewOnly === !!b.mapsNewOnly
 }

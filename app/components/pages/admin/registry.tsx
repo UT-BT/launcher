@@ -1,9 +1,10 @@
-import { LayoutDashboard, Tag, UserCog, Flag, Map as MapIcon, Package, ShieldAlert, ScrollText } from 'lucide-react'
+import { LayoutDashboard, Tag, UserCog, Flag, Map as MapIcon, Package, ShieldAlert, ScrollText, Newspaper } from 'lucide-react'
 import { ADMIN_DASHBOARD_ROLES, ADMIN_ONLY_ROLES } from '@/app/utils/roles'
 import type { AdminSection, AdminGroup, AdminSectionId } from './types'
 import { OverviewSection } from './sections/OverviewSection'
 import { TitleManagementSection } from './sections/TitleManagementSection'
 import { UserManagementSection } from './sections/UserManagementSection'
+import { NewsManagementSection } from './sections/NewsManagementSection'
 import { CapsManagementSection } from './sections/CapsManagementSection'
 import { MapsManagementSection } from './sections/MapsManagementSection'
 import { PatchesManagementSection } from './sections/PatchesManagementSection'
@@ -22,6 +23,7 @@ export const ADMIN_SECTIONS: AdminSection[] = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard, group: 'overview', roles: ADMIN_DASHBOARD_ROLES, Component: OverviewSection },
   { id: 'user-management', label: 'User Management', icon: UserCog, group: 'community', roles: ADMIN_DASHBOARD_ROLES, Component: UserManagementSection },
   { id: 'title-management', label: 'Title Management', icon: Tag, group: 'community', roles: ADMIN_DASHBOARD_ROLES, Component: TitleManagementSection },
+  { id: 'news-management', label: 'News', icon: Newspaper, group: 'community', roles: ADMIN_DASHBOARD_ROLES, Component: NewsManagementSection },
   { id: 'caps-management', label: 'Caps Management', icon: Flag, group: 'game-content', roles: ADMIN_DASHBOARD_ROLES, Component: CapsManagementSection },
   { id: 'maps-management', label: 'Maps Management', icon: MapIcon, group: 'game-content', roles: ADMIN_DASHBOARD_ROLES, Component: MapsManagementSection },
   { id: 'patches-management', label: 'Patch Releases', icon: Package, group: 'system', roles: ADMIN_ONLY_ROLES, Component: PatchesManagementSection },

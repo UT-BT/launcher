@@ -1050,6 +1050,192 @@ export async function derivePatch(token: string, assetUrl: string, signal?: Abor
     return apiGet('/admin/patches/derive', { token, method: 'POST', body: { asset_url: assetUrl }, signal, timeoutMs: 120_000 })
 }
 
+export type NewsCategoryKey = string
+
+export interface NewsCategoryDef {
+    id: number
+    key: string
+    label: string
+    colorR: number
+    colorG: number
+    colorB: number
+    icon: string
+    sortOrder: number
+}
+
+export interface AdminNewsCategory extends NewsCategoryDef {
+    inUse: number
+}
+
+export interface NewsArticle {
+    id: number
+    category: NewsCategoryKey
+    title: string
+    excerpt: string
+    body: string
+    linkUrl?: string | null
+    linkText?: string | null
+    pinned: boolean
+    publishedAt: string
+    expiresAt?: string | null
+    authorAlias?: string | null
+}
+
+export interface AdminNews extends NewsArticle {
+    active: boolean
+    authorId?: string | null
+    createdAt: string
+    updatedAt: string
+}
+
+interface NewsApiRow {
+    id: number
+    category: NewsCategoryKey
+    title: string
+    excerpt: string
+    body: string
+    link_url?: string | null
+    link_text?: string | null
+    pinned: boolean
+    published_at: string
+    expires_at?: string | null
+    author_alias?: string | null
+    active?: boolean
+    author_id?: string | null
+    created_at?: string
+    updated_at?: string
+}
+
+interface NewsCategoryApiRow {
+    id: number
+    key: string
+    label: string
+    color_r: number
+    color_g: number
+    color_b: number
+    icon: string
+    sort_order: number
+    in_use?: number
+}
+
+function toNewsArticle(row: NewsApiRow): NewsArticle {
+    return {
+        id: row.id,
+        category: row.category,
+        title: row.title,
+        excerpt: row.excerpt,
+        body: row.body,
+        linkUrl: row.link_url ?? null,
+        linkText: row.link_text ?? null,
+        pinned: !!row.pinned,
+        publishedAt: row.published_at,
+        expiresAt: row.expires_at ?? null,
+        authorAlias: row.author_alias ?? null,
+    }
+}
+
+function toAdminNews(row: NewsApiRow): AdminNews {
+    return {
+        ...toNewsArticle(row),
+        active: !!row.active,
+        authorId: row.author_id ?? null,
+        createdAt: row.created_at ?? '',
+        updatedAt: row.updated_at ?? '',
+    }
+}
+
+function toCategoryDef(row: NewsCategoryApiRow): AdminNewsCategory {
+    return {
+        id: row.id,
+        key: row.key,
+        label: row.label,
+        colorR: row.color_r,
+        colorG: row.color_g,
+        colorB: row.color_b,
+        icon: row.icon,
+        sortOrder: row.sort_order,
+        inUse: row.in_use ?? 0,
+    }
+}
+
+export async function fetchNews(token: string, signal?: AbortSignal): Promise<NewsArticle[]> {
+    const data = await apiGet<{ items: NewsApiRow[] }>('/v2/news/', { token, signal })
+    return data.items.map(toNewsArticle)
+}
+
+export async function fetchNewsItem(token: string, id: number, signal?: AbortSignal): Promise<NewsArticle> {
+    const row = await apiGet<NewsApiRow>(`/v2/news/${id}/`, { token, signal })
+    return toNewsArticle(row)
+}
+
+export async function fetchNewsCategories(token: string, signal?: AbortSignal): Promise<NewsCategoryDef[]> {
+    const data = await apiGet<{ items: NewsCategoryApiRow[] }>('/v2/news/categories/', { token, signal })
+    return data.items.map(toCategoryDef)
+}
+
+export async function fetchAdminNews(token: string, signal?: AbortSignal): Promise<AdminNews[]> {
+    const data = await apiGet<{ items: NewsApiRow[] }>('/admin/news', { token, signal })
+    return data.items.map(toAdminNews)
+}
+
+export async function fetchAdminNewsCategories(token: string, signal?: AbortSignal): Promise<AdminNewsCategory[]> {
+    const data = await apiGet<{ items: NewsCategoryApiRow[] }>('/admin/news/categories', { token, signal })
+    return data.items.map(toCategoryDef)
+}
+
+export interface CreateNewsInput {
+    category: NewsCategoryKey
+    title: string
+    excerpt: string
+    body: string
+    link_url?: string | null
+    link_text?: string | null
+    pinned?: boolean
+    active?: boolean
+    published_at?: string | null
+    expires_at?: string | null
+}
+
+export type UpdateNewsInput = Partial<CreateNewsInput>
+
+export async function createNews(token: string, input: CreateNewsInput): Promise<{ ok: boolean; id: string }> {
+    return apiGet('/admin/news', { token, method: 'POST', body: input })
+}
+
+export async function updateNews(token: string, id: number, input: UpdateNewsInput): Promise<{ ok: boolean }> {
+    return apiGet(`/admin/news/${id}`, { token, method: 'PATCH', body: input })
+}
+
+export async function setNewsActive(token: string, id: number, active: boolean): Promise<{ ok: boolean }> {
+    return apiGet(`/admin/news/${id}/${active ? 'activate' : 'deactivate'}`, { token, method: 'POST' })
+}
+
+export async function deleteNews(token: string, id: number): Promise<{ ok: boolean }> {
+    return apiGet(`/admin/news/${id}`, { token, method: 'DELETE' })
+}
+
+export interface CreateNewsCategoryInput {
+    label: string
+    key?: string
+    color_r: number
+    color_g: number
+    color_b: number
+    icon: string
+    sort_order?: number
+}
+
+export async function createNewsCategory(token: string, input: CreateNewsCategoryInput): Promise<{ ok: boolean; id: string; key: string }> {
+    return apiGet('/admin/news/categories', { token, method: 'POST', body: input })
+}
+
+export async function updateNewsCategory(token: string, id: number, input: Partial<CreateNewsCategoryInput>): Promise<{ ok: boolean }> {
+    return apiGet(`/admin/news/categories/${id}`, { token, method: 'PATCH', body: input })
+}
+
+export async function deleteNewsCategory(token: string, id: number): Promise<{ ok: boolean }> {
+    return apiGet(`/admin/news/categories/${id}`, { token, method: 'DELETE' })
+}
+
 export async function logLauncherStartup(accessToken: string): Promise<void> {
     try {
         const version = await window.conveyor.app.version()

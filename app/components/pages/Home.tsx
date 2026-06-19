@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Activity, AlertTriangle, RefreshCw } from 'lucide-react'
 import {
-    UserProfile, fetchSummary, fetchHotMaps,
-    Summary, SummaryWorldRecord, HotMap,
+    UserProfile, fetchSummary, fetchHotMaps, fetchNews, fetchNewsCategories,
+    Summary, SummaryWorldRecord, HotMap, NewsArticle, NewsCategoryDef,
 } from '@/app/utils/api'
 import { Button } from '@/app/components/ui/button'
 import { Modal } from '@/app/components/ui/modal'
@@ -23,7 +23,8 @@ import { NewestMapsCard } from './home/NewestMapsCard'
 import { RecentCapsCard } from './home/RecentCapsCard'
 import { MapsToReviewCard } from './home/MapsToReviewCard'
 import { NewsCard } from './home/news/NewsCard'
-import { buildNewsFeed } from './home/news/mockData'
+
+const NEWS_SEEN_KEY = 'utbt:newsSeen:v1'
 
 const ACCENTS: Record<string, SectionAccent> = {
     worldRecords: { tick: 'bg-blue-400' },
@@ -44,6 +45,7 @@ interface HomeProps {
     onViewNewMaps?: () => void
     onViewWorldRecords?: () => void
     onViewPlayers?: () => void
+    onViewNews?: () => void
 }
 
 const EMPTY_SUMMARY: Summary = {
@@ -55,11 +57,14 @@ const EMPTY_SUMMARY: Summary = {
 
 export function Home({
     userProfile, favoriteMapNames, onToggleFavorite, onMapSelect,
-    onViewServers, onViewMaps, onViewNewMaps, onViewWorldRecords, onViewPlayers,
+    onViewServers, onViewMaps, onViewNewMaps, onViewWorldRecords, onViewPlayers, onViewNews,
 }: HomeProps) {
     const refreshCooldown = useRefreshCooldown()
     const [summary, setSummary] = useState<Summary | null>(null)
     const [hotMaps, setHotMaps] = useState<HotMap[]>([])
+    const [news, setNews] = useState<NewsArticle[]>([])
+    const [newsCategories, setNewsCategories] = useState<NewsCategoryDef[]>([])
+    const [newsSeen] = useState<string | null>(() => localStorage.getItem(NEWS_SEEN_KEY))
     const [servers, setServers] = useState<Server[] | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -77,14 +82,18 @@ export function Home({
         setLoading(true)
         setError(null)
         try {
-            const [summaryData, hotMapsData, serverData] = await Promise.all([
+            const [summaryData, hotMapsData, newsData, newsCategoryData, serverData] = await Promise.all([
                 fetchSummary(userProfile.accessToken),
                 fetchHotMaps(userProfile.accessToken).catch(() => [] as HotMap[]),
+                fetchNews(userProfile.accessToken).catch(() => [] as NewsArticle[]),
+                fetchNewsCategories(userProfile.accessToken).catch(() => [] as NewsCategoryDef[]),
                 window.conveyor.game.fetchServers().catch(() => [] as Server[]) as Promise<Server[]>,
             ])
             if (!isActive()) return
             setSummary(summaryData)
             setHotMaps(hotMapsData)
+            setNews(newsData)
+            setNewsCategories(newsCategoryData)
             setServers(serverData)
             window.dispatchEvent(new CustomEvent('summary-badges', {
                 detail: {
@@ -130,10 +139,6 @@ export function Home({
         tooltip: refreshCooldown.canRefresh ? 'Refresh' : `Wait ${refreshCooldown.remainingSeconds}s`,
     })
 
-    const handleInstallPatch = () => {
-        window.dispatchEvent(new CustomEvent('open-settings', { detail: { section: 'game-installation' } }))
-    }
-
     const handleReviewMap = (mapName: string) => {
         setActiveReviewMap(mapName)
         setReviewOpen(true)
@@ -157,7 +162,14 @@ export function Home({
         })
     }
 
-    const newsFeed = useMemo(() => buildNewsFeed(summary?.latestPatch ?? null).slice(0, 3), [summary?.latestPatch])
+    const newsFeed = useMemo(() => news.slice(0, 3), [news])
+    const newsCategoryMap = useMemo(() => new Map(newsCategories.map(c => [c.key, c])), [newsCategories])
+
+    useEffect(() => {
+        if (news.length === 0) return
+        const newest = news.reduce((max, a) => (a.publishedAt > max ? a.publishedAt : max), '')
+        if (newest) localStorage.setItem(NEWS_SEEN_KEY, newest)
+    }, [news])
 
     if (!userProfile) {
         return (
@@ -233,8 +245,13 @@ export function Home({
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
                 <div className="lg:col-span-5 space-y-4">
                     {newsFeed.length > 0 && (
-                        <SpotlightSection title="Latest News" accent={ACCENTS.news}>
-                            <NewsCard articles={newsFeed} onInstall={handleInstallPatch} />
+                        <SpotlightSection
+                            title="Latest News"
+                            accent={ACCENTS.news}
+                            actionLabel={onViewNews ? 'See All' : undefined}
+                            onAction={onViewNews}
+                        >
+                            <NewsCard articles={newsFeed} categories={newsCategoryMap} newSince={newsSeen} />
                         </SpotlightSection>
                     )}
 
