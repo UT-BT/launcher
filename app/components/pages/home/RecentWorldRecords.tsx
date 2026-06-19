@@ -27,11 +27,11 @@ export function RecentWorldRecords({
         <DataTableShell className="flex-none">
             <DataTableHeaderRow>
                 <DataTableHeaderCell width="3.5rem"> </DataTableHeaderCell>
-                <DataTableHeaderCell>Map</DataTableHeaderCell>
-                <DataTableHeaderCell>Player</DataTableHeaderCell>
-                <DataTableHeaderCell align="right">Time</DataTableHeaderCell>
-                <DataTableHeaderCell align="right" width="6rem">When</DataTableHeaderCell>
-                <DataTableHeaderCell align="center" width="3rem"> </DataTableHeaderCell>
+                <DataTableHeaderCell align="center">Map</DataTableHeaderCell>
+                <DataTableHeaderCell align="center" width="10rem">Player</DataTableHeaderCell>
+                <DataTableHeaderCell align="center" width="7rem">Time</DataTableHeaderCell>
+                <DataTableHeaderCell align="center" width="6rem">When</DataTableHeaderCell>
+                <DataTableHeaderCell align="center" width="3.5rem"> </DataTableHeaderCell>
             </DataTableHeaderRow>
             <tbody>
                 {records.length === 0 ? (
@@ -49,7 +49,7 @@ export function RecentWorldRecords({
                                     <MapThumbnail mapName={r.mapName} className="w-12 h-12" />
                                 </DataTableCell>
                                 <DataTableCell>
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center justify-left gap-2">
                                         <FavoriteStar
                                             name={r.mapName}
                                             isFavorited={favoriteMapNames.has(r.mapName)}
@@ -66,16 +66,17 @@ export function RecentWorldRecords({
                                         alias={r.alias}
                                         title={r.activeTitle ?? null}
                                         size="sm"
+                                        className="flex items-center justify-left gap-2"
                                     />
                                 </DataTableCell>
-                                <DataTableCell align="right">
+                                <DataTableCell align="center">
                                     <CapTimeLink
                                         capId={r.id}
                                         seconds={r.time}
                                         className="font-mono font-black text-foreground/90 tracking-tight"
                                     />
                                 </DataTableCell>
-                                <DataTableCell align="right">
+                                <DataTableCell align="center">
                                     <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">
                                         {r.timeAgo}
                                     </span>

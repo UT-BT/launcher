@@ -31,7 +31,7 @@ export function RecentCapsCard({
     return (
         <DataTableShell className="flex-none">
             <DataTableHeaderRow>
-                <DataTableHeaderCell width="4rem"> </DataTableHeaderCell>
+                <DataTableHeaderCell width="3.5rem"> </DataTableHeaderCell>
                 <DataTableHeaderCell align="center">Map</DataTableHeaderCell>
                 <DataTableHeaderCell align="center" width="8rem">Author</DataTableHeaderCell>
                 <DataTableHeaderCell align="center" width="7rem">Time</DataTableHeaderCell>
