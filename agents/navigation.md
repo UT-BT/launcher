@@ -10,7 +10,7 @@ not_here:
   - "where page state / persistence lives → state-patterns.md"
   - "the PlayerInfo / CapTimeLink components that trigger nav → shared-components.md"
 sections: [the-model, navigate-is-the-only-entry-point, page-views-vs-detail-pages, the-sidebar-registry, event-driven-navigation, sidebar-new-badges, page-refresh-registry, per-entry-state]
-last_verified: 2026-06-19
+last_verified: 2026-06-20
 verify_against:
   - app/components/main/Main.tsx
   - app/components/layout/AppLayout.tsx
@@ -36,7 +36,7 @@ const [cursor, setCursor] = useState(0)
 - **`NavEntry`** (`app/components/navigation/NavigationContext.tsx`) =
   `{ id, view, params: NavParams, state: Record<string, unknown> }`. `id` is a
   monotonic counter; `state` is the per-entry bag (see below).
-- **`NavParams`** = `{ mapName?, playerId?, capId?, mapsNewOnly? }` — the params a
+- **`NavParams`** = `{ mapName?, playerId?, capId?, newsId?, mapsNewOnly? }` — the params a
   view can carry. Add a field here if a new detail page needs a different
   identifier, or if a page must open in a specific state. `mapsNewOnly` seeds the
   Maps page's new-only filter when opened from the Home "new maps" tile; `MapsPage`
@@ -76,11 +76,11 @@ parallel back stack. Sidebar clicks, `openMap`, and the `open-*` events all call
 
 | Kind | Views | Keyed? | Why |
 |---|---|---|---|
-| **Page-views** | `home`, `servers`, `maps`, `players`, `cap-it-all`, `world-records`, `achievements`, `admin` | **No** — one reused instance | State is hoisted per-entry via `usePageState`; the component stays mounted and reads the active entry. |
-| **Detail-pages** | `maps-detail`, `player-detail`, `cap-detail` | **Yes — `key={entry.id}`** | A new visit must remount so it refetches for the new param and `useNavState` re-reads the right entry's bag. |
+| **Page-views** | `home`, `servers`, `maps`, `players`, `cap-it-all`, `world-records`, `achievements`, `news`, `admin` | **No** — one reused instance | State is hoisted per-entry via `usePageState` (or, for the lightweight `news` list, self-fetched with `useNavState` for its filter); the component stays mounted and reads the active entry. |
+| **Detail-pages** | `maps-detail`, `player-detail`, `cap-detail`, `news-detail` | **Yes — `key={entry.id}`** | A new visit must remount so it refetches for the new param and `useNavState` re-reads the right entry's bag. |
 
 Detail cases pull their identifier from `entry.params` (`mapName!` / `playerId!` /
-`capId!`). Forgetting `key={entry.id}` on a detail case is a bug: the page keeps
+`capId!` / `newsId!`). Forgetting `key={entry.id}` on a detail case is a bug: the page keeps
 the previous visit's data and UI state.
 
 ## The sidebar registry
@@ -123,11 +123,14 @@ that `Main.tsx` listens for:
 |---|---|---|---|
 | `open-player` | `{ userId }` | `PlayerInfo` (click) | `navigate('player-detail', { playerId: userId })` |
 | `open-cap` | `{ capId }` | `CapTimeLink` / `openCap()` | `navigate('cap-detail', { capId })` |
+| `open-news` | `{ newsId }` | news `ArticleCard` / `openNews()` | `navigate('news-detail', { newsId })` |
 | `open-settings` | `{ section? }` | the installation banner | `AppLayout` opens the Settings modal (the user-dropdown Settings item opens it directly via local state, not this event) |
 
 `openMap(name)` is a direct helper (`navigate('maps-detail', { mapName })`) threaded
 to pages as `onMapSelect`. Render `PlayerInfo` and `CapTimeLink` (see
-`shared-components.md`) — don't dispatch these events by hand.
+`shared-components.md`) — don't dispatch these events by hand. `openNews(id)`
+(`app/components/navigation/openNews.ts`) is the news equivalent, dispatched by the
+news `ArticleCard`.
 
 ## Sidebar "new" badges + new-item highlight (not navigation)
 

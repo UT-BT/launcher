@@ -53,6 +53,8 @@ import {
 import { MapDetailPage } from '@/app/components/pages/MapDetailPage'
 import { PlayerDetailPage } from '@/app/components/pages/PlayerDetailPage'
 import { CapDetailPage } from '@/app/components/pages/CapDetailPage'
+import { NewsPage } from '@/app/components/pages/NewsPage'
+import { NewsDetailPage } from '@/app/components/pages/NewsDetailPage'
 import { AdminPage, DEFAULT_ADMIN_STATE, type AdminPageState } from '@/app/components/pages/admin/AdminPage'
 import { InstallationBanner } from '@/app/components/InstallationBanner'
 import { UpdateBanner } from '@/app/components/updater/UpdateBanner'
@@ -367,6 +369,16 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
     return () => window.removeEventListener('open-cap', onOpenCap as EventListener)
   }, [navigate])
 
+  useEffect(() => {
+    const onOpenNews = (e: Event) => {
+      const ce = e as CustomEvent<{ newsId: number }>
+      if (ce.detail?.newsId == null) return
+      navigate('news-detail', { newsId: ce.detail.newsId })
+    }
+    window.addEventListener('open-news', onOpenNews as EventListener)
+    return () => window.removeEventListener('open-news', onOpenNews as EventListener)
+  }, [navigate])
+
   // Stamp achievements + grant earned titles on launcher load, even if the user
   // never opens the Achievements page. GET /me stamps server-side and is
   // idempotent (unique constraint + existing-set check), so it's safe to fire on
@@ -476,6 +488,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
           onViewWorldRecords={() => navigate('world-records')}
           onViewPlayers={() => navigate('players')}
           onViewNewMaps={() => navigate('maps', { mapsNewOnly: true })}
+          onViewNews={() => navigate('news')}
         />
       case 'servers':
         return <ServerBrowserPage
@@ -570,6 +583,14 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
           userProfile={userProfile as any}
           onMapSelect={openMap}
         />
+      case 'news':
+        return <NewsPage userProfile={userProfile as any} />
+      case 'news-detail':
+        return <NewsDetailPage
+          key={entry.id}
+          newsId={entry.params.newsId!}
+          userProfile={userProfile as any}
+        />
       default:
         return <Home
           userProfile={userProfile as any}
@@ -581,6 +602,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
           onViewWorldRecords={() => navigate('world-records')}
           onViewPlayers={() => navigate('players')}
           onViewNewMaps={() => navigate('maps', { mapsNewOnly: true })}
+          onViewNews={() => navigate('news')}
         />
     }
   }
