@@ -229,8 +229,14 @@ path.
 
 ## Release workflow
 
-Releases are prepared on a dedicated branch created from `staging`. CI is
-triggered by Git tags like `v1.7.0`.
+Releases are prepared on a dedicated branch created from `staging`.
+
+> **The Git tag is what triggers a release — not merging to `main`.**
+> The build-and-release workflow (`.github/workflows/release.yml`) runs only on
+> `push` of a `v*` tag. Merging a release PR into `main` builds nothing on its
+> own. If you finish a promotion and no GitHub Actions run appears, you forgot to
+> push the tag — the release is not done until the tag is pushed and the workflow
+> run is green.
 
 Example for version `1.7.0`:
 
@@ -286,6 +292,33 @@ git push origin v1.7.0
 Pushing the tag triggers the GitHub Actions workflow, which builds the Windows
 installer and creates a GitHub Release with the artifacts (`.exe`, `.blockmap`,
 `latest.yml`).
+
+Confirm the run actually started — the tag push is the single step people forget:
+
+```bash
+gh run list --workflow "Build and Release Windows Installer" --limit 1
+```
+
+A run must appear within a minute of pushing the tag. If nothing appears, the tag
+did not reach the remote — re-run `git push origin v1.7.0` and check again.
+
+### Release checklist
+
+Once `release/vX.Y.Z` is approved and `staging` has been promoted to `main`, run
+these in order. This is the only part that publishes the release:
+
+```bash
+git switch main
+git pull --ff-only origin main          # main now holds the release version bump
+
+git tag vX.Y.Z -m "Release vX.Y.Z"      # tag the production merge commit on main
+git push origin vX.Y.Z                  # THIS triggers the build + GitHub Release
+
+gh run list --workflow "Build and Release Windows Installer" --limit 1
+```
+
+The release is not done until the workflow run is green and the GitHub Release
+carries the `.exe`, `.blockmap`, and `latest.yml` assets.
 
 ### Prereleases
 
