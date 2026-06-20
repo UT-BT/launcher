@@ -12,7 +12,7 @@ import { SearchInput, Pager, Feedback, ActionButton, AdminSelect, ConfirmDialog,
 import { useAdminTable, type AdminColumn } from '../components/useAdminTable'
 import { useAdminFilterPresets } from '../components/useAdminFilterPresets'
 import { TableControls } from '../components/TableControls'
-import { PANEL_LABEL, minWidthFor, useResetOnChange, useAdminPageSize } from '../components/shared'
+import { PANEL_LABEL, useResetOnChange, useAdminPageSize } from '../components/shared'
 import { MapLink } from '../components/MapLink'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
@@ -26,7 +26,7 @@ import { Button } from '@/app/components/ui/button'
 import { Input } from '@/app/components/ui/input'
 import {
   DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow, DataTableCell, DataTableEmpty,
-  DataTableSkeletonRow, type SortDirection,
+  DataTableSkeletonRow, type SortDirection, type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
 
 const MAPVOTE_STALE_KEY = 'utbt:admin:maps:mapvoteStale:v1'
@@ -62,6 +62,10 @@ const LAYOUT: Record<string, { width?: string; align?: 'left' | 'center' | 'righ
 
 const SORTABLE: Record<string, AdminMapSort> = {
   map: 'name', difficulty: 'difficulty', status: 'active',
+}
+
+const PRIORITY: Record<string, number> = {
+  status: 70, difficulty: 70, author: 30, tags: 30, superseded: 30,
 }
 
 interface MapFilters {
@@ -725,10 +729,17 @@ export function MapsManagementSection({ userProfile, onMapSelect }: AdminSection
 
   const statusLabel = STATUS_OPTIONS.find((o) => o.value === status)?.label ?? status
 
-  const tableMinWidth = useMemo(() => minWidthFor(tbl.columnOrder, tbl.isVisible, LAYOUT, 14), [tbl])
+  const responsiveColumns = useMemo<ResponsiveColumn[]>(
+    () => tbl.columnOrder.filter(tbl.isVisible).map((id) => ({ id, width: LAYOUT[id]?.width, priority: PRIORITY[id], required: tbl.requiredColumns.has(id) })),
+    [tbl.columnOrder, tbl.isVisible, tbl.requiredColumns],
+  )
+  const [resolved, setResolved] = useState<Set<string> | null>(null)
+  const handleResolve = useCallback((ids: Set<string>) => { setResolved(ids) }, [])
+  const isShown = useCallback((id: string) => tbl.isVisible(id) && (!resolved || resolved.has(id)), [tbl, resolved])
+  const effectiveCount = tbl.columnOrder.filter(isShown).length
 
   const renderHeader = (id: string): ReactNode => {
-    if (!tbl.isVisible(id)) return null
+    if (!isShown(id)) return null
     const layout = LAYOUT[id]
     const sortKey = SORTABLE[id]
     if (sortKey) {
@@ -743,7 +754,7 @@ export function MapsManagementSection({ userProfile, onMapSelect }: AdminSection
   }
 
   const renderCell = (id: string, m: AdminMapRow): ReactNode => {
-    if (!tbl.isVisible(id)) return null
+    if (!isShown(id)) return null
     const align = LAYOUT[id].align
     switch (id) {
       case 'map':
@@ -893,15 +904,15 @@ export function MapsManagementSection({ userProfile, onMapSelect }: AdminSection
         </div>
       )}
 
-      <DataTableShell className="flex-none" minWidth={tableMinWidth}>
+      <DataTableShell className="flex-none" responsive={{ columns: responsiveColumns, nameFloorRem: 14, extraRem: 0, onResolve: handleResolve }}>
         <DataTableHeaderRow>
           {tbl.columnOrder.map((id) => renderHeader(id))}
         </DataTableHeaderRow>
         <tbody>
           {loading && rows.length === 0 ? (
-            Array.from({ length: 8 }).map((_, i) => <DataTableSkeletonRow key={i} columnCount={tbl.visibleCount} />)
+            Array.from({ length: 8 }).map((_, i) => <DataTableSkeletonRow key={i} columnCount={effectiveCount} />)
           ) : rows.length === 0 ? (
-            <DataTableEmpty colSpan={tbl.visibleCount} message="No maps match these filters." />
+            <DataTableEmpty colSpan={effectiveCount} message="No maps match these filters." />
           ) : rows.map((m) => (
             <DataTableRow key={m.name}>{tbl.columnOrder.map((id) => renderCell(id, m))}</DataTableRow>
           ))}

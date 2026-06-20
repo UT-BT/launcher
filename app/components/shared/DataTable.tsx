@@ -1,6 +1,9 @@
-import { forwardRef } from 'react'
+import {
+    createContext, forwardRef, useCallback, useContext, useLayoutEffect, useMemo, useRef,
+} from 'react'
 import { ArrowUpDown, ChevronUp, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useElementWidth } from '@/app/hooks/useElementWidth'
 
 /**
  * Shared visual primitives for tabular pages (Maps, Servers, etc).
@@ -11,6 +14,94 @@ import { cn } from '@/lib/utils'
 
 export type SortDirection = 'asc' | 'desc' | null
 
+export type ResponsiveColumn = {
+    id: string
+    width?: string
+    priority?: number
+    required?: boolean
+}
+
+const DEFAULT_PRIORITY = 50
+const HYSTERESIS_REM = 1.5
+const SCROLLBAR_GUTTER_REM = 1
+const CONDENSE_BELOW_REM = 58
+
+export function widthToRem(width: string | undefined, floorRem: number): number {
+    if (!width) return floorRem
+    if (width.endsWith('rem')) {
+        const n = parseFloat(width)
+        return Number.isFinite(n) ? n : floorRem
+    }
+    if (width.endsWith('px')) {
+        const n = parseFloat(width)
+        return Number.isFinite(n) ? n / 16 : floorRem
+    }
+    return floorRem
+}
+
+interface ResolveOpts {
+    nameFloorRem?: number
+    extraRem?: number
+    prevVisible?: Set<string>
+}
+
+export function resolveResponsiveColumns(
+    cols: ResponsiveColumn[],
+    measuredRem: number,
+    opts: ResolveOpts = {},
+): { visibleIds: Set<string>; hiddenIds: Set<string>; minWidth: string } {
+    const { nameFloorRem = 12, extraRem = 0, prevVisible } = opts
+    const budget = measuredRem > 0 ? measuredRem - extraRem : Infinity
+
+    const order = new Map(cols.map((c, i) => [c.id, i]))
+    const visibleIds = new Set<string>()
+    const hiddenIds = new Set<string>()
+    let running = 0
+
+    for (const c of cols) {
+        if (!c.required) continue
+        visibleIds.add(c.id)
+        running += widthToRem(c.width, nameFloorRem)
+    }
+
+    const optional = cols
+        .filter(c => !c.required)
+        .sort((a, b) => {
+            const pa = a.priority ?? DEFAULT_PRIORITY
+            const pb = b.priority ?? DEFAULT_PRIORITY
+            if (pa !== pb) return pb - pa
+            return (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0)
+        })
+
+    for (const c of optional) {
+        const w = widthToRem(c.width, nameFloorRem)
+        const margin = prevVisible && !prevVisible.has(c.id) ? HYSTERESIS_REM : 0
+        if (running + w + margin <= budget) {
+            visibleIds.add(c.id)
+            running += w
+        } else {
+            hiddenIds.add(c.id)
+        }
+    }
+
+    const minWidthRem = cols
+        .filter(c => visibleIds.has(c.id))
+        .reduce((sum, c) => sum + widthToRem(c.width, nameFloorRem), 0)
+    return { visibleIds, hiddenIds, minWidth: `${minWidthRem + extraRem}rem` }
+}
+
+type Density = 'comfortable' | 'condensed'
+
+const DataTableDensityContext = createContext<Density>('comfortable')
+
+export interface ResponsiveConfig {
+    columns: ResponsiveColumn[]
+    nameFloorRem?: number
+    extraRem?: number
+    onResolve?: (visibleIds: Set<string>) => void
+    density?: boolean
+}
+
 interface DataTableShellProps {
     scrollRef?: React.RefObject<HTMLDivElement | null>
     onScroll?: () => void
@@ -18,6 +109,7 @@ interface DataTableShellProps {
     className?: string
     theadDataAttr?: string
     minWidth?: string
+    responsive?: ResponsiveConfig
 }
 
 /**
@@ -30,9 +122,10 @@ interface DataTableShellProps {
  *     <tbody>...</tbody>
  *   </DataTableShell>
  */
-export function DataTableShell({
-    scrollRef, onScroll, children, className, theadDataAttr, minWidth,
-}: DataTableShellProps) {
+export function DataTableShell(props: DataTableShellProps) {
+    if (props.responsive) return <ResponsiveDataTableShell {...props} responsive={props.responsive} />
+
+    const { scrollRef, onScroll, children, className, theadDataAttr, minWidth } = props
     return (
         <div
             ref={scrollRef}
@@ -47,6 +140,59 @@ export function DataTableShell({
                 {children}
             </table>
         </div>
+    )
+}
+
+function ResponsiveDataTableShell({
+    scrollRef, onScroll, children, className, theadDataAttr,
+    responsive,
+}: DataTableShellProps & { responsive: ResponsiveConfig }) {
+    const { columns, nameFloorRem = 12, extraRem = 0, onResolve, density: densityEnabled = true } = responsive
+
+    const internalRef = useRef<HTMLDivElement | null>(null)
+    const setRef = useCallback((node: HTMLDivElement | null) => {
+        internalRef.current = node
+        if (scrollRef) scrollRef.current = node
+    }, [scrollRef])
+
+    const widthPx = useElementWidth(internalRef)
+    const prevVisibleRef = useRef<Set<string> | undefined>(undefined)
+    const lastKeyRef = useRef<string>('')
+
+    const { visibleIds, minWidth, density, key } = useMemo(() => {
+        const measuredRem = widthPx > 0 ? widthPx / 16 - SCROLLBAR_GUTTER_REM : 0
+        const res = resolveResponsiveColumns(columns, measuredRem, {
+            nameFloorRem, extraRem, prevVisible: prevVisibleRef.current,
+        })
+        const k = [...res.visibleIds].sort().join('|')
+        const d: Density = densityEnabled && measuredRem > 0 && measuredRem < CONDENSE_BELOW_REM
+            ? 'condensed' : 'comfortable'
+        return { visibleIds: res.visibleIds, minWidth: res.minWidth, density: d, key: k }
+    }, [columns, widthPx, nameFloorRem, extraRem, densityEnabled])
+
+    useLayoutEffect(() => {
+        if (key === lastKeyRef.current) return
+        lastKeyRef.current = key
+        prevVisibleRef.current = visibleIds
+        onResolve?.(visibleIds)
+    }, [key, visibleIds, onResolve])
+
+    return (
+        <DataTableDensityContext.Provider value={density}>
+            <div
+                ref={setRef}
+                onScroll={onScroll}
+                className={cn(
+                    'flex-1 min-h-0 bg-card/30 border border-hairline/5 rounded-xl overflow-auto',
+                    className,
+                )}
+                data-utbt-table-thead={theadDataAttr}
+            >
+                <table className="w-full table-fixed text-sm" style={{ minWidth }}>
+                    {children}
+                </table>
+            </div>
+        </DataTableDensityContext.Provider>
     )
 }
 
@@ -93,9 +239,12 @@ export function DataTableHeaderCell({
     children, align = 'left', width, className,
     sortable, sortDirection = null, onSort, buttonRef,
 }: DataTableHeaderCellProps) {
+    const density = useContext(DataTableDensityContext)
+    const pad = density === 'condensed' ? 'px-3 py-2' : 'px-4 py-3'
     const alignClass = align === 'center' ? 'text-center' : align === 'right' ? 'text-right' : 'text-left'
     const thClass = cn(
-        'px-4 py-3 text-muted-foreground font-medium text-xs uppercase tracking-wider',
+        pad,
+        'text-muted-foreground font-medium text-xs uppercase tracking-wider',
         alignClass,
         className,
     )
@@ -169,12 +318,14 @@ interface DataTableCellProps extends React.TdHTMLAttributes<HTMLTableCellElement
  */
 export const DataTableCell = forwardRef<HTMLTableCellElement, DataTableCellProps>(
     function DataTableCell({ children, align = 'left', width, className, ...rest }, ref) {
+        const density = useContext(DataTableDensityContext)
+        const pad = density === 'condensed' ? 'px-3 py-2' : 'px-4 py-3'
         const alignClass = align === 'center' ? 'text-center' : align === 'right' ? 'text-right' : ''
         const style = width ? { width, ...(rest.style ?? {}) } : rest.style
         return (
             <td
                 ref={ref}
-                className={cn('px-4 py-3', alignClass, className)}
+                className={cn(pad, alignClass, className)}
                 style={style}
                 {...rest}
             >
@@ -212,10 +363,12 @@ interface DataTableSkeletonRowProps {
  * row instead of using this.
  */
 export function DataTableSkeletonRow({ columnCount }: DataTableSkeletonRowProps) {
+    const density = useContext(DataTableDensityContext)
+    const pad = density === 'condensed' ? 'px-3 py-2' : 'px-4 py-3'
     return (
         <tr className="border-b border-hairline/5 animate-pulse">
             {Array.from({ length: columnCount }).map((_, i) => (
-                <td key={i} className="px-4 py-3">
+                <td key={i} className={pad}>
                     <div className="h-6 w-full bg-hairline/5 rounded" />
                 </td>
             ))}

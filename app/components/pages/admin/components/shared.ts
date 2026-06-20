@@ -21,20 +21,6 @@ export function useAdminPageSize(): number {
   return useAutoPageSize(computeAdminPageSize)
 }
 
-export function minWidthFor(
-  columnOrder: string[],
-  isVisible: (id: string) => boolean,
-  layout: Record<string, { width?: string } | undefined>,
-  floorRem = 14,
-  extraRem = 0,
-): string {
-  const rem = columnOrder.filter(isVisible).reduce((sum, id) => {
-    const w = layout[id]?.width
-    return sum + (w ? parseFloat(w) : floorRem)
-  }, 0)
-  return `${rem + extraRem}rem`
-}
-
 export function useResetOnChange(reset: () => void, deps: unknown[]): void {
   const firstRun = useRef(true)
   useEffect(() => {

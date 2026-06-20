@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Search } from 'lucide-react'
 import { fetchUncappedMaps, fetchUncappedMapsCount, type Map as ApiMap } from '@/app/utils/api'
 import { usePaginatedQuery } from '@/app/hooks/useAsync'
@@ -9,7 +9,7 @@ import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import {
     DataTableShell, DataTableHeaderRow, DataTableHeaderCell,
     DataTableRow, DataTableCell, DataTableEmpty, DataTableSkeletonRow,
-    type SortDirection,
+    type SortDirection, type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
 import { PaginationBar } from '@/app/components/ui/pagination'
 
@@ -20,10 +20,16 @@ interface UncappedMapsCardProps {
     tabsSlot?: React.ReactNode
 }
 
-const SKELETON_COL_COUNT = 3
 const DEBOUNCE_MS = 250
 
 type SortField = 'name' | 'difficulty' | 'added'
+
+type ColumnId = 'name' | 'author' | 'difficulty'
+
+const COLUMNS: ColumnId[] = ['name', 'author', 'difficulty']
+const COLUMN_WIDTH: Partial<Record<ColumnId, string>> = { difficulty: '7rem' }
+const COLUMN_PRIORITY: Partial<Record<ColumnId, number>> = { difficulty: 80, author: 30 }
+const REQUIRED_COLUMNS = new Set<ColumnId>(['name'])
 
 export function UncappedMapsCard({ accessToken, userId, onMapSelect, tabsSlot }: UncappedMapsCardProps) {
     const [total, setTotal] = useState(0)
@@ -96,6 +102,22 @@ export function UncappedMapsCard({ accessToken, userId, onMapSelect, tabsSlot }:
     }
     const dir = (field: SortField): SortDirection => sortField === field ? sortDir : null
 
+    const responsiveColumns = useMemo<ResponsiveColumn[]>(
+        () => COLUMNS.map(id => ({
+            id,
+            width: COLUMN_WIDTH[id],
+            priority: COLUMN_PRIORITY[id],
+            required: REQUIRED_COLUMNS.has(id),
+        })),
+        [],
+    )
+    const [resolved, setResolved] = useState<Set<ColumnId> | null>(null)
+    const handleResolve = useCallback((ids: Set<string>) => {
+        setResolved(ids as Set<ColumnId>)
+    }, [])
+    const isVisible = (id: ColumnId): boolean => !resolved || resolved.has(id)
+    const visibleColumnCount = COLUMNS.reduce((n, id) => n + (isVisible(id) ? 1 : 0), 0)
+
     return (
         <div className="bg-card/30 border border-hairline/5 rounded-xl flex flex-col overflow-hidden">
             <div className="flex items-center justify-between gap-3 gap-y-2 px-4 py-3 border-b border-hairline/5 flex-wrap">
@@ -128,19 +150,22 @@ export function UncappedMapsCard({ accessToken, userId, onMapSelect, tabsSlot }:
                 </div>
             </div>
 
-            <DataTableShell className="!flex-none !min-h-0 !overflow-visible !rounded-none !border-0">
+            <DataTableShell
+                className="!flex-none !min-h-0 !overflow-visible !rounded-none !border-0"
+                responsive={{ columns: responsiveColumns, onResolve: handleResolve }}
+            >
                 <DataTableHeaderRow>
-                    <DataTableHeaderCell sortable sortDirection={dir('name')} onSort={() => handleSort('name')}>Map</DataTableHeaderCell>
-                    <DataTableHeaderCell>Author</DataTableHeaderCell>
-                    <DataTableHeaderCell align="center" width="7rem" sortable sortDirection={dir('difficulty')} onSort={() => handleSort('difficulty')}>Difficulty</DataTableHeaderCell>
+                    {isVisible('name') && <DataTableHeaderCell sortable sortDirection={dir('name')} onSort={() => handleSort('name')}>Map</DataTableHeaderCell>}
+                    {isVisible('author') && <DataTableHeaderCell>Author</DataTableHeaderCell>}
+                    {isVisible('difficulty') && <DataTableHeaderCell align="center" width="7rem" sortable sortDirection={dir('difficulty')} onSort={() => handleSort('difficulty')}>Difficulty</DataTableHeaderCell>}
                 </DataTableHeaderRow>
                 <tbody>
                     {loading ? (
                         Array.from({ length: 5 }).map((_, i) => (
-                            <DataTableSkeletonRow key={i} columnCount={SKELETON_COL_COUNT} />
+                            <DataTableSkeletonRow key={i} columnCount={visibleColumnCount} />
                         ))
                     ) : items.length === 0 ? (
-                        <DataTableEmpty colSpan={SKELETON_COL_COUNT} message={query ? 'No uncapped maps match that search.' : 'All caught up — no uncapped maps.'} />
+                        <DataTableEmpty colSpan={visibleColumnCount} message={query ? 'No uncapped maps match that search.' : 'All caught up — no uncapped maps.'} />
                     ) : (
                         items.map(m => (
                             <DataTableRow
@@ -148,28 +173,34 @@ export function UncappedMapsCard({ accessToken, userId, onMapSelect, tabsSlot }:
                                 className="cursor-pointer"
                                 onClick={() => onMapSelect?.(m.name)}
                             >
-                                <DataTableCell>
-                                    <div className="flex items-center gap-2 min-w-0">
-                                        <MapThumbnail mapName={m.name} className="size-8 shrink-0" />
-                                        <span className="text-sm font-semibold text-foreground truncate">
-                                            {displayMapName(m.name)}
+                                {isVisible('name') && (
+                                    <DataTableCell>
+                                        <div className="flex items-center gap-2 min-w-0">
+                                            <MapThumbnail mapName={m.name} className="size-8 shrink-0" />
+                                            <span className="text-sm font-semibold text-foreground truncate">
+                                                {displayMapName(m.name)}
+                                            </span>
+                                        </div>
+                                    </DataTableCell>
+                                )}
+                                {isVisible('author') && (
+                                    <DataTableCell>
+                                        <span className="text-xs text-muted-foreground truncate">
+                                            {m.author_str ?? String(m.author ?? '—')}
                                         </span>
-                                    </div>
-                                </DataTableCell>
-                                <DataTableCell>
-                                    <span className="text-xs text-muted-foreground truncate">
-                                        {m.author_str ?? String(m.author ?? '—')}
-                                    </span>
-                                </DataTableCell>
-                                <DataTableCell align="center">
-                                    {m.difficulty != null ? (
-                                        <span className={`inline-flex items-center justify-center size-5 rounded text-[10px] font-bold text-foreground ${difficultyBgColor(m.difficulty)}`}>
-                                            {m.difficulty}
-                                        </span>
-                                    ) : (
-                                        <span className="text-xs text-muted-foreground">—</span>
-                                    )}
-                                </DataTableCell>
+                                    </DataTableCell>
+                                )}
+                                {isVisible('difficulty') && (
+                                    <DataTableCell align="center">
+                                        {m.difficulty != null ? (
+                                            <span className={`inline-flex items-center justify-center size-5 rounded text-[10px] font-bold text-foreground ${difficultyBgColor(m.difficulty)}`}>
+                                                {m.difficulty}
+                                            </span>
+                                        ) : (
+                                            <span className="text-xs text-muted-foreground">—</span>
+                                        )}
+                                    </DataTableCell>
+                                )}
                             </DataTableRow>
                         ))
                     )}

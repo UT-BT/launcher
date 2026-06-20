@@ -15,7 +15,7 @@ import {
 import { useAdminTable, type AdminColumn } from '../components/useAdminTable'
 import { useAdminFilterPresets } from '../components/useAdminFilterPresets'
 import { TableControls } from '../components/TableControls'
-import { PANEL_LABEL, minWidthFor } from '../components/shared'
+import { PANEL_LABEL } from '../components/shared'
 import { Modal } from '@/app/components/ui/modal'
 import { Button } from '@/app/components/ui/button'
 import { Input } from '@/app/components/ui/input'
@@ -25,7 +25,7 @@ import { ActiveFilterChip } from '@/app/components/shared/ActiveFilterChip'
 import { useNavState } from '@/app/components/navigation/useNavState'
 import {
   DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow, DataTableCell,
-  DataTableEmpty, DataTableSkeletonRow, type SortDirection,
+  DataTableEmpty, DataTableSkeletonRow, type SortDirection, type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
 
 const CHANNEL_OPTIONS = [
@@ -67,6 +67,10 @@ const LAYOUT: Record<string, { width?: string; align?: 'left' | 'center' | 'righ
 
 const SORTABLE: Record<string, PatchSortKey> = {
   channel: 'channel', tag: 'tag', asset: 'asset', status: 'status', added: 'added',
+}
+
+const PRIORITY: Record<string, number> = {
+  asset: 70, hashes: 30, notes: 30, added: 30,
 }
 
 interface PatchFilters {
@@ -429,10 +433,17 @@ export function PatchesManagementSection({ userProfile }: AdminSectionProps) {
     }
   }, [token, deleteTarget, load])
 
-  const tableMinWidth = useMemo(() => minWidthFor(tbl.columnOrder, tbl.isVisible, LAYOUT, 14), [tbl])
+  const responsiveColumns = useMemo<ResponsiveColumn[]>(
+    () => tbl.columnOrder.filter(tbl.isVisible).map((id) => ({ id, width: LAYOUT[id]?.width, priority: PRIORITY[id], required: tbl.requiredColumns.has(id) })),
+    [tbl.columnOrder, tbl.isVisible, tbl.requiredColumns],
+  )
+  const [resolved, setResolved] = useState<Set<string> | null>(null)
+  const handleResolve = useCallback((ids: Set<string>) => { setResolved(ids) }, [])
+  const isShown = useCallback((id: string) => tbl.isVisible(id) && (!resolved || resolved.has(id)), [tbl, resolved])
+  const effectiveCount = tbl.columnOrder.filter(isShown).length
 
   const renderHeader = (id: string): ReactNode => {
-    if (!tbl.isVisible(id)) return null
+    if (!isShown(id)) return null
     const layout = LAYOUT[id]
     const sortCol = SORTABLE[id]
     if (sortCol) {
@@ -447,7 +458,7 @@ export function PatchesManagementSection({ userProfile }: AdminSectionProps) {
   }
 
   const renderCell = (id: string, p: AdminPatch): ReactNode => {
-    if (!tbl.isVisible(id)) return null
+    if (!isShown(id)) return null
     const align = LAYOUT[id].align
     switch (id) {
       case 'channel':
@@ -576,15 +587,15 @@ export function PatchesManagementSection({ userProfile }: AdminSectionProps) {
         </div>
       )}
 
-      <DataTableShell className="flex-none" minWidth={tableMinWidth}>
+      <DataTableShell className="flex-none" responsive={{ columns: responsiveColumns, nameFloorRem: 14, extraRem: 0, onResolve: handleResolve }}>
         <DataTableHeaderRow>
           {tbl.columnOrder.map((id) => renderHeader(id))}
         </DataTableHeaderRow>
         <tbody>
           {loading && rows.length === 0 ? (
-            Array.from({ length: 8 }).map((_, i) => <DataTableSkeletonRow key={i} columnCount={tbl.visibleCount} />)
+            Array.from({ length: 8 }).map((_, i) => <DataTableSkeletonRow key={i} columnCount={effectiveCount} />)
           ) : sorted.length === 0 ? (
-            <DataTableEmpty colSpan={tbl.visibleCount} message="No patches match these filters." />
+            <DataTableEmpty colSpan={effectiveCount} message="No patches match these filters." />
           ) : sorted.map((p) => (
             <DataTableRow key={p.id}>{tbl.columnOrder.map((id) => renderCell(id, p))}</DataTableRow>
           ))}

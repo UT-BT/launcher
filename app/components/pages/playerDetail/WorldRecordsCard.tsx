@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { History, Search } from 'lucide-react'
 import { fetchUserWorldRecords, fetchWorldRecordProgression, type Record, type WorldRecordProgressionEntry } from '@/app/utils/api'
 import { usePaginatedQuery } from '@/app/hooks/useAsync'
@@ -11,7 +11,7 @@ import { WorldRecordProgressionModal } from '@/app/components/modals/WorldRecord
 import {
     DataTableShell, DataTableHeaderRow, DataTableHeaderCell,
     DataTableRow, DataTableCell, DataTableEmpty, DataTableSkeletonRow,
-    type SortDirection,
+    type SortDirection, type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
 import { PaginationBar } from '@/app/components/ui/pagination'
 
@@ -23,10 +23,16 @@ interface WorldRecordsCardProps {
     tabsSlot?: React.ReactNode
 }
 
-const SKELETON_COL_COUNT = 4
 const DEBOUNCE_MS = 250
 
 type SortField = 'added' | 'time' | 'map'
+
+type ColumnId = 'map' | 'time' | 'added' | 'history'
+
+const COLUMNS: ColumnId[] = ['map', 'time', 'added', 'history']
+const COLUMN_WIDTH: { [k in ColumnId]?: string } = { time: '8rem', added: '8rem', history: '4rem' }
+const COLUMN_PRIORITY: { [k in ColumnId]?: number } = { time: 80, added: 40, history: 20 }
+const REQUIRED_COLUMNS = new Set<ColumnId>(['map'])
 
 export function WorldRecordsCard({ accessToken, userId, totalCount, onMapSelect, tabsSlot }: WorldRecordsCardProps) {
     const [query, setQuery] = useNavState('wrs.query', '')
@@ -80,6 +86,22 @@ export function WorldRecordsCard({ accessToken, userId, totalCount, onMapSelect,
     }
     const dir = (field: SortField): SortDirection => sortField === field ? sortDir : null
 
+    const responsiveColumns = useMemo<ResponsiveColumn[]>(
+        () => COLUMNS.map(id => ({
+            id,
+            width: COLUMN_WIDTH[id],
+            priority: COLUMN_PRIORITY[id],
+            required: REQUIRED_COLUMNS.has(id),
+        })),
+        [],
+    )
+    const [resolved, setResolved] = useState<Set<ColumnId> | null>(null)
+    const handleResolve = useCallback((ids: Set<string>) => {
+        setResolved(ids as Set<ColumnId>)
+    }, [])
+    const isVisible = (id: ColumnId): boolean => !resolved || resolved.has(id)
+    const visibleColumnCount = COLUMNS.reduce((n, id) => n + (isVisible(id) ? 1 : 0), 0)
+
     const openProgression = async (mapName: string) => {
         if (!accessToken) return
         setProgressionMap(mapName)
@@ -118,20 +140,23 @@ export function WorldRecordsCard({ accessToken, userId, totalCount, onMapSelect,
                 </div>
             )}
 
-            <DataTableShell className="!flex-none !min-h-0 !overflow-visible !rounded-none !border-0">
+            <DataTableShell
+                className="!flex-none !min-h-0 !overflow-visible !rounded-none !border-0"
+                responsive={{ columns: responsiveColumns, onResolve: handleResolve }}
+            >
                 <DataTableHeaderRow>
-                    <DataTableHeaderCell sortable sortDirection={dir('map')} onSort={() => handleSort('map')}>Map</DataTableHeaderCell>
-                    <DataTableHeaderCell align="right" width="8rem" sortable sortDirection={dir('time')} onSort={() => handleSort('time')}>Time</DataTableHeaderCell>
-                    <DataTableHeaderCell align="right" width="8rem" sortable sortDirection={dir('added')} onSort={() => handleSort('added')}>Set</DataTableHeaderCell>
-                    <DataTableHeaderCell align="center" width="4rem"><span className="sr-only">History</span></DataTableHeaderCell>
+                    {isVisible('map') && <DataTableHeaderCell sortable sortDirection={dir('map')} onSort={() => handleSort('map')}>Map</DataTableHeaderCell>}
+                    {isVisible('time') && <DataTableHeaderCell align="right" width="8rem" sortable sortDirection={dir('time')} onSort={() => handleSort('time')}>Time</DataTableHeaderCell>}
+                    {isVisible('added') && <DataTableHeaderCell align="right" width="8rem" sortable sortDirection={dir('added')} onSort={() => handleSort('added')}>Set</DataTableHeaderCell>}
+                    {isVisible('history') && <DataTableHeaderCell align="center" width="4rem"><span className="sr-only">History</span></DataTableHeaderCell>}
                 </DataTableHeaderRow>
                 <tbody>
                     {loading ? (
                         Array.from({ length: 5 }).map((_, i) => (
-                            <DataTableSkeletonRow key={i} columnCount={SKELETON_COL_COUNT} />
+                            <DataTableSkeletonRow key={i} columnCount={visibleColumnCount} />
                         ))
                     ) : items.length === 0 ? (
-                        <DataTableEmpty colSpan={SKELETON_COL_COUNT} message={query ? 'No world records match that search.' : 'No world records held.'} />
+                        <DataTableEmpty colSpan={visibleColumnCount} message={query ? 'No world records match that search.' : 'No world records held.'} />
                     ) : (
                         items.map(r => {
                             const exact = r.added ? (() => {
@@ -144,40 +169,48 @@ export function WorldRecordsCard({ accessToken, userId, totalCount, onMapSelect,
                                     className="cursor-pointer"
                                     onClick={() => onMapSelect?.(r.map)}
                                 >
-                                    <DataTableCell>
-                                        <div className="flex items-center gap-2 min-w-0">
-                                            <MapThumbnail mapName={r.map} className="size-8 shrink-0" />
-                                            <span className="text-sm font-semibold text-foreground truncate">
-                                                {displayMapName(r.map)}
-                                            </span>
-                                        </div>
-                                    </DataTableCell>
-                                    <DataTableCell align="right">
-                                        <CapTimeLink
-                                            capId={r.cap_id}
-                                            seconds={r.cap_time_seconds}
-                                            className="text-sm font-mono tabular-nums font-bold text-blue-200"
-                                        />
-                                    </DataTableCell>
-                                    <DataTableCell align="right">
-                                        <Tooltip content={exact} side="top">
-                                            <span className="text-xs text-muted-foreground tabular-nums">
-                                                {r.added ? formatAddedDate(r.added) : '—'}
-                                            </span>
-                                        </Tooltip>
-                                    </DataTableCell>
-                                    <DataTableCell align="center">
-                                        <Tooltip content="View WR progression" side="top">
-                                            <button
-                                                type="button"
-                                                onClick={(e) => { e.stopPropagation(); openProgression(r.map) }}
-                                                className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-hairline/5 transition-colors cursor-pointer"
-                                                aria-label="View WR progression"
-                                            >
-                                                <History className="size-3.5" />
-                                            </button>
-                                        </Tooltip>
-                                    </DataTableCell>
+                                    {isVisible('map') && (
+                                        <DataTableCell>
+                                            <div className="flex items-center gap-2 min-w-0">
+                                                <MapThumbnail mapName={r.map} className="size-8 shrink-0" />
+                                                <span className="text-sm font-semibold text-foreground truncate">
+                                                    {displayMapName(r.map)}
+                                                </span>
+                                            </div>
+                                        </DataTableCell>
+                                    )}
+                                    {isVisible('time') && (
+                                        <DataTableCell align="right">
+                                            <CapTimeLink
+                                                capId={r.cap_id}
+                                                seconds={r.cap_time_seconds}
+                                                className="text-sm font-mono tabular-nums font-bold text-blue-200"
+                                            />
+                                        </DataTableCell>
+                                    )}
+                                    {isVisible('added') && (
+                                        <DataTableCell align="right">
+                                            <Tooltip content={exact} side="top">
+                                                <span className="text-xs text-muted-foreground tabular-nums">
+                                                    {r.added ? formatAddedDate(r.added) : '—'}
+                                                </span>
+                                            </Tooltip>
+                                        </DataTableCell>
+                                    )}
+                                    {isVisible('history') && (
+                                        <DataTableCell align="center">
+                                            <Tooltip content="View WR progression" side="top">
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => { e.stopPropagation(); openProgression(r.map) }}
+                                                    className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-hairline/5 transition-colors cursor-pointer"
+                                                    aria-label="View WR progression"
+                                                >
+                                                    <History className="size-3.5" />
+                                                </button>
+                                            </Tooltip>
+                                        </DataTableCell>
+                                    )}
                                 </DataTableRow>
                             )
                         })

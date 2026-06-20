@@ -15,7 +15,7 @@ open the ONE the router points to, not the whole set.
 | Doc | Path | Provides | verify_against |
 |---|---|---|---|
 | build | `agents/build.md` | dev/build/lint/typecheck commands + pre-commit gate | `package.json`, `tsconfig.web.json` |
-| styling | `agents/styling.md` | locked design tokens + canonical class strings | `app/components/shared/DataTable.tsx`, `app/styles/globals.css`, `lib/utils.ts` |
+| styling | `agents/styling.md` | locked design tokens + canonical class strings | `app/components/shared/DataTable.tsx`, `app/styles/globals.css`, `lib/utils.ts`, `app/hooks/useElementWidth.ts` |
 | shared-components | `agents/shared-components.md` | inventory of reusable components + when to use each | `app/components/shared/{PlayerInfo,DataTable,CapTimeLink,ColumnsMenu,FilterPresetsMenu}.tsx` |
 | state-patterns | `agents/state-patterns.md` | three state tiers + localStorage convention + controlled pages | `app/components/main/Main.tsx`, `app/components/navigation/useNavState.ts`, `app/hooks/useAsync.ts` |
 | navigation | `agents/navigation.md` | nav stack, `navigate()` funnel, renderView, sidebar, `open-*` events | `app/components/main/Main.tsx`, `app/components/layout/AppLayout.tsx`, `app/components/navigation/NavigationContext.tsx`, `useNavState.ts` |

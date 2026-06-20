@@ -12,8 +12,17 @@ import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { PaginationBar } from '@/app/components/ui/pagination'
 import {
     DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow,
-    DataTableCell, DataTableEmpty, DataTableSkeletonRow,
+    DataTableCell, DataTableEmpty, DataTableSkeletonRow, type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
+
+type CapItAllColumnId = 'rank' | 'player' | 'certified' | 'noncertified'
+
+const CAP_IT_ALL_COLUMNS: ResponsiveColumn[] = [
+    { id: 'rank', width: '72px', priority: 30, required: true },
+    { id: 'player', required: true },
+    { id: 'certified', width: '220px', priority: 60 },
+    { id: 'noncertified', width: '220px', priority: 50 },
+]
 
 export interface CapItAllPageState {
     search: string
@@ -208,6 +217,16 @@ export function CapItAllPage({ userProfile, state, onStateChange, caches, onCach
     const items = caches.items
     const showSkeleton = !error && (!cacheFresh || (pageLoading && items.length === 0))
 
+    const [resolved, setResolved] = useState<Set<CapItAllColumnId> | null>(null)
+    const handleResolve = useCallback((ids: Set<string>) => {
+        setResolved(ids as Set<CapItAllColumnId>)
+    }, [])
+    const isVisible = useCallback(
+        (id: CapItAllColumnId) => !resolved || resolved.has(id),
+        [resolved],
+    )
+    const visibleColumnCount = resolved ? resolved.size : CAP_IT_ALL_COLUMNS.length
+
     return (
         <div className="space-y-4 h-full flex flex-col overflow-hidden">
             <div className="flex items-end justify-between shrink-0">
@@ -254,21 +273,25 @@ export function CapItAllPage({ userProfile, state, onStateChange, caches, onCach
                 </div>
             )}
 
-            <DataTableShell scrollRef={scrollContainerRef} onScroll={onScrollContainerScroll}>
+            <DataTableShell
+                scrollRef={scrollContainerRef}
+                onScroll={onScrollContainerScroll}
+                responsive={{ columns: CAP_IT_ALL_COLUMNS, onResolve: handleResolve }}
+            >
                 <DataTableHeaderRow theadDataAttr="data-utbt-capitall-thead">
-                    <DataTableHeaderCell align="right" width="72px">#</DataTableHeaderCell>
-                    <DataTableHeaderCell align="left">Player</DataTableHeaderCell>
-                    <DataTableHeaderCell align="left" width="220px">Certified</DataTableHeaderCell>
-                    <DataTableHeaderCell align="left" width="220px">Non-certified</DataTableHeaderCell>
+                    {isVisible('rank') && <DataTableHeaderCell align="right" width="72px">#</DataTableHeaderCell>}
+                    {isVisible('player') && <DataTableHeaderCell align="left">Player</DataTableHeaderCell>}
+                    {isVisible('certified') && <DataTableHeaderCell align="left" width="220px">Certified</DataTableHeaderCell>}
+                    {isVisible('noncertified') && <DataTableHeaderCell align="left" width="220px">Non-certified</DataTableHeaderCell>}
                 </DataTableHeaderRow>
                 <tbody>
                     {showSkeleton ? (
                         Array.from({ length: Math.min(pageSize, AUTO_PAGE_SIZE_MAX_ROWS) }).map((_, i) => (
-                            <DataTableSkeletonRow key={i} columnCount={4} />
+                            <DataTableSkeletonRow key={i} columnCount={visibleColumnCount} />
                         ))
                     ) : items.length === 0 ? (
                         <DataTableEmpty
-                            colSpan={4}
+                            colSpan={visibleColumnCount}
                             message={debouncedSearch ? 'No players match your search.' : 'No players on this leaderboard yet.'}
                         />
                     ) : (
@@ -276,30 +299,38 @@ export function CapItAllPage({ userProfile, state, onStateChange, caches, onCach
                             const isSelf = selfId != null && row.user_id === String(selfId)
                             return (
                                 <DataTableRow key={row.user_id}>
-                                    <DataTableCell align="right">
-                                        <span className={cn(
-                                            'font-mono tabular-nums',
-                                            row.rank <= 3 ? 'text-foreground font-bold' : 'text-muted-foreground',
-                                        )}>
-                                            #{row.rank.toLocaleString()}
-                                        </span>
-                                    </DataTableCell>
-                                    <DataTableCell>
-                                        <PlayerInfo
-                                            userId={row.user_id}
-                                            alias={row.alias}
-                                            title={row.active_title}
-                                            size="md"
-                                            highlight={isSelf}
-                                            showYouBadge={isSelf}
-                                        />
-                                    </DataTableCell>
-                                    <DataTableCell width="220px">
-                                        <MetricCell caps={row.certified_caps} pct={row.certified_percentage} barClass="bg-emerald-500/70" />
-                                    </DataTableCell>
-                                    <DataTableCell width="220px">
-                                        <MetricCell caps={row.non_certified_caps} pct={row.non_certified_percentage} barClass="bg-amber-400/60" />
-                                    </DataTableCell>
+                                    {isVisible('rank') && (
+                                        <DataTableCell align="right">
+                                            <span className={cn(
+                                                'font-mono tabular-nums',
+                                                row.rank <= 3 ? 'text-foreground font-bold' : 'text-muted-foreground',
+                                            )}>
+                                                #{row.rank.toLocaleString()}
+                                            </span>
+                                        </DataTableCell>
+                                    )}
+                                    {isVisible('player') && (
+                                        <DataTableCell>
+                                            <PlayerInfo
+                                                userId={row.user_id}
+                                                alias={row.alias}
+                                                title={row.active_title}
+                                                size="md"
+                                                highlight={isSelf}
+                                                showYouBadge={isSelf}
+                                            />
+                                        </DataTableCell>
+                                    )}
+                                    {isVisible('certified') && (
+                                        <DataTableCell width="220px">
+                                            <MetricCell caps={row.certified_caps} pct={row.certified_percentage} barClass="bg-emerald-500/70" />
+                                        </DataTableCell>
+                                    )}
+                                    {isVisible('noncertified') && (
+                                        <DataTableCell width="220px">
+                                            <MetricCell caps={row.non_certified_caps} pct={row.non_certified_percentage} barClass="bg-amber-400/60" />
+                                        </DataTableCell>
+                                    )}
                                 </DataTableRow>
                             )
                         })

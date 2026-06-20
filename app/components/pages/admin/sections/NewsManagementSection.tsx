@@ -16,7 +16,7 @@ import { Input } from '@/app/components/ui/input'
 import { useNavState } from '@/app/components/navigation/useNavState'
 import {
   DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow, DataTableCell,
-  DataTableEmpty, DataTableSkeletonRow,
+  DataTableEmpty, DataTableSkeletonRow, type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
 import { ArticleCard, CategoryChip } from '@/app/components/pages/home/news/NewsCard'
 import { MarkdownBody } from '@/app/components/shared/MarkdownBody'
@@ -29,6 +29,16 @@ const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
   { value: 'live', label: 'Live' },
   { value: 'scheduled', label: 'Scheduled' },
   { value: 'inactive', label: 'Inactive' },
+]
+
+const NEWS_COLUMNS: ResponsiveColumn[] = [
+  { id: 'category', width: '11rem', priority: 30 },
+  { id: 'title', required: true },
+  { id: 'status', width: '6rem', priority: 60 },
+  { id: 'pinned', width: '5rem', priority: 30 },
+  { id: 'published', width: '8rem', priority: 30 },
+  { id: 'expires', width: '8rem', priority: 30 },
+  { id: 'actions', width: '9rem', required: true },
 ]
 
 const TEXTAREA_CLASS = 'flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50'
@@ -441,6 +451,10 @@ export function NewsManagementSection({ userProfile }: AdminSectionProps) {
   const [toggleTarget, setToggleTarget] = useState<AdminNews | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<AdminNews | null>(null)
   const [actionBusy, setActionBusy] = useState(false)
+  const [resolved, setResolved] = useState<Set<string> | null>(null)
+  const handleResolve = useCallback((ids: Set<string>) => { setResolved(ids) }, [])
+  const isShown = useCallback((id: string) => !resolved || resolved.has(id), [resolved])
+  const effectiveCount = NEWS_COLUMNS.filter((c) => isShown(c.id)).length
 
   const loadCategories = useCallback((signal?: AbortSignal) => {
     if (!token) return
@@ -497,23 +511,29 @@ export function NewsManagementSection({ userProfile }: AdminSectionProps) {
     const st = statusOf(n)
     return (
       <DataTableRow key={n.id}>
-        <DataTableCell><CategoryChip category={categoryMap.get(n.category) ?? null} /></DataTableCell>
-        <DataTableCell className="font-medium text-sm">
-          <div className="truncate" title={n.title}>{n.title}</div>
-        </DataTableCell>
-        <DataTableCell align="center"><span className={cn('text-xs', st.tone)}>{st.label}</span></DataTableCell>
-        <DataTableCell align="center">
-          {n.pinned ? <Pin className="size-3.5 text-accent-300 inline" /> : <span className="text-muted-foreground/40">—</span>}
-        </DataTableCell>
-        <DataTableCell className="text-xs text-muted-foreground whitespace-nowrap" title={n.publishedAt}>{relTime(n.publishedAt)}</DataTableCell>
-        <DataTableCell className="text-xs text-muted-foreground whitespace-nowrap" title={n.expiresAt ?? ''}>{n.expiresAt ? relTime(n.expiresAt) : '—'}</DataTableCell>
-        <DataTableCell align="center">
-          <div className="flex justify-center gap-1.5">
-            <ActionButton tone="accent" icon={Pencil} onClick={() => setEditing(n)} title="Edit" />
-            <ActionButton tone={n.active ? 'amber' : 'emerald'} icon={n.active ? PowerOff : Power} onClick={() => setToggleTarget(n)} title={n.active ? 'Deactivate' : 'Activate'} />
-            <ActionButton tone="red" icon={Trash2} onClick={() => setDeleteTarget(n)} title="Delete" />
-          </div>
-        </DataTableCell>
+        {isShown('category') && <DataTableCell key="category"><CategoryChip category={categoryMap.get(n.category) ?? null} /></DataTableCell>}
+        {isShown('title') && (
+          <DataTableCell key="title" className="font-medium text-sm">
+            <div className="truncate" title={n.title}>{n.title}</div>
+          </DataTableCell>
+        )}
+        {isShown('status') && <DataTableCell key="status" align="center"><span className={cn('text-xs', st.tone)}>{st.label}</span></DataTableCell>}
+        {isShown('pinned') && (
+          <DataTableCell key="pinned" align="center">
+            {n.pinned ? <Pin className="size-3.5 text-accent-300 inline" /> : <span className="text-muted-foreground/40">—</span>}
+          </DataTableCell>
+        )}
+        {isShown('published') && <DataTableCell key="published" className="text-xs text-muted-foreground whitespace-nowrap" title={n.publishedAt}>{relTime(n.publishedAt)}</DataTableCell>}
+        {isShown('expires') && <DataTableCell key="expires" className="text-xs text-muted-foreground whitespace-nowrap" title={n.expiresAt ?? ''}>{n.expiresAt ? relTime(n.expiresAt) : '—'}</DataTableCell>}
+        {isShown('actions') && (
+          <DataTableCell key="actions" align="center">
+            <div className="flex justify-center gap-1.5">
+              <ActionButton tone="accent" icon={Pencil} onClick={() => setEditing(n)} title="Edit" />
+              <ActionButton tone={n.active ? 'amber' : 'emerald'} icon={n.active ? PowerOff : Power} onClick={() => setToggleTarget(n)} title={n.active ? 'Deactivate' : 'Activate'} />
+              <ActionButton tone="red" icon={Trash2} onClick={() => setDeleteTarget(n)} title="Delete" />
+            </div>
+          </DataTableCell>
+        )}
       </DataTableRow>
     )
   }
@@ -540,21 +560,21 @@ export function NewsManagementSection({ userProfile }: AdminSectionProps) {
           options={STATUS_OPTIONS} className="min-w-36" />
       </div>
 
-      <DataTableShell className="flex-none" minWidth="56rem">
+      <DataTableShell className="flex-none" responsive={{ columns: NEWS_COLUMNS, onResolve: handleResolve }}>
         <DataTableHeaderRow>
-          <DataTableHeaderCell width="11rem">Category</DataTableHeaderCell>
-          <DataTableHeaderCell>Title</DataTableHeaderCell>
-          <DataTableHeaderCell width="6rem" align="center">Status</DataTableHeaderCell>
-          <DataTableHeaderCell width="5rem" align="center">Pinned</DataTableHeaderCell>
-          <DataTableHeaderCell width="8rem">Published</DataTableHeaderCell>
-          <DataTableHeaderCell width="8rem">Expires</DataTableHeaderCell>
-          <DataTableHeaderCell width="9rem" align="center">Actions</DataTableHeaderCell>
+          {isShown('category') && <DataTableHeaderCell key="category" width="11rem">Category</DataTableHeaderCell>}
+          {isShown('title') && <DataTableHeaderCell key="title">Title</DataTableHeaderCell>}
+          {isShown('status') && <DataTableHeaderCell key="status" width="6rem" align="center">Status</DataTableHeaderCell>}
+          {isShown('pinned') && <DataTableHeaderCell key="pinned" width="5rem" align="center">Pinned</DataTableHeaderCell>}
+          {isShown('published') && <DataTableHeaderCell key="published" width="8rem">Published</DataTableHeaderCell>}
+          {isShown('expires') && <DataTableHeaderCell key="expires" width="8rem">Expires</DataTableHeaderCell>}
+          {isShown('actions') && <DataTableHeaderCell key="actions" width="9rem" align="center">Actions</DataTableHeaderCell>}
         </DataTableHeaderRow>
         <tbody>
           {loading && rows.length === 0 ? (
-            Array.from({ length: 6 }).map((_, i) => <DataTableSkeletonRow key={i} columnCount={7} />)
+            Array.from({ length: 6 }).map((_, i) => <DataTableSkeletonRow key={i} columnCount={effectiveCount} />)
           ) : filtered.length === 0 ? (
-            <DataTableEmpty colSpan={7} message="No news matches these filters." />
+            <DataTableEmpty colSpan={effectiveCount} message="No news matches these filters." />
           ) : filtered.map(renderRow)}
         </tbody>
       </DataTableShell>
