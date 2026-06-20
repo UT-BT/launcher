@@ -50,13 +50,12 @@ Distribution files will be located in the `dist` directory.
 
 | Branch                          | Purpose                                  | Who updates it                                     |
 | ------------------------------- | ---------------------------------------- | -------------------------------------------------- |
-| `main`                          | Production-ready releases                | Release managers only, through a PR from `staging` |
+| `main`                          | Production-ready releases                | Organizational admins, through a PR from `staging` |
 | `staging`                       | Shared integration branch                | Contributors, through PRs only                     |
 | `feature/*`, `fix/*`, `chore/*` | Short-lived development branches         | Individual contributors                            |
-| `release/*`                     | Short-lived release preparation branches | Release managers                                   |
+| `release/*`                     | Short-lived release preparation branches | Organizational admins                              |
 
-Do not push directly to `staging` or `main`. Both branches are protected by
-GitHub rulesets — changes must be made through pull requests.
+Do not push directly to `staging` or `main`. Both branches are protected by GitHub rulesets — changes must be made through pull requests.
 
 ## Normal contribution workflow
 
@@ -110,11 +109,9 @@ All pull requests into `staging` must use **Squash and merge**.
 Before opening a PR:
 
 * Keep the change focused on one concern.
-* Update tests when behaviour changes.
 * Run the relevant checks locally.
 * Avoid unrelated formatting changes or drive-by refactors.
 * Describe what changed and why.
-* Call out migrations, configuration changes, or deployment considerations.
 * Resolve merge conflicts before requesting review.
 
 Use clear PR titles. Prefer Conventional Commit-style wording where practical:
@@ -128,8 +125,7 @@ docs: document local development setup
 
 ## Local verification
 
-Run the project checks before opening a pull request. This repository has no test
-suite, so verification is lint plus a production build:
+Run the project checks before opening a pull request. Verification is lint plus a production build:
 
 ```bash
 npm ci
@@ -267,7 +263,7 @@ Compare branch: release/v1.7.0
 Merge this PR using **Squash and merge**.
 
 After the release candidate has been validated and approved from `staging`, an
-authorized release manager opens:
+authorized org admin opens:
 
 ```text
 Base branch:    main
