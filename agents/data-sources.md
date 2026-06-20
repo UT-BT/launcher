@@ -12,7 +12,7 @@ not_here:
   - "how UI state persists in localStorage → state-patterns.md"
   - "the procedure to wire a new endpoint into the UI → skill: consume-api-data"
 sections: [backend-api, admin-api, cap-detail-page-endpoints, world-records-page-endpoints, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites]
-last_verified: 2026-06-19
+last_verified: 2026-06-20
 verify_against: [app/utils/api.ts, app/utils/patreon.ts, app/utils/server-utils.ts]
 ---
 
@@ -48,6 +48,12 @@ full loop).
 | Admin (staff-only) | the moderator/admin dashboard slice — see [Admin API](#admin-api) |
 
 Most fetchers take `accessToken` first (Discord OAuth bearer).
+
+The player-detail caps list (`fetchCapsForUser`, `UserCapRow`) accepts
+`capFilter: 'disallowed'` to return only that player's disallowed caps — each row
+then carries `disallowed_at` + `disallow_reason`, sortable via `sort: 'disallowed_at'`.
+`UserSummaryCounts.disallowed_caps` is the matching total (powers the public
+"Disallowed" profile tab, hidden when zero).
 
 ### Admin API
 
