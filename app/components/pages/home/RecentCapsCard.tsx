@@ -43,11 +43,11 @@ export function RecentCapsCard({
     return (
         <DataTableShell className="!flex-none">
             <DataTableHeaderRow>
-                <DataTableHeaderCell>Map</DataTableHeaderCell>
-                <DataTableHeaderCell width="32%"></DataTableHeaderCell>
-                <DataTableHeaderCell width="110px" align="right">Time</DataTableHeaderCell>
-                <DataTableHeaderCell width="84px" align="right">When</DataTableHeaderCell>
-                <DataTableHeaderCell width="52px" align="center" />
+                <DataTableHeaderCell align="center" width="16rem">Map</DataTableHeaderCell>
+                <DataTableHeaderCell align="center" width="10rem"></DataTableHeaderCell>
+                <DataTableHeaderCell align="center" width="6rem">Time</DataTableHeaderCell>
+                <DataTableHeaderCell align="center" width="6rem">When</DataTableHeaderCell>
+                <DataTableHeaderCell align="center" width="4rem" />
             </DataTableHeaderRow>
             <tbody>
                 {rows.map(cap => {
@@ -74,8 +74,8 @@ export function RecentCapsCard({
                                     size="sm"
                                 />
                             </DataTableCell>
-                            <DataTableCell align="right">
-                                <div className="flex items-center justify-end gap-1.5">
+                            <DataTableCell align="center">
+                                <div className="flex items-center justify-center gap-1.5">
                                     {medalIcon && <img src={medalIcon} alt={cap.medal} className="size-3.5 shrink-0" />}
                                     <CapTimeLink
                                         capId={cap.id}
@@ -84,7 +84,7 @@ export function RecentCapsCard({
                                     />
                                 </div>
                             </DataTableCell>
-                            <DataTableCell align="right">
+                            <DataTableCell align="center">
                                 <span className="text-xs text-muted-foreground tabular-nums">{cap.timeAgo}</span>
                             </DataTableCell>
                             <DataTableCell align="center">

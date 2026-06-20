@@ -39,11 +39,11 @@ export function LatestRecordsCard({
     return (
         <DataTableShell className="!flex-none">
             <DataTableHeaderRow>
-                <DataTableHeaderCell>Map</DataTableHeaderCell>
-                <DataTableHeaderCell width="32%">Holder</DataTableHeaderCell>
-                <DataTableHeaderCell width="110px" align="right">Time</DataTableHeaderCell>
-                <DataTableHeaderCell width="84px" align="right">When</DataTableHeaderCell>
-                <DataTableHeaderCell width="52px" align="center" />
+                <DataTableHeaderCell align="center" width="16rem">Map</DataTableHeaderCell>
+                <DataTableHeaderCell align="center" width="10rem">Holder</DataTableHeaderCell>
+                <DataTableHeaderCell align="center" width="6rem">Time</DataTableHeaderCell>
+                <DataTableHeaderCell align="center" width="6rem">When</DataTableHeaderCell>
+                <DataTableHeaderCell align="center" width="4rem" />
             </DataTableHeaderRow>
             <tbody>
                 {rows.map(r => {
@@ -72,15 +72,19 @@ export function LatestRecordsCard({
                                     showYouBadge={isOwn}
                                 />
                             </DataTableCell>
-                            <DataTableCell align="right">
-                                <CapTimeLink
-                                    capId={r.id}
-                                    seconds={r.time}
-                                    className="font-mono tabular-nums font-bold text-blue-300"
-                                />
+                            <DataTableCell align="center">
+                                <div className="flex justify-center">
+                                    <CapTimeLink
+                                        capId={r.id}
+                                        seconds={r.time}
+                                        className="font-mono tabular-nums font-bold text-blue-300"
+                                    />
+                                </div>
                             </DataTableCell>
-                            <DataTableCell align="right">
-                                <span className="text-xs text-muted-foreground tabular-nums">{r.timeAgo}</span>
+                            <DataTableCell>
+                                <div className="flex justify-center">
+                                    <span className="text-xs text-muted-foreground tabular-nums">{r.timeAgo}</span>
+                                </div>
                             </DataTableCell>
                             <DataTableCell align="center">
                                 <IconActionButton
