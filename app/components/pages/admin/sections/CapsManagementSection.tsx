@@ -14,7 +14,7 @@ import {
 import { useAdminTable, type AdminColumn } from '../components/useAdminTable'
 import { useAdminFilterPresets } from '../components/useAdminFilterPresets'
 import { TableControls } from '../components/TableControls'
-import { PANEL_LABEL, minWidthFor, useResetOnChange, useAdminPageSize } from '../components/shared'
+import { PANEL_LABEL, useResetOnChange, useAdminPageSize } from '../components/shared'
 import { MapLink } from '../components/MapLink'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
@@ -24,7 +24,7 @@ import { ActiveFilterChip } from '@/app/components/shared/ActiveFilterChip'
 import { useNavState } from '@/app/components/navigation/useNavState'
 import {
   DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow, DataTableCell,
-  DataTableEmpty, DataTableSkeletonRow, type SortDirection,
+  DataTableEmpty, DataTableSkeletonRow, type SortDirection, type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
 import { DemoVerifyModal } from './DemoVerifyModal'
 import { Checkbox } from '@/app/components/ui/checkbox'
@@ -56,6 +56,10 @@ const LAYOUT: Record<string, { width?: string; align?: 'left' | 'center' | 'righ
 
 const SORTABLE: Record<string, AdminCapSort> = {
   player: 'player', map: 'map', time: 'time', status: 'status', added: 'added',
+}
+
+const PRIORITY: Record<string, number> = {
+  map: 70, time: 70, status: 70, added: 30,
 }
 
 interface CapFilters {
@@ -222,10 +226,17 @@ export function CapsManagementSection({ userProfile, onMapSelect }: AdminSection
     run: () => unverifyCap(token!, c.id).then(() => undefined),
   })
 
-  const tableMinWidth = useMemo(() => minWidthFor(tbl.columnOrder, tbl.isVisible, LAYOUT, 14, 3), [tbl])
+  const responsiveColumns = useMemo<ResponsiveColumn[]>(
+    () => tbl.columnOrder.filter(tbl.isVisible).map((id) => ({ id, width: LAYOUT[id]?.width, priority: PRIORITY[id], required: tbl.requiredColumns.has(id) })),
+    [tbl.columnOrder, tbl.isVisible, tbl.requiredColumns],
+  )
+  const [resolved, setResolved] = useState<Set<string> | null>(null)
+  const handleResolve = useCallback((ids: Set<string>) => { setResolved(ids) }, [])
+  const isShown = useCallback((id: string) => tbl.isVisible(id) && (!resolved || resolved.has(id)), [tbl, resolved])
+  const effectiveCount = tbl.columnOrder.filter(isShown).length
 
   const renderHeader = (id: string): ReactNode => {
-    if (!tbl.isVisible(id)) return null
+    if (!isShown(id)) return null
     const layout = LAYOUT[id]
     const sortKey = SORTABLE[id]
     if (sortKey) {
@@ -240,7 +251,7 @@ export function CapsManagementSection({ userProfile, onMapSelect }: AdminSection
   }
 
   const renderCell = (id: string, c: AdminCapRow): ReactNode => {
-    if (!tbl.isVisible(id)) return null
+    if (!isShown(id)) return null
     const align = LAYOUT[id].align
     const busy = busyId === c.id
     switch (id) {
@@ -339,7 +350,7 @@ export function CapsManagementSection({ userProfile, onMapSelect }: AdminSection
         </div>
       )}
 
-      <DataTableShell className="flex-none" minWidth={tableMinWidth}>
+      <DataTableShell className="flex-none" responsive={{ columns: responsiveColumns, nameFloorRem: 14, extraRem: 3, onResolve: handleResolve }}>
         <DataTableHeaderRow>
           <DataTableHeaderCell width="3rem" align="center">
             <Checkbox checked={allOnPageSelected ? true : someSelected ? 'indeterminate' : false}
@@ -349,9 +360,9 @@ export function CapsManagementSection({ userProfile, onMapSelect }: AdminSection
         </DataTableHeaderRow>
         <tbody>
           {loading && rows.length === 0 ? (
-            Array.from({ length: 8 }).map((_, i) => <DataTableSkeletonRow key={i} columnCount={tbl.visibleCount + 1} />)
+            Array.from({ length: 8 }).map((_, i) => <DataTableSkeletonRow key={i} columnCount={effectiveCount + 1} />)
           ) : rows.length === 0 ? (
-            <DataTableEmpty colSpan={tbl.visibleCount + 1} message="No caps match these filters." />
+            <DataTableEmpty colSpan={effectiveCount + 1} message="No caps match these filters." />
           ) : rows.map((c) => (
             <DataTableRow key={c.id} className={selected.has(c.id) ? 'bg-accent-500/[0.06]' : undefined}>
               <DataTableCell align="center" width="3rem">

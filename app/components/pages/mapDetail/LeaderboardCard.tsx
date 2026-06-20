@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { Play, Download, MessageSquareOff } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useNavState } from '@/app/components/navigation/useNavState'
@@ -23,6 +23,7 @@ import {
     DataTableCell,
     DataTableEmpty,
     DataTableSkeletonRow,
+    type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
 import { PaginationBar } from '@/app/components/ui/pagination'
 import type { LeaderboardEntry, MapMetadata } from '@/app/utils/api'
@@ -46,7 +47,28 @@ const TABS: { value: Tab; label: string }[] = [
     { value: 'all', label: 'All' },
 ]
 
-const SKELETON_COL_COUNT = 7
+type LeaderboardColumnId = 'rank' | 'player' | 'medal' | 'time' | 'date' | 'watch' | 'download'
+
+const LEADERBOARD_COLUMNS: LeaderboardColumnId[] = ['rank', 'player', 'medal', 'time', 'date', 'watch', 'download']
+
+const COLUMN_WIDTH: Record<LeaderboardColumnId, string | undefined> = {
+    rank: '4rem',
+    player: undefined,
+    medal: '3rem',
+    time: '8rem',
+    date: '8rem',
+    watch: '3rem',
+    download: '3rem',
+}
+
+const COLUMN_PRIORITY: Partial<Record<LeaderboardColumnId, number>> = {
+    date: 40,
+    medal: 30,
+    watch: 20,
+    download: 10,
+}
+
+const REQUIRED_COLUMNS = new Set<LeaderboardColumnId>(['player', 'rank', 'time'])
 
 export function LeaderboardCard({
     leaderboard, map, loading, currentUserId, wrCapId, onShowWrHistory,
@@ -59,6 +81,22 @@ export function LeaderboardCard({
 
     const replay = useReplayWatch()
     const demoDownload = useDemoDownload()
+
+    const responsiveColumns = useMemo<ResponsiveColumn[]>(
+        () => LEADERBOARD_COLUMNS.map(id => ({
+            id,
+            width: COLUMN_WIDTH[id],
+            priority: COLUMN_PRIORITY[id],
+            required: REQUIRED_COLUMNS.has(id),
+        })),
+        [],
+    )
+    const [resolved, setResolved] = useState<Set<LeaderboardColumnId> | null>(null)
+    const handleResolve = useCallback((ids: Set<string>) => {
+        setResolved(ids as Set<LeaderboardColumnId>)
+    }, [])
+    const isVisible = (id: LeaderboardColumnId) => !resolved || resolved.has(id)
+    const visibleColumnCount = LEADERBOARD_COLUMNS.reduce((n, id) => n + (isVisible(id) ? 1 : 0), 0)
 
     const filtered = useMemo(() => {
         if (tab === 'verified') return leaderboard.filter(e => e.verified)
@@ -136,53 +174,70 @@ export function LeaderboardCard({
             </div>
 
             <div className="flex flex-col">
-                <DataTableShell className="!flex-none !min-h-0 !overflow-visible !rounded-none !border-0">
+                <DataTableShell
+                    className="!flex-none !min-h-0 !overflow-visible !rounded-none !border-0"
+                    responsive={{ columns: responsiveColumns, onResolve: handleResolve }}
+                >
                     <DataTableHeaderRow>
-                        <DataTableHeaderCell
-                            sortable
-                            sortDirection={dir('rank')}
-                            onSort={() => handleSort('rank')}
-                            width="4rem"
-                            align="right"
-                        >
-                            #
-                        </DataTableHeaderCell>
-                        <DataTableHeaderCell
-                            sortable
-                            sortDirection={dir('player')}
-                            onSort={() => handleSort('player')}
-                        >
-                            Player
-                        </DataTableHeaderCell>
-                        <DataTableHeaderCell align="center" width="3rem"><span className="sr-only">Medal</span></DataTableHeaderCell>
-                        <DataTableHeaderCell
-                            sortable
-                            sortDirection={dir('time')}
-                            onSort={() => handleSort('time')}
-                            align="right"
-                            width="8rem"
-                        >
-                            Time
-                        </DataTableHeaderCell>
-                        <DataTableHeaderCell
-                            sortable
-                            sortDirection={dir('date')}
-                            onSort={() => handleSort('date')}
-                            align="right"
-                            width="8rem"
-                        >
-                            Date
-                        </DataTableHeaderCell>
-                        <DataTableHeaderCell align="center" width="3rem"><span className="sr-only">Watch</span></DataTableHeaderCell>
-                        <DataTableHeaderCell align="center" width="3rem"><span className="sr-only">Download</span></DataTableHeaderCell>
+                        {isVisible('rank') && (
+                            <DataTableHeaderCell
+                                sortable
+                                sortDirection={dir('rank')}
+                                onSort={() => handleSort('rank')}
+                                width="4rem"
+                                align="right"
+                            >
+                                #
+                            </DataTableHeaderCell>
+                        )}
+                        {isVisible('player') && (
+                            <DataTableHeaderCell
+                                sortable
+                                sortDirection={dir('player')}
+                                onSort={() => handleSort('player')}
+                            >
+                                Player
+                            </DataTableHeaderCell>
+                        )}
+                        {isVisible('medal') && (
+                            <DataTableHeaderCell align="center" width="3rem"><span className="sr-only">Medal</span></DataTableHeaderCell>
+                        )}
+                        {isVisible('time') && (
+                            <DataTableHeaderCell
+                                sortable
+                                sortDirection={dir('time')}
+                                onSort={() => handleSort('time')}
+                                align="right"
+                                width="8rem"
+                            >
+                                Time
+                            </DataTableHeaderCell>
+                        )}
+                        {isVisible('date') && (
+                            <DataTableHeaderCell
+                                sortable
+                                sortDirection={dir('date')}
+                                onSort={() => handleSort('date')}
+                                align="right"
+                                width="8rem"
+                            >
+                                Date
+                            </DataTableHeaderCell>
+                        )}
+                        {isVisible('watch') && (
+                            <DataTableHeaderCell align="center" width="3rem"><span className="sr-only">Watch</span></DataTableHeaderCell>
+                        )}
+                        {isVisible('download') && (
+                            <DataTableHeaderCell align="center" width="3rem"><span className="sr-only">Download</span></DataTableHeaderCell>
+                        )}
                     </DataTableHeaderRow>
                     <tbody>
                         {loading ? (
                             Array.from({ length: 5 }).map((_, i) => (
-                                <DataTableSkeletonRow key={i} columnCount={SKELETON_COL_COUNT} />
+                                <DataTableSkeletonRow key={i} columnCount={visibleColumnCount} />
                             ))
                         ) : pageRows.length === 0 ? (
-                            <DataTableEmpty colSpan={SKELETON_COL_COUNT} message="No caps yet." />
+                            <DataTableEmpty colSpan={visibleColumnCount} message="No caps yet." />
                         ) : (
                             pageRows.map(({ entry, rank }) => {
                                 const tier: MedalTier = computeMedalTier(
@@ -204,74 +259,88 @@ export function LeaderboardCard({
                                 })()
                                 return (
                                     <DataTableRow key={entry.id} className={cn(isOwn && 'bg-emerald-500/[0.05]')}>
-                                        <DataTableCell align="right">
-                                            <span className="text-xs font-bold font-mono text-muted-foreground tabular-nums">
-                                                #{rank}
-                                            </span>
-                                        </DataTableCell>
-                                        <DataTableCell>
-                                            <div className="flex items-center gap-1.5 min-w-0">
-                                                <PlayerInfo
-                                                    userId={entry.user}
-                                                    alias={entry.alias}
-                                                    title={entry.active_title}
-                                                    size="sm"
-                                                    highlight={isOwn}
-                                                    showYouBadge={isOwn}
-                                                />
-                                                {wrCapId && entry.id === wrCapId && onShowWrHistory && (
-                                                    <WorldRecordHistoryTrigger onClick={onShowWrHistory} />
-                                                )}
-                                            </div>
-                                        </DataTableCell>
-                                        <DataTableCell align="center">
-                                            {medalIcon && (
-                                                <Tooltip content={TIER_LABELS[tier]} side="top">
-                                                    <img src={medalIcon} alt={TIER_LABELS[tier]} className="size-4 inline-block shrink-0 object-contain max-w-none" />
-                                                </Tooltip>
-                                            )}
-                                        </DataTableCell>
-                                        <DataTableCell align="right">
-                                            <CapTimeLink
-                                                capId={entry.id}
-                                                seconds={entry.cap_time_seconds}
-                                                className={cn(
-                                                    'text-sm font-mono tabular-nums font-bold',
-                                                    rank === 1 ? 'text-red-300' : 'text-foreground',
-                                                )}
-                                            />
-                                        </DataTableCell>
-                                        <DataTableCell align="right">
-                                            <Tooltip content={exactTimestamp} side="top">
-                                                <span className="text-xs text-muted-foreground tabular-nums">
-                                                    {formatAddedDate(entry.added)}
+                                        {isVisible('rank') && (
+                                            <DataTableCell align="right">
+                                                <span className="text-xs font-bold font-mono text-muted-foreground tabular-nums">
+                                                    #{rank}
                                                 </span>
-                                            </Tooltip>
-                                        </DataTableCell>
-                                        <DataTableCell align="center" className="px-2">
-                                            <IconActionButton
-                                                variant="replay"
-                                                icon={entry.verified ? Play : MessageSquareOff}
-                                                iconFill={entry.verified}
-                                                tooltip={entry.verified ? 'Watch run' : 'No replay — cap not verified'}
-                                                disabled={!entry.verified}
-                                                loading={replay.loadingCapId === entry.id}
-                                                onClick={() => replay.openReplay({
-                                                    capId: entry.id,
-                                                    mapName: entry.map,
-                                                    time: entry.cap_time_seconds,
-                                                    alias: entry.alias ?? undefined,
-                                                })}
-                                            />
-                                        </DataTableCell>
-                                        <DataTableCell align="center" className="px-2">
-                                            <IconActionButton
-                                                variant="download"
-                                                icon={Download}
-                                                tooltip="Download demo"
-                                                onClick={() => demoDownload.start(entry, entry.map)}
-                                            />
-                                        </DataTableCell>
+                                            </DataTableCell>
+                                        )}
+                                        {isVisible('player') && (
+                                            <DataTableCell>
+                                                <div className="flex items-center gap-1.5 min-w-0">
+                                                    <PlayerInfo
+                                                        userId={entry.user}
+                                                        alias={entry.alias}
+                                                        title={entry.active_title}
+                                                        size="sm"
+                                                        highlight={isOwn}
+                                                        showYouBadge={isOwn}
+                                                    />
+                                                    {wrCapId && entry.id === wrCapId && onShowWrHistory && (
+                                                        <WorldRecordHistoryTrigger onClick={onShowWrHistory} />
+                                                    )}
+                                                </div>
+                                            </DataTableCell>
+                                        )}
+                                        {isVisible('medal') && (
+                                            <DataTableCell align="center">
+                                                {medalIcon && (
+                                                    <Tooltip content={TIER_LABELS[tier]} side="top">
+                                                        <img src={medalIcon} alt={TIER_LABELS[tier]} className="size-4 inline-block shrink-0 object-contain max-w-none" />
+                                                    </Tooltip>
+                                                )}
+                                            </DataTableCell>
+                                        )}
+                                        {isVisible('time') && (
+                                            <DataTableCell align="right">
+                                                <CapTimeLink
+                                                    capId={entry.id}
+                                                    seconds={entry.cap_time_seconds}
+                                                    className={cn(
+                                                        'text-sm font-mono tabular-nums font-bold',
+                                                        rank === 1 ? 'text-red-300' : 'text-foreground',
+                                                    )}
+                                                />
+                                            </DataTableCell>
+                                        )}
+                                        {isVisible('date') && (
+                                            <DataTableCell align="right">
+                                                <Tooltip content={exactTimestamp} side="top">
+                                                    <span className="text-xs text-muted-foreground tabular-nums">
+                                                        {formatAddedDate(entry.added)}
+                                                    </span>
+                                                </Tooltip>
+                                            </DataTableCell>
+                                        )}
+                                        {isVisible('watch') && (
+                                            <DataTableCell align="center" className="px-2">
+                                                <IconActionButton
+                                                    variant="replay"
+                                                    icon={entry.verified ? Play : MessageSquareOff}
+                                                    iconFill={entry.verified}
+                                                    tooltip={entry.verified ? 'Watch run' : 'No replay — cap not verified'}
+                                                    disabled={!entry.verified}
+                                                    loading={replay.loadingCapId === entry.id}
+                                                    onClick={() => replay.openReplay({
+                                                        capId: entry.id,
+                                                        mapName: entry.map,
+                                                        time: entry.cap_time_seconds,
+                                                        alias: entry.alias ?? undefined,
+                                                    })}
+                                                />
+                                            </DataTableCell>
+                                        )}
+                                        {isVisible('download') && (
+                                            <DataTableCell align="center" className="px-2">
+                                                <IconActionButton
+                                                    variant="download"
+                                                    icon={Download}
+                                                    tooltip="Download demo"
+                                                    onClick={() => demoDownload.start(entry, entry.map)}
+                                                />
+                                            </DataTableCell>
+                                        )}
                                     </DataTableRow>
                                 )
                             })

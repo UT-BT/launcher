@@ -14,7 +14,7 @@ import {
 import { useAdminTable, type AdminColumn } from '../components/useAdminTable'
 import { useAdminFilterPresets } from '../components/useAdminFilterPresets'
 import { TableControls } from '../components/TableControls'
-import { PANEL_LABEL, minWidthFor } from '../components/shared'
+import { PANEL_LABEL } from '../components/shared'
 import { Modal } from '@/app/components/ui/modal'
 import { Button } from '@/app/components/ui/button'
 import { Input } from '@/app/components/ui/input'
@@ -27,7 +27,7 @@ import { getTitleTextStyle } from '@/app/utils/titleStyles'
 import { cn } from '@/lib/utils'
 import {
   DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow, DataTableCell,
-  DataTableEmpty, DataTableSkeletonRow, type SortDirection,
+  DataTableEmpty, DataTableSkeletonRow, type SortDirection, type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
 
 function hexToRgb(hex: string) {
@@ -354,6 +354,10 @@ const SORTABLE: Record<string, SortKey> = {
   title: 'name', rarity: 'rarity', holders: 'holders',
 }
 
+const PRIORITY: Record<string, number> = {
+  rarity: 50, holders: 50,
+}
+
 const RARITY_FILTER_OPTIONS = [
   { value: 'all', label: 'Any rarity' },
   ...[1, 2, 3, 4, 5].map((n) => ({ value: String(n), label: `Rarity ${n}` })),
@@ -452,10 +456,17 @@ export function TitleManagementSection({ userProfile }: AdminSectionProps) {
     }
   }
 
-  const tableMinWidth = useMemo(() => minWidthFor(tbl.columnOrder, tbl.isVisible, LAYOUT, 14), [tbl])
+  const responsiveColumns = useMemo<ResponsiveColumn[]>(
+    () => tbl.columnOrder.filter(tbl.isVisible).map((id) => ({ id, width: LAYOUT[id]?.width, priority: PRIORITY[id], required: tbl.requiredColumns.has(id) })),
+    [tbl.columnOrder, tbl.isVisible, tbl.requiredColumns],
+  )
+  const [resolved, setResolved] = useState<Set<string> | null>(null)
+  const handleResolve = useCallback((ids: Set<string>) => { setResolved(ids) }, [])
+  const isShown = useCallback((id: string) => tbl.isVisible(id) && (!resolved || resolved.has(id)), [tbl, resolved])
+  const effectiveCount = tbl.columnOrder.filter(isShown).length
 
   const renderHeader = (id: string): ReactNode => {
-    if (!tbl.isVisible(id)) return null
+    if (!isShown(id)) return null
     const layout = LAYOUT[id]
     const sortKeyForCol = SORTABLE[id]
     if (sortKeyForCol) {
@@ -470,7 +481,7 @@ export function TitleManagementSection({ userProfile }: AdminSectionProps) {
   }
 
   const renderCell = (id: string, t: AdminTitleSummary): ReactNode => {
-    if (!tbl.isVisible(id)) return null
+    if (!isShown(id)) return null
     const align = LAYOUT[id].align
     switch (id) {
       case 'title': {
@@ -553,15 +564,15 @@ export function TitleManagementSection({ userProfile }: AdminSectionProps) {
         </div>
       )}
 
-      <DataTableShell className="flex-none" minWidth={tableMinWidth}>
+      <DataTableShell className="flex-none" responsive={{ columns: responsiveColumns, nameFloorRem: 14, extraRem: 0, onResolve: handleResolve }}>
         <DataTableHeaderRow>
           {tbl.columnOrder.map((id) => renderHeader(id))}
         </DataTableHeaderRow>
         <tbody>
           {loading && rows.length === 0 ? (
-            Array.from({ length: 8 }).map((_, i) => <DataTableSkeletonRow key={i} columnCount={tbl.visibleCount} />)
+            Array.from({ length: 8 }).map((_, i) => <DataTableSkeletonRow key={i} columnCount={effectiveCount} />)
           ) : rows.length === 0 ? (
-            <DataTableEmpty colSpan={tbl.visibleCount} message={query.trim() ? 'No titles match your filter.' : 'No titles yet.'} />
+            <DataTableEmpty colSpan={effectiveCount} message={query.trim() ? 'No titles match your filter.' : 'No titles yet.'} />
           ) : rows.map((t) => (
             <DataTableRow key={t.id}>{tbl.columnOrder.map((id) => renderCell(id, t))}</DataTableRow>
           ))}

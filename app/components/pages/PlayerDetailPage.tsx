@@ -15,6 +15,7 @@ import { ChangeTitleModal } from '@/app/components/modals/ChangeTitleModal'
 import { HeroSection } from './playerDetail/HeroSection'
 import { MedalShowcaseCard } from './playerDetail/MedalShowcaseCard'
 import { RecentCapsCard } from './playerDetail/RecentCapsCard'
+import { DisallowedCapsCard } from './playerDetail/DisallowedCapsCard'
 import { PersonalBestsCard } from './playerDetail/PersonalBestsCard'
 import { WorldRecordsCard } from './playerDetail/WorldRecordsCard'
 import { PlaytimeBreakdownCard } from './playerDetail/PlaytimeBreakdownCard'
@@ -85,6 +86,7 @@ export function PlayerDetailPage({
 
     const tabs: { value: PlayerDetailTab; label: string; count?: number; hidden?: boolean }[] = [
         { value: 'caps', label: 'All Caps', count: counts?.total_caps },
+        { value: 'disallowed', label: 'Disallowed', count: counts?.disallowed_caps, hidden: !counts?.disallowed_caps },
         { value: 'pbs', label: 'Personal Bests', count: counts?.unique_maps },
         { value: 'wrs', label: 'World Records', count: counts?.wr_count },
         { value: 'playtime', label: 'Playtime by Map' },
@@ -144,6 +146,15 @@ export function PlayerDetailPage({
                                 favoriteMapNames={favoriteMapNames}
                                 onToggleFavorite={isSelf ? onToggleFavorite : undefined}
                                 canEditFavorites={isSelf}
+                                onMapSelect={onMapSelect}
+                                tabsSlot={<MainSectionTabs tabs={tabs} active={activeTab} onChange={setActiveTab} />}
+                            />
+                        )}
+
+                        {activeTab === 'disallowed' && (
+                            <DisallowedCapsCard
+                                accessToken={accessToken}
+                                userId={userId}
                                 onMapSelect={onMapSelect}
                                 tabsSlot={<MainSectionTabs tabs={tabs} active={activeTab} onChange={setActiveTab} />}
                             />

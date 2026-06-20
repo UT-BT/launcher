@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Search, Star } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Tooltip } from '@/app/components/ui/tooltip'
@@ -10,7 +10,7 @@ import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import {
     DataTableShell, DataTableHeaderRow, DataTableHeaderCell,
     DataTableRow, DataTableCell, DataTableEmpty, DataTableSkeletonRow,
-    type SortDirection,
+    type SortDirection, type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
 import { PaginationBar } from '@/app/components/ui/pagination'
 
@@ -21,10 +21,16 @@ interface PlaytimeBreakdownCardProps {
     tabsSlot?: React.ReactNode
 }
 
-const SKELETON_COL_COUNT = 4
 const DEBOUNCE_MS = 250
 
 type SortField = 'hours' | 'sessions' | 'last_played' | 'map'
+
+type ColumnId = 'map' | 'hours' | 'sessions' | 'last_played'
+
+const COLUMNS: ColumnId[] = ['map', 'hours', 'sessions', 'last_played']
+const COLUMN_WIDTH: Partial<Record<ColumnId, string>> = { hours: '7rem', sessions: '6rem', last_played: '8rem' }
+const COLUMN_PRIORITY: Partial<Record<ColumnId, number>> = { hours: 80, sessions: 40, last_played: 30 }
+const REQUIRED_COLUMNS = new Set<ColumnId>(['map'])
 
 function formatHours(seconds: number): string {
     const hours = seconds / 3600
@@ -79,6 +85,22 @@ export function PlaytimeBreakdownCard({ accessToken, userId, onMapSelect, tabsSl
     }
     const dir = (field: SortField): SortDirection => sortField === field ? sortDir : null
 
+    const responsiveColumns = useMemo<ResponsiveColumn[]>(
+        () => COLUMNS.map(id => ({
+            id,
+            width: COLUMN_WIDTH[id],
+            priority: COLUMN_PRIORITY[id],
+            required: REQUIRED_COLUMNS.has(id),
+        })),
+        [],
+    )
+    const [resolved, setResolved] = useState<Set<ColumnId> | null>(null)
+    const handleResolve = useCallback((ids: Set<string>) => {
+        setResolved(ids as Set<ColumnId>)
+    }, [])
+    const isVisible = (id: ColumnId): boolean => !resolved || resolved.has(id)
+    const visibleColumnCount = COLUMNS.reduce((n, id) => n + (isVisible(id) ? 1 : 0), 0)
+
     return (
         <div className="bg-card/30 border border-hairline/5 rounded-xl flex flex-col overflow-hidden">
             <div className="flex items-center justify-between gap-3 gap-y-2 px-4 py-3 border-b border-hairline/5 flex-wrap">
@@ -120,20 +142,23 @@ export function PlaytimeBreakdownCard({ accessToken, userId, onMapSelect, tabsSl
                 </div>
             )}
 
-            <DataTableShell className="!flex-none !min-h-0 !overflow-visible !rounded-none !border-0">
+            <DataTableShell
+                className="!flex-none !min-h-0 !overflow-visible !rounded-none !border-0"
+                responsive={{ columns: responsiveColumns, onResolve: handleResolve }}
+            >
                 <DataTableHeaderRow>
-                    <DataTableHeaderCell sortable sortDirection={dir('map')} onSort={() => handleSort('map')}>Map</DataTableHeaderCell>
-                    <DataTableHeaderCell align="right" width="7rem" sortable sortDirection={dir('hours')} onSort={() => handleSort('hours')}>Time</DataTableHeaderCell>
-                    <DataTableHeaderCell align="right" width="6rem" sortable sortDirection={dir('sessions')} onSort={() => handleSort('sessions')}>Sessions</DataTableHeaderCell>
-                    <DataTableHeaderCell align="right" width="8rem" sortable sortDirection={dir('last_played')} onSort={() => handleSort('last_played')}>Last Played</DataTableHeaderCell>
+                    {isVisible('map') && <DataTableHeaderCell sortable sortDirection={dir('map')} onSort={() => handleSort('map')}>Map</DataTableHeaderCell>}
+                    {isVisible('hours') && <DataTableHeaderCell align="right" width="7rem" sortable sortDirection={dir('hours')} onSort={() => handleSort('hours')}>Time</DataTableHeaderCell>}
+                    {isVisible('sessions') && <DataTableHeaderCell align="right" width="6rem" sortable sortDirection={dir('sessions')} onSort={() => handleSort('sessions')}>Sessions</DataTableHeaderCell>}
+                    {isVisible('last_played') && <DataTableHeaderCell align="right" width="8rem" sortable sortDirection={dir('last_played')} onSort={() => handleSort('last_played')}>Last Played</DataTableHeaderCell>}
                 </DataTableHeaderRow>
                 <tbody>
                     {loading ? (
                         Array.from({ length: 5 }).map((_, i) => (
-                            <DataTableSkeletonRow key={i} columnCount={SKELETON_COL_COUNT} />
+                            <DataTableSkeletonRow key={i} columnCount={visibleColumnCount} />
                         ))
                     ) : items.length === 0 ? (
-                        <DataTableEmpty colSpan={SKELETON_COL_COUNT} message={query ? 'No playtime matches that search.' : 'No playtime recorded.'} />
+                        <DataTableEmpty colSpan={visibleColumnCount} message={query ? 'No playtime matches that search.' : 'No playtime recorded.'} />
                     ) : (
                         items.map(row => (
                             <DataTableRow
@@ -141,29 +166,37 @@ export function PlaytimeBreakdownCard({ accessToken, userId, onMapSelect, tabsSl
                                 className="cursor-pointer"
                                 onClick={() => onMapSelect?.(row.map)}
                             >
-                                <DataTableCell>
-                                    <div className="flex items-center gap-2 min-w-0">
-                                        <MapThumbnail mapName={row.map} className="size-8 shrink-0" />
-                                        <span className="text-sm font-semibold text-foreground truncate">
-                                            {displayMapName(row.map)}
+                                {isVisible('map') && (
+                                    <DataTableCell>
+                                        <div className="flex items-center gap-2 min-w-0">
+                                            <MapThumbnail mapName={row.map} className="size-8 shrink-0" />
+                                            <span className="text-sm font-semibold text-foreground truncate">
+                                                {displayMapName(row.map)}
+                                            </span>
+                                        </div>
+                                    </DataTableCell>
+                                )}
+                                {isVisible('hours') && (
+                                    <DataTableCell align="right">
+                                        <span className="text-sm font-mono tabular-nums font-bold text-amber-200">
+                                            {formatHours(row.total_seconds)}
                                         </span>
-                                    </div>
-                                </DataTableCell>
-                                <DataTableCell align="right">
-                                    <span className="text-sm font-mono tabular-nums font-bold text-amber-200">
-                                        {formatHours(row.total_seconds)}
-                                    </span>
-                                </DataTableCell>
-                                <DataTableCell align="right">
-                                    <span className="text-xs font-mono tabular-nums text-muted-foreground">
-                                        {row.sessions.toLocaleString()}
-                                    </span>
-                                </DataTableCell>
-                                <DataTableCell align="right">
-                                    <span className="text-xs text-muted-foreground tabular-nums">
-                                        {row.last_played ? formatAddedDate(row.last_played) : '—'}
-                                    </span>
-                                </DataTableCell>
+                                    </DataTableCell>
+                                )}
+                                {isVisible('sessions') && (
+                                    <DataTableCell align="right">
+                                        <span className="text-xs font-mono tabular-nums text-muted-foreground">
+                                            {row.sessions.toLocaleString()}
+                                        </span>
+                                    </DataTableCell>
+                                )}
+                                {isVisible('last_played') && (
+                                    <DataTableCell align="right">
+                                        <span className="text-xs text-muted-foreground tabular-nums">
+                                            {row.last_played ? formatAddedDate(row.last_played) : '—'}
+                                        </span>
+                                    </DataTableCell>
+                                )}
                             </DataTableRow>
                         ))
                     )}

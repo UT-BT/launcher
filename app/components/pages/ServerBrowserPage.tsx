@@ -33,6 +33,7 @@ import { displayMapName } from '@/app/utils/format'
 import {
     DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow,
     DataTableCell, DataTableEmpty, DataTableSkeletonRow,
+    type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
 import {
     DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
@@ -132,6 +133,18 @@ const DEFAULT_COLUMN_VISIBILITY: Record<ServerColumnId, boolean> = {
 }
 
 const REQUIRED_COLUMNS: ReadonlySet<ServerColumnId> = new Set(['name', 'actions'])
+
+const RESPONSIVE_REQUIRED_COLUMNS: ReadonlySet<ServerColumnId> = new Set([
+    'name', 'actions', 'players', 'spectators', 'status',
+])
+
+const COLUMN_PRIORITY: Partial<Record<ServerColumnId, number>> = {
+    map: 60,
+    ping: 55,
+    region: 40,
+    type: 35,
+    thumbnail: 30,
+}
 
 const SORTABLE_COLUMNS: Partial<Record<ServerColumnId, ServerSortField>> = {
     name: 'name',
@@ -632,10 +645,33 @@ export function ServerBrowserPage({
 
     const showSkeleton = loading && caches.servers.length === 0
 
-    const isVisible = (id: ServerColumnId) => state.columnVisibility[id]
+    const visibleColumns = useMemo(
+        () => state.columnOrder.filter(id => state.columnVisibility[id]),
+        [state.columnOrder, state.columnVisibility],
+    )
+
+    const responsiveColumns = useMemo<ResponsiveColumn[]>(
+        () => visibleColumns.map(id => ({
+            id,
+            width: COLUMN_LAYOUT[id].width,
+            priority: COLUMN_PRIORITY[id],
+            required: RESPONSIVE_REQUIRED_COLUMNS.has(id),
+        })),
+        [visibleColumns],
+    )
+
+    const [resolved, setResolved] = useState<Set<ServerColumnId> | null>(null)
+    const handleResolve = useCallback((ids: Set<string>) => {
+        setResolved(ids as Set<ServerColumnId>)
+    }, [])
+
+    const isEffectivelyVisible = useCallback(
+        (id: ServerColumnId) => state.columnVisibility[id] && (!resolved || resolved.has(id)),
+        [state.columnVisibility, resolved],
+    )
 
     const renderHeader = (id: ServerColumnId): React.ReactNode => {
-        if (!isVisible(id)) return null
+        if (!isEffectivelyVisible(id)) return null
         const layout = COLUMN_LAYOUT[id]
         const sortField = SORTABLE_COLUMNS[id]
         if (sortField) {
@@ -662,7 +698,7 @@ export function ServerBrowserPage({
     }
 
     const renderCell = (id: ServerColumnId, server: Server, isFirstRow: boolean): React.ReactNode => {
-        if (!isVisible(id)) return null
+        if (!isEffectivelyVisible(id)) return null
         const align = COLUMN_LAYOUT[id].align
         const type = getServerType(server.hostname)
         const region = getServerRegion(server.hostname)
@@ -845,15 +881,9 @@ export function ServerBrowserPage({
         }
     }
 
-    const visibleColumnCount = state.columnOrder.filter(isVisible).length
-
-    const NAME_MIN_WIDTH_REM = 12
-    const tableMinWidth = `${state.columnOrder
-        .filter(isVisible)
-        .reduce((sum, id) => {
-            const w = COLUMN_LAYOUT[id].width
-            return sum + (w ? parseFloat(w) : NAME_MIN_WIDTH_REM)
-        }, 0)}rem`
+    const visibleColumnCount = state.columnOrder.reduce(
+        (count, id) => count + (isEffectivelyVisible(id) ? 1 : 0), 0,
+    )
 
     return (
         <div className="space-y-4 h-full flex flex-col overflow-hidden">
@@ -1040,7 +1070,11 @@ export function ServerBrowserPage({
                 </div>
             )}
 
-            <DataTableShell scrollRef={scrollContainerRef} onScroll={onScroll} minWidth={tableMinWidth}>
+            <DataTableShell
+                scrollRef={scrollContainerRef}
+                onScroll={onScroll}
+                responsive={{ columns: responsiveColumns, onResolve: handleResolve }}
+            >
                 <DataTableHeaderRow theadDataAttr="data-utbt-servers-thead">
                     {state.columnOrder.map(id => renderHeader(id))}
                 </DataTableHeaderRow>

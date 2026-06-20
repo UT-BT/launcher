@@ -9,7 +9,7 @@ import { SearchInput, Pager, Feedback, ActionButton, AdminSelect, errMessage } f
 import { useAdminTable, type AdminColumn } from '../components/useAdminTable'
 import { useAdminFilterPresets } from '../components/useAdminFilterPresets'
 import { TableControls } from '../components/TableControls'
-import { PANEL_LABEL, minWidthFor, useResetOnChange, useAdminPageSize } from '../components/shared'
+import { PANEL_LABEL, useResetOnChange, useAdminPageSize } from '../components/shared'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { FilterPanelRow } from '@/app/components/ui/filter-panel-row'
 import { FilterPresetsMenu } from '@/app/components/shared/FilterPresetsMenu'
@@ -17,9 +17,13 @@ import { ActiveFilterChip } from '@/app/components/shared/ActiveFilterChip'
 import { useNavState } from '@/app/components/navigation/useNavState'
 import {
   DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow, DataTableCell,
-  DataTableEmpty, DataTableSkeletonRow, type SortDirection,
+  DataTableEmpty, DataTableSkeletonRow, type SortDirection, type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
 import { UserDetailModal } from './UserDetailModal'
+
+const PRIORITY: Record<string, number> = {
+  role: 70, status: 70, id: 30, warnings: 30, bans: 30,
+}
 
 const COLUMNS: AdminColumn[] = [
   { id: 'player', label: 'Player', required: true },
@@ -153,10 +157,17 @@ export function UserManagementSection({ userProfile }: AdminSectionProps) {
     onApply: applyFilters,
   })
 
-  const tableMinWidth = useMemo(() => minWidthFor(tbl.columnOrder, tbl.isVisible, LAYOUT, 16), [tbl])
+  const responsiveColumns = useMemo<ResponsiveColumn[]>(
+    () => tbl.columnOrder.filter(tbl.isVisible).map((id) => ({ id, width: LAYOUT[id]?.width, priority: PRIORITY[id], required: tbl.requiredColumns.has(id) })),
+    [tbl.columnOrder, tbl.isVisible, tbl.requiredColumns],
+  )
+  const [resolved, setResolved] = useState<Set<string> | null>(null)
+  const handleResolve = useCallback((ids: Set<string>) => { setResolved(ids) }, [])
+  const isShown = useCallback((id: string) => tbl.isVisible(id) && (!resolved || resolved.has(id)), [tbl, resolved])
+  const effectiveCount = tbl.columnOrder.filter(isShown).length
 
   const renderHeader = (id: string): ReactNode => {
-    if (!tbl.isVisible(id)) return null
+    if (!isShown(id)) return null
     const layout = LAYOUT[id]
     const sortKey = SORTABLE[id]
     if (sortKey) {
@@ -171,7 +182,7 @@ export function UserManagementSection({ userProfile }: AdminSectionProps) {
   }
 
   const renderCell = (id: string, u: AdminUserRow): ReactNode => {
-    if (!tbl.isVisible(id)) return null
+    if (!isShown(id)) return null
     const align = LAYOUT[id].align
     switch (id) {
       case 'player':
@@ -264,15 +275,15 @@ export function UserManagementSection({ userProfile }: AdminSectionProps) {
         </div>
       )}
 
-      <DataTableShell className="flex-none" minWidth={tableMinWidth}>
+      <DataTableShell className="flex-none" responsive={{ columns: responsiveColumns, nameFloorRem: 16, extraRem: 0, onResolve: handleResolve }}>
         <DataTableHeaderRow>
           {tbl.columnOrder.map((id) => renderHeader(id))}
         </DataTableHeaderRow>
         <tbody>
           {loading && rows.length === 0 ? (
-            Array.from({ length: 8 }).map((_, i) => <DataTableSkeletonRow key={i} columnCount={tbl.visibleCount} />)
+            Array.from({ length: 8 }).map((_, i) => <DataTableSkeletonRow key={i} columnCount={effectiveCount} />)
           ) : rows.length === 0 ? (
-            <DataTableEmpty colSpan={tbl.visibleCount} message="No players match your filters." />
+            <DataTableEmpty colSpan={effectiveCount} message="No players match your filters." />
           ) : rows.map((u) => (
             <DataTableRow key={u.id}>{tbl.columnOrder.map((id) => renderCell(id, u))}</DataTableRow>
           ))}

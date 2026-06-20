@@ -14,7 +14,7 @@ import { SectionShell } from '../components/SectionShell'
 import { Pager, Feedback, ActionButton, AdminSelect, ConfirmDialog, Copyable, relTime, errMessage } from '../components/controls'
 import { useAdminTable, type AdminColumn } from '../components/useAdminTable'
 import { TableControls } from '../components/TableControls'
-import { minWidthFor, useResetOnChange, useAdminPageSize } from '../components/shared'
+import { useResetOnChange, useAdminPageSize } from '../components/shared'
 import { MapLink } from '../components/MapLink'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { CapTimeLink, openCap } from '@/app/components/shared/CapTimeLink'
@@ -24,7 +24,7 @@ import { Checkbox } from '@/app/components/ui/checkbox'
 import { useNavState } from '@/app/components/navigation/useNavState'
 import {
   DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow, DataTableCell, DataTableEmpty,
-  DataTableSkeletonRow, type SortDirection,
+  DataTableSkeletonRow, type SortDirection, type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
 
 type TableLayout = Record<string, { width?: string; align?: 'left' | 'center' | 'right' }>
@@ -107,6 +107,14 @@ const SHARED_MODAL_LAYOUT: TableLayout = {
   added: { width: '7rem', align: 'left' },
 }
 
+const SHARED_MODAL_PRIORITY: Record<string, number> = {
+  player: 80,
+  map: 60,
+  time: 60,
+  status: 30,
+  added: 20,
+}
+
 function SharedDetailModal({ open, onClose, token, group, onMapSelect }: {
   open: boolean; onClose: () => void; token: string; group: AcSharedGroup | null; onMapSelect?: (mapName: string) => void
 }) {
@@ -129,19 +137,23 @@ function SharedDetailModal({ open, onClose, token, group, onMapSelect }: {
     return () => c.abort()
   }, [open, group, token, offset, PAGE])
 
-  const tableMinWidth = useMemo(
-    () => minWidthFor(tbl.columnOrder, tbl.isVisible, SHARED_MODAL_LAYOUT),
-    [tbl.columnOrder, tbl.isVisible],
+  const responsiveColumns = useMemo<ResponsiveColumn[]>(
+    () => tbl.columnOrder.filter(tbl.isVisible).map((id) => ({ id, width: SHARED_MODAL_LAYOUT[id]?.width, priority: SHARED_MODAL_PRIORITY[id], required: tbl.requiredColumns.has(id) })),
+    [tbl.columnOrder, tbl.isVisible, tbl.requiredColumns],
   )
+  const [resolvedSharedModal, setResolvedSharedModal] = useState<Set<string> | null>(null)
+  const handleResolveSharedModal = useCallback((ids: Set<string>) => { setResolvedSharedModal(ids) }, [])
+  const isShownSharedModal = useCallback((id: string) => tbl.isVisible(id) && (!resolvedSharedModal || resolvedSharedModal.has(id)), [tbl, resolvedSharedModal])
+  const effectiveCountSharedModal = tbl.columnOrder.filter(isShownSharedModal).length
 
   const renderHeader = (id: string): ReactNode => {
-    if (!tbl.isVisible(id)) return null
+    if (!isShownSharedModal(id)) return null
     const layout = SHARED_MODAL_LAYOUT[id]
     return <DataTableHeaderCell key={id} width={layout.width} align={layout.align}>{tbl.columnLabels[id]}</DataTableHeaderCell>
   }
 
   const renderCell = (id: string, c: AcIdentifierCap): ReactNode => {
-    if (!tbl.isVisible(id)) return null
+    if (!isShownSharedModal(id)) return null
     const align = SHARED_MODAL_LAYOUT[id].align
     switch (id) {
       case 'player':
@@ -181,15 +193,15 @@ function SharedDetailModal({ open, onClose, token, group, onMapSelect }: {
             <StatChip label="Players" value={detail.summary.player_count} />
           </div>
         )}
-        <DataTableShell className="flex-none" minWidth={tableMinWidth}>
+        <DataTableShell className="flex-none" responsive={{ columns: responsiveColumns, nameFloorRem: 14, extraRem: 0, onResolve: handleResolveSharedModal }}>
           <DataTableHeaderRow>
             {tbl.columnOrder.map((id) => renderHeader(id))}
           </DataTableHeaderRow>
           <tbody>
             {loading && (!detail || detail.items.length === 0) ? (
-              Array.from({ length: 6 }).map((_, i) => <DataTableSkeletonRow key={i} columnCount={tbl.visibleCount} />)
+              Array.from({ length: 6 }).map((_, i) => <DataTableSkeletonRow key={i} columnCount={effectiveCountSharedModal} />)
             ) : !detail || detail.items.length === 0 ? (
-              <DataTableEmpty colSpan={tbl.visibleCount} message="No caps on this identifier." />
+              <DataTableEmpty colSpan={effectiveCountSharedModal} message="No caps on this identifier." />
             ) : detail.items.map((c) => (
               <DataTableRow key={c.cap_id}>{tbl.columnOrder.map((id) => renderCell(id, c))}</DataTableRow>
             ))}
@@ -331,8 +343,8 @@ const CAP_STATS_BUCKETS: { label: string; fps: keyof AcCapStats; ping: keyof AcC
 function CapPercentileTable({ stats }: { stats: AcCapStats }) {
   const tbl = useAdminTable('utbt:admin:ac.capstats:cols:v2', CAP_STATS_COLUMNS, { defaultFiltersOpen: false })
 
-  const tableMinWidth = useMemo(
-    () => minWidthFor(tbl.columnOrder, tbl.isVisible, CAP_STATS_LAYOUT),
+  const responsiveColumns = useMemo<ResponsiveColumn[]>(
+    () => tbl.columnOrder.filter(tbl.isVisible).map((id) => ({ id, width: CAP_STATS_LAYOUT[id]?.width, required: true })),
     [tbl.columnOrder, tbl.isVisible],
   )
 
@@ -363,7 +375,7 @@ function CapPercentileTable({ stats }: { stats: AcCapStats }) {
         <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Frame rate &amp; ping percentiles</span>
         <TableControls table={tbl} showFilters={false} />
       </div>
-      <DataTableShell className="flex-none" minWidth={tableMinWidth}>
+      <DataTableShell className="flex-none" responsive={{ columns: responsiveColumns }}>
         <DataTableHeaderRow>
           {tbl.columnOrder.map((id) => renderHeader(id))}
         </DataTableHeaderRow>
@@ -688,6 +700,12 @@ const SHARED_LAYOUT: TableLayout = {
   lastSeen: { width: '8rem', align: 'left' },
 }
 
+const SHARED_PRIORITY: Record<string, number> = {
+  players: 80,
+  caps: 50,
+  lastSeen: 20,
+}
+
 function SharedTable({ token, defaultTotal, onMapSelect }: { token: string; defaultTotal: number | null; onMapSelect?: (mapName: string) => void }) {
   const tbl = useAdminTable('utbt:admin:ac.shared:cols:v2', SHARED_COLUMNS, { defaultFiltersOpen: false })
   const PAGE = useAdminPageSize()
@@ -716,19 +734,23 @@ function SharedTable({ token, defaultTotal, onMapSelect }: { token: string; defa
 
   useEffect(() => { const c = new AbortController(); load(c.signal); return () => c.abort() }, [load])
 
-  const tableMinWidth = useMemo(
-    () => minWidthFor(tbl.columnOrder, tbl.isVisible, SHARED_LAYOUT),
-    [tbl.columnOrder, tbl.isVisible],
+  const responsiveColumns = useMemo<ResponsiveColumn[]>(
+    () => tbl.columnOrder.filter(tbl.isVisible).map((id) => ({ id, width: SHARED_LAYOUT[id]?.width, priority: SHARED_PRIORITY[id], required: tbl.requiredColumns.has(id) })),
+    [tbl.columnOrder, tbl.isVisible, tbl.requiredColumns],
   )
+  const [resolvedShared, setResolvedShared] = useState<Set<string> | null>(null)
+  const handleResolveShared = useCallback((ids: Set<string>) => { setResolvedShared(ids) }, [])
+  const isShownShared = useCallback((id: string) => tbl.isVisible(id) && (!resolvedShared || resolvedShared.has(id)), [tbl, resolvedShared])
+  const effectiveCountShared = tbl.columnOrder.filter(isShownShared).length
 
   const renderHeader = (id: string): ReactNode => {
-    if (!tbl.isVisible(id)) return null
+    if (!isShownShared(id)) return null
     const layout = SHARED_LAYOUT[id]
     return <DataTableHeaderCell key={id} width={layout.width} align={layout.align}>{tbl.columnLabels[id]}</DataTableHeaderCell>
   }
 
   const renderCell = (id: string, g: AcSharedGroup): ReactNode => {
-    if (!tbl.isVisible(id)) return null
+    if (!isShownShared(id)) return null
     const align = SHARED_LAYOUT[id].align
     switch (id) {
       case 'type':
@@ -766,15 +788,15 @@ function SharedTable({ token, defaultTotal, onMapSelect }: { token: string; defa
           <ActionButton tone="accent" icon={RefreshCw} onClick={() => load()} loading={loading} />
         </div>
       </div>
-      <DataTableShell className="flex-none" minWidth={tableMinWidth}>
+      <DataTableShell className="flex-none" responsive={{ columns: responsiveColumns, nameFloorRem: 14, extraRem: 0, onResolve: handleResolveShared }}>
         <DataTableHeaderRow>
           {tbl.columnOrder.map((id) => renderHeader(id))}
         </DataTableHeaderRow>
         <tbody>
           {loading && rows.length === 0 ? (
-            Array.from({ length: 8 }).map((_, i) => <DataTableSkeletonRow key={i} columnCount={tbl.visibleCount} />)
+            Array.from({ length: 8 }).map((_, i) => <DataTableSkeletonRow key={i} columnCount={effectiveCountShared} />)
           ) : rows.length === 0 ? (
-            <DataTableEmpty colSpan={tbl.visibleCount} message="No accounts share an identifier." />
+            <DataTableEmpty colSpan={effectiveCountShared} message="No accounts share an identifier." />
           ) : rows.map((g) => (
             <DataTableRow key={`${g.type}:${g.value}`} onClick={() => setSelected(g)} className="cursor-pointer">
               {tbl.columnOrder.map((id) => renderCell(id, g))}
@@ -819,6 +841,13 @@ const CAP_DELTA_SORTABLE: Record<string, CapDeltaSort> = {
   added: 'added',
 }
 
+const CAP_DELTA_PRIORITY: Record<string, number> = {
+  delta: 80,
+  map: 70,
+  time: 70,
+  added: 20,
+}
+
 function CapDeltaTable({ token, defaultTotal, onMapSelect }: { token: string; defaultTotal: number | null; onMapSelect?: (mapName: string) => void }) {
   const tbl = useAdminTable('utbt:admin:ac.capdelta:cols:v2', CAP_DELTA_COLUMNS, { defaultFiltersOpen: false })
   const PAGE = useAdminPageSize()
@@ -859,13 +888,17 @@ function CapDeltaTable({ token, defaultTotal, onMapSelect }: { token: string; de
 
   const toggleSort = (col: CapDeltaSort) => { if (sort !== col) setSort(col) }
 
-  const tableMinWidth = useMemo(
-    () => minWidthFor(tbl.columnOrder, tbl.isVisible, CAP_DELTA_LAYOUT, 14, showSelect ? 3 : 0),
-    [tbl.columnOrder, tbl.isVisible, showSelect],
+  const responsiveColumns = useMemo<ResponsiveColumn[]>(
+    () => tbl.columnOrder.filter(tbl.isVisible).map((id) => ({ id, width: CAP_DELTA_LAYOUT[id]?.width, priority: CAP_DELTA_PRIORITY[id], required: tbl.requiredColumns.has(id) })),
+    [tbl.columnOrder, tbl.isVisible, tbl.requiredColumns],
   )
+  const [resolvedCapDelta, setResolvedCapDelta] = useState<Set<string> | null>(null)
+  const handleResolveCapDelta = useCallback((ids: Set<string>) => { setResolvedCapDelta(ids) }, [])
+  const isShownCapDelta = useCallback((id: string) => tbl.isVisible(id) && (!resolvedCapDelta || resolvedCapDelta.has(id)), [tbl, resolvedCapDelta])
+  const effectiveCountCapDelta = tbl.columnOrder.filter(isShownCapDelta).length
 
   const renderHeader = (id: string): ReactNode => {
-    if (!tbl.isVisible(id)) return null
+    if (!isShownCapDelta(id)) return null
     const layout = CAP_DELTA_LAYOUT[id]
     const sortKey = CAP_DELTA_SORTABLE[id]
     if (sortKey) {
@@ -880,7 +913,7 @@ function CapDeltaTable({ token, defaultTotal, onMapSelect }: { token: string; de
   }
 
   const renderCell = (id: string, r: AcCapDeltaRow): ReactNode => {
-    if (!tbl.isVisible(id)) return null
+    if (!isShownCapDelta(id)) return null
     const align = CAP_DELTA_LAYOUT[id].align
     switch (id) {
       case 'player':
@@ -947,7 +980,7 @@ function CapDeltaTable({ token, defaultTotal, onMapSelect }: { token: string; de
           allow={() => bulkAllow.setTarget({ ids: [...sel.selected], label: bulkLabel('Mark', sel.selected.size, 'They leave the flagged list but stay on the leaderboard. The reason is recorded in the audit log.') })}
           disallow={() => bulkDis.setTarget({ ids: [...sel.selected], label: bulkLabel('Disallow', sel.selected.size, 'They leave the leaderboard. The reason is recorded in the audit log for each.') })} />
       )}
-      <DataTableShell className="flex-none" minWidth={tableMinWidth}>
+      <DataTableShell className="flex-none" responsive={{ columns: responsiveColumns, nameFloorRem: 14, extraRem: showSelect ? 3 : 0, onResolve: handleResolveCapDelta }}>
         <DataTableHeaderRow>
           {showSelect && (
             <DataTableHeaderCell width="3rem" align="center">
@@ -959,9 +992,9 @@ function CapDeltaTable({ token, defaultTotal, onMapSelect }: { token: string; de
         </DataTableHeaderRow>
         <tbody>
           {loading && rows.length === 0 ? (
-            Array.from({ length: 8 }).map((_, i) => <DataTableSkeletonRow key={i} columnCount={tbl.visibleCount + (showSelect ? 1 : 0)} />)
+            Array.from({ length: 8 }).map((_, i) => <DataTableSkeletonRow key={i} columnCount={effectiveCountCapDelta + (showSelect ? 1 : 0)} />)
           ) : rows.length === 0 ? (
-            <DataTableEmpty colSpan={tbl.visibleCount + (showSelect ? 1 : 0)} message={view === 'allowed' ? 'No allow-listed cap-delta runs.' : view === 'denied' ? 'No disallowed cap-delta runs.' : 'No world-record runs over the delta threshold.'} />
+            <DataTableEmpty colSpan={effectiveCountCapDelta + (showSelect ? 1 : 0)} message={view === 'allowed' ? 'No allow-listed cap-delta runs.' : view === 'denied' ? 'No disallowed cap-delta runs.' : 'No world-record runs over the delta threshold.'} />
           ) : rows.map((r) => (
             <DataTableRow key={r.cap_id} onClick={() => setStatsCapId(r.cap_id)}
               className={cn('cursor-pointer', sel.selected.has(r.cap_id) && 'bg-accent-500/[0.06]')}>
@@ -1076,6 +1109,18 @@ const LOW_FPS_LAYOUT: TableLayout = {
   action: { width: '6.5rem', align: 'center' },
 }
 
+const LOW_FPS_PRIORITY: Record<string, number> = {
+  risk: 90,
+  time: 80,
+  map: 70,
+  fps1: 40,
+  fps5: 35,
+  fps25: 30,
+  fps50: 25,
+  limits: 35,
+  spawns: 30,
+}
+
 function LowFpsTable({ token, defaultTotal, onMapSelect }: { token: string; defaultTotal: number | null; onMapSelect?: (mapName: string) => void }) {
   const tbl = useAdminTable('utbt:admin:ac.lowfps:cols:v2', LOW_FPS_COLUMNS, { defaultFiltersOpen: false })
   const PAGE = useAdminPageSize()
@@ -1113,19 +1158,23 @@ function LowFpsTable({ token, defaultTotal, onMapSelect }: { token: string; defa
   const bulkAllow = useBulkAcAction(bulkAllowCaps, token, load, setError, sel.clear)
   const showSelect = view === 'flagged'
 
-  const tableMinWidth = useMemo(
-    () => minWidthFor(tbl.columnOrder, tbl.isVisible, LOW_FPS_LAYOUT, 14, showSelect ? 3 : 0),
-    [tbl.columnOrder, tbl.isVisible, showSelect],
+  const responsiveColumns = useMemo<ResponsiveColumn[]>(
+    () => tbl.columnOrder.filter(tbl.isVisible).map((id) => ({ id, width: LOW_FPS_LAYOUT[id]?.width, priority: LOW_FPS_PRIORITY[id], required: tbl.requiredColumns.has(id) })),
+    [tbl.columnOrder, tbl.isVisible, tbl.requiredColumns],
   )
+  const [resolvedLowFps, setResolvedLowFps] = useState<Set<string> | null>(null)
+  const handleResolveLowFps = useCallback((ids: Set<string>) => { setResolvedLowFps(ids) }, [])
+  const isShownLowFps = useCallback((id: string) => tbl.isVisible(id) && (!resolvedLowFps || resolvedLowFps.has(id)), [tbl, resolvedLowFps])
+  const effectiveCountLowFps = tbl.columnOrder.filter(isShownLowFps).length
 
   const renderHeader = (id: string): ReactNode => {
-    if (!tbl.isVisible(id)) return null
+    if (!isShownLowFps(id)) return null
     const layout = LOW_FPS_LAYOUT[id]
     return <DataTableHeaderCell key={id} width={layout.width} align={layout.align}>{tbl.columnLabels[id]}</DataTableHeaderCell>
   }
 
   const renderCell = (id: string, r: AcLowFpsWrRow): ReactNode => {
-    if (!tbl.isVisible(id)) return null
+    if (!isShownLowFps(id)) return null
     const align = LOW_FPS_LAYOUT[id].align
     switch (id) {
       case 'player':
@@ -1202,7 +1251,7 @@ function LowFpsTable({ token, defaultTotal, onMapSelect }: { token: string; defa
           allow={() => bulkAllow.setTarget({ ids: [...sel.selected], label: bulkLabel('Mark', sel.selected.size, 'They leave the flagged list but stay on the leaderboard. The reason is recorded in the audit log.') })}
           disallow={() => bulkDis.setTarget({ ids: [...sel.selected], label: bulkLabel('Disallow', sel.selected.size, 'They leave the leaderboard. The reason is recorded in the audit log for each.') })} />
       )}
-      <DataTableShell className="flex-none" minWidth={tableMinWidth}>
+      <DataTableShell className="flex-none" responsive={{ columns: responsiveColumns, nameFloorRem: 14, extraRem: showSelect ? 3 : 0, onResolve: handleResolveLowFps }}>
         <DataTableHeaderRow>
           {showSelect && (
             <DataTableHeaderCell width="3rem" align="center">
@@ -1214,9 +1263,9 @@ function LowFpsTable({ token, defaultTotal, onMapSelect }: { token: string; defa
         </DataTableHeaderRow>
         <tbody>
           {loading && rows.length === 0 ? (
-            Array.from({ length: 8 }).map((_, i) => <DataTableSkeletonRow key={i} columnCount={tbl.visibleCount + (showSelect ? 1 : 0)} />)
+            Array.from({ length: 8 }).map((_, i) => <DataTableSkeletonRow key={i} columnCount={effectiveCountLowFps + (showSelect ? 1 : 0)} />)
           ) : rows.length === 0 ? (
-            <DataTableEmpty colSpan={tbl.visibleCount + (showSelect ? 1 : 0)} message={view === 'allowed' ? 'No allow-listed world records.' : view === 'denied' ? 'No disallowed low FPS caps.' : 'No flagged world records.'} />
+            <DataTableEmpty colSpan={effectiveCountLowFps + (showSelect ? 1 : 0)} message={view === 'allowed' ? 'No allow-listed world records.' : view === 'denied' ? 'No disallowed low FPS caps.' : 'No flagged world records.'} />
           ) : rows.map((r) => (
             <DataTableRow key={r.cap_id} onClick={() => setStatsCapId(r.cap_id)}
               className={cn('cursor-pointer', sel.selected.has(r.cap_id) && 'bg-accent-500/[0.06]')}>

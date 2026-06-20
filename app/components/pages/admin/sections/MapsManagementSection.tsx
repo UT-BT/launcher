@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { Map as MapIcon, Plus, Pencil, RefreshCw, X, ImagePlus, AlertTriangle, Search, Megaphone } from 'lucide-react'
+import { Map as MapIcon, Plus, Pencil, RefreshCw, X, ImagePlus, AlertTriangle, Search, Megaphone, Gauge, Loader2, CheckCircle2 } from 'lucide-react'
 import {
   fetchAdminMaps, fetchAdminMapsCount, createMap, updateMap, fetchAdminUsers, fetchAdminMapTags,
   fetchMapvoteStatus, setMapvoteAnnouncement, regenerateMapvote, toActiveTitle,
-  type AdminMapRow, type AdminMapSort, type AdminUserRow, type MapvoteStatus,
+  fetchDifficultySyncPreview, applyDifficultySync,
+  type AdminMapRow, type AdminMapSort, type AdminUserRow, type MapvoteStatus, type DifficultySyncChange,
 } from '@/app/utils/api'
 import { cn } from '@/lib/utils'
 import type { AdminSectionProps } from '../types'
@@ -12,7 +13,7 @@ import { SearchInput, Pager, Feedback, ActionButton, AdminSelect, ConfirmDialog,
 import { useAdminTable, type AdminColumn } from '../components/useAdminTable'
 import { useAdminFilterPresets } from '../components/useAdminFilterPresets'
 import { TableControls } from '../components/TableControls'
-import { PANEL_LABEL, minWidthFor, useResetOnChange, useAdminPageSize } from '../components/shared'
+import { PANEL_LABEL, useResetOnChange, useAdminPageSize } from '../components/shared'
 import { MapLink } from '../components/MapLink'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
@@ -26,7 +27,7 @@ import { Button } from '@/app/components/ui/button'
 import { Input } from '@/app/components/ui/input'
 import {
   DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow, DataTableCell, DataTableEmpty,
-  DataTableSkeletonRow, type SortDirection,
+  DataTableSkeletonRow, type SortDirection, type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
 
 const MAPVOTE_STALE_KEY = 'utbt:admin:maps:mapvoteStale:v1'
@@ -62,6 +63,10 @@ const LAYOUT: Record<string, { width?: string; align?: 'left' | 'center' | 'righ
 
 const SORTABLE: Record<string, AdminMapSort> = {
   map: 'name', difficulty: 'difficulty', status: 'active',
+}
+
+const PRIORITY: Record<string, number> = {
+  status: 70, difficulty: 70, author: 30, tags: 30, superseded: 30,
 }
 
 interface MapFilters {
@@ -611,6 +616,182 @@ function MapvoteModal({ open, onClose, token, onRegenerated }: { open: boolean; 
   )
 }
 
+type DifficultySyncState =
+  | { status: 'loading' }
+  | { status: 'preview'; changes: DifficultySyncChange[] }
+  | { status: 'applying' }
+  | { status: 'done'; count: number }
+  | { status: 'error'; message: string }
+
+function DifficultySyncModal({ open, onClose, token, onApplied }: {
+  open: boolean
+  onClose: () => void
+  token: string
+  onApplied: () => void
+}) {
+  const [state, setState] = useState<DifficultySyncState>({ status: 'loading' })
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [reason, setReason] = useState('')
+
+  useEffect(() => {
+    if (!open) return
+    setState({ status: 'loading' }); setSelected(new Set()); setReason('')
+    const ctrl = new AbortController()
+    fetchDifficultySyncPreview(token, ctrl.signal)
+      .then((changes) => {
+        setState({ status: 'preview', changes })
+        setSelected(new Set(changes.map((c) => c.name)))
+      })
+      .catch((e) => { if (!ctrl.signal.aborted) setState({ status: 'error', message: errMessage(e) }) })
+    return () => ctrl.abort()
+  }, [open, token])
+
+  const changes = state.status === 'preview' ? state.changes : []
+  const allChecked = changes.length > 0 && selected.size === changes.length
+
+  const toggle = (name: string) => setSelected((prev) => {
+    const next = new Set(prev)
+    if (next.has(name)) next.delete(name); else next.add(name)
+    return next
+  })
+  const toggleAll = () => setSelected(allChecked ? new Set() : new Set(changes.map((c) => c.name)))
+
+  const apply = async () => {
+    const maps = [...selected]
+    setState({ status: 'applying' })
+    try {
+      const res = await applyDifficultySync(token, { reason: reason.trim() || undefined, maps })
+      setState({ status: 'done', count: res.count })
+      onApplied()
+    } catch (e) {
+      setState({ status: 'error', message: errMessage(e) })
+    }
+  }
+
+  const footer = state.status === 'preview' && changes.length > 0 ? (
+    <div className="p-4 border-t border-border bg-muted/50 flex justify-end gap-2">
+      <Button variant="outline" onClick={onClose}>Cancel</Button>
+      <ActionButton tone="emerald" icon={Gauge} onClick={apply} disabled={selected.size === 0}>
+        Apply {selected.size} {selected.size === 1 ? 'change' : 'changes'}
+      </ActionButton>
+    </div>
+  ) : (
+    <div className="p-4 border-t border-border bg-muted/50 flex justify-end gap-2">
+      <Button variant="outline" onClick={onClose} disabled={state.status === 'applying'}>
+        {state.status === 'done' || state.status === 'error' ? 'Close' : 'Cancel'}
+      </Button>
+    </div>
+  )
+
+  return (
+    <Modal isOpen={open} onClose={state.status === 'applying' ? () => {} : onClose} title="Sync map difficulties" offsetSidebar maxWidth="44rem" footer={footer}>
+      <div className="space-y-4">
+        {state.status === 'loading' && (
+          <div className="flex items-center justify-center gap-3 py-12 text-muted-foreground">
+            <Loader2 className="size-5 animate-spin" />
+            <span className="text-sm">Computing review averages…</span>
+          </div>
+        )}
+
+        {state.status === 'applying' && (
+          <div className="flex items-center justify-center gap-3 py-12 text-muted-foreground">
+            <Loader2 className="size-5 animate-spin" />
+            <span className="text-sm">Applying changes…</span>
+          </div>
+        )}
+
+        {state.status === 'error' && (
+          <div className="flex items-start gap-2.5 rounded-xl border border-red-500/40 bg-red-500/10 p-4 text-red-300">
+            <AlertTriangle className="size-4 shrink-0 mt-0.5" />
+            <p className="text-sm leading-relaxed">{state.message}</p>
+          </div>
+        )}
+
+        {state.status === 'done' && (
+          <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
+            <CheckCircle2 className="size-10 text-emerald-400" />
+            <p className="text-sm text-foreground">
+              {state.count === 0
+                ? 'No changes were applied.'
+                : <>Updated {state.count} {state.count === 1 ? 'map' : 'maps'}.</>}
+            </p>
+            <p className="text-xs text-muted-foreground">Each change is recorded in the audit log and can be rolled back there.</p>
+          </div>
+        )}
+
+        {state.status === 'preview' && changes.length === 0 && (
+          <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
+            <CheckCircle2 className="size-10 text-emerald-400" />
+            <p className="text-sm text-foreground">All map difficulties already match their review averages.</p>
+            <p className="text-xs text-muted-foreground">Nothing to sync.</p>
+          </div>
+        )}
+
+        {state.status === 'preview' && changes.length > 0 && (
+          <>
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              Each map&apos;s difficulty is set to the rounded average of its review difficulty ratings. Review the
+              proposed changes, deselect any you want to skip, then apply. Every change is recorded in the audit log
+              and can be rolled back.
+            </p>
+
+            <DataTableShell className="max-h-[22rem]">
+              <DataTableHeaderRow>
+                <DataTableHeaderCell width="3rem" align="center">
+                  <input
+                    type="checkbox"
+                    checked={allChecked}
+                    ref={(el) => { if (el) el.indeterminate = selected.size > 0 && !allChecked }}
+                    onChange={toggleAll}
+                    style={{ colorScheme: 'dark' }}
+                    className="size-4 accent-emerald-500 cursor-pointer align-middle"
+                    aria-label="Select all"
+                  />
+                </DataTableHeaderCell>
+                <DataTableHeaderCell align="left">Map</DataTableHeaderCell>
+                <DataTableHeaderCell width="8rem" align="center">Difficulty</DataTableHeaderCell>
+                <DataTableHeaderCell width="9rem" align="right">Avg (reviews)</DataTableHeaderCell>
+              </DataTableHeaderRow>
+              <tbody>
+                {changes.map((c) => (
+                  <DataTableRow key={c.name}>
+                    <DataTableCell align="center">
+                      <input
+                        type="checkbox"
+                        checked={selected.has(c.name)}
+                        onChange={() => toggle(c.name)}
+                        style={{ colorScheme: 'dark' }}
+                        className="size-4 accent-emerald-500 cursor-pointer align-middle"
+                        aria-label={`Sync ${c.name}`}
+                      />
+                    </DataTableCell>
+                    <DataTableCell align="left">
+                      <span className="font-medium text-sm text-foreground truncate">{c.name}</span>
+                    </DataTableCell>
+                    <DataTableCell align="center" className="tabular-nums">
+                      <span className="text-muted-foreground">{c.current ?? '—'}</span>
+                      <span className="text-muted-foreground/50 mx-1.5">→</span>
+                      <span className="text-foreground font-medium">{c.proposed}</span>
+                    </DataTableCell>
+                    <DataTableCell align="right" className="tabular-nums text-muted-foreground">
+                      {c.average} <span className="text-muted-foreground/50">({c.review_count})</span>
+                    </DataTableCell>
+                  </DataTableRow>
+                ))}
+              </tbody>
+            </DataTableShell>
+
+            <div className="space-y-1.5">
+              {fieldLabel('Reason (optional)')}
+              <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Why are you running this sync?" className="h-9" />
+            </div>
+          </>
+        )}
+      </div>
+    </Modal>
+  )
+}
+
 export function MapsManagementSection({ userProfile, onMapSelect }: AdminSectionProps) {
   const token = userProfile?.accessToken
   const PAGE = useAdminPageSize()
@@ -632,6 +813,7 @@ export function MapsManagementSection({ userProfile, onMapSelect }: AdminSection
   const [adding, setAdding] = useState(false)
   const [editing, setEditing] = useState<AdminMapRow | null>(null)
   const [mapvoteOpen, setMapvoteOpen] = useState(false)
+  const [diffSyncOpen, setDiffSyncOpen] = useState(false)
   const [allTags, setAllTags] = useState<string[]>([])
   const [mapvoteStale, setMapvoteStaleState] = useState<boolean>(() => {
     try { return localStorage.getItem(MAPVOTE_STALE_KEY) === '1' } catch { return false }
@@ -725,10 +907,17 @@ export function MapsManagementSection({ userProfile, onMapSelect }: AdminSection
 
   const statusLabel = STATUS_OPTIONS.find((o) => o.value === status)?.label ?? status
 
-  const tableMinWidth = useMemo(() => minWidthFor(tbl.columnOrder, tbl.isVisible, LAYOUT, 14), [tbl])
+  const responsiveColumns = useMemo<ResponsiveColumn[]>(
+    () => tbl.columnOrder.filter(tbl.isVisible).map((id) => ({ id, width: LAYOUT[id]?.width, priority: PRIORITY[id], required: tbl.requiredColumns.has(id) })),
+    [tbl.columnOrder, tbl.isVisible, tbl.requiredColumns],
+  )
+  const [resolved, setResolved] = useState<Set<string> | null>(null)
+  const handleResolve = useCallback((ids: Set<string>) => { setResolved(ids) }, [])
+  const isShown = useCallback((id: string) => tbl.isVisible(id) && (!resolved || resolved.has(id)), [tbl, resolved])
+  const effectiveCount = tbl.columnOrder.filter(isShown).length
 
   const renderHeader = (id: string): ReactNode => {
-    if (!tbl.isVisible(id)) return null
+    if (!isShown(id)) return null
     const layout = LAYOUT[id]
     const sortKey = SORTABLE[id]
     if (sortKey) {
@@ -743,7 +932,7 @@ export function MapsManagementSection({ userProfile, onMapSelect }: AdminSection
   }
 
   const renderCell = (id: string, m: AdminMapRow): ReactNode => {
-    if (!tbl.isVisible(id)) return null
+    if (!isShown(id)) return null
     const align = LAYOUT[id].align
     switch (id) {
       case 'map':
@@ -822,6 +1011,7 @@ export function MapsManagementSection({ userProfile, onMapSelect }: AdminSection
       actions={
         <>
           <ActionButton tone="accent" icon={RefreshCw} onClick={reload} loading={loading} />
+          <ActionButton tone="accent" icon={Gauge} onClick={() => setDiffSyncOpen(true)} disabled={!token}>Sync Difficulties</ActionButton>
           <ActionButton tone="accent" icon={Megaphone} onClick={() => setMapvoteOpen(true)} disabled={!token}>Mapvote</ActionButton>
           <ActionButton tone="accent" icon={Plus} disabled title="Adding maps is temporarily disabled — coming soon">Add Map</ActionButton>
         </>
@@ -893,15 +1083,15 @@ export function MapsManagementSection({ userProfile, onMapSelect }: AdminSection
         </div>
       )}
 
-      <DataTableShell className="flex-none" minWidth={tableMinWidth}>
+      <DataTableShell className="flex-none" responsive={{ columns: responsiveColumns, nameFloorRem: 14, extraRem: 0, onResolve: handleResolve }}>
         <DataTableHeaderRow>
           {tbl.columnOrder.map((id) => renderHeader(id))}
         </DataTableHeaderRow>
         <tbody>
           {loading && rows.length === 0 ? (
-            Array.from({ length: 8 }).map((_, i) => <DataTableSkeletonRow key={i} columnCount={tbl.visibleCount} />)
+            Array.from({ length: 8 }).map((_, i) => <DataTableSkeletonRow key={i} columnCount={effectiveCount} />)
           ) : rows.length === 0 ? (
-            <DataTableEmpty colSpan={tbl.visibleCount} message="No maps match these filters." />
+            <DataTableEmpty colSpan={effectiveCount} message="No maps match these filters." />
           ) : rows.map((m) => (
             <DataTableRow key={m.name}>{tbl.columnOrder.map((id) => renderCell(id, m))}</DataTableRow>
           ))}
@@ -915,6 +1105,7 @@ export function MapsManagementSection({ userProfile, onMapSelect }: AdminSection
       {token && <MapFormModal open={adding} onClose={() => setAdding(false)} token={token} editing={null} allTags={allTags} onSaved={() => { reload(); setMapvoteStale(true) }} />}
       {token && <MapFormModal open={!!editing} onClose={() => setEditing(null)} token={token} editing={editing} allTags={allTags} onSaved={() => { reload(); setMapvoteStale(true) }} />}
       {token && <MapvoteModal open={mapvoteOpen} onClose={() => setMapvoteOpen(false)} token={token} onRegenerated={() => setMapvoteStale(false)} />}
+      {token && <DifficultySyncModal open={diffSyncOpen} onClose={() => setDiffSyncOpen(false)} token={token} onApplied={() => { reload(); setMapvoteStale(true) }} />}
     </SectionShell>
   )
 }

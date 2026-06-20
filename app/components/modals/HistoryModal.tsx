@@ -1,11 +1,11 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { ChevronLeft, ChevronRight, Loader2, MessageSquarePlus, Play } from 'lucide-react'
 import { Modal } from '@/app/components/ui/modal'
 import { Button } from '@/app/components/ui/button'
 import { fetchSummaryCaps, SummaryCap } from '@/app/utils/api'
 import {
     DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow,
-    DataTableCell, DataTableEmpty, DataTableSkeletonRow,
+    DataTableCell, DataTableEmpty, DataTableSkeletonRow, type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
@@ -23,6 +23,18 @@ const TABLE_ROW_HEIGHT_PX = 72
 const MODAL_CHROME_PX = 290
 const AUTO_PAGE_SIZE_MIN_ROWS = 4
 const AUTO_PAGE_SIZE_MAX_ROWS = 20
+
+type HistoryColumnId = 'thumbnail' | 'map' | 'author' | 'time' | 'capped' | 'replay' | 'review'
+
+const HISTORY_COLUMNS: ResponsiveColumn[] = [
+    { id: 'thumbnail', width: '3.5rem', priority: 40 },
+    { id: 'map', required: true },
+    { id: 'author', priority: 30 },
+    { id: 'time', priority: 70 },
+    { id: 'capped', width: '8rem', priority: 20 },
+    { id: 'replay', width: '3rem', priority: 10 },
+    { id: 'review', width: '3rem', priority: 10 },
+]
 
 function computePageSize(): number {
     if (typeof window === 'undefined') return 9
@@ -52,6 +64,17 @@ export function HistoryModal({
     const [hasMore, setHasMore] = useState(false)
 
     const replay = useReplayWatch()
+
+    const [resolved, setResolved] = useState<Set<HistoryColumnId> | null>(null)
+    const handleResolve = useCallback((ids: Set<string>) => { setResolved(ids as Set<HistoryColumnId>) }, [])
+    const isVisible = useCallback(
+        (id: HistoryColumnId) => !resolved || resolved.has(id),
+        [resolved],
+    )
+    const visibleColumnCount = useMemo(
+        () => HISTORY_COLUMNS.reduce((n, c) => (!resolved || resolved.has(c.id as HistoryColumnId) ? n + 1 : n), 0),
+        [resolved],
+    )
 
     const load = useCallback(async (targetPage: number) => {
         if (!accessToken) return
@@ -93,23 +116,26 @@ export function HistoryModal({
                 className="bg-card/95 border-hairline/5 backdrop-blur-2xl"
             >
                 <div className="flex flex-col gap-3">
-                    <DataTableShell className="flex-none">
+                    <DataTableShell
+                        className="flex-none"
+                        responsive={{ columns: HISTORY_COLUMNS, onResolve: handleResolve }}
+                    >
                         <DataTableHeaderRow>
-                            <DataTableHeaderCell width="3.5rem"> </DataTableHeaderCell>
+                            {isVisible('thumbnail') && <DataTableHeaderCell width="3.5rem"> </DataTableHeaderCell>}
                             <DataTableHeaderCell>Map</DataTableHeaderCell>
-                            <DataTableHeaderCell>Author</DataTableHeaderCell>
-                            <DataTableHeaderCell align="right">Time</DataTableHeaderCell>
-                            <DataTableHeaderCell align="right" width="8rem">Capped</DataTableHeaderCell>
-                            <DataTableHeaderCell align="center" width="3rem"> </DataTableHeaderCell>
-                            <DataTableHeaderCell align="center" width="3rem"> </DataTableHeaderCell>
+                            {isVisible('author') && <DataTableHeaderCell>Author</DataTableHeaderCell>}
+                            {isVisible('time') && <DataTableHeaderCell align="right">Time</DataTableHeaderCell>}
+                            {isVisible('capped') && <DataTableHeaderCell align="right" width="8rem">Capped</DataTableHeaderCell>}
+                            {isVisible('replay') && <DataTableHeaderCell align="center" width="3rem"> </DataTableHeaderCell>}
+                            {isVisible('review') && <DataTableHeaderCell align="center" width="3rem"> </DataTableHeaderCell>}
                         </DataTableHeaderRow>
                         <tbody>
                             {loading && caps.length === 0 ? (
                                 Array.from({ length: pageSize }).map((_, i) => (
-                                    <DataTableSkeletonRow key={i} columnCount={7} />
+                                    <DataTableSkeletonRow key={i} columnCount={visibleColumnCount} />
                                 ))
                             ) : caps.length === 0 ? (
-                                <DataTableEmpty colSpan={7} message="No cap history yet. Start capping!" />
+                                <DataTableEmpty colSpan={visibleColumnCount} message="No cap history yet. Start capping!" />
                             ) : (
                                 caps.map(cap => {
                                     const medalIcon = getMedalIcon(cap.medal)
@@ -117,9 +143,11 @@ export function HistoryModal({
 
                                     return (
                                         <DataTableRow key={cap.id}>
-                                            <DataTableCell>
-                                                <MapThumbnail mapName={cap.mapName} className="w-12 h-12" />
-                                            </DataTableCell>
+                                            {isVisible('thumbnail') && (
+                                                <DataTableCell>
+                                                    <MapThumbnail mapName={cap.mapName} className="w-12 h-12" />
+                                                </DataTableCell>
+                                            )}
                                             <DataTableCell>
                                                 <div className="flex items-center gap-2 min-w-0">
                                                     <FavoriteStar
@@ -143,9 +171,12 @@ export function HistoryModal({
                                                     )}
                                                 </div>
                                             </DataTableCell>
-                                            <DataTableCell>
-                                                <PlayerInfo alias={cap.author} size="sm" />
-                                            </DataTableCell>
+                                            {isVisible('author') && (
+                                                <DataTableCell>
+                                                    <PlayerInfo alias={cap.author} size="sm" />
+                                                </DataTableCell>
+                                            )}
+                                            {isVisible('time') && (
                                             <DataTableCell align="right">
                                                 <div className="flex items-center justify-end gap-2">
                                                     {medalIcon && (
@@ -165,38 +196,45 @@ export function HistoryModal({
                                                     />
                                                 </div>
                                             </DataTableCell>
-                                            <DataTableCell align="right">
-                                                <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest whitespace-nowrap">
-                                                    {formatAddedDate(cap.added)}
-                                                </span>
-                                            </DataTableCell>
-                                            <DataTableCell align="center" className="px-2">
-                                                {cap.verified && (
-                                                    <IconActionButton
-                                                        variant="replay"
-                                                        icon={Play}
-                                                        iconFill
-                                                        tooltip="Watch run"
-                                                        loading={isLoadingReplay}
-                                                        onClick={() => replay.openReplay({
-                                                            capId: cap.id,
-                                                            mapName: cap.mapName,
-                                                            time: cap.time,
-                                                            alias: userAlias ?? undefined,
-                                                        })}
-                                                    />
-                                                )}
-                                            </DataTableCell>
-                                            <DataTableCell align="center" className="px-2">
-                                                {onReview && (
-                                                    <IconActionButton
-                                                        variant="review"
-                                                        icon={MessageSquarePlus}
-                                                        tooltip="Review this map"
-                                                        onClick={() => onReview(cap.mapName)}
-                                                    />
-                                                )}
-                                            </DataTableCell>
+                                            )}
+                                            {isVisible('capped') && (
+                                                <DataTableCell align="right">
+                                                    <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest whitespace-nowrap">
+                                                        {formatAddedDate(cap.added)}
+                                                    </span>
+                                                </DataTableCell>
+                                            )}
+                                            {isVisible('replay') && (
+                                                <DataTableCell align="center" className="px-2">
+                                                    {cap.verified && (
+                                                        <IconActionButton
+                                                            variant="replay"
+                                                            icon={Play}
+                                                            iconFill
+                                                            tooltip="Watch run"
+                                                            loading={isLoadingReplay}
+                                                            onClick={() => replay.openReplay({
+                                                                capId: cap.id,
+                                                                mapName: cap.mapName,
+                                                                time: cap.time,
+                                                                alias: userAlias ?? undefined,
+                                                            })}
+                                                        />
+                                                    )}
+                                                </DataTableCell>
+                                            )}
+                                            {isVisible('review') && (
+                                                <DataTableCell align="center" className="px-2">
+                                                    {onReview && (
+                                                        <IconActionButton
+                                                            variant="review"
+                                                            icon={MessageSquarePlus}
+                                                            tooltip="Review this map"
+                                                            onClick={() => onReview(cap.mapName)}
+                                                        />
+                                                    )}
+                                                </DataTableCell>
+                                            )}
                                         </DataTableRow>
                                     )
                                 })

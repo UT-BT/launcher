@@ -44,6 +44,7 @@ import { FilterPresetsMenu, type FilterPreset } from '@/app/components/shared/Fi
 import {
     DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow,
     DataTableCell, DataTableEmpty, DataTableSkeletonRow, type SortDirection,
+    type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
 import { formatCapTime, formatAddedDate, displayMapName } from '@/app/utils/format'
 import { difficultyTextColor } from '@/app/utils/scoreColors'
@@ -109,6 +110,32 @@ export const WORLD_RECORDS_COLUMN_LABELS: Record<WorldRecordsColumnId, string> =
 const DEFAULT_COLUMN_ORDER: WorldRecordsColumnId[] = ['map', 'holder', 'time', 'difficulty', 'date', 'actions']
 
 const REQUIRED_COLUMNS: ReadonlySet<WorldRecordsColumnId> = new Set(['map', 'holder', 'time'])
+
+const COLUMN_WIDTH: Partial<Record<WorldRecordsColumnId, string>> = {
+    time: '8rem',
+    difficulty: '7rem',
+    date: '8rem',
+    actions: '8.5rem',
+}
+
+const COLUMN_PRIORITY: Partial<Record<WorldRecordsColumnId, number>> = {
+    difficulty: 50,
+    actions: 40,
+    date: 30,
+}
+
+type RusherColumnId = 'rank' | 'rusher' | 'records' | 'share' | 'median' | 'average'
+
+const RUSHER_COLUMNS: ResponsiveColumn[] = [
+    { id: 'rank', width: '5rem', priority: 60 },
+    { id: 'rusher', required: true },
+    { id: 'records', width: '20rem', priority: 70 },
+    { id: 'share', width: '6rem', priority: 30 },
+    { id: 'median', width: '8rem', priority: 35 },
+    { id: 'average', width: '8rem', priority: 34 },
+]
+
+const RUSHER_COLUMN_IDS: RusherColumnId[] = RUSHER_COLUMNS.map(c => c.id as RusherColumnId)
 
 const DEFAULT_COLUMN_VISIBILITY: Record<WorldRecordsColumnId, boolean> = {
     map: true,
@@ -601,11 +628,42 @@ export function WorldRecordsPage({
         })
     }
 
-    const isColumnVisible = (id: WorldRecordsColumnId): boolean =>
-        REQUIRED_COLUMNS.has(id) || state.columnVisibility[id]
+    const visibleColumns = useMemo(
+        () => state.columnOrder.filter(id => REQUIRED_COLUMNS.has(id) || state.columnVisibility[id]),
+        [state.columnOrder, state.columnVisibility],
+    )
 
-    const visibleColumns = state.columnOrder.filter(isColumnVisible)
-    const visibleColumnCount = visibleColumns.length
+    const responsiveColumns = useMemo<ResponsiveColumn[]>(
+        () => visibleColumns.map(id => ({
+            id,
+            width: COLUMN_WIDTH[id],
+            priority: COLUMN_PRIORITY[id],
+            required: REQUIRED_COLUMNS.has(id),
+        })),
+        [visibleColumns],
+    )
+
+    const [recordsResolved, setRecordsResolved] = useState<Set<WorldRecordsColumnId> | null>(null)
+    const handleRecordsResolve = useCallback((ids: Set<string>) => {
+        setRecordsResolved(ids as Set<WorldRecordsColumnId>)
+    }, [])
+
+    const effectiveColumns = useMemo(
+        () => recordsResolved ? visibleColumns.filter(id => recordsResolved.has(id)) : visibleColumns,
+        [visibleColumns, recordsResolved],
+    )
+    const visibleColumnCount = effectiveColumns.length
+
+    const [rushersResolved, setRushersResolved] = useState<Set<RusherColumnId> | null>(null)
+    const handleRushersResolve = useCallback((ids: Set<string>) => {
+        setRushersResolved(ids as Set<RusherColumnId>)
+    }, [])
+    const isRusherColumnVisible = (id: RusherColumnId): boolean =>
+        !rushersResolved || rushersResolved.has(id)
+    const rusherColumnCount = RUSHER_COLUMN_IDS.reduce(
+        (n, id) => n + (isRusherColumnVisible(id) ? 1 : 0),
+        0,
+    )
 
     const totalRecords = caches.totalRecords
     const maxRusherCount = caches.maxRusherCount
@@ -1078,23 +1136,27 @@ export function WorldRecordsPage({
             )}
 
             {isRushers ? (
-                <DataTableShell scrollRef={scrollContainerRef} onScroll={onScrollContainerScroll}>
+                <DataTableShell
+                    scrollRef={scrollContainerRef}
+                    onScroll={onScrollContainerScroll}
+                    responsive={{ columns: RUSHER_COLUMNS, onResolve: handleRushersResolve }}
+                >
                     <DataTableHeaderRow theadDataAttr="data-utbt-rushers-thead">
-                        <DataTableHeaderCell align="right" width="5rem">#</DataTableHeaderCell>
-                        <DataTableHeaderCell align="left">Rusher</DataTableHeaderCell>
-                        <DataTableHeaderCell align="left" width="20rem">World Records</DataTableHeaderCell>
-                        <DataTableHeaderCell align="right" width="6rem">Share</DataTableHeaderCell>
-                        <DataTableHeaderCell align="right" width="8rem">Median WR</DataTableHeaderCell>
-                        <DataTableHeaderCell align="right" width="8rem">Average WR</DataTableHeaderCell>
+                        {isRusherColumnVisible('rank') && <DataTableHeaderCell align="right" width="5rem">#</DataTableHeaderCell>}
+                        {isRusherColumnVisible('rusher') && <DataTableHeaderCell align="left">Rusher</DataTableHeaderCell>}
+                        {isRusherColumnVisible('records') && <DataTableHeaderCell align="left" width="20rem">World Records</DataTableHeaderCell>}
+                        {isRusherColumnVisible('share') && <DataTableHeaderCell align="right" width="6rem">Share</DataTableHeaderCell>}
+                        {isRusherColumnVisible('median') && <DataTableHeaderCell align="right" width="8rem">Median WR</DataTableHeaderCell>}
+                        {isRusherColumnVisible('average') && <DataTableHeaderCell align="right" width="8rem">Average WR</DataTableHeaderCell>}
                     </DataTableHeaderRow>
                     <tbody>
                         {showSkeleton ? (
                             Array.from({ length: Math.min(pageSize, AUTO_PAGE_SIZE_MAX_ROWS) }).map((_, i) => (
-                                <DataTableSkeletonRow key={i} columnCount={6} />
+                                <DataTableSkeletonRow key={i} columnCount={rusherColumnCount} />
                             ))
                         ) : rusherPageRows.length === 0 ? (
                             <DataTableEmpty
-                                colSpan={6}
+                                colSpan={rusherColumnCount}
                                 message={debouncedSearch ? 'No rushers match your search.' : 'No rushers found.'}
                             />
                         ) : (
@@ -1105,46 +1167,58 @@ export function WorldRecordsPage({
                                 const barPct = maxRusherCount > 0 ? Math.max(4, (r.count / maxRusherCount) * 100) : 0
                                 return (
                                     <DataTableRow key={r.user_id}>
-                                        <DataTableCell align="right">
-                                            <span className={cn('font-mono font-bold tabular-nums', medalText(rank))}>
-                                                #{rank}
-                                            </span>
-                                        </DataTableCell>
-                                        <DataTableCell>
-                                            <PlayerInfo
-                                                userId={r.user_id}
-                                                alias={r.alias}
-                                                title={r.active_title}
-                                                size="md"
-                                                highlight={isSelf}
-                                                showYouBadge={isSelf}
-                                            />
-                                        </DataTableCell>
-                                        <DataTableCell>
-                                            <div className="flex items-center gap-2.5">
-                                                <div className="flex-1 h-1.5 rounded-full bg-hairline/10 overflow-hidden min-w-16">
-                                                    <div className="h-full rounded-full bg-accent-500/70" style={{ width: `${barPct}%` }} />
-                                                </div>
-                                                <span className="font-mono tabular-nums text-foreground font-bold w-10 text-right">
-                                                    {r.count}
+                                        {isRusherColumnVisible('rank') && (
+                                            <DataTableCell align="right">
+                                                <span className={cn('font-mono font-bold tabular-nums', medalText(rank))}>
+                                                    #{rank}
                                                 </span>
-                                            </div>
-                                        </DataTableCell>
-                                        <DataTableCell align="right">
-                                            <span className="font-mono tabular-nums text-xs text-muted-foreground">
-                                                {share.toFixed(1)}%
-                                            </span>
-                                        </DataTableCell>
-                                        <DataTableCell align="right">
-                                            <span className="font-mono tabular-nums text-xs text-foreground/80">
-                                                {r.median != null ? formatCapTime(r.median) : '—'}
-                                            </span>
-                                        </DataTableCell>
-                                        <DataTableCell align="right">
-                                            <span className="font-mono tabular-nums text-xs text-muted-foreground">
-                                                {r.average != null ? formatCapTime(r.average) : '—'}
-                                            </span>
-                                        </DataTableCell>
+                                            </DataTableCell>
+                                        )}
+                                        {isRusherColumnVisible('rusher') && (
+                                            <DataTableCell>
+                                                <PlayerInfo
+                                                    userId={r.user_id}
+                                                    alias={r.alias}
+                                                    title={r.active_title}
+                                                    size="md"
+                                                    highlight={isSelf}
+                                                    showYouBadge={isSelf}
+                                                />
+                                            </DataTableCell>
+                                        )}
+                                        {isRusherColumnVisible('records') && (
+                                            <DataTableCell>
+                                                <div className="flex items-center gap-2.5">
+                                                    <div className="flex-1 h-1.5 rounded-full bg-hairline/10 overflow-hidden min-w-16">
+                                                        <div className="h-full rounded-full bg-accent-500/70" style={{ width: `${barPct}%` }} />
+                                                    </div>
+                                                    <span className="font-mono tabular-nums text-foreground font-bold w-10 text-right">
+                                                        {r.count}
+                                                    </span>
+                                                </div>
+                                            </DataTableCell>
+                                        )}
+                                        {isRusherColumnVisible('share') && (
+                                            <DataTableCell align="right">
+                                                <span className="font-mono tabular-nums text-xs text-muted-foreground">
+                                                    {share.toFixed(1)}%
+                                                </span>
+                                            </DataTableCell>
+                                        )}
+                                        {isRusherColumnVisible('median') && (
+                                            <DataTableCell align="right">
+                                                <span className="font-mono tabular-nums text-xs text-foreground/80">
+                                                    {r.median != null ? formatCapTime(r.median) : '—'}
+                                                </span>
+                                            </DataTableCell>
+                                        )}
+                                        {isRusherColumnVisible('average') && (
+                                            <DataTableCell align="right">
+                                                <span className="font-mono tabular-nums text-xs text-muted-foreground">
+                                                    {r.average != null ? formatCapTime(r.average) : '—'}
+                                                </span>
+                                            </DataTableCell>
+                                        )}
                                     </DataTableRow>
                                 )
                             })
@@ -1152,9 +1226,13 @@ export function WorldRecordsPage({
                     </tbody>
                 </DataTableShell>
             ) : (
-                <DataTableShell scrollRef={scrollContainerRef} onScroll={onScrollContainerScroll}>
+                <DataTableShell
+                    scrollRef={scrollContainerRef}
+                    onScroll={onScrollContainerScroll}
+                    responsive={{ columns: responsiveColumns, onResolve: handleRecordsResolve }}
+                >
                     <DataTableHeaderRow theadDataAttr="data-utbt-worldrecords-thead">
-                        {visibleColumns.map(id => renderHeaderCell(id))}
+                        {effectiveColumns.map(id => renderHeaderCell(id))}
                     </DataTableHeaderRow>
                     <tbody>
                         {showSkeleton ? (
@@ -1175,7 +1253,7 @@ export function WorldRecordsPage({
                                         key={r.cap_id}
                                         className={isNew ? 'bg-accent-500/[0.07] ring-1 ring-inset ring-accent-500/40' : undefined}
                                     >
-                                        {visibleColumns.map(id => renderCell(
+                                        {effectiveColumns.map(id => renderCell(
                                             id, r, isNew,
                                             id === 'map' && isFirstNew ? highlight.registerFirstNew : undefined,
                                         ))}
