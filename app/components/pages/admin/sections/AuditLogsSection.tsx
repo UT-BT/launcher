@@ -8,7 +8,7 @@ import { SearchInput, Pager, Feedback, ActionButton, AdminSelect, ConfirmDialog,
 import { useAdminTable, type AdminColumn } from '../components/useAdminTable'
 import { useAdminFilterPresets } from '../components/useAdminFilterPresets'
 import { TableControls } from '../components/TableControls'
-import { PANEL_LABEL, minWidthFor, useResetOnChange, useAdminPageSize } from '../components/shared'
+import { PANEL_LABEL, useResetOnChange, useAdminPageSize } from '../components/shared'
 import { MapLink } from '../components/MapLink'
 import { ROLE_LABELS } from '@/app/utils/roles'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
@@ -19,7 +19,7 @@ import { useNavState } from '@/app/components/navigation/useNavState'
 import { cn } from '@/lib/utils'
 import {
   DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow, DataTableCell,
-  DataTableEmpty, DataTableSkeletonRow,
+  DataTableEmpty, DataTableSkeletonRow, type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
 
 const ACTIONS = [
@@ -51,6 +51,10 @@ const LAYOUT: Record<string, { width?: string; align?: 'left' | 'center' | 'righ
 const CHEVRON_WIDTH = '2.75rem'
 const CHEVRON_WIDTH_REM = 2.75
 const SUMMARY_MIN_WIDTH_REM = 16
+
+const PRIORITY: Record<string, number> = {
+  action: 70, time: 40, actor: 40,
+}
 
 interface AuditFilters {
   search: string
@@ -420,19 +424,23 @@ export function AuditLogsSection({ userProfile, onMapSelect, onNavigate }: Admin
     }
   }, [token, rollbackTarget, reload])
 
-  const tableMinWidth = useMemo(
-    () => minWidthFor(tbl.columnOrder, tbl.isVisible, LAYOUT, SUMMARY_MIN_WIDTH_REM, CHEVRON_WIDTH_REM),
-    [tbl],
+  const responsiveColumns = useMemo<ResponsiveColumn[]>(
+    () => tbl.columnOrder.filter(tbl.isVisible).map((id) => ({ id, width: LAYOUT[id]?.width, priority: PRIORITY[id], required: tbl.requiredColumns.has(id) })),
+    [tbl.columnOrder, tbl.isVisible, tbl.requiredColumns],
   )
+  const [resolved, setResolved] = useState<Set<string> | null>(null)
+  const handleResolve = useCallback((ids: Set<string>) => { setResolved(ids) }, [])
+  const isShown = useCallback((id: string) => tbl.isVisible(id) && (!resolved || resolved.has(id)), [tbl, resolved])
+  const effectiveCount = tbl.columnOrder.filter(isShown).length
 
   const renderHeader = (id: string): ReactNode => {
-    if (!tbl.isVisible(id)) return null
+    if (!isShown(id)) return null
     const layout = LAYOUT[id]
     return <DataTableHeaderCell key={id} width={layout?.width} align={layout?.align}>{tbl.columnLabels[id]}</DataTableHeaderCell>
   }
 
   const renderCell = (id: string, e: AuditEntry): ReactNode => {
-    if (!tbl.isVisible(id)) return null
+    if (!isShown(id)) return null
     const align = LAYOUT[id]?.align
     switch (id) {
       case 'time':
@@ -525,16 +533,16 @@ export function AuditLogsSection({ userProfile, onMapSelect, onNavigate }: Admin
         </div>
       )}
 
-      <DataTableShell className="flex-none" minWidth={tableMinWidth}>
+      <DataTableShell className="flex-none" responsive={{ columns: responsiveColumns, nameFloorRem: SUMMARY_MIN_WIDTH_REM, extraRem: CHEVRON_WIDTH_REM, onResolve: handleResolve }}>
         <DataTableHeaderRow>
           <DataTableHeaderCell width={CHEVRON_WIDTH}> </DataTableHeaderCell>
           {tbl.columnOrder.map((id) => renderHeader(id))}
         </DataTableHeaderRow>
         <tbody>
           {loading && rows.length === 0 ? (
-            Array.from({ length: 8 }).map((_, i) => <DataTableSkeletonRow key={i} columnCount={tbl.visibleCount + 1} />)
+            Array.from({ length: 8 }).map((_, i) => <DataTableSkeletonRow key={i} columnCount={effectiveCount + 1} />)
           ) : rows.length === 0 ? (
-            <DataTableEmpty colSpan={tbl.visibleCount + 1} message="No audit entries match these filters." />
+            <DataTableEmpty colSpan={effectiveCount + 1} message="No audit entries match these filters." />
           ) : rows.map((e) => {
             const open = expanded === e.id
             return (
@@ -550,7 +558,7 @@ export function AuditLogsSection({ userProfile, onMapSelect, onNavigate }: Admin
                 </DataTableRow>
                 {open && (
                   <tr className="border-b border-hairline/5 bg-hairline/[0.02]">
-                    <td colSpan={tbl.visibleCount + 1} className="px-4 py-4">
+                    <td colSpan={effectiveCount + 1} className="px-4 py-4">
                       <ExpandedDetail e={e} onRollback={setRollbackTarget} busy={rollbackBusy && rollbackTarget?.id === e.id} onMapSelect={onMapSelect} />
                     </td>
                   </tr>

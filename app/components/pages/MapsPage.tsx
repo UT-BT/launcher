@@ -33,7 +33,7 @@ import { ColumnsMenu } from '@/app/components/shared/ColumnsMenu'
 import { ActiveFilterChip } from '@/app/components/shared/ActiveFilterChip'
 import {
     DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow,
-    DataTableCell, DataTableEmpty,
+    DataTableCell, DataTableEmpty, type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
 import { formatCapTime, formatDelta, formatAddedDate, isNew, displayMapName } from '@/app/utils/format'
 import { difficultyTextColor, difficultyBgColor, scoreTextColor, scoreBgColor } from '@/app/utils/scoreColors'
@@ -189,6 +189,33 @@ const DEFAULT_COLUMN_ORDER: ColumnId[] = [
 
 const NON_TABLE_COLUMNS: ReadonlySet<ColumnId> = new Set()
 const REQUIRED_COLUMNS: ReadonlySet<ColumnId> = new Set(['name'])
+
+const COLUMN_WIDTH: Partial<Record<ColumnId, string>> = {
+    thumbnail: '3.5rem',
+    tags: '12rem',
+    author: '8rem',
+    difficulty: '6rem',
+    added: '7rem',
+    world_record: '9rem',
+    medal: '3rem',
+    pb: '9rem',
+    replay: '5rem',
+    community_rating: '11rem',
+    my_rating: '8rem',
+}
+
+const COLUMN_PRIORITY: Partial<Record<ColumnId, number>> = {
+    world_record: 90,
+    pb: 85,
+    difficulty: 70,
+    medal: 65,
+    author: 60,
+    tags: 50,
+    thumbnail: 45,
+    community_rating: 40,
+    added: 35,
+    my_rating: 30,
+}
 
 const DEFAULT_COLUMN_VISIBILITY: Record<ColumnId, boolean> = {
     thumbnail: true,
@@ -503,11 +530,12 @@ const SKELETON_CELL: Partial<Record<ColumnId, React.ReactNode>> = {
     my_rating: <td className="px-4 py-3"><div className="h-4 w-16 rounded bg-hairline/5 animate-pulse" /></td>,
 }
 
-const SkeletonRow = ({ order, visibility }: { order: ColumnId[]; visibility: Record<ColumnId, boolean> }) => (
+const SkeletonRow = ({ order, visibility, resolved }: { order: ColumnId[]; visibility: Record<ColumnId, boolean>; resolved: Set<ColumnId> | null }) => (
     <tr className="border-b border-hairline/5">
         {order.map(id => {
             if (NON_TABLE_COLUMNS.has(id)) return null
             if (!REQUIRED_COLUMNS.has(id) && !visibility[id]) return null
+            if (resolved && !resolved.has(id)) return null
             const cell = SKELETON_CELL[id]
             if (!cell) return null
             return <Fragment key={id}>{cell}</Fragment>
@@ -745,8 +773,26 @@ export function MapsPage({
     const isColumnVisible = (id: ColumnId): boolean =>
         REQUIRED_COLUMNS.has(id) || columnVisibility[id]
 
+    const responsiveColumns = useMemo<ResponsiveColumn[]>(
+        () => columnOrder
+            .filter(id => !NON_TABLE_COLUMNS.has(id) && isColumnVisible(id))
+            .map(id => ({
+                id,
+                width: COLUMN_WIDTH[id],
+                priority: COLUMN_PRIORITY[id],
+                required: REQUIRED_COLUMNS.has(id),
+            })),
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [columnOrder, columnVisibility],
+    )
+    const [resolved, setResolved] = useState<Set<ColumnId> | null>(null)
+    const handleResolve = useCallback((ids: Set<string>) => {
+        setResolved(ids as Set<ColumnId>)
+    }, [])
+    const isEffectivelyVisible = (id: ColumnId): boolean =>
+        !NON_TABLE_COLUMNS.has(id) && isColumnVisible(id) && (!resolved || resolved.has(id))
     const visibleColumnCount = columnOrder.reduce(
-        (n, id) => n + (!NON_TABLE_COLUMNS.has(id) && isColumnVisible(id) ? 1 : 0),
+        (n, id) => n + (isEffectivelyVisible(id) ? 1 : 0),
         0,
     )
     const searchAbortRef = useRef<AbortController | null>(null)
@@ -1421,8 +1467,7 @@ export function MapsPage({
         (mode === 'search' && searchLoading)
 
     const renderColumnHeader = (id: ColumnId): React.ReactNode => {
-        if (NON_TABLE_COLUMNS.has(id)) return null
-        if (!isColumnVisible(id)) return null
+        if (!isEffectivelyVisible(id)) return null
         switch (id) {
             case 'thumbnail':
                 return <DataTableHeaderCell key={id} width="3.5rem" />
@@ -1431,7 +1476,6 @@ export function MapsPage({
                     <DataTableHeaderCell
                         key={id}
                         align="center"
-                        width="16rem"
                         sortable
                         sortDirection={directionFor('name')}
                         onSort={() => handleSort('name')}
@@ -1579,8 +1623,7 @@ export function MapsPage({
     }
 
     const renderColumnCell = (id: ColumnId, ctx: RowCtx): React.ReactNode => {
-        if (NON_TABLE_COLUMNS.has(id)) return null
-        if (!isColumnVisible(id)) return null
+        if (!isEffectivelyVisible(id)) return null
         const { map, author, tags, ratings, myReview, mapNew, wr, bestCap, wrHolder, medalTier, isFirstRow } = ctx
         switch (id) {
             case 'thumbnail':
@@ -2262,13 +2305,17 @@ export function MapsPage({
                 </div>
             )}
 
-            <DataTableShell scrollRef={scrollContainerRef} onScroll={onScrollContainerScroll}>
+            <DataTableShell
+                scrollRef={scrollContainerRef}
+                onScroll={onScrollContainerScroll}
+                responsive={{ columns: responsiveColumns, onResolve: handleResolve }}
+            >
                 <DataTableHeaderRow theadDataAttr="data-utbt-maps-thead">
                     {columnOrder.map(id => renderColumnHeader(id))}
                 </DataTableHeaderRow>
                 <tbody>
                     {showSkeleton ? (
-                        Array.from({ length: SKELETON_ROW_COUNT }).map((_, i) => <SkeletonRow key={i} order={columnOrder} visibility={columnVisibility} />)
+                        Array.from({ length: SKELETON_ROW_COUNT }).map((_, i) => <SkeletonRow key={i} order={columnOrder} visibility={columnVisibility} resolved={resolved} />)
                     ) : pageItems.length === 0 ? (
                         <DataTableEmpty colSpan={visibleColumnCount} message="No maps match your filters." />
                     ) : (

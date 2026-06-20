@@ -40,7 +40,15 @@ and `agents/styling.md` (Column layout) first.
    Servers), add a branch to the comparator.
 6. **Required / hidden** — add to `requiredColumns` if it must never be hidden,
    or `excludeFromList` if it's a pseudo-column not shown in the menu.
-7. **Data not fetched yet?** If the field isn't in the row type, get it from the
+7. **Responsive priority** — these pages pass `responsive` to `DataTableShell`
+   and render through an effective-visibility gate (`effectiveColumns` /
+   `isEffectivelyVisible`), so a new column auto-participates in width-driven
+   auto-hide. Add a `COLUMN_PRIORITY` entry (higher = kept longer; omit for a
+   mid default; required/flex columns are never dropped). The new width you set
+   in step 3 is what the resolver charges it. If the column carries a tutorial
+   ref, mark it `required` in the responsive descriptor. See `styling.md` →
+   Responsive columns.
+8. **Data not fetched yet?** If the field isn't in the row type, get it from the
    API first — use the `consume-api-data` skill.
 
 ## Verify
@@ -48,4 +56,6 @@ and `agents/styling.md` (Column layout) first.
 - `npx tsc --noEmit -p tsconfig.web.json` — the union change surfaces every place
   you missed.
 - Smoke in `npm run dev`: toggle the column in the Columns menu, reorder it, and
-  sort by it; confirm alignment matches sibling numeric/text columns.
+  sort by it; confirm alignment matches sibling numeric/text columns. Narrow the
+  window — confirm the column auto-hides at the priority you gave it (header and
+  body drop together).

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Play, Download, MessageSquareOff, ShieldCheck, Search, Trophy, Star } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { fetchPersonalBestsForUser, type UserPersonalBestRow, type CapFilter } from '@/app/utils/api'
@@ -19,7 +19,7 @@ import { Modal } from '@/app/components/ui/modal'
 import {
     DataTableShell, DataTableHeaderRow, DataTableHeaderCell,
     DataTableRow, DataTableCell, DataTableEmpty, DataTableSkeletonRow,
-    type SortDirection,
+    type SortDirection, type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
 import { PaginationBar } from '@/app/components/ui/pagination'
 
@@ -33,9 +33,30 @@ interface PersonalBestsCardProps {
     tabsSlot?: React.ReactNode
 }
 
-const SKELETON_COL_COUNT = 6
 const DEBOUNCE_MS = 250
 type SortField = 'time' | 'added' | 'map'
+
+type PbColumnId = 'map' | 'medal' | 'time' | 'status' | 'added' | 'actions'
+
+const PB_COLUMNS: PbColumnId[] = ['map', 'medal', 'time', 'status', 'added', 'actions']
+
+const COLUMN_WIDTH: Record<PbColumnId, string | undefined> = {
+    map: undefined,
+    medal: '3rem',
+    time: '8rem',
+    status: '6rem',
+    added: '8rem',
+    actions: '6rem',
+}
+
+const COLUMN_PRIORITY: Partial<Record<PbColumnId, number>> = {
+    added: 40,
+    status: 30,
+    medal: 20,
+    actions: 10,
+}
+
+const REQUIRED_COLUMNS = new Set<PbColumnId>(['map', 'time'])
 
 const CAP_TYPE_UTBT_CERTIFIED = 2
 const CAP_TYPE_I4GAMES = 3
@@ -80,6 +101,22 @@ export function PersonalBestsCard({
 
     const replay = useReplayWatch()
     const demoDownload = useDemoDownload()
+
+    const responsiveColumns = useMemo<ResponsiveColumn[]>(
+        () => PB_COLUMNS.map(id => ({
+            id,
+            width: COLUMN_WIDTH[id],
+            priority: COLUMN_PRIORITY[id],
+            required: REQUIRED_COLUMNS.has(id),
+        })),
+        [],
+    )
+    const [resolved, setResolved] = useState<Set<PbColumnId> | null>(null)
+    const handleResolve = useCallback((ids: Set<string>) => {
+        setResolved(ids as Set<PbColumnId>)
+    }, [])
+    const isVisible = (id: PbColumnId) => !resolved || resolved.has(id)
+    const visibleColumnCount = PB_COLUMNS.reduce((n, id) => n + (isVisible(id) ? 1 : 0), 0)
 
     useEffect(() => {
         const t = setTimeout(() => setQuery(queryRaw), DEBOUNCE_MS)
@@ -169,22 +206,25 @@ export function PersonalBestsCard({
                 </div>
             )}
 
-            <DataTableShell className="!flex-none !min-h-0 !overflow-visible !rounded-none !border-0">
+            <DataTableShell
+                className="!flex-none !min-h-0 !overflow-visible !rounded-none !border-0"
+                responsive={{ columns: responsiveColumns, onResolve: handleResolve }}
+            >
                 <DataTableHeaderRow>
-                    <DataTableHeaderCell sortable sortDirection={dir('map')} onSort={() => handleSort('map')}>Map</DataTableHeaderCell>
-                    <DataTableHeaderCell align="center" width="3rem"><span className="sr-only">Medal</span></DataTableHeaderCell>
-                    <DataTableHeaderCell align="right" width="8rem" sortable sortDirection={dir('time')} onSort={() => handleSort('time')}>PB Time</DataTableHeaderCell>
-                    <DataTableHeaderCell align="center" width="6rem">Status</DataTableHeaderCell>
-                    <DataTableHeaderCell align="right" width="8rem" sortable sortDirection={dir('added')} onSort={() => handleSort('added')}>Set</DataTableHeaderCell>
-                    <DataTableHeaderCell align="center" width="6rem"><span className="sr-only">Actions</span></DataTableHeaderCell>
+                    {isVisible('map') && <DataTableHeaderCell sortable sortDirection={dir('map')} onSort={() => handleSort('map')}>Map</DataTableHeaderCell>}
+                    {isVisible('medal') && <DataTableHeaderCell align="center" width="3rem"><span className="sr-only">Medal</span></DataTableHeaderCell>}
+                    {isVisible('time') && <DataTableHeaderCell align="right" width="8rem" sortable sortDirection={dir('time')} onSort={() => handleSort('time')}>PB Time</DataTableHeaderCell>}
+                    {isVisible('status') && <DataTableHeaderCell align="center" width="6rem">Status</DataTableHeaderCell>}
+                    {isVisible('added') && <DataTableHeaderCell align="right" width="8rem" sortable sortDirection={dir('added')} onSort={() => handleSort('added')}>Set</DataTableHeaderCell>}
+                    {isVisible('actions') && <DataTableHeaderCell align="center" width="6rem"><span className="sr-only">Actions</span></DataTableHeaderCell>}
                 </DataTableHeaderRow>
                 <tbody>
                     {loading ? (
                         Array.from({ length: 5 }).map((_, i) => (
-                            <DataTableSkeletonRow key={i} columnCount={SKELETON_COL_COUNT} />
+                            <DataTableSkeletonRow key={i} columnCount={visibleColumnCount} />
                         ))
                     ) : items.length === 0 ? (
-                        <DataTableEmpty colSpan={SKELETON_COL_COUNT} message={query || capFilter !== 'all' ? 'No personal bests match the filter.' : 'No personal bests yet.'} />
+                        <DataTableEmpty colSpan={visibleColumnCount} message={query || capFilter !== 'all' ? 'No personal bests match the filter.' : 'No personal bests yet.'} />
                     ) : (
                         items.map(pb => {
                             const medalIcon = getMedalIcon(pb.medal.toLowerCase())
@@ -199,80 +239,92 @@ export function PersonalBestsCard({
                                     className="cursor-pointer"
                                     onClick={() => onMapSelect?.(pb.mapName)}
                                 >
-                                    <DataTableCell>
-                                        <div className="flex items-center gap-2 min-w-0">
-                                            <MapThumbnail mapName={pb.mapName} className="size-8 shrink-0" />
-                                            {onToggleFavorite && (
-                                                <FavoriteStar
-                                                    name={pb.mapName}
-                                                    isFavorited={favoriteMapNames.has(pb.mapName)}
-                                                    onToggle={onToggleFavorite}
-                                                    size="sm"
-                                                    disabled={!canEditFavorites}
-                                                />
+                                    {isVisible('map') && (
+                                        <DataTableCell>
+                                            <div className="flex items-center gap-2 min-w-0">
+                                                <MapThumbnail mapName={pb.mapName} className="size-8 shrink-0" />
+                                                {onToggleFavorite && (
+                                                    <FavoriteStar
+                                                        name={pb.mapName}
+                                                        isFavorited={favoriteMapNames.has(pb.mapName)}
+                                                        onToggle={onToggleFavorite}
+                                                        size="sm"
+                                                        disabled={!canEditFavorites}
+                                                    />
+                                                )}
+                                                <span className="text-sm font-semibold text-foreground truncate min-w-0">
+                                                    {displayMapName(pb.mapName)}
+                                                </span>
+                                            </div>
+                                        </DataTableCell>
+                                    )}
+                                    {isVisible('medal') && (
+                                        <DataTableCell align="center">
+                                            {medalIcon && (
+                                                <Tooltip content={pb.medal} side="top">
+                                                    <img src={medalIcon} alt={pb.medal} className="size-4 inline-block shrink-0 object-contain max-w-none" />
+                                                </Tooltip>
                                             )}
-                                            <span className="text-sm font-semibold text-foreground truncate min-w-0">
-                                                {displayMapName(pb.mapName)}
+                                        </DataTableCell>
+                                    )}
+                                    {isVisible('time') && (
+                                        <DataTableCell align="right">
+                                            <span className="inline-flex items-center gap-1.5">
+                                                {pb.medal === 'World Record' && <Trophy className="size-3 text-blue-300" />}
+                                                <CapTimeLink
+                                                    capId={pb.id}
+                                                    seconds={pb.time}
+                                                    className={cn(
+                                                        'text-sm font-mono tabular-nums font-bold',
+                                                        pb.medal === 'World Record' ? 'text-blue-200' : 'text-foreground',
+                                                    )}
+                                                />
                                             </span>
-                                        </div>
-                                    </DataTableCell>
-                                    <DataTableCell align="center">
-                                        {medalIcon && (
-                                            <Tooltip content={pb.medal} side="top">
-                                                <img src={medalIcon} alt={pb.medal} className="size-4 inline-block shrink-0 object-contain max-w-none" />
+                                        </DataTableCell>
+                                    )}
+                                    {isVisible('status') && (
+                                        <DataTableCell align="center">
+                                            {renderPbStatus(pb)}
+                                        </DataTableCell>
+                                    )}
+                                    {isVisible('added') && (
+                                        <DataTableCell align="right">
+                                            <Tooltip content={exact} side="top">
+                                                <span className="text-xs text-muted-foreground tabular-nums">
+                                                    {pb.added ? formatAddedDate(pb.added) : '—'}
+                                                </span>
                                             </Tooltip>
-                                        )}
-                                    </DataTableCell>
-                                    <DataTableCell align="right">
-                                        <span className="inline-flex items-center gap-1.5">
-                                            {pb.medal === 'World Record' && <Trophy className="size-3 text-blue-300" />}
-                                            <CapTimeLink
-                                                capId={pb.id}
-                                                seconds={pb.time}
-                                                className={cn(
-                                                    'text-sm font-mono tabular-nums font-bold',
-                                                    pb.medal === 'World Record' ? 'text-blue-200' : 'text-foreground',
-                                                )}
-                                            />
-                                        </span>
-                                    </DataTableCell>
-                                    <DataTableCell align="center">
-                                        {renderPbStatus(pb)}
-                                    </DataTableCell>
-                                    <DataTableCell align="right">
-                                        <Tooltip content={exact} side="top">
-                                            <span className="text-xs text-muted-foreground tabular-nums">
-                                                {pb.added ? formatAddedDate(pb.added) : '—'}
-                                            </span>
-                                        </Tooltip>
-                                    </DataTableCell>
-                                    <DataTableCell align="center" className="px-2">
-                                        <div className="inline-flex items-center gap-1">
-                                            <IconActionButton
-                                                variant="replay"
-                                                icon={canPlay ? Play : MessageSquareOff}
-                                                iconFill={canPlay}
-                                                tooltip={canPlay ? 'Watch run' : 'No replay — cap not verified'}
-                                                disabled={!canPlay}
-                                                loading={replay.loadingCapId === pb.id}
-                                                onClick={() => replay.openReplay({
-                                                    capId: pb.id,
-                                                    mapName: pb.mapName,
-                                                    time: pb.time,
-                                                })}
-                                            />
-                                            <IconActionButton
-                                                variant="download"
-                                                icon={Download}
-                                                tooltip={canPlay ? 'Download demo' : 'No demo — cap not verified'}
-                                                disabled={!canPlay}
-                                                onClick={() => demoDownload.start(
-                                                    { id: pb.id, alias: undefined, cap_time_seconds: pb.time } as any,
-                                                    pb.mapName,
-                                                )}
-                                            />
-                                        </div>
-                                    </DataTableCell>
+                                        </DataTableCell>
+                                    )}
+                                    {isVisible('actions') && (
+                                        <DataTableCell align="center" className="px-2">
+                                            <div className="inline-flex items-center gap-1">
+                                                <IconActionButton
+                                                    variant="replay"
+                                                    icon={canPlay ? Play : MessageSquareOff}
+                                                    iconFill={canPlay}
+                                                    tooltip={canPlay ? 'Watch run' : 'No replay — cap not verified'}
+                                                    disabled={!canPlay}
+                                                    loading={replay.loadingCapId === pb.id}
+                                                    onClick={() => replay.openReplay({
+                                                        capId: pb.id,
+                                                        mapName: pb.mapName,
+                                                        time: pb.time,
+                                                    })}
+                                                />
+                                                <IconActionButton
+                                                    variant="download"
+                                                    icon={Download}
+                                                    tooltip={canPlay ? 'Download demo' : 'No demo — cap not verified'}
+                                                    disabled={!canPlay}
+                                                    onClick={() => demoDownload.start(
+                                                        { id: pb.id, alias: undefined, cap_time_seconds: pb.time } as any,
+                                                        pb.mapName,
+                                                    )}
+                                                />
+                                            </div>
+                                        </DataTableCell>
+                                    )}
                                 </DataTableRow>
                             )
                         })

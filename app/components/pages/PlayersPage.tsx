@@ -20,6 +20,7 @@ import { ColumnsMenu } from '@/app/components/shared/ColumnsMenu'
 import {
     DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow,
     DataTableCell, DataTableEmpty, DataTableSkeletonRow, type SortDirection,
+    type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
 import { formatAddedDate } from '@/app/utils/format'
 import { ROLE_LABELS } from '@/app/utils/roles'
@@ -81,6 +82,17 @@ const DEFAULT_COLUMN_VISIBILITY: Record<PlayerColumnId, boolean> = {
 }
 
 const REQUIRED_COLUMNS: ReadonlySet<PlayerColumnId> = new Set<PlayerColumnId>(['player'])
+
+const COLUMN_PRIORITY: Partial<Record<PlayerColumnId, number>> = {
+    points: 80,
+    world_records: 70,
+    role: 60,
+    champion_medals: 50,
+    gold_medals: 45,
+    silver_medals: 44,
+    bronze_medals: 43,
+    registered_at: 30,
+}
 
 const COLUMN_SORT_FIELD: Partial<Record<PlayerColumnId, PlayerSortField>> = {
     rank: 'rank',
@@ -387,7 +399,27 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
         () => state.columnOrder.filter(id => state.columnVisibility[id] || REQUIRED_COLUMNS.has(id)),
         [state.columnOrder, state.columnVisibility],
     )
-    const visibleColumnCount = visibleColumns.length
+
+    const responsiveColumns = useMemo<ResponsiveColumn[]>(
+        () => visibleColumns.map(id => ({
+            id,
+            width: COLUMN_WIDTH[id],
+            priority: COLUMN_PRIORITY[id],
+            required: REQUIRED_COLUMNS.has(id) || id === 'rank',
+        })),
+        [visibleColumns],
+    )
+
+    const [resolved, setResolved] = useState<Set<PlayerColumnId> | null>(null)
+    const handleResolve = useCallback((ids: Set<string>) => {
+        setResolved(ids as Set<PlayerColumnId>)
+    }, [])
+
+    const effectiveColumns = useMemo(
+        () => resolved ? visibleColumns.filter(id => resolved.has(id)) : visibleColumns,
+        [visibleColumns, resolved],
+    )
+    const visibleColumnCount = effectiveColumns.length
 
     const players = caches.players
     const showSkeleton = !error && (!cacheFresh || (pageLoading && players.length === 0))
@@ -572,9 +604,13 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
                 </div>
             )}
 
-            <DataTableShell scrollRef={scrollContainerRef} onScroll={onScrollContainerScroll}>
+            <DataTableShell
+                scrollRef={scrollContainerRef}
+                onScroll={onScrollContainerScroll}
+                responsive={{ columns: responsiveColumns, onResolve: handleResolve }}
+            >
                 <DataTableHeaderRow theadDataAttr="data-utbt-players-thead">
-                    {visibleColumns.map(id => renderHeaderCell(id))}
+                    {effectiveColumns.map(id => renderHeaderCell(id))}
                 </DataTableHeaderRow>
                 <tbody>
                     {showSkeleton ? (
@@ -589,7 +625,7 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
                     ) : (
                         players.map((p, index) => (
                             <DataTableRow key={p.id}>
-                                {visibleColumns.map(id => renderCell(id, p, index === 0))}
+                                {effectiveColumns.map(id => renderCell(id, p, index === 0))}
                             </DataTableRow>
                         ))
                     )}
