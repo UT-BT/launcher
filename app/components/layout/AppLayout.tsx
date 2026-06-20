@@ -1,5 +1,5 @@
-import { ReactNode, useEffect, useState } from 'react'
-import { Home, Server, Map as MapIcon, Trophy, Settings, LogOut, Play, User, Users, Flag, Award } from 'lucide-react'
+import { ReactNode, useEffect, useMemo, useState } from 'react'
+import { Home, Server, Map as MapIcon, Trophy, Settings, LogOut, Play, User, Users, Flag, Award, ShieldAlert, Newspaper } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import logo from '@/app/assets/logo.png'
 import {
@@ -14,6 +14,7 @@ import { Button } from '@/app/components/ui/button'
 import { SettingsModal } from '@/app/components/modals/SettingsModal'
 import { ChangeTitleModal } from '@/app/components/modals/ChangeTitleModal'
 import { NavHistoryBar } from '@/app/components/navigation/NavHistoryBar'
+import { PageRefreshProvider } from '@/app/components/navigation/PageRefreshContext'
 
 interface NavItem {
     id: string
@@ -26,11 +27,12 @@ interface NavSection {
     items: NavItem[]
 }
 
-const navSections: NavSection[] = [
+const BASE_NAV_SECTIONS: NavSection[] = [
     {
         title: 'Main',
         items: [
             { id: 'home', label: 'Home', icon: Home },
+            { id: 'news', label: 'News', icon: Newspaper },
             { id: 'achievements', label: 'Achievements', icon: Award },
          ],
     },
@@ -55,20 +57,30 @@ import { UserProfile, getAvatarUrl } from '@/app/utils/api'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import { usePatreonTier } from '@/app/utils/patreon'
 import { PatreonBadge } from '@/app/components/shared/PatreonBadge'
+import { isStaff } from '@/app/utils/roles'
+
+function buildNavSections(userProfile?: UserProfile): NavSection[] {
+    if (!isStaff(userProfile)) return BASE_NAV_SECTIONS
+    return [
+        ...BASE_NAV_SECTIONS,
+        { title: 'Staff', items: [{ id: 'admin', label: 'Admin', icon: ShieldAlert }] },
+    ]
+}
 
 interface AppLayoutProps {
     children: ReactNode
     currentView: string
     onViewChange: (view: string) => void
+    getNavBadge?: (view: string) => number | null
     userProfile?: UserProfile
     installationStatus?: 'valid' | 'no-install' | 'unsupported' | null
 }
 
-function getRarityStyles(title: { rarity: number, color: string } | undefined | null) {
+function getRarityStyles(title: { rarity: number, color_r: number, color_g: number, color_b: number } | undefined | null) {
     if (!title) return { containerStyle: {}, titleStyle: {}, containerClass: '', titleClass: '' }
 
-    const { rarity, color } = title
-    const rgb = `rgb(${color})`
+    const { rarity, color_r, color_g, color_b } = title
+    const rgb = `rgb(${color_r}, ${color_g}, ${color_b})`
 
     const containerStyle: React.CSSProperties = {}
     const titleStyle: React.CSSProperties = { color: rarity >= 2 ? rgb : undefined }
@@ -92,13 +104,14 @@ function getRarityStyles(title: { rarity: number, color: string } | undefined | 
     return { containerStyle, titleStyle, containerClass, titleClass }
 }
 
-export function AppLayout({ children, currentView, onViewChange, userProfile, installationStatus }: AppLayoutProps) {
+export function AppLayout({ children, currentView, onViewChange, getNavBadge, userProfile, installationStatus }: AppLayoutProps) {
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
     const [isSettingsOpen, setIsSettingsOpen] = useState(false)
     const [isChangeTitleOpen, setIsChangeTitleOpen] = useState(false)
     const [settingsInitialSection, setSettingsInitialSection] = useState<string | undefined>(undefined)
     const { containerStyle, titleStyle, containerClass, titleClass } = getRarityStyles(userProfile?.active_title)
     const patreonTier = usePatreonTier(userProfile?.id ?? undefined)
+    const navSections = useMemo(() => buildNavSections(userProfile), [userProfile])
 
     useEffect(() => {
         const saved = localStorage.getItem('ui-scale')
@@ -114,8 +127,14 @@ export function AppLayout({ children, currentView, onViewChange, userProfile, in
             }
             setIsSettingsOpen(true)
         }
+        const handleOpenChangeTitle = () => setIsChangeTitleOpen(true)
+
         window.addEventListener('open-settings', handleOpenSettings)
-        return () => window.removeEventListener('open-settings', handleOpenSettings)
+        window.addEventListener('open-change-title', handleOpenChangeTitle)
+        return () => {
+            window.removeEventListener('open-settings', handleOpenSettings)
+            window.removeEventListener('open-change-title', handleOpenChangeTitle)
+        }
     }, [])
 
     const isInstallValid = installationStatus === 'valid'
@@ -174,7 +193,9 @@ export function AppLayout({ children, currentView, onViewChange, userProfile, in
                             <h3 className="px-4 mb-1 text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider">
                                 {section.title}
                             </h3>
-                            {section.items.map((item) => (
+                            {section.items.map((item) => {
+                                const badgeCount = getNavBadge?.(item.id) ?? null
+                                return (
                                 <button
                                     key={item.id}
                                     onClick={() => onViewChange(item.id)}
@@ -194,8 +215,20 @@ export function AppLayout({ children, currentView, onViewChange, userProfile, in
                                         currentView === item.id ? "text-accent-400" : "group-hover:text-accent-400/80"
                                     )} />
                                     <span className="relative z-10 font-medium">{item.label}</span>
+                                    {badgeCount != null && (
+                                        <span
+                                            className="relative z-10 ml-auto flex items-center"
+                                            title={`${badgeCount} new since your last visit`}
+                                        >
+                                            <span className="absolute inline-flex h-full w-full rounded-full bg-accent-400 opacity-60 animate-ping" />
+                                            <span className="relative inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-accent-500 text-white text-[10px] font-black tabular-nums shadow-[0_0_10px_rgb(var(--accent-glow-rgb)/0.5)]">
+                                                {badgeCount}
+                                            </span>
+                                        </span>
+                                    )}
                                 </button>
-                            ))}
+                                )
+                            })}
                         </div>
                     ))}
                 </nav>
@@ -287,10 +320,12 @@ export function AppLayout({ children, currentView, onViewChange, userProfile, in
 
             {/* Main Content */}
             <main className="flex-1 overflow-y-auto relative z-10">
-                <div className="p-8 min-h-full">
-                    <NavHistoryBar />
-                    {children}
-                </div>
+                <PageRefreshProvider>
+                    <div className="p-8 min-h-full">
+                        <NavHistoryBar />
+                        {children}
+                    </div>
+                </PageRefreshProvider>
 
                 <ChangeTitleModal
                     isOpen={isChangeTitleOpen}

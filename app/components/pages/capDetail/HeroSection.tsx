@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Play, Download, Loader2, ShieldCheck, BadgeCheck, Users, Calendar, Columns2 } from 'lucide-react'
+import { Play, Download, Loader2, ShieldCheck, ShieldAlert, BadgeCheck, Users, Calendar, Columns2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
@@ -180,15 +180,22 @@ export function HeroSection({
                                 {medalLabel}
                             </span>
                         )}
-                        <span className={cn(
-                            'inline-flex items-center gap-1.5 h-7 px-2 rounded-md border text-xs font-semibold',
-                            cap.verified
-                                ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
-                                : 'bg-hairline/5 border-hairline/10 text-muted-foreground',
-                        )}>
-                            <ShieldCheck className="size-3.5" />
-                            {cap.verified ? 'Verified' : 'Unverified'}
-                        </span>
+                        {cap.disallowed ? (
+                            <span className="inline-flex items-center gap-1.5 h-7 px-2 rounded-md border text-xs font-semibold bg-red-500/15 border-red-500/40 text-red-300">
+                                <ShieldAlert className="size-3.5" />
+                                Disallowed
+                            </span>
+                        ) : (
+                            <span className={cn(
+                                'inline-flex items-center gap-1.5 h-7 px-2 rounded-md border text-xs font-semibold',
+                                cap.verified
+                                    ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
+                                    : 'bg-hairline/5 border-hairline/10 text-muted-foreground',
+                            )}>
+                                <ShieldCheck className="size-3.5" />
+                                {cap.verified ? 'Verified' : 'Unverified'}
+                            </span>
+                        )}
                         <CapTypeBadge capType={cap.cap_type} />
                         {cap.added && (
                             <Tooltip content={friendlyDate(cap.added)} side="top">

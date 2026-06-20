@@ -1,0 +1,6 @@
+export const CHART_EMERALD = 'var(--chart-emerald, #10b981)'
+export const CHART_VIOLET = 'var(--chart-violet, #8b5cf6)'
+export const CHART_CYAN = 'var(--chart-cyan, #06b6d4)'
+export const CHART_AMBER = 'var(--chart-amber, #f59e0b)'
+export const CHART_PINK = 'var(--chart-pink, #ec4899)'
+export const CHART_TEAL = 'var(--chart-teal, #14b8a6)'

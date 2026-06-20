@@ -11,8 +11,8 @@ not_here:
   - "IPC channels (window.conveyor.*) → lib/conveyor/README.md"
   - "how UI state persists in localStorage → state-patterns.md"
   - "the procedure to wire a new endpoint into the UI → skill: consume-api-data"
-sections: [backend-api, cap-detail-page-endpoints, world-records-page-endpoints, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites]
-last_verified: 2026-06-16
+sections: [backend-api, admin-api, cap-detail-page-endpoints, world-records-page-endpoints, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites]
+last_verified: 2026-06-19
 verify_against: [app/utils/api.ts, app/utils/patreon.ts, app/utils/server-utils.ts]
 ---
 
@@ -43,9 +43,32 @@ full loop).
 | Demos | `fetchDemoStatus`, `getFirstPersonVideoUrl`, `downloadDemo` |
 | Cap detail | `fetchCapDetail`, `fetchCapCheckpoints` |
 | Achievements | `fetchMyAchievements`, `fetchAchievementDefinitions` |
-| Profile | `UserProfile` type, `getAvatarUrl(userId)` |
+| Home / summary | `fetchSummary` (homepage feed), `fetchHotMaps` (→ `GET /v2/summary/hot_maps` → `HotMap[]`), `fetchPendingReviews` |
+| Profile | `UserProfile` type, `getAvatarUrl(userId)`, `toActiveTitle` |
+| Admin (staff-only) | the moderator/admin dashboard slice — see [Admin API](#admin-api) |
 
 Most fetchers take `accessToken` first (Discord OAuth bearer).
+
+### Admin API
+
+The admin page (`app/components/pages/admin/`) calls a staff-gated slice of
+`api.ts`. The server authorizes every endpoint (moderator+) and audit-logs the
+mutations; the client role checks (`isStaff` in `app/utils/roles.ts`) are UX
+only — never the security boundary. Fetchers grouped by dashboard section:
+
+| Area | Functions |
+|---|---|
+| Overview | `fetchAdminOverview`, `fetchAdminActivity` |
+| Users | `fetchAdminUsers`, `fetchAdminUsersCount`, `fetchAdminUser`, `warnUser`, `banUser`, `unbanUser`, `assignTitleToUser` |
+| Titles | `fetchAdminTitles`, `fetchTitleHolders`, `createTitle`, `updateTitle`, `deleteTitle`, `unassignTitleFromUser` |
+| Caps | `fetchAdminCaps`, `fetchAdminCapsCount`, `disallowCap`, `reallowCap`, `verifyCapFlag`, `unverifyCap`, `verifyCapWithDemo` |
+| Maps | `fetchAdminMaps`, `fetchAdminMapsCount`, `fetchAdminMapTags`, `createMap`, `updateMap`, `fetchMapvoteStatus`, `setMapvoteAnnouncement`, `regenerateMapvote` |
+| Patches | `fetchAdminPatches`, `createPatch`, `updatePatch`, `setPatchActive`, `deletePatch`, `derivePatch` |
+| Anti-cheat | `fetchAcShared(+Count)`, `fetchAcCapDelta(+Count)`, `fetchAcLowFpsWr(+Count)`, `fetchAcIdentifier`, `fetchAcCapStats`, `fetchAcCapMapComparison`, `allowCap`, `unallowCap` |
+| Audit | `fetchAuditLog`, `fetchAuditLogCount`, `rollbackAudit` |
+
+`toActiveTitle(row)` normalizes an admin/title-shaped row (plain-number `rarity`)
+into the `ActiveTitle` that `PlayerInfo` and the title-style helpers expect.
 
 ### Cap Detail page endpoints
 

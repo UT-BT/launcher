@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import {
-    Search, RefreshCw, X, Play, Download, SlidersHorizontal,
+    Search, X, Play, Download, SlidersHorizontal,
     Trophy, Crown, ListOrdered, type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -8,8 +8,10 @@ import { Tooltip } from '@/app/components/ui/tooltip'
 import { Modal } from '@/app/components/ui/modal'
 import { useAutoPageSize } from '@/app/hooks/useAutoPageSize'
 import { useRefreshCooldown } from '@/app/hooks/useRefreshCooldown'
+import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
 import { useReplayWatch } from '@/app/hooks/useReplayWatch'
 import { useDemoDownload } from '@/app/hooks/useDemoDownload'
+import { useNewItemHighlight } from '@/app/hooks/useNewItemHighlight'
 import {
     type UserProfile,
     type Record as WorldRecord,
@@ -280,6 +282,9 @@ export function WorldRecordsPage({
 
     const replay = useReplayWatch()
     const demoDownload = useDemoDownload()
+    const highlight = useNewItemHighlight('world-records', () =>
+        onStateChange(prev => ({ ...prev, mode: 'records', sortBy: 'date', sortDir: 'desc', currentPage: 1 })),
+    )
 
     const [wrHistory, setWrHistory] = useState<{ mapName: string; entries: WorldRecordProgressionEntry[] } | null>(null)
 
@@ -505,6 +510,13 @@ export function WorldRecordsPage({
         })
     }
 
+    useRegisterPageRefresh({
+        onRefresh: refresh,
+        refreshing: pageLoading,
+        disabled: !refreshCooldown.canRefresh,
+        tooltip: refreshCooldown.canRefresh ? 'Refresh Data' : `Wait ${refreshCooldown.remainingSeconds}s`,
+    })
+
     const setMode = (mode: WorldRecordsMode) =>
         onStateChange(prev => prev.mode === mode ? prev : { ...prev, mode, currentPage: 1 })
 
@@ -604,6 +616,7 @@ export function WorldRecordsPage({
     const sliceStart = (page - 1) * pageSize
     const recordPageRows = caches.recordRows
     const rusherPageRows = caches.rusherRows
+    const firstNewIdx = recordPageRows.findIndex(r => highlight.isNew(r.added))
 
     useEffect(() => {
         if (cacheFresh && totalCount > 0 && state.currentPage > totalPages) {
@@ -667,12 +680,17 @@ export function WorldRecordsPage({
         }
     }
 
-    const renderCell = (id: WorldRecordsColumnId, r: WorldRecord) => {
+    const renderCell = (
+        id: WorldRecordsColumnId,
+        r: WorldRecord,
+        isNew: boolean,
+        cellRef?: (el: HTMLTableCellElement | null) => void,
+    ) => {
         const isSelf = selfId != null && r.user_id === String(selfId)
         switch (id) {
             case 'map':
                 return (
-                    <DataTableCell key={id}>
+                    <DataTableCell key={id} ref={cellRef}>
                         <div className="flex items-center gap-3 min-w-0">
                             <MapThumbnail mapName={r.map} className="w-12 h-12" />
                             <div className="flex items-center gap-2 min-w-0">
@@ -690,6 +708,11 @@ export function WorldRecordsPage({
                                 >
                                     {displayMapName(r.map)}
                                 </button>
+                                {isNew && (
+                                    <span className="shrink-0 inline-flex items-center h-4 px-1.5 rounded-full bg-accent-500 text-white text-[9px] font-black uppercase tracking-wider">
+                                        New
+                                    </span>
+                                )}
                             </div>
                         </div>
                     </DataTableCell>
@@ -800,16 +823,6 @@ export function WorldRecordsPage({
                         {activeHasFilter && <span className="opacity-50"> (filtered)</span>}
                     </p>
                 </div>
-                <Tooltip content={refreshCooldown.canRefresh ? 'Refresh Data' : `Wait ${refreshCooldown.remainingSeconds}s`} side="bottom">
-                    <button
-                        type="button"
-                        onClick={refresh}
-                        disabled={pageLoading || !refreshCooldown.canRefresh}
-                        className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-hairline/5 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        <RefreshCw className={cn('size-4', pageLoading && 'animate-spin')} />
-                    </button>
-                </Tooltip>
             </div>
 
             <div className="flex flex-wrap items-center gap-3 shrink-0">
@@ -1154,11 +1167,21 @@ export function WorldRecordsPage({
                                 message={recordsHaveFilter ? 'No world records match your filters.' : 'No world records found.'}
                             />
                         ) : (
-                            recordPageRows.map(r => (
-                                <DataTableRow key={r.cap_id}>
-                                    {visibleColumns.map(id => renderCell(id, r))}
-                                </DataTableRow>
-                            ))
+                            recordPageRows.map((r, i) => {
+                                const isNew = highlight.isNew(r.added)
+                                const isFirstNew = i === firstNewIdx
+                                return (
+                                    <DataTableRow
+                                        key={r.cap_id}
+                                        className={isNew ? 'bg-accent-500/[0.07] ring-1 ring-inset ring-accent-500/40' : undefined}
+                                    >
+                                        {visibleColumns.map(id => renderCell(
+                                            id, r, isNew,
+                                            id === 'map' && isFirstNew ? highlight.registerFirstNew : undefined,
+                                        ))}
+                                    </DataTableRow>
+                                )
+                            })
                         )}
                     </tbody>
                 </DataTableShell>

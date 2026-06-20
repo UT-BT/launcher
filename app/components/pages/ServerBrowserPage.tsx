@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRefreshCooldown } from '@/app/hooks/useRefreshCooldown'
+import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
 import {
     RefreshCw, Play, BadgeCheck, Signal, Swords, Gamepad2, HelpCircle, User, ExternalLink,
     Twitch, Eye, SlidersHorizontal, AlertCircle,
@@ -376,7 +377,6 @@ export function ServerBrowserPage({
     const [activePresetId, setActivePresetId] = useState<string | null>(null)
 
     const scrollContainerRef = useRef<HTMLDivElement | null>(null)
-    const refreshButtonRef = useRef<HTMLButtonElement | null>(null)
     const filtersButtonRef = useRef<HTMLButtonElement | null>(null)
     const columnsButtonRef = useRef<HTMLButtonElement | null>(null)
     const presetsButtonRef = useRef<HTMLButtonElement | null>(null)
@@ -494,6 +494,13 @@ export function ServerBrowserPage({
         () => processedServers.reduce((sum, s) => sum + s.player_count, 0),
         [processedServers],
     )
+
+    useRegisterPageRefresh({
+        onRefresh: () => refreshCooldown.trigger(fetchServers),
+        refreshing: loading,
+        disabled: !refreshCooldown.canRefresh,
+        tooltip: refreshCooldown.canRefresh ? 'Refresh servers' : `Wait ${refreshCooldown.remainingSeconds}s`,
+    })
 
     const handleJoin = async (server: Server, asSpectator: boolean) => {
         try {
@@ -873,17 +880,6 @@ export function ServerBrowserPage({
                             <HelpCircle className="size-4" />
                         </button>
                     </Tooltip>
-                    <Tooltip content={refreshCooldown.canRefresh ? 'Refresh servers' : `Wait ${refreshCooldown.remainingSeconds}s`} side="bottom">
-                        <button
-                            ref={refreshButtonRef}
-                            type="button"
-                            onClick={() => refreshCooldown.trigger(fetchServers)}
-                            disabled={loading || !refreshCooldown.canRefresh}
-                            className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-hairline/5 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            <RefreshCw className={cn('size-4', loading && 'animate-spin')} />
-                        </button>
-                    </Tooltip>
                 </div>
             </div>
 
@@ -1100,7 +1096,6 @@ export function ServerBrowserPage({
                     ariaLabel="Servers page tutorial"
                     steps={buildServerTutorialSteps(
                         {
-                            refreshButtonRef,
                             filtersButtonRef,
                             columnsButtonRef,
                             presetsButtonRef,

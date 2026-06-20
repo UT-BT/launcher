@@ -53,6 +53,27 @@ Add `{ id: '<name>', label: '<Label>', icon: <LucideIcon> }` to the right
 `navSections` group. The `id` **must** equal the `renderView` case. The sidebar
 button calls `navigate` for you.
 
+## Gated / multi-section pages
+
+Two variations the standard recipe above doesn't cover — the `admin` page
+(`app/components/pages/admin/`) is the reference for both:
+
+- **Role-gated nav + view.** The sidebar entry is conditional, not static: the
+  `navSections` array is computed from `userProfile` via `buildNavSections` in
+  `AppLayout.tsx`, which appends the group only for staff (`isStaff`, helpers in
+  `app/utils/roles.ts`). Defence-in-depth: also gate the `renderView` case (pass a
+  `forceDenied` prop) and render a denied state in-page. Don't rely on the hidden
+  nav item alone.
+- **Section-hub page.** When a page holds *many* sub-tools, don't hand-roll a
+  `switch` — copy the **section registry** pattern from
+  `app/components/pages/admin/registry.tsx`: one `ADMIN_SECTIONS` array of
+  `{ id, label, icon, group, roles, Component }` descriptors that both the left
+  rail and the content switch derive from. `roles` is an explicit allow-list
+  (`number[]`), not a minimum-role threshold. Adding a tool = append one descriptor +
+  write one `*Section.tsx`. The page persists only the active section id
+  (`PREF_KEYS = ['activeSection']`) and needs no caches singleton (each section
+  owns its data).
+
 ## Verify
 
 - `npx tsc --noEmit -p tsconfig.web.json` (0 errors).

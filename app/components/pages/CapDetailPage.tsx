@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { RefreshCw, Loader2 } from 'lucide-react'
-import { Tooltip } from '@/app/components/ui/tooltip'
+import { Loader2, ShieldAlert } from 'lucide-react'
 import { useNavScrollRestore } from '@/app/components/navigation/useNavScrollRestore'
 import { Modal } from '@/app/components/ui/modal'
 import { ReplayVideoModal } from '@/app/components/shared/ReplayVideoModal'
 import { DemoDownloadStatusModal } from '@/app/components/shared/DemoDownloadStatusModal'
 import { useAsync } from '@/app/hooks/useAsync'
 import { useRefreshCooldown } from '@/app/hooks/useRefreshCooldown'
+import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
 import { useReplayWatch } from '@/app/hooks/useReplayWatch'
 import { useDemoDownload } from '@/app/hooks/useDemoDownload'
 import { useVideoCompareAvailability } from '@/app/hooks/useVideoCompareAvailability'
@@ -61,6 +61,13 @@ export function CapDetailPage({ capId, userProfile, onMapSelect }: CapDetailPage
         [accessToken, capId, refreshKey],
         { enabled: !!accessToken && !!capId, errorMessage: 'Failed to load cap data.' },
     )
+
+    useRegisterPageRefresh({
+        onRefresh: () => refreshCooldown.trigger(() => setRefreshKey(k => k + 1)),
+        refreshing: loading,
+        disabled: !refreshCooldown.canRefresh,
+        tooltip: refreshCooldown.canRefresh ? 'Refresh' : `Wait ${refreshCooldown.remainingSeconds}s`,
+    })
 
     const [compareCapId, setCompareCapId] = useState<string | null>(null)
     const [compareData, setCompareData] = useState<{ checkpoints: CapDetail['checkpoints']; cap_time_seconds: number; alias: string | null; team: number | null } | null>(null)
@@ -136,19 +143,6 @@ export function CapDetailPage({ capId, userProfile, onMapSelect }: CapDetailPage
 
     return (
         <div className="space-y-4 h-full flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-0 duration-500">
-            <div className="flex items-center justify-end gap-3 shrink-0">
-                <Tooltip content={refreshCooldown.canRefresh ? 'Refresh' : `Wait ${refreshCooldown.remainingSeconds}s`} side="top">
-                    <button
-                        type="button"
-                        onClick={() => refreshCooldown.trigger(() => setRefreshKey(k => k + 1))}
-                        disabled={loading || !refreshCooldown.canRefresh}
-                        className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-hairline/5 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
-                        aria-label="Refresh"
-                    >
-                        <RefreshCw className={`size-4 ${loading ? 'animate-spin' : ''}`} />
-                    </button>
-                </Tooltip>
-            </div>
 
             {loading && !detail ? (
                 <div className="bg-card/30 border border-hairline/5 rounded-xl h-56 animate-pulse shrink-0" />
@@ -190,6 +184,18 @@ export function CapDetailPage({ capId, userProfile, onMapSelect }: CapDetailPage
                             cap.map,
                         )}
                     />
+
+                    {cap.disallowed && (
+                        <div className="flex items-start gap-3 p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-red-300 shrink-0">
+                            <ShieldAlert className="size-5 shrink-0 mt-0.5" />
+                            <div className="space-y-1 min-w-0">
+                                <div className="font-bold uppercase tracking-wider text-xs">Disallowed cap</div>
+                                <p className="text-sm text-red-200/90 leading-relaxed">
+                                    This run has been disallowed by staff. It no longer counts toward leaderboards, medals, or world records.
+                                </p>
+                            </div>
+                        </div>
+                    )}
 
                     {error && (
                         <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm shrink-0">

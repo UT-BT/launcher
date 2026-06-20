@@ -28,6 +28,15 @@ function formatHoursShort(seconds: number): string {
     return `${minutes} m`
 }
 
+function banUntilLabel(end: string | null | undefined): string | null {
+    if (!end) return null
+    const d = new Date(end)
+    if (isNaN(d.getTime())) return null
+    const yearsOut = (d.getTime() - Date.now()) / (1000 * 60 * 60 * 24 * 365)
+    if (yearsOut >= 50) return 'Permanent'
+    return formatAddedDate(end)
+}
+
 const POINTS_EXPLAINER = (
     <div className="space-y-2 max-w-[260px]">
         <div className="text-[10px] uppercase tracking-wider font-bold text-blue-200">
@@ -75,8 +84,10 @@ export function HeroSection({ userId, summary, loading, isSelf, chart, onChangeT
     const fallback = `https://cdn.discordapp.com/embed/avatars/${Number(userId) % 5}.png`
     const role = profile?.utbt_role ? ROLE_LABELS[profile.utbt_role] : null
     const patreonTier = usePatreonTier(userId)
-    const ban = profile?.active_ban
-    const banReason = ban && typeof ban === 'object' ? (ban as { reason?: string }).reason : null
+    const ban = profile?.active_ban ?? null
+    const banReason = ban?.reason ?? null
+    const banStart = ban?.start ?? null
+    const banUntil = banUntilLabel(ban?.end)
 
     const counts = summary?.counts
     const medals = summary?.medals
@@ -196,13 +207,29 @@ export function HeroSection({ userId, summary, loading, isSelf, chart, onChangeT
                 </div>
             </div>
 
-            {banReason && (
-                <div className="flex items-start gap-2 p-2 bg-red-500/10 border border-red-500/30 rounded-lg text-red-300 text-xs">
-                    <ShieldAlert className="size-4 shrink-0 mt-px" />
-                    <span className="leading-relaxed">
-                        <span className="font-bold uppercase tracking-wider text-[10px] mr-1.5">Banned</span>
-                        {banReason}
-                    </span>
+            {ban && (
+                <div className="flex items-start gap-3 p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-red-300">
+                    <ShieldAlert className="size-5 shrink-0 mt-0.5" />
+                    <div className="space-y-2 min-w-0">
+                        <div className="font-bold uppercase tracking-wider text-xs">Banned</div>
+                        {banReason && <p className="text-sm text-red-200/90 leading-relaxed">{banReason}</p>}
+                        {(banStart || banUntil) && (
+                            <div className="flex flex-wrap gap-x-6 gap-y-1.5">
+                                {banStart && (
+                                    <div className="flex flex-col leading-tight">
+                                        <span className="text-[10px] uppercase tracking-wider text-red-300/60">Banned</span>
+                                        <span className="text-xs font-medium text-red-200/90">{formatAddedDate(banStart)}</span>
+                                    </div>
+                                )}
+                                {banUntil && (
+                                    <div className="flex flex-col leading-tight">
+                                        <span className="text-[10px] uppercase tracking-wider text-red-300/60">Until</span>
+                                        <span className="text-xs font-medium text-red-200/90">{banUntil}</span>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
                 </div>
             )}
 
