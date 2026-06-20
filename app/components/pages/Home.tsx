@@ -251,7 +251,7 @@ export function Home({
                                 accent={ACCENTS.news}
                                 actionLabel={onViewNews ? 'See All' : undefined}
                                 onAction={onViewNews}
-                                className="lg:col-span-6"
+                                className="lg:col-span-5"
                             >
                                 <NewsCard articles={newsFeed} categories={newsCategoryMap} newSince={newsSeen} />
                             </SpotlightSection>
@@ -263,7 +263,7 @@ export function Home({
                                 accent={ACCENTS.hotMaps}
                                 actionLabel={onViewMaps ? 'See All' : undefined}
                                 onAction={onViewMaps}
-                                className="lg:col-span-6"
+                                className="lg:col-span-7"
                             >
                                 <HottestPosterGrid
                                     maps={hotMaps}
