@@ -988,6 +988,26 @@ export async function updateMap(token: string, name: string, input: UpdateMapInp
     return apiGet(`/admin/maps/${encodeURIComponent(name)}`, { token, method: 'PATCH', body: input })
 }
 
+export interface DifficultySyncChange {
+    name: string
+    current: number | null
+    average: number
+    review_count: number
+    proposed: number
+}
+
+export async function fetchDifficultySyncPreview(token: string, signal?: AbortSignal): Promise<DifficultySyncChange[]> {
+    const data = await apiGet<{ changes: DifficultySyncChange[] }>('/admin/maps/difficulty-sync/preview', { token, signal })
+    return data.changes
+}
+
+export async function applyDifficultySync(
+    token: string,
+    opts: { reason?: string; maps?: string[] },
+): Promise<{ ok: boolean; count: number; changed: DifficultySyncChange[] }> {
+    return apiGet('/admin/maps/difficulty-sync', { token, method: 'POST', body: { reason: opts.reason, maps: opts.maps } })
+}
+
 export type PatchChannel = 'stable' | 'rc'
 
 export interface AdminPatch {

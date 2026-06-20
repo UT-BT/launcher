@@ -25,7 +25,7 @@ import {
 const ACTIONS = [
   '', 'user.ban', 'user.unban', 'user.warn', 'user.alias_change', 'user.title_assign', 'user.title_unassign',
   'title.create', 'title.update', 'title.delete', 'cap.disallow', 'cap.reallow', 'cap.verify', 'cap.unverify', 'cap.verify_demo',
-  'map.create', 'map.update',
+  'map.create', 'map.update', 'map.difficulty_sync',
   'patch.create', 'patch.update', 'patch.activate', 'patch.deactivate', 'patch.delete',
   'mapvote.regenerate', 'mapvote.announcement',
 ]
@@ -250,6 +250,8 @@ function AuditDescription({ e, onMapSelect }: { e: AuditEntry; onMapSelect?: (ma
     case 'cap.verify_demo': return <span>Verified {targetRef(e, onMapSelect)} <span className="text-muted-foreground/60">via demo</span></span>
     case 'map.create': return <span>Created map {targetRef(e, onMapSelect)}</span>
     case 'map.update': return <span>Updated map {targetRef(e, onMapSelect)}</span>
+    case 'map.difficulty_sync':
+      return <span>Synced difficulty of {targetRef(e, onMapSelect)} <span className="text-muted-foreground/70 font-mono text-xs">{String(before?.difficulty ?? '—')} → {String(after?.difficulty ?? '—')}</span></span>
     default: return <span>{e.summary || e.action}</span>
   }
 }
