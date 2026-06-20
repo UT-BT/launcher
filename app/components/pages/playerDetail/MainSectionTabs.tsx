@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils'
 
-export type PlayerDetailTab = 'caps' | 'pbs' | 'wrs' | 'playtime' | 'uncapped' | 'achievements'
+export type PlayerDetailTab = 'caps' | 'disallowed' | 'pbs' | 'wrs' | 'playtime' | 'uncapped' | 'achievements'
 
 interface MainSectionTabsProps {
     tabs: { value: PlayerDetailTab; label: string; count?: number; hidden?: boolean }[]

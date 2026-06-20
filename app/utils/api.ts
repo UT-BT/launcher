@@ -2183,6 +2183,7 @@ export interface UserSummaryMedals {
 export interface UserSummaryCounts {
     total_caps: number
     verified_caps: number
+    disallowed_caps: number
     certified_caps: number
     unique_maps: number
     uncapped_maps: number
@@ -2348,6 +2349,8 @@ export interface UserCapRow {
     timeAgo?: string
     verified: boolean
     disallowed: boolean
+    disallowed_at?: string | null
+    disallow_reason?: string | null
     cap_type: number
 }
 
@@ -2356,7 +2359,7 @@ export interface UserCapsPage {
     items: UserCapRow[]
 }
 
-export type CapFilter = 'all' | 'verified' | 'certified' | 'casual'
+export type CapFilter = 'all' | 'verified' | 'certified' | 'casual' | 'disallowed'
 
 export interface UserPersonalBestRow {
     id: string
@@ -2414,7 +2417,7 @@ export interface UserCapsParams {
     mapFuzzy?: string
     capFilter?: CapFilter
     favoritesOnly?: boolean
-    sort?: 'added' | 'time' | 'map'
+    sort?: 'added' | 'time' | 'map' | 'disallowed_at'
     order?: 'asc' | 'desc'
 }
 
