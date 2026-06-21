@@ -10,8 +10,8 @@ not_here:
   - "which component to use → shared-components.md"
   - "state / persistence → state-patterns.md"
 sections: [class-merging, tables-locked, page-layout, filter-panel, buttons-toggle-states, form-inputs, card-backgrounds-borders, text, color-palette, animation, donts]
-last_verified: 2026-06-16
-verify_against: [app/components/shared/DataTable.tsx, app/styles/globals.css, lib/utils.ts]
+last_verified: 2026-06-20
+verify_against: [app/components/shared/DataTable.tsx, app/styles/globals.css, lib/utils.ts, app/hooks/useElementWidth.ts]
 ---
 
 # Styling reference
@@ -35,14 +35,14 @@ Set inside `app/components/shared/DataTable.tsx`. Don't override inline.
 
 | Element | Class |
 |---|---|
-| Scroll container | `flex-1 min-h-0 bg-card/30 border border-white/5 rounded-xl overflow-auto` |
-| `<table>` | `w-full text-sm` |
+| Scroll container | `flex-1 min-h-0 bg-card/30 border border-hairline/5 rounded-xl overflow-auto` |
+| `<table>` | `w-full table-fixed text-sm` |
 | `<thead>` | `sticky top-0 z-[2] bg-card/95 backdrop-blur` |
-| `<thead> <tr>` | `border-b border-white/10` |
-| `<th>` | `px-4 py-3 text-left text-muted-foreground font-medium text-xs uppercase tracking-wider` |
-| `<th>` sort button | `inline-flex items-center gap-1 hover:text-white transition-colors cursor-pointer` |
-| `<tbody> <tr>` | `border-b border-white/5 hover:bg-white/[0.03] transition-colors group` |
-| `<td>` | `px-4 py-3` |
+| `<thead> <tr>` | `border-b border-hairline/10` |
+| `<th>` | `px-4 py-3 text-muted-foreground font-medium text-xs uppercase tracking-wider` (+ align) |
+| `<th>` sort button | `inline-flex items-center gap-1 hover:text-foreground transition-colors cursor-pointer` |
+| `<tbody> <tr>` | `border-b border-hairline/5 hover:bg-hairline/[0.03] transition-colors group` |
+| `<td>` | `px-4 py-3` (→ `px-3 py-2` when the shell is in condensed density) |
 | Empty state `<td>` | `px-4 py-16 text-center text-muted-foreground` — text only, no icon |
 
 Sort icons: `ArrowUpDown` (size-3 opacity-30) when not sorted; `ChevronUp` /
@@ -56,10 +56,34 @@ column (Player / Name / Map / Rusher), which stays width-less to absorb the
 slack. Skip this and `table-fixed` splits every column evenly: a right-aligned
 numeric column then floats its value to the far edge (the Players "rank" bug).
 
-When the flex column can be squeezed below its content (many columns + small
-window), pass `minWidth` to `DataTableShell` (sum of column widths + a floor for
-the flex column) so the table scrolls horizontally instead of collapsing the
-flex column into its neighbour. See `tableMinWidth` in `ServerBrowserPage.tsx`.
+### Responsive columns (opt-in)
+
+`DataTableShell` takes an optional `responsive` prop that makes a table degrade
+gracefully on narrow windows (the app floor is ~960px of content width, less
+under ui-scale zoom). Pass `responsive={{ columns, onResolve, nameFloorRem?, extraRem? }}`
+where `columns: ResponsiveColumn[]` (`{ id, width?, priority?, required? }`)
+describes the **currently-visible** columns in display order — reuse the exact
+same width literal the header cell uses (the resolver normalizes `rem`/`px`/`%`;
+`%`/undefined = the flex column). The shell measures its own box
+(`useElementWidth` → ResizeObserver), then, in this precedence:
+
+1. **Condenses** padding (`px-4 py-3` → `px-3 py-2`) below ~58rem;
+2. **Auto-hides** the lowest-`priority` columns that don't fit (higher priority
+   survives longer; `required` columns and the flex column are never dropped);
+3. **Scrolls** via a `minWidth` floor recomputed from the *surviving* columns,
+   only when even those overflow.
+
+The surviving ids come back via `onResolve(visibleIds)`. Intersect them with your
+own render gate — `effective = userVisible AND resolved.has(id)` — applied to
+**both the header and the body** (a one-sided gate desyncs `table-fixed` tracks).
+This overlay is **render-time only**: never write `resolved` to persisted state /
+localStorage / `columnVisibility`, or it clobbers the user's column prefs. Keep
+`onResolve` in a `useCallback` and the `columns` array in a `useMemo` (loop
+safety). Mark any tutorial-spotlighted column `required` so auto-hide can't null
+its ref. Co-locate priorities as a `COLUMN_PRIORITY: Partial<Record<TColumnId, number>>`
+beside the existing column records. Reference: `PlayersPage.tsx` (ColumnsMenu page)
+and `CapItAllPage.tsx` (fixed-column card). The legacy `minWidth` string prop
+still works for a scroll-only floor without auto-hide.
 
 Align by content type:
 

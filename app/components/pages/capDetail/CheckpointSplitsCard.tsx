@@ -1,4 +1,4 @@
-import { lazy, Suspense, useMemo } from 'react'
+import { lazy, Suspense, useCallback, useMemo, useState } from 'react'
 import { Loader2, Info } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Tooltip } from '@/app/components/ui/tooltip'
@@ -9,6 +9,7 @@ import {
     DataTableHeaderCell,
     DataTableRow,
     DataTableCell,
+    type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
 import { buildDeltaPoints, buildSyncAnchors, formatSignedDelta, deltaClass } from './capStats'
 import type { CapCheckpoint } from '@/app/utils/api'
@@ -32,6 +33,25 @@ interface CheckpointSplitsCardProps {
     onSelectCompare: (id: string | null) => void
     comparing: boolean
 }
+
+type SplitsColumnId = 'cp' | 'split' | 'cumulative' | 'splitDelta' | 'cumDelta'
+
+const COLUMN_WIDTH: Record<SplitsColumnId, string | undefined> = {
+    cp: '4rem',
+    split: undefined,
+    cumulative: undefined,
+    splitDelta: undefined,
+    cumDelta: undefined,
+}
+
+const COLUMN_PRIORITY: Partial<Record<SplitsColumnId, number>> = {
+    split: 60,
+    cumulative: 50,
+    splitDelta: 20,
+    cumDelta: 10,
+}
+
+const REQUIRED_COLUMNS = new Set<SplitsColumnId>(['cp'])
 
 function NoSplits({ message }: { message: string }) {
     return (
@@ -92,6 +112,28 @@ export function CheckpointSplitsCard({
         return out
     }, [canCompare, checkpoints, baseline, capTime, baselineTime])
 
+    const presentColumns = useMemo<SplitsColumnId[]>(
+        () => canCompare
+            ? ['cp', 'split', 'cumulative', 'splitDelta', 'cumDelta']
+            : ['cp', 'split', 'cumulative'],
+        [canCompare],
+    )
+    const responsiveColumns = useMemo<ResponsiveColumn[]>(
+        () => presentColumns.map(id => ({
+            id,
+            width: COLUMN_WIDTH[id],
+            priority: COLUMN_PRIORITY[id],
+            required: REQUIRED_COLUMNS.has(id),
+        })),
+        [presentColumns],
+    )
+    const [resolved, setResolved] = useState<Set<SplitsColumnId> | null>(null)
+    const handleResolve = useCallback((ids: Set<string>) => {
+        setResolved(ids as Set<SplitsColumnId>)
+    }, [])
+    const isVisible = (id: SplitsColumnId) =>
+        presentColumns.includes(id) && (!resolved || resolved.has(id))
+
     return (
         <div className="bg-card/30 border border-hairline/5 rounded-xl flex flex-col overflow-hidden">
             <div className="relative flex items-center px-4 py-3 border-b border-hairline/5 shrink-0">
@@ -126,47 +168,52 @@ export function CheckpointSplitsCard({
             ) : (
                 <div className="flex flex-col lg:flex-row lg:h-[460px]">
                     <div className="lg:w-1/2 h-[320px] lg:h-full lg:border-r border-hairline/5 min-h-0 flex flex-col">
-                        <DataTableShell className="!bg-transparent !border-0 !rounded-none">
+                        <DataTableShell
+                            className="!bg-transparent !border-0 !rounded-none"
+                            responsive={{ columns: responsiveColumns, onResolve: handleResolve }}
+                        >
                             <DataTableHeaderRow>
-                                <DataTableHeaderCell width="4rem" align="center">CP</DataTableHeaderCell>
-                                <DataTableHeaderCell align="right">Split</DataTableHeaderCell>
-                                <DataTableHeaderCell align="right">Cumulative</DataTableHeaderCell>
-                                {canCompare && (
-                                    <>
-                                        <DataTableHeaderCell align="right">Δ Split</DataTableHeaderCell>
-                                        <DataTableHeaderCell align="right">Δ Total</DataTableHeaderCell>
-                                    </>
-                                )}
+                                {isVisible('cp') && <DataTableHeaderCell width="4rem" align="center">CP</DataTableHeaderCell>}
+                                {isVisible('split') && <DataTableHeaderCell align="right">Split</DataTableHeaderCell>}
+                                {isVisible('cumulative') && <DataTableHeaderCell align="right">Cumulative</DataTableHeaderCell>}
+                                {isVisible('splitDelta') && <DataTableHeaderCell align="right">Δ Split</DataTableHeaderCell>}
+                                {isVisible('cumDelta') && <DataTableHeaderCell align="right">Δ Total</DataTableHeaderCell>}
                             </DataTableHeaderRow>
                             <tbody>
                                 {rows.map(({ key, n, segment, cumulative, cumDelta, splitDelta }) => (
                                     <DataTableRow key={key}>
-                                        <DataTableCell align="center">
-                                            <span className="text-xs font-mono text-muted-foreground tabular-nums">{n}</span>
-                                        </DataTableCell>
-                                        <DataTableCell align="right">
-                                            <span className="text-xs font-mono tabular-nums text-muted-foreground">
-                                                {segment.toFixed(3)}
-                                            </span>
-                                        </DataTableCell>
-                                        <DataTableCell align="right">
-                                            <span className="text-sm font-mono tabular-nums text-foreground">
-                                                {formatCapTime(cumulative)}
-                                            </span>
-                                        </DataTableCell>
-                                        {canCompare && (
-                                            <>
-                                                <DataTableCell align="right">
-                                                    <span className={cn('text-xs font-mono tabular-nums', deltaClass(splitDelta))}>
-                                                        {splitDelta != null ? formatSignedDelta(splitDelta) : '—'}
-                                                    </span>
-                                                </DataTableCell>
-                                                <DataTableCell align="right">
-                                                    <span className={cn('text-xs font-mono tabular-nums', deltaClass(cumDelta))}>
-                                                        {cumDelta != null ? formatSignedDelta(cumDelta) : '—'}
-                                                    </span>
-                                                </DataTableCell>
-                                            </>
+                                        {isVisible('cp') && (
+                                            <DataTableCell align="center">
+                                                <span className="text-xs font-mono text-muted-foreground tabular-nums">{n}</span>
+                                            </DataTableCell>
+                                        )}
+                                        {isVisible('split') && (
+                                            <DataTableCell align="right">
+                                                <span className="text-xs font-mono tabular-nums text-muted-foreground">
+                                                    {segment.toFixed(3)}
+                                                </span>
+                                            </DataTableCell>
+                                        )}
+                                        {isVisible('cumulative') && (
+                                            <DataTableCell align="right">
+                                                <span className="text-sm font-mono tabular-nums text-foreground">
+                                                    {formatCapTime(cumulative)}
+                                                </span>
+                                            </DataTableCell>
+                                        )}
+                                        {isVisible('splitDelta') && (
+                                            <DataTableCell align="right">
+                                                <span className={cn('text-xs font-mono tabular-nums', deltaClass(splitDelta))}>
+                                                    {splitDelta != null ? formatSignedDelta(splitDelta) : '—'}
+                                                </span>
+                                            </DataTableCell>
+                                        )}
+                                        {isVisible('cumDelta') && (
+                                            <DataTableCell align="right">
+                                                <span className={cn('text-xs font-mono tabular-nums', deltaClass(cumDelta))}>
+                                                    {cumDelta != null ? formatSignedDelta(cumDelta) : '—'}
+                                                </span>
+                                            </DataTableCell>
                                         )}
                                     </DataTableRow>
                                 ))}
