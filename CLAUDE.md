@@ -10,6 +10,7 @@ main-process code under `lib/main/`; typed renderer↔main IPC under `lib/convey
 **This repo is public** — keep docs and code about the launcher only. Never put
 backend internals here (repo names, filesystem paths, tech stack, internal
 endpoints or patterns); document only the client-side contract the launcher uses.
+For whole-system context beyond this repo, see the workspace-root WORKSPACE.md.
 
 ## Router — open the RIGHT doc, not all of them
 
@@ -32,6 +33,7 @@ every doc.
 | IPC channels / window.conveyor / events | lib/conveyor/README.md | channel inventory + add pattern |
 | main-process / services / file access | lib/main/README.md | services + path/url safety + config |
 | settings panels / UT99 ini keys | app/components/pages/settings/README.md | sections + ini flow + constants |
+| login / logout / Discord OAuth / access token | agents/auth.md | client-side OAuth flow + token storage + window.auth |
 | run / build / lint / typecheck / commit | agents/build.md | commands + pre-commit gate |
 
 ## Hard rules
