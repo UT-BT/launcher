@@ -83,16 +83,14 @@ export function LatestRecordsCard({
                             </DataTableCell>
                             {isVisible('holder') && (
                                 <DataTableCell>
-                                    <div className="flex justify-start">
-                                        <PlayerInfo
-                                            userId={r.userId ?? undefined}
-                                            alias={r.alias}
-                                            title={r.activeTitle ?? null}
-                                            size="sm"
-                                            highlight={isOwn}
-                                            showYouBadge={isOwn}
-                                        />
-                                    </div>
+                                    <PlayerInfo
+                                        userId={r.userId ?? undefined}
+                                        alias={r.alias}
+                                        title={r.activeTitle ?? null}
+                                        size="sm"
+                                        highlight={isOwn}
+                                        showYouBadge={isOwn}
+                                    />
                                 </DataTableCell>
                             )}
                             {isVisible('time') && (
