@@ -17,8 +17,8 @@ export function AdminLayout({ sections, activeSection, onSectionChange, children
     .filter((g) => g.items.length > 0)
 
   return (
-    <div className="flex flex-1 min-h-0 overflow-hidden">
-      <aside className="w-64 shrink-0 overflow-y-auto custom-scrollbar border-r border-hairline/10 pr-4 pt-1 space-y-8">
+    <div className="flex flex-1">
+      <aside className="w-64 shrink-0 sticky top-0 self-start max-h-[calc(100vh-4rem)] overflow-y-auto custom-scrollbar border-r border-hairline/10 pr-4 pt-1 space-y-8">
         {groups.map((group) => (
           <div key={group.id}>
             <h3 className="mb-3 px-3 text-[10px] font-bold text-muted-foreground/60 uppercase tracking-[0.2em]">
@@ -45,7 +45,7 @@ export function AdminLayout({ sections, activeSection, onSectionChange, children
         ))}
       </aside>
 
-      <main className="flex-1 overflow-y-auto min-w-0 custom-scrollbar">
+      <main className="flex-1 min-w-0 overflow-x-clip">
         <div className="w-full pl-6 lg:pl-8 pr-1 pt-1 pb-8">
           <AnimatePresence mode="wait">
             <motion.div
