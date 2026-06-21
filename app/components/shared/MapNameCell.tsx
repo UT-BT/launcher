@@ -16,7 +16,7 @@ export function MapNameCell({ mapName, favorited, onToggleFavorite, onMapSelect 
         : undefined
 
     return (
-        <div className="flex items-center gap-2 min-w-0">
+        <div className="flex items-center gap-2.5 min-w-0">
             <button
                 type="button"
                 onClick={select}
@@ -26,6 +26,13 @@ export function MapNameCell({ mapName, favorited, onToggleFavorite, onMapSelect 
             >
                 <MapThumbnail mapName={mapName} className="size-9 rounded-md" />
             </button>
+            <FavoriteStar
+                name={mapName}
+                isFavorited={favorited}
+                onToggle={onToggleFavorite}
+                size="sm"
+                className="shrink-0"
+            />
             <button
                 type="button"
                 onClick={select}
@@ -36,13 +43,6 @@ export function MapNameCell({ mapName, favorited, onToggleFavorite, onMapSelect 
                     {displayMapName(mapName)}
                 </span>
             </button>
-            <FavoriteStar
-                name={mapName}
-                isFavorited={favorited}
-                onToggle={onToggleFavorite}
-                size="sm"
-                className="shrink-0"
-            />
         </div>
     )
 }

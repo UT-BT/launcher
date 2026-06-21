@@ -90,7 +90,7 @@ export function MapsToReviewCard({
                     items.map(r => (
                         <div
                             key={r.id}
-                            className="flex items-center gap-3 px-3 py-2.5 border-b border-hairline/5 last:border-0"
+                            className="flex items-center gap-3 px-3 py-2.5 h-16 border-b border-hairline/5 last:border-0"
                         >
                             <button
                                 type="button"
@@ -101,6 +101,14 @@ export function MapsToReviewCard({
                             >
                                 <MapThumbnail mapName={r.mapName} className="size-10 rounded-md" />
                             </button>
+                            <div className="flex items-center gap-1 min-w-0">
+                                <FavoriteStar
+                                    name={r.mapName}
+                                    isFavorited={favoriteMapNames.has(r.mapName)}
+                                    onToggle={onToggleFavorite}
+                                    size="sm"
+                                />
+                            </div>
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-1 min-w-0">
                                     <button
@@ -111,12 +119,6 @@ export function MapsToReviewCard({
                                     >
                                         {displayMapName(r.mapName)}
                                     </button>
-                                    <FavoriteStar
-                                        name={r.mapName}
-                                        isFavorited={favoriteMapNames.has(r.mapName)}
-                                        onToggle={onToggleFavorite}
-                                        size="sm"
-                                    />
                                 </div>
                                 <span className="text-[11px] text-muted-foreground">Capped {r.timeAgo}</span>
                             </div>

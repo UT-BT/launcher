@@ -242,24 +242,47 @@ export function Home({
                 />
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
-                <div className="lg:col-span-5 space-y-4">
-                    {newsFeed.length > 0 && (
-                        <SpotlightSection
-                            title="Latest News"
-                            accent={ACCENTS.news}
-                            actionLabel={onViewNews ? 'See All' : undefined}
-                            onAction={onViewNews}
-                        >
-                            <NewsCard articles={newsFeed} categories={newsCategoryMap} newSince={newsSeen} />
-                        </SpotlightSection>
-                    )}
+            <div className="space-y-4">
+                {(newsFeed.length > 0 || hotMaps.length > 0) && (
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+                        {newsFeed.length > 0 && (
+                            <SpotlightSection
+                                title="Latest News"
+                                accent={ACCENTS.news}
+                                actionLabel={onViewNews ? 'See All' : undefined}
+                                onAction={onViewNews}
+                                className="lg:col-span-5"
+                            >
+                                <NewsCard articles={newsFeed} categories={newsCategoryMap} newSince={newsSeen} />
+                            </SpotlightSection>
+                        )}
 
+                        {hotMaps.length > 0 && (
+                            <SpotlightSection
+                                title="Hottest Maps"
+                                accent={ACCENTS.hotMaps}
+                                actionLabel={onViewMaps ? 'See All' : undefined}
+                                onAction={onViewMaps}
+                                className="lg:col-span-7"
+                            >
+                                <HottestPosterGrid
+                                    maps={hotMaps}
+                                    favoriteMapNames={favoriteMapNames}
+                                    onToggleFavorite={onToggleFavorite}
+                                    onMapSelect={onMapSelect}
+                                />
+                            </SpotlightSection>
+                        )}
+                    </div>
+                )}
+
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
                     <SpotlightSection
                         title="Newest Maps"
                         accent={ACCENTS.newMaps}
                         actionLabel={onViewMaps ? 'See All' : undefined}
                         onAction={onViewMaps}
+                        className="lg:col-span-6"
                     >
                         <NewestMapsCard
                             maps={newMaps}
@@ -268,8 +291,7 @@ export function Home({
                             onMapSelect={onMapSelect}
                         />
                     </SpotlightSection>
-
-                    <SpotlightSection title="Maps to Review" accent={ACCENTS.reviews}>
+                    <SpotlightSection title="Maps to Review" accent={ACCENTS.reviews} className="lg:col-span-6">
                         <MapsToReviewCard
                             accessToken={userProfile.accessToken}
                             refreshKey={reviewsRefreshKey}
@@ -281,28 +303,13 @@ export function Home({
                     </SpotlightSection>
                 </div>
 
-                <div className="lg:col-span-7 space-y-4">
-                    {hotMaps.length > 0 && (
-                        <SpotlightSection
-                            title="Hottest Maps"
-                            accent={ACCENTS.hotMaps}
-                            actionLabel={onViewMaps ? 'See All' : undefined}
-                            onAction={onViewMaps}
-                        >
-                            <HottestPosterGrid
-                                maps={hotMaps}
-                                favoriteMapNames={favoriteMapNames}
-                                onToggleFavorite={onToggleFavorite}
-                                onMapSelect={onMapSelect}
-                            />
-                        </SpotlightSection>
-                    )}
-
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
                     <SpotlightSection
                         title="Latest World Records"
                         accent={ACCENTS.worldRecords}
                         actionLabel={onViewWorldRecords ? 'See All' : undefined}
                         onAction={onViewWorldRecords}
+                        className="lg:col-span-6"
                     >
                         <LatestRecordsCard
                             records={recentWRs}
@@ -320,6 +327,7 @@ export function Home({
                         accent={ACCENTS.caps}
                         actionLabel="See More"
                         onAction={() => setHistoryOpen(true)}
+                        className="lg:col-span-6"
                     >
                         <RecentCapsCard
                             caps={data.achievements}

@@ -32,7 +32,7 @@ export function NewestMapsCard({ maps, favoriteMapNames, onToggleFavorite, onMap
                 <div
                     key={map.name}
                     className={cn(
-                        'flex items-center gap-3 px-3 py-2.5 border-b border-hairline/5 last:border-0 transition-colors',
+                        'flex items-center gap-3 px-3 py-2.5 h-16 border-b border-hairline/5 last:border-0 transition-colors',
                         onMapSelect && 'hover:bg-hairline/[0.03]',
                     )}
                 >
@@ -45,6 +45,14 @@ export function NewestMapsCard({ maps, favoriteMapNames, onToggleFavorite, onMap
                     >
                         <MapThumbnail mapName={map.name} className="size-10 rounded-md" />
                     </button>
+                    <div className="flex items-center gap-1 min-w-0">
+                        <FavoriteStar
+                            name={map.name}
+                            isFavorited={favoriteMapNames.has(map.name)}
+                            onToggle={onToggleFavorite}
+                            size="sm"
+                        />
+                    </div>
                     <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1 min-w-0">
                             <button
@@ -55,12 +63,6 @@ export function NewestMapsCard({ maps, favoriteMapNames, onToggleFavorite, onMap
                             >
                                 {displayMapName(map.name)}
                             </button>
-                            <FavoriteStar
-                                name={map.name}
-                                isFavorited={favoriteMapNames.has(map.name)}
-                                onToggle={onToggleFavorite}
-                                size="sm"
-                            />
                         </div>
                         <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground min-w-0">
                             <span className="truncate">{map.author ? `by ${map.author}` : 'Community map'}</span>
