@@ -17,10 +17,10 @@ type CapColumnId = 'map' | 'holder' | 'time' | 'when' | 'replay'
 
 const CAP_COLUMNS: ResponsiveColumn[] = [
     { id: 'map', required: true },
-    { id: 'holder', width: '32%', priority: 30 },
-    { id: 'time', width: '110px', priority: 70 },
-    { id: 'when', width: '84px', priority: 20 },
-    { id: 'replay', width: '52px', priority: 10 },
+    { id: 'holder', width: '8rem', priority: 20 },
+    { id: 'time', width: '6rem', priority: 70, required: true },
+    { id: 'when', width: '6rem', priority: 30 },
+    { id: 'replay', width: '4rem', priority: 40 },
 ]
 
 interface RecentCapsCardProps {
@@ -62,11 +62,11 @@ export function RecentCapsCard({
             responsive={{ columns: CAP_COLUMNS, onResolve: handleResolve }}
         >
             <DataTableHeaderRow>
-                <DataTableHeaderCell align="center" width="16rem">Map</DataTableHeaderCell>
-                {isVisible('holder') && <DataTableHeaderCell align="center" width="10rem"></DataTableHeaderCell>}
+                <DataTableHeaderCell align="center" width="18rem">Map</DataTableHeaderCell>
+                {isVisible('holder') && <DataTableHeaderCell align="center" width="7rem"></DataTableHeaderCell>}
                 {isVisible('time') && <DataTableHeaderCell align="center" width="6rem">Time</DataTableHeaderCell>}
-                {isVisible('when') && <DataTableHeaderCell align="center" width="6rem">When</DataTableHeaderCell>}
-                {isVisible('replay') && <DataTableHeaderCell align="center" width="4rem" />}
+                {isVisible('when') && <DataTableHeaderCell align="center" width="4rem">When</DataTableHeaderCell>}
+                {isVisible('replay') && <DataTableHeaderCell align="center" width="3rem" />}
             </DataTableHeaderRow>
             <tbody>
                 {rows.map(cap => {
@@ -87,12 +87,14 @@ export function RecentCapsCard({
                             </DataTableCell>
                             {isVisible('holder') && (
                                 <DataTableCell>
-                                    <PlayerInfo
-                                        userId={playerUserId ?? undefined}
-                                        alias={playerAlias}
-                                        title={playerTitle ?? null}
-                                        size="sm"
-                                    />
+                                    <div className="flex justify-center">
+                                        <PlayerInfo
+                                            userId={playerUserId ?? undefined}
+                                            alias={playerAlias}
+                                            title={playerTitle ?? null}
+                                            size="sm"
+                                            />
+                                    </div>
                                 </DataTableCell>
                             )}
                             {isVisible('time') && (
