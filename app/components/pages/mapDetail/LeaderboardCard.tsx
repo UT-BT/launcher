@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils'
 import { useNavState } from '@/app/components/navigation/useNavState'
 import { formatAddedDate } from '@/app/utils/format'
 import { getMedalIcon } from '@/app/utils/medals'
+import { getTeamDisplay } from '@/app/utils/team'
 import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
 import { computeMedalTier, TIER_LABELS, type MedalTier } from '@/app/components/pages/MapsPage'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
@@ -47,13 +48,14 @@ const TABS: { value: Tab; label: string }[] = [
     { value: 'all', label: 'All' },
 ]
 
-type LeaderboardColumnId = 'rank' | 'player' | 'medal' | 'time' | 'date' | 'watch' | 'download'
+type LeaderboardColumnId = 'rank' | 'player' | 'team' | 'medal' | 'time' | 'date' | 'watch' | 'download'
 
-const LEADERBOARD_COLUMNS: LeaderboardColumnId[] = ['rank', 'player', 'medal', 'time', 'date', 'watch', 'download']
+const LEADERBOARD_COLUMNS: LeaderboardColumnId[] = ['rank', 'player', 'medal', 'time', 'team', 'date', 'watch', 'download']
 
 const COLUMN_WIDTH: Record<LeaderboardColumnId, string | undefined> = {
     rank: '4rem',
     player: undefined,
+    team: '5rem',
     medal: '3rem',
     time: '8rem',
     date: '8rem',
@@ -63,6 +65,7 @@ const COLUMN_WIDTH: Record<LeaderboardColumnId, string | undefined> = {
 
 const COLUMN_PRIORITY: Partial<Record<LeaderboardColumnId, number>> = {
     date: 40,
+    team: 35,
     medal: 30,
     watch: 20,
     download: 10,
@@ -213,6 +216,9 @@ export function LeaderboardCard({
                                 Time
                             </DataTableHeaderCell>
                         )}
+                        {isVisible('team') && (
+                            <DataTableHeaderCell align="center" width="5rem">Team</DataTableHeaderCell>
+                        )}
                         {isVisible('date') && (
                             <DataTableHeaderCell
                                 sortable
@@ -302,6 +308,17 @@ export function LeaderboardCard({
                                                         rank === 1 ? 'text-red-300' : 'text-foreground',
                                                     )}
                                                 />
+                                            </DataTableCell>
+                                        )}
+                                        {isVisible('team') && (
+                                            <DataTableCell align="center">
+                                                {entry.team == null ? (
+                                                    <span className="text-xs text-muted-foreground">—</span>
+                                                ) : (
+                                                    <span className={cn('text-xs font-medium', getTeamDisplay(entry.team).accent)}>
+                                                        {getTeamDisplay(entry.team).name}
+                                                    </span>
+                                                )}
                                             </DataTableCell>
                                         )}
                                         {isVisible('date') && (

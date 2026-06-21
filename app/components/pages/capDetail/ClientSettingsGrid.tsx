@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import { toNum } from './capStats'
 import { getRegionFlag } from '@/app/utils/server-utils'
+import { getTeamDisplay } from '@/app/utils/team'
 import type { CapRecord } from '@/app/utils/api'
 
 interface ClientSettingsGridProps {
@@ -48,9 +49,7 @@ function SpreadTile({ label, accent, cells }: {
 export function ClientSettingsGrid({ cap, server }: ClientSettingsGridProps) {
     const spawnCount = toNum(cap.spawn_count)
     const deaths = spawnCount != null ? Math.max(spawnCount - 1, 0) : null
-    const teamNum = toNum(cap.team)
-    const team = teamNum === 0 ? 'Red' : teamNum === 1 ? 'Blue' : 'Unknown'
-    const teamAccent = teamNum === 0 ? 'text-red-300' : teamNum === 1 ? 'text-blue-300' : 'text-muted-foreground'
+    const { name: team, accent: teamAccent } = getTeamDisplay(toNum(cap.team))
     const region = server.region ?? null
 
     const fpsCells = [
