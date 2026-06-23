@@ -222,7 +222,7 @@ export function Home({
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-0 duration-500 pb-12 pt-2">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
                 <YouDoorway
-                    className="lg:col-span-5"
+                    className="lg:col-span-6"
                     userId={userProfile.id ?? undefined}
                     alias={userProfile.alias}
                     title={userProfile.active_title ?? null}
@@ -230,7 +230,7 @@ export function Home({
                     refreshKey={refreshKey}
                 />
                 <CommunityStatsRow
-                    className="lg:col-span-7"
+                    className="lg:col-span-6"
                     accessToken={userProfile.accessToken}
                     playersOnline={playersOnline}
                     newMaps={data.global.newMaps}
@@ -251,7 +251,7 @@ export function Home({
                                 accent={ACCENTS.news}
                                 actionLabel={onViewNews ? 'See All' : undefined}
                                 onAction={onViewNews}
-                                className="lg:col-span-5"
+                                className="lg:col-span-6"
                             >
                                 <NewsCard articles={newsFeed} categories={newsCategoryMap} newSince={newsSeen} />
                             </SpotlightSection>
@@ -263,7 +263,7 @@ export function Home({
                                 accent={ACCENTS.hotMaps}
                                 actionLabel={onViewMaps ? 'See All' : undefined}
                                 onAction={onViewMaps}
-                                className="lg:col-span-7"
+                                className="lg:col-span-6"
                             >
                                 <HottestPosterGrid
                                     maps={hotMaps}
