@@ -51,10 +51,12 @@ export function ArticleCard({ article, category, isNew }: { article: NewsArticle
                 <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 min-w-0">
                         <p className="text-base font-semibold text-foreground leading-snug truncate">{article.title}</p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
                         <CategoryChip category={category} />
                         {isNew && <NewPill />}
+                        <span className="text-[11px] text-muted-foreground tabular-nums shrink-0">{formatAddedDate(article.publishedAt)}</span>
                     </div>
-                    <span className="text-[11px] text-muted-foreground tabular-nums shrink-0">{formatAddedDate(article.publishedAt)}</span>
                 </div>
                 <p className="text-sm text-muted-foreground line-clamp-3">{article.excerpt}</p>
                 <div className="flex items-center gap-3 pt-1">

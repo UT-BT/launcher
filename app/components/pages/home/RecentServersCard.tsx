@@ -27,7 +27,7 @@ export function RecentServersCard({ recentServers, liveServers, installationStat
     }
 
     return (
-        <div className="bg-card/30 border border-hairline/5 rounded-xl overflow-hidden max-h-56 overflow-y-auto pr-1 [scrollbar-width:thin] [scrollbar-color:rgba(148,163,184,0.25)_transparent] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-hairline/20">
+        <div className="bg-card/30 border border-hairline/5 rounded-xl overflow-hidden max-h-[10.75rem] sm:max-h-[14.25rem] overflow-y-auto pr-1 [scrollbar-width:thin] [scrollbar-color:rgba(148,163,184,0.25)_transparent] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-hairline/20">
             {rows.map(({ entry, live }) => {
                 const server = live ?? entry
                 const isFull = live ? live.player_count >= live.max_players : false
@@ -69,7 +69,7 @@ export function RecentServersCard({ recentServers, liveServers, installationStat
                                         className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border border-accent-500/30 bg-accent-500/10 text-accent-300 hover:bg-accent-500/25 hover:text-accent-100 hover:border-accent-500/50 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                                     >
                                         <Play className="size-3 fill-current" />
-                                        Join
+                                        <span className="hidden [@media(min-height:761px)]:inline">Join</span>
                                     </button>
                                 </span>
                             </Tooltip>
@@ -82,7 +82,7 @@ export function RecentServersCard({ recentServers, liveServers, installationStat
                                         className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border border-hairline/10 bg-hairline/5 text-muted-foreground hover:bg-hairline/10 hover:text-foreground hover:border-hairline/20 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                                     >
                                         <Eye className="size-3" />
-                                        Spec
+                                        <span className="hidden [@media(min-height:761px)]:inline">Spec</span>
                                     </button>
                                 </span>
                             </Tooltip>
@@ -92,9 +92,9 @@ export function RecentServersCard({ recentServers, liveServers, installationStat
                                         type="button"
                                         aria-label="Hide Server"
                                         onClick={() => onHide(entry.id)}
-                                        className="inline-flex items-center justify-center size-7 rounded-md text-xs font-medium border border-red-500/30 bg-red-500/10 text-red-300 hover:bg-red-500/25 hover:text-red-100 hover:border-red-500/50 transition-colors cursor-pointer"
+                                        className="inline-flex items-center justify-center size-6 rounded-md border border-red-500/30 bg-red-500/10 text-red-300 hover:bg-red-500/25 hover:text-red-100 hover:border-red-500/50 transition-colors cursor-pointer"
                                     >
-                                        <Minus className="size-3.5" />
+                                        <Minus className="size-3" />
                                     </button>
                                 </span>
                             </Tooltip>
