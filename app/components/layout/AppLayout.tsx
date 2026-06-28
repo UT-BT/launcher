@@ -212,7 +212,7 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                     )}
                 </div>
 
-                <nav className="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-4 space-y-6 [@media(max-height:760px)]:space-y-3 relative z-10">
+                <nav className="flex-1 min-h-0 overflow-y-hidden [@media(max-height:900px)]:overflow-y-auto px-4 pb-4 [@media(max-height:760px)]:pb-3 space-y-6 [@media(max-height:760px)]:space-y-3 relative z-10 [scrollbar-width:thin] [scrollbar-color:rgba(148,163,184,0.25)_transparent] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-hairline/20">
                     {navSections.map((section) => (
                         <div key={section.title} className="space-y-2">
                             <h3 className="px-4 mb-1 text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider">
