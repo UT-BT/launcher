@@ -82,7 +82,7 @@ export function RecentServersCard({ recentServers, liveServers, installationStat
                 const specTooltip =
                     installationStatus === 'no-install' ? 'No valid UT99 installation found' :
                         installationStatus === 'unsupported' ? 'Unsupported game version' :
-                                'Spectate'
+                            'Spectate'
                 return (
                     <div key={entry.id} className="grid grid-cols-[minmax(0,1fr)_minmax(8rem,0.72fr)_2rem_2.5rem_auto] [@media(min-height:761px)]:grid-cols-[minmax(0,1fr)_minmax(6.4rem,0.72fr)_2.75rem_1.5rem_2.5rem_auto] items-center gap-2 px-3 py-2.5 min-h-14 border-b border-hairline/5 last:border-0">
                         <div className="flex-1 min-w-0">
