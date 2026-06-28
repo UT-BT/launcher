@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useMemo, useState } from 'react'
-import { Home, Server, Map as MapIcon, Trophy, Settings, LogOut, Play, User, Users, Flag, Award, ShieldAlert, Newspaper } from 'lucide-react'
+import { Home, Server, Map as MapIcon, Trophy, Settings, LogOut, Play, User, Users, Flag, Award, ShieldAlert, Newspaper, Twitch, Heart } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import logo from '@/app/assets/logo.png'
 import {
@@ -19,7 +19,11 @@ import { PageRefreshProvider } from '@/app/components/navigation/PageRefreshCont
 interface NavItem {
     id: string
     label: string
-    icon: React.ElementType
+    icon?: React.ElementType
+    action?: 'patreon' | 'external'
+    href?: string
+    leading?: 'patreon-tier-1'
+    tone?: 'patreon' | 'twitch'
 }
 
 interface NavSection {
@@ -51,12 +55,19 @@ const BASE_NAV_SECTIONS: NavSection[] = [
             { id: 'world-records', label: 'World Records', icon: Trophy },
         ],
     },
+    {
+        title: 'SUPPORT',
+        items: [
+            { id: 'support-patreon', label: 'Patreon', action: 'patreon', leading: 'patreon-tier-1', tone: 'patreon' },
+            { id: 'support-twitch', label: 'Twitch', icon: Twitch, action: 'external', href: 'https://twitch.tv/utbt', tone: 'twitch' },
+        ],
+    },
 ]
 
 import { UserProfile, getAvatarUrl } from '@/app/utils/api'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import { usePatreonTier } from '@/app/utils/patreon'
-import { PatreonBadge } from '@/app/components/shared/PatreonBadge'
+import { openPatreonInfo, PatreonBadge } from '@/app/components/shared/PatreonBadge'
 import { isStaff } from '@/app/utils/roles'
 
 function buildNavSections(userProfile?: UserProfile): NavSection[] {
@@ -139,6 +150,20 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
 
     const isInstallValid = installationStatus === 'valid'
 
+    const handleNavItemClick = (item: NavItem) => {
+        if (item.action === 'patreon') {
+            openPatreonInfo()
+            return
+        }
+
+        if (item.action === 'external' && item.href) {
+            window.conveyor.window.webOpenUrl(item.href)
+            return
+        }
+
+        onViewChange(item.id)
+    }
+
     return (
         <div className="flex h-full bg-background text-foreground overflow-hidden relative">
             <div className="nebula-bg absolute inset-0 opacity-30 pointer-events-none" />
@@ -195,25 +220,35 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                             </h3>
                             {section.items.map((item) => {
                                 const badgeCount = getNavBadge?.(item.id) ?? null
+                                const Icon = item.icon
+                                const isActive = currentView === item.id && item.action == null
                                 return (
                                 <button
                                     key={item.id}
-                                    onClick={() => onViewChange(item.id)}
+                                    onClick={() => handleNavItemClick(item)}
                                     className={cn(
                                         "w-full flex items-center gap-3 px-4 py-3 [@media(max-height:760px)]:py-2 rounded-lg transition-all duration-200 cursor-pointer group relative overflow-hidden",
-                                        currentView === item.id
+                                        isActive
                                             ? "text-foreground shadow-[0_0_20px_rgba(29,78,216,0.3)]"
-                                            : "text-muted-foreground hover:text-foreground hover:bg-hairline/5"
+                                            : "text-muted-foreground hover:text-foreground hover:bg-hairline/5",
+                                        item.tone === 'patreon' && "border border-rose-500/35 text-rose-200/90 hover:border-rose-400/60 hover:bg-rose-500/10 hover:text-rose-100",
+                                        item.tone === 'twitch' && "border border-[#9146FF]/35 text-[#B794FF] hover:border-[#9146FF]/60 hover:bg-[#9146FF]/10 hover:text-[#D7C4FF]"
                                     )}
                                 >
-                                    {currentView === item.id && (
+                                    {isActive && (
                                         <div className="absolute inset-0 bg-gradient-to-r from-accent-600/20 to-red-600/20 border-l-2 border-accent-500" />
                                     )}
 
-                                    <item.icon className={cn(
-                                        "size-5 transition-colors duration-200 relative z-10",
-                                        currentView === item.id ? "text-accent-400" : "group-hover:text-accent-400/80"
-                                    )} />
+                                    {item.leading === 'patreon-tier-1' ? (
+                                        <Heart className="size-5 transition-colors duration-200 relative z-10 text-rose-400/70 group-hover:text-rose-300" />
+                                    ) : Icon ? (
+                                        <Icon className={cn(
+                                            "size-5 transition-colors duration-200 relative z-10",
+                                            item.tone === 'twitch'
+                                                ? "text-[#9146FF] group-hover:text-[#B794FF]"
+                                                : isActive ? "text-accent-400" : "group-hover:text-accent-400/80"
+                                        )} />
+                                    ) : null}
                                     <span className="relative z-10 font-medium">{item.label}</span>
                                     {badgeCount != null && (
                                         <span
