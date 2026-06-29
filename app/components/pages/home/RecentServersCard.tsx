@@ -1,9 +1,12 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Eye, Minus, Play, Server as ServerIcon } from 'lucide-react'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import type { Server } from '@/app/components/pages/ServerBrowserPage'
-import { trimServerName, type RecentServerEntry } from '@/app/utils/server-utils'
+import {
+    getRegionFlag, getServerRegion, trimServerName, type RecentServerEntry,
+} from '@/app/utils/server-utils'
 import { displayMapName } from '@/app/utils/format'
+import { cn } from '@/lib/utils'
 
 interface RecentServersCardProps {
     recentServers: RecentServerEntry[]
@@ -15,7 +18,35 @@ interface RecentServersCardProps {
 
 export function RecentServersCard({ recentServers, liveServers, installationStatus, onJoin, onHide }: RecentServersCardProps) {
     const liveById = useMemo(() => new Map(liveServers.map(server => [server.id, server])), [liveServers])
-    const rows = recentServers.map(entry => ({ entry, live: liveById.get(entry.id) ?? null }))
+    const rows = useMemo(
+        () => recentServers.map(entry => ({ entry, live: liveById.get(entry.id) ?? null })),
+        [liveById, recentServers],
+    )
+    const [pingByIp, setPingByIp] = useState<Map<string, number>>(() => new Map())
+
+    useEffect(() => {
+        let cancelled = false
+        const uniqueIps = Array.from(new Set(rows.map(({ entry, live }) => (live ?? entry).ip)))
+            .filter(ip => !pingByIp.has(ip))
+        if (uniqueIps.length === 0) return
+
+        uniqueIps.forEach(ip => {
+            window.conveyor.game.pingServer(ip)
+                .then(ping => {
+                    if (cancelled) return
+                    setPingByIp(prev => {
+                        const next = new Map(prev)
+                        next.set(ip, ping)
+                        return next
+                    })
+                })
+                .catch(() => {
+                    // Ping is supplemental for this compact feed; leave it pending if it fails.
+                })
+        })
+
+        return () => { cancelled = true }
+    }, [rows, pingByIp])
 
     if (rows.length === 0) {
         return (
@@ -35,6 +66,11 @@ export function RecentServersCard({ recentServers, liveServers, installationStat
                 const canSpec = installationStatus === 'valid'
                 const players = live ? `${live.player_count}/${live.max_players}` : 'Offline'
                 const mapName = live?.map_name ? displayMapName(live.map_name) : '-'
+                const region = getServerRegion(server.hostname)
+                const ping = live?.ping ?? pingByIp.get(server.ip)
+                const pingColor = !ping ? 'text-muted-foreground' :
+                    ping < 100 ? 'text-emerald-400' :
+                        ping < 200 ? 'text-amber-300' : 'text-red-400'
                 const playerTone = !live ? 'text-muted-foreground' :
                     isFull ? 'text-rose-400' :
                         live.player_count > 0 ? 'text-emerald-400' : 'text-muted-foreground'
@@ -46,17 +82,39 @@ export function RecentServersCard({ recentServers, liveServers, installationStat
                 const specTooltip =
                     installationStatus === 'no-install' ? 'No valid UT99 installation found' :
                         installationStatus === 'unsupported' ? 'Unsupported game version' :
-                            'Spectate'
+                                'Spectate'
                 return (
-                    <div key={entry.id} className="flex items-center gap-3 px-3 py-2.5 min-h-14 border-b border-hairline/5 last:border-0">
+                    <div key={entry.id} className="grid grid-cols-[minmax(0,1fr)_minmax(8rem,0.72fr)_2rem_2.5rem_auto] [@media(min-height:761px)]:grid-cols-[minmax(0,1fr)_minmax(6.4rem,0.72fr)_2.75rem_1.5rem_2.5rem_auto] items-center gap-2 px-3 py-2.5 min-h-14 border-b border-hairline/5 last:border-0">
                         <div className="flex-1 min-w-0">
                             <div className="truncate text-sm font-semibold text-foreground">{trimServerName(server.hostname)}</div>
                             <div className="text-[11px] text-muted-foreground truncate">{server.ip}:{server.hostport}</div>
                         </div>
-                        <div className="w-28 min-w-0 text-xs font-medium text-muted-foreground truncate" title={mapName}>
+                        <div className="min-w-0 text-xs font-medium text-muted-foreground truncate" title={mapName}>
                             {mapName}
                         </div>
-                        <div className={`w-14 text-center text-xs font-bold tabular-nums ${playerTone}`}>
+                        <Tooltip content={region} side="top" className="justify-center [@media(min-height:761px)]:hidden">
+                            <div className="flex flex-col items-center justify-center gap-1 min-w-0">
+                                <span className={cn('text-[10px] font-bold leading-none tabular-nums', pingColor)}>
+                                    {ping ? `${ping}ms` : '...'}
+                                </span>
+                                <img
+                                    src={getRegionFlag(region)}
+                                    alt={region}
+                                    className="h-3.5 w-5 object-cover rounded-[2px] border border-hairline/10"
+                                />
+                            </div>
+                        </Tooltip>
+                        <div className={cn('hidden [@media(min-height:761px)]:block justify-self-center text-xs font-bold leading-none tabular-nums', pingColor)}>
+                            {ping ? `${ping}ms` : '...'}
+                        </div>
+                        <Tooltip content={region} side="top" className="hidden [@media(min-height:761px)]:inline-flex justify-center">
+                            <img
+                                src={getRegionFlag(region)}
+                                alt={region}
+                                className="h-4 w-6 object-cover rounded-[2px] border border-hairline/10"
+                            />
+                        </Tooltip>
+                        <div className={`w-10 justify-self-center text-center text-xs font-bold tabular-nums ${playerTone}`}>
                             {players}
                         </div>
                         <div className="inline-flex items-center gap-1.5 shrink-0">
@@ -66,7 +124,7 @@ export function RecentServersCard({ recentServers, liveServers, installationStat
                                         type="button"
                                         onClick={() => onJoin(server, false)}
                                         disabled={!canJoin}
-                                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border border-accent-500/30 bg-accent-500/10 text-accent-300 hover:bg-accent-500/25 hover:text-accent-100 hover:border-accent-500/50 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                                        className="inline-flex items-center justify-center gap-1.5 size-6 [@media(min-height:761px)]:size-auto [@media(min-height:761px)]:h-6 [@media(min-height:761px)]:px-2.5 rounded-md text-xs font-medium border border-accent-500/30 bg-accent-500/10 text-accent-300 hover:bg-accent-500/25 hover:text-accent-100 hover:border-accent-500/50 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                                     >
                                         <Play className="size-3 fill-current" />
                                         <span className="hidden [@media(min-height:761px)]:inline">Join</span>
@@ -79,7 +137,7 @@ export function RecentServersCard({ recentServers, liveServers, installationStat
                                         type="button"
                                         onClick={() => onJoin(server, true)}
                                         disabled={!canSpec}
-                                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border border-hairline/10 bg-hairline/5 text-muted-foreground hover:bg-hairline/10 hover:text-foreground hover:border-hairline/20 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                                        className="inline-flex items-center justify-center gap-1.5 size-6 [@media(min-height:761px)]:size-auto [@media(min-height:761px)]:h-6 [@media(min-height:761px)]:px-2.5 rounded-md text-xs font-medium border border-hairline/10 bg-hairline/5 text-muted-foreground hover:bg-hairline/10 hover:text-foreground hover:border-hairline/20 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                                     >
                                         <Eye className="size-3" />
                                         <span className="hidden [@media(min-height:761px)]:inline">Spec</span>
@@ -92,9 +150,9 @@ export function RecentServersCard({ recentServers, liveServers, installationStat
                                         type="button"
                                         aria-label="Hide Server"
                                         onClick={() => onHide(entry.id)}
-                                        className="inline-flex items-center justify-center size-6 rounded-md border border-red-500/30 bg-red-500/10 text-red-300 hover:bg-red-500/25 hover:text-red-100 hover:border-red-500/50 transition-colors cursor-pointer"
+                                        className="inline-flex items-center justify-center size-5 rounded-md border border-red-500/30 bg-red-500/10 text-red-300 hover:bg-red-500/25 hover:text-red-100 hover:border-red-500/50 transition-colors cursor-pointer"
                                     >
-                                        <Minus className="size-3" />
+                                        <Minus className="size-2.5" />
                                     </button>
                                 </span>
                             </Tooltip>
