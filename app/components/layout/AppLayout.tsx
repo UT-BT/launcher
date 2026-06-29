@@ -319,7 +319,7 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 overflow-y-auto relative z-10">
+            <main className="flex-1 overflow-y-auto relative z-10 pr-1 [scrollbar-width:thin] [scrollbar-color:rgba(148,163,184,0.25)_transparent] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-hairline/20">
                 <PageRefreshProvider>
                     <div className="p-8 min-h-full">
                         <NavHistoryBar />
