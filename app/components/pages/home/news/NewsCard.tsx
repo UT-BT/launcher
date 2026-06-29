@@ -1,4 +1,5 @@
-import { ExternalLink, ArrowRight } from 'lucide-react'
+import { useLayoutEffect, useRef, useState, type Ref } from 'react'
+import { ExternalLink, ChevronsRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatAddedDate } from '@/app/utils/format'
 import { openNews } from '@/app/components/navigation/openNews'
@@ -37,45 +38,58 @@ function NewPill() {
     )
 }
 
-export function ArticleCard({ article, category, isNew }: { article: NewsArticle; category?: NewsCategoryDef | null; isNew?: boolean }) {
+export function ArticleCard({
+    article,
+    category,
+    isNew,
+    articleRef,
+}: {
+    article: NewsArticle
+    category?: NewsCategoryDef | null
+    isNew?: boolean
+    articleRef?: Ref<HTMLDivElement>
+}) {
     const open = () => openNews(article.id)
     return (
         <div
+            ref={articleRef}
             role="button"
             tabIndex={0}
             onClick={open}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open() } }}
             className="group bg-card/30 border border-hairline/5 rounded-xl overflow-hidden cursor-pointer transition-colors hover:border-hairline/15 hover:bg-card/40"
         >
-            <div className="p-4 space-y-2">
+            <div className="px-4 py-3 space-y-1.5">
                 <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 min-w-0">
                         <p className="text-base font-semibold text-foreground leading-snug truncate">{article.title}</p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                        <CategoryChip category={category} />
                         {isNew && <NewPill />}
                         <span className="text-[11px] text-muted-foreground tabular-nums shrink-0">{formatAddedDate(article.publishedAt)}</span>
                     </div>
                 </div>
-                <p className="text-sm text-muted-foreground line-clamp-3">{article.excerpt}</p>
-                <div className="flex items-center gap-3 pt-1">
-                    <span className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors">
-                        Read more
-                        <ArrowRight className="size-3" />
-                    </span>
-                    {article.linkUrl && (
-                        <a
-                            href={article.linkUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
-                        >
-                            {article.linkText?.trim() || 'Open link'}
-                            <ExternalLink className="size-3" />
-                        </a>
-                    )}
+                <p className="text-sm text-muted-foreground line-clamp-3 leading-snug">{article.excerpt}</p>
+                <div className="flex items-center justify-between gap-3 pt-0.5">
+                    <div className="flex items-center gap-3 min-w-0">
+                        <span className="inline-flex items-center gap-0.25 text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors">
+                            Read more
+                            <ChevronsRight className="size-3 translate-y-0.5 transition-transform group-hover:translate-x-0.5" />
+                        </span>
+                        {article.linkUrl && (
+                            <a
+                                href={article.linkUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors truncate"
+                            >
+                                <span className="truncate">{article.linkText?.trim() || 'Open link'}</span>
+                                <ExternalLink className="size-3 shrink-0" />
+                            </a>
+                        )}
+                    </div>
+                    <CategoryChip category={category} />
                 </div>
             </div>
         </div>
@@ -90,12 +104,43 @@ interface NewsCardProps {
 }
 
 export function NewsCard({ articles, categories, newSince, className }: NewsCardProps) {
+    const itemRefs = useRef<Array<HTMLDivElement | null>>([])
+    const [visibleHeight, setVisibleHeight] = useState<number | null>(null)
+
+    useLayoutEffect(() => {
+        if (articles.length === 0) return
+
+        const measure = () => {
+            const visibleCount = Math.min(2, articles.length)
+            const first = itemRefs.current[0]
+            const last = itemRefs.current[visibleCount - 1]
+            if (!first || !last) return
+
+            const height = last.offsetTop + last.offsetHeight - first.offsetTop
+            setVisibleHeight(Math.ceil(height) + 2)
+        }
+
+        measure()
+
+        const observer = new ResizeObserver(measure)
+        itemRefs.current.slice(0, 2).forEach(node => {
+            if (node) observer.observe(node)
+        })
+        window.addEventListener('resize', measure)
+
+        return () => {
+            observer.disconnect()
+            window.removeEventListener('resize', measure)
+        }
+    }, [articles])
+
     if (articles.length === 0) return null
     return (
-        <div className={cn('space-y-3', className)}>
-            {articles.map(a => (
+        <div className={cn('space-y-3', className)} style={visibleHeight ? { maxHeight: visibleHeight } : undefined}>
+            {articles.map((a, index) => (
                 <ArticleCard
                     key={a.id}
+                    articleRef={node => { itemRefs.current[index] = node }}
                     article={a}
                     category={categories?.get(a.category) ?? null}
                     isNew={!!newSince && a.publishedAt > newSince}
