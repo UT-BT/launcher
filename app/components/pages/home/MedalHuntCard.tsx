@@ -768,7 +768,7 @@ function OpportunityHeader({
                         className={cn(
                           'size-2 rounded-full border',
                           sortDir === 'asc'
-                            ? 'bg-teal-400 border-teal-200 shadow-[0_0_8px_rgba(45,212,191,0.55)]'
+                            ? 'bg-red-700 border-red-600 shadow-[0_0_8px_rgba(248,113,113,0.55)]'
                             : 'border-muted-foreground/50'
                         )}
                       />
@@ -793,7 +793,7 @@ function OpportunityHeader({
                         className={cn(
                           'size-2 rounded-full border',
                           sortDir === 'desc'
-                            ? 'bg-teal-400 border-teal-200 shadow-[0_0_8px_rgba(45,212,191,0.55)]'
+                            ? 'bg-red-700 border-red-600 shadow-[0_0_8px_rgba(248,113,113,0.55)]'
                             : 'border-muted-foreground/50'
                         )}
                       />
