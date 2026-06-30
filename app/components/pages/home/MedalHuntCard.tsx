@@ -12,6 +12,7 @@ import {
   SlidersHorizontal,
   Target,
   Timer,
+  TvMinimalPlay,
 } from 'lucide-react'
 import { fetchBestCaps, fetchMapsMetadata, type BestCap, type MapMetadata } from '@/app/utils/api'
 import { displayMapName, formatCapTime, formatDelta } from '@/app/utils/format'
@@ -19,6 +20,8 @@ import { getMedalIcon } from '@/app/utils/medals'
 import { difficultyTextColor } from '@/app/utils/scoreColors'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
+import { ReplayVideoModal } from '@/app/components/shared/ReplayVideoModal'
+import { ReplayPickerModal } from '@/app/components/modals/ReplayPickerModal'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import {
   DropdownMenu,
@@ -230,6 +233,13 @@ export function MedalHuntCard({
   const [sortDir, setSortDir] = useState<SortDir>('asc')
   const [hiddenMapNames, setHiddenMapNames] = useState<string[]>(() => readHiddenMapNames(userId))
   const [showHidden, setShowHidden] = useState(false)
+  const [replayPickerMap, setReplayPickerMap] = useState<string | null>(null)
+  const [videoModal, setVideoModal] = useState<{
+    url: string
+    mapName: string
+    time?: number
+    alias?: string
+  } | null>(null)
 
   useEffect(() => {
     const updateLimit = () => {
@@ -456,6 +466,7 @@ export function MedalHuntCard({
             onMapSelect={onMapSelect}
             onHideMap={hideMap}
             onRestoreMap={restoreMap}
+            onOpenDemos={setReplayPickerMap}
           />
         ))}
         {Array.from({ length: Math.max(0, responsiveLimit - pageItems.length) }).map((_, i) => (
@@ -466,6 +477,24 @@ export function MedalHuntCard({
           />
         ))}
       </div>
+      <ReplayPickerModal
+        open={replayPickerMap !== null}
+        onClose={() => setReplayPickerMap(null)}
+        accessToken={accessToken}
+        userId={userId ?? undefined}
+        mapName={replayPickerMap}
+        mapMetadata={replayPickerMap ? maps.find((map) => map.name === replayPickerMap) : undefined}
+        onSelect={(url, mapName, entry) => {
+          setReplayPickerMap(null)
+          setVideoModal({
+            url,
+            mapName,
+            time: entry.cap_time_seconds,
+            alias: entry.alias ?? undefined,
+          })
+        }}
+      />
+      <ReplayVideoModal state={videoModal} onClose={() => setVideoModal(null)} />
     </div>
   )
 }
@@ -478,6 +507,7 @@ interface OpportunityRowProps {
   onMapSelect?: (mapName: string) => void
   onHideMap: (mapName: string) => void
   onRestoreMap: (mapName: string) => void
+  onOpenDemos: (mapName: string) => void
 }
 
 function OpportunityRow({
@@ -488,6 +518,7 @@ function OpportunityRow({
   onMapSelect,
   onHideMap,
   onRestoreMap,
+  onOpenDemos,
 }: OpportunityRowProps) {
   const icon = getMedalIcon(item.targetMedal)
   const canSelectMap = !isHiddenView && onMapSelect != null
@@ -548,6 +579,14 @@ function OpportunityRow({
           PB {formatCapTime(item.currentTime)}
         </div>
       </div>
+      <button
+        type="button"
+        aria-label="Demos"
+        onClick={() => onOpenDemos(item.mapName)}
+        className="inline-flex shrink-0 items-center justify-center size-7 rounded-md border border-accent-500/30 bg-accent-500/10 text-accent-300 hover:bg-accent-500/25 hover:text-accent-100 hover:border-accent-500/50 transition-colors cursor-pointer"
+      >
+        <TvMinimalPlay className="size-3.5" />
+      </button>
       <Tooltip content={isHiddenView ? 'Restore Map' : 'Hide Map'} side="top">
         <span className="inline-flex shrink-0">
           <button
