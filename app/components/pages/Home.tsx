@@ -32,6 +32,7 @@ import { NewsCard } from './home/news/NewsCard'
 import { PersonalProgressSnapshot } from './home/PersonalProgressSnapshot'
 import { AchievementProgressPreview } from './home/AchievementProgressPreview'
 import { RecentServersCard } from './home/RecentServersCard'
+import { MedalHuntCard } from './home/MedalHuntCard'
 
 const NEWS_SEEN_KEY = 'utbt:newsSeen:v1'
 
@@ -43,6 +44,7 @@ const ACCENTS: Record<string, SectionAccent> = {
     reviews: { tick: 'bg-orange-300' },
     caps: { tick: 'bg-amber-400' },
     personal: { tick: 'bg-amber-400' },
+    medalHunt: { tick: 'bg-red-500 shadow-[0_0_10px_rgba(248,113,113,0.65)]' },
     achievements: { tick: 'bg-emerald-400' },
     recentServers: { tick: 'bg-violet-400' },
 }
@@ -330,18 +332,28 @@ export function Home({
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
-                    <div className="lg:col-span-6 space-y-4">
-                        <SpotlightSection title="Your Progress" accent={ACCENTS.personal}>
-                            <PersonalProgressSnapshot summary={userSummary} />
-                        </SpotlightSection>
-                        <SpotlightSection title="Achievement Progress" accent={ACCENTS.achievements}>
-                            <AchievementProgressPreview
-                                achievements={achievementProgress}
-                                definitions={achievementDefinitionMap}
-                            />
-                        </SpotlightSection>
-                    </div>
+                    <SpotlightSection title="Your Progress" accent={ACCENTS.personal} className="lg:col-span-6">
+                        <PersonalProgressSnapshot summary={userSummary} />
+                    </SpotlightSection>
+                    <SpotlightSection title="Achievement Progress" accent={ACCENTS.achievements} className="lg:col-span-6">
+                        <AchievementProgressPreview
+                            achievements={achievementProgress}
+                            definitions={achievementDefinitionMap}
+                        />
+                    </SpotlightSection>
+                </div>
 
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+                    <SpotlightSection title="Medal Hunt" accent={ACCENTS.medalHunt} className="lg:col-span-6">
+                        <MedalHuntCard
+                            accessToken={userProfile.accessToken}
+                            userId={userProfile.id}
+                            refreshKey={refreshKey}
+                            favoriteMapNames={favoriteMapNames}
+                            onToggleFavorite={onToggleFavorite}
+                            onMapSelect={onMapSelect}
+                        />
+                    </SpotlightSection>
                     {hotMaps.length > 0 && (
                         <SpotlightSection
                             title="Hottest Maps"
