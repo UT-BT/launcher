@@ -2,14 +2,14 @@ name: Build and Release Windows Installer
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - main
 
 permissions:
   contents: write
 
 concurrency:
-  group: release-${{ github.ref_name }}
+  group: release-main
   cancel-in-progress: false
 
 jobs:
@@ -22,6 +22,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -29,37 +31,37 @@ jobs:
           node-version: 20
           cache: npm
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Derive version and prerelease
+      - name: Derive version, tag, and whether to release
         id: meta
         shell: pwsh
         run: |
-          $refName = $env:GITHUB_REF_NAME
-          if (-not $refName) { throw "GITHUB_REF_NAME not set" }
-          $version = if ($refName.StartsWith('v')) { $refName.Substring(1) } else { $refName }
-          $isPrerelease = $version -match '-'
-          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-          "prerelease=$isPrerelease" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-          Write-Host "Derived version: $version; prerelease: $isPrerelease"
-
-      - name: Set application version from tag (if needed)
-        shell: pwsh
-        run: |
-          $version = "${{ steps.meta.outputs.version }}"
           $pkg = Get-Content package.json | ConvertFrom-Json
-          if ($pkg.version -ne $version) {
-            npm version $version --no-git-tag-version
-            Write-Host "Updated package.json version to $version"
+          $version = $pkg.version
+          if (-not $version) { throw "package.json version is empty" }
+          $tag = "v$version"
+          $isPrerelease = $version -match '-'
+          $tagExists = [bool](git tag -l $tag)
+          $release = if ($tagExists) { 'false' } else { 'true' }
+          "version=$version"         | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "tag=$tag"                 | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "prerelease=$isPrerelease" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "release=$release"         | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          if ($release -eq 'true') {
+            Write-Host "Releasing $tag (prerelease: $isPrerelease)"
           } else {
-            Write-Host "package.json already at $version; no change"
+            Write-Host "Tag $tag already exists; this push does not bump the version, so nothing to release."
           }
 
+      - name: Install dependencies
+        if: steps.meta.outputs.release == 'true'
+        run: npm ci
+
       - name: Build Windows installer
+        if: steps.meta.outputs.release == 'true'
         run: npm run build:win
 
       - name: Upload build artifacts (for reference)
+        if: steps.meta.outputs.release == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: utbt-launcher-${{ steps.meta.outputs.version }}-dist
@@ -70,9 +72,11 @@ jobs:
           if-no-files-found: error
 
       - name: Create GitHub Release
+        if: steps.meta.outputs.release == 'true'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }}
+          tag_name: ${{ steps.meta.outputs.tag }}
+          target_commitish: ${{ github.sha }}
           name: UTBT Launcher v${{ steps.meta.outputs.version }}
           generate_release_notes: true
           prerelease: ${{ steps.meta.outputs.prerelease == 'true' }}
@@ -85,6 +89,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: VirusTotal Scan
+        if: steps.meta.outputs.release == 'true'
         id: vt
         uses: crazy-max/ghaction-virustotal@v4
         with:
@@ -96,11 +101,12 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Update Release Notes with VirusTotal Link
+        if: steps.meta.outputs.release == 'true'
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VT_ANALYSIS: ${{ steps.vt.outputs.analysis }}
-          TAG_NAME: ${{ github.ref_name }}
+          TAG_NAME: ${{ steps.meta.outputs.tag }}
         run: |
           $analysis = $env:VT_ANALYSIS
           if (-not $analysis -or -not $analysis.Trim()) {

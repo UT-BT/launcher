@@ -27,13 +27,13 @@ const AUTO_PAGE_SIZE_MAX_ROWS = 20
 type HistoryColumnId = 'thumbnail' | 'map' | 'author' | 'time' | 'capped' | 'replay' | 'review'
 
 const HISTORY_COLUMNS: ResponsiveColumn[] = [
-    { id: 'thumbnail', width: '3.5rem', priority: 40 },
+    { id: 'thumbnail', width: '3.5rem', required: true },
     { id: 'map', required: true },
-    { id: 'author', priority: 30 },
-    { id: 'time', priority: 70 },
-    { id: 'capped', width: '8rem', priority: 20 },
-    { id: 'replay', width: '3rem', priority: 10 },
-    { id: 'review', width: '3rem', priority: 10 },
+    { id: 'author', width: '8rem', required: true },
+    { id: 'time', width: '9rem', required: true },
+    { id: 'capped', width: '9rem', priority: 20 },
+    { id: 'replay', width: '3rem', required: true },
+    { id: 'review', width: '3rem', required: true },
 ]
 
 function computePageSize(): number {
@@ -122,10 +122,10 @@ export function HistoryModal({
                     >
                         <DataTableHeaderRow>
                             {isVisible('thumbnail') && <DataTableHeaderCell width="3.5rem"> </DataTableHeaderCell>}
-                            <DataTableHeaderCell>Map</DataTableHeaderCell>
-                            {isVisible('author') && <DataTableHeaderCell>Author</DataTableHeaderCell>}
-                            {isVisible('time') && <DataTableHeaderCell align="right">Time</DataTableHeaderCell>}
-                            {isVisible('capped') && <DataTableHeaderCell align="right" width="8rem">Capped</DataTableHeaderCell>}
+                            <DataTableHeaderCell className="pl-24">Map</DataTableHeaderCell>
+                            {isVisible('author') && <DataTableHeaderCell align="center" width="8rem">Author</DataTableHeaderCell>}
+                            {isVisible('time') && <DataTableHeaderCell align="center" width="9rem">Time</DataTableHeaderCell>}
+                            {isVisible('capped') && <DataTableHeaderCell align="center" width="7rem">Capped</DataTableHeaderCell>}
                             {isVisible('replay') && <DataTableHeaderCell align="center" width="3rem"> </DataTableHeaderCell>}
                             {isVisible('review') && <DataTableHeaderCell align="center" width="3rem"> </DataTableHeaderCell>}
                         </DataTableHeaderRow>
@@ -154,51 +154,51 @@ export function HistoryModal({
                                                         name={cap.mapName}
                                                         isFavorited={favoriteMapNames.has(cap.mapName)}
                                                         onToggle={onToggleFavorite}
-                                                        size="sm"
+                                                        size="md"
                                                     />
                                                     {onMapSelect ? (
                                                         <button
                                                             type="button"
                                                             onClick={() => { onMapSelect(cap.mapName); onOpenChange(false) }}
-                                                            className="font-bold text-foreground/90 truncate cursor-pointer hover:underline underline-offset-2 hover:text-foreground transition-colors text-left"
+                                                            className="font-bold text-foreground hover:text-accent-300 underline-offset-4 transition-colors cursor-pointer text-left text-md truncate"
                                                         >
                                                             {displayMapName(cap.mapName)}
                                                         </button>
                                                     ) : (
-                                                        <span className="font-bold text-foreground/90 truncate">
+                                                        <span className="font-bold text-foreground text-md truncate">
                                                             {displayMapName(cap.mapName)}
                                                         </span>
                                                     )}
                                                 </div>
                                             </DataTableCell>
                                             {isVisible('author') && (
-                                                <DataTableCell>
-                                                    <PlayerInfo alias={cap.author} size="sm" />
+                                                <DataTableCell align="center" className="text-muted-foreground">
+                                                    <PlayerInfo alias={cap.author} size="md" className="justify-center" />
                                                 </DataTableCell>
                                             )}
                                             {isVisible('time') && (
-                                            <DataTableCell align="right">
-                                                <div className="flex items-center justify-end gap-2">
-                                                    {medalIcon && (
-                                                        <Tooltip content={cap.medal} side="top">
-                                                            <img
-                                                                src={medalIcon}
-                                                                alt={cap.medal}
-                                                                className="size-4 object-contain shrink-0 max-w-none"
-                                                            />
-                                                        </Tooltip>
-                                                    )}
-                                                    <CapTimeLink
-                                                        capId={cap.id}
-                                                        seconds={cap.time}
-                                                        onNavigate={() => onOpenChange(false)}
-                                                        className="font-mono font-black text-foreground/90 hover:text-foreground tracking-tight"
-                                                    />
-                                                </div>
-                                            </DataTableCell>
+                                                <DataTableCell align="center" className="font-mono text-sm text-muted-foreground">
+                                                    <div className="inline-flex items-center justify-center gap-2">
+                                                        {medalIcon && (
+                                                            <Tooltip content={cap.medal} side="top">
+                                                                <img
+                                                                    src={medalIcon}
+                                                                    alt={cap.medal}
+                                                                    className="size-4 object-contain shrink-0 max-w-none"
+                                                                />
+                                                            </Tooltip>
+                                                        )}
+                                                        <CapTimeLink
+                                                            capId={cap.id}
+                                                            seconds={cap.time}
+                                                            onNavigate={() => onOpenChange(false)}
+                                                            className="font-black text-foreground/90 hover:text-foreground tracking-tight"
+                                                        />
+                                                    </div>
+                                                </DataTableCell>
                                             )}
                                             {isVisible('capped') && (
-                                                <DataTableCell align="right">
+                                                <DataTableCell align="center" className="text-sm text-muted-foreground whitespace-nowrap">
                                                     <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest whitespace-nowrap">
                                                         {formatAddedDate(cap.added)}
                                                     </span>

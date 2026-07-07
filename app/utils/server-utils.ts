@@ -32,6 +32,57 @@ export interface ServerPreset {
     filters: ServerPresetFilters
 }
 
+export interface RecentServerEntry {
+    id: string
+    ip: string
+    hostport: number
+    hostname: string
+    lastJoinedAt: string
+}
+
+export const RECENT_SERVERS_STORAGE_KEY = 'utbt:recentServers:v1'
+const MAX_RECENT_SERVERS = 5
+
+export function readRecentServers(): RecentServerEntry[] {
+    try {
+        const raw = localStorage.getItem(RECENT_SERVERS_STORAGE_KEY)
+        if (!raw) return []
+        const parsed = JSON.parse(raw)
+        if (!Array.isArray(parsed)) return []
+        return parsed
+            .filter((row): row is RecentServerEntry => (
+                row &&
+                typeof row.id === 'string' &&
+                typeof row.ip === 'string' &&
+                typeof row.hostport === 'number' &&
+                typeof row.hostname === 'string' &&
+                typeof row.lastJoinedAt === 'string'
+            ))
+            .slice(0, MAX_RECENT_SERVERS)
+    } catch {
+        return []
+    }
+}
+
+export function rememberRecentServer(server: Pick<Server, 'id' | 'ip' | 'hostport' | 'hostname'>): RecentServerEntry[] {
+    const entry: RecentServerEntry = {
+        id: server.id,
+        ip: server.ip,
+        hostport: server.hostport,
+        hostname: server.hostname,
+        lastJoinedAt: new Date().toISOString(),
+    }
+    const next = [entry, ...readRecentServers().filter(s => s.id !== server.id)].slice(0, MAX_RECENT_SERVERS)
+    localStorage.setItem(RECENT_SERVERS_STORAGE_KEY, JSON.stringify(next))
+    return next
+}
+
+export function forgetRecentServer(serverId: string): RecentServerEntry[] {
+    const next = readRecentServers().filter(server => server.id !== serverId)
+    localStorage.setItem(RECENT_SERVERS_STORAGE_KEY, JSON.stringify(next))
+    return next
+}
+
 const TYPE_RANK: Record<ServerType, number> = {
     Certified: 0,
     Duel: 1,
