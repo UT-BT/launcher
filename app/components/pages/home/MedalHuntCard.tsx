@@ -3,6 +3,7 @@ import {
   ArrowDownWideNarrow,
   ArrowUpNarrowWide,
   BarChart3,
+  CalendarClock,
   ChevronLeft,
   ChevronRight,
   EyeOff,
@@ -14,7 +15,7 @@ import {
   Timer,
   TvMinimalPlay,
 } from 'lucide-react'
-import { fetchBestCaps, fetchMapsMetadata, type BestCap, type MapMetadata } from '@/app/utils/api'
+import { fetchBestCaps, fetchMapsMetadata, fetchWorldRecordsForMaps, type BestCap, type MapMetadata } from '@/app/utils/api'
 import { displayMapName, formatCapTime, formatDelta } from '@/app/utils/format'
 import { getMedalIcon } from '@/app/utils/medals'
 import { difficultyTextColor } from '@/app/utils/scoreColors'
@@ -52,12 +53,15 @@ interface Opportunity {
   targetMedal: TargetMedal
   improvement: number
   improvementPct: number
+  worldRecordAdded: string | null
+  worldRecordAddedTime: number
 }
 
 const CERTIFIED_CAP_TYPE = 2
 const WR_EPSILON_SECONDS = 0.0005
 const HIDDEN_STORAGE_KEY_PREFIX = 'utbt:homeMedalHuntHidden:v1'
 const ROW_HEIGHT_PX = 64
+const WR_DATE_BATCH_SIZE = 80
 
 const TARGET_MEDALS: TargetMedal[] = ['Bronze Medal', 'Silver Medal', 'Gold Medal', 'Champion Medal', 'World Record']
 const MEDAL_FILTER_ORDER: TargetMedal[] = [
@@ -83,7 +87,7 @@ const MEDAL_TONE: Record<TargetMedal, string> = {
 }
 
 type ImproveWindow = 'all' | '1' | '3' | '5' | '10' | '30'
-type SortField = 'improve' | 'medal' | 'rating'
+type SortField = 'improve' | 'medal' | 'rating' | 'date'
 type SortDir = 'asc' | 'desc'
 
 const IMPROVE_WINDOW_LABELS: Record<ImproveWindow, string> = {
@@ -133,7 +137,17 @@ function nextTarget(
   return null
 }
 
-function buildOpportunities(bestCaps: BestCap[], maps: MapMetadata[]): Opportunity[] {
+function parseDateTime(value: string | null | undefined): number {
+  if (!value) return 0
+  const time = new Date(value).getTime()
+  return Number.isFinite(time) ? time : 0
+}
+
+function buildOpportunities(
+  bestCaps: BestCap[],
+  maps: MapMetadata[],
+  worldRecordDatesByMap: Record<string, string | null> = {}
+): Opportunity[] {
   const mapsByName = new Map(maps.map((map) => [map.name, map]))
   const thresholdsByName = new Map(maps.map((map) => [map.name, getMedalThresholds(map)]))
 
@@ -156,6 +170,8 @@ function buildOpportunities(bestCaps: BestCap[], maps: MapMetadata[]): Opportuni
         targetMedal: target.targetMedal,
         improvement,
         improvementPct: improvement / cap.cap_time_seconds,
+        worldRecordAdded: worldRecordDatesByMap[cap.map] ?? null,
+        worldRecordAddedTime: parseDateTime(worldRecordDatesByMap[cap.map]),
       } satisfies Opportunity
     })
     .filter((item): item is Opportunity => item !== null)
@@ -229,8 +245,10 @@ export function MedalHuntCard({
   const [page, setPage] = useState(1)
   const [selectedMedals, setSelectedMedals] = useState<Set<TargetMedal>>(() => new Set(TARGET_MEDALS))
   const [improveWindow, setImproveWindow] = useState<ImproveWindow>('all')
-  const [sortField, setSortField] = useState<SortField>('improve')
-  const [sortDir, setSortDir] = useState<SortDir>('asc')
+  const [sortField, setSortField] = useState<SortField>('date')
+  const [sortDir, setSortDir] = useState<SortDir>('desc')
+  const [worldRecordDatesByMap, setWorldRecordDatesByMap] = useState<Record<string, string | null>>({})
+  const fetchedWorldRecordDateMapsRef = useRef<Set<string>>(new Set())
   const [hiddenMapNames, setHiddenMapNames] = useState<string[]>(() => readHiddenMapNames(userId))
   const [showHidden, setShowHidden] = useState(false)
   const [replayPickerMap, setReplayPickerMap] = useState<string | null>(null)
@@ -297,7 +315,54 @@ export function MedalHuntCard({
   }, [userId])
 
   const hiddenMaps = useMemo(() => new Set(hiddenMapNames), [hiddenMapNames])
-  const allOpportunities = useMemo(() => buildOpportunities(bestCaps, maps), [bestCaps, maps])
+  const baseOpportunities = useMemo(() => buildOpportunities(bestCaps, maps), [bestCaps, maps])
+
+  useEffect(() => {
+    fetchedWorldRecordDateMapsRef.current.clear()
+    setWorldRecordDatesByMap({})
+  }, [userId, refreshKey])
+
+  useEffect(() => {
+    if (!accessToken || baseOpportunities.length === 0) return
+
+    const fetched = fetchedWorldRecordDateMapsRef.current
+    const missing = baseOpportunities
+      .map((item) => item.mapName)
+      .filter((mapName, index, arr) => arr.indexOf(mapName) === index)
+      .filter((mapName) => !fetched.has(mapName))
+
+    if (missing.length === 0) return
+    missing.forEach((mapName) => fetched.add(mapName))
+
+    let cancelled = false
+    ;(async () => {
+      const additions: Record<string, string | null> = {}
+      for (let i = 0; i < missing.length; i += WR_DATE_BATCH_SIZE) {
+        const batch = missing.slice(i, i + WR_DATE_BATCH_SIZE)
+        try {
+          const records = await fetchWorldRecordsForMaps(accessToken, batch)
+          if (cancelled) return
+          for (const mapName of batch) additions[mapName] = null
+          for (const record of records) additions[record.map] = record.added ?? null
+        } catch (error) {
+          console.error('Failed to load Medal Hunt world record dates', error)
+          batch.forEach((mapName) => fetched.delete(mapName))
+        }
+      }
+      if (!cancelled && Object.keys(additions).length > 0) {
+        setWorldRecordDatesByMap((prev) => ({ ...prev, ...additions }))
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [accessToken, baseOpportunities, refreshKey])
+
+  const allOpportunities = useMemo(
+    () => buildOpportunities(bestCaps, maps, worldRecordDatesByMap),
+    [bestCaps, maps, worldRecordDatesByMap]
+  )
 
   const opportunities = useMemo(() => {
     const maxImprove = improveWindow === 'all' ? null : Number(improveWindow)
@@ -311,7 +376,9 @@ export function MedalHuntCard({
             ? MEDAL_RANK[a.targetMedal] - MEDAL_RANK[b.targetMedal]
             : sortField === 'rating'
               ? a.difficulty - b.difficulty
-              : a.improvement - b.improvement
+              : sortField === 'date'
+                ? a.worldRecordAddedTime - b.worldRecordAddedTime
+                : a.improvement - b.improvement
         const fallback = a.mapName.localeCompare(b.mapName)
         const value = sortValue === 0 ? fallback : sortValue
         return sortDir === 'asc' ? value : -value
@@ -373,6 +440,7 @@ export function MedalHuntCard({
 
   const updateSortField = (value: SortField) => {
     setSortField(value)
+    if (value === 'date') setSortDir('desc')
     setPage(1)
   }
 
@@ -694,6 +762,24 @@ function OpportunityHeader({
               </DropdownMenuLabel>
               <div className="flex w-full items-center gap-1.5 px-2 pb-2">
                 <div className="flex items-center gap-1.5">
+                  <Tooltip content="Recently Lost" side="top">
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        onSortFieldChange('date')
+                      }}
+                      aria-pressed={sortField === 'date'}
+                      className={cn(
+                        'inline-flex items-center justify-center size-8 rounded-md border transition-colors cursor-pointer',
+                        sortField === 'date'
+                          ? 'bg-red-500/15 border-red-500/40 text-red-300'
+                          : 'bg-card/70 border-hairline/10 text-muted-foreground hover:text-foreground hover:border-hairline/20'
+                      )}
+                    >
+                      <CalendarClock className="size-4" />
+                    </button>
+                  </Tooltip>
                   <Tooltip content="Improve Time" side="top">
                     <button
                       type="button"
