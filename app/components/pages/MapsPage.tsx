@@ -16,6 +16,7 @@ import {
 
 import { MapReviewsModal } from '@/app/components/modals/MapReviewsModal'
 import { ReplayPickerModal } from '@/app/components/modals/ReplayPickerModal'
+import { ReplayVideoPlayer } from '@/app/components/shared/ReplayVideoModal'
 import { openCap } from '@/app/components/shared/CapTimeLink'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
@@ -2476,15 +2477,7 @@ export function MapsPage({
                     </div>
                 }
             >
-                {videoModal && (
-                    <video
-                        key={videoModal.url}
-                        src={videoModal.url}
-                        controls
-                        autoPlay
-                        className="w-full aspect-video bg-black rounded"
-                    />
-                )}
+                {videoModal && <ReplayVideoPlayer url={videoModal.url} />}
             </Modal>
 
             <Modal

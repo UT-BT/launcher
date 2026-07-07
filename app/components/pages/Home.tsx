@@ -2,7 +2,9 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Activity, AlertTriangle, RefreshCw } from 'lucide-react'
 import {
     UserProfile, fetchSummary, fetchHotMaps, fetchNews, fetchNewsCategories,
+    fetchUserSummary, fetchMyAchievements, fetchAchievementDefinitions,
     Summary, SummaryWorldRecord, HotMap, NewsArticle, NewsCategoryDef,
+    UserSummary, AchievementProgress, AchievementDefinition,
 } from '@/app/utils/api'
 import { Button } from '@/app/components/ui/button'
 import { Modal } from '@/app/components/ui/modal'
@@ -13,6 +15,10 @@ import { useReplayWatch } from '@/app/hooks/useReplayWatch'
 import { useRefreshCooldown } from '@/app/hooks/useRefreshCooldown'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
 import type { Server } from '@/app/components/pages/ServerBrowserPage'
+import {
+    forgetRecentServer, readRecentServers, rememberRecentServer,
+    type RecentServerEntry,
+} from '@/app/utils/server-utils'
 
 import { SpotlightSection, type SectionAccent } from './home/SpotlightSection'
 import { CommunityStatsRow } from './home/CommunityStatsRow'
@@ -23,6 +29,10 @@ import { NewestMapsCard } from './home/NewestMapsCard'
 import { RecentCapsCard } from './home/RecentCapsCard'
 import { MapsToReviewCard } from './home/MapsToReviewCard'
 import { NewsCard } from './home/news/NewsCard'
+import { PersonalProgressSnapshot } from './home/PersonalProgressSnapshot'
+import { AchievementProgressPreview } from './home/AchievementProgressPreview'
+import { RecentServersCard } from './home/RecentServersCard'
+import { MedalHuntCard } from './home/MedalHuntCard'
 
 const NEWS_SEEN_KEY = 'utbt:newsSeen:v1'
 
@@ -33,10 +43,15 @@ const ACCENTS: Record<string, SectionAccent> = {
     news: { tick: 'bg-accent-400' },
     reviews: { tick: 'bg-orange-300' },
     caps: { tick: 'bg-amber-400' },
+    personal: { tick: 'bg-amber-400' },
+    medalHunt: { tick: 'bg-red-500 shadow-[0_0_10px_rgba(248,113,113,0.65)]' },
+    achievements: { tick: 'bg-emerald-400' },
+    recentServers: { tick: 'bg-violet-400' },
 }
 
 interface HomeProps {
     userProfile?: UserProfile
+    installationStatus?: 'valid' | 'no-install' | 'unsupported' | null
     favoriteMapNames: Set<string>
     onToggleFavorite: (mapName: string) => void
     onMapSelect?: (mapName: string) => void
@@ -56,7 +71,7 @@ const EMPTY_SUMMARY: Summary = {
 }
 
 export function Home({
-    userProfile, favoriteMapNames, onToggleFavorite, onMapSelect,
+    userProfile, installationStatus, favoriteMapNames, onToggleFavorite, onMapSelect,
     onViewServers, onViewMaps, onViewNewMaps, onViewWorldRecords, onViewPlayers, onViewNews,
 }: HomeProps) {
     const refreshCooldown = useRefreshCooldown()
@@ -64,13 +79,18 @@ export function Home({
     const [hotMaps, setHotMaps] = useState<HotMap[]>([])
     const [news, setNews] = useState<NewsArticle[]>([])
     const [newsCategories, setNewsCategories] = useState<NewsCategoryDef[]>([])
+    const [userSummary, setUserSummary] = useState<UserSummary | null>(null)
+    const [achievementProgress, setAchievementProgress] = useState<AchievementProgress[]>([])
+    const [achievementDefinitions, setAchievementDefinitions] = useState<AchievementDefinition[]>([])
     const [newsSeen] = useState<string | null>(() => localStorage.getItem(NEWS_SEEN_KEY))
     const [servers, setServers] = useState<Server[] | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [reviewOpen, setReviewOpen] = useState(false)
     const [historyOpen, setHistoryOpen] = useState(false)
+    const [launchError, setLaunchError] = useState<string | null>(null)
     const [activeReviewMap, setActiveReviewMap] = useState<string | null>(null)
+    const [recentServers, setRecentServers] = useState<RecentServerEntry[]>(() => readRecentServers())
     const [reviewsRefreshKey, setReviewsRefreshKey] = useState(0)
     const [refreshKey, setRefreshKey] = useState(0)
     const mountedRef = useRef(true)
@@ -82,12 +102,17 @@ export function Home({
         setLoading(true)
         setError(null)
         try {
-            const [summaryData, hotMapsData, newsData, newsCategoryData, serverData] = await Promise.all([
+            const [summaryData, hotMapsData, newsData, newsCategoryData, serverData, userSummaryData, achievementsData, achievementDefsData] = await Promise.all([
                 fetchSummary(userProfile.accessToken),
                 fetchHotMaps(userProfile.accessToken).catch(() => [] as HotMap[]),
                 fetchNews(userProfile.accessToken).catch(() => [] as NewsArticle[]),
                 fetchNewsCategories(userProfile.accessToken).catch(() => [] as NewsCategoryDef[]),
                 window.conveyor.game.fetchServers().catch(() => [] as Server[]) as Promise<Server[]>,
+                userProfile.id
+                    ? fetchUserSummary(userProfile.accessToken, userProfile.id).catch(() => null as UserSummary | null)
+                    : Promise.resolve(null),
+                fetchMyAchievements(userProfile.accessToken).then(data => data.items).catch(() => [] as AchievementProgress[]),
+                fetchAchievementDefinitions(userProfile.accessToken).catch(() => [] as AchievementDefinition[]),
             ])
             if (!isActive()) return
             setSummary(summaryData)
@@ -95,6 +120,9 @@ export function Home({
             setNews(newsData)
             setNewsCategories(newsCategoryData)
             setServers(serverData)
+            setUserSummary(userSummaryData)
+            setAchievementProgress(achievementsData)
+            setAchievementDefinitions(achievementDefsData)
             window.dispatchEvent(new CustomEvent('summary-badges', {
                 detail: {
                     maps: {
@@ -114,7 +142,7 @@ export function Home({
         } finally {
             if (isActive()) setLoading(false)
         }
-    }, [userProfile?.accessToken])
+    }, [userProfile?.accessToken, userProfile?.id])
 
     useEffect(() => {
         if (!userProfile?.accessToken) {
@@ -162,8 +190,33 @@ export function Home({
         })
     }
 
-    const newsFeed = useMemo(() => news.slice(0, 3), [news])
+    const handleJoinServer = async (server: Server | RecentServerEntry, asSpectator: boolean) => {
+        try {
+            if (window.conveyor?.ini) {
+                if (asSpectator) {
+                    await window.conveyor.ini.writeIniValue('User.ini', 'DefaultPlayer', 'OverrideClass', 'Botpack.CHSpectator')
+                } else {
+                    const currentClass = await window.conveyor.ini.readIniValue('User.ini', 'DefaultPlayer', 'Class')
+                    if (currentClass === 'Botpack.CHSpectator') {
+                        await window.conveyor.ini.writeIniValue('User.ini', 'DefaultPlayer', 'Class', '')
+                    }
+                    await window.conveyor.ini.writeIniValue('User.ini', 'DefaultPlayer', 'OverrideClass', '')
+                }
+            }
+            await window.conveyor.game.launchGame(server.ip, server.hostport)
+            setRecentServers(rememberRecentServer(server))
+        } catch (err) {
+            console.error('Failed to launch game:', err)
+            setLaunchError(err instanceof Error ? err.message : 'Failed to launch the game.')
+        }
+    }
+
+    const newsFeed = useMemo(() => news.slice(0, 5), [news])
     const newsCategoryMap = useMemo(() => new Map(newsCategories.map(c => [c.key, c])), [newsCategories])
+    const achievementDefinitionMap = useMemo(
+        () => new Map(achievementDefinitions.map(d => [d.code, d])),
+        [achievementDefinitions],
+    )
 
     useEffect(() => {
         if (news.length === 0) return
@@ -222,7 +275,7 @@ export function Home({
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-0 duration-500 pb-12 pt-2">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
                 <YouDoorway
-                    className="lg:col-span-5"
+                    className="lg:col-span-6"
                     userId={userProfile.id ?? undefined}
                     alias={userProfile.alias}
                     title={userProfile.active_title ?? null}
@@ -230,7 +283,7 @@ export function Home({
                     refreshKey={refreshKey}
                 />
                 <CommunityStatsRow
-                    className="lg:col-span-7"
+                    className="lg:col-span-6"
                     accessToken={userProfile.accessToken}
                     playersOnline={playersOnline}
                     newMaps={data.global.newMaps}
@@ -242,24 +295,90 @@ export function Home({
                 />
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
-                <div className="lg:col-span-5 space-y-4">
+            <div className="space-y-4">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
                     {newsFeed.length > 0 && (
                         <SpotlightSection
                             title="Latest News"
                             accent={ACCENTS.news}
                             actionLabel={onViewNews ? 'See All' : undefined}
                             onAction={onViewNews}
+                            className="lg:col-span-6"
                         >
-                            <NewsCard articles={newsFeed} categories={newsCategoryMap} newSince={newsSeen} />
+                            <NewsCard
+                                articles={newsFeed}
+                                categories={newsCategoryMap}
+                                newSince={newsSeen}
+                                className="grid grid-cols-1 md:grid-cols-1 gap-3 space-y-0 overflow-y-auto pr-1 [scrollbar-width:thin] [scrollbar-color:rgba(148,163,184,0.25)_transparent] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-hairline/20"
+                            />
                         </SpotlightSection>
                     )}
 
+                    <SpotlightSection
+                        title="Your Recent Servers"
+                        accent={ACCENTS.recentServers}
+                        actionLabel="See All"
+                        onAction={onViewServers}
+                        className="lg:col-span-6"
+                    >
+                        <RecentServersCard
+                            recentServers={recentServers}
+                            liveServers={servers ?? []}
+                            installationStatus={installationStatus}
+                            onJoin={handleJoinServer}
+                            onHide={(serverId) => setRecentServers(forgetRecentServer(serverId))}
+                        />
+                    </SpotlightSection>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+                    <SpotlightSection title="Your Progress" accent={ACCENTS.personal} className="lg:col-span-6">
+                        <PersonalProgressSnapshot summary={userSummary} />
+                    </SpotlightSection>
+                    <SpotlightSection title="Achievement Progress" accent={ACCENTS.achievements} className="lg:col-span-6">
+                        <AchievementProgressPreview
+                            achievements={achievementProgress}
+                            definitions={achievementDefinitionMap}
+                        />
+                    </SpotlightSection>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+                    <SpotlightSection title="Medal Hunt" accent={ACCENTS.medalHunt} className="lg:col-span-6">
+                        <MedalHuntCard
+                            accessToken={userProfile.accessToken}
+                            userId={userProfile.id}
+                            refreshKey={refreshKey}
+                            favoriteMapNames={favoriteMapNames}
+                            onToggleFavorite={onToggleFavorite}
+                            onMapSelect={onMapSelect}
+                        />
+                    </SpotlightSection>
+                    {hotMaps.length > 0 && (
+                        <SpotlightSection
+                            title="Hottest Maps"
+                            accent={ACCENTS.hotMaps}
+                            actionLabel={onViewMaps ? 'See All' : undefined}
+                            onAction={onViewMaps}
+                            className="lg:col-span-6"
+                        >
+                            <HottestPosterGrid
+                                maps={hotMaps}
+                                favoriteMapNames={favoriteMapNames}
+                                onToggleFavorite={onToggleFavorite}
+                                onMapSelect={onMapSelect}
+                            />
+                        </SpotlightSection>
+                    )}
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
                     <SpotlightSection
                         title="Newest Maps"
                         accent={ACCENTS.newMaps}
                         actionLabel={onViewMaps ? 'See All' : undefined}
                         onAction={onViewMaps}
+                        className="lg:col-span-6"
                     >
                         <NewestMapsCard
                             maps={newMaps}
@@ -268,8 +387,7 @@ export function Home({
                             onMapSelect={onMapSelect}
                         />
                     </SpotlightSection>
-
-                    <SpotlightSection title="Maps to Review" accent={ACCENTS.reviews}>
+                    <SpotlightSection title="Maps to Review" accent={ACCENTS.reviews} className="lg:col-span-6">
                         <MapsToReviewCard
                             accessToken={userProfile.accessToken}
                             refreshKey={reviewsRefreshKey}
@@ -281,28 +399,13 @@ export function Home({
                     </SpotlightSection>
                 </div>
 
-                <div className="lg:col-span-7 space-y-4">
-                    {hotMaps.length > 0 && (
-                        <SpotlightSection
-                            title="Hottest Maps"
-                            accent={ACCENTS.hotMaps}
-                            actionLabel={onViewMaps ? 'See All' : undefined}
-                            onAction={onViewMaps}
-                        >
-                            <HottestPosterGrid
-                                maps={hotMaps}
-                                favoriteMapNames={favoriteMapNames}
-                                onToggleFavorite={onToggleFavorite}
-                                onMapSelect={onMapSelect}
-                            />
-                        </SpotlightSection>
-                    )}
-
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
                     <SpotlightSection
                         title="Latest World Records"
                         accent={ACCENTS.worldRecords}
                         actionLabel={onViewWorldRecords ? 'See All' : undefined}
                         onAction={onViewWorldRecords}
+                        className="lg:col-span-6"
                     >
                         <LatestRecordsCard
                             records={recentWRs}
@@ -320,6 +423,7 @@ export function Home({
                         accent={ACCENTS.caps}
                         actionLabel="See More"
                         onAction={() => setHistoryOpen(true)}
+                        className="lg:col-span-6"
                     >
                         <RecentCapsCard
                             caps={data.achievements}
@@ -369,6 +473,16 @@ export function Home({
                 offsetSidebar
             >
                 <p className="text-sm text-muted-foreground">{replay.error}</p>
+            </Modal>
+
+            <Modal
+                isOpen={launchError !== null}
+                onClose={() => setLaunchError(null)}
+                title="Launch Error"
+                className="w-[95%] sm:w-[440px] max-w-md"
+                offsetSidebar
+            >
+                <p className="text-sm text-muted-foreground">{launchError}</p>
             </Modal>
         </div>
     )

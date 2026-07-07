@@ -1619,6 +1619,7 @@ export interface LeaderboardEntry {
     cap_type: number
     verified: boolean
     id: string
+    team?: number | null
     active_title?: ActiveTitle | null
 }
 

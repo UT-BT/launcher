@@ -3,6 +3,7 @@ import { Share2, Check } from 'lucide-react'
 import { Modal } from '@/app/components/ui/modal'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import { formatCapTime, displayMapName } from '@/app/utils/format'
+import { loadReplayVideoVolume, saveReplayVideoVolume } from '@/app/utils/replayVideoVolume'
 import { cn } from '@/lib/utils'
 
 export interface ReplayVideoState {
@@ -25,6 +26,30 @@ function buildTitle(s: ReplayVideoState | null): string {
         return `Replay — ${formatCapTime(s.time)} by ${s.alias} on ${cleanMap}`
     }
     return `Replay — ${cleanMap}`
+}
+
+export function ReplayVideoPlayer({ url, className }: { url: string; className?: string }) {
+    const videoRef = useRef<HTMLVideoElement>(null)
+
+    useEffect(() => {
+        const el = videoRef.current
+        if (!el) return
+        el.volume = loadReplayVideoVolume()
+        const onVolumeChange = () => saveReplayVideoVolume(el.volume)
+        el.addEventListener('volumechange', onVolumeChange)
+        return () => el.removeEventListener('volumechange', onVolumeChange)
+    }, [url])
+
+    return (
+        <video
+            ref={videoRef}
+            key={url}
+            src={url}
+            controls
+            autoPlay
+            className={className ?? 'w-full aspect-video bg-black rounded'}
+        />
+    )
 }
 
 export function ReplayVideoModal({ state, onClose, leftAction }: ReplayVideoModalProps) {
@@ -88,15 +113,7 @@ export function ReplayVideoModal({ state, onClose, leftAction }: ReplayVideoModa
                 </div>
             }
         >
-            {state && (
-                <video
-                    key={state.url}
-                    src={state.url}
-                    controls
-                    autoPlay
-                    className="w-full aspect-video bg-black rounded"
-                />
-            )}
+            {state && <ReplayVideoPlayer url={state.url} />}
         </Modal>
     )
 }

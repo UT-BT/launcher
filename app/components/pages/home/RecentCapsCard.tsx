@@ -17,10 +17,10 @@ type CapColumnId = 'map' | 'holder' | 'time' | 'when' | 'replay'
 
 const CAP_COLUMNS: ResponsiveColumn[] = [
     { id: 'map', required: true },
-    { id: 'holder', width: '32%', priority: 30 },
-    { id: 'time', width: '110px', priority: 70 },
-    { id: 'when', width: '84px', priority: 20 },
-    { id: 'replay', width: '52px', priority: 10 },
+    { id: 'holder', width: '8rem', priority: 20 },
+    { id: 'time', width: '6rem', priority: 70, required: true },
+    { id: 'when', width: '6rem', priority: 30 },
+    { id: 'replay', width: '4rem', priority: 40 },
 ]
 
 interface RecentCapsCardProps {
@@ -62,11 +62,11 @@ export function RecentCapsCard({
             responsive={{ columns: CAP_COLUMNS, onResolve: handleResolve }}
         >
             <DataTableHeaderRow>
-                <DataTableHeaderCell>Map</DataTableHeaderCell>
-                {isVisible('holder') && <DataTableHeaderCell width="32%"></DataTableHeaderCell>}
-                {isVisible('time') && <DataTableHeaderCell width="110px" align="right">Time</DataTableHeaderCell>}
-                {isVisible('when') && <DataTableHeaderCell width="84px" align="right">When</DataTableHeaderCell>}
-                {isVisible('replay') && <DataTableHeaderCell width="52px" align="center" />}
+                <DataTableHeaderCell align="center" width="18rem">Map</DataTableHeaderCell>
+                {isVisible('holder') && <DataTableHeaderCell align="center" width="7rem"></DataTableHeaderCell>}
+                {isVisible('time') && <DataTableHeaderCell align="center" width="6rem">Time</DataTableHeaderCell>}
+                {isVisible('when') && <DataTableHeaderCell align="center" width="4rem">When</DataTableHeaderCell>}
+                {isVisible('replay') && <DataTableHeaderCell align="center" width="3rem" />}
             </DataTableHeaderRow>
             <tbody>
                 {rows.map(cap => {
@@ -87,17 +87,19 @@ export function RecentCapsCard({
                             </DataTableCell>
                             {isVisible('holder') && (
                                 <DataTableCell>
-                                    <PlayerInfo
-                                        userId={playerUserId ?? undefined}
-                                        alias={playerAlias}
-                                        title={playerTitle ?? null}
-                                        size="sm"
-                                    />
+                                    <div className="flex justify-center">
+                                        <PlayerInfo
+                                            userId={playerUserId ?? undefined}
+                                            alias={playerAlias}
+                                            title={playerTitle ?? null}
+                                            size="sm"
+                                            />
+                                    </div>
                                 </DataTableCell>
                             )}
                             {isVisible('time') && (
-                                <DataTableCell align="right">
-                                    <div className="flex items-center justify-end gap-1.5">
+                                <DataTableCell align="center">
+                                    <div className="flex items-center justify-center gap-1.5">
                                         {medalIcon && <img src={medalIcon} alt={cap.medal} className="size-3.5 shrink-0" />}
                                         <CapTimeLink
                                             capId={cap.id}
@@ -108,7 +110,7 @@ export function RecentCapsCard({
                                 </DataTableCell>
                             )}
                             {isVisible('when') && (
-                                <DataTableCell align="right">
+                                <DataTableCell align="center">
                                     <span className="text-xs text-muted-foreground tabular-nums">{cap.timeAgo}</span>
                                 </DataTableCell>
                             )}

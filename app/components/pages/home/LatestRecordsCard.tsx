@@ -15,10 +15,10 @@ type RecordColumnId = 'map' | 'holder' | 'time' | 'when' | 'replay'
 
 const RECORD_COLUMNS: ResponsiveColumn[] = [
     { id: 'map', required: true },
-    { id: 'holder', width: '32%', priority: 30 },
-    { id: 'time', width: '110px', priority: 70 },
-    { id: 'when', width: '84px', priority: 20 },
-    { id: 'replay', width: '52px', priority: 10 },
+    { id: 'holder', width: '8rem', priority: 30, required: true },
+    { id: 'time', width: '5rem', priority: 70, required: true },
+    { id: 'when', width: '4rem', priority: 10 },
+    { id: 'replay', width: '3rem', priority: 20 },
 ]
 
 interface LatestRecordsCardProps {
@@ -58,11 +58,11 @@ export function LatestRecordsCard({
             responsive={{ columns: RECORD_COLUMNS, onResolve: handleResolve }}
         >
             <DataTableHeaderRow>
-                <DataTableHeaderCell>Map</DataTableHeaderCell>
-                {isVisible('holder') && <DataTableHeaderCell width="32%">Holder</DataTableHeaderCell>}
-                {isVisible('time') && <DataTableHeaderCell width="110px" align="right">Time</DataTableHeaderCell>}
-                {isVisible('when') && <DataTableHeaderCell width="84px" align="right">When</DataTableHeaderCell>}
-                {isVisible('replay') && <DataTableHeaderCell width="52px" align="center" />}
+                <DataTableHeaderCell align="center" width="14rem">Map</DataTableHeaderCell>
+                {isVisible('holder') && <DataTableHeaderCell align="center" width="9rem">Holder</DataTableHeaderCell>}
+                {isVisible('time') && <DataTableHeaderCell align="center" width="5rem">Time</DataTableHeaderCell>}
+                {isVisible('when') && <DataTableHeaderCell align="center" width="4rem">When</DataTableHeaderCell>}
+                {isVisible('replay') && <DataTableHeaderCell align="center" width="3rem" />}
             </DataTableHeaderRow>
             <tbody>
                 {rows.map(r => {
@@ -94,29 +94,35 @@ export function LatestRecordsCard({
                                 </DataTableCell>
                             )}
                             {isVisible('time') && (
-                                <DataTableCell align="right">
-                                    <CapTimeLink
-                                        capId={r.id}
-                                        seconds={r.time}
-                                        className="font-mono tabular-nums font-bold text-blue-300"
-                                    />
+                                <DataTableCell align="center">
+                                    <div className="flex justify-center">
+                                        <CapTimeLink
+                                            capId={r.id}
+                                            seconds={r.time}
+                                            className="font-mono tabular-nums font-bold text-blue-300"
+                                        />
+                                    </div>
                                 </DataTableCell>
                             )}
                             {isVisible('when') && (
-                                <DataTableCell align="right">
-                                    <span className="text-xs text-muted-foreground tabular-nums">{r.timeAgo}</span>
+                                <DataTableCell>
+                                    <div className="flex justify-center">
+                                        <span className="text-xs text-muted-foreground tabular-nums">{r.timeAgo}</span>
+                                    </div>
                                 </DataTableCell>
                             )}
                             {isVisible('replay') && (
                                 <DataTableCell align="center">
-                                    <IconActionButton
-                                        variant="replay"
-                                        icon={Play}
-                                        iconFill
-                                        tooltip="Watch replay"
-                                        loading={loadingCapId === r.id}
-                                        onClick={() => onWatchReplay(r)}
-                                    />
+                                    <div className="flex justify-center">
+                                        <IconActionButton
+                                            variant="replay"
+                                            icon={Play}
+                                            iconFill
+                                            tooltip="Watch replay"
+                                            loading={loadingCapId === r.id}
+                                            onClick={() => onWatchReplay(r)}
+                                            />
+                                    </div>
                                 </DataTableCell>
                             )}
                         </DataTableRow>

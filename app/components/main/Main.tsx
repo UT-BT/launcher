@@ -480,6 +480,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
       case 'home':
         return <Home
           userProfile={userProfile as any}
+          installationStatus={installationStatus}
           favoriteMapNames={favoriteMapNames}
           onToggleFavorite={toggleFavorite}
           onMapSelect={openMap}

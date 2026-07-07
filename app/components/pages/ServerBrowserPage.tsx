@@ -16,7 +16,7 @@ import { useLogger } from '@/app/hooks/use-logger'
 import {
     CapacityValue, DEFAULT_FILTERS, FilterState, ServerPreset, ServerPresetFilters,
     ServerSortField, ServerType, SortDir, filterServers, getGameStatusText, getRegionFlag,
-    getServerRegion, getServerType, sortServers, trimServerName,
+    getServerRegion, getServerType, rememberRecentServer, sortServers, trimServerName,
 } from '@/app/utils/server-utils'
 import { ErrorModal } from '@/app/components/ErrorModal'
 import { Tooltip } from '@/app/components/ui/tooltip'
@@ -529,6 +529,7 @@ export function ServerBrowserPage({
                 }
             }
             await window.conveyor.game.launchGame(server.ip, server.hostport)
+            rememberRecentServer(server)
         } catch (err) {
             logger.error('Failed to launch game', { error: err })
             setLaunchError(err instanceof Error ? err.message : 'An unknown error occurred while trying to launch the game.')
