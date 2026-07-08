@@ -354,22 +354,20 @@ export function Home({
                             onMapSelect={onMapSelect}
                         />
                     </SpotlightSection>
-                    {hotMaps.length > 0 && (
-                        <SpotlightSection
-                            title="Hottest Maps"
-                            accent={ACCENTS.hotMaps}
-                            actionLabel={onViewMaps ? 'See All' : undefined}
-                            onAction={onViewMaps}
-                            className="lg:col-span-6"
-                        >
-                            <HottestPosterGrid
-                                maps={hotMaps}
-                                favoriteMapNames={favoriteMapNames}
-                                onToggleFavorite={onToggleFavorite}
-                                onMapSelect={onMapSelect}
-                            />
-                        </SpotlightSection>
-                    )}
+                    <SpotlightSection
+                        title="Hottest Maps"
+                        accent={ACCENTS.hotMaps}
+                        actionLabel={onViewMaps ? 'See All' : undefined}
+                        onAction={onViewMaps}
+                        className="lg:col-span-6"
+                    >
+                        <HottestPosterGrid
+                            maps={hotMaps}
+                            favoriteMapNames={favoriteMapNames}
+                            onToggleFavorite={onToggleFavorite}
+                            onMapSelect={onMapSelect}
+                        />
+                    </SpotlightSection>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">

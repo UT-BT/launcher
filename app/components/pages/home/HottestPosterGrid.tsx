@@ -1,4 +1,4 @@
-import { Clock, Eye } from 'lucide-react'
+import { Clock, Eye, Flame } from 'lucide-react'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
 import { cn } from '@/lib/utils'
@@ -21,7 +21,14 @@ function formatDuration(seconds: number): string {
 }
 
 export function HottestPosterGrid({ maps, favoriteMapNames, onToggleFavorite, onMapSelect, limit = 6 }: HottestPosterGridProps) {
-    if (maps.length === 0) return null
+    if (maps.length === 0) {
+        return (
+            <div className="bg-card/30 border border-hairline/5 rounded-xl flex flex-col items-center justify-center gap-2 py-8 text-center">
+                <Flame className="size-6 text-accent-300/70" />
+                <p className="text-xs text-muted-foreground">Map activity will show up here once people start playing.</p>
+            </div>
+        )
+    }
 
     const tiles = maps.slice(0, limit)
 

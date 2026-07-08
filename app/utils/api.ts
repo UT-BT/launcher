@@ -2130,7 +2130,7 @@ export async function fetchHotMaps(accessToken: string): Promise<HotMap[]> {
     })
     if (!response.ok) throw new Error('Failed to fetch hot maps')
     const json = await response.json()
-    return json.data
+    return Array.isArray(json.data) ? json.data : []
 }
 
 export interface PendingReview {
