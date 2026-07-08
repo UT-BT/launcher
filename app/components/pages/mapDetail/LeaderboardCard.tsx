@@ -1,10 +1,11 @@
 import { useCallback, useMemo, useState } from 'react'
-import { Play, Download, MessageSquareOff } from 'lucide-react'
+import { Play, Download, MessageSquareOff, ShieldCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useNavState } from '@/app/components/navigation/useNavState'
-import { formatAddedDate } from '@/app/utils/format'
+import { formatAddedDate, formatCapTime } from '@/app/utils/format'
 import { getMedalIcon } from '@/app/utils/medals'
 import { getTeamDisplay } from '@/app/utils/team'
+import { medalIconForInt, medalLabelForInt } from '@/app/components/pages/capDetail/capStats'
 import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
 import { computeMedalTier, TIER_LABELS, type MedalTier } from '@/app/components/pages/MapsPage'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
@@ -27,7 +28,7 @@ import {
     type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
 import { PaginationBar } from '@/app/components/ui/pagination'
-import type { LeaderboardEntry, MapMetadata } from '@/app/utils/api'
+import type { LeaderboardEntry, TeamLeaderboardEntry, MapMetadata } from '@/app/utils/api'
 
 type Tab = 'verified' | 'certified' | 'all'
 type SortField = 'rank' | 'player' | 'time' | 'date'
@@ -35,11 +36,27 @@ type SortDir = 'asc' | 'desc'
 
 interface LeaderboardCardProps {
     leaderboard: LeaderboardEntry[]
+    teamLeaderboard?: TeamLeaderboardEntry[]
+    requiredPlayers?: number | null
     map: MapMetadata | null
     loading: boolean
     currentUserId?: string | number
     wrCapId?: string | null
     onShowWrHistory?: () => void
+}
+
+export function LeaderboardCard(props: LeaderboardCardProps) {
+    const isTeam = props.requiredPlayers != null && props.requiredPlayers > 1
+    if (isTeam) {
+        return (
+            <TeamLeaderboardTable
+                teamLeaderboard={props.teamLeaderboard ?? []}
+                loading={props.loading}
+                currentUserId={props.currentUserId}
+            />
+        )
+    }
+    return <SoloLeaderboardTable {...props} />
 }
 
 const TABS: { value: Tab; label: string }[] = [
@@ -73,7 +90,7 @@ const COLUMN_PRIORITY: Partial<Record<LeaderboardColumnId, number>> = {
 
 const REQUIRED_COLUMNS = new Set<LeaderboardColumnId>(['player', 'rank', 'time'])
 
-export function LeaderboardCard({
+function SoloLeaderboardTable({
     leaderboard, map, loading, currentUserId, wrCapId, onShowWrHistory,
 }: LeaderboardCardProps) {
     const [tab, setTab] = useNavState<Tab>('leaderboard.tab', 'verified')
@@ -397,6 +414,236 @@ export function LeaderboardCard({
                 state={demoDownload.download}
                 onClose={demoDownload.clear}
             />
+        </div>
+    )
+}
+
+type TeamTab = 'verified' | 'all'
+type TeamSortField = 'rank' | 'time' | 'date'
+
+const TEAM_TABS: { value: TeamTab; label: string }[] = [
+    { value: 'verified', label: 'Verified' },
+    { value: 'all', label: 'All' },
+]
+
+interface TeamLeaderboardTableProps {
+    teamLeaderboard: TeamLeaderboardEntry[]
+    loading: boolean
+    currentUserId?: string | number
+}
+
+function TeamLeaderboardTable({ teamLeaderboard, loading, currentUserId }: TeamLeaderboardTableProps) {
+    const [tab, setTab] = useNavState<TeamTab>('teamLeaderboard.tab', 'verified')
+    const [sortBy, setSortBy] = useNavState<TeamSortField>('teamLeaderboard.sortBy', 'rank')
+    const [sortDir, setSortDir] = useNavState<SortDir>('teamLeaderboard.sortDir', 'asc')
+    const [page, setPage] = useNavState('teamLeaderboard.page', 1)
+    const [pageSize, setPageSize] = useNavState('teamLeaderboard.pageSize', 10)
+
+    const filtered = useMemo(() => {
+        if (tab === 'verified') return teamLeaderboard.filter(e => e.verified)
+        return teamLeaderboard
+    }, [teamLeaderboard, tab])
+
+    const ranked = useMemo(() => {
+        const byTime = [...filtered].sort((a, b) => a.cap_time_seconds - b.cap_time_seconds)
+        return byTime.map((entry, i) => ({ entry, rank: i + 1 }))
+    }, [filtered])
+
+    const sorted = useMemo(() => {
+        const arr = [...ranked]
+        arr.sort((a, b) => {
+            let cmp = 0
+            switch (sortBy) {
+                case 'rank':
+                    cmp = a.rank - b.rank
+                    break
+                case 'time':
+                    cmp = a.entry.cap_time_seconds - b.entry.cap_time_seconds
+                    break
+                case 'date':
+                    cmp = new Date(a.entry.added).getTime() - new Date(b.entry.added).getTime()
+                    break
+            }
+            return sortDir === 'asc' ? cmp : -cmp
+        })
+        return arr
+    }, [ranked, sortBy, sortDir])
+
+    const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
+    const safePage = Math.min(page, totalPages)
+    const pageRows = sorted.slice((safePage - 1) * pageSize, safePage * pageSize)
+
+    const handleSort = (field: TeamSortField) => {
+        if (sortBy === field) {
+            setSortDir(sortDir === 'asc' ? 'desc' : 'asc')
+        } else {
+            setSortBy(field)
+            setSortDir('asc')
+        }
+        setPage(1)
+    }
+
+    const dir = (field: TeamSortField): 'asc' | 'desc' | null => (sortBy === field ? sortDir : null)
+
+    return (
+        <div className="bg-card/30 border border-hairline/5 rounded-xl flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-hairline/5">
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
+                    Team Leaderboard
+                </div>
+                <div className="flex items-center gap-1">
+                    {TEAM_TABS.map(t => (
+                        <button
+                            key={t.value}
+                            type="button"
+                            onClick={() => { setTab(t.value); setPage(1) }}
+                            className={cn(
+                                'h-7 px-3 rounded-md text-xs font-medium border transition-colors cursor-pointer',
+                                tab === t.value
+                                    ? 'bg-accent-500/20 border-accent-500/50 text-accent-200'
+                                    : 'bg-card/50 border-hairline/10 text-muted-foreground hover:text-foreground hover:border-hairline/20',
+                            )}
+                        >
+                            {t.label}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            <div className="flex flex-col">
+                <DataTableShell
+                    className="!flex-none !min-h-0 !overflow-x-auto !rounded-none !border-0"
+                    minWidth="40rem"
+                >
+                    <DataTableHeaderRow>
+                        <DataTableHeaderCell
+                            sortable
+                            sortDirection={dir('rank')}
+                            onSort={() => handleSort('rank')}
+                            width="4rem"
+                            align="right"
+                        >
+                            #
+                        </DataTableHeaderCell>
+                        <DataTableHeaderCell>Team</DataTableHeaderCell>
+                        <DataTableHeaderCell align="center" width="3rem"><span className="sr-only">Medal</span></DataTableHeaderCell>
+                        <DataTableHeaderCell
+                            sortable
+                            sortDirection={dir('time')}
+                            onSort={() => handleSort('time')}
+                            align="right"
+                            width="8rem"
+                        >
+                            Team Time
+                        </DataTableHeaderCell>
+                        <DataTableHeaderCell align="center" width="7rem">Status</DataTableHeaderCell>
+                        <DataTableHeaderCell
+                            sortable
+                            sortDirection={dir('date')}
+                            onSort={() => handleSort('date')}
+                            align="right"
+                            width="8rem"
+                        >
+                            Date
+                        </DataTableHeaderCell>
+                    </DataTableHeaderRow>
+                    <tbody>
+                        {loading ? (
+                            Array.from({ length: 5 }).map((_, i) => (
+                                <DataTableSkeletonRow key={i} columnCount={6} />
+                            ))
+                        ) : pageRows.length === 0 ? (
+                            <DataTableEmpty colSpan={6} message="No team runs yet." />
+                        ) : (
+                            pageRows.map(({ entry, rank }) => {
+                                const medalIcon = medalIconForInt(entry.medal)
+                                const medalLabel = medalLabelForInt(entry.medal)
+                                const isOwn = currentUserId != null && entry.members.some(m => String(m.user) === String(currentUserId))
+                                const exactTimestamp = (() => {
+                                    const d = new Date(entry.added)
+                                    return isNaN(d.getTime()) ? entry.added : d.toLocaleString()
+                                })()
+                                return (
+                                    <DataTableRow key={entry.id} className={cn(isOwn && 'bg-emerald-500/[0.05]')}>
+                                        <DataTableCell align="right">
+                                            <span className="text-xs font-bold font-mono text-muted-foreground tabular-nums">
+                                                #{rank}
+                                            </span>
+                                        </DataTableCell>
+                                        <DataTableCell>
+                                            <div className="flex flex-col gap-1.5 py-0.5 min-w-0">
+                                                {entry.members.map(member => (
+                                                    <div key={member.cap_id} className="flex items-center gap-1.5 min-w-0">
+                                                        <PlayerInfo
+                                                            userId={member.user}
+                                                            alias={member.alias}
+                                                            size="sm"
+                                                            highlight={currentUserId != null && String(member.user) === String(currentUserId)}
+                                                        />
+                                                        {!member.verified && (
+                                                            <span className="text-[9px] uppercase tracking-wider text-amber-300/80">
+                                                                pending demo
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </DataTableCell>
+                                        <DataTableCell align="center">
+                                            {medalIcon && (
+                                                <Tooltip content={medalLabel} side="top">
+                                                    <img src={medalIcon} alt={medalLabel} className="size-4 inline-block shrink-0 object-contain max-w-none" />
+                                                </Tooltip>
+                                            )}
+                                        </DataTableCell>
+                                        <DataTableCell align="right">
+                                            <span className={cn(
+                                                'text-sm font-mono tabular-nums font-bold',
+                                                rank === 1 ? 'text-red-300' : 'text-foreground',
+                                            )}>
+                                                {formatCapTime(entry.cap_time_seconds)}
+                                            </span>
+                                        </DataTableCell>
+                                        <DataTableCell align="center">
+                                            <span className={cn(
+                                                'inline-flex items-center gap-1 h-6 px-2 rounded-md border text-[11px] font-semibold',
+                                                entry.verified
+                                                    ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
+                                                    : 'bg-hairline/5 border-hairline/10 text-muted-foreground',
+                                            )}>
+                                                <ShieldCheck className="size-3" />
+                                                {entry.verified ? 'Verified' : 'Pending'}
+                                            </span>
+                                        </DataTableCell>
+                                        <DataTableCell align="right">
+                                            <Tooltip content={exactTimestamp} side="top">
+                                                <span className="text-xs text-muted-foreground tabular-nums">
+                                                    {formatAddedDate(entry.added)}
+                                                </span>
+                                            </Tooltip>
+                                        </DataTableCell>
+                                    </DataTableRow>
+                                )
+                            })
+                        )}
+                    </tbody>
+                </DataTableShell>
+
+                {!loading && sorted.length > 0 && (
+                    <div className="px-4 py-3 border-t border-hairline/5">
+                        <PaginationBar
+                            page={safePage}
+                            totalPages={totalPages}
+                            pageSize={pageSize}
+                            totalForCount={sorted.length}
+                            pageSizePreference={pageSize}
+                            autoPageSize={pageSize}
+                            onPageChange={setPage}
+                            onPageSizeChange={(pref) => setPageSize(pref === 'auto' ? 10 : pref)}
+                        />
+                    </div>
+                )}
+            </div>
         </div>
     )
 }

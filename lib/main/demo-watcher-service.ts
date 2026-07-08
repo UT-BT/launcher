@@ -1,11 +1,12 @@
 import chokidar, { FSWatcher, type ChokidarOptions } from 'chokidar'
 import { join } from 'path'
 import { loggingService } from '@/lib/main/logging-service'
-import { getUt99InstallPath, getDemoWatcherConfig, getAuthConfig } from '@/lib/main/config'
+import { getUt99InstallPath, getDemoWatcherConfig, getAuthConfig, type DemoWatcherConfig } from '@/lib/main/config'
 import { readFile, rename, unlink, mkdir, access } from 'fs/promises'
 import { existsSync, type Stats } from 'fs'
 import { gatewayService } from '@/lib/main/gateway-service'
-import { uploadDemo } from '@/app/utils/api'
+import { uploadDemo, fetchTeamRunStatus } from '@/app/utils/api'
+import { isTeamMap } from '@/app/utils/format'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
 import { app } from 'electron'
@@ -22,6 +23,7 @@ type LeaderboardResponse = {
 type CapResponse = {
     data: Array<{
         cap_type: number
+        team_run_id?: string | null
     }>
     success: boolean
 }
@@ -46,12 +48,14 @@ export class DemoWatcherService {
     private deferred = new Map<string, number>()
     private lastAddAt = new Map<string, number>()
     private addCounts = new Map<string, number>()
+    private teamRunChecks = new Map<string, number>()
 
     private static readonly COMPLETED_TTL_MS = 24 * 60 * 60 * 1000
     private static readonly COMPLETED_MAX = 500
     private static readonly DEFER_MS = 10 * 60 * 1000
     private static readonly ADD_DEBOUNCE_MS = 3000
     private static readonly LASTADD_TTL_MS = 60 * 1000
+    private static readonly TEAM_RUN_MAX_CHECKS = 6
 
     constructor() {
         this.systemPath = undefined
@@ -88,6 +92,7 @@ export class DemoWatcherService {
     private markCompleted(filename: string, status: 'uploaded' | 'discarded' | 'rejected') {
         this.completed.set(filename, { status, at: Date.now() })
         this.deferred.delete(filename)
+        this.teamRunChecks.delete(filename)
     }
 
     private markDeferred(filename: string) {
@@ -271,182 +276,289 @@ export class DemoWatcherService {
         this.processingFiles.add(filename)
 
         try {
-            const parts = filename.split('__');
-            const map = parts[0];
-            const time = parts[1];
-            const timeInSeconds = this.getTimeInSeconds(time);
+            const parts = filename.split('__')
+            const map = parts[0]
+            const time = parts[1]
+            const timeInSeconds = this.getTimeInSeconds(time)
 
             loggingService.debug(`Map: ${map}, Time: ${time} (${timeInSeconds} seconds)`, 'DemoWatcher')
 
             const config = getDemoWatcherConfig()
-            let shouldUpload = false
-            let shouldDiscard = false
 
-            try {
-                if (config.autoUpload === 'Personal Bests Only') {
-                    const auth = getAuthConfig()
-                    if (auth?.discordId) {
-                        shouldUpload = await this.checkIsPB(map, timeInSeconds, auth.discordId)
-                        shouldDiscard = !shouldUpload
-                    } else {
-                        loggingService.warn('Cannot check PB: User not logged in', 'DemoWatcher')
-                        this.markDeferred(filename)
-                        return
-                    }
-                } else if (config.autoUpload === 'World Records Only') {
-                    shouldUpload = await this.checkIsWR(map, timeInSeconds)
-                    shouldDiscard = !shouldUpload
-                }
-            } catch (error: any) {
-                // PB/WR lookup failed (network/API error). Do NOT discard a potentially
-                // good demo on a transient failure — defer and retry on a later event.
-                loggingService.warn(`PB/WR check failed for ${filename}; will retry later: ${error?.message ?? error}`, 'DemoWatcher')
-                this.markDeferred(filename)
-                return
-            }
-
-            if (shouldDiscard) {
-                try {
-                    if (config.discardDemoAction === 'Move to Folder') {
-                        if (this.systemPath) {
-                            const discardedDir = join(this.systemPath, 'Discarded')
-                            try {
-                                await access(discardedDir)
-                            } catch {
-                                await mkdir(discardedDir)
-                            }
-                            const newPath = join(discardedDir, filename)
-                            await rename(filePath, newPath)
-                            loggingService.info(`Moved demo to: ${newPath}`, 'DemoWatcher')
-                        }
-                    } else if (config.discardDemoAction == 'Delete') {
-                        await unlink(filePath)
-                        loggingService.info(`Deleted demo: ${filename}`, 'DemoWatcher')
-                    }
-                } catch (error) {
-                    loggingService.error('Failed to perform discard action', 'DemoWatcher', error)
-                }
-                // A slower-than-best run will never become a PB/WR — never reprocess it.
-                this.markCompleted(filename, 'discarded')
-            }
-
-            if (shouldUpload) {
-                const auth = getAuthConfig()
-                if (!auth) {
-                    loggingService.warn('Cannot upload demo: User not logged in', 'DemoWatcher')
-                    this.markDeferred(filename)
-                    return
-                } else {
-                    loggingService.info(`Uploading demo: ${filename}`, 'DemoWatcher')
-
-                    // Verify demo before uploading
-                    const btpogId = await this.extractBtpogId(filePath)
-                    if (!btpogId) {
-                        loggingService.warn(`Ignoring demo ${filename}: No BTPog ID found`, 'DemoWatcher')
-                        this.markCompleted(filename, 'rejected')
-                        return
-                    }
-
-                    const isCertified = await this.checkIsCertified(btpogId)
-                    if (!isCertified) {
-                        loggingService.info(`Ignoring demo ${filename}: Run is not certified (BTPog ID: ${btpogId})`, 'DemoWatcher')
-                        this.markCompleted(filename, 'rejected')
-                        return
-                    }
-
-                    loggingService.info(`Verified demo ${filename} (BTPog ID: ${btpogId}). Proceeding with upload.`, 'DemoWatcher')
-
-                    this.addLogEntry({
-                        filename,
-                        status: 'uploading',
-                        timestamp: new Date().toISOString(),
-                        attempt: 1,
-                        maxAttempts: 5
-                    })
-
-                    let attempts = 0
-                    const maxAttempts = 5
-                    let success = false
-
-                    while (attempts < maxAttempts && !success) {
-                        attempts++
-                        if (attempts > 1) {
-                            this.updateLogAttempt(filename, attempts, maxAttempts)
-                        }
-
-                        try {
-                            const buffer = await readFile(filePath)
-                            const blob = new Blob([buffer])
-
-                            await uploadDemo(blob, filename, auth.accessToken)
-                            success = true
-
-                            loggingService.info(`Demo uploaded successfully: ${filename}`, 'DemoWatcher')
-                            this.updateLogStatus(filename, 'success')
-                        } catch (error: any) {
-                            const errorMessage = error.message || 'Unknown error'
-                            const lower = errorMessage.toLowerCase()
-
-                            if (lower.includes('already verified') || lower.includes('already exists')) {
-                                loggingService.info(`Demo ${filename} already on server (${errorMessage}); treating as success`, 'DemoWatcher')
-                                success = true
-                                this.updateLogStatus(filename, 'success')
-                                break
-                            }
-
-                            const isLastAttempt = attempts === maxAttempts
-
-                            const isFileSystemError = ['EBUSY', 'EPERM', 'EACCES', 'EIO'].includes(error.code)
-                            const isCloudError = lower.includes('cloud') || (typeof error.code === 'string' && error.code.includes('CLOUD'))
-                            const shouldRetry = isFileSystemError || isCloudError || lower.includes('no matching cap found') || lower.includes('network error')
-
-                            if (!shouldRetry || isLastAttempt) {
-                                loggingService.error(`Failed to upload demo ${filename}: ${errorMessage}`, 'DemoWatcher')
-                                this.updateLogStatus(filename, 'failed', errorMessage)
-                                break
-                            }
-
-                            const delay = attempts * 2000
-                            loggingService.warn(`Upload failed for ${filename} (${error.code || 'API Error'}), retrying in ${delay}ms... (Attempt ${attempts}/${maxAttempts})`, 'DemoWatcher')
-
-                            await new Promise(resolve => setTimeout(resolve, delay))
-                        }
-                    }
-
-                    if (success) {
-                        this.markCompleted(filename, 'uploaded')
-                    } else {
-                        shouldUpload = false
-                        this.markDeferred(filename)
-                    }
-
-                }
-
-                if (shouldUpload) {
-                    try {
-                        if (config.postUploadAction === 'Move to Folder') {
-                            if (this.systemPath) {
-                                const uploadedDir = join(this.systemPath, 'Uploaded')
-                                try {
-                                    await access(uploadedDir)
-                                } catch {
-                                    await mkdir(uploadedDir)
-                                }
-                                const newPath = join(uploadedDir, filename)
-                                await rename(filePath, newPath)
-                                loggingService.info(`Moved demo to: ${newPath}`, 'DemoWatcher')
-                            }
-                        } else if (config.postUploadAction === 'Delete') {
-                            await unlink(filePath)
-                            loggingService.info(`Deleted demo: ${filename}`, 'DemoWatcher')
-                        }
-                    } catch (error) {
-                        loggingService.error('Failed to perform post-upload action', 'DemoWatcher', error)
-                    }
-                }
+            if (isTeamMap(map) != null) {
+                await this.processTeamDemo(filePath, filename, map, timeInSeconds, config)
+            } else {
+                await this.processSoloDemo(filePath, filename, map, timeInSeconds, config)
             }
         } finally {
             this.processingFiles.delete(filename)
+        }
+    }
+
+    private async processSoloDemo(
+        filePath: string,
+        filename: string,
+        map: string,
+        timeInSeconds: number,
+        config: DemoWatcherConfig,
+    ): Promise<void> {
+        let shouldUpload = false
+        let shouldDiscard = false
+
+        try {
+            if (config.autoUpload === 'Personal Bests Only') {
+                const auth = getAuthConfig()
+                if (auth?.discordId) {
+                    shouldUpload = await this.checkIsPB(map, timeInSeconds, auth.discordId)
+                    shouldDiscard = !shouldUpload
+                } else {
+                    loggingService.warn('Cannot check PB: User not logged in', 'DemoWatcher')
+                    this.markDeferred(filename)
+                    return
+                }
+            } else if (config.autoUpload === 'World Records Only') {
+                shouldUpload = await this.checkIsWR(map, timeInSeconds)
+                shouldDiscard = !shouldUpload
+            }
+        } catch (error: any) {
+            loggingService.warn(`PB/WR check failed for ${filename}; will retry later: ${error?.message ?? error}`, 'DemoWatcher')
+            this.markDeferred(filename)
+            return
+        }
+
+        if (shouldDiscard) {
+            await this.discardDemo(filePath, filename, config)
+        }
+
+        if (shouldUpload) {
+            await this.performUpload(filePath, filename, config)
+        }
+    }
+
+    private async processTeamDemo(
+        filePath: string,
+        filename: string,
+        map: string,
+        timeInSeconds: number,
+        config: DemoWatcherConfig,
+    ): Promise<void> {
+        if (config.autoUpload === 'Never') {
+            return
+        }
+
+        const btpogId = await this.extractBtpogId(filePath)
+        if (!btpogId) {
+            loggingService.warn(`Ignoring team run demo ${filename}: No BTPog ID found`, 'DemoWatcher')
+            this.markCompleted(filename, 'rejected')
+            return
+        }
+
+        let certified: boolean
+        let teamRunId: string | null
+        try {
+            const certification = await this.checkTeamCertification(btpogId)
+            certified = certification.certified
+            teamRunId = certification.teamRunId
+        } catch (error: any) {
+            loggingService.warn(`Team certification check failed for ${filename}; will retry later: ${error?.message ?? error}`, 'DemoWatcher')
+            this.markDeferred(filename)
+            return
+        }
+
+        if (!certified) {
+            loggingService.info(`Discarding team run demo ${filename}: run is not certified (BTPog ID: ${btpogId})`, 'DemoWatcher')
+            await this.discardDemo(filePath, filename, config)
+            return
+        }
+
+        if (!teamRunId) {
+            loggingService.debug(`Team map demo ${filename} has no team run; using individual gating`, 'DemoWatcher')
+            await this.processSoloDemo(filePath, filename, map, timeInSeconds, config)
+            return
+        }
+
+        const auth = getAuthConfig()
+        if (!auth?.accessToken) {
+            loggingService.warn(`Cannot check team run for ${filename}: User not logged in`, 'DemoWatcher')
+            this.markDeferred(filename)
+            return
+        }
+
+        const status = await fetchTeamRunStatus(auth.accessToken, teamRunId)
+        if (!status) {
+            loggingService.warn(`Team run status unavailable for ${filename}; will retry later`, 'DemoWatcher')
+            this.markDeferred(filename)
+            return
+        }
+
+        if (!status.complete) {
+            const checks = (this.teamRunChecks.get(filename) ?? 0) + 1
+            this.teamRunChecks.set(filename, checks)
+            if (checks >= DemoWatcherService.TEAM_RUN_MAX_CHECKS) {
+                loggingService.info(`Team run for ${filename} still incomplete after ${checks} checks; discarding`, 'DemoWatcher')
+                await this.discardDemo(filePath, filename, config)
+                return
+            }
+            loggingService.info(`Team run for ${filename} not complete yet (check ${checks}/${DemoWatcherService.TEAM_RUN_MAX_CHECKS}); will retry later`, 'DemoWatcher')
+            this.markDeferred(filename)
+            return
+        }
+
+        const shouldUpload = config.autoUpload === 'World Records Only'
+            ? status.is_world_record
+            : status.is_combination_best_verified || status.is_combination_best_unverified || status.is_world_record
+
+        if (!shouldUpload) {
+            loggingService.info(`Discarding team run demo ${filename}: does not meet ${config.autoUpload} criteria`, 'DemoWatcher')
+            await this.discardDemo(filePath, filename, config)
+            return
+        }
+
+        await this.performUpload(filePath, filename, config, btpogId)
+    }
+
+    private async discardDemo(filePath: string, filename: string, config: DemoWatcherConfig): Promise<void> {
+        try {
+            if (config.discardDemoAction === 'Move to Folder') {
+                if (this.systemPath) {
+                    const discardedDir = join(this.systemPath, 'Discarded')
+                    try {
+                        await access(discardedDir)
+                    } catch {
+                        await mkdir(discardedDir)
+                    }
+                    const newPath = join(discardedDir, filename)
+                    await rename(filePath, newPath)
+                    loggingService.info(`Moved demo to: ${newPath}`, 'DemoWatcher')
+                }
+            } else if (config.discardDemoAction == 'Delete') {
+                await unlink(filePath)
+                loggingService.info(`Deleted demo: ${filename}`, 'DemoWatcher')
+            }
+        } catch (error) {
+            loggingService.error('Failed to perform discard action', 'DemoWatcher', error)
+        }
+        this.markCompleted(filename, 'discarded')
+    }
+
+    private async performUpload(
+        filePath: string,
+        filename: string,
+        config: DemoWatcherConfig,
+        verifiedBtpogId?: string,
+    ): Promise<void> {
+        const auth = getAuthConfig()
+        if (!auth) {
+            loggingService.warn('Cannot upload demo: User not logged in', 'DemoWatcher')
+            this.markDeferred(filename)
+            return
+        }
+
+        loggingService.info(`Uploading demo: ${filename}`, 'DemoWatcher')
+
+        if (verifiedBtpogId) {
+            loggingService.info(`Verified team run demo ${filename} (BTPog ID: ${verifiedBtpogId}). Proceeding with upload.`, 'DemoWatcher')
+        } else {
+            const btpogId = await this.extractBtpogId(filePath)
+            if (!btpogId) {
+                loggingService.warn(`Ignoring demo ${filename}: No BTPog ID found`, 'DemoWatcher')
+                this.markCompleted(filename, 'rejected')
+                return
+            }
+
+            const isCertified = await this.checkIsCertified(btpogId)
+            if (!isCertified) {
+                loggingService.info(`Ignoring demo ${filename}: Run is not certified (BTPog ID: ${btpogId})`, 'DemoWatcher')
+                this.markCompleted(filename, 'rejected')
+                return
+            }
+
+            loggingService.info(`Verified demo ${filename} (BTPog ID: ${btpogId}). Proceeding with upload.`, 'DemoWatcher')
+        }
+
+        this.addLogEntry({
+            filename,
+            status: 'uploading',
+            timestamp: new Date().toISOString(),
+            attempt: 1,
+            maxAttempts: 5
+        })
+
+        let attempts = 0
+        const maxAttempts = 5
+        let success = false
+
+        while (attempts < maxAttempts && !success) {
+            attempts++
+            if (attempts > 1) {
+                this.updateLogAttempt(filename, attempts, maxAttempts)
+            }
+
+            try {
+                const buffer = await readFile(filePath)
+                const blob = new Blob([buffer])
+
+                await uploadDemo(blob, filename, auth.accessToken)
+                success = true
+
+                loggingService.info(`Demo uploaded successfully: ${filename}`, 'DemoWatcher')
+                this.updateLogStatus(filename, 'success')
+            } catch (error: any) {
+                const errorMessage = error.message || 'Unknown error'
+                const lower = errorMessage.toLowerCase()
+
+                if (lower.includes('already verified') || lower.includes('already exists')) {
+                    loggingService.info(`Demo ${filename} already on server (${errorMessage}); treating as success`, 'DemoWatcher')
+                    success = true
+                    this.updateLogStatus(filename, 'success')
+                    break
+                }
+
+                const isLastAttempt = attempts === maxAttempts
+
+                const isFileSystemError = ['EBUSY', 'EPERM', 'EACCES', 'EIO'].includes(error.code)
+                const isCloudError = lower.includes('cloud') || (typeof error.code === 'string' && error.code.includes('CLOUD'))
+                const shouldRetry = isFileSystemError || isCloudError || lower.includes('no matching cap found') || lower.includes('network error')
+
+                if (!shouldRetry || isLastAttempt) {
+                    loggingService.error(`Failed to upload demo ${filename}: ${errorMessage}`, 'DemoWatcher')
+                    this.updateLogStatus(filename, 'failed', errorMessage)
+                    break
+                }
+
+                const delay = attempts * 2000
+                loggingService.warn(`Upload failed for ${filename} (${error.code || 'API Error'}), retrying in ${delay}ms... (Attempt ${attempts}/${maxAttempts})`, 'DemoWatcher')
+
+                await new Promise(resolve => setTimeout(resolve, delay))
+            }
+        }
+
+        if (!success) {
+            this.markDeferred(filename)
+            return
+        }
+
+        this.markCompleted(filename, 'uploaded')
+
+        try {
+            if (config.postUploadAction === 'Move to Folder') {
+                if (this.systemPath) {
+                    const uploadedDir = join(this.systemPath, 'Uploaded')
+                    try {
+                        await access(uploadedDir)
+                    } catch {
+                        await mkdir(uploadedDir)
+                    }
+                    const newPath = join(uploadedDir, filename)
+                    await rename(filePath, newPath)
+                    loggingService.info(`Moved demo to: ${newPath}`, 'DemoWatcher')
+                }
+            } else if (config.postUploadAction === 'Delete') {
+                await unlink(filePath)
+                loggingService.info(`Deleted demo: ${filename}`, 'DemoWatcher')
+            }
+        } catch (error) {
+            loggingService.error('Failed to perform post-upload action', 'DemoWatcher', error)
         }
     }
 
@@ -511,6 +623,23 @@ export class DemoWatcherService {
             loggingService.error(`Certification check API error for ${btpogId}`, 'DemoWatcher', error)
             return false
         }
+    }
+
+    private async checkTeamCertification(btpogId: string): Promise<{ certified: boolean; teamRunId: string | null }> {
+        const endpoint = `/caps?btpog_ids=${btpogId}&columns=cap_type,team_run_id`
+        const response = await gatewayService.get<CapResponse>(endpoint)
+
+        if (!response.success) {
+            throw new Error('Team certification check: API returned success=false')
+        }
+
+        if (!response.data || response.data.length === 0) {
+            return { certified: false, teamRunId: null }
+        }
+
+        const certified = response.data.some((cap) => cap.cap_type === 2)
+        const teamRunId = response.data.find((cap) => cap.team_run_id != null && cap.team_run_id !== '')?.team_run_id ?? null
+        return { certified, teamRunId }
     }
 
     private getTimeInSeconds(time: string): number {

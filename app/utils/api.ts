@@ -63,6 +63,7 @@ export interface Map {
     gold_medal?: number
     silver_medal?: number
     bronze_medal?: number
+    required_players?: number | null
 }
 
 export interface MapMetadata {
@@ -80,6 +81,7 @@ export interface MapMetadata {
     gold_medal?: number
     silver_medal?: number
     bronze_medal?: number
+    required_players?: number | null
     preceded_by?: string | null
     superseded_by?: string | null
     changelog?: string | null
@@ -1638,6 +1640,90 @@ export async function fetchMapLeaderboard(accessToken: string, mapName: string, 
     }
 }
 
+export interface TeamRunMember {
+    user: string
+    alias: string
+    cap_id: string
+    cap_time_seconds: number
+    verified: boolean
+}
+
+export interface TeamLeaderboardEntry {
+    id: string
+    map: string
+    added: string
+    cap_time_seconds: number
+    verified: boolean
+    team_size: number
+    user: string
+    medal: number
+    members: TeamRunMember[]
+}
+
+export interface TeamRunStatus {
+    complete: boolean
+    team_time_seconds: number
+    team_cap_id: string
+    members: TeamRunMember[]
+    is_combination_best_verified: boolean
+    is_combination_best_unverified: boolean
+    is_world_record: boolean
+}
+
+export interface TeamMapLeaderboardOptions {
+    verifiedLimit?: number
+    unverifiedLimit?: number
+    member?: string | number
+    before?: string
+    columns?: string[]
+    signal?: AbortSignal
+}
+
+export async function fetchTeamMapLeaderboard(
+    accessToken: string,
+    mapName: string,
+    opts: TeamMapLeaderboardOptions = {},
+): Promise<TeamLeaderboardEntry[]> {
+    try {
+        const usp = new URLSearchParams()
+        if (opts.verifiedLimit != null) usp.set('verified_limit', String(opts.verifiedLimit))
+        if (opts.unverifiedLimit != null) usp.set('unverified_limit', String(opts.unverifiedLimit))
+        if (opts.member != null) usp.set('member', String(opts.member))
+        if (opts.before) usp.set('before', opts.before)
+        if (opts.columns?.length) usp.set('columns', opts.columns.join(','))
+        const qs = usp.toString()
+        const res = await fetch(
+            `${API_BASE_URL}/caps/leaderboard/team/map/${encodeURIComponent(mapName)}${qs ? `?${qs}` : ''}`,
+            { headers: { Authorization: `Bearer ${accessToken}` }, signal: opts.signal },
+        )
+        if (!res.ok) return []
+        const json = await res.json()
+        if (json.success && Array.isArray(json.data)) return json.data as TeamLeaderboardEntry[]
+        return []
+    } catch {
+        return []
+    }
+}
+
+export async function fetchTeamRunStatus(
+    accessToken: string,
+    teamRunId: string,
+    signal?: AbortSignal,
+): Promise<TeamRunStatus | null> {
+    try {
+        const res = await fetch(`${API_BASE_URL}/caps/team_runs/${encodeURIComponent(teamRunId)}`, {
+            headers: { Authorization: `Bearer ${accessToken}` },
+            signal,
+        })
+        if (!res.ok) return null
+        const json = await res.json()
+        if (json.success && json.data) return json.data as TeamRunStatus
+        return null
+    } catch {
+        return null
+    }
+}
+
 export async function fetchDemoStatus(capId: string): Promise<DemoConverterStatus | null> {
     try {
         const res = await fetch(`${GATEWAY_BASE_URL}/democonverter/status/${capId}`)
@@ -1688,6 +1774,7 @@ export interface CapRecord {
     renderer?: string | null
     spawn_count?: number | null
     team?: number | null
+    team_run_id?: string | null
     netspeed_min?: number | null
     netspeed_max?: number | null
     fps_1pc?: number | null

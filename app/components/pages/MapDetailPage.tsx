@@ -4,17 +4,20 @@ import { useNavScrollRestore } from '@/app/components/navigation/useNavScrollRes
 import {
     fetchMap,
     fetchMapLeaderboard,
+    fetchTeamMapLeaderboard,
     fetchMapReviews,
     fetchPlaytimeForMap,
     fetchWorldRecordProgression,
     fetchUserCapCountForMap,
     type LeaderboardEntry,
+    type TeamLeaderboardEntry,
     type MapMetadata,
     type MapReview,
     type Playtime,
     type WorldRecordProgressionEntry,
     type UserProfile,
 } from '@/app/utils/api'
+import { isTeamMap } from '@/app/utils/format'
 import { useRefreshCooldown } from '@/app/hooks/useRefreshCooldown'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
 import { useMapDownload } from '@/app/hooks/useMapDownload'
@@ -43,7 +46,7 @@ interface MapDetailPageProps {
 const MAP_METADATA_COLUMNS = [
     'name', 'added', 'difficulty', 'active', 'tags', 'author', 'author_str', 'author_ref',
     'world_record', 'champion_medal', 'gold_medal', 'silver_medal', 'bronze_medal',
-    'url', 'preceded_by', 'superseded_by', 'changelog',
+    'required_players', 'url', 'preceded_by', 'superseded_by', 'changelog',
 ]
 
 export function MapDetailPage({
@@ -52,8 +55,12 @@ export function MapDetailPage({
     const accessToken = userProfile?.accessToken
     const currentUserId = userProfile?.id ?? undefined
 
+    const requiredPlayers = isTeamMap(mapName)
+    const isTeam = requiredPlayers != null
+
     const [map, setMap] = useState<MapMetadata | null>(null)
     const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
+    const [teamLeaderboard, setTeamLeaderboard] = useState<TeamLeaderboardEntry[]>([])
     const [reviews, setReviews] = useState<MapReview[]>([])
     const [playtime, setPlaytime] = useState<Playtime[]>([])
     const [wrProgression, setWrProgression] = useState<WorldRecordProgressionEntry[]>([])
@@ -85,9 +92,12 @@ export function MapDetailPage({
         setUserCapCount(null)
         ;(async () => {
             try {
-                const [matched, lb, rv, pt, wr, capCount] = await Promise.all([
+                const [matched, lb, teamLb, rv, pt, wr, capCount] = await Promise.all([
                     fetchMap(accessToken, mapName, MAP_METADATA_COLUMNS),
                     fetchMapLeaderboard(accessToken, mapName, false),
+                    isTeam
+                        ? fetchTeamMapLeaderboard(accessToken, mapName)
+                        : Promise.resolve([] as TeamLeaderboardEntry[]),
                     fetchMapReviews(accessToken, mapName),
                     fetchPlaytimeForMap(accessToken, mapName),
                     fetchWorldRecordProgression(accessToken, mapName),
@@ -98,6 +108,7 @@ export function MapDetailPage({
                 if (cancelled) return
                 setMap(matched)
                 setLeaderboard(lb)
+                setTeamLeaderboard(teamLb)
                 setReviews(rv)
                 setPlaytime(pt)
                 setWrProgression(wr)
@@ -111,7 +122,7 @@ export function MapDetailPage({
             }
         })()
         return () => { cancelled = true }
-    }, [accessToken, mapName, currentUserId, refreshKey])
+    }, [accessToken, mapName, currentUserId, refreshKey, isTeam])
 
     const avgOverall = useMemo(() => {
         if (reviews.length === 0) return null
@@ -198,7 +209,12 @@ export function MapDetailPage({
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
                     <div className="lg:col-span-4 space-y-4">
-                        <MedalCard map={map} loading={loading} />
+                        <MedalCard
+                            map={map}
+                            loading={loading}
+                            requiredPlayers={requiredPlayers}
+                            teamLeaderboard={teamLeaderboard}
+                        />
                         <ReviewsCard
                             reviews={reviews}
                             currentUserId={currentUserId ?? undefined}
@@ -210,6 +226,8 @@ export function MapDetailPage({
                     <div className="lg:col-span-8 space-y-4">
                         <LeaderboardCard
                             leaderboard={leaderboard}
+                            teamLeaderboard={teamLeaderboard}
+                            requiredPlayers={requiredPlayers}
                             map={map}
                             loading={loading}
                             currentUserId={currentUserId ?? undefined}
