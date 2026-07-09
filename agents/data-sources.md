@@ -12,7 +12,7 @@ not_here:
   - "how UI state persists in localStorage → state-patterns.md"
   - "the procedure to wire a new endpoint into the UI → skill: consume-api-data"
 sections: [backend-api, admin-api, cap-detail-page-endpoints, world-records-page-endpoints, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites]
-last_verified: 2026-06-21
+last_verified: 2026-07-09
 verify_against: [app/utils/api.ts, app/utils/patreon.ts, app/utils/server-utils.ts]
 ---
 
@@ -44,7 +44,8 @@ full loop).
 | Cap detail | `fetchCapDetail`, `fetchCapCheckpoints` |
 | Achievements | `fetchMyAchievements`, `fetchAchievementDefinitions` |
 | Home / summary | `fetchSummary` (homepage feed), `fetchHotMaps` (→ `GET /v2/summary/hot_maps` → `HotMap[]`), `fetchPendingReviews` |
-| Profile | `UserProfile` type, `getAvatarUrl(userId)`, `toActiveTitle` |
+| Profile | `UserProfile` type (incl. `team` clan-tag summary), `getAvatarUrl(userId)`, `toActiveTitle` |
+| Teams | `createTeam`, `fetchTeams`, `fetchTeam`, `updateTeam`, `disbandTeam`, `transferTeamOwnership`, `fetchTeamMembers`, `inviteToTeam`, `applyToTeam`, `acceptTeamInvite`, `leaveTeam`, `approveTeamMember`, `denyTeamMember`, `kickTeamMember`, `setTeamMemberRole`, `fetchLineups`, `createLineup`, `updateLineup`, `deleteLineup`, `fetchMyTeam`, `fetchMyInvitations`, `fetchMyApplications` (clans + lineups; mutations return the fresh `TeamDetail`; errors surface `reason`) |
 | Admin (staff-only) | the moderator/admin dashboard slice — see [Admin API](#admin-api) |
 
 Most fetchers take `accessToken` first (Discord OAuth bearer).

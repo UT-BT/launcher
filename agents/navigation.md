@@ -10,7 +10,7 @@ not_here:
   - "where page state / persistence lives → state-patterns.md"
   - "the PlayerInfo / CapTimeLink components that trigger nav → shared-components.md"
 sections: [the-model, navigate-is-the-only-entry-point, page-views-vs-detail-pages, the-sidebar-registry, event-driven-navigation, sidebar-new-badges, page-refresh-registry, per-entry-state]
-last_verified: 2026-06-20
+last_verified: 2026-07-09
 verify_against:
   - app/components/main/Main.tsx
   - app/components/layout/AppLayout.tsx
@@ -76,7 +76,7 @@ parallel back stack. Sidebar clicks, `openMap`, and the `open-*` events all call
 
 | Kind | Views | Keyed? | Why |
 |---|---|---|---|
-| **Page-views** | `home`, `servers`, `maps`, `players`, `cap-it-all`, `world-records`, `achievements`, `news`, `admin` | **No** — one reused instance | State is hoisted per-entry via `usePageState` (or, for the lightweight `news` list, self-fetched with `useNavState` for its filter); the component stays mounted and reads the active entry. |
+| **Page-views** | `home`, `servers`, `maps`, `players`, `teams`, `cap-it-all`, `world-records`, `achievements`, `news`, `admin` | **No** — one reused instance | State is hoisted per-entry via `usePageState` (or, for the lightweight `news` list, self-fetched with `useNavState` for its filter); the component stays mounted and reads the active entry. |
 | **Detail-pages** | `maps-detail`, `player-detail`, `cap-detail`, `news-detail` | **Yes — `key={entry.id}`** | A new visit must remount so it refetches for the new param and `useNavState` re-reads the right entry's bag. |
 
 Detail cases pull their identifier from `entry.params` (`mapName!` / `playerId!` /

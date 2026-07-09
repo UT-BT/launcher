@@ -50,6 +50,13 @@ import {
   type AchievementsPageState,
   type AchievementsPageCaches,
 } from '@/app/components/pages/AchievementsPage'
+import {
+  TeamsPage,
+  DEFAULT_TEAMS_STATE,
+  DEFAULT_TEAMS_CACHES,
+  type TeamsPageState,
+  type TeamsPageCaches,
+} from '@/app/components/pages/TeamsPage'
 import { MapDetailPage } from '@/app/components/pages/MapDetailPage'
 import { PlayerDetailPage } from '@/app/components/pages/PlayerDetailPage'
 import { CapDetailPage } from '@/app/components/pages/CapDetailPage'
@@ -74,6 +81,7 @@ const PLAYERS_STATE_STORAGE_KEY = 'utbt:playersState:v1'
 const CAP_IT_ALL_STATE_STORAGE_KEY = 'utbt:capItAllState:v1'
 const WORLD_RECORDS_STATE_STORAGE_KEY = 'utbt:worldRecordsState:v1'
 const ACHIEVEMENTS_STATE_STORAGE_KEY = 'utbt:achievementsState:v1'
+const TEAMS_STATE_STORAGE_KEY = 'utbt:teamsState:v1'
 const ADMIN_STATE_STORAGE_KEY = 'utbt:adminState:v1'
 const SERVER_PRESETS_STORAGE_KEY = 'utbt:serverPresets:v1'
 const SERVER_FAVORITES_STORAGE_KEY = 'utbt:serverFavorites:v2'
@@ -114,6 +122,7 @@ const PLAYERS_PREF_KEYS: readonly (keyof PlayersPageState)[] = ['columnVisibilit
 const CAP_IT_ALL_PREF_KEYS: readonly (keyof CapItAllPageState)[] = ['pageSizePreference']
 const WORLD_RECORDS_PREF_KEYS: readonly (keyof WorldRecordsPageState)[] = ['columnVisibility', 'columnOrder', 'pageSizePreference', 'filtersPanelOpen']
 const ACHIEVEMENTS_PREF_KEYS: readonly (keyof AchievementsPageState)[] = []
+const TEAMS_PREF_KEYS: readonly (keyof TeamsPageState)[] = []
 const ADMIN_PREF_KEYS: readonly (keyof AdminPageState)[] = ['activeSection']
 
 function pickKeys<T extends object>(o: T, keys: readonly (keyof T)[]): Partial<T> {
@@ -211,6 +220,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
   const [capItAllCaches, setCapItAllCaches] = useState<CapItAllPageCaches>(DEFAULT_CAP_IT_ALL_CACHES)
   const [worldRecordsCaches, setWorldRecordsCaches] = useState<WorldRecordsPageCaches>(DEFAULT_WORLD_RECORDS_CACHES)
   const [achievementsCaches, setAchievementsCaches] = useState<AchievementsPageCaches>(DEFAULT_ACHIEVEMENTS_CACHES)
+  const [teamsCaches, setTeamsCaches] = useState<TeamsPageCaches>(DEFAULT_TEAMS_CACHES)
   const [serverPresets, setServerPresets] = useState<ServerPreset[]>(loadPersistedServerPresets)
   const [favoriteServerIds, setFavoriteServerIds] = useState<Set<string>>(loadPersistedServerFavorites)
 
@@ -347,6 +357,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
   const [capItAllState, setCapItAllState] = usePageState(CAP_IT_ALL_STATE_STORAGE_KEY, DEFAULT_CAP_IT_ALL_STATE, CAP_IT_ALL_PREF_KEYS, getEntryState, updateEntryState)
   const [worldRecordsState, setWorldRecordsState] = usePageState(WORLD_RECORDS_STATE_STORAGE_KEY, DEFAULT_WORLD_RECORDS_STATE, WORLD_RECORDS_PREF_KEYS, getEntryState, updateEntryState)
   const [achievementsState, setAchievementsState] = usePageState(ACHIEVEMENTS_STATE_STORAGE_KEY, DEFAULT_ACHIEVEMENTS_STATE, ACHIEVEMENTS_PREF_KEYS, getEntryState, updateEntryState)
+  const [teamsState, setTeamsState] = usePageState(TEAMS_STATE_STORAGE_KEY, DEFAULT_TEAMS_STATE, TEAMS_PREF_KEYS, getEntryState, updateEntryState)
   const [adminState, setAdminState] = usePageState(ADMIN_STATE_STORAGE_KEY, DEFAULT_ADMIN_STATE, ADMIN_PREF_KEYS, getEntryState, updateEntryState)
 
   useEffect(() => {
@@ -550,6 +561,14 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
           onStateChange={setAchievementsState}
           caches={achievementsCaches}
           onCachesChange={setAchievementsCaches}
+        />
+      case 'teams':
+        return <TeamsPage
+          userProfile={userProfile}
+          state={teamsState}
+          onStateChange={setTeamsState}
+          caches={teamsCaches}
+          onCachesChange={setTeamsCaches}
         />
       case 'admin':
         return <AdminPage

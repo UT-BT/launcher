@@ -40,12 +40,23 @@ export interface LauncherActivity {
     created_at: string
 }
 
+export type TeamTagPosition = 'prefix' | 'suffix'
+
+export interface UserTeamSummary {
+    id: string
+    name: string
+    tag: string | null
+    tag_position: TeamTagPosition | null
+    tagged_alias: string | null
+}
+
 export interface UserProfile extends AuthConfig {
     active_title?: UserTitle | null
     alias?: string | null
     id?: string | null
     utbt_role?: number
     latest_activity?: LauncherActivity | null
+    team?: UserTeamSummary | null
 }
 
 export interface Map {
@@ -2834,4 +2845,163 @@ export async function fetchCapItAllLeaderboard(
         }
     }
     throw new Error('Invalid response format from server')
+}
+
+export type TeamRole = 'owner' | 'admin' | 'member'
+export type TeamMemberStatus = 'invited' | 'applied' | 'active'
+
+export interface TeamCore {
+    id: string
+    name: string
+    tag: string | null
+    tag_position: TeamTagPosition | null
+    is_open: boolean
+    owner: string
+    member_count: number
+    added: string | null
+}
+
+export interface TeamMember {
+    user: string
+    alias: string | null
+    role: TeamRole
+    status: TeamMemberStatus
+    joined_at: string | null
+    tag: string | null
+    tag_position: TeamTagPosition | null
+    tagged_alias: string | null
+}
+
+export interface Lineup {
+    id: string
+    team_id: string
+    label: string
+    member_key: string
+    members: string[]
+    added: string | null
+}
+
+export interface TeamDetail extends TeamCore {
+    members: TeamMember[]
+    lineups: Lineup[]
+}
+
+export interface TeamDirectoryPage {
+    total: number
+    teams: TeamCore[]
+}
+
+export interface CreateTeamInput {
+    name: string
+    tag?: string | null
+    tag_position?: TeamTagPosition
+    is_open?: boolean
+}
+
+export interface UpdateTeamInput {
+    name?: string
+    tag?: string | null
+    tag_position?: TeamTagPosition
+    is_open?: boolean
+}
+
+export interface TeamDirectoryParams {
+    limit?: number
+    offset?: number
+    search?: string
+    isOpen?: boolean
+}
+
+export async function createTeam(accessToken: string, input: CreateTeamInput): Promise<TeamDetail> {
+    return apiGet<TeamDetail>('/teams/', { token: accessToken, method: 'POST', body: input })
+}
+
+export async function fetchTeams(accessToken: string, params: TeamDirectoryParams = {}): Promise<TeamDirectoryPage> {
+    const usp = new URLSearchParams()
+    if (params.limit !== undefined) usp.set('limit', String(params.limit))
+    if (params.offset !== undefined) usp.set('offset', String(params.offset))
+    if (params.search) usp.set('search', params.search)
+    if (params.isOpen !== undefined) usp.set('is_open', String(params.isOpen))
+    return apiGet<TeamDirectoryPage>(`/teams/?${usp.toString()}`, { token: accessToken })
+}
+
+export async function fetchTeam(accessToken: string, teamId: string): Promise<TeamDetail> {
+    return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}`, { token: accessToken })
+}
+
+export async function updateTeam(accessToken: string, teamId: string, input: UpdateTeamInput): Promise<TeamDetail> {
+    return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}`, { token: accessToken, method: 'PATCH', body: input })
+}
+
+export async function disbandTeam(accessToken: string, teamId: string): Promise<{ id: string; disbanded: boolean }> {
+    return apiGet(`/teams/${encodeURIComponent(teamId)}`, { token: accessToken, method: 'DELETE' })
+}
+
+export async function transferTeamOwnership(accessToken: string, teamId: string, user: string): Promise<TeamDetail> {
+    return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}/transfer`, { token: accessToken, method: 'POST', body: { user } })
+}
+
+export async function fetchTeamMembers(accessToken: string, teamId: string): Promise<TeamMember[]> {
+    return apiGet<TeamMember[]>(`/teams/${encodeURIComponent(teamId)}/members`, { token: accessToken })
+}
+
+export async function inviteToTeam(accessToken: string, teamId: string, user: string): Promise<TeamDetail> {
+    return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}/invite`, { token: accessToken, method: 'POST', body: { user } })
+}
+
+export async function applyToTeam(accessToken: string, teamId: string): Promise<TeamDetail> {
+    return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}/apply`, { token: accessToken, method: 'POST' })
+}
+
+export async function acceptTeamInvite(accessToken: string, teamId: string): Promise<TeamDetail> {
+    return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}/accept`, { token: accessToken, method: 'POST' })
+}
+
+export async function leaveTeam(accessToken: string, teamId: string): Promise<{ id: string; left: boolean }> {
+    return apiGet(`/teams/${encodeURIComponent(teamId)}/leave`, { token: accessToken, method: 'POST' })
+}
+
+export async function approveTeamMember(accessToken: string, teamId: string, user: string): Promise<TeamDetail> {
+    return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}/members/${encodeURIComponent(user)}/approve`, { token: accessToken, method: 'POST' })
+}
+
+export async function denyTeamMember(accessToken: string, teamId: string, user: string): Promise<TeamDetail> {
+    return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}/members/${encodeURIComponent(user)}/deny`, { token: accessToken, method: 'POST' })
+}
+
+export async function kickTeamMember(accessToken: string, teamId: string, user: string): Promise<TeamDetail> {
+    return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}/members/${encodeURIComponent(user)}/kick`, { token: accessToken, method: 'POST' })
+}
+
+export async function setTeamMemberRole(accessToken: string, teamId: string, user: string, role: 'admin' | 'member'): Promise<TeamDetail> {
+    return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}/members/${encodeURIComponent(user)}/role`, { token: accessToken, method: 'POST', body: { role } })
+}
+
+export async function fetchLineups(accessToken: string, teamId: string): Promise<Lineup[]> {
+    return apiGet<Lineup[]>(`/teams/${encodeURIComponent(teamId)}/lineups`, { token: accessToken })
+}
+
+export async function createLineup(accessToken: string, teamId: string, input: { label: string; members: string[] }): Promise<Lineup> {
+    return apiGet<Lineup>(`/teams/${encodeURIComponent(teamId)}/lineups`, { token: accessToken, method: 'POST', body: input })
+}
+
+export async function updateLineup(accessToken: string, teamId: string, lineupId: string, label: string): Promise<Lineup> {
+    return apiGet<Lineup>(`/teams/${encodeURIComponent(teamId)}/lineups/${encodeURIComponent(lineupId)}`, { token: accessToken, method: 'PATCH', body: { label } })
+}
+
+export async function deleteLineup(accessToken: string, teamId: string, lineupId: string): Promise<{ id: string; deleted: boolean }> {
+    return apiGet(`/teams/${encodeURIComponent(teamId)}/lineups/${encodeURIComponent(lineupId)}`, { token: accessToken, method: 'DELETE' })
+}
+
+export async function fetchMyTeam(accessToken: string): Promise<TeamDetail | null> {
+    const data = await apiGet<{ team: TeamDetail | null }>('/me/team', { token: accessToken })
+    return data.team
+}
+
+export async function fetchMyInvitations(accessToken: string): Promise<TeamCore[]> {
+    return apiGet<TeamCore[]>('/me/invitations', { token: accessToken })
+}
+
+export async function fetchMyApplications(accessToken: string): Promise<TeamCore[]> {
+    return apiGet<TeamCore[]>('/me/applications', { token: accessToken })
 }
