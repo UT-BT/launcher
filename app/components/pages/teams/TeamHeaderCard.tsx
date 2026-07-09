@@ -10,6 +10,7 @@ import {
     type TeamDetail, type TeamTagPosition, type UserProfile,
 } from '@/app/utils/api'
 import { AccessBadge, AccessToggle, ErrorBanner, TagChip, refreshUserProfile, teamInputClass, teamErrorMessage } from './teamsShared'
+import { tagValidationError } from './tagFormat'
 
 interface TeamHeaderCardProps {
     accessToken: string
@@ -154,6 +155,8 @@ function EditTeamModal({ accessToken, team, onClose, onSaved }: {
     const [saving, setSaving] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
+    const tagError = tag.trim().length > 0 ? tagValidationError(tag.trim()) : null
+
     const save = async () => {
         setSaving(true)
         setError(null)
@@ -181,7 +184,7 @@ function EditTeamModal({ accessToken, team, onClose, onSaved }: {
             footer={
                 <div className="p-4 border-t border-border bg-muted/50 flex justify-end gap-2 shrink-0">
                     <Button variant="secondary" onClick={onClose}>Cancel</Button>
-                    <Button onClick={save} disabled={saving || name.trim().length === 0 || tag.trim().length === 0}>
+                    <Button onClick={save} disabled={saving || name.trim().length === 0 || tag.trim().length === 0 || !!tagError}>
                         {saving ? 'Saving…' : 'Save'}
                     </Button>
                 </div>
@@ -195,6 +198,7 @@ function EditTeamModal({ accessToken, team, onClose, onSaved }: {
                 <label className="flex flex-col gap-1.5">
                     <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Clan tag</span>
                     <input value={tag} onChange={e => setTag(e.target.value)} maxLength={8} className={teamInputClass} />
+                    {tagError && <span className="text-[11px] text-red-400">{tagError}</span>}
                 </label>
                 <div className="flex flex-col gap-1.5">
                     <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Tag position</span>

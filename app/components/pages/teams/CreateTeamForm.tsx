@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/app/components/ui/button'
 import { createTeam, type TeamDetail, type TeamTagPosition, type UserProfile } from '@/app/utils/api'
-import { formatTaggedAlias } from './tagFormat'
+import { formatTaggedAlias, tagValidationError } from './tagFormat'
 import { AccessToggle, ErrorBanner, teamInputClass, teamErrorMessage } from './teamsShared'
 
 interface CreateTeamFormProps {
@@ -23,7 +23,8 @@ export function CreateTeamForm({ accessToken, userProfile, onCreated, onCancel }
     const [error, setError] = useState<string | null>(null)
 
     const preview = formatTaggedAlias(userProfile?.alias, tag, tagPosition)
-    const canSubmit = name.trim().length > 0 && tag.trim().length > 0 && !submitting
+    const tagError = tag.trim().length > 0 ? tagValidationError(tag.trim()) : null
+    const canSubmit = name.trim().length > 0 && tag.trim().length > 0 && !tagError && !submitting
 
     const submit = async () => {
         if (!canSubmit) return
@@ -66,6 +67,7 @@ export function CreateTeamForm({ accessToken, userProfile, onCreated, onCancel }
                         placeholder="e.g. BB"
                         className={teamInputClass}
                     />
+                    {tagError && <span className="text-[11px] text-red-400">{tagError}</span>}
                 </label>
             </div>
 

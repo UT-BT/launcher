@@ -1,5 +1,11 @@
 import type { TeamTagPosition } from '@/app/utils/api'
 
+export function tagValidationError(tag: string): string | null {
+    if (tag.includes('|')) return 'Clan tag cannot contain the | character.'
+    if (/<[Cc]..>/.test(tag)) return 'Clan tag cannot use a <Cxx> in-game colour-code pattern.'
+    return null
+}
+
 export function formatTaggedAlias(
     alias: string | null | undefined,
     tag: string | null | undefined,
