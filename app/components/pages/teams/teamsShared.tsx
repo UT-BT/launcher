@@ -68,7 +68,7 @@ export function StatusBadge({ status }: { status: TeamMemberStatus }) {
     )
 }
 
-export function OpenClosedBadge({ isOpen }: { isOpen: boolean }) {
+export function AccessBadge({ isOpen }: { isOpen: boolean }) {
     return (
         <span className={cn(
             'text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border',
@@ -76,8 +76,39 @@ export function OpenClosedBadge({ isOpen }: { isOpen: boolean }) {
                 ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
                 : 'bg-white/5 text-muted-foreground border-white/10',
         )}>
-            {isOpen ? 'Open' : 'Closed'}
+            {isOpen ? 'Open' : 'Invite Only'}
         </span>
+    )
+}
+
+export function AccessToggle({ isOpen, onChange }: { isOpen: boolean; onChange: (value: boolean) => void }) {
+    const options: { value: boolean; label: string }[] = [
+        { value: true, label: 'Open' },
+        { value: false, label: 'Invite Only' },
+    ]
+    return (
+        <div className="space-y-1.5">
+            <div className="flex items-center gap-1">
+                {options.map(opt => (
+                    <button
+                        key={String(opt.value)}
+                        type="button"
+                        onClick={() => onChange(opt.value)}
+                        className={cn(
+                            'px-3 py-1.5 rounded-md text-xs font-medium border transition-colors cursor-pointer',
+                            isOpen === opt.value
+                                ? 'bg-accent-500/20 border-accent-500/50 text-accent-300'
+                                : 'bg-card/50 border-white/10 text-muted-foreground hover:text-white hover:border-white/20',
+                        )}
+                    >
+                        {opt.label}
+                    </button>
+                ))}
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+                {isOpen ? 'Anyone can apply to join.' : 'Members can only join by invitation.'}
+            </p>
+        </div>
     )
 }
 

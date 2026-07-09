@@ -181,7 +181,7 @@ export interface Playtime {
 }
 
 
-const API_BASE_URL = import.meta.env.DEV ? 'http://localhost:5000' : 'https://api.utbt.net'
+const API_BASE_URL = import.meta.env.DEV ? 'http://localhost:80' : 'https://api.utbt.net'
 
 const DEFAULT_TIMEOUT_MS = 20_000
 
@@ -242,6 +242,20 @@ export async function apiGet<T>(path: string, opts: ApiRequestOptions = {}): Pro
     const json = await res.json()
     if (json && json.success && json.data !== null && json.data !== undefined) {
         return json.data as T
+    }
+    throw new Error('Invalid response format from server')
+}
+
+export async function apiGetList<T>(path: string, opts: ApiRequestOptions = {}): Promise<T[]> {
+    const res = await apiRequest(path, opts)
+    if (!res.ok) {
+        let reason: string | undefined
+        try { reason = (await res.json())?.reason } catch { reason = undefined }
+        throw new ApiError(res.status, reason, `Request failed: ${res.statusText} (${res.status})`)
+    }
+    const json = await res.json()
+    if (json && json.success) {
+        return Array.isArray(json.data) ? (json.data as T[]) : []
     }
     throw new Error('Invalid response format from server')
 }
@@ -2942,7 +2956,7 @@ export async function transferTeamOwnership(accessToken: string, teamId: string,
 }
 
 export async function fetchTeamMembers(accessToken: string, teamId: string): Promise<TeamMember[]> {
-    return apiGet<TeamMember[]>(`/teams/${encodeURIComponent(teamId)}/members`, { token: accessToken })
+    return apiGetList<TeamMember>(`/teams/${encodeURIComponent(teamId)}/members`, { token: accessToken })
 }
 
 export async function inviteToTeam(accessToken: string, teamId: string, user: string): Promise<TeamDetail> {
@@ -2978,7 +2992,7 @@ export async function setTeamMemberRole(accessToken: string, teamId: string, use
 }
 
 export async function fetchLineups(accessToken: string, teamId: string): Promise<Lineup[]> {
-    return apiGet<Lineup[]>(`/teams/${encodeURIComponent(teamId)}/lineups`, { token: accessToken })
+    return apiGetList<Lineup>(`/teams/${encodeURIComponent(teamId)}/lineups`, { token: accessToken })
 }
 
 export async function createLineup(accessToken: string, teamId: string, input: { label: string; members: string[] }): Promise<Lineup> {
@@ -2999,9 +3013,9 @@ export async function fetchMyTeam(accessToken: string): Promise<TeamDetail | nul
 }
 
 export async function fetchMyInvitations(accessToken: string): Promise<TeamCore[]> {
-    return apiGet<TeamCore[]>('/me/invitations', { token: accessToken })
+    return apiGetList<TeamCore>('/me/invitations', { token: accessToken })
 }
 
 export async function fetchMyApplications(accessToken: string): Promise<TeamCore[]> {
-    return apiGet<TeamCore[]>('/me/applications', { token: accessToken })
+    return apiGetList<TeamCore>('/me/applications', { token: accessToken })
 }

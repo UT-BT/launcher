@@ -1,20 +1,20 @@
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/app/components/ui/button'
-import { Switch } from '@/app/components/ui/switch'
 import { createTeam, type TeamDetail, type TeamTagPosition, type UserProfile } from '@/app/utils/api'
 import { formatTaggedAlias } from './tagFormat'
-import { ErrorBanner, SectionCard, teamInputClass, teamErrorMessage } from './teamsShared'
+import { AccessToggle, ErrorBanner, teamInputClass, teamErrorMessage } from './teamsShared'
 
 interface CreateTeamFormProps {
     accessToken: string
     userProfile?: UserProfile
     onCreated: (team: TeamDetail) => void
+    onCancel?: () => void
 }
 
 const TAG_POSITIONS: TeamTagPosition[] = ['prefix', 'suffix']
 
-export function CreateTeamForm({ accessToken, userProfile, onCreated }: CreateTeamFormProps) {
+export function CreateTeamForm({ accessToken, userProfile, onCreated, onCancel }: CreateTeamFormProps) {
     const [name, setName] = useState('')
     const [tag, setTag] = useState('')
     const [tagPosition, setTagPosition] = useState<TeamTagPosition>('prefix')
@@ -23,7 +23,7 @@ export function CreateTeamForm({ accessToken, userProfile, onCreated }: CreateTe
     const [error, setError] = useState<string | null>(null)
 
     const preview = formatTaggedAlias(userProfile?.alias, tag, tagPosition)
-    const canSubmit = name.trim().length > 0 && !submitting
+    const canSubmit = name.trim().length > 0 && tag.trim().length > 0 && !submitting
 
     const submit = async () => {
         if (!canSubmit) return
@@ -32,7 +32,7 @@ export function CreateTeamForm({ accessToken, userProfile, onCreated }: CreateTe
         try {
             const team = await createTeam(accessToken, {
                 name: name.trim(),
-                tag: tag.trim() ? tag.trim() : null,
+                tag: tag.trim(),
                 tag_position: tagPosition,
                 is_open: isOpen,
             })
@@ -45,7 +45,7 @@ export function CreateTeamForm({ accessToken, userProfile, onCreated }: CreateTe
     }
 
     return (
-        <SectionCard title="Create a Team" subtitle="Start a clan, invite members, and build named lineups.">
+        <div className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
                 <label className="flex flex-col gap-1.5">
                     <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Team name</span>
@@ -58,7 +58,7 @@ export function CreateTeamForm({ accessToken, userProfile, onCreated }: CreateTe
                     />
                 </label>
                 <label className="flex flex-col gap-1.5">
-                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Clan tag (optional)</span>
+                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Clan tag</span>
                     <input
                         value={tag}
                         onChange={e => setTag(e.target.value)}
@@ -91,11 +91,8 @@ export function CreateTeamForm({ accessToken, userProfile, onCreated }: CreateTe
                     </div>
                 </div>
                 <div className="flex flex-col gap-1.5">
-                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Visibility</span>
-                    <label className="flex items-center gap-2 text-sm text-white">
-                        <Switch checked={isOpen} onCheckedChange={setIsOpen} />
-                        <span>{isOpen ? 'Open — anyone can apply' : 'Closed — invite only'}</span>
-                    </label>
+                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Access</span>
+                    <AccessToggle isOpen={isOpen} onChange={setIsOpen} />
                 </div>
             </div>
 
@@ -108,11 +105,12 @@ export function CreateTeamForm({ accessToken, userProfile, onCreated }: CreateTe
 
             <ErrorBanner message={error} />
 
-            <div className="flex justify-end">
+            <div className="flex justify-end gap-2">
+                {onCancel && <Button variant="secondary" onClick={onCancel}>Cancel</Button>}
                 <Button onClick={submit} disabled={!canSubmit}>
                     {submitting ? 'Creating…' : 'Create Team'}
                 </Button>
             </div>
-        </SectionCard>
+        </div>
     )
 }

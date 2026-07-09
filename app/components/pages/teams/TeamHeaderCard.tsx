@@ -1,22 +1,25 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Pencil, ArrowRightLeft, Trash2, LogOut } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/app/components/ui/button'
-import { Switch } from '@/app/components/ui/switch'
 import { Modal } from '@/app/components/ui/modal'
 import { ConfirmModal } from '@/app/components/shared/ConfirmModal'
+import { formatAddedDate } from '@/app/utils/format'
 import {
     disbandTeam, leaveTeam, transferTeamOwnership, updateTeam,
     type TeamDetail, type TeamTagPosition, type UserProfile,
 } from '@/app/utils/api'
 import { formatTaggedAlias } from './tagFormat'
-import { ErrorBanner, OpenClosedBadge, TagChip, teamInputClass, teamErrorMessage } from './teamsShared'
+import { AccessBadge, AccessToggle, ErrorBanner, TagChip, teamInputClass, teamErrorMessage } from './teamsShared'
 
 interface TeamHeaderCardProps {
     accessToken: string
     team: TeamDetail
     isOwner: boolean
     isManager: boolean
+    isOwnTeam: boolean
+    canLeave: boolean
+    rightExtra?: ReactNode
     userProfile?: UserProfile
     onTeamChange: (team: TeamDetail) => void
     onLeftOrDisbanded: () => void
@@ -25,11 +28,12 @@ interface TeamHeaderCardProps {
 const TAG_POSITIONS: TeamTagPosition[] = ['prefix', 'suffix']
 
 export function TeamHeaderCard({
-    accessToken, team, isOwner, isManager, userProfile, onTeamChange, onLeftOrDisbanded,
+    accessToken, team, isOwner, isManager, isOwnTeam, canLeave, rightExtra,
+    userProfile, onTeamChange, onLeftOrDisbanded,
 }: TeamHeaderCardProps) {
     const [editing, setEditing] = useState(false)
     const [transferring, setTransferring] = useState(false)
-    const [confirmDisband, setConfirmDisband] = useState(false)
+    const [confirmDelete, setConfirmDelete] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [leaving, setLeaving] = useState(false)
 
@@ -55,15 +59,20 @@ export function TeamHeaderCard({
                     <div className="flex items-center gap-2.5 flex-wrap">
                         <h1 className="text-2xl font-bold text-white leading-tight">{team.name}</h1>
                         <TagChip tag={team.tag} />
-                        <OpenClosedBadge isOpen={team.is_open} />
+                        <AccessBadge isOpen={team.is_open} />
                     </div>
                     <p className="text-xs text-muted-foreground">
-                        {team.member_count} {team.member_count === 1 ? 'member' : 'members'} · You appear as{' '}
-                        <span className="text-white font-medium">{myPreview}</span>
+                        {team.member_count} {team.member_count === 1 ? 'member' : 'members'}
+                        {' · '}{team.lineups.length} {team.lineups.length === 1 ? 'lineup' : 'lineups'}
+                        {team.added ? ` · Created ${formatAddedDate(team.added)}` : ''}
+                        {isOwnTeam && (
+                            <> · You appear as <span className="text-white font-medium">{myPreview}</span></>
+                        )}
                     </p>
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
+                    {rightExtra}
                     {isManager && (
                         <Button size="sm" variant="secondary" onClick={() => setEditing(true)}>
                             <Pencil className="size-3.5" /> Edit
@@ -75,13 +84,15 @@ export function TeamHeaderCard({
                         </Button>
                     )}
                     {isOwner && (
-                        <Button size="sm" variant="destructive" onClick={() => setConfirmDisband(true)}>
-                            <Trash2 className="size-3.5" /> Disband
+                        <Button size="sm" variant="destructive" onClick={() => setConfirmDelete(true)}>
+                            <Trash2 className="size-3.5" /> Delete
                         </Button>
                     )}
-                    <Button size="sm" variant="destructive" disabled={leaving} onClick={leave}>
-                        <LogOut className="size-3.5" /> {leaving ? 'Leaving…' : 'Leave'}
-                    </Button>
+                    {canLeave && (
+                        <Button size="sm" variant="destructive" disabled={leaving} onClick={leave}>
+                            <LogOut className="size-3.5" /> {leaving ? 'Leaving…' : 'Leave'}
+                        </Button>
+                    )}
                 </div>
             </div>
 
@@ -106,10 +117,10 @@ export function TeamHeaderCard({
             )}
 
             <ConfirmModal
-                isOpen={confirmDisband}
-                onClose={() => setConfirmDisband(false)}
+                isOpen={confirmDelete}
+                onClose={() => setConfirmDelete(false)}
                 onConfirm={async () => {
-                    setConfirmDisband(false)
+                    setConfirmDelete(false)
                     setError(null)
                     try {
                         await disbandTeam(accessToken, team.id)
@@ -118,10 +129,10 @@ export function TeamHeaderCard({
                         setError(teamErrorMessage(e))
                     }
                 }}
-                title="Disband team?"
+                title="Delete team?"
                 message={`This permanently deletes ${team.name}, its members, and its lineups.`}
                 detail="This cannot be undone."
-                confirmText="Disband"
+                confirmText="Delete"
                 cancelText="Cancel"
                 variant="error"
             />
@@ -148,7 +159,7 @@ function EditTeamModal({ accessToken, team, onClose, onSaved }: {
         try {
             const detail = await updateTeam(accessToken, team.id, {
                 name: name.trim(),
-                tag: tag.trim() ? tag.trim() : null,
+                tag: tag.trim(),
                 tag_position: tagPosition,
                 is_open: isOpen,
             })
@@ -169,7 +180,7 @@ function EditTeamModal({ accessToken, team, onClose, onSaved }: {
             footer={
                 <div className="p-4 border-t border-border bg-muted/50 flex justify-end gap-2 shrink-0">
                     <Button variant="secondary" onClick={onClose}>Cancel</Button>
-                    <Button onClick={save} disabled={saving || name.trim().length === 0}>
+                    <Button onClick={save} disabled={saving || name.trim().length === 0 || tag.trim().length === 0}>
                         {saving ? 'Saving…' : 'Save'}
                     </Button>
                 </div>
@@ -181,7 +192,7 @@ function EditTeamModal({ accessToken, team, onClose, onSaved }: {
                     <input value={name} onChange={e => setName(e.target.value)} maxLength={40} className={teamInputClass} />
                 </label>
                 <label className="flex flex-col gap-1.5">
-                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Clan tag (leave empty to clear)</span>
+                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Clan tag</span>
                     <input value={tag} onChange={e => setTag(e.target.value)} maxLength={8} className={teamInputClass} />
                 </label>
                 <div className="flex flex-col gap-1.5">
@@ -204,10 +215,10 @@ function EditTeamModal({ accessToken, team, onClose, onSaved }: {
                         ))}
                     </div>
                 </div>
-                <label className="flex items-center gap-2 text-sm text-white">
-                    <Switch checked={isOpen} onCheckedChange={setIsOpen} />
-                    <span>{isOpen ? 'Open — anyone can apply' : 'Closed — invite only'}</span>
-                </label>
+                <div className="flex flex-col gap-1.5">
+                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Access</span>
+                    <AccessToggle isOpen={isOpen} onChange={setIsOpen} />
+                </div>
                 <ErrorBanner message={error} />
             </div>
         </Modal>

@@ -10,6 +10,9 @@ import {
 } from '@/app/utils/api'
 import { ErrorBanner, SectionCard, teamInputClass, teamErrorMessage } from './teamsShared'
 
+const LINEUP_MIN_MEMBERS = 2
+const LINEUP_MAX_MEMBERS = 12
+
 interface LineupsPanelProps {
     accessToken: string
     team: TeamDetail
@@ -36,7 +39,10 @@ export function LineupsPanel({ accessToken, team, canManage, onTeamChange }: Lin
         setSelected(prev => {
             const next = new Set(prev)
             if (next.has(userId)) next.delete(userId)
-            else next.add(userId)
+            else {
+                if (next.size >= LINEUP_MAX_MEMBERS) return prev
+                next.add(userId)
+            }
             return next
         })
     }
@@ -121,21 +127,29 @@ export function LineupsPanel({ accessToken, team, canManage, onTeamChange }: Lin
                         />
                     </label>
                     <div className="space-y-1.5">
-                        <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Members</span>
+                        <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                            Members{' '}
+                            <span className="normal-case text-muted-foreground/70">
+                                — select {LINEUP_MIN_MEMBERS}–{LINEUP_MAX_MEMBERS} ({selected.size} selected)
+                            </span>
+                        </span>
                         <div className="flex flex-wrap gap-2">
                             {activeMembers.map(m => {
                                 const id = String(m.user)
                                 const on = selected.has(id)
+                                const atMax = !on && selected.size >= LINEUP_MAX_MEMBERS
                                 return (
                                     <button
                                         key={id}
                                         type="button"
+                                        disabled={atMax}
                                         onClick={() => toggleMember(id)}
                                         className={cn(
                                             'flex items-center gap-2 px-2 py-1.5 rounded-md border transition-colors cursor-pointer',
                                             on
                                                 ? 'bg-accent-500/20 border-accent-500/50'
                                                 : 'bg-card/50 border-white/10 hover:border-white/20',
+                                            atMax && 'opacity-40 cursor-not-allowed',
                                         )}
                                     >
                                         <PlayerInfo userId={m.user} alias={m.alias} size="sm" interactive={false} />
@@ -145,12 +159,17 @@ export function LineupsPanel({ accessToken, team, canManage, onTeamChange }: Lin
                             })}
                         </div>
                     </div>
-                    <div className="flex justify-end gap-2">
+                    <div className="flex items-center justify-end gap-2">
+                        {(selected.size < LINEUP_MIN_MEMBERS || selected.size > LINEUP_MAX_MEMBERS) && (
+                            <span className="mr-auto text-[11px] text-muted-foreground">
+                                Select between {LINEUP_MIN_MEMBERS} and {LINEUP_MAX_MEMBERS} members.
+                            </span>
+                        )}
                         <Button size="sm" variant="ghost" onClick={resetCreate}>Cancel</Button>
                         <Button
                             size="sm"
                             onClick={create}
-                            disabled={busy || newLabel.trim().length === 0 || selected.size === 0}
+                            disabled={busy || newLabel.trim().length === 0 || selected.size < LINEUP_MIN_MEMBERS || selected.size > LINEUP_MAX_MEMBERS}
                         >
                             {busy ? 'Saving…' : 'Create lineup'}
                         </Button>

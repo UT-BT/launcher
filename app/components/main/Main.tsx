@@ -57,6 +57,7 @@ import {
   type TeamsPageState,
   type TeamsPageCaches,
 } from '@/app/components/pages/TeamsPage'
+import { TeamDetailsPage } from '@/app/components/pages/teams/TeamDetailsPage'
 import { MapDetailPage } from '@/app/components/pages/MapDetailPage'
 import { PlayerDetailPage } from '@/app/components/pages/PlayerDetailPage'
 import { CapDetailPage } from '@/app/components/pages/CapDetailPage'
@@ -418,6 +419,11 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
   }, [accessToken])
 
   const openMap = useCallback((name: string) => navigate('maps-detail', { mapName: name }), [navigate])
+  const openTeam = useCallback((teamId: string) => navigate('team-detail', { teamId }), [navigate])
+  const exitTeamsToGallery = useCallback(() => {
+    setTeamsCaches(prev => ({ ...prev, loaded: false }))
+    navigate('teams')
+  }, [navigate])
 
   useEffect(() => {
     const onMouseUp = (e: MouseEvent) => {
@@ -569,6 +575,15 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
           onStateChange={setTeamsState}
           caches={teamsCaches}
           onCachesChange={setTeamsCaches}
+          onTeamSelect={openTeam}
+        />
+      case 'team-detail':
+        return <TeamDetailsPage
+          key={entry.id}
+          teamId={entry.params.teamId!}
+          userProfile={userProfile}
+          onBack={back}
+          onExitToGallery={exitTeamsToGallery}
         />
       case 'admin':
         return <AdminPage
