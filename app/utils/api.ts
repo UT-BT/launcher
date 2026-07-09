@@ -2884,6 +2884,7 @@ export interface TeamMember {
     tag: string | null
     tag_position: TeamTagPosition | null
     tagged_alias: string | null
+    title?: ActiveTitle | null
 }
 
 export interface Lineup {

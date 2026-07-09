@@ -2,17 +2,18 @@ import { Users2, Calendar } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { formatAddedDate } from '@/app/utils/format'
-import type { TeamCore } from '@/app/utils/api'
+import type { ActiveTitle, TeamCore } from '@/app/utils/api'
 import { AccessBadge, TagChip } from './teamsShared'
 
 interface TeamCardProps {
     team: TeamCore
     ownerAlias?: string
+    ownerTitle?: ActiveTitle | null
     isOwnTeam?: boolean
     onSelect: (teamId: string) => void
 }
 
-export function TeamCard({ team, ownerAlias, isOwnTeam, onSelect }: TeamCardProps) {
+export function TeamCard({ team, ownerAlias, ownerTitle, isOwnTeam, onSelect }: TeamCardProps) {
     return (
         <button
             type="button"
@@ -38,7 +39,7 @@ export function TeamCard({ team, ownerAlias, isOwnTeam, onSelect }: TeamCardProp
 
             <div className="flex items-center gap-2">
                 <span className="text-[10px] uppercase tracking-wider text-muted-foreground shrink-0">Owner</span>
-                <PlayerInfo userId={team.owner} alias={ownerAlias} size="sm" interactive={false} />
+                <PlayerInfo userId={team.owner} alias={ownerAlias} title={ownerTitle} size="sm" interactive={false} />
             </div>
 
             <div className="flex items-center justify-between gap-2 pt-1 border-t border-white/5">

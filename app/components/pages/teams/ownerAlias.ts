@@ -1,7 +1,12 @@
 import { useEffect, useState } from 'react'
-import { fetchUserSummary } from '@/app/utils/api'
+import { fetchUserSummary, type ActiveTitle } from '@/app/utils/api'
 
-const aliasCache = new Map<string, string>()
+export interface OwnerIdentity {
+    alias?: string
+    title?: ActiveTitle | null
+}
+
+const cache = new Map<string, OwnerIdentity>()
 const inflight = new Map<string, Promise<void>>()
 
 function resolveOne(accessToken: string, id: string): Promise<void> {
@@ -9,8 +14,7 @@ function resolveOne(accessToken: string, id: string): Promise<void> {
     if (existing) return existing
     const p = fetchUserSummary(accessToken, id)
         .then(summary => {
-            const alias = summary.profile.alias
-            if (alias) aliasCache.set(id, alias)
+            cache.set(id, { alias: summary.profile.alias ?? undefined, title: summary.profile.active_title ?? null })
         })
         .catch(() => undefined)
         .finally(() => { inflight.delete(id) })
@@ -18,35 +22,44 @@ function resolveOne(accessToken: string, id: string): Promise<void> {
     return p
 }
 
-export function seedOwnerAlias(id: string | null | undefined, alias: string | null | undefined) {
-    if (id && alias) aliasCache.set(String(id), alias)
+export function seedOwnerIdentity(
+    id: string | null | undefined,
+    alias: string | null | undefined,
+    title: ActiveTitle | null | undefined,
+) {
+    if (!id) return
+    const existing = cache.get(String(id)) ?? {}
+    cache.set(String(id), {
+        alias: alias ?? existing.alias,
+        title: title !== undefined ? title : existing.title,
+    })
 }
 
-export function useOwnerAliases(accessToken: string | undefined, ownerIds: string[]): Record<string, string> {
-    const [aliases, setAliases] = useState<Record<string, string>>({})
+export function useOwnerIdentities(accessToken: string | undefined, ownerIds: string[]): Record<string, OwnerIdentity> {
+    const [identities, setIdentities] = useState<Record<string, OwnerIdentity>>({})
     const idsKey = Array.from(new Set(ownerIds.map(String))).sort().join(',')
 
     useEffect(() => {
         if (!accessToken) return
         const unique = idsKey ? idsKey.split(',') : []
-        const snapshot: Record<string, string> = {}
+        const snapshot: Record<string, OwnerIdentity> = {}
         for (const id of unique) {
-            const cached = aliasCache.get(id)
+            const cached = cache.get(id)
             if (cached) snapshot[id] = cached
         }
-        setAliases(snapshot)
+        setIdentities(snapshot)
 
-        const missing = unique.filter(id => !aliasCache.has(id))
+        const missing = unique.filter(id => !cache.has(id))
         if (missing.length === 0) return
 
         let cancelled = false
         void Promise.all(missing.map(id => resolveOne(accessToken, id))).then(() => {
             if (cancelled) return
-            setAliases(prev => {
+            setIdentities(prev => {
                 const next = { ...prev }
                 for (const id of missing) {
-                    const alias = aliasCache.get(id)
-                    if (alias) next[id] = alias
+                    const info = cache.get(id)
+                    if (info) next[id] = info
                 }
                 return next
             })
@@ -54,5 +67,5 @@ export function useOwnerAliases(accessToken: string | undefined, ownerIds: strin
         return () => { cancelled = true }
     }, [accessToken, idsKey])
 
-    return aliases
+    return identities
 }

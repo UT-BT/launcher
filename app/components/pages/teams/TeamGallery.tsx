@@ -3,9 +3,9 @@ import { Search, X, ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/app/components/ui/button'
 import { fetchTeams, type TeamCore, type TeamDetail } from '@/app/utils/api'
-import { ErrorBanner, teamInputClass, teamErrorMessage } from './teamsShared'
+import { ErrorBanner, memberTitle, teamInputClass, teamErrorMessage } from './teamsShared'
 import { TeamCard } from './TeamCard'
-import { seedOwnerAlias, useOwnerAliases } from './ownerAlias'
+import { seedOwnerIdentity, useOwnerIdentities } from './ownerAlias'
 
 const PAGE_SIZE = 9
 
@@ -50,7 +50,7 @@ export function TeamGallery({
     useEffect(() => {
         if (!myTeam) return
         const ownerMember = myTeam.members.find(m => String(m.user) === String(myTeam.owner))
-        seedOwnerAlias(myTeam.owner, ownerMember?.alias)
+        seedOwnerIdentity(myTeam.owner, ownerMember?.alias, memberTitle(ownerMember?.title))
     }, [myTeam])
 
     useEffect(() => {
@@ -89,7 +89,7 @@ export function TeamGallery({
     }, [page, myTeam, search, teams])
 
     const ownerIds = useMemo(() => displayTeams.map(t => t.owner), [displayTeams])
-    const ownerAliases = useOwnerAliases(accessToken, ownerIds)
+    const ownerIdentities = useOwnerIdentities(accessToken, ownerIds)
 
     const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
@@ -122,15 +122,19 @@ export function TeamGallery({
                 <div className="py-16 text-center text-sm text-muted-foreground">No teams match your search.</div>
             ) : (
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                    {displayTeams.map(team => (
-                        <TeamCard
-                            key={team.id}
-                            team={team}
-                            ownerAlias={ownerAliases[String(team.owner)]}
-                            isOwnTeam={team.id === myTeam?.id}
-                            onSelect={onSelect}
-                        />
-                    ))}
+                    {displayTeams.map(team => {
+                        const owner = ownerIdentities[String(team.owner)]
+                        return (
+                            <TeamCard
+                                key={team.id}
+                                team={team}
+                                ownerAlias={owner?.alias}
+                                ownerTitle={owner?.title}
+                                isOwnTeam={team.id === myTeam?.id}
+                                onSelect={onSelect}
+                            />
+                        )
+                    })}
                 </div>
             )}
 

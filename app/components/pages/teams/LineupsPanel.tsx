@@ -8,7 +8,7 @@ import {
     createLineup, deleteLineup, updateLineup,
     type Lineup, type TeamDetail, type TeamMember,
 } from '@/app/utils/api'
-import { ErrorBanner, SectionCard, teamInputClass, teamErrorMessage } from './teamsShared'
+import { ErrorBanner, SectionCard, memberTitle, teamInputClass, teamErrorMessage } from './teamsShared'
 
 const LINEUP_MIN_MEMBERS = 2
 const LINEUP_MAX_MEMBERS = 12
@@ -152,7 +152,7 @@ export function LineupsPanel({ accessToken, team, canManage, onTeamChange }: Lin
                                             atMax && 'opacity-40 cursor-not-allowed',
                                         )}
                                     >
-                                        <PlayerInfo userId={m.user} alias={m.alias} size="sm" interactive={false} />
+                                        <PlayerInfo userId={m.user} alias={m.alias} title={memberTitle(m.title)} size="sm" interactive={false} />
                                         {on && <Check className="size-3.5 text-accent-300" />}
                                     </button>
                                 )
@@ -244,6 +244,7 @@ export function LineupsPanel({ accessToken, team, canManage, onTeamChange }: Lin
                                             key={uid}
                                             userId={uid}
                                             alias={m?.alias ?? String(uid)}
+                                            title={memberTitle(m?.title)}
                                             size="sm"
                                             interactive={false}
                                         />

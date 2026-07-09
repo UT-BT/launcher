@@ -1,9 +1,14 @@
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
-import type { TeamMemberStatus, TeamRole } from '@/app/utils/api'
+import type { ActiveTitle, TeamMemberStatus, TeamRole } from '@/app/utils/api'
 
 export const teamInputClass =
     'px-3 py-2 bg-card/50 border border-white/10 rounded-lg text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:border-accent-500/50'
+
+export function memberTitle(raw: ActiveTitle | null | undefined): ActiveTitle | null {
+    if (!raw || !raw.name) return null
+    return raw
+}
 
 export function teamErrorMessage(e: unknown): string {
     if (e instanceof Error && e.message) return e.message

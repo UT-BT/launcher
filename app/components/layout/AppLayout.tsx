@@ -266,11 +266,6 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                                     <div className="flex flex-col flex-1 min-w-0 text-left">
                                         <div className="flex items-center gap-1.5 min-w-0">
                                             <span className="text-sm font-medium truncate">{userProfile?.alias || userProfile?.username || 'Player'}</span>
-                                            {userProfile?.team?.tag && (
-                                                <span className="shrink-0 text-[10px] font-mono font-semibold px-1 py-0.5 rounded bg-accent-500/15 text-accent-300 border border-accent-500/30">
-                                                    {userProfile.team.tag}
-                                                </span>
-                                            )}
                                             {patreonTier !== 0 && <PatreonBadge tier={patreonTier} size="sm" />}
                                         </div>
                                         {userProfile?.active_title ? (

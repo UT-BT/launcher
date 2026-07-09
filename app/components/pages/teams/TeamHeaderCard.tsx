@@ -9,7 +9,6 @@ import {
     disbandTeam, leaveTeam, transferTeamOwnership, updateTeam,
     type TeamDetail, type TeamTagPosition, type UserProfile,
 } from '@/app/utils/api'
-import { formatTaggedAlias } from './tagFormat'
 import { AccessBadge, AccessToggle, ErrorBanner, TagChip, teamInputClass, teamErrorMessage } from './teamsShared'
 
 interface TeamHeaderCardProps {
@@ -50,7 +49,7 @@ export function TeamHeaderCard({
         }
     }
 
-    const myPreview = formatTaggedAlias(userProfile?.alias, team.tag, team.tag_position)
+    const meMember = team.members.find(m => String(m.user) === String(userProfile?.id))
 
     return (
         <section className="bg-card/30 border border-white/10 rounded-xl p-5 space-y-4">
@@ -65,8 +64,8 @@ export function TeamHeaderCard({
                         {team.member_count} {team.member_count === 1 ? 'member' : 'members'}
                         {' · '}{team.lineups.length} {team.lineups.length === 1 ? 'lineup' : 'lineups'}
                         {team.added ? ` · Created ${formatAddedDate(team.added)}` : ''}
-                        {isOwnTeam && (
-                            <> · You appear as <span className="text-white font-medium">{myPreview}</span></>
+                        {isOwnTeam && meMember?.alias && (
+                            <> · You appear as <span className="text-white font-medium">{meMember.alias}</span></>
                         )}
                     </p>
                 </div>

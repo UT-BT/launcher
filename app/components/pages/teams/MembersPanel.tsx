@@ -7,7 +7,7 @@ import {
     approveTeamMember, denyTeamMember, inviteToTeam, kickTeamMember, setTeamMemberRole,
     type PlayerListRow, type TeamDetail, type TeamMember,
 } from '@/app/utils/api'
-import { ErrorBanner, RoleBadge, SectionCard, StatusBadge, teamErrorMessage } from './teamsShared'
+import { ErrorBanner, RoleBadge, SectionCard, StatusBadge, memberTitle, teamErrorMessage } from './teamsShared'
 import { PlayerSearchInput } from './PlayerSearchInput'
 
 interface MembersPanelProps {
@@ -89,14 +89,9 @@ export function MembersPanel({ accessToken, team, isOwner, isManager, onTeamChan
                             className="flex items-center gap-3 px-3 py-2.5 bg-white/5 border border-white/5 rounded-lg"
                         >
                             <div className="min-w-0 flex-1 flex items-center gap-2 flex-wrap">
-                                <PlayerInfo userId={member.user} alias={member.alias} size="sm" />
+                                <PlayerInfo userId={member.user} alias={member.alias} title={memberTitle(member.title)} size="sm" />
                                 <RoleBadge role={member.role} />
                                 {member.status !== 'active' && <StatusBadge status={member.status} />}
-                                {member.tagged_alias && member.status === 'active' && (
-                                    <span className="text-[11px] text-muted-foreground font-mono truncate">
-                                        {member.tagged_alias}
-                                    </span>
-                                )}
                             </div>
 
                             {isManager && (
