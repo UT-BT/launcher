@@ -10,7 +10,7 @@ import {
 import { CreateTeamForm } from './teams/CreateTeamForm'
 import { TeamGallery } from './teams/TeamGallery'
 import { InvitationsSection } from './teams/InvitationsSection'
-import { ErrorBanner, teamErrorMessage } from './teams/teamsShared'
+import { ErrorBanner, refreshUserProfile, teamErrorMessage } from './teams/teamsShared'
 
 export interface TeamsPageState {
     directorySearch: string
@@ -96,11 +96,13 @@ export function TeamsPage({ userProfile, state, onStateChange, caches, onCachesC
 
     const onCreated = useCallback((team: TeamDetail) => {
         onCachesChange(prev => ({ ...prev, myTeam: team }))
+        refreshUserProfile()
         onTeamSelect(team.id)
     }, [onCachesChange, onTeamSelect])
 
     const onAccepted = useCallback((team: TeamDetail) => {
         onCachesChange(prev => ({ ...prev, myTeam: team }))
+        refreshUserProfile()
         onTeamSelect(team.id)
     }, [onCachesChange, onTeamSelect])
 

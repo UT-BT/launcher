@@ -9,7 +9,7 @@ import {
     disbandTeam, leaveTeam, transferTeamOwnership, updateTeam,
     type TeamDetail, type TeamTagPosition, type UserProfile,
 } from '@/app/utils/api'
-import { AccessBadge, AccessToggle, ErrorBanner, TagChip, teamInputClass, teamErrorMessage } from './teamsShared'
+import { AccessBadge, AccessToggle, ErrorBanner, TagChip, refreshUserProfile, teamInputClass, teamErrorMessage } from './teamsShared'
 
 interface TeamHeaderCardProps {
     accessToken: string
@@ -41,6 +41,7 @@ export function TeamHeaderCard({
         setError(null)
         try {
             await leaveTeam(accessToken, team.id)
+            refreshUserProfile()
             onLeftOrDisbanded()
         } catch (e) {
             setError(teamErrorMessage(e))
@@ -102,7 +103,7 @@ export function TeamHeaderCard({
                     accessToken={accessToken}
                     team={team}
                     onClose={() => setEditing(false)}
-                    onSaved={t => { onTeamChange(t); setEditing(false) }}
+                    onSaved={t => { onTeamChange(t); setEditing(false); refreshUserProfile() }}
                 />
             )}
 
@@ -123,6 +124,7 @@ export function TeamHeaderCard({
                     setError(null)
                     try {
                         await disbandTeam(accessToken, team.id)
+                        refreshUserProfile()
                         onLeftOrDisbanded()
                     } catch (e) {
                         setError(teamErrorMessage(e))

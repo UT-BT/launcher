@@ -10,6 +10,10 @@ export function memberTitle(raw: ActiveTitle | null | undefined): ActiveTitle | 
     return raw
 }
 
+export function refreshUserProfile() {
+    window.dispatchEvent(new CustomEvent('refresh-user-profile'))
+}
+
 export function teamErrorMessage(e: unknown): string {
     if (e instanceof Error && e.message) return e.message
     return 'Something went wrong. Please try again.'
