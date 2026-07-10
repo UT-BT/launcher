@@ -296,24 +296,26 @@ export function CapDetailPage({ capId, userProfile, onMapSelect }: CapDetailPage
                     open
                     onClose={() => setVideoOpponent(null)}
                     mapName={cap.map}
-                    runA={{
-                        capId: cap.id,
-                        alias: cap.alias ?? null,
-                        userId: cap.user,
-                        title: cap.active_title ?? null,
-                        capTime: cap.cap_time_seconds,
-                        checkpoints: videoSameTeam ? detail.checkpoints : [],
-                        url: videoAvail.urlA as string,
-                    }}
-                    runB={{
-                        capId: videoOpponent.id,
-                        alias: videoOpponent.alias,
-                        userId: videoOpponent.user,
-                        title: videoOpponent.active_title ?? null,
-                        capTime: videoOpponent.cap_time_seconds,
-                        checkpoints: videoSameTeam ? (videoOpponentData?.checkpoints ?? []) : [],
-                        url: videoAvail.urlB as string,
-                    }}
+                    runs={[
+                        {
+                            capId: cap.id,
+                            alias: cap.alias ?? null,
+                            userId: cap.user,
+                            title: cap.active_title ?? null,
+                            capTime: cap.cap_time_seconds,
+                            checkpoints: videoSameTeam ? detail.checkpoints : [],
+                            url: videoAvail.urlA as string,
+                        },
+                        {
+                            capId: videoOpponent.id,
+                            alias: videoOpponent.alias,
+                            userId: videoOpponent.user,
+                            title: videoOpponent.active_title ?? null,
+                            capTime: videoOpponent.cap_time_seconds,
+                            checkpoints: videoSameTeam ? (videoOpponentData?.checkpoints ?? []) : [],
+                            url: videoAvail.urlB as string,
+                        },
+                    ]}
                 />
             )}
 

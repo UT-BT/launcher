@@ -7,7 +7,7 @@ import { formatCapTime, displayMapName } from '@/app/utils/format'
 import { cn } from '@/lib/utils'
 import type { ActiveTitle, CapCheckpoint } from '@/app/utils/api'
 import { buildSyncAnchors, formatSignedDelta, deltaClass } from '@/app/components/pages/capDetail/capStats'
-import { CompareScrubber, type ScrubTick } from './CompareScrubber'
+import { CompareScrubber, type ScrubTick, type ScrubLane } from './CompareScrubber'
 import { CompareDeltaBar } from './CompareDeltaBar'
 
 export interface CompareRun {
@@ -24,8 +24,7 @@ interface VideoCompareModalProps {
     open: boolean
     onClose: () => void
     mapName: string
-    runA: CompareRun
-    runB: CompareRun
+    runs: CompareRun[]
 }
 
 const NUDGE_STEP = 0.1
@@ -33,6 +32,24 @@ const END_EPS = 0.06
 const FRAME_STEP = 1 / 30
 const SKIP_SECONDS = 5
 const RATES = [0.25, 0.5, 1, 1.5, 2] as const
+
+interface RunColor {
+    tickColor: string
+    capColor: string
+    textColor: string
+    dot: string
+}
+
+const RUN_COLORS: RunColor[] = [
+    { tickColor: 'bg-blue-400/40', capColor: 'bg-blue-300', textColor: 'text-blue-300/80', dot: 'bg-blue-300' },
+    { tickColor: 'bg-amber-400/40', capColor: 'bg-amber-300', textColor: 'text-amber-300/80', dot: 'bg-amber-300' },
+    { tickColor: 'bg-emerald-400/40', capColor: 'bg-emerald-300', textColor: 'text-emerald-300/80', dot: 'bg-emerald-300' },
+    { tickColor: 'bg-fuchsia-400/40', capColor: 'bg-fuchsia-300', textColor: 'text-fuchsia-300/80', dot: 'bg-fuchsia-300' },
+    { tickColor: 'bg-rose-400/40', capColor: 'bg-rose-300', textColor: 'text-rose-300/80', dot: 'bg-rose-300' },
+    { tickColor: 'bg-cyan-400/40', capColor: 'bg-cyan-300', textColor: 'text-cyan-300/80', dot: 'bg-cyan-300' },
+    { tickColor: 'bg-violet-400/40', capColor: 'bg-violet-300', textColor: 'text-violet-300/80', dot: 'bg-violet-300' },
+    { tickColor: 'bg-lime-400/40', capColor: 'bg-lime-300', textColor: 'text-lime-300/80', dot: 'bg-lime-300' },
+]
 
 function isFiniteDuration(d: number | undefined | null): d is number {
     return d != null && Number.isFinite(d) && d > 0
@@ -44,31 +61,46 @@ function lastPassedIdx(cpTimes: number[], vt: number): number {
     return idx
 }
 
-export function VideoCompareModal({ open, onClose, mapName, runA, runB }: VideoCompareModalProps) {
-    const videoARef = useRef<HTMLVideoElement>(null)
-    const videoBRef = useRef<HTMLVideoElement>(null)
-    const rafRef = useRef<number | null>(null)
-    const nudgeARef = useRef(0)
-    const nudgeBRef = useRef(0)
+function gridColsClass(count: number): string {
+    if (count <= 2) return 'grid-cols-1 lg:grid-cols-2'
+    if (count === 3) return 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
+    if (count === 4) return 'grid-cols-2'
+    return 'grid-cols-2 lg:grid-cols-3'
+}
+
+function paneMaxHeight(count: number): string {
+    if (count <= 2) return '38vh'
+    if (count <= 4) return '30vh'
+    return '22vh'
+}
+
+export function VideoCompareModal({ open, onClose, mapName, runs }: VideoCompareModalProps) {
+    const n = runs.length
+    const runsKey = useMemo(() => runs.map(r => r.capId).join(','), [runs])
+
+    const videoRefs = useRef<(HTMLVideoElement | null)[]>([])
+    const nudgeRefs = useRef<number[]>(runs.map(() => 0))
     const masterRef = useRef(0)
+    const rafRef = useRef<number | null>(null)
 
     const [playing, setPlaying] = useState(false)
     const [master, setMasterState] = useState(0)
-    const [nudgeA, setNudgeAState] = useState(0)
-    const [nudgeB, setNudgeBState] = useState(0)
-    const [errorA, setErrorA] = useState(false)
-    const [errorB, setErrorB] = useState(false)
-    const [bufferingA, setBufferingA] = useState(false)
-    const [bufferingB, setBufferingB] = useState(false)
-    const [durationA, setDurationA] = useState<number | null>(null)
-    const [durationB, setDurationB] = useState<number | null>(null)
-    const [mutedA, setMutedA] = useState(true)
-    const [mutedB, setMutedB] = useState(true)
+    const [nudges, setNudges] = useState<number[]>(() => runs.map(() => 0))
+    const [errors, setErrors] = useState<boolean[]>(() => runs.map(() => false))
+    const [bufferings, setBufferings] = useState<boolean[]>(() => runs.map(() => false))
+    const [durations, setDurations] = useState<(number | null)[]>(() => runs.map(() => null))
+    const [muteds, setMuteds] = useState<boolean[]>(() => runs.map(() => true))
     const [rate, setRate] = useState(1)
 
     const setMaster = (t: number) => { masterRef.current = t; setMasterState(t) }
 
-    const tMax = Math.max(durationA ?? 0, durationB ?? 0)
+    const tMax = durations.reduce<number>((m, d) => Math.max(m, d ?? 0), 0)
+
+    const refIndex = useMemo(
+        () => runs.reduce((maxI, r, i, arr) => (r.capTime > arr[maxI].capTime ? i : maxI), 0),
+        [runs],
+    )
+    const refRun = runs[refIndex] ?? runs[0]
 
     const seekVideo = (video: HTMLVideoElement | null, nudge: number, T: number) => {
         if (!video) return
@@ -78,43 +110,62 @@ export function VideoCompareModal({ open, onClose, mapName, runA, runB }: VideoC
         video.currentTime = Math.min(hi, Math.max(0, target))
     }
     const seekToMaster = (T: number) => {
-        seekVideo(videoARef.current, nudgeARef.current, T)
-        seekVideo(videoBRef.current, nudgeBRef.current, T)
+        videoRefs.current.forEach((v, i) => seekVideo(v, nudgeRefs.current[i] ?? 0, T))
     }
 
-    const onDurationKnown = (video: HTMLVideoElement | null, setDuration: (d: number | null) => void) => {
+    const onDurationKnown = (i: number) => {
+        const video = videoRefs.current[i]
         if (!video) return
-        setDuration(isFiniteDuration(video.duration) ? video.duration : null)
+        setDurations(prev => {
+            const next = [...prev]
+            next[i] = isFiniteDuration(video.duration) ? video.duration : null
+            return next
+        })
         video.playbackRate = rate
         if (!playing) seekToMaster(masterRef.current)
+    }
+
+    const setBuffering = (i: number, b: boolean) => {
+        setBufferings(prev => {
+            if ((prev[i] ?? false) === b) return prev
+            const next = [...prev]
+            next[i] = b
+            return next
+        })
+    }
+
+    const setError = (i: number) => {
+        setErrors(prev => {
+            if (prev[i]) return prev
+            const next = [...prev]
+            next[i] = true
+            return next
+        })
     }
 
     const stopPlay = () => {
         if (rafRef.current != null) cancelAnimationFrame(rafRef.current)
         rafRef.current = null
-        videoARef.current?.pause()
-        videoBRef.current?.pause()
+        videoRefs.current.forEach(v => v?.pause())
         setPlaying(false)
     }
 
     const startPlay = () => {
-        const va = videoARef.current, vb = videoBRef.current
-        if (!va || !vb || errorA || errorB) return
-        if (!isFiniteDuration(va.duration) || !isFiniteDuration(vb.duration)) return
+        const vids = videoRefs.current
+        if (vids.length === 0 || errors.some(Boolean)) return
+        if (!runs.every((_, i) => isFiniteDuration(vids[i]?.duration))) return
         seekToMaster(masterRef.current)
-        va.playbackRate = rate
-        vb.playbackRate = rate
+        vids.forEach(v => { if (v) v.playbackRate = rate })
         setPlaying(true)
-        va.play().catch(() => {})
-        vb.play().catch(() => {})
+        vids.forEach(v => v?.play().catch(() => {}))
         const loop = () => {
-            const a = videoARef.current, b = videoBRef.current
-            const ta = a ? a.currentTime + nudgeARef.current : -Infinity
-            const tb = b ? b.currentTime + nudgeBRef.current : -Infinity
-            setMaster(Math.max(0, ta, tb))
-            const aEnded = !a || a.ended || (isFiniteDuration(a.duration) && a.currentTime >= a.duration - END_EPS)
-            const bEnded = !b || b.ended || (isFiniteDuration(b.duration) && b.currentTime >= b.duration - END_EPS)
-            if (aEnded && bEnded) { stopPlay(); return }
+            const vs = videoRefs.current
+            const times = vs.map((v, i) => (v ? v.currentTime + (nudgeRefs.current[i] ?? 0) : -Infinity))
+            setMaster(Math.max(0, ...times))
+            const allEnded = vs.every(v =>
+                !v || v.ended || (isFiniteDuration(v.duration) && v.currentTime >= v.duration - END_EPS),
+            )
+            if (allEnded) { stopPlay(); return }
             rafRef.current = requestAnimationFrame(loop)
         }
         rafRef.current = requestAnimationFrame(loop)
@@ -131,46 +182,45 @@ export function VideoCompareModal({ open, onClose, mapName, runA, runB }: VideoC
         seekToMaster(next)
     }
 
-    const applyNudge = (
-        ref: React.MutableRefObject<number>,
-        setState: (n: number) => void,
-        v: number,
-    ) => {
+    const setNudge = (i: number, v: number) => {
         const limit = Math.max(60, tMax)
         const clamped = Math.round(Math.min(limit, Math.max(-limit, v)) * 100) / 100
-        ref.current = clamped
-        setState(clamped)
+        const refs = [...nudgeRefs.current]
+        refs[i] = clamped
+        nudgeRefs.current = refs
+        setNudges(prev => {
+            const next = [...prev]
+            next[i] = clamped
+            return next
+        })
         if (!playing) seekToMaster(masterRef.current)
     }
-    const setNudgeA = (v: number) => applyNudge(nudgeARef, setNudgeAState, v)
-    const setNudgeB = (v: number) => applyNudge(nudgeBRef, setNudgeBState, v)
-    const stepNudgeA = (dir: number) => applyNudge(nudgeARef, setNudgeAState, nudgeARef.current + dir * NUDGE_STEP)
-    const stepNudgeB = (dir: number) => applyNudge(nudgeBRef, setNudgeBState, nudgeBRef.current + dir * NUDGE_STEP)
+    const stepNudge = (i: number, dir: number) => setNudge(i, (nudgeRefs.current[i] ?? 0) + dir * NUDGE_STEP)
 
     useEffect(() => {
         if (!open) return
         setPlaying(false)
         setMaster(0)
-        nudgeARef.current = 0; setNudgeAState(0)
-        nudgeBRef.current = 0; setNudgeBState(0)
-        setErrorA(false); setErrorB(false)
-        setBufferingA(false); setBufferingB(false)
-        setDurationA(null); setDurationB(null)
-        setMutedA(true); setMutedB(true)
+        nudgeRefs.current = runs.map(() => 0)
+        setNudges(runs.map(() => 0))
+        setErrors(runs.map(() => false))
+        setBufferings(runs.map(() => false))
+        setDurations(runs.map(() => null))
+        setMuteds(runs.map(() => true))
         setRate(1)
-    }, [open, runA.capId, runB.capId])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [open, runsKey])
 
-    useEffect(() => { if (videoARef.current) videoARef.current.muted = mutedA }, [mutedA])
-    useEffect(() => { if (videoBRef.current) videoBRef.current.muted = mutedB }, [mutedB])
     useEffect(() => {
-        if (videoARef.current) videoARef.current.playbackRate = rate
-        if (videoBRef.current) videoBRef.current.playbackRate = rate
+        videoRefs.current.forEach((v, i) => { if (v) v.muted = muteds[i] ?? true })
+    }, [muteds])
+    useEffect(() => {
+        videoRefs.current.forEach(v => { if (v) v.playbackRate = rate })
     }, [rate])
 
     useEffect(() => () => {
         if (rafRef.current != null) cancelAnimationFrame(rafRef.current)
-        videoARef.current?.pause()
-        videoBRef.current?.pause()
+        videoRefs.current.forEach(v => v?.pause())
     }, [])
 
     useEffect(() => {
@@ -200,44 +250,70 @@ export function VideoCompareModal({ open, onClose, mapName, runA, runB }: VideoC
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, tMax])
 
-    const anchors = useMemo(
-        () => buildSyncAnchors(runA.checkpoints, runB.checkpoints, runA.capTime, runB.capTime),
-        [runA.checkpoints, runB.checkpoints, runA.capTime, runB.capTime],
+    const paneAnchors = useMemo(
+        () => runs.map(r => buildSyncAnchors(r.checkpoints, refRun.checkpoints, r.capTime, refRun.capTime)),
+        [runs, refRun],
     )
-    const cpAnchors = useMemo(() => anchors.filter(a => a.label !== 'SPAWN' && a.label !== 'CAP'), [anchors])
-    const deltaPoints = useMemo(
-        () => cpAnchors.length === 0 ? [] : anchors.map(a => ({ x: a.aTime + nudgeA, delta: a.aTime - a.bTime })),
-        [anchors, cpAnchors, nudgeA],
-    )
-    const aTimes = useMemo(() => cpAnchors.map(a => a.aTime), [cpAnchors])
-    const bTimes = useMemo(() => cpAnchors.map(a => a.bTime), [cpAnchors])
-    const ticksA = useMemo<ScrubTick[]>(
-        () => [...cpAnchors.map(a => ({ t: a.aTime + nudgeA, isCap: false })), { t: runA.capTime + nudgeA, isCap: true }],
-        [cpAnchors, runA.capTime, nudgeA],
-    )
-    const ticksB = useMemo<ScrubTick[]>(
-        () => [...cpAnchors.map(a => ({ t: a.bTime + nudgeB, isCap: false })), { t: runB.capTime + nudgeB, isCap: true }],
-        [cpAnchors, runB.capTime, nudgeB],
+    const paneCpAnchors = useMemo(
+        () => paneAnchors.map(a => a.filter(x => x.label !== 'SPAWN' && x.label !== 'CAP')),
+        [paneAnchors],
     )
 
-    const vtA = master - nudgeA
-    const vtB = master - nudgeB
-    const endedA = durationA != null && vtA >= durationA - END_EPS
-    const endedB = durationB != null && vtB >= durationB - END_EPS
+    const paneTicks = useMemo<ScrubTick[][]>(
+        () => runs.map((r, i) => {
+            const nudge = nudges[i] ?? 0
+            return [
+                ...paneCpAnchors[i].map(a => ({ t: a.aTime + nudge, isCap: false })),
+                { t: r.capTime + nudge, isCap: true },
+            ]
+        }),
+        [runs, paneCpAnchors, nudges],
+    )
 
-    const deltas = useMemo(() => cpAnchors.map(a => a.aTime - a.bTime), [cpAnchors])
-    const idxA = lastPassedIdx(aTimes, vtA)
-    const idxB = lastPassedIdx(bTimes, vtB)
-    const atCapA = vtA >= runA.capTime - END_EPS
-    const atCapB = vtB >= runB.capTime - END_EPS
-    const capDelta = runA.capTime - runB.capTime
-    const labelA = atCapA ? 'CAP' : idxA < 0 ? 'SPAWN' : `CP${idxA + 1}`
-    const labelB = atCapB ? 'CAP' : idxB < 0 ? 'SPAWN' : `CP${idxB + 1}`
-    const deltaA = atCapA ? capDelta : idxA < 0 ? null : deltas[idxA]
-    const deltaB = atCapB ? -capDelta : idxB < 0 ? null : -deltas[idxB]
+    const panes = runs.map((r, i) => {
+        const nudge = nudges[i] ?? 0
+        const vt = master - nudge
+        const cp = paneCpAnchors[i]
+        const idx = lastPassedIdx(cp.map(a => a.aTime), vt)
+        const atCap = vt >= r.capTime - END_EPS
+        const dur = durations[i] ?? null
+        const ended = dur != null && vt >= dur - END_EPS
+        const capDelta = r.capTime - refRun.capTime
+        const label = atCap ? 'CAP' : idx < 0 ? 'SPAWN' : `CP${idx + 1}`
+        const delta = atCap ? capDelta : idx < 0 ? null : cp[idx].aTime - cp[idx].bTime
+        return { label, delta, ended, capDelta }
+    })
 
-    const durationsReady = isFiniteDuration(durationA) && isFiniteDuration(durationB)
-    const canPlay = !errorA && !errorB && durationsReady
+    const lanes = useMemo<ScrubLane[]>(
+        () => runs.map((r, i) => {
+            const c = RUN_COLORS[i % RUN_COLORS.length]
+            return {
+                alias: r.alias ?? `Run ${i + 1}`,
+                ticks: paneTicks[i],
+                tickColor: c.tickColor,
+                capColor: c.capColor,
+                textColor: c.textColor,
+            }
+        }),
+        [runs, paneTicks],
+    )
+
+    const showDeltaBar = n === 2
+    const pairAnchors = useMemo(
+        () => (showDeltaBar ? buildSyncAnchors(runs[0].checkpoints, runs[1].checkpoints, runs[0].capTime, runs[1].capTime) : []),
+        [showDeltaBar, runs],
+    )
+    const deltaPoints = useMemo(() => {
+        if (!showDeltaBar) return []
+        const cp = pairAnchors.filter(a => a.label !== 'SPAWN' && a.label !== 'CAP')
+        if (cp.length === 0) return []
+        const nudge = nudges[0] ?? 0
+        return pairAnchors.map(a => ({ x: a.aTime + nudge, delta: a.aTime - a.bTime }))
+    }, [showDeltaBar, pairAnchors, nudges])
+
+    const durationsReady = runs.every((_, i) => isFiniteDuration(durations[i]))
+    const canPlay = !errors.some(Boolean) && durationsReady
+    const maxHeight = paneMaxHeight(n)
 
     return (
         <Modal
@@ -264,37 +340,42 @@ export function VideoCompareModal({ open, onClose, mapName, runA, runB }: VideoC
             }
         >
             <div className="flex flex-col gap-3">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                    <VideoPane
-                        run={runA} videoRef={videoARef} error={errorA} buffering={bufferingA} ended={endedA}
-                        totalDelta={capDelta} muted={mutedA}
-                        onDurationKnown={() => onDurationKnown(videoARef.current, setDurationA)}
-                        onBufferingChange={setBufferingA}
-                        onError={() => setErrorA(true)}
-                    />
-                    <VideoPane
-                        run={runB} videoRef={videoBRef} error={errorB} buffering={bufferingB} ended={endedB}
-                        totalDelta={-capDelta} muted={mutedB}
-                        onDurationKnown={() => onDurationKnown(videoBRef.current, setDurationB)}
-                        onBufferingChange={setBufferingB}
-                        onError={() => setErrorB(true)}
-                    />
+                <div className={cn('grid gap-3', gridColsClass(n))}>
+                    {runs.map((run, i) => (
+                        <VideoPane
+                            key={run.capId}
+                            run={run}
+                            color={RUN_COLORS[i % RUN_COLORS.length]}
+                            isReference={i === refIndex}
+                            capDelta={panes[i].capDelta}
+                            cpLabel={panes[i].label}
+                            delta={panes[i].delta}
+                            ended={panes[i].ended}
+                            error={errors[i] ?? false}
+                            buffering={bufferings[i] ?? false}
+                            muted={muteds[i] ?? true}
+                            nudge={nudges[i] ?? 0}
+                            maxHeight={maxHeight}
+                            videoRefCb={el => { videoRefs.current[i] = el }}
+                            onDurationKnown={() => onDurationKnown(i)}
+                            onBufferingChange={b => setBuffering(i, b)}
+                            onError={() => setError(i)}
+                            onToggleMute={() => setMuteds(prev => {
+                                const next = [...prev]
+                                next[i] = !(next[i] ?? true)
+                                return next
+                            })}
+                            onStepNudge={dir => stepNudge(i, dir)}
+                            onSetNudge={v => setNudge(i, v)}
+                            onResetNudge={() => setNudge(i, 0)}
+                        />
+                    ))}
                 </div>
 
-                <div className="flex flex-col gap-1.5">
-                <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-                    <PaneControls
-                        cpText={labelA} delta={deltaA} ended={endedA}
-                        nudge={nudgeA} onStep={stepNudgeA} onSet={setNudgeA} onReset={() => setNudgeA(0)}
-                    />
-                    <div className="flex flex-col items-center gap-1.5 self-start">
+                <div className="flex flex-col items-center gap-1.5">
                     <div className="flex items-center gap-2">
-                        <MuteButton muted={mutedA} onToggle={() => setMutedA(m => !m)} who={runA.alias ?? 'this run'} />
                         <SkipButton dir={-1} seconds={SKIP_SECONDS} disabled={tMax <= 0} onSkip={skip} />
-                        <Tooltip
-                            content={canPlay ? 'Play both from the cursor' : 'Preparing videos…'}
-                            side="top"
-                        >
+                        <Tooltip content={canPlay ? 'Play all from the cursor' : 'Preparing videos…'} side="top">
                             <button
                                 type="button"
                                 onClick={() => (playing ? stopPlay() : startPlay())}
@@ -310,29 +391,20 @@ export function VideoCompareModal({ open, onClose, mapName, runA, runB }: VideoC
                             </button>
                         </Tooltip>
                         <SkipButton dir={1} seconds={SKIP_SECONDS} disabled={tMax <= 0} onSkip={skip} />
-                        <MuteButton muted={mutedB} onToggle={() => setMutedB(m => !m)} who={runB.alias ?? 'baseline'} />
                     </div>
-                        <SpeedControl rate={rate} onRate={setRate} />
-                    </div>
-                    <PaneControls
-                        cpText={labelB} delta={deltaB} ended={endedB}
-                        nudge={nudgeB} onStep={stepNudgeB} onSet={setNudgeB} onReset={() => setNudgeB(0)}
-                    />
+                    <SpeedControl rate={rate} onRate={setRate} />
                 </div>
 
                 <CompareScrubber
                     master={master}
                     duration={tMax}
-                    ticksA={ticksA}
-                    ticksB={ticksB}
+                    lanes={lanes}
                     onScrub={handleScrub}
                     onScrubStart={handleScrubStart}
                     onScrubEnd={handleScrubEnd}
-                    aliasA={runA.alias ?? 'This run'}
-                    aliasB={runB.alias ?? 'Baseline'}
                 />
 
-                {deltaPoints.length > 0 && (
+                {showDeltaBar && deltaPoints.length > 0 && (
                     <CompareDeltaBar
                         points={deltaPoints}
                         duration={tMax}
@@ -342,7 +414,6 @@ export function VideoCompareModal({ open, onClose, mapName, runA, runB }: VideoC
                         onScrubEnd={handleScrubEnd}
                     />
                 )}
-                </div>
             </div>
         </Modal>
     )
@@ -350,30 +421,45 @@ export function VideoCompareModal({ open, onClose, mapName, runA, runB }: VideoC
 
 interface VideoPaneProps {
     run: CompareRun
-    videoRef: React.RefObject<HTMLVideoElement | null>
+    color: RunColor
+    isReference: boolean
+    capDelta: number
+    cpLabel: string
+    delta: number | null
+    ended: boolean
     error: boolean
     buffering: boolean
-    ended: boolean
-    totalDelta: number
     muted: boolean
+    nudge: number
+    maxHeight: string
+    videoRefCb: (el: HTMLVideoElement | null) => void
     onDurationKnown: () => void
     onBufferingChange: (b: boolean) => void
     onError: () => void
+    onToggleMute: () => void
+    onStepNudge: (dir: number) => void
+    onSetNudge: (v: number) => void
+    onResetNudge: () => void
 }
 
 function VideoPane({
-    run, videoRef, error, buffering, ended, totalDelta, muted,
-    onDurationKnown, onBufferingChange, onError,
+    run, color, isReference, capDelta, cpLabel, delta, ended, error, buffering, muted, nudge, maxHeight,
+    videoRefCb, onDurationKnown, onBufferingChange, onError, onToggleMute, onStepNudge, onSetNudge, onResetNudge,
 }: VideoPaneProps) {
     return (
         <div className="flex flex-col gap-2 min-w-0">
             <div className="flex items-center justify-between gap-2 min-w-0 min-h-10">
-                <PlayerInfo userId={run.userId} alias={run.alias} title={run.title} size="sm" />
+                <div className="flex items-center gap-1.5 min-w-0">
+                    <span className={cn('size-2 rounded-full shrink-0', color.dot)} />
+                    <PlayerInfo userId={run.userId} alias={run.alias} title={run.title} size="sm" />
+                </div>
                 <span className="shrink-0 flex items-baseline gap-1.5">
                     <span className="text-sm font-mono tabular-nums text-amber-300">{formatCapTime(run.capTime)}</span>
-                    <span className={cn('text-xs font-mono tabular-nums', deltaClass(totalDelta))}>
-                        ({formatSignedDelta(totalDelta)})
-                    </span>
+                    {!isReference && (
+                        <span className={cn('text-xs font-mono tabular-nums', deltaClass(capDelta))}>
+                            ({formatSignedDelta(capDelta)})
+                        </span>
+                    )}
                 </span>
             </div>
 
@@ -385,7 +471,7 @@ function VideoPane({
                 ) : (
                     <>
                         <video
-                            ref={videoRef}
+                            ref={videoRefCb}
                             key={run.url}
                             src={run.url}
                             muted={muted}
@@ -401,7 +487,8 @@ function VideoPane({
                             onPlaying={() => onBufferingChange(false)}
                             onCanPlay={() => onBufferingChange(false)}
                             onError={onError}
-                            className="w-full max-h-[38vh] object-contain bg-black"
+                            style={{ maxHeight }}
+                            className="w-full object-contain bg-black"
                         />
                         {ended && (
                             <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-black text-muted-foreground">
@@ -417,6 +504,37 @@ function VideoPane({
                     </>
                 )}
             </div>
+
+            <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-muted-foreground min-w-0">
+                    <span className="truncate">{ended ? 'Capped' : cpLabel}</span>
+                    {delta != null && (
+                        <span className={cn('font-mono tabular-nums normal-case', deltaClass(delta))}>
+                            ({formatSignedDelta(delta)})
+                        </span>
+                    )}
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                    <MuteButton muted={muted} onToggle={onToggleMute} who={run.alias ?? 'this run'} />
+                    <div className="flex items-center gap-1">
+                        <NudgeButton onStep={() => onStepNudge(-1)} aria="Nudge earlier (hold to repeat)">
+                            <Minus className="size-3" />
+                        </NudgeButton>
+                        <NudgeInput value={nudge} onCommit={onSetNudge} />
+                        <NudgeButton onStep={() => onStepNudge(1)} aria="Nudge later (hold to repeat)">
+                            <Plus className="size-3" />
+                        </NudgeButton>
+                        <NudgeButton
+                            onStep={onResetNudge}
+                            repeat={false}
+                            aria="Reset sync"
+                            className={cn(nudge === 0 && 'invisible')}
+                        >
+                            <RotateCcw className="size-3" />
+                        </NudgeButton>
+                    </div>
+                </div>
+            </div>
         </div>
     )
 }
@@ -429,7 +547,7 @@ function MuteButton({ muted, onToggle, who }: { muted: boolean; onToggle: () => 
                 onClick={onToggle}
                 aria-label={`${muted ? 'Unmute' : 'Mute'} ${who}`}
                 className={cn(
-                    'inline-flex items-center justify-center size-9 rounded-md border transition-colors cursor-pointer',
+                    'inline-flex items-center justify-center size-8 rounded-md border transition-colors cursor-pointer',
                     muted
                         ? 'bg-hairline/[0.03] border-hairline/10 text-muted-foreground hover:text-foreground hover:border-hairline/20'
                         : 'bg-accent-500/20 border-accent-500/50 text-accent-100 hover:bg-accent-500/30',
@@ -490,51 +608,6 @@ function SpeedControl({ rate, onRate }: { rate: number; onRate: (r: number) => v
                     {r}×
                 </button>
             ))}
-        </div>
-    )
-}
-
-interface PaneControlsProps {
-    cpText: string
-    delta: number | null
-    ended: boolean
-    nudge: number
-    onStep: (dir: number) => void
-    onSet: (v: number) => void
-    onReset: () => void
-}
-
-function PaneControls({ cpText, delta, ended, nudge, onStep, onSet, onReset }: PaneControlsProps) {
-    return (
-        <div className="flex flex-col items-center gap-1.5">
-            <div className="flex items-center justify-center gap-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">
-                <span>{ended ? 'Capped' : cpText}</span>
-                {delta != null && (
-                    <span className={cn('font-mono tabular-nums normal-case', deltaClass(delta))}>
-                        ({formatSignedDelta(delta)})
-                    </span>
-                )}
-            </div>
-            <div className="flex flex-col items-center gap-1 text-[10px] text-muted-foreground">
-                <span className="uppercase tracking-wider text-muted-foreground/70">sync</span>
-                <div className="flex items-center gap-1.5">
-                    <NudgeButton onStep={() => onStep(-1)} aria="Nudge earlier (hold to repeat)">
-                        <Minus className="size-3" />
-                    </NudgeButton>
-                    <NudgeInput value={nudge} onCommit={onSet} />
-                    <NudgeButton onStep={() => onStep(1)} aria="Nudge later (hold to repeat)">
-                        <Plus className="size-3" />
-                    </NudgeButton>
-                </div>
-                <NudgeButton
-                    onStep={onReset}
-                    repeat={false}
-                    aria="Reset sync"
-                    className={cn('mt-0.5', nudge === 0 && 'invisible')}
-                >
-                    <RotateCcw className="size-3" />
-                </NudgeButton>
-            </div>
         </div>
     )
 }

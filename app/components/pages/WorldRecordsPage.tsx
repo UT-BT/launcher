@@ -800,16 +800,19 @@ export function WorldRecordsPage({
                         )}
                     </DataTableCell>
                 )
-            case 'time':
+            case 'time': {
+                const isTeamRow = !!(r.members && r.members.length > 0)
                 return (
                     <DataTableCell key={id} align="right">
                         <CapTimeLink
-                            capId={r.cap_id}
+                            capId={isTeamRow ? undefined : r.cap_id}
+                            teamCapId={isTeamRow ? r.cap_id : undefined}
                             seconds={r.cap_time_seconds}
                             className="font-mono font-black tabular-nums text-blue-300 tracking-tight"
                         />
                     </DataTableCell>
                 )
+            }
             case 'difficulty':
                 return (
                     <DataTableCell key={id} align="center">

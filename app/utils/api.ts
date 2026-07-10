@@ -1767,6 +1767,81 @@ export async function fetchTeamRunStatus(
     }
 }
 
+export interface TeamCapDetailMember {
+    user: string
+    alias: string | null
+    active_title: ActiveTitle | null
+    cap_id: string
+    cap_time_seconds: number
+    verified: boolean
+    disallowed: boolean
+    has_demo: boolean
+}
+
+export interface TeamCapMedalThresholds {
+    world_record: number | null
+    champion: number | null
+    gold: number | null
+    silver: number | null
+    bronze: number | null
+}
+
+export interface TeamCapDeltas {
+    world_record: number | null
+    champion: number | null
+    gold: number | null
+    silver: number | null
+    bronze: number | null
+}
+
+export interface TeamCapDetail {
+    id: string
+    team_run_id: string
+    team_cap_id: string
+    map: string
+    team_size: number
+    member_key: string
+    team_time_seconds: number
+    cap_type: number
+    medal: number
+    complete: boolean
+    verified: boolean
+    disallowed: boolean
+    public_server: boolean
+    added: string | null
+    completed_at: string | null
+    verified_at: string | null
+    members: TeamCapDetailMember[]
+    is_world_record: boolean
+    is_combination_best_verified: boolean
+    is_combination_best_unverified: boolean
+    wr_time_seconds: number | null
+    rank_on_map: number
+    total_on_map: number
+    medals: TeamCapMedalThresholds
+    deltas: TeamCapDeltas
+    server: { name: string | null; region: string | null }
+}
+
+export async function fetchTeamCapDetail(
+    accessToken: string,
+    teamCapId: string,
+    signal?: AbortSignal,
+): Promise<TeamCapDetail | null> {
+    try {
+        const res = await fetch(`${API_BASE_URL}/caps/team_caps/${encodeURIComponent(teamCapId)}/detail`, {
+            headers: { Authorization: `Bearer ${accessToken}` },
+            signal,
+        })
+        if (!res.ok) return null
+        const json = await res.json()
+        if (json.success && json.data) return json.data as TeamCapDetail
+        return null
+    } catch {
+        return null
+    }
+}
+
 export async function fetchDemoStatus(capId: string): Promise<DemoConverterStatus | null> {
     try {
         const res = await fetch(`${GATEWAY_BASE_URL}/democonverter/status/${capId}`)
@@ -2131,6 +2206,7 @@ export interface Summary {
         timeAgo: string
         verified: boolean
         isTeam?: boolean
+        teamCapId?: string | null
         teamMembers?: SummaryTeamMember[] | null
     }[]
     recentWorldRecords?: SummaryWorldRecord[]

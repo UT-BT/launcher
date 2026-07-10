@@ -7,7 +7,7 @@ import {
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { TeamHolders } from '@/app/components/shared/TeamHolders'
 import { MapNameCell } from '@/app/components/shared/MapNameCell'
-import { CapTimeLink, openCap } from '@/app/components/shared/CapTimeLink'
+import { CapTimeLink, openCap, openTeamCap } from '@/app/components/shared/CapTimeLink'
 import { IconActionButton } from '@/app/components/shared/IconActionButton'
 import { cn } from '@/lib/utils'
 import type { SummaryWorldRecord } from '@/app/utils/api'
@@ -68,11 +68,12 @@ export function LatestRecordsCard({
             <tbody>
                 {rows.map(r => {
                     const isOwn = currentUserId != null && r.userId === currentUserId
+                    const isTeamRow = !!(r.members && r.members.length > 0)
                     return (
                         <DataTableRow
                             key={r.id}
                             className={cn('cursor-pointer', isOwn && 'bg-emerald-500/[0.05]')}
-                            onClick={() => openCap(r.id)}
+                            onClick={() => isTeamRow ? openTeamCap(r.id) : openCap(r.id)}
                         >
                             <DataTableCell>
                                 <MapNameCell
@@ -106,7 +107,8 @@ export function LatestRecordsCard({
                                 <DataTableCell align="center">
                                     <div className="flex justify-center">
                                         <CapTimeLink
-                                            capId={r.id}
+                                            capId={isTeamRow ? undefined : r.id}
+                                            teamCapId={isTeamRow ? r.id : undefined}
                                             seconds={r.time}
                                             className="font-mono tabular-nums font-bold text-blue-300"
                                         />

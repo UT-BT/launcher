@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react'
 import { Play, Download, MessageSquareOff, ShieldCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useNavState } from '@/app/components/navigation/useNavState'
-import { formatAddedDate, formatCapTime } from '@/app/utils/format'
+import { formatAddedDate } from '@/app/utils/format'
 import { getMedalIcon } from '@/app/utils/medals'
 import { getTeamDisplay } from '@/app/utils/team'
 import { medalIconForInt, medalLabelForInt } from '@/app/components/pages/capDetail/capStats'
@@ -597,12 +597,14 @@ function TeamLeaderboardTable({ teamLeaderboard, loading, currentUserId }: TeamL
                                             )}
                                         </DataTableCell>
                                         <DataTableCell align="right">
-                                            <span className={cn(
-                                                'text-sm font-mono tabular-nums font-bold',
-                                                rank === 1 ? 'text-red-300' : 'text-foreground',
-                                            )}>
-                                                {formatCapTime(entry.cap_time_seconds)}
-                                            </span>
+                                            <CapTimeLink
+                                                teamCapId={entry.id}
+                                                seconds={entry.cap_time_seconds}
+                                                className={cn(
+                                                    'text-sm font-mono tabular-nums font-bold',
+                                                    rank === 1 ? 'text-red-300' : 'text-foreground',
+                                                )}
+                                            />
                                         </DataTableCell>
                                         <DataTableCell align="center">
                                             <span className={cn(

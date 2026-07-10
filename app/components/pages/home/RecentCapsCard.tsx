@@ -7,7 +7,7 @@ import {
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { TeamHolders } from '@/app/components/shared/TeamHolders'
 import { MapNameCell } from '@/app/components/shared/MapNameCell'
-import { CapTimeLink, openCap } from '@/app/components/shared/CapTimeLink'
+import { CapTimeLink, openCap, openTeamCap } from '@/app/components/shared/CapTimeLink'
 import { IconActionButton } from '@/app/components/shared/IconActionButton'
 import { getMedalIcon } from '@/app/utils/medals'
 import type { Summary, ActiveTitle } from '@/app/utils/api'
@@ -72,11 +72,12 @@ export function RecentCapsCard({
             <tbody>
                 {rows.map(cap => {
                     const medalIcon = getMedalIcon(cap.medal)
+                    const teamCapId = cap.isTeam ? cap.teamCapId ?? null : null
                     return (
                         <DataTableRow
                             key={cap.id}
                             className="cursor-pointer"
-                            onClick={() => openCap(cap.id)}
+                            onClick={() => teamCapId ? openTeamCap(teamCapId) : openCap(cap.id)}
                         >
                             <DataTableCell>
                                 <div className="flex items-center gap-2 min-w-0">
@@ -118,7 +119,8 @@ export function RecentCapsCard({
                                     <div className="flex items-center justify-center gap-1.5">
                                         {medalIcon && <img src={medalIcon} alt={cap.medal} className="size-3.5 shrink-0" />}
                                         <CapTimeLink
-                                            capId={cap.id}
+                                            capId={teamCapId ? undefined : cap.id}
+                                            teamCapId={teamCapId ?? undefined}
                                             seconds={cap.time}
                                             className="font-mono tabular-nums font-bold text-amber-300"
                                         />
