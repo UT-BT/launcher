@@ -10,6 +10,8 @@ import { ReplayVideoModal } from '@/app/components/shared/ReplayVideoModal'
 import { DemoDownloadStatusModal } from '@/app/components/shared/DemoDownloadStatusModal'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
+import { TeamHolders } from '@/app/components/shared/TeamHolders'
+import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import { useAsync } from '@/app/hooks/useAsync'
 import { useRefreshCooldown } from '@/app/hooks/useRefreshCooldown'
@@ -23,7 +25,6 @@ import { MedalThresholdsStrip } from './capDetail/MedalThresholdsStrip'
 import { ClientSettingsGrid } from './capDetail/ClientSettingsGrid'
 import { MovementAnalyticsCard } from './capDetail/MovementAnalyticsCard'
 import { VideoCompareModal, type CompareRun } from './capDetail/videoCompare/VideoCompareModal'
-import { TeamLeaderboardTable } from './mapDetail/LeaderboardCard'
 import {
     fetchTeamCapDetail,
     fetchCapCheckpoints,
@@ -41,6 +42,88 @@ interface TeamCapDetailPageProps {
 }
 
 type CompareState = 'idle' | 'resolving' | 'ready' | 'insufficient'
+
+const ROSTER_GRID_COLS: Record<number, string> = {
+    1: 'grid-cols-1',
+    2: 'grid-cols-2',
+    3: 'grid-cols-3',
+    4: 'grid-cols-4',
+    5: 'grid-cols-5',
+    6: 'grid-cols-6',
+}
+
+function rosterColumnCount(n: number): number {
+    if (n <= 1) return 1
+    if (n <= 3) return n
+    return Math.ceil(Math.sqrt(n))
+}
+
+interface TeamRankContextRow {
+    entry: TeamLeaderboardEntry
+    rank: number
+    isCurrent: boolean
+}
+
+function TeamRankContextCard({
+    rank, total, rows, loading, currentUserId,
+}: {
+    rank: number
+    total: number
+    rows: TeamRankContextRow[]
+    loading: boolean
+    currentUserId?: string | null
+}) {
+    return (
+        <div className="bg-card/30 border border-hairline/5 rounded-xl">
+            <div className="px-4 py-3 border-b border-hairline/5 text-[10px] uppercase tracking-wider text-muted-foreground font-medium text-center">
+                Rank
+            </div>
+
+            <div className="px-4 py-4 flex items-baseline gap-2">
+                <span className="text-3xl font-bold font-mono tabular-nums text-foreground">#{rank}</span>
+                <span className="text-sm text-muted-foreground">of {total.toLocaleString()}</span>
+            </div>
+
+            <div className="px-2 pb-3 space-y-1">
+                {loading && rows.length === 0 ? (
+                    Array.from({ length: 5 }).map((_, i) => (
+                        <div key={i} className="h-11 rounded-lg bg-hairline/[0.03] animate-pulse" />
+                    ))
+                ) : rows.length === 0 ? (
+                    <div className="px-3 py-6 text-center text-xs text-muted-foreground">
+                        No ranked team runs yet.
+                    </div>
+                ) : (
+                    rows.map(({ entry, rank: rowRank, isCurrent }) => (
+                        <div
+                            key={entry.id}
+                            className={cn(
+                                'flex items-center gap-2 px-3 py-2 rounded-lg',
+                                isCurrent ? 'bg-accent-500/10 border border-accent-500/30' : 'hover:bg-hairline/[0.03]',
+                            )}
+                        >
+                            <span className="w-8 text-xs font-bold font-mono text-muted-foreground tabular-nums shrink-0">#{rowRank}</span>
+                            <div className="min-w-0 flex-1">
+                                <TeamHolders
+                                    members={entry.members.map(m => ({
+                                        userId: m.user,
+                                        alias: m.alias,
+                                        activeTitle: m.active_title ?? null,
+                                    }))}
+                                    size="sm"
+                                    currentUserId={currentUserId}
+                                />
+                            </div>
+                            <span className="text-sm font-mono tabular-nums font-bold text-foreground shrink-0">
+                                <CapTimeLink teamCapId={entry.id} seconds={entry.cap_time_seconds} />
+                            </span>
+                        </div>
+                    ))
+                )}
+            </div>
+        </div>
+    )
+}
 
 export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamCapDetailPageProps) {
     const accessToken = userProfile?.accessToken
@@ -68,7 +151,6 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
         [accessToken, detail?.map, refreshKey],
         { enabled: !!accessToken && !!detail?.map, errorMessage: 'Failed to load team leaderboard.' },
     )
-    const teamLeaderboard = teamLeaderboardData ?? []
 
     const gapToNext = useMemo(() => {
         if (!detail || detail.rank_on_map <= 1) return null
@@ -83,11 +165,35 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
         return nextTime == null ? null : detail.team_time_seconds - nextTime
     }, [detail, teamLeaderboardData])
 
+    const rankContextRows = useMemo<TeamRankContextRow[]>(() => {
+        if (!detail) return []
+        const ranked = [...(teamLeaderboardData ?? [])]
+            .sort((a, b) => a.cap_time_seconds - b.cap_time_seconds)
+            .map((entry, i) => ({ entry, rank: i + 1 }))
+        if (ranked.length === 0) return []
+        let currentIndex = ranked.findIndex(r => String(r.entry.id) === String(detail.team_cap_id))
+        if (currentIndex === -1) {
+            currentIndex = ranked.findIndex(r => String(r.entry.user) === String(detail.member_key))
+        }
+        const windowSize = 5
+        let start = Math.max(0, currentIndex - 2)
+        let end = start + windowSize - 1
+        if (end > ranked.length - 1) {
+            end = ranked.length - 1
+            start = Math.max(0, end - windowSize + 1)
+        }
+        return ranked.slice(start, end + 1).map(r => ({
+            entry: r.entry,
+            rank: r.rank,
+            isCurrent: currentIndex !== -1 && r.rank === currentIndex + 1,
+        }))
+    }, [detail, teamLeaderboardData])
+
     const [compareState, setCompareState] = useState<CompareState>('idle')
     const [compareRuns, setCompareRuns] = useState<CompareRun[] | null>(null)
     const compareReqRef = useRef(0)
 
-    const [activeMemberTab, setActiveMemberTab] = useState<string | null>(null)
+    const [selectedCapId, setSelectedCapId] = useState<string | null>(null)
     const [demoBatch, setDemoBatch] = useState<{ total: number; done: number } | null>(null)
 
     const downloadAllDemos = async () => {
@@ -156,10 +262,15 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
 
     const members = detail?.members ?? []
     const membersWithDemos = members.filter(m => m.has_demo)
-    const activeMemberId = (activeMemberTab && members.some(m => m.cap_id === activeMemberTab))
-        ? activeMemberTab
+    const anchorMemberId = detail
+        ? (members.find(m => m.cap_time_seconds === detail.team_time_seconds)?.cap_id ?? members[0]?.cap_id ?? null)
         : (members[0]?.cap_id ?? null)
-    const activeMember = members.find(m => m.cap_id === activeMemberId) ?? null
+    const selectedMemberId = (selectedCapId && members.some(m => m.cap_id === selectedCapId))
+        ? selectedCapId
+        : anchorMemberId
+    const selectedMember = members.find(m => m.cap_id === selectedMemberId) ?? null
+
+    const rosterColsClass = ROSTER_GRID_COLS[rosterColumnCount(members.length)] ?? 'grid-cols-4'
 
     return (
         <div className="space-y-4 h-full flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-0 duration-500">
@@ -335,149 +446,142 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
                     )}
 
                     <div ref={scrollRef} onScroll={onScroll} className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-4">
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-                        <div className="bg-card/30 border border-hairline/5 rounded-xl">
-                            <div className="px-4 py-3 border-b border-hairline/5 text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
-                                Roster
-                            </div>
-                            <div className="p-3 flex flex-col gap-2">
-                                {detail.members.map(member => {
-                                    const isAnchor = member.cap_time_seconds === detail.team_time_seconds
-                                    return (
-                                        <div
-                                            key={member.cap_id}
-                                            className={cn(
-                                                'flex items-center justify-between gap-3 min-w-0 rounded-lg border px-3 py-2.5',
-                                                isAnchor
-                                                    ? 'bg-accent-500/[0.06] border-accent-500/30'
-                                                    : 'bg-hairline/[0.02] border-hairline/5',
-                                            )}
-                                        >
-                                            <div className="flex items-center gap-2 min-w-0">
-                                                <PlayerInfo
-                                                    userId={member.user}
-                                                    alias={member.alias}
-                                                    title={member.active_title}
-                                                    size="md"
-                                                />
-                                            </div>
-                                            <div className="flex items-center gap-3 shrink-0">
-                                                <span className="text-sm font-mono tabular-nums font-bold text-foreground">
-                                                    {formatCapTime(member.cap_time_seconds)}
-                                                </span>
-                                                {member.disallowed ? (
-                                                    <Tooltip content="Disallowed" side="top">
-                                                        <ShieldAlert className="size-4 text-red-300" />
-                                                    </Tooltip>
-                                                ) : (
-                                                    <Tooltip content={member.verified ? 'Verified' : 'Pending demo'} side="top">
-                                                        {member.verified
-                                                            ? <ShieldCheck className="size-4 text-emerald-300" />
-                                                            : <ShieldAlert className="size-4 text-amber-300" />}
-                                                    </Tooltip>
-                                                )}
-                                                <button
-                                                    type="button"
-                                                    onClick={() => replay.openReplay({
-                                                        capId: member.cap_id,
-                                                        mapName: detail.map,
-                                                        time: member.cap_time_seconds,
-                                                        alias: member.alias ?? undefined,
-                                                    })}
-                                                    disabled={!member.verified || replay.loadingCapId === member.cap_id}
-                                                    className={cn(
-                                                        'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border transition-colors text-xs font-semibold cursor-pointer',
-                                                        'bg-accent-500/15 border-accent-500/40 text-accent-200 hover:bg-accent-500/25 hover:text-foreground hover:border-accent-500/60',
-                                                        'disabled:opacity-50 disabled:cursor-not-allowed',
-                                                    )}
-                                                    title={member.verified ? 'Watch Replay' : 'No replay — cap not verified'}
-                                                >
-                                                    {replay.loadingCapId === member.cap_id
-                                                        ? <Loader2 className="size-3.5 animate-spin" />
-                                                        : <Play className="size-3.5" />}
-                                                    Watch
-                                                </button>
-                                                {member.has_demo && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => demoDownload.start(
-                                                            {
-                                                                id: member.cap_id,
-                                                                alias: member.alias ?? '',
-                                                                cap_time_seconds: member.cap_time_seconds,
-                                                                map: detail.map,
-                                                            } as LeaderboardEntry,
-                                                            detail.map,
-                                                        )}
-                                                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-hairline/[0.03] border border-hairline/10 text-muted-foreground hover:text-foreground hover:bg-hairline/[0.06] hover:border-hairline/20 transition-colors text-xs font-semibold cursor-pointer"
-                                                        title="Download demo"
-                                                    >
-                                                        <Download className="size-3.5" />
-                                                        Demo
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </div>
-                                    )
-                                })}
-                            </div>
-                        </div>
-
-                        <TeamLeaderboardTable
-                            teamLeaderboard={teamLeaderboard}
-                            loading={leaderboardLoading}
-                            currentUserId={userProfile?.id ?? undefined}
-                            highlightTeamCapId={detail.team_cap_id}
-                            highlightMemberKey={detail.member_key}
-                        />
-                        </div>
-
                         {members.length > 0 && (
-                            <div className="space-y-4">
-                                <div className="bg-card/30 border border-hairline/5 rounded-xl">
-                                    <div className="px-4 py-3 border-b border-hairline/5 text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
-                                        Player Breakdown
-                                    </div>
-                                    <div className="p-3 flex flex-wrap gap-1.5">
+                            <div className="bg-card/30 border border-hairline/5 rounded-xl">
+                                <div className="px-4 py-3 border-b border-hairline/5 text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
+                                    Roster
+                                </div>
+                                <div className="p-3">
+                                    <div className={cn('grid gap-2 items-stretch', rosterColsClass)}>
                                         {members.map(member => {
-                                            const isActive = member.cap_id === activeMemberId
+                                            const isSelected = member.cap_id === selectedMemberId
                                             return (
-                                                <button
+                                                <div
                                                     key={member.cap_id}
-                                                    type="button"
-                                                    onClick={() => setActiveMemberTab(member.cap_id)}
+                                                    role="button"
+                                                    tabIndex={0}
+                                                    aria-pressed={isSelected}
+                                                    onClick={() => setSelectedCapId(member.cap_id)}
+                                                    onKeyDown={e => {
+                                                        if (e.key === 'Enter' || e.key === ' ') {
+                                                            e.preventDefault()
+                                                            setSelectedCapId(member.cap_id)
+                                                        }
+                                                    }}
                                                     className={cn(
-                                                        'inline-flex items-center gap-2 pl-1.5 pr-3 py-1.5 rounded-lg border transition-colors cursor-pointer text-left',
-                                                        isActive
-                                                            ? 'bg-accent-500/[0.12] border-accent-500/40'
+                                                        'flex flex-col gap-2.5 rounded-lg border px-3 py-3 text-left transition-colors cursor-pointer outline-none',
+                                                        'focus-visible:ring-2 focus-visible:ring-accent-500/50',
+                                                        isSelected
+                                                            ? 'bg-accent-500/[0.12] border-accent-500/50 ring-1 ring-accent-500/30'
                                                             : 'bg-hairline/[0.02] border-hairline/5 hover:border-hairline/20 hover:bg-hairline/[0.04]',
                                                     )}
                                                 >
-                                                    <PlayerInfo
-                                                        userId={member.user}
-                                                        alias={member.alias}
-                                                        title={member.active_title}
-                                                        size="sm"
-                                                        interactive={false}
-                                                    />
-                                                </button>
+                                                    <div className="flex items-start justify-between gap-2 min-w-0">
+                                                        <PlayerInfo
+                                                            userId={member.user}
+                                                            alias={member.alias}
+                                                            title={member.active_title}
+                                                            size="md"
+                                                        />
+                                                        {member.disallowed ? (
+                                                            <Tooltip content="Disallowed" side="top">
+                                                                <ShieldAlert className="size-4 text-red-300 shrink-0 mt-1" />
+                                                            </Tooltip>
+                                                        ) : (
+                                                            <Tooltip content={member.verified ? 'Verified' : 'Pending demo'} side="top">
+                                                                {member.verified
+                                                                    ? <ShieldCheck className="size-4 text-emerald-300 shrink-0 mt-1" />
+                                                                    : <ShieldAlert className="size-4 text-amber-300 shrink-0 mt-1" />}
+                                                            </Tooltip>
+                                                        )}
+                                                    </div>
+
+                                                    <div className="text-lg font-mono tabular-nums font-bold text-foreground leading-none">
+                                                        {formatCapTime(member.cap_time_seconds)}
+                                                    </div>
+
+                                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                                        <button
+                                                            type="button"
+                                                            onClick={e => {
+                                                                e.stopPropagation()
+                                                                replay.openReplay({
+                                                                    capId: member.cap_id,
+                                                                    mapName: detail.map,
+                                                                    time: member.cap_time_seconds,
+                                                                    alias: member.alias ?? undefined,
+                                                                })
+                                                            }}
+                                                            disabled={!member.verified || replay.loadingCapId === member.cap_id}
+                                                            className={cn(
+                                                                'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border transition-colors text-xs font-semibold cursor-pointer',
+                                                                'bg-accent-500/15 border-accent-500/40 text-accent-200 hover:bg-accent-500/25 hover:text-foreground hover:border-accent-500/60',
+                                                                'disabled:opacity-50 disabled:cursor-not-allowed',
+                                                            )}
+                                                            title={member.verified ? 'Watch Replay' : 'No replay — cap not verified'}
+                                                        >
+                                                            {replay.loadingCapId === member.cap_id
+                                                                ? <Loader2 className="size-3.5 animate-spin" />
+                                                                : <Play className="size-3.5" />}
+                                                            Watch
+                                                        </button>
+                                                        {member.has_demo && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={e => {
+                                                                    e.stopPropagation()
+                                                                    demoDownload.start(
+                                                                        {
+                                                                            id: member.cap_id,
+                                                                            alias: member.alias ?? '',
+                                                                            cap_time_seconds: member.cap_time_seconds,
+                                                                            map: detail.map,
+                                                                        } as LeaderboardEntry,
+                                                                        detail.map,
+                                                                    )
+                                                                }}
+                                                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-hairline/[0.03] border border-hairline/10 text-muted-foreground hover:text-foreground hover:bg-hairline/[0.06] hover:border-hairline/20 transition-colors text-xs font-semibold cursor-pointer"
+                                                                title="Download demo"
+                                                            >
+                                                                <Download className="size-3.5" />
+                                                                Demo
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </div>
                                             )
                                         })}
                                     </div>
                                 </div>
-
-                                {activeMember?.cap ? (
-                                    <>
-                                        <ClientSettingsGrid cap={activeMember.cap} server={detail.server} />
-                                        <MovementAnalyticsCard cap={activeMember.cap} />
-                                    </>
-                                ) : (
-                                    <div className="bg-card/30 border border-hairline/5 rounded-xl px-6 py-10 text-center text-sm text-muted-foreground">
-                                        No client, server, or movement data is available for this player yet.
-                                    </div>
-                                )}
                             </div>
                         )}
+
+                        {members.length > 0 && (
+                            selectedMember?.cap ? (
+                                <ClientSettingsGrid cap={selectedMember.cap} server={detail.server} />
+                            ) : (
+                                <div className="bg-card/30 border border-hairline/5 rounded-xl px-6 py-10 text-center text-sm text-muted-foreground">
+                                    No client or server data is available for this player yet.
+                                </div>
+                            )
+                        )}
+
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+                            <TeamRankContextCard
+                                rank={detail.rank_on_map}
+                                total={detail.total_on_map}
+                                rows={rankContextRows}
+                                loading={leaderboardLoading}
+                                currentUserId={userProfile?.id ?? null}
+                            />
+                            {selectedMember?.cap ? (
+                                <MovementAnalyticsCard cap={selectedMember.cap} />
+                            ) : (
+                                <div className="bg-card/30 border border-hairline/5 rounded-xl px-6 py-10 text-center text-sm text-muted-foreground">
+                                    No movement data is available for this player yet.
+                                </div>
+                            )}
+                        </div>
 
                         <MedalThresholdsStrip
                             medals={detail.medals}
