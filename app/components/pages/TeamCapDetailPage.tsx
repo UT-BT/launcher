@@ -448,7 +448,7 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
                     <div ref={scrollRef} onScroll={onScroll} className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-4">
                         {members.length > 0 && (
                             <div className="bg-card/30 border border-hairline/5 rounded-xl">
-                                <div className="px-4 py-3 border-b border-hairline/5 text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
+                                <div className="px-4 py-3 border-b border-hairline/5 text-[10px] uppercase tracking-wider text-muted-foreground font-medium text-center">
                                     Roster
                                 </div>
                                 <div className="p-3">
@@ -469,84 +469,84 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
                                                         }
                                                     }}
                                                     className={cn(
-                                                        'flex flex-col gap-2.5 rounded-lg border px-3 py-3 text-left transition-colors cursor-pointer outline-none',
+                                                        'flex flex-col gap-2 rounded-lg border p-3 text-left transition-colors cursor-pointer outline-none',
                                                         'focus-visible:ring-2 focus-visible:ring-accent-500/50',
                                                         isSelected
                                                             ? 'bg-accent-500/[0.12] border-accent-500/50 ring-1 ring-accent-500/30'
                                                             : 'bg-hairline/[0.02] border-hairline/5 hover:border-hairline/20 hover:bg-hairline/[0.04]',
                                                     )}
                                                 >
-                                                    <div className="flex items-start justify-between gap-2 min-w-0">
+                                                    <div className="flex items-center gap-1.5 min-w-0">
                                                         <PlayerInfo
                                                             userId={member.user}
                                                             alias={member.alias}
                                                             title={member.active_title}
-                                                            size="md"
+                                                            size="sm"
                                                         />
                                                         {member.disallowed ? (
                                                             <Tooltip content="Disallowed" side="top">
-                                                                <ShieldAlert className="size-4 text-red-300 shrink-0 mt-1" />
+                                                                <ShieldAlert className="size-3.5 text-red-300 shrink-0" />
                                                             </Tooltip>
                                                         ) : (
                                                             <Tooltip content={member.verified ? 'Verified' : 'Pending demo'} side="top">
                                                                 {member.verified
-                                                                    ? <ShieldCheck className="size-4 text-emerald-300 shrink-0 mt-1" />
-                                                                    : <ShieldAlert className="size-4 text-amber-300 shrink-0 mt-1" />}
+                                                                    ? <ShieldCheck className="size-3.5 text-emerald-300 shrink-0" />
+                                                                    : <ShieldAlert className="size-3.5 text-amber-300 shrink-0" />}
                                                             </Tooltip>
                                                         )}
                                                     </div>
 
-                                                    <div className="text-lg font-mono tabular-nums font-bold text-foreground leading-none">
-                                                        {formatCapTime(member.cap_time_seconds)}
-                                                    </div>
-
-                                                    <div className="flex items-center gap-1.5 flex-wrap">
-                                                        <button
-                                                            type="button"
-                                                            onClick={e => {
-                                                                e.stopPropagation()
-                                                                replay.openReplay({
-                                                                    capId: member.cap_id,
-                                                                    mapName: detail.map,
-                                                                    time: member.cap_time_seconds,
-                                                                    alias: member.alias ?? undefined,
-                                                                })
-                                                            }}
-                                                            disabled={!member.verified || replay.loadingCapId === member.cap_id}
-                                                            className={cn(
-                                                                'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border transition-colors text-xs font-semibold cursor-pointer',
-                                                                'bg-accent-500/15 border-accent-500/40 text-accent-200 hover:bg-accent-500/25 hover:text-foreground hover:border-accent-500/60',
-                                                                'disabled:opacity-50 disabled:cursor-not-allowed',
-                                                            )}
-                                                            title={member.verified ? 'Watch Replay' : 'No replay — cap not verified'}
-                                                        >
-                                                            {replay.loadingCapId === member.cap_id
-                                                                ? <Loader2 className="size-3.5 animate-spin" />
-                                                                : <Play className="size-3.5" />}
-                                                            Watch
-                                                        </button>
-                                                        {member.has_demo && (
+                                                    <div className="flex items-center justify-between gap-2">
+                                                        <span className="text-base font-mono tabular-nums font-bold text-foreground leading-none">
+                                                            {formatCapTime(member.cap_time_seconds)}
+                                                        </span>
+                                                        <div className="flex items-center gap-1 shrink-0">
                                                             <button
                                                                 type="button"
                                                                 onClick={e => {
                                                                     e.stopPropagation()
-                                                                    demoDownload.start(
-                                                                        {
-                                                                            id: member.cap_id,
-                                                                            alias: member.alias ?? '',
-                                                                            cap_time_seconds: member.cap_time_seconds,
-                                                                            map: detail.map,
-                                                                        } as LeaderboardEntry,
-                                                                        detail.map,
-                                                                    )
+                                                                    replay.openReplay({
+                                                                        capId: member.cap_id,
+                                                                        mapName: detail.map,
+                                                                        time: member.cap_time_seconds,
+                                                                        alias: member.alias ?? undefined,
+                                                                    })
                                                                 }}
-                                                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-hairline/[0.03] border border-hairline/10 text-muted-foreground hover:text-foreground hover:bg-hairline/[0.06] hover:border-hairline/20 transition-colors text-xs font-semibold cursor-pointer"
-                                                                title="Download demo"
+                                                                disabled={!member.verified || replay.loadingCapId === member.cap_id}
+                                                                className={cn(
+                                                                    'inline-flex items-center gap-1 px-2 py-1 rounded-md border transition-colors text-xs font-semibold cursor-pointer',
+                                                                    'bg-accent-500/15 border-accent-500/40 text-accent-200 hover:bg-accent-500/25 hover:text-foreground hover:border-accent-500/60',
+                                                                    'disabled:opacity-50 disabled:cursor-not-allowed',
+                                                                )}
+                                                                title={member.verified ? 'Watch Replay' : 'No replay — cap not verified'}
                                                             >
-                                                                <Download className="size-3.5" />
-                                                                Demo
+                                                                {replay.loadingCapId === member.cap_id
+                                                                    ? <Loader2 className="size-3.5 animate-spin" />
+                                                                    : <Play className="size-3.5" />}
+                                                                Watch
                                                             </button>
-                                                        )}
+                                                            {member.has_demo && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={e => {
+                                                                        e.stopPropagation()
+                                                                        demoDownload.start(
+                                                                            {
+                                                                                id: member.cap_id,
+                                                                                alias: member.alias ?? '',
+                                                                                cap_time_seconds: member.cap_time_seconds,
+                                                                                map: detail.map,
+                                                                            } as LeaderboardEntry,
+                                                                            detail.map,
+                                                                        )
+                                                                    }}
+                                                                    className="inline-flex items-center justify-center size-7 rounded-md bg-hairline/[0.03] border border-hairline/10 text-muted-foreground hover:text-foreground hover:bg-hairline/[0.06] hover:border-hairline/20 transition-colors cursor-pointer"
+                                                                    title="Download demo"
+                                                                >
+                                                                    <Download className="size-3.5" />
+                                                                </button>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
                                             )
