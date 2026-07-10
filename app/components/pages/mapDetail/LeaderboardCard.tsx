@@ -430,9 +430,13 @@ interface TeamLeaderboardTableProps {
     teamLeaderboard: TeamLeaderboardEntry[]
     loading: boolean
     currentUserId?: string | number
+    highlightTeamCapId?: string | null
+    highlightMemberKey?: string | number | null
 }
 
-function TeamLeaderboardTable({ teamLeaderboard, loading, currentUserId }: TeamLeaderboardTableProps) {
+export function TeamLeaderboardTable({
+    teamLeaderboard, loading, currentUserId, highlightTeamCapId, highlightMemberKey,
+}: TeamLeaderboardTableProps) {
     const [tab, setTab] = useNavState<TeamTab>('teamLeaderboard.tab', 'verified')
     const [sortBy, setSortBy] = useNavState<TeamSortField>('teamLeaderboard.sortBy', 'rank')
     const [sortDir, setSortDir] = useNavState<SortDir>('teamLeaderboard.sortDir', 'asc')
@@ -559,12 +563,16 @@ function TeamLeaderboardTable({ teamLeaderboard, loading, currentUserId }: TeamL
                                 const medalIcon = medalIconForInt(entry.medal)
                                 const medalLabel = medalLabelForInt(entry.medal)
                                 const isOwn = currentUserId != null && entry.members.some(m => String(m.user) === String(currentUserId))
+                                const isCurrentRun =
+                                    (highlightTeamCapId != null && String(entry.id) === String(highlightTeamCapId)) ||
+                                    (highlightMemberKey != null && String(entry.user) === String(highlightMemberKey))
+                                const highlightRow = (highlightTeamCapId != null || highlightMemberKey != null) ? isCurrentRun : isOwn
                                 const exactTimestamp = (() => {
                                     const d = new Date(entry.added)
                                     return isNaN(d.getTime()) ? entry.added : d.toLocaleString()
                                 })()
                                 return (
-                                    <DataTableRow key={entry.id} className={cn(isOwn && 'bg-emerald-500/[0.05]')}>
+                                    <DataTableRow key={entry.id} className={cn(highlightRow && 'bg-emerald-500/[0.05]')}>
                                         <DataTableCell align="right">
                                             <span className="text-xs font-bold font-mono text-muted-foreground tabular-nums">
                                                 #{rank}

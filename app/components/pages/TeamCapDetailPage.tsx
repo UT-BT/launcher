@@ -1,7 +1,7 @@
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import {
     Loader2, ShieldAlert, ShieldCheck, Play, Download, Calendar,
-    Users, Trophy, ListOrdered, MapPin,
+    Users, Trophy, MapPin,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useNavScrollRestore } from '@/app/components/navigation/useNavScrollRestore'
@@ -23,10 +23,13 @@ import { MedalThresholdsStrip } from './capDetail/MedalThresholdsStrip'
 import { ClientSettingsGrid } from './capDetail/ClientSettingsGrid'
 import { MovementAnalyticsCard } from './capDetail/MovementAnalyticsCard'
 import { VideoCompareModal, type CompareRun } from './capDetail/videoCompare/VideoCompareModal'
+import { TeamLeaderboardTable } from './mapDetail/LeaderboardCard'
 import {
     fetchTeamCapDetail,
     fetchCapCheckpoints,
+    fetchTeamMapLeaderboard,
     type TeamCapDetail,
+    type TeamLeaderboardEntry,
     type LeaderboardEntry,
     type UserProfile,
 } from '@/app/utils/api'
@@ -59,6 +62,26 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
         disabled: !refreshCooldown.canRefresh,
         tooltip: refreshCooldown.canRefresh ? 'Refresh' : `Wait ${refreshCooldown.remainingSeconds}s`,
     })
+
+    const { data: teamLeaderboardData, loading: leaderboardLoading } = useAsync<TeamLeaderboardEntry[]>(
+        (signal) => fetchTeamMapLeaderboard(accessToken!, detail!.map, { signal }),
+        [accessToken, detail?.map, refreshKey],
+        { enabled: !!accessToken && !!detail?.map, errorMessage: 'Failed to load team leaderboard.' },
+    )
+    const teamLeaderboard = teamLeaderboardData ?? []
+
+    const gapToNext = useMemo(() => {
+        if (!detail || detail.rank_on_map <= 1) return null
+        let nextTime: number | null = null
+        for (const entry of teamLeaderboardData ?? []) {
+            if (entry.id === detail.team_cap_id) continue
+            if (entry.cap_time_seconds < detail.team_time_seconds
+                && (nextTime == null || entry.cap_time_seconds > nextTime)) {
+                nextTime = entry.cap_time_seconds
+            }
+        }
+        return nextTime == null ? null : detail.team_time_seconds - nextTime
+    }, [detail, teamLeaderboardData])
 
     const [compareState, setCompareState] = useState<CompareState>('idle')
     const [compareRuns, setCompareRuns] = useState<CompareRun[] | null>(null)
@@ -212,14 +235,6 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
                                                 : <Download className="size-3.5" />}
                                             {demoBatch !== null ? `Downloading ${demoBatch.done}/${demoBatch.total}…` : 'Download Demos'}
                                         </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => onMapSelect?.(detail.map)}
-                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-hairline/[0.03] border border-hairline/10 text-muted-foreground hover:text-foreground hover:bg-hairline/[0.06] hover:border-hairline/20 transition-colors text-xs font-semibold cursor-pointer"
-                                        >
-                                            <ListOrdered className="size-3.5" />
-                                            Leaderboard
-                                        </button>
                                     </div>
                                 </div>
 
@@ -247,20 +262,20 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
                                     </div>
                                     <div className="self-stretch w-px bg-hairline/10" />
                                     <div className="flex flex-col justify-between text-left">
-                                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Standing</div>
-                                        <div className="text-lg font-bold leading-none">
-                                            {detail.is_world_record ? (
-                                                <span className="inline-flex items-center gap-1.5 text-yellow-300">
-                                                    <Trophy className="size-4" />
-                                                    World Record
-                                                </span>
-                                            ) : isCombinationBest ? (
-                                                <span className="text-emerald-300">Combination Best</span>
-                                            ) : (
-                                                <span className={cn('font-mono tabular-nums', deltaClass(detail.deltas.world_record))}>
-                                                    Δ WR {formatSignedDelta(detail.deltas.world_record)}
-                                                </span>
-                                            )}
+                                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Δ WR</div>
+                                        <div className="text-lg font-bold font-mono tabular-nums leading-none">
+                                            <span className={detail.is_world_record ? 'text-muted-foreground' : deltaClass(detail.deltas.world_record)}>
+                                                {detail.is_world_record ? 'WR' : formatSignedDelta(detail.deltas.world_record)}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="self-stretch w-px bg-hairline/10" />
+                                    <div className="flex flex-col justify-between text-left">
+                                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Gap to Next</div>
+                                        <div className="text-lg font-bold font-mono tabular-nums leading-none">
+                                            <span className={detail.is_world_record || gapToNext == null ? 'text-muted-foreground' : 'text-red-300'}>
+                                                {detail.is_world_record || gapToNext == null ? '—' : formatSignedDelta(gapToNext)}
+                                            </span>
                                         </div>
                                     </div>
                                 </div>
@@ -272,6 +287,16 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
                                             {medalLabel}
                                         </span>
                                     )}
+                                    {detail.is_world_record ? (
+                                        <span className="inline-flex items-center gap-1.5 h-7 px-2 rounded-md border text-xs font-semibold bg-yellow-500/15 border-yellow-500/40 text-yellow-300">
+                                            <Trophy className="size-3.5" />
+                                            World Record
+                                        </span>
+                                    ) : isCombinationBest ? (
+                                        <span className="inline-flex items-center h-7 px-2 rounded-md border text-xs font-semibold bg-emerald-500/15 border-emerald-500/40 text-emerald-300">
+                                            Combination Best
+                                        </span>
+                                    ) : null}
                                     {detail.disallowed ? (
                                         <span className="inline-flex items-center gap-1.5 h-7 px-2 rounded-md border text-xs font-semibold bg-red-500/15 border-red-500/40 text-red-300">
                                             <ShieldAlert className="size-3.5" />
@@ -358,11 +383,6 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
                                                     title={member.active_title}
                                                     size="md"
                                                 />
-                                                {isAnchor && (
-                                                    <span className="shrink-0 inline-flex items-center h-5 px-1.5 rounded-full bg-accent-500/20 border border-accent-500/40 text-accent-200 text-[9px] font-bold uppercase tracking-wider">
-                                                        Anchor
-                                                    </span>
-                                                )}
                                             </div>
                                             <div className="flex items-center gap-3 shrink-0">
                                                 <span className="text-sm font-mono tabular-nums font-bold text-foreground">
@@ -426,6 +446,14 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
                             </div>
                         </div>
 
+                        <TeamLeaderboardTable
+                            teamLeaderboard={teamLeaderboard}
+                            loading={leaderboardLoading}
+                            currentUserId={userProfile?.id ?? undefined}
+                            highlightTeamCapId={detail.team_cap_id}
+                            highlightMemberKey={detail.member_key}
+                        />
+
                         {members.length > 0 && (
                             <div className="space-y-4">
                                 <div className="bg-card/30 border border-hairline/5 rounded-xl">
@@ -441,7 +469,7 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
                                                     type="button"
                                                     onClick={() => setActiveMemberTab(member.cap_id)}
                                                     className={cn(
-                                                        'inline-flex items-center gap-2 pl-1.5 pr-3 py-1.5 rounded-lg border transition-colors cursor-pointer',
+                                                        'inline-flex items-center gap-2 pl-1.5 pr-3 py-1.5 rounded-lg border transition-colors cursor-pointer text-left',
                                                         isActive
                                                             ? 'bg-accent-500/[0.12] border-accent-500/40'
                                                             : 'bg-hairline/[0.02] border-hairline/5 hover:border-hairline/20 hover:bg-hairline/[0.04]',

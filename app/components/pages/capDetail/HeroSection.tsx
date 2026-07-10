@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Play, Download, Loader2, ShieldCheck, ShieldAlert, BadgeCheck, Users, Calendar, Columns2 } from 'lucide-react'
+import { Play, Download, Loader2, ShieldCheck, ShieldAlert, BadgeCheck, User, Users, Calendar, Columns2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
@@ -149,6 +149,13 @@ export function HeroSection({
                     </div>
 
                     <PlayerInfo userId={cap.user} alias={cap.alias} title={cap.active_title} size="lg" />
+
+                    {!teamRun && (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <User className="size-4 shrink-0" />
+                            <span className="font-semibold text-foreground">Solo run</span>
+                        </div>
+                    )}
 
                     <div className="flex items-stretch gap-5 pt-3 border-t border-hairline/5">
                         <div className="flex flex-col justify-between">

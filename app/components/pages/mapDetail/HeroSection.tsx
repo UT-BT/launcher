@@ -1,4 +1,4 @@
-import { Download, Calendar, Star, Sparkles, Loader2, Users } from 'lucide-react'
+import { Download, Calendar, Star, Sparkles, Loader2, User, Users } from 'lucide-react'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
@@ -60,12 +60,6 @@ export function HeroSection({
                             </h1>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
-                            {requiredPlayers != null && (
-                                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-accent-500/15 border border-accent-500/40 text-accent-200 text-[10px] font-bold uppercase tracking-wider">
-                                    <Users className="size-3" />
-                                    {requiredPlayers}-Player Map
-                                </span>
-                            )}
                             {showNew && (
                                 <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 text-[10px] font-bold uppercase tracking-wider">
                                     <Sparkles className="size-3" />
@@ -106,6 +100,11 @@ export function HeroSection({
                         ) : author ? (
                             <MetaPill label="By" value={author} />
                         ) : null}
+                        {requiredPlayers != null ? (
+                            <MetaPill icon={Users} value={`${requiredPlayers}-Player`} />
+                        ) : (
+                            <MetaPill icon={User} value="Solo" />
+                        )}
                         {added && (
                             <MetaPill icon={Calendar} value={formatAddedDate(added)} />
                         )}
