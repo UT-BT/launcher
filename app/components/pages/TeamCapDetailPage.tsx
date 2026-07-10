@@ -45,11 +45,11 @@ type CompareState = 'idle' | 'resolving' | 'ready' | 'insufficient'
 
 const ROSTER_GRID_COLS: Record<number, string> = {
     1: 'grid-cols-1',
-    2: 'grid-cols-2',
-    3: 'grid-cols-3',
-    4: 'grid-cols-4',
-    5: 'grid-cols-5',
-    6: 'grid-cols-6',
+    2: 'grid-cols-1 lg:grid-cols-2',
+    3: 'grid-cols-1 lg:grid-cols-3',
+    4: 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4',
+    5: 'grid-cols-1 md:grid-cols-2 lg:grid-cols-5',
+    6: 'grid-cols-1 md:grid-cols-2 lg:grid-cols-6',
 }
 
 function rosterColumnCount(n: number): number {
@@ -270,7 +270,7 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
         : anchorMemberId
     const selectedMember = members.find(m => m.cap_id === selectedMemberId) ?? null
 
-    const rosterColsClass = ROSTER_GRID_COLS[rosterColumnCount(members.length)] ?? 'grid-cols-4'
+    const rosterColsClass = ROSTER_GRID_COLS[rosterColumnCount(members.length)] ?? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4'
 
     return (
         <div className="space-y-4 h-full flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-0 duration-500">
