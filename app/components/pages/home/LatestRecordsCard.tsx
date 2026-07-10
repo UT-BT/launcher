@@ -5,6 +5,7 @@ import {
     type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
+import { TeamHolders } from '@/app/components/shared/TeamHolders'
 import { MapNameCell } from '@/app/components/shared/MapNameCell'
 import { CapTimeLink, openCap } from '@/app/components/shared/CapTimeLink'
 import { IconActionButton } from '@/app/components/shared/IconActionButton'
@@ -83,14 +84,22 @@ export function LatestRecordsCard({
                             </DataTableCell>
                             {isVisible('holder') && (
                                 <DataTableCell>
-                                    <PlayerInfo
-                                        userId={r.userId ?? undefined}
-                                        alias={r.alias}
-                                        title={r.activeTitle ?? null}
-                                        size="sm"
-                                        highlight={isOwn}
-                                        showYouBadge={isOwn}
-                                    />
+                                    {r.members && r.members.length > 0 ? (
+                                        <TeamHolders
+                                            members={r.members}
+                                            size="sm"
+                                            currentUserId={currentUserId}
+                                        />
+                                    ) : (
+                                        <PlayerInfo
+                                            userId={r.userId ?? undefined}
+                                            alias={r.alias}
+                                            title={r.activeTitle ?? null}
+                                            size="sm"
+                                            highlight={isOwn}
+                                            showYouBadge={isOwn}
+                                        />
+                                    )}
                                 </DataTableCell>
                             )}
                             {isVisible('time') && (

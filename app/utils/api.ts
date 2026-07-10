@@ -145,6 +145,15 @@ export interface MapReview {
     overall: number
 }
 
+export interface RecordTeamMember {
+    user: string
+    alias: string
+    cap_id: string
+    cap_time_seconds: number
+    verified: boolean
+    active_title: ActiveTitle | null
+}
+
 export interface Record {
     cap_id: string
     user_id: string
@@ -157,6 +166,7 @@ export interface Record {
     color_b?: number
     active_title?: ActiveTitle | null
     difficulty?: number
+    members?: RecordTeamMember[] | null
 }
 
 export interface Playtime {
@@ -1646,6 +1656,7 @@ export interface TeamRunMember {
     cap_id: string
     cap_time_seconds: number
     verified: boolean
+    active_title?: ActiveTitle | null
 }
 
 export interface TeamLeaderboardEntry {
@@ -2078,6 +2089,12 @@ export async function fetchMapReviews(accessToken: string, mapName: string): Pro
     }
 }
 
+export interface SummaryTeamMember {
+    userId: string | null
+    alias: string
+    activeTitle: ActiveTitle | null
+}
+
 export interface SummaryWorldRecord {
     id: string
     mapName: string
@@ -2087,6 +2104,7 @@ export interface SummaryWorldRecord {
     time: number
     added: string | null
     timeAgo: string
+    members?: SummaryTeamMember[] | null
 }
 
 export interface SummaryNewMap {
@@ -2112,6 +2130,8 @@ export interface Summary {
         medal: string
         timeAgo: string
         verified: boolean
+        isTeam?: boolean
+        teamMembers?: SummaryTeamMember[] | null
     }[]
     recentWorldRecords?: SummaryWorldRecord[]
     newMaps?: SummaryNewMap[]

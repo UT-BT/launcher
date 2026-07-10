@@ -5,6 +5,7 @@ import {
     type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
+import { TeamHolders } from '@/app/components/shared/TeamHolders'
 import { MapNameCell } from '@/app/components/shared/MapNameCell'
 import { CapTimeLink, openCap } from '@/app/components/shared/CapTimeLink'
 import { IconActionButton } from '@/app/components/shared/IconActionButton'
@@ -78,22 +79,37 @@ export function RecentCapsCard({
                             onClick={() => openCap(cap.id)}
                         >
                             <DataTableCell>
-                                <MapNameCell
-                                    mapName={cap.mapName}
-                                    favorited={favoriteMapNames.has(cap.mapName)}
-                                    onToggleFavorite={onToggleFavorite}
-                                    onMapSelect={onMapSelect}
-                                />
+                                <div className="flex items-center gap-2 min-w-0">
+                                    <MapNameCell
+                                        mapName={cap.mapName}
+                                        favorited={favoriteMapNames.has(cap.mapName)}
+                                        onToggleFavorite={onToggleFavorite}
+                                        onMapSelect={onMapSelect}
+                                    />
+                                    {cap.isTeam && (
+                                        <span className="shrink-0 inline-flex items-center h-4 px-1.5 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-300 text-[9px] font-bold uppercase tracking-wider">
+                                            Team
+                                        </span>
+                                    )}
+                                </div>
                             </DataTableCell>
                             {isVisible('holder') && (
                                 <DataTableCell>
                                     <div className="flex justify-center">
-                                        <PlayerInfo
-                                            userId={playerUserId ?? undefined}
-                                            alias={playerAlias}
-                                            title={playerTitle ?? null}
-                                            size="sm"
+                                        {cap.teamMembers && cap.teamMembers.length > 0 ? (
+                                            <TeamHolders
+                                                members={cap.teamMembers}
+                                                size="sm"
+                                                currentUserId={playerUserId}
                                             />
+                                        ) : (
+                                            <PlayerInfo
+                                                userId={playerUserId ?? undefined}
+                                                alias={playerAlias}
+                                                title={playerTitle ?? null}
+                                                size="sm"
+                                                />
+                                        )}
                                     </div>
                                 </DataTableCell>
                             )}

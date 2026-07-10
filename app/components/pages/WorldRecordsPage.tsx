@@ -26,6 +26,7 @@ import {
     fetchWorldRecordFilterOptions,
 } from '@/app/utils/api'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
+import { TeamHolders } from '@/app/components/shared/TeamHolders'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
 import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
@@ -778,14 +779,25 @@ export function WorldRecordsPage({
             case 'holder':
                 return (
                     <DataTableCell key={id}>
-                        <PlayerInfo
-                            userId={r.user_id}
-                            alias={r.alias}
-                            title={r.active_title}
-                            size="sm"
-                            highlight={isSelf}
-                            showYouBadge={isSelf}
-                        />
+                        {r.members && r.members.length > 0 ? (
+                            <TeamHolders
+                                members={r.members.map(m => ({
+                                    userId: m.user,
+                                    alias: m.alias,
+                                    activeTitle: m.active_title,
+                                }))}
+                                currentUserId={selfId != null ? String(selfId) : undefined}
+                            />
+                        ) : (
+                            <PlayerInfo
+                                userId={r.user_id}
+                                alias={r.alias}
+                                title={r.active_title}
+                                size="sm"
+                                highlight={isSelf}
+                                showYouBadge={isSelf}
+                            />
+                        )}
                     </DataTableCell>
                 )
             case 'time':

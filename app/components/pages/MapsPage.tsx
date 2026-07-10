@@ -36,7 +36,7 @@ import {
     DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow,
     DataTableCell, DataTableEmpty, type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
-import { formatCapTime, formatDelta, formatAddedDate, isNew, displayMapName } from '@/app/utils/format'
+import { formatCapTime, formatAddedDate, isNew, displayMapName } from '@/app/utils/format'
 import { difficultyTextColor, difficultyBgColor, scoreTextColor, scoreBgColor } from '@/app/utils/scoreColors'
 
 import championIcon from '@/app/assets/champion.png'
@@ -1745,9 +1745,6 @@ export function MapsPage({
                 }
                 const capId = wrHolder?.cap_id
                 const clickable = !!capId
-                const aliasStyle: React.CSSProperties | undefined = wrHolder?.color_r != null
-                    ? { color: `rgb(${wrHolder.color_r}, ${wrHolder.color_g}, ${wrHolder.color_b})` }
-                    : undefined
                 const timeNode = (
                     <span className={cn(
                         "text-amber-300 transition-[color,text-shadow] duration-150 w-fit",
@@ -1777,28 +1774,6 @@ export function MapsPage({
                     <DataTableCell key={id} align="center" className="font-mono text-sm text-muted-foreground">
                         <div className="inline-flex flex-col items-center leading-tight">
                             {timeButton}
-                            {wrHolder && (wrHolder.user_id ? (
-                                <button
-                                    type="button"
-                                    onClick={e => {
-                                        e.stopPropagation()
-                                        window.dispatchEvent(new CustomEvent('open-player', {
-                                            detail: { userId: wrHolder.user_id },
-                                        }))
-                                    }}
-                                    className="text-[12px] font-sans font-bold truncate max-w-[140px] hover:underline underline-offset-2 cursor-pointer text-left"
-                                    style={aliasStyle}
-                                >
-                                    {wrHolder.alias}
-                                </button>
-                            ) : (
-                                <span
-                                    className="text-[12px] font-sans font-bold truncate max-w-[140px]"
-                                    style={aliasStyle}
-                                >
-                                    {wrHolder.alias}
-                                </span>
-                            ))}
                         </div>
                     </DataTableCell>
                 )
@@ -1830,13 +1805,6 @@ export function MapsPage({
                         {formatCapTime(bestCap.cap_time_seconds)}
                     </span>
                 )
-                const deltaText = wr != null && wr > 0 && (
-                    isWR ? (
-                        <span className="text-[12px] text-blue-400 font-bold tracking-wider font-sans">World Record</span>
-                    ) : (
-                        <span className="text-[12px] text-muted-foreground/70">+{formatDelta(bestCap.cap_time_seconds - wr)}</span>
-                    )
-                )
                 return (
                     <DataTableCell key={id} align="center" className="font-mono text-sm text-muted-foreground">
                         {clickable ? (
@@ -1851,7 +1819,6 @@ export function MapsPage({
                                     className="flex flex-col leading-tight text-center cursor-pointer group/pb"
                                 >
                                     {timeText}
-                                    {deltaText}
                                 </button>
                             </Tooltip>
                         ) : (
@@ -1860,7 +1827,6 @@ export function MapsPage({
                                 className="flex flex-col leading-tight"
                             >
                                 {timeText}
-                                {deltaText}
                             </div>
                         )}
                     </DataTableCell>
