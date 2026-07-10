@@ -4,14 +4,16 @@ import { cn } from '@/lib/utils'
 import { Modal } from '@/app/components/ui/modal'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
+import { TeamHolders } from '@/app/components/shared/TeamHolders'
+import { openTeamCap } from '@/app/components/shared/CapTimeLink'
 import { DemoDownloadStatusModal } from '@/app/components/shared/DemoDownloadStatusModal'
 import { useDemoDownload } from '@/app/hooks/useDemoDownload'
 import {
-    fetchMapLeaderboard, fetchDemoStatus, getFirstPersonVideoUrl,
-    LeaderboardEntry, MapMetadata,
+    fetchMapLeaderboard, fetchTeamMapLeaderboard, fetchDemoStatus, getFirstPersonVideoUrl,
+    LeaderboardEntry, TeamLeaderboardEntry, MapMetadata,
 } from '@/app/utils/api'
 import { computeMedalTier, TIER_ICONS, TIER_LABELS, MedalTier } from '@/app/components/pages/MapsPage'
-import { formatCapTime, displayMapName } from '@/app/utils/format'
+import { formatCapTime, displayMapName, isTeamMap } from '@/app/utils/format'
 
 interface ReplayPickerModalProps {
     open: boolean
@@ -56,17 +58,21 @@ export function ReplayPickerModal({
 }: ReplayPickerModalProps) {
     const [loading, setLoading] = useState(false)
     const [rows, setRows] = useState<RunRow[]>([])
+    const [teamRuns, setTeamRuns] = useState<TeamLeaderboardEntry[]>([])
     const [error, setError] = useState<string | null>(null)
     const [page, setPage] = useState(1)
     const requestRef = useRef(0)
     const pageRef = useRef(1)
     pageRef.current = page
 
+    const isTeam = !compareMode && !!mapName && isTeamMap(mapName) != null
+
     const demoDownload = useDemoDownload()
 
     useEffect(() => {
         if (!open || !mapName || !accessToken) {
             setRows([])
+            setTeamRuns([])
             setError(null)
             setPage(1)
             return
@@ -76,6 +82,26 @@ export function ReplayPickerModal({
         setError(null)
         setPage(1)
 
+        if (isTeam) {
+            setRows([])
+            setTeamRuns([])
+            setLoading(true)
+            ;(async () => {
+                try {
+                    const leaderboard = await fetchTeamMapLeaderboard(accessToken, mapName)
+                    if (cancelled || requestRef.current !== myRequest) return
+                    setTeamRuns(leaderboard.filter(e => e.id))
+                    setLoading(false)
+                } catch {
+                    if (cancelled || requestRef.current !== myRequest) return
+                    setError('Failed to load runs.')
+                    setLoading(false)
+                }
+            })()
+            return () => { cancelled = true }
+        }
+
+        setTeamRuns([])
         const cached = readCache(mapName)
         if (cached) {
             setRows(cached)
@@ -104,7 +130,7 @@ export function ReplayPickerModal({
         return () => {
             cancelled = true
         }
-    }, [open, mapName, accessToken, excludeCapId])
+    }, [open, mapName, accessToken, excludeCapId, isTeam])
 
     // Fetch demo statuses with a small worker pool, prioritizing the visible
     // page so users don't wait for off-page rows before seeing playability.
@@ -154,12 +180,17 @@ export function ReplayPickerModal({
     }, [rows.length, mapName])
 
     const userIdStr = userId != null ? String(userId) : null
-    const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE))
+    const listLength = isTeam ? teamRuns.length : rows.length
+    const totalPages = Math.max(1, Math.ceil(listLength / PAGE_SIZE))
     const clampedPage = Math.min(page, totalPages)
     const pageRows = useMemo(() => {
         const start = (clampedPage - 1) * PAGE_SIZE
         return rows.slice(start, start + PAGE_SIZE).map((r, i) => ({ row: r, rank: start + i + 1 }))
     }, [rows, clampedPage])
+    const teamPageRows = useMemo(() => {
+        const start = (clampedPage - 1) * PAGE_SIZE
+        return teamRuns.slice(start, start + PAGE_SIZE).map((entry, i) => ({ entry, rank: start + i + 1 }))
+    }, [teamRuns, clampedPage])
 
     return (
         <Modal
@@ -186,16 +217,41 @@ export function ReplayPickerModal({
                     </div>
                 )}
 
-                {!loading && rows.length === 0 && !error && (
+                {!loading && listLength === 0 && !error && (
                     <div className="text-center py-10 text-sm text-muted-foreground">
                         No runs found for this map.
                     </div>
                 )}
 
-                {!loading && rows.length > 0 && (
+                {!loading && listLength > 0 && (
                     <>
                         <div className="space-y-1.5">
-                            {pageRows.map(({ row, rank }) => {
+                            {isTeam ? (
+                                teamPageRows.map(({ entry, rank }) => (
+                                    <div
+                                        key={entry.id}
+                                        role="button"
+                                        tabIndex={0}
+                                        onClick={() => { openTeamCap(entry.id); onClose() }}
+                                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openTeamCap(entry.id); onClose() } }}
+                                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg border border-hairline/5 bg-hairline/[0.02] cursor-pointer hover:bg-hairline/[0.06] hover:border-hairline/15 transition-colors"
+                                    >
+                                        <span className="text-xs font-bold font-mono w-6 text-muted-foreground shrink-0">#{rank}</span>
+                                        <span className="flex-1 min-w-0">
+                                            <TeamHolders
+                                                members={entry.members.map(m => ({ userId: m.user, alias: m.alias, activeTitle: m.active_title ?? null }))}
+                                                size="sm"
+                                                currentUserId={userIdStr}
+                                            />
+                                        </span>
+                                        <span className="text-sm font-mono text-amber-300 shrink-0">
+                                            {formatCapTime(entry.cap_time_seconds)}
+                                        </span>
+                                        <ChevronRight className="size-4 text-accent-300/80 shrink-0" />
+                                    </div>
+                                ))
+                            ) : (
+                                pageRows.map(({ row, rank }) => {
                                 const isOwn = userIdStr != null && String(row.entry.user) === userIdStr
                                 const checking = row.videoUrl === undefined
                                 const unavailable = row.videoUrl === null
@@ -311,7 +367,8 @@ export function ReplayPickerModal({
                                         </Tooltip>
                                     </div>
                                 )
-                            })}
+                                })
+                            )}
                         </div>
 
                         {totalPages > 1 && (
@@ -325,7 +382,7 @@ export function ReplayPickerModal({
                                     <ChevronLeft className="size-3.5" /> Prev
                                 </button>
                                 <span className="text-xs text-muted-foreground">
-                                    Page {clampedPage} of {totalPages} · {rows.length} runs
+                                    Page {clampedPage} of {totalPages} · {listLength} runs
                                 </span>
                                 <button
                                     type="button"

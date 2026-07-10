@@ -5,6 +5,7 @@ import { usePaginatedQuery } from '@/app/hooks/useAsync'
 import { useNavState } from '@/app/components/navigation/useNavState'
 import { formatAddedDate, displayMapName } from '@/app/utils/format'
 import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
+import { TeamHolders } from '@/app/components/shared/TeamHolders'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import { WorldRecordProgressionModal } from '@/app/components/modals/WorldRecordProgressionModal'
@@ -163,6 +164,7 @@ export function WorldRecordsCard({ accessToken, userId, totalCount, onMapSelect,
                                 const d = new Date(r.added)
                                 return isNaN(d.getTime()) ? r.added : d.toLocaleString()
                             })() : '—'
+                            const isTeamRow = r.members != null && r.members.length > 0
                             return (
                                 <DataTableRow
                                     key={`${r.map}-${r.cap_id}`}
@@ -173,16 +175,33 @@ export function WorldRecordsCard({ accessToken, userId, totalCount, onMapSelect,
                                         <DataTableCell>
                                             <div className="flex items-center gap-2 min-w-0">
                                                 <MapThumbnail mapName={r.map} className="size-8 shrink-0" />
-                                                <span className="text-sm font-semibold text-foreground truncate">
-                                                    {displayMapName(r.map)}
-                                                </span>
+                                                <div className="flex flex-col gap-1 min-w-0">
+                                                    <div className="flex items-center gap-2 min-w-0">
+                                                        <span className="text-sm font-semibold text-foreground truncate">
+                                                            {displayMapName(r.map)}
+                                                        </span>
+                                                        {isTeamRow && (
+                                                            <span className="shrink-0 inline-flex items-center h-4 px-1.5 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-300 text-[9px] font-bold uppercase tracking-wider">
+                                                                Team
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    {isTeamRow && (
+                                                        <TeamHolders
+                                                            members={r.members!.map(m => ({ userId: m.user, alias: m.alias, activeTitle: m.active_title }))}
+                                                            size="sm"
+                                                            currentUserId={String(userId)}
+                                                        />
+                                                    )}
+                                                </div>
                                             </div>
                                         </DataTableCell>
                                     )}
                                     {isVisible('time') && (
                                         <DataTableCell align="right">
                                             <CapTimeLink
-                                                capId={r.cap_id}
+                                                capId={isTeamRow ? undefined : r.cap_id}
+                                                teamCapId={isTeamRow ? r.cap_id : undefined}
                                                 seconds={r.cap_time_seconds}
                                                 className="text-sm font-mono tabular-nums font-bold text-blue-200"
                                             />

@@ -1553,6 +1553,7 @@ export interface WorldRecordProgressionEntry {
     cap_time_seconds: number
     added: string | null
     active_title: ActiveTitle | null
+    members?: SummaryTeamMember[] | null
 }
 
 export async function fetchWorldRecordProgression(accessToken: string, mapName: string): Promise<WorldRecordProgressionEntry[]> {
@@ -2228,6 +2229,9 @@ export interface SummaryCap {
     medal: string
     added: string
     verified: boolean
+    isTeam?: boolean
+    teamMembers?: SummaryTeamMember[] | null
+    teamCapId?: string | null
 }
 
 export async function fetchSummary(accessToken: string): Promise<Summary> {
@@ -2588,6 +2592,9 @@ export interface UserCapRow {
     disallowed_at?: string | null
     disallow_reason?: string | null
     cap_type: number
+    isTeam: boolean
+    teamMembers: SummaryTeamMember[] | null
+    teamCapId: string | null
 }
 
 export interface UserCapsPage {
@@ -2607,6 +2614,9 @@ export interface UserPersonalBestRow {
     added: string | null
     verified: boolean
     cap_type: number
+    isTeam: boolean
+    teamMembers: SummaryTeamMember[] | null
+    teamCapId: string | null
 }
 
 export interface UserPersonalBestsPage {

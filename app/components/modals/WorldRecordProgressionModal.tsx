@@ -8,6 +8,7 @@ import { Modal } from '@/app/components/ui/modal'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import { Button } from '@/app/components/ui/button'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
+import { TeamHolders } from '@/app/components/shared/TeamHolders'
 import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
 import { cn } from '@/lib/utils'
 import { formatCapTime, formatAddedDate, formatDelta, displayMapName } from '@/app/utils/format'
@@ -85,6 +86,7 @@ function ProgressionTooltip({ active, payload }: {
 export function WorldRecordProgressionModal({
     isOpen, onClose, mapName, entries, currentUserId,
 }: WorldRecordProgressionModalProps) {
+    const currentUserIdStr = currentUserId != null ? String(currentUserId) : null
     const [hoverIdx, setHoverIdx] = useState<number | null>(null)
     const [brushRange, setBrushRange] = useState<{ start: number; end: number } | null>(null)
     const brushRef = useRef(brushRange)
@@ -176,14 +178,22 @@ export function WorldRecordProgressionModal({
                         <div className="text-[9px] uppercase tracking-widest text-blue-200/70 font-bold">
                             Current World Record
                         </div>
-                        <PlayerInfo
-                            userId={current.user_id ?? undefined}
-                            alias={current.alias ?? undefined}
-                            title={current.active_title ?? null}
-                            size="sm"
-                            highlight={currentIsOwn}
-                            showYouBadge={currentIsOwn}
-                        />
+                        {current.members && current.members.length > 0 ? (
+                            <TeamHolders
+                                members={current.members}
+                                size="sm"
+                                currentUserId={currentUserIdStr}
+                            />
+                        ) : (
+                            <PlayerInfo
+                                userId={current.user_id ?? undefined}
+                                alias={current.alias ?? undefined}
+                                title={current.active_title ?? null}
+                                size="sm"
+                                highlight={currentIsOwn}
+                                showYouBadge={currentIsOwn}
+                            />
+                        )}
                     </div>
                     <div className="text-right shrink-0">
                         <div className="text-2xl font-mono font-bold tabular-nums text-foreground leading-none">
@@ -332,17 +342,26 @@ export function WorldRecordProgressionModal({
                                         {isCurrent ? 'WR' : `#${wrIdx + 1}`}
                                     </span>
                                     <span className="flex-1 min-w-0">
-                                        <PlayerInfo
-                                            userId={entry.user_id ?? undefined}
-                                            alias={entry.alias ?? undefined}
-                                            title={entry.active_title ?? null}
-                                            size="sm"
-                                            highlight={isOwn}
-                                            showYouBadge={isOwn}
-                                        />
+                                        {entry.members && entry.members.length > 0 ? (
+                                            <TeamHolders
+                                                members={entry.members}
+                                                size="sm"
+                                                currentUserId={currentUserIdStr}
+                                            />
+                                        ) : (
+                                            <PlayerInfo
+                                                userId={entry.user_id ?? undefined}
+                                                alias={entry.alias ?? undefined}
+                                                title={entry.active_title ?? null}
+                                                size="sm"
+                                                highlight={isOwn}
+                                                showYouBadge={isOwn}
+                                            />
+                                        )}
                                     </span>
                                     <CapTimeLink
-                                        capId={entry.cap_id}
+                                        capId={entry.members && entry.members.length > 0 ? undefined : entry.cap_id}
+                                        teamCapId={entry.members && entry.members.length > 0 ? entry.cap_id : undefined}
                                         seconds={entry.cap_time_seconds}
                                         className="text-xs font-mono tabular-nums text-foreground/85 shrink-0"
                                     />

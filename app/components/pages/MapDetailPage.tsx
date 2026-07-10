@@ -200,6 +200,8 @@ export function MapDetailPage({
                     leaderboard={leaderboard}
                     playtime={playtime}
                     loading={loading}
+                    isTeam={isTeam}
+                    teamLeaderboard={teamLeaderboard}
                     onShowPlaytimeBreakdown={() => setPlaytimeModalOpen(true)}
                     onShowCapDistribution={() => setDistributionModalOpen(true)}
                 />
@@ -280,6 +282,8 @@ export function MapDetailPage({
                 leaderboard={leaderboard}
                 map={map}
                 currentUserId={currentUserId ?? undefined}
+                isTeam={isTeam}
+                teamLeaderboard={teamLeaderboard}
             />
 
             <MapDownloadStatusModal
