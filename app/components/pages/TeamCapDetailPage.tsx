@@ -167,7 +167,8 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
 
     const rankContextRows = useMemo<TeamRankContextRow[]>(() => {
         if (!detail) return []
-        const ranked = [...(teamLeaderboardData ?? [])]
+        const ranked = (teamLeaderboardData ?? [])
+            .filter(entry => entry.verified === true)
             .sort((a, b) => a.cap_time_seconds - b.cap_time_seconds)
             .map((entry, i) => ({ entry, rank: i + 1 }))
         if (ranked.length === 0) return []
