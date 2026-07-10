@@ -153,7 +153,7 @@ export function HeroSection({
                     {!teamRun && (
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <User className="size-4 shrink-0" />
-                            <span className="font-semibold text-foreground">Solo run</span>
+                            <span className="font-semibold text-foreground">1 player run</span>
                         </div>
                     )}
 

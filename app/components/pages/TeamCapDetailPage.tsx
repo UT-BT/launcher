@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react'
 import {
     Loader2, ShieldAlert, ShieldCheck, Play, Download, Calendar,
-    Users, Trophy, MapPin,
+    Users, BadgeCheck,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useNavScrollRestore } from '@/app/components/navigation/useNavScrollRestore'
@@ -154,8 +154,6 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
     const medalIcon = detail ? medalIconForInt(detail.medal) : null
     const medalLabel = detail ? medalLabelForInt(detail.medal) : ''
 
-    const isCombinationBest = !!detail && (detail.is_combination_best_verified || detail.is_combination_best_unverified)
-
     const members = detail?.members ?? []
     const membersWithDemos = members.filter(m => m.has_demo)
     const activeMemberId = (activeMemberTab && members.some(m => m.cap_id === activeMemberTab))
@@ -240,7 +238,7 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
 
                                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                     <Users className="size-4 shrink-0" />
-                                    <span className="font-semibold text-foreground">{detail.team_size}-player team run</span>
+                                    <span className="font-semibold text-foreground">{detail.team_size} player run</span>
                                 </div>
 
                                 <div className="flex items-stretch gap-5 pt-3 border-t border-hairline/5 flex-wrap">
@@ -287,16 +285,6 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
                                             {medalLabel}
                                         </span>
                                     )}
-                                    {detail.is_world_record ? (
-                                        <span className="inline-flex items-center gap-1.5 h-7 px-2 rounded-md border text-xs font-semibold bg-yellow-500/15 border-yellow-500/40 text-yellow-300">
-                                            <Trophy className="size-3.5" />
-                                            World Record
-                                        </span>
-                                    ) : isCombinationBest ? (
-                                        <span className="inline-flex items-center h-7 px-2 rounded-md border text-xs font-semibold bg-emerald-500/15 border-emerald-500/40 text-emerald-300">
-                                            Combination Best
-                                        </span>
-                                    ) : null}
                                     {detail.disallowed ? (
                                         <span className="inline-flex items-center gap-1.5 h-7 px-2 rounded-md border text-xs font-semibold bg-red-500/15 border-red-500/40 text-red-300">
                                             <ShieldAlert className="size-3.5" />
@@ -313,26 +301,14 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
                                             {detail.verified ? 'Verified' : 'Unverified'}
                                         </span>
                                     )}
-                                    <span className={cn(
-                                        'inline-flex items-center gap-1.5 h-7 px-2 rounded-md border text-xs font-semibold',
-                                        detail.complete
-                                            ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
-                                            : 'bg-hairline/5 border-hairline/10 text-muted-foreground',
-                                    )}>
-                                        <ShieldCheck className="size-3.5" />
-                                        {detail.complete ? 'Complete' : 'Pending demos'}
+                                    <span className="inline-flex items-center gap-1.5 h-7 px-2 rounded-md border text-xs font-semibold bg-blue-500/15 border-blue-500/40 text-blue-300">
+                                        <BadgeCheck className="size-3.5" />
+                                        Certified
                                     </span>
                                     {(detail.completed_at || detail.added) && (
                                         <span className="inline-flex items-center gap-1.5 h-7 px-2 rounded-md bg-hairline/5 border border-hairline/5 text-xs text-muted-foreground">
                                             <Calendar className="size-3.5" />
                                             {formatAddedDate((detail.completed_at ?? detail.added) as string)}
-                                        </span>
-                                    )}
-                                    {detail.server.name && (
-                                        <span className="inline-flex items-center gap-1.5 h-7 px-2 rounded-md bg-hairline/5 border border-hairline/5 text-xs text-muted-foreground">
-                                            <MapPin className="size-3.5" />
-                                            {detail.server.name}
-                                            {detail.server.region ? ` · ${detail.server.region}` : ''}
                                         </span>
                                     )}
                                 </div>
@@ -359,6 +335,7 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
                     )}
 
                     <div ref={scrollRef} onScroll={onScroll} className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-4">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
                         <div className="bg-card/30 border border-hairline/5 rounded-xl">
                             <div className="px-4 py-3 border-b border-hairline/5 text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
                                 Roster
@@ -453,6 +430,7 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
                             highlightTeamCapId={detail.team_cap_id}
                             highlightMemberKey={detail.member_key}
                         />
+                        </div>
 
                         {members.length > 0 && (
                             <div className="space-y-4">

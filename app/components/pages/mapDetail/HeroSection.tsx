@@ -101,9 +101,9 @@ export function HeroSection({
                             <MetaPill label="By" value={author} />
                         ) : null}
                         {requiredPlayers != null ? (
-                            <MetaPill icon={Users} value={`${requiredPlayers}-Player`} />
+                            <MetaPill icon={Users} value={`${requiredPlayers} Players`} />
                         ) : (
-                            <MetaPill icon={User} value="Solo" />
+                            <MetaPill icon={User} value="1 Player" />
                         )}
                         {added && (
                             <MetaPill icon={Calendar} value={formatAddedDate(added)} />
