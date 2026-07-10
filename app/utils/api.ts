@@ -172,7 +172,7 @@ export interface Playtime {
 }
 
 
-const API_BASE_URL = import.meta.env.DEV ? 'http://localhost:5000' : 'https://api.utbt.net'
+const API_BASE_URL = import.meta.env.DEV ? 'http://localhost' : 'https://api.utbt.net'
 
 const DEFAULT_TIMEOUT_MS = 20_000
 
@@ -1702,6 +1702,38 @@ export async function fetchTeamMapLeaderboard(
         return []
     } catch {
         return []
+    }
+}
+
+export interface TeamMapUserStats {
+    personal_best_seconds: number | null
+    verified: boolean | null
+    medal: number | null
+    cap_type: number
+    rank: number | null
+    total_ranks: number
+    total_runs: number
+    team_cap_id: string | null
+    team_run_id: string | null
+    added: string | null
+}
+
+export async function fetchUserTeamMapStats(
+    accessToken: string,
+    userId: string | number,
+    mapName: string,
+): Promise<TeamMapUserStats | null> {
+    try {
+        const res = await fetch(
+            `${API_BASE_URL}/caps/team/stats/${encodeURIComponent(String(userId))}/${encodeURIComponent(mapName)}`,
+            { headers: { Authorization: `Bearer ${accessToken}` } },
+        )
+        if (!res.ok) return null
+        const json = await res.json()
+        if (json.success && json.data) return json.data as TeamMapUserStats
+        return null
+    } catch {
+        return null
     }
 }
 

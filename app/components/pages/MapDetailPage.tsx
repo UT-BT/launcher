@@ -9,8 +9,10 @@ import {
     fetchPlaytimeForMap,
     fetchWorldRecordProgression,
     fetchUserCapCountForMap,
+    fetchUserTeamMapStats,
     type LeaderboardEntry,
     type TeamLeaderboardEntry,
+    type TeamMapUserStats,
     type MapMetadata,
     type MapReview,
     type Playtime,
@@ -65,6 +67,7 @@ export function MapDetailPage({
     const [playtime, setPlaytime] = useState<Playtime[]>([])
     const [wrProgression, setWrProgression] = useState<WorldRecordProgressionEntry[]>([])
     const [userCapCount, setUserCapCount] = useState<number | null>(null)
+    const [teamStats, setTeamStats] = useState<TeamMapUserStats | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [reviewModalOpen, setReviewModalOpen] = useState(false)
@@ -90,9 +93,10 @@ export function MapDetailPage({
         setLoading(true)
         setError(null)
         setUserCapCount(null)
+        setTeamStats(null)
         ;(async () => {
             try {
-                const [matched, lb, teamLb, rv, pt, wr, capCount] = await Promise.all([
+                const [matched, lb, teamLb, rv, pt, wr, capCount, teamUserStats] = await Promise.all([
                     fetchMap(accessToken, mapName, MAP_METADATA_COLUMNS),
                     fetchMapLeaderboard(accessToken, mapName, false),
                     isTeam
@@ -104,6 +108,9 @@ export function MapDetailPage({
                     currentUserId != null
                         ? fetchUserCapCountForMap(accessToken, currentUserId, mapName)
                         : Promise.resolve(0),
+                    isTeam && currentUserId != null
+                        ? fetchUserTeamMapStats(accessToken, currentUserId, mapName)
+                        : Promise.resolve(null),
                 ])
                 if (cancelled) return
                 setMap(matched)
@@ -113,6 +120,7 @@ export function MapDetailPage({
                 setPlaytime(pt)
                 setWrProgression(wr)
                 setUserCapCount(capCount)
+                setTeamStats(teamUserStats)
             } catch (e) {
                 if (cancelled) return
                 console.error('Failed to load map detail:', e)
@@ -204,6 +212,8 @@ export function MapDetailPage({
                         totalCaps={userCapCount}
                         loading={loading}
                         onShowPlaytimeBreakdown={() => setPlaytimeModalOpen(true)}
+                        isTeamMap={isTeam}
+                        teamStats={teamStats}
                     />
                 )}
 

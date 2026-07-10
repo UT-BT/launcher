@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { Trophy, Hash, Repeat, Clock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatCapTime } from '@/app/utils/format'
-import type { LeaderboardEntry, Playtime } from '@/app/utils/api'
+import type { LeaderboardEntry, Playtime, TeamMapUserStats } from '@/app/utils/api'
 
 interface YourStatsCardProps {
     currentUserId: string | number | null | undefined
@@ -11,6 +11,8 @@ interface YourStatsCardProps {
     totalCaps: number | null
     loading: boolean
     onShowPlaytimeBreakdown?: () => void
+    isTeamMap?: boolean
+    teamStats?: TeamMapUserStats | null
 }
 
 function formatHours(seconds: number): string {
@@ -23,6 +25,7 @@ function formatHours(seconds: number): string {
 
 export function YourStatsCard({
     currentUserId, leaderboard, playtime, totalCaps, loading, onShowPlaytimeBreakdown,
+    isTeamMap = false, teamStats,
 }: YourStatsCardProps) {
     const userIdStr = currentUserId != null ? String(currentUserId) : null
 
@@ -51,10 +54,16 @@ export function YourStatsCard({
 
     if (!userIdStr) return null
 
-    const isLoading = loading && totalCaps === null
+    const pbTime = isTeamMap ? (teamStats?.personal_best_seconds ?? null) : (computed?.pbTime ?? null)
+    const rank = isTeamMap ? (teamStats?.rank ?? null) : (computed?.rank ?? null)
+    const totalRanks = isTeamMap ? (teamStats?.total_ranks ?? 0) : (computed?.totalRanks ?? 0)
+    const capsValue = isTeamMap ? (teamStats?.total_runs ?? null) : totalCaps
+    const capsLabel = isTeamMap ? 'Team Runs' : 'Total Caps'
+    const playtimeSeconds = computed?.playtimeSeconds ?? 0
+
+    const isLoading = isTeamMap ? loading && teamStats == null : loading && totalCaps === null
     const hasAnyData =
-        computed != null &&
-        (computed.pbTime != null || (totalCaps != null && totalCaps > 0) || computed.playtimeSeconds > 0)
+        pbTime != null || (capsValue != null && capsValue > 0) || playtimeSeconds > 0
 
     if (!isLoading && !hasAnyData) return null
 
@@ -62,7 +71,7 @@ export function YourStatsCard({
         {
             key: 'pb',
             label: 'Personal Best',
-            value: computed?.pbTime != null ? formatCapTime(computed.pbTime) : '—',
+            value: pbTime != null ? formatCapTime(pbTime) : '—',
             icon: Trophy,
             onClick: undefined as (() => void) | undefined,
             hint: undefined as string | undefined,
@@ -70,8 +79,8 @@ export function YourStatsCard({
         {
             key: 'rank',
             label: 'Your Rank',
-            value: computed?.rank != null
-                ? `#${computed.rank}${computed.totalRanks ? ` / ${computed.totalRanks}` : ''}`
+            value: rank != null
+                ? `#${rank}${totalRanks ? ` / ${totalRanks}` : ''}`
                 : '—',
             icon: Hash,
             onClick: undefined,
@@ -79,8 +88,8 @@ export function YourStatsCard({
         },
         {
             key: 'caps',
-            label: 'Total Caps',
-            value: totalCaps != null ? totalCaps.toLocaleString() : '—',
+            label: capsLabel,
+            value: capsValue != null ? capsValue.toLocaleString() : '—',
             icon: Repeat,
             onClick: undefined,
             hint: undefined,
@@ -88,8 +97,8 @@ export function YourStatsCard({
         {
             key: 'playtime',
             label: 'Your Playtime',
-            value: computed?.playtimeSeconds && computed.playtimeSeconds > 0
-                ? formatHours(computed.playtimeSeconds)
+            value: playtimeSeconds > 0
+                ? formatHours(playtimeSeconds)
                 : '—',
             icon: Clock,
             onClick: onShowPlaytimeBreakdown,
