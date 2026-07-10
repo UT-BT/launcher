@@ -139,7 +139,7 @@ export function RecentCapsCard({
                                             variant="replay"
                                             icon={Play}
                                             iconFill
-                                            tooltip="Watch replay"
+                                            tooltip="Watch Replay"
                                             loading={loadingCapId === cap.id}
                                             onClick={() => onWatchReplay(cap)}
                                         />

@@ -118,10 +118,10 @@ export function HeroSection({
                                     'bg-accent-500/15 border-accent-500/40 text-accent-200 hover:bg-accent-500/25 hover:text-foreground hover:border-accent-500/60',
                                     'disabled:opacity-50 disabled:cursor-not-allowed',
                                 )}
-                                title={canWatch ? 'Watch replay' : 'No replay — cap not verified'}
+                                title={canWatch ? 'Watch Replay' : 'No replay — cap not verified'}
                             >
                                 {watching ? <Loader2 className="size-3.5 animate-spin" /> : <Play className="size-3.5" />}
-                                Watch replay
+                                Watch Replay
                             </button>
                             <button
                                 type="button"

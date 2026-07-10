@@ -168,6 +168,7 @@ export function MapDetailPage({
                 onToggleFavorite={onToggleFavorite}
                 accessToken={accessToken}
                 onMapSelect={onMapSelect}
+                requiredPlayers={requiredPlayers}
                 onDownload={() => mapDownload.start(mapName)}
                 isDownloading={mapDownload.download?.status === 'downloading'}
                 chart={

@@ -32,9 +32,10 @@ function median(values: number[]): number | null {
 const ENGAGED_PLAYTIME_SECONDS = 300
 
 export function StatsRow({ leaderboard, playtime, loading, isTeam = false, teamLeaderboard = [], onShowPlaytimeBreakdown, onShowCapDistribution }: StatsRowProps) {
-    const totalCaps = leaderboard.length
-    const verifiedEntries = leaderboard.filter(e => e.verified)
-    const verifiedCaps = verifiedEntries.length
+    const totalCaps = isTeam ? teamLeaderboard.length : leaderboard.length
+    const verifiedCaps = isTeam
+        ? teamLeaderboard.filter(e => e.verified).length
+        : leaderboard.filter(e => e.verified).length
 
     const playtimeByUser = new Map<string, number>()
     let totalPlaytimeSec = 0
@@ -55,8 +56,12 @@ export function StatsRow({ leaderboard, playtime, loading, isTeam = false, teamL
         .map(e => e.cap_time_seconds)
     const medianCertified = median(certifiedTimes)
 
-    const teamMedian = isTeam ? median(teamLeaderboard.map(e => e.cap_time_seconds)) : null
-    const medianValue = isTeam ? teamMedian : medianCertified
+    const teamTimes = teamLeaderboard
+        .map(e => Number(e.cap_time_seconds))
+        .filter(v => Number.isFinite(v))
+    const teamMedian = isTeam ? median(teamTimes) : null
+    const rawMedian = isTeam ? teamMedian : medianCertified
+    const medianValue = rawMedian != null && Number.isFinite(rawMedian) ? rawMedian : null
 
     const tiles: {
         key: string

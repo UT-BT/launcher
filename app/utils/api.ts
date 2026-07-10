@@ -1777,6 +1777,7 @@ export interface TeamCapDetailMember {
     verified: boolean
     disallowed: boolean
     has_demo: boolean
+    cap?: CapRecord
 }
 
 export interface TeamCapMedalThresholds {
@@ -3008,6 +3009,10 @@ export interface CapItAllRow {
     certified_percentage: number
     non_certified_caps: number
     non_certified_percentage: number
+    team_caps: number
+    team_percentage: number
+    total_caps: number
+    total_percentage: number
 }
 
 export interface CapItAllParams {
@@ -3033,6 +3038,10 @@ function normaliseCapItAllRows(raw: any): CapItAllRow[] {
         certified_percentage: Number(row.certified_percentage) || 0,
         non_certified_caps: Number(row.non_certified_caps) || 0,
         non_certified_percentage: Number(row.non_certified_percentage) || 0,
+        team_caps: Number(row.team_caps) || 0,
+        team_percentage: Number(row.team_percentage) || 0,
+        total_caps: Number(row.total_caps) || 0,
+        total_percentage: Number(row.total_percentage) || 0,
     }))
 }
 

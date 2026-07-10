@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import {
-    Loader2, ShieldAlert, ShieldCheck, Play, Download, Columns2, Calendar,
+    Loader2, ShieldAlert, ShieldCheck, Play, Download, Calendar,
     Users, Trophy, ListOrdered, MapPin,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -20,6 +20,8 @@ import { resolveCompareVideoUrl } from '@/app/hooks/useVideoCompareAvailability'
 import { formatCapTime, displayMapName, formatAddedDate } from '@/app/utils/format'
 import { medalIconForInt, medalLabelForInt, formatSignedDelta, deltaClass } from './capDetail/capStats'
 import { MedalThresholdsStrip } from './capDetail/MedalThresholdsStrip'
+import { ClientSettingsGrid } from './capDetail/ClientSettingsGrid'
+import { MovementAnalyticsCard } from './capDetail/MovementAnalyticsCard'
 import { VideoCompareModal, type CompareRun } from './capDetail/videoCompare/VideoCompareModal'
 import {
     fetchTeamCapDetail,
@@ -61,6 +63,29 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
     const [compareState, setCompareState] = useState<CompareState>('idle')
     const [compareRuns, setCompareRuns] = useState<CompareRun[] | null>(null)
     const compareReqRef = useRef(0)
+
+    const [activeMemberTab, setActiveMemberTab] = useState<string | null>(null)
+    const [demoBatch, setDemoBatch] = useState<{ total: number; done: number } | null>(null)
+
+    const downloadAllDemos = async () => {
+        if (!detail || demoBatch) return
+        const withDemos = detail.members.filter(m => m.has_demo)
+        if (withDemos.length === 0) return
+        setDemoBatch({ total: withDemos.length, done: 0 })
+        for (const member of withDemos) {
+            await demoDownload.start(
+                {
+                    id: member.cap_id,
+                    alias: member.alias ?? '',
+                    cap_time_seconds: member.cap_time_seconds,
+                    map: detail.map,
+                } as LeaderboardEntry,
+                detail.map,
+            )
+            setDemoBatch(prev => (prev ? { ...prev, done: prev.done + 1 } : prev))
+        }
+        setDemoBatch(null)
+    }
 
     const startCompare = async () => {
         if (!detail || !accessToken) return
@@ -108,6 +133,13 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
 
     const isCombinationBest = !!detail && (detail.is_combination_best_verified || detail.is_combination_best_unverified)
 
+    const members = detail?.members ?? []
+    const membersWithDemos = members.filter(m => m.has_demo)
+    const activeMemberId = (activeMemberTab && members.some(m => m.cap_id === activeMemberTab))
+        ? activeMemberTab
+        : (members[0]?.cap_id ?? null)
+    const activeMember = members.find(m => m.cap_id === activeMemberId) ?? null
+
     return (
         <div className="space-y-4 h-full flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-0 duration-500">
 
@@ -154,15 +186,31 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
                                             disabled={compareState === 'resolving'}
                                             className={cn(
                                                 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border transition-colors text-xs font-semibold cursor-pointer',
-                                                'bg-rose-500/15 border-rose-500/40 text-rose-200 hover:bg-rose-500/25 hover:text-foreground hover:border-rose-500/60',
+                                                'bg-accent-500/15 border-accent-500/40 text-accent-200 hover:bg-accent-500/25 hover:text-foreground hover:border-accent-500/60',
                                                 'disabled:opacity-50 disabled:cursor-not-allowed',
                                             )}
-                                            title="Compare every member's replay, side by side"
+                                            title="Watch every member's replay together"
                                         >
                                             {compareState === 'resolving'
                                                 ? <Loader2 className="size-3.5 animate-spin" />
-                                                : <Columns2 className="size-3.5" />}
-                                            Compare POVs
+                                                : <Play className="size-3.5" />}
+                                            Watch Team Replay
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={downloadAllDemos}
+                                            disabled={membersWithDemos.length === 0 || demoBatch !== null}
+                                            className={cn(
+                                                'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border transition-colors text-xs font-semibold cursor-pointer',
+                                                'bg-hairline/[0.03] border-hairline/10 text-muted-foreground hover:text-foreground hover:bg-hairline/[0.06] hover:border-hairline/20',
+                                                'disabled:opacity-50 disabled:cursor-not-allowed',
+                                            )}
+                                            title={membersWithDemos.length === 0 ? 'No demos available yet' : 'Download every available member demo'}
+                                        >
+                                            {demoBatch !== null
+                                                ? <Loader2 className="size-3.5 animate-spin" />
+                                                : <Download className="size-3.5" />}
+                                            {demoBatch !== null ? `Downloading ${demoBatch.done}/${demoBatch.total}…` : 'Download Demos'}
                                         </button>
                                         <button
                                             type="button"
@@ -345,7 +393,7 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
                                                         'bg-accent-500/15 border-accent-500/40 text-accent-200 hover:bg-accent-500/25 hover:text-foreground hover:border-accent-500/60',
                                                         'disabled:opacity-50 disabled:cursor-not-allowed',
                                                     )}
-                                                    title={member.verified ? 'Watch replay' : 'No replay — cap not verified'}
+                                                    title={member.verified ? 'Watch Replay' : 'No replay — cap not verified'}
                                                 >
                                                     {replay.loadingCapId === member.cap_id
                                                         ? <Loader2 className="size-3.5 animate-spin" />
@@ -378,6 +426,53 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
                             </div>
                         </div>
 
+                        {members.length > 0 && (
+                            <div className="space-y-4">
+                                <div className="bg-card/30 border border-hairline/5 rounded-xl">
+                                    <div className="px-4 py-3 border-b border-hairline/5 text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
+                                        Player Breakdown
+                                    </div>
+                                    <div className="p-3 flex flex-wrap gap-1.5">
+                                        {members.map(member => {
+                                            const isActive = member.cap_id === activeMemberId
+                                            return (
+                                                <button
+                                                    key={member.cap_id}
+                                                    type="button"
+                                                    onClick={() => setActiveMemberTab(member.cap_id)}
+                                                    className={cn(
+                                                        'inline-flex items-center gap-2 pl-1.5 pr-3 py-1.5 rounded-lg border transition-colors cursor-pointer',
+                                                        isActive
+                                                            ? 'bg-accent-500/[0.12] border-accent-500/40'
+                                                            : 'bg-hairline/[0.02] border-hairline/5 hover:border-hairline/20 hover:bg-hairline/[0.04]',
+                                                    )}
+                                                >
+                                                    <PlayerInfo
+                                                        userId={member.user}
+                                                        alias={member.alias}
+                                                        title={member.active_title}
+                                                        size="sm"
+                                                        interactive={false}
+                                                    />
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
+                                </div>
+
+                                {activeMember?.cap ? (
+                                    <>
+                                        <ClientSettingsGrid cap={activeMember.cap} server={detail.server} />
+                                        <MovementAnalyticsCard cap={activeMember.cap} />
+                                    </>
+                                ) : (
+                                    <div className="bg-card/30 border border-hairline/5 rounded-xl px-6 py-10 text-center text-sm text-muted-foreground">
+                                        No client, server, or movement data is available for this player yet.
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         <MedalThresholdsStrip
                             medals={detail.medals}
                             deltas={{
@@ -397,7 +492,7 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
             <Modal
                 isOpen={compareState === 'resolving' || compareState === 'insufficient'}
                 onClose={closeCompare}
-                title="Compare POVs"
+                title="Watch Team Replay"
                 className="w-[95%] sm:w-[440px] max-w-md"
                 offsetSidebar
             >

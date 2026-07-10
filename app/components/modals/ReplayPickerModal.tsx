@@ -343,7 +343,7 @@ export function ReplayPickerModal({
                                                         if (playable && mapName) onSelect(url as string, mapName, row.entry)
                                                     }}
                                                     disabled={!playable}
-                                                    aria-label={compareMode ? 'Compare side by side' : 'Watch replay'}
+                                                    aria-label={compareMode ? 'Compare side by side' : 'Watch Replay'}
                                                     className={cn(
                                                         'p-1.5 rounded-md transition-colors cursor-pointer shrink-0 disabled:opacity-40 disabled:cursor-default',
                                                         compareMode

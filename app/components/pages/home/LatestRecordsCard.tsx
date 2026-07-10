@@ -129,7 +129,7 @@ export function LatestRecordsCard({
                                             variant="replay"
                                             icon={Play}
                                             iconFill
-                                            tooltip="Watch replay"
+                                            tooltip="Watch Replay"
                                             loading={loadingCapId === r.id}
                                             onClick={() => onWatchReplay(r)}
                                             />
