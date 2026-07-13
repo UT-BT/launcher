@@ -12,7 +12,7 @@ not_here:
   - "how UI state persists in localStorage → state-patterns.md"
   - "the procedure to wire a new endpoint into the UI → skill: consume-api-data"
 sections: [backend-api, admin-api, cap-detail-page-endpoints, world-records-page-endpoints, team-maps-and-team-runs, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites]
-last_verified: 2026-07-08
+last_verified: 2026-07-13
 verify_against: [app/utils/api.ts, app/utils/patreon.ts, app/utils/server-utils.ts]
 ---
 
@@ -126,19 +126,20 @@ fastest cap on every map.
 ## Team maps & team runs
 
 Some maps are **team maps**, capped by a fixed-size squad rather than a single
-player. Their name encodes the required squad size as a Roman numeral between
-`CTF-BT-` and the next `-` (`CTF-BT-II-*` … `CTF-BT-XII-*` → 2 … 12 players).
-`isTeamMap(mapName)` in `app/utils/format.ts` returns that count (or `null` for a
-solo map) — the launcher's single source of truth for "is this a team map?".
-`/maps*` rows also carry **`required_players`** (`number | null`).
+player. `/maps*` rows carry the authoritative **`required_players`** value
+(`number`, 1–12). A value of `1` is a solo map; values above `1` are team maps.
+Map names are not used to infer team size.
 
 A **team run** is one squad's shared attempt. Its time is the **slowest member's**
 time; it counts as **verified** only once **every** member has uploaded their
-demo. The leaderboard shows **one row per unique member combination**.
+demo. For each unique member combination, the leaderboard shows its fastest
+verified run and shows a certified run only when it is faster than that verified
+run (or the roster has no verified run).
 
 - **`GET /caps/leaderboard/team/map/<map>`** → `TeamLeaderboardEntry[]`
   (`fetchTeamMapLeaderboard`). One row per member combination:
-  `{ id, map, added, cap_time_seconds (team time), verified, team_size, user
+  `{ id, map, added, cap_time_seconds (team time), complete, verified, disallowed,
+  state, team_size, user
   (';'-joined member ids), medal, members }`, where each `members[]` entry is
   `{ user, alias, cap_id, cap_time_seconds, verified }`. Options →
   `verified_limit`, `unverified_limit`, `member` (single member id), `before`

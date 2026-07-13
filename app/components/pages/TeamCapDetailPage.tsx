@@ -41,6 +41,19 @@ interface TeamCapDetailPageProps {
     onMapSelect?: (mapName: string) => void
 }
 
+async function mapWithConcurrency<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+    const results = new Array<R>(items.length)
+    let next = 0
+    const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+        while (next < items.length) {
+            const index = next++
+            results[index] = await fn(items[index])
+        }
+    })
+    await Promise.all(workers)
+    return results
+}
+
 type CompareState = 'idle' | 'resolving' | 'ready' | 'insufficient'
 
 const ROSTER_GRID_COLS: Record<number, string> = {
@@ -67,7 +80,7 @@ interface TeamRankContextRow {
 function TeamRankContextCard({
     rank, total, rows, loading, currentUserId,
 }: {
-    rank: number
+    rank: number | null
     total: number
     rows: TeamRankContextRow[]
     loading: boolean
@@ -80,8 +93,10 @@ function TeamRankContextCard({
             </div>
 
             <div className="px-4 py-4 flex items-baseline gap-2">
-                <span className="text-3xl font-bold font-mono tabular-nums text-foreground">#{rank}</span>
-                <span className="text-sm text-muted-foreground">of {total.toLocaleString()}</span>
+                <span className="text-3xl font-bold font-mono tabular-nums text-foreground">
+                    {rank == null ? 'Unranked' : `#${rank}`}
+                </span>
+                {rank != null && <span className="text-sm text-muted-foreground">of {total.toLocaleString()}</span>}
             </div>
 
             <div className="px-2 pb-3 space-y-1">
@@ -153,7 +168,7 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
     )
 
     const gapToNext = useMemo(() => {
-        if (!detail || detail.rank_on_map <= 1) return null
+        if (!detail || detail.rank_on_map == null || detail.rank_on_map <= 1 || detail.team_time_seconds == null) return null
         let nextTime: number | null = null
         for (const entry of teamLeaderboardData ?? []) {
             if (entry.id === detail.team_cap_id) continue
@@ -221,12 +236,12 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
         if (!detail || !accessToken) return
         const req = ++compareReqRef.current
         setCompareState('resolving')
-        const resolved = await Promise.all(detail.members.map(async member => {
-            const [url, cps] = await Promise.all([
-                resolveCompareVideoUrl(member.cap_id),
-                fetchCapCheckpoints(accessToken, member.cap_id),
-            ])
+        const eligible = detail.members.filter(member => member.has_demo)
+        const resolved = await mapWithConcurrency(eligible, 3, async member => {
+            if (member.cap_time_seconds == null) return null
+            const url = await resolveCompareVideoUrl(member.cap_id)
             if (!url) return null
+            const cps = await fetchCapCheckpoints(accessToken, member.cap_id)
             return {
                 capId: member.cap_id,
                 alias: member.alias,
@@ -236,7 +251,7 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
                 checkpoints: cps?.checkpoints ?? [],
                 url,
             } as CompareRun
-        }))
+        })
         if (compareReqRef.current !== req) return
         const runs = resolved.filter((r): r is CompareRun => r != null)
         if (runs.length < 2) {
@@ -357,14 +372,14 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
                                     <div className="flex flex-col justify-between">
                                         <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Team Time</div>
                                         <div className="text-4xl font-bold font-mono tabular-nums text-foreground leading-none">
-                                            {formatCapTime(detail.team_time_seconds)}
+                                            {detail.team_time_seconds == null ? '—' : formatCapTime(detail.team_time_seconds)}
                                         </div>
                                     </div>
                                     <div className="self-stretch w-px bg-hairline/10" />
                                     <div className="flex flex-col justify-between text-left">
                                         <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Rank</div>
                                         <div className="text-lg font-bold font-mono tabular-nums leading-none">
-                                            <span className="text-foreground">#{detail.rank_on_map}</span>{' '}
+                                            <span className="text-foreground">{detail.rank_on_map == null ? '—' : `#${detail.rank_on_map}`}</span>{' '}
                                             <span className="text-[10px] text-muted-foreground font-normal">
                                                 of {detail.total_on_map.toLocaleString()}
                                             </span>
@@ -374,8 +389,8 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
                                     <div className="flex flex-col justify-between text-left">
                                         <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Δ WR</div>
                                         <div className="text-lg font-bold font-mono tabular-nums leading-none">
-                                            <span className={detail.is_world_record ? 'text-muted-foreground' : deltaClass(detail.deltas.world_record)}>
-                                                {detail.is_world_record ? 'WR' : formatSignedDelta(detail.deltas.world_record)}
+                                            <span className={detail.is_world_record ? 'text-muted-foreground' : deltaClass(detail.deltas?.world_record ?? null)}>
+                                                {detail.is_world_record ? 'WR' : formatSignedDelta(detail.deltas?.world_record ?? null)}
                                             </span>
                                         </div>
                                     </div>
@@ -405,12 +420,18 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
                                     ) : (
                                         <span className={cn(
                                             'inline-flex items-center gap-1.5 h-7 px-2 rounded-md border text-xs font-semibold',
-                                            detail.verified
+                                            detail.state === 'verified'
                                                 ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
-                                                : 'bg-hairline/5 border-hairline/10 text-muted-foreground',
+                                                : detail.state === 'pending'
+                                                    ? 'bg-amber-500/15 border-amber-500/40 text-amber-300'
+                                                    : 'bg-hairline/5 border-hairline/10 text-muted-foreground',
                                         )}>
                                             <ShieldCheck className="size-3.5" />
-                                            {detail.verified ? 'Verified' : 'Unverified'}
+                                            {detail.state === 'verified'
+                                                ? 'Verified'
+                                                : detail.state === 'pending'
+                                                    ? 'Certified'
+                                                    : 'Incomplete'}
                                         </span>
                                     )}
                                     <span className="inline-flex items-center gap-1.5 h-7 px-2 rounded-md border text-xs font-semibold bg-blue-500/15 border-blue-500/40 text-blue-300">
@@ -499,7 +520,7 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
 
                                                     <div className="flex items-center justify-between gap-2">
                                                         <span className="text-base font-mono tabular-nums font-bold text-foreground leading-none">
-                                                            {formatCapTime(member.cap_time_seconds)}
+                                                            {member.cap_time_seconds == null ? '—' : formatCapTime(member.cap_time_seconds)}
                                                         </span>
                                                         <div className="flex items-center gap-1 shrink-0">
                                                             <button
@@ -509,7 +530,7 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
                                                                     replay.openReplay({
                                                                         capId: member.cap_id,
                                                                         mapName: detail.map,
-                                                                        time: member.cap_time_seconds,
+                                                                        time: member.cap_time_seconds ?? undefined,
                                                                         alias: member.alias ?? undefined,
                                                                     })
                                                                 }}
@@ -526,7 +547,7 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
                                                                     : <Play className="size-3.5" />}
                                                                 Watch
                                                             </button>
-                                                            {member.has_demo && (
+                                                            {member.has_demo && member.cap_time_seconds != null && (
                                                                 <button
                                                                     type="button"
                                                                     onClick={e => {
@@ -584,16 +605,18 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
                             )}
                         </div>
 
-                        <MedalThresholdsStrip
-                            medals={detail.medals}
-                            deltas={{
-                                wr: detail.deltas.world_record,
-                                champion: detail.deltas.champion,
-                                gold: detail.deltas.gold,
-                                silver: detail.deltas.silver,
-                                bronze: detail.deltas.bronze,
-                            }}
-                        />
+                        {detail.medals && detail.deltas && (
+                            <MedalThresholdsStrip
+                                medals={detail.medals}
+                                deltas={{
+                                    wr: detail.deltas.world_record,
+                                    champion: detail.deltas.champion,
+                                    gold: detail.deltas.gold,
+                                    silver: detail.deltas.silver,
+                                    bronze: detail.deltas.bronze,
+                                }}
+                            />
+                        )}
                     </div>
                 </>
             )}

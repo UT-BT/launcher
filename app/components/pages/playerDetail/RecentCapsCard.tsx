@@ -7,7 +7,7 @@ import { useNavState } from '@/app/components/navigation/useNavState'
 import { formatAddedDate, displayMapName } from '@/app/utils/format'
 import { getMedalIcon } from '@/app/utils/medals'
 import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
-import { TeamHolders } from '@/app/components/shared/TeamHolders'
+import { TeamRosterBadge } from '@/app/components/shared/TeamRosterBadge'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
 import { IconActionButton } from '@/app/components/shared/IconActionButton'
@@ -270,18 +270,9 @@ export function RecentCapsCard({
                                                             {displayMapName(cap.mapName)}
                                                         </span>
                                                         {cap.isTeam && (
-                                                            <span className="shrink-0 inline-flex items-center h-4 px-1.5 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-300 text-[9px] font-bold uppercase tracking-wider">
-                                                                Team
-                                                            </span>
+                                                            <TeamRosterBadge members={cap.teamMembers} currentUserId={String(userId)} />
                                                         )}
                                                     </div>
-                                                    {cap.isTeam && cap.teamMembers && cap.teamMembers.length > 0 && (
-                                                        <TeamHolders
-                                                            members={cap.teamMembers}
-                                                            size="sm"
-                                                            currentUserId={String(userId)}
-                                                        />
-                                                    )}
                                                 </div>
                                             </div>
                                         </DataTableCell>

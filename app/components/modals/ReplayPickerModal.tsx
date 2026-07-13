@@ -13,7 +13,7 @@ import {
     LeaderboardEntry, TeamLeaderboardEntry, MapMetadata,
 } from '@/app/utils/api'
 import { computeMedalTier, TIER_ICONS, TIER_LABELS, MedalTier } from '@/app/components/pages/MapsPage'
-import { formatCapTime, displayMapName, isTeamMap } from '@/app/utils/format'
+import { formatCapTime, displayMapName } from '@/app/utils/format'
 
 interface ReplayPickerModalProps {
     open: boolean
@@ -65,7 +65,7 @@ export function ReplayPickerModal({
     const pageRef = useRef(1)
     pageRef.current = page
 
-    const isTeam = !compareMode && !!mapName && isTeamMap(mapName) != null
+    const isTeam = !compareMode && (mapMetadata?.required_players ?? 1) > 1
 
     const demoDownload = useDemoDownload()
 

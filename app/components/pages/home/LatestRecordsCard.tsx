@@ -5,7 +5,7 @@ import {
     type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
-import { TeamHolders } from '@/app/components/shared/TeamHolders'
+import { TeamAvatarStack } from '@/app/components/shared/TeamAvatarStack'
 import { MapNameCell } from '@/app/components/shared/MapNameCell'
 import { CapTimeLink, openCap, openTeamCap } from '@/app/components/shared/CapTimeLink'
 import { IconActionButton } from '@/app/components/shared/IconActionButton'
@@ -16,7 +16,7 @@ type RecordColumnId = 'map' | 'holder' | 'time' | 'when' | 'replay'
 
 const RECORD_COLUMNS: ResponsiveColumn[] = [
     { id: 'map', required: true },
-    { id: 'holder', width: '8rem', priority: 30, required: true },
+    { id: 'holder', width: '9rem', priority: 30, required: true },
     { id: 'time', width: '5rem', priority: 70, required: true },
     { id: 'when', width: '4rem', priority: 10 },
     { id: 'replay', width: '3rem', priority: 20 },
@@ -86,9 +86,8 @@ export function LatestRecordsCard({
                             {isVisible('holder') && (
                                 <DataTableCell>
                                     {r.members && r.members.length > 0 ? (
-                                        <TeamHolders
+                                        <TeamAvatarStack
                                             members={r.members}
-                                            size="sm"
                                             currentUserId={currentUserId}
                                         />
                                     ) : (

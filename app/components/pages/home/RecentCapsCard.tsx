@@ -5,7 +5,7 @@ import {
     type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
-import { TeamHolders } from '@/app/components/shared/TeamHolders'
+import { TeamAvatarStack } from '@/app/components/shared/TeamAvatarStack'
 import { MapNameCell } from '@/app/components/shared/MapNameCell'
 import { CapTimeLink, openCap, openTeamCap } from '@/app/components/shared/CapTimeLink'
 import { IconActionButton } from '@/app/components/shared/IconActionButton'
@@ -18,7 +18,7 @@ type CapColumnId = 'map' | 'holder' | 'time' | 'when' | 'replay'
 
 const CAP_COLUMNS: ResponsiveColumn[] = [
     { id: 'map', required: true },
-    { id: 'holder', width: '8rem', priority: 20 },
+    { id: 'holder', width: '9rem', priority: 20 },
     { id: 'time', width: '6rem', priority: 70, required: true },
     { id: 'when', width: '6rem', priority: 30 },
     { id: 'replay', width: '4rem', priority: 40 },
@@ -64,7 +64,7 @@ export function RecentCapsCard({
         >
             <DataTableHeaderRow>
                 <DataTableHeaderCell align="center" width="18rem">Map</DataTableHeaderCell>
-                {isVisible('holder') && <DataTableHeaderCell align="center" width="7rem"></DataTableHeaderCell>}
+                {isVisible('holder') && <DataTableHeaderCell align="center" width="9rem"></DataTableHeaderCell>}
                 {isVisible('time') && <DataTableHeaderCell align="center" width="6rem">Time</DataTableHeaderCell>}
                 {isVisible('when') && <DataTableHeaderCell align="center" width="4rem">When</DataTableHeaderCell>}
                 {isVisible('replay') && <DataTableHeaderCell align="center" width="3rem" />}
@@ -87,20 +87,14 @@ export function RecentCapsCard({
                                         onToggleFavorite={onToggleFavorite}
                                         onMapSelect={onMapSelect}
                                     />
-                                    {cap.isTeam && (
-                                        <span className="shrink-0 inline-flex items-center h-4 px-1.5 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-300 text-[9px] font-bold uppercase tracking-wider">
-                                            Team
-                                        </span>
-                                    )}
                                 </div>
                             </DataTableCell>
                             {isVisible('holder') && (
                                 <DataTableCell>
                                     <div className="flex justify-center">
                                         {cap.teamMembers && cap.teamMembers.length > 0 ? (
-                                            <TeamHolders
+                                            <TeamAvatarStack
                                                 members={cap.teamMembers}
-                                                size="sm"
                                                 currentUserId={playerUserId}
                                             />
                                         ) : (

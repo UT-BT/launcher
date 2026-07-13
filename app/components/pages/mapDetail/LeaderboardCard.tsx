@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
-import { Play, Download, MessageSquareOff, ShieldCheck } from 'lucide-react'
+import { Play, Download, MessageSquareOff, ShieldCheck, ShieldAlert } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useNavState } from '@/app/components/navigation/useNavState'
 import { formatAddedDate } from '@/app/utils/format'
@@ -37,7 +37,7 @@ type SortDir = 'asc' | 'desc'
 interface LeaderboardCardProps {
     leaderboard: LeaderboardEntry[]
     teamLeaderboard?: TeamLeaderboardEntry[]
-    requiredPlayers?: number | null
+    requiredPlayers?: number
     map: MapMetadata | null
     loading: boolean
     currentUserId?: string | number
@@ -442,11 +442,12 @@ export function TeamLeaderboardTable({
     const [sortDir, setSortDir] = useNavState<SortDir>('teamLeaderboard.sortDir', 'asc')
     const [page, setPage] = useNavState('teamLeaderboard.page', 1)
     const [pageSize, setPageSize] = useNavState('teamLeaderboard.pageSize', 10)
+    const activeTab: TeamTab = tab === 'verified' ? 'verified' : 'all'
 
     const filtered = useMemo(() => {
-        if (tab === 'verified') return teamLeaderboard.filter(e => e.verified)
+        if (activeTab === 'verified') return teamLeaderboard.filter(e => e.state === 'verified')
         return teamLeaderboard
-    }, [teamLeaderboard, tab])
+    }, [teamLeaderboard, activeTab])
 
     const ranked = useMemo(() => {
         const byTime = [...filtered].sort((a, b) => a.cap_time_seconds - b.cap_time_seconds)
@@ -503,7 +504,7 @@ export function TeamLeaderboardTable({
                             onClick={() => { setTab(t.value); setPage(1) }}
                             className={cn(
                                 'h-7 px-3 rounded-md text-xs font-medium border transition-colors cursor-pointer',
-                                tab === t.value
+                                activeTab === t.value
                                     ? 'bg-accent-500/20 border-accent-500/50 text-accent-200'
                                     : 'bg-card/50 border-hairline/10 text-muted-foreground hover:text-foreground hover:border-hairline/20',
                             )}
@@ -560,7 +561,7 @@ export function TeamLeaderboardTable({
                             <DataTableEmpty colSpan={6} message="No team runs yet." />
                         ) : (
                             pageRows.map(({ entry, rank }) => {
-                                const medalIcon = medalIconForInt(entry.medal)
+                                const medalIcon = entry.verified ? medalIconForInt(entry.medal) : null
                                 const medalLabel = medalLabelForInt(entry.medal)
                                 const isOwn = currentUserId != null && entry.members.some(m => String(m.user) === String(currentUserId))
                                 const isCurrentRun =
@@ -610,7 +611,7 @@ export function TeamLeaderboardTable({
                                                 seconds={entry.cap_time_seconds}
                                                 className={cn(
                                                     'text-sm font-mono tabular-nums font-bold',
-                                                    rank === 1 ? 'text-red-300' : 'text-foreground',
+                                                    activeTab === 'verified' && rank === 1 ? 'text-red-300' : 'text-foreground',
                                                 )}
                                             />
                                         </DataTableCell>
@@ -621,8 +622,10 @@ export function TeamLeaderboardTable({
                                                     ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
                                                     : 'bg-hairline/5 border-hairline/10 text-muted-foreground',
                                             )}>
-                                                <ShieldCheck className="size-3" />
-                                                {entry.verified ? 'Verified' : 'Pending'}
+                                                {entry.verified
+                                                    ? <ShieldCheck className="size-3" />
+                                                    : <ShieldAlert className="size-3" />}
+                                                {entry.state === 'incomplete' ? 'Incomplete' : entry.verified ? 'Verified' : 'Certified'}
                                             </span>
                                         </DataTableCell>
                                         <DataTableCell align="right">

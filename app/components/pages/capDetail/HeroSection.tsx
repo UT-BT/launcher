@@ -167,7 +167,9 @@ export function HeroSection({
                         <div className="self-stretch w-px bg-hairline/10" />
                         {teamRun ? (
                             <MiniStat label="Team Time">
-                                <span className="text-foreground">{formatCapTime(teamRun.team_time_seconds)}</span>
+                                <span className="text-foreground">
+                                    {teamRun.team_time_seconds == null ? '—' : formatCapTime(teamRun.team_time_seconds)}
+                                </span>
                             </MiniStat>
                         ) : (
                             <>
@@ -197,12 +199,22 @@ export function HeroSection({
                                 </span>
                                 <span className={cn(
                                     'inline-flex items-center gap-1 h-6 px-2 rounded-md border text-[11px] font-semibold',
-                                    teamRun.complete
+                                    teamRun.state === 'verified'
                                         ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
-                                        : 'bg-hairline/5 border-hairline/10 text-muted-foreground',
+                                        : teamRun.state === 'disallowed'
+                                            ? 'bg-red-500/15 border-red-500/40 text-red-300'
+                                            : teamRun.state === 'pending'
+                                                ? 'bg-amber-500/15 border-amber-500/40 text-amber-300'
+                                                : 'bg-hairline/5 border-hairline/10 text-muted-foreground',
                                 )}>
-                                    <ShieldCheck className="size-3" />
-                                    {teamRun.complete ? 'Verified' : 'Pending demos'}
+                                    {teamRun.state === 'verified' ? <ShieldCheck className="size-3" /> : <ShieldAlert className="size-3" />}
+                                    {teamRun.state === 'verified'
+                                        ? 'Verified'
+                                        : teamRun.state === 'disallowed'
+                                            ? 'Disallowed'
+                                            : teamRun.state === 'pending'
+                                                ? 'Certified'
+                                                : 'Incomplete'}
                                 </span>
                             </div>
                             <div className="flex flex-col gap-1.5">
@@ -216,7 +228,7 @@ export function HeroSection({
                                         />
                                         <div className="flex items-center gap-2 shrink-0">
                                             <span className="text-xs font-mono tabular-nums text-foreground">
-                                                {formatCapTime(member.cap_time_seconds)}
+                                                {member.cap_time_seconds == null ? '—' : formatCapTime(member.cap_time_seconds)}
                                             </span>
                                             {member.verified
                                                 ? <ShieldCheck className="size-3.5 text-emerald-300" />

@@ -21,7 +21,7 @@ interface HeroSectionProps {
     chart?: React.ReactNode
     accessToken?: string
     onMapSelect?: (mapName: string) => void
-    requiredPlayers?: number | null
+    requiredPlayers?: number
 }
 
 export function HeroSection({
@@ -100,10 +100,10 @@ export function HeroSection({
                         ) : author ? (
                             <MetaPill label="By" value={author} />
                         ) : null}
-                        {requiredPlayers != null ? (
-                            <MetaPill icon={Users} value={`${requiredPlayers} Players`} />
-                        ) : (
+                        {requiredPlayers === undefined ? null : requiredPlayers === 1 ? (
                             <MetaPill icon={User} value="1 Player" />
+                        ) : (
+                            <MetaPill icon={Users} value={`${requiredPlayers} Players`} />
                         )}
                         {added && (
                             <MetaPill icon={Calendar} value={formatAddedDate(added)} />

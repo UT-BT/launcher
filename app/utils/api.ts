@@ -63,7 +63,7 @@ export interface Map {
     gold_medal?: number
     silver_medal?: number
     bronze_medal?: number
-    required_players?: number | null
+    required_players: number
 }
 
 export interface MapMetadata {
@@ -81,7 +81,7 @@ export interface MapMetadata {
     gold_medal?: number
     silver_medal?: number
     bronze_medal?: number
-    required_players?: number | null
+    required_players: number
     preceded_by?: string | null
     superseded_by?: string | null
     changelog?: string | null
@@ -678,6 +678,7 @@ export interface AdminMapRow {
     superseded_by: string | null
     preceded_by: string | null
     added: string | null
+    required_players: number
 }
 
 export type AdminMapSort = 'name' | 'difficulty' | 'active' | 'added'
@@ -982,6 +983,7 @@ export interface CreateMapInput {
     changelog?: string
     preceded_by?: string
     transfer_records?: boolean
+    required_players: number
 }
 
 export async function createMap(token: string, input: CreateMapInput): Promise<{ ok: boolean }> {
@@ -994,6 +996,7 @@ export interface UpdateMapInput {
     tags?: string | null
     author_str?: string | null
     author_ref?: string | number | null
+    required_players?: number
 }
 
 export async function updateMap(token: string, name: string, input: UpdateMapInput): Promise<{ ok: boolean }> {
@@ -1299,12 +1302,13 @@ const DEFAULT_MAP_COLUMNS = [
     'name', 'added', 'difficulty', 'tags',
     'author', 'author_str', 'author_ref',
     'world_record', 'champion_medal', 'gold_medal', 'silver_medal', 'bronze_medal',
-    'active',
+    'active', 'required_players',
 ]
 
 const MAP_METADATA_COLUMNS = [
     'name', 'added', 'difficulty', 'tags', 'author', 'author_str', 'author_ref',
     'world_record', 'champion_medal', 'gold_medal', 'silver_medal', 'bronze_medal',
+    'required_players',
 ]
 
 function buildMapQuery(params: MapListParams, defaultActive = true): string {
@@ -1655,10 +1659,13 @@ export interface TeamRunMember {
     user: string
     alias: string
     cap_id: string
-    cap_time_seconds: number
+    cap_time_seconds: number | null
     verified: boolean
+    disallowed?: boolean
     active_title?: ActiveTitle | null
 }
+
+export type TeamRunState = 'incomplete' | 'pending' | 'verified' | 'disallowed'
 
 export interface TeamLeaderboardEntry {
     id: string
@@ -1666,6 +1673,9 @@ export interface TeamLeaderboardEntry {
     added: string
     cap_time_seconds: number
     verified: boolean
+    complete: boolean
+    disallowed: boolean
+    state: TeamRunState
     team_size: number
     user: string
     medal: number
@@ -1674,7 +1684,11 @@ export interface TeamLeaderboardEntry {
 
 export interface TeamRunStatus {
     complete: boolean
-    team_time_seconds: number
+    verified: boolean
+    disallowed: boolean
+    state: TeamRunState
+    invalid_reason?: string | null
+    team_time_seconds: number | null
     team_cap_id: string
     members: TeamRunMember[]
     is_combination_best_verified: boolean
@@ -1696,25 +1710,25 @@ export async function fetchTeamMapLeaderboard(
     mapName: string,
     opts: TeamMapLeaderboardOptions = {},
 ): Promise<TeamLeaderboardEntry[]> {
-    try {
-        const usp = new URLSearchParams()
-        if (opts.verifiedLimit != null) usp.set('verified_limit', String(opts.verifiedLimit))
-        if (opts.unverifiedLimit != null) usp.set('unverified_limit', String(opts.unverifiedLimit))
-        if (opts.member != null) usp.set('member', String(opts.member))
-        if (opts.before) usp.set('before', opts.before)
-        if (opts.columns?.length) usp.set('columns', opts.columns.join(','))
-        const qs = usp.toString()
-        const res = await fetch(
-            `${API_BASE_URL}/caps/leaderboard/team/map/${encodeURIComponent(mapName)}${qs ? `?${qs}` : ''}`,
-            { headers: { Authorization: `Bearer ${accessToken}` }, signal: opts.signal },
-        )
-        if (!res.ok) return []
-        const json = await res.json()
-        if (json.success && Array.isArray(json.data)) return json.data as TeamLeaderboardEntry[]
-        return []
-    } catch {
-        return []
+    const usp = new URLSearchParams()
+    if (opts.verifiedLimit != null) usp.set('verified_limit', String(opts.verifiedLimit))
+    if (opts.unverifiedLimit != null) usp.set('unverified_limit', String(opts.unverifiedLimit))
+    if (opts.member != null) usp.set('member', String(opts.member))
+    if (opts.before) usp.set('before', opts.before)
+    if (opts.columns?.length) usp.set('columns', opts.columns.join(','))
+    const qs = usp.toString()
+    const res = await fetch(
+        `${API_BASE_URL}/caps/leaderboard/team/map/${encodeURIComponent(mapName)}${qs ? `?${qs}` : ''}`,
+        { headers: { Authorization: `Bearer ${accessToken}` }, signal: opts.signal },
+    )
+    if (!res.ok) {
+        throw new Error(`Failed to fetch team leaderboard: ${res.statusText} (${res.status})`)
     }
+    const json = await res.json()
+    if (!json.success || !Array.isArray(json.data)) {
+        throw new Error('Invalid team leaderboard response')
+    }
+    return json.data as TeamLeaderboardEntry[]
 }
 
 export interface TeamMapUserStats {
@@ -1773,7 +1787,7 @@ export interface TeamCapDetailMember {
     alias: string | null
     active_title: ActiveTitle | null
     cap_id: string
-    cap_time_seconds: number
+    cap_time_seconds: number | null
     verified: boolean
     disallowed: boolean
     has_demo: boolean
@@ -1802,14 +1816,16 @@ export interface TeamCapDetail {
     team_cap_id: string
     map: string
     team_size: number
-    member_key: string
-    team_time_seconds: number
+    member_key: string | null
+    team_time_seconds: number | null
     cap_type: number
     medal: number
     complete: boolean
     verified: boolean
     disallowed: boolean
-    public_server: boolean
+    state: TeamRunState
+    invalid_reason?: string | null
+    public_server: string | null
     added: string | null
     completed_at: string | null
     verified_at: string | null
@@ -1818,10 +1834,10 @@ export interface TeamCapDetail {
     is_combination_best_verified: boolean
     is_combination_best_unverified: boolean
     wr_time_seconds: number | null
-    rank_on_map: number
+    rank_on_map: number | null
     total_on_map: number
-    medals: TeamCapMedalThresholds
-    deltas: TeamCapDeltas
+    medals: TeamCapMedalThresholds | null
+    deltas: TeamCapDeltas | null
     server: { name: string | null; region: string | null }
 }
 

@@ -16,6 +16,7 @@ interface PlayerInfoProps {
     showYouBadge?: boolean
     className?: string
     interactive?: boolean
+    presentation?: 'full' | 'avatar'
 }
 
 const AVATAR_PX: Record<NonNullable<PlayerInfoProps['size']>, number> = {
@@ -66,7 +67,7 @@ function openPlayer(userId: string | number) {
 export function PlayerInfo({
     userId, alias, title,
     size = 'md', layout = 'horizontal',
-    highlight, showYouBadge, className, interactive = true,
+    highlight, showYouBadge, className, interactive = true, presentation = 'full',
 }: PlayerInfoProps) {
     const { themeId } = useTheme()
     const isLight = themeId === 'light'
@@ -95,7 +96,11 @@ export function PlayerInfo({
     }
 
     const wrapperClass = cn(
-        layout === 'vertical' ? 'flex flex-col items-center gap-1.5' : 'flex items-center gap-2.5',
+        presentation === 'avatar'
+            ? 'inline-flex items-center'
+            : layout === 'vertical'
+                ? 'flex flex-col items-center gap-1.5'
+                : 'flex items-center gap-2.5',
         'min-w-0',
         isClickable && 'w-fit max-w-full cursor-pointer hover:opacity-80 transition-opacity',
         className,
@@ -130,6 +135,27 @@ export function PlayerInfo({
             )}
         </div>
     )
+
+    if (presentation === 'avatar') {
+        return (
+            <div
+                className={cn(wrapperClass, highlight && 'rounded-full ring-1 ring-emerald-400/70')}
+                aria-label={displayName}
+                {...interactiveProps}
+            >
+                {isAvatarable ? (
+                    <PlayerAvatar userId={userId!} alias={alias} title={title} sizePx={sizePx} isLight={isLight} />
+                ) : (
+                    <span
+                        className="inline-flex items-center justify-center rounded-full bg-hairline/10 border border-hairline/10 text-[9px] font-bold text-foreground uppercase"
+                        style={{ width: sizePx, height: sizePx }}
+                    >
+                        {displayName.slice(0, 1)}
+                    </span>
+                )}
+            </div>
+        )
+    }
 
     return (
         <div className={wrapperClass} {...interactiveProps}>

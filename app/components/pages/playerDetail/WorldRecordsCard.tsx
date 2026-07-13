@@ -5,7 +5,7 @@ import { usePaginatedQuery } from '@/app/hooks/useAsync'
 import { useNavState } from '@/app/components/navigation/useNavState'
 import { formatAddedDate, displayMapName } from '@/app/utils/format'
 import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
-import { TeamHolders } from '@/app/components/shared/TeamHolders'
+import { TeamRosterBadge } from '@/app/components/shared/TeamRosterBadge'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import { WorldRecordProgressionModal } from '@/app/components/modals/WorldRecordProgressionModal'
@@ -181,18 +181,16 @@ export function WorldRecordsCard({ accessToken, userId, totalCount, onMapSelect,
                                                             {displayMapName(r.map)}
                                                         </span>
                                                         {isTeamRow && (
-                                                            <span className="shrink-0 inline-flex items-center h-4 px-1.5 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-300 text-[9px] font-bold uppercase tracking-wider">
-                                                                Team
-                                                            </span>
+                                                            <TeamRosterBadge
+                                                                members={r.members!.map(member => ({
+                                                                    userId: member.user,
+                                                                    alias: member.alias,
+                                                                    activeTitle: member.active_title,
+                                                                }))}
+                                                                currentUserId={String(userId)}
+                                                            />
                                                         )}
                                                     </div>
-                                                    {isTeamRow && (
-                                                        <TeamHolders
-                                                            members={r.members!.map(m => ({ userId: m.user, alias: m.alias, activeTitle: m.active_title }))}
-                                                            size="sm"
-                                                            currentUserId={String(userId)}
-                                                        />
-                                                    )}
                                                 </div>
                                             </div>
                                         </DataTableCell>

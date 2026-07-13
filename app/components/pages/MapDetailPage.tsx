@@ -19,7 +19,6 @@ import {
     type WorldRecordProgressionEntry,
     type UserProfile,
 } from '@/app/utils/api'
-import { isTeamMap } from '@/app/utils/format'
 import { useRefreshCooldown } from '@/app/hooks/useRefreshCooldown'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
 import { useMapDownload } from '@/app/hooks/useMapDownload'
@@ -57,10 +56,9 @@ export function MapDetailPage({
     const accessToken = userProfile?.accessToken
     const currentUserId = userProfile?.id ?? undefined
 
-    const requiredPlayers = isTeamMap(mapName)
-    const isTeam = requiredPlayers != null
-
     const [map, setMap] = useState<MapMetadata | null>(null)
+    const requiredPlayers = map?.name === mapName ? map.required_players : undefined
+    const isTeam = (requiredPlayers ?? 1) > 1
     const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
     const [teamLeaderboard, setTeamLeaderboard] = useState<TeamLeaderboardEntry[]>([])
     const [reviews, setReviews] = useState<MapReview[]>([])
@@ -96,10 +94,12 @@ export function MapDetailPage({
         setTeamStats(null)
         ;(async () => {
             try {
-                const [matched, lb, teamLb, rv, pt, wr, capCount, teamUserStats] = await Promise.all([
-                    fetchMap(accessToken, mapName, MAP_METADATA_COLUMNS),
+                const matched = await fetchMap(accessToken, mapName, MAP_METADATA_COLUMNS)
+                if (!matched) throw new Error(`Map metadata not found for ${mapName}`)
+                const teamMap = matched.required_players > 1
+                const [lb, teamLb, rv, pt, wr, capCount, teamUserStats] = await Promise.all([
                     fetchMapLeaderboard(accessToken, mapName, false),
-                    isTeam
+                    teamMap
                         ? fetchTeamMapLeaderboard(accessToken, mapName)
                         : Promise.resolve([] as TeamLeaderboardEntry[]),
                     fetchMapReviews(accessToken, mapName),
@@ -108,7 +108,7 @@ export function MapDetailPage({
                     currentUserId != null
                         ? fetchUserCapCountForMap(accessToken, currentUserId, mapName)
                         : Promise.resolve(0),
-                    isTeam && currentUserId != null
+                    teamMap && currentUserId != null
                         ? fetchUserTeamMapStats(accessToken, currentUserId, mapName)
                         : Promise.resolve(null),
                 ])
@@ -130,7 +130,7 @@ export function MapDetailPage({
             }
         })()
         return () => { cancelled = true }
-    }, [accessToken, mapName, currentUserId, refreshKey, isTeam])
+    }, [accessToken, mapName, currentUserId, refreshKey])
 
     const avgOverall = useMemo(() => {
         if (reviews.length === 0) return null

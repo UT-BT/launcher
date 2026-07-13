@@ -476,7 +476,7 @@ function VideoPane({
                             src={run.url}
                             muted={muted}
                             playsInline
-                            preload="auto"
+                            preload="metadata"
                             controls={false}
                             onLoadedMetadata={onDurationKnown}
                             onDurationChange={onDurationKnown}

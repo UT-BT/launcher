@@ -9,7 +9,7 @@ import type { MapMetadata, TeamLeaderboardEntry } from '@/app/utils/api'
 interface MedalCardProps {
     map: MapMetadata | null
     loading: boolean
-    requiredPlayers?: number | null
+    requiredPlayers?: number
     teamLeaderboard?: TeamLeaderboardEntry[]
 }
 
