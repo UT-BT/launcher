@@ -81,7 +81,7 @@ function TeamRankContextCard({
     rank, total, rows, loading, currentUserId,
 }: {
     rank: number | null
-    total: number
+    total: number | null
     rows: TeamRankContextRow[]
     loading: boolean
     currentUserId?: string | null
@@ -96,7 +96,7 @@ function TeamRankContextCard({
                 <span className="text-3xl font-bold font-mono tabular-nums text-foreground">
                     {rank == null ? 'Unranked' : `#${rank}`}
                 </span>
-                {rank != null && <span className="text-sm text-muted-foreground">of {total.toLocaleString()}</span>}
+                {rank != null && total != null && <span className="text-sm text-muted-foreground">of {total.toLocaleString()}</span>}
             </div>
 
             <div className="px-2 pb-3 space-y-1">
@@ -380,9 +380,11 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
                                         <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Rank</div>
                                         <div className="text-lg font-bold font-mono tabular-nums leading-none">
                                             <span className="text-foreground">{detail.rank_on_map == null ? '—' : `#${detail.rank_on_map}`}</span>{' '}
-                                            <span className="text-[10px] text-muted-foreground font-normal">
-                                                of {detail.total_on_map.toLocaleString()}
-                                            </span>
+                                            {detail.total_on_map != null && (
+                                                <span className="text-[10px] text-muted-foreground font-normal">
+                                                    of {detail.total_on_map.toLocaleString()}
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
                                     <div className="self-stretch w-px bg-hairline/10" />
