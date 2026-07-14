@@ -15,7 +15,7 @@ function readCache(capId: string): string | null | undefined {
     return c.url
 }
 
-async function resolveUrl(capId: string): Promise<string | null> {
+export async function resolveCompareVideoUrl(capId: string): Promise<string | null> {
     const cached = readCache(capId)
     if (cached !== undefined) return cached
     const status = await fetchDemoStatus(capId)
@@ -52,10 +52,10 @@ export function useVideoCompareAvailability(
         setUrlA(readCache(capIdA))
         setUrlB(readCache(capIdB))
 
-        resolveUrl(capIdA).then(url => {
+        resolveCompareVideoUrl(capIdA).then(url => {
             if (!cancelled && requestRef.current === myRequest) setUrlA(url)
         })
-        resolveUrl(capIdB).then(url => {
+        resolveCompareVideoUrl(capIdB).then(url => {
             if (!cancelled && requestRef.current === myRequest) setUrlB(url)
         })
 

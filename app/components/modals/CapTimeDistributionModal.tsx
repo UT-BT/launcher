@@ -8,7 +8,7 @@ import { Modal } from '@/app/components/ui/modal'
 import { cn } from '@/lib/utils'
 import { formatCapTime, displayMapName } from '@/app/utils/format'
 import { getMedalIcon } from '@/app/utils/medals'
-import type { LeaderboardEntry, MapMetadata } from '@/app/utils/api'
+import type { LeaderboardEntry, TeamLeaderboardEntry, MapMetadata } from '@/app/utils/api'
 
 interface CapTimeDistributionModalProps {
     open: boolean
@@ -17,6 +17,15 @@ interface CapTimeDistributionModalProps {
     leaderboard: LeaderboardEntry[]
     map: MapMetadata | null
     currentUserId?: string | number
+    isTeam?: boolean
+    teamLeaderboard?: TeamLeaderboardEntry[]
+}
+
+const TEAM_MEDAL_MULTIPLIERS = {
+    champion_medal: 1.025,
+    gold_medal: 1.125,
+    silver_medal: 1.30,
+    bronze_medal: 1.60,
 }
 
 interface Bucket {
@@ -77,25 +86,66 @@ function formatTimeAxis(seconds: number, useShortFormat: boolean): string {
 }
 
 export function CapTimeDistributionModal({
-    open, onClose, mapName, leaderboard, map, currentUserId,
+    open, onClose, mapName, leaderboard, map, currentUserId, isTeam = false, teamLeaderboard = [],
 }: CapTimeDistributionModalProps) {
-    const certified = useMemo(
-        () => leaderboard.filter(e => e.cap_type === 2),
-        [leaderboard],
-    )
+    const userIdStr = currentUserId != null ? String(currentUserId) : null
+
+    const rows = useMemo(() => {
+        if (isTeam) {
+            return teamLeaderboard.map(e => ({
+                time: e.cap_time_seconds,
+                isOwn: userIdStr != null && e.members.some(m => String(m.user) === userIdStr),
+            }))
+        }
+        return leaderboard
+            .filter(e => e.cap_type === 2)
+            .map(e => ({
+                time: e.cap_time_seconds,
+                isOwn: userIdStr != null && String(e.user) === userIdStr,
+            }))
+    }, [isTeam, teamLeaderboard, leaderboard, userIdStr])
+
+    const teamWorldRecord = useMemo(() => {
+        if (!isTeam) return null
+        const verified = teamLeaderboard.filter(e => e.verified).map(e => e.cap_time_seconds)
+        if (verified.length === 0) return null
+        return Math.min(...verified)
+    }, [isTeam, teamLeaderboard])
+
+    const effectiveMap = useMemo<MapMetadata | null>(() => {
+        if (!isTeam) return map
+        if (!map) return null
+        if (teamWorldRecord == null) {
+            return {
+                ...map,
+                world_record: undefined,
+                champion_medal: undefined,
+                gold_medal: undefined,
+                silver_medal: undefined,
+                bronze_medal: undefined,
+            }
+        }
+        return {
+            ...map,
+            world_record: teamWorldRecord,
+            champion_medal: teamWorldRecord * TEAM_MEDAL_MULTIPLIERS.champion_medal,
+            gold_medal: teamWorldRecord * TEAM_MEDAL_MULTIPLIERS.gold_medal,
+            silver_medal: teamWorldRecord * TEAM_MEDAL_MULTIPLIERS.silver_medal,
+            bronze_medal: teamWorldRecord * TEAM_MEDAL_MULTIPLIERS.bronze_medal,
+        }
+    }, [isTeam, map, teamWorldRecord])
 
     const sortedTimes = useMemo(
-        () => [...certified].map(e => e.cap_time_seconds).sort((a, b) => a - b),
-        [certified],
+        () => rows.map(r => r.time).sort((a, b) => a - b),
+        [rows],
     )
 
-    const userIdStr = currentUserId != null ? String(currentUserId) : null
     const userBest = useMemo(() => {
         if (!userIdStr) return null
-        const own = certified.filter(e => String(e.user) === userIdStr)
+        const own = rows.filter(r => r.isOwn).map(r => r.time)
         if (own.length === 0) return null
-        return Math.min(...own.map(e => e.cap_time_seconds))
-    }, [certified, userIdStr])
+        return Math.min(...own)
+    }, [rows, userIdStr])
 
     const stats = useMemo(() => {
         if (sortedTimes.length === 0) return null
@@ -123,10 +173,10 @@ export function CapTimeDistributionModal({
         const p95 = sortedTimes[p95Idx]
 
         const tierBoundaries = [
-            map?.champion_medal,
-            map?.gold_medal,
-            map?.silver_medal,
-            map?.bronze_medal,
+            effectiveMap?.champion_medal,
+            effectiveMap?.gold_medal,
+            effectiveMap?.silver_medal,
+            effectiveMap?.bronze_medal,
         ].filter((v): v is number => v != null && v > 0).sort((a, b) => a - b)
 
         // Smallest tier boundary that covers p95.
@@ -143,7 +193,7 @@ export function CapTimeDistributionModal({
         if (xMax - xMin < 0.1) xMax = xMin + 0.5
 
         return { xMin, xMax }
-    }, [stats, map, sortedTimes, userBest])
+    }, [stats, effectiveMap, sortedTimes, userBest])
 
     const buckets: Bucket[] = useMemo(() => {
         if (!stats || !xRange || stats.count === 0) return []
@@ -153,11 +203,11 @@ export function CapTimeDistributionModal({
         // will never cross a tier boundary — each bar lives entirely in one
         // medal tier.
         type Seg = { tierKey: TierKey; tierColor: string; tierLabel: string; start: number; end: number }
-        const wr = map?.world_record
-        const champ = map?.champion_medal
-        const gold = map?.gold_medal
-        const silver = map?.silver_medal
-        const bronze = map?.bronze_medal
+        const wr = effectiveMap?.world_record
+        const champ = effectiveMap?.champion_medal
+        const gold = effectiveMap?.gold_medal
+        const silver = effectiveMap?.silver_medal
+        const bronze = effectiveMap?.bronze_medal
 
         const segs: Seg[] = []
         const addSeg = (key: TierKey, start: number, end: number) => {
@@ -176,7 +226,7 @@ export function CapTimeDistributionModal({
         if (bronze != null && bronze > 0) addSeg('beyond', bronze, xMax)
 
         if (segs.length === 0) {
-            const tier = tierFor(xMin, map)
+            const tier = tierFor(xMin, effectiveMap)
             return [{
                 binStart: xMin, binEnd: xMax, binMid: (xMin + xMax) / 2,
                 count: sortedTimes.length,
@@ -186,7 +236,7 @@ export function CapTimeDistributionModal({
         }
 
         // Per-segment data counts → allocate sub-buckets weighted by density.
-        const segCounts = segs.map(s => sortedTimes.filter(t => tierFor(t, map).key === s.tierKey && t >= s.start && t <= s.end).length)
+        const segCounts = segs.map(s => sortedTimes.filter(t => tierFor(t, effectiveMap).key === s.tierKey && t >= s.start && t <= s.end).length)
         const totalCount = segCounts.reduce((a, b) => a + b, 0) || 1
 
         const subBucketsPerSeg = segs.map((_s, i) => {
@@ -206,12 +256,12 @@ export function CapTimeDistributionModal({
                 const binMid = (binStart + binEnd) / 2
                 const isLastInSeg = j === n - 1
                 const count = sortedTimes.filter(t => {
-                    if (tierFor(t, map).key !== seg.tierKey) return false
+                    if (tierFor(t, effectiveMap).key !== seg.tierKey) return false
                     if (isLastInSeg) return t >= binStart && t <= binEnd
                     return t >= binStart && t < binEnd
                 }).length
                 const containsUser = userBest != null
-                    && tierFor(userBest, map).key === seg.tierKey
+                    && tierFor(userBest, effectiveMap).key === seg.tierKey
                     && userBest >= binStart
                     && (isLastInSeg ? userBest <= binEnd : userBest < binEnd)
                 out.push({
@@ -222,7 +272,7 @@ export function CapTimeDistributionModal({
             }
         }
         return out
-    }, [stats, xRange, sortedTimes, userBest, map])
+    }, [stats, xRange, sortedTimes, userBest, effectiveMap])
 
     const overflowCount = useMemo(() => {
         if (!xRange) return 0
@@ -233,11 +283,11 @@ export function CapTimeDistributionModal({
     const tierCounts = useMemo(() => {
         const counts = new Map<TierKey, number>()
         for (const t of sortedTimes) {
-            const key = tierFor(t, map).key
+            const key = tierFor(t, effectiveMap).key
             counts.set(key, (counts.get(key) ?? 0) + 1)
         }
         return counts
-    }, [sortedTimes, map])
+    }, [sortedTimes, effectiveMap])
 
     const userRank = useMemo(() => {
         if (userBest == null || sortedTimes.length === 0) return null
@@ -246,15 +296,15 @@ export function CapTimeDistributionModal({
     }, [userBest, sortedTimes])
 
     const userPercentile = userRank != null && stats ? percentile(userRank, stats.count) : null
-    const userTier = userBest != null ? tierFor(userBest, map) : null
+    const userTier = userBest != null ? tierFor(userBest, effectiveMap) : null
 
     // "Your Position" counts compare against OTHER players' certified caps,
     // not the user's own. Otherwise a single user with one cap would always
     // show "Tied with you: 1" (themselves).
     const otherCertifiedTimes = useMemo(() => {
         if (!userIdStr) return sortedTimes
-        return certified.filter(e => String(e.user) !== userIdStr).map(e => e.cap_time_seconds)
-    }, [certified, sortedTimes, userIdStr])
+        return rows.filter(r => !r.isOwn).map(r => r.time)
+    }, [rows, sortedTimes, userIdStr])
 
     const fasterThanUser = userBest != null ? otherCertifiedTimes.filter(t => t < userBest).length : 0
     const sameAsUser = userBest != null ? otherCertifiedTimes.filter(t => t === userBest).length : 0
@@ -271,12 +321,12 @@ export function CapTimeDistributionModal({
     // exact x-range that qualifies for that tier, so the visual tier shown
     // under the "You" line always matches the real tier classification.
     const tierBands = useMemo(() => {
-        if (!xRange || !map) return []
-        const wr = (map.world_record != null && map.world_record > 0) ? map.world_record : null
-        const champ = (map.champion_medal != null && map.champion_medal > 0) ? map.champion_medal : null
-        const gold = (map.gold_medal != null && map.gold_medal > 0) ? map.gold_medal : null
-        const silver = (map.silver_medal != null && map.silver_medal > 0) ? map.silver_medal : null
-        const bronze = (map.bronze_medal != null && map.bronze_medal > 0) ? map.bronze_medal : null
+        if (!xRange || !effectiveMap) return []
+        const wr = (effectiveMap.world_record != null && effectiveMap.world_record > 0) ? effectiveMap.world_record : null
+        const champ = (effectiveMap.champion_medal != null && effectiveMap.champion_medal > 0) ? effectiveMap.champion_medal : null
+        const gold = (effectiveMap.gold_medal != null && effectiveMap.gold_medal > 0) ? effectiveMap.gold_medal : null
+        const silver = (effectiveMap.silver_medal != null && effectiveMap.silver_medal > 0) ? effectiveMap.silver_medal : null
+        const bronze = (effectiveMap.bronze_medal != null && effectiveMap.bronze_medal > 0) ? effectiveMap.bronze_medal : null
 
         const bands: { key: TierKey; x1: number; x2: number; color: string }[] = []
         const champStart = wr ?? xRange.xMin
@@ -286,13 +336,13 @@ export function CapTimeDistributionModal({
         if (silver != null && bronze != null && bronze > silver) bands.push({ key: 'bronze', x1: silver, x2: bronze, color: TIER_DEFS[4].bandColor })
         if (bronze != null && bronze < xRange.xMax) bands.push({ key: 'beyond', x1: bronze, x2: xRange.xMax, color: TIER_DEFS[5].bandColor })
         return bands
-    }, [xRange, map])
+    }, [xRange, effectiveMap])
 
     return (
         <Modal
             isOpen={open}
             onClose={onClose}
-            title={`Certified Cap Distribution — ${displayMapName(mapName)}`}
+            title={`${isTeam ? 'Team Time' : 'Certified Cap'} Distribution — ${displayMapName(mapName)}`}
             offsetSidebar
             maxWidth="min(92vw, 880px)"
             className="bg-card/98 border-hairline/5"
@@ -301,7 +351,7 @@ export function CapTimeDistributionModal({
             <div className="space-y-4">
                 {!stats || stats.count === 0 ? (
                     <div className="py-12 text-center text-sm text-muted-foreground">
-                        No certified caps recorded yet.
+                        {isTeam ? 'No team runs recorded yet.' : 'No certified caps recorded yet.'}
                     </div>
                 ) : (
                     <>
@@ -309,7 +359,7 @@ export function CapTimeDistributionModal({
                             'grid gap-2',
                             userBest != null ? 'grid-cols-2 md:grid-cols-4' : 'grid-cols-2 md:grid-cols-3',
                         )}>
-                            <StatTile label="Certified Caps" value={stats.count.toLocaleString()} accent="text-blue-300" />
+                            <StatTile label={isTeam ? 'Team Runs' : 'Certified Caps'} value={stats.count.toLocaleString()} accent="text-blue-300" />
                             <StatTile label="Median" value={formatCapTime(stats.median)} accent="text-yellow-300" />
                             <StatTile label="Mean" value={formatCapTime(stats.mean)} accent="text-foreground" />
                             {userBest != null && userPercentile != null && (
@@ -422,9 +472,9 @@ export function CapTimeDistributionModal({
                                             ))}
                                         </Bar>
 
-                                        {map?.world_record != null && map.world_record > 0 && xRange != null && map.world_record >= xRange.xMin && map.world_record <= xRange.xMax && (
+                                        {effectiveMap?.world_record != null && effectiveMap.world_record > 0 && xRange != null && effectiveMap.world_record >= xRange.xMin && effectiveMap.world_record <= xRange.xMax && (
                                             <ReferenceLine
-                                                x={map.world_record}
+                                                x={effectiveMap.world_record}
                                                 stroke="#60a5fa"
                                                 strokeWidth={2}
                                                 ifOverflow="visible"
@@ -438,7 +488,7 @@ export function CapTimeDistributionModal({
                                                             fontSize={11}
                                                             fontWeight={700}
                                                         >
-                                                            {`WR ${formatCapTime(map.world_record!)}`}
+                                                            {`WR ${formatCapTime(effectiveMap.world_record!)}`}
                                                         </text>
                                                     </g>
                                                 )}

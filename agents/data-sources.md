@@ -11,8 +11,8 @@ not_here:
   - "IPC channels (window.conveyor.*) → lib/conveyor/README.md"
   - "how UI state persists in localStorage → state-patterns.md"
   - "the procedure to wire a new endpoint into the UI → skill: consume-api-data"
-sections: [backend-api, admin-api, cap-detail-page-endpoints, world-records-page-endpoints, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites]
-last_verified: 2026-06-21
+sections: [backend-api, admin-api, cap-detail-page-endpoints, world-records-page-endpoints, team-maps-and-team-runs, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites]
+last_verified: 2026-07-13
 verify_against: [app/utils/api.ts, app/utils/patreon.ts, app/utils/server-utils.ts]
 ---
 
@@ -36,6 +36,7 @@ full loop).
 |---|---|
 | Maps | `fetchMaps`, `fetchMapsCount`, `fetchMapsMetadata`, `fetchMapsFuzzy`, `fetchMapAuthors`, `buildMapQuery` |
 | Records | `fetchWorldRecords`, `fetchWorldRecordsCount`, `fetchRushers`, `fetchRecordsCount`, `fetchWorldRecordsForMaps`, `fetchWorldRecordProgression`, `fetchBestCaps`, `fetchMapLeaderboard` |
+| Team runs | `fetchTeamMapLeaderboard`, `fetchTeamRunStatus` (→ [Team maps & team runs](#team-maps-and-team-runs)) |
 | Per-map per-user counts | `fetchUserCapCountForMap` |
 | Players | `fetchPlayers`, `fetchPlayersCount` (→ `/v2/players`, server-side alias search/sort/pagination + medals; row type `PlayerListRow`) |
 | Reviews | `fetchMapReviews`, `fetchAllMapReviews`, `submitSummaryReview` |
@@ -121,6 +122,37 @@ fastest cap on every map.
 - **`GET /v2/world_records/progression/<map>`** → `WorldRecordProgressionEntry[]`
   (`fetchWorldRecordProgression`). Chronological history of every cap that set a
   new WR on that map. Powers the `WorldRecordProgressionModal` drill-down.
+
+## Team maps & team runs
+
+Some maps are **team maps**, capped by a fixed-size squad rather than a single
+player. `/maps*` rows carry the authoritative **`required_players`** value
+(`number`, 1–12). A value of `1` is a solo map; values above `1` are team maps.
+Map names are not used to infer team size.
+
+A **team run** is one squad's shared attempt. Its time is the **slowest member's**
+time; it counts as **verified** only once **every** member has uploaded their
+demo. For each unique member combination, the leaderboard shows its fastest
+verified run and shows a certified run only when it is faster than that verified
+run (or the roster has no verified run).
+
+- **`GET /caps/leaderboard/team/map/<map>`** → `TeamLeaderboardEntry[]`
+  (`fetchTeamMapLeaderboard`). One row per member combination:
+  `{ id, map, added, cap_time_seconds (team time), complete, verified, disallowed,
+  state, team_size, user
+  (';'-joined member ids), medal, members }`, where each `members[]` entry is
+  `{ user, alias, cap_id, cap_time_seconds, verified }`. Options →
+  `verified_limit`, `unverified_limit`, `member` (single member id), `before`
+  (pagination cursor), `columns`.
+- **`GET /caps/team_runs/<team_run_id>`** → `TeamRunStatus`
+  (`fetchTeamRunStatus`): `{ complete, team_time_seconds, team_cap_id, members,
+  is_combination_best_verified, is_combination_best_unverified, is_world_record }`.
+  Used to render a run's per-member breakdown and to gate what the demo watcher
+  auto-uploads for team maps.
+- A cap may belong to a team run: `/caps` rows and the Cap Detail `cap`
+  (`/caps/<id>/detail`) carry **`team_run_id`** (`string | null`), and
+  `GET /caps?btpog_ids=<id>&columns=cap_type,team_run_id` returns it alongside
+  `cap_type`.
 
 ## Avatar URLs
 

@@ -26,6 +26,7 @@ import {
     fetchWorldRecordFilterOptions,
 } from '@/app/utils/api'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
+import { TeamHolders } from '@/app/components/shared/TeamHolders'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
 import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
@@ -778,26 +779,40 @@ export function WorldRecordsPage({
             case 'holder':
                 return (
                     <DataTableCell key={id}>
-                        <PlayerInfo
-                            userId={r.user_id}
-                            alias={r.alias}
-                            title={r.active_title}
-                            size="sm"
-                            highlight={isSelf}
-                            showYouBadge={isSelf}
-                        />
+                        {r.members && r.members.length > 0 ? (
+                            <TeamHolders
+                                members={r.members.map(m => ({
+                                    userId: m.user,
+                                    alias: m.alias,
+                                    activeTitle: m.active_title,
+                                }))}
+                                currentUserId={selfId != null ? String(selfId) : undefined}
+                            />
+                        ) : (
+                            <PlayerInfo
+                                userId={r.user_id}
+                                alias={r.alias}
+                                title={r.active_title}
+                                size="sm"
+                                highlight={isSelf}
+                                showYouBadge={isSelf}
+                            />
+                        )}
                     </DataTableCell>
                 )
-            case 'time':
+            case 'time': {
+                const isTeamRow = !!(r.members && r.members.length > 0)
                 return (
                     <DataTableCell key={id} align="right">
                         <CapTimeLink
-                            capId={r.cap_id}
+                            capId={isTeamRow ? undefined : r.cap_id}
+                            teamCapId={isTeamRow ? r.cap_id : undefined}
                             seconds={r.cap_time_seconds}
                             className="font-mono font-black tabular-nums text-blue-300 tracking-tight"
                         />
                     </DataTableCell>
                 )
+            }
             case 'difficulty':
                 return (
                     <DataTableCell key={id} align="center">

@@ -11,7 +11,7 @@ not_here:
   - "how detail pages open via events (open-player / open-cap) → navigation.md"
   - "page/query state + persistence → state-patterns.md"
 sections: [hard-rule-playerinfo, player-cap-links, tables-datatable-primitives, columns-columnsmenu, filter-presets, tutorial, visual-primitives, ui-primitives, utilities, when-to-extract]
-last_verified: 2026-06-20
+last_verified: 2026-07-13
 verify_against: [app/components/shared/PlayerInfo.tsx, app/components/shared/DataTable.tsx, app/components/shared/CapTimeLink.tsx, app/components/shared/ColumnsMenu.tsx, app/components/shared/FilterPresetsMenu.tsx]
 ---
 
@@ -34,6 +34,8 @@ text or hand-roll an avatar `<img>`. Handles:
 - Active title display + per-rarity styling (color, weight, glow, legendary pulse)
 - "You" highlight (emerald tint + badge)
 - `horizontal` / `vertical` layout, `sm` / `md` / `lg` sizing
+- Avatar-only presentation for compact roster stacks, with the same fallback and
+  active-title border styling
 
 Props are flat primitives — `userId`, `alias`, `title`. Never pass nested
 user/record shapes; destructure at the call site.
@@ -56,6 +58,10 @@ on the name compares/selects instead of navigating away.
 If the API payload you're rendering lacks `active_title`, get the field added to
 the API endpoint rather than working around it in the launcher (see the
 `consume-api-data` skill).
+
+Use `presentation="avatar"` only inside compact identity collections such as
+`TeamAvatarStack`. The surrounding component must expose names through an
+accessible label or roster tooltip.
 
 Rarity styling (1–5) lives in `app/utils/titleStyles.ts`
 (`getAvatarBorderStyle`, `getTitleTextStyle`, `getReadableTitleColor`, `hasTitle`).

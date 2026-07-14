@@ -5,6 +5,7 @@ import { usePaginatedQuery } from '@/app/hooks/useAsync'
 import { useNavState } from '@/app/components/navigation/useNavState'
 import { formatAddedDate, displayMapName } from '@/app/utils/format'
 import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
+import { TeamRosterBadge } from '@/app/components/shared/TeamRosterBadge'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import {
@@ -170,16 +171,24 @@ export function DisallowedCapsCard({ accessToken, userId, onMapSelect, tabsSlot 
                                     <DataTableCell>
                                         <div className="flex items-center gap-2 min-w-0">
                                             <MapThumbnail mapName={cap.mapName} className="size-8 shrink-0" />
-                                            <span className="text-sm font-semibold text-foreground truncate min-w-0">
-                                                {displayMapName(cap.mapName)}
-                                            </span>
+                                            <div className="flex flex-col gap-1 min-w-0">
+                                                <div className="flex items-center gap-2 min-w-0">
+                                                    <span className="text-sm font-semibold text-foreground truncate min-w-0">
+                                                        {displayMapName(cap.mapName)}
+                                                    </span>
+                                                    {cap.isTeam && (
+                                                        <TeamRosterBadge members={cap.teamMembers} currentUserId={String(userId)} />
+                                                    )}
+                                                </div>
+                                            </div>
                                         </div>
                                     </DataTableCell>
                                 )}
                                 {isVisible('time') && (
                                     <DataTableCell align="right">
                                         <CapTimeLink
-                                            capId={cap.id}
+                                            capId={cap.isTeam ? undefined : cap.id}
+                                            teamCapId={cap.isTeam ? cap.teamCapId ?? undefined : undefined}
                                             seconds={cap.time}
                                             className="text-sm font-mono tabular-nums font-bold text-foreground"
                                         />

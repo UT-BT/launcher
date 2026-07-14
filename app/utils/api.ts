@@ -63,6 +63,7 @@ export interface Map {
     gold_medal?: number
     silver_medal?: number
     bronze_medal?: number
+    required_players: number
 }
 
 export interface MapMetadata {
@@ -80,6 +81,7 @@ export interface MapMetadata {
     gold_medal?: number
     silver_medal?: number
     bronze_medal?: number
+    required_players: number
     preceded_by?: string | null
     superseded_by?: string | null
     changelog?: string | null
@@ -143,6 +145,15 @@ export interface MapReview {
     overall: number
 }
 
+export interface RecordTeamMember {
+    user: string
+    alias: string
+    cap_id: string
+    cap_time_seconds: number
+    verified: boolean
+    active_title: ActiveTitle | null
+}
+
 export interface Record {
     cap_id: string
     user_id: string
@@ -155,6 +166,7 @@ export interface Record {
     color_b?: number
     active_title?: ActiveTitle | null
     difficulty?: number
+    members?: RecordTeamMember[] | null
 }
 
 export interface Playtime {
@@ -170,7 +182,7 @@ export interface Playtime {
 }
 
 
-const API_BASE_URL = import.meta.env.DEV ? 'http://localhost:5000' : 'https://api.utbt.net'
+const API_BASE_URL = import.meta.env.DEV ? 'http://localhost' : 'https://api.utbt.net'
 
 const DEFAULT_TIMEOUT_MS = 20_000
 
@@ -666,6 +678,7 @@ export interface AdminMapRow {
     superseded_by: string | null
     preceded_by: string | null
     added: string | null
+    required_players: number
 }
 
 export type AdminMapSort = 'name' | 'difficulty' | 'active' | 'added'
@@ -970,6 +983,7 @@ export interface CreateMapInput {
     changelog?: string
     preceded_by?: string
     transfer_records?: boolean
+    required_players: number
 }
 
 export async function createMap(token: string, input: CreateMapInput): Promise<{ ok: boolean }> {
@@ -982,6 +996,7 @@ export interface UpdateMapInput {
     tags?: string | null
     author_str?: string | null
     author_ref?: string | number | null
+    required_players?: number
 }
 
 export async function updateMap(token: string, name: string, input: UpdateMapInput): Promise<{ ok: boolean }> {
@@ -1287,12 +1302,13 @@ const DEFAULT_MAP_COLUMNS = [
     'name', 'added', 'difficulty', 'tags',
     'author', 'author_str', 'author_ref',
     'world_record', 'champion_medal', 'gold_medal', 'silver_medal', 'bronze_medal',
-    'active',
+    'active', 'required_players',
 ]
 
 const MAP_METADATA_COLUMNS = [
     'name', 'added', 'difficulty', 'tags', 'author', 'author_str', 'author_ref',
     'world_record', 'champion_medal', 'gold_medal', 'silver_medal', 'bronze_medal',
+    'required_players',
 ]
 
 function buildMapQuery(params: MapListParams, defaultActive = true): string {
@@ -1541,6 +1557,7 @@ export interface WorldRecordProgressionEntry {
     cap_time_seconds: number
     added: string | null
     active_title: ActiveTitle | null
+    members?: SummaryTeamMember[] | null
 }
 
 export async function fetchWorldRecordProgression(accessToken: string, mapName: string): Promise<WorldRecordProgressionEntry[]> {
@@ -1638,6 +1655,211 @@ export async function fetchMapLeaderboard(accessToken: string, mapName: string, 
     }
 }
 
+export interface TeamRunMember {
+    user: string
+    alias: string
+    cap_id: string
+    cap_time_seconds: number | null
+    verified: boolean
+    disallowed?: boolean
+    active_title?: ActiveTitle | null
+}
+
+export type TeamRunState = 'incomplete' | 'pending' | 'verified' | 'disallowed'
+
+export interface TeamLeaderboardEntry {
+    id: string
+    map: string
+    added: string
+    cap_time_seconds: number
+    verified: boolean
+    complete: boolean
+    disallowed: boolean
+    state: TeamRunState
+    team_size: number
+    user: string
+    medal: number
+    members: TeamRunMember[]
+}
+
+export interface TeamRunStatus {
+    complete: boolean
+    verified: boolean
+    disallowed: boolean
+    state: TeamRunState
+    invalid_reason?: string | null
+    team_time_seconds: number | null
+    team_cap_id: string
+    members: TeamRunMember[]
+    is_combination_best_verified: boolean
+    is_combination_best_unverified: boolean
+    is_world_record: boolean
+}
+
+export interface TeamMapLeaderboardOptions {
+    verifiedLimit?: number
+    unverifiedLimit?: number
+    member?: string | number
+    before?: string
+    columns?: string[]
+    signal?: AbortSignal
+}
+
+export async function fetchTeamMapLeaderboard(
+    accessToken: string,
+    mapName: string,
+    opts: TeamMapLeaderboardOptions = {},
+): Promise<TeamLeaderboardEntry[]> {
+    const usp = new URLSearchParams()
+    if (opts.verifiedLimit != null) usp.set('verified_limit', String(opts.verifiedLimit))
+    if (opts.unverifiedLimit != null) usp.set('unverified_limit', String(opts.unverifiedLimit))
+    if (opts.member != null) usp.set('member', String(opts.member))
+    if (opts.before) usp.set('before', opts.before)
+    if (opts.columns?.length) usp.set('columns', opts.columns.join(','))
+    const qs = usp.toString()
+    const res = await fetch(
+        `${API_BASE_URL}/caps/leaderboard/team/map/${encodeURIComponent(mapName)}${qs ? `?${qs}` : ''}`,
+        { headers: { Authorization: `Bearer ${accessToken}` }, signal: opts.signal },
+    )
+    if (!res.ok) {
+        throw new Error(`Failed to fetch team leaderboard: ${res.statusText} (${res.status})`)
+    }
+    const json = await res.json()
+    if (!json.success || !Array.isArray(json.data)) {
+        throw new Error('Invalid team leaderboard response')
+    }
+    return json.data as TeamLeaderboardEntry[]
+}
+
+export interface TeamMapUserStats {
+    personal_best_seconds: number | null
+    verified: boolean | null
+    medal: number | null
+    cap_type: number
+    rank: number | null
+    total_ranks: number
+    total_runs: number
+    team_cap_id: string | null
+    team_run_id: string | null
+    added: string | null
+}
+
+export async function fetchUserTeamMapStats(
+    accessToken: string,
+    userId: string | number,
+    mapName: string,
+): Promise<TeamMapUserStats | null> {
+    try {
+        const res = await fetch(
+            `${API_BASE_URL}/caps/team/stats/${encodeURIComponent(String(userId))}/${encodeURIComponent(mapName)}`,
+            { headers: { Authorization: `Bearer ${accessToken}` } },
+        )
+        if (!res.ok) return null
+        const json = await res.json()
+        if (json.success && json.data) return json.data as TeamMapUserStats
+        return null
+    } catch {
+        return null
+    }
+}
+
+export async function fetchTeamRunStatus(
+    accessToken: string,
+    teamRunId: string,
+    signal?: AbortSignal,
+): Promise<TeamRunStatus | null> {
+    try {
+        const res = await fetch(`${API_BASE_URL}/caps/team_runs/${encodeURIComponent(teamRunId)}`, {
+            headers: { Authorization: `Bearer ${accessToken}` },
+            signal,
+        })
+        if (!res.ok) return null
+        const json = await res.json()
+        if (json.success && json.data) return json.data as TeamRunStatus
+        return null
+    } catch {
+        return null
+    }
+}
+
+export interface TeamCapDetailMember {
+    user: string
+    alias: string | null
+    active_title: ActiveTitle | null
+    cap_id: string
+    cap_time_seconds: number | null
+    verified: boolean
+    disallowed: boolean
+    has_demo: boolean
+    cap?: CapRecord
+}
+
+export interface TeamCapMedalThresholds {
+    world_record: number | null
+    champion: number | null
+    gold: number | null
+    silver: number | null
+    bronze: number | null
+}
+
+export interface TeamCapDeltas {
+    world_record: number | null
+    champion: number | null
+    gold: number | null
+    silver: number | null
+    bronze: number | null
+}
+
+export interface TeamCapDetail {
+    id: string
+    team_run_id: string
+    team_cap_id: string
+    map: string
+    team_size: number
+    member_key: string | null
+    team_time_seconds: number | null
+    cap_type: number
+    medal: number
+    complete: boolean
+    verified: boolean
+    disallowed: boolean
+    state: TeamRunState
+    invalid_reason?: string | null
+    public_server: string | null
+    added: string | null
+    completed_at: string | null
+    verified_at: string | null
+    members: TeamCapDetailMember[]
+    is_world_record: boolean
+    is_combination_best_verified: boolean
+    is_combination_best_unverified: boolean
+    wr_time_seconds: number | null
+    rank_on_map: number | null
+    total_on_map: number
+    medals: TeamCapMedalThresholds | null
+    deltas: TeamCapDeltas | null
+    server: { name: string | null; region: string | null }
+}
+
+export async function fetchTeamCapDetail(
+    accessToken: string,
+    teamCapId: string,
+    signal?: AbortSignal,
+): Promise<TeamCapDetail | null> {
+    try {
+        const res = await fetch(`${API_BASE_URL}/caps/team_caps/${encodeURIComponent(teamCapId)}/detail`, {
+            headers: { Authorization: `Bearer ${accessToken}` },
+            signal,
+        })
+        if (!res.ok) return null
+        const json = await res.json()
+        if (json.success && json.data) return json.data as TeamCapDetail
+        return null
+    } catch {
+        return null
+    }
+}
+
 export async function fetchDemoStatus(capId: string): Promise<DemoConverterStatus | null> {
     try {
         const res = await fetch(`${GATEWAY_BASE_URL}/democonverter/status/${capId}`)
@@ -1688,6 +1910,7 @@ export interface CapRecord {
     renderer?: string | null
     spawn_count?: number | null
     team?: number | null
+    team_run_id?: string | null
     netspeed_min?: number | null
     netspeed_max?: number | null
     fps_1pc?: number | null
@@ -1959,6 +2182,12 @@ export async function fetchMapReviews(accessToken: string, mapName: string): Pro
     }
 }
 
+export interface SummaryTeamMember {
+    userId: string | null
+    alias: string
+    activeTitle: ActiveTitle | null
+}
+
 export interface SummaryWorldRecord {
     id: string
     mapName: string
@@ -1968,6 +2197,7 @@ export interface SummaryWorldRecord {
     time: number
     added: string | null
     timeAgo: string
+    members?: SummaryTeamMember[] | null
 }
 
 export interface SummaryNewMap {
@@ -1993,6 +2223,9 @@ export interface Summary {
         medal: string
         timeAgo: string
         verified: boolean
+        isTeam?: boolean
+        teamCapId?: string | null
+        teamMembers?: SummaryTeamMember[] | null
     }[]
     recentWorldRecords?: SummaryWorldRecord[]
     newMaps?: SummaryNewMap[]
@@ -2013,6 +2246,9 @@ export interface SummaryCap {
     medal: string
     added: string
     verified: boolean
+    isTeam?: boolean
+    teamMembers?: SummaryTeamMember[] | null
+    teamCapId?: string | null
 }
 
 export async function fetchSummary(accessToken: string): Promise<Summary> {
@@ -2043,7 +2279,7 @@ export async function fetchHotMaps(accessToken: string): Promise<HotMap[]> {
     })
     if (!response.ok) throw new Error('Failed to fetch hot maps')
     const json = await response.json()
-    return json.data
+    return Array.isArray(json.data) ? json.data : []
 }
 
 export interface PendingReview {
@@ -2373,6 +2609,9 @@ export interface UserCapRow {
     disallowed_at?: string | null
     disallow_reason?: string | null
     cap_type: number
+    isTeam: boolean
+    teamMembers: SummaryTeamMember[] | null
+    teamCapId: string | null
 }
 
 export interface UserCapsPage {
@@ -2392,6 +2631,9 @@ export interface UserPersonalBestRow {
     added: string | null
     verified: boolean
     cap_type: number
+    isTeam: boolean
+    teamMembers: SummaryTeamMember[] | null
+    teamCapId: string | null
 }
 
 export interface UserPersonalBestsPage {
@@ -2783,6 +3025,10 @@ export interface CapItAllRow {
     certified_percentage: number
     non_certified_caps: number
     non_certified_percentage: number
+    team_caps: number
+    team_percentage: number
+    total_caps: number
+    total_percentage: number
 }
 
 export interface CapItAllParams {
@@ -2808,6 +3054,10 @@ function normaliseCapItAllRows(raw: any): CapItAllRow[] {
         certified_percentage: Number(row.certified_percentage) || 0,
         non_certified_caps: Number(row.non_certified_caps) || 0,
         non_certified_percentage: Number(row.non_certified_percentage) || 0,
+        team_caps: Number(row.team_caps) || 0,
+        team_percentage: Number(row.team_percentage) || 0,
+        total_caps: Number(row.total_caps) || 0,
+        total_percentage: Number(row.total_percentage) || 0,
     }))
 }
 

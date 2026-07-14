@@ -5,8 +5,9 @@ import {
     type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
+import { TeamAvatarStack } from '@/app/components/shared/TeamAvatarStack'
 import { MapNameCell } from '@/app/components/shared/MapNameCell'
-import { CapTimeLink, openCap } from '@/app/components/shared/CapTimeLink'
+import { CapTimeLink, openCap, openTeamCap } from '@/app/components/shared/CapTimeLink'
 import { IconActionButton } from '@/app/components/shared/IconActionButton'
 import { cn } from '@/lib/utils'
 import type { SummaryWorldRecord } from '@/app/utils/api'
@@ -15,7 +16,7 @@ type RecordColumnId = 'map' | 'holder' | 'time' | 'when' | 'replay'
 
 const RECORD_COLUMNS: ResponsiveColumn[] = [
     { id: 'map', required: true },
-    { id: 'holder', width: '8rem', priority: 30, required: true },
+    { id: 'holder', width: '9rem', priority: 30, required: true },
     { id: 'time', width: '5rem', priority: 70, required: true },
     { id: 'when', width: '4rem', priority: 10 },
     { id: 'replay', width: '3rem', priority: 20 },
@@ -67,11 +68,12 @@ export function LatestRecordsCard({
             <tbody>
                 {rows.map(r => {
                     const isOwn = currentUserId != null && r.userId === currentUserId
+                    const isTeamRow = !!(r.members && r.members.length > 0)
                     return (
                         <DataTableRow
                             key={r.id}
                             className={cn('cursor-pointer', isOwn && 'bg-emerald-500/[0.05]')}
-                            onClick={() => openCap(r.id)}
+                            onClick={() => isTeamRow ? openTeamCap(r.id) : openCap(r.id)}
                         >
                             <DataTableCell>
                                 <MapNameCell
@@ -83,21 +85,29 @@ export function LatestRecordsCard({
                             </DataTableCell>
                             {isVisible('holder') && (
                                 <DataTableCell>
-                                    <PlayerInfo
-                                        userId={r.userId ?? undefined}
-                                        alias={r.alias}
-                                        title={r.activeTitle ?? null}
-                                        size="sm"
-                                        highlight={isOwn}
-                                        showYouBadge={isOwn}
-                                    />
+                                    {r.members && r.members.length > 0 ? (
+                                        <TeamAvatarStack
+                                            members={r.members}
+                                            currentUserId={currentUserId}
+                                        />
+                                    ) : (
+                                        <PlayerInfo
+                                            userId={r.userId ?? undefined}
+                                            alias={r.alias}
+                                            title={r.activeTitle ?? null}
+                                            size="sm"
+                                            highlight={isOwn}
+                                            showYouBadge={isOwn}
+                                        />
+                                    )}
                                 </DataTableCell>
                             )}
                             {isVisible('time') && (
                                 <DataTableCell align="center">
                                     <div className="flex justify-center">
                                         <CapTimeLink
-                                            capId={r.id}
+                                            capId={isTeamRow ? undefined : r.id}
+                                            teamCapId={isTeamRow ? r.id : undefined}
                                             seconds={r.time}
                                             className="font-mono tabular-nums font-bold text-blue-300"
                                         />
@@ -118,7 +128,7 @@ export function LatestRecordsCard({
                                             variant="replay"
                                             icon={Play}
                                             iconFill
-                                            tooltip="Watch replay"
+                                            tooltip="Watch Replay"
                                             loading={loadingCapId === r.id}
                                             onClick={() => onWatchReplay(r)}
                                             />

@@ -7,6 +7,7 @@ import { useNavState } from '@/app/components/navigation/useNavState'
 import { formatAddedDate, displayMapName } from '@/app/utils/format'
 import { getMedalIcon } from '@/app/utils/medals'
 import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
+import { TeamRosterBadge } from '@/app/components/shared/TeamRosterBadge'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
 import { IconActionButton } from '@/app/components/shared/IconActionButton'
@@ -263,9 +264,16 @@ export function RecentCapsCard({
                                                         disabled={!canEditFavorites}
                                                     />
                                                 )}
-                                                <span className="text-sm font-semibold text-foreground truncate min-w-0">
-                                                    {displayMapName(cap.mapName)}
-                                                </span>
+                                                <div className="flex flex-col gap-1 min-w-0">
+                                                    <div className="flex items-center gap-2 min-w-0">
+                                                        <span className="text-sm font-semibold text-foreground truncate min-w-0">
+                                                            {displayMapName(cap.mapName)}
+                                                        </span>
+                                                        {cap.isTeam && (
+                                                            <TeamRosterBadge members={cap.teamMembers} currentUserId={String(userId)} />
+                                                        )}
+                                                    </div>
+                                                </div>
                                             </div>
                                         </DataTableCell>
                                     )}
@@ -281,7 +289,8 @@ export function RecentCapsCard({
                                     {isVisible('time') && (
                                         <DataTableCell align="right">
                                             <CapTimeLink
-                                                capId={cap.id}
+                                                capId={cap.isTeam ? undefined : cap.id}
+                                                teamCapId={cap.isTeam ? cap.teamCapId ?? undefined : undefined}
                                                 seconds={cap.time}
                                                 className="text-sm font-mono tabular-nums font-bold text-foreground"
                                             />

@@ -6,7 +6,7 @@ import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import { displayMapName, formatCapTime, formatAddedDate } from '@/app/utils/format'
 import { medalIconForInt, medalLabelForInt, formatSignedDelta, deltaClass } from './capStats'
-import type { CapRecord } from '@/app/utils/api'
+import type { CapRecord, TeamRunStatus } from '@/app/utils/api'
 
 interface HeroSectionProps {
     cap: CapRecord
@@ -16,6 +16,7 @@ interface HeroSectionProps {
     deltaWr: number | null
     gapToNext: number | null
     isWr: boolean
+    teamRun?: TeamRunStatus | null
     onMapSelect?: (mapName: string) => void
     onWatch: () => void
     watching: boolean
@@ -74,7 +75,7 @@ function MiniStat({ label, children }: { label: string; children: ReactNode }) {
 }
 
 export function HeroSection({
-    cap, mapName, rank, total, deltaWr, gapToNext, isWr,
+    cap, mapName, rank, total, deltaWr, gapToNext, isWr, teamRun,
     onMapSelect, onWatch, watching, canWatch, onDownload, onCompareRun, canCompareRun,
 }: HeroSectionProps) {
     const medalIcon = medalIconForInt(cap.medal)
@@ -117,10 +118,10 @@ export function HeroSection({
                                     'bg-accent-500/15 border-accent-500/40 text-accent-200 hover:bg-accent-500/25 hover:text-foreground hover:border-accent-500/60',
                                     'disabled:opacity-50 disabled:cursor-not-allowed',
                                 )}
-                                title={canWatch ? 'Watch replay' : 'No replay — cap not verified'}
+                                title={canWatch ? 'Watch Replay' : 'No replay — cap not verified'}
                             >
                                 {watching ? <Loader2 className="size-3.5 animate-spin" /> : <Play className="size-3.5" />}
-                                Watch replay
+                                Watch Replay
                             </button>
                             <button
                                 type="button"
@@ -157,21 +158,80 @@ export function HeroSection({
                             </div>
                         </div>
                         <div className="self-stretch w-px bg-hairline/10" />
-                        <MiniStat label="Rank">
-                            <span className="text-foreground">#{rank}</span>{' '}
-                            <span className="text-[10px] text-muted-foreground font-normal">of {total.toLocaleString()}</span>
-                        </MiniStat>
-                        <MiniStat label="Δ WR">
-                            <span className={isWr ? 'text-muted-foreground' : deltaClass(deltaWr)}>
-                                {isWr ? '—' : formatSignedDelta(deltaWr)}
-                            </span>
-                        </MiniStat>
-                        <MiniStat label="Gap to Next">
-                            <span className={isWr || gapToNext == null ? 'text-muted-foreground' : 'text-red-300'}>
-                                {isWr || gapToNext == null ? '—' : formatSignedDelta(gapToNext)}
-                            </span>
-                        </MiniStat>
+                        {teamRun ? (
+                            <MiniStat label="Team Time">
+                                <span className="text-foreground">
+                                    {teamRun.team_time_seconds == null ? '—' : formatCapTime(teamRun.team_time_seconds)}
+                                </span>
+                            </MiniStat>
+                        ) : (
+                            <>
+                                <MiniStat label="Rank">
+                                    <span className="text-foreground">#{rank}</span>{' '}
+                                    <span className="text-[10px] text-muted-foreground font-normal">of {total.toLocaleString()}</span>
+                                </MiniStat>
+                                <MiniStat label="Δ WR">
+                                    <span className={isWr ? 'text-muted-foreground' : deltaClass(deltaWr)}>
+                                        {isWr ? '—' : formatSignedDelta(deltaWr)}
+                                    </span>
+                                </MiniStat>
+                                <MiniStat label="Gap to Next">
+                                    <span className={isWr || gapToNext == null ? 'text-muted-foreground' : 'text-red-300'}>
+                                        {isWr || gapToNext == null ? '—' : formatSignedDelta(gapToNext)}
+                                    </span>
+                                </MiniStat>
+                            </>
+                        )}
                     </div>
+
+                    {teamRun && (
+                        <div className="rounded-lg border border-hairline/10 bg-hairline/[0.02] p-3">
+                            <div className="flex items-center justify-between gap-2 mb-2">
+                                <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
+                                    Team run
+                                </span>
+                                <span className={cn(
+                                    'inline-flex items-center gap-1 h-6 px-2 rounded-md border text-[11px] font-semibold',
+                                    teamRun.state === 'verified'
+                                        ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
+                                        : teamRun.state === 'disallowed'
+                                            ? 'bg-red-500/15 border-red-500/40 text-red-300'
+                                            : teamRun.state === 'pending'
+                                                ? 'bg-amber-500/15 border-amber-500/40 text-amber-300'
+                                                : 'bg-hairline/5 border-hairline/10 text-muted-foreground',
+                                )}>
+                                    {teamRun.state === 'verified' ? <ShieldCheck className="size-3" /> : <ShieldAlert className="size-3" />}
+                                    {teamRun.state === 'verified'
+                                        ? 'Verified'
+                                        : teamRun.state === 'disallowed'
+                                            ? 'Disallowed'
+                                            : teamRun.state === 'pending'
+                                                ? 'Certified'
+                                                : 'Incomplete'}
+                                </span>
+                            </div>
+                            <div className="flex flex-col gap-1.5">
+                                {teamRun.members.map(member => (
+                                    <div key={member.cap_id} className="flex items-center justify-between gap-3 min-w-0">
+                                        <PlayerInfo
+                                            userId={member.user}
+                                            alias={member.alias}
+                                            size="sm"
+                                            highlight={String(member.user) === String(cap.user)}
+                                        />
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            <span className="text-xs font-mono tabular-nums text-foreground">
+                                                {member.cap_time_seconds == null ? '—' : formatCapTime(member.cap_time_seconds)}
+                                            </span>
+                                            {member.verified
+                                                ? <ShieldCheck className="size-3.5 text-emerald-300" />
+                                                : <ShieldAlert className="size-3.5 text-amber-300" />}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
                     <div className="flex items-center gap-2 flex-wrap">
                         {showMedal && medalIcon && (
