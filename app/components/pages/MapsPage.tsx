@@ -17,7 +17,7 @@ import {
 import { MapReviewsModal } from '@/app/components/modals/MapReviewsModal'
 import { ReplayPickerModal } from '@/app/components/modals/ReplayPickerModal'
 import { ReplayVideoPlayer } from '@/app/components/shared/ReplayVideoModal'
-import { openCap } from '@/app/components/shared/CapTimeLink'
+import { openCap, openTeamCap } from '@/app/components/shared/CapTimeLink'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
@@ -1760,7 +1760,10 @@ export function MapsPage({
                             type="button"
                             onClick={e => {
                                 e.stopPropagation()
-                                if (capId) openCap(capId)
+                                if (capId) {
+                                    if ((map.required_players ?? 0) > 1) openTeamCap(capId)
+                                    else openCap(capId)
+                                }
                             }}
                             className="text-left cursor-pointer group/wr"
                         >
@@ -1814,7 +1817,10 @@ export function MapsPage({
                                     type="button"
                                     onClick={e => {
                                         e.stopPropagation()
-                                        if (pbCapId) openCap(pbCapId)
+                                        if (pbCapId) {
+                                            if ((map.required_players ?? 0) > 1) openTeamCap(pbCapId)
+                                            else openCap(pbCapId)
+                                        }
                                     }}
                                     className="flex flex-col leading-tight text-center cursor-pointer group/pb"
                                 >
