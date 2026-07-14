@@ -14,6 +14,7 @@
     "format": "prettier --write .",
     "lint": "eslint . --ext .ts,.tsx --fix",
     "start": "electron-vite preview",
+    "test": "vitest run",
     "postinstall": "electron-builder install-app-deps",
     "vite:build:app": "electron-vite build",
     "electron:build:win": "electron-builder --win --publish never",
@@ -73,6 +74,7 @@
     "tailwindcss": "^4.3.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.61.1",
-    "vite": "^7.3.5"
+    "vite": "^7.3.5",
+    "vitest": "^3.2.4"
   }
 }
