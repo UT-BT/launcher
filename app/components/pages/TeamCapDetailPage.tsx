@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react'
 import {
     Loader2, ShieldAlert, ShieldCheck, Play, Download, Calendar,
-    Users, BadgeCheck,
+    Users,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useNavScrollRestore } from '@/app/components/navigation/useNavScrollRestore'
@@ -432,14 +432,10 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
                                             {detail.state === 'verified'
                                                 ? 'Verified'
                                                 : detail.state === 'pending'
-                                                    ? 'Certified'
+                                                    ? 'Pending'
                                                     : 'Incomplete'}
                                         </span>
                                     )}
-                                    <span className="inline-flex items-center gap-1.5 h-7 px-2 rounded-md border text-xs font-semibold bg-blue-500/15 border-blue-500/40 text-blue-300">
-                                        <BadgeCheck className="size-3.5" />
-                                        Certified
-                                    </span>
                                     {(detail.completed_at || detail.added) && (
                                         <span className="inline-flex items-center gap-1.5 h-7 px-2 rounded-md bg-hairline/5 border border-hairline/5 text-xs text-muted-foreground">
                                             <Calendar className="size-3.5" />
