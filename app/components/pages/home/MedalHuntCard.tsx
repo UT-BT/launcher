@@ -408,6 +408,7 @@ export function MedalHuntCard({
           for (const record of records) additions[record.map] = record.added ?? null
         } catch (error) {
           console.error('Failed to load Medal Hunt world record dates', error)
+          for (const mapName of batch) additions[mapName] = null
           batch.forEach((mapName) => fetched.delete(mapName))
         }
       }
@@ -425,6 +426,10 @@ export function MedalHuntCard({
     () => buildOpportunities(bestCaps, maps, worldRecordDatesByMap),
     [bestCaps, maps, worldRecordDatesByMap]
   )
+  const worldRecordDatesReady = useMemo(() => {
+    if (baseOpportunities.length === 0) return true
+    return baseOpportunities.every((item) => Object.prototype.hasOwnProperty.call(worldRecordDatesByMap, item.mapName))
+  }, [baseOpportunities, worldRecordDatesByMap])
 
   const opportunities = useMemo(() => {
     const maxImprove = improveWindow === 'all' ? null : Number(improveWindow)
@@ -527,7 +532,7 @@ export function MedalHuntCard({
   const goPrev = () => setPage((p) => Math.max(1, p - 1))
   const goNext = () => setPage((p) => Math.min(totalPages, p + 1))
 
-  if (loading) {
+  if (loading || (sortField === 'date' && !worldRecordDatesReady)) {
     return (
       <div ref={containerRef} className="bg-card/30 border border-hairline/5 rounded-xl overflow-hidden">
         {Array.from({ length: responsiveLimit }).map((_, i) => (
