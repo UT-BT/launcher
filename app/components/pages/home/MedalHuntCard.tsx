@@ -60,6 +60,7 @@ interface Opportunity {
 const CERTIFIED_CAP_TYPE = 2
 const WR_EPSILON_SECONDS = 0.0005
 const HIDDEN_STORAGE_KEY_PREFIX = 'utbt:homeMedalHuntHidden:v1'
+const FILTER_PREFS_STORAGE_KEY_PREFIX = 'utbt:homeMedalHuntFilters:v1'
 const ROW_HEIGHT_PX = 64
 const WR_DATE_BATCH_SIZE = 80
 
@@ -89,6 +90,12 @@ const MEDAL_TONE: Record<TargetMedal, string> = {
 type ImproveWindow = 'all' | '1' | '3' | '5' | '10' | '30'
 type SortField = 'improve' | 'medal' | 'rating' | 'date'
 type SortDir = 'asc' | 'desc'
+type MedalHuntFilterPrefs = {
+  selectedMedals: TargetMedal[]
+  improveWindow: ImproveWindow
+  sortField: SortField
+  sortDir: SortDir
+}
 
 const IMPROVE_WINDOW_LABELS: Record<ImproveWindow, string> = {
   all: 'Any improvement',
@@ -106,6 +113,13 @@ const IMPROVE_FILTER_SHORT_LABELS: Record<ImproveWindow, string> = {
   '5': '5s',
   '10': '10s',
   '30': '30s',
+}
+
+const DEFAULT_FILTER_PREFS: MedalHuntFilterPrefs = {
+  selectedMedals: TARGET_MEDALS,
+  improveWindow: 'all',
+  sortField: 'date',
+  sortDir: 'desc',
 }
 
 type MedalThreshold = { medal: TargetMedal; time: number | undefined }
@@ -185,6 +199,54 @@ function hiddenStorageKey(userId?: string | number | null): string {
   return `${HIDDEN_STORAGE_KEY_PREFIX}:${userId ?? 'unknown'}`
 }
 
+function filterPrefsStorageKey(userId?: string | number | null): string {
+  return `${FILTER_PREFS_STORAGE_KEY_PREFIX}:${userId ?? 'unknown'}`
+}
+
+function isTargetMedal(value: unknown): value is TargetMedal {
+  return typeof value === 'string' && TARGET_MEDALS.includes(value as TargetMedal)
+}
+
+function isImproveWindow(value: unknown): value is ImproveWindow {
+  return typeof value === 'string' && IMPROVE_FILTER_ORDER.includes(value as ImproveWindow)
+}
+
+function isSortField(value: unknown): value is SortField {
+  return value === 'improve' || value === 'medal' || value === 'rating' || value === 'date'
+}
+
+function isSortDir(value: unknown): value is SortDir {
+  return value === 'asc' || value === 'desc'
+}
+
+function sanitizeFilterPrefs(value: unknown): MedalHuntFilterPrefs {
+  if (typeof value !== 'object' || value === null) return DEFAULT_FILTER_PREFS
+  const raw = value as Partial<MedalHuntFilterPrefs>
+  const selectedMedals = Array.isArray(raw.selectedMedals)
+    ? raw.selectedMedals.filter((item, index, arr) => isTargetMedal(item) && arr.indexOf(item) === index)
+    : DEFAULT_FILTER_PREFS.selectedMedals
+
+  return {
+    selectedMedals,
+    improveWindow: isImproveWindow(raw.improveWindow) ? raw.improveWindow : DEFAULT_FILTER_PREFS.improveWindow,
+    sortField: isSortField(raw.sortField) ? raw.sortField : DEFAULT_FILTER_PREFS.sortField,
+    sortDir: isSortDir(raw.sortDir) ? raw.sortDir : DEFAULT_FILTER_PREFS.sortDir,
+  }
+}
+
+function readFilterPrefs(userId?: string | number | null): MedalHuntFilterPrefs {
+  try {
+    const raw = localStorage.getItem(filterPrefsStorageKey(userId))
+    return raw ? sanitizeFilterPrefs(JSON.parse(raw)) : DEFAULT_FILTER_PREFS
+  } catch {
+    return DEFAULT_FILTER_PREFS
+  }
+}
+
+function writeFilterPrefs(userId: string | number | null | undefined, prefs: MedalHuntFilterPrefs) {
+  localStorage.setItem(filterPrefsStorageKey(userId), JSON.stringify(prefs))
+}
+
 function readHiddenMapNames(userId?: string | number | null): string[] {
   try {
     const raw = localStorage.getItem(hiddenStorageKey(userId))
@@ -243,10 +305,7 @@ export function MedalHuntCard({
   const [loading, setLoading] = useState(true)
   const [responsiveLimit, setResponsiveLimit] = useState(6)
   const [page, setPage] = useState(1)
-  const [selectedMedals, setSelectedMedals] = useState<Set<TargetMedal>>(() => new Set(TARGET_MEDALS))
-  const [improveWindow, setImproveWindow] = useState<ImproveWindow>('all')
-  const [sortField, setSortField] = useState<SortField>('date')
-  const [sortDir, setSortDir] = useState<SortDir>('desc')
+  const [filterPrefs, setFilterPrefs] = useState<MedalHuntFilterPrefs>(() => readFilterPrefs(userId))
   const [worldRecordDatesByMap, setWorldRecordDatesByMap] = useState<Record<string, string | null>>({})
   const fetchedWorldRecordDateMapsRef = useRef<Set<string>>(new Set())
   const [hiddenMapNames, setHiddenMapNames] = useState<string[]>(() => readHiddenMapNames(userId))
@@ -258,6 +317,8 @@ export function MedalHuntCard({
     time?: number
     alias?: string
   } | null>(null)
+  const selectedMedals = useMemo(() => new Set(filterPrefs.selectedMedals), [filterPrefs.selectedMedals])
+  const { improveWindow, sortField, sortDir } = filterPrefs
 
   useEffect(() => {
     const updateLimit = () => {
@@ -309,6 +370,7 @@ export function MedalHuntCard({
   }, [accessToken, userId, refreshKey])
 
   useEffect(() => {
+    setFilterPrefs(readFilterPrefs(userId))
     setHiddenMapNames(readHiddenMapNames(userId))
     setPage(1)
     setShowHidden(false)
@@ -399,10 +461,12 @@ export function MedalHuntCard({
   }, [totalPages])
 
   const toggleMedal = (medal: TargetMedal) => {
-    setSelectedMedals((prev) => {
-      const next = new Set(prev)
-      if (next.has(medal)) next.delete(medal)
-      else next.add(medal)
+    setFilterPrefs((prev) => {
+      const selectedMedals = prev.selectedMedals.includes(medal)
+        ? prev.selectedMedals.filter((item) => item !== medal)
+        : [...prev.selectedMedals, medal]
+      const next = { ...prev, selectedMedals }
+      writeFilterPrefs(userId, next)
       return next
     })
     setPage(1)
@@ -434,18 +498,29 @@ export function MedalHuntCard({
   }
 
   const updateImproveWindow = (value: ImproveWindow) => {
-    setImproveWindow(value)
+    setFilterPrefs((prev) => {
+      const next = { ...prev, improveWindow: value }
+      writeFilterPrefs(userId, next)
+      return next
+    })
     setPage(1)
   }
 
   const updateSortField = (value: SortField) => {
-    setSortField(value)
-    if (value === 'date') setSortDir('desc')
+    setFilterPrefs((prev) => {
+      const next = { ...prev, sortField: value, sortDir: value === 'date' ? 'desc' : prev.sortDir }
+      writeFilterPrefs(userId, next)
+      return next
+    })
     setPage(1)
   }
 
   const updateSortDir = (value: SortDir) => {
-    setSortDir(value)
+    setFilterPrefs((prev) => {
+      const next = { ...prev, sortDir: value }
+      writeFilterPrefs(userId, next)
+      return next
+    })
     setPage(1)
   }
 
