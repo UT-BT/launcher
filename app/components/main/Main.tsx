@@ -7,7 +7,7 @@ import {
   type NavParams,
   type NavigationContextValue,
 } from '@/app/components/navigation/NavigationContext'
-import { Home } from '@/app/components/pages/Home'
+import { Home, DEFAULT_HOME_CACHES, type HomePageCaches } from '@/app/components/pages/Home'
 import {
   ServerBrowserPage,
   DEFAULT_SERVERS_STATE,
@@ -212,8 +212,10 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
   const [capItAllCaches, setCapItAllCaches] = useState<CapItAllPageCaches>(DEFAULT_CAP_IT_ALL_CACHES)
   const [worldRecordsCaches, setWorldRecordsCaches] = useState<WorldRecordsPageCaches>(DEFAULT_WORLD_RECORDS_CACHES)
   const [achievementsCaches, setAchievementsCaches] = useState<AchievementsPageCaches>(DEFAULT_ACHIEVEMENTS_CACHES)
+  const [homeCaches, setHomeCaches] = useState<HomePageCaches>(DEFAULT_HOME_CACHES)
   const [serverPresets, setServerPresets] = useState<ServerPreset[]>(loadPersistedServerPresets)
   const [favoriteServerIds, setFavoriteServerIds] = useState<Set<string>>(loadPersistedServerFavorites)
+  const achievementsInFlightRef = useRef<Promise<void> | null>(null)
 
   useEffect(() => {
     void loadPatreonMembers()
@@ -240,6 +242,43 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
 
   const accessToken = userProfile?.accessToken
   const userId = userProfile?.id ?? undefined
+
+  const ensureAchievements = useCallback(async (force = false) => {
+    if (!accessToken) return
+    if (achievementsInFlightRef.current) return achievementsInFlightRef.current
+
+    let shouldFetch = force
+    setAchievementsCaches(prev => {
+      if (!force && (prev.status === 'ready' || prev.status === 'loading')) return prev
+      shouldFetch = true
+      return { ...prev, status: 'loading' }
+    })
+    if (!shouldFetch) return
+
+    const run = (async () => {
+      try {
+        const [definitions, mine] = await Promise.all([
+          fetchAchievementDefinitions(accessToken),
+          fetchMyAchievements(accessToken),
+        ])
+        setAchievementsCaches(prev => ({
+          ...prev,
+          definitions,
+          progress: mine.items,
+          lastRefreshIso: new Date().toISOString(),
+          status: 'ready',
+        }))
+      } catch (e) {
+        console.error('Achievement stamp-on-load failed:', e)
+        setAchievementsCaches(prev => ({ ...prev, status: 'error' }))
+      } finally {
+        achievementsInFlightRef.current = null
+      }
+    })()
+
+    achievementsInFlightRef.current = run
+    return run
+  }, [accessToken])
 
   // Single source of truth for map favorites. See app/hooks/useFavorites.ts.
   const {
@@ -393,29 +432,12 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
   // Stamp achievements + grant earned titles on launcher load, even if the user
   // never opens the Achievements page. GET /me stamps server-side and is
   // idempotent (unique constraint + existing-set check), so it's safe to fire on
-  // every sign-in. Also warms the cache so the page opens instantly.
+  // every sign-in. Single-flight so Home and the Achievements page share one fetch
+  // rather than racing; both read the resulting cache.
   useEffect(() => {
     if (!accessToken) return
-    let cancelled = false
-    void (async () => {
-      try {
-        const [definitions, mine] = await Promise.all([
-          fetchAchievementDefinitions(accessToken),
-          fetchMyAchievements(accessToken),
-        ])
-        if (cancelled) return
-        setAchievementsCaches(prev => ({
-          ...prev,
-          definitions,
-          progress: mine.items,
-          lastRefreshIso: new Date().toISOString(),
-        }))
-      } catch (e) {
-        console.error('Achievement stamp-on-load failed:', e)
-      }
-    })()
-    return () => { cancelled = true }
-  }, [accessToken])
+    void ensureAchievements()
+  }, [accessToken, ensureAchievements])
 
   const openMap = useCallback((name: string) => navigate('maps-detail', { mapName: name }), [navigate])
 
@@ -493,6 +515,10 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
           userProfile={userProfile as any}
           installationStatus={installationStatus}
           favoriteMapNames={favoriteMapNames}
+          caches={homeCaches}
+          onCachesChange={setHomeCaches}
+          achievementsCaches={achievementsCaches}
+          onEnsureAchievements={ensureAchievements}
           onToggleFavorite={toggleFavorite}
           onMapSelect={openMap}
           onViewServers={() => navigate('servers')}
@@ -614,6 +640,10 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
         return <Home
           userProfile={userProfile as any}
           favoriteMapNames={favoriteMapNames}
+          caches={homeCaches}
+          onCachesChange={setHomeCaches}
+          achievementsCaches={achievementsCaches}
+          onEnsureAchievements={ensureAchievements}
           onToggleFavorite={toggleFavorite}
           onMapSelect={openMap}
           onViewServers={() => navigate('servers')}

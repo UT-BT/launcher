@@ -11,7 +11,7 @@ not_here:
   - "the navigation stack / navigate() / renderView wiring → navigation.md"
   - "the shared components used (FilterPresetsMenu, ColumnsMenu, Tutorial) → shared-components.md"
 sections: [controlled-pages-with-hoisted-state, navigation-history-per-entry-ui-state, localstorage-persistence, filter-presets, tutorial-state, favorites, naming-conventions]
-last_verified: 2026-06-19
+last_verified: 2026-07-15
 verify_against: [app/components/main/Main.tsx, app/components/navigation/useNavState.ts, app/hooks/useAsync.ts]
 ---
 
@@ -33,7 +33,13 @@ component**. The page receives `state`, `onStateChange`, `caches`,
 **fresh** open (sidebar click, opening something new) starts from defaults.
 Preference fields (column layout, page-size, filters-panel-open) are the
 exception — they persist across fresh opens and restarts via localStorage. Data
-caches survive (shared singleton) so revisiting a page doesn't refetch.
+caches survive (shared singleton) so revisiting a page doesn't refetch — but only
+for data actually hoisted into that page's `caches`. Anything a page **or one of its
+children** keeps in local `useState` is refetched on every visit, because
+`renderView()` unmounts the page on a view change (see `agents/navigation.md`). A
+child that fetches for itself therefore needs its slice threaded through the page's
+`caches` too — `Home` does this for the Medal Hunt rows, the community counts and
+the first page of maps-to-review.
 
 **Caches are shared, query state is per-entry — so a cache holds only the *last*
 query's rows.** For server-queried/paginated pages (e.g. `PlayersPage`,

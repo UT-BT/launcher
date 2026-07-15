@@ -15,8 +15,8 @@ import {
   Timer,
   TvMinimalPlay,
 } from 'lucide-react'
-import { fetchBestCaps, fetchMapsMetadata, fetchWorldRecordsForMaps, type BestCap, type MapMetadata } from '@/app/utils/api'
-import { buildOpportunities, type Opportunity, type TargetMedal } from '@/app/utils/medalHunt'
+import { fetchMap, fetchMedalHunt, type MapMetadata, type MedalHuntOpportunity } from '@/app/utils/api'
+import { toOpportunities, type Opportunity, type TargetMedal } from '@/app/utils/medalHunt'
 import { displayMapName, formatCapTime, formatDelta } from '@/app/utils/format'
 import { getMedalIcon } from '@/app/utils/medals'
 import { difficultyTextColor } from '@/app/utils/scoreColors'
@@ -39,6 +39,8 @@ interface MedalHuntCardProps {
   accessToken?: string
   userId?: string | number | null
   refreshKey?: number
+  rows: MedalHuntOpportunity[] | null
+  onRowsLoaded: (rows: MedalHuntOpportunity[]) => void
   favoriteMapNames: Set<string>
   onToggleFavorite: (mapName: string) => void
   onMapSelect?: (mapName: string) => void
@@ -46,7 +48,10 @@ interface MedalHuntCardProps {
 
 const HIDDEN_STORAGE_KEY_PREFIX = 'utbt:homeMedalHuntHidden:v1'
 const ROW_HEIGHT_PX = 64
-const WR_DATE_BATCH_SIZE = 80
+const MEDAL_TIER_COLUMNS = [
+  'name', 'required_players',
+  'world_record', 'champion_medal', 'gold_medal', 'silver_medal', 'bronze_medal',
+]
 
 const TARGET_MEDALS: TargetMedal[] = ['Bronze Medal', 'Silver Medal', 'Gold Medal', 'Champion Medal', 'World Record']
 const MEDAL_FILTER_ORDER: TargetMedal[] = [
@@ -145,25 +150,24 @@ export function MedalHuntCard({
   accessToken,
   userId,
   refreshKey = 0,
+  rows,
+  onRowsLoaded,
   favoriteMapNames,
   onToggleFavorite,
   onMapSelect,
 }: MedalHuntCardProps) {
   const containerRef = useRef<HTMLDivElement | null>(null)
-  const [bestCaps, setBestCaps] = useState<BestCap[]>([])
-  const [maps, setMaps] = useState<MapMetadata[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(rows === null)
   const [responsiveLimit, setResponsiveLimit] = useState(6)
   const [page, setPage] = useState(1)
   const [selectedMedals, setSelectedMedals] = useState<Set<TargetMedal>>(() => new Set(TARGET_MEDALS))
   const [improveWindow, setImproveWindow] = useState<ImproveWindow>('all')
   const [sortField, setSortField] = useState<SortField>('date')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
-  const [worldRecordDatesByMap, setWorldRecordDatesByMap] = useState<Record<string, string | null>>({})
-  const fetchedWorldRecordDateMapsRef = useRef<Set<string>>(new Set())
   const [hiddenMapNames, setHiddenMapNames] = useState<string[]>(() => readHiddenMapNames(userId))
   const [showHidden, setShowHidden] = useState(false)
   const [replayPickerMap, setReplayPickerMap] = useState<string | null>(null)
+  const [replayPickerMapMetadata, setReplayPickerMapMetadata] = useState<MapMetadata | null>(null)
   const [videoModal, setVideoModal] = useState<{
     url: string
     mapName: string
@@ -196,29 +200,31 @@ export function MedalHuntCard({
       return
     }
 
-    let cancelled = false
+    if (rows !== null) {
+      setLoading(false)
+      return
+    }
+
+    const controller = new AbortController()
     setLoading(true)
-    Promise.all([fetchBestCaps(accessToken, userId), fetchMapsMetadata(accessToken)])
-      .then(([capsData, mapsData]) => {
-        if (cancelled) return
-        setBestCaps(capsData)
-        setMaps(mapsData)
+    fetchMedalHunt(accessToken, controller.signal)
+      .then((data) => {
+        if (controller.signal.aborted) return
+        onRowsLoaded(data)
       })
       .catch((error) => {
+        if (controller.signal.aborted) return
         console.error('Failed to load Medal Hunt', error)
-        if (!cancelled) {
-          setBestCaps([])
-          setMaps([])
-        }
+        onRowsLoaded([])
       })
       .finally(() => {
-        if (!cancelled) setLoading(false)
+        if (!controller.signal.aborted) setLoading(false)
       })
 
     return () => {
-      cancelled = true
+      controller.abort()
     }
-  }, [accessToken, userId, refreshKey])
+  }, [accessToken, userId, refreshKey, rows, onRowsLoaded])
 
   useEffect(() => {
     setHiddenMapNames(readHiddenMapNames(userId))
@@ -227,54 +233,28 @@ export function MedalHuntCard({
   }, [userId])
 
   const hiddenMaps = useMemo(() => new Set(hiddenMapNames), [hiddenMapNames])
-  const baseOpportunities = useMemo(() => buildOpportunities(bestCaps, maps), [bestCaps, maps])
+
+  const allOpportunities = useMemo(() => toOpportunities(rows ?? []), [rows])
 
   useEffect(() => {
-    fetchedWorldRecordDateMapsRef.current.clear()
-    setWorldRecordDatesByMap({})
-  }, [userId, refreshKey])
-
-  useEffect(() => {
-    if (!accessToken || baseOpportunities.length === 0) return
-
-    const fetched = fetchedWorldRecordDateMapsRef.current
-    const missing = baseOpportunities
-      .map((item) => item.mapName)
-      .filter((mapName, index, arr) => arr.indexOf(mapName) === index)
-      .filter((mapName) => !fetched.has(mapName))
-
-    if (missing.length === 0) return
-    missing.forEach((mapName) => fetched.add(mapName))
+    if (!accessToken || !replayPickerMap) {
+      setReplayPickerMapMetadata(null)
+      return
+    }
 
     let cancelled = false
-    ;(async () => {
-      const additions: Record<string, string | null> = {}
-      for (let i = 0; i < missing.length; i += WR_DATE_BATCH_SIZE) {
-        const batch = missing.slice(i, i + WR_DATE_BATCH_SIZE)
-        try {
-          const records = await fetchWorldRecordsForMaps(accessToken, batch)
-          if (cancelled) return
-          for (const mapName of batch) additions[mapName] = null
-          for (const record of records) additions[record.map] = record.added ?? null
-        } catch (error) {
-          console.error('Failed to load Medal Hunt world record dates', error)
-          batch.forEach((mapName) => fetched.delete(mapName))
-        }
-      }
-      if (!cancelled && Object.keys(additions).length > 0) {
-        setWorldRecordDatesByMap((prev) => ({ ...prev, ...additions }))
-      }
-    })()
+    fetchMap(accessToken, replayPickerMap, MEDAL_TIER_COLUMNS)
+      .then((data) => {
+        if (!cancelled) setReplayPickerMapMetadata(data)
+      })
+      .catch(() => {
+        if (!cancelled) setReplayPickerMapMetadata(null)
+      })
 
     return () => {
       cancelled = true
     }
-  }, [accessToken, baseOpportunities, refreshKey])
-
-  const allOpportunities = useMemo(
-    () => buildOpportunities(bestCaps, maps, worldRecordDatesByMap),
-    [bestCaps, maps, worldRecordDatesByMap]
-  )
+  }, [accessToken, replayPickerMap])
 
   const opportunities = useMemo(() => {
     const maxImprove = improveWindow === 'all' ? null : Number(improveWindow)
@@ -463,7 +443,7 @@ export function MedalHuntCard({
         accessToken={accessToken}
         userId={userId ?? undefined}
         mapName={replayPickerMap}
-        mapMetadata={replayPickerMap ? maps.find((map) => map.name === replayPickerMap) : undefined}
+        mapMetadata={replayPickerMapMetadata ?? undefined}
         onSelect={(url, mapName, entry) => {
           setReplayPickerMap(null)
           setVideoModal({
