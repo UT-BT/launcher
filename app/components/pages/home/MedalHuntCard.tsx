@@ -16,6 +16,7 @@ import {
   TvMinimalPlay,
 } from 'lucide-react'
 import { fetchBestCaps, fetchMapsMetadata, fetchWorldRecordsForMaps, type BestCap, type MapMetadata } from '@/app/utils/api'
+import { buildOpportunities, type Opportunity, type TargetMedal } from '@/app/utils/medalHunt'
 import { displayMapName, formatCapTime, formatDelta } from '@/app/utils/format'
 import { getMedalIcon } from '@/app/utils/medals'
 import { difficultyTextColor } from '@/app/utils/scoreColors'
@@ -43,22 +44,6 @@ interface MedalHuntCardProps {
   onMapSelect?: (mapName: string) => void
 }
 
-type TargetMedal = 'Bronze Medal' | 'Silver Medal' | 'Gold Medal' | 'Champion Medal' | 'World Record'
-
-interface Opportunity {
-  mapName: string
-  difficulty: number
-  currentTime: number
-  targetTime: number
-  targetMedal: TargetMedal
-  improvement: number
-  improvementPct: number
-  worldRecordAdded: string | null
-  worldRecordAddedTime: number
-}
-
-const CERTIFIED_CAP_TYPE = 2
-const WR_EPSILON_SECONDS = 0.0005
 const HIDDEN_STORAGE_KEY_PREFIX = 'utbt:homeMedalHuntHidden:v1'
 const ROW_HEIGHT_PX = 64
 const WR_DATE_BATCH_SIZE = 80
@@ -106,79 +91,6 @@ const IMPROVE_FILTER_SHORT_LABELS: Record<ImproveWindow, string> = {
   '5': '5s',
   '10': '10s',
   '30': '30s',
-}
-
-type MedalThreshold = { medal: TargetMedal; time: number | undefined }
-
-function getMedalThresholds(map: MapMetadata): MedalThreshold[] {
-  return [
-    { medal: 'Bronze Medal', time: map.bronze_medal },
-    { medal: 'Silver Medal', time: map.silver_medal },
-    { medal: 'Gold Medal', time: map.gold_medal },
-    { medal: 'Champion Medal', time: map.champion_medal },
-    { medal: 'World Record', time: map.world_record },
-  ]
-}
-
-function nextTarget(
-  cap: BestCap,
-  thresholds: MedalThreshold[]
-): Pick<Opportunity, 'targetMedal' | 'targetTime'> | null {
-  if (cap.cap_type !== CERTIFIED_CAP_TYPE || cap.cap_time_seconds <= 0) return null
-
-  const time = cap.cap_time_seconds
-  for (const threshold of thresholds) {
-    if (threshold.time == null || threshold.time <= 0) continue
-    if (time - threshold.time > WR_EPSILON_SECONDS) {
-      return { targetMedal: threshold.medal, targetTime: threshold.time }
-    }
-  }
-
-  return null
-}
-
-function parseDateTime(value: string | null | undefined): number {
-  if (!value) return 0
-  const time = new Date(value).getTime()
-  return Number.isFinite(time) ? time : 0
-}
-
-function buildOpportunities(
-  bestCaps: BestCap[],
-  maps: MapMetadata[],
-  worldRecordDatesByMap: Record<string, string | null> = {}
-): Opportunity[] {
-  const mapsByName = new Map(maps.map((map) => [map.name, map]))
-  const thresholdsByName = new Map(maps.map((map) => [map.name, getMedalThresholds(map)]))
-
-  return bestCaps
-    .map((cap) => {
-      const map = mapsByName.get(cap.map)
-      if (!map) return null
-      const thresholds = thresholdsByName.get(cap.map)
-      if (!thresholds) return null
-      const target = nextTarget(cap, thresholds)
-      if (!target) return null
-      const improvement = cap.cap_time_seconds - target.targetTime
-      if (improvement <= WR_EPSILON_SECONDS) return null
-
-      return {
-        mapName: cap.map,
-        difficulty: map.difficulty,
-        currentTime: cap.cap_time_seconds,
-        targetTime: target.targetTime,
-        targetMedal: target.targetMedal,
-        improvement,
-        improvementPct: improvement / cap.cap_time_seconds,
-        worldRecordAdded: worldRecordDatesByMap[cap.map] ?? null,
-        worldRecordAddedTime: parseDateTime(worldRecordDatesByMap[cap.map]),
-      } satisfies Opportunity
-    })
-    .filter((item): item is Opportunity => item !== null)
-    .sort((a, b) => {
-      const pct = a.improvementPct - b.improvementPct
-      return Math.abs(pct) > 0.0001 ? pct : a.improvement - b.improvement
-    })
 }
 
 function hiddenStorageKey(userId?: string | number | null): string {
