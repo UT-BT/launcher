@@ -3,7 +3,7 @@ import {
     Lock, Sparkles, Award, Crown, Check, ChevronDown,
     Clock, Map as MapIcon, Trophy, Medal, Star, Swords, Tags, Globe, Shield, Wind, Flame, Snowflake,
     Users, Handshake, ShieldCheck, Zap, Gem,
-    Hammer, Hourglass, Heart, PenTool,
+    Hammer, Hourglass, Heart, PenTool, Blocks,
     type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -30,7 +30,7 @@ export const STATUS_FILTERS: { id: AchievementStatusFilter; label: string }[] = 
 const ICON_MAP: Record<string, LucideIcon> = {
     Clock, Map: MapIcon, Crown, Medal, Award, Trophy, Swords, Star, Tags, Globe, Shield, Wind, Flame, Sparkles,
     Users, Handshake, ShieldCheck, Zap, Gem,
-    Hammer, Hourglass, Heart, PenTool,
+    Hammer, Hourglass, Heart, PenTool, Blocks,
 }
 
 function goalTextFor(def: AchievementDefinition, tier: AchievementTier): string {
