@@ -2520,11 +2520,14 @@ export interface AchievementTitle {
     color_b: number
 }
 
+export type AchievementCategory = 'general' | 'solo' | 'team' | 'mastery'
+
 export interface AchievementTier {
     index?: number
     level: number
     threshold: number
     dynamic?: boolean
+    is_all?: boolean
     grants_title_id: number | null
     title?: AchievementTitle | null
     unlocked_at?: string | null
@@ -2537,8 +2540,10 @@ export interface AchievementDefinition {
     metric: string
     icon: string
     goal: string            // requirement phrasing with {n} placeholder, e.g. "Reach {n} hours played"
-    goal_all?: string | null // phrasing for a dynamic "all" tier, e.g. "Cap every map"
+    goal_all?: string | null // phrasing for an "all" tier, e.g. "Cap every map"
     unit?: string           // short noun for the "N <unit> to go" countdown, e.g. "hours"
+    team?: boolean
+    category?: AchievementCategory
     tiers: AchievementTier[]
 }
 

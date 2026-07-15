@@ -1,15 +1,18 @@
-import { useMemo, useState } from 'react'
+import { Fragment, useMemo, useState } from 'react'
 import {
     Lock, Sparkles, Award, Crown, Check, ChevronDown,
     Clock, Map as MapIcon, Trophy, Medal, Star, Swords, Tags, Globe, Shield, Wind, Flame, Snowflake,
+    Users, Handshake, ShieldCheck, Zap, Gem,
     type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import { getTitleTextStyle } from '@/app/utils/titleStyles'
 import {
+    type AchievementCategory,
     type AchievementDefinition,
     type AchievementProgress,
+    type AchievementTier,
     type AchievementTitle,
     type ActiveTitle,
 } from '@/app/utils/api'
@@ -25,6 +28,22 @@ export const STATUS_FILTERS: { id: AchievementStatusFilter; label: string }[] = 
 
 const ICON_MAP: Record<string, LucideIcon> = {
     Clock, Map: MapIcon, Crown, Medal, Award, Trophy, Swords, Star, Tags, Globe, Shield, Wind, Flame, Sparkles,
+    Users, Handshake, ShieldCheck, Zap, Gem,
+}
+
+function goalTextFor(def: AchievementDefinition, tier: AchievementTier): string {
+    return tier.is_all
+        ? (def.goal_all ?? 'Complete it')
+        : (def.goal ?? 'Reach {n}').replace('{n}', tier.threshold.toLocaleString())
+}
+
+function remainingTextFor(
+    def: AchievementDefinition,
+    tier: AchievementTier,
+    progress: AchievementProgress,
+): string {
+    const toGo = Math.max(0, tier.threshold - progress.current_value)
+    return `${toGo.toLocaleString()}${def.unit ? ` ${def.unit}` : ''} to go`
 }
 
 interface RarityStyle {
@@ -90,6 +109,27 @@ export function Segmented({ active, label, onClick }: { active: boolean; label: 
     )
 }
 
+const CATEGORIES = [
+    { id: 'general', label: 'General' },
+    { id: 'solo', label: 'Solo' },
+    { id: 'team', label: 'Team' },
+    { id: 'mastery', label: 'Mastery' },
+] as const
+
+function categoryOf(def: AchievementDefinition): AchievementCategory {
+    return def.category ?? (def.team ? 'team' : 'solo')
+}
+
+function SectionHeading({ label, maxed, total }: { label: string; maxed: number; total: number }) {
+    return (
+        <div className="flex items-baseline gap-3 pt-2 first:pt-0">
+            <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground shrink-0">{label}</h2>
+            <span className="flex-1 h-px bg-hairline/10" />
+            <span className="text-[11px] tabular-nums text-muted-foreground/70 shrink-0">{maxed}/{total} maxed</span>
+        </div>
+    )
+}
+
 /**
  * Presentational list of achievement "showcase rows". Pure — it merges the
  * given definitions with the given progress (by code), applies the status
@@ -127,6 +167,22 @@ export function AchievementsShowcase({
             return true
         }), [definitions, progressByCode, statusFilter])
 
+    const sections = useMemo(() => CATEGORIES
+        .map(c => ({ ...c, rows: filtered.filter(({ def }) => categoryOf(def) === c.id) }))
+        .filter(s => s.rows.length > 0), [filtered])
+
+    const totals = useMemo(() => {
+        const tally: Record<string, { total: number; maxed: number }> = {}
+        for (const c of CATEGORIES) {
+            const defs = definitions.filter(d => categoryOf(d) === c.id)
+            tally[c.id] = {
+                total: defs.length,
+                maxed: defs.filter(d => (progressByCode[d.code] ?? defaultProgress(d)).maxed).length,
+            }
+        }
+        return tally
+    }, [definitions, progressByCode])
+
     if (loading) {
         return (
             <>
@@ -141,10 +197,17 @@ export function AchievementsShowcase({
         return <div className="py-10 text-center text-muted-foreground text-sm">{emptyText}</div>
     }
 
+    const showHeadings = sections.length > 1
+
     return (
         <>
-            {filtered.map(({ def, progress }) => (
-                <AchievementRow key={def.code} def={def} progress={progress} />
+            {sections.map(section => (
+                <Fragment key={section.id}>
+                    {showHeadings && <SectionHeading label={section.label} {...totals[section.id]} />}
+                    {section.rows.map(({ def, progress }) => (
+                        <AchievementRow key={def.code} def={def} progress={progress} />
+                    ))}
+                </Fragment>
             ))}
         </>
     )
@@ -161,9 +224,7 @@ function TierBar({ def, progress }: { def: AchievementDefinition; progress: Achi
                 const r = rarityOf(tier.level - 1)
                 const fillPct = reached ? 100 : isActive ? Math.max(0, Math.min(100, progress.percent_to_next)) : 0
                 const tStyle = titleStyle(tier.title)
-                const reqText = tier.dynamic
-                    ? (def.goal_all ?? 'Complete it')
-                    : (def.goal ?? 'Reach {n}').replace('{n}', tier.threshold.toLocaleString())
+                const reqText = goalTextFor(def, tier)
                 return (
                     <Tooltip
                         key={tier.level}
@@ -298,10 +359,8 @@ function AchievementRow({ def, progress }: { def: AchievementDefinition; progres
                             const isNext = !progress.maxed && s === progress.current_tier + 1
                             const r = rarityOf(tier.level - 1)
                             const name = tier.title?.name ?? `Rarity ${tier.level} title`
-                            const goalText = tier.dynamic
-                                ? (def.goal_all ?? 'Complete it')
-                                : (def.goal ?? 'Reach {n}').replace('{n}', tier.threshold.toLocaleString())
-                            const toGo = Math.max(0, tier.threshold - progress.current_value)
+                            const goalText = goalTextFor(def, tier)
+                            const remainingText = remainingTextFor(def, tier, progress)
                             return (
                                 <Tooltip
                                     key={tier.level}
@@ -316,7 +375,7 @@ function AchievementRow({ def, progress }: { def: AchievementDefinition; progres
                                                 {earned
                                                     ? <span className="text-emerald-400 font-semibold">Unlocked</span>
                                                     : isNext
-                                                        ? <span className="font-semibold" style={{ color: r.base }}>{toGo.toLocaleString()}{def.unit ? ` ${def.unit}` : ''} to go</span>
+                                                        ? <span className="font-semibold" style={{ color: r.base }}>{remainingText}</span>
                                                         : <span className="text-foreground/45">Locked</span>}
                                             </div>
                                         </div>
@@ -367,7 +426,7 @@ function AchievementRow({ def, progress }: { def: AchievementDefinition; progres
                                             {earned ? (
                                                 <span className="text-emerald-400/80 font-medium">Unlocked</span>
                                             ) : isNext ? (
-                                                <span className="font-semibold truncate" style={{ color: r.base }}>{toGo.toLocaleString()}{def.unit ? ` ${def.unit}` : ''} to go</span>
+                                                <span className="font-semibold truncate" style={{ color: r.base }}>{remainingText}</span>
                                             ) : (
                                                 <span className="text-muted-foreground truncate">{goalText}</span>
                                             )}
