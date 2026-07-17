@@ -95,12 +95,22 @@ only — never the security boundary. Fetchers grouped by dashboard section:
 | Titles | `fetchAdminTitles`, `fetchTitleHolders`, `createTitle`, `updateTitle`, `deleteTitle`, `unassignTitleFromUser` |
 | Caps | `fetchAdminCaps`, `fetchAdminCapsCount`, `disallowCap`, `reallowCap`, `verifyCapFlag`, `unverifyCap`, `verifyCapWithDemo` |
 | Maps | `fetchAdminMaps`, `fetchAdminMapsCount`, `fetchAdminMapTags`, `createMap`, `updateMap`, `fetchDifficultySyncPreview`, `applyDifficultySync`, `fetchMapvoteStatus`, `setMapvoteAnnouncement`, `regenerateMapvote` |
+| Map authors | `fetchMapAuthorStrings(+Count)`, `fetchLinkedMapAuthors`, `fetchMapAuthorCandidates`, `fetchMapAuthorPreview`, `linkMapAuthor`, `unlinkMapAuthor` |
 | Patches | `fetchAdminPatches`, `createPatch`, `updatePatch`, `setPatchActive`, `deletePatch`, `derivePatch` |
 | Anti-cheat | `fetchAcShared(+Count)`, `fetchAcCapDelta(+Count)`, `fetchAcLowFpsWr(+Count)`, `fetchAcIdentifier`, `fetchAcCapStats`, `fetchAcCapMapComparison`, `allowCap`, `unallowCap` |
 | Audit | `fetchAuditLog`, `fetchAuditLogCount`, `rollbackAudit` |
 
 `toActiveTitle(row)` normalizes an admin/title-shaped row (plain-number `rarity`)
 into the `ActiveTitle` that `PlayerInfo` and the title-style helpers expect.
+
+The map-author fetchers back `MapAuthorsModal` (opened from the Maps section). A map
+credited to a plain name (`author_str`) scores for nobody; linking it to a player
+(`author_ref`) is what makes that player's mapper achievements count. Every author
+name goes through `encodeURIComponent` — the real data contains `&`, `/` and `.`.
+`linkMapAuthor` sends `expectedMaps` from exactly the list the preview rendered, and
+the server returns 409 if that set has changed since, so a stale preview can never
+re-credit maps the admin did not see. `Map.author_ref` is a **string**, not a number:
+it is a Discord id large enough to lose precision as a JS number.
 
 ### Cap Detail page endpoints
 

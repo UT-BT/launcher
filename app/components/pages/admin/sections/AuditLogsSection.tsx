@@ -25,13 +25,13 @@ import {
 const ACTIONS = [
   '', 'user.ban', 'user.unban', 'user.warn', 'user.alias_change', 'user.title_assign', 'user.title_unassign',
   'title.create', 'title.update', 'title.delete', 'cap.disallow', 'cap.reallow', 'cap.verify', 'cap.unverify', 'cap.verify_demo',
-  'map.create', 'map.update', 'map.difficulty_sync',
+  'map.create', 'map.update', 'map.difficulty_sync', 'map.author_link', 'map.author_unlink',
   'patch.create', 'patch.update', 'patch.activate', 'patch.deactivate', 'patch.delete',
   'mapvote.regenerate', 'mapvote.announcement',
 ]
 const ACTION_OPTIONS = ACTIONS.map((a) => ({ value: a, label: a || 'All actions' }))
 
-const TARGET_TYPES = ['', 'user', 'cap', 'title', 'map', 'patch', 'mapvote']
+const TARGET_TYPES = ['', 'user', 'cap', 'title', 'map', 'map_author', 'patch', 'mapvote']
 const TARGET_OPTIONS = TARGET_TYPES.map((t) => ({ value: t, label: t || 'All targets' }))
 
 const COLUMNS: AdminColumn[] = [
@@ -252,6 +252,14 @@ function AuditDescription({ e, onMapSelect }: { e: AuditEntry; onMapSelect?: (ma
     case 'map.update': return <span>Updated map {targetRef(e, onMapSelect)}</span>
     case 'map.difficulty_sync':
       return <span>Synced difficulty of {targetRef(e, onMapSelect)} <span className="text-muted-foreground/70 font-mono text-xs">{String(before?.difficulty ?? '—')} → {String(after?.difficulty ?? '—')}</span></span>
+    case 'map.author_link': {
+      const maps = Array.isArray(after?.maps) ? (after!.maps as unknown[]).length : 0
+      return <span>Linked author <span className="font-mono text-xs">{String(before?.author_str ?? e.target_id)}</span> to <PlayerRef id={after?.author_ref as string} alias={after?.alias as string} /> <span className="text-muted-foreground/60">· {maps} {maps === 1 ? 'map' : 'maps'}</span></span>
+    }
+    case 'map.author_unlink': {
+      const maps = Array.isArray(after?.maps) ? (after!.maps as unknown[]).length : 0
+      return <span>Unlinked <PlayerRef id={before?.author_ref as string} alias={before?.alias as string} /> from <span className="font-mono text-xs">{String(after?.author_str ?? e.target_id)}</span> <span className="text-muted-foreground/60">· {maps} {maps === 1 ? 'map' : 'maps'}</span></span>
+    }
     default: return <span>{e.summary || e.action}</span>
   }
 }

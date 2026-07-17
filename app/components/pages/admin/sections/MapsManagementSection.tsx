@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { Map as MapIcon, Plus, Pencil, RefreshCw, X, ImagePlus, AlertTriangle, Search, Megaphone, Gauge, Loader2, CheckCircle2 } from 'lucide-react'
+import { Map as MapIcon, Plus, Pencil, RefreshCw, X, ImagePlus, AlertTriangle, Search, Megaphone, Gauge, Loader2, CheckCircle2, Link2 } from 'lucide-react'
 import {
   fetchAdminMaps, fetchAdminMapsCount, createMap, updateMap, fetchAdminUsers, fetchAdminMapTags,
   fetchMapvoteStatus, setMapvoteAnnouncement, regenerateMapvote, toActiveTitle,
@@ -15,6 +15,7 @@ import { useAdminFilterPresets } from '../components/useAdminFilterPresets'
 import { TableControls } from '../components/TableControls'
 import { PANEL_LABEL, useResetOnChange, useAdminPageSize } from '../components/shared'
 import { MapLink } from '../components/MapLink'
+import { MapAuthorsModal } from './MapAuthorsModal'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { FilterPanelRow } from '@/app/components/ui/filter-panel-row'
@@ -830,6 +831,7 @@ export function MapsManagementSection({ userProfile, onMapSelect }: AdminSection
   const [editing, setEditing] = useState<AdminMapRow | null>(null)
   const [mapvoteOpen, setMapvoteOpen] = useState(false)
   const [diffSyncOpen, setDiffSyncOpen] = useState(false)
+  const [authorsOpen, setAuthorsOpen] = useState(false)
   const [allTags, setAllTags] = useState<string[]>([])
   const [mapvoteStale, setMapvoteStaleState] = useState<boolean>(() => {
     try { return localStorage.getItem(MAPVOTE_STALE_KEY) === '1' } catch { return false }
@@ -1030,6 +1032,7 @@ export function MapsManagementSection({ userProfile, onMapSelect }: AdminSection
         <>
           <ActionButton tone="accent" icon={RefreshCw} onClick={reload} loading={loading} />
           <ActionButton tone="accent" icon={Gauge} onClick={() => setDiffSyncOpen(true)} disabled={!token}>Sync Difficulties</ActionButton>
+          <ActionButton tone="accent" icon={Link2} onClick={() => setAuthorsOpen(true)} disabled={!token}>Authors</ActionButton>
           <ActionButton tone="accent" icon={Megaphone} onClick={() => setMapvoteOpen(true)} disabled={!token}>Mapvote</ActionButton>
           <ActionButton tone="accent" icon={Plus} disabled title="Adding maps is temporarily disabled — coming soon">Add Map</ActionButton>
         </>
@@ -1124,6 +1127,7 @@ export function MapsManagementSection({ userProfile, onMapSelect }: AdminSection
       {token && <MapFormModal open={!!editing} onClose={() => setEditing(null)} token={token} editing={editing} allTags={allTags} onSaved={() => { reload(); setMapvoteStale(true) }} />}
       {token && <MapvoteModal open={mapvoteOpen} onClose={() => setMapvoteOpen(false)} token={token} onRegenerated={() => setMapvoteStale(false)} />}
       {token && <DifficultySyncModal open={diffSyncOpen} onClose={() => setDiffSyncOpen(false)} token={token} onApplied={() => { reload(); setMapvoteStale(true) }} />}
+      {token && <MapAuthorsModal open={authorsOpen} onClose={() => setAuthorsOpen(false)} token={token} onApplied={() => { reload(); setMapvoteStale(true) }} />}
     </SectionShell>
   )
 }

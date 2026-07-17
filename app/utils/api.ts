@@ -67,7 +67,7 @@ export interface Map {
     tags?: string
     author: string | number
     author_str?: string
-    author_ref?: number
+    author_ref?: string
     url?: string
     world_record?: number
     champion_medal?: number
@@ -85,7 +85,7 @@ export interface MapMetadata {
     tags?: string
     author?: string | number
     author_str?: string
-    author_ref?: number
+    author_ref?: string
     url?: string
     world_record?: number
     champion_medal?: number
@@ -1057,6 +1057,141 @@ export async function applyDifficultySync(
     opts: { reason?: string; maps?: string[] },
 ): Promise<{ ok: boolean; count: number; changed: DifficultySyncChange[] }> {
     return apiGet('/admin/maps/difficulty-sync', { token, method: 'POST', body: { reason: opts.reason, maps: opts.maps } })
+}
+
+export type MapAuthorMatch = 'exact' | 'ci'
+export type MapAuthorFlags = 'all' | 'co_authored' | 'placeholder' | 'clean'
+
+export interface MapAuthorRow {
+    author_str: string
+    map_count: number
+    active_map_count: number
+    co_authored: boolean
+    placeholder: boolean
+    exact_alias_match: { id: string; alias: string | null } | null
+}
+
+export interface LinkedMapAuthorRow {
+    author_ref: string
+    alias: string | null
+    map_count: number
+    active_map_count: number
+    original_str: string | null
+    link_audit_id: string | null
+}
+
+export interface MapAuthorCandidate {
+    id: string
+    alias: string | null
+    active_title: AdminActiveTitle | null
+    match_type: 'exact' | 'normalized' | 'fuzzy'
+    score: number
+    existing_map_count: number
+}
+
+export interface MapAuthorPreviewMap {
+    name: string
+    active: boolean
+    difficulty: number | null
+    author_str: string
+}
+
+export interface MapAuthorPreview {
+    author_str: string
+    match: MapAuthorMatch
+    map_count: number
+    maps: MapAuthorPreviewMap[]
+    variants: { author_str: string; map_count: number }[]
+    co_authored: boolean
+    placeholder: boolean
+    target: {
+        id: string
+        alias: string | null
+        active_title: AdminActiveTitle | null
+        existing_map_count: number
+        existing_maps: string[]
+    } | null
+}
+
+export async function fetchMapAuthorStrings(
+    token: string,
+    params: { search?: string; sort?: 'name' | 'maps'; order?: 'asc' | 'desc'; flags?: MapAuthorFlags; limit?: number; offset?: number },
+    signal?: AbortSignal,
+): Promise<MapAuthorRow[]> {
+    const q = new URLSearchParams()
+    if (params.search) q.set('search', params.search)
+    if (params.sort) q.set('sort', params.sort)
+    if (params.order) q.set('order', params.order)
+    if (params.flags) q.set('flags', params.flags)
+    q.set('limit', String(params.limit ?? 50))
+    q.set('offset', String(params.offset ?? 0))
+    const data = await apiGet<{ items: MapAuthorRow[] }>(`/admin/maps/authors?${q}`, { token, signal })
+    return data.items
+}
+
+export async function fetchMapAuthorStringsCount(token: string, params: { search?: string }, signal?: AbortSignal): Promise<number> {
+    const q = new URLSearchParams()
+    if (params.search) q.set('search', params.search)
+    const data = await apiGet<{ count: number }>(`/admin/maps/authors/count?${q}`, { token, signal })
+    return data.count
+}
+
+export async function fetchLinkedMapAuthors(token: string, signal?: AbortSignal): Promise<LinkedMapAuthorRow[]> {
+    const data = await apiGet<{ items: LinkedMapAuthorRow[] }>('/admin/maps/authors/linked', { token, signal })
+    return data.items
+}
+
+export async function fetchMapAuthorCandidates(token: string, authorStr: string, signal?: AbortSignal): Promise<MapAuthorCandidate[]> {
+    const q = new URLSearchParams({ author_str: authorStr })
+    const data = await apiGet<{ candidates: MapAuthorCandidate[] }>(`/admin/maps/authors/candidates?${q}`, { token, signal })
+    return data.candidates
+}
+
+export async function fetchMapAuthorPreview(
+    token: string,
+    opts: { authorStr: string; match?: MapAuthorMatch; userId?: string },
+    signal?: AbortSignal,
+): Promise<MapAuthorPreview> {
+    const q = new URLSearchParams({ author_str: opts.authorStr })
+    if (opts.match) q.set('match', opts.match)
+    if (opts.userId) q.set('user_id', opts.userId)
+    return apiGet<MapAuthorPreview>(`/admin/maps/authors/preview?${q}`, { token, signal })
+}
+
+export async function linkMapAuthor(
+    token: string,
+    input: { authorStr: string; userId: string; match?: MapAuthorMatch; expectedMaps?: string[]; reason?: string; allowPlaceholder?: boolean },
+): Promise<{
+    ok: boolean
+    linked_count: number
+    user: { id: string; alias: string | null }
+    maps: { name: string; author_str: string }[]
+    audit_id: string
+    warnings: string[]
+}> {
+    return apiGet('/admin/maps/authors/link', {
+        token,
+        method: 'POST',
+        body: {
+            author_str: input.authorStr,
+            user_id: input.userId,
+            match: input.match,
+            expected_maps: input.expectedMaps,
+            reason: input.reason,
+            allow_placeholder: input.allowPlaceholder,
+        },
+    })
+}
+
+export async function unlinkMapAuthor(
+    token: string,
+    input: { authorStr: string; userId: string; maps?: string[]; reason?: string },
+): Promise<{ ok: boolean; unlinked_count: number; maps: { name: string; author_ref: string }[] }> {
+    return apiGet('/admin/maps/authors/unlink', {
+        token,
+        method: 'POST',
+        body: { author_str: input.authorStr, user_id: input.userId, maps: input.maps, reason: input.reason },
+    })
 }
 
 export type PatchChannel = 'stable' | 'rc'
@@ -2561,7 +2696,7 @@ export interface AchievementTitle {
     color_b: number
 }
 
-export type AchievementCategory = 'general' | 'solo' | 'team' | 'mastery'
+export type AchievementCategory = 'general' | 'solo' | 'team' | 'mapper' | 'mastery'
 
 export interface AchievementTier {
     index?: number
