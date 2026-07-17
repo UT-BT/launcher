@@ -68,6 +68,8 @@ export function Tooltip({ content, children, className, side = 'top' }: TooltipP
                 className={cn("relative inline-flex items-center", className)}
                 onMouseEnter={() => setIsVisible(true)}
                 onMouseLeave={hide}
+                onFocus={() => setIsVisible(true)}
+                onBlur={hide}
             >
                 {children || <Info className="size-4 text-muted-foreground hover:text-foreground transition-colors cursor-help" />}
             </div>

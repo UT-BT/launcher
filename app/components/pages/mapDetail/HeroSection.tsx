@@ -1,4 +1,4 @@
-import { Download, Calendar, Star, Sparkles, Loader2 } from 'lucide-react'
+import { Download, Calendar, Star, Sparkles, Loader2, User, Users } from 'lucide-react'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
@@ -21,11 +21,12 @@ interface HeroSectionProps {
     chart?: React.ReactNode
     accessToken?: string
     onMapSelect?: (mapName: string) => void
+    requiredPlayers?: number
 }
 
 export function HeroSection({
     mapName, map, avgOverall, reviewCount, isFavorited, onToggleFavorite, onDownload, isDownloading, chart,
-    accessToken, onMapSelect,
+    accessToken, onMapSelect, requiredPlayers,
 }: HeroSectionProps) {
     const difficulty = map?.difficulty
     const author = map?.author_str ?? (map?.author != null ? String(map.author) : null)
@@ -99,6 +100,11 @@ export function HeroSection({
                         ) : author ? (
                             <MetaPill label="By" value={author} />
                         ) : null}
+                        {requiredPlayers === undefined ? null : requiredPlayers === 1 ? (
+                            <MetaPill icon={User} value="1 Player" />
+                        ) : (
+                            <MetaPill icon={Users} value={`${requiredPlayers} Players`} />
+                        )}
                         {added && (
                             <MetaPill icon={Calendar} value={formatAddedDate(added)} />
                         )}

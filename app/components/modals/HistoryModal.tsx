@@ -8,6 +8,7 @@ import {
     DataTableCell, DataTableEmpty, DataTableSkeletonRow, type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
+import { TeamHolders } from '@/app/components/shared/TeamHolders'
 import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
 import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
@@ -156,19 +157,31 @@ export function HistoryModal({
                                                         onToggle={onToggleFavorite}
                                                         size="md"
                                                     />
-                                                    {onMapSelect ? (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => { onMapSelect(cap.mapName); onOpenChange(false) }}
-                                                            className="font-bold text-foreground hover:text-accent-300 underline-offset-4 transition-colors cursor-pointer text-left text-md truncate"
-                                                        >
-                                                            {displayMapName(cap.mapName)}
-                                                        </button>
-                                                    ) : (
-                                                        <span className="font-bold text-foreground text-md truncate">
-                                                            {displayMapName(cap.mapName)}
-                                                        </span>
-                                                    )}
+                                                    <div className="flex flex-col gap-1 min-w-0">
+                                                        <div className="flex items-center gap-2 min-w-0">
+                                                            {onMapSelect ? (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => { onMapSelect(cap.mapName); onOpenChange(false) }}
+                                                                    className="font-bold text-foreground hover:text-accent-300 underline-offset-4 transition-colors cursor-pointer text-left text-md truncate"
+                                                                >
+                                                                    {displayMapName(cap.mapName)}
+                                                                </button>
+                                                            ) : (
+                                                                <span className="font-bold text-foreground text-md truncate">
+                                                                    {displayMapName(cap.mapName)}
+                                                                </span>
+                                                            )}
+                                                            {cap.isTeam && (
+                                                                <span className="shrink-0 inline-flex items-center h-4 px-1.5 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-300 text-[9px] font-bold uppercase tracking-wider">
+                                                                    Team
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        {cap.isTeam && cap.teamMembers && cap.teamMembers.length > 0 && (
+                                                            <TeamHolders members={cap.teamMembers} size="sm" />
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </DataTableCell>
                                             {isVisible('author') && (
@@ -189,7 +202,8 @@ export function HistoryModal({
                                                             </Tooltip>
                                                         )}
                                                         <CapTimeLink
-                                                            capId={cap.id}
+                                                            capId={cap.isTeam ? undefined : cap.id}
+                                                            teamCapId={cap.isTeam ? cap.teamCapId ?? undefined : undefined}
                                                             seconds={cap.time}
                                                             onNavigate={() => onOpenChange(false)}
                                                             className="font-black text-foreground/90 hover:text-foreground tracking-tight"

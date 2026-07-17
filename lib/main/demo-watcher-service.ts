@@ -1,8 +1,8 @@
 import chokidar, { FSWatcher, type ChokidarOptions } from 'chokidar'
 import { join } from 'path'
 import { loggingService } from '@/lib/main/logging-service'
-import { getUt99InstallPath, getDemoWatcherConfig, getAuthConfig } from '@/lib/main/config'
-import { readFile, rename, unlink, mkdir, access } from 'fs/promises'
+import { getUt99InstallPath, getDemoWatcherConfig, getAuthConfig, type DemoWatcherConfig } from '@/lib/main/config'
+import { readFile, writeFile, rename, unlink, mkdir, access, readdir, stat } from 'fs/promises'
 import { existsSync, type Stats } from 'fs'
 import { gatewayService } from '@/lib/main/gateway-service'
 import { uploadDemo } from '@/app/utils/api'
@@ -22,8 +22,26 @@ type LeaderboardResponse = {
 type CapResponse = {
     data: Array<{
         cap_type: number
+        team_run_id?: string | null
     }>
     success: boolean
+}
+
+type RetryJob = {
+    filePath: string
+    filename: string
+    fingerprint: string
+    btpogId?: string
+    firstSeen: number
+    nextAttempt: number
+    attempts: number
+    lastError?: string
+}
+
+type WatcherState = {
+    version: 1
+    jobs: RetryJob[]
+    completed: Array<{ fingerprint: string; status: 'uploaded' | 'discarded' | 'rejected'; at: number }>
 }
 
 export interface UploadLogEntry {
@@ -43,13 +61,19 @@ export class DemoWatcherService {
     private processingFiles = new Set<string>()
 
     private completed = new Map<string, { status: 'uploaded' | 'discarded' | 'rejected'; at: number }>()
-    private deferred = new Map<string, number>()
+    private retryJobs = new Map<string, RetryJob>()
+    private activeFingerprints = new Map<string, string>()
     private lastAddAt = new Map<string, number>()
     private addCounts = new Map<string, number>()
+    private retryTimer: ReturnType<typeof setTimeout> | null = null
+    private statePath: string | null = null
+    private persistenceReady: Promise<void> | null = null
+    private stateWrite: Promise<void> = Promise.resolve()
 
     private static readonly COMPLETED_TTL_MS = 24 * 60 * 60 * 1000
-    private static readonly COMPLETED_MAX = 500
-    private static readonly DEFER_MS = 10 * 60 * 1000
+    private static readonly RETRY_INITIAL_MS = 5000
+    private static readonly RETRY_MAX_MS = 10 * 60 * 1000
+    private static readonly RETRY_LIFETIME_MS = 24 * 60 * 60 * 1000
     private static readonly ADD_DEBOUNCE_MS = 3000
     private static readonly LASTADD_TTL_MS = 60 * 1000
 
@@ -86,12 +110,47 @@ export class DemoWatcherService {
 
 
     private markCompleted(filename: string, status: 'uploaded' | 'discarded' | 'rejected') {
-        this.completed.set(filename, { status, at: Date.now() })
-        this.deferred.delete(filename)
+        const fingerprint = this.activeFingerprints.get(filename)
+        if (fingerprint) this.completed.set(fingerprint, { status, at: Date.now() })
+        this.retryJobs.delete(filename)
+        void this.persistState()
     }
 
-    private markDeferred(filename: string) {
-        this.deferred.set(filename, Date.now() + DemoWatcherService.DEFER_MS)
+    private queueRetry(filePath: string, filename: string, error: string, btpogId?: string) {
+        const now = Date.now()
+        const previous = this.retryJobs.get(filename)
+        const firstSeen = previous?.firstSeen ?? now
+        if (now - firstSeen >= DemoWatcherService.RETRY_LIFETIME_MS) {
+            this.retryJobs.delete(filename)
+            loggingService.error(`Stopped retrying ${filename} after 24 hours; the demo was left untouched. Last error: ${error}`, 'DemoWatcher')
+            this.addLogEntry({
+                filename,
+                status: 'failed',
+                timestamp: new Date().toISOString(),
+                error: `Retry period expired; source retained: ${error}`,
+            })
+            void this.persistState()
+            return
+        }
+        const attempts = (previous?.attempts ?? 0) + 1
+        const delay = Math.min(
+            DemoWatcherService.RETRY_INITIAL_MS * Math.pow(2, Math.min(attempts - 1, 16)),
+            DemoWatcherService.RETRY_MAX_MS,
+        )
+        const fingerprint = this.activeFingerprints.get(filename) ?? previous?.fingerprint ?? filename
+        this.retryJobs.set(filename, {
+            filePath,
+            filename,
+            fingerprint,
+            btpogId: btpogId ?? previous?.btpogId,
+            firstSeen,
+            nextAttempt: now + delay,
+            attempts,
+            lastError: error,
+        })
+        loggingService.info(`Will retry ${filename} in ${Math.ceil(delay / 1000)}s (attempt ${attempts})`, 'DemoWatcher')
+        void this.persistState()
+        this.scheduleRetries()
     }
 
     private pruneMaps() {
@@ -100,17 +159,94 @@ export class DemoWatcherService {
         for (const [name, entry] of this.completed) {
             if (now - entry.at > DemoWatcherService.COMPLETED_TTL_MS) this.completed.delete(name)
         }
-        if (this.completed.size > DemoWatcherService.COMPLETED_MAX) {
-            const oldestFirst = [...this.completed.entries()].sort((a, b) => a[1].at - b[1].at)
-            const excess = this.completed.size - DemoWatcherService.COMPLETED_MAX
-            for (let i = 0; i < excess; i++) this.completed.delete(oldestFirst[i][0])
-        }
-
-        for (const [name, until] of this.deferred) {
-            if (now >= until) this.deferred.delete(name)
-        }
         for (const [name, at] of this.lastAddAt) {
             if (now - at > DemoWatcherService.LASTADD_TTL_MS) this.lastAddAt.delete(name)
+        }
+    }
+
+    private async fingerprint(filePath: string): Promise<string> {
+        const info = await stat(filePath)
+        return `${filePath.toLowerCase()}|${info.size}|${Math.round(info.mtimeMs)}`
+    }
+
+    private async initialisePersistence(): Promise<void> {
+        this.statePath = join(app.getPath('userData'), 'demo-watcher-state.json')
+        try {
+            const raw = JSON.parse(await readFile(this.statePath, 'utf8')) as WatcherState
+            if (raw.version === 1) {
+                const now = Date.now()
+                for (const entry of raw.completed ?? []) {
+                    if (now - entry.at < DemoWatcherService.COMPLETED_TTL_MS) {
+                        this.completed.set(entry.fingerprint, { status: entry.status, at: entry.at })
+                    }
+                }
+                for (const job of raw.jobs ?? []) {
+                    if (now - job.firstSeen < DemoWatcherService.RETRY_LIFETIME_MS) this.retryJobs.set(job.filename, job)
+                }
+            }
+        } catch (error: any) {
+            if (error?.code !== 'ENOENT') loggingService.warn('Could not restore demo retry state; startup recovery will rescan recent demos.', 'DemoWatcher', error)
+        }
+        this.scheduleRetries()
+    }
+
+    private async persistState(): Promise<void> {
+        if (this.persistenceReady) await this.persistenceReady
+        if (!this.statePath) return
+        this.pruneMaps()
+        const state: WatcherState = {
+            version: 1,
+            jobs: [...this.retryJobs.values()],
+            completed: [...this.completed.entries()].map(([fingerprint, entry]) => ({ fingerprint, ...entry })),
+        }
+        const temporary = `${this.statePath}.tmp`
+        const write = async () => {
+            try {
+                await writeFile(temporary, JSON.stringify(state), 'utf8')
+                await rename(temporary, this.statePath as string)
+            } catch (error) {
+                loggingService.warn('Failed to persist demo retry state', 'DemoWatcher', error)
+            }
+        }
+        this.stateWrite = this.stateWrite.then(write, write)
+        await this.stateWrite
+    }
+
+    private scheduleRetries() {
+        if (this.retryTimer) clearTimeout(this.retryTimer)
+        if (this.retryJobs.size === 0) return
+        const next = Math.min(...[...this.retryJobs.values()].map(job => job.nextAttempt))
+        this.retryTimer = setTimeout(() => void this.processDueRetries(), Math.max(250, next - Date.now()))
+    }
+
+    private async processDueRetries() {
+        this.retryTimer = null
+        const now = Date.now()
+        const due = [...this.retryJobs.values()].filter(job => job.nextAttempt <= now)
+        for (const job of due) {
+            if (!existsSync(job.filePath)) {
+                this.retryJobs.delete(job.filename)
+                continue
+            }
+            await this.handleNewFile(job.filePath, true)
+        }
+        await this.persistState()
+        this.scheduleRetries()
+    }
+
+    private async recoverRecentDemos() {
+        if (!this.systemPath) return
+        try {
+            const cutoff = Date.now() - DemoWatcherService.RETRY_LIFETIME_MS
+            const names = await readdir(this.systemPath)
+            for (const name of names) {
+                if (!name.toLowerCase().endsWith('.dem')) continue
+                const filePath = join(this.systemPath, name)
+                const info = await stat(filePath)
+                if (info.isFile() && info.mtimeMs >= cutoff) await this.handleNewFile(filePath, true)
+            }
+        } catch (error) {
+            loggingService.warn('Failed to scan recent demos during startup recovery', 'DemoWatcher', error)
         }
     }
 
@@ -152,6 +288,8 @@ export class DemoWatcherService {
     public startWatching() {
         try {
             this.stopWatching()
+
+            if (!this.persistenceReady) this.persistenceReady = this.initialisePersistence()
 
             const installPath = getUt99InstallPath()
             if (!installPath) {
@@ -211,12 +349,21 @@ export class DemoWatcherService {
                     .on('ready', () => loggingService.info('Watcher ready', 'DemoDiag'))
             }
 
+            void this.persistenceReady.then(() => {
+                this.scheduleRetries()
+                return this.recoverRecentDemos()
+            })
+
         } catch (error) {
             loggingService.error('Failed to start demo watcher', 'DemoWatcher', error)
         }
     }
 
     public stopWatching() {
+        if (this.retryTimer) {
+            clearTimeout(this.retryTimer)
+            this.retryTimer = null
+        }
         if (this.watcher) {
             this.watcher.close()
             this.watcher = null
@@ -230,7 +377,7 @@ export class DemoWatcherService {
         this.startWatching()
     }
 
-    private async handleNewFile(filePath: string) {
+    private async handleNewFile(filePath: string, force = false) {
         const DEMO_REGEX = /^CTF-BT(?:(?!__).)+__(?:\d{2}m_\d{2}s_\d{3}ms|\d{3}h_\d{2}m_\d{2}s_\d{3}ms)__\d{4}-\d{2}-\d{2}-\d{2}h\d{2}m_Run\d+\.dem$/;
         const filename = filePath.split(/[/\\]/).pop() || filePath
 
@@ -241,21 +388,30 @@ export class DemoWatcherService {
 
         this.pruneMaps()
 
-        const done = this.completed.get(filename)
+        let fingerprint: string
+        try {
+            fingerprint = await this.fingerprint(filePath)
+            this.activeFingerprints.set(filename, fingerprint)
+        } catch (error: any) {
+            loggingService.warn(`Could not inspect ${filename}: ${error?.message ?? error}`, 'DemoWatcher')
+            return
+        }
+
+        const done = this.completed.get(fingerprint)
         if (done) {
             loggingService.debug(`Skipping ${filename}: already ${done.status}`, 'DemoWatcher')
             return
         }
 
-        const deferUntil = this.deferred.get(filename)
-        if (deferUntil && Date.now() < deferUntil) {
-            loggingService.debug(`Deferring re-check of ${filename} (backoff active)`, 'DemoWatcher')
+        const queued = this.retryJobs.get(filename)
+        if (!force && queued) {
+            loggingService.debug(`Skipping ${filename}: durable retry is already scheduled`, 'DemoWatcher')
             return
         }
 
         const lastAdd = this.lastAddAt.get(filename) ?? 0
         const nowMs = Date.now()
-        if (nowMs - lastAdd < DemoWatcherService.ADD_DEBOUNCE_MS) {
+        if (!force && nowMs - lastAdd < DemoWatcherService.ADD_DEBOUNCE_MS) {
             loggingService.debug(`Debounced duplicate add for ${filename}`, 'DemoWatcher')
             return
         }
@@ -271,182 +427,250 @@ export class DemoWatcherService {
         this.processingFiles.add(filename)
 
         try {
-            const parts = filename.split('__');
-            const map = parts[0];
-            const time = parts[1];
-            const timeInSeconds = this.getTimeInSeconds(time);
+            const parts = filename.split('__')
+            const map = parts[0]
+            const time = parts[1]
+            const timeInSeconds = this.getTimeInSeconds(time)
 
             loggingService.debug(`Map: ${map}, Time: ${time} (${timeInSeconds} seconds)`, 'DemoWatcher')
 
             const config = getDemoWatcherConfig()
-            let shouldUpload = false
-            let shouldDiscard = false
 
-            try {
-                if (config.autoUpload === 'Personal Bests Only') {
-                    const auth = getAuthConfig()
-                    if (auth?.discordId) {
-                        shouldUpload = await this.checkIsPB(map, timeInSeconds, auth.discordId)
-                        shouldDiscard = !shouldUpload
+            if (config.autoUpload === 'Never') {
+                const paused = this.retryJobs.get(filename)
+                if (paused) {
+                    if (Date.now() - paused.firstSeen >= DemoWatcherService.RETRY_LIFETIME_MS) {
+                        this.retryJobs.delete(filename)
                     } else {
-                        loggingService.warn('Cannot check PB: User not logged in', 'DemoWatcher')
-                        this.markDeferred(filename)
-                        return
+                        paused.nextAttempt = Date.now() + DemoWatcherService.RETRY_MAX_MS
                     }
-                } else if (config.autoUpload === 'World Records Only') {
-                    shouldUpload = await this.checkIsWR(map, timeInSeconds)
-                    shouldDiscard = !shouldUpload
+                    void this.persistState()
+                    this.scheduleRetries()
                 }
-            } catch (error: any) {
-                // PB/WR lookup failed (network/API error). Do NOT discard a potentially
-                // good demo on a transient failure — defer and retry on a later event.
-                loggingService.warn(`PB/WR check failed for ${filename}; will retry later: ${error?.message ?? error}`, 'DemoWatcher')
-                this.markDeferred(filename)
                 return
             }
 
-            if (shouldDiscard) {
-                try {
-                    if (config.discardDemoAction === 'Move to Folder') {
-                        if (this.systemPath) {
-                            const discardedDir = join(this.systemPath, 'Discarded')
-                            try {
-                                await access(discardedDir)
-                            } catch {
-                                await mkdir(discardedDir)
-                            }
-                            const newPath = join(discardedDir, filename)
-                            await rename(filePath, newPath)
-                            loggingService.info(`Moved demo to: ${newPath}`, 'DemoWatcher')
-                        }
-                    } else if (config.discardDemoAction == 'Delete') {
-                        await unlink(filePath)
-                        loggingService.info(`Deleted demo: ${filename}`, 'DemoWatcher')
-                    }
-                } catch (error) {
-                    loggingService.error('Failed to perform discard action', 'DemoWatcher', error)
-                }
-                // A slower-than-best run will never become a PB/WR — never reprocess it.
-                this.markCompleted(filename, 'discarded')
+            const existingJob = this.retryJobs.get(filename)
+            const btpogId = existingJob?.btpogId || await this.extractBtpogId(filePath)
+            if (!btpogId) {
+                this.queueRetry(filePath, filename, 'No BTPog ID found in the demo yet')
+                return
             }
 
-            if (shouldUpload) {
-                const auth = getAuthConfig()
-                if (!auth) {
-                    loggingService.warn('Cannot upload demo: User not logged in', 'DemoWatcher')
-                    this.markDeferred(filename)
-                    return
+            try {
+                const cap = await this.checkCap(btpogId)
+                if (!cap.found) {
+                    this.queueRetry(filePath, filename, 'No matching cap found yet', btpogId)
+                } else if (!cap.certified) {
+                    loggingService.info(`Leaving ${filename} untouched: its cap is not certified (BTPog ID: ${btpogId})`, 'DemoWatcher')
+                    this.markCompleted(filename, 'rejected')
+                } else if (cap.teamRunId) {
+                    await this.processTeamDemo(filePath, filename, config, btpogId)
                 } else {
-                    loggingService.info(`Uploading demo: ${filename}`, 'DemoWatcher')
-
-                    // Verify demo before uploading
-                    const btpogId = await this.extractBtpogId(filePath)
-                    if (!btpogId) {
-                        loggingService.warn(`Ignoring demo ${filename}: No BTPog ID found`, 'DemoWatcher')
-                        this.markCompleted(filename, 'rejected')
-                        return
-                    }
-
-                    const isCertified = await this.checkIsCertified(btpogId)
-                    if (!isCertified) {
-                        loggingService.info(`Ignoring demo ${filename}: Run is not certified (BTPog ID: ${btpogId})`, 'DemoWatcher')
-                        this.markCompleted(filename, 'rejected')
-                        return
-                    }
-
-                    loggingService.info(`Verified demo ${filename} (BTPog ID: ${btpogId}). Proceeding with upload.`, 'DemoWatcher')
-
-                    this.addLogEntry({
-                        filename,
-                        status: 'uploading',
-                        timestamp: new Date().toISOString(),
-                        attempt: 1,
-                        maxAttempts: 5
-                    })
-
-                    let attempts = 0
-                    const maxAttempts = 5
-                    let success = false
-
-                    while (attempts < maxAttempts && !success) {
-                        attempts++
-                        if (attempts > 1) {
-                            this.updateLogAttempt(filename, attempts, maxAttempts)
-                        }
-
-                        try {
-                            const buffer = await readFile(filePath)
-                            const blob = new Blob([buffer])
-
-                            await uploadDemo(blob, filename, auth.accessToken)
-                            success = true
-
-                            loggingService.info(`Demo uploaded successfully: ${filename}`, 'DemoWatcher')
-                            this.updateLogStatus(filename, 'success')
-                        } catch (error: any) {
-                            const errorMessage = error.message || 'Unknown error'
-                            const lower = errorMessage.toLowerCase()
-
-                            if (lower.includes('already verified') || lower.includes('already exists')) {
-                                loggingService.info(`Demo ${filename} already on server (${errorMessage}); treating as success`, 'DemoWatcher')
-                                success = true
-                                this.updateLogStatus(filename, 'success')
-                                break
-                            }
-
-                            const isLastAttempt = attempts === maxAttempts
-
-                            const isFileSystemError = ['EBUSY', 'EPERM', 'EACCES', 'EIO'].includes(error.code)
-                            const isCloudError = lower.includes('cloud') || (typeof error.code === 'string' && error.code.includes('CLOUD'))
-                            const shouldRetry = isFileSystemError || isCloudError || lower.includes('no matching cap found') || lower.includes('network error')
-
-                            if (!shouldRetry || isLastAttempt) {
-                                loggingService.error(`Failed to upload demo ${filename}: ${errorMessage}`, 'DemoWatcher')
-                                this.updateLogStatus(filename, 'failed', errorMessage)
-                                break
-                            }
-
-                            const delay = attempts * 2000
-                            loggingService.warn(`Upload failed for ${filename} (${error.code || 'API Error'}), retrying in ${delay}ms... (Attempt ${attempts}/${maxAttempts})`, 'DemoWatcher')
-
-                            await new Promise(resolve => setTimeout(resolve, delay))
-                        }
-                    }
-
-                    if (success) {
-                        this.markCompleted(filename, 'uploaded')
-                    } else {
-                        shouldUpload = false
-                        this.markDeferred(filename)
-                    }
-
+                    await this.processSoloDemo(filePath, filename, map, timeInSeconds, config, btpogId)
                 }
-
-                if (shouldUpload) {
-                    try {
-                        if (config.postUploadAction === 'Move to Folder') {
-                            if (this.systemPath) {
-                                const uploadedDir = join(this.systemPath, 'Uploaded')
-                                try {
-                                    await access(uploadedDir)
-                                } catch {
-                                    await mkdir(uploadedDir)
-                                }
-                                const newPath = join(uploadedDir, filename)
-                                await rename(filePath, newPath)
-                                loggingService.info(`Moved demo to: ${newPath}`, 'DemoWatcher')
-                            }
-                        } else if (config.postUploadAction === 'Delete') {
-                            await unlink(filePath)
-                            loggingService.info(`Deleted demo: ${filename}`, 'DemoWatcher')
-                        }
-                    } catch (error) {
-                        loggingService.error('Failed to perform post-upload action', 'DemoWatcher', error)
-                    }
-                }
+            } catch (error: any) {
+                this.queueRetry(filePath, filename, `Cap lookup failed: ${error?.message ?? error}`, btpogId)
             }
         } finally {
             this.processingFiles.delete(filename)
+        }
+    }
+
+    private async processSoloDemo(
+        filePath: string,
+        filename: string,
+        map: string,
+        timeInSeconds: number,
+        config: DemoWatcherConfig,
+        btpogId?: string,
+    ): Promise<void> {
+        let shouldUpload = false
+        let shouldDiscard = false
+
+        try {
+            if (config.autoUpload === 'Personal Bests Only') {
+                const auth = getAuthConfig()
+                if (auth?.discordId) {
+                    shouldUpload = await this.checkIsPB(map, timeInSeconds, auth.discordId)
+                    shouldDiscard = !shouldUpload
+                } else {
+                    loggingService.warn('Cannot check PB: User not logged in', 'DemoWatcher')
+                    this.queueRetry(filePath, filename, 'User is not logged in', btpogId)
+                    return
+                }
+            } else if (config.autoUpload === 'World Records Only') {
+                shouldUpload = await this.checkIsWR(map, timeInSeconds)
+                shouldDiscard = !shouldUpload
+            }
+        } catch (error: any) {
+            loggingService.warn(`PB/WR check failed for ${filename}; will retry later: ${error?.message ?? error}`, 'DemoWatcher')
+            this.queueRetry(filePath, filename, `PB/WR check failed: ${error?.message ?? error}`, btpogId)
+            return
+        }
+
+        if (shouldDiscard) {
+            await this.discardDemo(filePath, filename, config)
+        }
+
+        if (shouldUpload) {
+            await this.performUpload(filePath, filename, config, btpogId)
+        }
+    }
+
+    private async processTeamDemo(
+        filePath: string,
+        filename: string,
+        config: DemoWatcherConfig,
+        btpogId: string,
+    ): Promise<void> {
+        // Team verification is atomic: every certified member demo is evidence, so PB/WR
+        // preferences do not gate it and we do not wait for the aggregate to complete.
+        await this.performUpload(filePath, filename, config, btpogId)
+    }
+
+    private async discardDemo(filePath: string, filename: string, config: DemoWatcherConfig): Promise<void> {
+        try {
+            if (config.discardDemoAction === 'Move to Folder') {
+                if (this.systemPath) {
+                    const discardedDir = join(this.systemPath, 'Discarded')
+                    try {
+                        await access(discardedDir)
+                    } catch {
+                        await mkdir(discardedDir)
+                    }
+                    const newPath = join(discardedDir, filename)
+                    await rename(filePath, newPath)
+                    loggingService.info(`Moved demo to: ${newPath}`, 'DemoWatcher')
+                }
+            } else if (config.discardDemoAction == 'Delete') {
+                await unlink(filePath)
+                loggingService.info(`Deleted demo: ${filename}`, 'DemoWatcher')
+            }
+        } catch (error) {
+            loggingService.error('Failed to perform discard action', 'DemoWatcher', error)
+        }
+        this.markCompleted(filename, 'discarded')
+    }
+
+    private async performUpload(
+        filePath: string,
+        filename: string,
+        config: DemoWatcherConfig,
+        verifiedBtpogId?: string,
+    ): Promise<void> {
+        const auth = getAuthConfig()
+        if (!auth) {
+            loggingService.warn('Cannot upload demo: User not logged in', 'DemoWatcher')
+            this.queueRetry(filePath, filename, 'User is not logged in', verifiedBtpogId)
+            return
+        }
+
+        loggingService.info(`Uploading demo: ${filename}`, 'DemoWatcher')
+
+        if (verifiedBtpogId) {
+            loggingService.info(`Verified team run demo ${filename} (BTPog ID: ${verifiedBtpogId}). Proceeding with upload.`, 'DemoWatcher')
+        } else {
+            const btpogId = await this.extractBtpogId(filePath)
+            if (!btpogId) {
+                loggingService.warn(`Ignoring demo ${filename}: No BTPog ID found`, 'DemoWatcher')
+                this.markCompleted(filename, 'rejected')
+                return
+            }
+
+            const isCertified = await this.checkIsCertified(btpogId)
+            if (!isCertified) {
+                loggingService.info(`Ignoring demo ${filename}: Run is not certified (BTPog ID: ${btpogId})`, 'DemoWatcher')
+                this.markCompleted(filename, 'rejected')
+                return
+            }
+
+            loggingService.info(`Verified demo ${filename} (BTPog ID: ${btpogId}). Proceeding with upload.`, 'DemoWatcher')
+        }
+
+        this.addLogEntry({
+            filename,
+            status: 'uploading',
+            timestamp: new Date().toISOString(),
+            attempt: 1,
+            maxAttempts: 5
+        })
+
+        let attempts = 0
+        const maxAttempts = 5
+        let success = false
+
+        while (attempts < maxAttempts && !success) {
+            attempts++
+            if (attempts > 1) {
+                this.updateLogAttempt(filename, attempts, maxAttempts)
+            }
+
+            try {
+                const buffer = await readFile(filePath)
+                const blob = new Blob([buffer])
+
+                await uploadDemo(blob, filename, auth.accessToken)
+                success = true
+
+                loggingService.info(`Demo uploaded successfully: ${filename}`, 'DemoWatcher')
+                this.updateLogStatus(filename, 'success')
+            } catch (error: any) {
+                const errorMessage = error.message || 'Unknown error'
+                const lower = errorMessage.toLowerCase()
+
+                if (lower.includes('already verified') || lower.includes('already exists')) {
+                    loggingService.info(`Demo ${filename} already on server (${errorMessage}); treating as success`, 'DemoWatcher')
+                    success = true
+                    this.updateLogStatus(filename, 'success')
+                    break
+                }
+
+                const isLastAttempt = attempts === maxAttempts
+
+                const isFileSystemError = ['EBUSY', 'EPERM', 'EACCES', 'EIO'].includes(error.code)
+                const isCloudError = lower.includes('cloud') || (typeof error.code === 'string' && error.code.includes('CLOUD'))
+                const shouldRetry = isFileSystemError || isCloudError || lower.includes('no matching cap found') || lower.includes('network error')
+
+                if (!shouldRetry || isLastAttempt) {
+                    loggingService.error(`Failed to upload demo ${filename}: ${errorMessage}`, 'DemoWatcher')
+                    this.updateLogStatus(filename, 'failed', errorMessage)
+                    break
+                }
+
+                const delay = attempts * 2000
+                loggingService.warn(`Upload failed for ${filename} (${error.code || 'API Error'}), retrying in ${delay}ms... (Attempt ${attempts}/${maxAttempts})`, 'DemoWatcher')
+
+                await new Promise(resolve => setTimeout(resolve, delay))
+            }
+        }
+
+        if (!success) {
+            this.queueRetry(filePath, filename, 'Upload failed after local retries', verifiedBtpogId)
+            return
+        }
+
+        this.markCompleted(filename, 'uploaded')
+
+        try {
+            if (config.postUploadAction === 'Move to Folder') {
+                if (this.systemPath) {
+                    const uploadedDir = join(this.systemPath, 'Uploaded')
+                    try {
+                        await access(uploadedDir)
+                    } catch {
+                        await mkdir(uploadedDir)
+                    }
+                    const newPath = join(uploadedDir, filename)
+                    await rename(filePath, newPath)
+                    loggingService.info(`Moved demo to: ${newPath}`, 'DemoWatcher')
+                }
+            } else if (config.postUploadAction === 'Delete') {
+                await unlink(filePath)
+                loggingService.info(`Deleted demo: ${filename}`, 'DemoWatcher')
+            }
+        } catch (error) {
+            loggingService.error('Failed to perform post-upload action', 'DemoWatcher', error)
         }
     }
 
@@ -510,6 +734,26 @@ export class DemoWatcherService {
         } catch (error) {
             loggingService.error(`Certification check API error for ${btpogId}`, 'DemoWatcher', error)
             return false
+        }
+    }
+
+    private async checkCap(btpogId: string): Promise<{ found: boolean; certified: boolean; teamRunId: string | null }> {
+        const endpoint = `/caps?btpog_ids=${btpogId}&columns=cap_type,team_run_id`
+        const response = await gatewayService.get<CapResponse>(endpoint)
+
+        if (!response.success) {
+            throw new Error('Team certification check: API returned success=false')
+        }
+
+        if (!response.data || response.data.length === 0) {
+            return { found: false, certified: false, teamRunId: null }
+        }
+
+        const certifiedCap = response.data.find((cap) => cap.cap_type === 2)
+        return {
+            found: true,
+            certified: certifiedCap != null,
+            teamRunId: certifiedCap?.team_run_id || null,
         }
     }
 

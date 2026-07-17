@@ -4,11 +4,15 @@ import { useNavScrollRestore } from '@/app/components/navigation/useNavScrollRes
 import {
     fetchMap,
     fetchMapLeaderboard,
+    fetchTeamMapLeaderboard,
     fetchMapReviews,
     fetchPlaytimeForMap,
     fetchWorldRecordProgression,
     fetchUserCapCountForMap,
+    fetchUserTeamMapStats,
     type LeaderboardEntry,
+    type TeamLeaderboardEntry,
+    type TeamMapUserStats,
     type MapMetadata,
     type MapReview,
     type Playtime,
@@ -43,7 +47,7 @@ interface MapDetailPageProps {
 const MAP_METADATA_COLUMNS = [
     'name', 'added', 'difficulty', 'active', 'tags', 'author', 'author_str', 'author_ref',
     'world_record', 'champion_medal', 'gold_medal', 'silver_medal', 'bronze_medal',
-    'url', 'preceded_by', 'superseded_by', 'changelog',
+    'required_players', 'url', 'preceded_by', 'superseded_by', 'changelog',
 ]
 
 export function MapDetailPage({
@@ -53,11 +57,15 @@ export function MapDetailPage({
     const currentUserId = userProfile?.id ?? undefined
 
     const [map, setMap] = useState<MapMetadata | null>(null)
+    const requiredPlayers = map?.name === mapName ? map.required_players : undefined
+    const isTeam = (requiredPlayers ?? 1) > 1
     const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
+    const [teamLeaderboard, setTeamLeaderboard] = useState<TeamLeaderboardEntry[]>([])
     const [reviews, setReviews] = useState<MapReview[]>([])
     const [playtime, setPlaytime] = useState<Playtime[]>([])
     const [wrProgression, setWrProgression] = useState<WorldRecordProgressionEntry[]>([])
     const [userCapCount, setUserCapCount] = useState<number | null>(null)
+    const [teamStats, setTeamStats] = useState<TeamMapUserStats | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [reviewModalOpen, setReviewModalOpen] = useState(false)
@@ -83,25 +91,36 @@ export function MapDetailPage({
         setLoading(true)
         setError(null)
         setUserCapCount(null)
+        setTeamStats(null)
         ;(async () => {
             try {
-                const [matched, lb, rv, pt, wr, capCount] = await Promise.all([
-                    fetchMap(accessToken, mapName, MAP_METADATA_COLUMNS),
+                const matched = await fetchMap(accessToken, mapName, MAP_METADATA_COLUMNS)
+                if (!matched) throw new Error(`Map metadata not found for ${mapName}`)
+                const teamMap = matched.required_players > 1
+                const [lb, teamLb, rv, pt, wr, capCount, teamUserStats] = await Promise.all([
                     fetchMapLeaderboard(accessToken, mapName, false),
+                    teamMap
+                        ? fetchTeamMapLeaderboard(accessToken, mapName)
+                        : Promise.resolve([] as TeamLeaderboardEntry[]),
                     fetchMapReviews(accessToken, mapName),
                     fetchPlaytimeForMap(accessToken, mapName),
                     fetchWorldRecordProgression(accessToken, mapName),
                     currentUserId != null
                         ? fetchUserCapCountForMap(accessToken, currentUserId, mapName)
                         : Promise.resolve(0),
+                    teamMap && currentUserId != null
+                        ? fetchUserTeamMapStats(accessToken, currentUserId, mapName)
+                        : Promise.resolve(null),
                 ])
                 if (cancelled) return
                 setMap(matched)
                 setLeaderboard(lb)
+                setTeamLeaderboard(teamLb)
                 setReviews(rv)
                 setPlaytime(pt)
                 setWrProgression(wr)
                 setUserCapCount(capCount)
+                setTeamStats(teamUserStats)
             } catch (e) {
                 if (cancelled) return
                 console.error('Failed to load map detail:', e)
@@ -149,6 +168,7 @@ export function MapDetailPage({
                 onToggleFavorite={onToggleFavorite}
                 accessToken={accessToken}
                 onMapSelect={onMapSelect}
+                requiredPlayers={requiredPlayers}
                 onDownload={() => mapDownload.start(mapName)}
                 isDownloading={mapDownload.download?.status === 'downloading'}
                 chart={
@@ -181,6 +201,8 @@ export function MapDetailPage({
                     leaderboard={leaderboard}
                     playtime={playtime}
                     loading={loading}
+                    isTeam={isTeam}
+                    teamLeaderboard={teamLeaderboard}
                     onShowPlaytimeBreakdown={() => setPlaytimeModalOpen(true)}
                     onShowCapDistribution={() => setDistributionModalOpen(true)}
                 />
@@ -193,12 +215,19 @@ export function MapDetailPage({
                         totalCaps={userCapCount}
                         loading={loading}
                         onShowPlaytimeBreakdown={() => setPlaytimeModalOpen(true)}
+                        isTeamMap={isTeam}
+                        teamStats={teamStats}
                     />
                 )}
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
                     <div className="lg:col-span-4 space-y-4">
-                        <MedalCard map={map} loading={loading} />
+                        <MedalCard
+                            map={map}
+                            loading={loading}
+                            requiredPlayers={requiredPlayers}
+                            teamLeaderboard={teamLeaderboard}
+                        />
                         <ReviewsCard
                             reviews={reviews}
                             currentUserId={currentUserId ?? undefined}
@@ -210,6 +239,8 @@ export function MapDetailPage({
                     <div className="lg:col-span-8 space-y-4">
                         <LeaderboardCard
                             leaderboard={leaderboard}
+                            teamLeaderboard={teamLeaderboard}
+                            requiredPlayers={requiredPlayers}
                             map={map}
                             loading={loading}
                             currentUserId={currentUserId ?? undefined}
@@ -252,6 +283,8 @@ export function MapDetailPage({
                 leaderboard={leaderboard}
                 map={map}
                 currentUserId={currentUserId ?? undefined}
+                isTeam={isTeam}
+                teamLeaderboard={teamLeaderboard}
             />
 
             <MapDownloadStatusModal

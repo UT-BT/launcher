@@ -61,6 +61,7 @@ import { TeamDetailsPage } from '@/app/components/pages/teams/TeamDetailsPage'
 import { MapDetailPage } from '@/app/components/pages/MapDetailPage'
 import { PlayerDetailPage } from '@/app/components/pages/PlayerDetailPage'
 import { CapDetailPage } from '@/app/components/pages/CapDetailPage'
+import { TeamCapDetailPage } from '@/app/components/pages/TeamCapDetailPage'
 import { NewsPage } from '@/app/components/pages/NewsPage'
 import { NewsDetailPage } from '@/app/components/pages/NewsDetailPage'
 import { AdminPage, DEFAULT_ADMIN_STATE, type AdminPageState } from '@/app/components/pages/admin/AdminPage'
@@ -382,6 +383,16 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
   }, [navigate])
 
   useEffect(() => {
+    const onOpenTeamCap = (e: Event) => {
+      const ce = e as CustomEvent<{ teamCapId: string }>
+      if (!ce.detail?.teamCapId) return
+      navigate('team-cap-detail', { teamCapId: ce.detail.teamCapId })
+    }
+    window.addEventListener('open-team-cap', onOpenTeamCap as EventListener)
+    return () => window.removeEventListener('open-team-cap', onOpenTeamCap as EventListener)
+  }, [navigate])
+
+  useEffect(() => {
     const onOpenNews = (e: Event) => {
       const ce = e as CustomEvent<{ newsId: number }>
       if (ce.detail?.newsId == null) return
@@ -614,6 +625,13 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
         return <CapDetailPage
           key={entry.id}
           capId={entry.params.capId!}
+          userProfile={userProfile as any}
+          onMapSelect={openMap}
+        />
+      case 'team-cap-detail':
+        return <TeamCapDetailPage
+          key={entry.id}
+          teamCapId={entry.params.teamCapId!}
           userProfile={userProfile as any}
           onMapSelect={openMap}
         />

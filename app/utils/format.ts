@@ -1,8 +1,10 @@
 export function formatCapTime(seconds: number): string {
-    const hours = Math.floor(seconds / 3600)
-    const minutes = Math.floor((seconds % 3600) / 60)
-    const secs = Math.floor(seconds % 60)
-    const ms = Math.floor((seconds % 1) * 1000)
+    const totalMs = Math.round(seconds * 1000)
+    const totalSecs = Math.floor(totalMs / 1000)
+    const hours = Math.floor(totalSecs / 3600)
+    const minutes = Math.floor((totalSecs % 3600) / 60)
+    const secs = totalSecs % 60
+    const ms = totalMs % 1000
     const msStr = ms.toString().padStart(3, '0')
     const secsStr = secs.toString().padStart(2, '0')
     const minsStr = minutes.toString().padStart(2, '0')

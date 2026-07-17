@@ -123,11 +123,16 @@ export function LauncherDemoSettings() {
                     label="Auto Demo Upload"
                     description={
                         <div className="flex flex-col gap-1">
-                            <span>Choose when to automatically upload recorded demos.</span>
+                            <span>Choose when to automatically upload solo demos.</span>
+                            {autoDemoUpload !== 'Never' && (
+                                <span className="text-xs text-muted-foreground">
+                                    Certified team demos always upload for team verification, regardless of the solo PB/WR filter.
+                                </span>
+                            )}
                             {autoDemoUpload === 'Never' && (
                                 <span className="flex items-center gap-1 text-yellow-500 text-xs font-semibold">
                                     <AlertTriangle className="size-3" />
-                                    Required for verification (24h limit)
+                                    Team runs remain pending without automatic uploads
                                 </span>
                             )}
                         </div>
@@ -152,7 +157,7 @@ export function LauncherDemoSettings() {
 
                 <SettingsRow
                     label="Discarded Demos"
-                    description="Choose what to do with demos that aren't personal bests or world records"
+                    description="Choose what to do with solo demos that aren't personal bests or world records. Pending team evidence is never discarded."
                 >
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild disabled={disabled || autoDemoUpload === 'Never'}>
@@ -173,7 +178,7 @@ export function LauncherDemoSettings() {
 
                 <SettingsRow
                     label="After Upload Action"
-                    description="Choose what to do with the demo file after it has been processed."
+                    description="After a successful upload, move, delete, or retain the demo. Failed uploads retry for up to 24 hours and leave the source untouched."
                 >
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild disabled={disabled || autoDemoUpload === 'Never'}>

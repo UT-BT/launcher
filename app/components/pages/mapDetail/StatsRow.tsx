@@ -1,12 +1,14 @@
 import { Trophy, ShieldCheck, Users, Clock, Activity } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatCapTime } from '@/app/utils/format'
-import type { LeaderboardEntry, Playtime } from '@/app/utils/api'
+import type { LeaderboardEntry, TeamLeaderboardEntry, Playtime } from '@/app/utils/api'
 
 interface StatsRowProps {
     leaderboard: LeaderboardEntry[]
     playtime: Playtime[]
     loading: boolean
+    isTeam?: boolean
+    teamLeaderboard?: TeamLeaderboardEntry[]
     onShowPlaytimeBreakdown?: () => void
     onShowCapDistribution?: () => void
 }
@@ -29,10 +31,11 @@ function median(values: number[]): number | null {
 
 const ENGAGED_PLAYTIME_SECONDS = 300
 
-export function StatsRow({ leaderboard, playtime, loading, onShowPlaytimeBreakdown, onShowCapDistribution }: StatsRowProps) {
-    const totalCaps = leaderboard.length
-    const verifiedEntries = leaderboard.filter(e => e.verified)
-    const verifiedCaps = verifiedEntries.length
+export function StatsRow({ leaderboard, playtime, loading, isTeam = false, teamLeaderboard = [], onShowPlaytimeBreakdown, onShowCapDistribution }: StatsRowProps) {
+    const totalCaps = isTeam ? teamLeaderboard.length : leaderboard.length
+    const verifiedCaps = isTeam
+        ? teamLeaderboard.filter(e => e.verified).length
+        : leaderboard.filter(e => e.verified).length
 
     const playtimeByUser = new Map<string, number>()
     let totalPlaytimeSec = 0
@@ -52,6 +55,13 @@ export function StatsRow({ leaderboard, playtime, loading, onShowPlaytimeBreakdo
         .filter(e => e.cap_type === 2)
         .map(e => e.cap_time_seconds)
     const medianCertified = median(certifiedTimes)
+
+    const teamTimes = teamLeaderboard
+        .map(e => Number(e.cap_time_seconds))
+        .filter(v => Number.isFinite(v))
+    const teamMedian = isTeam ? median(teamTimes) : null
+    const rawMedian = isTeam ? teamMedian : medianCertified
+    const medianValue = rawMedian != null && Number.isFinite(rawMedian) ? rawMedian : null
 
     const tiles: {
         key: string
@@ -80,11 +90,11 @@ export function StatsRow({ leaderboard, playtime, loading, onShowPlaytimeBreakdo
         { key: 'playtime', label: 'Total Playtime', value: loading ? null : formatHours(totalPlaytimeSec), icon: Clock, accent: 'text-amber-300', onClick: onShowPlaytimeBreakdown },
         {
             key: 'median',
-            label: 'Median Certified Time',
-            value: loading ? null : (medianCertified != null ? formatCapTime(medianCertified) : '—'),
+            label: isTeam ? 'Median Team Time' : 'Median Certified Time',
+            value: loading ? null : (medianValue != null ? formatCapTime(medianValue) : '—'),
             icon: Trophy,
             accent: 'text-yellow-300',
-            onClick: medianCertified != null ? onShowCapDistribution : undefined,
+            onClick: medianValue != null ? onShowCapDistribution : undefined,
         },
     ]
 

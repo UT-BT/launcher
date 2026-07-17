@@ -15,13 +15,15 @@ import {
     DataTableCell, DataTableEmpty, DataTableSkeletonRow, type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
 
-type CapItAllColumnId = 'rank' | 'player' | 'certified' | 'noncertified'
+type CapItAllColumnId = 'rank' | 'player' | 'certified' | 'noncertified' | 'teammaps' | 'total'
 
 const CAP_IT_ALL_COLUMNS: ResponsiveColumn[] = [
     { id: 'rank', width: '72px', priority: 30, required: true },
     { id: 'player', required: true },
     { id: 'certified', width: '220px', priority: 60 },
     { id: 'noncertified', width: '220px', priority: 50 },
+    { id: 'teammaps', width: '220px', priority: 40 },
+    { id: 'total', width: '220px', priority: 35 },
 ]
 
 export interface CapItAllPageState {
@@ -283,6 +285,8 @@ export function CapItAllPage({ userProfile, state, onStateChange, caches, onCach
                     {isVisible('player') && <DataTableHeaderCell align="left">Player</DataTableHeaderCell>}
                     {isVisible('certified') && <DataTableHeaderCell align="left" width="220px">Certified</DataTableHeaderCell>}
                     {isVisible('noncertified') && <DataTableHeaderCell align="left" width="220px">Non-certified</DataTableHeaderCell>}
+                    {isVisible('teammaps') && <DataTableHeaderCell align="left" width="220px">Team Maps</DataTableHeaderCell>}
+                    {isVisible('total') && <DataTableHeaderCell align="left" width="220px">Total %</DataTableHeaderCell>}
                 </DataTableHeaderRow>
                 <tbody>
                     {showSkeleton ? (
@@ -329,6 +333,16 @@ export function CapItAllPage({ userProfile, state, onStateChange, caches, onCach
                                     {isVisible('noncertified') && (
                                         <DataTableCell width="220px">
                                             <MetricCell caps={row.non_certified_caps} pct={row.non_certified_percentage} barClass="bg-amber-400/60" />
+                                        </DataTableCell>
+                                    )}
+                                    {isVisible('teammaps') && (
+                                        <DataTableCell width="220px">
+                                            <MetricCell caps={row.team_caps} pct={row.team_percentage} barClass="bg-sky-400/60" />
+                                        </DataTableCell>
+                                    )}
+                                    {isVisible('total') && (
+                                        <DataTableCell width="220px">
+                                            <MetricCell caps={row.total_caps} pct={row.total_percentage} barClass="bg-violet-400/60" />
                                         </DataTableCell>
                                     )}
                                 </DataTableRow>

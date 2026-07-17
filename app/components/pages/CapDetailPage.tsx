@@ -14,8 +14,10 @@ import { formatCapTime } from '@/app/utils/format'
 import {
     fetchCapDetail,
     fetchCapCheckpoints,
+    fetchTeamRunStatus,
     type CapDetail,
     type LeaderboardEntry,
+    type TeamRunStatus,
     type UserProfile,
 } from '@/app/utils/api'
 import { ReplayPickerModal } from '@/app/components/modals/ReplayPickerModal'
@@ -76,6 +78,7 @@ export function CapDetailPage({ capId, userProfile, onMapSelect }: CapDetailPage
     const [comparePickerOpen, setComparePickerOpen] = useState(false)
     const [videoOpponent, setVideoOpponent] = useState<LeaderboardEntry | null>(null)
     const [videoOpponentData, setVideoOpponentData] = useState<{ checkpoints: CapDetail['checkpoints']; team: number | null } | null>(null)
+    const [teamRun, setTeamRun] = useState<TeamRunStatus | null>(null)
 
     const defaultedFor = useRef<string | null>(null)
     useEffect(() => {
@@ -106,6 +109,16 @@ export function CapDetailPage({ capId, userProfile, onMapSelect }: CapDetailPage
             .finally(() => { if (!cancelled) setComparing(false) })
         return () => { cancelled = true; controller.abort() }
     }, [compareCapId, accessToken])
+
+    const teamRunId = detail?.cap.team_run_id ?? null
+    useEffect(() => {
+        if (!teamRunId || !accessToken) { setTeamRun(null); return }
+        const controller = new AbortController()
+        let cancelled = false
+        fetchTeamRunStatus(accessToken, teamRunId, controller.signal)
+            .then(s => { if (!cancelled) setTeamRun(s) })
+        return () => { cancelled = true; controller.abort() }
+    }, [teamRunId, accessToken, refreshKey])
 
     const compareOptions = useMemo(
         () => (detail?.compare_candidates ?? [])
@@ -163,6 +176,7 @@ export function CapDetailPage({ capId, userProfile, onMapSelect }: CapDetailPage
                         deltaWr={detail.deltas.wr}
                         gapToNext={gapToNext}
                         isWr={isWr}
+                        teamRun={teamRun}
                         onMapSelect={onMapSelect}
                         onWatch={() => replay.openReplay({
                             capId: cap.id,
@@ -282,24 +296,26 @@ export function CapDetailPage({ capId, userProfile, onMapSelect }: CapDetailPage
                     open
                     onClose={() => setVideoOpponent(null)}
                     mapName={cap.map}
-                    runA={{
-                        capId: cap.id,
-                        alias: cap.alias ?? null,
-                        userId: cap.user,
-                        title: cap.active_title ?? null,
-                        capTime: cap.cap_time_seconds,
-                        checkpoints: videoSameTeam ? detail.checkpoints : [],
-                        url: videoAvail.urlA as string,
-                    }}
-                    runB={{
-                        capId: videoOpponent.id,
-                        alias: videoOpponent.alias,
-                        userId: videoOpponent.user,
-                        title: videoOpponent.active_title ?? null,
-                        capTime: videoOpponent.cap_time_seconds,
-                        checkpoints: videoSameTeam ? (videoOpponentData?.checkpoints ?? []) : [],
-                        url: videoAvail.urlB as string,
-                    }}
+                    runs={[
+                        {
+                            capId: cap.id,
+                            alias: cap.alias ?? null,
+                            userId: cap.user,
+                            title: cap.active_title ?? null,
+                            capTime: cap.cap_time_seconds,
+                            checkpoints: videoSameTeam ? detail.checkpoints : [],
+                            url: videoAvail.urlA as string,
+                        },
+                        {
+                            capId: videoOpponent.id,
+                            alias: videoOpponent.alias,
+                            userId: videoOpponent.user,
+                            title: videoOpponent.active_title ?? null,
+                            capTime: videoOpponent.cap_time_seconds,
+                            checkpoints: videoSameTeam ? (videoOpponentData?.checkpoints ?? []) : [],
+                            url: videoAvail.urlB as string,
+                        },
+                    ]}
                 />
             )}
 

@@ -7,6 +7,7 @@ import { useNavState } from '@/app/components/navigation/useNavState'
 import { formatAddedDate, displayMapName } from '@/app/utils/format'
 import { getMedalIcon } from '@/app/utils/medals'
 import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
+import { TeamRosterBadge } from '@/app/components/shared/TeamRosterBadge'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
 import { IconActionButton } from '@/app/components/shared/IconActionButton'
@@ -252,9 +253,16 @@ export function PersonalBestsCard({
                                                         disabled={!canEditFavorites}
                                                     />
                                                 )}
-                                                <span className="text-sm font-semibold text-foreground truncate min-w-0">
-                                                    {displayMapName(pb.mapName)}
-                                                </span>
+                                                <div className="flex flex-col gap-1 min-w-0">
+                                                    <div className="flex items-center gap-2 min-w-0">
+                                                        <span className="text-sm font-semibold text-foreground truncate min-w-0">
+                                                            {displayMapName(pb.mapName)}
+                                                        </span>
+                                                        {pb.isTeam && (
+                                                            <TeamRosterBadge members={pb.teamMembers} currentUserId={String(userId)} />
+                                                        )}
+                                                    </div>
+                                                </div>
                                             </div>
                                         </DataTableCell>
                                     )}
@@ -272,7 +280,8 @@ export function PersonalBestsCard({
                                             <span className="inline-flex items-center gap-1.5">
                                                 {pb.medal === 'World Record' && <Trophy className="size-3 text-blue-300" />}
                                                 <CapTimeLink
-                                                    capId={pb.id}
+                                                    capId={pb.isTeam ? undefined : pb.id}
+                                                    teamCapId={pb.isTeam ? pb.teamCapId ?? undefined : undefined}
                                                     seconds={pb.time}
                                                     className={cn(
                                                         'text-sm font-mono tabular-nums font-bold',

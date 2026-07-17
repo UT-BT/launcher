@@ -5,6 +5,14 @@ function achievementName(definitions: Map<string, AchievementDefinition>, code: 
     return definitions.get(code)?.name ?? code.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 }
 
+function TeamChip() {
+    return (
+        <span className="shrink-0 text-[9px] font-bold uppercase tracking-wider px-1 py-0.5 rounded bg-sky-400/15 text-sky-300">
+            Team
+        </span>
+    )
+}
+
 interface AchievementProgressPreviewProps {
     achievements: AchievementProgress[]
     definitions: Map<string, AchievementDefinition>
@@ -44,7 +52,10 @@ export function AchievementProgressPreview({ achievements, definitions }: Achiev
                     <div key={a.code} className="bg-card/30 border border-hairline/5 rounded-xl px-2 py-3 sm:px-3">
                         <div className="flex items-center justify-between gap-3">
                             <div className="min-w-0">
-                                <div className="text-xs sm:text-sm font-semibold text-foreground truncate">{achievementName(definitions, a.code)}</div>
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                    <span className="text-xs sm:text-sm font-semibold text-foreground truncate">{achievementName(definitions, a.code)}</span>
+                                    {definitions.get(a.code)?.team && <TeamChip />}
+                                </div>
                                 <div className="text-[11px] text-muted-foreground">
                                     {remaining.toLocaleString()} {unit} to go
                                 </div>

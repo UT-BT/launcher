@@ -32,6 +32,10 @@ import {
 
 const MAPVOTE_STALE_KEY = 'utbt:admin:maps:mapvoteStale:v1'
 const DIFFICULTY_OPTIONS = Array.from({ length: 10 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) }))
+const PLAYER_COUNT_OPTIONS = Array.from({ length: 12 }, (_, i) => ({
+  value: String(i + 1),
+  label: i === 0 ? '1 player (solo)' : `${i + 1} players`,
+}))
 
 type MapStatus = 'all' | 'active' | 'inactive'
 
@@ -45,6 +49,7 @@ const MAP_COLUMNS: AdminColumn[] = [
   { id: 'map', label: 'Map', required: true },
   { id: 'author', label: 'Author' },
   { id: 'difficulty', label: 'Difficulty' },
+  { id: 'players', label: 'Players' },
   { id: 'tags', label: 'Tags' },
   { id: 'status', label: 'Status' },
   { id: 'superseded', label: 'Superseded' },
@@ -55,6 +60,7 @@ const LAYOUT: Record<string, { width?: string; align?: 'left' | 'center' | 'righ
   map: { align: 'left' },
   author: { width: '15rem', align: 'left' },
   difficulty: { width: '6rem', align: 'center' },
+  players: { width: '7rem', align: 'center' },
   tags: { width: '16rem', align: 'left' },
   status: { width: '7rem', align: 'center' },
   superseded: { width: '12rem', align: 'left' },
@@ -66,7 +72,7 @@ const SORTABLE: Record<string, AdminMapSort> = {
 }
 
 const PRIORITY: Record<string, number> = {
-  status: 70, difficulty: 70, author: 30, tags: 30, superseded: 30,
+  status: 70, difficulty: 70, players: 70, author: 30, tags: 30, superseded: 30,
 }
 
 interface MapFilters {
@@ -257,6 +263,7 @@ function MapFormModal({ open, onClose, token, editing, onSaved, allTags }: {
   const isEdit = !!editing
   const [name, setName] = useState('')
   const [difficulty, setDifficulty] = useState('5')
+  const [requiredPlayers, setRequiredPlayers] = useState('1')
   const [active, setActive] = useState(true)
   const [authorMode, setAuthorMode] = useState<'text' | 'player'>('text')
   const [authorStr, setAuthorStr] = useState('')
@@ -276,6 +283,7 @@ function MapFormModal({ open, onClose, token, editing, onSaved, allTags }: {
     if (editing) {
       setName(editing.name)
       setDifficulty(String(editing.difficulty ?? 5))
+      setRequiredPlayers(String(editing.required_players ?? 1))
       setActive(editing.active)
       setTags(editing.tags ? editing.tags.split(',').map((t) => t.trim()).filter(Boolean) : [])
       if (editing.author_ref) {
@@ -284,7 +292,7 @@ function MapFormModal({ open, onClose, token, editing, onSaved, allTags }: {
         setAuthorMode('text'); setAuthorStr(editing.author_str || ''); setAuthorUser(null)
       }
     } else {
-      setName(''); setDifficulty('5'); setActive(true); setTags([])
+      setName(''); setDifficulty('5'); setRequiredPlayers('1'); setActive(true); setTags([])
       setAuthorMode('text'); setAuthorStr(''); setAuthorUser(null)
     }
   }, [open, editing])
@@ -302,10 +310,14 @@ function MapFormModal({ open, onClose, token, editing, onSaved, allTags }: {
     try {
       const tagsStr = tags.join(',')
       if (isEdit && editing) {
-        await updateMap(token, editing.name, { active, difficulty: parseInt(difficulty, 10), tags: tagsStr, ...authorPayload })
+        await updateMap(token, editing.name, {
+          active, difficulty: parseInt(difficulty, 10), required_players: parseInt(requiredPlayers, 10),
+          tags: tagsStr, ...authorPayload,
+        })
       } else {
         await createMap(token, {
-          name: name.trim(), difficulty: parseInt(difficulty, 10), active, tags: tagsStr,
+          name: name.trim(), difficulty: parseInt(difficulty, 10), required_players: parseInt(requiredPlayers, 10),
+          active, tags: tagsStr,
           url: url.trim() || undefined, changelog: changelog.trim() || undefined,
           preceded_by: precededBy || undefined,
           transfer_records: precededBy ? transferRecords : undefined,
@@ -351,10 +363,14 @@ function MapFormModal({ open, onClose, token, editing, onSaved, allTags }: {
           )}
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           <div className="space-y-1.5">
             {fieldLabel('Difficulty')}
             <AdminSelect value={difficulty} onChange={setDifficulty} options={DIFFICULTY_OPTIONS} ariaLabel="Difficulty" className="w-full" />
+          </div>
+          <div className="space-y-1.5">
+            {fieldLabel('Players')}
+            <AdminSelect value={requiredPlayers} onChange={setRequiredPlayers} options={PLAYER_COUNT_OPTIONS} ariaLabel="Required players" className="w-full" />
           </div>
           <div className="space-y-1.5">
             {fieldLabel('Status')}
@@ -956,6 +972,8 @@ export function MapsManagementSection({ userProfile, onMapSelect }: AdminSection
         )
       case 'difficulty':
         return <DataTableCell key={id} align={align} className="tabular-nums">{m.difficulty ?? '—'}</DataTableCell>
+      case 'players':
+        return <DataTableCell key={id} align={align} className="tabular-nums">{m.required_players}</DataTableCell>
       case 'tags': {
         const tags = m.tags ? m.tags.split(',').map((x) => x.trim()).filter(Boolean) : []
         const expanded = expandedTags.includes(m.name)

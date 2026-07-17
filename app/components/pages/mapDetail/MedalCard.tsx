@@ -1,13 +1,16 @@
+import { useMemo } from 'react'
 import { Info } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import { formatCapTime } from '@/app/utils/format'
 import { getMedalIcon } from '@/app/utils/medals'
-import type { MapMetadata } from '@/app/utils/api'
+import type { MapMetadata, TeamLeaderboardEntry } from '@/app/utils/api'
 
 interface MedalCardProps {
     map: MapMetadata | null
     loading: boolean
+    requiredPlayers?: number
+    teamLeaderboard?: TeamLeaderboardEntry[]
 }
 
 const ROWS: {
@@ -50,7 +53,16 @@ const EXPLAINER = (
     </div>
 )
 
-export function MedalCard({ map, loading }: MedalCardProps) {
+export function MedalCard({ map, loading, requiredPlayers, teamLeaderboard }: MedalCardProps) {
+    const isTeam = requiredPlayers != null && requiredPlayers > 1
+
+    const teamWorldRecord = useMemo(() => {
+        if (!isTeam || !teamLeaderboard?.length) return null
+        const verifiedTimes = teamLeaderboard.filter(e => e.verified).map(e => e.cap_time_seconds)
+        if (verifiedTimes.length === 0) return null
+        return Math.min(...verifiedTimes)
+    }, [isTeam, teamLeaderboard])
+
     return (
         <div className="bg-card/30 border border-hairline/5 rounded-xl p-4">
             <div className="flex items-center justify-between mb-3">
@@ -69,7 +81,9 @@ export function MedalCard({ map, loading }: MedalCardProps) {
             </div>
             <div className="space-y-2">
                 {ROWS.map(row => {
-                    const value = map ? (map[row.key] as number | undefined) : undefined
+                    const value = isTeam
+                        ? (teamWorldRecord != null ? teamWorldRecord * (row.multiplier ?? 1) : undefined)
+                        : (map ? (map[row.key] as number | undefined) : undefined)
                     const icon = getMedalIcon(row.medal)
                     return (
                         <div
