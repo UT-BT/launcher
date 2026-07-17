@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useMemo, useState } from 'react'
-import { Home, Server, Map as MapIcon, Trophy, Settings, LogOut, Play, User, Users, Flag, Award, ShieldAlert, Newspaper } from 'lucide-react'
+import { Home, Server, Map as MapIcon, Trophy, Settings, LogOut, Play, User, Users, Users2, Flag, Award, ShieldAlert, Newspaper } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import logo from '@/app/assets/logo.png'
 import {
@@ -41,6 +41,7 @@ const BASE_NAV_SECTIONS: NavSection[] = [
         items: [
             { id: 'maps', label: 'Maps', icon: MapIcon },
             { id: 'players', label: 'Players', icon: Users },
+            { id: 'teams', label: 'Teams', icon: Users2 },
             { id: 'servers', label: 'Servers', icon: Server },
         ],
     },

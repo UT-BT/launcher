@@ -10,7 +10,7 @@ not_here:
   - "where page state / persistence lives → state-patterns.md"
   - "the PlayerInfo / CapTimeLink components that trigger nav → shared-components.md"
 sections: [the-model, navigate-is-the-only-entry-point, page-views-vs-detail-pages, the-sidebar-registry, event-driven-navigation, sidebar-new-badges, page-refresh-registry, per-entry-state]
-last_verified: 2026-07-15
+last_verified: 2026-07-17
 verify_against:
   - app/components/main/Main.tsx
   - app/components/layout/AppLayout.tsx
@@ -36,7 +36,7 @@ const [cursor, setCursor] = useState(0)
 - **`NavEntry`** (`app/components/navigation/NavigationContext.tsx`) =
   `{ id, view, params: NavParams, state: Record<string, unknown> }`. `id` is a
   monotonic counter; `state` is the per-entry bag (see below).
-- **`NavParams`** = `{ mapName?, playerId?, capId?, newsId?, mapsNewOnly? }` — the params a
+- **`NavParams`** = `{ mapName?, playerId?, capId?, newsId?, teamId?, mapsNewOnly? }` — the params a
   view can carry. Add a field here if a new detail page needs a different
   identifier, or if a page must open in a specific state. `mapsNewOnly` seeds the
   Maps page's new-only filter when opened from the Home "new maps" tile; `MapsPage`
@@ -76,12 +76,15 @@ parallel back stack. Sidebar clicks, `openMap`, and the `open-*` events all call
 
 | Kind | Views | Keyed? | Why |
 |---|---|---|---|
-| **Page-views** | `home`, `servers`, `maps`, `players`, `cap-it-all`, `world-records`, `achievements`, `news`, `admin` | **No** — one reused instance per view | Not-keyed means no remount between *entries of the same view*. It does **not** mean the component survives a view change: `renderView()` returns exactly one element, so `home` -> `maps` unmounts `Home`. State and data survive because they are hoisted to `Main` — per-entry via `usePageState`, data via a `caches` singleton — and read back on remount, **not** because the component stays mounted. A page-view that keeps data in its own `useState` refetches it on every visit. |
-| **Detail-pages** | `maps-detail`, `player-detail`, `cap-detail`, `news-detail` | **Yes — `key={entry.id}`** | A new visit must remount so it refetches for the new param and `useNavState` re-reads the right entry's bag. |
+| **Page-views** | `home`, `servers`, `maps`, `players`, `teams`, `cap-it-all`, `world-records`, `achievements`, `news`, `admin` | **No** — one reused instance per view | Not-keyed means no remount between *entries of the same view*. It does **not** mean the component survives a view change: `renderView()` returns exactly one element, so `home` -> `maps` unmounts `Home`. State and data survive because they are hoisted to `Main` — per-entry via `usePageState`, data via a `caches` singleton — and read back on remount, **not** because the component stays mounted. A page-view that keeps data in its own `useState` refetches it on every visit. |
+| **Detail-pages** | `maps-detail`, `player-detail`, `cap-detail`, `news-detail`, `team-detail` | **Yes — `key={entry.id}`** | A new visit must remount so it refetches for the new param and `useNavState` re-reads the right entry's bag. |
 
 Detail cases pull their identifier from `entry.params` (`mapName!` / `playerId!` /
-`capId!` / `newsId!`). Forgetting `key={entry.id}` on a detail case is a bug: the page keeps
-the previous visit's data and UI state.
+`capId!` / `newsId!` / `teamId!`). Forgetting `key={entry.id}` on a detail case is a bug: the page keeps
+the previous visit's data and UI state. `team-detail` (`TeamDetailsPage`) is role-aware:
+it fetches `/teams/<id>` + `/me/team`, derives `viewerRole` (owner/admin/member/none) +
+`isOwnTeam`, and renders management / member / public branches accordingly; leave/disband/
+apply/accept/decline/withdraw route back to the `teams` gallery and force it to refresh.
 
 ## The sidebar registry
 
