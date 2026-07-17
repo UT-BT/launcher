@@ -4,23 +4,27 @@ import { Button } from '@/app/components/ui/button'
 import { Modal } from '@/app/components/ui/modal'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
 import {
-    fetchMyInvitations, fetchMyTeam,
-    type TeamCore, type TeamDetail, type UserProfile,
+    fetchMyApplications, fetchMyInvitations, fetchMyTeam,
+    type TeamCore, type TeamDetail, type TeamSort, type UserProfile,
 } from '@/app/utils/api'
 import { CreateTeamForm } from './teams/CreateTeamForm'
-import { TeamGallery } from './teams/TeamGallery'
+import { TeamGallery, type TeamAccessFilter } from './teams/TeamGallery'
 import { InvitationsSection } from './teams/InvitationsSection'
 import { ErrorBanner, refreshUserProfile, teamErrorMessage } from './teams/teamsShared'
 
 export interface TeamsPageState {
     directorySearch: string
     directoryPage: number
+    directoryAccess: TeamAccessFilter
+    directorySort: TeamSort
+    directorySortDir: 'asc' | 'desc'
     scrollTop: number
 }
 
 export interface TeamsPageCaches {
     myTeam: TeamDetail | null
     invitations: TeamCore[]
+    applications: TeamCore[]
     loaded: boolean
     lastRefreshIso: string | null
 }
@@ -28,12 +32,16 @@ export interface TeamsPageCaches {
 export const DEFAULT_TEAMS_STATE: TeamsPageState = {
     directorySearch: '',
     directoryPage: 1,
+    directoryAccess: 'all',
+    directorySort: 'added',
+    directorySortDir: 'asc',
     scrollTop: 0,
 }
 
 export const DEFAULT_TEAMS_CACHES: TeamsPageCaches = {
     myTeam: null,
     invitations: [],
+    applications: [],
     loaded: false,
     lastRefreshIso: null,
 }
@@ -62,14 +70,16 @@ export function TeamsPage({ userProfile, state, onStateChange, caches, onCachesC
         if (!background) setLoading(true)
         setError(null)
         try {
-            const [team, invitations] = await Promise.all([
+            const [team, invitations, applications] = await Promise.all([
                 fetchMyTeam(accessToken),
                 fetchMyInvitations(accessToken),
+                fetchMyApplications(accessToken),
             ])
             onCachesChange(prev => ({
                 ...prev,
                 myTeam: team,
                 invitations,
+                applications: team ? [] : applications,
                 loaded: true,
                 lastRefreshIso: new Date().toISOString(),
             }))
@@ -114,6 +124,18 @@ export function TeamsPage({ userProfile, state, onStateChange, caches, onCachesC
         onStateChange(prev => ({ ...prev, directoryPage: page }))
     }, [onStateChange])
 
+    const setDirectoryAccess = useCallback((value: TeamAccessFilter) => {
+        onStateChange(prev => ({ ...prev, directoryAccess: value, directoryPage: 1 }))
+    }, [onStateChange])
+
+    const setDirectorySort = useCallback((value: TeamSort) => {
+        onStateChange(prev => ({ ...prev, directorySort: value, directoryPage: 1 }))
+    }, [onStateChange])
+
+    const setDirectorySortDir = useCallback((value: 'asc' | 'desc') => {
+        onStateChange(prev => ({ ...prev, directorySortDir: value, directoryPage: 1 }))
+    }, [onStateChange])
+
     if (!accessToken) {
         return (
             <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
@@ -128,7 +150,7 @@ export function TeamsPage({ userProfile, state, onStateChange, caches, onCachesC
                 <div>
                     <h1 className="text-2xl font-bold text-white leading-tight">Teams</h1>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                        Browse every team, manage your own, and build named lineups.
+                        Browse every team and manage your own.
                     </p>
                 </div>
                 {caches.loaded && !caches.myTeam && (
@@ -159,16 +181,24 @@ export function TeamsPage({ userProfile, state, onStateChange, caches, onCachesC
                             invitations={caches.invitations}
                             hasActiveTeam={!!caches.myTeam}
                             onAccepted={onAccepted}
+                            onDeclined={teamId => onCachesChange(prev => ({ ...prev, invitations: prev.invitations.filter(t => t.id !== teamId) }))}
                             onSelect={onTeamSelect}
                         />
 
                         <TeamGallery
                             accessToken={accessToken}
                             myTeam={caches.myTeam}
+                            appliedTeamIds={caches.applications.map(t => t.id)}
                             search={state.directorySearch}
                             page={state.directoryPage}
+                            access={state.directoryAccess}
+                            sort={state.directorySort}
+                            sortDir={state.directorySortDir}
                             onSearchChange={setDirectorySearch}
                             onPageChange={setDirectoryPage}
+                            onAccessChange={setDirectoryAccess}
+                            onSortChange={setDirectorySort}
+                            onSortDirChange={setDirectorySortDir}
                             onSelect={onTeamSelect}
                         />
                     </>

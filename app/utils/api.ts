@@ -2862,7 +2862,8 @@ export async function fetchCapItAllLeaderboard(
 }
 
 export type TeamRole = 'owner' | 'admin' | 'member'
-export type TeamMemberStatus = 'invited' | 'applied' | 'active'
+export type TeamMemberStatus = 'invited' | 'applied' | 'active' | 'blocked'
+export type TeamSort = 'added' | 'members' | 'name'
 
 export interface TeamCore {
     id: string
@@ -2906,6 +2907,30 @@ export interface TeamDirectoryPage {
     teams: TeamCore[]
 }
 
+export type TeamActivityType = 'cap' | 'world_record' | 'playtime'
+
+export interface TeamActivityItem {
+    type: TeamActivityType
+    user: string
+    alias: string | null
+    title: ActiveTitle | null
+    map: string | null
+    cap_id: string | null
+    cap_time_seconds: number | null
+    time_played_seconds: number | null
+    medal: string | null
+    verified: boolean | null
+    added: string | null
+}
+
+export interface TeamActivityPage {
+    total: number
+    caps: number
+    world_records: number
+    playtime: number
+    items: TeamActivityItem[]
+}
+
 export interface CreateTeamInput {
     name: string
     tag?: string | null
@@ -2925,6 +2950,8 @@ export interface TeamDirectoryParams {
     offset?: number
     search?: string
     isOpen?: boolean
+    sort?: TeamSort
+    order?: 'asc' | 'desc'
 }
 
 export async function createTeam(accessToken: string, input: CreateTeamInput): Promise<TeamDetail> {
@@ -2937,11 +2964,47 @@ export async function fetchTeams(accessToken: string, params: TeamDirectoryParam
     if (params.offset !== undefined) usp.set('offset', String(params.offset))
     if (params.search) usp.set('search', params.search)
     if (params.isOpen !== undefined) usp.set('is_open', String(params.isOpen))
+    if (params.sort) usp.set('sort', params.sort)
+    if (params.order) usp.set('order', params.order)
     return apiGet<TeamDirectoryPage>(`/teams/?${usp.toString()}`, { token: accessToken })
 }
 
 export async function fetchTeam(accessToken: string, teamId: string): Promise<TeamDetail> {
     return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}`, { token: accessToken })
+}
+
+export async function fetchTeamActivity(
+    accessToken: string,
+    teamId: string,
+    params: { limit?: number } = {},
+): Promise<TeamActivityPage> {
+    const usp = new URLSearchParams()
+    if (params.limit !== undefined) usp.set('limit', String(params.limit))
+    return apiGet<TeamActivityPage>(`/teams/${encodeURIComponent(teamId)}/activity?${usp.toString()}`, { token: accessToken })
+}
+
+export type TeamAuditAction =
+    | 'create' | 'update' | 'invite' | 'apply' | 'withdraw' | 'decline' | 'join'
+    | 'approve' | 'deny' | 'block' | 'unblock' | 'kick' | 'promote' | 'demote' | 'transfer' | 'leave'
+
+export interface TeamAuditEntry {
+    id: string
+    action: TeamAuditAction | string
+    actor: string | null
+    actor_alias: string | null
+    target: string | null
+    target_alias: string | null
+    created_at: string | null
+}
+
+export async function fetchTeamAudit(
+    accessToken: string,
+    teamId: string,
+    params: { limit?: number } = {},
+): Promise<TeamAuditEntry[]> {
+    const usp = new URLSearchParams()
+    if (params.limit !== undefined) usp.set('limit', String(params.limit))
+    return apiGetList<TeamAuditEntry>(`/teams/${encodeURIComponent(teamId)}/audit?${usp.toString()}`, { token: accessToken })
 }
 
 export async function updateTeam(accessToken: string, teamId: string, input: UpdateTeamInput): Promise<TeamDetail> {
@@ -2972,6 +3035,14 @@ export async function acceptTeamInvite(accessToken: string, teamId: string): Pro
     return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}/accept`, { token: accessToken, method: 'POST' })
 }
 
+export async function withdrawApplication(accessToken: string, teamId: string): Promise<TeamDetail> {
+    return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}/withdraw`, { token: accessToken, method: 'POST' })
+}
+
+export async function declineTeamInvite(accessToken: string, teamId: string): Promise<TeamDetail> {
+    return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}/decline`, { token: accessToken, method: 'POST' })
+}
+
 export async function leaveTeam(accessToken: string, teamId: string): Promise<{ id: string; left: boolean }> {
     return apiGet(`/teams/${encodeURIComponent(teamId)}/leave`, { token: accessToken, method: 'POST' })
 }
@@ -2980,8 +3051,12 @@ export async function approveTeamMember(accessToken: string, teamId: string, use
     return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}/members/${encodeURIComponent(user)}/approve`, { token: accessToken, method: 'POST' })
 }
 
-export async function denyTeamMember(accessToken: string, teamId: string, user: string): Promise<TeamDetail> {
-    return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}/members/${encodeURIComponent(user)}/deny`, { token: accessToken, method: 'POST' })
+export async function denyTeamMember(accessToken: string, teamId: string, user: string, block = false): Promise<TeamDetail> {
+    return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}/members/${encodeURIComponent(user)}/deny`, { token: accessToken, method: 'POST', body: { block } })
+}
+
+export async function unblockTeamMember(accessToken: string, teamId: string, user: string): Promise<TeamDetail> {
+    return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}/members/${encodeURIComponent(user)}/unblock`, { token: accessToken, method: 'POST' })
 }
 
 export async function kickTeamMember(accessToken: string, teamId: string, user: string): Promise<TeamDetail> {

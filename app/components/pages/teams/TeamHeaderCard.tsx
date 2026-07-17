@@ -16,9 +16,9 @@ interface TeamHeaderCardProps {
     accessToken: string
     team: TeamDetail
     isOwner: boolean
-    isManager: boolean
     isOwnTeam: boolean
     canLeave: boolean
+    canTransfer: boolean
     rightExtra?: ReactNode
     userProfile?: UserProfile
     onTeamChange: (team: TeamDetail) => void
@@ -28,7 +28,7 @@ interface TeamHeaderCardProps {
 const TAG_POSITIONS: TeamTagPosition[] = ['prefix', 'suffix']
 
 export function TeamHeaderCard({
-    accessToken, team, isOwner, isManager, isOwnTeam, canLeave, rightExtra,
+    accessToken, team, isOwner, isOwnTeam, canLeave, canTransfer, rightExtra,
     userProfile, onTeamChange, onLeftOrDisbanded,
 }: TeamHeaderCardProps) {
     const [editing, setEditing] = useState(false)
@@ -64,7 +64,6 @@ export function TeamHeaderCard({
                     </div>
                     <p className="text-xs text-muted-foreground">
                         {team.member_count} {team.member_count === 1 ? 'member' : 'members'}
-                        {' · '}{team.lineups.length} {team.lineups.length === 1 ? 'lineup' : 'lineups'}
                         {team.added ? ` · Created ${formatAddedDate(team.added)}` : ''}
                         {isOwnTeam && meMember?.alias && (
                             <> · You appear as <span className="text-white font-medium">{meMember.alias}</span></>
@@ -74,12 +73,12 @@ export function TeamHeaderCard({
 
                 <div className="flex items-center gap-2 shrink-0">
                     {rightExtra}
-                    {isManager && (
+                    {isOwner && (
                         <Button size="sm" variant="secondary" onClick={() => setEditing(true)}>
                             <Pencil className="size-3.5" /> Edit
                         </Button>
                     )}
-                    {isOwner && (
+                    {isOwner && canTransfer && (
                         <Button size="sm" variant="secondary" onClick={() => setTransferring(true)}>
                             <ArrowRightLeft className="size-3.5" /> Transfer
                         </Button>
@@ -197,7 +196,7 @@ function EditTeamModal({ accessToken, team, onClose, onSaved }: {
                 </label>
                 <label className="flex flex-col gap-1.5">
                     <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Clan tag</span>
-                    <input value={tag} onChange={e => setTag(e.target.value)} maxLength={8} className={teamInputClass} />
+                    <input value={tag} onChange={e => setTag(e.target.value)} maxLength={9} className={teamInputClass} />
                     {tagError && <span className="text-[11px] text-red-400">{tagError}</span>}
                 </label>
                 <div className="flex flex-col gap-1.5">

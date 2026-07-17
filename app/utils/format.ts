@@ -21,6 +21,28 @@ export function formatAddedDate(added: string): string {
     return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: '2-digit' })
 }
 
+function parseServerDate(added: string): Date {
+    const iso = added.includes('T') ? added : added.replace(' ', 'T')
+    const withZone = /[zZ]|[+-]\d\d:?\d\d$/.test(iso) ? iso : `${iso}Z`
+    return new Date(withZone)
+}
+
+export function formatTimeAgo(added: string): string {
+    const then = parseServerDate(added)
+    if (isNaN(then.getTime())) return '—'
+    const secs = Math.floor((Date.now() - then.getTime()) / 1000)
+    if (secs < 45) return 'just now'
+    const mins = Math.floor(secs / 60)
+    if (mins < 60) return `${Math.max(1, mins)}m ago`
+    const hours = Math.floor(mins / 60)
+    if (hours < 24) return `${hours}h ago`
+    const days = Math.floor(hours / 24)
+    if (days < 7) return `${days}d ago`
+    if (days < 30) return `${Math.floor(days / 7)}w ago`
+    if (days < 365) return `${Math.floor(days / 30)}mo ago`
+    return `${Math.floor(days / 365)}y ago`
+}
+
 const NEW_MAP_WINDOW_DAYS = 30
 
 export function isNew(added: string): boolean {

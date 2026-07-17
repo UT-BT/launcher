@@ -1,46 +1,55 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Search, X, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Search, X, ChevronLeft, ChevronRight, ArrowUp, ArrowDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/app/components/ui/button'
-import { fetchTeams, type TeamCore, type TeamDetail } from '@/app/utils/api'
+import { fetchTeams, type TeamCore, type TeamDetail, type TeamSort } from '@/app/utils/api'
 import { ErrorBanner, memberTitle, teamInputClass, teamErrorMessage } from './teamsShared'
 import { TeamCard } from './TeamCard'
 import { seedOwnerIdentity, useOwnerIdentities } from './ownerAlias'
 
 const PAGE_SIZE = 9
 
+export type TeamAccessFilter = 'all' | 'open' | 'invite'
+
+const ACCESS_OPTIONS: { value: TeamAccessFilter; label: string }[] = [
+    { value: 'all', label: 'All' },
+    { value: 'open', label: 'Open' },
+    { value: 'invite', label: 'Invite Only' },
+]
+
+const SORT_OPTIONS: { value: TeamSort; label: string }[] = [
+    { value: 'added', label: 'Creation date' },
+    { value: 'members', label: 'Players' },
+]
+
 interface TeamGalleryProps {
     accessToken: string
     myTeam: TeamDetail | null
+    appliedTeamIds: string[]
     search: string
     page: number
+    access: TeamAccessFilter
+    sort: TeamSort
+    sortDir: 'asc' | 'desc'
     onSearchChange: (value: string) => void
     onPageChange: (page: number) => void
+    onAccessChange: (value: TeamAccessFilter) => void
+    onSortChange: (value: TeamSort) => void
+    onSortDirChange: (value: 'asc' | 'desc') => void
     onSelect: (teamId: string) => void
 }
 
-function toCore(team: TeamDetail): TeamCore {
-    return {
-        id: team.id,
-        name: team.name,
-        tag: team.tag,
-        tag_position: team.tag_position,
-        is_open: team.is_open,
-        owner: team.owner,
-        member_count: team.member_count,
-        added: team.added,
-    }
-}
-
-function matchesSearch(team: TeamCore, search: string): boolean {
-    if (!search) return true
-    const q = search.toLowerCase()
-    return team.name.toLowerCase().includes(q) || (team.tag?.toLowerCase().includes(q) ?? false)
+function accessToIsOpen(access: TeamAccessFilter): boolean | undefined {
+    if (access === 'open') return true
+    if (access === 'invite') return false
+    return undefined
 }
 
 export function TeamGallery({
-    accessToken, myTeam, search, page, onSearchChange, onPageChange, onSelect,
+    accessToken, myTeam, appliedTeamIds, search, page, access, sort, sortDir,
+    onSearchChange, onPageChange, onAccessChange, onSortChange, onSortDirChange, onSelect,
 }: TeamGalleryProps) {
+    const appliedSet = useMemo(() => new Set(appliedTeamIds), [appliedTeamIds])
     const [raw, setRaw] = useState(search)
     const [teams, setTeams] = useState<TeamCore[]>([])
     const [total, setTotal] = useState(0)
@@ -69,6 +78,9 @@ export function TeamGallery({
         setError(null)
         fetchTeams(accessToken, {
             search: search || undefined,
+            isOpen: accessToIsOpen(access),
+            sort,
+            order: sortDir,
             limit: PAGE_SIZE,
             offset: (page - 1) * PAGE_SIZE,
         })
@@ -80,13 +92,9 @@ export function TeamGallery({
             .catch(e => { if (!cancelled) setError(teamErrorMessage(e)) })
             .finally(() => { if (!cancelled) setLoading(false) })
         return () => { cancelled = true }
-    }, [accessToken, search, page])
+    }, [accessToken, search, page, access, sort, sortDir])
 
-    const displayTeams = useMemo(() => {
-        const pinnedOwn = page === 1 && myTeam && matchesSearch(toCore(myTeam), search) ? toCore(myTeam) : null
-        const listed = teams.filter(t => t.id !== myTeam?.id)
-        return pinnedOwn ? [pinnedOwn, ...listed] : listed
-    }, [page, myTeam, search, teams])
+    const displayTeams = teams
 
     const ownerIds = useMemo(() => displayTeams.map(t => t.owner), [displayTeams])
     const ownerIdentities = useOwnerIdentities(accessToken, ownerIds)
@@ -114,6 +122,49 @@ export function TeamGallery({
                 )}
             </div>
 
+            <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-1">
+                    {ACCESS_OPTIONS.map(opt => (
+                        <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => onAccessChange(opt.value)}
+                            className={cn(
+                                'px-3 py-1.5 rounded-md text-xs font-medium border transition-colors cursor-pointer',
+                                access === opt.value
+                                    ? 'bg-accent-500/20 border-accent-500/50 text-accent-300'
+                                    : 'bg-card/50 border-white/10 text-muted-foreground hover:text-white hover:border-white/20',
+                            )}
+                        >
+                            {opt.label}
+                        </button>
+                    ))}
+                </div>
+
+                <div className="flex items-center gap-2">
+                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Sort</span>
+                    <select
+                        value={sort}
+                        onChange={e => onSortChange(e.target.value as TeamSort)}
+                        style={{ colorScheme: 'dark' }}
+                        className={cn(teamInputClass, 'py-1.5 cursor-pointer')}
+                    >
+                        {SORT_OPTIONS.map(opt => (
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                    </select>
+                    <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => onSortDirChange(sortDir === 'asc' ? 'desc' : 'asc')}
+                        className="px-2"
+                        title={sortDir === 'asc' ? 'Ascending' : 'Descending'}
+                    >
+                        {sortDir === 'asc' ? <ArrowUp className="size-4" /> : <ArrowDown className="size-4" />}
+                    </Button>
+                </div>
+            </div>
+
             <ErrorBanner message={error} />
 
             {loading ? (
@@ -121,7 +172,7 @@ export function TeamGallery({
             ) : displayTeams.length === 0 ? (
                 <div className="py-16 text-center text-sm text-muted-foreground">No teams match your search.</div>
             ) : (
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                     {displayTeams.map(team => {
                         const owner = ownerIdentities[String(team.owner)]
                         return (
@@ -131,6 +182,7 @@ export function TeamGallery({
                                 ownerAlias={owner?.alias}
                                 ownerTitle={owner?.title}
                                 isOwnTeam={team.id === myTeam?.id}
+                                applied={appliedSet.has(team.id)}
                                 onSelect={onSelect}
                             />
                         )

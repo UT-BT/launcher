@@ -1,16 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavScrollRestore } from '@/app/components/navigation/useNavScrollRestore'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
-import { BackButton } from '@/app/components/shared/BackButton'
 import { Button } from '@/app/components/ui/button'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import {
-    applyToTeam, fetchMyTeam, fetchTeam,
+    acceptTeamInvite, applyToTeam, declineTeamInvite, fetchMyTeam, fetchTeam, withdrawApplication,
     type TeamDetail, type TeamRole, type UserProfile,
 } from '@/app/utils/api'
 import { TeamHeaderCard } from './TeamHeaderCard'
 import { MembersPanel } from './MembersPanel'
-import { LineupsPanel } from './LineupsPanel'
+import { TeamStatsRow } from './TeamStatsRow'
+import { TeamActivityPanel } from './TeamActivityPanel'
+import { TeamWorldRecordsPanel } from './TeamWorldRecordsPanel'
 import { ErrorBanner, teamErrorMessage } from './teamsShared'
 
 type ViewerRole = TeamRole | 'none'
@@ -18,11 +19,10 @@ type ViewerRole = TeamRole | 'none'
 interface TeamDetailsPageProps {
     teamId: string
     userProfile?: UserProfile
-    onBack: () => void
     onExitToGallery: () => void
 }
 
-export function TeamDetailsPage({ teamId, userProfile, onBack, onExitToGallery }: TeamDetailsPageProps) {
+export function TeamDetailsPage({ teamId, userProfile, onExitToGallery }: TeamDetailsPageProps) {
     const accessToken = userProfile?.accessToken
     const myUserId = userProfile?.id ?? undefined
 
@@ -32,6 +32,8 @@ export function TeamDetailsPage({ teamId, userProfile, onBack, onExitToGallery }
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [applying, setApplying] = useState(false)
+    const [withdrawing, setWithdrawing] = useState(false)
+    const [inviteBusy, setInviteBusy] = useState(false)
     const scrollRef = useRef<HTMLDivElement>(null)
 
     const load = useCallback(async (background = false) => {
@@ -64,12 +66,16 @@ export function TeamDetailsPage({ teamId, userProfile, onBack, onExitToGallery }
     const onScroll = useNavScrollRestore(scrollRef, !loading)
 
     const isOwnTeam = team != null && myTeamId != null && myTeamId === team.id
-    const meMember = isOwnTeam && team ? team.members.find(m => String(m.user) === String(myUserId)) : undefined
+    const myMembership = team ? team.members.find(m => String(m.user) === String(myUserId)) : undefined
+    const iApplied = myMembership?.status === 'applied'
+    const iInvited = myMembership?.status === 'invited'
+    const iBlocked = myMembership?.status === 'blocked'
+    const meMember = isOwnTeam ? myMembership : undefined
     const viewerRole: ViewerRole = isOwnTeam ? (meMember?.role ?? 'member') : 'none'
     const isOwner = viewerRole === 'owner'
     const isManager = viewerRole === 'owner' || viewerRole === 'admin'
-    const soleActiveMember = team ? team.members.filter(m => m.status === 'active').length <= 1 : false
-    const canLeave = isOwnTeam && !(isOwner && soleActiveMember)
+    const canLeave = isOwnTeam && !isOwner
+    const hasOtherActiveMembers = team ? team.members.some(m => m.status === 'active' && String(m.user) !== String(myUserId)) : false
 
     const apply = async () => {
         if (!accessToken || !team) return
@@ -84,26 +90,95 @@ export function TeamDetailsPage({ teamId, userProfile, onBack, onExitToGallery }
         }
     }
 
-    const applyControl = team && !isOwnTeam && team.is_open
-        ? hasTeam
-            ? (
+    const withdraw = async () => {
+        if (!accessToken || !team) return
+        setWithdrawing(true)
+        setError(null)
+        try {
+            await withdrawApplication(accessToken, team.id)
+            onExitToGallery()
+        } catch (e) {
+            setError(teamErrorMessage(e))
+            setWithdrawing(false)
+        }
+    }
+
+    const accept = async () => {
+        if (!accessToken || !team) return
+        setInviteBusy(true)
+        setError(null)
+        try {
+            await acceptTeamInvite(accessToken, team.id)
+            onExitToGallery()
+        } catch (e) {
+            setError(teamErrorMessage(e))
+            setInviteBusy(false)
+        }
+    }
+
+    const decline = async () => {
+        if (!accessToken || !team) return
+        setInviteBusy(true)
+        setError(null)
+        try {
+            await declineTeamInvite(accessToken, team.id)
+            onExitToGallery()
+        } catch (e) {
+            setError(teamErrorMessage(e))
+            setInviteBusy(false)
+        }
+    }
+
+    const applyControl = (() => {
+        if (!team || isOwnTeam) return undefined
+
+        if (iApplied) {
+            return (
+                <Button size="sm" variant="destructive" disabled={withdrawing} onClick={withdraw}>
+                    {withdrawing ? 'Withdrawing…' : 'Withdraw application'}
+                </Button>
+            )
+        }
+
+        if (iInvited) {
+            const acceptBtn = (
+                <Button size="sm" disabled={inviteBusy || hasTeam} onClick={accept}>
+                    {inviteBusy ? 'Working…' : 'Accept'}
+                </Button>
+            )
+            return (
+                <div className="flex items-center gap-2">
+                    {hasTeam
+                        ? <Tooltip content="Leave your current team to accept">{acceptBtn}</Tooltip>
+                        : acceptBtn}
+                    <Button size="sm" variant="secondary" disabled={inviteBusy} onClick={decline}>Decline</Button>
+                </div>
+            )
+        }
+
+        if (iBlocked) {
+            return <span className="text-xs text-red-300/80">Blocked from applying</span>
+        }
+
+        if (!team.is_open) return undefined
+
+        if (hasTeam) {
+            return (
                 <Tooltip content="Leave your current team to apply">
                     <Button size="sm" disabled>Apply</Button>
                 </Tooltip>
             )
-            : (
-                <Button size="sm" disabled={applying} onClick={apply}>
-                    {applying ? 'Applying…' : 'Apply'}
-                </Button>
-            )
-        : undefined
+        }
+
+        return (
+            <Button size="sm" disabled={applying} onClick={apply}>
+                {applying ? 'Applying…' : 'Apply'}
+            </Button>
+        )
+    })()
 
     return (
         <div className="space-y-4 h-full flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-0 duration-500">
-            <div className="shrink-0">
-                <BackButton onClick={onBack} />
-            </div>
-
             {error && <div className="shrink-0"><ErrorBanner message={error} /></div>}
 
             <div
@@ -121,28 +196,40 @@ export function TeamDetailsPage({ teamId, userProfile, onBack, onExitToGallery }
                             accessToken={accessToken!}
                             team={team}
                             isOwner={isOwner}
-                            isManager={isManager}
                             isOwnTeam={isOwnTeam}
                             canLeave={canLeave}
+                            canTransfer={isOwner && hasOtherActiveMembers}
                             rightExtra={applyControl}
                             userProfile={userProfile}
                             onTeamChange={setTeam}
                             onLeftOrDisbanded={onExitToGallery}
                         />
-                        <div className="grid gap-4 lg:grid-cols-2 items-start">
-                            <MembersPanel
-                                accessToken={accessToken!}
-                                team={team}
-                                isOwner={isOwner}
-                                isManager={isManager}
-                                onTeamChange={setTeam}
-                            />
-                            <LineupsPanel
-                                accessToken={accessToken!}
-                                team={team}
-                                canManage={isManager}
-                                onTeamChange={setTeam}
-                            />
+                        <TeamStatsRow accessToken={accessToken!} team={team} />
+
+                        <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 items-start">
+                            <div className="xl:col-span-4">
+                                <MembersPanel
+                                    accessToken={accessToken!}
+                                    team={team}
+                                    isOwner={isOwner}
+                                    isManager={isManager}
+                                    onTeamChange={setTeam}
+                                />
+                            </div>
+                            <div className="xl:col-span-8 space-y-4">
+                                <TeamActivityPanel
+                                    accessToken={accessToken!}
+                                    teamId={team.id}
+                                    hasMembers={team.members.some(m => m.status === 'active')}
+                                    selfUserId={myUserId}
+                                />
+                                <TeamWorldRecordsPanel
+                                    accessToken={accessToken!}
+                                    teamId={team.id}
+                                    memberIds={team.members.filter(m => m.status === 'active').map(m => m.user)}
+                                    selfUserId={myUserId}
+                                />
+                            </div>
                         </div>
                     </div>
                 )}

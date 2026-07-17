@@ -582,7 +582,6 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
           key={entry.id}
           teamId={entry.params.teamId!}
           userProfile={userProfile}
-          onBack={back}
           onExitToGallery={exitTeamsToGallery}
         />
       case 'admin':

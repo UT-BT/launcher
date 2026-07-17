@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/app/components/ui/button'
-import { createTeam, type TeamDetail, type TeamTagPosition, type UserProfile } from '@/app/utils/api'
+import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
+import { createTeam, toActiveTitle, type TeamDetail, type TeamTagPosition, type UserProfile } from '@/app/utils/api'
 import { formatTaggedAlias, tagValidationError } from './tagFormat'
 import { AccessToggle, ErrorBanner, teamInputClass, teamErrorMessage } from './teamsShared'
 
@@ -63,7 +64,7 @@ export function CreateTeamForm({ accessToken, userProfile, onCreated, onCancel }
                     <input
                         value={tag}
                         onChange={e => setTag(e.target.value)}
-                        maxLength={8}
+                        maxLength={9}
                         placeholder="e.g. BB"
                         className={teamInputClass}
                     />
@@ -100,8 +101,13 @@ export function CreateTeamForm({ accessToken, userProfile, onCreated, onCancel }
 
             <div className="flex flex-col gap-1.5">
                 <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Preview</span>
-                <div className="px-3 py-2 bg-white/5 border border-white/5 rounded-lg text-sm text-white font-medium">
-                    {preview}
+                <div className="px-3 py-2.5 bg-white/5 border border-white/5 rounded-lg">
+                    <PlayerInfo
+                        userId={userProfile?.id ?? undefined}
+                        alias={preview}
+                        title={toActiveTitle(userProfile?.active_title)}
+                        interactive={false}
+                    />
                 </div>
             </div>
 

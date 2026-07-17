@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Button } from '@/app/components/ui/button'
 import { Tooltip } from '@/app/components/ui/tooltip'
-import { acceptTeamInvite, type TeamCore, type TeamDetail } from '@/app/utils/api'
+import { acceptTeamInvite, declineTeamInvite, type TeamCore, type TeamDetail } from '@/app/utils/api'
 import { ErrorBanner, SectionCard, TagChip, teamErrorMessage } from './teamsShared'
 
 interface InvitationsSectionProps {
@@ -9,26 +9,39 @@ interface InvitationsSectionProps {
     invitations: TeamCore[]
     hasActiveTeam: boolean
     onAccepted: (team: TeamDetail) => void
+    onDeclined: (teamId: string) => void
     onSelect: (teamId: string) => void
 }
 
 export function InvitationsSection({
-    accessToken, invitations, hasActiveTeam, onAccepted, onSelect,
+    accessToken, invitations, hasActiveTeam, onAccepted, onDeclined, onSelect,
 }: InvitationsSectionProps) {
-    const [acceptingId, setAcceptingId] = useState<string | null>(null)
+    const [busyId, setBusyId] = useState<string | null>(null)
     const [error, setError] = useState<string | null>(null)
 
     if (invitations.length === 0) return null
 
     const accept = async (team: TeamCore) => {
-        setAcceptingId(team.id)
+        setBusyId(team.id)
         setError(null)
         try {
             onAccepted(await acceptTeamInvite(accessToken, team.id))
         } catch (e) {
             setError(teamErrorMessage(e))
+            setBusyId(null)
+        }
+    }
+
+    const decline = async (team: TeamCore) => {
+        setBusyId(team.id)
+        setError(null)
+        try {
+            await declineTeamInvite(accessToken, team.id)
+            onDeclined(team.id)
+        } catch (e) {
+            setError(teamErrorMessage(e))
         } finally {
-            setAcceptingId(null)
+            setBusyId(null)
         }
     }
 
@@ -40,14 +53,15 @@ export function InvitationsSection({
             <ErrorBanner message={error} />
             <div className="space-y-2">
                 {invitations.map(team => {
+                    const busy = busyId === team.id
                     const acceptButton = (
                         <Button
                             size="sm"
-                            disabled={hasActiveTeam || acceptingId === team.id}
+                            disabled={hasActiveTeam || busy}
                             onClick={() => accept(team)}
                             className="shrink-0"
                         >
-                            {acceptingId === team.id ? 'Accepting…' : 'Accept'}
+                            {busy ? 'Working…' : 'Accept'}
                         </Button>
                     )
                     return (
@@ -70,6 +84,9 @@ export function InvitationsSection({
                                     {acceptButton}
                                 </Tooltip>
                             ) : acceptButton}
+                            <Button size="sm" variant="secondary" disabled={busy} onClick={() => decline(team)} className="shrink-0">
+                                Decline
+                            </Button>
                         </div>
                     )
                 })}
