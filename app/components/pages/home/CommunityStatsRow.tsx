@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { Users, Map as MapIcon, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { fetchMapsCount, fetchPlayersCount } from '@/app/utils/api'
@@ -7,6 +7,9 @@ interface CommunityStatsRowProps {
     accessToken?: string
     playersOnline: number | null
     newMaps: number
+    totalMaps: number | null
+    totalPlayers: number | null
+    onCountsLoaded: (counts: { mapsCount: number | null; playersCount: number | null }) => void
     className?: string
     refreshKey?: number
     onViewPlayers?: () => void
@@ -64,19 +67,23 @@ function StatTile({ icon: Icon, label, primaryValue, onPrimary, secondaryValue, 
 }
 
 export function CommunityStatsRow({
-    accessToken, playersOnline, newMaps, className, refreshKey,
+    accessToken, playersOnline, newMaps, totalMaps, totalPlayers, onCountsLoaded,
+    className, refreshKey,
     onViewPlayers, onViewServers, onViewMaps, onViewNewMaps,
 }: CommunityStatsRowProps) {
-    const [totalMaps, setTotalMaps] = useState<number | null>(null)
-    const [totalPlayers, setTotalPlayers] = useState<number | null>(null)
+    const hasCounts = totalMaps !== null && totalPlayers !== null
 
     useEffect(() => {
-        if (!accessToken) return
+        if (!accessToken || hasCounts) return
         let cancelled = false
-        fetchMapsCount(accessToken, {}).then(n => { if (!cancelled) setTotalMaps(n) }).catch(() => {})
-        fetchPlayersCount(accessToken).then(n => { if (!cancelled) setTotalPlayers(n) }).catch(() => {})
+        Promise.all([
+            fetchMapsCount(accessToken, {}).catch(() => null),
+            fetchPlayersCount(accessToken).catch(() => null),
+        ]).then(([mapsCount, playersCount]) => {
+            if (!cancelled) onCountsLoaded({ mapsCount, playersCount })
+        })
         return () => { cancelled = true }
-    }, [accessToken, refreshKey])
+    }, [accessToken, hasCounts, refreshKey, onCountsLoaded])
 
     return (
         <div className={cn('flex gap-4', className)}>

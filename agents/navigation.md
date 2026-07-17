@@ -76,7 +76,7 @@ parallel back stack. Sidebar clicks, `openMap`, and the `open-*` events all call
 
 | Kind | Views | Keyed? | Why |
 |---|---|---|---|
-| **Page-views** | `home`, `servers`, `maps`, `players`, `teams`, `cap-it-all`, `world-records`, `achievements`, `news`, `admin` | **No** — one reused instance | State is hoisted per-entry via `usePageState` (or, for the lightweight `news` list, self-fetched with `useNavState` for its filter); the component stays mounted and reads the active entry. |
+| **Page-views** | `home`, `servers`, `maps`, `players`, `teams`, `cap-it-all`, `world-records`, `achievements`, `news`, `admin` | **No** — one reused instance per view | Not-keyed means no remount between *entries of the same view*. It does **not** mean the component survives a view change: `renderView()` returns exactly one element, so `home` -> `maps` unmounts `Home`. State and data survive because they are hoisted to `Main` — per-entry via `usePageState`, data via a `caches` singleton — and read back on remount, **not** because the component stays mounted. A page-view that keeps data in its own `useState` refetches it on every visit. |
 | **Detail-pages** | `maps-detail`, `player-detail`, `cap-detail`, `news-detail`, `team-detail` | **Yes — `key={entry.id}`** | A new visit must remount so it refetches for the new param and `useNavState` re-reads the right entry's bag. |
 
 Detail cases pull their identifier from `entry.params` (`mapName!` / `playerId!` /

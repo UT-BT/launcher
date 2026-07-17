@@ -44,12 +44,36 @@ full loop).
 | Demos | `fetchDemoStatus`, `getFirstPersonVideoUrl`, `downloadDemo` |
 | Cap detail | `fetchCapDetail`, `fetchCapCheckpoints` |
 | Achievements | `fetchMyAchievements`, `fetchAchievementDefinitions` |
-| Home / summary | `fetchSummary` (homepage feed), `fetchHotMaps` (→ `GET /v2/summary/hot_maps` → `HotMap[]`), `fetchPendingReviews` |
+| Home / summary | `fetchSummary` (homepage feed), `fetchHotMaps` (→ `GET /v2/summary/hot_maps` → `HotMap[]`), `fetchMedalHunt` (→ `GET /v2/summary/medal_hunt` → `MedalHuntOpportunity[]`), `fetchPendingReviews` |
 | Profile | `UserProfile` type (incl. `team` clan-tag summary), `getAvatarUrl(userId)`, `toActiveTitle` |
 | Teams | `createTeam`, `fetchTeams`, `fetchTeam`, `updateTeam`, `disbandTeam`, `transferTeamOwnership`, `fetchTeamMembers`, `inviteToTeam`, `applyToTeam`, `withdrawApplication`, `acceptTeamInvite`, `declineTeamInvite`, `leaveTeam`, `approveTeamMember`, `denyTeamMember` (optional `block`), `unblockTeamMember`, `kickTeamMember`, `setTeamMemberRole`, `fetchTeamActivity`, `fetchTeamAudit`, `fetchLineups`, `createLineup`, `updateLineup`, `deleteLineup`, `fetchMyTeam`, `fetchMyInvitations`, `fetchMyApplications` (clans + lineups; mutations return the fresh `TeamDetail`; errors surface `reason`) |
 | Admin (staff-only) | the moderator/admin dashboard slice — see [Admin API](#admin-api) |
 
 Most fetchers take `accessToken` first (Discord OAuth bearer).
+
+### Medal Hunt (`fetchMedalHunt`)
+
+`GET /v2/summary/medal_hunt` takes no params — the caller is identified by the bearer
+token. It answers "which medals can I still win", returning the opportunity list
+**pre-joined and pre-filtered**: certified best caps on active maps that still have an
+unreached medal threshold. The response is `{ opportunities: [...] }`, an object rather
+than a bare array, so the zero-opportunity case (a brand-new player) still carries the
+key; `fetchMedalHunt` returns `[]` for any non-array payload so a malformed response
+degrades to the card's empty state instead of throwing.
+
+Each row is `{ mapName, difficulty, currentTime, targetTime, targetMedal, improvement,
+improvementPct, worldRecordAdded }`. The rows are **unsorted** — the card owns all
+filtering, sorting and paging, and they stay instant and client-side.
+`worldRecordAdded` is a date string with **no UTC offset**, so `new Date()` parses it as
+local time; `medalHunt.ts::parseDateTime` turns it into the `worldRecordAddedTime` epoch
+the "recently lost" sort uses, falling back to `0` when the date is absent or
+unparseable. It is always `null` for team maps. `difficulty` is `""` rather than `null`
+when a map has none.
+
+The medal ladder itself (which medal is targeted, the improvement epsilon) is decided
+server-side; the launcher does not reimplement it. `app/utils/medalHunt.fixture.json`
+pins the exact contract — the same fixture is asserted against the API's own
+implementation, so a divergence fails a test rather than silently reordering the card.
 
 The player-detail caps list (`fetchCapsForUser`, `UserCapRow`) accepts
 `capFilter: 'disallowed'` to return only that player's disallowed caps — each row

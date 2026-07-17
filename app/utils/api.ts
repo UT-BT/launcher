@@ -106,6 +106,17 @@ export interface BestCap {
     verified: boolean
 }
 
+export interface MedalHuntOpportunity {
+    mapName: string
+    difficulty: number
+    currentTime: number
+    targetTime: number
+    targetMedal: 'Bronze Medal' | 'Silver Medal' | 'Gold Medal' | 'Champion Medal' | 'World Record'
+    improvement: number
+    improvementPct: number
+    worldRecordAdded: string | null
+}
+
 export interface MapListParams {
     limit?: number
     offset?: number
@@ -1386,6 +1397,11 @@ export async function fetchMapsMetadata(accessToken: string): Promise<MapMetadat
         active: true,
     })
     return rows as unknown as MapMetadata[]
+}
+
+export async function fetchMedalHunt(accessToken: string, signal?: AbortSignal): Promise<MedalHuntOpportunity[]> {
+    const data = await apiGet<{ opportunities?: unknown }>('/v2/summary/medal_hunt', { token: accessToken, signal })
+    return Array.isArray(data?.opportunities) ? (data.opportunities as MedalHuntOpportunity[]) : []
 }
 
 export async function fetchBestCaps(accessToken: string, userId: string | number): Promise<BestCap[]> {
