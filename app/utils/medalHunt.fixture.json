@@ -1,0 +1,499 @@
+{
+  "version": 1,
+  "description": "Golden fixture for the medal-hunt rule port. Recorded against the pre-endpoint client implementation. Thresholds and difficulty use the semantic token \"absent\" rather than a wire literal: the API emits \"\" for an absent float/int (base.py:39 casts through the dataclass field type, float(None)/int(None) raise TypeError, caught at base.py:45-46), while the Python port sees None. Each suite maps \"absent\" to its own native representation.",
+  "cases": [
+    {
+      "name": "certified cap above bronze targets Bronze",
+      "caps": [{ "map": "CTF-Simple", "cap_time_seconds": 100.0, "cap_type": 2, "verified": true }],
+      "maps": [
+        {
+          "name": "CTF-Simple",
+          "difficulty": 3,
+          "required_players": 1,
+          "bronze_medal": 80.0,
+          "silver_medal": 65.0,
+          "gold_medal": 56.25,
+          "champion_medal": 51.25,
+          "world_record": 50.0
+        }
+      ],
+      "worldRecordDates": { "CTF-Simple": "2026-01-02 03:04:05.123456" },
+      "expected": [
+        {
+          "mapName": "CTF-Simple",
+          "difficulty": 3,
+          "currentTime": 100.0,
+          "targetTime": 80.0,
+          "targetMedal": "Bronze Medal",
+          "improvement": 20.0,
+          "improvementPct": 0.2,
+          "worldRecordAdded": "2026-01-02 03:04:05.123456"
+        }
+      ]
+    },
+    {
+      "name": "cap_type 1 (uncertified) is dropped",
+      "caps": [{ "map": "CTF-Simple", "cap_time_seconds": 100.0, "cap_type": 1, "verified": true }],
+      "maps": [
+        {
+          "name": "CTF-Simple",
+          "difficulty": 3,
+          "required_players": 1,
+          "bronze_medal": 80.0,
+          "silver_medal": 65.0,
+          "gold_medal": 56.25,
+          "champion_medal": 51.25,
+          "world_record": 50.0
+        }
+      ],
+      "worldRecordDates": {},
+      "expected": []
+    },
+    {
+      "name": "cap_type 3 (i4Games) is dropped",
+      "caps": [{ "map": "CTF-Simple", "cap_time_seconds": 100.0, "cap_type": 3, "verified": true }],
+      "maps": [
+        {
+          "name": "CTF-Simple",
+          "difficulty": 3,
+          "required_players": 1,
+          "bronze_medal": 80.0,
+          "silver_medal": 65.0,
+          "gold_medal": 56.25,
+          "champion_medal": 51.25,
+          "world_record": 50.0
+        }
+      ],
+      "worldRecordDates": {},
+      "expected": []
+    },
+    {
+      "name": "cap_time exactly 0 is dropped",
+      "caps": [{ "map": "CTF-Simple", "cap_time_seconds": 0, "cap_type": 2, "verified": true }],
+      "maps": [
+        {
+          "name": "CTF-Simple",
+          "difficulty": 3,
+          "required_players": 1,
+          "bronze_medal": 80.0,
+          "silver_medal": 65.0,
+          "gold_medal": 56.25,
+          "champion_medal": 51.25,
+          "world_record": 50.0
+        }
+      ],
+      "worldRecordDates": {},
+      "expected": []
+    },
+    {
+      "name": "negative cap_time is dropped",
+      "caps": [{ "map": "CTF-Simple", "cap_time_seconds": -5.0, "cap_type": 2, "verified": true }],
+      "maps": [
+        {
+          "name": "CTF-Simple",
+          "difficulty": 3,
+          "required_players": 1,
+          "bronze_medal": 80.0,
+          "silver_medal": 65.0,
+          "gold_medal": 56.25,
+          "champion_medal": 51.25,
+          "world_record": 50.0
+        }
+      ],
+      "worldRecordDates": {},
+      "expected": []
+    },
+    {
+      "name": "absent bronze is skipped and Silver becomes the target",
+      "caps": [{ "map": "CTF-Simple", "cap_time_seconds": 100.0, "cap_type": 2, "verified": true }],
+      "maps": [
+        {
+          "name": "CTF-Simple",
+          "difficulty": 3,
+          "required_players": 1,
+          "bronze_medal": "absent",
+          "silver_medal": 65.0,
+          "gold_medal": 56.25,
+          "champion_medal": 51.25,
+          "world_record": 50.0
+        }
+      ],
+      "worldRecordDates": {},
+      "expected": [
+        {
+          "mapName": "CTF-Simple",
+          "difficulty": 3,
+          "currentTime": 100.0,
+          "targetTime": 65.0,
+          "targetMedal": "Silver Medal",
+          "improvement": 35.0,
+          "improvementPct": 0.35,
+          "worldRecordAdded": null
+        }
+      ]
+    },
+    {
+      "name": "bronze of exactly 0 is SKIPPED, not treated as an unbeatable threshold",
+      "caps": [{ "map": "CTF-Simple", "cap_time_seconds": 100.0, "cap_type": 2, "verified": true }],
+      "maps": [
+        {
+          "name": "CTF-Simple",
+          "difficulty": 3,
+          "required_players": 1,
+          "bronze_medal": 0,
+          "silver_medal": 65.0,
+          "gold_medal": 56.25,
+          "champion_medal": 51.25,
+          "world_record": 50.0
+        }
+      ],
+      "worldRecordDates": {},
+      "expected": [
+        {
+          "mapName": "CTF-Simple",
+          "difficulty": 3,
+          "currentTime": 100.0,
+          "targetTime": 65.0,
+          "targetMedal": "Silver Medal",
+          "improvement": 35.0,
+          "improvementPct": 0.35,
+          "worldRecordAdded": null
+        }
+      ]
+    },
+    {
+      "name": "all thresholds absent drops the map (no medal view row)",
+      "caps": [{ "map": "CTF-Simple", "cap_time_seconds": 100.0, "cap_type": 2, "verified": true }],
+      "maps": [
+        {
+          "name": "CTF-Simple",
+          "difficulty": 3,
+          "required_players": 1,
+          "bronze_medal": "absent",
+          "silver_medal": "absent",
+          "gold_medal": "absent",
+          "champion_medal": "absent",
+          "world_record": "absent"
+        }
+      ],
+      "worldRecordDates": {},
+      "expected": []
+    },
+    {
+      "name": "cap between silver and bronze targets Silver (easiest unearned; the ladder is not a min/max)",
+      "caps": [{ "map": "CTF-Simple", "cap_time_seconds": 70.0, "cap_type": 2, "verified": true }],
+      "maps": [
+        {
+          "name": "CTF-Simple",
+          "difficulty": 3,
+          "required_players": 1,
+          "bronze_medal": 80.0,
+          "silver_medal": 65.0,
+          "gold_medal": 56.25,
+          "champion_medal": 51.25,
+          "world_record": 50.0
+        }
+      ],
+      "worldRecordDates": {},
+      "expected": [
+        {
+          "mapName": "CTF-Simple",
+          "difficulty": 3,
+          "currentTime": 70.0,
+          "targetTime": 65.0,
+          "targetMedal": "Silver Medal",
+          "improvement": 5.0,
+          "improvementPct": 0.07142857142857142,
+          "worldRecordAdded": null
+        }
+      ]
+    },
+    {
+      "name": "improvement of exactly the epsilon is dropped (the comparison is strictly greater). Only reachable at small magnitudes: 0.0015 - 0.001 is exactly the 0.0005 double (Sterbenz), whereas 50.0005 - 50 is not.",
+      "caps": [{ "map": "CTF-Simple", "cap_time_seconds": 0.0015, "cap_type": 2, "verified": true }],
+      "maps": [
+        {
+          "name": "CTF-Simple",
+          "difficulty": 3,
+          "required_players": 1,
+          "bronze_medal": "absent",
+          "silver_medal": "absent",
+          "gold_medal": "absent",
+          "champion_medal": "absent",
+          "world_record": 0.001
+        }
+      ],
+      "worldRecordDates": {},
+      "expected": []
+    },
+    {
+      "name": "a cap 0.5ms above the world record is KEPT: 50.0005 - 50 is 0.0005000000000023874 in binary64, which is greater than the epsilon",
+      "caps": [{ "map": "CTF-Simple", "cap_time_seconds": 50.0005, "cap_type": 2, "verified": true }],
+      "maps": [
+        {
+          "name": "CTF-Simple",
+          "difficulty": 3,
+          "required_players": 1,
+          "bronze_medal": "absent",
+          "silver_medal": "absent",
+          "gold_medal": "absent",
+          "champion_medal": "absent",
+          "world_record": 50.0
+        }
+      ],
+      "worldRecordDates": {},
+      "expected": [
+        {
+          "mapName": "CTF-Simple",
+          "difficulty": 3,
+          "currentTime": 50.0005,
+          "targetTime": 50.0,
+          "targetMedal": "World Record",
+          "improvement": 0.0005000000000023874,
+          "improvementPct": 0.000009999900001047738,
+          "worldRecordAdded": null
+        }
+      ]
+    },
+    {
+      "name": "improvement just above the epsilon is kept",
+      "caps": [{ "map": "CTF-Simple", "cap_time_seconds": 50.000500000001, "cap_type": 2, "verified": true }],
+      "maps": [
+        {
+          "name": "CTF-Simple",
+          "difficulty": 3,
+          "required_players": 1,
+          "bronze_medal": "absent",
+          "silver_medal": "absent",
+          "gold_medal": "absent",
+          "champion_medal": "absent",
+          "world_record": 50.0
+        }
+      ],
+      "worldRecordDates": {},
+      "expected": [
+        {
+          "mapName": "CTF-Simple",
+          "difficulty": 3,
+          "currentTime": 50.000500000001,
+          "targetTime": 50.0,
+          "targetMedal": "World Record",
+          "improvement": 0.0005000000009971473,
+          "improvementPct": 0.000009999900020942536,
+          "worldRecordAdded": null
+        }
+      ]
+    },
+    {
+      "name": "a cap on a map absent from the active list is dropped",
+      "caps": [
+        { "map": "CTF-Retired", "cap_time_seconds": 100.0, "cap_type": 2, "verified": true },
+        { "map": "CTF-Simple", "cap_time_seconds": 100.0, "cap_type": 2, "verified": true }
+      ],
+      "maps": [
+        {
+          "name": "CTF-Simple",
+          "difficulty": 3,
+          "required_players": 1,
+          "bronze_medal": 80.0,
+          "silver_medal": 65.0,
+          "gold_medal": 56.25,
+          "champion_medal": 51.25,
+          "world_record": 50.0
+        }
+      ],
+      "worldRecordDates": {},
+      "expected": [
+        {
+          "mapName": "CTF-Simple",
+          "difficulty": 3,
+          "currentTime": 100.0,
+          "targetTime": 80.0,
+          "targetMedal": "Bronze Medal",
+          "improvement": 20.0,
+          "improvementPct": 0.2,
+          "worldRecordAdded": null
+        }
+      ]
+    },
+    {
+      "name": "team map: unrounded thresholds, cap_type forced to certified, world-record date always null",
+      "caps": [{ "map": "CTF-TeamRun", "cap_time_seconds": 100.0, "cap_type": 2, "verified": true }],
+      "maps": [
+        {
+          "name": "CTF-TeamRun",
+          "difficulty": 5,
+          "required_players": 4,
+          "bronze_medal": 80.00000000000001,
+          "silver_medal": 65.0,
+          "gold_medal": 56.25,
+          "champion_medal": 51.25,
+          "world_record": 50.0
+        }
+      ],
+      "worldRecordDates": {},
+      "expected": [
+        {
+          "mapName": "CTF-TeamRun",
+          "difficulty": 5,
+          "currentTime": 100.0,
+          "targetTime": 80.00000000000001,
+          "targetMedal": "Bronze Medal",
+          "improvement": 19.999999999999986,
+          "improvementPct": 0.19999999999999984,
+          "worldRecordAdded": null
+        }
+      ]
+    },
+    {
+      "name": "absent world-record date yields epoch 0",
+      "caps": [{ "map": "CTF-Simple", "cap_time_seconds": 100.0, "cap_type": 2, "verified": true }],
+      "maps": [
+        {
+          "name": "CTF-Simple",
+          "difficulty": 3,
+          "required_players": 1,
+          "bronze_medal": 80.0,
+          "silver_medal": 65.0,
+          "gold_medal": 56.25,
+          "champion_medal": 51.25,
+          "world_record": 50.0
+        }
+      ],
+      "worldRecordDates": { "CTF-Simple": null },
+      "expected": [
+        {
+          "mapName": "CTF-Simple",
+          "difficulty": 3,
+          "currentTime": 100.0,
+          "targetTime": 80.0,
+          "targetMedal": "Bronze Medal",
+          "improvement": 20.0,
+          "improvementPct": 0.2,
+          "worldRecordAdded": null
+        }
+      ]
+    },
+    {
+      "name": "unparseable world-record date yields epoch 0",
+      "caps": [{ "map": "CTF-Simple", "cap_time_seconds": 100.0, "cap_type": 2, "verified": true }],
+      "maps": [
+        {
+          "name": "CTF-Simple",
+          "difficulty": 3,
+          "required_players": 1,
+          "bronze_medal": 80.0,
+          "silver_medal": 65.0,
+          "gold_medal": 56.25,
+          "champion_medal": 51.25,
+          "world_record": 50.0
+        }
+      ],
+      "worldRecordDates": { "CTF-Simple": "not-a-date" },
+      "expected": [
+        {
+          "mapName": "CTF-Simple",
+          "difficulty": 3,
+          "currentTime": 100.0,
+          "targetTime": 80.0,
+          "targetMedal": "Bronze Medal",
+          "improvement": 20.0,
+          "improvementPct": 0.2,
+          "worldRecordAdded": "not-a-date"
+        }
+      ]
+    },
+    {
+      "name": "null difficulty arrives as the empty-string TypeError fallback",
+      "caps": [{ "map": "CTF-Simple", "cap_time_seconds": 100.0, "cap_type": 2, "verified": true }],
+      "maps": [
+        {
+          "name": "CTF-Simple",
+          "difficulty": "absent",
+          "required_players": 1,
+          "bronze_medal": 80.0,
+          "silver_medal": 65.0,
+          "gold_medal": 56.25,
+          "champion_medal": 51.25,
+          "world_record": 50.0
+        }
+      ],
+      "worldRecordDates": {},
+      "expected": [
+        {
+          "mapName": "CTF-Simple",
+          "difficulty": "absent",
+          "currentTime": 100.0,
+          "targetTime": 80.0,
+          "targetMedal": "Bronze Medal",
+          "improvement": 20.0,
+          "improvementPct": 0.2,
+          "worldRecordAdded": null
+        }
+      ]
+    },
+    {
+      "name": "multiple maps: every opportunity is returned, order is not part of the contract",
+      "caps": [
+        { "map": "CTF-Alpha", "cap_time_seconds": 100.0, "cap_type": 2, "verified": true },
+        { "map": "CTF-Beta", "cap_time_seconds": 70.0, "cap_type": 2, "verified": true },
+        { "map": "CTF-Gamma", "cap_time_seconds": 49.0, "cap_type": 2, "verified": true }
+      ],
+      "maps": [
+        {
+          "name": "CTF-Alpha",
+          "difficulty": 1,
+          "required_players": 1,
+          "bronze_medal": 80.0,
+          "silver_medal": 65.0,
+          "gold_medal": 56.25,
+          "champion_medal": 51.25,
+          "world_record": 50.0
+        },
+        {
+          "name": "CTF-Beta",
+          "difficulty": 2,
+          "required_players": 1,
+          "bronze_medal": 80.0,
+          "silver_medal": 65.0,
+          "gold_medal": 56.25,
+          "champion_medal": 51.25,
+          "world_record": 50.0
+        },
+        {
+          "name": "CTF-Gamma",
+          "difficulty": 3,
+          "required_players": 1,
+          "bronze_medal": 80.0,
+          "silver_medal": 65.0,
+          "gold_medal": 56.25,
+          "champion_medal": 51.25,
+          "world_record": 50.0
+        }
+      ],
+      "worldRecordDates": { "CTF-Alpha": "2026-01-02 03:04:05.123456", "CTF-Beta": null },
+      "expected": [
+        {
+          "mapName": "CTF-Alpha",
+          "difficulty": 1,
+          "currentTime": 100.0,
+          "targetTime": 80.0,
+          "targetMedal": "Bronze Medal",
+          "improvement": 20.0,
+          "improvementPct": 0.2,
+          "worldRecordAdded": "2026-01-02 03:04:05.123456"
+        },
+        {
+          "mapName": "CTF-Beta",
+          "difficulty": 2,
+          "currentTime": 70.0,
+          "targetTime": 65.0,
+          "targetMedal": "Silver Medal",
+          "improvement": 5.0,
+          "improvementPct": 0.07142857142857142,
+          "worldRecordAdded": null
+        }
+      ]
+    }
+  ]
+}

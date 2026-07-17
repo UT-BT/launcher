@@ -4,13 +4,15 @@ import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
 import { Button } from '@/app/components/ui/button'
 import { displayMapName } from '@/app/utils/format'
-import { fetchPendingReviews, type PendingReview } from '@/app/utils/api'
+import { fetchPendingReviews, type PendingReview, type PendingReviewsPage } from '@/app/utils/api'
 
 const PAGE_SIZE = 5
 
 interface MapsToReviewCardProps {
     accessToken?: string
     refreshKey?: number
+    firstPage: PendingReviewsPage | null
+    onFirstPageLoaded: (page: PendingReviewsPage) => void
     favoriteMapNames: Set<string>
     onToggleFavorite: (mapName: string) => void
     onReview: (mapName: string) => void
@@ -18,13 +20,13 @@ interface MapsToReviewCardProps {
 }
 
 export function MapsToReviewCard({
-    accessToken, refreshKey = 0, favoriteMapNames,
+    accessToken, refreshKey = 0, firstPage, onFirstPageLoaded, favoriteMapNames,
     onToggleFavorite, onReview, onMapSelect,
 }: MapsToReviewCardProps) {
     const [page, setPage] = useState(1)
-    const [items, setItems] = useState<PendingReview[]>([])
-    const [total, setTotal] = useState(0)
-    const [loading, setLoading] = useState(true)
+    const [items, setItems] = useState<PendingReview[]>(firstPage?.items ?? [])
+    const [total, setTotal] = useState(firstPage?.total ?? 0)
+    const [loading, setLoading] = useState(firstPage === null)
     const [error, setError] = useState<string | null>(null)
 
     const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
@@ -41,6 +43,7 @@ export function MapsToReviewCard({
             if (!isActive()) return
             setItems(data.items)
             setTotal(data.total)
+            if (targetPage === 1) onFirstPageLoaded(data)
         } catch (err) {
             if (!isActive()) return
             console.error('Failed to load pending reviews', err)
@@ -48,13 +51,19 @@ export function MapsToReviewCard({
         } finally {
             if (isActive()) setLoading(false)
         }
-    }, [accessToken])
+    }, [accessToken, onFirstPageLoaded])
 
     useEffect(() => {
+        if (page === 1 && firstPage !== null) {
+            setItems(firstPage.items)
+            setTotal(firstPage.total)
+            setLoading(false)
+            return
+        }
         let cancelled = false
         load(page, () => !cancelled)
         return () => { cancelled = true }
-    }, [load, page, refreshKey])
+    }, [load, page, refreshKey, firstPage])
 
     if (!loading && !error && items.length === 0) {
         return (

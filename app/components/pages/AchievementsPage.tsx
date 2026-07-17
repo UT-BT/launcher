@@ -21,10 +21,13 @@ export interface AchievementsPageState {
     scrollTop: number
 }
 
+export type AchievementsCacheStatus = 'idle' | 'loading' | 'ready' | 'error'
+
 export interface AchievementsPageCaches {
     definitions: AchievementDefinition[]
     progress: AchievementProgress[]
     lastRefreshIso: string | null
+    status: AchievementsCacheStatus
 }
 
 export const DEFAULT_ACHIEVEMENTS_STATE: AchievementsPageState = {
@@ -36,6 +39,7 @@ export const DEFAULT_ACHIEVEMENTS_CACHES: AchievementsPageCaches = {
     definitions: [],
     progress: [],
     lastRefreshIso: null,
+    status: 'idle',
 }
 
 interface AchievementsPageProps {
