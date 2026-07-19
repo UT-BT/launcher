@@ -12,7 +12,7 @@ not_here:
   - "how UI state persists in localStorage → state-patterns.md"
   - "the procedure to wire a new endpoint into the UI → skill: consume-api-data"
 sections: [backend-api, admin-api, cap-detail-page-endpoints, world-records-page-endpoints, team-maps-and-team-runs, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites]
-last_verified: 2026-07-13
+last_verified: 2026-07-17
 verify_against: [app/utils/api.ts, app/utils/patreon.ts, app/utils/server-utils.ts]
 ---
 
@@ -44,11 +44,36 @@ full loop).
 | Demos | `fetchDemoStatus`, `getFirstPersonVideoUrl`, `downloadDemo` |
 | Cap detail | `fetchCapDetail`, `fetchCapCheckpoints` |
 | Achievements | `fetchMyAchievements`, `fetchAchievementDefinitions` |
-| Home / summary | `fetchSummary` (homepage feed), `fetchHotMaps` (→ `GET /v2/summary/hot_maps` → `HotMap[]`), `fetchPendingReviews` |
-| Profile | `UserProfile` type, `getAvatarUrl(userId)`, `toActiveTitle` |
+| Home / summary | `fetchSummary` (homepage feed), `fetchHotMaps` (→ `GET /v2/summary/hot_maps` → `HotMap[]`), `fetchMedalHunt` (→ `GET /v2/summary/medal_hunt` → `MedalHuntOpportunity[]`), `fetchPendingReviews` |
+| Profile | `UserProfile` type (incl. `team` clan-tag summary), `getAvatarUrl(userId)`, `toActiveTitle` |
+| Teams | `createTeam`, `fetchTeams`, `fetchTeam`, `updateTeam`, `disbandTeam`, `transferTeamOwnership`, `fetchTeamMembers`, `inviteToTeam`, `applyToTeam`, `withdrawApplication`, `acceptTeamInvite`, `declineTeamInvite`, `leaveTeam`, `approveTeamMember`, `denyTeamMember` (optional `block`), `unblockTeamMember`, `kickTeamMember`, `setTeamMemberRole`, `fetchTeamActivity`, `fetchTeamAudit`, `fetchLineups`, `createLineup`, `updateLineup`, `deleteLineup`, `fetchMyTeam`, `fetchMyInvitations`, `fetchMyApplications` (clans + lineups; mutations return the fresh `TeamDetail`; errors surface `reason`) |
 | Admin (staff-only) | the moderator/admin dashboard slice — see [Admin API](#admin-api) |
 
 Most fetchers take `accessToken` first (Discord OAuth bearer).
+
+### Medal Hunt (`fetchMedalHunt`)
+
+`GET /v2/summary/medal_hunt` takes no params — the caller is identified by the bearer
+token. It answers "which medals can I still win", returning the opportunity list
+**pre-joined and pre-filtered**: certified best caps on active maps that still have an
+unreached medal threshold. The response is `{ opportunities: [...] }`, an object rather
+than a bare array, so the zero-opportunity case (a brand-new player) still carries the
+key; `fetchMedalHunt` returns `[]` for any non-array payload so a malformed response
+degrades to the card's empty state instead of throwing.
+
+Each row is `{ mapName, difficulty, currentTime, targetTime, targetMedal, improvement,
+improvementPct, worldRecordAdded }`. The rows are **unsorted** — the card owns all
+filtering, sorting and paging, and they stay instant and client-side.
+`worldRecordAdded` is a date string with **no UTC offset**, so `new Date()` parses it as
+local time; `medalHunt.ts::parseDateTime` turns it into the `worldRecordAddedTime` epoch
+the "recently lost" sort uses, falling back to `0` when the date is absent or
+unparseable. It is always `null` for team maps. `difficulty` is `""` rather than `null`
+when a map has none.
+
+The medal ladder itself (which medal is targeted, the improvement epsilon) is decided
+server-side; the launcher does not reimplement it. `app/utils/medalHunt.fixture.json`
+pins the exact contract — the same fixture is asserted against the API's own
+implementation, so a divergence fails a test rather than silently reordering the card.
 
 The player-detail caps list (`fetchCapsForUser`, `UserCapRow`) accepts
 `capFilter: 'disallowed'` to return only that player's disallowed caps — each row
@@ -70,12 +95,22 @@ only — never the security boundary. Fetchers grouped by dashboard section:
 | Titles | `fetchAdminTitles`, `fetchTitleHolders`, `createTitle`, `updateTitle`, `deleteTitle`, `unassignTitleFromUser` |
 | Caps | `fetchAdminCaps`, `fetchAdminCapsCount`, `disallowCap`, `reallowCap`, `verifyCapFlag`, `unverifyCap`, `verifyCapWithDemo` |
 | Maps | `fetchAdminMaps`, `fetchAdminMapsCount`, `fetchAdminMapTags`, `createMap`, `updateMap`, `fetchDifficultySyncPreview`, `applyDifficultySync`, `fetchMapvoteStatus`, `setMapvoteAnnouncement`, `regenerateMapvote` |
+| Map authors | `fetchMapAuthorStrings(+Count)`, `fetchLinkedMapAuthors`, `fetchMapAuthorCandidates`, `fetchMapAuthorPreview`, `linkMapAuthor`, `unlinkMapAuthor` |
 | Patches | `fetchAdminPatches`, `createPatch`, `updatePatch`, `setPatchActive`, `deletePatch`, `derivePatch` |
 | Anti-cheat | `fetchAcShared(+Count)`, `fetchAcCapDelta(+Count)`, `fetchAcLowFpsWr(+Count)`, `fetchAcIdentifier`, `fetchAcCapStats`, `fetchAcCapMapComparison`, `allowCap`, `unallowCap` |
 | Audit | `fetchAuditLog`, `fetchAuditLogCount`, `rollbackAudit` |
 
 `toActiveTitle(row)` normalizes an admin/title-shaped row (plain-number `rarity`)
 into the `ActiveTitle` that `PlayerInfo` and the title-style helpers expect.
+
+The map-author fetchers back `MapAuthorsModal` (opened from the Maps section). A map
+credited to a plain name (`author_str`) scores for nobody; linking it to a player
+(`author_ref`) is what makes that player's mapper achievements count. Every author
+name goes through `encodeURIComponent` — the real data contains `&`, `/` and `.`.
+`linkMapAuthor` sends `expectedMaps` from exactly the list the preview rendered, and
+the server returns 409 if that set has changed since, so a stale preview can never
+re-credit maps the admin did not see. `Map.author_ref` is a **string**, not a number:
+it is a Discord id large enough to lose precision as a JS number.
 
 ### Cap Detail page endpoints
 

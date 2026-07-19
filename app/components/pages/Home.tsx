@@ -2,10 +2,11 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Activity, AlertTriangle, RefreshCw } from 'lucide-react'
 import {
     UserProfile, fetchSummary, fetchHotMaps, fetchNews, fetchNewsCategories,
-    fetchUserSummary, fetchMyAchievements, fetchAchievementDefinitions,
+    fetchUserSummary,
     Summary, SummaryWorldRecord, HotMap, NewsArticle, NewsCategoryDef,
-    UserSummary, AchievementProgress, AchievementDefinition,
+    UserSummary, MedalHuntOpportunity, PendingReviewsPage,
 } from '@/app/utils/api'
+import type { AchievementsPageCaches } from '@/app/components/pages/AchievementsPage'
 import { Button } from '@/app/components/ui/button'
 import { Modal } from '@/app/components/ui/modal'
 import { ReviewModal } from '@/app/components/modals/ReviewModal'
@@ -49,10 +50,42 @@ const ACCENTS: Record<string, SectionAccent> = {
     recentServers: { tick: 'bg-violet-400' },
 }
 
+export interface HomePageCaches {
+    summary: Summary | null
+    hotMaps: HotMap[]
+    news: NewsArticle[]
+    newsCategories: NewsCategoryDef[]
+    userSummary: UserSummary | null
+    servers: Server[] | null
+    medalHunt: MedalHuntOpportunity[] | null
+    mapsCount: number | null
+    playersCount: number | null
+    pendingReviews: PendingReviewsPage | null
+    lastRefreshIso: string | null
+}
+
+export const DEFAULT_HOME_CACHES: HomePageCaches = {
+    summary: null,
+    hotMaps: [],
+    news: [],
+    newsCategories: [],
+    userSummary: null,
+    servers: null,
+    medalHunt: null,
+    mapsCount: null,
+    playersCount: null,
+    pendingReviews: null,
+    lastRefreshIso: null,
+}
+
 interface HomeProps {
     userProfile?: UserProfile
     installationStatus?: 'valid' | 'no-install' | 'unsupported' | null
     favoriteMapNames: Set<string>
+    caches: HomePageCaches
+    onCachesChange: (updater: (prev: HomePageCaches) => HomePageCaches) => void
+    achievementsCaches: AchievementsPageCaches
+    onEnsureAchievements: (force?: boolean) => void
     onToggleFavorite: (mapName: string) => void
     onMapSelect?: (mapName: string) => void
     onViewServers?: () => void
@@ -71,20 +104,16 @@ const EMPTY_SUMMARY: Summary = {
 }
 
 export function Home({
-    userProfile, installationStatus, favoriteMapNames, onToggleFavorite, onMapSelect,
+    userProfile, installationStatus, favoriteMapNames,
+    caches, onCachesChange, achievementsCaches, onEnsureAchievements,
+    onToggleFavorite, onMapSelect,
     onViewServers, onViewMaps, onViewNewMaps, onViewWorldRecords, onViewPlayers, onViewNews,
 }: HomeProps) {
     const refreshCooldown = useRefreshCooldown()
-    const [summary, setSummary] = useState<Summary | null>(null)
-    const [hotMaps, setHotMaps] = useState<HotMap[]>([])
-    const [news, setNews] = useState<NewsArticle[]>([])
-    const [newsCategories, setNewsCategories] = useState<NewsCategoryDef[]>([])
-    const [userSummary, setUserSummary] = useState<UserSummary | null>(null)
-    const [achievementProgress, setAchievementProgress] = useState<AchievementProgress[]>([])
-    const [achievementDefinitions, setAchievementDefinitions] = useState<AchievementDefinition[]>([])
+    const { summary, hotMaps, news, newsCategories, userSummary, servers } = caches
+    const hasCachedData = summary !== null
     const [newsSeen] = useState<string | null>(() => localStorage.getItem(NEWS_SEEN_KEY))
-    const [servers, setServers] = useState<Server[] | null>(null)
-    const [loading, setLoading] = useState(true)
+    const [loading, setLoading] = useState(!hasCachedData)
     const [error, setError] = useState<string | null>(null)
     const [reviewOpen, setReviewOpen] = useState(false)
     const [historyOpen, setHistoryOpen] = useState(false)
@@ -102,7 +131,7 @@ export function Home({
         setLoading(true)
         setError(null)
         try {
-            const [summaryData, hotMapsData, newsData, newsCategoryData, serverData, userSummaryData, achievementsData, achievementDefsData] = await Promise.all([
+            const [summaryData, hotMapsData, newsData, newsCategoryData, serverData, userSummaryData] = await Promise.all([
                 fetchSummary(userProfile.accessToken),
                 fetchHotMaps(userProfile.accessToken).catch(() => [] as HotMap[]),
                 fetchNews(userProfile.accessToken).catch(() => [] as NewsArticle[]),
@@ -111,18 +140,18 @@ export function Home({
                 userProfile.id
                     ? fetchUserSummary(userProfile.accessToken, userProfile.id).catch(() => null as UserSummary | null)
                     : Promise.resolve(null),
-                fetchMyAchievements(userProfile.accessToken).then(data => data.items).catch(() => [] as AchievementProgress[]),
-                fetchAchievementDefinitions(userProfile.accessToken).catch(() => [] as AchievementDefinition[]),
             ])
             if (!isActive()) return
-            setSummary(summaryData)
-            setHotMaps(hotMapsData)
-            setNews(newsData)
-            setNewsCategories(newsCategoryData)
-            setServers(serverData)
-            setUserSummary(userSummaryData)
-            setAchievementProgress(achievementsData)
-            setAchievementDefinitions(achievementDefsData)
+            onCachesChange(prev => ({
+                ...prev,
+                summary: summaryData,
+                hotMaps: hotMapsData,
+                news: newsData,
+                newsCategories: newsCategoryData,
+                servers: serverData,
+                userSummary: userSummaryData,
+                lastRefreshIso: new Date().toISOString(),
+            }))
             window.dispatchEvent(new CustomEvent('summary-badges', {
                 detail: {
                     maps: {
@@ -142,23 +171,52 @@ export function Home({
         } finally {
             if (isActive()) setLoading(false)
         }
-    }, [userProfile?.accessToken, userProfile?.id])
+    }, [userProfile?.accessToken, userProfile?.id, onCachesChange])
 
     useEffect(() => {
         if (!userProfile?.accessToken) {
             setLoading(false)
             return
         }
+        if (hasCachedData) {
+            setLoading(false)
+            return
+        }
         let cancelled = false
         loadData(() => !cancelled)
         return () => { cancelled = true }
-    }, [userProfile?.accessToken, loadData])
+    }, [userProfile?.accessToken, hasCachedData, loadData])
+
+    useEffect(() => {
+        if (!userProfile?.accessToken) return
+        onEnsureAchievements()
+    }, [userProfile?.accessToken, onEnsureAchievements])
 
     useEffect(() => () => { mountedRef.current = false }, [])
 
+    const handleMedalHuntLoaded = useCallback((rows: MedalHuntOpportunity[]) => {
+        onCachesChange(prev => ({ ...prev, medalHunt: rows }))
+    }, [onCachesChange])
+
+    const handleCountsLoaded = useCallback((counts: { mapsCount: number | null; playersCount: number | null }) => {
+        onCachesChange(prev => ({ ...prev, mapsCount: counts.mapsCount, playersCount: counts.playersCount }))
+    }, [onCachesChange])
+
+    const handlePendingReviewsLoaded = useCallback((page: PendingReviewsPage) => {
+        onCachesChange(prev => ({ ...prev, pendingReviews: page }))
+    }, [onCachesChange])
+
     useRegisterPageRefresh({
         onRefresh: () => refreshCooldown.trigger(() => {
+            onCachesChange(prev => ({
+                ...prev,
+                medalHunt: null,
+                mapsCount: null,
+                playersCount: null,
+                pendingReviews: null,
+            }))
             loadData(() => mountedRef.current)
+            onEnsureAchievements(true)
             setReviewsRefreshKey(k => k + 1)
             setRefreshKey(k => k + 1)
         }),
@@ -214,8 +272,8 @@ export function Home({
     const newsFeed = useMemo(() => news.slice(0, 5), [news])
     const newsCategoryMap = useMemo(() => new Map(newsCategories.map(c => [c.key, c])), [newsCategories])
     const achievementDefinitionMap = useMemo(
-        () => new Map(achievementDefinitions.map(d => [d.code, d])),
-        [achievementDefinitions],
+        () => new Map(achievementsCaches.definitions.map(d => [d.code, d])),
+        [achievementsCaches.definitions],
     )
 
     useEffect(() => {
@@ -279,14 +337,16 @@ export function Home({
                     userId={userProfile.id ?? undefined}
                     alias={userProfile.alias}
                     title={userProfile.active_title ?? null}
-                    accessToken={userProfile.accessToken}
-                    refreshKey={refreshKey}
+                    worldRecords={userSummary?.medals.world_records ?? null}
                 />
                 <CommunityStatsRow
                     className="lg:col-span-6"
                     accessToken={userProfile.accessToken}
                     playersOnline={playersOnline}
                     newMaps={data.global.newMaps}
+                    totalMaps={caches.mapsCount}
+                    totalPlayers={caches.playersCount}
+                    onCountsLoaded={handleCountsLoaded}
                     onViewPlayers={onViewPlayers}
                     onViewServers={onViewServers}
                     onViewMaps={onViewMaps}
@@ -337,7 +397,7 @@ export function Home({
                     </SpotlightSection>
                     <SpotlightSection title="Achievement Progress" accent={ACCENTS.achievements} className="lg:col-span-6">
                         <AchievementProgressPreview
-                            achievements={achievementProgress}
+                            achievements={achievementsCaches.progress}
                             definitions={achievementDefinitionMap}
                         />
                     </SpotlightSection>
@@ -349,6 +409,8 @@ export function Home({
                             accessToken={userProfile.accessToken}
                             userId={userProfile.id}
                             refreshKey={refreshKey}
+                            rows={caches.medalHunt}
+                            onRowsLoaded={handleMedalHuntLoaded}
                             favoriteMapNames={favoriteMapNames}
                             onToggleFavorite={onToggleFavorite}
                             onMapSelect={onMapSelect}
@@ -389,6 +451,8 @@ export function Home({
                         <MapsToReviewCard
                             accessToken={userProfile.accessToken}
                             refreshKey={reviewsRefreshKey}
+                            firstPage={caches.pendingReviews}
+                            onFirstPageLoaded={handlePendingReviewsLoaded}
                             favoriteMapNames={favoriteMapNames}
                             onToggleFavorite={onToggleFavorite}
                             onReview={handleReviewMap}

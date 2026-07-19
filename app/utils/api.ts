@@ -40,12 +40,23 @@ export interface LauncherActivity {
     created_at: string
 }
 
+export type TeamTagPosition = 'prefix' | 'suffix'
+
+export interface UserTeamSummary {
+    id: string
+    name: string
+    tag: string | null
+    tag_position: TeamTagPosition | null
+    tagged_alias: string | null
+}
+
 export interface UserProfile extends AuthConfig {
     active_title?: UserTitle | null
     alias?: string | null
     id?: string | null
     utbt_role?: number
     latest_activity?: LauncherActivity | null
+    team?: UserTeamSummary | null
 }
 
 export interface Map {
@@ -56,7 +67,7 @@ export interface Map {
     tags?: string
     author: string | number
     author_str?: string
-    author_ref?: number
+    author_ref?: string
     url?: string
     world_record?: number
     champion_medal?: number
@@ -74,7 +85,7 @@ export interface MapMetadata {
     tags?: string
     author?: string | number
     author_str?: string
-    author_ref?: number
+    author_ref?: string
     url?: string
     world_record?: number
     champion_medal?: number
@@ -93,6 +104,17 @@ export interface BestCap {
     cap_time_seconds: number
     cap_type: number
     verified: boolean
+}
+
+export interface MedalHuntOpportunity {
+    mapName: string
+    difficulty: number
+    currentTime: number
+    targetTime: number
+    targetMedal: 'Bronze Medal' | 'Silver Medal' | 'Gold Medal' | 'Champion Medal' | 'World Record'
+    improvement: number
+    improvementPct: number
+    worldRecordAdded: string | null
 }
 
 export interface MapListParams {
@@ -243,6 +265,20 @@ export async function apiGet<T>(path: string, opts: ApiRequestOptions = {}): Pro
     const json = await res.json()
     if (json && json.success && json.data !== null && json.data !== undefined) {
         return json.data as T
+    }
+    throw new Error('Invalid response format from server')
+}
+
+export async function apiGetList<T>(path: string, opts: ApiRequestOptions = {}): Promise<T[]> {
+    const res = await apiRequest(path, opts)
+    if (!res.ok) {
+        let reason: string | undefined
+        try { reason = (await res.json())?.reason } catch { reason = undefined }
+        throw new ApiError(res.status, reason, `Request failed: ${res.statusText} (${res.status})`)
+    }
+    const json = await res.json()
+    if (json && json.success) {
+        return Array.isArray(json.data) ? (json.data as T[]) : []
     }
     throw new Error('Invalid response format from server')
 }
@@ -1023,6 +1059,141 @@ export async function applyDifficultySync(
     return apiGet('/admin/maps/difficulty-sync', { token, method: 'POST', body: { reason: opts.reason, maps: opts.maps } })
 }
 
+export type MapAuthorMatch = 'exact' | 'ci'
+export type MapAuthorFlags = 'all' | 'co_authored' | 'placeholder' | 'clean'
+
+export interface MapAuthorRow {
+    author_str: string
+    map_count: number
+    active_map_count: number
+    co_authored: boolean
+    placeholder: boolean
+    exact_alias_match: { id: string; alias: string | null } | null
+}
+
+export interface LinkedMapAuthorRow {
+    author_ref: string
+    alias: string | null
+    map_count: number
+    active_map_count: number
+    original_str: string | null
+    link_audit_id: string | null
+}
+
+export interface MapAuthorCandidate {
+    id: string
+    alias: string | null
+    active_title: AdminActiveTitle | null
+    match_type: 'exact' | 'normalized' | 'fuzzy'
+    score: number
+    existing_map_count: number
+}
+
+export interface MapAuthorPreviewMap {
+    name: string
+    active: boolean
+    difficulty: number | null
+    author_str: string
+}
+
+export interface MapAuthorPreview {
+    author_str: string
+    match: MapAuthorMatch
+    map_count: number
+    maps: MapAuthorPreviewMap[]
+    variants: { author_str: string; map_count: number }[]
+    co_authored: boolean
+    placeholder: boolean
+    target: {
+        id: string
+        alias: string | null
+        active_title: AdminActiveTitle | null
+        existing_map_count: number
+        existing_maps: string[]
+    } | null
+}
+
+export async function fetchMapAuthorStrings(
+    token: string,
+    params: { search?: string; sort?: 'name' | 'maps'; order?: 'asc' | 'desc'; flags?: MapAuthorFlags; limit?: number; offset?: number },
+    signal?: AbortSignal,
+): Promise<MapAuthorRow[]> {
+    const q = new URLSearchParams()
+    if (params.search) q.set('search', params.search)
+    if (params.sort) q.set('sort', params.sort)
+    if (params.order) q.set('order', params.order)
+    if (params.flags) q.set('flags', params.flags)
+    q.set('limit', String(params.limit ?? 50))
+    q.set('offset', String(params.offset ?? 0))
+    const data = await apiGet<{ items: MapAuthorRow[] }>(`/admin/maps/authors?${q}`, { token, signal })
+    return data.items
+}
+
+export async function fetchMapAuthorStringsCount(token: string, params: { search?: string }, signal?: AbortSignal): Promise<number> {
+    const q = new URLSearchParams()
+    if (params.search) q.set('search', params.search)
+    const data = await apiGet<{ count: number }>(`/admin/maps/authors/count?${q}`, { token, signal })
+    return data.count
+}
+
+export async function fetchLinkedMapAuthors(token: string, signal?: AbortSignal): Promise<LinkedMapAuthorRow[]> {
+    const data = await apiGet<{ items: LinkedMapAuthorRow[] }>('/admin/maps/authors/linked', { token, signal })
+    return data.items
+}
+
+export async function fetchMapAuthorCandidates(token: string, authorStr: string, signal?: AbortSignal): Promise<MapAuthorCandidate[]> {
+    const q = new URLSearchParams({ author_str: authorStr })
+    const data = await apiGet<{ candidates: MapAuthorCandidate[] }>(`/admin/maps/authors/candidates?${q}`, { token, signal })
+    return data.candidates
+}
+
+export async function fetchMapAuthorPreview(
+    token: string,
+    opts: { authorStr: string; match?: MapAuthorMatch; userId?: string },
+    signal?: AbortSignal,
+): Promise<MapAuthorPreview> {
+    const q = new URLSearchParams({ author_str: opts.authorStr })
+    if (opts.match) q.set('match', opts.match)
+    if (opts.userId) q.set('user_id', opts.userId)
+    return apiGet<MapAuthorPreview>(`/admin/maps/authors/preview?${q}`, { token, signal })
+}
+
+export async function linkMapAuthor(
+    token: string,
+    input: { authorStr: string; userId: string; match?: MapAuthorMatch; expectedMaps?: string[]; reason?: string; allowPlaceholder?: boolean },
+): Promise<{
+    ok: boolean
+    linked_count: number
+    user: { id: string; alias: string | null }
+    maps: { name: string; author_str: string }[]
+    audit_id: string
+    warnings: string[]
+}> {
+    return apiGet('/admin/maps/authors/link', {
+        token,
+        method: 'POST',
+        body: {
+            author_str: input.authorStr,
+            user_id: input.userId,
+            match: input.match,
+            expected_maps: input.expectedMaps,
+            reason: input.reason,
+            allow_placeholder: input.allowPlaceholder,
+        },
+    })
+}
+
+export async function unlinkMapAuthor(
+    token: string,
+    input: { authorStr: string; userId: string; maps?: string[]; reason?: string },
+): Promise<{ ok: boolean; unlinked_count: number; maps: { name: string; author_ref: string }[] }> {
+    return apiGet('/admin/maps/authors/unlink', {
+        token,
+        method: 'POST',
+        body: { author_str: input.authorStr, user_id: input.userId, maps: input.maps, reason: input.reason },
+    })
+}
+
 export type PatchChannel = 'stable' | 'rc'
 
 export interface AdminPatch {
@@ -1361,6 +1532,11 @@ export async function fetchMapsMetadata(accessToken: string): Promise<MapMetadat
         active: true,
     })
     return rows as unknown as MapMetadata[]
+}
+
+export async function fetchMedalHunt(accessToken: string, signal?: AbortSignal): Promise<MedalHuntOpportunity[]> {
+    const data = await apiGet<{ opportunities?: unknown }>('/v2/summary/medal_hunt', { token: accessToken, signal })
+    return Array.isArray(data?.opportunities) ? (data.opportunities as MedalHuntOpportunity[]) : []
 }
 
 export async function fetchBestCaps(accessToken: string, userId: string | number): Promise<BestCap[]> {
@@ -2520,7 +2696,7 @@ export interface AchievementTitle {
     color_b: number
 }
 
-export type AchievementCategory = 'general' | 'solo' | 'team' | 'mastery'
+export type AchievementCategory = 'general' | 'solo' | 'team' | 'mapper' | 'mastery'
 
 export interface AchievementTier {
     index?: number
@@ -3089,4 +3265,239 @@ export async function fetchCapItAllLeaderboard(
         }
     }
     throw new Error('Invalid response format from server')
+}
+
+export type TeamRole = 'owner' | 'admin' | 'member'
+export type TeamMemberStatus = 'invited' | 'applied' | 'active' | 'blocked'
+export type TeamSort = 'added' | 'members' | 'name'
+
+export interface TeamCore {
+    id: string
+    name: string
+    tag: string | null
+    tag_position: TeamTagPosition | null
+    is_open: boolean
+    owner: string
+    member_count: number
+    added: string | null
+}
+
+export interface TeamMember {
+    user: string
+    alias: string | null
+    role: TeamRole
+    status: TeamMemberStatus
+    joined_at: string | null
+    tag: string | null
+    tag_position: TeamTagPosition | null
+    tagged_alias: string | null
+    title?: ActiveTitle | null
+}
+
+export interface Lineup {
+    id: string
+    team_id: string
+    label: string
+    member_key: string
+    members: string[]
+    added: string | null
+}
+
+export interface TeamDetail extends TeamCore {
+    members: TeamMember[]
+    lineups: Lineup[]
+}
+
+export interface TeamDirectoryPage {
+    total: number
+    teams: TeamCore[]
+}
+
+export type TeamActivityType = 'cap' | 'world_record' | 'playtime'
+
+export interface TeamActivityItem {
+    type: TeamActivityType
+    user: string
+    alias: string | null
+    title: ActiveTitle | null
+    map: string | null
+    cap_id: string | null
+    cap_time_seconds: number | null
+    time_played_seconds: number | null
+    medal: string | null
+    verified: boolean | null
+    added: string | null
+}
+
+export interface TeamActivityPage {
+    total: number
+    caps: number
+    world_records: number
+    playtime: number
+    items: TeamActivityItem[]
+}
+
+export interface CreateTeamInput {
+    name: string
+    tag?: string | null
+    tag_position?: TeamTagPosition
+    is_open?: boolean
+}
+
+export interface UpdateTeamInput {
+    name?: string
+    tag?: string | null
+    tag_position?: TeamTagPosition
+    is_open?: boolean
+}
+
+export interface TeamDirectoryParams {
+    limit?: number
+    offset?: number
+    search?: string
+    isOpen?: boolean
+    sort?: TeamSort
+    order?: 'asc' | 'desc'
+}
+
+export async function createTeam(accessToken: string, input: CreateTeamInput): Promise<TeamDetail> {
+    return apiGet<TeamDetail>('/teams/', { token: accessToken, method: 'POST', body: input })
+}
+
+export async function fetchTeams(accessToken: string, params: TeamDirectoryParams = {}): Promise<TeamDirectoryPage> {
+    const usp = new URLSearchParams()
+    if (params.limit !== undefined) usp.set('limit', String(params.limit))
+    if (params.offset !== undefined) usp.set('offset', String(params.offset))
+    if (params.search) usp.set('search', params.search)
+    if (params.isOpen !== undefined) usp.set('is_open', String(params.isOpen))
+    if (params.sort) usp.set('sort', params.sort)
+    if (params.order) usp.set('order', params.order)
+    return apiGet<TeamDirectoryPage>(`/teams/?${usp.toString()}`, { token: accessToken })
+}
+
+export async function fetchTeam(accessToken: string, teamId: string): Promise<TeamDetail> {
+    return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}`, { token: accessToken })
+}
+
+export async function fetchTeamActivity(
+    accessToken: string,
+    teamId: string,
+    params: { limit?: number } = {},
+): Promise<TeamActivityPage> {
+    const usp = new URLSearchParams()
+    if (params.limit !== undefined) usp.set('limit', String(params.limit))
+    return apiGet<TeamActivityPage>(`/teams/${encodeURIComponent(teamId)}/activity?${usp.toString()}`, { token: accessToken })
+}
+
+export type TeamAuditAction =
+    | 'create' | 'update' | 'invite' | 'apply' | 'withdraw' | 'decline' | 'join'
+    | 'approve' | 'deny' | 'block' | 'unblock' | 'kick' | 'promote' | 'demote' | 'transfer' | 'leave'
+
+export interface TeamAuditEntry {
+    id: string
+    action: TeamAuditAction | string
+    actor: string | null
+    actor_alias: string | null
+    target: string | null
+    target_alias: string | null
+    created_at: string | null
+}
+
+export async function fetchTeamAudit(
+    accessToken: string,
+    teamId: string,
+    params: { limit?: number } = {},
+): Promise<TeamAuditEntry[]> {
+    const usp = new URLSearchParams()
+    if (params.limit !== undefined) usp.set('limit', String(params.limit))
+    return apiGetList<TeamAuditEntry>(`/teams/${encodeURIComponent(teamId)}/audit?${usp.toString()}`, { token: accessToken })
+}
+
+export async function updateTeam(accessToken: string, teamId: string, input: UpdateTeamInput): Promise<TeamDetail> {
+    return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}`, { token: accessToken, method: 'PATCH', body: input })
+}
+
+export async function disbandTeam(accessToken: string, teamId: string): Promise<{ id: string; disbanded: boolean }> {
+    return apiGet(`/teams/${encodeURIComponent(teamId)}`, { token: accessToken, method: 'DELETE' })
+}
+
+export async function transferTeamOwnership(accessToken: string, teamId: string, user: string): Promise<TeamDetail> {
+    return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}/transfer`, { token: accessToken, method: 'POST', body: { user } })
+}
+
+export async function fetchTeamMembers(accessToken: string, teamId: string): Promise<TeamMember[]> {
+    return apiGetList<TeamMember>(`/teams/${encodeURIComponent(teamId)}/members`, { token: accessToken })
+}
+
+export async function inviteToTeam(accessToken: string, teamId: string, user: string): Promise<TeamDetail> {
+    return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}/invite`, { token: accessToken, method: 'POST', body: { user } })
+}
+
+export async function applyToTeam(accessToken: string, teamId: string): Promise<TeamDetail> {
+    return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}/apply`, { token: accessToken, method: 'POST' })
+}
+
+export async function acceptTeamInvite(accessToken: string, teamId: string): Promise<TeamDetail> {
+    return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}/accept`, { token: accessToken, method: 'POST' })
+}
+
+export async function withdrawApplication(accessToken: string, teamId: string): Promise<TeamDetail> {
+    return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}/withdraw`, { token: accessToken, method: 'POST' })
+}
+
+export async function declineTeamInvite(accessToken: string, teamId: string): Promise<TeamDetail> {
+    return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}/decline`, { token: accessToken, method: 'POST' })
+}
+
+export async function leaveTeam(accessToken: string, teamId: string): Promise<{ id: string; left: boolean }> {
+    return apiGet(`/teams/${encodeURIComponent(teamId)}/leave`, { token: accessToken, method: 'POST' })
+}
+
+export async function approveTeamMember(accessToken: string, teamId: string, user: string): Promise<TeamDetail> {
+    return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}/members/${encodeURIComponent(user)}/approve`, { token: accessToken, method: 'POST' })
+}
+
+export async function denyTeamMember(accessToken: string, teamId: string, user: string, block = false): Promise<TeamDetail> {
+    return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}/members/${encodeURIComponent(user)}/deny`, { token: accessToken, method: 'POST', body: { block } })
+}
+
+export async function unblockTeamMember(accessToken: string, teamId: string, user: string): Promise<TeamDetail> {
+    return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}/members/${encodeURIComponent(user)}/unblock`, { token: accessToken, method: 'POST' })
+}
+
+export async function kickTeamMember(accessToken: string, teamId: string, user: string): Promise<TeamDetail> {
+    return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}/members/${encodeURIComponent(user)}/kick`, { token: accessToken, method: 'POST' })
+}
+
+export async function setTeamMemberRole(accessToken: string, teamId: string, user: string, role: 'admin' | 'member'): Promise<TeamDetail> {
+    return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}/members/${encodeURIComponent(user)}/role`, { token: accessToken, method: 'POST', body: { role } })
+}
+
+export async function fetchLineups(accessToken: string, teamId: string): Promise<Lineup[]> {
+    return apiGetList<Lineup>(`/teams/${encodeURIComponent(teamId)}/lineups`, { token: accessToken })
+}
+
+export async function createLineup(accessToken: string, teamId: string, input: { label: string; members: string[] }): Promise<Lineup> {
+    return apiGet<Lineup>(`/teams/${encodeURIComponent(teamId)}/lineups`, { token: accessToken, method: 'POST', body: input })
+}
+
+export async function updateLineup(accessToken: string, teamId: string, lineupId: string, label: string): Promise<Lineup> {
+    return apiGet<Lineup>(`/teams/${encodeURIComponent(teamId)}/lineups/${encodeURIComponent(lineupId)}`, { token: accessToken, method: 'PATCH', body: { label } })
+}
+
+export async function deleteLineup(accessToken: string, teamId: string, lineupId: string): Promise<{ id: string; deleted: boolean }> {
+    return apiGet(`/teams/${encodeURIComponent(teamId)}/lineups/${encodeURIComponent(lineupId)}`, { token: accessToken, method: 'DELETE' })
+}
+
+export async function fetchMyTeam(accessToken: string): Promise<TeamDetail | null> {
+    const data = await apiGet<{ team: TeamDetail | null }>('/me/team', { token: accessToken })
+    return data.team
+}
+
+export async function fetchMyInvitations(accessToken: string): Promise<TeamCore[]> {
+    return apiGetList<TeamCore>('/me/invitations', { token: accessToken })
+}
+
+export async function fetchMyApplications(accessToken: string): Promise<TeamCore[]> {
+    return apiGetList<TeamCore>('/me/applications', { token: accessToken })
 }
