@@ -12,7 +12,7 @@ not_here:
   - "how UI state persists in localStorage → state-patterns.md"
   - "the procedure to wire a new endpoint into the UI → skill: consume-api-data"
 sections: [backend-api, admin-api, cap-detail-page-endpoints, world-records-page-endpoints, team-maps-and-team-runs, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites]
-last_verified: 2026-07-17
+last_verified: 2026-07-20
 verify_against: [app/utils/api.ts, app/utils/patreon.ts, app/utils/server-utils.ts]
 ---
 
@@ -109,7 +109,9 @@ credited to a plain name (`author_str`) scores for nobody; linking it to a playe
 name goes through `encodeURIComponent` — the real data contains `&`, `/` and `.`.
 `linkMapAuthor` sends `expectedMaps` from exactly the list the preview rendered, and
 the server returns 409 if that set has changed since, so a stale preview can never
-re-credit maps the admin did not see. `Map.author_ref` is a **string**, not a number:
+re-credit maps the admin did not see. The Review step lets the admin tick a subset of
+a name's maps; `linkMapAuthor` then sends that subset as `maps` and only those are
+re-credited, while unticked maps keep their `author_str` and stay unlinked. `Map.author_ref` is a **string**, not a number:
 it is a Discord id large enough to lose precision as a JS number.
 
 ### Cap Detail page endpoints

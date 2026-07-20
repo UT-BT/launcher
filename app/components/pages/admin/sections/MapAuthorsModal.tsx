@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import {
-  AlertTriangle, ArrowLeft, CheckCircle2, Link2, Loader2, Search, Unlink,
+  AlertTriangle, ArrowLeft, ArrowRight, CheckCircle2, Link2, Loader2, Search, Unlink,
 } from 'lucide-react'
 import {
   fetchAdminUsers, fetchLinkedMapAuthors, fetchMapAuthorCandidates, fetchMapAuthorPreview,
@@ -14,6 +14,7 @@ import { Button } from '@/app/components/ui/button'
 import { Input } from '@/app/components/ui/input'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { MapLink } from '../components/MapLink'
+import { Checkbox } from '@/app/components/ui/checkbox'
 import { ActionButton, Feedback, Pager, SearchInput, errMessage } from '../components/controls'
 import { useAdminPageSize } from '../components/shared'
 import {
@@ -23,10 +24,11 @@ import {
 
 type Step =
   | { status: 'browse' }
+  | { status: 'review'; author: MapAuthorRow }
   | { status: 'pick'; author: MapAuthorRow }
   | { status: 'preview'; author: MapAuthorRow; target: MapAuthorCandidate | AdminUserRow; preview: MapAuthorPreview }
   | { status: 'applying' }
-  | { status: 'done'; count: number; alias: string | null; warnings: string[] }
+  | { status: 'done'; count: number; alias: string | null; warnings: string[]; leftover: number }
   | { status: 'error'; message: string }
 
 function FlagChip({ tone, children }: { tone: 'amber' | 'red'; children: ReactNode }) {
@@ -105,6 +107,10 @@ export function MapAuthorsModal({ open, onClose, token, onApplied }: {
   const [offset, setOffset] = useState(0)
   const limit = useAdminPageSize()
 
+  const [reviewPreview, setReviewPreview] = useState<MapAuthorPreview | null>(null)
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [selectedFor, setSelectedFor] = useState<string | null>(null)
+
   const [candidates, setCandidates] = useState<MapAuthorCandidate[] | null>(null)
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<AdminUserRow[]>([])
@@ -116,6 +122,7 @@ export function MapAuthorsModal({ open, onClose, token, onApplied }: {
     if (!open) return
     setStep({ status: 'browse' }); setReason(''); setNotice(null)
     setSearch(''); setOffset(0); setTab('unlinked')
+    setReviewPreview(null); setSelected(new Set()); setSelectedFor(null)
   }, [open])
 
   const loadBrowse = useCallback((signal?: AbortSignal) => {
@@ -148,6 +155,24 @@ export function MapAuthorsModal({ open, onClose, token, onApplied }: {
       .finally(() => { if (!ctrl.signal.aborted) setLoading(false) })
     return () => ctrl.abort()
   }, [open, browsing, tab, token])
+
+  const reviewing = step.status === 'review' ? step.author.author_str : null
+
+  useEffect(() => {
+    if (!reviewing) return
+    const ctrl = new AbortController()
+    setReviewPreview(null)
+    fetchMapAuthorPreview(token, { authorStr: reviewing, match: 'exact' }, ctrl.signal)
+      .then((p) => {
+        setReviewPreview(p)
+        if (selectedFor !== reviewing) {
+          setSelected(new Set(p.maps.map((m) => m.name)))
+          setSelectedFor(reviewing)
+        }
+      })
+      .catch((e) => { if (!ctrl.signal.aborted) setStep({ status: 'error', message: errMessage(e) }) })
+    return () => ctrl.abort()
+  }, [reviewing, token, selectedFor])
 
   const picking = step.status === 'pick' ? step.author.author_str : null
 
@@ -182,17 +207,25 @@ export function MapAuthorsModal({ open, onClose, token, onApplied }: {
   const apply = async () => {
     if (step.status !== 'preview') return
     const { author, target, preview } = step
+    const selectedMaps = preview.maps.filter((m) => selected.has(m.name)).map((m) => m.name)
     setStep({ status: 'applying' })
     try {
       const res = await linkMapAuthor(token, {
         authorStr: author.author_str,
         userId: target.id,
         match: 'exact',
+        maps: selectedMaps,
         expectedMaps: preview.maps.map((m) => m.name),
         reason: reason.trim() || undefined,
         allowPlaceholder: author.placeholder,
       })
-      setStep({ status: 'done', count: res.linked_count, alias: res.user.alias, warnings: res.warnings })
+      setStep({
+        status: 'done',
+        count: res.linked_count,
+        alias: res.user.alias,
+        warnings: res.warnings,
+        leftover: preview.maps.length - res.linked_count,
+      })
       onApplied()
     } catch (e) {
       setStep({ status: 'error', message: errMessage(e) })
@@ -213,15 +246,28 @@ export function MapAuthorsModal({ open, onClose, token, onApplied }: {
   }
 
   const title = useMemo(() => {
+    if (step.status === 'review') return `Review "${step.author.author_str}"`
     if (step.status === 'pick' || step.status === 'preview') return `Link "${step.author.author_str}"`
     return 'Map authors'
   }, [step])
 
-  const footer = step.status === 'preview' ? (
+  const previewSelectedCount = step.status === 'preview'
+    ? step.preview.maps.filter((m) => selected.has(m.name)).length
+    : 0
+
+  const footer = step.status === 'review' ? (
+    <div className="p-4 border-t border-border bg-muted/50 flex justify-end gap-2">
+      <Button variant="outline" onClick={() => setStep({ status: 'browse' })}>Back</Button>
+      <ActionButton tone="accent" icon={ArrowRight} onClick={() => setStep({ status: 'pick', author: step.author })}
+        disabled={selected.size === 0 || reviewPreview === null}>
+        Continue with {selected.size} {selected.size === 1 ? 'map' : 'maps'}
+      </ActionButton>
+    </div>
+  ) : step.status === 'preview' ? (
     <div className="p-4 border-t border-border bg-muted/50 flex justify-end gap-2">
       <Button variant="outline" onClick={() => setStep({ status: 'pick', author: step.author })}>Back</Button>
-      <ActionButton tone="emerald" icon={Link2} onClick={apply} disabled={step.preview.map_count === 0}>
-        Link {step.preview.map_count} {step.preview.map_count === 1 ? 'map' : 'maps'}
+      <ActionButton tone="emerald" icon={Link2} onClick={apply} disabled={previewSelectedCount === 0}>
+        Link {previewSelectedCount} {previewSelectedCount === 1 ? 'map' : 'maps'}
       </ActionButton>
     </div>
   ) : (
@@ -267,6 +313,11 @@ export function MapAuthorsModal({ open, onClose, token, onApplied }: {
             {step.warnings.includes('co_authored') && (
               <p className="text-xs text-amber-300">That name lists more than one author — only this player was linked.</p>
             )}
+            {step.leftover > 0 && (
+              <p className="text-xs text-muted-foreground">
+                {step.leftover} {step.leftover === 1 ? 'map' : 'maps'} left unlinked under that name.
+              </p>
+            )}
             <p className="text-xs text-muted-foreground">
               Recorded in the audit log and reversible from there. Their mapper achievements update the next time they
               open their achievements page.
@@ -303,7 +354,7 @@ export function MapAuthorsModal({ open, onClose, token, onApplied }: {
                     <DataTableHeaderCell align="left">Author</DataTableHeaderCell>
                     <DataTableHeaderCell width="5rem" align="right">Maps</DataTableHeaderCell>
                     <DataTableHeaderCell width="12rem" align="left">Notes</DataTableHeaderCell>
-                    <DataTableHeaderCell width="6rem" align="right" />
+                    <DataTableHeaderCell width="7.5rem" align="right" />
                   </DataTableHeaderRow>
                   <tbody>
                     {loading && rows.length === 0 && Array.from({ length: 6 }, (_, i) => (
@@ -326,8 +377,8 @@ export function MapAuthorsModal({ open, onClose, token, onApplied }: {
                           </span>
                         </DataTableCell>
                         <DataTableCell align="right">
-                          <ActionButton tone="accent" icon={Link2} onClick={() => setStep({ status: 'pick', author: r })}>
-                            Link
+                          <ActionButton tone="accent" icon={ArrowRight} onClick={() => setStep({ status: 'review', author: r })}>
+                            Review
                           </ActionButton>
                         </DataTableCell>
                       </DataTableRow>
@@ -383,9 +434,98 @@ export function MapAuthorsModal({ open, onClose, token, onApplied }: {
           </>
         )}
 
-        {step.status === 'pick' && (
+        {step.status === 'review' && (
           <>
             <Button variant="outline" onClick={() => setStep({ status: 'browse' })}>
+              <ArrowLeft className="size-4 mr-1.5" /> Back
+            </Button>
+
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              These are the maps credited to <span className="font-mono text-foreground">{step.author.author_str}</span>.
+              Tick only the ones that belong to the player you'll link next — unticked maps stay unlinked under this name.
+            </p>
+
+            {reviewPreview === null ? (
+              <div className="flex items-center gap-2 py-8 text-muted-foreground">
+                <Loader2 className="size-4 animate-spin" /><span className="text-xs">Loading maps…</span>
+              </div>
+            ) : (
+              <>
+                {reviewPreview.placeholder && (
+                  <Banner tone="red">
+                    This is a placeholder name, not a real author. Only link maps you're sure belong to one player.
+                  </Banner>
+                )}
+                {reviewPreview.co_authored && (
+                  <Banner tone="amber">
+                    This name lists more than one author — a map credits one player, so untick maps that aren't theirs.
+                  </Banner>
+                )}
+                {reviewPreview.variants.length > 0 && (
+                  <Banner tone="amber">
+                    {reviewPreview.variants.map((v) => (
+                      <div key={v.author_str}>
+                        <span className="font-mono">{v.author_str}</span> ({v.map_count} maps) is spelled differently and
+                        is not shown here. Link it separately.
+                      </div>
+                    ))}
+                  </Banner>
+                )}
+
+                <DataTableShell className="max-h-80">
+                  <DataTableHeaderRow>
+                    <DataTableHeaderCell width="2.5rem" align="left">
+                      <Checkbox
+                        checked={selected.size === 0 ? false : selected.size === reviewPreview.maps.length ? true : 'indeterminate'}
+                        onCheckedChange={(v) => setSelected(v === true
+                          ? new Set(reviewPreview.maps.map((m) => m.name))
+                          : new Set())}
+                        aria-label="Select all maps"
+                      />
+                    </DataTableHeaderCell>
+                    <DataTableHeaderCell align="left">Map</DataTableHeaderCell>
+                    <DataTableHeaderCell width="6rem" align="right">Status</DataTableHeaderCell>
+                  </DataTableHeaderRow>
+                  <tbody>
+                    {reviewPreview.maps.length === 0 && (
+                      <DataTableEmpty colSpan={3} message="No maps use this name anymore." />
+                    )}
+                    {reviewPreview.maps.map((m) => (
+                      <DataTableRow key={m.name}>
+                        <DataTableCell align="left">
+                          <Checkbox
+                            checked={selected.has(m.name)}
+                            onCheckedChange={() => setSelected((prev) => {
+                              const next = new Set(prev)
+                              if (next.has(m.name)) next.delete(m.name)
+                              else next.add(m.name)
+                              return next
+                            })}
+                            aria-label={`Include ${m.name}`}
+                          />
+                        </DataTableCell>
+                        <DataTableCell align="left"><MapLink name={m.name} /></DataTableCell>
+                        <DataTableCell align="right">
+                          <span className={cn('text-[11px]', m.active ? 'text-emerald-300' : 'text-muted-foreground/60')}>
+                            {m.active ? 'Active' : 'Inactive'}
+                          </span>
+                        </DataTableCell>
+                      </DataTableRow>
+                    ))}
+                  </tbody>
+                </DataTableShell>
+
+                <p className="text-xs text-muted-foreground">
+                  {selected.size} of {reviewPreview.maps.length} selected.
+                </p>
+              </>
+            )}
+          </>
+        )}
+
+        {step.status === 'pick' && (
+          <>
+            <Button variant="outline" onClick={() => setStep({ status: 'review', author: step.author })}>
               <ArrowLeft className="size-4 mr-1.5" /> Back
             </Button>
 
@@ -439,7 +579,7 @@ export function MapAuthorsModal({ open, onClose, token, onApplied }: {
           <>
             {step.preview.placeholder && (
               <Banner tone="red">
-                This is a placeholder name, not a real author. Linking credits all {step.preview.map_count} maps to one player.
+                This is a placeholder name, not a real author. Linking credits {previewSelectedCount} maps to one player.
               </Banner>
             )}
             {step.preview.co_authored && (
@@ -467,14 +607,14 @@ export function MapAuthorsModal({ open, onClose, token, onApplied }: {
             {step.preview.target && step.preview.target.existing_map_count > 0 && (
               <Banner tone="accent">
                 {step.target.alias} already has {step.preview.target.existing_map_count} linked{' '}
-                {step.preview.target.existing_map_count === 1 ? 'map' : 'maps'} — these {step.preview.map_count} will be
+                {step.preview.target.existing_map_count === 1 ? 'map' : 'maps'} — these {previewSelectedCount} will be
                 merged in.
               </Banner>
             )}
 
             <div>
               <p className="text-xs text-muted-foreground mb-2">
-                {step.preview.map_count} {step.preview.map_count === 1 ? 'map' : 'maps'} will be re-credited
+                {previewSelectedCount} {previewSelectedCount === 1 ? 'map' : 'maps'} will be re-credited
               </p>
               <DataTableShell className="max-h-64">
                 <DataTableHeaderRow>
@@ -482,7 +622,7 @@ export function MapAuthorsModal({ open, onClose, token, onApplied }: {
                   <DataTableHeaderCell width="6rem" align="right">Status</DataTableHeaderCell>
                 </DataTableHeaderRow>
                 <tbody>
-                  {step.preview.maps.map((m) => (
+                  {step.preview.maps.filter((m) => selected.has(m.name)).map((m) => (
                     <DataTableRow key={m.name}>
                       <DataTableCell align="left"><MapLink name={m.name} /></DataTableCell>
                       <DataTableCell align="right">
