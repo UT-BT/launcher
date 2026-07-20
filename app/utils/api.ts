@@ -1160,7 +1160,7 @@ export async function fetchMapAuthorPreview(
 
 export async function linkMapAuthor(
     token: string,
-    input: { authorStr: string; userId: string; match?: MapAuthorMatch; expectedMaps?: string[]; reason?: string; allowPlaceholder?: boolean },
+    input: { authorStr: string; userId: string; match?: MapAuthorMatch; maps?: string[]; expectedMaps?: string[]; reason?: string; allowPlaceholder?: boolean },
 ): Promise<{
     ok: boolean
     linked_count: number
@@ -1176,6 +1176,7 @@ export async function linkMapAuthor(
             author_str: input.authorStr,
             user_id: input.userId,
             match: input.match,
+            maps: input.maps,
             expected_maps: input.expectedMaps,
             reason: input.reason,
             allow_placeholder: input.allowPlaceholder,
