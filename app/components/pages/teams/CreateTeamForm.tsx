@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/app/components/ui/button'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { createTeam, toActiveTitle, type TeamDetail, type TeamTagPosition, type UserProfile } from '@/app/utils/api'
-import { formatTaggedAlias, tagValidationError } from './tagFormat'
+import { formatTaggedAlias, nameValidationError, tagValidationError, TEAM_NAME_MAX_LENGTH, TAG_MAX_LENGTH } from './tagFormat'
 import { AccessToggle, ErrorBanner, teamInputClass, teamErrorMessage } from './teamsShared'
 
 interface CreateTeamFormProps {
@@ -25,7 +25,8 @@ export function CreateTeamForm({ accessToken, userProfile, onCreated, onCancel }
 
     const preview = formatTaggedAlias(userProfile?.alias, tag, tagPosition)
     const tagError = tag.trim().length > 0 ? tagValidationError(tag.trim()) : null
-    const canSubmit = name.trim().length > 0 && tag.trim().length > 0 && !tagError && !submitting
+    const nameError = name.trim().length > 0 ? nameValidationError(name) : null
+    const canSubmit = name.trim().length > 0 && tag.trim().length > 0 && !tagError && !nameError && !submitting
 
     const submit = async () => {
         if (!canSubmit) return
@@ -54,17 +55,18 @@ export function CreateTeamForm({ accessToken, userProfile, onCreated, onCancel }
                     <input
                         value={name}
                         onChange={e => setName(e.target.value)}
-                        maxLength={40}
+                        maxLength={TEAM_NAME_MAX_LENGTH}
                         placeholder="e.g. Bunny Brigade"
                         className={teamInputClass}
                     />
+                    {nameError && <span className="text-[11px] text-red-400">{nameError}</span>}
                 </label>
                 <label className="flex flex-col gap-1.5">
                     <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Clan tag</span>
                     <input
                         value={tag}
                         onChange={e => setTag(e.target.value)}
-                        maxLength={9}
+                        maxLength={TAG_MAX_LENGTH}
                         placeholder="e.g. BB"
                         className={teamInputClass}
                     />
