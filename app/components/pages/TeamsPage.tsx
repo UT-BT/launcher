@@ -4,7 +4,7 @@ import { Button } from '@/app/components/ui/button'
 import { Modal } from '@/app/components/ui/modal'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
 import {
-    fetchMyApplications, fetchMyInvitations, fetchMyTeam,
+    fetchMyInvitations, fetchMyTeam,
     type TeamCore, type TeamDetail, type TeamSort, type UserProfile,
 } from '@/app/utils/api'
 import { CreateTeamForm } from './teams/CreateTeamForm'
@@ -24,7 +24,6 @@ export interface TeamsPageState {
 export interface TeamsPageCaches {
     myTeam: TeamDetail | null
     invitations: TeamCore[]
-    applications: TeamCore[]
     loaded: boolean
     lastRefreshIso: string | null
 }
@@ -41,7 +40,6 @@ export const DEFAULT_TEAMS_STATE: TeamsPageState = {
 export const DEFAULT_TEAMS_CACHES: TeamsPageCaches = {
     myTeam: null,
     invitations: [],
-    applications: [],
     loaded: false,
     lastRefreshIso: null,
 }
@@ -70,16 +68,14 @@ export function TeamsPage({ userProfile, state, onStateChange, caches, onCachesC
         if (!background) setLoading(true)
         setError(null)
         try {
-            const [team, invitations, applications] = await Promise.all([
+            const [team, invitations] = await Promise.all([
                 fetchMyTeam(accessToken),
                 fetchMyInvitations(accessToken),
-                fetchMyApplications(accessToken),
             ])
             onCachesChange(prev => ({
                 ...prev,
                 myTeam: team,
                 invitations,
-                applications: team ? [] : applications,
                 loaded: true,
                 lastRefreshIso: new Date().toISOString(),
             }))
@@ -188,7 +184,6 @@ export function TeamsPage({ userProfile, state, onStateChange, caches, onCachesC
                         <TeamGallery
                             accessToken={accessToken}
                             myTeam={caches.myTeam}
-                            appliedTeamIds={caches.applications.map(t => t.id)}
                             search={state.directorySearch}
                             page={state.directoryPage}
                             access={state.directoryAccess}

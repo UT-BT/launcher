@@ -4,7 +4,7 @@ import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshC
 import { Button } from '@/app/components/ui/button'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import {
-    acceptTeamInvite, applyToTeam, declineTeamInvite, fetchMyTeam, fetchTeam, withdrawApplication,
+    acceptTeamInvite, declineTeamInvite, fetchMyTeam, fetchTeam, joinTeam,
     type TeamDetail, type TeamRole, type UserProfile,
 } from '@/app/utils/api'
 import { TeamHeaderCard } from './TeamHeaderCard'
@@ -31,8 +31,7 @@ export function TeamDetailsPage({ teamId, userProfile, onExitToGallery }: TeamDe
     const [hasTeam, setHasTeam] = useState(false)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
-    const [applying, setApplying] = useState(false)
-    const [withdrawing, setWithdrawing] = useState(false)
+    const [joining, setJoining] = useState(false)
     const [inviteBusy, setInviteBusy] = useState(false)
     const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -67,7 +66,6 @@ export function TeamDetailsPage({ teamId, userProfile, onExitToGallery }: TeamDe
 
     const isOwnTeam = team != null && myTeamId != null && myTeamId === team.id
     const myMembership = team ? team.members.find(m => String(m.user) === String(myUserId)) : undefined
-    const iApplied = myMembership?.status === 'applied'
     const iInvited = myMembership?.status === 'invited'
     const iBlocked = myMembership?.status === 'blocked'
     const meMember = isOwnTeam ? myMembership : undefined
@@ -77,29 +75,16 @@ export function TeamDetailsPage({ teamId, userProfile, onExitToGallery }: TeamDe
     const canLeave = isOwnTeam && !isOwner
     const hasOtherActiveMembers = team ? team.members.some(m => m.status === 'active' && String(m.user) !== String(myUserId)) : false
 
-    const apply = async () => {
+    const join = async () => {
         if (!accessToken || !team) return
-        setApplying(true)
+        setJoining(true)
         setError(null)
         try {
-            await applyToTeam(accessToken, team.id)
+            await joinTeam(accessToken, team.id)
             onExitToGallery()
         } catch (e) {
             setError(teamErrorMessage(e))
-            setApplying(false)
-        }
-    }
-
-    const withdraw = async () => {
-        if (!accessToken || !team) return
-        setWithdrawing(true)
-        setError(null)
-        try {
-            await withdrawApplication(accessToken, team.id)
-            onExitToGallery()
-        } catch (e) {
-            setError(teamErrorMessage(e))
-            setWithdrawing(false)
+            setJoining(false)
         }
     }
 
@@ -129,16 +114,8 @@ export function TeamDetailsPage({ teamId, userProfile, onExitToGallery }: TeamDe
         }
     }
 
-    const applyControl = (() => {
+    const joinControl = (() => {
         if (!team || isOwnTeam) return undefined
-
-        if (iApplied) {
-            return (
-                <Button size="sm" variant="destructive" disabled={withdrawing} onClick={withdraw}>
-                    {withdrawing ? 'Withdrawing…' : 'Withdraw application'}
-                </Button>
-            )
-        }
 
         if (iInvited) {
             const acceptBtn = (
@@ -157,22 +134,22 @@ export function TeamDetailsPage({ teamId, userProfile, onExitToGallery }: TeamDe
         }
 
         if (iBlocked) {
-            return <span className="text-xs text-red-300/80">Blocked from applying</span>
+            return <span className="text-xs text-red-300/80">Blocked from joining</span>
         }
 
         if (!team.is_open) return undefined
 
         if (hasTeam) {
             return (
-                <Tooltip content="Leave your current team to apply">
-                    <Button size="sm" disabled>Apply</Button>
+                <Tooltip content="Leave your current team to join">
+                    <Button size="sm" disabled>Join</Button>
                 </Tooltip>
             )
         }
 
         return (
-            <Button size="sm" disabled={applying} onClick={apply}>
-                {applying ? 'Applying…' : 'Apply'}
+            <Button size="sm" disabled={joining} onClick={join}>
+                {joining ? 'Joining…' : 'Join'}
             </Button>
         )
     })()
@@ -199,7 +176,7 @@ export function TeamDetailsPage({ teamId, userProfile, onExitToGallery }: TeamDe
                             isOwnTeam={isOwnTeam}
                             canLeave={canLeave}
                             canTransfer={isOwner && hasOtherActiveMembers}
-                            rightExtra={applyControl}
+                            rightExtra={joinControl}
                             userProfile={userProfile}
                             onTeamChange={setTeam}
                             onLeftOrDisbanded={onExitToGallery}

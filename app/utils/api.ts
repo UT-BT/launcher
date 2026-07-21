@@ -3281,7 +3281,7 @@ export async function fetchCapItAllLeaderboard(
 }
 
 export type TeamRole = 'owner' | 'admin' | 'member'
-export type TeamMemberStatus = 'invited' | 'applied' | 'active' | 'blocked'
+export type TeamMemberStatus = 'invited' | 'active' | 'blocked'
 export type TeamSort = 'added' | 'members' | 'name'
 
 export interface TeamCore {
@@ -3458,16 +3458,12 @@ export async function inviteToTeam(accessToken: string, teamId: string, user: st
     return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}/invite`, { token: accessToken, method: 'POST', body: { user } })
 }
 
-export async function applyToTeam(accessToken: string, teamId: string): Promise<TeamDetail> {
-    return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}/apply`, { token: accessToken, method: 'POST' })
+export async function joinTeam(accessToken: string, teamId: string): Promise<TeamDetail> {
+    return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}/join`, { token: accessToken, method: 'POST' })
 }
 
 export async function acceptTeamInvite(accessToken: string, teamId: string): Promise<TeamDetail> {
     return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}/accept`, { token: accessToken, method: 'POST' })
-}
-
-export async function withdrawApplication(accessToken: string, teamId: string): Promise<TeamDetail> {
-    return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}/withdraw`, { token: accessToken, method: 'POST' })
 }
 
 export async function declineTeamInvite(accessToken: string, teamId: string): Promise<TeamDetail> {
@@ -3478,20 +3474,16 @@ export async function leaveTeam(accessToken: string, teamId: string): Promise<{ 
     return apiGet(`/teams/${encodeURIComponent(teamId)}/leave`, { token: accessToken, method: 'POST' })
 }
 
-export async function approveTeamMember(accessToken: string, teamId: string, user: string): Promise<TeamDetail> {
-    return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}/members/${encodeURIComponent(user)}/approve`, { token: accessToken, method: 'POST' })
-}
-
-export async function denyTeamMember(accessToken: string, teamId: string, user: string, block = false): Promise<TeamDetail> {
-    return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}/members/${encodeURIComponent(user)}/deny`, { token: accessToken, method: 'POST', body: { block } })
+export async function denyTeamMember(accessToken: string, teamId: string, user: string): Promise<TeamDetail> {
+    return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}/members/${encodeURIComponent(user)}/deny`, { token: accessToken, method: 'POST' })
 }
 
 export async function unblockTeamMember(accessToken: string, teamId: string, user: string): Promise<TeamDetail> {
     return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}/members/${encodeURIComponent(user)}/unblock`, { token: accessToken, method: 'POST' })
 }
 
-export async function kickTeamMember(accessToken: string, teamId: string, user: string): Promise<TeamDetail> {
-    return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}/members/${encodeURIComponent(user)}/kick`, { token: accessToken, method: 'POST' })
+export async function kickTeamMember(accessToken: string, teamId: string, user: string, block = false): Promise<TeamDetail> {
+    return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}/members/${encodeURIComponent(user)}/kick`, { token: accessToken, method: 'POST', body: { block } })
 }
 
 export async function setTeamMemberRole(accessToken: string, teamId: string, user: string, role: 'admin' | 'member'): Promise<TeamDetail> {
@@ -3558,8 +3550,4 @@ export async function setMyTagHidden(accessToken: string, tagHidden: boolean): P
 
 export async function fetchMyInvitations(accessToken: string): Promise<TeamCore[]> {
     return apiGetList<TeamCore>('/me/invitations', { token: accessToken })
-}
-
-export async function fetchMyApplications(accessToken: string): Promise<TeamCore[]> {
-    return apiGetList<TeamCore>('/me/applications', { token: accessToken })
 }

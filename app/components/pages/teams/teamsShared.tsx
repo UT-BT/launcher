@@ -97,7 +97,6 @@ export function SectionHeader({ title, subtitle, action, accentClass = 'bg-accen
 const STATUS_STYLES: Record<TeamMemberStatus, string> = {
     active: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
     invited: 'bg-accent-500/15 text-accent-300 border-accent-500/30',
-    applied: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
     blocked: 'bg-red-500/15 text-red-300 border-red-500/30',
 }
 
@@ -147,7 +146,7 @@ export function AccessToggle({ isOpen, onChange }: { isOpen: boolean; onChange: 
                 ))}
             </div>
             <p className="text-[11px] text-muted-foreground">
-                {isOpen ? 'Anyone can apply to join.' : 'Members can only join by invitation.'}
+                {isOpen ? 'Anyone can join instantly.' : 'Members can only join by invitation.'}
             </p>
         </div>
     )

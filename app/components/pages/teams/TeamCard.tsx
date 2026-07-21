@@ -11,11 +11,10 @@ interface TeamCardProps {
     ownerAlias?: string
     ownerTitle?: ActiveTitle | null
     isOwnTeam?: boolean
-    applied?: boolean
     onSelect: (teamId: string) => void
 }
 
-export function TeamCard({ team, ownerAlias, ownerTitle, isOwnTeam, applied, onSelect }: TeamCardProps) {
+export function TeamCard({ team, ownerAlias, ownerTitle, isOwnTeam, onSelect }: TeamCardProps) {
     return (
         <button
             type="button"
@@ -34,15 +33,11 @@ export function TeamCard({ team, ownerAlias, ownerTitle, isOwnTeam, applied, onS
                     <div className="flex items-center gap-2 flex-wrap">
                         <TagChip tag={team.tag} />
                         <AccessBadge isOpen={team.is_open} />
-                        {isOwnTeam ? (
+                        {isOwnTeam && (
                             <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border bg-accent-500/20 text-accent-200 border-accent-500/40">
                                 Your team
                             </span>
-                        ) : applied ? (
-                            <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border bg-amber-500/15 text-amber-300 border-amber-500/30">
-                                Applied
-                            </span>
-                        ) : null}
+                        )}
                     </div>
                 </div>
             </div>
