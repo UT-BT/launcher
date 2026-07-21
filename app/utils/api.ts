@@ -41,12 +41,17 @@ export interface LauncherActivity {
 }
 
 export type TeamTagPosition = 'prefix' | 'suffix'
+export type TeamTagStyle = 'plain' | 'numbered' | 'number_only'
 
 export interface UserTeamSummary {
     id: string
     name: string
     tag: string | null
     tag_position: TeamTagPosition | null
+    tag_style: TeamTagStyle | null
+    tag_spaced: boolean
+    tag_number: number | null
+    tag_hidden: boolean
     tagged_alias: string | null
 }
 
@@ -3284,21 +3289,29 @@ export interface TeamCore {
     name: string
     tag: string | null
     tag_position: TeamTagPosition | null
+    tag_style: TeamTagStyle
+    tag_spaced: boolean
     is_open: boolean
     owner: string
     member_count: number
+    has_avatar: boolean
+    avatar_updated: string | null
     added: string | null
 }
 
 export interface TeamMember {
     user: string
+    /** Display name: the clan tag is already applied by the API. */
     alias: string | null
+    /** The untagged alias. Use this when composing a preview, never `alias`. */
+    raw_alias: string | null
     role: TeamRole
     status: TeamMemberStatus
     joined_at: string | null
     tag: string | null
     tag_position: TeamTagPosition | null
-    tagged_alias: string | null
+    tag_number: number | null
+    tag_hidden: boolean
     title?: ActiveTitle | null
 }
 
@@ -3349,6 +3362,8 @@ export interface CreateTeamInput {
     name: string
     tag?: string | null
     tag_position?: TeamTagPosition
+    tag_style?: TeamTagStyle
+    tag_spaced?: boolean
     is_open?: boolean
 }
 
@@ -3356,6 +3371,8 @@ export interface UpdateTeamInput {
     name?: string
     tag?: string | null
     tag_position?: TeamTagPosition
+    tag_style?: TeamTagStyle
+    tag_spaced?: boolean
     is_open?: boolean
 }
 
@@ -3481,6 +3498,38 @@ export async function setTeamMemberRole(accessToken: string, teamId: string, use
     return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}/members/${encodeURIComponent(user)}/role`, { token: accessToken, method: 'POST', body: { role } })
 }
 
+export async function setTeamMemberNumber(accessToken: string, teamId: string, user: string, number: number | null): Promise<TeamDetail> {
+    return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}/members/${encodeURIComponent(user)}/number`, { token: accessToken, method: 'POST', body: { number } })
+}
+
+export function teamAvatarUrl(team: Pick<TeamCore, 'id' | 'has_avatar' | 'avatar_updated'>): string | null {
+    if (!team.has_avatar) return null
+    const version = encodeURIComponent(team.avatar_updated ?? '')
+    return `${API_BASE_URL}/teams/${encodeURIComponent(team.id)}/avatar?v=${version}`
+}
+
+export async function uploadTeamAvatar(accessToken: string, teamId: string, file: Blob, filename: string): Promise<TeamDetail> {
+    const formData = new FormData()
+    formData.append('file', file, filename)
+    const res = await fetch(`${API_BASE_URL}/teams/${encodeURIComponent(teamId)}/avatar`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${accessToken}` },
+        body: formData,
+    })
+    if (!res.ok) {
+        throw await apiErrorFor(res)
+    }
+    const json = await res.json()
+    if (json && json.success && json.data) {
+        return json.data as TeamDetail
+    }
+    throw new Error('Invalid response format from server')
+}
+
+export async function deleteTeamAvatar(accessToken: string, teamId: string): Promise<TeamDetail> {
+    return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}/avatar`, { token: accessToken, method: 'DELETE' })
+}
+
 export async function fetchLineups(accessToken: string, teamId: string): Promise<Lineup[]> {
     return apiGetList<Lineup>(`/teams/${encodeURIComponent(teamId)}/lineups`, { token: accessToken })
 }
@@ -3499,6 +3548,11 @@ export async function deleteLineup(accessToken: string, teamId: string, lineupId
 
 export async function fetchMyTeam(accessToken: string): Promise<TeamDetail | null> {
     const data = await apiGet<{ team: TeamDetail | null }>('/me/team', { token: accessToken })
+    return data.team
+}
+
+export async function setMyTagHidden(accessToken: string, tagHidden: boolean): Promise<TeamDetail | null> {
+    const data = await apiGet<{ team: TeamDetail | null }>('/me/team', { token: accessToken, method: 'PATCH', body: { tag_hidden: tagHidden } })
     return data.team
 }
 

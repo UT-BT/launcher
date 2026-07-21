@@ -4,6 +4,7 @@ import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { formatAddedDate } from '@/app/utils/format'
 import type { ActiveTitle, TeamCore } from '@/app/utils/api'
 import { AccessBadge, TagChip } from './teamsShared'
+import { TeamAvatar } from './TeamAvatar'
 
 interface TeamCardProps {
     team: TeamCore
@@ -26,20 +27,24 @@ export function TeamCard({ team, ownerAlias, ownerTitle, isOwnTeam, applied, onS
                     : 'bg-card/30 border-white/10 hover:border-white/20 hover:bg-card/50',
             )}
         >
-            <span className="block text-base font-bold text-white truncate leading-tight">{team.name}</span>
-
-            <div className="flex items-center gap-2 flex-wrap">
-                <TagChip tag={team.tag} />
-                <AccessBadge isOpen={team.is_open} />
-                {isOwnTeam ? (
-                    <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border bg-accent-500/20 text-accent-200 border-accent-500/40">
-                        Your team
-                    </span>
-                ) : applied ? (
-                    <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border bg-amber-500/15 text-amber-300 border-amber-500/30">
-                        Applied
-                    </span>
-                ) : null}
+            <div className="flex items-start gap-3 min-w-0">
+                <TeamAvatar team={team} size="md" />
+                <div className="min-w-0 flex-1 space-y-2">
+                    <span className="block text-base font-bold text-white truncate leading-tight">{team.name}</span>
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <TagChip tag={team.tag} />
+                        <AccessBadge isOpen={team.is_open} />
+                        {isOwnTeam ? (
+                            <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border bg-accent-500/20 text-accent-200 border-accent-500/40">
+                                Your team
+                            </span>
+                        ) : applied ? (
+                            <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border bg-amber-500/15 text-amber-300 border-amber-500/30">
+                                Applied
+                            </span>
+                        ) : null}
+                    </div>
+                </div>
             </div>
 
             <div className="flex items-center gap-2 min-w-0">
