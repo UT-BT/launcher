@@ -11,7 +11,7 @@ not_here:
   - "the navigation stack / navigate() / renderView wiring → navigation.md"
   - "the shared components used (FilterPresetsMenu, ColumnsMenu, Tutorial) → shared-components.md"
 sections: [controlled-pages-with-hoisted-state, navigation-history-per-entry-ui-state, localstorage-persistence, filter-presets, tutorial-state, favorites, naming-conventions]
-last_verified: 2026-07-17
+last_verified: 2026-07-21
 verify_against: [app/components/main/Main.tsx, app/components/navigation/useNavState.ts, app/hooks/useAsync.ts]
 ---
 
@@ -197,7 +197,7 @@ page's **preference fields only** (the `*_PREF_KEYS` subset), not full query sta
 | `utbt:capItAllState:v1` | `Main.tsx` (`usePageState`) | Cap-It-All prefs: `pageSizePreference` |
 | `utbt:worldRecordsState:v1` | `Main.tsx` (`usePageState`) | World Records prefs: column visibility/order, `pageSizePreference` |
 | `utbt:achievementsState:v1` | `Main.tsx` (`usePageState`) | none (no pref fields → nothing persisted) |
-| `utbt:teamsState:v1` | `Main.tsx` (`usePageState`) | none persisted (no pref fields); per-entry query state = team-gallery search/page + directory access filter + sort field + sort direction + scroll. Gallery caches (`myTeam`, `invitations`, `applications`) live in the shared singleton, refreshed on mount and updated from each mutation's fresh `TeamDetail`. The role-aware `team-detail` page fetches its own `/teams/<id>` + `/me/team`; leave/disband/apply/accept/decline/withdraw invalidate the gallery cache and route back. |
+| `utbt:teamsState:v1` | `Main.tsx` (`usePageState`) | none persisted (no pref fields); per-entry query state = team-gallery search/page + directory access filter + sort field + sort direction + scroll. Gallery caches (`myTeam`, `invitations`) live in the shared singleton, refreshed on mount and updated from each mutation's fresh `TeamDetail`. The role-aware `team-detail` page fetches its own `/teams/<id>` + `/me/team`; leave/disband/join/accept/decline invalidate the gallery cache and route back. |
 | `utbt:newMapsSeen:v1` | `Main.tsx` (`markViewed`) | ISO timestamp of the newest map the user has seen — gates the Maps "new" sidebar badge + row highlight |
 | `utbt:newRecordsSeen:v1` | `Main.tsx` (`markViewed`) | ISO timestamp of the newest WR the user has seen — gates the World Records "new" badge + highlight |
 | `utbt:adminState:v1` | `Main.tsx` (`usePageState`) | Admin page pref: `activeSection`. Each admin section owns its own table state: column visibility/order in `utbt:admin:<section>:cols:v2` + saved filters in `utbt:admin:<section>:filters:v1` (both localStorage, via `useAdminTable`/`useAdminFilterPresets`); transient sort/filter/search/page via `useNavState('admin.<section>.<field>')` so it restores on Back/Forward. No caches singleton. |

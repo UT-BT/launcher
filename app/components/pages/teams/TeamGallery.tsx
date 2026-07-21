@@ -25,7 +25,6 @@ const SORT_OPTIONS: { value: TeamSort; label: string }[] = [
 interface TeamGalleryProps {
     accessToken: string
     myTeam: TeamDetail | null
-    appliedTeamIds: string[]
     search: string
     page: number
     access: TeamAccessFilter
@@ -46,10 +45,9 @@ function accessToIsOpen(access: TeamAccessFilter): boolean | undefined {
 }
 
 export function TeamGallery({
-    accessToken, myTeam, appliedTeamIds, search, page, access, sort, sortDir,
+    accessToken, myTeam, search, page, access, sort, sortDir,
     onSearchChange, onPageChange, onAccessChange, onSortChange, onSortDirChange, onSelect,
 }: TeamGalleryProps) {
-    const appliedSet = useMemo(() => new Set(appliedTeamIds), [appliedTeamIds])
     const [raw, setRaw] = useState(search)
     const [teams, setTeams] = useState<TeamCore[]>([])
     const [total, setTotal] = useState(0)
@@ -182,7 +180,6 @@ export function TeamGallery({
                                 ownerAlias={owner?.alias}
                                 ownerTitle={owner?.title}
                                 isOwnTeam={team.id === myTeam?.id}
-                                applied={appliedSet.has(team.id)}
                                 onSelect={onSelect}
                             />
                         )

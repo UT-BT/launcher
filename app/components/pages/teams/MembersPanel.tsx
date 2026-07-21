@@ -11,7 +11,7 @@ import { Modal } from '@/app/components/ui/modal'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { formatTimeAgo } from '@/app/utils/format'
 import {
-    approveTeamMember, denyTeamMember, fetchTeamAudit, inviteToTeam, kickTeamMember, setTeamMemberNumber, setTeamMemberRole, unblockTeamMember,
+    denyTeamMember, fetchTeamAudit, inviteToTeam, kickTeamMember, setTeamMemberNumber, setTeamMemberRole, unblockTeamMember,
     type PlayerListRow, type TeamAuditEntry, type TeamDetail, type TeamMember, type TeamRole,
 } from '@/app/utils/api'
 import { ErrorBanner, SectionCard, StatusBadge, memberTitle, teamErrorMessage, teamInputClass } from './teamsShared'
@@ -27,7 +27,7 @@ interface MembersPanelProps {
 }
 
 const ROLE_ORDER: Record<TeamRole, number> = { owner: 0, admin: 1, member: 2 }
-const PENDING_ORDER: Record<string, number> = { applied: 0, invited: 1, blocked: 2 }
+const PENDING_ORDER: Record<string, number> = { invited: 0, blocked: 1 }
 
 function RoleSlot({ role }: { role: TeamRole }) {
     if (role === 'owner') return <Tooltip content="Owner"><Crown className="size-4 text-yellow-300 shrink-0" /></Tooltip>
@@ -198,7 +198,7 @@ export function MembersPanel({ accessToken, team, isOwner, isManager, onTeamChan
             {isManager && (
                 <Modal isOpen={requestsOpen} onClose={() => setRequestsOpen(false)} title="Requests" offsetSidebar maxWidth="34rem" footer={null}>
                     <div className="space-y-4">
-                        <p className="text-xs text-muted-foreground">Pending applications and invitations, and players blocked from applying.</p>
+                        <p className="text-xs text-muted-foreground">Pending invitations, and players blocked from joining.</p>
                         <ErrorBanner message={error} />
                         {pending.length === 0 ? (
                             <EmptyState icon={Inbox} title="Nothing pending" hint="Applications and invites will appear here." />
@@ -213,13 +213,6 @@ export function MembersPanel({ accessToken, team, isOwner, isManager, onTeamChan
                                                 <StatusBadge status={member.status} />
                                             </div>
                                             <div className="flex items-center gap-1.5 shrink-0">
-                                                {member.status === 'applied' && (
-                                                    <>
-                                                        <ActionButton tooltip="Approve" icon={Check} tone="emerald" busy={busy} onClick={() => run(member.user, () => approveTeamMember(accessToken, team.id, member.user))} />
-                                                        <ActionButton tooltip="Deny" icon={X} tone="red" busy={busy} onClick={() => run(member.user, () => denyTeamMember(accessToken, team.id, member.user))} />
-                                                        <ActionButton tooltip="Deny & block from applying" icon={Ban} tone="red" busy={busy} onClick={() => run(member.user, () => denyTeamMember(accessToken, team.id, member.user, true))} />
-                                                    </>
-                                                )}
                                                 {member.status === 'invited' && (
                                                     <ActionButton tooltip="Cancel invite" icon={X} tone="red" busy={busy} onClick={() => run(member.user, () => denyTeamMember(accessToken, team.id, member.user))} />
                                                 )}
@@ -263,7 +256,10 @@ export function MembersPanel({ accessToken, team, isOwner, isManager, onTeamChan
                                                     <ActionButton tooltip="Demote to member" icon={ShieldOff} tone="muted" busy={busy} onClick={() => run(member.user, () => setTeamMemberRole(accessToken, team.id, member.user, 'member'))} />
                                                 )}
                                                 {(isOwner || member.role === 'member') && (
-                                                    <ActionButton tooltip="Kick from team" icon={UserMinus} tone="red" busy={busy} onClick={() => run(member.user, () => kickTeamMember(accessToken, team.id, member.user))} />
+                                                    <>
+                                                        <ActionButton tooltip="Kick from team" icon={UserMinus} tone="red" busy={busy} onClick={() => run(member.user, () => kickTeamMember(accessToken, team.id, member.user))} />
+                                                        <ActionButton tooltip="Kick & block from rejoining" icon={Ban} tone="red" busy={busy} onClick={() => run(member.user, () => kickTeamMember(accessToken, team.id, member.user, true))} />
+                                                    </>
                                                 )}
                                             </div>
                                         </div>
