@@ -1,4 +1,7 @@
-import type { TeamTagPosition } from '@/app/utils/api'
+import type { TeamTagPosition, TeamTagStyle } from '@/app/utils/api'
+
+export const TAG_NUMBER_MIN = 0
+export const TAG_NUMBER_MAX = 999
 
 export const TAG_MIN_LENGTH = 2
 export const TAG_MAX_LENGTH = 9
@@ -43,13 +46,43 @@ export function nameValidationError(name: string): string | null {
     return null
 }
 
+export const TAG_STYLES: { id: TeamTagStyle; label: string; hint: string }[] = [
+    { id: 'plain', label: 'Standard', hint: 'The tag sits next to the alias.' },
+    { id: 'numbered', label: 'Numbered', hint: 'Each member’s number is appended to the tag.' },
+    { id: 'number_only', label: 'Number only', hint: 'The tag and number replace the alias entirely.' },
+]
+
+/**
+ * Mirrors apply_tag on the backend. Keep the two in lockstep — the server is the
+ * source of truth for the name players actually wear, this only drives previews.
+ */
 export function formatTaggedAlias(
     alias: string | null | undefined,
     tag: string | null | undefined,
     position: TeamTagPosition | null | undefined,
+    style: TeamTagStyle = 'plain',
+    spaced = true,
+    memberNumber: number | null | undefined = null,
 ): string {
     const name = (alias && alias.trim()) || 'Player'
     const trimmedTag = tag?.trim()
     if (!trimmedTag) return name
-    return position === 'suffix' ? `${name} ${trimmedTag}` : `${trimmedTag} ${name}`
+
+    const numbered = style !== 'plain' && memberNumber !== null && memberNumber !== undefined
+    const unit = numbered ? `${trimmedTag}${memberNumber}` : trimmedTag
+
+    if (style === 'number_only') return numbered ? unit : name
+
+    const separator = spaced ? ' ' : ''
+    return position === 'suffix' ? `${name}${separator}${unit}` : `${unit}${separator}${name}`
+}
+
+export function memberNumberValidationError(value: string): string | null {
+    if (value.trim() === '') return null
+    if (!/^\d+$/.test(value.trim())) return 'Numbers only.'
+    const parsed = Number(value.trim())
+    if (parsed < TAG_NUMBER_MIN || parsed > TAG_NUMBER_MAX) {
+        return `Must be between ${TAG_NUMBER_MIN} and ${TAG_NUMBER_MAX}.`
+    }
+    return null
 }

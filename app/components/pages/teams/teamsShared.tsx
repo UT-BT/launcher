@@ -19,6 +19,26 @@ export function teamErrorMessage(e: unknown): string {
     return 'Something went wrong. Please try again.'
 }
 
+// Mirrors the API's avatar limits so a bad pick fails instantly instead of after a 4 MB upload.
+export const TEAM_AVATAR_MAX_BYTES = 4 * 1024 * 1024
+export const TEAM_AVATAR_ACCEPT = 'image/png,image/jpeg,image/webp,image/gif'
+
+export function teamAvatarValidationError(file: File): string | null {
+    if (!file.type.startsWith('image/')) return 'Choose a PNG, JPEG, WEBP or GIF image.'
+    if (file.size > TEAM_AVATAR_MAX_BYTES) return 'Image must be 4 MB or smaller.'
+    return null
+}
+
+// A data URL, not createObjectURL: the renderer CSP allows `data:` in img-src but not `blob:`.
+export function readImageDataUrl(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(String(reader.result))
+        reader.onerror = () => reject(new Error('Could not read that image.'))
+        reader.readAsDataURL(file)
+    })
+}
+
 export function ErrorBanner({ message }: { message: string | null }) {
     if (!message) return null
     return (

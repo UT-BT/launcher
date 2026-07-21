@@ -1,19 +1,21 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
     Crown, Sword, Check, X, Ban, RotateCcw, ShieldCheck, ShieldOff, UserMinus,
-    Inbox, UserCog, History, UserPlus, LogOut, ArrowRightLeft, Pencil, Flag,
+    Inbox, UserCog, History, UserPlus, LogOut, ArrowRightLeft, Pencil, Flag, Hash, ImagePlus, EyeOff,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { Button } from '@/app/components/ui/button'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import { Modal } from '@/app/components/ui/modal'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { formatTimeAgo } from '@/app/utils/format'
 import {
-    approveTeamMember, denyTeamMember, fetchTeamAudit, inviteToTeam, kickTeamMember, setTeamMemberRole, unblockTeamMember,
-    type PlayerListRow, type TeamAuditEntry, type TeamDetail, type TeamRole,
+    approveTeamMember, denyTeamMember, fetchTeamAudit, inviteToTeam, kickTeamMember, setTeamMemberNumber, setTeamMemberRole, unblockTeamMember,
+    type PlayerListRow, type TeamAuditEntry, type TeamDetail, type TeamMember, type TeamRole,
 } from '@/app/utils/api'
-import { ErrorBanner, SectionCard, StatusBadge, memberTitle, teamErrorMessage } from './teamsShared'
+import { ErrorBanner, SectionCard, StatusBadge, memberTitle, teamErrorMessage, teamInputClass } from './teamsShared'
+import { memberNumberValidationError } from './tagFormat'
 import { PlayerSearchInput } from './PlayerSearchInput'
 
 interface MembersPanelProps {
@@ -50,6 +52,8 @@ const AUDIT_META: Record<string, { icon: LucideIcon; tone: string; text: (actor:
     demote: { icon: ShieldOff, tone: 'text-muted-foreground', text: (a, t) => `${a} demoted ${t} to member` },
     transfer: { icon: ArrowRightLeft, tone: 'text-yellow-300', text: (a, t) => `${a} transferred ownership to ${t}` },
     leave: { icon: LogOut, tone: 'text-muted-foreground', text: a => `${a} left the team` },
+    number: { icon: Hash, tone: 'text-accent-300', text: (a, t) => `${a} changed ${t}'s number` },
+    avatar: { icon: ImagePlus, tone: 'text-accent-300', text: a => `${a} changed the team image` },
 }
 
 function IconButton({ tooltip, icon: Icon, count }: { tooltip: string; icon: LucideIcon; count?: number }) {
@@ -68,6 +72,7 @@ export function MembersPanel({ accessToken, team, isOwner, isManager, onTeamChan
     const [error, setError] = useState<string | null>(null)
     const [requestsOpen, setRequestsOpen] = useState(false)
     const [manageOpen, setManageOpen] = useState(false)
+    const [numbersOpen, setNumbersOpen] = useState(false)
     const [historyOpen, setHistoryOpen] = useState(false)
     const [audit, setAudit] = useState<TeamAuditEntry[]>([])
     const [auditLoading, setAuditLoading] = useState(false)
@@ -128,12 +133,21 @@ export function MembersPanel({ accessToken, team, isOwner, isManager, onTeamChan
         }
     }
 
+    const usesNumbers = team.tag_style !== 'plain'
+
     const headerActions = isManager ? (
         <div className="flex items-center gap-1.5 shrink-0">
             {pending.length > 0 && (
                 <Tooltip content="Requests">
                     <Button size="sm" variant="secondary" onClick={() => setRequestsOpen(true)}>
                         <IconButton tooltip="Requests" icon={Inbox} count={pending.length} />
+                    </Button>
+                </Tooltip>
+            )}
+            {usesNumbers && (
+                <Tooltip content="Member numbers">
+                    <Button size="sm" variant="secondary" onClick={() => setNumbersOpen(true)}>
+                        <IconButton tooltip="Member numbers" icon={Hash} />
                     </Button>
                 </Tooltip>
             )}
@@ -172,6 +186,11 @@ export function MembersPanel({ accessToken, team, isOwner, isManager, onTeamChan
                     <div key={member.user} className="flex items-center gap-2.5 px-3 py-2.5 bg-white/5 border border-white/5 rounded-lg">
                         <RoleSlot role={member.role} />
                         <PlayerInfo userId={member.user} alias={member.alias} title={memberTitle(member.title)} size="sm" />
+                        {member.tag_hidden && (
+                            <Tooltip content="Wearing no clan tag by choice">
+                                <EyeOff className="size-3.5 text-muted-foreground/60 shrink-0 ml-auto" />
+                            </Tooltip>
+                        )}
                     </div>
                 ))}
             </div>
@@ -256,6 +275,29 @@ export function MembersPanel({ accessToken, team, isOwner, isManager, onTeamChan
                 </Modal>
             )}
 
+            {isManager && usesNumbers && (
+                <Modal isOpen={numbersOpen} onClose={() => setNumbersOpen(false)} title="Member Numbers" offsetSidebar maxWidth="34rem" footer={null}>
+                    <div className="space-y-4">
+                        <p className="text-xs text-muted-foreground">
+                            {team.tag_style === 'number_only'
+                                ? `Each member plays as ${team.tag}<number>. Numbers must be unique within the team.`
+                                : `Each member's number is appended to ${team.tag}. Numbers must be unique within the team.`}
+                        </p>
+                        <ErrorBanner message={error} />
+                        <div className="space-y-2">
+                            {activeMembers.map(member => (
+                                <MemberNumberRow
+                                    key={`${member.user}:${member.tag_number}`}
+                                    member={member}
+                                    busy={busyUser === member.user}
+                                    onCommit={value => run(member.user, () => setTeamMemberNumber(accessToken, team.id, member.user, value))}
+                                />
+                            ))}
+                        </div>
+                    </div>
+                </Modal>
+            )}
+
             {isManager && (
                 <Modal isOpen={historyOpen} onClose={() => setHistoryOpen(false)} title="Audit Log" offsetSidebar maxWidth="36rem" footer={null}>
                     <div className="space-y-3">
@@ -293,6 +335,50 @@ export function MembersPanel({ accessToken, team, isOwner, isManager, onTeamChan
 
 function cnTone(tone?: string) {
     return `size-3.5 shrink-0 ${tone ?? 'text-muted-foreground'}`
+}
+
+function MemberNumberRow({ member, busy, onCommit }: {
+    member: TeamMember
+    busy: boolean
+    onCommit: (value: number | null) => void
+}) {
+    const stored = member.tag_number == null ? '' : String(member.tag_number)
+    const [draft, setDraft] = useState(stored)
+    const [touched, setTouched] = useState(false)
+
+    const current = touched ? draft : stored
+    const validationError = memberNumberValidationError(current)
+
+    // On success the row is remounted by its key (which includes tag_number), resetting the
+    // draft. On failure it is not, so the typed value survives for the user to correct.
+    const commit = () => {
+        if (validationError || current.trim() === stored) return
+        onCommit(current.trim() === '' ? null : Number(current.trim()))
+    }
+
+    return (
+        <div className="flex items-center gap-3 px-3 py-2.5 bg-white/5 border border-white/5 rounded-lg">
+            <div className="min-w-0 flex-1 flex items-center gap-2">
+                <RoleSlot role={member.role} />
+                <PlayerInfo userId={member.user} alias={member.alias} title={memberTitle(member.title)} size="sm" />
+            </div>
+            <div className="shrink-0 flex flex-col items-end gap-0.5">
+                <input
+                    value={current}
+                    disabled={busy}
+                    inputMode="numeric"
+                    maxLength={3}
+                    placeholder="—"
+                    aria-label={`Number for ${member.alias ?? member.user}`}
+                    onChange={e => { setTouched(true); setDraft(e.target.value) }}
+                    onBlur={commit}
+                    onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur() }}
+                    className={cn(teamInputClass, 'w-16 text-center tabular-nums py-1.5', validationError && 'border-red-500/50')}
+                />
+                {validationError && <span className="text-[10px] text-red-400">{validationError}</span>}
+            </div>
+        </div>
+    )
 }
 
 function EmptyState({ icon: Icon, title, hint }: { icon: LucideIcon; title: string; hint: string }) {

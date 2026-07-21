@@ -1,16 +1,20 @@
-import { useState, type ReactNode } from 'react'
-import { Pencil, ArrowRightLeft, Trash2, LogOut } from 'lucide-react'
+import { useRef, useState, type ReactNode } from 'react'
+import { Pencil, ArrowRightLeft, Trash2, LogOut, ImagePlus, ImageOff } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/app/components/ui/button'
 import { Modal } from '@/app/components/ui/modal'
+import { Switch } from '@/app/components/ui/switch'
+import { Tooltip } from '@/app/components/ui/tooltip'
 import { ConfirmModal } from '@/app/components/shared/ConfirmModal'
 import { formatAddedDate } from '@/app/utils/format'
 import {
-    disbandTeam, leaveTeam, transferTeamOwnership, updateTeam,
-    type TeamDetail, type TeamTagPosition, type UserProfile,
+    deleteTeamAvatar, disbandTeam, leaveTeam, setMyTagHidden, transferTeamOwnership, updateTeam, uploadTeamAvatar,
+    type TeamDetail, type UserProfile,
 } from '@/app/utils/api'
 import { AccessBadge, AccessToggle, ErrorBanner, TagChip, refreshUserProfile, teamInputClass, teamErrorMessage } from './teamsShared'
 import { nameValidationError, tagValidationError, TEAM_NAME_MAX_LENGTH, TAG_MAX_LENGTH } from './tagFormat'
+import { TagPreview, TagStyleFields, type TagStyleValue } from './TagStyleFields'
+import { TeamAvatar } from './TeamAvatar'
 
 interface TeamHeaderCardProps {
     accessToken: string
@@ -25,8 +29,6 @@ interface TeamHeaderCardProps {
     onLeftOrDisbanded: () => void
 }
 
-const TAG_POSITIONS: TeamTagPosition[] = ['prefix', 'suffix']
-
 export function TeamHeaderCard({
     accessToken, team, isOwner, isOwnTeam, canLeave, canTransfer, rightExtra,
     userProfile, onTeamChange, onLeftOrDisbanded,
@@ -36,6 +38,9 @@ export function TeamHeaderCard({
     const [confirmDelete, setConfirmDelete] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [leaving, setLeaving] = useState(false)
+    const [avatarBusy, setAvatarBusy] = useState(false)
+    const [tagBusy, setTagBusy] = useState(false)
+    const avatarInputRef = useRef<HTMLInputElement>(null)
 
     const leave = async () => {
         setLeaving(true)
@@ -53,26 +58,99 @@ export function TeamHeaderCard({
 
     const meMember = team.members.find(m => String(m.user) === String(userProfile?.id))
 
+    const runAvatar = async (fn: () => Promise<TeamDetail>) => {
+        setAvatarBusy(true)
+        setError(null)
+        try {
+            onTeamChange(await fn())
+        } catch (e) {
+            setError(teamErrorMessage(e))
+        } finally {
+            setAvatarBusy(false)
+        }
+    }
+
+    const pickAvatar = async (file: File | null) => {
+        if (!file) return
+        await runAvatar(() => uploadTeamAvatar(accessToken, team.id, file, file.name))
+    }
+
+    const toggleMyTag = async (show: boolean) => {
+        setTagBusy(true)
+        setError(null)
+        try {
+            const updated = await setMyTagHidden(accessToken, !show)
+            if (updated) onTeamChange(updated)
+            refreshUserProfile()
+        } catch (e) {
+            setError(teamErrorMessage(e))
+        } finally {
+            setTagBusy(false)
+        }
+    }
+
     return (
         <section className="bg-card/30 border border-white/10 rounded-xl p-5 space-y-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0 space-y-1.5">
-                    <div className="flex items-center gap-2.5 flex-wrap">
-                        <h1 className="text-2xl font-bold text-white leading-tight">{team.name}</h1>
-                        <TagChip tag={team.tag} />
-                        <AccessBadge isOpen={team.is_open} />
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                        {team.member_count} {team.member_count === 1 ? 'member' : 'members'}
-                        {team.added ? ` · Created ${formatAddedDate(team.added)}` : ''}
-                        {isOwnTeam && meMember?.alias && (
-                            <> · You appear as <span className="text-white font-medium">{meMember.alias}</span></>
+                <div className="min-w-0 flex items-start gap-3.5">
+                    <TeamAvatar team={team} size="lg" />
+                    <div className="min-w-0 space-y-1.5">
+                        <div className="flex items-center gap-2.5 flex-wrap">
+                            <h1 className="text-2xl font-bold text-white leading-tight">{team.name}</h1>
+                            <TagChip tag={team.tag} />
+                            <AccessBadge isOpen={team.is_open} />
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                            {team.member_count} {team.member_count === 1 ? 'member' : 'members'}
+                            {team.added ? ` · Created ${formatAddedDate(team.added)}` : ''}
+                            {isOwnTeam && meMember?.alias && (
+                                <> · You appear as <span className="text-white font-medium">{meMember.alias}</span></>
+                            )}
+                        </p>
+                        {isOwnTeam && meMember && (
+                            <div className="flex items-center gap-2 pt-0.5">
+                                <Switch
+                                    checked={!meMember.tag_hidden}
+                                    disabled={tagBusy}
+                                    onCheckedChange={toggleMyTag}
+                                    className="h-5 w-10"
+                                />
+                                <span className="text-xs text-muted-foreground">
+                                    Show clan tag on my name
+                                </span>
+                            </div>
                         )}
-                    </p>
+                    </div>
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
                     {rightExtra}
+                    {isOwner && (
+                        <>
+                            <Tooltip content={team.has_avatar ? 'Replace team image' : 'Upload team image'}>
+                                <Button size="sm" variant="secondary" disabled={avatarBusy} onClick={() => avatarInputRef.current?.click()}>
+                                    <ImagePlus className="size-3.5" />
+                                </Button>
+                            </Tooltip>
+                            {team.has_avatar && (
+                                <Tooltip content="Remove team image">
+                                    <Button size="sm" variant="secondary" disabled={avatarBusy} onClick={() => runAvatar(() => deleteTeamAvatar(accessToken, team.id))}>
+                                        <ImageOff className="size-3.5" />
+                                    </Button>
+                                </Tooltip>
+                            )}
+                            <input
+                                ref={avatarInputRef}
+                                type="file"
+                                accept="image/png,image/jpeg,image/webp,image/gif"
+                                className="hidden"
+                                onChange={e => {
+                                    void pickAvatar(e.target.files?.[0] ?? null)
+                                    e.target.value = ''
+                                }}
+                            />
+                        </>
+                    )}
                     {isOwner && (
                         <Button size="sm" variant="secondary" onClick={() => setEditing(true)}>
                             <Pencil className="size-3.5" /> Edit
@@ -102,6 +180,9 @@ export function TeamHeaderCard({
                 <EditTeamModal
                     accessToken={accessToken}
                     team={team}
+                    userProfile={userProfile}
+                    rawAlias={meMember?.raw_alias ?? null}
+                    memberNumber={meMember?.tag_number ?? null}
                     onClose={() => setEditing(false)}
                     onSaved={t => { onTeamChange(t); setEditing(false); refreshUserProfile() }}
                 />
@@ -141,19 +222,27 @@ export function TeamHeaderCard({
     )
 }
 
-function EditTeamModal({ accessToken, team, onClose, onSaved }: {
+function EditTeamModal({ accessToken, team, userProfile, rawAlias, memberNumber, onClose, onSaved }: {
     accessToken: string
     team: TeamDetail
+    userProfile?: UserProfile
+    rawAlias: string | null
+    memberNumber: number | null
     onClose: () => void
     onSaved: (team: TeamDetail) => void
 }) {
     const [name, setName] = useState(team.name)
-    const [tag, setTag] = useState(team.tag ?? '')
-    const [tagPosition, setTagPosition] = useState<TeamTagPosition>(team.tag_position ?? 'prefix')
+    const [tagStyle, setTagStyle] = useState<TagStyleValue>({
+        tag: team.tag ?? '',
+        position: team.tag_position ?? 'prefix',
+        style: team.tag_style,
+        spaced: team.tag_spaced,
+    })
     const [isOpen, setIsOpen] = useState(team.is_open)
     const [saving, setSaving] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
+    const tag = tagStyle.tag
     const tagError = tag.trim().length > 0 ? tagValidationError(tag.trim()) : null
     const nameError = name.trim().length > 0 ? nameValidationError(name) : null
 
@@ -165,7 +254,9 @@ function EditTeamModal({ accessToken, team, onClose, onSaved }: {
             const detail = await updateTeam(accessToken, team.id, {
                 name: name.trim(),
                 tag: tag.trim(),
-                tag_position: tagPosition,
+                tag_position: tagStyle.position,
+                tag_style: tagStyle.style,
+                tag_spaced: tagStyle.spaced,
                 is_open: isOpen,
             })
             onSaved(detail)
@@ -199,29 +290,11 @@ function EditTeamModal({ accessToken, team, onClose, onSaved }: {
                 </label>
                 <label className="flex flex-col gap-1.5">
                     <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Clan tag</span>
-                    <input value={tag} onChange={e => setTag(e.target.value)} maxLength={TAG_MAX_LENGTH} className={teamInputClass} />
+                    <input value={tag} onChange={e => setTagStyle({ ...tagStyle, tag: e.target.value })} maxLength={TAG_MAX_LENGTH} className={teamInputClass} />
                     {tagError && <span className="text-[11px] text-red-400">{tagError}</span>}
                 </label>
-                <div className="flex flex-col gap-1.5">
-                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Tag position</span>
-                    <div className="flex items-center gap-1">
-                        {TAG_POSITIONS.map(pos => (
-                            <button
-                                key={pos}
-                                type="button"
-                                onClick={() => setTagPosition(pos)}
-                                className={cn(
-                                    'px-3 py-1.5 rounded-md text-xs font-medium border transition-colors cursor-pointer capitalize',
-                                    tagPosition === pos
-                                        ? 'bg-accent-500/20 border-accent-500/50 text-accent-300'
-                                        : 'bg-card/50 border-white/10 text-muted-foreground hover:text-white hover:border-white/20',
-                                )}
-                            >
-                                {pos}
-                            </button>
-                        ))}
-                    </div>
-                </div>
+                <TagStyleFields value={tagStyle} onChange={setTagStyle} />
+                <TagPreview value={tagStyle} alias={rawAlias} userProfile={userProfile} memberNumber={memberNumber} />
                 <div className="flex flex-col gap-1.5">
                     <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Access</span>
                     <AccessToggle isOpen={isOpen} onChange={setIsOpen} />

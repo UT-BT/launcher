@@ -46,7 +46,7 @@ full loop).
 | Achievements | `fetchMyAchievements`, `fetchAchievementDefinitions` |
 | Home / summary | `fetchSummary` (homepage feed), `fetchHotMaps` (→ `GET /v2/summary/hot_maps` → `HotMap[]`), `fetchMedalHunt` (→ `GET /v2/summary/medal_hunt` → `MedalHuntOpportunity[]`), `fetchPendingReviews` |
 | Profile | `UserProfile` type (incl. `team` clan-tag summary), `getAvatarUrl(userId)`, `toActiveTitle` |
-| Teams | `createTeam`, `fetchTeams`, `fetchTeam`, `updateTeam`, `disbandTeam`, `transferTeamOwnership`, `fetchTeamMembers`, `inviteToTeam`, `applyToTeam`, `withdrawApplication`, `acceptTeamInvite`, `declineTeamInvite`, `leaveTeam`, `approveTeamMember`, `denyTeamMember` (optional `block`), `unblockTeamMember`, `kickTeamMember`, `setTeamMemberRole`, `fetchTeamActivity`, `fetchTeamAudit`, `fetchLineups`, `createLineup`, `updateLineup`, `deleteLineup`, `fetchMyTeam`, `fetchMyInvitations`, `fetchMyApplications` (clans + lineups; mutations return the fresh `TeamDetail`; validation failures surface the server's message — see [Errors](#errors)) |
+| Teams | `createTeam`, `fetchTeams`, `fetchTeam`, `updateTeam`, `disbandTeam`, `transferTeamOwnership`, `fetchTeamMembers`, `inviteToTeam`, `applyToTeam`, `withdrawApplication`, `acceptTeamInvite`, `declineTeamInvite`, `leaveTeam`, `approveTeamMember`, `denyTeamMember` (optional `block`), `unblockTeamMember`, `kickTeamMember`, `setTeamMemberRole`, `setTeamMemberNumber`, `fetchTeamActivity`, `fetchTeamAudit`, `fetchLineups`, `createLineup`, `updateLineup`, `deleteLineup`, `fetchMyTeam`, `setMyTagHidden`, `fetchMyInvitations`, `fetchMyApplications`, `uploadTeamAvatar`, `deleteTeamAvatar`, `teamAvatarUrl` (clans + lineups; mutations return the fresh `TeamDetail`; validation failures surface the server's message — see [Errors](#errors)) |
 | Admin (staff-only) | the moderator/admin dashboard slice — see [Admin API](#admin-api) |
 
 Most fetchers take `accessToken` first (Discord OAuth bearer).
@@ -62,9 +62,26 @@ rate limiter is the one endpoint that uses `reason` instead. `apiErrorFor` in
 it is an empty string over HTTP/2, which is what prod serves.
 
 Server-side validation messages are the source of truth, but mirror any rule the user
-types against (team name, clan tag — `app/components/pages/teams/tagFormat.ts`) so the
-error shows inline instead of after a round trip. Keep the mirror in sync with the API
+types against (team name, clan tag, member number — `app/components/pages/teams/tagFormat.ts`)
+so the error shows inline instead of after a round trip. Keep the mirror in sync with the API
 or the client will reject values the server accepts.
+
+### Clan tag composition
+
+The API returns aliases **already tagged** — the launcher never assembles the name a player
+actually wears. `formatTaggedAlias` in `tagFormat.ts` exists only to preview an unsaved
+choice, and mirrors the server rule:
+
+```
+unit = tag + number   (style !== 'plain' and a number is assigned)   else tag
+sep  = ' ' if tag_spaced else ''
+'number_only' -> unit               (raw alias when no number is assigned)
+'suffix'      -> alias + sep + unit
+'prefix'      -> unit  + sep + alias
+```
+
+`'numbered'` without an assigned number renders as `'plain'`. A member with `tag_hidden`
+comes back from the API untagged everywhere, so nothing client-side needs to special-case it.
 
 ### Medal Hunt (`fetchMedalHunt`)
 
@@ -216,6 +233,11 @@ https://gateway.utbt.net/users/{userId}/avatar
 
 Fallback on error: `https://cdn.discordapp.com/embed/avatars/{userId % 5}.png`.
 `PlayerInfo` handles both — never write an avatar `<img>` directly.
+
+Team images are served by the API and built by `teamAvatarUrl(team)`, which returns
+`null` when `team.has_avatar` is false and appends `avatar_updated` as a cache-busting
+`?v=`. `TeamAvatar` renders it with an initials fallback. This is a *team* crest, not a
+player avatar, so the `PlayerInfo`-only rule does not apply to it.
 
 Map screenshots:
 
