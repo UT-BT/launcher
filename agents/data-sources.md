@@ -11,8 +11,8 @@ not_here:
   - "IPC channels (window.conveyor.*) → lib/conveyor/README.md"
   - "how UI state persists in localStorage → state-patterns.md"
   - "the procedure to wire a new endpoint into the UI → skill: consume-api-data"
-sections: [backend-api, admin-api, cap-detail-page-endpoints, world-records-page-endpoints, team-maps-and-team-runs, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites]
-last_verified: 2026-07-20
+sections: [backend-api, errors, admin-api, cap-detail-page-endpoints, world-records-page-endpoints, team-maps-and-team-runs, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites]
+last_verified: 2026-07-21
 verify_against: [app/utils/api.ts, app/utils/patreon.ts, app/utils/server-utils.ts]
 ---
 
@@ -46,10 +46,25 @@ full loop).
 | Achievements | `fetchMyAchievements`, `fetchAchievementDefinitions` |
 | Home / summary | `fetchSummary` (homepage feed), `fetchHotMaps` (→ `GET /v2/summary/hot_maps` → `HotMap[]`), `fetchMedalHunt` (→ `GET /v2/summary/medal_hunt` → `MedalHuntOpportunity[]`), `fetchPendingReviews` |
 | Profile | `UserProfile` type (incl. `team` clan-tag summary), `getAvatarUrl(userId)`, `toActiveTitle` |
-| Teams | `createTeam`, `fetchTeams`, `fetchTeam`, `updateTeam`, `disbandTeam`, `transferTeamOwnership`, `fetchTeamMembers`, `inviteToTeam`, `applyToTeam`, `withdrawApplication`, `acceptTeamInvite`, `declineTeamInvite`, `leaveTeam`, `approveTeamMember`, `denyTeamMember` (optional `block`), `unblockTeamMember`, `kickTeamMember`, `setTeamMemberRole`, `fetchTeamActivity`, `fetchTeamAudit`, `fetchLineups`, `createLineup`, `updateLineup`, `deleteLineup`, `fetchMyTeam`, `fetchMyInvitations`, `fetchMyApplications` (clans + lineups; mutations return the fresh `TeamDetail`; errors surface `reason`) |
+| Teams | `createTeam`, `fetchTeams`, `fetchTeam`, `updateTeam`, `disbandTeam`, `transferTeamOwnership`, `fetchTeamMembers`, `inviteToTeam`, `applyToTeam`, `withdrawApplication`, `acceptTeamInvite`, `declineTeamInvite`, `leaveTeam`, `approveTeamMember`, `denyTeamMember` (optional `block`), `unblockTeamMember`, `kickTeamMember`, `setTeamMemberRole`, `fetchTeamActivity`, `fetchTeamAudit`, `fetchLineups`, `createLineup`, `updateLineup`, `deleteLineup`, `fetchMyTeam`, `fetchMyInvitations`, `fetchMyApplications` (clans + lineups; mutations return the fresh `TeamDetail`; validation failures surface the server's message — see [Errors](#errors)) |
 | Admin (staff-only) | the moderator/admin dashboard slice — see [Admin API](#admin-api) |
 
 Most fetchers take `accessToken` first (Discord OAuth bearer).
+
+### Errors
+
+A failed request answers `{ success: false, error: "<human-readable reason>" }` — the
+rate limiter is the one endpoint that uses `reason` instead. `apiErrorFor` in
+`app/utils/api.ts` reads `error` then falls back to `reason`, and both `apiGet` and
+`apiGetList` throw the resulting `ApiError` (`.status`, `.reason`, `.message`). Surface
+`e.message` in the UI — it already carries the server's explanation, falling back to
+`Request failed (<status>)` only when the body has none. **Don't use `res.statusText`**:
+it is an empty string over HTTP/2, which is what prod serves.
+
+Server-side validation messages are the source of truth, but mirror any rule the user
+types against (team name, clan tag — `app/components/pages/teams/tagFormat.ts`) so the
+error shows inline instead of after a round trip. Keep the mirror in sync with the API
+or the client will reject values the server accepts.
 
 ### Medal Hunt (`fetchMedalHunt`)
 

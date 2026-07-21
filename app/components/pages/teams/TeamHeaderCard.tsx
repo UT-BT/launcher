@@ -10,7 +10,7 @@ import {
     type TeamDetail, type TeamTagPosition, type UserProfile,
 } from '@/app/utils/api'
 import { AccessBadge, AccessToggle, ErrorBanner, TagChip, refreshUserProfile, teamInputClass, teamErrorMessage } from './teamsShared'
-import { tagValidationError } from './tagFormat'
+import { nameValidationError, tagValidationError, TEAM_NAME_MAX_LENGTH, TAG_MAX_LENGTH } from './tagFormat'
 
 interface TeamHeaderCardProps {
     accessToken: string
@@ -155,8 +155,10 @@ function EditTeamModal({ accessToken, team, onClose, onSaved }: {
     const [error, setError] = useState<string | null>(null)
 
     const tagError = tag.trim().length > 0 ? tagValidationError(tag.trim()) : null
+    const nameError = name.trim().length > 0 ? nameValidationError(name) : null
 
     const save = async () => {
+        if (tagError || nameError) return
         setSaving(true)
         setError(null)
         try {
@@ -183,7 +185,7 @@ function EditTeamModal({ accessToken, team, onClose, onSaved }: {
             footer={
                 <div className="p-4 border-t border-border bg-muted/50 flex justify-end gap-2 shrink-0">
                     <Button variant="secondary" onClick={onClose}>Cancel</Button>
-                    <Button onClick={save} disabled={saving || name.trim().length === 0 || tag.trim().length === 0 || !!tagError}>
+                    <Button onClick={save} disabled={saving || name.trim().length === 0 || tag.trim().length === 0 || !!tagError || !!nameError}>
                         {saving ? 'Saving…' : 'Save'}
                     </Button>
                 </div>
@@ -192,11 +194,12 @@ function EditTeamModal({ accessToken, team, onClose, onSaved }: {
             <div className="space-y-4">
                 <label className="flex flex-col gap-1.5">
                     <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Team name</span>
-                    <input value={name} onChange={e => setName(e.target.value)} maxLength={40} className={teamInputClass} />
+                    <input value={name} onChange={e => setName(e.target.value)} maxLength={TEAM_NAME_MAX_LENGTH} className={teamInputClass} />
+                    {nameError && <span className="text-[11px] text-red-400">{nameError}</span>}
                 </label>
                 <label className="flex flex-col gap-1.5">
                     <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Clan tag</span>
-                    <input value={tag} onChange={e => setTag(e.target.value)} maxLength={9} className={teamInputClass} />
+                    <input value={tag} onChange={e => setTag(e.target.value)} maxLength={TAG_MAX_LENGTH} className={teamInputClass} />
                     {tagError && <span className="text-[11px] text-red-400">{tagError}</span>}
                 </label>
                 <div className="flex flex-col gap-1.5">

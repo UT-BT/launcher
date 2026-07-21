@@ -255,12 +255,21 @@ export class ApiError extends Error {
     }
 }
 
+async function apiErrorFor(res: Response): Promise<ApiError> {
+    let reason: string | undefined
+    try {
+        const body = await res.json()
+        reason = body?.error || body?.reason || undefined
+    } catch {
+        reason = undefined
+    }
+    return new ApiError(res.status, reason, `Request failed (${res.status})`)
+}
+
 export async function apiGet<T>(path: string, opts: ApiRequestOptions = {}): Promise<T> {
     const res = await apiRequest(path, opts)
     if (!res.ok) {
-        let reason: string | undefined
-        try { reason = (await res.json())?.reason } catch { reason = undefined }
-        throw new ApiError(res.status, reason, `Request failed: ${res.statusText} (${res.status})`)
+        throw await apiErrorFor(res)
     }
     const json = await res.json()
     if (json && json.success && json.data !== null && json.data !== undefined) {
@@ -272,9 +281,7 @@ export async function apiGet<T>(path: string, opts: ApiRequestOptions = {}): Pro
 export async function apiGetList<T>(path: string, opts: ApiRequestOptions = {}): Promise<T[]> {
     const res = await apiRequest(path, opts)
     if (!res.ok) {
-        let reason: string | undefined
-        try { reason = (await res.json())?.reason } catch { reason = undefined }
-        throw new ApiError(res.status, reason, `Request failed: ${res.statusText} (${res.status})`)
+        throw await apiErrorFor(res)
     }
     const json = await res.json()
     if (json && json.success) {
