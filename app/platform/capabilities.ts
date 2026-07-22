@@ -7,6 +7,7 @@ export interface PlatformCapabilities {
     desktopFiles: boolean
     windowChrome: boolean
     settingsModal: boolean
+    anonymousBrowse: boolean
 }
 
 export const DESKTOP_CAPABILITIES: PlatformCapabilities = {
@@ -18,6 +19,7 @@ export const DESKTOP_CAPABILITIES: PlatformCapabilities = {
     desktopFiles: true,
     windowChrome: true,
     settingsModal: true,
+    anonymousBrowse: false,
 }
 
 export const WEB_CAPABILITIES: PlatformCapabilities = {
@@ -29,4 +31,5 @@ export const WEB_CAPABILITIES: PlatformCapabilities = {
     desktopFiles: false,
     windowChrome: false,
     settingsModal: false,
+    anonymousBrowse: true,
 }

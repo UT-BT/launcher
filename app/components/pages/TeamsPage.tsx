@@ -4,9 +4,10 @@ import { Button } from '@/app/components/ui/button'
 import { Modal } from '@/app/components/ui/modal'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
 import {
-    fetchMyInvitations, fetchMyTeam,
+    fetchMyInvitations, fetchMyTeam, ANONYMOUS_TOKEN,
     type TeamCore, type TeamDetail, type TeamSort, type UserProfile,
 } from '@/app/utils/api'
+import { capabilities } from '@/app/platform'
 import { CreateTeamForm } from './teams/CreateTeamForm'
 import { TeamGallery, type TeamAccessFilter } from './teams/TeamGallery'
 import { InvitationsSection } from './teams/InvitationsSection'
@@ -55,8 +56,9 @@ interface TeamsPageProps {
 
 export function TeamsPage({ userProfile, state, onStateChange, caches, onCachesChange, onTeamSelect }: TeamsPageProps) {
     const accessToken = userProfile?.accessToken
+    const browseToken = accessToken ?? ANONYMOUS_TOKEN
 
-    const [loading, setLoading] = useState(!caches.loaded)
+    const [loading, setLoading] = useState(!caches.loaded && !!accessToken)
     const [error, setError] = useState<string | null>(null)
     const [createOpen, setCreateOpen] = useState(false)
     const scrollRef = useRef<HTMLDivElement | null>(null)
@@ -132,7 +134,7 @@ export function TeamsPage({ userProfile, state, onStateChange, caches, onCachesC
         onStateChange(prev => ({ ...prev, directorySortDir: value, directoryPage: 1 }))
     }, [onStateChange])
 
-    if (!accessToken) {
+    if (!accessToken && !capabilities.anonymousBrowse) {
         return (
             <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
                 Sign in to manage your team.
@@ -149,7 +151,7 @@ export function TeamsPage({ userProfile, state, onStateChange, caches, onCachesC
                         Browse every team and manage your own.
                     </p>
                 </div>
-                {caches.loaded && !caches.myTeam && (
+                {!!accessToken && caches.loaded && !caches.myTeam && (
                     <Button onClick={() => setCreateOpen(true)}>
                         <Plus className="size-4" /> Create Team
                     </Button>
@@ -172,6 +174,7 @@ export function TeamsPage({ userProfile, state, onStateChange, caches, onCachesC
                     <div className="py-16 text-center text-sm text-muted-foreground">Loading teams…</div>
                 ) : (
                     <>
+                        {accessToken && (
                         <InvitationsSection
                             accessToken={accessToken}
                             invitations={caches.invitations}
@@ -180,9 +183,10 @@ export function TeamsPage({ userProfile, state, onStateChange, caches, onCachesC
                             onDeclined={teamId => onCachesChange(prev => ({ ...prev, invitations: prev.invitations.filter(t => t.id !== teamId) }))}
                             onSelect={onTeamSelect}
                         />
+                        )}
 
                         <TeamGallery
-                            accessToken={accessToken}
+                            accessToken={browseToken}
                             myTeam={caches.myTeam}
                             search={state.directorySearch}
                             page={state.directoryPage}
@@ -209,7 +213,7 @@ export function TeamsPage({ userProfile, state, onStateChange, caches, onCachesC
                 footer={null}
             >
                 <CreateTeamForm
-                    accessToken={accessToken}
+                    accessToken={accessToken ?? ''}
                     userProfile={userProfile}
                     onCreated={team => { setCreateOpen(false); onCreated(team) }}
                     onCancel={() => setCreateOpen(false)}

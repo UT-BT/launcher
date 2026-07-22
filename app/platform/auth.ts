@@ -1,5 +1,6 @@
 import type { AuthConfig } from '@/lib/main/config'
 import { IS_WEB } from './target'
+import { webAuth } from './web/auth-web'
 
 export type AuthProfile = AuthConfig
 
@@ -17,11 +18,4 @@ const desktopAuth: PlatformAuth = {
     consumeLoginError: () => null,
 }
 
-const webAuthStub: PlatformAuth = {
-    login: () => Promise.reject(new Error('Web login is not available yet')),
-    logout: () => Promise.resolve(),
-    getProfile: () => Promise.resolve(undefined),
-    consumeLoginError: () => null,
-}
-
-export const platformAuth: PlatformAuth = IS_WEB ? webAuthStub : desktopAuth
+export const platformAuth: PlatformAuth = IS_WEB ? webAuth : desktopAuth

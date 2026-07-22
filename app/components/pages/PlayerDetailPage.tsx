@@ -7,6 +7,7 @@ import {
     type UserSummary,
     type UserProfile,
     type UserActivityBucket,
+    ANONYMOUS_TOKEN,
 } from '@/app/utils/api'
 import { useRefreshCooldown } from '@/app/hooks/useRefreshCooldown'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
@@ -38,7 +39,7 @@ interface PlayerDetailPageProps {
 export function PlayerDetailPage({
     userId, userProfile, favoriteMapNames, onToggleFavorite, onMapSelect,
 }: PlayerDetailPageProps) {
-    const accessToken = userProfile?.accessToken
+    const accessToken = userProfile?.accessToken ?? ANONYMOUS_TOKEN
     const currentUserId = userProfile?.id ?? undefined
     const isSelf = currentUserId != null && String(currentUserId) === String(userId)
 

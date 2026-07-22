@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Activity, AlertTriangle, RefreshCw } from 'lucide-react'
 import {
     UserProfile, fetchSummary, fetchHotMaps, fetchNews, fetchNewsCategories,
-    fetchUserSummary,
+    fetchUserSummary, ANONYMOUS_TOKEN,
     Summary, SummaryWorldRecord, HotMap, NewsArticle, NewsCategoryDef,
     UserSummary, MedalHuntOpportunity, PendingReviewsPage,
 } from '@/app/utils/api'
@@ -128,18 +128,19 @@ export function Home({
     const replay = useReplayWatch()
 
     const loadData = useCallback(async (isActive: () => boolean = () => true) => {
-        if (!userProfile?.accessToken) return
+        if (!userProfile?.accessToken && !capabilities.anonymousBrowse) return
+        const token = userProfile?.accessToken ?? ''
         setLoading(true)
         setError(null)
         try {
             const [summaryData, hotMapsData, newsData, newsCategoryData, serverData, userSummaryData] = await Promise.all([
-                fetchSummary(userProfile.accessToken),
-                fetchHotMaps(userProfile.accessToken).catch(() => [] as HotMap[]),
-                fetchNews(userProfile.accessToken).catch(() => [] as NewsArticle[]),
-                fetchNewsCategories(userProfile.accessToken).catch(() => [] as NewsCategoryDef[]),
+                fetchSummary(token),
+                fetchHotMaps(token).catch(() => [] as HotMap[]),
+                fetchNews(token).catch(() => [] as NewsArticle[]),
+                fetchNewsCategories(token).catch(() => [] as NewsCategoryDef[]),
                 fetchGatewayServers<Server[]>().catch(() => [] as Server[]),
-                userProfile.id
-                    ? fetchUserSummary(userProfile.accessToken, userProfile.id).catch(() => null as UserSummary | null)
+                userProfile?.id
+                    ? fetchUserSummary(token, userProfile.id).catch(() => null as UserSummary | null)
                     : Promise.resolve(null),
             ])
             if (!isActive()) return
@@ -175,7 +176,7 @@ export function Home({
     }, [userProfile?.accessToken, userProfile?.id, onCachesChange])
 
     useEffect(() => {
-        if (!userProfile?.accessToken) {
+        if (!userProfile?.accessToken && !capabilities.anonymousBrowse) {
             setLoading(false)
             return
         }
@@ -284,7 +285,7 @@ export function Home({
         if (newest) localStorage.setItem(NEWS_SEEN_KEY, newest)
     }, [news])
 
-    if (!userProfile) {
+    if (!userProfile && !capabilities.anonymousBrowse) {
         return (
             <div className="flex h-full items-center justify-center">
                 <div className="text-center space-y-4">
@@ -334,6 +335,7 @@ export function Home({
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-0 duration-500 pb-12 pt-2">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
+                {userProfile && (
                 <YouDoorway
                     className="lg:col-span-6"
                     userId={userProfile.id ?? undefined}
@@ -341,9 +343,10 @@ export function Home({
                     title={userProfile.active_title ?? null}
                     worldRecords={userSummary?.medals.world_records ?? null}
                 />
+                )}
                 <CommunityStatsRow
-                    className="lg:col-span-6"
-                    accessToken={userProfile.accessToken}
+                    className={userProfile ? "lg:col-span-6" : "lg:col-span-12"}
+                    accessToken={userProfile?.accessToken ?? ANONYMOUS_TOKEN}
                     playersOnline={playersOnline}
                     newMaps={data.global.newMaps}
                     totalMaps={caches.mapsCount}
@@ -393,6 +396,7 @@ export function Home({
                     </SpotlightSection>
                 </div>
 
+                {userProfile && (
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
                     <SpotlightSection title="Your Progress" accent={ACCENTS.personal} className="lg:col-span-6">
                         <PersonalProgressSnapshot summary={userSummary} />
@@ -404,8 +408,10 @@ export function Home({
                         />
                     </SpotlightSection>
                 </div>
+                )}
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+                    {userProfile && (
                     <SpotlightSection title="Medal Hunt" accent={ACCENTS.medalHunt} className="lg:col-span-6">
                         <MedalHuntCard
                             accessToken={userProfile.accessToken}
@@ -418,6 +424,7 @@ export function Home({
                             onMapSelect={onMapSelect}
                         />
                     </SpotlightSection>
+                    )}
                     <SpotlightSection
                         title="Hottest Maps"
                         accent={ACCENTS.hotMaps}
@@ -449,6 +456,7 @@ export function Home({
                             onMapSelect={onMapSelect}
                         />
                     </SpotlightSection>
+                    {userProfile && (
                     <SpotlightSection title="Maps to Review" accent={ACCENTS.reviews} className="lg:col-span-6">
                         <MapsToReviewCard
                             accessToken={userProfile.accessToken}
@@ -461,6 +469,7 @@ export function Home({
                             onMapSelect={onMapSelect}
                         />
                     </SpotlightSection>
+                    )}
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
@@ -473,7 +482,7 @@ export function Home({
                     >
                         <LatestRecordsCard
                             records={recentWRs}
-                            currentUserId={userProfile.id ?? undefined}
+                            currentUserId={userProfile?.id ?? undefined}
                             favoriteMapNames={favoriteMapNames}
                             onToggleFavorite={onToggleFavorite}
                             onMapSelect={onMapSelect}
@@ -482,6 +491,7 @@ export function Home({
                         />
                     </SpotlightSection>
 
+                    {userProfile && (
                     <SpotlightSection
                         title="Your Latest Caps"
                         accent={ACCENTS.caps}
@@ -491,9 +501,9 @@ export function Home({
                     >
                         <RecentCapsCard
                             caps={data.achievements}
-                            playerUserId={userProfile.id ?? undefined}
-                            playerAlias={userProfile.alias}
-                            playerTitle={userProfile.active_title ?? null}
+                            playerUserId={userProfile?.id ?? undefined}
+                            playerAlias={userProfile?.alias}
+                            playerTitle={userProfile?.active_title ?? null}
                             favoriteMapNames={favoriteMapNames}
                             onToggleFavorite={onToggleFavorite}
                             onMapSelect={onMapSelect}
@@ -501,9 +511,11 @@ export function Home({
                             loadingCapId={replay.loadingCapId}
                         />
                     </SpotlightSection>
+                    )}
                 </div>
             </div>
 
+            {userProfile && (<>
             <HistoryModal
                 open={historyOpen}
                 onOpenChange={setHistoryOpen}
@@ -526,6 +538,7 @@ export function Home({
                     setReviewsRefreshKey(k => k + 1)
                 }}
             />
+            </>)}
 
             <ReplayVideoModal state={replay.video} onClose={replay.clearVideo} />
 

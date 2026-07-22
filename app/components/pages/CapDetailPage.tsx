@@ -19,6 +19,7 @@ import {
     type LeaderboardEntry,
     type TeamRunStatus,
     type UserProfile,
+    ANONYMOUS_TOKEN,
 } from '@/app/utils/api'
 import { ReplayPickerModal } from '@/app/components/modals/ReplayPickerModal'
 import { HeroSection } from './capDetail/HeroSection'
@@ -50,7 +51,7 @@ function nearestByTime<T extends { id: string; cap_time_seconds: number }>(items
 }
 
 export function CapDetailPage({ capId, userProfile, onMapSelect }: CapDetailPageProps) {
-    const accessToken = userProfile?.accessToken
+    const accessToken = userProfile?.accessToken ?? ANONYMOUS_TOKEN
     const currentUserId = userProfile?.id ?? undefined
     const refreshCooldown = useRefreshCooldown()
     const [refreshKey, setRefreshKey] = useState(0)

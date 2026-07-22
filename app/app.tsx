@@ -6,7 +6,7 @@ import { ErrorModal } from '@/app/components/ErrorModal'
 import { UpdaterProvider } from '@/app/hooks/useUpdater'
 import { UpdateModal } from '@/app/components/updater/UpdateModal'
 import { useLogger } from '@/app/hooks/use-logger'
-import { platformAuth } from '@/app/platform'
+import { IS_WEB, platformAuth } from '@/app/platform'
 import { fetchUserProfile, UserProfile, logLauncherStartup, fetchLatestActivity } from '@/app/utils/api'
 
 import './styles/index.css'
@@ -86,8 +86,8 @@ export default function App() {
       setUserProfile(result.profile)
       setAppPhase('main')
     } else if (result.status === 'loggedout') {
-      logger.info('Preload result: Not logged in, transitioning to Login')
-      setAppPhase('login')
+      logger.info(IS_WEB ? 'Preload result: Not logged in, browsing anonymously' : 'Preload result: Not logged in, transitioning to Login')
+      setAppPhase(IS_WEB ? 'main' : 'login')
     } else {
       logger.error('Preload result: Error', result.error)
       setInitError({
@@ -111,7 +111,7 @@ export default function App() {
       setUserProfile(result.profile)
       setAppPhase('main')
     } else if (result.status === 'loggedout') {
-      setAppPhase('login')
+      setAppPhase(IS_WEB ? 'main' : 'login')
     } else {
       setInitError({
         message: 'Failed to load user data. Please check your internet connection and try again.',

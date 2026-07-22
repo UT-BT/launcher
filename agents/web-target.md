@@ -17,6 +17,7 @@ verify_against:
   - app/platform/auth.ts
   - app/platform/gateway.ts
   - app/platform/downloads.ts
+  - app/platform/web/auth-web.ts
   - app/renderer.tsx
   - app/renderer-web.tsx
   - vite.config.web.ts
@@ -36,14 +37,15 @@ desktop-only UI and swaps a handful of bridge calls for browser equivalents.
   Build-time, not runtime sniffing: each artifact is deterministic and the dead
   branch is tree-shaken. Never check `window.conveyor` presence to detect web.
 - `capabilities.ts` — boolean flags (`game, ping, ini, install, updater,
-  desktopFiles, windowChrome, settingsModal`), all `true` on desktop, all
-  `false` on web. Gate UI with these, not with `IS_WEB` directly, so a future
+  desktopFiles, windowChrome, settingsModal, anonymousBrowse`). All desktop-only
+  ones are `true` on desktop / `false` on web; `anonymousBrowse` is the inverse
+  (web only). Gate UI with these, not with `IS_WEB` directly, so a future
   capability split stays one-line.
 - `index.ts` — `usePlatform()` hook returning `{ isWeb, capabilities, auth,
   gateway, external, downloads }`; non-component modules import the named
   exports directly.
 - `auth.ts` — `PlatformAuth` seam (`login/logout/getProfile/consumeLoginError`).
-  Desktop passes through `window.auth`; web uses the browser OAuth flow.
+  Desktop passes through `window.auth`; web uses `web/auth-web.ts`.
 - `gateway.ts` — `fetchGatewayServers()` / `fetchGatewayPatrons()`: desktop goes
   through `window.conveyor.game.*`; web fetches the gateway (`/server-info`,
   `/patreon`) directly.
@@ -70,6 +72,45 @@ desktop-only UI and swaps a handful of bridge calls for browser equivalents.
 Event bridges (`utInstall`, `utPatch`, `utProfile`, `utFavorites`,
 `utbtUpdater`, `uiScale`) are optional-chained everywhere and simply never fire
 on web.
+
+## Web auth (Discord login in the browser)
+
+`app/platform/web/auth-web.ts` implements the PKCE authorization-code flow:
+
+1. `login()` generates a PKCE verifier + S256 challenge and a CSRF `state`,
+   stashes `{verifier, state, returnTo}` in sessionStorage
+   (`utbt:webAuthFlow:v1`), and redirects to Discord's authorize page with
+   `redirect_uri = <origin>/auth/callback` and scope `identify`.
+2. `app/renderer-web.tsx` consumes `/auth/callback` BEFORE React mounts:
+   verifies `state`, POSTs `{code, code_verifier, redirect_uri}` to the API's
+   `POST /auth/discord/token`, stores the resulting profile+tokens in
+   localStorage (`utbt:webAuth:v1`), and `replaceState`s back to `returnTo`.
+3. `getProfile()` mirrors the desktop refresh model: single-flight
+   `POST /auth/discord/refresh` when within 5 min of expiry, stale-on-failure.
+4. Tokens are raw Discord bearers, so every existing `app/utils/api.ts` fetcher
+   works unchanged once the profile is in React state.
+
+Client-side API contract: `POST /auth/discord/token`
+(`{code, code_verifier, redirect_uri}` →
+`{access_token, token_type, expires_in, refresh_token, scope, user:{id,
+username, avatar}}`) and `POST /auth/discord/refresh` (`{refresh_token}` → same
+minus `user`). Errors are `{success:false, error:"invalid_request"|"invalid_grant"}`.
+The Discord app must list `<origin>/auth/callback` as a redirect URI
+(`http://localhost:5174/auth/callback` for dev).
+
+Accepted risk (documented on purpose): tokens live in localStorage and are
+XSS-readable; the scope is `identify` only.
+
+## Anonymous browsing
+
+The web build never shows a login wall. `app.tsx` sends a logged-out web visitor
+to `main` with `userProfile = undefined`; `AppLayout` renders a "Login with
+Discord" button in the user slot instead of the profile chip. Data pages fetch
+public data with `ANONYMOUS_TOKEN` (from `app/utils/api.ts`) — a sentinel that
+`apiRequest` strips so no Authorization header is sent; the API allows anonymous
+reads on the public GET surface. Personal UI (favorites toggles, my-team panels,
+medal hunt, pending reviews, achievements page content, admin) stays gated on a
+real `accessToken`.
 
 ## Build
 

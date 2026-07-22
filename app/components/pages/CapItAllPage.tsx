@@ -6,7 +6,7 @@ import { useRefreshCooldown } from '@/app/hooks/useRefreshCooldown'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
 import {
     UserProfile, CapItAllRow, CapItAllLeaderboardPage,
-    fetchCapItAllLeaderboard,
+    fetchCapItAllLeaderboard, ANONYMOUS_TOKEN,
 } from '@/app/utils/api'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { PaginationBar } from '@/app/components/ui/pagination'
@@ -81,7 +81,7 @@ interface CapItAllPageProps {
 }
 
 export function CapItAllPage({ userProfile, state, onStateChange, caches, onCachesChange }: CapItAllPageProps) {
-    const accessToken = userProfile?.accessToken
+    const accessToken = userProfile?.accessToken ?? ANONYMOUS_TOKEN
     const selfId = userProfile?.id ?? undefined
 
     const autoPageSize = useAutoPageSize(computePageSize)

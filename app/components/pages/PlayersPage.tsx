@@ -9,7 +9,7 @@ import { Modal } from '@/app/components/ui/modal'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import {
     UserProfile, PlayerListRow, PlayerSortField,
-    fetchPlayers, fetchPlayersCount,
+    fetchPlayers, fetchPlayersCount, ANONYMOUS_TOKEN,
 } from '@/app/utils/api'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { Tutorial } from '@/app/components/shared/Tutorial'
@@ -177,7 +177,7 @@ interface PlayersPageProps {
 }
 
 export function PlayersPage({ userProfile, state, onStateChange, caches, onCachesChange }: PlayersPageProps) {
-    const accessToken = userProfile?.accessToken
+    const accessToken = userProfile?.accessToken ?? ANONYMOUS_TOKEN
     const selfId = userProfile?.id ?? undefined
 
     const autoPageSize = useAutoPageSize(computePageSize)

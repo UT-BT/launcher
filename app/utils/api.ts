@@ -210,7 +210,9 @@ export interface Playtime {
 }
 
 
-const API_BASE_URL = import.meta.env.DEV ? 'http://localhost' : 'https://api.utbt.net'
+export const API_BASE_URL = import.meta.env.DEV ? 'http://localhost' : 'https://api.utbt.net'
+
+export const ANONYMOUS_TOKEN = 'anonymous'
 
 const DEFAULT_TIMEOUT_MS = 20_000
 
@@ -238,7 +240,7 @@ export async function apiRequest(path: string, opts: ApiRequestOptions = {}): Pr
             method,
             signal: controller.signal,
             headers: {
-                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                ...(token && token !== ANONYMOUS_TOKEN ? { Authorization: `Bearer ${token}` } : {}),
                 ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
                 ...headers,
             },

@@ -18,6 +18,7 @@ import {
     type Playtime,
     type WorldRecordProgressionEntry,
     type UserProfile,
+    ANONYMOUS_TOKEN,
 } from '@/app/utils/api'
 import { useRefreshCooldown } from '@/app/hooks/useRefreshCooldown'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
@@ -54,6 +55,7 @@ export function MapDetailPage({
     mapName, userProfile, favoriteMapNames, onToggleFavorite, onMapSelect,
 }: MapDetailPageProps) {
     const accessToken = userProfile?.accessToken
+    const browseToken = accessToken ?? ANONYMOUS_TOKEN
     const currentUserId = userProfile?.id ?? undefined
 
     const [map, setMap] = useState<MapMetadata | null>(null)
@@ -87,29 +89,29 @@ export function MapDetailPage({
 
     useEffect(() => {
         let cancelled = false
-        if (!accessToken) return
+        if (!browseToken) return
         setLoading(true)
         setError(null)
         setUserCapCount(null)
         setTeamStats(null)
         ;(async () => {
             try {
-                const matched = await fetchMap(accessToken, mapName, MAP_METADATA_COLUMNS)
+                const matched = await fetchMap(browseToken, mapName, MAP_METADATA_COLUMNS)
                 if (!matched) throw new Error(`Map metadata not found for ${mapName}`)
                 const teamMap = matched.required_players > 1
                 const [lb, teamLb, rv, pt, wr, capCount, teamUserStats] = await Promise.all([
-                    fetchMapLeaderboard(accessToken, mapName, false),
+                    fetchMapLeaderboard(browseToken, mapName, false),
                     teamMap
-                        ? fetchTeamMapLeaderboard(accessToken, mapName)
+                        ? fetchTeamMapLeaderboard(browseToken, mapName)
                         : Promise.resolve([] as TeamLeaderboardEntry[]),
-                    fetchMapReviews(accessToken, mapName),
-                    fetchPlaytimeForMap(accessToken, mapName),
-                    fetchWorldRecordProgression(accessToken, mapName),
+                    fetchMapReviews(browseToken, mapName),
+                    fetchPlaytimeForMap(browseToken, mapName),
+                    fetchWorldRecordProgression(browseToken, mapName),
                     currentUserId != null
-                        ? fetchUserCapCountForMap(accessToken, currentUserId, mapName)
+                        ? fetchUserCapCountForMap(browseToken, currentUserId, mapName)
                         : Promise.resolve(0),
                     teamMap && currentUserId != null
-                        ? fetchUserTeamMapStats(accessToken, currentUserId, mapName)
+                        ? fetchUserTeamMapStats(browseToken, currentUserId, mapName)
                         : Promise.resolve(null),
                 ])
                 if (cancelled) return
@@ -130,7 +132,7 @@ export function MapDetailPage({
             }
         })()
         return () => { cancelled = true }
-    }, [accessToken, mapName, currentUserId, refreshKey])
+    }, [browseToken, mapName, currentUserId, refreshKey])
 
     const avgOverall = useMemo(() => {
         if (reviews.length === 0) return null

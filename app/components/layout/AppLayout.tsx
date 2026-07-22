@@ -1,4 +1,5 @@
 import { ReactNode, useEffect, useMemo, useState } from 'react'
+import { FaDiscord } from 'react-icons/fa'
 import { Home, Server, Map as MapIcon, Trophy, Settings, LogOut, Play, User, Users, Users2, Flag, Award, ShieldAlert, Newspaper } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import logo from '@/app/assets/logo.png'
@@ -109,6 +110,7 @@ function getRarityStyles(title: { rarity: number, color_r: number, color_g: numb
 export function AppLayout({ children, currentView, onViewChange, getNavBadge, userProfile, installationStatus }: AppLayoutProps) {
     const { capabilities, auth } = usePlatform()
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
+    const [loginError, setLoginError] = useState<string | null>(() => auth.consumeLoginError())
     const [isSettingsOpen, setIsSettingsOpen] = useState(false)
     const [isChangeTitleOpen, setIsChangeTitleOpen] = useState(false)
     const [settingsInitialSection, setSettingsInitialSection] = useState<string | undefined>(undefined)
@@ -237,6 +239,20 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                 </nav>
 
                 <div className="p-4 border-t border-hairline/10 relative z-10">
+                    {!userProfile ? (
+                        <div className="space-y-2">
+                            {loginError && (
+                                <p className="px-1 text-xs text-red-400 text-center">{loginError}</p>
+                            )}
+                            <button
+                                onClick={() => { setLoginError(null); void auth.login() }}
+                                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-foreground bg-[#5865F2] hover:bg-[#4752C4] active:bg-[#3C45A5] rounded-lg transition-all duration-200 text-sm font-medium shadow-lg hover:shadow-[#5865F2]/25 cursor-pointer"
+                            >
+                                <FaDiscord className="size-4" />
+                                <span>Login with Discord</span>
+                            </button>
+                        </div>
+                    ) : (
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <div className="relative group cursor-pointer outline-none">
@@ -320,6 +336,7 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
+                    )}
                 </div>
             </aside>
 

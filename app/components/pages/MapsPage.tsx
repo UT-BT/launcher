@@ -11,7 +11,7 @@ import { Tooltip } from '@/app/components/ui/tooltip'
 import {
     UserProfile, Map, MapMetadata, MapReview, BestCap,
     fetchMaps, fetchMapsCount, fetchMapsMetadata, fetchMapsFuzzy, fetchAllMapReviews, fetchMapAuthors,
-    fetchBestCaps, fetchWorldRecordsForMaps,
+    fetchBestCaps, fetchWorldRecordsForMaps, ANONYMOUS_TOKEN,
 } from '@/app/utils/api'
 
 import { MapReviewsModal } from '@/app/components/modals/MapReviewsModal'
@@ -800,6 +800,7 @@ export function MapsPage({
     const scrollContainerRef = useRef<HTMLDivElement | null>(null)
 
     const accessToken = userProfile?.accessToken
+    const browseToken = accessToken ?? ANONYMOUS_TOKEN
 
     const isSearchMode = state.search.trim().length > 0
     const usesClientOnlyFilter =
@@ -847,7 +848,7 @@ export function MapsPage({
         bestCaps: false,
     })
     const loadCaches = useCallback(async (force = false) => {
-        if (!accessToken) return
+        if (!browseToken) return
         const inFlight = loadCachesInFlightRef.current
         const needsMetadata = (force || !caches.metadataLoaded) && !inFlight.metadata
         const needsReviews = (force || !caches.reviewsLoaded) && !inFlight.reviews
@@ -863,10 +864,10 @@ export function MapsPage({
         setError(null)
         try {
             const [metadataData, reviewsData, authorsData, bestCapsData] = await Promise.all([
-                needsMetadata ? fetchMapsMetadata(accessToken) : Promise.resolve(null),
-                needsReviews ? fetchAllMapReviews(accessToken) : Promise.resolve(null),
-                needsAuthors ? fetchMapAuthors(accessToken) : Promise.resolve(null),
-                needsBestCaps ? fetchBestCaps(accessToken, userId) : Promise.resolve(null),
+                needsMetadata ? fetchMapsMetadata(browseToken) : Promise.resolve(null),
+                needsReviews ? fetchAllMapReviews(browseToken) : Promise.resolve(null),
+                needsAuthors ? fetchMapAuthors(browseToken) : Promise.resolve(null),
+                needsBestCaps ? fetchBestCaps(browseToken, userId) : Promise.resolve(null),
             ])
             onCachesChange(prev => ({
                 ...prev,
@@ -890,7 +891,7 @@ export function MapsPage({
             if (needsAuthors) inFlight.authors = false
             if (needsBestCaps) inFlight.bestCaps = false
         }
-    }, [accessToken, userId, caches.metadataLoaded, caches.reviewsLoaded, caches.authorsLoaded, caches.bestCapsLoaded, onCachesChange])
+    }, [browseToken, userId, caches.metadataLoaded, caches.reviewsLoaded, caches.authorsLoaded, caches.bestCapsLoaded, onCachesChange])
 
     useEffect(() => { loadCaches() }, [loadCaches])
 
@@ -915,14 +916,14 @@ export function MapsPage({
     }, [browseServerFilters])
 
     const fetchPage = useCallback((p: number): Promise<Map[] | null> => {
-        if (!accessToken) return Promise.resolve(null)
+        if (!browseToken) return Promise.resolve(null)
         const key = keyFor(p)
         const existing = pageCacheRef.current[key]
         if (existing !== undefined) {
             return Array.isArray(existing) ? Promise.resolve(existing) : existing
         }
         const offset = (p - 1) * pageSize
-        const promise = fetchMaps(accessToken, { ...browseServerFilters, limit: pageSize, offset })
+        const promise = fetchMaps(browseToken, { ...browseServerFilters, limit: pageSize, offset })
             .then(maps => {
                 pageCacheRef.current[key] = maps
                 return maps
@@ -933,16 +934,16 @@ export function MapsPage({
             })
         pageCacheRef.current[key] = promise
         return promise
-    }, [accessToken, browseServerFilters, pageSize, keyFor])
+    }, [browseToken, browseServerFilters, pageSize, keyFor])
 
     const fetchCount = useCallback((): Promise<number | null> => {
-        if (!accessToken) return Promise.resolve(null)
+        if (!browseToken) return Promise.resolve(null)
         const ck = countKeyFor()
         const existing = countCacheRef.current[ck]
         if (existing !== undefined) {
             return typeof existing === 'number' ? Promise.resolve(existing) : existing
         }
-        const promise = fetchMapsCount(accessToken, browseServerFilters)
+        const promise = fetchMapsCount(browseToken, browseServerFilters)
             .then(count => {
                 countCacheRef.current[ck] = count
                 return count
@@ -953,10 +954,10 @@ export function MapsPage({
             })
         countCacheRef.current[ck] = promise
         return promise
-    }, [accessToken, browseServerFilters, countKeyFor])
+    }, [browseToken, browseServerFilters, countKeyFor])
 
     const loadBrowsePage = useCallback(async () => {
-        if (!accessToken || mode !== 'browse') return
+        if (!browseToken || mode !== 'browse') return
 
         const currentKey = keyFor(state.currentPage)
         const cachedPageEntry = pageCacheRef.current[currentKey]
@@ -1010,12 +1011,12 @@ export function MapsPage({
         } finally {
             setPageLoading(false)
         }
-    }, [accessToken, mode, state.currentPage, pageSize, keyFor, countKeyFor, fetchPage, fetchCount, onCachesChange])
+    }, [browseToken, mode, state.currentPage, pageSize, keyFor, countKeyFor, fetchPage, fetchCount, onCachesChange])
 
     useEffect(() => { loadBrowsePage() }, [loadBrowsePage])
 
     useEffect(() => {
-        if (mode !== 'search' || !accessToken) {
+        if (mode !== 'search' || !browseToken) {
             searchAbortRef.current?.abort()
             searchAbortRef.current = null
             setSearchLoading(false)
@@ -1028,7 +1029,7 @@ export function MapsPage({
             const ac = new AbortController()
             searchAbortRef.current = ac
             try {
-                const results = await fetchMapsFuzzy(accessToken, term, undefined, ac.signal)
+                const results = await fetchMapsFuzzy(browseToken, term, undefined, ac.signal)
                 if (ac.signal.aborted) return
                 setSearchResults(results)
                 setSearchLoading(false)
@@ -1038,7 +1039,7 @@ export function MapsPage({
             }
         }, SEARCH_DEBOUNCE_MS)
         return () => clearTimeout(t)
-    }, [mode, state.search, accessToken])
+    }, [mode, state.search, browseToken])
 
     useEffect(() => {
         setLoading(!caches.metadataLoaded || !caches.reviewsLoaded)
@@ -1278,7 +1279,7 @@ export function MapsPage({
 
     const wrHoldersInFlightRef = useRef<Set<string>>(new Set())
     useEffect(() => {
-        if (!accessToken) return
+        if (!browseToken) return
         const fetchedSet = new Set(caches.wrHoldersFetched)
         const inFlight = wrHoldersInFlightRef.current
         const missing: string[] = []
@@ -1292,7 +1293,7 @@ export function MapsPage({
         let cancelled = false
         ;(async () => {
             try {
-                const records = await fetchWorldRecordsForMaps(accessToken, missing)
+                const records = await fetchWorldRecordsForMaps(browseToken, missing)
                 if (cancelled) return
                 const additions: Record<string, WRHolder> = {}
                 for (const r of records) {
@@ -1317,7 +1318,7 @@ export function MapsPage({
         return () => {
             cancelled = true
         }
-    }, [pageItems, accessToken, caches.wrHoldersFetched, onCachesChange])
+    }, [pageItems, browseToken, caches.wrHoldersFetched, onCachesChange])
 
     const uniqueAuthors = caches.authors
 

@@ -33,6 +33,7 @@ import {
     type TeamLeaderboardEntry,
     type LeaderboardEntry,
     type UserProfile,
+    ANONYMOUS_TOKEN,
 } from '@/app/utils/api'
 
 interface TeamCapDetailPageProps {
@@ -141,7 +142,7 @@ function TeamRankContextCard({
 }
 
 export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamCapDetailPageProps) {
-    const accessToken = userProfile?.accessToken
+    const accessToken = userProfile?.accessToken ?? ANONYMOUS_TOKEN
     const refreshCooldown = useRefreshCooldown()
     const [refreshKey, setRefreshKey] = useState(0)
 

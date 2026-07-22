@@ -4,7 +4,7 @@ import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshC
 import { Button } from '@/app/components/ui/button'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import {
-    acceptTeamInvite, declineTeamInvite, fetchMyTeam, fetchTeam, joinTeam,
+    acceptTeamInvite, declineTeamInvite, fetchMyTeam, fetchTeam, joinTeam, ANONYMOUS_TOKEN,
     type TeamDetail, type TeamRole, type UserProfile,
 } from '@/app/utils/api'
 import { TeamHeaderCard } from './TeamHeaderCard'
@@ -24,6 +24,7 @@ interface TeamDetailsPageProps {
 
 export function TeamDetailsPage({ teamId, userProfile, onExitToGallery }: TeamDetailsPageProps) {
     const accessToken = userProfile?.accessToken
+    const browseToken = accessToken ?? ANONYMOUS_TOKEN
     const myUserId = userProfile?.id ?? undefined
 
     const [team, setTeam] = useState<TeamDetail | null>(null)
@@ -36,13 +37,12 @@ export function TeamDetailsPage({ teamId, userProfile, onExitToGallery }: TeamDe
     const scrollRef = useRef<HTMLDivElement>(null)
 
     const load = useCallback(async (background = false) => {
-        if (!accessToken) return
         if (!background) setLoading(true)
         setError(null)
         try {
             const [detail, mine] = await Promise.all([
-                fetchTeam(accessToken, teamId),
-                fetchMyTeam(accessToken),
+                fetchTeam(browseToken, teamId),
+                accessToken ? fetchMyTeam(accessToken) : Promise.resolve(null),
             ])
             setTeam(detail)
             setMyTeamId(mine?.id ?? null)
@@ -52,7 +52,7 @@ export function TeamDetailsPage({ teamId, userProfile, onExitToGallery }: TeamDe
         } finally {
             if (!background) setLoading(false)
         }
-    }, [accessToken, teamId])
+    }, [accessToken, browseToken, teamId])
 
     useEffect(() => { void load() }, [load])
 
@@ -115,7 +115,7 @@ export function TeamDetailsPage({ teamId, userProfile, onExitToGallery }: TeamDe
     }
 
     const joinControl = (() => {
-        if (!team || isOwnTeam) return undefined
+        if (!accessToken || !team || isOwnTeam) return undefined
 
         if (iInvited) {
             const acceptBtn = (
@@ -170,7 +170,7 @@ export function TeamDetailsPage({ teamId, userProfile, onExitToGallery }: TeamDe
                 ) : (
                     <div className="space-y-4">
                         <TeamHeaderCard
-                            accessToken={accessToken!}
+                            accessToken={browseToken}
                             team={team}
                             isOwner={isOwner}
                             isOwnTeam={isOwnTeam}
@@ -181,12 +181,12 @@ export function TeamDetailsPage({ teamId, userProfile, onExitToGallery }: TeamDe
                             onTeamChange={setTeam}
                             onLeftOrDisbanded={onExitToGallery}
                         />
-                        <TeamStatsRow accessToken={accessToken!} team={team} />
+                        <TeamStatsRow accessToken={browseToken} team={team} />
 
                         <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 items-start">
                             <div className="xl:col-span-4">
                                 <MembersPanel
-                                    accessToken={accessToken!}
+                                    accessToken={browseToken}
                                     team={team}
                                     isOwner={isOwner}
                                     isManager={isManager}
@@ -195,13 +195,13 @@ export function TeamDetailsPage({ teamId, userProfile, onExitToGallery }: TeamDe
                             </div>
                             <div className="xl:col-span-8 space-y-4">
                                 <TeamActivityPanel
-                                    accessToken={accessToken!}
+                                    accessToken={browseToken}
                                     teamId={team.id}
                                     hasMembers={team.members.some(m => m.status === 'active')}
                                     selfUserId={myUserId}
                                 />
                                 <TeamWorldRecordsPanel
-                                    accessToken={accessToken!}
+                                    accessToken={browseToken}
                                     teamId={team.id}
                                     memberIds={team.members.filter(m => m.status === 'active').map(m => m.user)}
                                     selfUserId={myUserId}

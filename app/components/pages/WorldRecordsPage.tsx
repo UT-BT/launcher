@@ -24,6 +24,7 @@ import {
     fetchRushers,
     fetchWorldRecordProgression,
     fetchWorldRecordFilterOptions,
+    ANONYMOUS_TOKEN,
 } from '@/app/utils/api'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { TeamHolders } from '@/app/components/shared/TeamHolders'
@@ -295,7 +296,7 @@ export function WorldRecordsPage({
     userProfile, state, onStateChange, caches, onCachesChange,
     favoriteMapNames, onToggleFavorite, onMapSelect,
 }: WorldRecordsPageProps) {
-    const accessToken = userProfile?.accessToken
+    const accessToken = userProfile?.accessToken ?? ANONYMOUS_TOKEN
     const selfId = userProfile?.id ?? undefined
     const isRushers = state.mode === 'rushers'
 

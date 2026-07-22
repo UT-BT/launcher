@@ -49,7 +49,13 @@ full loop).
 | Teams | `createTeam`, `fetchTeams`, `fetchTeam`, `updateTeam`, `disbandTeam`, `transferTeamOwnership`, `fetchTeamMembers`, `inviteToTeam`, `joinTeam`, `acceptTeamInvite`, `declineTeamInvite`, `leaveTeam`, `denyTeamMember`, `unblockTeamMember`, `kickTeamMember` (optional `block`), `setTeamMemberRole`, `setTeamMemberNumber`, `fetchTeamActivity`, `fetchTeamAudit`, `fetchLineups`, `createLineup`, `updateLineup`, `deleteLineup`, `fetchMyTeam`, `setMyTagHidden`, `fetchMyInvitations`, `uploadTeamAvatar`, `deleteTeamAvatar`, `teamAvatarUrl` (clans + lineups; mutations return the fresh `TeamDetail`; validation failures surface the server's message — see [Errors](#errors)) |
 | Admin (staff-only) | the moderator/admin dashboard slice — see [Admin API](#admin-api) |
 
-Most fetchers take `accessToken` first (Discord OAuth bearer).
+Most fetchers take `accessToken` first (Discord OAuth bearer). On the web build,
+logged-out pages pass the `ANONYMOUS_TOKEN` sentinel (exported from `api.ts`)
+instead — `apiRequest` strips it so the request goes out with no Authorization
+header, and the API's public read endpoints accept that. Never send
+`ANONYMOUS_TOKEN` into a mutation or "my X" fetcher; those require a real token.
+The web login flow itself uses `POST /auth/discord/token` + `/auth/discord/refresh`
+(see `agents/web-target.md` for the full contract).
 
 ### Errors
 
