@@ -18,7 +18,10 @@
     "postinstall": "electron-builder install-app-deps",
     "vite:build:app": "electron-vite build",
     "electron:build:win": "electron-builder --win --publish never",
-    "build:win": "run-s vite:build:app electron:build:win"
+    "build:win": "run-s vite:build:app electron:build:win",
+    "dev:web": "vite --config vite.config.web.ts",
+    "build:web": "vite build --config vite.config.web.ts",
+    "preview:web": "vite preview --config vite.config.web.ts"
   },
   "repository": {
     "type": "git",
