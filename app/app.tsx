@@ -6,6 +6,7 @@ import { ErrorModal } from '@/app/components/ErrorModal'
 import { UpdaterProvider } from '@/app/hooks/useUpdater'
 import { UpdateModal } from '@/app/components/updater/UpdateModal'
 import { useLogger } from '@/app/hooks/use-logger'
+import { platformAuth } from '@/app/platform'
 import { fetchUserProfile, UserProfile, logLauncherStartup, fetchLatestActivity } from '@/app/utils/api'
 
 import './styles/index.css'
@@ -31,7 +32,7 @@ export default function App() {
   const preloadData = useCallback(async (): Promise<InitResult> => {
     try {
       logger.info('Starting data preload...')
-      const authConfig = await window.auth.getProfile()
+      const authConfig = await platformAuth.getProfile()
 
       if (!authConfig) {
         logger.info('Preload: User not logged in')

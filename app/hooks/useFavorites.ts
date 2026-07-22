@@ -5,6 +5,7 @@ import {
     removeFavoriteMap,
     replaceFavoriteMaps,
 } from '@/app/utils/api'
+import { capabilities } from '@/app/platform'
 
 /**
  * Single source of truth for map favorites in the launcher.
@@ -45,6 +46,7 @@ export function useFavorites(
     const [syncModal, setSyncModal] = useState<SyncDiff>({ open: false, db: [], ini: [] })
 
     const writeIniBestEffort = useCallback(async (mapNames: string[]) => {
+        if (!capabilities.ini) return
         try {
             await window.conveyor.favorites.writeIni(mapNames)
         } catch (err) {
@@ -72,6 +74,7 @@ export function useFavorites(
                 if (cancelled) return
                 applyFavorites(dbNames)
 
+                if (!capabilities.ini) return
                 if (startupSyncCheckedRef.current) return
                 const ini = await window.conveyor.favorites.readIni()
                 if (cancelled) return
@@ -133,7 +136,7 @@ export function useFavorites(
 
     // Game-close: read ini → replace DB
     useEffect(() => {
-        if (!accessToken) return
+        if (!accessToken || !capabilities.ini) return
         const remove = window.utFavorites?.onGameClosed(async () => {
             try {
                 const ini = await window.conveyor.favorites.readIni()

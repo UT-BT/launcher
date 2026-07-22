@@ -11,7 +11,7 @@ not_here:
   - "the navigation stack / navigate() / renderView wiring → navigation.md"
   - "the shared components used (FilterPresetsMenu, ColumnsMenu, Tutorial) → shared-components.md"
 sections: [controlled-pages-with-hoisted-state, navigation-history-per-entry-ui-state, localstorage-persistence, filter-presets, tutorial-state, favorites, naming-conventions]
-last_verified: 2026-07-21
+last_verified: 2026-07-22
 verify_against: [app/components/main/Main.tsx, app/components/navigation/useNavState.ts, app/hooks/useAsync.ts]
 ---
 

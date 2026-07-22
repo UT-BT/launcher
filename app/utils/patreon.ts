@@ -1,4 +1,5 @@
 import { useEffect, useSyncExternalStore } from 'react'
+import { fetchGatewayPatrons } from '@/app/platform/gateway'
 
 /**
  * Patreon member tiers, keyed by Discord user id (the same id used as
@@ -79,7 +80,7 @@ export function loadPatreonMembers(): Promise<void> {
         }
 
         try {
-            const payload = (await window.conveyor.game.fetchPatrons()) as PatreonPayload
+            const payload = await fetchGatewayPatrons<PatreonPayload>()
             tiers = flatten(payload)
             loaded = true
             try {

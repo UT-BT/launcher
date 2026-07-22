@@ -27,6 +27,7 @@ import { MultiFilterDropdown } from '@/app/components/ui/multi-filter-dropdown'
 import { FilterPanelRow } from '@/app/components/ui/filter-panel-row'
 import { FilterPresetsMenu } from '@/app/components/shared/FilterPresetsMenu'
 import { ColumnsMenu } from '@/app/components/shared/ColumnsMenu'
+import { capabilities, fetchGatewayServers } from '@/app/platform'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { ActiveFilterChip } from '@/app/components/shared/ActiveFilterChip'
 import { displayMapName } from '@/app/utils/format'
@@ -419,6 +420,7 @@ export function ServerBrowserPage({
     }, [onStateChange])
 
     const pingAllServers = useCallback(async (serversToPing: Server[]) => {
+        if (!capabilities.ping) return
         const uniqueIps = Array.from(new Set(serversToPing.map(s => s.ip)))
         const PING_CONCURRENCY = 6
         for (let i = 0; i < uniqueIps.length; i += PING_CONCURRENCY) {
@@ -451,7 +453,7 @@ export function ServerBrowserPage({
         if (!silent) setLoading(true)
         setError(null)
         try {
-            const data = await window.conveyor.game.fetchServers() as Server[]
+            const data = await fetchGatewayServers<Server[]>()
             onCachesChange(() => ({
                 servers: data,
                 lastRefreshIso: new Date().toISOString(),
@@ -473,8 +475,11 @@ export function ServerBrowserPage({
     useEffect(() => {
         const interval = setInterval(async () => {
             try {
-                const isRunning = await window.conveyor.game.isGameRunning()
-                if (!isRunning) fetchServers({ silent: true })
+                if (capabilities.game) {
+                    const isRunning = await window.conveyor.game.isGameRunning()
+                    if (isRunning) return
+                }
+                fetchServers({ silent: true })
             } catch (err) {
                 console.error('Failed to check game status during auto-refresh', err)
             }
@@ -516,6 +521,7 @@ export function ServerBrowserPage({
     })
 
     const handleJoin = async (server: Server, asSpectator: boolean) => {
+        if (!capabilities.game) return
         try {
             if (window.conveyor?.ini) {
                 if (asSpectator) {
@@ -646,9 +652,15 @@ export function ServerBrowserPage({
 
     const showSkeleton = loading && caches.servers.length === 0
 
+    const displayColumnOrder = useMemo(
+        () => state.columnOrder.filter(id =>
+            (capabilities.ping || id !== 'ping') && (capabilities.game || id !== 'actions')),
+        [state.columnOrder],
+    )
+
     const visibleColumns = useMemo(
-        () => state.columnOrder.filter(id => state.columnVisibility[id]),
-        [state.columnOrder, state.columnVisibility],
+        () => displayColumnOrder.filter(id => state.columnVisibility[id]),
+        [displayColumnOrder, state.columnVisibility],
     )
 
     const responsiveColumns = useMemo<ResponsiveColumn[]>(
@@ -882,7 +894,7 @@ export function ServerBrowserPage({
         }
     }
 
-    const visibleColumnCount = state.columnOrder.reduce(
+    const visibleColumnCount = displayColumnOrder.reduce(
         (count, id) => count + (isEffectivelyVisible(id) ? 1 : 0), 0,
     )
 
@@ -936,7 +948,7 @@ export function ServerBrowserPage({
                 </button>
 
                 <ColumnsMenu<ServerColumnId>
-                    columnOrder={state.columnOrder}
+                    columnOrder={displayColumnOrder}
                     columnVisibility={state.columnVisibility}
                     columnLabels={SERVER_COLUMN_LABELS}
                     onToggle={toggleColumn}
@@ -1077,7 +1089,7 @@ export function ServerBrowserPage({
                 responsive={{ columns: responsiveColumns, onResolve: handleResolve }}
             >
                 <DataTableHeaderRow theadDataAttr="data-utbt-servers-thead">
-                    {state.columnOrder.map(id => renderHeader(id))}
+                    {displayColumnOrder.map(id => renderHeader(id))}
                 </DataTableHeaderRow>
                 <tbody>
                     {showSkeleton ? (
@@ -1089,7 +1101,7 @@ export function ServerBrowserPage({
                     ) : (
                         processedServers.map((server, index) => (
                             <DataTableRow key={server.id}>
-                                {state.columnOrder.map(id => renderCell(id, server, index === 0))}
+                                {displayColumnOrder.map(id => renderCell(id, server, index === 0))}
                             </DataTableRow>
                         ))
                     )}

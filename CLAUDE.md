@@ -7,6 +7,8 @@ Guidance for Claude Code (claude.ai/code) working in the UTBT launcher repo.
 Electron desktop launcher for UTBT (UT99 BunnyTrack). React 19 + Vite 7 +
 TypeScript + Tailwind 4, built with `electron-vite`. Renderer code under `app/`;
 main-process code under `lib/main/`; typed renderer↔main IPC under `lib/conveyor/`.
+The renderer also ships as a static website (`agents/web-target.md`) — shared UI
+must stay desktop-agnostic behind `app/platform/`.
 **This repo is public** — keep docs and code about the launcher only. Never put
 backend internals here (repo names, filesystem paths, tech stack, internal
 endpoints or patterns); document only the client-side contract the launcher uses.
@@ -29,6 +31,7 @@ every doc.
 | persist UI state / add a localStorage key | agents/state-patterns.md | the 3 state tiers + key convention |
 | navigation / Back-Forward / detail pages | agents/navigation.md | navigate(), renderView, sidebar, events |
 | call the API / asset URLs / favorites | agents/data-sources.md | endpoints + favorites/patreon sync |
+| make a feature work or hide on the web build / platform gating | agents/web-target.md | platform layer + capability gates + web build |
 | IPC channels / window.conveyor / events | lib/conveyor/README.md | channel inventory + add pattern |
 | main-process / services / file access | lib/main/README.md | services + path/url safety + config |
 | settings panels / UT99 ini keys | app/components/pages/settings/README.md | sections + ini flow + constants |
@@ -55,6 +58,10 @@ every doc.
 8. **Extend the API, don't hack the renderer.** When the launcher needs data the
    API doesn't expose, get the field added to the API rather than deriving or
    working around it in the renderer. See skill: consume-api-data.
+9. **Desktop-only behavior gates via `app/platform/` capabilities** (the
+   `usePlatform()` hook or its named exports), never raw `window.conveyor`
+   presence checks or direct `__WEB_TARGET__` reads. The renderer ships to
+   desktop AND web — see `agents/web-target.md`.
 
 ## Keeping docs honest
 

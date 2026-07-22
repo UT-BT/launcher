@@ -1,6 +1,7 @@
 import type { AuthConfig } from '@/lib/main/config'
+import { IS_WEB } from '@/app/platform/target'
 
-const GATEWAY_BASE_URL = 'https://gateway.utbt.net'
+export const GATEWAY_BASE_URL = 'https://gateway.utbt.net'
 
 export function getAvatarUrl(userId: string | number): string {
     return `${GATEWAY_BASE_URL}/users/${userId}/avatar`
@@ -1456,6 +1457,7 @@ export async function deleteNewsCategory(token: string, id: number): Promise<{ o
 }
 
 export async function logLauncherStartup(accessToken: string): Promise<void> {
+    if (IS_WEB) return
     try {
         const version = await window.conveyor.app.version()
         const osInfo = await window.conveyor.app.getOSInfo()

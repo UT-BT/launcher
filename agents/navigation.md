@@ -10,7 +10,7 @@ not_here:
   - "where page state / persistence lives → state-patterns.md"
   - "the PlayerInfo / CapTimeLink components that trigger nav → shared-components.md"
 sections: [the-model, navigate-is-the-only-entry-point, page-views-vs-detail-pages, the-sidebar-registry, event-driven-navigation, sidebar-new-badges, page-refresh-registry, per-entry-state]
-last_verified: 2026-07-21
+last_verified: 2026-07-22
 verify_against:
   - app/components/main/Main.tsx
   - app/components/layout/AppLayout.tsx

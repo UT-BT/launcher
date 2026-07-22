@@ -12,7 +12,7 @@ not_here:
   - "how UI state persists in localStorage → state-patterns.md"
   - "the procedure to wire a new endpoint into the UI → skill: consume-api-data"
 sections: [backend-api, errors, admin-api, cap-detail-page-endpoints, world-records-page-endpoints, team-maps-and-team-runs, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites]
-last_verified: 2026-07-21
+last_verified: 2026-07-22
 verify_against: [app/utils/api.ts, app/utils/patreon.ts, app/utils/server-utils.ts]
 ---
 
@@ -307,9 +307,11 @@ Don't bypass this dance — favorites toggles must go through `Main.tsx`'s
 
 Patreon supporters get a heart next to their name everywhere `PlayerInfo` renders
 (and on the profile hero). The data comes from the gateway `/patreon` endpoint
-via `window.conveyor.game.fetchPatrons()`, which returns Discord user ids bucketed
+via `fetchGatewayPatrons()` in `app/platform/gateway.ts` (IPC on desktop, direct
+gateway fetch on web — same shape either way), returning Discord user ids bucketed
 by tier — the same id the launcher uses as `userId`, so matching is a direct
-lookup.
+lookup. The server list uses the same seam (`fetchGatewayServers()` → gateway
+`/server-info`).
 
 `app/utils/patreon.ts` owns it: a module-level store (`useSyncExternalStore`) so
 all `PlayerInfo` instances share one fetch. `loadPatreonMembers()` is

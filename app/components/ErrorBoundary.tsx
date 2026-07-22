@@ -28,6 +28,8 @@ export class ErrorBoundary extends Component<Props, State> {
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     if (window.logging) {
       window.logging.error('ErrorBoundary caught an error', 'ErrorBoundary', { error: error.toString(), componentStack: errorInfo.componentStack })
+    } else {
+      console.error('ErrorBoundary caught an error', error, errorInfo.componentStack)
     }
     this.setState({
       error,

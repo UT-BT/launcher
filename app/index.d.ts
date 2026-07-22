@@ -1,5 +1,7 @@
 /// <reference types="electron-vite/node" />
 
+declare const __WEB_TARGET__: boolean
+
 declare module '*.css' {
   const content: string
   export default content

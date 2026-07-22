@@ -34,6 +34,7 @@ import { PersonalProgressSnapshot } from './home/PersonalProgressSnapshot'
 import { AchievementProgressPreview } from './home/AchievementProgressPreview'
 import { RecentServersCard } from './home/RecentServersCard'
 import { MedalHuntCard } from './home/MedalHuntCard'
+import { capabilities, fetchGatewayServers } from '@/app/platform'
 
 const NEWS_SEEN_KEY = 'utbt:newsSeen:v1'
 
@@ -136,7 +137,7 @@ export function Home({
                 fetchHotMaps(userProfile.accessToken).catch(() => [] as HotMap[]),
                 fetchNews(userProfile.accessToken).catch(() => [] as NewsArticle[]),
                 fetchNewsCategories(userProfile.accessToken).catch(() => [] as NewsCategoryDef[]),
-                window.conveyor.game.fetchServers().catch(() => [] as Server[]) as Promise<Server[]>,
+                fetchGatewayServers<Server[]>().catch(() => [] as Server[]),
                 userProfile.id
                     ? fetchUserSummary(userProfile.accessToken, userProfile.id).catch(() => null as UserSummary | null)
                     : Promise.resolve(null),
@@ -249,6 +250,7 @@ export function Home({
     }
 
     const handleJoinServer = async (server: Server | RecentServerEntry, asSpectator: boolean) => {
+        if (!capabilities.game) return
         try {
             if (window.conveyor?.ini) {
                 if (asSpectator) {

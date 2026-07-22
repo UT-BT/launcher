@@ -75,6 +75,7 @@ import { loadPatreonMembers } from '@/app/utils/patreon'
 import { fetchAchievementDefinitions, fetchMyAchievements } from '@/app/utils/api'
 import { writePendingHighlight, type HighlightView } from '@/app/hooks/useNewItemHighlight'
 import { isStaff } from '@/app/utils/roles'
+import { capabilities } from '@/app/platform'
 
 
 const MAPS_STATE_STORAGE_KEY = 'utbt:mapsPageState:v1'
@@ -508,6 +509,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
   }, [installationStatus])
 
   const validateInstallation = async () => {
+    if (!capabilities.install) return
     try {
       const result = await window.conveyor.app.validateCurrentInstallation()
 

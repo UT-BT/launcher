@@ -59,6 +59,7 @@ import { Tooltip } from '@/app/components/ui/tooltip'
 import { usePatreonTier } from '@/app/utils/patreon'
 import { PatreonBadge } from '@/app/components/shared/PatreonBadge'
 import { isStaff } from '@/app/utils/roles'
+import { usePlatform } from '@/app/platform'
 
 function buildNavSections(userProfile?: UserProfile): NavSection[] {
     if (!isStaff(userProfile)) return BASE_NAV_SECTIONS
@@ -106,6 +107,7 @@ function getRarityStyles(title: { rarity: number, color_r: number, color_g: numb
 }
 
 export function AppLayout({ children, currentView, onViewChange, getNavBadge, userProfile, installationStatus }: AppLayoutProps) {
+    const { capabilities, auth } = usePlatform()
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
     const [isSettingsOpen, setIsSettingsOpen] = useState(false)
     const [isChangeTitleOpen, setIsChangeTitleOpen] = useState(false)
@@ -165,7 +167,7 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                         <Server className="size-4" />
                         Join Server
                     </Button>
-                    {isInstallValid ? (
+                    {capabilities.game && (isInstallValid ? (
                         <Button
                             variant="ghost"
                             className="w-full h-9 bg-card/50 border border-hairline/10 text-muted-foreground hover:text-foreground hover:bg-card/80 hover:border-hairline/20 transition-colors rounded-lg font-medium"
@@ -185,7 +187,7 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                                 Launch Game
                             </Button>
                         </Tooltip>
-                    )}
+                    ))}
                 </div>
 
                 <nav className="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-4 space-y-6 [@media(max-height:760px)]:space-y-3 relative z-10">
@@ -299,13 +301,15 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                                 <Trophy className="mr-2 size-4" />
                                 <span>Change Title</span>
                             </DropdownMenuItem>
-                            <DropdownMenuItem
-                                onClick={() => setIsSettingsOpen(true)}
-                                className="text-muted-foreground focus:text-foreground focus:bg-hairline/10 cursor-pointer mb-1"
-                            >
-                                <Settings className="mr-2 size-4" />
-                                <span>Settings</span>
-                            </DropdownMenuItem>
+                            {capabilities.settingsModal && (
+                                <DropdownMenuItem
+                                    onClick={() => setIsSettingsOpen(true)}
+                                    className="text-muted-foreground focus:text-foreground focus:bg-hairline/10 cursor-pointer mb-1"
+                                >
+                                    <Settings className="mr-2 size-4" />
+                                    <span>Settings</span>
+                                </DropdownMenuItem>
+                            )}
                             <DropdownMenuSeparator className="bg-hairline/10" />
                             <DropdownMenuItem
                                 onClick={() => setShowLogoutConfirm(true)}
@@ -366,7 +370,7 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                                     </Button>
                                     <Button
                                         variant="destructive"
-                                        onClick={() => window.auth.logout().then(() => window.location.reload())}
+                                        onClick={() => auth.logout().then(() => window.location.reload())}
                                         className="min-w-[100px]"
                                     >
                                         Sign Out
@@ -378,12 +382,14 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                 )
             }
 
-            <SettingsModal
-                isOpen={isSettingsOpen}
-                onClose={() => setIsSettingsOpen(false)}
-                initialSection={settingsInitialSection}
-                unlockExclusive={patreonTier > 0 || (userProfile?.utbt_role ?? 0) > 0}
-            />
+            {capabilities.settingsModal && (
+                <SettingsModal
+                    isOpen={isSettingsOpen}
+                    onClose={() => setIsSettingsOpen(false)}
+                    initialSection={settingsInitialSection}
+                    unlockExclusive={patreonTier > 0 || (userProfile?.utbt_role ?? 0) > 0}
+                />
+            )}
 
         </div>
     )
