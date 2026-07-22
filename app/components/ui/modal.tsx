@@ -101,7 +101,7 @@ export function Modal({
             data-modal-backdrop
             className={cn(
                 "fixed top-[var(--window-titlebar-height)] right-0 bottom-0 left-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200",
-                offsetSidebar && "pl-64",
+                offsetSidebar && "lg:pl-64",
                 backdropClassName
             )}
         >

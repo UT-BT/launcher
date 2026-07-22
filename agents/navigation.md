@@ -139,7 +139,10 @@ function buildNavSections(userProfile?: UserProfile): NavSection[] {
 ```
 
 Each `item.id` must match a `renderView` case; clicking calls
-`onViewChange(item.id)` which is `navigate`. To add a sidebar page: add the
+`changeView(item.id)` — a thin wrapper that closes the mobile drawer and then
+calls `onViewChange` (`navigate`). Below the `lg` breakpoint the same sidebar
+`<aside>` renders as an off-canvas drawer behind a hamburger top bar (see
+`agents/web-target.md`, responsive-layout). To add a sidebar page: add the
 `renderView` case **and** a `navSections` item. (Settings is **not** a view — it's
 a modal opened from the user dropdown / the `open-settings` window event.)
 

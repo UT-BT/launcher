@@ -1,10 +1,11 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, lazy, Suspense } from 'react'
 import { SplashScreen } from '@/app/components/splash/SplashScreen'
 import { Main } from '@/app/components/main/Main'
-import { LoginPage } from '@/app/components/pages/LoginPage'
 import { ErrorModal } from '@/app/components/ErrorModal'
 import { UpdaterProvider } from '@/app/hooks/useUpdater'
-import { UpdateModal } from '@/app/components/updater/UpdateModal'
+
+const LoginPage = lazy(() => import('@/app/components/pages/LoginPage').then(m => ({ default: m.LoginPage })))
+const UpdateModal = lazy(() => import('@/app/components/updater/UpdateModal').then(m => ({ default: m.UpdateModal })))
 import { useLogger } from '@/app/hooks/use-logger'
 import { IS_WEB, platformAuth } from '@/app/platform'
 import { fetchUserProfile, UserProfile, logLauncherStartup, fetchLatestActivity } from '@/app/utils/api'
@@ -178,10 +179,18 @@ export default function App() {
   return (
     <UpdaterProvider>
       {appPhase === 'main' && <Main userProfile={userProfile} />}
-      {appPhase === 'login' && <LoginPage onLoginSuccess={handleLoginSuccess} />}
+      {appPhase === 'login' && (
+        <Suspense fallback={null}>
+          <LoginPage onLoginSuccess={handleLoginSuccess} />
+        </Suspense>
+      )}
       {appPhase === 'splash' && <SplashScreen onReady={handleSplashComplete} variant={initError ? 'error' : 'intro'} />}
 
-      <UpdateModal />
+      {!IS_WEB && (
+        <Suspense fallback={null}>
+          <UpdateModal />
+        </Suspense>
+      )}
 
       <ErrorModal
         isOpen={!!initError}

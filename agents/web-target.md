@@ -9,7 +9,7 @@ provides: "the web build target: platform layer, capability gates, per-bridge we
 not_here:
   - "IPC channel contract → lib/conveyor/README.md"
   - "build commands reference → agents/build.md"
-sections: [overview, platform-layer, capability-gates, build, hosting-note]
+sections: [overview, platform-layer, capability-gates, web-auth, anonymous-browsing, shareable-urls, responsive-layout, performance, build, hosting-note]
 last_verified: 2026-07-22
 verify_against:
   - app/platform/index.ts
@@ -120,7 +120,46 @@ path scheme and the popstate model live in `agents/navigation.md`
 followed while logged out survives the OAuth redirect via the flow stash's
 `returnTo`.
 
-## Build
+## Responsive layout
+
+The desktop app targets 16:9; the web build must also work on phones. One
+breakpoint governs the shell: **`lg` (1024px)**.
+
+- `app/index.html` carries the viewport meta tag (harmless in Electron).
+- `AppLayout` below `lg`: the sidebar becomes an off-canvas drawer (same single
+  `<aside>`, CSS `max-lg:` translate — no duplicated markup), opened from a
+  fixed top bar (hamburger + logo). Every nav action goes through `changeView`,
+  which closes the drawer. At `lg+` the DOM and styling are the pre-mobile
+  desktop layout.
+- Content padding scales `p-4 sm:p-6 lg:p-8`; the app root uses `h-dvh` (mobile
+  browser toolbars) and the web entry zeroes `--window-titlebar-height`.
+- Modals: `offsetSidebar` pads left only at `lg+` (`lg:pl-64`) so they center on
+  phones.
+- Tables need no per-page mobile work: `DataTable`'s width-resolver
+  (`COLUMN_PRIORITY` + `RESPONSIVE_REQUIRED_COLUMNS`, see
+  `agents/shared-components.md`) already drops low-priority columns as the
+  container narrows — at 390px the Maps table shows Map + World Record and stays
+  usable.
+
+When adding UI: never assume the sidebar is visible; anything positioned
+relative to it needs the `lg:` variant.
+
+## Performance
+
+The web entry chunk must stay lean — phones parse it on first visit. Current
+split (enforced by convention, check bundle output when touching imports):
+
+- Detail pages (`maps-detail`, `player-detail`, `cap-detail`, `team-cap-detail`,
+  `news-detail`, `team-detail`) and `AdminPage` are `React.lazy` in `Main.tsx`
+  (one `<Suspense>` wraps `renderView()`); `AdminPage`'s state constants live in
+  `admin/types.ts` so Main's static import doesn't drag the dashboard in.
+- `LoginPage` + `UpdateModal` are lazy in `app.tsx`; `SettingsModal` +
+  `ChangeTitleModal` are lazy in `AppLayout` and mount only while open. This
+  keeps react-markdown, framer-motion, recharts, and the entire settings tree
+  out of the entry chunk (~1.79MB → ~1.10MB, gzip ~324kB).
+- Rule: a module only needed after a user action (a modal, a detail page, an
+  admin surface) gets `lazy()` + a mount gate, not a static import. Primary
+  sidebar pages stay eager — they are the app.
 
 | Command | Purpose |
 |---|---|

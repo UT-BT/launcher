@@ -51,7 +51,7 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
     }, [isLoading, logger])
 
     return (
-        <div className="page-container flex flex-col items-center justify-center min-h-screen bg-background text-foreground">
+        <div className="page-container flex flex-col items-center justify-center min-h-dvh bg-background text-foreground">
             <div className="nebula-bg" aria-hidden="true" />
 
             <div className="z-10 flex flex-col items-center gap-8 p-8 rounded-xl bg-card/50 backdrop-blur-sm border border-border shadow-2xl max-w-md w-full">

@@ -1,6 +1,6 @@
-import { ReactNode, useEffect, useMemo, useState } from 'react'
+import { ReactNode, lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { FaDiscord } from 'react-icons/fa'
-import { Home, Server, Map as MapIcon, Trophy, Settings, LogOut, Play, User, Users, Users2, Flag, Award, ShieldAlert, Newspaper } from 'lucide-react'
+import { Home, Server, Map as MapIcon, Trophy, Settings, LogOut, Play, User, Users, Users2, Flag, Award, ShieldAlert, Newspaper, Menu } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import logo from '@/app/assets/logo.png'
 import {
@@ -12,9 +12,10 @@ import {
     DropdownMenuTrigger,
 } from '@/app/components/ui/dropdown-menu'
 import { Button } from '@/app/components/ui/button'
-import { SettingsModal } from '@/app/components/modals/SettingsModal'
-import { ChangeTitleModal } from '@/app/components/modals/ChangeTitleModal'
 import { NavHistoryBar } from '@/app/components/navigation/NavHistoryBar'
+
+const SettingsModal = lazy(() => import('@/app/components/modals/SettingsModal').then(m => ({ default: m.SettingsModal })))
+const ChangeTitleModal = lazy(() => import('@/app/components/modals/ChangeTitleModal').then(m => ({ default: m.ChangeTitleModal })))
 import { PageRefreshProvider } from '@/app/components/navigation/PageRefreshContext'
 
 interface NavItem {
@@ -111,6 +112,12 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
     const { capabilities, auth } = usePlatform()
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
     const [loginError, setLoginError] = useState<string | null>(() => auth.consumeLoginError())
+    const [mobileNavOpen, setMobileNavOpen] = useState(false)
+
+    const changeView = (view: string) => {
+        setMobileNavOpen(false)
+        onViewChange(view)
+    }
     const [isSettingsOpen, setIsSettingsOpen] = useState(false)
     const [isChangeTitleOpen, setIsChangeTitleOpen] = useState(false)
     const [settingsInitialSection, setSettingsInitialSection] = useState<string | undefined>(undefined)
@@ -148,8 +155,34 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
         <div className="flex h-full bg-background text-foreground overflow-hidden relative">
             <div className="nebula-bg absolute inset-0 opacity-30 pointer-events-none" />
 
+            {/* Mobile top bar */}
+            <div className="lg:hidden fixed top-0 inset-x-0 h-14 z-30 flex items-center gap-3 px-4 bg-card/80 backdrop-blur-xl border-b border-hairline/10">
+                <button
+                    type="button"
+                    aria-label="Open navigation"
+                    onClick={() => setMobileNavOpen(true)}
+                    className="inline-flex items-center justify-center size-10 -ml-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-hairline/10 transition-colors cursor-pointer"
+                >
+                    <Menu className="size-5" />
+                </button>
+                <img src={logo} alt="UTBT Logo" className="size-8 object-contain" />
+                <span className="font-bold tracking-tight">UTBT.net</span>
+            </div>
+
+            {/* Drawer backdrop */}
+            {mobileNavOpen && (
+                <div
+                    className="lg:hidden fixed inset-0 z-40 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200"
+                    onClick={() => setMobileNavOpen(false)}
+                />
+            )}
+
             {/* Sidebar */}
-            <aside className="w-64 bg-card/50 backdrop-blur-xl border-r border-hairline/10 flex flex-col z-20 relative">
+            <aside className={cn(
+                "w-64 bg-card/50 backdrop-blur-xl border-r border-hairline/10 flex flex-col relative z-20",
+                "max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:z-50 max-lg:w-72 max-lg:max-w-[85vw] max-lg:bg-card/95 max-lg:transition-transform max-lg:duration-200",
+                mobileNavOpen ? "max-lg:translate-x-0" : "max-lg:-translate-x-full"
+            )}>
                 <div className="absolute inset-0 bg-gradient-to-b from-accent-900/10 to-transparent pointer-events-none" />
 
                 <div className="p-6 [@media(max-height:760px)]:p-3 flex flex-col items-center relative z-10">
@@ -164,7 +197,7 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                     <Button
                         variant="ghost"
                         className="w-full h-11 bg-accent-500/15 border border-accent-500/40 text-accent-200 hover:bg-accent-500/25 hover:text-foreground hover:border-accent-500/60 hover:shadow-[0_0_20px_rgba(59,130,246,0.25)] transition-all font-semibold rounded-lg"
-                        onClick={() => onViewChange('servers')}
+                        onClick={() => changeView('servers')}
                     >
                         <Server className="size-4" />
                         Join Server
@@ -203,7 +236,7 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                                 return (
                                 <button
                                     key={item.id}
-                                    onClick={() => onViewChange(item.id)}
+                                    onClick={() => changeView(item.id)}
                                     className={cn(
                                         "w-full flex items-center gap-3 px-4 py-3 [@media(max-height:760px)]:py-2 rounded-lg transition-all duration-200 cursor-pointer group relative overflow-hidden",
                                         currentView === item.id
@@ -341,22 +374,26 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 overflow-y-auto relative z-10 pr-1 [scrollbar-width:thin] [scrollbar-color:rgba(148,163,184,0.25)_transparent] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-hairline/20">
+            <main className="flex-1 overflow-y-auto relative z-10 pr-1 max-lg:pt-14 [scrollbar-width:thin] [scrollbar-color:rgba(148,163,184,0.25)_transparent] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-hairline/20">
                 <PageRefreshProvider>
-                    <div className="p-8 min-h-full">
+                    <div className="p-4 sm:p-6 lg:p-8 min-h-full">
                         <NavHistoryBar />
                         {children}
                     </div>
                 </PageRefreshProvider>
 
-                <ChangeTitleModal
-                    isOpen={isChangeTitleOpen}
-                    onClose={() => setIsChangeTitleOpen(false)}
-                    accessToken={userProfile?.accessToken}
-                    userId={userProfile?.id || undefined}
-                    currentTitleId={userProfile?.active_title?.id || undefined}
-                    onTitleChanged={() => window.dispatchEvent(new CustomEvent('refresh-user-profile'))}
-                />
+                {isChangeTitleOpen && (
+                    <Suspense fallback={null}>
+                        <ChangeTitleModal
+                            isOpen={isChangeTitleOpen}
+                            onClose={() => setIsChangeTitleOpen(false)}
+                            accessToken={userProfile?.accessToken}
+                            userId={userProfile?.id || undefined}
+                            currentTitleId={userProfile?.active_title?.id || undefined}
+                            onTitleChanged={() => window.dispatchEvent(new CustomEvent('refresh-user-profile'))}
+                        />
+                    </Suspense>
+                )}
             </main>
 
             {/* Logout Confirmation Modal */}
@@ -399,13 +436,15 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                 )
             }
 
-            {capabilities.settingsModal && (
-                <SettingsModal
-                    isOpen={isSettingsOpen}
-                    onClose={() => setIsSettingsOpen(false)}
-                    initialSection={settingsInitialSection}
-                    unlockExclusive={patreonTier > 0 || (userProfile?.utbt_role ?? 0) > 0}
-                />
+            {capabilities.settingsModal && isSettingsOpen && (
+                <Suspense fallback={null}>
+                    <SettingsModal
+                        isOpen={isSettingsOpen}
+                        onClose={() => setIsSettingsOpen(false)}
+                        initialSection={settingsInitialSection}
+                        unlockExclusive={patreonTier > 0 || (userProfile?.utbt_role ?? 0) > 0}
+                    />
+                </Suspense>
             )}
 
         </div>

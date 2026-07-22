@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef, type Dispatch, type SetStateAction } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef, lazy, Suspense, type Dispatch, type SetStateAction } from 'react'
 import { AppLayout } from '@/app/components/layout/AppLayout'
 import {
   NavigationContext,
@@ -57,14 +57,16 @@ import {
   type TeamsPageState,
   type TeamsPageCaches,
 } from '@/app/components/pages/TeamsPage'
-import { TeamDetailsPage } from '@/app/components/pages/teams/TeamDetailsPage'
-import { MapDetailPage } from '@/app/components/pages/MapDetailPage'
-import { PlayerDetailPage } from '@/app/components/pages/PlayerDetailPage'
-import { CapDetailPage } from '@/app/components/pages/CapDetailPage'
-import { TeamCapDetailPage } from '@/app/components/pages/TeamCapDetailPage'
 import { NewsPage } from '@/app/components/pages/NewsPage'
-import { NewsDetailPage } from '@/app/components/pages/NewsDetailPage'
-import { AdminPage, DEFAULT_ADMIN_STATE, type AdminPageState } from '@/app/components/pages/admin/AdminPage'
+import { DEFAULT_ADMIN_STATE, type AdminPageState } from '@/app/components/pages/admin/types'
+
+const TeamDetailsPage = lazy(() => import('@/app/components/pages/teams/TeamDetailsPage').then(m => ({ default: m.TeamDetailsPage })))
+const MapDetailPage = lazy(() => import('@/app/components/pages/MapDetailPage').then(m => ({ default: m.MapDetailPage })))
+const PlayerDetailPage = lazy(() => import('@/app/components/pages/PlayerDetailPage').then(m => ({ default: m.PlayerDetailPage })))
+const CapDetailPage = lazy(() => import('@/app/components/pages/CapDetailPage').then(m => ({ default: m.CapDetailPage })))
+const TeamCapDetailPage = lazy(() => import('@/app/components/pages/TeamCapDetailPage').then(m => ({ default: m.TeamCapDetailPage })))
+const NewsDetailPage = lazy(() => import('@/app/components/pages/NewsDetailPage').then(m => ({ default: m.NewsDetailPage })))
+const AdminPage = lazy(() => import('@/app/components/pages/admin/AdminPage').then(m => ({ default: m.AdminPage })))
 import { InstallationBanner } from '@/app/components/InstallationBanner'
 import { UpdateBanner } from '@/app/components/updater/UpdateBanner'
 import { FavoritesSyncModal } from '@/app/components/shared/FavoritesSyncModal'
@@ -715,7 +717,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
   }
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden">
+    <div className="h-dvh flex flex-col overflow-hidden">
       <UpdateBanner />
       {installationStatus && installationStatus !== 'valid' && (
         <InstallationBanner
@@ -726,7 +728,14 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
       <div className="flex-1 overflow-hidden">
         <NavigationContext.Provider value={navValue}>
           <AppLayout currentView={currentView} onViewChange={navigate} getNavBadge={(view) => badgeVisible(view) ? badges[view].count : null} userProfile={userProfile} installationStatus={installationStatus}>
-            {renderView()}
+            <Suspense fallback={
+              <div className="space-y-4 pt-2">
+                <div className="h-10 w-64 bg-hairline/5 rounded-lg animate-pulse" />
+                <div className="h-72 bg-hairline/5 rounded-xl animate-pulse" />
+              </div>
+            }>
+              {renderView()}
+            </Suspense>
           </AppLayout>
         </NavigationContext.Provider>
       </div>
