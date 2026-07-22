@@ -112,6 +112,14 @@ reads on the public GET surface. Personal UI (favorites toggles, my-team panels,
 medal hunt, pending reviews, achievements page content, admin) stays gated on a
 real `accessToken`.
 
+## Shareable URLs
+
+Web-only URL sync mirrors the in-memory nav stack into the History API — the
+path scheme and the popstate model live in `agents/navigation.md`
+(`url-sync-web-build`). Deep links cold-load into the right view; a deep link
+followed while logged out survives the OAuth redirect via the flow stash's
+`returnTo`.
+
 ## Build
 
 | Command | Purpose |

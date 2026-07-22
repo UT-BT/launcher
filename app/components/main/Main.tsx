@@ -75,7 +75,8 @@ import { loadPatreonMembers } from '@/app/utils/patreon'
 import { fetchAchievementDefinitions, fetchMyAchievements } from '@/app/utils/api'
 import { writePendingHighlight, type HighlightView } from '@/app/hooks/useNewItemHighlight'
 import { isStaff } from '@/app/utils/roles'
-import { capabilities } from '@/app/platform'
+import { capabilities, IS_WEB } from '@/app/platform'
+import { pushUrlForEntry, seedEntriesFromUrl, useUrlSync } from '@/app/components/navigation/useUrlSync'
 
 
 const MAPS_STATE_STORAGE_KEY = 'utbt:mapsPageState:v1'
@@ -211,7 +212,7 @@ function loadPersistedServerFavorites(): Set<string> {
 }
 
 export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').UserProfile }) {
-  const [entries, setEntries] = useState<NavEntry[]>(() => [{ id: 0, view: 'home', params: {}, state: {} }])
+  const [entries, setEntries] = useState<NavEntry[]>(seedEntriesFromUrl)
   const [cursor, setCursor] = useState(0)
   const nextIdRef = useRef(1)
   const stackRef = useRef({ entries, cursor })
@@ -350,7 +351,8 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
     const active = cur[curIdx]
     if (active.view === view && paramsEqual(active.params, params)) return
     markViewed(view)
-    let next = [...cur.slice(0, curIdx + 1), { id: nextIdRef.current++, view, params, state: {} }]
+    const entry = { id: nextIdRef.current++, view, params, state: {} }
+    let next = [...cur.slice(0, curIdx + 1), entry]
     let nextCursor = next.length - 1
     if (next.length > HISTORY_CAP) {
       const drop = next.length - HISTORY_CAP
@@ -359,10 +361,30 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
     }
     setEntries(next)
     setCursor(nextCursor)
+    pushUrlForEntry(entry)
   }, [markViewed])
 
-  const back = useCallback(() => setCursor(c => Math.max(0, c - 1)), [])
-  const forward = useCallback(() => setCursor(c => Math.min(stackRef.current.entries.length - 1, c + 1)), [])
+  const pushExternal = useCallback((view: string, params: NavParams) => {
+    const { entries: cur, cursor: curIdx } = stackRef.current
+    const entry = { id: nextIdRef.current++, view, params, state: {} }
+    let next = [...cur.slice(0, curIdx + 1), entry]
+    let nextCursor = next.length - 1
+    if (next.length > HISTORY_CAP) {
+      const drop = next.length - HISTORY_CAP
+      next = next.slice(drop)
+      nextCursor -= drop
+    }
+    setEntries(next)
+    setCursor(nextCursor)
+    return entry.id
+  }, [])
+
+  const urlNav = useUrlSync({ stackRef, setCursor, pushExternal })
+
+  const localBack = useCallback(() => setCursor(c => Math.max(0, c - 1)), [])
+  const localForward = useCallback(() => setCursor(c => Math.min(stackRef.current.entries.length - 1, c + 1)), [])
+  const back = urlNav ? urlNav.back : localBack
+  const forward = urlNav ? urlNav.forward : localForward
 
   const getEntryState = useCallback(<T,>(key: string, def: T): T => {
     const { entries: cur, cursor: curIdx } = stackRef.current
@@ -460,6 +482,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
   }, [navigate])
 
   useEffect(() => {
+    if (IS_WEB) return
     const onMouseUp = (e: MouseEvent) => {
       if (e.button === 3) { e.preventDefault(); back() }
       else if (e.button === 4) { e.preventDefault(); forward() }

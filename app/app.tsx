@@ -72,6 +72,13 @@ export default function App() {
     return () => { mountedRef.current = false }
   }, [preloadData, logger])
 
+  const webBootRef = useRef(false)
+  useEffect(() => {
+    if (!IS_WEB || webBootRef.current) return
+    webBootRef.current = true
+    void handleSplashComplete()
+  })
+
   const handleSplashComplete = async () => {
     logger.info('Splash screen completed, awaiting preload result')
 
