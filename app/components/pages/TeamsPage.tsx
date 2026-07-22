@@ -4,7 +4,7 @@ import { Button } from '@/app/components/ui/button'
 import { Modal } from '@/app/components/ui/modal'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
 import {
-    fetchMyInvitations, fetchMyTeam, ANONYMOUS_TOKEN,
+    fetchMyInvitations, fetchMyTeam,
     type TeamCore, type TeamDetail, type TeamSort, type UserProfile,
 } from '@/app/utils/api'
 import { capabilities } from '@/app/platform'
@@ -12,6 +12,7 @@ import { CreateTeamForm } from './teams/CreateTeamForm'
 import { TeamGallery, type TeamAccessFilter } from './teams/TeamGallery'
 import { InvitationsSection } from './teams/InvitationsSection'
 import { ErrorBanner, refreshUserProfile, teamErrorMessage } from './teams/teamsShared'
+import { requestLogin } from '@/app/components/shared/AuthRequiredModal'
 
 export interface TeamsPageState {
     directorySearch: string
@@ -56,7 +57,7 @@ interface TeamsPageProps {
 
 export function TeamsPage({ userProfile, state, onStateChange, caches, onCachesChange, onTeamSelect }: TeamsPageProps) {
     const accessToken = userProfile?.accessToken
-    const browseToken = accessToken ?? ANONYMOUS_TOKEN
+    const browseToken = accessToken ?? ''
 
     const [loading, setLoading] = useState(!caches.loaded && !!accessToken)
     const [error, setError] = useState<string | null>(null)
@@ -151,8 +152,8 @@ export function TeamsPage({ userProfile, state, onStateChange, caches, onCachesC
                         Browse every team and manage your own.
                     </p>
                 </div>
-                {!!accessToken && caches.loaded && !caches.myTeam && (
-                    <Button onClick={() => setCreateOpen(true)}>
+                {(!accessToken || (caches.loaded && !caches.myTeam)) && (
+                    <Button onClick={() => accessToken ? setCreateOpen(true) : requestLogin({ feature: 'create a team' })}>
                         <Plus className="size-4" /> Create Team
                     </Button>
                 )}

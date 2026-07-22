@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { requestLogin } from '@/app/components/shared/AuthRequiredModal'
 import { useNavScrollRestore } from '@/app/components/navigation/useNavScrollRestore'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
 import { Button } from '@/app/components/ui/button'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import {
-    acceptTeamInvite, declineTeamInvite, fetchMyTeam, fetchTeam, joinTeam, ANONYMOUS_TOKEN,
+    acceptTeamInvite, declineTeamInvite, fetchMyTeam, fetchTeam, joinTeam,
     type TeamDetail, type TeamRole, type UserProfile,
 } from '@/app/utils/api'
 import { TeamHeaderCard } from './TeamHeaderCard'
@@ -24,7 +25,7 @@ interface TeamDetailsPageProps {
 
 export function TeamDetailsPage({ teamId, userProfile, onExitToGallery }: TeamDetailsPageProps) {
     const accessToken = userProfile?.accessToken
-    const browseToken = accessToken ?? ANONYMOUS_TOKEN
+    const browseToken = accessToken ?? ''
     const myUserId = userProfile?.id ?? undefined
 
     const [team, setTeam] = useState<TeamDetail | null>(null)
@@ -115,7 +116,13 @@ export function TeamDetailsPage({ teamId, userProfile, onExitToGallery }: TeamDe
     }
 
     const joinControl = (() => {
-        if (!accessToken || !team || isOwnTeam) return undefined
+        if (!team || isOwnTeam) return undefined
+
+        if (!accessToken) {
+            return team.is_open
+                ? <Button size="sm" onClick={() => requestLogin({ feature: 'join this team' })}>Join</Button>
+                : undefined
+        }
 
         if (iInvited) {
             const acceptBtn = (

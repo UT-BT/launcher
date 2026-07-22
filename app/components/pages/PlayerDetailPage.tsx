@@ -7,7 +7,6 @@ import {
     type UserSummary,
     type UserProfile,
     type UserActivityBucket,
-    ANONYMOUS_TOKEN,
 } from '@/app/utils/api'
 import { useRefreshCooldown } from '@/app/hooks/useRefreshCooldown'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
@@ -39,7 +38,7 @@ interface PlayerDetailPageProps {
 export function PlayerDetailPage({
     userId, userProfile, favoriteMapNames, onToggleFavorite, onMapSelect,
 }: PlayerDetailPageProps) {
-    const accessToken = userProfile?.accessToken ?? ANONYMOUS_TOKEN
+    const accessToken = userProfile?.accessToken ?? ''
     const currentUserId = userProfile?.id ?? undefined
     const isSelf = currentUserId != null && String(currentUserId) === String(userId)
 
@@ -55,9 +54,9 @@ export function PlayerDetailPage({
     const scrollRef = useRef<HTMLDivElement>(null)
 
     const { data: summaryData, loading, error } = useAsync<UserSummary>(
-        () => fetchUserSummary(accessToken!, userId),
+        () => fetchUserSummary(accessToken, userId),
         [accessToken, userId, refreshKey],
-        { enabled: !!accessToken, errorMessage: 'Failed to load player data.' },
+        { enabled: true, errorMessage: 'Failed to load player data.' },
     )
     const summary = summaryData ?? null
 
@@ -73,7 +72,7 @@ export function PlayerDetailPage({
     // Lazy-load aggregated lifetime activity once initial summary is in.
     useEffect(() => {
         let cancelled = false
-        if (!accessToken || !summary) return
+        if (!summary) return
         setChartLoading(true)
         fetchUserActivity(accessToken, userId)
             .then(rows => { if (!cancelled) setActivity(rows) })

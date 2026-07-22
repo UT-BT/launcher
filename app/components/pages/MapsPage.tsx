@@ -11,7 +11,7 @@ import { Tooltip } from '@/app/components/ui/tooltip'
 import {
     UserProfile, Map, MapMetadata, MapReview, BestCap,
     fetchMaps, fetchMapsCount, fetchMapsMetadata, fetchMapsFuzzy, fetchAllMapReviews, fetchMapAuthors,
-    fetchBestCaps, fetchWorldRecordsForMaps, ANONYMOUS_TOKEN,
+    fetchBestCaps, fetchWorldRecordsForMaps,
 } from '@/app/utils/api'
 
 import { MapReviewsModal } from '@/app/components/modals/MapReviewsModal'
@@ -645,6 +645,8 @@ export function MapsPage({
     userProfile, state, onStateChange, caches, onCachesChange, onMapSelect,
     favoriteMapNames, onToggleFavorite, initialNewOnly,
 }: MapsPageProps) {
+    const accessToken = userProfile?.accessToken
+    const browseToken = accessToken ?? ''
     const autoPageSize = useAutoPageSize(computePageSize)
     const pageSize = state.pageSizePreference === 'auto' ? autoPageSize : state.pageSizePreference
     const [loading, setLoading] = useState(!caches.metadataLoaded || !caches.reviewsLoaded)
@@ -777,6 +779,7 @@ export function MapsPage({
     const responsiveColumns = useMemo<ResponsiveColumn[]>(
         () => columnOrder
             .filter(id => !NON_TABLE_COLUMNS.has(id) && isColumnVisible(id))
+            .filter(id => !!accessToken || !(['medal', 'pb', 'my_rating'] as ColumnId[]).includes(id))
             .map(id => ({
                 id,
                 width: COLUMN_WIDTH[id],
@@ -784,7 +787,7 @@ export function MapsPage({
                 required: REQUIRED_COLUMNS.has(id),
             })),
         // eslint-disable-next-line react-hooks/exhaustive-deps
-        [columnOrder, columnVisibility],
+        [columnOrder, columnVisibility, accessToken],
     )
     const [resolved, setResolved] = useState<Set<ColumnId> | null>(null)
     const handleResolve = useCallback((ids: Set<string>) => {
@@ -798,9 +801,6 @@ export function MapsPage({
     )
     const searchAbortRef = useRef<AbortController | null>(null)
     const scrollContainerRef = useRef<HTMLDivElement | null>(null)
-
-    const accessToken = userProfile?.accessToken
-    const browseToken = accessToken ?? ANONYMOUS_TOKEN
 
     const isSearchMode = state.search.trim().length > 0
     const usesClientOnlyFilter =
@@ -848,7 +848,6 @@ export function MapsPage({
         bestCaps: false,
     })
     const loadCaches = useCallback(async (force = false) => {
-        if (!browseToken) return
         const inFlight = loadCachesInFlightRef.current
         const needsMetadata = (force || !caches.metadataLoaded) && !inFlight.metadata
         const needsReviews = (force || !caches.reviewsLoaded) && !inFlight.reviews
@@ -916,7 +915,6 @@ export function MapsPage({
     }, [browseServerFilters])
 
     const fetchPage = useCallback((p: number): Promise<Map[] | null> => {
-        if (!browseToken) return Promise.resolve(null)
         const key = keyFor(p)
         const existing = pageCacheRef.current[key]
         if (existing !== undefined) {
@@ -937,7 +935,6 @@ export function MapsPage({
     }, [browseToken, browseServerFilters, pageSize, keyFor])
 
     const fetchCount = useCallback((): Promise<number | null> => {
-        if (!browseToken) return Promise.resolve(null)
         const ck = countKeyFor()
         const existing = countCacheRef.current[ck]
         if (existing !== undefined) {
@@ -957,7 +954,7 @@ export function MapsPage({
     }, [browseToken, browseServerFilters, countKeyFor])
 
     const loadBrowsePage = useCallback(async () => {
-        if (!browseToken || mode !== 'browse') return
+        if (mode !== 'browse') return
 
         const currentKey = keyFor(state.currentPage)
         const cachedPageEntry = pageCacheRef.current[currentKey]
@@ -1016,7 +1013,7 @@ export function MapsPage({
     useEffect(() => { loadBrowsePage() }, [loadBrowsePage])
 
     useEffect(() => {
-        if (mode !== 'search' || !browseToken) {
+        if (mode !== 'search') {
             searchAbortRef.current?.abort()
             searchAbortRef.current = null
             setSearchLoading(false)
@@ -1080,7 +1077,7 @@ export function MapsPage({
             if (!state.difficultyFilters.some(t => isMapInDifficultyTier(m.difficulty, t))) return false
         }
         if (!opts?.skipNew && state.newOnly && !isNew(m.added)) return false
-        if (!opts?.skipFavorites && state.favoritesOnly && !favoriteMapNames.has(m.name)) return false
+        if (!opts?.skipFavorites && !!accessToken && state.favoritesOnly && !favoriteMapNames.has(m.name)) return false
 
         const ratings = caches.avgRatings[m.name]
         if (state.ratingFilters.length > 0) {
@@ -1279,7 +1276,6 @@ export function MapsPage({
 
     const wrHoldersInFlightRef = useRef<Set<string>>(new Set())
     useEffect(() => {
-        if (!browseToken) return
         const fetchedSet = new Set(caches.wrHoldersFetched)
         const inFlight = wrHoldersInFlightRef.current
         const missing: string[] = []
@@ -2126,7 +2122,7 @@ export function MapsPage({
                             onClear={() => updateFilter('newOnly', false)}
                         />
                     )}
-                    {state.favoritesOnly && (
+                    {!!accessToken && state.favoritesOnly && (
                         <ActiveFilterChip
                             label="Favorites"
                             value="On"
@@ -2577,4 +2573,3 @@ const cappedOptions: [string, string][] = [
     ['champion', 'Champion'],
     ['world_record', 'World Record'],
 ]
-

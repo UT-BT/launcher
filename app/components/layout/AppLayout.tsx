@@ -1,4 +1,4 @@
-import { ReactNode, lazy, Suspense, useEffect, useMemo, useState } from 'react'
+import { ReactNode, lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { FaDiscord } from 'react-icons/fa'
 import { Home, Server, Map as MapIcon, Trophy, Settings, LogOut, Play, User, Users, Users2, Flag, Award, ShieldAlert, Newspaper, Menu } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -113,6 +113,8 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
     const [loginError, setLoginError] = useState<string | null>(() => auth.consumeLoginError())
     const [mobileNavOpen, setMobileNavOpen] = useState(false)
+    const mobileMenuButtonRef = useRef<HTMLButtonElement>(null)
+    const sidebarRef = useRef<HTMLElement>(null)
 
     const changeView = (view: string) => {
         setMobileNavOpen(false)
@@ -149,6 +151,58 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
         }
     }, [])
 
+    useEffect(() => {
+        const sidebar = sidebarRef.current
+        if (!sidebar) return
+
+        const mobile = window.matchMedia('(max-width: 1023px)').matches
+        if (!mobile) {
+            sidebar.removeAttribute('inert')
+            return
+        }
+        if (!mobileNavOpen) {
+            sidebar.setAttribute('inert', '')
+            return
+        }
+
+        sidebar.removeAttribute('inert')
+        const menuButton = mobileMenuButtonRef.current
+        const focusable = () => Array.from(sidebar.querySelectorAll<HTMLElement>(
+            'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ))
+        focusable()[0]?.focus()
+
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') {
+                event.preventDefault()
+                setMobileNavOpen(false)
+                return
+            }
+            if (event.key !== 'Tab') return
+            const nodes = focusable()
+            if (nodes.length === 0) {
+                event.preventDefault()
+                sidebar.focus()
+                return
+            }
+            const first = nodes[0]
+            const last = nodes[nodes.length - 1]
+            if (event.shiftKey && document.activeElement === first) {
+                event.preventDefault()
+                last.focus()
+            } else if (!event.shiftKey && document.activeElement === last) {
+                event.preventDefault()
+                first.focus()
+            }
+        }
+        document.addEventListener('keydown', handleKeyDown)
+        return () => {
+            document.removeEventListener('keydown', handleKeyDown)
+            sidebar.setAttribute('inert', '')
+            menuButton?.focus()
+        }
+    }, [mobileNavOpen])
+
     const isInstallValid = installationStatus === 'valid'
 
     return (
@@ -158,8 +212,11 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
             {/* Mobile top bar */}
             <div className="lg:hidden fixed top-0 inset-x-0 h-14 z-30 flex items-center gap-3 px-4 bg-card/80 backdrop-blur-xl border-b border-hairline/10">
                 <button
+                    ref={mobileMenuButtonRef}
                     type="button"
                     aria-label="Open navigation"
+                    aria-controls="app-navigation"
+                    aria-expanded={mobileNavOpen}
                     onClick={() => setMobileNavOpen(true)}
                     className="inline-flex items-center justify-center size-10 -ml-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-hairline/10 transition-colors cursor-pointer"
                 >
@@ -171,18 +228,26 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
 
             {/* Drawer backdrop */}
             {mobileNavOpen && (
-                <div
+                <button
+                    type="button"
+                    aria-label="Close navigation"
                     className="lg:hidden fixed inset-0 z-40 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200"
                     onClick={() => setMobileNavOpen(false)}
                 />
             )}
 
             {/* Sidebar */}
-            <aside className={cn(
+            <aside
+                ref={sidebarRef}
+                id="app-navigation"
+                aria-label="Primary navigation"
+                tabIndex={-1}
+                className={cn(
                 "w-64 bg-card/50 backdrop-blur-xl border-r border-hairline/10 flex flex-col relative z-20",
                 "max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:z-50 max-lg:w-72 max-lg:max-w-[85vw] max-lg:bg-card/95 max-lg:transition-transform max-lg:duration-200",
                 mobileNavOpen ? "max-lg:translate-x-0" : "max-lg:-translate-x-full"
-            )}>
+                )}
+            >
                 <div className="absolute inset-0 bg-gradient-to-b from-accent-900/10 to-transparent pointer-events-none" />
 
                 <div className="p-6 [@media(max-height:760px)]:p-3 flex flex-col items-center relative z-10">

@@ -137,7 +137,7 @@ export function RecentCapsCard({
     const {
         page, pageSize, items, total, totalPages, loading, error, setPage, setPageSize,
     } = usePaginatedQuery<UserCapRow>({
-        enabled: !!accessToken,
+        enabled: true,
         errorMessage: 'Failed to load caps.',
         deps: [accessToken, userId, query, capFilter, favoritesOnly, sortField, sortDir],
         page: capsPage,
@@ -145,7 +145,7 @@ export function RecentCapsCard({
         onPageChange: setCapsPage,
         onPageSizeChange: setCapsPageSize,
         fetchPage: ({ limit, offset }) =>
-            fetchCapsForUser(accessToken!, userId, {
+            fetchCapsForUser(accessToken ?? '', userId, {
                 limit, offset,
                 mapFuzzy: query || undefined,
                 capFilter,

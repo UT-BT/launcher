@@ -70,6 +70,7 @@ const AdminPage = lazy(() => import('@/app/components/pages/admin/AdminPage').th
 import { InstallationBanner } from '@/app/components/InstallationBanner'
 import { UpdateBanner } from '@/app/components/updater/UpdateBanner'
 import { FavoritesSyncModal } from '@/app/components/shared/FavoritesSyncModal'
+import { AuthRequiredModal, LOGIN_REQUIRED_EVENT, type LoginRequest } from '@/app/components/shared/AuthRequiredModal'
 import { PatreonModal } from '@/app/components/modals/PatreonModal'
 import type { ServerPreset } from '@/app/utils/server-utils'
 import { useFavorites } from '@/app/hooks/useFavorites'
@@ -231,6 +232,13 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
   const [serverPresets, setServerPresets] = useState<ServerPreset[]>(loadPersistedServerPresets)
   const [favoriteServerIds, setFavoriteServerIds] = useState<Set<string>>(loadPersistedServerFavorites)
   const achievementsInFlightRef = useRef<Promise<void> | null>(null)
+  const [loginRequest, setLoginRequest] = useState<LoginRequest | null>(null)
+
+  useEffect(() => {
+    const onLoginRequired = (event: Event) => setLoginRequest((event as CustomEvent<LoginRequest>).detail)
+    window.addEventListener(LOGIN_REQUIRED_EVENT, onLoginRequired)
+    return () => window.removeEventListener(LOGIN_REQUIRED_EVENT, onLoginRequired)
+  }, [])
 
   useEffect(() => {
     void loadPatreonMembers()
@@ -303,6 +311,14 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
     resolveSync,
     dismissSync,
   } = useFavorites(accessToken, userId)
+
+  const toggleFavoriteOrLogin = useCallback((mapName: string) => {
+    if (!accessToken) {
+      setLoginRequest({ feature: 'save favorites', description: 'Sign in to save favorite maps to your profile and sync them across devices.' })
+      return
+    }
+    toggleFavorite(mapName)
+  }, [accessToken, toggleFavorite])
 
   const [badges, setBadges] = useState<Record<string, BadgeInfo>>({})
   const [seen, setSeen] = useState<Record<string, string | null>>(() => ({
@@ -563,7 +579,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
           onCachesChange={setHomeCaches}
           achievementsCaches={achievementsCaches}
           onEnsureAchievements={ensureAchievements}
-          onToggleFavorite={toggleFavorite}
+          onToggleFavorite={toggleFavoriteOrLogin}
           onMapSelect={openMap}
           onViewServers={() => navigate('servers')}
           onViewMaps={() => navigate('maps')}
@@ -594,7 +610,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
           onCachesChange={setMapsCaches}
           onMapSelect={openMap}
           favoriteMapNames={favoriteMapNames}
-          onToggleFavorite={toggleFavorite}
+          onToggleFavorite={toggleFavoriteOrLogin}
           initialNewOnly={entry.params.mapsNewOnly}
         />
       case 'players':
@@ -621,7 +637,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
           caches={worldRecordsCaches}
           onCachesChange={setWorldRecordsCaches}
           favoriteMapNames={favoriteMapNames}
-          onToggleFavorite={toggleFavorite}
+          onToggleFavorite={toggleFavoriteOrLogin}
           onMapSelect={openMap}
         />
       case 'achievements':
@@ -662,7 +678,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
           mapName={entry.params.mapName!}
           userProfile={userProfile as any}
           favoriteMapNames={favoriteMapNames}
-          onToggleFavorite={toggleFavorite}
+          onToggleFavorite={toggleFavoriteOrLogin}
           onMapSelect={openMap}
         />
       case 'player-detail':
@@ -671,7 +687,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
           userId={entry.params.playerId!}
           userProfile={userProfile as any}
           favoriteMapNames={favoriteMapNames}
-          onToggleFavorite={toggleFavorite}
+          onToggleFavorite={toggleFavoriteOrLogin}
           onMapSelect={openMap}
         />
       case 'cap-detail':
@@ -704,7 +720,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
           onCachesChange={setHomeCaches}
           achievementsCaches={achievementsCaches}
           onEnsureAchievements={ensureAchievements}
-          onToggleFavorite={toggleFavorite}
+          onToggleFavorite={toggleFavoriteOrLogin}
           onMapSelect={openMap}
           onViewServers={() => navigate('servers')}
           onViewMaps={() => navigate('maps')}
@@ -747,6 +763,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
         onDismiss={dismissSync}
       />
       <PatreonModal />
+      <AuthRequiredModal request={loginRequest} onClose={() => setLoginRequest(null)} />
     </div>
   )
 }

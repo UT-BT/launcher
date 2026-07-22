@@ -7,7 +7,7 @@ import { useNavScrollRestore } from '@/app/components/navigation/useNavScrollRes
 import { MarkdownBody } from '@/app/components/shared/MarkdownBody'
 import { CategoryChip } from '@/app/components/pages/home/news/NewsCard'
 import { formatAddedDate } from '@/app/utils/format'
-import { fetchNewsItem, fetchNewsCategories, ANONYMOUS_TOKEN, type NewsArticle, type NewsCategoryDef, type UserProfile } from '@/app/utils/api'
+import { fetchNewsItem, fetchNewsCategories, type NewsArticle, type NewsCategoryDef, type UserProfile } from '@/app/utils/api'
 
 interface NewsDetailPageProps {
     newsId: number
@@ -15,7 +15,7 @@ interface NewsDetailPageProps {
 }
 
 export function NewsDetailPage({ newsId, userProfile }: NewsDetailPageProps) {
-    const accessToken = userProfile?.accessToken ?? ANONYMOUS_TOKEN
+    const accessToken = userProfile?.accessToken ?? ''
     const refreshCooldown = useRefreshCooldown()
     const [refreshKey, setRefreshKey] = useState(0)
     const scrollRef = useRef<HTMLDivElement>(null)
@@ -29,7 +29,7 @@ export function NewsDetailPage({ newsId, userProfile }: NewsDetailPageProps) {
             return { article, categories }
         },
         [accessToken, newsId, refreshKey],
-        { enabled: !!accessToken && !!newsId, errorMessage: 'Failed to load this news item.' },
+        { enabled: !!newsId, errorMessage: 'Failed to load this news item.' },
     )
 
     const onScroll = useNavScrollRestore(scrollRef, !loading && !!data)

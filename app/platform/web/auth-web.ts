@@ -59,11 +59,12 @@ function readStoredProfile(): AuthProfile | undefined {
     }
 }
 
-function persistProfile(profile: AuthProfile): void {
+function persistProfile(profile: AuthProfile): boolean {
     try {
         window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(profile))
+        return true
     } catch {
-        return
+        return false
     }
 }
 
@@ -132,7 +133,7 @@ export async function handleOAuthCallbackIfPresent(): Promise<void> {
         })
         if (!tokens.user?.id) throw new Error('Login failed. Please try again.')
 
-        persistProfile({
+        const persisted = persistProfile({
             discordId: tokens.user.id,
             username: tokens.user.username,
             avatar: tokens.user.avatar,
@@ -140,6 +141,7 @@ export async function handleOAuthCallbackIfPresent(): Promise<void> {
             refreshToken: tokens.refresh_token,
             expiresAt: Date.now() + tokens.expires_in * 1000,
         })
+        if (!persisted) throw new Error('Login succeeded, but this browser blocked local storage.')
     } catch (err) {
         loginError = err instanceof Error ? err.message : 'Login failed. Please try again.'
     } finally {
@@ -157,7 +159,9 @@ async function performRefresh(profile: AuthProfile): Promise<AuthProfile> {
         refreshToken: tokens.refresh_token,
         expiresAt: Date.now() + tokens.expires_in * 1000,
     }
-    persistProfile(next)
+    if (!persistProfile(next)) {
+        throw new Error('The refreshed login could not be saved.')
+    }
     return next
 }
 
@@ -174,8 +178,13 @@ async function getWebProfile(): Promise<AuthProfile | undefined> {
             }
             return await refreshPromise
         } catch (err) {
-            console.warn('Web token refresh failed; using stored token', err)
-            return profile
+            if (Date.now() < profile.expiresAt) {
+                console.warn('Web token refresh failed; using the still-valid stored token', err)
+                return profile
+            }
+            window.localStorage.removeItem(AUTH_STORAGE_KEY)
+            loginError = 'Your session expired. Please log in again.'
+            return undefined
         }
     }
 

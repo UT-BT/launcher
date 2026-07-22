@@ -18,9 +18,13 @@ export default defineConfig({
   plugins: [tailwindcss(), react()],
   server: {
     port: 5174,
+    watch: {
+      ignored: ['**/test-results/**', '**/playwright-report/**'],
+    },
   },
   build: {
     outDir: resolve(__dirname, 'dist-web'),
     emptyOutDir: true,
+    manifest: true,
   },
 })

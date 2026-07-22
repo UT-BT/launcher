@@ -43,6 +43,58 @@ export function LatestRecordsCard({
     const handleResolve = useCallback((ids: Set<string>) => { setResolved(ids as Set<RecordColumnId>) }, [])
     const isVisible = (id: RecordColumnId) => !resolved || resolved.has(id)
 
+    const compactRows = rows.map(r => {
+        const isOwn = currentUserId != null && r.userId === currentUserId
+        const isTeamRow = !!(r.members && r.members.length > 0)
+        return (
+            <div
+                key={r.id}
+                role="listitem"
+                className={cn('grid grid-cols-[minmax(0,1fr)_auto] gap-3 p-3 border-b border-hairline/5 last:border-0', isOwn && 'bg-emerald-500/[0.05]')}
+            >
+                <div className="min-w-0 space-y-2">
+                    <MapNameCell
+                        mapName={r.mapName}
+                        favorited={favoriteMapNames.has(r.mapName)}
+                        onToggleFavorite={onToggleFavorite}
+                        onMapSelect={onMapSelect}
+                    />
+                    {isTeamRow ? (
+                        <TeamAvatarStack members={r.members!} currentUserId={currentUserId} />
+                    ) : (
+                        <PlayerInfo
+                            userId={r.userId ?? undefined}
+                            alias={r.alias}
+                            title={r.activeTitle ?? null}
+                            size="sm"
+                            highlight={isOwn}
+                            showYouBadge={isOwn}
+                        />
+                    )}
+                </div>
+                <div className="flex flex-col items-end justify-between gap-2">
+                    <CapTimeLink
+                        capId={isTeamRow ? undefined : r.id}
+                        teamCapId={isTeamRow ? r.id : undefined}
+                        seconds={r.time}
+                        className="font-mono tabular-nums font-bold text-blue-300"
+                    />
+                    <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground tabular-nums">{r.timeAgo}</span>
+                        <IconActionButton
+                            variant="replay"
+                            icon={Play}
+                            iconFill
+                            tooltip="Watch Replay"
+                            loading={loadingCapId === r.id}
+                            onClick={() => onWatchReplay(r)}
+                        />
+                    </div>
+                </div>
+            </div>
+        )
+    })
+
     if (rows.length === 0) {
         return (
             <div className="bg-card/30 border border-hairline/5 rounded-xl flex flex-col items-center justify-center gap-2 py-12 text-center">
@@ -56,7 +108,12 @@ export function LatestRecordsCard({
     return (
         <DataTableShell
             className="!flex-none"
-            responsive={{ columns: RECORD_COLUMNS, onResolve: handleResolve }}
+            responsive={{
+                columns: RECORD_COLUMNS,
+                onResolve: handleResolve,
+                compactContent: compactRows,
+                compactAriaLabel: 'Latest world records',
+            }}
         >
             <DataTableHeaderRow>
                 <DataTableHeaderCell align="center" width="14rem">Map</DataTableHeaderCell>

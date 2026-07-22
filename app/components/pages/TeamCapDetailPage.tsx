@@ -33,7 +33,6 @@ import {
     type TeamLeaderboardEntry,
     type LeaderboardEntry,
     type UserProfile,
-    ANONYMOUS_TOKEN,
 } from '@/app/utils/api'
 
 interface TeamCapDetailPageProps {
@@ -142,7 +141,7 @@ function TeamRankContextCard({
 }
 
 export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamCapDetailPageProps) {
-    const accessToken = userProfile?.accessToken ?? ANONYMOUS_TOKEN
+    const accessToken = userProfile?.accessToken ?? ''
     const refreshCooldown = useRefreshCooldown()
     const [refreshKey, setRefreshKey] = useState(0)
 
@@ -150,9 +149,9 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
     const demoDownload = useDemoDownload()
 
     const { data: detail, loading, error } = useAsync<TeamCapDetail | null>(
-        (signal) => fetchTeamCapDetail(accessToken!, teamCapId, signal),
+        (signal) => fetchTeamCapDetail(accessToken, teamCapId, signal),
         [accessToken, teamCapId, refreshKey],
-        { enabled: !!accessToken && !!teamCapId, errorMessage: 'Failed to load team run data.' },
+        { enabled: !!teamCapId, errorMessage: 'Failed to load team run data.' },
     )
 
     useRegisterPageRefresh({
@@ -163,9 +162,9 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
     })
 
     const { data: teamLeaderboardData, loading: leaderboardLoading } = useAsync<TeamLeaderboardEntry[]>(
-        (signal) => fetchTeamMapLeaderboard(accessToken!, detail!.map, { signal }),
+        (signal) => fetchTeamMapLeaderboard(accessToken, detail!.map, { signal }),
         [accessToken, detail?.map, refreshKey],
-        { enabled: !!accessToken && !!detail?.map, errorMessage: 'Failed to load team leaderboard.' },
+        { enabled: !!detail?.map, errorMessage: 'Failed to load team leaderboard.' },
     )
 
     const gapToNext = useMemo(() => {
@@ -234,7 +233,7 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
     }
 
     const startCompare = async () => {
-        if (!detail || !accessToken) return
+        if (!detail) return
         const req = ++compareReqRef.current
         setCompareState('resolving')
         const eligible = detail.members.filter(member => member.has_demo)

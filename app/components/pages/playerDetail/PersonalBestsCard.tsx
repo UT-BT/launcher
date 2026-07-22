@@ -127,7 +127,7 @@ export function PersonalBestsCard({
     const {
         page, pageSize, items, total, totalPages, loading, error, setPage, setPageSize,
     } = usePaginatedQuery<UserPersonalBestRow>({
-        enabled: !!accessToken,
+        enabled: true,
         errorMessage: 'Failed to load personal bests.',
         deps: [accessToken, userId, query, capFilter, favoritesOnly, sortField, sortDir],
         page: pbsPage,
@@ -135,7 +135,7 @@ export function PersonalBestsCard({
         onPageChange: setPbsPage,
         onPageSizeChange: setPbsPageSize,
         fetchPage: ({ limit, offset }) =>
-            fetchPersonalBestsForUser(accessToken!, userId, {
+            fetchPersonalBestsForUser(accessToken ?? '', userId, {
                 limit, offset,
                 mapFuzzy: query || undefined,
                 capFilter,

@@ -9,7 +9,7 @@ import { Modal } from '@/app/components/ui/modal'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import {
     UserProfile, PlayerListRow, PlayerSortField,
-    fetchPlayers, fetchPlayersCount, ANONYMOUS_TOKEN,
+    fetchPlayers, fetchPlayersCount,
 } from '@/app/utils/api'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { Tutorial } from '@/app/components/shared/Tutorial'
@@ -177,7 +177,7 @@ interface PlayersPageProps {
 }
 
 export function PlayersPage({ userProfile, state, onStateChange, caches, onCachesChange }: PlayersPageProps) {
-    const accessToken = userProfile?.accessToken ?? ANONYMOUS_TOKEN
+    const accessToken = userProfile?.accessToken ?? ''
     const selfId = userProfile?.id ?? undefined
 
     const autoPageSize = useAutoPageSize(computePageSize)
@@ -240,7 +240,6 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
     }, [debouncedSearch])
 
     const fetchPageData = useCallback((p: number): Promise<PlayerListRow[] | null> => {
-        if (!accessToken) return Promise.resolve(null)
         const key = keyFor(p)
         const existing = pageCacheRef.current[key]
         if (existing !== undefined) {
@@ -255,7 +254,6 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
     }, [accessToken, serverParams, pageSize, keyFor])
 
     const fetchCountData = useCallback((): Promise<number | null> => {
-        if (!accessToken) return Promise.resolve(null)
         const existing = countCacheRef.current[countKey]
         if (existing !== undefined) {
             return typeof existing === 'number' ? Promise.resolve(existing) : existing
@@ -268,7 +266,6 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
     }, [accessToken, serverParams.search, countKey])
 
     const loadPage = useCallback(async (isCancelled: () => boolean = () => false) => {
-        if (!accessToken) return
 
         const prefetchNeighbours = (totalPages: number) => {
             if (state.currentPage > 1 && !(keyFor(state.currentPage - 1) in pageCacheRef.current)) {

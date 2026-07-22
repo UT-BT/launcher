@@ -19,7 +19,6 @@ import {
     type LeaderboardEntry,
     type TeamRunStatus,
     type UserProfile,
-    ANONYMOUS_TOKEN,
 } from '@/app/utils/api'
 import { ReplayPickerModal } from '@/app/components/modals/ReplayPickerModal'
 import { HeroSection } from './capDetail/HeroSection'
@@ -51,7 +50,7 @@ function nearestByTime<T extends { id: string; cap_time_seconds: number }>(items
 }
 
 export function CapDetailPage({ capId, userProfile, onMapSelect }: CapDetailPageProps) {
-    const accessToken = userProfile?.accessToken ?? ANONYMOUS_TOKEN
+    const accessToken = userProfile?.accessToken ?? ''
     const currentUserId = userProfile?.id ?? undefined
     const refreshCooldown = useRefreshCooldown()
     const [refreshKey, setRefreshKey] = useState(0)
@@ -60,9 +59,9 @@ export function CapDetailPage({ capId, userProfile, onMapSelect }: CapDetailPage
     const demoDownload = useDemoDownload()
 
     const { data: detail, loading, error } = useAsync<CapDetail | null>(
-        (signal) => fetchCapDetail(accessToken!, capId, signal),
+        (signal) => fetchCapDetail(accessToken, capId, signal),
         [accessToken, capId, refreshKey],
-        { enabled: !!accessToken && !!capId, errorMessage: 'Failed to load cap data.' },
+        { enabled: !!capId, errorMessage: 'Failed to load cap data.' },
     )
 
     useRegisterPageRefresh({
@@ -98,7 +97,7 @@ export function CapDetailPage({ capId, userProfile, onMapSelect }: CapDetailPage
     }, [detail, capId])
 
     useEffect(() => {
-        if (!compareCapId || !accessToken) {
+        if (!compareCapId) {
             setCompareData(null)
             return
         }
@@ -113,7 +112,7 @@ export function CapDetailPage({ capId, userProfile, onMapSelect }: CapDetailPage
 
     const teamRunId = detail?.cap.team_run_id ?? null
     useEffect(() => {
-        if (!teamRunId || !accessToken) { setTeamRun(null); return }
+        if (!teamRunId) { setTeamRun(null); return }
         const controller = new AbortController()
         let cancelled = false
         fetchTeamRunStatus(accessToken, teamRunId, controller.signal)
@@ -140,7 +139,7 @@ export function CapDetailPage({ capId, userProfile, onMapSelect }: CapDetailPage
     const baselineLabel = compareData ? (compareData.alias ?? 'Run') : ''
 
     useEffect(() => {
-        if (!videoOpponent?.id || !accessToken) { setVideoOpponentData(null); return }
+        if (!videoOpponent?.id) { setVideoOpponentData(null); return }
         const controller = new AbortController()
         let cancelled = false
         fetchCapCheckpoints(accessToken, videoOpponent.id, controller.signal)

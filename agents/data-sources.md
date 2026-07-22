@@ -21,7 +21,7 @@ verify_against: [app/utils/api.ts, app/utils/patreon.ts, app/utils/server-utils.
 ## Backend API
 
 The launcher reads its data over HTTPS from `https://api.utbt.net` (prod) or
-`http://localhost:5000` (dev). All HTTP helpers live in `app/utils/api.ts` —
+`http://localhost` (dev; override with `VITE_API_BASE_URL`). All HTTP helpers live in `app/utils/api.ts` —
 don't hand-roll `fetch` calls in components.
 
 Responses use a `{ success, data }` envelope; the helpers unwrap it for you.

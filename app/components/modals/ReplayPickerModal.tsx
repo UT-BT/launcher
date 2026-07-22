@@ -70,7 +70,7 @@ export function ReplayPickerModal({
     const demoDownload = useDemoDownload()
 
     useEffect(() => {
-        if (!open || !mapName || !accessToken) {
+        if (!open || !mapName) {
             setRows([])
             setTeamRuns([])
             setError(null)
@@ -88,7 +88,7 @@ export function ReplayPickerModal({
             setLoading(true)
             ;(async () => {
                 try {
-                    const leaderboard = await fetchTeamMapLeaderboard(accessToken, mapName)
+                    const leaderboard = await fetchTeamMapLeaderboard(accessToken ?? '', mapName)
                     if (cancelled || requestRef.current !== myRequest) return
                     setTeamRuns(leaderboard.filter(e => e.id))
                     setLoading(false)
@@ -114,7 +114,7 @@ export function ReplayPickerModal({
 
         ;(async () => {
             try {
-                const leaderboard = await fetchMapLeaderboard(accessToken, mapName, true)
+                const leaderboard = await fetchMapLeaderboard(accessToken ?? '', mapName, true)
                 if (cancelled || requestRef.current !== myRequest) return
                 const eligible = leaderboard.filter(e => e.id && e.id !== excludeCapId)
                 const initial: RunRow[] = eligible.map(e => ({ entry: e, videoUrl: undefined }))

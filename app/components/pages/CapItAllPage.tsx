@@ -6,7 +6,7 @@ import { useRefreshCooldown } from '@/app/hooks/useRefreshCooldown'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
 import {
     UserProfile, CapItAllRow, CapItAllLeaderboardPage,
-    fetchCapItAllLeaderboard, ANONYMOUS_TOKEN,
+    fetchCapItAllLeaderboard,
 } from '@/app/utils/api'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { PaginationBar } from '@/app/components/ui/pagination'
@@ -81,7 +81,7 @@ interface CapItAllPageProps {
 }
 
 export function CapItAllPage({ userProfile, state, onStateChange, caches, onCachesChange }: CapItAllPageProps) {
-    const accessToken = userProfile?.accessToken ?? ANONYMOUS_TOKEN
+    const accessToken = userProfile?.accessToken ?? ''
     const selfId = userProfile?.id ?? undefined
 
     const autoPageSize = useAutoPageSize(computePageSize)
@@ -116,7 +116,6 @@ export function CapItAllPage({ userProfile, state, onStateChange, caches, onCach
     }, [serverParams, pageSize])
 
     const fetchPageData = useCallback((p: number): Promise<CapItAllLeaderboardPage | null> => {
-        if (!accessToken) return Promise.resolve(null)
         const key = keyFor(p)
         const existing = pageCacheRef.current[key]
         if (existing !== undefined) {
@@ -131,7 +130,6 @@ export function CapItAllPage({ userProfile, state, onStateChange, caches, onCach
     }, [accessToken, serverParams, pageSize, keyFor])
 
     const loadPage = useCallback(async () => {
-        if (!accessToken) return
 
         const prefetchNeighbours = (totalPages: number) => {
             if (state.currentPage > 1 && !(keyFor(state.currentPage - 1) in pageCacheRef.current)) {

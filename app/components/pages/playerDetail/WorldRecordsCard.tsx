@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import { History, Search } from 'lucide-react'
 import { fetchUserWorldRecords, fetchWorldRecordProgression, type Record, type WorldRecordProgressionEntry } from '@/app/utils/api'
 import { usePaginatedQuery } from '@/app/hooks/useAsync'
@@ -8,7 +8,6 @@ import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
 import { TeamRosterBadge } from '@/app/components/shared/TeamRosterBadge'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { Tooltip } from '@/app/components/ui/tooltip'
-import { WorldRecordProgressionModal } from '@/app/components/modals/WorldRecordProgressionModal'
 import {
     DataTableShell, DataTableHeaderRow, DataTableHeaderCell,
     DataTableRow, DataTableCell, DataTableEmpty, DataTableSkeletonRow,
@@ -25,6 +24,7 @@ interface WorldRecordsCardProps {
 }
 
 const DEBOUNCE_MS = 250
+const WorldRecordProgressionModal = lazy(() => import('@/app/components/modals/WorldRecordProgressionModal').then(m => ({ default: m.WorldRecordProgressionModal })))
 
 type SortField = 'added' | 'time' | 'map'
 
@@ -55,7 +55,7 @@ export function WorldRecordsCard({ accessToken, userId, totalCount, onMapSelect,
     const {
         page, pageSize, items, loading, error, setPage, setPageSize,
     } = usePaginatedQuery<Record>({
-        enabled: !!accessToken,
+        enabled: true,
         errorMessage: 'Failed to load world records.',
         deps: [accessToken, userId, query, sortField, sortDir],
         page: wrsPage,
@@ -63,7 +63,7 @@ export function WorldRecordsCard({ accessToken, userId, totalCount, onMapSelect,
         onPageChange: setWrsPage,
         onPageSizeChange: setWrsPageSize,
         fetchPage: async ({ limit, offset }) => {
-            const rows = await fetchUserWorldRecords(accessToken!, userId, {
+            const rows = await fetchUserWorldRecords(accessToken ?? '', userId, {
                 limit, offset,
                 sort: sortDir,
                 sortBy: sortField,
@@ -104,11 +104,11 @@ export function WorldRecordsCard({ accessToken, userId, totalCount, onMapSelect,
     const visibleColumnCount = COLUMNS.reduce((n, id) => n + (isVisible(id) ? 1 : 0), 0)
 
     const openProgression = async (mapName: string) => {
-        if (!accessToken) return
+
         setProgressionMap(mapName)
         setProgressionLoading(true)
         try {
-            const entries = await fetchWorldRecordProgression(accessToken, mapName)
+            const entries = await fetchWorldRecordProgression(accessToken ?? '', mapName)
             setProgressionEntries(entries)
         } finally {
             setProgressionLoading(false)
@@ -250,13 +250,15 @@ export function WorldRecordsCard({ accessToken, userId, totalCount, onMapSelect,
                 </div>
             )}
 
-            <WorldRecordProgressionModal
-                isOpen={progressionMap !== null && !progressionLoading}
-                onClose={() => { setProgressionMap(null); setProgressionEntries([]) }}
-                mapName={progressionMap ?? ''}
-                entries={progressionEntries}
-                currentUserId={userId}
-            />
+            <Suspense fallback={null}>
+                <WorldRecordProgressionModal
+                    isOpen={progressionMap !== null && !progressionLoading}
+                    onClose={() => { setProgressionMap(null); setProgressionEntries([]) }}
+                    mapName={progressionMap ?? ''}
+                    entries={progressionEntries}
+                    currentUserId={userId}
+                />
+            </Suspense>
         </div>
     )
 }

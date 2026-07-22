@@ -60,14 +60,12 @@ export function AchievementsPage({
     const scrollRef = useRef<HTMLDivElement | null>(null)
 
     const load = useCallback(async (background = false) => {
-        if (!accessToken) return
+
         if (!background) setLoading(true)
         setError(null)
         try {
-            const [definitions, mine] = await Promise.all([
-                fetchAchievementDefinitions(accessToken),
-                fetchMyAchievements(accessToken),
-            ])
+            const definitions = await fetchAchievementDefinitions(accessToken ?? '')
+            const mine = accessToken ? await fetchMyAchievements(accessToken) : { items: [] }
             onCachesChange(prev => ({
                 ...prev,
                 definitions,
@@ -85,7 +83,7 @@ export function AchievementsPage({
     // Refetch on mount so the page reflects backend changes. If we already have
     // cached data, revalidate silently (no spinner) and keep showing it meanwhile.
     useEffect(() => {
-        if (accessToken) void load(caches.definitions.length > 0)
+        void load(caches.definitions.length > 0)
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [accessToken])
 
@@ -100,14 +98,6 @@ export function AchievementsPage({
         tooltip: 'Refresh',
     })
 
-    if (!accessToken) {
-        return (
-            <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
-                Sign in to view your achievements.
-            </div>
-        )
-    }
-
     return (
         <div className="space-y-4 h-full flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-0 duration-500">
             <div className="flex flex-wrap items-end justify-between gap-3 shrink-0">
@@ -117,7 +107,7 @@ export function AchievementsPage({
             </div>
 
             <div className="flex flex-wrap items-center gap-1 shrink-0">
-                {STATUS_FILTERS.map(s => (
+                {(accessToken ? STATUS_FILTERS : STATUS_FILTERS.slice(0, 1)).map(s => (
                     <Segmented
                         key={s.id}
                         active={state.statusFilter === s.id}
@@ -146,8 +136,9 @@ export function AchievementsPage({
                 <AchievementsShowcase
                     definitions={caches.definitions}
                     progress={caches.progress}
-                    statusFilter={state.statusFilter}
+                    statusFilter={accessToken ? state.statusFilter : 'all'}
                     loading={loading}
+                    anonymous={!accessToken}
                 />
             </div>
         </div>

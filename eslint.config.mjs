@@ -22,6 +22,17 @@ export default [
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
   {
+    files: ['**/*.mjs'],
+    languageOptions: {
+      globals: {
+        process: 'readonly',
+        Buffer: 'readonly',
+        URL: 'readonly',
+        console: 'readonly',
+      },
+    },
+  },
+  {
     files: ['**/*.{js,jsx,ts,tsx}'],
     plugins: {
       react: reactPlugin,
@@ -33,7 +44,9 @@ export default [
       parser: tseslint.parser,
       parserOptions: {
         ecmaFeatures: { jsx: true },
-        projectService: true,
+        projectService: {
+          allowDefaultProject: ['playwright.config.ts', 'vitest.config.ts', 'e2e/*.ts'],
+        },
       },
       globals: {
         // Browser globals that should be readonly

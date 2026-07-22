@@ -7,14 +7,14 @@ import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshC
 import { useNavScrollRestore } from '@/app/components/navigation/useNavScrollRestore'
 import { useNavState } from '@/app/components/navigation/useNavState'
 import { ArticleCard } from '@/app/components/pages/home/news/NewsCard'
-import { fetchNews, fetchNewsCategories, ANONYMOUS_TOKEN, type NewsArticle, type NewsCategoryDef, type UserProfile } from '@/app/utils/api'
+import { fetchNews, fetchNewsCategories, type NewsArticle, type NewsCategoryDef, type UserProfile } from '@/app/utils/api'
 
 interface NewsPageProps {
     userProfile?: UserProfile
 }
 
 export function NewsPage({ userProfile }: NewsPageProps) {
-    const accessToken = userProfile?.accessToken ?? ANONYMOUS_TOKEN
+    const accessToken = userProfile?.accessToken ?? ''
     const refreshCooldown = useRefreshCooldown()
     const [refreshKey, setRefreshKey] = useState(0)
     const scrollRef = useRef<HTMLDivElement>(null)
@@ -29,7 +29,7 @@ export function NewsPage({ userProfile }: NewsPageProps) {
             return { news, categories }
         },
         [accessToken, refreshKey],
-        { enabled: !!accessToken, errorMessage: 'Failed to load the news feed.' },
+        { enabled: true, errorMessage: 'Failed to load the news feed.' },
     )
 
     const onScroll = useNavScrollRestore(scrollRef, !loading)

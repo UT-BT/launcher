@@ -49,7 +49,7 @@ export function resolveResponsiveColumns(
     cols: ResponsiveColumn[],
     measuredRem: number,
     opts: ResolveOpts = {},
-): { visibleIds: Set<string>; hiddenIds: Set<string>; minWidth: string } {
+): { visibleIds: Set<string>; hiddenIds: Set<string>; minWidth: string; requiredFits: boolean } {
     const { nameFloorRem = 12, extraRem = 0, prevVisible } = opts
     const budget = measuredRem > 0 ? measuredRem - extraRem : Infinity
 
@@ -63,6 +63,7 @@ export function resolveResponsiveColumns(
         visibleIds.add(c.id)
         running += widthToRem(c.width, nameFloorRem)
     }
+    const requiredFits = measuredRem <= 0 || running <= budget
 
     const optional = cols
         .filter(c => !c.required)
@@ -87,7 +88,7 @@ export function resolveResponsiveColumns(
     const minWidthRem = cols
         .filter(c => visibleIds.has(c.id))
         .reduce((sum, c) => sum + widthToRem(c.width, nameFloorRem), 0)
-    return { visibleIds, hiddenIds, minWidth: `${minWidthRem + extraRem}rem` }
+    return { visibleIds, hiddenIds, minWidth: `${minWidthRem + extraRem}rem`, requiredFits }
 }
 
 type Density = 'comfortable' | 'condensed'
@@ -100,6 +101,9 @@ export interface ResponsiveConfig {
     extraRem?: number
     onResolve?: (visibleIds: Set<string>) => void
     density?: boolean
+    /** Mobile-first representation used when even the required columns cannot fit. */
+    compactContent?: React.ReactNode
+    compactAriaLabel?: string
 }
 
 interface DataTableShellProps {
@@ -147,7 +151,10 @@ function ResponsiveDataTableShell({
     scrollRef, onScroll, children, className, theadDataAttr,
     responsive,
 }: DataTableShellProps & { responsive: ResponsiveConfig }) {
-    const { columns, nameFloorRem = 12, extraRem = 0, onResolve, density: densityEnabled = true } = responsive
+    const {
+        columns, nameFloorRem = 12, extraRem = 0, onResolve,
+        density: densityEnabled = true, compactContent, compactAriaLabel,
+    } = responsive
 
     const internalRef = useRef<HTMLDivElement | null>(null)
     const setRef = useCallback((node: HTMLDivElement | null) => {
@@ -159,7 +166,7 @@ function ResponsiveDataTableShell({
     const prevVisibleRef = useRef<Set<string> | undefined>(undefined)
     const lastKeyRef = useRef<string>('')
 
-    const { visibleIds, minWidth, density, key } = useMemo(() => {
+    const { visibleIds, minWidth, requiredFits, density, key } = useMemo(() => {
         const measuredRem = widthPx > 0 ? widthPx / 16 - SCROLLBAR_GUTTER_REM : 0
         const res = resolveResponsiveColumns(columns, measuredRem, {
             nameFloorRem, extraRem, prevVisible: prevVisibleRef.current,
@@ -167,7 +174,10 @@ function ResponsiveDataTableShell({
         const k = [...res.visibleIds].sort().join('|')
         const d: Density = densityEnabled && measuredRem > 0 && measuredRem < CONDENSE_BELOW_REM
             ? 'condensed' : 'comfortable'
-        return { visibleIds: res.visibleIds, minWidth: res.minWidth, density: d, key: k }
+        return {
+            visibleIds: res.visibleIds, minWidth: res.minWidth,
+            requiredFits: res.requiredFits, density: d, key: k,
+        }
     }, [columns, widthPx, nameFloorRem, extraRem, densityEnabled])
 
     useLayoutEffect(() => {
@@ -183,14 +193,19 @@ function ResponsiveDataTableShell({
                 ref={setRef}
                 onScroll={onScroll}
                 className={cn(
-                    'flex-1 min-h-0 bg-card/30 border border-hairline/5 rounded-xl overflow-auto',
+                    'flex-1 min-h-0 bg-card/30 border border-hairline/5 rounded-xl',
+                    requiredFits || !compactContent ? 'overflow-auto' : 'overflow-y-auto overflow-x-hidden',
                     className,
                 )}
                 data-utbt-table-thead={theadDataAttr}
             >
-                <table className="w-full table-fixed text-sm" style={{ minWidth }}>
-                    {children}
-                </table>
+                {!requiredFits && compactContent ? (
+                    <div role="list" aria-label={compactAriaLabel}>{compactContent}</div>
+                ) : (
+                    <table className="w-full table-fixed text-sm" style={{ minWidth }}>
+                        {children}
+                    </table>
+                )}
             </div>
         </DataTableDensityContext.Provider>
     )

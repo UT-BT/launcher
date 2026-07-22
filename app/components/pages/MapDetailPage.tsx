@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { requestLogin } from '@/app/components/shared/AuthRequiredModal'
 import { AlertTriangle } from 'lucide-react'
 import { useNavScrollRestore } from '@/app/components/navigation/useNavScrollRestore'
 import {
@@ -18,14 +19,12 @@ import {
     type Playtime,
     type WorldRecordProgressionEntry,
     type UserProfile,
-    ANONYMOUS_TOKEN,
 } from '@/app/utils/api'
 import { useRefreshCooldown } from '@/app/hooks/useRefreshCooldown'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
 import { useMapDownload } from '@/app/hooks/useMapDownload'
 import { MapDownloadStatusModal } from '@/app/components/shared/MapDownloadStatusModal'
 import { ReviewModal } from '@/app/components/modals/ReviewModal'
-import { WorldRecordProgressionModal } from '@/app/components/modals/WorldRecordProgressionModal'
 import { PlaytimeBreakdownModal } from '@/app/components/modals/PlaytimeBreakdownModal'
 import { CapTimeDistributionModal } from '@/app/components/modals/CapTimeDistributionModal'
 import { HeroSection } from './mapDetail/HeroSection'
@@ -36,6 +35,7 @@ import { LeaderboardCard } from './mapDetail/LeaderboardCard'
 import { ReviewsCard } from './mapDetail/ReviewsCard'
 
 const ActivityChart = lazy(() => import('./mapDetail/ActivityChart'))
+const WorldRecordProgressionModal = lazy(() => import('@/app/components/modals/WorldRecordProgressionModal').then(m => ({ default: m.WorldRecordProgressionModal })))
 
 interface MapDetailPageProps {
     mapName: string
@@ -55,7 +55,7 @@ export function MapDetailPage({
     mapName, userProfile, favoriteMapNames, onToggleFavorite, onMapSelect,
 }: MapDetailPageProps) {
     const accessToken = userProfile?.accessToken
-    const browseToken = accessToken ?? ANONYMOUS_TOKEN
+    const browseToken = accessToken ?? ''
     const currentUserId = userProfile?.id ?? undefined
 
     const [map, setMap] = useState<MapMetadata | null>(null)
@@ -89,7 +89,7 @@ export function MapDetailPage({
 
     useEffect(() => {
         let cancelled = false
-        if (!browseToken) return
+
         setLoading(true)
         setError(null)
         setUserCapCount(null)
@@ -220,6 +220,14 @@ export function MapDetailPage({
                         isTeamMap={isTeam}
                         teamStats={teamStats}
                     />
+                )}                {currentUserId == null && (
+                    <div className="rounded-xl border border-accent-500/25 bg-accent-500/[0.06] p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div>
+                            <div className="text-sm font-semibold text-foreground">Your stats, right here</div>
+                            <p className="mt-1 text-xs text-muted-foreground">Sign in to see your personal best, medal, playtime, and progress on this map.</p>
+                        </div>
+                        <button type="button" onClick={() => requestLogin({ feature: 'view your map stats' })} className="shrink-0 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer">Sign in</button>
+                    </div>
                 )}
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
@@ -234,8 +242,8 @@ export function MapDetailPage({
                             reviews={reviews}
                             currentUserId={currentUserId ?? undefined}
                             loading={loading}
-                            canSubmit={!!accessToken && !isInactive}
-                            onOpenReviewModal={() => setReviewModalOpen(true)}
+                            canSubmit={!isInactive}
+                            onOpenReviewModal={() => accessToken ? setReviewModalOpen(true) : requestLogin({ feature: 'review maps' })}
                         />
                     </div>
                     <div className="lg:col-span-8 space-y-4">
@@ -262,13 +270,15 @@ export function MapDetailPage({
                 onSuccess={() => setRefreshKey(k => k + 1)}
             />
 
-            <WorldRecordProgressionModal
-                isOpen={wrModalOpen}
-                onClose={() => setWrModalOpen(false)}
-                mapName={mapName}
-                entries={wrProgression}
-                currentUserId={currentUserId ?? undefined}
-            />
+            <Suspense fallback={null}>
+                <WorldRecordProgressionModal
+                    isOpen={wrModalOpen}
+                    onClose={() => setWrModalOpen(false)}
+                    mapName={mapName}
+                    entries={wrProgression}
+                    currentUserId={currentUserId ?? undefined}
+                />
+            </Suspense>
 
             <PlaytimeBreakdownModal
                 open={playtimeModalOpen}

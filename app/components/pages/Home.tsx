@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Activity, AlertTriangle, RefreshCw } from 'lucide-react'
 import {
     UserProfile, fetchSummary, fetchHotMaps, fetchNews, fetchNewsCategories,
-    fetchUserSummary, ANONYMOUS_TOKEN,
+    fetchUserSummary,
     Summary, SummaryWorldRecord, HotMap, NewsArticle, NewsCategoryDef,
     UserSummary, MedalHuntOpportunity, PendingReviewsPage,
 } from '@/app/utils/api'
@@ -35,6 +35,7 @@ import { AchievementProgressPreview } from './home/AchievementProgressPreview'
 import { RecentServersCard } from './home/RecentServersCard'
 import { MedalHuntCard } from './home/MedalHuntCard'
 import { capabilities, fetchGatewayServers } from '@/app/platform'
+import { requestLogin } from '@/app/components/shared/AuthRequiredModal'
 
 const NEWS_SEEN_KEY = 'utbt:newsSeen:v1'
 
@@ -344,9 +345,19 @@ export function Home({
                     worldRecords={userSummary?.medals.world_records ?? null}
                 />
                 )}
+                {!userProfile && (
+                    <div className="lg:col-span-12 rounded-2xl border border-accent-500/25 bg-gradient-to-br from-accent-500/10 to-card/30 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                            <div className="font-semibold text-foreground">Make UTBT yours</div>
+                            <p className="mt-1 text-sm text-muted-foreground">Sign in to track medals and achievements, review maps, and sync favorites.</p>
+                        </div>
+                        <Button onClick={() => requestLogin({ feature: 'personalize UTBT' })}>Continue with Discord</Button>
+                    </div>
+                )}
+
                 <CommunityStatsRow
                     className={userProfile ? "lg:col-span-6" : "lg:col-span-12"}
-                    accessToken={userProfile?.accessToken ?? ANONYMOUS_TOKEN}
+                    accessToken={userProfile?.accessToken}
                     playersOnline={playersOnline}
                     newMaps={data.global.newMaps}
                     totalMaps={caches.mapsCount}

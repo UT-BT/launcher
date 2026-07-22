@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import { lazy, Suspense, useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import {
     Search, X, Play, Download, SlidersHorizontal,
     Trophy, Crown, ListOrdered, type LucideIcon,
@@ -24,7 +24,6 @@ import {
     fetchRushers,
     fetchWorldRecordProgression,
     fetchWorldRecordFilterOptions,
-    ANONYMOUS_TOKEN,
 } from '@/app/utils/api'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { TeamHolders } from '@/app/components/shared/TeamHolders'
@@ -34,14 +33,13 @@ import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
 import { IconActionButton } from '@/app/components/shared/IconActionButton'
 import { ReplayVideoModal } from '@/app/components/shared/ReplayVideoModal'
 import { DemoDownloadStatusModal } from '@/app/components/shared/DemoDownloadStatusModal'
-import {
-    WorldRecordProgressionModal, WorldRecordHistoryTrigger,
-} from '@/app/components/modals/WorldRecordProgressionModal'
+import { WorldRecordHistoryTrigger } from '@/app/components/shared/WorldRecordHistoryTrigger'
 import { PaginationBar } from '@/app/components/ui/pagination'
 import { ColumnsMenu } from '@/app/components/shared/ColumnsMenu'
 import { MultiFilterDropdown } from '@/app/components/ui/multi-filter-dropdown'
 import { FilterPanelRow } from '@/app/components/ui/filter-panel-row'
 import { ActiveFilterChip } from '@/app/components/shared/ActiveFilterChip'
+const WorldRecordProgressionModal = lazy(() => import('@/app/components/modals/WorldRecordProgressionModal').then(m => ({ default: m.WorldRecordProgressionModal })))
 import { FilterPresetsMenu, type FilterPreset } from '@/app/components/shared/FilterPresetsMenu'
 import {
     DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow,
@@ -296,7 +294,7 @@ export function WorldRecordsPage({
     userProfile, state, onStateChange, caches, onCachesChange,
     favoriteMapNames, onToggleFavorite, onMapSelect,
 }: WorldRecordsPageProps) {
-    const accessToken = userProfile?.accessToken ?? ANONYMOUS_TOKEN
+    const accessToken = userProfile?.accessToken ?? ''
     const selfId = userProfile?.id ?? undefined
     const isRushers = state.mode === 'rushers'
 
@@ -325,7 +323,6 @@ export function WorldRecordsPage({
 
     const [filterOptions, setFilterOptions] = useState<WorldRecordFilterOptions>({ holders: [], years: [] })
     useEffect(() => {
-        if (!accessToken) return
         let cancelled = false
         fetchWorldRecordFilterOptions(accessToken)
             .then(o => { if (!cancelled) setFilterOptions(o) })
@@ -353,8 +350,8 @@ export function WorldRecordsPage({
         const search = debouncedSearch || undefined
         if (isRushers) return { mode: 'rushers', search }
         const addedSince = state.timeframe === 'all' ? undefined : isoDaysAgo(TIMEFRAME_DAYS[state.timeframe])
-        const favoritesEmpty = state.favoritesOnly && favoriteMapNames.size === 0
-        const maps = state.favoritesOnly && favoriteMapNames.size > 0
+        const favoritesEmpty = !!accessToken && state.favoritesOnly && favoriteMapNames.size === 0
+        const maps = !!accessToken && state.favoritesOnly && favoriteMapNames.size > 0
             ? [...favoriteMapNames].sort().join(',')
             : undefined
         return {
@@ -392,7 +389,6 @@ export function WorldRecordsPage({
     useEffect(() => { globalsCacheRef.current = {} }, [globalsKey])
 
     const fetchPageData = useCallback((p: number): Promise<WorldRecord[] | RusherRow[] | null> => {
-        if (!accessToken) return Promise.resolve(null)
         if (serverParams.mode === 'records' && serverParams.favoritesEmpty) {
             globalsCacheRef.current[globalsKey] = { total: 0, totalRecords: 0, maxRusherCount: 0 }
             return Promise.resolve([])
@@ -426,7 +422,6 @@ export function WorldRecordsPage({
     }, [accessToken, serverParams, pageSize, keyFor, globalsKey])
 
     const fetchGlobalsData = useCallback((): Promise<Globals | null> => {
-        if (!accessToken) return Promise.resolve(null)
         const existing = globalsCacheRef.current[globalsKey]
         if (existing !== undefined) return 'total' in existing ? Promise.resolve(existing) : existing
         if (serverParams.mode === 'records' && serverParams.favoritesEmpty) {
@@ -454,7 +449,6 @@ export function WorldRecordsPage({
     }, [isRushers, onCachesChange, querySig])
 
     const loadPage = useCallback(async (isCancelled: () => boolean = () => false) => {
-        if (!accessToken) return
 
         const prefetchNeighbours = (totalPages: number) => {
             if (state.currentPage > 1 && !(keyFor(state.currentPage - 1) in pageCacheRef.current)) {
@@ -707,7 +701,6 @@ export function WorldRecordsPage({
     }, [activePreset, state.search, state.difficultyFilters, state.holderFilters, state.timeFilters, state.yearFilters, state.timeframe, state.favoritesOnly, state.sortBy, state.sortDir])
 
     const openHistory = useCallback(async (mapName: string) => {
-        if (!accessToken) return
         setWrHistory({ mapName, entries: [] })
         const entries = await fetchWorldRecordProgression(accessToken, mapName)
         setWrHistory(cur => cur && cur.mapName === mapName ? { mapName, entries } : cur)
@@ -1023,7 +1016,7 @@ export function WorldRecordsPage({
                             onClear={() => updateFilter('timeframe', 'all')}
                         />
                     )}
-                    {state.favoritesOnly && (
+                    {!!accessToken && state.favoritesOnly && (
                         <ActiveFilterChip label="Favorites" value="On" onClear={() => updateFilter('favoritesOnly', false)} />
                     )}
                 </div>
@@ -1295,13 +1288,15 @@ export function WorldRecordsPage({
                 />
             )}
 
-            <WorldRecordProgressionModal
-                isOpen={wrHistory !== null}
-                onClose={() => setWrHistory(null)}
-                mapName={wrHistory?.mapName ?? ''}
-                entries={wrHistory?.entries ?? []}
-                currentUserId={selfId}
-            />
+            <Suspense fallback={null}>
+                <WorldRecordProgressionModal
+                    isOpen={wrHistory !== null}
+                    onClose={() => setWrHistory(null)}
+                    mapName={wrHistory?.mapName ?? ''}
+                    entries={wrHistory?.entries ?? []}
+                    currentUserId={selfId}
+                />
+            </Suspense>
 
             <ReplayVideoModal state={replay.video} onClose={replay.clearVideo} />
 

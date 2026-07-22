@@ -12,7 +12,7 @@ import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { IconActionButton } from '@/app/components/shared/IconActionButton'
 import { ReplayVideoModal } from '@/app/components/shared/ReplayVideoModal'
 import { DemoDownloadStatusModal } from '@/app/components/shared/DemoDownloadStatusModal'
-import { WorldRecordHistoryTrigger } from '@/app/components/modals/WorldRecordProgressionModal'
+import { WorldRecordHistoryTrigger } from '@/app/components/shared/WorldRecordHistoryTrigger'
 import { useReplayWatch } from '@/app/hooks/useReplayWatch'
 import { useDemoDownload } from '@/app/hooks/useDemoDownload'
 import { Tooltip } from '@/app/components/ui/tooltip'
@@ -426,6 +426,15 @@ const TEAM_TABS: { value: TeamTab; label: string }[] = [
     { value: 'all', label: 'All' },
 ]
 
+const TEAM_LEADERBOARD_COLUMNS: ResponsiveColumn[] = [
+    { id: 'rank', width: '4rem', required: true },
+    { id: 'team', width: '10rem', required: true },
+    { id: 'medal', width: '3rem', required: true },
+    { id: 'time', width: '8rem', required: true },
+    { id: 'status', width: '7rem', required: true },
+    { id: 'date', width: '8rem', required: true },
+]
+
 interface TeamLeaderboardTableProps {
     teamLeaderboard: TeamLeaderboardEntry[]
     loading: boolean
@@ -489,6 +498,57 @@ export function TeamLeaderboardTable({
     }
 
     const dir = (field: TeamSortField): 'asc' | 'desc' | null => (sortBy === field ? sortDir : null)
+    const compactRows = loading ? (
+        Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} role="listitem" className="p-3 border-b border-hairline/5 last:border-0 animate-pulse">
+                <div className="h-14 rounded bg-hairline/5" />
+            </div>
+        ))
+    ) : pageRows.length === 0 ? (
+        <div role="listitem" className="px-4 py-12 text-center text-sm text-muted-foreground">No team runs yet.</div>
+    ) : pageRows.map(({ entry, rank }) => {
+        const medalIcon = entry.verified ? medalIconForInt(entry.medal) : null
+        const medalLabel = medalLabelForInt(entry.medal)
+        const isOwn = currentUserId != null && entry.members.some(m => String(m.user) === String(currentUserId))
+        const isCurrentRun =
+            (highlightTeamCapId != null && String(entry.id) === String(highlightTeamCapId)) ||
+            (highlightMemberKey != null && String(entry.user) === String(highlightMemberKey))
+        const highlightRow = (highlightTeamCapId != null || highlightMemberKey != null) ? isCurrentRun : isOwn
+        return (
+            <div key={entry.id} role="listitem" className={cn('grid grid-cols-[auto_minmax(0,1fr)_auto] gap-3 p-3 border-b border-hairline/5 last:border-0', highlightRow && 'bg-emerald-500/[0.05]')}>
+                <span className="pt-0.5 text-xs font-bold font-mono text-muted-foreground tabular-nums">#{rank}</span>
+                <div className="min-w-0 space-y-1.5">
+                    {entry.members.map(member => (
+                        <div key={member.cap_id} className="flex items-center gap-1.5 min-w-0">
+                            <PlayerInfo
+                                userId={member.user}
+                                alias={member.alias}
+                                size="sm"
+                                highlight={currentUserId != null && String(member.user) === String(currentUserId)}
+                            />
+                            {!member.verified && <span className="text-[9px] uppercase tracking-wider text-amber-300/80">pending</span>}
+                        </div>
+                    ))}
+                    <span className="block text-[10px] text-muted-foreground">{formatAddedDate(entry.added)}</span>
+                </div>
+                <div className="flex flex-col items-end justify-between gap-2">
+                    <div className="flex items-center gap-1.5">
+                        {medalIcon && <img src={medalIcon} alt={medalLabel} className="size-4 object-contain" />}
+                        <CapTimeLink teamCapId={entry.id} seconds={entry.cap_time_seconds} className="font-mono tabular-nums font-bold text-foreground" />
+                    </div>
+                    <span className={cn(
+                        'inline-flex items-center gap-1 h-6 px-2 rounded-md border text-[10px] font-semibold',
+                        entry.verified
+                            ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
+                            : 'bg-hairline/5 border-hairline/10 text-muted-foreground',
+                    )}>
+                        {entry.verified ? <ShieldCheck className="size-3" /> : <ShieldAlert className="size-3" />}
+                        {entry.state === 'incomplete' ? 'Incomplete' : entry.verified ? 'Verified' : 'Certified'}
+                    </span>
+                </div>
+            </div>
+        )
+    })
 
     return (
         <div className="bg-card/30 border border-hairline/5 rounded-xl flex flex-col overflow-hidden">
@@ -517,8 +577,12 @@ export function TeamLeaderboardTable({
 
             <div className="flex flex-col">
                 <DataTableShell
-                    className="!flex-none !min-h-0 !overflow-x-auto !rounded-none !border-0"
-                    minWidth="40rem"
+                    className="!flex-none !min-h-0 !rounded-none !border-0"
+                    responsive={{
+                        columns: TEAM_LEADERBOARD_COLUMNS,
+                        compactContent: compactRows,
+                        compactAriaLabel: 'Team leaderboard',
+                    }}
                 >
                     <DataTableHeaderRow>
                         <DataTableHeaderCell

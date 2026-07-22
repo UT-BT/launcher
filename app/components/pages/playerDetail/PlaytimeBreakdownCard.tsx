@@ -58,7 +58,7 @@ export function PlaytimeBreakdownCard({ accessToken, userId, onMapSelect, tabsSl
     const {
         page, pageSize, items, total, totalPages, loading, error, setPage, setPageSize,
     } = usePaginatedQuery<PlaytimeByMapRow>({
-        enabled: !!accessToken,
+        enabled: true,
         errorMessage: 'Failed to load playtime breakdown.',
         deps: [accessToken, userId, query, favoritesOnly, sortField, sortDir],
         page: playtimePage,
@@ -66,7 +66,7 @@ export function PlaytimeBreakdownCard({ accessToken, userId, onMapSelect, tabsSl
         onPageChange: setPlaytimePage,
         onPageSizeChange: setPlaytimePageSize,
         fetchPage: ({ limit, offset }) =>
-            fetchPlaytimeByMap(accessToken!, userId, {
+            fetchPlaytimeByMap(accessToken ?? '', userId, {
                 limit, offset,
                 mapFuzzy: query || undefined,
                 favoritesOnly,
