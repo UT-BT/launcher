@@ -93,7 +93,7 @@ export function MedalCard({ map, loading, requiredPlayers, teamLeaderboard }: Me
                             <div className="flex items-center gap-2 min-w-0">
                                 {icon && <img src={icon} alt="" className="size-5 shrink-0 object-contain max-w-none" />}
                                 <div className="min-w-0 flex flex-col leading-tight">
-                                    <span className={cn('text-sm font-semibold truncate', row.accent)}>
+                                    <span className={cn('text-sm font-semibold', row.accent)}>
                                         {row.label}
                                     </span>
                                 </div>

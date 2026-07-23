@@ -136,7 +136,7 @@ export function Modal({
                 </div>
 
                 {/* Content */}
-                <div className="p-6 overflow-y-auto custom-scrollbar flex-1">
+                <div className="p-4 sm:p-6 overflow-y-auto custom-scrollbar flex-1">
                     {children}
                 </div>
 

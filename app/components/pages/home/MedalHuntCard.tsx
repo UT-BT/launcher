@@ -159,6 +159,7 @@ export function MedalHuntCard({
   const containerRef = useRef<HTMLDivElement | null>(null)
   const [loading, setLoading] = useState(rows === null)
   const [responsiveLimit, setResponsiveLimit] = useState(6)
+  const [narrow, setNarrow] = useState(false)
   const [page, setPage] = useState(1)
   const [selectedMedals, setSelectedMedals] = useState<Set<TargetMedal>>(() => new Set(TARGET_MEDALS))
   const [improveWindow, setImproveWindow] = useState<ImproveWindow>('all')
@@ -179,6 +180,7 @@ export function MedalHuntCard({
     const updateLimit = () => {
       const containerWidth = containerRef.current?.getBoundingClientRect().width ?? window.innerWidth
       const height = window.innerHeight
+      setNarrow(containerWidth < 480)
       if (containerWidth < 560 || height < 760) setResponsiveLimit(4)
       else if (height > 1080) setResponsiveLimit(8)
       else setResponsiveLimit(6)
@@ -194,19 +196,22 @@ export function MedalHuntCard({
     }
   }, [])
 
+  const fetchedRef = useRef(false)
+  useEffect(() => {
+    fetchedRef.current = false
+  }, [accessToken, userId, refreshKey])
   useEffect(() => {
     if (!accessToken || !userId) {
       setLoading(false)
       return
     }
 
-    if (rows !== null) {
-      setLoading(false)
-      return
-    }
+    if (rows !== null) setLoading(false)
+    if (fetchedRef.current) return
+    fetchedRef.current = true
 
     const controller = new AbortController()
-    setLoading(true)
+    if (rows === null) setLoading(true)
     fetchMedalHunt(accessToken, controller.signal)
       .then((data) => {
         if (controller.signal.aborted) return
@@ -215,7 +220,7 @@ export function MedalHuntCard({
       .catch((error) => {
         if (controller.signal.aborted) return
         console.error('Failed to load Medal Hunt', error)
-        onRowsLoaded([])
+        if (rows === null) onRowsLoaded([])
       })
       .finally(() => {
         if (!controller.signal.aborted) setLoading(false)
@@ -415,11 +420,12 @@ export function MedalHuntCard({
         onSortDirChange={updateSortDir}
         onResetHidden={resetHidden}
       />
-      <div style={{ minHeight: responsiveLimit * ROW_HEIGHT_PX }}>
+      <div style={narrow ? undefined : { minHeight: responsiveLimit * ROW_HEIGHT_PX }}>
         {pageItems.map((item) => (
           <OpportunityRow
             key={item.mapName}
             item={item}
+            narrow={narrow}
             isHiddenView={showHidden}
             isFavorited={favoriteMapNames.has(item.mapName)}
             onToggleFavorite={onToggleFavorite}
@@ -429,7 +435,7 @@ export function MedalHuntCard({
             onOpenDemos={setReplayPickerMap}
           />
         ))}
-        {Array.from({ length: Math.max(0, responsiveLimit - pageItems.length) }).map((_, i) => (
+        {!narrow && Array.from({ length: Math.max(0, responsiveLimit - pageItems.length) }).map((_, i) => (
           <div
             key={`pb-opportunity-filler-${i}`}
             className="h-16 border-b border-hairline/5 last:border-0"
@@ -461,6 +467,7 @@ export function MedalHuntCard({
 
 interface OpportunityRowProps {
   item: Opportunity
+  narrow: boolean
   isHiddenView: boolean
   isFavorited: boolean
   onToggleFavorite: (mapName: string) => void
@@ -472,6 +479,7 @@ interface OpportunityRowProps {
 
 function OpportunityRow({
   item,
+  narrow,
   isHiddenView,
   isFavorited,
   onToggleFavorite,
@@ -486,6 +494,70 @@ function OpportunityRow({
   const handleVisibilityChange = () => {
     if (isHiddenView) onRestoreMap(item.mapName)
     else onHideMap(item.mapName)
+  }
+
+  if (narrow) {
+    return (
+      <div
+        className={cn(
+          'p-3 space-y-2 border-b border-hairline/5 transition-colors',
+          canSelectMap && 'hover:bg-hairline/[0.03]'
+        )}
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          <FavoriteStar name={item.mapName} isFavorited={isFavorited} onToggle={onToggleFavorite} size="sm" />
+          <button
+            type="button"
+            onClick={handleMapSelect}
+            disabled={!canSelectMap}
+            className="min-w-0 flex-1 truncate text-left text-sm font-semibold text-foreground leading-tight enabled:cursor-pointer enabled:hover:underline underline-offset-2"
+          >
+            {displayMapName(item.mapName)}
+          </button>
+          {item.difficulty > 0 && (
+            <span className={cn('shrink-0 text-[11px] font-black tabular-nums', difficultyTextColor(item.difficulty))}>
+              R{item.difficulty}
+            </span>
+          )}
+          <button
+            type="button"
+            aria-label="Demos"
+            onClick={() => onOpenDemos(item.mapName)}
+            className="inline-flex shrink-0 items-center justify-center size-7 rounded-md border border-accent-500/30 bg-accent-500/10 text-accent-300 hover:bg-accent-500/25 hover:text-accent-100 hover:border-accent-500/50 transition-colors cursor-pointer"
+          >
+            <TvMinimalPlay className="size-3.5" />
+          </button>
+          <button
+            type="button"
+            aria-label={isHiddenView ? 'Restore Map' : 'Hide Map'}
+            onClick={handleVisibilityChange}
+            className={cn(
+              'inline-flex items-center justify-center size-7 rounded-md border transition-colors cursor-pointer',
+              isHiddenView
+                ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
+                : 'border-red-500/30 bg-red-500/10 text-red-300'
+            )}
+          >
+            {isHiddenView ? <Plus className="size-3" /> : <Minus className="size-3" />}
+          </button>
+        </div>
+        <div className="text-[11px] text-muted-foreground leading-snug">
+          Improve by <span className="font-mono tabular-nums text-foreground">{formatDelta(item.improvement)}</span>{' '}
+          for <span className={cn('font-semibold', MEDAL_TONE[item.targetMedal])}>{item.targetMedal}</span>
+        </div>
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[10px] text-muted-foreground font-mono tabular-nums">
+            PB {formatCapTime(item.currentTime)}
+          </span>
+          <span className="flex shrink-0 items-center gap-1.5">
+            {icon && <img src={icon} alt={item.targetMedal} className="size-4 object-contain" />}
+            <span className={cn('text-xs font-bold font-mono tabular-nums', MEDAL_TONE[item.targetMedal])}>
+              {formatCapTime(item.targetTime)}
+            </span>
+          </span>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -615,7 +687,7 @@ function OpportunityHeader({
 
   return (
     <div className="flex items-center justify-between gap-3 px-3 py-2 border-b border-hairline/5 bg-black/20 backdrop-blur-sm">
-      <span className="ml-[5.375rem] text-xs font-medium uppercase tracking-wider text-muted-foreground">Map</span>
+      <span className="ml-1 sm:ml-[5.375rem] text-xs font-medium uppercase tracking-wider text-muted-foreground">Map</span>
       <div className="flex items-center gap-1.5">
         <span className="hidden sm:inline text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 tabular-nums">
           {page}/{totalPages}

@@ -250,15 +250,18 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
             >
                 <div className="absolute inset-0 bg-gradient-to-b from-accent-900/10 to-transparent pointer-events-none" />
 
-                <div className="p-6 [@media(max-height:760px)]:p-3 flex flex-col items-center relative z-10">
+                <div className="p-6 [@media(max-height:800px)]:p-3 max-lg:hidden flex flex-col items-center relative z-10">
                     <img
                         src={logo}
                         alt="UTBT Logo"
-                        className="w-24 h-24 [@media(max-height:760px)]:w-14 [@media(max-height:760px)]:h-14 object-contain drop-shadow-[0_0_15px_rgb(var(--accent-glow-rgb)/0.3)] mb-4 [@media(max-height:760px)]:mb-0 transition-all hover:scale-105 duration-300"
+                        className="w-24 h-24 [@media(max-height:800px)]:w-14 [@media(max-height:800px)]:h-14 object-contain drop-shadow-[0_0_15px_rgb(var(--accent-glow-rgb)/0.3)] mb-4 [@media(max-height:800px)]:mb-0 transition-all hover:scale-105 duration-300"
                     />
                 </div>
 
-                <div className="px-4 mb-6 [@media(max-height:760px)]:mb-3 relative z-10 space-y-2">
+                <div className={cn(
+                    'px-4 mb-6 [@media(max-height:800px)]:mb-3 relative z-10 space-y-2',
+                    !capabilities.game && 'max-lg:hidden max-lg:mb-0',
+                )}>
                     <Button
                         variant="ghost"
                         className="w-full h-11 bg-accent-500/15 border border-accent-500/40 text-accent-200 hover:bg-accent-500/25 hover:text-foreground hover:border-accent-500/60 hover:shadow-[0_0_20px_rgba(59,130,246,0.25)] transition-all font-semibold rounded-lg"
@@ -290,7 +293,7 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                     ))}
                 </div>
 
-                <nav className="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-4 space-y-6 [@media(max-height:760px)]:space-y-3 relative z-10">
+                <nav className="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-4 max-lg:pt-6 space-y-6 [@media(max-height:800px)]:space-y-3 relative z-10">
                     {navSections.map((section) => (
                         <div key={section.title} className="space-y-2">
                             <h3 className="px-4 mb-1 text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider">
@@ -303,7 +306,7 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                                     key={item.id}
                                     onClick={() => changeView(item.id)}
                                     className={cn(
-                                        "w-full flex items-center gap-3 px-4 py-3 [@media(max-height:760px)]:py-2 rounded-lg transition-all duration-200 cursor-pointer group relative overflow-hidden",
+                                        "w-full flex items-center gap-3 px-4 py-3 [@media(max-height:800px)]:py-2 rounded-lg transition-all duration-200 cursor-pointer group relative overflow-hidden",
                                         currentView === item.id
                                             ? "text-foreground shadow-[0_0_20px_rgba(29,78,216,0.3)]"
                                             : "text-muted-foreground hover:text-foreground hover:bg-hairline/5"

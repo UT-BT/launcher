@@ -127,9 +127,9 @@ const COLUMN_PRIORITY: Partial<Record<WorldRecordsColumnId, number>> = {
 type RusherColumnId = 'rank' | 'rusher' | 'records' | 'share' | 'median' | 'average'
 
 const RUSHER_COLUMNS: ResponsiveColumn[] = [
-    { id: 'rank', width: '5rem', priority: 60 },
+    { id: 'rank', width: '5rem', required: true },
     { id: 'rusher', required: true },
-    { id: 'records', width: '20rem', priority: 70 },
+    { id: 'records', width: '20rem', required: true },
     { id: 'share', width: '6rem', priority: 30 },
     { id: 'median', width: '8rem', priority: 35 },
     { id: 'average', width: '8rem', priority: 34 },
@@ -639,6 +639,9 @@ export function WorldRecordsPage({
         [visibleColumns],
     )
 
+    const [compactMode, setCompactMode] = useState(false)
+    const handleCompactChange = useCallback((compact: boolean) => setCompactMode(compact), [])
+
     const [recordsResolved, setRecordsResolved] = useState<Set<WorldRecordsColumnId> | null>(null)
     const handleRecordsResolve = useCallback((ids: Set<string>) => {
         setRecordsResolved(ids as Set<WorldRecordsColumnId>)
@@ -864,6 +867,118 @@ export function WorldRecordsPage({
 
     const recordWord = totalCount === 1 ? 'record' : 'records'
 
+    const compactSkeleton = Array.from({ length: Math.min(pageSize, AUTO_PAGE_SIZE_MAX_ROWS) }).map((_, i) => (
+        <div key={i} className="h-14 mx-3 my-2 rounded-lg bg-hairline/5 animate-pulse" />
+    ))
+
+    const compactRecordContent = showSkeleton ? compactSkeleton : recordPageRows.length === 0 ? (
+        <div className="px-4 py-16 text-center text-muted-foreground">
+            {recordsHaveFilter ? 'No world records match your filters.' : 'No world records found.'}
+        </div>
+    ) : recordPageRows.map(r => {
+        const isTeamRow = !!(r.members && r.members.length > 0)
+        const isSelf = selfId != null && r.user_id === String(selfId)
+        const isNew = highlight.isNew(r.added)
+        return (
+            <div
+                key={r.cap_id}
+                role="listitem"
+                className={cn(
+                    'grid grid-cols-[minmax(0,1fr)_auto] gap-3 p-3 border-b border-hairline/5 last:border-0',
+                    isNew && 'bg-accent-500/[0.07]',
+                )}
+            >
+                <div className="min-w-0 space-y-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                        <FavoriteStar
+                            name={r.map}
+                            isFavorited={favoriteMapNames.has(r.map)}
+                            onToggle={onToggleFavorite}
+                            size="sm"
+                            className="shrink-0"
+                        />
+                        <button
+                            type="button"
+                            onClick={() => onMapSelect(r.map)}
+                            className="font-bold text-foreground/90 truncate hover:text-foreground hover:underline underline-offset-2 cursor-pointer text-left"
+                        >
+                            {displayMapName(r.map)}
+                        </button>
+                    </div>
+                    {isTeamRow ? (
+                        <TeamHolders
+                            members={r.members!.map(m => ({
+                                userId: m.user,
+                                alias: m.alias,
+                                activeTitle: m.active_title,
+                            }))}
+                            currentUserId={selfId != null ? String(selfId) : undefined}
+                        />
+                    ) : (
+                        <PlayerInfo
+                            userId={r.user_id}
+                            alias={r.alias}
+                            title={r.active_title}
+                            size="sm"
+                            highlight={isSelf}
+                            showYouBadge={isSelf}
+                        />
+                    )}
+                </div>
+                <div className="flex flex-col items-end justify-between gap-2">
+                    <CapTimeLink
+                        capId={isTeamRow ? undefined : r.cap_id}
+                        teamCapId={isTeamRow ? r.cap_id : undefined}
+                        seconds={r.cap_time_seconds}
+                        className="font-mono font-black tabular-nums text-blue-300 tracking-tight"
+                    />
+                    <div className="flex items-center gap-2">
+                        {r.difficulty != null && (
+                            <span className={cn('font-mono tabular-nums text-xs font-bold', difficultyTextColor(r.difficulty))}>
+                                {r.difficulty}
+                            </span>
+                        )}
+                        <span className="text-xs text-muted-foreground tabular-nums">{formatAddedDate(r.added)}</span>
+                    </div>
+                </div>
+            </div>
+        )
+    })
+
+    const compactRusherContent = showSkeleton ? compactSkeleton : rusherPageRows.length === 0 ? (
+        <div className="px-4 py-16 text-center text-muted-foreground">
+            {debouncedSearch ? 'No rushers match your search.' : 'No rushers found.'}
+        </div>
+    ) : rusherPageRows.map((r, i) => {
+        const rank = sliceStart + i + 1
+        const isSelf = selfId != null && r.user_id === String(selfId)
+        const share = totalRecords > 0 ? (r.count / totalRecords) * 100 : 0
+        return (
+            <div key={r.user_id} role="listitem" className="flex items-center gap-3 p-3 border-b border-hairline/5 last:border-0">
+                <span className={cn('font-mono font-bold tabular-nums w-9 shrink-0 text-right', medalText(rank))}>
+                    #{rank}
+                </span>
+                <div className="min-w-0 flex-1">
+                    <PlayerInfo
+                        userId={r.user_id}
+                        alias={r.alias}
+                        title={r.active_title}
+                        size="sm"
+                        highlight={isSelf}
+                        showYouBadge={isSelf}
+                    />
+                </div>
+                <div className="flex flex-col items-end shrink-0">
+                    <span className="font-mono tabular-nums text-foreground font-bold">
+                        {r.count}
+                        <span className="ml-1 text-[9px] uppercase tracking-widest text-muted-foreground font-bold">WRs</span>
+                    </span>
+                    <span className="font-mono tabular-nums text-xs text-muted-foreground">{share.toFixed(1)}%</span>
+                </div>
+            </div>
+        )
+    })
+
     return (
         <div className="space-y-4 h-full flex flex-col overflow-hidden">
             <div className="flex items-end justify-between shrink-0">
@@ -960,14 +1075,16 @@ export function WorldRecordsPage({
                             )}
                         </button>
 
-                        <ColumnsMenu<WorldRecordsColumnId>
-                            columnOrder={state.columnOrder}
-                            columnVisibility={state.columnVisibility}
-                            columnLabels={WORLD_RECORDS_COLUMN_LABELS}
-                            onToggle={toggleColumn}
-                            onReorder={reorderColumn}
-                            requiredColumns={REQUIRED_COLUMNS}
-                        />
+                        {!compactMode && (
+                            <ColumnsMenu<WorldRecordsColumnId>
+                                columnOrder={state.columnOrder}
+                                columnVisibility={state.columnVisibility}
+                                columnLabels={WORLD_RECORDS_COLUMN_LABELS}
+                                onToggle={toggleColumn}
+                                onReorder={reorderColumn}
+                                requiredColumns={REQUIRED_COLUMNS}
+                            />
+                        )}
                     </>
                 )}
             </div>
@@ -1102,7 +1219,7 @@ export function WorldRecordsPage({
             )}
 
             {isRushers && showPodium && (
-                <div className="grid grid-cols-3 gap-3 shrink-0">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 shrink-0">
                     {PODIUM_SLOTS.map(slot => {
                         const r = rusherPageRows[slot.rank - 1]
                         if (!r) return <div key={slot.rank} />
@@ -1148,7 +1265,12 @@ export function WorldRecordsPage({
                 <DataTableShell
                     scrollRef={scrollContainerRef}
                     onScroll={onScrollContainerScroll}
-                    responsive={{ columns: RUSHER_COLUMNS, onResolve: handleRushersResolve }}
+                    responsive={{
+                        columns: RUSHER_COLUMNS,
+                        onResolve: handleRushersResolve,
+                        compactContent: compactRusherContent,
+                        compactAriaLabel: 'Top rushers',
+                    }}
                 >
                     <DataTableHeaderRow theadDataAttr="data-utbt-rushers-thead">
                         {isRusherColumnVisible('rank') && <DataTableHeaderCell align="right" width="5rem">#</DataTableHeaderCell>}
@@ -1238,7 +1360,13 @@ export function WorldRecordsPage({
                 <DataTableShell
                     scrollRef={scrollContainerRef}
                     onScroll={onScrollContainerScroll}
-                    responsive={{ columns: responsiveColumns, onResolve: handleRecordsResolve }}
+                    responsive={{
+                        columns: responsiveColumns,
+                        onResolve: handleRecordsResolve,
+                        compactContent: compactRecordContent,
+                        compactAriaLabel: 'World records',
+                        onCompactChange: handleCompactChange,
+                    }}
                 >
                     <DataTableHeaderRow theadDataAttr="data-utbt-worldrecords-thead">
                         {effectiveColumns.map(id => renderHeaderCell(id))}

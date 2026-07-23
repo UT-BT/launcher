@@ -145,7 +145,7 @@ export function DisallowedCapsCard({ accessToken, userId, onMapSelect, tabsSlot 
 
             <DataTableShell
                 className="!flex-none !min-h-0 !overflow-visible !rounded-none !border-0"
-                responsive={{ columns: responsiveColumns, onResolve: handleResolve }}
+                responsive={{ columns: responsiveColumns, nameFloorRem: 14, onResolve: handleResolve }}
             >
                 <DataTableHeaderRow>
                     {isVisible('map') && <DataTableHeaderCell width="32%" sortable sortDirection={dir('map')} onSort={() => handleSort('map')}>Map</DataTableHeaderCell>}

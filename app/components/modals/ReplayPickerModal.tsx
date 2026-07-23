@@ -234,7 +234,7 @@ export function ReplayPickerModal({
                                         tabIndex={0}
                                         onClick={() => { openTeamCap(entry.id); onClose() }}
                                         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openTeamCap(entry.id); onClose() } }}
-                                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg border border-hairline/5 bg-hairline/[0.02] cursor-pointer hover:bg-hairline/[0.06] hover:border-hairline/15 transition-colors"
+                                        className="w-full flex flex-wrap items-center gap-x-3 gap-y-1.5 px-3 py-2 rounded-lg border border-hairline/5 bg-hairline/[0.02] cursor-pointer hover:bg-hairline/[0.06] hover:border-hairline/15 transition-colors"
                                     >
                                         <span className="text-xs font-bold font-mono w-6 text-muted-foreground shrink-0">#{rank}</span>
                                         <span className="flex-1 min-w-0">
@@ -268,7 +268,7 @@ export function ReplayPickerModal({
                                             onClick={onPick}
                                             onKeyDown={(e) => { if (playable && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onPick() } }}
                                             className={cn(
-                                                'w-full flex items-center gap-3 px-3 py-2 rounded-lg border border-hairline/5 bg-hairline/[0.02] transition-colors',
+                                                'w-full flex flex-wrap items-center gap-x-3 gap-y-1.5 px-3 py-2 rounded-lg border border-hairline/5 bg-hairline/[0.02] transition-colors',
                                                 playable ? 'cursor-pointer hover:bg-hairline/[0.06] hover:border-hairline/15' : 'opacity-60 cursor-default',
                                             )}
                                         >
@@ -290,12 +290,12 @@ export function ReplayPickerModal({
                                 return (
                                     <div
                                         key={row.entry.id}
-                                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg border border-hairline/5 bg-hairline/[0.02] hover:bg-hairline/[0.04] transition-colors"
+                                        className="w-full flex flex-wrap items-center gap-x-3 gap-y-1.5 px-3 py-2 rounded-lg border border-hairline/5 bg-hairline/[0.02] hover:bg-hairline/[0.04] transition-colors"
                                     >
                                         <span className="text-xs font-bold font-mono w-6 text-muted-foreground shrink-0">
                                             #{rank}
                                         </span>
-                                        <span className="flex-1 min-w-0">
+                                        <span className="flex-1 min-w-0 basis-36">
                                             <PlayerInfo
                                                 userId={row.entry.user}
                                                 alias={row.entry.alias}

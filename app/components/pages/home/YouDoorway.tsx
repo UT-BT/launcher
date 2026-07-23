@@ -16,16 +16,16 @@ export function YouDoorway({ userId, alias, title, worldRecords, className }: Yo
     return (
         <div className={cn('relative overflow-hidden bg-card/30 border border-hairline/5 rounded-2xl backdrop-blur-xl', className)}>
             <div className="absolute inset-0 bg-gradient-to-r from-accent-500/[0.05] via-transparent to-accent-500/[0.02] pointer-events-none" />
-            <div className="relative flex items-center justify-between gap-3 p-4 sm:p-5 h-full">
+            <div className="relative flex flex-wrap items-center justify-between gap-3 p-4 sm:p-5 h-full">
                 <PlayerInfo
                     userId={userId ?? undefined}
                     alias={alias}
                     title={title ?? null}
                     size="lg"
                     showYouBadge
-                    className="min-w-0"
+                    className="min-w-0 flex-1 basis-52"
                 />
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex flex-wrap items-center gap-2">
                     {worldRecords != null && worldRecords > 0 && (
                         <MetaPill icon={Medal} label="WRs" value={worldRecords.toLocaleString()} tone="blue" />
                     )}

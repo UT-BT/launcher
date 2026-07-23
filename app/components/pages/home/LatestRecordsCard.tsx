@@ -116,7 +116,7 @@ export function LatestRecordsCard({
             }}
         >
             <DataTableHeaderRow>
-                <DataTableHeaderCell align="center" width="14rem">Map</DataTableHeaderCell>
+                <DataTableHeaderCell align="center">Map</DataTableHeaderCell>
                 {isVisible('holder') && <DataTableHeaderCell align="center" width="9rem">Holder</DataTableHeaderCell>}
                 {isVisible('time') && <DataTableHeaderCell align="center" width="5rem">Time</DataTableHeaderCell>}
                 {isVisible('when') && <DataTableHeaderCell align="center" width="4rem">When</DataTableHeaderCell>}

@@ -19,8 +19,22 @@ import { ActionButton, Feedback, Pager, SearchInput, errMessage } from '../compo
 import { useAdminPageSize } from '../components/shared'
 import {
   DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow, DataTableCell, DataTableEmpty,
-  DataTableSkeletonRow,
+  DataTableSkeletonRow, type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
+
+const UNLINKED_COLUMNS: ResponsiveColumn[] = [
+  { id: 'author', required: true },
+  { id: 'maps', width: '5rem', required: true },
+  { id: 'notes', width: '12rem', priority: 30 },
+  { id: 'action', width: '7.5rem', required: true },
+]
+
+const LINKED_COLUMNS: ResponsiveColumn[] = [
+  { id: 'player', required: true },
+  { id: 'maps', width: '5rem', required: true },
+  { id: 'was', width: '12rem', priority: 30 },
+  { id: 'action', width: '6rem', required: true },
+]
 
 type Step =
   | { status: 'browse' }
@@ -117,6 +131,13 @@ export function MapAuthorsModal({ open, onClose, token, onApplied }: {
 
   const [linked, setLinked] = useState<LinkedMapAuthorRow[]>([])
   const [tab, setTab] = useState<'unlinked' | 'linked'>('unlinked')
+
+  const [unlinkedResolved, setUnlinkedResolved] = useState<Set<string> | null>(null)
+  const handleUnlinkedResolve = useCallback((ids: Set<string>) => setUnlinkedResolved(ids), [])
+  const showNotes = !unlinkedResolved || unlinkedResolved.has('notes')
+  const [linkedResolved, setLinkedResolved] = useState<Set<string> | null>(null)
+  const handleLinkedResolve = useCallback((ids: Set<string>) => setLinkedResolved(ids), [])
+  const showWas = !linkedResolved || linkedResolved.has('was')
 
   useEffect(() => {
     if (!open) return
@@ -349,18 +370,21 @@ export function MapAuthorsModal({ open, onClose, token, onApplied }: {
 
                 <SearchInput value={search} onChange={(v) => { setSearch(v); setOffset(0) }} placeholder="Search author names…" />
 
-                <DataTableShell className="max-h-[22rem]">
+                <DataTableShell
+                  className="max-h-[22rem]"
+                  responsive={{ columns: UNLINKED_COLUMNS, nameFloorRem: 8, onResolve: handleUnlinkedResolve }}
+                >
                   <DataTableHeaderRow>
                     <DataTableHeaderCell align="left">Author</DataTableHeaderCell>
                     <DataTableHeaderCell width="5rem" align="right">Maps</DataTableHeaderCell>
-                    <DataTableHeaderCell width="12rem" align="left">Notes</DataTableHeaderCell>
+                    {showNotes && <DataTableHeaderCell width="12rem" align="left">Notes</DataTableHeaderCell>}
                     <DataTableHeaderCell width="7.5rem" align="right" />
                   </DataTableHeaderRow>
                   <tbody>
                     {loading && rows.length === 0 && Array.from({ length: 6 }, (_, i) => (
-                      <DataTableSkeletonRow key={i} columnCount={4} />
+                      <DataTableSkeletonRow key={i} columnCount={showNotes ? 4 : 3} />
                     ))}
-                    {!loading && rows.length === 0 && <DataTableEmpty colSpan={4} message="No author names found." />}
+                    {!loading && rows.length === 0 && <DataTableEmpty colSpan={showNotes ? 4 : 3} message="No author names found." />}
                     {rows.map((r) => (
                       <DataTableRow key={r.author_str}>
                         <DataTableCell align="left">
@@ -369,13 +393,15 @@ export function MapAuthorsModal({ open, onClose, token, onApplied }: {
                         <DataTableCell align="right" className="tabular-nums text-muted-foreground">
                           {r.map_count}
                         </DataTableCell>
-                        <DataTableCell align="left">
-                          <span className="flex flex-wrap gap-1">
-                            {r.placeholder && <FlagChip tone="red">placeholder</FlagChip>}
-                            {r.co_authored && <FlagChip tone="amber">co-authored</FlagChip>}
-                            {r.exact_alias_match && <FlagChip tone="amber">alias match</FlagChip>}
-                          </span>
-                        </DataTableCell>
+                        {showNotes && (
+                          <DataTableCell align="left">
+                            <span className="flex flex-wrap gap-1">
+                              {r.placeholder && <FlagChip tone="red">placeholder</FlagChip>}
+                              {r.co_authored && <FlagChip tone="amber">co-authored</FlagChip>}
+                              {r.exact_alias_match && <FlagChip tone="amber">alias match</FlagChip>}
+                            </span>
+                          </DataTableCell>
+                        )}
                         <DataTableCell align="right">
                           <ActionButton tone="accent" icon={ArrowRight} onClick={() => setStep({ status: 'review', author: r })}>
                             Review
@@ -397,18 +423,21 @@ export function MapAuthorsModal({ open, onClose, token, onApplied }: {
                 <p className="text-xs leading-relaxed text-muted-foreground">
                   Players whose maps are linked to their account. Unlinking restores the original author name.
                 </p>
-                <DataTableShell className="max-h-[22rem]">
+                <DataTableShell
+                  className="max-h-[22rem]"
+                  responsive={{ columns: LINKED_COLUMNS, nameFloorRem: 8, onResolve: handleLinkedResolve }}
+                >
                   <DataTableHeaderRow>
                     <DataTableHeaderCell align="left">Player</DataTableHeaderCell>
                     <DataTableHeaderCell width="5rem" align="right">Maps</DataTableHeaderCell>
-                    <DataTableHeaderCell width="12rem" align="left">Was</DataTableHeaderCell>
+                    {showWas && <DataTableHeaderCell width="12rem" align="left">Was</DataTableHeaderCell>}
                     <DataTableHeaderCell width="6rem" align="right" />
                   </DataTableHeaderRow>
                   <tbody>
                     {loading && linked.length === 0 && Array.from({ length: 4 }, (_, i) => (
-                      <DataTableSkeletonRow key={i} columnCount={4} />
+                      <DataTableSkeletonRow key={i} columnCount={showWas ? 4 : 3} />
                     ))}
-                    {!loading && linked.length === 0 && <DataTableEmpty colSpan={4} message="No linked authors yet." />}
+                    {!loading && linked.length === 0 && <DataTableEmpty colSpan={showWas ? 4 : 3} message="No linked authors yet." />}
                     {linked.map((r) => (
                       <DataTableRow key={r.author_ref}>
                         <DataTableCell align="left">
@@ -417,9 +446,11 @@ export function MapAuthorsModal({ open, onClose, token, onApplied }: {
                         <DataTableCell align="right" className="tabular-nums text-muted-foreground">
                           {r.map_count}
                         </DataTableCell>
-                        <DataTableCell align="left">
-                          <span className="font-mono text-[11px] text-muted-foreground truncate">{r.original_str ?? '—'}</span>
-                        </DataTableCell>
+                        {showWas && (
+                          <DataTableCell align="left">
+                            <span className="font-mono text-[11px] text-muted-foreground truncate">{r.original_str ?? '—'}</span>
+                          </DataTableCell>
+                        )}
                         <DataTableCell align="right">
                           {r.original_str && (
                             <ActionButton tone="red" icon={Unlink} onClick={() => unlink(r)}>Unlink</ActionButton>

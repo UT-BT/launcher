@@ -62,6 +62,14 @@ every doc.
    `usePlatform()` hook or its named exports), never raw `window.conveyor`
    presence checks or direct `__WEB_TARGET__` reads. The renderer ships to
    desktop AND web — see `agents/web-target.md`.
+10. **Every UI change must work at every viewport — phone (360px) through 4K —
+    on BOTH targets.** Tables get `responsive` configs + `compactContent` card
+    rows (never horizontal scroll); heroes/tiles wrap instead of truncating key
+    data; controls stay tappable at 390px. And it must stay cheap: respect the
+    bundle budget (`npm run check:bundle`; lazy anything post-user-action) and
+    the CSS runtime budget (no per-row `backdrop-blur` / infinite animations).
+    See `agents/styling.md` (responsive-columns, css-runtime-cost) and
+    `agents/web-target.md` (responsive-layout, performance).
 
 ## Keeping docs honest
 

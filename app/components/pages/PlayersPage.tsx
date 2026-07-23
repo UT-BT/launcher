@@ -402,7 +402,7 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
             id,
             width: COLUMN_WIDTH[id],
             priority: COLUMN_PRIORITY[id],
-            required: REQUIRED_COLUMNS.has(id) || id === 'rank',
+            required: REQUIRED_COLUMNS.has(id) || id === 'rank' || id === 'points',
         })),
         [visibleColumns],
     )
@@ -411,6 +411,8 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
     const handleResolve = useCallback((ids: Set<string>) => {
         setResolved(ids as Set<PlayerColumnId>)
     }, [])
+    const [compactMode, setCompactMode] = useState(false)
+    const handleCompactChange = useCallback((compact: boolean) => setCompactMode(compact), [])
 
     const effectiveColumns = useMemo(
         () => resolved ? visibleColumns.filter(id => resolved.has(id)) : visibleColumns,
@@ -533,6 +535,42 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
         }
     }
 
+    const compactContent = showSkeleton ? (
+        Array.from({ length: Math.min(pageSize, AUTO_PAGE_SIZE_MAX_ROWS) }).map((_, i) => (
+            <div key={i} className="h-14 mx-3 my-2 rounded-lg bg-hairline/5 animate-pulse" />
+        ))
+    ) : players.length === 0 ? (
+        <div className="px-4 py-16 text-center text-muted-foreground">
+            {debouncedSearch ? 'No players match your search.' : 'No players found.'}
+        </div>
+    ) : players.map(p => {
+        const isSelf = selfId != null && String(p.id) === String(selfId)
+        return (
+            <div key={p.id} role="listitem" className="flex items-center gap-3 p-3 border-b border-hairline/5 last:border-0">
+                <span className="font-mono tabular-nums w-10 shrink-0 text-right text-muted-foreground">
+                    {p.rank > 0 ? `#${p.rank.toLocaleString()}` : '—'}
+                </span>
+                <div className="min-w-0 flex-1 flex items-center gap-2">
+                    <PlayerInfo
+                        userId={p.id}
+                        alias={p.alias}
+                        title={p.active_title}
+                        size="sm"
+                        highlight={isSelf}
+                        showYouBadge={isSelf}
+                    />
+                    {p.banned && <BannedBadge reason={p.ban_reason} expires={p.ban_expires} />}
+                </div>
+                <div className="flex flex-col items-end shrink-0">
+                    <span className={cn('font-mono tabular-nums font-bold', p.points > 0 ? 'text-foreground' : 'text-muted-foreground/40')}>
+                        {p.points.toLocaleString()}
+                    </span>
+                    <span className="text-[9px] uppercase tracking-widest text-muted-foreground font-bold">pts</span>
+                </div>
+            </div>
+        )
+    })
+
     return (
         <div className="space-y-4 h-full flex flex-col overflow-hidden">
             <div className="flex items-end justify-between shrink-0">
@@ -582,17 +620,19 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
                     )}
                 </div>
 
-                <ColumnsMenu<PlayerColumnId>
-                    columnOrder={state.columnOrder}
-                    columnVisibility={state.columnVisibility}
-                    columnLabels={COLUMN_LABELS}
-                    onToggle={toggleColumn}
-                    onReorder={reorderColumn}
-                    requiredColumns={REQUIRED_COLUMNS}
-                    triggerRef={columnsButtonRef}
-                    menuOpen={columnsMenuOpen}
-                    onMenuOpenChange={setColumnsMenuOpen}
-                />
+                {!compactMode && (
+                    <ColumnsMenu<PlayerColumnId>
+                        columnOrder={state.columnOrder}
+                        columnVisibility={state.columnVisibility}
+                        columnLabels={COLUMN_LABELS}
+                        onToggle={toggleColumn}
+                        onReorder={reorderColumn}
+                        requiredColumns={REQUIRED_COLUMNS}
+                        triggerRef={columnsButtonRef}
+                        menuOpen={columnsMenuOpen}
+                        onMenuOpenChange={setColumnsMenuOpen}
+                    />
+                )}
             </div>
 
             {error && (
@@ -604,7 +644,13 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
             <DataTableShell
                 scrollRef={scrollContainerRef}
                 onScroll={onScrollContainerScroll}
-                responsive={{ columns: responsiveColumns, onResolve: handleResolve }}
+                responsive={{
+                    columns: responsiveColumns,
+                    onResolve: handleResolve,
+                    compactContent,
+                    compactAriaLabel: 'Players',
+                    onCompactChange: handleCompactChange,
+                }}
             >
                 <DataTableHeaderRow theadDataAttr="data-utbt-players-thead">
                     {effectiveColumns.map(id => renderHeaderCell(id))}

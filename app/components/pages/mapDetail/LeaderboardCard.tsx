@@ -168,6 +168,67 @@ function SoloLeaderboardTable({
 
     const dir = (field: SortField): 'asc' | 'desc' | null => (sortBy === field ? sortDir : null)
 
+    const compactRows = loading ? (
+        Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} role="listitem" className="p-3 border-b border-hairline/5 last:border-0 animate-pulse">
+                <div className="h-10 rounded bg-hairline/5" />
+            </div>
+        ))
+    ) : pageRows.length === 0 ? (
+        <div role="listitem" className="px-4 py-12 text-center text-sm text-muted-foreground">No caps yet.</div>
+    ) : pageRows.map(({ entry, rank }) => {
+        const tier: MedalTier = computeMedalTier(
+            { map: entry.map, cap_time_seconds: entry.cap_time_seconds, cap_type: entry.cap_type, verified: entry.verified },
+            map ?? undefined,
+        )
+        const isOwn = currentUserId != null && String(entry.user) === String(currentUserId)
+        const medalIconKey = tier === 'world_record' ? 'world record' :
+            tier === 'champion' ? 'champion medal' :
+                tier === 'gold' ? 'gold medal' :
+                    tier === 'silver' ? 'silver medal' :
+                        tier === 'bronze' ? 'bronze medal' :
+                            tier === 'verified' ? 'certified' :
+                                tier === 'casual' ? 'casual' : ''
+        const medalIcon = medalIconKey ? getMedalIcon(medalIconKey) : null
+        return (
+            <div
+                key={entry.id}
+                role="listitem"
+                className={cn('grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 p-3 border-b border-hairline/5 last:border-0', isOwn && 'bg-emerald-500/[0.05]')}
+            >
+                <span className="text-xs font-bold font-mono text-muted-foreground tabular-nums w-8 text-right">
+                    #{rank}
+                </span>
+                <div className="min-w-0">
+                    <PlayerInfo
+                        userId={entry.user}
+                        alias={entry.alias}
+                        title={entry.active_title}
+                        size="sm"
+                        highlight={isOwn}
+                        showYouBadge={isOwn}
+                    />
+                </div>
+                <div className="flex flex-col items-end gap-0.5">
+                    <div className="flex items-center gap-1.5">
+                        {medalIcon && (
+                            <img src={medalIcon} alt={TIER_LABELS[tier]} className="size-4 inline-block shrink-0 object-contain max-w-none" />
+                        )}
+                        <CapTimeLink
+                            capId={entry.id}
+                            seconds={entry.cap_time_seconds}
+                            className={cn(
+                                'text-sm font-mono tabular-nums font-bold',
+                                rank === 1 ? 'text-red-300' : 'text-foreground',
+                            )}
+                        />
+                    </div>
+                    <span className="text-xs text-muted-foreground tabular-nums">{formatAddedDate(entry.added)}</span>
+                </div>
+            </div>
+        )
+    })
+
     return (
         <div className="bg-card/30 border border-hairline/5 rounded-xl flex flex-col overflow-hidden">
             <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-hairline/5">
@@ -195,8 +256,13 @@ function SoloLeaderboardTable({
 
             <div className="flex flex-col">
                 <DataTableShell
-                    className="!flex-none !min-h-0 !overflow-visible !rounded-none !border-0"
-                    responsive={{ columns: responsiveColumns, onResolve: handleResolve }}
+                    className="!flex-none !min-h-0 !rounded-none !border-0"
+                    responsive={{
+                        columns: responsiveColumns,
+                        onResolve: handleResolve,
+                        compactContent: compactRows,
+                        compactAriaLabel: 'Map leaderboard',
+                    }}
                 >
                     <DataTableHeaderRow>
                         {isVisible('rank') && (

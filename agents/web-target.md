@@ -10,7 +10,7 @@ not_here:
   - "IPC channel contract → lib/conveyor/README.md"
   - "build commands reference → agents/build.md"
 sections: [overview, platform-layer, capability-gates, web-auth, anonymous-browsing, shareable-urls, responsive-layout, performance, build, hosting-note]
-last_verified: 2026-07-22
+last_verified: 2026-07-23
 verify_against:
   - app/platform/index.ts
   - app/platform/capabilities.ts
@@ -19,6 +19,9 @@ verify_against:
   - app/platform/downloads.ts
   - app/platform/web/auth-web.ts
   - app/renderer.tsx
+  - app/components/navigation/NavHistoryBar.tsx
+  - app/components/splash/WebBootScreen.tsx
+  - scripts/check-web-bundle.mjs
   - app/renderer-web.tsx
   - vite.config.web.ts
 ---
@@ -68,6 +71,16 @@ desktop-only UI and swaps a handful of bridge calls for browser equivalents.
 | File logging | console fallback (warn/error) | `use-logger.ts` |
 | Titlebar / window controls / zoom | not mounted (web entry skips `WindowContextProvider`) | `app/renderer-web.tsx` |
 | Launcher telemetry (`logLauncherStartup`) | skipped | `IS_WEB` in `app/utils/api.ts` |
+| Nav bar (`NavHistoryBar` — Back/Forward + Refresh) | never rendered — browser chrome owns history and reload; pages revalidate on mount instead (see navigation.md, page-refresh-registry) | `IS_WEB` in `app/components/navigation/NavHistoryBar.tsx` |
+| Splash screen | replaced by `WebBootScreen` (logo + spinner, error+retry variant); `SplashScreen` is lazy and never fetched on web | `IS_WEB` in `app/app.tsx` |
+
+**Bundle split reality check:** desktop-only surfaces (`SplashScreen`,
+`SettingsModal`, `UpdateModal`, `LoginPage`) are `lazy()` chunks that dist-web
+*emits* but a browser never *fetches* — their mount sites are `IS_WEB` /
+capability-gated. `npm run check:bundle` additionally fails the build if
+hard desktop markers (`electron-updater`, install/patch code) leak into any
+web asset. When adding a desktop-only feature: gate the mount with a
+capability AND keep the module behind `lazy()` so the web entry never grows.
 
 Event bridges (`utInstall`, `utPatch`, `utProfile`, `utFavorites`,
 `utbtUpdater`, `uiScale`) are optional-chained everywhere and simply never fire
@@ -122,27 +135,42 @@ followed while logged out survives the OAuth redirect via the flow stash's
 
 ## Responsive layout
 
-The desktop app targets 16:9; the web build must also work on phones. One
-breakpoint governs the shell: **`lg` (1024px)**.
+The renderer must be usable from a 360px phone to a 4K monitor, on BOTH
+targets. One breakpoint governs the shell: **`lg` (1024px)**. Content is
+deliberately **full-width at every size — no max-width cap** (owner decision;
+don't reintroduce centering).
 
 - `app/index.html` carries the viewport meta tag (harmless in Electron).
 - `AppLayout` below `lg`: the sidebar becomes an off-canvas drawer (same single
   `<aside>`, CSS `max-lg:` translate — no duplicated markup), opened from a
-  fixed top bar (hamburger + logo). Every nav action goes through `changeView`,
+  fixed top bar (hamburger + logo). The drawer hides the big logo block
+  (`max-lg:hidden` — the top bar already brands) so nav items + the profile
+  card fit an 800px-tall phone. Every nav action goes through `changeView`,
   which closes the drawer. At `lg+` the DOM and styling are the pre-mobile
   desktop layout.
 - Content padding scales `p-4 sm:p-6 lg:p-8`; the app root uses `h-dvh` (mobile
   browser toolbars) and the web entry zeroes `--window-titlebar-height`.
 - Modals: `offsetSidebar` pads left only at `lg+` (`lg:pl-64`) so they center on
   phones.
-- Tables need no per-page mobile work: `DataTable`'s width-resolver
-  (`COLUMN_PRIORITY` + `RESPONSIVE_REQUIRED_COLUMNS`, see
-  `agents/shared-components.md`) already drops low-priority columns as the
-  container narrows — at 390px the Maps table shows Map + World Record and stays
-  usable.
+- **Tables:** every tabular surface passes `responsive={{ columns, ...,
+  compactContent }}` — priorities drop cosmetic columns first, the core metric
+  is `required`, and below the required-fit width rows render as stacked cards
+  (never horizontal scroll). Full contract + canonical examples in
+  `agents/styling.md` → Responsive columns.
+- **Pagination:** `PaginationBar` renders the desktop control row at `sm+` and
+  a touch bar (`‹ Prev [page]/total Next ›`, editable page number) below `sm` —
+  pages get this for free.
+- **Heroes / stat tiles:** titles `line-clamp-2 break-all` + `flex-wrap` action
+  rows; tile grids step `grid-cols-2 sm:grid-cols-3 xl:grid-cols-5`; see
+  `agents/styling.md`.
+- Home pairs sections two-up; any section whose partner is conditional
+  (login-gated, empty news feed) must widen to `lg:col-span-12` when alone —
+  never leave a half-empty grid row (`Home.tsx` render helpers).
 
 When adding UI: never assume the sidebar is visible; anything positioned
-relative to it needs the `lg:` variant.
+relative to it needs the `lg:` variant. Screenshot-verify new surfaces at
+390×844, 1024×768 (the breakpoint boundary — historically the worst width),
+1920×1080, and 3840×2160 before calling them done.
 
 ## Performance
 
@@ -160,6 +188,14 @@ split (enforced by convention, check bundle output when touching imports):
 - Rule: a module only needed after a user action (a modal, a detail page, an
   admin surface) gets `lazy()` + a mount gate, not a static import. Primary
   sidebar pages stay eager — they are the app.
+- `npm run check:bundle` enforces both the gzip budget for the largest chunk
+  and the absence of desktop-only markers in every web asset — run it after
+  touching imports or platform gates.
+- Performance is not only bundle size: the page also has a CSS runtime budget
+  (compositor / RAM / CPU — phones and the Electron shell share a machine with
+  the game). Rules live in `agents/styling.md` → CSS runtime cost; headline:
+  no per-row `backdrop-blur`, no per-row infinite animations, compact-card
+  renderers mount only below the required-fit width so wide screens pay zero.
 
 | Command | Purpose |
 |---|---|

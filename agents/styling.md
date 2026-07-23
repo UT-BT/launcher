@@ -9,8 +9,8 @@ provides: "the locked design tokens + the canonical class strings"
 not_here:
   - "which component to use → shared-components.md"
   - "state / persistence → state-patterns.md"
-sections: [class-merging, tables-locked, page-layout, filter-panel, buttons-toggle-states, form-inputs, card-backgrounds-borders, text, color-palette, animation, donts]
-last_verified: 2026-06-20
+sections: [class-merging, tables-locked, responsive-columns, page-layout, filter-panel, buttons-toggle-states, form-inputs, card-backgrounds-borders, text, color-palette, animation, css-runtime-cost, donts]
+last_verified: 2026-07-23
 verify_against: [app/components/shared/DataTable.tsx, app/styles/globals.css, lib/utils.ts, app/hooks/useElementWidth.ts]
 ---
 
@@ -84,6 +84,43 @@ its ref. Co-locate priorities as a `COLUMN_PRIORITY: Partial<Record<TColumnId, n
 beside the existing column records. Reference: `PlayersPage.tsx` (ColumnsMenu page)
 and `CapItAllPage.tsx` (fixed-column card). The legacy `minWidth` string prop
 still works for a scroll-only floor without auto-hide.
+
+**Phone widths — compact card rows are mandatory, not optional.** Horizontal
+table scroll is a design failure on the web target. Every primary/tabular
+surface must pass `compactContent` (+ `compactAriaLabel`) so that when even the
+`required` columns can't fit, rows render as stacked cards instead of a
+side-scrolling table. Rules for the compact renderer:
+
+- It must show the page's **core metric** (time / count / points) — that's the
+  reason the row exists. Identity renders through `PlayerInfo`, times through
+  `CapTimeLink` (hard rules still apply inside cards).
+- Handle skeleton and empty states in the compact branch too — `compactContent`
+  replaces the whole `<table>`, including `DataTableSkeletonRow` / `DataTableEmpty`.
+- Make the core metric column `required` (or top-priority) so mid widths never
+  silently drop it before compact mode engages — a leaderboard showing only
+  rank + name is a bug.
+- Canonical examples: `WorldRecordsPage.tsx` (both tabs), `ServerBrowserPage.tsx`,
+  `CapItAllPage.tsx`, `PlayersPage.tsx`, `home/LatestRecordsCard.tsx`,
+  `mapDetail/LeaderboardCard.tsx` (team table), `teams/TeamActivityPanel.tsx`.
+- **Table-only controls must hide while cards show.** Pass
+  `onCompactChange: (compact) => ...` in the `responsive` config and gate
+  `ColumnsMenu` (and any sort-header-dependent control) with `!compactMode` —
+  a Columns menu that visibly does nothing in card view is a bug. See
+  `WorldRecordsPage.tsx` / `PlayersPage.tsx` / `ServerBrowserPage.tsx`.
+- The header cell `width` literals and the `ResponsiveColumn.width` values MUST
+  match — a header forcing e.g. `18rem` on the flex column while the resolver
+  assumes the `nameFloorRem` makes the real table wider than the computed
+  `minWidth` floor and silently reintroduces horizontal scroll (the home
+  RecentCaps bug). The flex column's header takes no `width` at all.
+
+**Hero / stat-tile rows must wrap, never clip.** Detail-page title rows pair a
+`line-clamp-2 break-all` title (map names have no spaces) with a `flex-wrap`
+actions group — never `truncate` beside a `shrink-0` button row (that squeezes
+the title to zero at ~1024px). Stat tiles use responsive grid steps
+(`grid-cols-2 sm:grid-cols-3 xl:grid-cols-5`), labels/subtext wrap
+(`leading-tight`, no `truncate` on key data), and `w-px` flex dividers get
+`max-sm:hidden` so a wrapped row doesn't strand a floating bar. `MetaPill`
+wraps internally — don't re-add `whitespace-nowrap`.
 
 Align by content type:
 
@@ -369,6 +406,25 @@ change (it reads `useTheme`), so they update live.
 - Tutorial card: `animate-in fade-in slide-in-from-bottom-4 duration-200`
 - Skeleton: `animate-pulse` with `bg-white/5`
 - Legendary title/avatar: `legendaryAvatarPulse` / `legendaryTitlePulse` keyframes in `globals.css`
+
+### CSS runtime cost (RAM/CPU)
+
+The renderer runs on phones and in the Electron shell alongside a game — style
+choices have a compositor cost, not just a look:
+
+- `backdrop-blur` is the most expensive effect in the app. The budget is the
+  existing chrome (sidebar, top bar, sticky theads, modals). Never apply it
+  per-row / per-card in a list — one blurred surface, not N.
+- Infinite animations (`animate-pulse`, `animate-ping`, the legendary pulses)
+  animate `opacity`/`transform`/`box-shadow` and each one keeps the compositor
+  awake. Keep them for singletons (badges, one hero) — never one per row.
+  Skeleton `animate-pulse` is fine: it exists only while loading.
+- Prefer `transform`/`opacity` transitions over animating layout properties
+  (`width`/`height`/`top`) — the drawer slides with `translate-x` for this reason.
+- Large `box-shadow` glows on hover are fine; permanent glows on hundreds of
+  elements are not.
+- A page must stay smooth with its largest realistic dataset at its largest
+  page size (200 rows) — if a per-row effect can't survive that, it doesn't ship.
 
 ## Don'ts
 

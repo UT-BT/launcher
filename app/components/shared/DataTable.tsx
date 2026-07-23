@@ -104,6 +104,9 @@ export interface ResponsiveConfig {
     /** Mobile-first representation used when even the required columns cannot fit. */
     compactContent?: React.ReactNode
     compactAriaLabel?: string
+    /** Fires when the shell switches between table and compact-card rendering.
+     *  Use it to hide table-only controls (ColumnsMenu, sort headers) while cards show. */
+    onCompactChange?: (compact: boolean) => void
 }
 
 interface DataTableShellProps {
@@ -154,6 +157,7 @@ function ResponsiveDataTableShell({
     const {
         columns, nameFloorRem = 12, extraRem = 0, onResolve,
         density: densityEnabled = true, compactContent, compactAriaLabel,
+        onCompactChange,
     } = responsive
 
     const internalRef = useRef<HTMLDivElement | null>(null)
@@ -186,6 +190,14 @@ function ResponsiveDataTableShell({
         prevVisibleRef.current = visibleIds
         onResolve?.(visibleIds)
     }, [key, visibleIds, onResolve])
+
+    const compactActive = !requiredFits && !!compactContent
+    const lastCompactRef = useRef<boolean | null>(null)
+    useLayoutEffect(() => {
+        if (widthPx <= 0 || lastCompactRef.current === compactActive) return
+        lastCompactRef.current = compactActive
+        onCompactChange?.(compactActive)
+    }, [widthPx, compactActive, onCompactChange])
 
     return (
         <DataTableDensityContext.Provider value={density}>

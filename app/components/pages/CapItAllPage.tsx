@@ -23,7 +23,7 @@ const CAP_IT_ALL_COLUMNS: ResponsiveColumn[] = [
     { id: 'certified', width: '220px', priority: 60 },
     { id: 'noncertified', width: '220px', priority: 50 },
     { id: 'teammaps', width: '220px', priority: 40 },
-    { id: 'total', width: '220px', priority: 35 },
+    { id: 'total', width: '220px', required: true },
 ]
 
 export interface CapItAllPageState {
@@ -227,6 +227,42 @@ export function CapItAllPage({ userProfile, state, onStateChange, caches, onCach
     )
     const visibleColumnCount = resolved ? resolved.size : CAP_IT_ALL_COLUMNS.length
 
+    const compactContent = showSkeleton ? (
+        Array.from({ length: Math.min(pageSize, AUTO_PAGE_SIZE_MAX_ROWS) }).map((_, i) => (
+            <div key={i} className="h-14 mx-3 my-2 rounded-lg bg-hairline/5 animate-pulse" />
+        ))
+    ) : items.length === 0 ? (
+        <div className="px-4 py-16 text-center text-muted-foreground">
+            {debouncedSearch ? 'No players match your search.' : 'No players on this leaderboard yet.'}
+        </div>
+    ) : items.map(row => {
+        const isSelf = selfId != null && row.user_id === String(selfId)
+        return (
+            <div key={row.user_id} role="listitem" className="flex items-center gap-3 p-3 border-b border-hairline/5 last:border-0">
+                <span className={cn(
+                    'font-mono tabular-nums w-10 shrink-0 text-right',
+                    row.rank <= 3 ? 'text-foreground font-bold' : 'text-muted-foreground',
+                )}>
+                    #{row.rank.toLocaleString()}
+                </span>
+                <div className="min-w-0 flex-1">
+                    <PlayerInfo
+                        userId={row.user_id}
+                        alias={row.alias}
+                        title={row.active_title}
+                        size="sm"
+                        highlight={isSelf}
+                        showYouBadge={isSelf}
+                    />
+                </div>
+                <div className="flex flex-col items-end shrink-0">
+                    <span className="font-mono tabular-nums text-foreground font-bold">{row.certified_caps.toLocaleString()}</span>
+                    <span className="font-mono tabular-nums text-[11px] text-muted-foreground">{row.certified_percentage.toFixed(2)}%</span>
+                </div>
+            </div>
+        )
+    })
+
     return (
         <div className="space-y-4 h-full flex flex-col overflow-hidden">
             <div className="flex items-end justify-between shrink-0">
@@ -276,7 +312,12 @@ export function CapItAllPage({ userProfile, state, onStateChange, caches, onCach
             <DataTableShell
                 scrollRef={scrollContainerRef}
                 onScroll={onScrollContainerScroll}
-                responsive={{ columns: CAP_IT_ALL_COLUMNS, onResolve: handleResolve }}
+                responsive={{
+                    columns: CAP_IT_ALL_COLUMNS,
+                    onResolve: handleResolve,
+                    compactContent,
+                    compactAriaLabel: 'Cap It All leaderboard',
+                }}
             >
                 <DataTableHeaderRow theadDataAttr="data-utbt-capitall-thead">
                     {isVisible('rank') && <DataTableHeaderCell align="right" width="72px">#</DataTableHeaderCell>}

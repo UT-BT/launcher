@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback, lazy, Suspense } from 'react'
-import { SplashScreen } from '@/app/components/splash/SplashScreen'
+import { WebBootScreen } from '@/app/components/splash/WebBootScreen'
+const SplashScreen = lazy(() => import('@/app/components/splash/SplashScreen').then(m => ({ default: m.SplashScreen })))
 import { Main } from '@/app/components/main/Main'
 import { ErrorModal } from '@/app/components/ErrorModal'
 import { UpdaterProvider } from '@/app/hooks/useUpdater'
@@ -184,7 +185,15 @@ export default function App() {
           <LoginPage onLoginSuccess={handleLoginSuccess} />
         </Suspense>
       )}
-      {appPhase === 'splash' && <SplashScreen onReady={handleSplashComplete} variant={initError ? 'error' : 'intro'} />}
+      {appPhase === 'splash' && (
+        IS_WEB ? (
+          <WebBootScreen error={initError} />
+        ) : (
+          <Suspense fallback={null}>
+            <SplashScreen onReady={handleSplashComplete} variant={initError ? 'error' : 'intro'} />
+          </Suspense>
+        )
+      )}
 
       {!IS_WEB && (
         <Suspense fallback={null}>

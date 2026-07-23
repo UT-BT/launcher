@@ -22,3 +22,16 @@ console.log(`Largest JavaScript chunk: ${entry.file} (${Math.round(entry.gzipByt
 if (entry.gzipBytes > maxEntryGzipBytes) {
   throw new Error(`JavaScript chunk exceeds the ${maxEntryGzipBytes / 1024} KiB gzip budget.`)
 }
+
+const desktopOnlyMarkers = ['electron-updater', 'utbt-launcher-updater', 'checking-installation', 'electron.vite']
+const violations = []
+for (const file of JavaScript) {
+  const text = await readFile(join(assetsDir, file), 'utf8')
+  for (const marker of desktopOnlyMarkers) {
+    if (text.includes(marker)) violations.push(`${file}: contains desktop-only marker "${marker}"`)
+  }
+}
+if (violations.length > 0) {
+  throw new Error(`Desktop-only code leaked into the web bundle:\n${violations.join('\n')}`)
+}
+console.log('No desktop-only markers found in web assets.')
