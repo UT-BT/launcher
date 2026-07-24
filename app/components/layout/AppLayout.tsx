@@ -1,6 +1,6 @@
 import { ReactNode, lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { FaDiscord } from 'react-icons/fa'
-import { Home, Server, Map as MapIcon, Trophy, Settings, LogOut, Play, User, Users, Users2, Flag, Award, ShieldAlert, Newspaper, Menu } from 'lucide-react'
+import { Home, Server, Map as MapIcon, Trophy, Settings, LogOut, Play, User, Users, Users2, Flag, Award, ShieldAlert, Newspaper, Menu, Swords } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import logo from '@/app/assets/logo.png'
 import {
@@ -44,6 +44,7 @@ const BASE_NAV_SECTIONS: NavSection[] = [
             { id: 'maps', label: 'Maps', icon: MapIcon },
             { id: 'players', label: 'Players', icon: Users },
             { id: 'teams', label: 'Teams', icon: Users2 },
+            { id: 'events', label: 'Events', icon: Swords },
             { id: 'servers', label: 'Servers', icon: Server },
         ],
     },

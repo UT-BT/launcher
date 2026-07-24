@@ -57,10 +57,18 @@ import {
   type TeamsPageState,
   type TeamsPageCaches,
 } from '@/app/components/pages/TeamsPage'
+import {
+  EventsPage,
+  DEFAULT_EVENTS_STATE,
+  DEFAULT_EVENTS_CACHES,
+  type EventsPageState,
+  type EventsPageCaches,
+} from '@/app/components/pages/EventsPage'
 import { NewsPage } from '@/app/components/pages/NewsPage'
 import { DEFAULT_ADMIN_STATE, type AdminPageState } from '@/app/components/pages/admin/types'
 
 const TeamDetailsPage = lazy(() => import('@/app/components/pages/teams/TeamDetailsPage').then(m => ({ default: m.TeamDetailsPage })))
+const EventDetailPage = lazy(() => import('@/app/components/pages/EventDetailPage').then(m => ({ default: m.EventDetailPage })))
 const MapDetailPage = lazy(() => import('@/app/components/pages/MapDetailPage').then(m => ({ default: m.MapDetailPage })))
 const PlayerDetailPage = lazy(() => import('@/app/components/pages/PlayerDetailPage').then(m => ({ default: m.PlayerDetailPage })))
 const CapDetailPage = lazy(() => import('@/app/components/pages/CapDetailPage').then(m => ({ default: m.CapDetailPage })))
@@ -75,7 +83,7 @@ import { PatreonModal } from '@/app/components/modals/PatreonModal'
 import type { ServerPreset } from '@/app/utils/server-utils'
 import { useFavorites } from '@/app/hooks/useFavorites'
 import { loadPatreonMembers } from '@/app/utils/patreon'
-import { fetchAchievementDefinitions, fetchMyAchievements } from '@/app/utils/api'
+import { fetchAchievementDefinitions, fetchEvents, fetchMyAchievements } from '@/app/utils/api'
 import { writePendingHighlight, type HighlightView } from '@/app/hooks/useNewItemHighlight'
 import { isStaff } from '@/app/utils/roles'
 import { capabilities, IS_WEB } from '@/app/platform'
@@ -89,6 +97,7 @@ const CAP_IT_ALL_STATE_STORAGE_KEY = 'utbt:capItAllState:v1'
 const WORLD_RECORDS_STATE_STORAGE_KEY = 'utbt:worldRecordsState:v1'
 const ACHIEVEMENTS_STATE_STORAGE_KEY = 'utbt:achievementsState:v1'
 const TEAMS_STATE_STORAGE_KEY = 'utbt:teamsState:v1'
+const EVENTS_STATE_STORAGE_KEY = 'utbt:eventsState:v1'
 const ADMIN_STATE_STORAGE_KEY = 'utbt:adminState:v1'
 const SERVER_PRESETS_STORAGE_KEY = 'utbt:serverPresets:v1'
 const SERVER_FAVORITES_STORAGE_KEY = 'utbt:serverFavorites:v2'
@@ -103,6 +112,12 @@ interface BadgeInfo {
 const BADGE_STORAGE_KEYS: Record<string, string> = {
   'maps': 'utbt:newMapsSeen:v1',
   'world-records': 'utbt:newRecordsSeen:v1',
+  'events': 'utbt:newEventsSeen:v1',
+}
+
+function parseEventStamp(value: string | null | undefined): number {
+  if (!value) return NaN
+  return Date.parse(value.includes('T') ? value : `${value.replace(' ', 'T')}Z`)
 }
 
 function readSeen(key: string): string | null {
@@ -130,6 +145,7 @@ const CAP_IT_ALL_PREF_KEYS: readonly (keyof CapItAllPageState)[] = ['pageSizePre
 const WORLD_RECORDS_PREF_KEYS: readonly (keyof WorldRecordsPageState)[] = ['columnVisibility', 'columnOrder', 'pageSizePreference', 'filtersPanelOpen']
 const ACHIEVEMENTS_PREF_KEYS: readonly (keyof AchievementsPageState)[] = []
 const TEAMS_PREF_KEYS: readonly (keyof TeamsPageState)[] = []
+const EVENTS_PREF_KEYS: readonly (keyof EventsPageState)[] = []
 const ADMIN_PREF_KEYS: readonly (keyof AdminPageState)[] = ['activeSection']
 
 function pickKeys<T extends object>(o: T, keys: readonly (keyof T)[]): Partial<T> {
@@ -229,6 +245,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
   const [achievementsCaches, setAchievementsCaches] = useState<AchievementsPageCaches>(DEFAULT_ACHIEVEMENTS_CACHES)
   const [homeCaches, setHomeCaches] = useState<HomePageCaches>(DEFAULT_HOME_CACHES)
   const [teamsCaches, setTeamsCaches] = useState<TeamsPageCaches>(DEFAULT_TEAMS_CACHES)
+  const [eventsCaches, setEventsCaches] = useState<EventsPageCaches>(DEFAULT_EVENTS_CACHES)
   const [serverPresets, setServerPresets] = useState<ServerPreset[]>(loadPersistedServerPresets)
   const [favoriteServerIds, setFavoriteServerIds] = useState<Set<string>>(loadPersistedServerFavorites)
   const achievementsInFlightRef = useRef<Promise<void> | null>(null)
@@ -324,6 +341,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
   const [seen, setSeen] = useState<Record<string, string | null>>(() => ({
     'maps': readSeen(BADGE_STORAGE_KEYS['maps']),
     'world-records': readSeen(BADGE_STORAGE_KEYS['world-records']),
+    'events': readSeen(BADGE_STORAGE_KEYS['events']),
   }))
   const seenRef = useRef(seen)
   seenRef.current = seen
@@ -333,13 +351,39 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent).detail as { maps?: BadgeInfo; worldRecords?: BadgeInfo } | undefined
-      setBadges({
+      setBadges(prev => ({
+        ...prev,
         'maps': detail?.maps ?? { count: 0, newestIso: null },
         'world-records': detail?.worldRecords ?? { count: 0, newestIso: null },
-      })
+      }))
     }
     window.addEventListener('summary-badges', handler)
     return () => window.removeEventListener('summary-badges', handler)
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    fetchEvents('')
+      .then(events => {
+        if (cancelled) return
+        const last = parseEventStamp(seenRef.current['events'])
+        const stamps = events
+          .map(event => parseEventStamp(event.created_at ?? event.signup_opens_at ?? event.starts_at))
+          .filter(Number.isFinite)
+        const newest = stamps.length > 0 ? Math.max(...stamps) : NaN
+        const count = Number.isFinite(last)
+          ? stamps.filter(stamp => stamp > last).length
+          : stamps.length
+        setBadges(prev => ({
+          ...prev,
+          'events': {
+            count,
+            newestIso: Number.isFinite(newest) ? new Date(newest).toISOString() : null,
+          },
+        }))
+      })
+      .catch(() => undefined)
+    return () => { cancelled = true }
   }, [])
 
   const badgeVisible = useCallback((view: string): boolean => {
@@ -360,8 +404,10 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
     const stamp = b.newestIso ?? new Date().toISOString()
     writeSeen(BADGE_STORAGE_KEYS[view], stamp)
     setSeen(s => ({ ...s, [view]: stamp }))
-    writePendingHighlight(view as HighlightView, last)
-    window.dispatchEvent(new CustomEvent('highlight-new', { detail: { view, since: last } }))
+    if (view === 'maps' || view === 'world-records') {
+      writePendingHighlight(view as HighlightView, last)
+      window.dispatchEvent(new CustomEvent('highlight-new', { detail: { view, since: last } }))
+    }
   }, [])
 
   const navigate = useCallback((view: string, params: NavParams = {}) => {
@@ -440,6 +486,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
   const [worldRecordsState, setWorldRecordsState] = usePageState(WORLD_RECORDS_STATE_STORAGE_KEY, DEFAULT_WORLD_RECORDS_STATE, WORLD_RECORDS_PREF_KEYS, getEntryState, updateEntryState)
   const [achievementsState, setAchievementsState] = usePageState(ACHIEVEMENTS_STATE_STORAGE_KEY, DEFAULT_ACHIEVEMENTS_STATE, ACHIEVEMENTS_PREF_KEYS, getEntryState, updateEntryState)
   const [teamsState, setTeamsState] = usePageState(TEAMS_STATE_STORAGE_KEY, DEFAULT_TEAMS_STATE, TEAMS_PREF_KEYS, getEntryState, updateEntryState)
+  const [eventsState, setEventsState] = usePageState(EVENTS_STATE_STORAGE_KEY, DEFAULT_EVENTS_STATE, EVENTS_PREF_KEYS, getEntryState, updateEntryState)
   const [adminState, setAdminState] = usePageState(ADMIN_STATE_STORAGE_KEY, DEFAULT_ADMIN_STATE, ADMIN_PREF_KEYS, getEntryState, updateEntryState)
 
   useEffect(() => {
@@ -494,6 +541,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
 
   const openMap = useCallback((name: string) => navigate('maps-detail', { mapName: name }), [navigate])
   const openTeam = useCallback((teamId: string) => navigate('team-detail', { teamId }), [navigate])
+  const openEvent = useCallback((eventSlug: string) => navigate('event-detail', { eventSlug }), [navigate])
   const exitTeamsToGallery = useCallback(() => {
     setTeamsCaches(prev => ({ ...prev, loaded: false }))
     navigate('teams')
@@ -663,6 +711,23 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
           teamId={entry.params.teamId!}
           userProfile={userProfile}
           onExitToGallery={exitTeamsToGallery}
+        />
+      case 'events':
+        return <EventsPage
+          userProfile={userProfile}
+          state={eventsState}
+          onStateChange={setEventsState}
+          caches={eventsCaches}
+          onCachesChange={setEventsCaches}
+          onEventSelect={openEvent}
+        />
+      case 'event-detail':
+        return <EventDetailPage
+          key={entry.id}
+          eventSlug={entry.params.eventSlug!}
+          userProfile={userProfile}
+          initialTab={entry.params.eventTab}
+          onBack={() => navigate('events')}
         />
       case 'admin':
         return <AdminPage
