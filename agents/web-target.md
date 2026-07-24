@@ -9,9 +9,12 @@ provides: "the web build target: platform layer, capability gates, per-bridge we
 not_here:
   - "IPC channel contract → lib/conveyor/README.md"
   - "build commands reference → agents/build.md"
-sections: [overview, platform-layer, capability-gates, web-auth, anonymous-browsing, shareable-urls, responsive-layout, performance, build, hosting-note]
-last_verified: 2026-07-23
+sections: [overview, platform-layer, capability-gates, web-auth, anonymous-browsing, shareable-urls, responsive-layout, performance, build, seo-and-link-previews, hosting-note]
+last_verified: 2026-07-24
 verify_against:
+  - app/public/route-contract.json
+  - app/components/navigation/useDocumentMeta.ts
+  - app/components/navigation/titles.ts
   - app/platform/index.ts
   - app/platform/capabilities.ts
   - app/platform/auth.ts
@@ -208,8 +211,45 @@ or `renderer-web.tsx` based on `__WEB_TARGET__`; Rollup drops the unused branch
 per target. One `app/index.html` serves both. `electron-builder.yml` excludes
 `dist-web/**` and `vite.config.web.ts` from the packaged app.
 
+## SEO and link previews
+
+Crawlers — and Discord's unfurler in particular — never run JavaScript, so a
+client-rendered `<head>` is invisible to them. The deployed site therefore
+serves each HTML document with per-URL metadata already injected, and the build
+ships the static half of that contract:
+
+- **`app/public/`** (web only — `electron.vite.config.ts` sets
+  `publicDir: false` so none of it reaches the desktop artifact): favicons,
+  `apple-touch-icon`, maskable icon, `site.webmanifest`, `robots.txt`,
+  `og-default.png` (the 1200x630 card every link falls back to), and
+  `route-contract.json`.
+- **`route-contract.json`** is the path→entity table, generated from the same
+  route list as `routes.ts`, shipped in the build so a frontend deploy keeps the
+  per-URL metadata in sync with no cross-repo edit.
+  `routes.contract.test.ts` fails the build if the two drift.
+- **`vite.config.web.ts`** carries a `transformIndexHtml` plugin that grafts the
+  icon links and a default tag block onto the head, bracketed by
+  `<!--utbt-head-start-->` / `<!--utbt-head-end-->`. The deployed site replaces
+  everything between those markers per URL, so leave them in place.
+  `app/index.html` stays untouched and shared — the plugin lifts the shell's
+  `<title>`, `description` and `theme-color` out so the document never carries a
+  duplicate.
+
+Client-side, `useDocumentMeta` (called from `Main.tsx`) keeps the tab title and
+`<link rel="canonical">` in step with navigation, and detail pages call
+`useDocumentTitle` to refine the title once their payload lands. `og:*` is
+deliberately **not** updated client-side: crawlers never see it, so it would be
+bytes for nothing.
+
+`VITE_SITE_ORIGIN` (default `https://utbt.net`) sets the origin baked into the
+default canonical and image URLs.
+
 ## Hosting note
 
-The web build is a SPA. Any future static host must rewrite unknown paths to
-`/index.html` (Vite dev/preview already do this). Hosting/deploy is not wired
-up in this repo.
+The web build is a SPA: unknown paths must resolve to the app rather than 404
+(Vite dev/preview already do this locally). In production the deployment fills
+the marked `<head>` region per URL and falls back to the plain
+`dist-web/index.html` when that is unavailable — so **never remove the
+`<!--utbt-head-*-->` markers**. How that is served, and the cutover steps, live
+outside this repo. `.github/workflows/web.yml` builds `dist-web/` and publishes
+it.

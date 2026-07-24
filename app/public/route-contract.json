@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "routes": [
+    { "path": "/", "view": "home", "kind": "home" },
+    { "path": "/servers", "view": "servers", "kind": "list.servers" },
+    { "path": "/maps", "view": "maps", "kind": "list.maps" },
+    { "path": "/maps/:mapName", "view": "maps-detail", "kind": "map", "param": "mapName" },
+    { "path": "/players", "view": "players", "kind": "list.players" },
+    { "path": "/players/:playerId", "view": "player-detail", "kind": "player", "param": "playerId" },
+    { "path": "/teams", "view": "teams", "kind": "list.teams" },
+    { "path": "/teams/:teamId", "view": "team-detail", "kind": "team", "param": "teamId" },
+    { "path": "/world-records", "view": "world-records", "kind": "list.world-records" },
+    { "path": "/cap-it-all", "view": "cap-it-all", "kind": "list.cap-it-all" },
+    { "path": "/caps/:capId", "view": "cap-detail", "kind": "cap", "param": "capId" },
+    { "path": "/team-caps/:teamCapId", "view": "team-cap-detail", "kind": "team-cap", "param": "teamCapId" },
+    { "path": "/achievements", "view": "achievements", "kind": "list.achievements" },
+    { "path": "/news", "view": "news", "kind": "list.news" },
+    { "path": "/news/:newsId", "view": "news-detail", "kind": "news", "param": "newsId" },
+    { "path": "/admin", "view": "admin", "kind": "admin" }
+  ]
+}

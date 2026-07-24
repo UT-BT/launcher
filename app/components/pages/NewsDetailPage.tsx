@@ -4,6 +4,8 @@ import { useAsync } from '@/app/hooks/useAsync'
 import { useRefreshCooldown } from '@/app/hooks/useRefreshCooldown'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
 import { useNavScrollRestore } from '@/app/components/navigation/useNavScrollRestore'
+import { useDocumentTitle } from '@/app/components/navigation/useDocumentMeta'
+import { SITE_NAME } from '@/app/components/navigation/titles'
 import { MarkdownBody } from '@/app/components/shared/MarkdownBody'
 import { CategoryChip } from '@/app/components/pages/home/news/NewsCard'
 import { formatAddedDate } from '@/app/utils/format'
@@ -31,6 +33,8 @@ export function NewsDetailPage({ newsId, userProfile }: NewsDetailPageProps) {
         [accessToken, newsId, refreshKey],
         { enabled: !!newsId, errorMessage: 'Failed to load this news item.' },
     )
+
+    useDocumentTitle(data?.article?.title, SITE_NAME)
 
     const onScroll = useNavScrollRestore(scrollRef, !loading && !!data)
 

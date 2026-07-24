@@ -1,6 +1,8 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { useNavState } from '@/app/components/navigation/useNavState'
 import { useNavScrollRestore } from '@/app/components/navigation/useNavScrollRestore'
+import { useDocumentTitle } from '@/app/components/navigation/useDocumentMeta'
+import { SITE_NAME } from '@/app/components/navigation/titles'
 import {
     fetchUserSummary,
     fetchUserActivity,
@@ -59,6 +61,8 @@ export function PlayerDetailPage({
         { enabled: true, errorMessage: 'Failed to load player data.' },
     )
     const summary = summaryData ?? null
+
+    useDocumentTitle(summary?.profile?.alias, SITE_NAME)
 
     useRegisterPageRefresh({
         onRefresh: () => refreshCooldown.trigger(() => setRefreshKey(k => k + 1)),
