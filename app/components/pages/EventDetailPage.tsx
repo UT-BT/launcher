@@ -13,8 +13,9 @@ import { EventStatusBadge, formatEventDate, formatEventDateTime, formatTeamSize 
 import { EventTeamsList } from './events/EventTeamsList'
 import { EventLfpList } from './events/EventLfpList'
 import { SignupPanel } from './events/SignupPanel'
+import { ManagePanel } from './events/ManagePanel'
 
-export type EventTab = 'info' | 'teams' | 'players' | 'signup'
+export type EventTab = 'info' | 'teams' | 'players' | 'signup' | 'manage'
 
 interface EventDetailPageProps {
     eventSlug: string
@@ -23,12 +24,16 @@ interface EventDetailPageProps {
     onBack: () => void
 }
 
-const TABS: { id: EventTab; label: string }[] = [
+const BASE_TABS: { id: EventTab; label: string }[] = [
     { id: 'info', label: 'Info' },
     { id: 'teams', label: 'Teams' },
     { id: 'players', label: 'Looking for Partner' },
     { id: 'signup', label: 'Signup' },
 ]
+
+const MANAGE_TAB: { id: EventTab; label: string } = { id: 'manage', label: 'Manage' }
+
+const TABS = [...BASE_TABS, MANAGE_TAB]
 
 export function EventDetailPage({ eventSlug, userProfile, initialTab, onBack }: EventDetailPageProps) {
     const accessToken = userProfile?.accessToken
@@ -111,6 +116,9 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onBack }: 
     const dates = [formatEventDate(event.starts_at), formatEventDate(event.ends_at)].filter(Boolean)
     const signupCloses = formatEventDateTime(event.signup_closes_at)
     const signupOpens = formatEventDateTime(event.signup_opens_at)
+    const canManage = !!my?.can_manage
+    const visibleTabs = canManage ? TABS : BASE_TABS
+    const activeTab = tab === 'manage' && !canManage ? 'info' : tab
 
     return (
         <div className="h-full flex flex-col overflow-hidden space-y-4 animate-in fade-in slide-in-from-bottom-0 duration-500">
@@ -136,7 +144,7 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onBack }: 
                 {error && <ErrorBanner message={error} />}
 
                 <div className="flex items-center gap-1 border-b border-white/10 overflow-x-auto">
-                    {TABS.map(t => {
+                    {visibleTabs.map(t => {
                         const inviteCount = t.id === 'signup' ? (my?.invitations?.length ?? 0) : 0
                         const signupCallout = t.id === 'signup' && event.signups_open && !my?.team
                         return (
@@ -145,7 +153,7 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onBack }: 
                                 onClick={() => setTab(t.id)}
                                 className={cn(
                                     'flex items-center gap-1.5 px-3 py-2 text-sm font-medium whitespace-nowrap border-b-2 -mb-px transition-colors cursor-pointer',
-                                    tab === t.id
+                                    activeTab === t.id
                                         ? 'border-accent-400 text-white'
                                         : signupCallout
                                             ? 'border-transparent text-accent-300 hover:text-accent-200'
@@ -157,7 +165,7 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onBack }: 
                                     <span className="min-w-4 h-4 px-1 inline-flex items-center justify-center rounded-full bg-accent-500 text-[10px] font-bold text-white leading-none">
                                         {inviteCount}
                                     </span>
-                                ) : signupCallout && tab !== t.id ? (
+                                ) : signupCallout && activeTab !== t.id ? (
                                     <span className="relative flex size-1.5">
                                         <span className="absolute inline-flex h-full w-full rounded-full bg-accent-400 opacity-75 animate-ping" />
                                         <span className="relative inline-flex size-1.5 rounded-full bg-accent-400" />
@@ -170,7 +178,7 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onBack }: 
             </div>
 
             <div className="flex-1 min-h-0 overflow-auto px-0.5 pb-2">
-                {tab === 'info' && (
+                {activeTab === 'info' && (
                     <div className="space-y-6 max-w-3xl">
                         {event.summary && <p className="text-sm text-foreground">{event.summary}</p>}
                         {event.description ? (
@@ -186,9 +194,9 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onBack }: 
                         )}
                     </div>
                 )}
-                {tab === 'teams' && <EventTeamsList teams={teams} teamSize={event.team_size} loading={loading} />}
-                {tab === 'players' && <EventLfpList entries={lfp} loading={loading} />}
-                {tab === 'signup' && (
+                {activeTab === 'teams' && <EventTeamsList teams={teams} teamSize={event.team_size} loading={loading} />}
+                {activeTab === 'players' && <EventLfpList entries={lfp} loading={loading} />}
+                {activeTab === 'signup' && (
                     <div className="max-w-2xl">
                         <SignupPanel
                             accessToken={accessToken}
@@ -196,6 +204,17 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onBack }: 
                             event={event}
                             my={my}
                             myLoading={myLoading}
+                            onRefresh={refresh}
+                        />
+                    </div>
+                )}
+                {activeTab === 'manage' && canManage && accessToken && (
+                    <div className="max-w-3xl">
+                        <ManagePanel
+                            accessToken={accessToken}
+                            slug={eventSlug}
+                            event={event}
+                            lfp={lfp}
                             onRefresh={refresh}
                         />
                     </div>

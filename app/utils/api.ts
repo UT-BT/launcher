@@ -3602,6 +3602,7 @@ export interface MyEventStatus {
     invitations: EventTeam[]
     lfp: EventLfpEntry | null
     volunteer: EventVolunteer | null
+    can_manage?: boolean
 }
 
 export interface EventSignupFields {
@@ -3689,4 +3690,136 @@ export async function setEventVolunteer(accessToken: string, slug: string, input
 
 export async function deleteEventVolunteer(accessToken: string, slug: string): Promise<{ deleted: boolean }> {
     return apiGet(`/tournaments/${encodeURIComponent(slug)}/volunteer`, { token: accessToken, method: 'DELETE' })
+}
+
+export interface EventManager {
+    user: string
+    alias: string | null
+    flag: string | null
+    granted_by: string | null
+    granted_by_alias: string | null
+    created_at: string | null
+}
+
+export interface AdminEventInput {
+    slug?: string
+    name?: string
+    summary?: string | null
+    description?: string | null
+    rules?: string | null
+    team_size?: number
+    bracket_type?: string | null
+    status?: EventStatus
+    signup_opens_at?: string | null
+    signup_closes_at?: string | null
+    starts_at?: string | null
+    ends_at?: string | null
+    max_teams?: number | null
+}
+
+export interface EventVolunteerRow extends EventVolunteer {
+    user: string
+    alias: string | null
+    flag: string | null
+    created_at: string | null
+}
+
+export interface EventAuditEntry {
+    id: string
+    action: string
+    team_id: string | null
+    actor: string | null
+    actor_alias: string | null
+    target: string | null
+    target_alias: string | null
+    created_at: string | null
+}
+
+export interface AdminRoleRow {
+    user: string
+    alias: string | null
+    flag: string | null
+    role: number
+    granted_by: string | null
+    granted_by_alias: string | null
+    note: string | null
+    granted_at: string | null
+}
+
+export async function createEvent(accessToken: string, input: AdminEventInput): Promise<EventDetail> {
+    const data = await apiGet<{ tournament: EventDetail }>('/tournaments/', { token: accessToken, method: 'POST', body: input })
+    return data.tournament
+}
+
+export async function updateEvent(accessToken: string, slug: string, input: AdminEventInput): Promise<EventDetail> {
+    const data = await apiGet<{ tournament: EventDetail }>(`/tournaments/${encodeURIComponent(slug)}`, { token: accessToken, method: 'PATCH', body: input })
+    return data.tournament
+}
+
+export async function deleteEvent(accessToken: string, slug: string): Promise<{ deleted: boolean }> {
+    return apiGet(`/tournaments/${encodeURIComponent(slug)}`, { token: accessToken, method: 'DELETE' })
+}
+
+export async function fetchEventManagers(accessToken: string, slug: string, signal?: AbortSignal): Promise<EventManager[]> {
+    const data = await apiGet<{ items: EventManager[] }>(`/tournaments/${encodeURIComponent(slug)}/managers`, { token: accessToken, signal })
+    return data.items ?? []
+}
+
+export async function grantEventManager(accessToken: string, slug: string, userId: string): Promise<EventManager[]> {
+    const data = await apiGet<{ items: EventManager[] }>(`/tournaments/${encodeURIComponent(slug)}/managers/${encodeURIComponent(userId)}`, { token: accessToken, method: 'PUT' })
+    return data.items ?? []
+}
+
+export async function revokeEventManager(accessToken: string, slug: string, userId: string): Promise<EventManager[]> {
+    const data = await apiGet<{ items: EventManager[] }>(`/tournaments/${encodeURIComponent(slug)}/managers/${encodeURIComponent(userId)}`, { token: accessToken, method: 'DELETE' })
+    return data.items ?? []
+}
+
+export async function fetchEventAdminTeams(accessToken: string, slug: string, signal?: AbortSignal): Promise<EventTeam[]> {
+    const data = await apiGet<{ items: EventTeam[] }>(`/tournaments/${encodeURIComponent(slug)}/admin/teams`, { token: accessToken, signal })
+    return data.items ?? []
+}
+
+export async function updateEventAdminTeam(accessToken: string, slug: string, teamId: string, input: { name?: string; status?: EventTeamStatus; seed?: number | null }): Promise<EventTeam> {
+    const data = await apiGet<{ team: EventTeam }>(`/tournaments/${encodeURIComponent(slug)}/admin/teams/${encodeURIComponent(teamId)}`, { token: accessToken, method: 'PATCH', body: input })
+    return data.team
+}
+
+export async function deleteEventAdminTeam(accessToken: string, slug: string, teamId: string): Promise<{ id: string; deleted: boolean }> {
+    return apiGet(`/tournaments/${encodeURIComponent(slug)}/admin/teams/${encodeURIComponent(teamId)}`, { token: accessToken, method: 'DELETE' })
+}
+
+export async function kickEventTeamMember(accessToken: string, slug: string, teamId: string, userId: string): Promise<EventTeam> {
+    const data = await apiGet<{ team: EventTeam }>(`/tournaments/${encodeURIComponent(slug)}/admin/teams/${encodeURIComponent(teamId)}/members/${encodeURIComponent(userId)}`, { token: accessToken, method: 'DELETE' })
+    return data.team
+}
+
+export async function fetchEventVolunteers(accessToken: string, slug: string, signal?: AbortSignal): Promise<EventVolunteerRow[]> {
+    const data = await apiGet<{ items: EventVolunteerRow[] }>(`/tournaments/${encodeURIComponent(slug)}/admin/volunteers`, { token: accessToken, signal })
+    return data.items ?? []
+}
+
+export async function removeEventLfp(accessToken: string, slug: string, userId: string): Promise<{ removed: boolean }> {
+    return apiGet(`/tournaments/${encodeURIComponent(slug)}/admin/lfp/${encodeURIComponent(userId)}`, { token: accessToken, method: 'DELETE' })
+}
+
+export async function fetchEventAuditLog(accessToken: string, slug: string, params: { limit?: number; offset?: number } = {}, signal?: AbortSignal): Promise<{ items: EventAuditEntry[]; count: number }> {
+    const search = new URLSearchParams()
+    if (params.limit != null) search.set('limit', String(params.limit))
+    if (params.offset != null) search.set('offset', String(params.offset))
+    const qs = search.toString()
+    return apiGet(`/tournaments/${encodeURIComponent(slug)}/admin/audit${qs ? `?${qs}` : ''}`, { token: accessToken, signal })
+}
+
+export async function fetchAdminRoles(accessToken: string, signal?: AbortSignal): Promise<AdminRoleRow[]> {
+    const data = await apiGet<{ items: AdminRoleRow[] }>('/admin/roles', { token: accessToken, signal })
+    return data.items ?? []
+}
+
+export async function setUserRole(accessToken: string, userId: string, role: number, note?: string): Promise<{ ok: boolean; effective_role: number }> {
+    return apiGet(`/admin/roles/${encodeURIComponent(userId)}`, { token: accessToken, method: 'PUT', body: { role, note } })
+}
+
+export async function revokeUserRole(accessToken: string, userId: string): Promise<{ ok: boolean; effective_role: number }> {
+    return apiGet(`/admin/roles/${encodeURIComponent(userId)}`, { token: accessToken, method: 'DELETE' })
 }
