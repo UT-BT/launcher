@@ -15,6 +15,11 @@ export function viewToPath(view: string, params: NavParams): string {
         case 'player-detail': return `/players/${encodeURIComponent(String(params.playerId ?? ''))}`
         case 'teams': return '/teams'
         case 'team-detail': return `/teams/${encodeURIComponent(params.teamId ?? '')}`
+        case 'events': return '/events'
+        case 'event-detail': {
+            const base = `/events/${encodeURIComponent(params.eventSlug ?? '')}`
+            return params.eventTab ? `${base}?tab=${encodeURIComponent(params.eventTab)}` : base
+        }
         case 'world-records': return '/world-records'
         case 'cap-it-all': return '/cap-it-all'
         case 'cap-detail': return `/caps/${encodeURIComponent(params.capId ?? '')}`
@@ -45,6 +50,13 @@ export function pathToNav(pathname: string, search: string): RouteTarget {
         case 'teams':
             if (second) return { view: 'team-detail', params: { teamId: second } }
             return { view: 'teams', params: {} }
+        case 'events': {
+            if (second) {
+                const tab = query.get('tab')
+                return { view: 'event-detail', params: { eventSlug: second, ...(tab ? { eventTab: tab } : {}) } }
+            }
+            return { view: 'events', params: {} }
+        }
         case 'world-records': return { view: 'world-records', params: {} }
         case 'cap-it-all': return { view: 'cap-it-all', params: {} }
         case 'caps':
