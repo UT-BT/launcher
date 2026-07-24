@@ -3547,6 +3547,7 @@ export interface EventSummary {
     ends_at: string | null
     max_teams: number | null
     team_count: number
+    registered_team_count: number
     created_at: string | null
 }
 

@@ -134,7 +134,7 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onBack }: 
                     <EventStatusBadge event={event} />
                 </div>
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                    <span className="inline-flex items-center gap-1.5"><Users2 className="size-3.5" /> {formatTeamSize(event.team_size)} · {event.team_count} team{event.team_count === 1 ? '' : 's'} signed up</span>
+                    <span className="inline-flex items-center gap-1.5"><Users2 className="size-3.5" /> {formatTeamSize(event.team_size)} · {event.team_count} team{event.team_count === 1 ? '' : 's'} signed up{event.max_teams != null && ` · ${event.registered_team_count}/${event.max_teams} spots filled`}</span>
                     {dates.length > 0 && (
                         <span className="inline-flex items-center gap-1.5"><CalendarDays className="size-3.5" /> {dates.join(' – ')}</span>
                     )}

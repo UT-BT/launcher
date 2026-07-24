@@ -28,6 +28,15 @@ function TeamStatusLine({ team, teamSize }: { team: EventTeam; teamSize: number 
     if (team.status === 'registered') {
         return <p className="text-xs text-emerald-300">Your team is registered. See you in the cup!</p>
     }
+    if (team.status === 'waitlisted') {
+        return <p className="text-xs text-sky-300">The event is full — your team is on the waitlist and moves in if a spot frees up.</p>
+    }
+    if (team.status === 'withdrawn') {
+        return <p className="text-xs text-muted-foreground">Your team has been withdrawn from this event.</p>
+    }
+    if (team.status === 'disqualified') {
+        return <p className="text-xs text-red-300">Your team has been disqualified from this event.</p>
+    }
     return (
         <p className="text-xs text-amber-300">
             Roster incomplete ({team.member_count}/{teamSize}) — your team counts once every spot is filled.
@@ -227,6 +236,11 @@ export function SignupPanel({ accessToken, userProfile, event, my, myLoading, on
             {!team && invitations.length === 0 && (
                 <SectionCard title="Register a team" subtitle={`Create your ${event.team_size > 1 ? `${event.team_size}-player` : 'solo'} team for this event.`}>
                     <div className="space-y-3">
+                        {event.max_teams != null && event.registered_team_count >= event.max_teams && (
+                            <p className="p-3 bg-sky-500/10 border border-sky-500/30 rounded-lg text-sky-300 text-xs">
+                                This event is full ({event.registered_team_count}/{event.max_teams} teams). New teams that complete their roster join the waitlist.
+                            </p>
+                        )}
                         <div className="space-y-1.5">
                             <label className="text-xs font-medium text-muted-foreground">Team name</label>
                             <input
