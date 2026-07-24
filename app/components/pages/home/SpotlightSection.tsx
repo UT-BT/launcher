@@ -22,7 +22,7 @@ export function SpotlightSection({ title, accent, actionLabel, onAction, classNa
             <header className="flex items-center justify-between gap-3 mb-3 pr-1 h-8 shrink-0">
                 <h2 className="flex items-center gap-2.5 min-w-0">
                     <span className={cn('h-5 w-1 rounded-full shrink-0', accent.tick)} aria-hidden />
-                    <span className="text-base font-black uppercase tracking-[0.14em] leading-none truncate drop-shadow-sm text-foreground">
+                    <span className="text-sm sm:text-base font-black uppercase tracking-[0.08em] sm:tracking-[0.14em] leading-none truncate drop-shadow-sm text-foreground">
                         {title}
                     </span>
                 </h2>

@@ -127,7 +127,7 @@ export function PersonalBestsCard({
     const {
         page, pageSize, items, total, totalPages, loading, error, setPage, setPageSize,
     } = usePaginatedQuery<UserPersonalBestRow>({
-        enabled: !!accessToken,
+        enabled: true,
         errorMessage: 'Failed to load personal bests.',
         deps: [accessToken, userId, query, capFilter, favoritesOnly, sortField, sortDir],
         page: pbsPage,
@@ -135,7 +135,7 @@ export function PersonalBestsCard({
         onPageChange: setPbsPage,
         onPageSizeChange: setPbsPageSize,
         fetchPage: ({ limit, offset }) =>
-            fetchPersonalBestsForUser(accessToken!, userId, {
+            fetchPersonalBestsForUser(accessToken ?? '', userId, {
                 limit, offset,
                 mapFuzzy: query || undefined,
                 capFilter,
@@ -154,6 +154,65 @@ export function PersonalBestsCard({
         }
     }
     const dir = (field: SortField): SortDirection => sortField === field ? sortDir : null
+
+    const compactRows = loading ? (
+        Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} role="listitem" className="p-3 border-b border-hairline/5 last:border-0 animate-pulse">
+                <div className="h-10 rounded bg-hairline/5" />
+            </div>
+        ))
+    ) : items.length === 0 ? (
+        <div role="listitem" className="px-4 py-12 text-center text-sm text-muted-foreground">
+            {query || capFilter !== 'all' ? 'No personal bests match the filter.' : 'No personal bests yet.'}
+        </div>
+    ) : items.map(pb => {
+        const medalIcon = getMedalIcon(pb.medal.toLowerCase())
+        return (
+            <div
+                key={pb.id}
+                role="listitem"
+                className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 p-3 border-b border-hairline/5 last:border-0 cursor-pointer"
+                onClick={() => onMapSelect?.(pb.mapName)}
+            >
+                <div className="min-w-0 space-y-1">
+                    <div className="flex items-center gap-2 min-w-0">
+                        {onToggleFavorite && (
+                            <FavoriteStar
+                                name={pb.mapName}
+                                isFavorited={favoriteMapNames.has(pb.mapName)}
+                                onToggle={onToggleFavorite}
+                                size="sm"
+                                disabled={!canEditFavorites}
+                            />
+                        )}
+                        <span className="text-sm font-semibold text-foreground truncate min-w-0">
+                            {displayMapName(pb.mapName)}
+                        </span>
+                    </div>
+                    <div className="flex items-center gap-2">{renderPbStatus(pb)}</div>
+                </div>
+                <div className="flex flex-col items-end gap-0.5">
+                    <span className="inline-flex items-center gap-1.5">
+                        {medalIcon && (
+                            <img src={medalIcon} alt={pb.medal} className="size-4 inline-block shrink-0 object-contain max-w-none" />
+                        )}
+                        <CapTimeLink
+                            capId={pb.isTeam ? undefined : pb.id}
+                            teamCapId={pb.isTeam ? pb.teamCapId ?? undefined : undefined}
+                            seconds={pb.time}
+                            className={cn(
+                                'text-sm font-mono tabular-nums font-bold',
+                                pb.medal === 'World Record' ? 'text-blue-200' : 'text-foreground',
+                            )}
+                        />
+                    </span>
+                    <span className="text-xs text-muted-foreground tabular-nums">
+                        {pb.added ? formatAddedDate(pb.added) : '—'}
+                    </span>
+                </div>
+            </div>
+        )
+    })
 
     return (
         <div className="bg-card/30 border border-hairline/5 rounded-xl flex flex-col overflow-hidden">
@@ -208,8 +267,14 @@ export function PersonalBestsCard({
             )}
 
             <DataTableShell
-                className="!flex-none !min-h-0 !overflow-visible !rounded-none !border-0"
-                responsive={{ columns: responsiveColumns, onResolve: handleResolve }}
+                className="!flex-none !min-h-0 !rounded-none !border-0"
+                responsive={{
+                    columns: responsiveColumns,
+                    nameFloorRem: 14,
+                    onResolve: handleResolve,
+                    compactContent: compactRows,
+                    compactAriaLabel: 'Personal bests',
+                }}
             >
                 <DataTableHeaderRow>
                     {isVisible('map') && <DataTableHeaderCell sortable sortDirection={dir('map')} onSort={() => handleSort('map')}>Map</DataTableHeaderCell>}

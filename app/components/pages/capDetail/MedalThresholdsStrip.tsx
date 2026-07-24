@@ -27,7 +27,7 @@ function Chip({ icon, label, threshold, delta }: {
     return (
         <div className="bg-hairline/[0.02] border border-hairline/5 rounded-lg px-2 py-2.5 flex flex-col items-center text-center gap-1 h-full">
             {icon && <img src={icon} alt={label} className="size-5 object-contain" />}
-            <div className="text-[10px] uppercase tracking-wider text-muted-foreground truncate max-w-full">{label}</div>
+            <div className="text-[10px] uppercase tracking-wider text-muted-foreground leading-tight max-w-full">{label}</div>
             <div className="text-sm font-mono tabular-nums text-foreground">{formatCapTime(threshold)}</div>
             <div className={cn(
                 'text-xs font-mono tabular-nums font-semibold',

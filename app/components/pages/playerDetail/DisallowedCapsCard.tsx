@@ -82,7 +82,7 @@ export function DisallowedCapsCard({ accessToken, userId, onMapSelect, tabsSlot 
     const {
         page, pageSize, items, total, totalPages, loading, error, setPage, setPageSize,
     } = usePaginatedQuery<UserCapRow>({
-        enabled: !!accessToken,
+        enabled: true,
         errorMessage: 'Failed to load disallowed caps.',
         deps: [accessToken, userId, query, sortField, sortDir],
         page: capsPage,
@@ -90,7 +90,7 @@ export function DisallowedCapsCard({ accessToken, userId, onMapSelect, tabsSlot 
         onPageChange: setCapsPage,
         onPageSizeChange: setCapsPageSize,
         fetchPage: ({ limit, offset }) =>
-            fetchCapsForUser(accessToken!, userId, {
+            fetchCapsForUser(accessToken ?? '', userId, {
                 limit, offset,
                 mapFuzzy: query || undefined,
                 capFilter: 'disallowed',
@@ -145,7 +145,7 @@ export function DisallowedCapsCard({ accessToken, userId, onMapSelect, tabsSlot 
 
             <DataTableShell
                 className="!flex-none !min-h-0 !overflow-visible !rounded-none !border-0"
-                responsive={{ columns: responsiveColumns, onResolve: handleResolve }}
+                responsive={{ columns: responsiveColumns, nameFloorRem: 14, onResolve: handleResolve }}
             >
                 <DataTableHeaderRow>
                     {isVisible('map') && <DataTableHeaderCell width="32%" sortable sortDirection={dir('map')} onSort={() => handleSort('map')}>Map</DataTableHeaderCell>}

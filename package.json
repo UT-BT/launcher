@@ -12,13 +12,22 @@
     "predev": "node scripts/ensure-electron.mjs",
     "dev": "cross-env ELECTRON_DISABLE_SANDBOX=1 electron-vite dev -w",
     "format": "prettier --write .",
-    "lint": "eslint . --ext .ts,.tsx --fix",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "start": "electron-vite preview",
     "test": "vitest run",
     "postinstall": "electron-builder install-app-deps",
     "vite:build:app": "electron-vite build",
     "electron:build:win": "electron-builder --win --publish never",
-    "build:win": "run-s vite:build:app electron:build:win"
+    "build:win": "run-s vite:build:app electron:build:win",
+    "dev:web": "vite --config vite.config.web.ts",
+    "build:web": "vite build --config vite.config.web.ts",
+    "preview:web": "vite preview --config vite.config.web.ts",
+    "typecheck:web": "tsc --noEmit -p tsconfig.web.json",
+    "test:e2e": "playwright test",
+    "test:e2e:live": "cross-env UTBT_LIVE_API=1 playwright test --grep @live",
+    "check:bundle": "node scripts/check-web-bundle.mjs",
+    "quality:web": "npm-run-all typecheck:web lint test build:web check:bundle"
   },
   "repository": {
     "type": "git",
@@ -48,9 +57,11 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.12.1",
     "@electron-toolkit/eslint-config-prettier": "^3.0.0",
     "@electron-toolkit/tsconfig": "^1.0.1",
     "@eslint/js": "^9.39.4",
+    "@playwright/test": "^1.61.1",
     "@rushstack/eslint-patch": "^1.16.1",
     "@tailwindcss/vite": "^4.3.1",
     "@types/chokidar": "^2.1.7",

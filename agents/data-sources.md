@@ -12,7 +12,7 @@ not_here:
   - "how UI state persists in localStorage → state-patterns.md"
   - "the procedure to wire a new endpoint into the UI → skill: consume-api-data"
 sections: [backend-api, errors, admin-api, cap-detail-page-endpoints, world-records-page-endpoints, team-maps-and-team-runs, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites]
-last_verified: 2026-07-21
+last_verified: 2026-07-22
 verify_against: [app/utils/api.ts, app/utils/patreon.ts, app/utils/server-utils.ts]
 ---
 
@@ -21,7 +21,7 @@ verify_against: [app/utils/api.ts, app/utils/patreon.ts, app/utils/server-utils.
 ## Backend API
 
 The launcher reads its data over HTTPS from `https://api.utbt.net` (prod) or
-`http://localhost:5000` (dev). All HTTP helpers live in `app/utils/api.ts` —
+`http://localhost` (dev; override with `VITE_API_BASE_URL`). All HTTP helpers live in `app/utils/api.ts` —
 don't hand-roll `fetch` calls in components.
 
 Responses use a `{ success, data }` envelope; the helpers unwrap it for you.
@@ -49,7 +49,13 @@ full loop).
 | Teams | `createTeam`, `fetchTeams`, `fetchTeam`, `updateTeam`, `disbandTeam`, `transferTeamOwnership`, `fetchTeamMembers`, `inviteToTeam`, `joinTeam`, `acceptTeamInvite`, `declineTeamInvite`, `leaveTeam`, `denyTeamMember`, `unblockTeamMember`, `kickTeamMember` (optional `block`), `setTeamMemberRole`, `setTeamMemberNumber`, `fetchTeamActivity`, `fetchTeamAudit`, `fetchLineups`, `createLineup`, `updateLineup`, `deleteLineup`, `fetchMyTeam`, `setMyTagHidden`, `fetchMyInvitations`, `uploadTeamAvatar`, `deleteTeamAvatar`, `teamAvatarUrl` (clans + lineups; mutations return the fresh `TeamDetail`; validation failures surface the server's message — see [Errors](#errors)) |
 | Admin (staff-only) | the moderator/admin dashboard slice — see [Admin API](#admin-api) |
 
-Most fetchers take `accessToken` first (Discord OAuth bearer).
+Most fetchers take `accessToken` first (Discord OAuth bearer). On the web build,
+logged-out pages pass the `ANONYMOUS_TOKEN` sentinel (exported from `api.ts`)
+instead — `apiRequest` strips it so the request goes out with no Authorization
+header, and the API's public read endpoints accept that. Never send
+`ANONYMOUS_TOKEN` into a mutation or "my X" fetcher; those require a real token.
+The web login flow itself uses `POST /auth/discord/token` + `/auth/discord/refresh`
+(see `agents/web-target.md` for the full contract).
 
 ### Errors
 
@@ -307,9 +313,11 @@ Don't bypass this dance — favorites toggles must go through `Main.tsx`'s
 
 Patreon supporters get a heart next to their name everywhere `PlayerInfo` renders
 (and on the profile hero). The data comes from the gateway `/patreon` endpoint
-via `window.conveyor.game.fetchPatrons()`, which returns Discord user ids bucketed
+via `fetchGatewayPatrons()` in `app/platform/gateway.ts` (IPC on desktop, direct
+gateway fetch on web — same shape either way), returning Discord user ids bucketed
 by tier — the same id the launcher uses as `userId`, so matching is a direct
-lookup.
+lookup. The server list uses the same seam (`fetchGatewayServers()` → gateway
+`/server-info`).
 
 `app/utils/patreon.ts` owns it: a module-level store (`useSyncExternalStore`) so
 all `PlayerInfo` instances share one fetch. `loadPatreonMembers()` is

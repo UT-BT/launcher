@@ -7,8 +7,8 @@ keywords: [npm, dev, lint, tsc, build, node, pre-commit, typecheck]
 provides: "the dev/build/lint/typecheck commands + the pre-commit gate"
 not_here: ["release / versioning process → CONTRIBUTING.md"]
 sections: [commands, requirements, pre-commit-checklist]
-last_verified: 2026-06-16
-verify_against: [package.json, tsconfig.web.json]
+last_verified: 2026-07-22
+verify_against: [package.json, tsconfig.web.json, vite.config.web.ts]
 ---
 
 # Build / dev / test
@@ -18,9 +18,12 @@ verify_against: [package.json, tsconfig.web.json]
 | Command | Purpose |
 |---|---|
 | `npm run dev` | Start dev server (Electron + Vite HMR). |
+| `npm run dev:web` | Start the WEB dev server (plain browser, port 5174). See `agents/web-target.md`. |
 | `npm run lint` | ESLint over `app/`, `lib/`. Auto-fix via `--fix` (already wired in). |
 | `npx tsc --noEmit -p tsconfig.web.json` | Typecheck renderer code only. Fast. Run before commits. |
 | `npm run build:win` | Production Windows build. |
+| `npm run build:web` | Static web build into `dist-web/` (gitignored, excluded from the installer). |
+| `npm run preview:web` | Serve the production web build locally. |
 
 ## Requirements
 

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { downloadMapZip } from '@/app/utils/api'
+import { saveMapZip } from '@/app/platform'
 
 export type MapDownloadState =
     | { status: 'downloading'; mapName: string }
@@ -27,7 +28,7 @@ export function useMapDownload() {
 
         try {
             const bytes = new Uint8Array(buffer)
-            const res = await window.conveyor.maps.extractToInstall(mapName, bytes)
+            const res = await saveMapZip(mapName, bytes)
             if (res.ok) {
                 setDownload({
                     status: 'success',

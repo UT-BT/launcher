@@ -3,6 +3,7 @@ import { Heart } from 'lucide-react'
 import { Modal } from '@/app/components/ui/modal'
 import { Button } from '@/app/components/ui/button'
 import { PatreonBadge, PATREON_EVENT } from '@/app/components/shared/PatreonBadge'
+import { openExternal } from '@/app/platform'
 
 const PATREON_URL = 'https://patreon.com/utbt'
 
@@ -28,7 +29,7 @@ export function PatreonModal() {
     }, [])
 
     const close = () => setIsOpen(false)
-    const openPatreon = () => window.conveyor.window.webOpenUrl(PATREON_URL)
+    const openPatreon = () => openExternal(PATREON_URL)
 
     return (
         <Modal

@@ -27,9 +27,9 @@ export function FavoriteMapsCard({
 
     useEffect(() => {
         let cancelled = false
-        if (!accessToken) return
+
         setLoading(true)
-        fetchUserFavorites(accessToken, userId)
+        fetchUserFavorites(accessToken ?? '', userId)
             .then(rows => { if (!cancelled) setFavorites(rows) })
             .finally(() => { if (!cancelled) setLoading(false) })
         return () => { cancelled = true }

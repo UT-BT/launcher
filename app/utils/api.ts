@@ -1,6 +1,7 @@
 import type { AuthConfig } from '@/lib/main/config'
+import { IS_WEB } from '@/app/platform/target'
 
-const GATEWAY_BASE_URL = 'https://gateway.utbt.net'
+export const GATEWAY_BASE_URL = (import.meta.env.VITE_GATEWAY_BASE_URL || 'https://gateway.utbt.net').replace(/\/$/, '')
 
 export function getAvatarUrl(userId: string | number): string {
     return `${GATEWAY_BASE_URL}/users/${userId}/avatar`
@@ -209,7 +210,14 @@ export interface Playtime {
 }
 
 
-const API_BASE_URL = import.meta.env.DEV ? 'http://localhost' : 'https://api.utbt.net'
+export const API_BASE_URL = (
+    import.meta.env.VITE_API_BASE_URL
+    || (import.meta.env.DEV ? 'http://localhost' : 'https://api.utbt.net')
+).replace(/\/$/, '')
+
+export function bearerHeaders(token?: string): { [key: string]: string } {
+    return token ? { Authorization: `Bearer ${token}` } : {}
+}
 
 const DEFAULT_TIMEOUT_MS = 20_000
 
@@ -237,7 +245,7 @@ export async function apiRequest(path: string, opts: ApiRequestOptions = {}): Pr
             method,
             signal: controller.signal,
             headers: {
-                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                ...bearerHeaders(token),
                 ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
                 ...headers,
             },
@@ -330,9 +338,7 @@ export async function uploadDemo(file: Blob, filename: string, accessToken: stri
 
     const response = await fetch(`${API_BASE_URL}/demos/upload`, {
         method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${accessToken}`
-        },
+        headers: bearerHeaders(accessToken),
         body: formData
     })
 
@@ -689,7 +695,7 @@ export async function verifyCapWithDemo(token: string, capId: string, file: Blob
     if (override) formData.append('override', 'true')
     const response = await fetch(`${API_BASE_URL}/admin/caps/${encodeURIComponent(capId)}/verify`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
+        headers: bearerHeaders(token),
         body: formData,
     })
     try {
@@ -1456,6 +1462,7 @@ export async function deleteNewsCategory(token: string, id: number): Promise<{ o
 }
 
 export async function logLauncherStartup(accessToken: string): Promise<void> {
+    if (IS_WEB) return
     try {
         const version = await window.conveyor.app.version()
         const osInfo = await window.conveyor.app.getOSInfo()
@@ -1463,7 +1470,7 @@ export async function logLauncherStartup(accessToken: string): Promise<void> {
         const response = await fetch(`${API_BASE_URL}/launcher/activity/`, {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${accessToken}`,
+                ...bearerHeaders(accessToken),
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
@@ -1564,9 +1571,7 @@ export async function fetchBestCaps(accessToken: string, userId: string | number
 export async function fetchMapAuthors(accessToken: string, activeOnly = true): Promise<string[]> {
     try {
         const response = await fetch(`${API_BASE_URL}/maps/authors/?active=${activeOnly}`, {
-            headers: {
-                'Authorization': `Bearer ${accessToken}`
-            }
+            headers: bearerHeaders(accessToken)
         })
 
         if (!response.ok) {
@@ -1599,9 +1604,7 @@ export async function fetchMapsCount(accessToken: string, params: MapCountParams
         usp.set('active', params.active === undefined ? 'true' : String(params.active))
 
         const response = await fetch(`${API_BASE_URL}/maps/count/?${usp.toString()}`, {
-            headers: {
-                'Authorization': `Bearer ${accessToken}`
-            }
+            headers: bearerHeaders(accessToken)
         })
 
         if (!response.ok) {
@@ -1622,9 +1625,7 @@ export async function fetchMapsCount(accessToken: string, params: MapCountParams
 export async function fetchLatestActivity(accessToken: string): Promise<LauncherActivity | null> {
     try {
         const response = await fetch(`${API_BASE_URL}/launcher/activity/latest`, {
-            headers: {
-                'Authorization': `Bearer ${accessToken}`
-            }
+            headers: bearerHeaders(accessToken)
         })
 
         if (!response.ok) {
@@ -1752,7 +1753,7 @@ export interface WorldRecordProgressionEntry {
 export async function fetchWorldRecordProgression(accessToken: string, mapName: string): Promise<WorldRecordProgressionEntry[]> {
     const url = `${API_BASE_URL}/v2/world_records/progression/${encodeURIComponent(mapName)}`
     try {
-        const res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } })
+        const res = await fetch(url, { headers: bearerHeaders(accessToken) })
         if (!res.ok) return []
         const json = await res.json()
         if (json.success && Array.isArray(json.data)) {
@@ -1767,7 +1768,7 @@ export async function fetchWorldRecordProgression(accessToken: string, mapName: 
 export async function fetchMapCapsCount(accessToken: string, mapName: string): Promise<number> {
     const url = `${API_BASE_URL}/caps/count/?map=${encodeURIComponent(mapName)}`
     try {
-        const res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } })
+        const res = await fetch(url, { headers: bearerHeaders(accessToken) })
         if (!res.ok) return 0
         const json = await res.json()
         if (json.success && json.data && typeof json.data.count === 'number') {
@@ -1782,7 +1783,7 @@ export async function fetchMapCapsCount(accessToken: string, mapName: string): P
 export async function fetchUserCapCountForMap(accessToken: string, userId: string | number, mapName: string): Promise<number> {
     const url = `${API_BASE_URL}/caps/count/?user=${encodeURIComponent(String(userId))}&map=${encodeURIComponent(mapName)}`
     try {
-        const res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } })
+        const res = await fetch(url, { headers: bearerHeaders(accessToken) })
         if (!res.ok) return 0
         const json = await res.json()
         if (json.success && json.data && typeof json.data.count === 'number') {
@@ -1799,7 +1800,7 @@ export async function fetchWorldRecordsForMaps(accessToken: string, mapNames: st
     const mapsParam = encodeURIComponent(mapNames.join(','))
     const url = `${API_BASE_URL}/v2/world_records/?maps=${mapsParam}&limit=${mapNames.length}`
     try {
-        const res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } })
+        const res = await fetch(url, { headers: bearerHeaders(accessToken) })
         if (!res.ok) return []
         const json = await res.json()
         if (json.success && Array.isArray(json.data)) return json.data as Record[]
@@ -1833,7 +1834,7 @@ export async function fetchMapLeaderboard(accessToken: string, mapName: string, 
     try {
         const params = verifiedOnly ? '?verified=true' : ''
         const res = await fetch(`${API_BASE_URL}/caps/leaderboard/map/${encodeURIComponent(mapName)}${params}`, {
-            headers: { 'Authorization': `Bearer ${accessToken}` },
+            headers: bearerHeaders(accessToken),
         })
         if (!res.ok) return []
         const json = await res.json()
@@ -1908,7 +1909,7 @@ export async function fetchTeamMapLeaderboard(
     const qs = usp.toString()
     const res = await fetch(
         `${API_BASE_URL}/caps/leaderboard/team/map/${encodeURIComponent(mapName)}${qs ? `?${qs}` : ''}`,
-        { headers: { Authorization: `Bearer ${accessToken}` }, signal: opts.signal },
+        { headers: bearerHeaders(accessToken), signal: opts.signal },
     )
     if (!res.ok) {
         throw new Error(`Failed to fetch team leaderboard: ${res.statusText} (${res.status})`)
@@ -1941,7 +1942,7 @@ export async function fetchUserTeamMapStats(
     try {
         const res = await fetch(
             `${API_BASE_URL}/caps/team/stats/${encodeURIComponent(String(userId))}/${encodeURIComponent(mapName)}`,
-            { headers: { Authorization: `Bearer ${accessToken}` } },
+            { headers: bearerHeaders(accessToken) },
         )
         if (!res.ok) return null
         const json = await res.json()
@@ -1959,7 +1960,7 @@ export async function fetchTeamRunStatus(
 ): Promise<TeamRunStatus | null> {
     try {
         const res = await fetch(`${API_BASE_URL}/caps/team_runs/${encodeURIComponent(teamRunId)}`, {
-            headers: { Authorization: `Bearer ${accessToken}` },
+            headers: bearerHeaders(accessToken),
             signal,
         })
         if (!res.ok) return null
@@ -2037,7 +2038,7 @@ export async function fetchTeamCapDetail(
 ): Promise<TeamCapDetail | null> {
     try {
         const res = await fetch(`${API_BASE_URL}/caps/team_caps/${encodeURIComponent(teamCapId)}/detail`, {
-            headers: { Authorization: `Bearer ${accessToken}` },
+            headers: bearerHeaders(accessToken),
             signal,
         })
         if (!res.ok) return null
@@ -2179,9 +2180,7 @@ export async function fetchRecordsCount(accessToken: string, addedSince?: string
     try {
         const addedSinceParam = addedSince ? `&added_since=${encodeURIComponent(addedSince)}` : ''
         const response = await fetch(`${API_BASE_URL}/v2/world_records/?count=true${addedSinceParam}`, {
-            headers: {
-                'Authorization': `Bearer ${accessToken}`
-            }
+            headers: bearerHeaders(accessToken)
         })
 
         if (!response.ok) {
@@ -2204,9 +2203,7 @@ export async function fetchTitles(accessToken: string, limit: number, offset: nu
     try {
         const userParam = userId ? `&user=${userId}` : ''
         const response = await fetch(`${API_BASE_URL}/v2/titles/?limit=${limit}&offset=${offset}${userParam}`, {
-            headers: {
-                'Authorization': `Bearer ${accessToken}`
-            }
+            headers: bearerHeaders(accessToken)
         })
 
         if (!response.ok) {
@@ -2229,9 +2226,7 @@ export async function fetchTitlesCount(accessToken: string, userId?: number): Pr
     try {
         const userParam = userId ? `&user=${userId}` : ''
         const response = await fetch(`${API_BASE_URL}/v2/titles/?count=true${userParam}`, {
-            headers: {
-                'Authorization': `Bearer ${accessToken}`
-            }
+            headers: bearerHeaders(accessToken)
         })
 
         if (!response.ok) {
@@ -2253,9 +2248,7 @@ export async function fetchTitlesCount(accessToken: string, userId?: number): Pr
 export async function fetchRecentPlaytime(accessToken: string, limit: number, offset: number): Promise<Playtime[]> {
     try {
         const response = await fetch(`${API_BASE_URL}/playtime/?limit=${limit}&offset=${offset}&order=desc`, {
-            headers: {
-                'Authorization': `Bearer ${accessToken}`
-            }
+            headers: bearerHeaders(accessToken)
         })
 
         if (!response.ok) {
@@ -2277,9 +2270,7 @@ export async function fetchRecentPlaytime(accessToken: string, limit: number, of
 export async function fetchPlaytimeForMap(accessToken: string, mapName: string): Promise<Playtime[]> {
     try {
         const response = await fetch(`${API_BASE_URL}/playtime/?map=${encodeURIComponent(mapName)}`, {
-            headers: {
-                'Authorization': `Bearer ${accessToken}`
-            }
+            headers: bearerHeaders(accessToken)
         })
         if (!response.ok) return []
         const json = await response.json()
@@ -2297,9 +2288,7 @@ export async function fetchMapsFuzzy(accessToken: string, partialName: string, l
         const usp = new URLSearchParams({ active: 'true' })
         if (limit !== undefined) usp.set('limit', String(limit))
         const response = await fetch(`${API_BASE_URL}/maps/fuzzy/${encodeURIComponent(partialName)}?${usp.toString()}`, {
-            headers: {
-                'Authorization': `Bearer ${accessToken}`
-            },
+            headers: bearerHeaders(accessToken),
             signal,
         })
 
@@ -2323,9 +2312,7 @@ export async function fetchMapsFuzzy(accessToken: string, partialName: string, l
 export async function fetchAllMapReviews(accessToken: string): Promise<MapReview[]> {
     try {
         const response = await fetch(`${API_BASE_URL}/map_reviews/?columns=aesthetics,learning,luck,overall,map_name,user`, {
-            headers: {
-                'Authorization': `Bearer ${accessToken}`
-            }
+            headers: bearerHeaders(accessToken)
         })
 
         if (!response.ok) {
@@ -2347,9 +2334,7 @@ export async function fetchAllMapReviews(accessToken: string): Promise<MapReview
 export async function fetchMapReviews(accessToken: string, mapName: string): Promise<MapReview[]> {
     try {
         const response = await fetch(`${API_BASE_URL}/map_reviews/?map_name=${encodeURIComponent(mapName)}`, {
-            headers: {
-                'Authorization': `Bearer ${accessToken}`
-            }
+            headers: bearerHeaders(accessToken)
         })
 
         if (!response.ok) {
@@ -2442,9 +2427,7 @@ export interface SummaryCap {
 
 export async function fetchSummary(accessToken: string): Promise<Summary> {
     const response = await fetch(`${API_BASE_URL}/v2/summary/`, {
-        headers: {
-            'Authorization': `Bearer ${accessToken}`
-        }
+        headers: bearerHeaders(accessToken)
     })
     if (!response.ok) throw new Error('Failed to fetch summary')
     const json = await response.json()
@@ -2462,9 +2445,7 @@ export interface HotMap {
 
 export async function fetchHotMaps(accessToken: string): Promise<HotMap[]> {
     const response = await fetch(`${API_BASE_URL}/v2/summary/hot_maps`, {
-        headers: {
-            'Authorization': `Bearer ${accessToken}`
-        }
+        headers: bearerHeaders(accessToken)
     })
     if (!response.ok) throw new Error('Failed to fetch hot maps')
     const json = await response.json()
@@ -2489,7 +2470,7 @@ export async function fetchPendingReviews(
 ): Promise<PendingReviewsPage> {
     const response = await fetch(
         `${API_BASE_URL}/v2/summary/pending_reviews?limit=${limit}&offset=${offset}`,
-        { headers: { 'Authorization': `Bearer ${accessToken}` } },
+        { headers: bearerHeaders(accessToken) },
     )
     if (!response.ok) throw new Error('Failed to fetch pending reviews')
     const json = await response.json()
@@ -2498,9 +2479,7 @@ export async function fetchPendingReviews(
 
 export async function fetchSummaryCaps(accessToken: string, limit = 50, offset = 0): Promise<SummaryCap[]> {
     const response = await fetch(`${API_BASE_URL}/v2/summary/caps?limit=${limit}&offset=${offset}`, {
-        headers: {
-            'Authorization': `Bearer ${accessToken}`
-        }
+        headers: bearerHeaders(accessToken)
     })
     if (!response.ok) throw new Error('Failed to fetch summary caps')
     const json = await response.json()
@@ -2518,7 +2497,7 @@ export async function submitSummaryReview(accessToken: string, review: {
     const response = await fetch(`${API_BASE_URL}/v2/summary/map_reviews`, {
         method: 'POST',
         headers: {
-            'Authorization': `Bearer ${accessToken}`,
+            ...bearerHeaders(accessToken),
             'Content-Type': 'application/json'
         },
         body: JSON.stringify(review)
@@ -2540,9 +2519,7 @@ export async function fetchUserFavorites(accessToken: string, userId?: string | 
             ? `${API_BASE_URL}/user_favorite_maps/?user=${encodeURIComponent(String(userId))}`
             : `${API_BASE_URL}/user_favorite_maps/`
         const response = await fetch(url, {
-            headers: {
-                'Authorization': `Bearer ${accessToken}`
-            }
+            headers: bearerHeaders(accessToken)
         })
         if (!response.ok) {
             throw new Error(`Failed to fetch favorites: ${response.statusText} (${response.status})`)
@@ -2562,7 +2539,7 @@ export async function addFavoriteMap(accessToken: string, mapName: string): Prom
     const response = await fetch(`${API_BASE_URL}/user_favorite_maps/`, {
         method: 'POST',
         headers: {
-            'Authorization': `Bearer ${accessToken}`,
+            ...bearerHeaders(accessToken),
             'Content-Type': 'application/json'
         },
         body: JSON.stringify({ map_name: mapName })
@@ -2575,9 +2552,7 @@ export async function addFavoriteMap(accessToken: string, mapName: string): Prom
 export async function removeFavoriteMap(accessToken: string, mapName: string): Promise<void> {
     const response = await fetch(`${API_BASE_URL}/user_favorite_maps/${encodeURIComponent(mapName)}`, {
         method: 'DELETE',
-        headers: {
-            'Authorization': `Bearer ${accessToken}`
-        }
+        headers: bearerHeaders(accessToken)
     })
     if (!response.ok) {
         throw new Error(`Failed to remove favorite: ${response.statusText} (${response.status})`)
@@ -2588,7 +2563,7 @@ export async function replaceFavoriteMaps(accessToken: string, mapNames: string[
     const response = await fetch(`${API_BASE_URL}/user_favorite_maps/replace`, {
         method: 'PUT',
         headers: {
-            'Authorization': `Bearer ${accessToken}`,
+            ...bearerHeaders(accessToken),
             'Content-Type': 'application/json'
         },
         body: JSON.stringify({ map_names: mapNames })
@@ -2669,7 +2644,7 @@ function normaliseActiveTitle(raw: any): ActiveTitle | null {
 
 export async function fetchUserSummary(accessToken: string, userId: string | number): Promise<UserSummary> {
     const response = await fetch(`${API_BASE_URL}/v2/summary/user/${encodeURIComponent(String(userId))}`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
+        headers: bearerHeaders(accessToken),
     })
     if (!response.ok) {
         throw new Error(`Failed to fetch user summary: ${response.statusText} (${response.status})`)
@@ -2760,7 +2735,7 @@ export interface MyAchievements {
 
 export async function fetchAchievementDefinitions(accessToken: string): Promise<AchievementDefinition[]> {
     const response = await fetch(`${API_BASE_URL}/v2/achievements/definitions`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
+        headers: bearerHeaders(accessToken),
     })
     if (!response.ok) return []
     const json = await response.json()
@@ -2770,7 +2745,7 @@ export async function fetchAchievementDefinitions(accessToken: string): Promise<
 
 export async function fetchMyAchievements(accessToken: string): Promise<MyAchievements> {
     const response = await fetch(`${API_BASE_URL}/v2/achievements/me`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
+        headers: bearerHeaders(accessToken),
     })
     if (!response.ok) return { items: [] }
     const json = await response.json()
@@ -2781,7 +2756,7 @@ export async function fetchMyAchievements(accessToken: string): Promise<MyAchiev
 // Another player's achievements (read-only; never stamps unlocks or grants titles).
 export async function fetchUserAchievements(accessToken: string, userId: string | number): Promise<MyAchievements> {
     const response = await fetch(`${API_BASE_URL}/v2/achievements/user/${encodeURIComponent(String(userId))}`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
+        headers: bearerHeaders(accessToken),
     })
     if (!response.ok) return { items: [] }
     const json = await response.json()
@@ -2860,7 +2835,7 @@ export async function fetchPersonalBestsForUser(
     if (params.sort) usp.set('sort', params.sort)
     if (params.order) usp.set('order', params.order)
     const response = await fetch(`${API_BASE_URL}/v2/summary/user/${encodeURIComponent(String(userId))}/personal_bests?${usp.toString()}`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
+        headers: bearerHeaders(accessToken),
     })
     if (!response.ok) return { total: 0, items: [] }
     const json = await response.json()
@@ -2893,7 +2868,7 @@ export async function fetchCapsForUser(
     if (params.sort) usp.set('sort', params.sort)
     if (params.order) usp.set('order', params.order)
     const response = await fetch(`${API_BASE_URL}/v2/summary/user/${encodeURIComponent(String(userId))}/caps?${usp.toString()}`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
+        headers: bearerHeaders(accessToken),
     })
     if (!response.ok) return { total: 0, items: [] }
     const json = await response.json()
@@ -2909,7 +2884,7 @@ export async function fetchCapsCountForUser(
     const usp = new URLSearchParams({ user: String(userId) })
     if (extra.verified !== undefined) usp.set('verified', String(extra.verified))
     const response = await fetch(`${API_BASE_URL}/caps/count/?${usp.toString()}`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
+        headers: bearerHeaders(accessToken),
     })
     if (!response.ok) return 0
     const json = await response.json()
@@ -2939,7 +2914,7 @@ export async function fetchUserWorldRecords(
     if (params.sortBy) usp.set('sort_by', params.sortBy)
     if (params.mapFuzzy) usp.set('map', params.mapFuzzy)
     const response = await fetch(`${API_BASE_URL}/v2/world_records/?${usp.toString()}`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
+        headers: bearerHeaders(accessToken),
     })
     if (!response.ok) return []
     const json = await response.json()
@@ -2953,7 +2928,7 @@ export async function fetchUserWorldRecordsCount(
 ): Promise<number> {
     const usp = new URLSearchParams({ user: String(userId), count: 'true' })
     const response = await fetch(`${API_BASE_URL}/v2/world_records/?${usp.toString()}`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
+        headers: bearerHeaders(accessToken),
     })
     if (!response.ok) return 0
     const json = await response.json()
@@ -2998,7 +2973,7 @@ export async function fetchPlaytimeByMap(
     if (params.sort) usp.set('sort', params.sort)
     if (params.order) usp.set('order', params.order)
     const response = await fetch(`${API_BASE_URL}/playtime/by_map/${encodeURIComponent(String(userId))}?${usp.toString()}`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
+        headers: bearerHeaders(accessToken),
     })
     if (!response.ok) return { total: 0, items: [] }
     const json = await response.json()
@@ -3033,7 +3008,7 @@ export async function fetchUncappedMaps(
     if (params.difficultyMin !== undefined) usp.set('difficulty_min', String(params.difficultyMin))
     if (params.difficultyMax !== undefined) usp.set('difficulty_max', String(params.difficultyMax))
     const response = await fetch(`${API_BASE_URL}/caps/uncapped/${encodeURIComponent(String(userId))}?${usp.toString()}`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
+        headers: bearerHeaders(accessToken),
     })
     if (!response.ok) return []
     const json = await response.json()
@@ -3047,7 +3022,7 @@ export async function fetchUncappedMapsCount(
 ): Promise<number> {
     const usp = new URLSearchParams({ count: 'true' })
     const response = await fetch(`${API_BASE_URL}/caps/uncapped/${encodeURIComponent(String(userId))}?${usp.toString()}`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
+        headers: bearerHeaders(accessToken),
     })
     if (!response.ok) return 0
     const json = await response.json()
@@ -3060,7 +3035,7 @@ export async function fetchMapReviewsByUser(
     userId: string | number,
 ): Promise<MapReview[]> {
     const response = await fetch(`${API_BASE_URL}/map_reviews/?user=${encodeURIComponent(String(userId))}`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
+        headers: bearerHeaders(accessToken),
     })
     if (!response.ok) return []
     const json = await response.json()
@@ -3080,7 +3055,7 @@ export async function fetchUserActivity(
     userId: string | number,
 ): Promise<UserActivityBucket[]> {
     const response = await fetch(`${API_BASE_URL}/v2/summary/user/${encodeURIComponent(String(userId))}/activity`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
+        headers: bearerHeaders(accessToken),
     })
     if (!response.ok) return []
     const json = await response.json()
@@ -3096,7 +3071,7 @@ export async function fetchPlaytimeForUser(
     { limit = 500 }: { limit?: number } = {},
 ): Promise<Playtime[]> {
     const response = await fetch(`${API_BASE_URL}/playtime/?user=${encodeURIComponent(String(userId))}&limit=${limit}&order=desc`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
+        headers: bearerHeaders(accessToken),
     })
     if (!response.ok) return []
     const json = await response.json()
@@ -3110,7 +3085,7 @@ export async function assignTitle(accessToken: string, titleId?: string | null):
         const response = await fetch(`${API_BASE_URL}/v2/titles/assign`, {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${accessToken}`,
+                ...bearerHeaders(accessToken),
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({ title_id: titleId ?? null })
@@ -3175,7 +3150,7 @@ function buildPlayerQuery(params: PlayerListParams): string {
 export async function fetchPlayers(accessToken: string, params: PlayerListParams = {}): Promise<PlayerListRow[]> {
     const qs = buildPlayerQuery(params)
     const response = await fetch(`${API_BASE_URL}/v2/players/?${qs}`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
+        headers: bearerHeaders(accessToken),
     })
     if (!response.ok) {
         throw new Error(`Failed to fetch players: ${response.statusText} (${response.status})`)
@@ -3198,7 +3173,7 @@ export async function fetchPlayersCount(
     const usp = new URLSearchParams()
     if (params.search) usp.set('search', params.search)
     const response = await fetch(`${API_BASE_URL}/v2/players/count/?${usp.toString()}`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
+        headers: bearerHeaders(accessToken),
     })
     if (!response.ok) {
         throw new Error(`Failed to fetch players count: ${response.statusText} (${response.status})`)
@@ -3264,7 +3239,7 @@ export async function fetchCapItAllLeaderboard(
     if (params.limit !== undefined) usp.set('limit', String(params.limit))
     if (params.offset !== undefined) usp.set('offset', String(params.offset))
     const response = await fetch(`${API_BASE_URL}/v2/leaderboards/cap_it_all?${usp.toString()}`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
+        headers: bearerHeaders(accessToken),
     })
     if (!response.ok) {
         throw new Error(`Failed to fetch leaderboard: ${response.statusText} (${response.status})`)
@@ -3505,7 +3480,7 @@ export async function uploadTeamAvatar(accessToken: string, teamId: string, file
     formData.append('file', file, filename)
     const res = await fetch(`${API_BASE_URL}/teams/${encodeURIComponent(teamId)}/avatar`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${accessToken}` },
+        headers: bearerHeaders(accessToken),
         body: formData,
     })
     if (!res.ok) {

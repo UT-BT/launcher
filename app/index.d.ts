@@ -1,5 +1,12 @@
 /// <reference types="electron-vite/node" />
 
+declare const __WEB_TARGET__: boolean
+
+interface ImportMetaEnv {
+  readonly VITE_API_BASE_URL?: string
+  readonly VITE_GATEWAY_BASE_URL?: string
+}
+
 declare module '*.css' {
   const content: string
   export default content

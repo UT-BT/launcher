@@ -14,7 +14,7 @@ interface NewsPageProps {
 }
 
 export function NewsPage({ userProfile }: NewsPageProps) {
-    const accessToken = userProfile?.accessToken
+    const accessToken = userProfile?.accessToken ?? ''
     const refreshCooldown = useRefreshCooldown()
     const [refreshKey, setRefreshKey] = useState(0)
     const scrollRef = useRef<HTMLDivElement>(null)
@@ -29,7 +29,7 @@ export function NewsPage({ userProfile }: NewsPageProps) {
             return { news, categories }
         },
         [accessToken, refreshKey],
-        { enabled: !!accessToken, errorMessage: 'Failed to load the news feed.' },
+        { enabled: true, errorMessage: 'Failed to load the news feed.' },
     )
 
     const onScroll = useNavScrollRestore(scrollRef, !loading)

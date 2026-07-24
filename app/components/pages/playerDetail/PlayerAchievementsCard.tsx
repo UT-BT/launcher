@@ -28,12 +28,12 @@ export function PlayerAchievementsCard({ accessToken, userId, tabsSlot }: Player
 
     useEffect(() => {
         let cancelled = false
-        if (!accessToken) { setLoading(false); return }
+
         setLoading(true)
         setError(null)
         Promise.all([
-            fetchAchievementDefinitions(accessToken),
-            fetchUserAchievements(accessToken, userId),
+            fetchAchievementDefinitions(accessToken ?? ''),
+            fetchUserAchievements(accessToken ?? '', userId),
         ])
             .then(([defs, achievements]) => {
                 if (cancelled) return

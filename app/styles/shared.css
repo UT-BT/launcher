@@ -60,6 +60,34 @@
   }
 }
 
+@media (max-width: 767px) {
+  .nebula-bg::before {
+    display: none;
+  }
+
+  .nebula-bg::after {
+    filter: blur(36px) saturate(115%);
+    animation: none;
+    opacity: 0.65;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .nebula-bg::before,
+  .nebula-bg::after {
+    animation: none;
+  }
+}
+
 .page-container {
   width: 100%;
   height: 100vh;

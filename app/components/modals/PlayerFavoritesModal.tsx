@@ -29,10 +29,10 @@ export function PlayerFavoritesModal({
     const [pageSize, setPageSize] = useState(25)
 
     useEffect(() => {
-        if (!open || !accessToken) return
+        if (!open) return
         let cancelled = false
         setLoading(true)
-        fetchUserFavorites(accessToken, userId)
+        fetchUserFavorites(accessToken ?? '', userId)
             .then(rows => { if (!cancelled) setFavorites(rows) })
             .finally(() => { if (!cancelled) setLoading(false) })
         return () => { cancelled = true }

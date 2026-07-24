@@ -100,15 +100,15 @@ export function HeroSection({
                 </div>
 
                 <div className="flex-1 p-4 flex flex-col justify-center gap-4 min-w-0">
-                    <div className="flex items-start justify-between gap-3">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
                         <button
                             type="button"
                             onClick={() => onMapSelect?.(mapName)}
-                            className="text-3xl font-bold text-foreground leading-tight truncate hover:underline decoration-dotted underline-offset-4 cursor-pointer text-left min-w-0"
+                            className="text-2xl sm:text-3xl font-bold text-foreground leading-tight line-clamp-2 break-all hover:underline decoration-dotted underline-offset-4 cursor-pointer text-left min-w-0"
                         >
                             {displayMapName(mapName)}
                         </button>
-                        <div className="flex items-center gap-2 shrink-0">
+                        <div className="flex flex-wrap items-center gap-2">
                             <button
                                 type="button"
                                 onClick={onWatch}
@@ -150,14 +150,14 @@ export function HeroSection({
 
                     <PlayerInfo userId={cap.user} alias={cap.alias} title={cap.active_title} size="lg" />
 
-                    <div className="flex items-stretch gap-5 pt-3 border-t border-hairline/5">
+                    <div className="flex flex-wrap items-stretch gap-x-5 gap-y-3 pt-3 border-t border-hairline/5">
                         <div className="flex flex-col justify-between">
                             <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Cap Time</div>
                             <div className="text-4xl font-bold font-mono tabular-nums text-foreground leading-none">
                                 {formatCapTime(cap.cap_time_seconds)}
                             </div>
                         </div>
-                        <div className="self-stretch w-px bg-hairline/10" />
+                        <div className="self-stretch w-px bg-hairline/10 max-sm:hidden" />
                         {teamRun ? (
                             <MiniStat label="Team Time">
                                 <span className="text-foreground">

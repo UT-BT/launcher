@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef, type Dispatch, type SetStateAction } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef, lazy, Suspense, type Dispatch, type SetStateAction } from 'react'
 import { AppLayout } from '@/app/components/layout/AppLayout'
 import {
   NavigationContext,
@@ -57,17 +57,20 @@ import {
   type TeamsPageState,
   type TeamsPageCaches,
 } from '@/app/components/pages/TeamsPage'
-import { TeamDetailsPage } from '@/app/components/pages/teams/TeamDetailsPage'
-import { MapDetailPage } from '@/app/components/pages/MapDetailPage'
-import { PlayerDetailPage } from '@/app/components/pages/PlayerDetailPage'
-import { CapDetailPage } from '@/app/components/pages/CapDetailPage'
-import { TeamCapDetailPage } from '@/app/components/pages/TeamCapDetailPage'
 import { NewsPage } from '@/app/components/pages/NewsPage'
-import { NewsDetailPage } from '@/app/components/pages/NewsDetailPage'
-import { AdminPage, DEFAULT_ADMIN_STATE, type AdminPageState } from '@/app/components/pages/admin/AdminPage'
+import { DEFAULT_ADMIN_STATE, type AdminPageState } from '@/app/components/pages/admin/types'
+
+const TeamDetailsPage = lazy(() => import('@/app/components/pages/teams/TeamDetailsPage').then(m => ({ default: m.TeamDetailsPage })))
+const MapDetailPage = lazy(() => import('@/app/components/pages/MapDetailPage').then(m => ({ default: m.MapDetailPage })))
+const PlayerDetailPage = lazy(() => import('@/app/components/pages/PlayerDetailPage').then(m => ({ default: m.PlayerDetailPage })))
+const CapDetailPage = lazy(() => import('@/app/components/pages/CapDetailPage').then(m => ({ default: m.CapDetailPage })))
+const TeamCapDetailPage = lazy(() => import('@/app/components/pages/TeamCapDetailPage').then(m => ({ default: m.TeamCapDetailPage })))
+const NewsDetailPage = lazy(() => import('@/app/components/pages/NewsDetailPage').then(m => ({ default: m.NewsDetailPage })))
+const AdminPage = lazy(() => import('@/app/components/pages/admin/AdminPage').then(m => ({ default: m.AdminPage })))
 import { InstallationBanner } from '@/app/components/InstallationBanner'
 import { UpdateBanner } from '@/app/components/updater/UpdateBanner'
 import { FavoritesSyncModal } from '@/app/components/shared/FavoritesSyncModal'
+import { AuthRequiredModal, LOGIN_REQUIRED_EVENT, type LoginRequest } from '@/app/components/shared/AuthRequiredModal'
 import { PatreonModal } from '@/app/components/modals/PatreonModal'
 import type { ServerPreset } from '@/app/utils/server-utils'
 import { useFavorites } from '@/app/hooks/useFavorites'
@@ -75,6 +78,8 @@ import { loadPatreonMembers } from '@/app/utils/patreon'
 import { fetchAchievementDefinitions, fetchMyAchievements } from '@/app/utils/api'
 import { writePendingHighlight, type HighlightView } from '@/app/hooks/useNewItemHighlight'
 import { isStaff } from '@/app/utils/roles'
+import { capabilities, IS_WEB } from '@/app/platform'
+import { pushUrlForEntry, seedEntriesFromUrl, useUrlSync } from '@/app/components/navigation/useUrlSync'
 
 
 const MAPS_STATE_STORAGE_KEY = 'utbt:mapsPageState:v1'
@@ -210,7 +215,7 @@ function loadPersistedServerFavorites(): Set<string> {
 }
 
 export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').UserProfile }) {
-  const [entries, setEntries] = useState<NavEntry[]>(() => [{ id: 0, view: 'home', params: {}, state: {} }])
+  const [entries, setEntries] = useState<NavEntry[]>(seedEntriesFromUrl)
   const [cursor, setCursor] = useState(0)
   const nextIdRef = useRef(1)
   const stackRef = useRef({ entries, cursor })
@@ -227,6 +232,13 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
   const [serverPresets, setServerPresets] = useState<ServerPreset[]>(loadPersistedServerPresets)
   const [favoriteServerIds, setFavoriteServerIds] = useState<Set<string>>(loadPersistedServerFavorites)
   const achievementsInFlightRef = useRef<Promise<void> | null>(null)
+  const [loginRequest, setLoginRequest] = useState<LoginRequest | null>(null)
+
+  useEffect(() => {
+    const onLoginRequired = (event: Event) => setLoginRequest((event as CustomEvent<LoginRequest>).detail)
+    window.addEventListener(LOGIN_REQUIRED_EVENT, onLoginRequired)
+    return () => window.removeEventListener(LOGIN_REQUIRED_EVENT, onLoginRequired)
+  }, [])
 
   useEffect(() => {
     void loadPatreonMembers()
@@ -300,6 +312,14 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
     dismissSync,
   } = useFavorites(accessToken, userId)
 
+  const toggleFavoriteOrLogin = useCallback((mapName: string) => {
+    if (!accessToken) {
+      setLoginRequest({ feature: 'save favorites', description: 'Sign in to save favorite maps to your profile and sync them across devices.' })
+      return
+    }
+    toggleFavorite(mapName)
+  }, [accessToken, toggleFavorite])
+
   const [badges, setBadges] = useState<Record<string, BadgeInfo>>({})
   const [seen, setSeen] = useState<Record<string, string | null>>(() => ({
     'maps': readSeen(BADGE_STORAGE_KEYS['maps']),
@@ -349,7 +369,8 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
     const active = cur[curIdx]
     if (active.view === view && paramsEqual(active.params, params)) return
     markViewed(view)
-    let next = [...cur.slice(0, curIdx + 1), { id: nextIdRef.current++, view, params, state: {} }]
+    const entry = { id: nextIdRef.current++, view, params, state: {} }
+    let next = [...cur.slice(0, curIdx + 1), entry]
     let nextCursor = next.length - 1
     if (next.length > HISTORY_CAP) {
       const drop = next.length - HISTORY_CAP
@@ -358,10 +379,30 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
     }
     setEntries(next)
     setCursor(nextCursor)
+    pushUrlForEntry(entry)
   }, [markViewed])
 
-  const back = useCallback(() => setCursor(c => Math.max(0, c - 1)), [])
-  const forward = useCallback(() => setCursor(c => Math.min(stackRef.current.entries.length - 1, c + 1)), [])
+  const pushExternal = useCallback((view: string, params: NavParams) => {
+    const { entries: cur, cursor: curIdx } = stackRef.current
+    const entry = { id: nextIdRef.current++, view, params, state: {} }
+    let next = [...cur.slice(0, curIdx + 1), entry]
+    let nextCursor = next.length - 1
+    if (next.length > HISTORY_CAP) {
+      const drop = next.length - HISTORY_CAP
+      next = next.slice(drop)
+      nextCursor -= drop
+    }
+    setEntries(next)
+    setCursor(nextCursor)
+    return entry.id
+  }, [])
+
+  const urlNav = useUrlSync({ stackRef, setCursor, pushExternal })
+
+  const localBack = useCallback(() => setCursor(c => Math.max(0, c - 1)), [])
+  const localForward = useCallback(() => setCursor(c => Math.min(stackRef.current.entries.length - 1, c + 1)), [])
+  const back = urlNav ? urlNav.back : localBack
+  const forward = urlNav ? urlNav.forward : localForward
 
   const getEntryState = useCallback(<T,>(key: string, def: T): T => {
     const { entries: cur, cursor: curIdx } = stackRef.current
@@ -459,6 +500,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
   }, [navigate])
 
   useEffect(() => {
+    if (IS_WEB) return
     const onMouseUp = (e: MouseEvent) => {
       if (e.button === 3) { e.preventDefault(); back() }
       else if (e.button === 4) { e.preventDefault(); forward() }
@@ -508,6 +550,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
   }, [installationStatus])
 
   const validateInstallation = async () => {
+    if (!capabilities.install) return
     try {
       const result = await window.conveyor.app.validateCurrentInstallation()
 
@@ -536,7 +579,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
           onCachesChange={setHomeCaches}
           achievementsCaches={achievementsCaches}
           onEnsureAchievements={ensureAchievements}
-          onToggleFavorite={toggleFavorite}
+          onToggleFavorite={toggleFavoriteOrLogin}
           onMapSelect={openMap}
           onViewServers={() => navigate('servers')}
           onViewMaps={() => navigate('maps')}
@@ -567,7 +610,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
           onCachesChange={setMapsCaches}
           onMapSelect={openMap}
           favoriteMapNames={favoriteMapNames}
-          onToggleFavorite={toggleFavorite}
+          onToggleFavorite={toggleFavoriteOrLogin}
           initialNewOnly={entry.params.mapsNewOnly}
         />
       case 'players':
@@ -594,7 +637,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
           caches={worldRecordsCaches}
           onCachesChange={setWorldRecordsCaches}
           favoriteMapNames={favoriteMapNames}
-          onToggleFavorite={toggleFavorite}
+          onToggleFavorite={toggleFavoriteOrLogin}
           onMapSelect={openMap}
         />
       case 'achievements':
@@ -635,7 +678,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
           mapName={entry.params.mapName!}
           userProfile={userProfile as any}
           favoriteMapNames={favoriteMapNames}
-          onToggleFavorite={toggleFavorite}
+          onToggleFavorite={toggleFavoriteOrLogin}
           onMapSelect={openMap}
         />
       case 'player-detail':
@@ -644,7 +687,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
           userId={entry.params.playerId!}
           userProfile={userProfile as any}
           favoriteMapNames={favoriteMapNames}
-          onToggleFavorite={toggleFavorite}
+          onToggleFavorite={toggleFavoriteOrLogin}
           onMapSelect={openMap}
         />
       case 'cap-detail':
@@ -677,7 +720,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
           onCachesChange={setHomeCaches}
           achievementsCaches={achievementsCaches}
           onEnsureAchievements={ensureAchievements}
-          onToggleFavorite={toggleFavorite}
+          onToggleFavorite={toggleFavoriteOrLogin}
           onMapSelect={openMap}
           onViewServers={() => navigate('servers')}
           onViewMaps={() => navigate('maps')}
@@ -690,7 +733,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
   }
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden">
+    <div className="h-dvh flex flex-col overflow-hidden">
       <UpdateBanner />
       {installationStatus && installationStatus !== 'valid' && (
         <InstallationBanner
@@ -701,7 +744,14 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
       <div className="flex-1 overflow-hidden">
         <NavigationContext.Provider value={navValue}>
           <AppLayout currentView={currentView} onViewChange={navigate} getNavBadge={(view) => badgeVisible(view) ? badges[view].count : null} userProfile={userProfile} installationStatus={installationStatus}>
-            {renderView()}
+            <Suspense fallback={
+              <div className="space-y-4 pt-2">
+                <div className="h-10 w-64 bg-hairline/5 rounded-lg animate-pulse" />
+                <div className="h-72 bg-hairline/5 rounded-xl animate-pulse" />
+              </div>
+            }>
+              {renderView()}
+            </Suspense>
           </AppLayout>
         </NavigationContext.Provider>
       </div>
@@ -713,6 +763,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
         onDismiss={dismissSync}
       />
       <PatreonModal />
+      <AuthRequiredModal request={loginRequest} onClose={() => setLoginRequest(null)} />
     </div>
   )
 }

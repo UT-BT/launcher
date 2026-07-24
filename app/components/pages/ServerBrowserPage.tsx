@@ -27,6 +27,7 @@ import { MultiFilterDropdown } from '@/app/components/ui/multi-filter-dropdown'
 import { FilterPanelRow } from '@/app/components/ui/filter-panel-row'
 import { FilterPresetsMenu } from '@/app/components/shared/FilterPresetsMenu'
 import { ColumnsMenu } from '@/app/components/shared/ColumnsMenu'
+import { capabilities, fetchGatewayServers } from '@/app/platform'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { ActiveFilterChip } from '@/app/components/shared/ActiveFilterChip'
 import { displayMapName } from '@/app/utils/format'
@@ -419,6 +420,7 @@ export function ServerBrowserPage({
     }, [onStateChange])
 
     const pingAllServers = useCallback(async (serversToPing: Server[]) => {
+        if (!capabilities.ping) return
         const uniqueIps = Array.from(new Set(serversToPing.map(s => s.ip)))
         const PING_CONCURRENCY = 6
         for (let i = 0; i < uniqueIps.length; i += PING_CONCURRENCY) {
@@ -451,7 +453,7 @@ export function ServerBrowserPage({
         if (!silent) setLoading(true)
         setError(null)
         try {
-            const data = await window.conveyor.game.fetchServers() as Server[]
+            const data = await fetchGatewayServers<Server[]>()
             onCachesChange(() => ({
                 servers: data,
                 lastRefreshIso: new Date().toISOString(),
@@ -466,15 +468,18 @@ export function ServerBrowserPage({
     }, [logger, onCachesChange, pingAllServers])
 
     useEffect(() => {
-        if (caches.servers.length === 0) fetchServers()
+        fetchServers({ silent: caches.servers.length > 0 })
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
     useEffect(() => {
         const interval = setInterval(async () => {
             try {
-                const isRunning = await window.conveyor.game.isGameRunning()
-                if (!isRunning) fetchServers({ silent: true })
+                if (capabilities.game) {
+                    const isRunning = await window.conveyor.game.isGameRunning()
+                    if (isRunning) return
+                }
+                fetchServers({ silent: true })
             } catch (err) {
                 console.error('Failed to check game status during auto-refresh', err)
             }
@@ -516,6 +521,7 @@ export function ServerBrowserPage({
     })
 
     const handleJoin = async (server: Server, asSpectator: boolean) => {
+        if (!capabilities.game) return
         try {
             if (window.conveyor?.ini) {
                 if (asSpectator) {
@@ -646,9 +652,15 @@ export function ServerBrowserPage({
 
     const showSkeleton = loading && caches.servers.length === 0
 
+    const displayColumnOrder = useMemo(
+        () => state.columnOrder.filter(id =>
+            (capabilities.ping || id !== 'ping') && (capabilities.game || id !== 'actions')),
+        [state.columnOrder],
+    )
+
     const visibleColumns = useMemo(
-        () => state.columnOrder.filter(id => state.columnVisibility[id]),
-        [state.columnOrder, state.columnVisibility],
+        () => displayColumnOrder.filter(id => state.columnVisibility[id]),
+        [displayColumnOrder, state.columnVisibility],
     )
 
     const responsiveColumns = useMemo<ResponsiveColumn[]>(
@@ -665,6 +677,8 @@ export function ServerBrowserPage({
     const handleResolve = useCallback((ids: Set<string>) => {
         setResolved(ids as Set<ServerColumnId>)
     }, [])
+    const [compactMode, setCompactMode] = useState(false)
+    const handleCompactChange = useCallback((compact: boolean) => setCompactMode(compact), [])
 
     const isEffectivelyVisible = useCallback(
         (id: ServerColumnId) => state.columnVisibility[id] && (!resolved || resolved.has(id)),
@@ -823,7 +837,7 @@ export function ServerBrowserPage({
                 return (
                     <DataTableCell key={id} align={align} ref={isFirstRow ? (firstRowStatusRef as React.RefObject<HTMLTableCellElement>) : undefined}>
                         <div className={cn(
-                            'inline-flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider border',
+                            'inline-flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider border whitespace-nowrap',
                             isEnded
                                 ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
                                 : 'bg-hairline/5 border-hairline/5 text-muted-foreground',
@@ -882,9 +896,101 @@ export function ServerBrowserPage({
         }
     }
 
-    const visibleColumnCount = state.columnOrder.reduce(
+    const visibleColumnCount = displayColumnOrder.reduce(
         (count, id) => count + (isEffectivelyVisible(id) ? 1 : 0), 0,
     )
+
+    const compactServerContent = showSkeleton ? (
+        Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="h-16 mx-3 my-2 rounded-lg bg-hairline/5 animate-pulse" />
+        ))
+    ) : processedServers.length === 0 ? (
+        <div className="px-4 py-16 text-center text-muted-foreground">No servers match your filters.</div>
+    ) : processedServers.map(server => {
+        const type = getServerType(server.hostname)
+        const region = getServerRegion(server.hostname)
+        const trimmed = trimServerName(server.hostname).replace(/\s*\([^)]+\)\s*$/, '')
+        const playerColor =
+            server.player_count >= server.max_players ? 'text-rose-400' :
+                server.player_count > 0 ? 'text-emerald-400' : 'text-muted-foreground'
+        const statusText = getGameStatusText(
+            server.remaining_time_seconds,
+            server.certified_records,
+            type,
+            server.red_team_score,
+            server.blue_team_score,
+        )
+        const isEnded = statusText === 'Match Ended' || statusText === 'Overtime'
+        const canJoin = installationStatus === 'valid' && server.player_count < server.max_players
+        return (
+            <div key={server.id} role="listitem" className="p-3 border-b border-hairline/5 last:border-0 space-y-2">
+                <div className="flex items-center gap-2 min-w-0">
+                    <FavoriteStar
+                        name={server.id}
+                        isFavorited={favoriteServerIds.has(server.id)}
+                        onToggle={onToggleServerFavorite}
+                        size="sm"
+                    />
+                    <TypeIcon type={type} />
+                    <span className="text-sm font-bold text-foreground truncate">{trimmed}</span>
+                    <span className={cn('ml-auto shrink-0 text-sm font-bold tabular-nums', playerColor)}>
+                        {server.player_count}/{server.max_players}
+                    </span>
+                </div>
+                <div className="flex items-center gap-2 min-w-0">
+                    <img
+                        src={getRegionFlag(region)}
+                        alt={region}
+                        className="h-4 w-6 shrink-0 object-cover rounded-[2px] border border-hairline/10"
+                    />
+                    {onMapSelect ? (
+                        <button
+                            type="button"
+                            onClick={() => onMapSelect(server.map_name)}
+                            className="text-sm font-semibold text-foreground truncate text-left hover:text-accent-300 hover:underline underline-offset-2 transition-colors cursor-pointer"
+                        >
+                            {displayMapName(server.map_name)}
+                        </button>
+                    ) : (
+                        <span className="text-sm font-semibold text-foreground truncate">
+                            {displayMapName(server.map_name)}
+                        </span>
+                    )}
+                    <span className={cn(
+                        'ml-auto shrink-0 inline-flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider border whitespace-nowrap',
+                        isEnded
+                            ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+                            : 'bg-hairline/5 border-hairline/5 text-muted-foreground',
+                    )}>
+                        {isEnded ? <Flag className="size-3" /> : <Clock className="size-3" />}
+                        {statusText}
+                    </span>
+                </div>
+                {capabilities.game && (
+                    <div className="flex items-center gap-1.5">
+                        <button
+                            type="button"
+                            onClick={() => handleJoin(server, false)}
+                            disabled={!canJoin}
+                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium border border-accent-500/30 bg-accent-500/10 text-accent-300 hover:bg-accent-500/25 hover:text-accent-100 hover:border-accent-500/50 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                            <Play className="size-3 fill-current" />
+                            Join
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => handleJoin(server, true)}
+                            disabled={installationStatus !== 'valid'}
+                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium border border-hairline/10 bg-hairline/5 text-muted-foreground hover:bg-hairline/10 hover:text-foreground hover:border-hairline/20 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                            <Eye className="size-3" />
+                            Spec
+                        </button>
+                    </div>
+                )}
+            </div>
+        )
+    })
 
     return (
         <div className="space-y-4 h-full flex flex-col overflow-hidden">
@@ -935,17 +1041,19 @@ export function ServerBrowserPage({
                     )}
                 </button>
 
-                <ColumnsMenu<ServerColumnId>
-                    columnOrder={state.columnOrder}
-                    columnVisibility={state.columnVisibility}
-                    columnLabels={SERVER_COLUMN_LABELS}
-                    onToggle={toggleColumn}
-                    onReorder={reorderColumn}
-                    requiredColumns={REQUIRED_COLUMNS}
-                    triggerRef={columnsButtonRef}
-                    menuOpen={columnsMenuOpen}
-                    onMenuOpenChange={setColumnsMenuOpen}
-                />
+                {!compactMode && (
+                    <ColumnsMenu<ServerColumnId>
+                        columnOrder={displayColumnOrder}
+                        columnVisibility={state.columnVisibility}
+                        columnLabels={SERVER_COLUMN_LABELS}
+                        onToggle={toggleColumn}
+                        onReorder={reorderColumn}
+                        requiredColumns={REQUIRED_COLUMNS}
+                        triggerRef={columnsButtonRef}
+                        menuOpen={columnsMenuOpen}
+                        onMenuOpenChange={setColumnsMenuOpen}
+                    />
+                )}
 
                 <div className="ml-auto flex items-center gap-3 text-[10px] uppercase tracking-wider text-muted-foreground">
                     <span className="inline-flex items-center gap-1.5"><TypeIcon type="Certified" className="size-3.5" /> Certified</span>
@@ -1074,10 +1182,16 @@ export function ServerBrowserPage({
             <DataTableShell
                 scrollRef={scrollContainerRef}
                 onScroll={onScroll}
-                responsive={{ columns: responsiveColumns, onResolve: handleResolve }}
+                responsive={{
+                    columns: responsiveColumns,
+                    onResolve: handleResolve,
+                    compactContent: compactServerContent,
+                    compactAriaLabel: 'Servers',
+                    onCompactChange: handleCompactChange,
+                }}
             >
                 <DataTableHeaderRow theadDataAttr="data-utbt-servers-thead">
-                    {state.columnOrder.map(id => renderHeader(id))}
+                    {displayColumnOrder.map(id => renderHeader(id))}
                 </DataTableHeaderRow>
                 <tbody>
                     {showSkeleton ? (
@@ -1089,7 +1203,7 @@ export function ServerBrowserPage({
                     ) : (
                         processedServers.map((server, index) => (
                             <DataTableRow key={server.id}>
-                                {state.columnOrder.map(id => renderCell(id, server, index === 0))}
+                                {displayColumnOrder.map(id => renderCell(id, server, index === 0))}
                             </DataTableRow>
                         ))
                     )}

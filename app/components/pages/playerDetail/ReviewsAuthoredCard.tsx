@@ -26,9 +26,9 @@ export function ReviewsAuthoredCard({
 
     useEffect(() => {
         let cancelled = false
-        if (!accessToken) return
+
         setLoading(true)
-        fetchMapReviewsByUser(accessToken, userId)
+        fetchMapReviewsByUser(accessToken ?? '', userId)
             .then(rows => {
                 if (cancelled) return
                 rows.sort((a, b) => b.overall - a.overall)

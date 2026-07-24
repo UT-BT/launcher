@@ -371,7 +371,7 @@ function CapPercentileTable({ stats }: { stats: AcCapStats }) {
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Frame rate &amp; ping percentiles</span>
         <TableControls table={tbl} showFilters={false} />
       </div>
@@ -779,7 +779,7 @@ function SharedTable({ token, defaultTotal, onMapSelect }: { token: string; defa
   return (
     <div className="space-y-3">
       <Feedback message={error} tone="red" onDismiss={() => setError(null)} />
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <AdminSelect value={type} onChange={(v) => setType(v as AcSharedType)} ariaLabel="Identifier type"
           options={[{ value: 'all', label: 'HWID & IP' }, { value: 'hwid', label: 'HWID only' }, { value: 'ip', label: 'IP only' }]}
           className="min-w-40" />

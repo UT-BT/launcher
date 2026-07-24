@@ -20,6 +20,12 @@ export function useLogger(context: string): Logger {
     try {
       if (window.logging) {
         await window.logging.log(level, message, context, data)
+      } else if (level === 'error') {
+        if (data !== undefined) console.error(`[${context}] ${message}`, data)
+        else console.error(`[${context}] ${message}`)
+      } else if (level === 'warn') {
+        if (data !== undefined) console.warn(`[${context}] ${message}`, data)
+        else console.warn(`[${context}] ${message}`)
       }
     } catch (error) {
       console.error('Failed to log message:', error)

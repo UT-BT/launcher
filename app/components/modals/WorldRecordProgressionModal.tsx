@@ -3,7 +3,7 @@ import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip,
     ResponsiveContainer, Brush,
 } from 'recharts'
-import { History, ZoomOut } from 'lucide-react'
+import { ZoomOut } from 'lucide-react'
 import { Modal } from '@/app/components/ui/modal'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import { Button } from '@/app/components/ui/button'
@@ -382,30 +382,5 @@ export function WorldRecordProgressionModal({
                 </div>
             </div>
         </Modal>
-    )
-}
-
-interface WorldRecordHistoryTriggerProps {
-    onClick: () => void
-}
-
-/**
- * Small icon-only button shown on the WR holder's leaderboard row, opens the modal.
- */
-export function WorldRecordHistoryTrigger({ onClick }: WorldRecordHistoryTriggerProps) {
-    return (
-        <Tooltip content="View WR history" side="top">
-            <button
-                type="button"
-                onClick={(e) => {
-                    e.stopPropagation()
-                    onClick()
-                }}
-                aria-label="View world record history"
-                className="inline-flex items-center justify-center size-6 rounded-md text-accent-300/80 hover:text-accent-200 hover:bg-accent-500/15 transition-colors cursor-pointer"
-            >
-                <History className="size-3.5" />
-            </button>
-        </Tooltip>
     )
 }

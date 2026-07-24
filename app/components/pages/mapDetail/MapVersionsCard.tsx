@@ -53,7 +53,7 @@ export function MapVersionsBar({ map, accessToken, onSelect }: MapVersionsBarPro
         : null
 
     useEffect(() => {
-        if (!accessToken || !currentName || (!hasPredecessor && !hasSuccessor)) return
+        if (!currentName || (!hasPredecessor && !hasSuccessor)) return
         let cancelled = false
 
         ;(async () => {
@@ -64,7 +64,7 @@ export function MapVersionsBar({ map, accessToken, onSelect }: MapVersionsBarPro
                 let cursor: string | null | undefined = map?.preceded_by
                 while (cursor && !visited.has(cursor)) {
                     visited.add(cursor)
-                    const match = await fetchMap(accessToken, cursor, CHAIN_COLUMNS)
+                    const match = await fetchMap(accessToken ?? '', cursor, CHAIN_COLUMNS)
                     if (!match) break
                     built.unshift({ name: match.name, added: match.added })
                     cursor = match.preceded_by
@@ -73,7 +73,7 @@ export function MapVersionsBar({ map, accessToken, onSelect }: MapVersionsBarPro
                 cursor = map?.superseded_by
                 while (cursor && !visited.has(cursor)) {
                     visited.add(cursor)
-                    const match = await fetchMap(accessToken, cursor, CHAIN_COLUMNS)
+                    const match = await fetchMap(accessToken ?? '', cursor, CHAIN_COLUMNS)
                     if (!match) break
                     built.push({ name: match.name, added: match.added })
                     cursor = match.superseded_by
@@ -89,7 +89,7 @@ export function MapVersionsBar({ map, accessToken, onSelect }: MapVersionsBarPro
             if (missing.length === 0) return
 
             const results = await Promise.all(
-                missing.map(async e => [e.name, (await fetchMapCapsCount(accessToken, e.name)) > 0] as const),
+                missing.map(async e => [e.name, (await fetchMapCapsCount(accessToken ?? '', e.name)) > 0] as const),
             )
             if (cancelled) return
             for (const [n, v] of results) capsHasCache.set(n, v)

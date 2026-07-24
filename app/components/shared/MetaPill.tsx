@@ -67,7 +67,7 @@ export function MetaPill({
             onClick={onClick}
             type={onClick && !href ? 'button' : undefined}
             className={cn(
-                'inline-flex items-center gap-1.5 h-7 px-2 rounded-md border text-xs leading-none whitespace-nowrap',
+                'inline-flex flex-wrap items-center gap-1.5 min-h-7 py-1 px-2 rounded-md border text-xs leading-none max-w-full',
                 TONE_CLASSES[tone],
                 interactive && 'cursor-pointer hover:brightness-125 transition-all',
                 className,

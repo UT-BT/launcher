@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { requestLogin } from '@/app/components/shared/AuthRequiredModal'
 import { Modal } from '@/app/components/ui/modal'
 import { Loader2, Pencil, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -52,11 +53,11 @@ export function MapReviewsModal({
     const [sortDir, setSortDir] = useState<SortDir>('desc')
 
     const load = async () => {
-        if (!accessToken || !mapName) return
+        if (!mapName) return
         setLoading(true)
         setError(null)
         try {
-            const data = await fetchMapReviews(accessToken, mapName)
+            const data = await fetchMapReviews(accessToken ?? '', mapName)
             setReviews(data)
         } catch {
             setError('Failed to load reviews.')
@@ -146,8 +147,7 @@ export function MapReviewsModal({
                             </div>
                             <button
                                 type="button"
-                                onClick={() => setReviewModalOpen(true)}
-                                disabled={!accessToken || !mapName}
+                                onClick={() => accessToken ? setReviewModalOpen(true) : requestLogin({ feature: 'review maps' })}
                                 className={cn(
                                     "group w-full rounded-xl border border-dashed border-accent-500/30 bg-accent-500/[0.04] p-4",
                                     "flex items-center justify-center gap-3 cursor-pointer",
@@ -238,9 +238,8 @@ export function MapReviewsModal({
                                 ) : (
                                     <button
                                         type="button"
-                                        onClick={() => setReviewModalOpen(true)}
-                                        disabled={!accessToken || !mapName}
-                                        className={cn(
+                                        onClick={() => accessToken ? setReviewModalOpen(true) : requestLogin({ feature: 'review maps' })}
+                                                className={cn(
                                             "group w-full rounded-xl border border-dashed border-accent-500/30 bg-accent-500/[0.04] p-4",
                                             "flex items-center justify-center gap-3 cursor-pointer",
                                             "hover:bg-accent-500/10 hover:border-accent-500/60 hover:text-accent-100 transition-colors",

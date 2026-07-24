@@ -20,8 +20,8 @@ const CAP_COLUMNS: ResponsiveColumn[] = [
     { id: 'map', required: true },
     { id: 'holder', width: '9rem', priority: 20 },
     { id: 'time', width: '6rem', priority: 70, required: true },
-    { id: 'when', width: '6rem', priority: 30 },
-    { id: 'replay', width: '4rem', priority: 40 },
+    { id: 'when', width: '4rem', priority: 30 },
+    { id: 'replay', width: '3rem', priority: 40 },
 ]
 
 interface RecentCapsCardProps {
@@ -57,13 +57,67 @@ export function RecentCapsCard({
         )
     }
 
+    const compactRows = rows.map(cap => {
+        const medalIcon = getMedalIcon(cap.medal)
+        const teamCapId = cap.isTeam ? cap.teamCapId ?? null : null
+        return (
+            <div
+                key={cap.id}
+                role="listitem"
+                className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 p-3 border-b border-hairline/5 last:border-0 cursor-pointer"
+                onClick={() => teamCapId ? openTeamCap(teamCapId) : openCap(cap.id)}
+            >
+                <div className="min-w-0 space-y-1.5">
+                    <MapNameCell
+                        mapName={cap.mapName}
+                        favorited={favoriteMapNames.has(cap.mapName)}
+                        onToggleFavorite={onToggleFavorite}
+                        onMapSelect={onMapSelect}
+                    />
+                    {cap.teamMembers && cap.teamMembers.length > 0 && (
+                        <TeamAvatarStack members={cap.teamMembers} currentUserId={playerUserId} />
+                    )}
+                </div>
+                <div className="flex flex-col items-end gap-1">
+                    <div className="flex items-center gap-1.5">
+                        {medalIcon && <img src={medalIcon} alt={cap.medal} className="size-3.5 shrink-0" />}
+                        <CapTimeLink
+                            capId={teamCapId ? undefined : cap.id}
+                            teamCapId={teamCapId ?? undefined}
+                            seconds={cap.time}
+                            className="font-mono tabular-nums font-bold text-amber-300"
+                        />
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground tabular-nums">{cap.timeAgo}</span>
+                        {cap.verified && (
+                            <IconActionButton
+                                variant="replay"
+                                icon={Play}
+                                iconFill
+                                tooltip="Watch Replay"
+                                loading={loadingCapId === cap.id}
+                                onClick={() => onWatchReplay(cap)}
+                            />
+                        )}
+                    </div>
+                </div>
+            </div>
+        )
+    })
+
     return (
         <DataTableShell
             className="!flex-none"
-            responsive={{ columns: CAP_COLUMNS, onResolve: handleResolve }}
+            responsive={{
+                columns: CAP_COLUMNS,
+                onResolve: handleResolve,
+                compactContent: compactRows,
+                compactAriaLabel: 'Your latest caps',
+            }}
         >
             <DataTableHeaderRow>
-                <DataTableHeaderCell align="center" width="18rem">Map</DataTableHeaderCell>
+                <DataTableHeaderCell align="center">Map</DataTableHeaderCell>
                 {isVisible('holder') && <DataTableHeaderCell align="center" width="9rem"></DataTableHeaderCell>}
                 {isVisible('time') && <DataTableHeaderCell align="center" width="6rem">Time</DataTableHeaderCell>}
                 {isVisible('when') && <DataTableHeaderCell align="center" width="4rem">When</DataTableHeaderCell>}
