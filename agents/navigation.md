@@ -9,20 +9,23 @@ provides: "the whole navigation model: stack, navigate() funnel, renderView, sid
 not_here:
   - "where page state / persistence lives → state-patterns.md"
   - "the PlayerInfo / CapTimeLink components that trigger nav → shared-components.md"
-sections: [the-model, navigate-is-the-only-entry-point, page-views-vs-detail-pages, the-sidebar-registry, event-driven-navigation, sidebar-new-badges, page-refresh-registry, per-entry-state]
-last_verified: 2026-07-21
+sections: [the-model, navigate-is-the-only-entry-point, url-sync-web-build, page-views-vs-detail-pages, the-sidebar-registry, event-driven-navigation, sidebar-new-badges, page-refresh-registry, per-entry-state]
+last_verified: 2026-07-23
 verify_against:
   - app/components/main/Main.tsx
   - app/components/layout/AppLayout.tsx
   - app/components/navigation/NavigationContext.tsx
   - app/components/navigation/useNavState.ts
+  - app/components/navigation/routes.ts
+  - app/components/navigation/useUrlSync.ts
 ---
 
 # Navigation
 
 There is **no URL router**. `Main.tsx` owns an in-memory history stack and a
 `switch` that renders the active view. Everything else funnels through one
-`navigate()`.
+`navigate()`. On the **web build only**, the browser URL mirrors the stack —
+see [URL sync (web build)](#url-sync-web-build); desktop stays URL-less.
 
 ## The model
 
@@ -62,13 +65,43 @@ navigate(view: string, params?: NavParams)
   shifts with it.
 
 `back()` / `forward()` just move the cursor (clamped); `canBack` / `canForward`
-gate the UI. Back/forward also fire on **mouse buttons 3/4** (unconditionally) and
-on **Alt+←/→** (suppressed while typing in an input/textarea/select/contentEditable).
-`NavHistoryBar` (rendered in `AppLayout`) is the back/forward button bar.
+gate the UI. Back/forward also fire on **mouse buttons 3/4** and
+on **Alt+←/→** (suppressed while typing in an input/textarea/select/contentEditable);
+both custom handlers are skipped on the web build, where the browser natively maps
+those inputs to history navigation. `NavHistoryBar` (rendered in `AppLayout`) is
+the back/forward + refresh button bar **on desktop only** — on web the whole
+bar never renders (`IS_WEB`; browser chrome owns history and reload).
 
 **Rule: never add a second navigation mechanism.** No raw `setCurrentView`, no
 parallel back stack. Sidebar clicks, `openMap`, and the `open-*` events all call
-`navigate()`. This is hard rule 6.
+`navigate()`. This is hard rule 6. (URL sync below is not a second mechanism —
+it mirrors this stack, it never drives it except on external entry.)
+
+## URL sync (web build)
+
+Files: `app/components/navigation/routes.ts` (`viewToPath` / `pathToNav`) +
+`app/components/navigation/useUrlSync.ts`. Desktop is untouched — `useUrlSync`
+returns `null` unless `IS_WEB`, and `pushUrlForEntry` no-ops.
+
+Model: **the in-memory stack stays master; browser history mirrors it.**
+
+- `Main.tsx` seeds `entries` from the URL (`seedEntriesFromUrl`) and the boot
+  effect `replaceState`s the canonical path (unknown paths normalize to `/`).
+- `navigate()` also calls `pushUrlForEntry(entry)` → `history.pushState({navId},
+  '', viewToPath(...))`.
+- In-app Back/Forward delegate to `history.back()/forward()` on web; the
+  `popstate` handler looks up `event.state.navId` in the stack and moves the
+  cursor. A `navId` that is missing (external entry, `HISTORY_CAP` trim) falls
+  back to `pathToNav` and pushes a fresh entry — its per-entry state starts
+  empty, which is accepted.
+- `/auth/callback` is consumed before React mounts (see `agents/web-target.md`)
+  and never becomes a view.
+
+Path scheme: `/` home, `/servers`, `/maps` (+`?new=1`), `/maps/:mapName`,
+`/players`, `/players/:playerId`, `/teams`, `/teams/:teamId`, `/world-records`,
+`/cap-it-all`, `/caps/:capId`, `/team-caps/:teamCapId`, `/achievements`,
+`/news`, `/news/:newsId`, `/admin`; unknown → `/`. Adding a view = add both
+directions in `routes.ts`, same commit.
 
 ## Page-views vs detail-pages
 
@@ -107,7 +140,10 @@ function buildNavSections(userProfile?: UserProfile): NavSection[] {
 ```
 
 Each `item.id` must match a `renderView` case; clicking calls
-`onViewChange(item.id)` which is `navigate`. To add a sidebar page: add the
+`changeView(item.id)` — a thin wrapper that closes the mobile drawer and then
+calls `onViewChange` (`navigate`). Below the `lg` breakpoint the same sidebar
+`<aside>` renders as an off-canvas drawer behind a hamburger top bar (see
+`agents/web-target.md`, responsive-layout). To add a sidebar page: add the
 `renderView` case **and** a `navSections` item. (Settings is **not** a view — it's
 a modal opened from the user dropdown / the `open-settings` window event.)
 
@@ -163,6 +199,20 @@ cross-cutting **refresh-button registry**, not a history primitive. A page calls
 `useRegisterPageRefresh({ onRefresh, refreshing, disabled, tooltip })`;
 `NavHistoryBar` renders one shared refresh button beside Back/Forward and invokes
 the registered handler. Pages no longer hand-roll their own refresh button.
+**Desktop-only surface** — on web `NavHistoryBar` never renders, so the
+registered handler is unreachable there. Freshness on web comes from the
+mount contract below, plus the browser's own reload.
+
+**Freshness contract (both targets):** the `caches` singleton exists so a
+revisit paints instantly — it is a render cache, not a data authority. Every
+page-view must **revalidate on mount**: render the cached data, then kick the
+fetch anyway and swap results in silently (no skeleton when cache exists).
+The paginated pages get this for free (their page cache is a per-mount ref);
+`Home`, `TeamsPage`, `AchievementsPage`, `ServerBrowserPage` do it explicitly
+with a `background`/`silent` flag. A mount effect that early-returns because
+"the cache is warm" is a staleness bug. The registered `onRefresh` must clear
+every cache layer it owns (page cache refs AND the `caches` singleton slices)
+before refetching.
 
 ## Per-entry state
 

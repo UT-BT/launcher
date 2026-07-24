@@ -99,7 +99,7 @@ export function StatsRow({ leaderboard, playtime, loading, isTeam = false, teamL
     ]
 
     return (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 shrink-0">
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 shrink-0">
             {tiles.map(t => {
                 const Wrapper: any = t.onClick ? 'button' : 'div'
                 return (

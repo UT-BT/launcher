@@ -74,9 +74,27 @@ Two variations the standard recipe above doesn't cover — the `admin` page
   (`PREF_KEYS = ['activeSection']`) and needs no caches singleton (each section
   owns its data).
 
+## Responsive + performance (both targets — non-negotiable)
+
+The page ships to the Electron app AND the website (phones → 4K). Before
+calling it done:
+
+- The table passes `responsive={{ columns, onResolve, compactContent,
+  compactAriaLabel }}` — core metric `required`, cosmetic columns prioritized,
+  compact card rows (with skeleton + empty states) for phone widths. Contract:
+  `agents/styling.md` → Responsive columns.
+- Pagination is the shared `PaginationBar` (mobile touch bar comes free).
+- Header/toolbars wrap (`flex-wrap`); no `truncate` beside a `shrink-0` group.
+- New view added to `routes.ts` both directions (web deep links).
+- Bundle: primary page stays eager, but any modal/detail it opens is `lazy()`;
+  `npm run check:bundle` still passes. No per-row `backdrop-blur` / infinite
+  animations (`agents/styling.md` → CSS runtime cost).
+
 ## Verify
 
 - `npx tsc --noEmit -p tsconfig.web.json` (0 errors).
 - `npm run dev`: the sidebar item appears, opens the page, and Back/Forward
   restores the page's query state; a fresh sidebar click starts from defaults;
   persisted prefs survive a restart.
+- `npm run dev:web`: check the page at 390×844 (compact rows + touch
+  pagination), 1024×768 (sidebar boundary), and 1920×1080.

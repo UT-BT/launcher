@@ -141,7 +141,7 @@ function TeamRankContextCard({
 }
 
 export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamCapDetailPageProps) {
-    const accessToken = userProfile?.accessToken
+    const accessToken = userProfile?.accessToken ?? ''
     const refreshCooldown = useRefreshCooldown()
     const [refreshKey, setRefreshKey] = useState(0)
 
@@ -149,9 +149,9 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
     const demoDownload = useDemoDownload()
 
     const { data: detail, loading, error } = useAsync<TeamCapDetail | null>(
-        (signal) => fetchTeamCapDetail(accessToken!, teamCapId, signal),
+        (signal) => fetchTeamCapDetail(accessToken, teamCapId, signal),
         [accessToken, teamCapId, refreshKey],
-        { enabled: !!accessToken && !!teamCapId, errorMessage: 'Failed to load team run data.' },
+        { enabled: !!teamCapId, errorMessage: 'Failed to load team run data.' },
     )
 
     useRegisterPageRefresh({
@@ -162,9 +162,9 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
     })
 
     const { data: teamLeaderboardData, loading: leaderboardLoading } = useAsync<TeamLeaderboardEntry[]>(
-        (signal) => fetchTeamMapLeaderboard(accessToken!, detail!.map, { signal }),
+        (signal) => fetchTeamMapLeaderboard(accessToken, detail!.map, { signal }),
         [accessToken, detail?.map, refreshKey],
-        { enabled: !!accessToken && !!detail?.map, errorMessage: 'Failed to load team leaderboard.' },
+        { enabled: !!detail?.map, errorMessage: 'Failed to load team leaderboard.' },
     )
 
     const gapToNext = useMemo(() => {
@@ -233,7 +233,7 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
     }
 
     const startCompare = async () => {
-        if (!detail || !accessToken) return
+        if (!detail) return
         const req = ++compareReqRef.current
         setCompareState('resolving')
         const eligible = detail.members.filter(member => member.has_demo)
@@ -319,15 +319,15 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
                             </div>
 
                             <div className="flex-1 p-4 flex flex-col justify-center gap-4 min-w-0">
-                                <div className="flex items-start justify-between gap-3">
+                                <div className="flex flex-wrap items-start justify-between gap-3">
                                     <button
                                         type="button"
                                         onClick={() => onMapSelect?.(detail.map)}
-                                        className="text-3xl font-bold text-foreground leading-tight truncate hover:underline decoration-dotted underline-offset-4 cursor-pointer text-left min-w-0"
+                                        className="text-2xl sm:text-3xl font-bold text-foreground leading-tight line-clamp-2 break-all hover:underline decoration-dotted underline-offset-4 cursor-pointer text-left min-w-0"
                                     >
                                         {displayMapName(detail.map)}
                                     </button>
-                                    <div className="flex items-center gap-2 shrink-0">
+                                    <div className="flex flex-wrap items-center gap-2">
                                         <button
                                             type="button"
                                             onClick={startCompare}
@@ -375,7 +375,7 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
                                             {detail.team_time_seconds == null ? '—' : formatCapTime(detail.team_time_seconds)}
                                         </div>
                                     </div>
-                                    <div className="self-stretch w-px bg-hairline/10" />
+                                    <div className="self-stretch w-px bg-hairline/10 max-sm:hidden" />
                                     <div className="flex flex-col justify-between text-left">
                                         <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Rank</div>
                                         <div className="text-lg font-bold font-mono tabular-nums leading-none">
@@ -387,7 +387,7 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
                                             )}
                                         </div>
                                     </div>
-                                    <div className="self-stretch w-px bg-hairline/10" />
+                                    <div className="self-stretch w-px bg-hairline/10 max-sm:hidden" />
                                     <div className="flex flex-col justify-between text-left">
                                         <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Δ WR</div>
                                         <div className="text-lg font-bold font-mono tabular-nums leading-none">
@@ -396,7 +396,7 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
                                             </span>
                                         </div>
                                     </div>
-                                    <div className="self-stretch w-px bg-hairline/10" />
+                                    <div className="self-stretch w-px bg-hairline/10 max-sm:hidden" />
                                     <div className="flex flex-col justify-between text-left">
                                         <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Gap to Next</div>
                                         <div className="text-lg font-bold font-mono tabular-nums leading-none">

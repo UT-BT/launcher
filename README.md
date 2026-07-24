@@ -43,3 +43,16 @@ Our launcher is intended for use by the [UTBT](https://utbt.net) community, but 
 ## Contributing
 
 Developer setup and build instructions are available in [CONTRIBUTING.md](./CONTRIBUTING.md).
+
+## Web application
+
+The React renderer also runs as a browser application. API endpoints default to
+`https://gateway.utbt.net` and `https://api.utbt.net`; local deployments can
+override them with `VITE_GATEWAY_BASE_URL` and `VITE_API_BASE_URL`.
+
+- `npm run dev:web` starts the browser development server.
+- `npm run build:web` creates the production application in `dist-web`.
+- `npm run test:e2e` runs fixture-backed desktop and mobile Playwright/axe checks.
+- `npm run test:e2e:live` opts into a public live-API smoke test.
+- `npm run quality:web` runs typechecking, linting, unit tests, the production build,
+  and the bundle budget.

@@ -1,11 +1,14 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
-import { SplashScreen } from '@/app/components/splash/SplashScreen'
+import { useState, useRef, useEffect, useCallback, lazy, Suspense } from 'react'
+import { WebBootScreen } from '@/app/components/splash/WebBootScreen'
+const SplashScreen = lazy(() => import('@/app/components/splash/SplashScreen').then(m => ({ default: m.SplashScreen })))
 import { Main } from '@/app/components/main/Main'
-import { LoginPage } from '@/app/components/pages/LoginPage'
 import { ErrorModal } from '@/app/components/ErrorModal'
 import { UpdaterProvider } from '@/app/hooks/useUpdater'
-import { UpdateModal } from '@/app/components/updater/UpdateModal'
+
+const LoginPage = lazy(() => import('@/app/components/pages/LoginPage').then(m => ({ default: m.LoginPage })))
+const UpdateModal = lazy(() => import('@/app/components/updater/UpdateModal').then(m => ({ default: m.UpdateModal })))
 import { useLogger } from '@/app/hooks/use-logger'
+import { IS_WEB, platformAuth } from '@/app/platform'
 import { fetchUserProfile, UserProfile, logLauncherStartup, fetchLatestActivity } from '@/app/utils/api'
 
 import './styles/index.css'
@@ -31,7 +34,7 @@ export default function App() {
   const preloadData = useCallback(async (): Promise<InitResult> => {
     try {
       logger.info('Starting data preload...')
-      const authConfig = await window.auth.getProfile()
+      const authConfig = await platformAuth.getProfile()
 
       if (!authConfig) {
         logger.info('Preload: User not logged in')
@@ -71,6 +74,13 @@ export default function App() {
     return () => { mountedRef.current = false }
   }, [preloadData, logger])
 
+  const webBootRef = useRef(false)
+  useEffect(() => {
+    if (!IS_WEB || webBootRef.current) return
+    webBootRef.current = true
+    void handleSplashComplete()
+  })
+
   const handleSplashComplete = async () => {
     logger.info('Splash screen completed, awaiting preload result')
 
@@ -85,8 +95,8 @@ export default function App() {
       setUserProfile(result.profile)
       setAppPhase('main')
     } else if (result.status === 'loggedout') {
-      logger.info('Preload result: Not logged in, transitioning to Login')
-      setAppPhase('login')
+      logger.info(IS_WEB ? 'Preload result: Not logged in, browsing anonymously' : 'Preload result: Not logged in, transitioning to Login')
+      setAppPhase(IS_WEB ? 'main' : 'login')
     } else {
       logger.error('Preload result: Error', result.error)
       setInitError({
@@ -110,7 +120,7 @@ export default function App() {
       setUserProfile(result.profile)
       setAppPhase('main')
     } else if (result.status === 'loggedout') {
-      setAppPhase('login')
+      setAppPhase(IS_WEB ? 'main' : 'login')
     } else {
       setInitError({
         message: 'Failed to load user data. Please check your internet connection and try again.',
@@ -170,10 +180,26 @@ export default function App() {
   return (
     <UpdaterProvider>
       {appPhase === 'main' && <Main userProfile={userProfile} />}
-      {appPhase === 'login' && <LoginPage onLoginSuccess={handleLoginSuccess} />}
-      {appPhase === 'splash' && <SplashScreen onReady={handleSplashComplete} variant={initError ? 'error' : 'intro'} />}
+      {appPhase === 'login' && (
+        <Suspense fallback={null}>
+          <LoginPage onLoginSuccess={handleLoginSuccess} />
+        </Suspense>
+      )}
+      {appPhase === 'splash' && (
+        IS_WEB ? (
+          <WebBootScreen error={initError} />
+        ) : (
+          <Suspense fallback={null}>
+            <SplashScreen onReady={handleSplashComplete} variant={initError ? 'error' : 'intro'} />
+          </Suspense>
+        )
+      )}
 
-      <UpdateModal />
+      {!IS_WEB && (
+        <Suspense fallback={null}>
+          <UpdateModal />
+        </Suspense>
+      )}
 
       <ErrorModal
         isOpen={!!initError}

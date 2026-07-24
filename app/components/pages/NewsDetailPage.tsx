@@ -15,7 +15,7 @@ interface NewsDetailPageProps {
 }
 
 export function NewsDetailPage({ newsId, userProfile }: NewsDetailPageProps) {
-    const accessToken = userProfile?.accessToken
+    const accessToken = userProfile?.accessToken ?? ''
     const refreshCooldown = useRefreshCooldown()
     const [refreshKey, setRefreshKey] = useState(0)
     const scrollRef = useRef<HTMLDivElement>(null)
@@ -29,7 +29,7 @@ export function NewsDetailPage({ newsId, userProfile }: NewsDetailPageProps) {
             return { article, categories }
         },
         [accessToken, newsId, refreshKey],
-        { enabled: !!accessToken && !!newsId, errorMessage: 'Failed to load this news item.' },
+        { enabled: !!newsId, errorMessage: 'Failed to load this news item.' },
     )
 
     const onScroll = useNavScrollRestore(scrollRef, !loading && !!data)

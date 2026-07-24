@@ -34,6 +34,8 @@ import { PersonalProgressSnapshot } from './home/PersonalProgressSnapshot'
 import { AchievementProgressPreview } from './home/AchievementProgressPreview'
 import { RecentServersCard } from './home/RecentServersCard'
 import { MedalHuntCard } from './home/MedalHuntCard'
+import { capabilities, fetchGatewayServers } from '@/app/platform'
+import { requestLogin } from '@/app/components/shared/AuthRequiredModal'
 
 const NEWS_SEEN_KEY = 'utbt:newsSeen:v1'
 
@@ -127,18 +129,19 @@ export function Home({
     const replay = useReplayWatch()
 
     const loadData = useCallback(async (isActive: () => boolean = () => true) => {
-        if (!userProfile?.accessToken) return
+        if (!userProfile?.accessToken && !capabilities.anonymousBrowse) return
+        const token = userProfile?.accessToken ?? ''
         setLoading(true)
         setError(null)
         try {
             const [summaryData, hotMapsData, newsData, newsCategoryData, serverData, userSummaryData] = await Promise.all([
-                fetchSummary(userProfile.accessToken),
-                fetchHotMaps(userProfile.accessToken).catch(() => [] as HotMap[]),
-                fetchNews(userProfile.accessToken).catch(() => [] as NewsArticle[]),
-                fetchNewsCategories(userProfile.accessToken).catch(() => [] as NewsCategoryDef[]),
-                window.conveyor.game.fetchServers().catch(() => [] as Server[]) as Promise<Server[]>,
-                userProfile.id
-                    ? fetchUserSummary(userProfile.accessToken, userProfile.id).catch(() => null as UserSummary | null)
+                fetchSummary(token),
+                fetchHotMaps(token).catch(() => [] as HotMap[]),
+                fetchNews(token).catch(() => [] as NewsArticle[]),
+                fetchNewsCategories(token).catch(() => [] as NewsCategoryDef[]),
+                fetchGatewayServers<Server[]>().catch(() => [] as Server[]),
+                userProfile?.id
+                    ? fetchUserSummary(token, userProfile.id).catch(() => null as UserSummary | null)
                     : Promise.resolve(null),
             ])
             if (!isActive()) return
@@ -174,18 +177,18 @@ export function Home({
     }, [userProfile?.accessToken, userProfile?.id, onCachesChange])
 
     useEffect(() => {
-        if (!userProfile?.accessToken) {
+        if (!userProfile?.accessToken && !capabilities.anonymousBrowse) {
             setLoading(false)
             return
         }
-        if (hasCachedData) {
-            setLoading(false)
-            return
-        }
+        if (hasCachedData) setLoading(false)
         let cancelled = false
         loadData(() => !cancelled)
         return () => { cancelled = true }
-    }, [userProfile?.accessToken, hasCachedData, loadData])
+        // Cached data renders immediately; the fetch still runs so a revisit
+        // always shows live data (stale-while-revalidate).
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [userProfile?.accessToken, loadData])
 
     useEffect(() => {
         if (!userProfile?.accessToken) return
@@ -249,6 +252,7 @@ export function Home({
     }
 
     const handleJoinServer = async (server: Server | RecentServerEntry, asSpectator: boolean) => {
+        if (!capabilities.game) return
         try {
             if (window.conveyor?.ini) {
                 if (asSpectator) {
@@ -282,7 +286,7 @@ export function Home({
         if (newest) localStorage.setItem(NEWS_SEEN_KEY, newest)
     }, [news])
 
-    if (!userProfile) {
+    if (!userProfile && !capabilities.anonymousBrowse) {
         return (
             <div className="flex h-full items-center justify-center">
                 <div className="text-center space-y-4">
@@ -329,9 +333,112 @@ export function Home({
     const newMaps = data.newMaps ?? []
     const playersOnline = servers === null ? null : servers.reduce((sum, s) => sum + s.player_count, 0)
 
+    const renderNewsSection = (span: string) => (
+        <SpotlightSection
+            key="news"
+            title="Latest News"
+            accent={ACCENTS.news}
+            actionLabel={onViewNews ? 'See All' : undefined}
+            onAction={onViewNews}
+            className={span}
+        >
+            <NewsCard
+                articles={newsFeed}
+                categories={newsCategoryMap}
+                newSince={newsSeen}
+                className="grid grid-cols-1 md:grid-cols-1 gap-3 space-y-0 overflow-y-auto pr-1 [scrollbar-width:thin] [scrollbar-color:rgba(148,163,184,0.25)_transparent] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-hairline/20"
+            />
+        </SpotlightSection>
+    )
+
+    const renderRecentServersSection = (span: string) => (
+        <SpotlightSection
+            key="recent-servers"
+            title="Your Recent Servers"
+            accent={ACCENTS.recentServers}
+            actionLabel="See All"
+            onAction={onViewServers}
+            className={span}
+        >
+            <RecentServersCard
+                recentServers={recentServers}
+                liveServers={servers ?? []}
+                installationStatus={installationStatus}
+                onJoin={handleJoinServer}
+                onHide={(serverId) => setRecentServers(forgetRecentServer(serverId))}
+            />
+        </SpotlightSection>
+    )
+
+    const renderHottestMapsSection = (span: string) => (
+        <SpotlightSection
+            key="hottest-maps"
+            title="Hottest Maps"
+            accent={ACCENTS.hotMaps}
+            actionLabel={onViewMaps ? 'See All' : undefined}
+            onAction={onViewMaps}
+            className={span}
+        >
+            <HottestPosterGrid
+                maps={hotMaps}
+                favoriteMapNames={favoriteMapNames}
+                onToggleFavorite={onToggleFavorite}
+                onMapSelect={onMapSelect}
+            />
+        </SpotlightSection>
+    )
+
+    const renderNewestMapsSection = (span: string) => (
+        <SpotlightSection
+            key="newest-maps"
+            title="Newest Maps"
+            accent={ACCENTS.newMaps}
+            actionLabel={onViewMaps ? 'See All' : undefined}
+            onAction={onViewMaps}
+            className={span}
+        >
+            <NewestMapsCard
+                maps={newMaps}
+                favoriteMapNames={favoriteMapNames}
+                onToggleFavorite={onToggleFavorite}
+                onMapSelect={onMapSelect}
+            />
+        </SpotlightSection>
+    )
+
+    const renderLatestRecordsSection = (span: string) => (
+        <SpotlightSection
+            key="latest-records"
+            title="Latest World Records"
+            accent={ACCENTS.worldRecords}
+            actionLabel={onViewWorldRecords ? 'See All' : undefined}
+            onAction={onViewWorldRecords}
+            className={span}
+        >
+            <LatestRecordsCard
+                records={recentWRs}
+                currentUserId={userProfile?.id ?? undefined}
+                favoriteMapNames={favoriteMapNames}
+                onToggleFavorite={onToggleFavorite}
+                onMapSelect={onMapSelect}
+                onWatchReplay={handleWatchReplay}
+                loadingCapId={replay.loadingCapId}
+            />
+        </SpotlightSection>
+    )
+
+    const anonymousSections = [
+        ...(newsFeed.length > 0 ? [renderNewsSection] : []),
+        renderRecentServersSection,
+        renderHottestMapsSection,
+        renderNewestMapsSection,
+        renderLatestRecordsSection,
+    ]
+
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-0 duration-500 pb-12 pt-2">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
+                {userProfile && (
                 <YouDoorway
                     className="lg:col-span-6"
                     userId={userProfile.id ?? undefined}
@@ -339,9 +446,20 @@ export function Home({
                     title={userProfile.active_title ?? null}
                     worldRecords={userSummary?.medals.world_records ?? null}
                 />
+                )}
+                {!userProfile && (
+                    <div className="lg:col-span-12 rounded-2xl border border-accent-500/25 bg-gradient-to-br from-accent-500/10 to-card/30 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                            <div className="font-semibold text-foreground">Make UTBT yours</div>
+                            <p className="mt-1 text-sm text-muted-foreground">Sign in to track medals and achievements, review maps, and sync favorites.</p>
+                        </div>
+                        <Button onClick={() => requestLogin({ feature: 'personalize UTBT' })}>Continue with Discord</Button>
+                    </div>
+                )}
+
                 <CommunityStatsRow
-                    className="lg:col-span-6"
-                    accessToken={userProfile.accessToken}
+                    className={userProfile ? "lg:col-span-6" : "lg:col-span-12"}
+                    accessToken={userProfile?.accessToken}
                     playersOnline={playersOnline}
                     newMaps={data.global.newMaps}
                     totalMaps={caches.mapsCount}
@@ -356,39 +474,18 @@ export function Home({
             </div>
 
             <div className="space-y-4">
+                {!userProfile ? (
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+                        {anonymousSections.map((render, i) => render(
+                            i === anonymousSections.length - 1 && anonymousSections.length % 2 === 1
+                                ? 'lg:col-span-12'
+                                : 'lg:col-span-6',
+                        ))}
+                    </div>
+                ) : (<>
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
-                    {newsFeed.length > 0 && (
-                        <SpotlightSection
-                            title="Latest News"
-                            accent={ACCENTS.news}
-                            actionLabel={onViewNews ? 'See All' : undefined}
-                            onAction={onViewNews}
-                            className="lg:col-span-6"
-                        >
-                            <NewsCard
-                                articles={newsFeed}
-                                categories={newsCategoryMap}
-                                newSince={newsSeen}
-                                className="grid grid-cols-1 md:grid-cols-1 gap-3 space-y-0 overflow-y-auto pr-1 [scrollbar-width:thin] [scrollbar-color:rgba(148,163,184,0.25)_transparent] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-hairline/20"
-                            />
-                        </SpotlightSection>
-                    )}
-
-                    <SpotlightSection
-                        title="Your Recent Servers"
-                        accent={ACCENTS.recentServers}
-                        actionLabel="See All"
-                        onAction={onViewServers}
-                        className="lg:col-span-6"
-                    >
-                        <RecentServersCard
-                            recentServers={recentServers}
-                            liveServers={servers ?? []}
-                            installationStatus={installationStatus}
-                            onJoin={handleJoinServer}
-                            onHide={(serverId) => setRecentServers(forgetRecentServer(serverId))}
-                        />
-                    </SpotlightSection>
+                    {newsFeed.length > 0 && renderNewsSection('lg:col-span-6')}
+                    {renderRecentServersSection(newsFeed.length > 0 ? 'lg:col-span-6' : 'lg:col-span-12')}
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
@@ -416,37 +513,11 @@ export function Home({
                             onMapSelect={onMapSelect}
                         />
                     </SpotlightSection>
-                    <SpotlightSection
-                        title="Hottest Maps"
-                        accent={ACCENTS.hotMaps}
-                        actionLabel={onViewMaps ? 'See All' : undefined}
-                        onAction={onViewMaps}
-                        className="lg:col-span-6"
-                    >
-                        <HottestPosterGrid
-                            maps={hotMaps}
-                            favoriteMapNames={favoriteMapNames}
-                            onToggleFavorite={onToggleFavorite}
-                            onMapSelect={onMapSelect}
-                        />
-                    </SpotlightSection>
+                    {renderHottestMapsSection('lg:col-span-6')}
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
-                    <SpotlightSection
-                        title="Newest Maps"
-                        accent={ACCENTS.newMaps}
-                        actionLabel={onViewMaps ? 'See All' : undefined}
-                        onAction={onViewMaps}
-                        className="lg:col-span-6"
-                    >
-                        <NewestMapsCard
-                            maps={newMaps}
-                            favoriteMapNames={favoriteMapNames}
-                            onToggleFavorite={onToggleFavorite}
-                            onMapSelect={onMapSelect}
-                        />
-                    </SpotlightSection>
+                    {renderNewestMapsSection('lg:col-span-6')}
                     <SpotlightSection title="Maps to Review" accent={ACCENTS.reviews} className="lg:col-span-6">
                         <MapsToReviewCard
                             accessToken={userProfile.accessToken}
@@ -462,24 +533,7 @@ export function Home({
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
-                    <SpotlightSection
-                        title="Latest World Records"
-                        accent={ACCENTS.worldRecords}
-                        actionLabel={onViewWorldRecords ? 'See All' : undefined}
-                        onAction={onViewWorldRecords}
-                        className="lg:col-span-6"
-                    >
-                        <LatestRecordsCard
-                            records={recentWRs}
-                            currentUserId={userProfile.id ?? undefined}
-                            favoriteMapNames={favoriteMapNames}
-                            onToggleFavorite={onToggleFavorite}
-                            onMapSelect={onMapSelect}
-                            onWatchReplay={handleWatchReplay}
-                            loadingCapId={replay.loadingCapId}
-                        />
-                    </SpotlightSection>
-
+                    {renderLatestRecordsSection('lg:col-span-6')}
                     <SpotlightSection
                         title="Your Latest Caps"
                         accent={ACCENTS.caps}
@@ -489,9 +543,9 @@ export function Home({
                     >
                         <RecentCapsCard
                             caps={data.achievements}
-                            playerUserId={userProfile.id ?? undefined}
-                            playerAlias={userProfile.alias}
-                            playerTitle={userProfile.active_title ?? null}
+                            playerUserId={userProfile?.id ?? undefined}
+                            playerAlias={userProfile?.alias}
+                            playerTitle={userProfile?.active_title ?? null}
                             favoriteMapNames={favoriteMapNames}
                             onToggleFavorite={onToggleFavorite}
                             onMapSelect={onMapSelect}
@@ -500,8 +554,10 @@ export function Home({
                         />
                     </SpotlightSection>
                 </div>
+                </>)}
             </div>
 
+            {userProfile && (<>
             <HistoryModal
                 open={historyOpen}
                 onOpenChange={setHistoryOpen}
@@ -524,6 +580,7 @@ export function Home({
                     setReviewsRefreshKey(k => k + 1)
                 }}
             />
+            </>)}
 
             <ReplayVideoModal state={replay.video} onClose={replay.clearVideo} />
 

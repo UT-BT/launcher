@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import { lazy, Suspense, useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import {
     Search, X, Play, Download, SlidersHorizontal,
     Trophy, Crown, ListOrdered, type LucideIcon,
@@ -33,14 +33,13 @@ import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
 import { IconActionButton } from '@/app/components/shared/IconActionButton'
 import { ReplayVideoModal } from '@/app/components/shared/ReplayVideoModal'
 import { DemoDownloadStatusModal } from '@/app/components/shared/DemoDownloadStatusModal'
-import {
-    WorldRecordProgressionModal, WorldRecordHistoryTrigger,
-} from '@/app/components/modals/WorldRecordProgressionModal'
+import { WorldRecordHistoryTrigger } from '@/app/components/shared/WorldRecordHistoryTrigger'
 import { PaginationBar } from '@/app/components/ui/pagination'
 import { ColumnsMenu } from '@/app/components/shared/ColumnsMenu'
 import { MultiFilterDropdown } from '@/app/components/ui/multi-filter-dropdown'
 import { FilterPanelRow } from '@/app/components/ui/filter-panel-row'
 import { ActiveFilterChip } from '@/app/components/shared/ActiveFilterChip'
+const WorldRecordProgressionModal = lazy(() => import('@/app/components/modals/WorldRecordProgressionModal').then(m => ({ default: m.WorldRecordProgressionModal })))
 import { FilterPresetsMenu, type FilterPreset } from '@/app/components/shared/FilterPresetsMenu'
 import {
     DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow,
@@ -128,9 +127,9 @@ const COLUMN_PRIORITY: Partial<Record<WorldRecordsColumnId, number>> = {
 type RusherColumnId = 'rank' | 'rusher' | 'records' | 'share' | 'median' | 'average'
 
 const RUSHER_COLUMNS: ResponsiveColumn[] = [
-    { id: 'rank', width: '5rem', priority: 60 },
+    { id: 'rank', width: '5rem', required: true },
     { id: 'rusher', required: true },
-    { id: 'records', width: '20rem', priority: 70 },
+    { id: 'records', width: '20rem', required: true },
     { id: 'share', width: '6rem', priority: 30 },
     { id: 'median', width: '8rem', priority: 35 },
     { id: 'average', width: '8rem', priority: 34 },
@@ -295,7 +294,7 @@ export function WorldRecordsPage({
     userProfile, state, onStateChange, caches, onCachesChange,
     favoriteMapNames, onToggleFavorite, onMapSelect,
 }: WorldRecordsPageProps) {
-    const accessToken = userProfile?.accessToken
+    const accessToken = userProfile?.accessToken ?? ''
     const selfId = userProfile?.id ?? undefined
     const isRushers = state.mode === 'rushers'
 
@@ -324,7 +323,6 @@ export function WorldRecordsPage({
 
     const [filterOptions, setFilterOptions] = useState<WorldRecordFilterOptions>({ holders: [], years: [] })
     useEffect(() => {
-        if (!accessToken) return
         let cancelled = false
         fetchWorldRecordFilterOptions(accessToken)
             .then(o => { if (!cancelled) setFilterOptions(o) })
@@ -352,8 +350,8 @@ export function WorldRecordsPage({
         const search = debouncedSearch || undefined
         if (isRushers) return { mode: 'rushers', search }
         const addedSince = state.timeframe === 'all' ? undefined : isoDaysAgo(TIMEFRAME_DAYS[state.timeframe])
-        const favoritesEmpty = state.favoritesOnly && favoriteMapNames.size === 0
-        const maps = state.favoritesOnly && favoriteMapNames.size > 0
+        const favoritesEmpty = !!accessToken && state.favoritesOnly && favoriteMapNames.size === 0
+        const maps = !!accessToken && state.favoritesOnly && favoriteMapNames.size > 0
             ? [...favoriteMapNames].sort().join(',')
             : undefined
         return {
@@ -391,7 +389,6 @@ export function WorldRecordsPage({
     useEffect(() => { globalsCacheRef.current = {} }, [globalsKey])
 
     const fetchPageData = useCallback((p: number): Promise<WorldRecord[] | RusherRow[] | null> => {
-        if (!accessToken) return Promise.resolve(null)
         if (serverParams.mode === 'records' && serverParams.favoritesEmpty) {
             globalsCacheRef.current[globalsKey] = { total: 0, totalRecords: 0, maxRusherCount: 0 }
             return Promise.resolve([])
@@ -425,7 +422,6 @@ export function WorldRecordsPage({
     }, [accessToken, serverParams, pageSize, keyFor, globalsKey])
 
     const fetchGlobalsData = useCallback((): Promise<Globals | null> => {
-        if (!accessToken) return Promise.resolve(null)
         const existing = globalsCacheRef.current[globalsKey]
         if (existing !== undefined) return 'total' in existing ? Promise.resolve(existing) : existing
         if (serverParams.mode === 'records' && serverParams.favoritesEmpty) {
@@ -453,7 +449,6 @@ export function WorldRecordsPage({
     }, [isRushers, onCachesChange, querySig])
 
     const loadPage = useCallback(async (isCancelled: () => boolean = () => false) => {
-        if (!accessToken) return
 
         const prefetchNeighbours = (totalPages: number) => {
             if (state.currentPage > 1 && !(keyFor(state.currentPage - 1) in pageCacheRef.current)) {
@@ -644,6 +639,9 @@ export function WorldRecordsPage({
         [visibleColumns],
     )
 
+    const [compactMode, setCompactMode] = useState(false)
+    const handleCompactChange = useCallback((compact: boolean) => setCompactMode(compact), [])
+
     const [recordsResolved, setRecordsResolved] = useState<Set<WorldRecordsColumnId> | null>(null)
     const handleRecordsResolve = useCallback((ids: Set<string>) => {
         setRecordsResolved(ids as Set<WorldRecordsColumnId>)
@@ -706,7 +704,6 @@ export function WorldRecordsPage({
     }, [activePreset, state.search, state.difficultyFilters, state.holderFilters, state.timeFilters, state.yearFilters, state.timeframe, state.favoritesOnly, state.sortBy, state.sortDir])
 
     const openHistory = useCallback(async (mapName: string) => {
-        if (!accessToken) return
         setWrHistory({ mapName, entries: [] })
         const entries = await fetchWorldRecordProgression(accessToken, mapName)
         setWrHistory(cur => cur && cur.mapName === mapName ? { mapName, entries } : cur)
@@ -870,6 +867,118 @@ export function WorldRecordsPage({
 
     const recordWord = totalCount === 1 ? 'record' : 'records'
 
+    const compactSkeleton = Array.from({ length: Math.min(pageSize, AUTO_PAGE_SIZE_MAX_ROWS) }).map((_, i) => (
+        <div key={i} className="h-14 mx-3 my-2 rounded-lg bg-hairline/5 animate-pulse" />
+    ))
+
+    const compactRecordContent = showSkeleton ? compactSkeleton : recordPageRows.length === 0 ? (
+        <div className="px-4 py-16 text-center text-muted-foreground">
+            {recordsHaveFilter ? 'No world records match your filters.' : 'No world records found.'}
+        </div>
+    ) : recordPageRows.map(r => {
+        const isTeamRow = !!(r.members && r.members.length > 0)
+        const isSelf = selfId != null && r.user_id === String(selfId)
+        const isNew = highlight.isNew(r.added)
+        return (
+            <div
+                key={r.cap_id}
+                role="listitem"
+                className={cn(
+                    'grid grid-cols-[minmax(0,1fr)_auto] gap-3 p-3 border-b border-hairline/5 last:border-0',
+                    isNew && 'bg-accent-500/[0.07]',
+                )}
+            >
+                <div className="min-w-0 space-y-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                        <FavoriteStar
+                            name={r.map}
+                            isFavorited={favoriteMapNames.has(r.map)}
+                            onToggle={onToggleFavorite}
+                            size="sm"
+                            className="shrink-0"
+                        />
+                        <button
+                            type="button"
+                            onClick={() => onMapSelect(r.map)}
+                            className="font-bold text-foreground/90 truncate hover:text-foreground hover:underline underline-offset-2 cursor-pointer text-left"
+                        >
+                            {displayMapName(r.map)}
+                        </button>
+                    </div>
+                    {isTeamRow ? (
+                        <TeamHolders
+                            members={r.members!.map(m => ({
+                                userId: m.user,
+                                alias: m.alias,
+                                activeTitle: m.active_title,
+                            }))}
+                            currentUserId={selfId != null ? String(selfId) : undefined}
+                        />
+                    ) : (
+                        <PlayerInfo
+                            userId={r.user_id}
+                            alias={r.alias}
+                            title={r.active_title}
+                            size="sm"
+                            highlight={isSelf}
+                            showYouBadge={isSelf}
+                        />
+                    )}
+                </div>
+                <div className="flex flex-col items-end justify-between gap-2">
+                    <CapTimeLink
+                        capId={isTeamRow ? undefined : r.cap_id}
+                        teamCapId={isTeamRow ? r.cap_id : undefined}
+                        seconds={r.cap_time_seconds}
+                        className="font-mono font-black tabular-nums text-blue-300 tracking-tight"
+                    />
+                    <div className="flex items-center gap-2">
+                        {r.difficulty != null && (
+                            <span className={cn('font-mono tabular-nums text-xs font-bold', difficultyTextColor(r.difficulty))}>
+                                {r.difficulty}
+                            </span>
+                        )}
+                        <span className="text-xs text-muted-foreground tabular-nums">{formatAddedDate(r.added)}</span>
+                    </div>
+                </div>
+            </div>
+        )
+    })
+
+    const compactRusherContent = showSkeleton ? compactSkeleton : rusherPageRows.length === 0 ? (
+        <div className="px-4 py-16 text-center text-muted-foreground">
+            {debouncedSearch ? 'No rushers match your search.' : 'No rushers found.'}
+        </div>
+    ) : rusherPageRows.map((r, i) => {
+        const rank = sliceStart + i + 1
+        const isSelf = selfId != null && r.user_id === String(selfId)
+        const share = totalRecords > 0 ? (r.count / totalRecords) * 100 : 0
+        return (
+            <div key={r.user_id} role="listitem" className="flex items-center gap-3 p-3 border-b border-hairline/5 last:border-0">
+                <span className={cn('font-mono font-bold tabular-nums w-9 shrink-0 text-right', medalText(rank))}>
+                    #{rank}
+                </span>
+                <div className="min-w-0 flex-1">
+                    <PlayerInfo
+                        userId={r.user_id}
+                        alias={r.alias}
+                        title={r.active_title}
+                        size="sm"
+                        highlight={isSelf}
+                        showYouBadge={isSelf}
+                    />
+                </div>
+                <div className="flex flex-col items-end shrink-0">
+                    <span className="font-mono tabular-nums text-foreground font-bold">
+                        {r.count}
+                        <span className="ml-1 text-[9px] uppercase tracking-widest text-muted-foreground font-bold">WRs</span>
+                    </span>
+                    <span className="font-mono tabular-nums text-xs text-muted-foreground">{share.toFixed(1)}%</span>
+                </div>
+            </div>
+        )
+    })
+
     return (
         <div className="space-y-4 h-full flex flex-col overflow-hidden">
             <div className="flex items-end justify-between shrink-0">
@@ -966,14 +1075,16 @@ export function WorldRecordsPage({
                             )}
                         </button>
 
-                        <ColumnsMenu<WorldRecordsColumnId>
-                            columnOrder={state.columnOrder}
-                            columnVisibility={state.columnVisibility}
-                            columnLabels={WORLD_RECORDS_COLUMN_LABELS}
-                            onToggle={toggleColumn}
-                            onReorder={reorderColumn}
-                            requiredColumns={REQUIRED_COLUMNS}
-                        />
+                        {!compactMode && (
+                            <ColumnsMenu<WorldRecordsColumnId>
+                                columnOrder={state.columnOrder}
+                                columnVisibility={state.columnVisibility}
+                                columnLabels={WORLD_RECORDS_COLUMN_LABELS}
+                                onToggle={toggleColumn}
+                                onReorder={reorderColumn}
+                                requiredColumns={REQUIRED_COLUMNS}
+                            />
+                        )}
                     </>
                 )}
             </div>
@@ -1022,7 +1133,7 @@ export function WorldRecordsPage({
                             onClear={() => updateFilter('timeframe', 'all')}
                         />
                     )}
-                    {state.favoritesOnly && (
+                    {!!accessToken && state.favoritesOnly && (
                         <ActiveFilterChip label="Favorites" value="On" onClear={() => updateFilter('favoritesOnly', false)} />
                     )}
                 </div>
@@ -1108,7 +1219,7 @@ export function WorldRecordsPage({
             )}
 
             {isRushers && showPodium && (
-                <div className="grid grid-cols-3 gap-3 shrink-0">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 shrink-0">
                     {PODIUM_SLOTS.map(slot => {
                         const r = rusherPageRows[slot.rank - 1]
                         if (!r) return <div key={slot.rank} />
@@ -1154,7 +1265,12 @@ export function WorldRecordsPage({
                 <DataTableShell
                     scrollRef={scrollContainerRef}
                     onScroll={onScrollContainerScroll}
-                    responsive={{ columns: RUSHER_COLUMNS, onResolve: handleRushersResolve }}
+                    responsive={{
+                        columns: RUSHER_COLUMNS,
+                        onResolve: handleRushersResolve,
+                        compactContent: compactRusherContent,
+                        compactAriaLabel: 'Top rushers',
+                    }}
                 >
                     <DataTableHeaderRow theadDataAttr="data-utbt-rushers-thead">
                         {isRusherColumnVisible('rank') && <DataTableHeaderCell align="right" width="5rem">#</DataTableHeaderCell>}
@@ -1244,7 +1360,13 @@ export function WorldRecordsPage({
                 <DataTableShell
                     scrollRef={scrollContainerRef}
                     onScroll={onScrollContainerScroll}
-                    responsive={{ columns: responsiveColumns, onResolve: handleRecordsResolve }}
+                    responsive={{
+                        columns: responsiveColumns,
+                        onResolve: handleRecordsResolve,
+                        compactContent: compactRecordContent,
+                        compactAriaLabel: 'World records',
+                        onCompactChange: handleCompactChange,
+                    }}
                 >
                     <DataTableHeaderRow theadDataAttr="data-utbt-worldrecords-thead">
                         {effectiveColumns.map(id => renderHeaderCell(id))}
@@ -1294,13 +1416,15 @@ export function WorldRecordsPage({
                 />
             )}
 
-            <WorldRecordProgressionModal
-                isOpen={wrHistory !== null}
-                onClose={() => setWrHistory(null)}
-                mapName={wrHistory?.mapName ?? ''}
-                entries={wrHistory?.entries ?? []}
-                currentUserId={selfId}
-            />
+            <Suspense fallback={null}>
+                <WorldRecordProgressionModal
+                    isOpen={wrHistory !== null}
+                    onClose={() => setWrHistory(null)}
+                    mapName={wrHistory?.mapName ?? ''}
+                    entries={wrHistory?.entries ?? []}
+                    currentUserId={selfId}
+                />
+            </Suspense>
 
             <ReplayVideoModal state={replay.video} onClose={replay.clearVideo} />
 

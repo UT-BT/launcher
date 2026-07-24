@@ -80,6 +80,35 @@ export function TeamWorldRecordsPanel({ accessToken, teamId, memberIds, selfUser
     const dirFor = (field: WrSortField): SortDirection => (sort.by === field ? sort.dir : null)
 
     const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+    const compactRows = loading ? (
+        Array.from({ length: PAGE_SIZE }).map((_, i) => (
+            <div key={i} role="listitem" className="p-3 border-b border-hairline/5 last:border-0 animate-pulse">
+                <div className="h-10 rounded bg-hairline/5" />
+            </div>
+        ))
+    ) : records.length === 0 ? (
+        <div role="listitem" className="px-4 py-12 text-center text-sm text-muted-foreground">
+            This team holds no world records yet.
+        </div>
+    ) : records.map(r => {
+        const isOwn = selfUserId != null && String(r.user_id) === String(selfUserId)
+        return (
+            <div
+                key={r.cap_id}
+                role="listitem"
+                className={cn('grid grid-cols-[minmax(0,1fr)_auto] gap-3 p-3 border-b border-hairline/5 last:border-0', isOwn && 'bg-emerald-500/[0.05]')}
+            >
+                <div className="min-w-0 space-y-1.5">
+                    <PlayerInfo userId={r.user_id} alias={r.alias} title={r.active_title} size="sm" highlight={isOwn} showYouBadge={isOwn} />
+                    <span className="text-sm text-foreground truncate block">{displayMapName(r.map)}</span>
+                </div>
+                <div className="flex flex-col items-end justify-between gap-1.5">
+                    <CapTimeLink capId={r.cap_id} seconds={r.cap_time_seconds} className="font-mono tabular-nums font-bold text-blue-300" />
+                    <span className="text-xs text-muted-foreground tabular-nums">{r.added ? formatAddedDate(r.added) : '—'}</span>
+                </div>
+            </div>
+        )
+    })
 
     return (
         <section>
@@ -91,7 +120,15 @@ export function TeamWorldRecordsPanel({ accessToken, teamId, memberIds, selfUser
 
             {error && <div className="mb-2 p-2.5 bg-red-500/10 border border-red-500/30 rounded-lg text-red-300 text-xs">{error}</div>}
 
-            <DataTableShell className="!flex-none" responsive={{ columns: COLUMNS, onResolve: handleResolve }}>
+            <DataTableShell
+                className="!flex-none"
+                responsive={{
+                    columns: COLUMNS,
+                    onResolve: handleResolve,
+                    compactContent: compactRows,
+                    compactAriaLabel: 'Team world records',
+                }}
+            >
                 <DataTableHeaderRow>
                     <DataTableHeaderCell width="15rem" sortable sortDirection={dirFor('holder')} onSort={() => handleSort('holder')}>Holder</DataTableHeaderCell>
                     <DataTableHeaderCell width="10rem" sortable sortDirection={dirFor('map')} onSort={() => handleSort('map')}>Map</DataTableHeaderCell>

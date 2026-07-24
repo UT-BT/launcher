@@ -11,7 +11,7 @@ not_here:
   - "how detail pages open via events (open-player / open-cap) → navigation.md"
   - "page/query state + persistence → state-patterns.md"
 sections: [hard-rule-playerinfo, player-cap-links, tables-datatable-primitives, columns-columnsmenu, filter-presets, tutorial, visual-primitives, ui-primitives, utilities, when-to-extract]
-last_verified: 2026-07-13
+last_verified: 2026-07-23
 verify_against: [app/components/shared/PlayerInfo.tsx, app/components/shared/DataTable.tsx, app/components/shared/CapTimeLink.tsx, app/components/shared/ColumnsMenu.tsx, app/components/shared/FilterPresetsMenu.tsx]
 ---
 
@@ -123,7 +123,7 @@ own their column definitions and cell content; primitives own the shell.
 
 | Component | Purpose |
 |---|---|
-| `DataTableShell` | Scroll container + `<table>`. Pass `scrollRef`, `onScroll` for persisted scroll state. `minWidth` floors the table width so a flex column scrolls instead of collapsing at small sizes. Opt-in `responsive={{ columns, onResolve }}` adds width-driven condensed density + priority auto-hide (the resolver computes the floor itself) — see `styling.md` → Responsive columns. |
+| `DataTableShell` | Scroll container + `<table>`. Pass `scrollRef`, `onScroll` for persisted scroll state. `minWidth` floors the table width so a flex column scrolls instead of collapsing at small sizes. Opt-in `responsive={{ columns, onResolve, compactContent, compactAriaLabel }}` adds width-driven condensed density + priority auto-hide, and below the required-fit width renders `compactContent` (stacked card rows) instead of the table — mandatory for every primary tabular surface; see `styling.md` → Responsive columns. |
 | `DataTableHeaderRow` | Sticky `<thead>` + bordered `<tr>`. `theadDataAttr` writes a data-attr for tutorial z-lift. |
 | `DataTableHeaderCell` | `<th>` with locked padding/font. `sortable` + `sortDirection` + `onSort` for sortable headers. `align`, `width`, `className`, `buttonRef` overrides. |
 | `DataTableRow` | Body `<tr>` with locked hover/border styling. Spread-through tr props. |
@@ -251,7 +251,7 @@ the whole thead during the step:
 
 | Component | Use for |
 |---|---|
-| `pagination.tsx` — `PaginationBar`, `buildPageList`, `PAGE_SIZE_OPTIONS` | Page count + per-page dropdown + prev/next + ellipsis. Pass optional `meta` ("search" / "filtered") for the count badge. |
+| `pagination.tsx` — `PaginationBar`, `buildPageList`, `PAGE_SIZE_OPTIONS` | Page count + per-page dropdown + prev/next + ellipsis. Pass optional `meta` ("search" / "filtered") for the count badge. Below `sm` it swaps itself for a touch bar (`‹ Prev [editable page]/total Next ›`) — pages get mobile pagination for free; never hand-roll a second pager. |
 | `multi-filter-dropdown.tsx` — `MultiFilterDropdown` | Multi-select with optional fuzzy search and per-option icons. Empty selection = show all. |
 | `filter-panel-row.tsx` — `FilterPanelRow` | Label + flex-wrap children. Used inside a filter panel. |
 | `dropdown-menu.tsx` | Radix dropdown primitive. Use for any click-to-open popover. |

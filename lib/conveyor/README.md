@@ -11,7 +11,7 @@ not_here:
   - "the step-by-step add-a-channel procedure → .claude/skills/add-ipc-channel/SKILL.md"
   - "the main-process services behind the handlers → lib/main/README.md"
 sections: [overview, the-channel-inventory, calling-from-the-renderer, adding-a-channel, event-bridges, conventions]
-last_verified: 2026-06-16
+last_verified: 2026-07-22
 verify_against:
   - lib/conveyor/api/index.ts
   - lib/conveyor/schemas/index.ts
@@ -37,6 +37,11 @@ channel is one triple kept in three folders:
 
 > This is for renderer↔main calls. HTTP to the backend API does **not** go
 > through Conveyor — it lives in `app/utils/api.ts` (see `agents/data-sources.md`).
+
+> **Web target:** none of these bridges exist in the web build. Shared UI must
+> reach desktop functionality through `app/platform/` (capability gates + web
+> fallbacks), never via raw `window.conveyor` presence checks. See
+> `agents/web-target.md`.
 
 ## The channel inventory
 

@@ -42,6 +42,9 @@ export default defineConfig({
   },
   renderer: {
     root: './app',
+    define: {
+      __WEB_TARGET__: 'false',
+    },
     build: {
       rollupOptions: {
         input: {

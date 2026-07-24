@@ -7,6 +7,7 @@ import {
 } from '@/app/utils/server-utils'
 import { displayMapName } from '@/app/utils/format'
 import { cn } from '@/lib/utils'
+import { capabilities } from '@/app/platform'
 
 interface RecentServersCardProps {
     recentServers: RecentServerEntry[]
@@ -25,6 +26,7 @@ export function RecentServersCard({ recentServers, liveServers, installationStat
     const [pingByIp, setPingByIp] = useState<Map<string, number>>(() => new Map())
 
     useEffect(() => {
+        if (!capabilities.ping) return
         let cancelled = false
         const uniqueIps = Array.from(new Set(rows.map(({ entry, live }) => (live ?? entry).ip)))
             .filter(ip => !pingByIp.has(ip))
@@ -94,9 +96,11 @@ export function RecentServersCard({ recentServers, liveServers, installationStat
                         </div>
                         <Tooltip content={region} side="top" className="justify-center [@media(min-height:761px)]:hidden">
                             <div className="flex flex-col items-center justify-center gap-1 min-w-0">
-                                <span className={cn('text-[10px] font-bold leading-none tabular-nums', pingColor)}>
-                                    {ping ? `${ping}ms` : '...'}
-                                </span>
+                                {capabilities.ping && (
+                                    <span className={cn('text-[10px] font-bold leading-none tabular-nums', pingColor)}>
+                                        {ping ? `${ping}ms` : '...'}
+                                    </span>
+                                )}
                                 <img
                                     src={getRegionFlag(region)}
                                     alt={region}
@@ -105,7 +109,7 @@ export function RecentServersCard({ recentServers, liveServers, installationStat
                             </div>
                         </Tooltip>
                         <div className={cn('hidden [@media(min-height:761px)]:block justify-self-center text-xs font-bold leading-none tabular-nums', pingColor)}>
-                            {ping ? `${ping}ms` : '...'}
+                            {capabilities.ping ? (ping ? `${ping}ms` : '...') : null}
                         </div>
                         <Tooltip content={region} side="top" className="hidden [@media(min-height:761px)]:inline-flex justify-center">
                             <img
@@ -118,6 +122,7 @@ export function RecentServersCard({ recentServers, liveServers, installationStat
                             {players}
                         </div>
                         <div className="inline-flex items-center gap-1.5 shrink-0">
+                            {capabilities.game && (<>
                             <Tooltip content={joinTooltip} side="top">
                                 <span className="inline-flex">
                                     <button
@@ -144,6 +149,7 @@ export function RecentServersCard({ recentServers, liveServers, installationStat
                                     </button>
                                 </span>
                             </Tooltip>
+                            </>)}
                             <Tooltip content="Hide Server" side="top">
                                 <span className="inline-flex">
                                     <button

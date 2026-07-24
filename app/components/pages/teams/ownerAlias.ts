@@ -40,7 +40,7 @@ export function useOwnerIdentities(accessToken: string | undefined, ownerIds: st
     const idsKey = Array.from(new Set(ownerIds.map(String))).sort().join(',')
 
     useEffect(() => {
-        if (!accessToken) return
+
         const unique = idsKey ? idsKey.split(',') : []
         const snapshot: Record<string, OwnerIdentity> = {}
         for (const id of unique) {
@@ -53,7 +53,7 @@ export function useOwnerIdentities(accessToken: string | undefined, ownerIds: st
         if (missing.length === 0) return
 
         let cancelled = false
-        void Promise.all(missing.map(id => resolveOne(accessToken, id))).then(() => {
+        void Promise.all(missing.map(id => resolveOne(accessToken ?? '', id))).then(() => {
             if (cancelled) return
             setIdentities(prev => {
                 const next = { ...prev }

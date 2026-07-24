@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { UpdaterStateSnapshot } from '@/lib/conveyor/schemas/updater-schema'
+import { capabilities } from '@/app/platform'
 
 const DEFAULT_STATE: UpdaterStateSnapshot = {
   phase: 'idle',
@@ -27,6 +28,7 @@ export function UpdaterProvider({ children }: { children: ReactNode }) {
   const autoOpenedForVersionRef = useRef<string | null>(null)
 
   useEffect(() => {
+    if (!capabilities.updater) return
     let cancelled = false
     window.conveyor.updater
       .getState()
@@ -54,18 +56,22 @@ export function UpdaterProvider({ children }: { children: ReactNode }) {
   }, [state.phase, state.lastCheckTrigger, state.version])
 
   const check = useCallback(async (manual = false) => {
+    if (!capabilities.updater) return
     await window.conveyor.updater.check(manual)
   }, [])
 
   const download = useCallback(async () => {
+    if (!capabilities.updater) return
     await window.conveyor.updater.download()
   }, [])
 
   const install = useCallback(async () => {
+    if (!capabilities.updater) return
     await window.conveyor.updater.quitAndInstall()
   }, [])
 
   const setAllowPrerelease = useCallback(async (value: boolean) => {
+    if (!capabilities.updater) return
     await window.conveyor.updater.setAllowPrerelease(value)
   }, [])
 

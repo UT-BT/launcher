@@ -27,7 +27,7 @@ function StatTile({ icon: Icon, label, value, accent, loading }: {
                 {loading ? (
                     <div className="mt-1 h-5 w-14 bg-hairline/5 rounded animate-pulse" />
                 ) : (
-                    <div className="text-lg font-bold font-mono tabular-nums text-foreground leading-tight truncate">{value}</div>
+                    <div className="text-base sm:text-lg font-bold font-mono tabular-nums text-foreground leading-tight">{value}</div>
                 )}
             </div>
         </div>

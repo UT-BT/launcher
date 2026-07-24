@@ -4,18 +4,20 @@ import type { UserProfile } from '@/app/utils/api'
 
 export type Tone = 'accent' | 'emerald' | 'red' | 'amber'
 
-export type AdminGroupId = 'overview' | 'community' | 'game-content' | 'integrity' | 'system'
+export type AdminGroupId = 'overview' | 'community' | 'events' | 'game-content' | 'integrity' | 'system'
 
 export type AdminSectionId =
   | 'overview'
   | 'title-management'
   | 'user-management'
   | 'news-management'
+  | 'events-management'
   | 'caps-management'
   | 'maps-management'
   | 'patches-management'
   | 'anti-cheat'
   | 'audit-logs'
+  | 'role-management'
 
 export interface AdminSectionProps {
   userProfile?: UserProfile

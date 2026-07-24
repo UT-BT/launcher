@@ -59,3 +59,8 @@ and `agents/styling.md` (Column layout) first.
   sort by it; confirm alignment matches sibling numeric/text columns. Narrow the
   window — confirm the column auto-hides at the priority you gave it (header and
   body drop together).
+- Both targets, all widths: if the new column carries the page's core metric,
+  mark it `required` AND add it to the page's `compactContent` card renderer —
+  a phone user must still see it (`agents/styling.md` → Responsive columns).
+  Check at 390px via `npm run dev:web` that the compact card shows the right
+  fields and the table never scrolls horizontally.

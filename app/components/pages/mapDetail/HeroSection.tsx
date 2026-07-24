@@ -46,7 +46,7 @@ export function HeroSection({
                     />
                 </div>
                 <div className="flex-1 p-4 flex flex-col gap-3 min-w-0">
-                    <div className="flex items-center justify-between gap-3">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
                         <div className="flex items-center gap-2 min-w-0">
                             <FavoriteStar
                                 name={mapName}
@@ -55,11 +55,11 @@ export function HeroSection({
                                 size="lg"
                                 className="translate-y-px"
                             />
-                            <h1 className="text-2xl font-bold text-foreground leading-tight truncate">
+                            <h1 className="text-2xl font-bold text-foreground leading-tight line-clamp-2 break-all">
                                 {displayMapName(mapName)}
                             </h1>
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
+                        <div className="flex flex-wrap items-center gap-2">
                             {showNew && (
                                 <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 text-[10px] font-bold uppercase tracking-wider">
                                     <Sparkles className="size-3" />

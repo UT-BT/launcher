@@ -147,6 +147,7 @@ export function AchievementsShowcase({
     loading = false,
     skeletonCount = 8,
     emptyText = 'No achievements match these filters.',
+    anonymous = false,
 }: {
     definitions: AchievementDefinition[]
     progress: AchievementProgress[]
@@ -154,6 +155,7 @@ export function AchievementsShowcase({
     loading?: boolean
     skeletonCount?: number
     emptyText?: string
+    anonymous?: boolean
 }) {
     const progressByCode = useMemo(() => {
         const m: Record<string, AchievementProgress> = {}
@@ -208,7 +210,7 @@ export function AchievementsShowcase({
                 <Fragment key={section.id}>
                     {showHeadings && <SectionHeading label={section.label} {...totals[section.id]} />}
                     {section.rows.map(({ def, progress }) => (
-                        <AchievementRow key={def.code} def={def} progress={progress} />
+                        <AchievementRow key={def.code} def={def} progress={progress} anonymous={anonymous} />
                     ))}
                 </Fragment>
             ))}
@@ -266,7 +268,7 @@ function TierBar({ def, progress }: { def: AchievementDefinition; progress: Achi
     )
 }
 
-function AchievementRow({ def, progress }: { def: AchievementDefinition; progress: AchievementProgress }) {
+function AchievementRow({ def, progress, anonymous }: { def: AchievementDefinition; progress: AchievementProgress; anonymous: boolean }) {
     const [showTitles, setShowTitles] = useState(false)
     const Icon = ICON_MAP[def.icon] ?? Award
     const maxed = progress.maxed
@@ -316,15 +318,15 @@ function AchievementRow({ def, progress }: { def: AchievementDefinition; progres
                     <div className="flex flex-col gap-1.5 w-60">
                         <div className="flex items-center justify-between text-[11px]">
                             <span className="font-mono tabular-nums text-foreground/90">
-                                {progress.current_value.toLocaleString()}
-                                <span className="text-muted-foreground"> / {goal.toLocaleString()}</span>
+                                {anonymous ? 'Sign in to track progress' : progress.current_value.toLocaleString()}
+                                {!anonymous && <span className="text-muted-foreground"> / {goal.toLocaleString()}</span>}
                             </span>
                             <span className={cn('font-semibold', maxed ? 'text-emerald-300' : 'text-muted-foreground')}>
                                 {maxed ? (isBadge ? 'Earned' : 'Complete') : `${progress.percent_to_next}%`}
                             </span>
                         </div>
-                        <TierBar def={def} progress={progress} />
-                        {progress.current && (
+                        {!anonymous && <TierBar def={def} progress={progress} />}
+                        {!anonymous && progress.current && (
                             <div className="text-[10px] text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-0.5">
                                 <span>
                                     {progress.current.label}:{' '}

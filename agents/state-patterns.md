@@ -11,7 +11,7 @@ not_here:
   - "the navigation stack / navigate() / renderView wiring → navigation.md"
   - "the shared components used (FilterPresetsMenu, ColumnsMenu, Tutorial) → shared-components.md"
 sections: [controlled-pages-with-hoisted-state, navigation-history-per-entry-ui-state, localstorage-persistence, filter-presets, tutorial-state, favorites, naming-conventions]
-last_verified: 2026-07-21
+last_verified: 2026-07-22
 verify_against: [app/components/main/Main.tsx, app/components/navigation/useNavState.ts, app/hooks/useAsync.ts]
 ---
 
@@ -203,6 +203,7 @@ page's **preference fields only** (the `*_PREF_KEYS` subset), not full query sta
 | `utbt:adminState:v1` | `Main.tsx` (`usePageState`) | Admin page pref: `activeSection`. Each admin section owns its own table state: column visibility/order in `utbt:admin:<section>:cols:v2` + saved filters in `utbt:admin:<section>:filters:v1` (both localStorage, via `useAdminTable`/`useAdminFilterPresets`); transient sort/filter/search/page via `useNavState('admin.<section>.<field>')` so it restores on Back/Forward. No caches singleton. |
 | `utbt:dismissedPatch:v1` | `Home` | `string` (patch tag the user dismissed) |
 | `utbt:theme:v1` | `ThemeProvider` (app-global) | `{ id }` — selected theme (`classic`/`red`/`aurum`/`amethyst`/`emerald`/`rose`/`light`/`black`) |
+| `utbt:webAuth:v1` | `app/platform/web/auth-web.ts` (**web build only**) | `AuthProfile` — Discord identity + access/refresh tokens + expiry; the web equivalent of the desktop main-process auth config |
 | `utbt-server-browser-settings` | DEPRECATED | (old shape — can ignore) |
 
 `utbt:theme:v1` is an **app-global** preference (like `ui-scale`), not per-page —
@@ -215,7 +216,9 @@ key — a transient navigate-time hand-off written by `markViewed` (inside `Main
 `navigate()`) via `writePendingHighlight` and consumed **once** on the next page mount by
 `useNewItemHighlight`. It is **not** a persisted preference; it just tells the
 freshly-mounted page which rows to ring. See `agents/navigation.md`
-(`sidebar-new-badges`).
+(`sidebar-new-badges`). The web build adds one more sessionStorage key:
+`utbt:webAuthFlow:v1`, the in-flight OAuth redirect state (PKCE verifier + CSRF
+state + return path), written on login start and consumed once on `/auth/callback`.
 
 ## Filter presets
 

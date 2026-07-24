@@ -43,10 +43,10 @@ export function PlayerReviewsModal({
     const [pageSize, setPageSize] = useState(10)
 
     useEffect(() => {
-        if (!open || !accessToken) return
+        if (!open) return
         let cancelled = false
         setLoading(true)
-        fetchMapReviewsByUser(accessToken, userId)
+        fetchMapReviewsByUser(accessToken ?? '', userId)
             .then(rows => { if (!cancelled) setReviews(rows) })
             .finally(() => { if (!cancelled) setLoading(false) })
         return () => { cancelled = true }

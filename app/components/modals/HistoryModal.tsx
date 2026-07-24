@@ -78,11 +78,11 @@ export function HistoryModal({
     )
 
     const load = useCallback(async (targetPage: number) => {
-        if (!accessToken) return
+
         setLoading(true)
         try {
             // Fetch one extra row to detect whether a next page exists.
-            const data = await fetchSummaryCaps(accessToken, pageSize + 1, (targetPage - 1) * pageSize)
+            const data = await fetchSummaryCaps(accessToken ?? '', pageSize + 1, (targetPage - 1) * pageSize)
             setHasMore(data.length > pageSize)
             setCaps(data.slice(0, pageSize))
         } catch (err) {
@@ -95,7 +95,7 @@ export function HistoryModal({
     }, [accessToken, pageSize])
 
     useEffect(() => {
-        if (open && accessToken) load(page)
+        if (open) load(page)
     }, [open, accessToken, page, load])
 
     useEffect(() => {
@@ -105,6 +105,79 @@ export function HistoryModal({
             setHasMore(false)
         }
     }, [open])
+
+    const compactRows = loading && caps.length === 0 ? (
+        Array.from({ length: pageSize }).map((_, i) => (
+            <div key={i} role="listitem" className="p-3 border-b border-hairline/5 last:border-0 animate-pulse">
+                <div className="h-14 rounded bg-hairline/5" />
+            </div>
+        ))
+    ) : caps.length === 0 ? (
+        <div role="listitem" className="px-4 py-12 text-center text-sm text-muted-foreground">
+            No cap history yet. Start capping!
+        </div>
+    ) : caps.map(cap => {
+        const medalIcon = getMedalIcon(cap.medal)
+        return (
+            <div key={cap.id} role="listitem" className="grid grid-cols-[3rem_minmax(0,1fr)_auto] gap-3 p-3 border-b border-hairline/5 last:border-0">
+                <MapThumbnail mapName={cap.mapName} className="size-12" />
+                <div className="min-w-0 space-y-1.5">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                        <FavoriteStar name={cap.mapName} isFavorited={favoriteMapNames.has(cap.mapName)} onToggle={onToggleFavorite} size="md" />
+                        {onMapSelect ? (
+                            <button
+                                type="button"
+                                onClick={() => { onMapSelect(cap.mapName); onOpenChange(false) }}
+                                className="font-bold text-foreground hover:text-accent-300 text-left truncate"
+                            >
+                                {displayMapName(cap.mapName)}
+                            </button>
+                        ) : <span className="font-bold text-foreground truncate">{displayMapName(cap.mapName)}</span>}
+                    </div>
+                    {cap.isTeam && cap.teamMembers?.length ? (
+                        <TeamHolders members={cap.teamMembers} size="sm" />
+                    ) : (
+                        <PlayerInfo alias={cap.author} size="sm" />
+                    )}
+                    <span className="block text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">
+                        {formatAddedDate(cap.added)}
+                    </span>
+                </div>
+                <div className="flex flex-col items-end justify-between gap-2">
+                    <div className="inline-flex items-center gap-1.5">
+                        {medalIcon && <img src={medalIcon} alt={cap.medal} className="size-4 object-contain" />}
+                        <CapTimeLink
+                            capId={cap.isTeam ? undefined : cap.id}
+                            teamCapId={cap.isTeam ? cap.teamCapId ?? undefined : undefined}
+                            seconds={cap.time}
+                            onNavigate={() => onOpenChange(false)}
+                            className="font-mono font-black text-foreground/90"
+                        />
+                    </div>
+                    <div className="flex items-center gap-1">
+                        {cap.verified && (
+                            <IconActionButton
+                                variant="replay"
+                                icon={Play}
+                                iconFill
+                                tooltip="Watch run"
+                                loading={replay.loadingCapId === cap.id}
+                                onClick={() => replay.openReplay({
+                                    capId: cap.id,
+                                    mapName: cap.mapName,
+                                    time: cap.time,
+                                    alias: userAlias ?? undefined,
+                                })}
+                            />
+                        )}
+                        {onReview && (
+                            <IconActionButton variant="review" icon={MessageSquarePlus} tooltip="Review this map" onClick={() => onReview(cap.mapName)} />
+                        )}
+                    </div>
+                </div>
+            </div>
+        )
+    })
 
     return (
         <>
@@ -119,7 +192,12 @@ export function HistoryModal({
                 <div className="flex flex-col gap-3">
                     <DataTableShell
                         className="flex-none"
-                        responsive={{ columns: HISTORY_COLUMNS, onResolve: handleResolve }}
+                        responsive={{
+                            columns: HISTORY_COLUMNS,
+                            onResolve: handleResolve,
+                            compactContent: compactRows,
+                            compactAriaLabel: 'Recent caps',
+                        }}
                     >
                         <DataTableHeaderRow>
                             {isVisible('thumbnail') && <DataTableHeaderCell width="3.5rem"> </DataTableHeaderCell>}

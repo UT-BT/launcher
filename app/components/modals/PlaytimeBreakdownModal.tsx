@@ -128,10 +128,10 @@ export function PlaytimeBreakdownModal({
                                             className="min-w-0 flex-1"
                                         />
                                         <div className="flex items-baseline gap-2 shrink-0 tabular-nums">
-                                            <span className="text-xs text-muted-foreground">
+                                            <span className="text-xs text-muted-foreground max-sm:hidden">
                                                 {r.sessions} session{r.sessions === 1 ? '' : 's'}
                                             </span>
-                                            <span className="text-xs text-muted-foreground/70">
+                                            <span className="text-xs text-muted-foreground/70 max-sm:hidden">
                                                 {pct.toFixed(1)}%
                                             </span>
                                             <span className={cn(

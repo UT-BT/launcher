@@ -15,7 +15,7 @@ function StatTile({ label, value, description }: { label: string; value: string;
     return (
         <div className="bg-hairline/[0.02] border border-hairline/5 rounded-lg px-3 py-2.5 flex flex-col gap-1 h-full">
             <div className="flex items-center gap-1.5">
-                <span className="text-[10px] uppercase tracking-wider text-muted-foreground truncate">{label}</span>
+                <span className="text-[10px] uppercase tracking-wider text-muted-foreground leading-tight">{label}</span>
                 <Tooltip content={description} side="top">
                     <Info className="size-3 text-muted-foreground/60 shrink-0" />
                 </Tooltip>

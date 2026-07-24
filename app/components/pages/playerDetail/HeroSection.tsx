@@ -233,7 +233,7 @@ export function HeroSection({ userId, summary, loading, isSelf, chart, onChangeT
                 </div>
             )}
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-2">
                 <HeroStat
                     icon={Activity}
                     label="Total Caps"
@@ -287,14 +287,14 @@ function HeroStat({ icon: Icon, label, value, subtext, accent }: {
         <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-hairline/[0.02] border border-hairline/5">
             <Icon className={cn('size-4 shrink-0', accent)} />
             <div className="min-w-0 flex flex-col leading-tight">
-                <span className="text-[10px] uppercase tracking-wider text-muted-foreground truncate">{label}</span>
+                <span className="text-[10px] uppercase tracking-wider text-muted-foreground leading-tight">{label}</span>
                 {value === null ? (
                     <span className="h-4 w-14 bg-hairline/5 rounded animate-pulse mt-0.5" />
                 ) : (
                     <span className={cn('font-mono tabular-nums font-bold text-base leading-none mt-0.5', accent)}>{value}</span>
                 )}
                 {subtext && (
-                    <span className="text-[9px] text-muted-foreground/70 truncate mt-0.5">{subtext}</span>
+                    <span className="text-[9px] text-muted-foreground/70 leading-tight mt-0.5">{subtext}</span>
                 )}
             </div>
         </div>

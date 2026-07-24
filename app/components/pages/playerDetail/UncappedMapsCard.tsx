@@ -59,9 +59,9 @@ export function UncappedMapsCard({ accessToken, userId, onMapSelect, tabsSlot }:
 
     useEffect(() => {
         let cancelled = false
-        if (!accessToken) return
+
         if (countLoaded && !query && difficultyTier === 'all') return
-        fetchUncappedMapsCount(accessToken, userId)
+        fetchUncappedMapsCount(accessToken ?? '', userId)
             .then(n => { if (!cancelled) { setTotal(n); setCountLoaded(true) } })
         return () => { cancelled = true }
     }, [accessToken, userId, countLoaded, query, difficultyTier])
@@ -69,14 +69,14 @@ export function UncappedMapsCard({ accessToken, userId, onMapSelect, tabsSlot }:
     const {
         page, pageSize, items, loading, setPage, setPageSize,
     } = usePaginatedQuery<ApiMap>({
-        enabled: !!accessToken,
+        enabled: true,
         deps: [accessToken, userId, query, sortField, sortDir, difficultyRange.min, difficultyRange.max],
         page: uncappedPage,
         pageSize: uncappedPageSize,
         onPageChange: setUncappedPage,
         onPageSizeChange: setUncappedPageSize,
         fetchPage: async ({ limit, offset }) => {
-            const rows = await fetchUncappedMaps(accessToken!, userId, {
+            const rows = await fetchUncappedMaps(accessToken ?? '', userId, {
                 limit, offset,
                 mapFuzzy: query || undefined,
                 sort: sortField,

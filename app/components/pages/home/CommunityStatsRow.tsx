@@ -71,14 +71,14 @@ export function CommunityStatsRow({
     className, refreshKey,
     onViewPlayers, onViewServers, onViewMaps, onViewNewMaps,
 }: CommunityStatsRowProps) {
-    const hasCounts = totalMaps !== null && totalPlayers !== null
+    const hasCounts = typeof totalMaps === 'number' && typeof totalPlayers === 'number'
 
     useEffect(() => {
-        if (!accessToken || hasCounts) return
+        if (hasCounts) return
         let cancelled = false
         Promise.all([
-            fetchMapsCount(accessToken, {}).catch(() => null),
-            fetchPlayersCount(accessToken).catch(() => null),
+            fetchMapsCount(accessToken ?? '', {}).catch(() => null),
+            fetchPlayersCount(accessToken ?? '').catch(() => null),
         ]).then(([mapsCount, playersCount]) => {
             if (!cancelled) onCountsLoaded({ mapsCount, playersCount })
         })
@@ -90,7 +90,7 @@ export function CommunityStatsRow({
             <StatTile
                 icon={Users}
                 label="Players"
-                primaryValue={totalPlayers === null ? null : totalPlayers.toLocaleString()}
+                primaryValue={typeof totalPlayers === 'number' ? totalPlayers.toLocaleString() : null}
                 onPrimary={onViewPlayers}
                 secondaryValue={playersOnline === null ? null : playersOnline.toLocaleString()}
                 secondaryLabel="online"
@@ -100,7 +100,7 @@ export function CommunityStatsRow({
             <StatTile
                 icon={MapIcon}
                 label="Maps"
-                primaryValue={totalMaps === null ? null : totalMaps.toLocaleString()}
+                primaryValue={typeof totalMaps === 'number' ? totalMaps.toLocaleString() : null}
                 onPrimary={onViewMaps}
                 secondaryValue={newMaps > 0 ? newMaps.toLocaleString() : null}
                 secondaryLabel="new"

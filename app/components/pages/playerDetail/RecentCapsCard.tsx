@@ -137,7 +137,7 @@ export function RecentCapsCard({
     const {
         page, pageSize, items, total, totalPages, loading, error, setPage, setPageSize,
     } = usePaginatedQuery<UserCapRow>({
-        enabled: !!accessToken,
+        enabled: true,
         errorMessage: 'Failed to load caps.',
         deps: [accessToken, userId, query, capFilter, favoritesOnly, sortField, sortDir],
         page: capsPage,
@@ -145,7 +145,7 @@ export function RecentCapsCard({
         onPageChange: setCapsPage,
         onPageSizeChange: setCapsPageSize,
         fetchPage: ({ limit, offset }) =>
-            fetchCapsForUser(accessToken!, userId, {
+            fetchCapsForUser(accessToken ?? '', userId, {
                 limit, offset,
                 mapFuzzy: query || undefined,
                 capFilter,
@@ -165,6 +165,65 @@ export function RecentCapsCard({
     }
 
     const dir = (field: SortField): SortDirection => sortField === field ? sortDir : null
+
+    const compactRows = loading ? (
+        Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} role="listitem" className="p-3 border-b border-hairline/5 last:border-0 animate-pulse">
+                <div className="h-10 rounded bg-hairline/5" />
+            </div>
+        ))
+    ) : items.length === 0 ? (
+        <div role="listitem" className="px-4 py-12 text-center text-sm text-muted-foreground">
+            {query ? 'No caps match that search.' : 'No caps yet.'}
+        </div>
+    ) : items.map(cap => {
+        const medalIcon = getMedalIcon(cap.medal.toLowerCase())
+        return (
+            <div
+                key={cap.id}
+                role="listitem"
+                className={cn(
+                    'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 p-3 border-b border-hairline/5 last:border-0 cursor-pointer',
+                    cap.disallowed && 'opacity-60',
+                )}
+                onClick={() => onMapSelect?.(cap.mapName)}
+            >
+                <div className="min-w-0 space-y-1">
+                    <div className="flex items-center gap-2 min-w-0">
+                        {onToggleFavorite && (
+                            <FavoriteStar
+                                name={cap.mapName}
+                                isFavorited={favoriteMapNames.has(cap.mapName)}
+                                onToggle={onToggleFavorite}
+                                size="sm"
+                                disabled={!canEditFavorites}
+                            />
+                        )}
+                        <span className="text-sm font-semibold text-foreground truncate min-w-0">
+                            {displayMapName(cap.mapName)}
+                        </span>
+                    </div>
+                    <div className="flex items-center gap-2">{renderCapStatus(cap)}</div>
+                </div>
+                <div className="flex flex-col items-end gap-0.5">
+                    <span className="inline-flex items-center gap-1.5">
+                        {medalIcon && (
+                            <img src={medalIcon} alt={cap.medal} className="size-4 inline-block shrink-0 object-contain max-w-none" />
+                        )}
+                        <CapTimeLink
+                            capId={cap.isTeam ? undefined : cap.id}
+                            teamCapId={cap.isTeam ? cap.teamCapId ?? undefined : undefined}
+                            seconds={cap.time}
+                            className="text-sm font-mono tabular-nums font-bold text-foreground"
+                        />
+                    </span>
+                    <span className="text-xs text-muted-foreground tabular-nums">
+                        {cap.added ? formatAddedDate(cap.added) : '—'}
+                    </span>
+                </div>
+            </div>
+        )
+    })
 
     return (
         <div className="bg-card/30 border border-hairline/5 rounded-xl flex flex-col overflow-hidden">
@@ -219,8 +278,14 @@ export function RecentCapsCard({
             )}
 
             <DataTableShell
-                className="!flex-none !min-h-0 !overflow-visible !rounded-none !border-0"
-                responsive={{ columns: responsiveColumns, onResolve: handleResolve }}
+                className="!flex-none !min-h-0 !rounded-none !border-0"
+                responsive={{
+                    columns: responsiveColumns,
+                    nameFloorRem: 14,
+                    onResolve: handleResolve,
+                    compactContent: compactRows,
+                    compactAriaLabel: 'Caps',
+                }}
             >
                 <DataTableHeaderRow>
                     {isVisible('map') && <DataTableHeaderCell width="40%" sortable sortDirection={dir('map')} onSort={() => handleSort('map')}>Map</DataTableHeaderCell>}
