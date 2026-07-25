@@ -5,10 +5,10 @@ import { defineConfig, type Plugin } from 'vite'
 
 const SITE_ORIGIN = process.env.VITE_SITE_ORIGIN ?? 'https://utbt.net'
 
-const DEFAULT_TITLE = 'UTBT.net — Unreal Tournament BunnyTrack Community'
+const DEFAULT_TITLE = 'UTBT.net — Unreal Tournament 1999 BunnyTrack Community'
 const DEFAULT_DESCRIPTION =
-  'BunnyTrack maps, world records, player profiles, teams and server activity for Unreal Tournament 1999.'
-const DEFAULT_IMAGE_ALT = 'UTBT.net — Unreal Tournament BunnyTrack'
+  'BunnyTrack Maps, Records, Players, Teams and Servers for Unreal Tournament 1999.'
+const DEFAULT_IMAGE_ALT = 'UTBT.net — Unreal Tournament 1999 BunnyTrack'
 
 const ICON_TAGS = `
     <link rel="icon" href="/favicon.ico" sizes="32x32" />

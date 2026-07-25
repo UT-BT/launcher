@@ -14,11 +14,11 @@ export const SITE_NAME = 'UTBT.net'
 export function titleForRoute(view: string, params: NavParams): string {
     switch (view) {
         case 'home':
-            return `${SITE_NAME} — Unreal Tournament BunnyTrack records & community`
+            return `${SITE_NAME} — Unreal Tournament 1999 BunnyTrack Community`
         case 'servers':
             return `Servers — ${SITE_NAME}`
         case 'maps':
-            return params.mapsNewOnly ? `New maps — ${SITE_NAME}` : `Maps — ${SITE_NAME}`
+            return params.mapsNewOnly ? `New Maps — ${SITE_NAME}` : `Maps — ${SITE_NAME}`
         case 'maps-detail':
             return params.mapName ? `${displayMapName(params.mapName)} — ${SITE_NAME}` : `Map — ${SITE_NAME}`
         case 'players':
@@ -34,13 +34,13 @@ export function titleForRoute(view: string, params: NavParams): string {
         case 'event-detail':
             return `Event — ${SITE_NAME}`
         case 'world-records':
-            return `World records — ${SITE_NAME}`
+            return `World Records — ${SITE_NAME}`
         case 'cap-it-all':
             return `Cap It All — ${SITE_NAME}`
         case 'cap-detail':
             return `Cap — ${SITE_NAME}`
         case 'team-cap-detail':
-            return `Team cap — ${SITE_NAME}`
+            return `Team Cap — ${SITE_NAME}`
         case 'achievements':
             return `Achievements — ${SITE_NAME}`
         case 'news':
