@@ -63,6 +63,22 @@ test('navigation remains interactive after closing the mobile drawer and resizin
   await expect(page).toHaveURL(/\/players$/)
 })
 
+test('closed navigation becomes inert when resizing from desktop to mobile', async ({ page, isMobile }) => {
+  test.skip(isMobile)
+  const navigation = page.locator('aside#app-navigation')
+  await expect(navigation).not.toHaveAttribute('inert', '')
+
+  await page.setViewportSize({ width: 390, height: 844 })
+  await expect(navigation).toHaveAttribute('inert', '')
+
+  const menu = page.getByRole('button', { name: 'Open navigation' })
+  await menu.click()
+  await expect(navigation).not.toHaveAttribute('inert', '')
+  await navigation.getByRole('button', { name: 'Maps' }).click()
+  await expect(page).toHaveURL(/\/maps$/)
+  await expect(navigation).toHaveAttribute('inert', '')
+})
+
 test('primary pages have no serious accessibility violations', async ({ page }) => {
   const results = await new AxeBuilder({ page })
     .disableRules(['color-contrast'])
