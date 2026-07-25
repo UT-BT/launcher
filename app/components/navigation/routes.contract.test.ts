@@ -27,6 +27,7 @@ const SAMPLES: Record<string, string> = {
     capId: '762aae22-12a2-4be2-9045-db197d676953',
     teamCapId: '3059e580-ef39-4cd4-9759-48dd6bda72c4',
     newsId: '42',
+    eventSlug: '2v2-cup-2026',
 }
 
 function paramsFor(route: ContractRoute): NavParams {

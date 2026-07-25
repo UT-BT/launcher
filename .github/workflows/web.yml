@@ -84,3 +84,4 @@ jobs:
           curl -fsS -o /dev/null -w 'home %{http_code}\n'  https://utbt.net/
           curl -fsS https://utbt.net/ | grep -q 'og:image' || (echo "og tags missing"; exit 1)
           curl -fsS -o /dev/null -w 'images %{http_code}\n' https://utbt.net/images/screenshots/default.png
+          curl -fsS -o /dev/null -w 'screens %{http_code}\n' https://api.utbt.net/screenshots/default.png

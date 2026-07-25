@@ -12,7 +12,7 @@ not_here:
   - "how UI state persists in localStorage → state-patterns.md"
   - "the procedure to wire a new endpoint into the UI → skill: consume-api-data"
 sections: [backend-api, errors, admin-api, cap-detail-page-endpoints, world-records-page-endpoints, team-maps-and-team-runs, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites]
-last_verified: 2026-07-22
+last_verified: 2026-07-25
 verify_against: [app/utils/api.ts, app/utils/patreon.ts, app/utils/server-utils.ts]
 ---
 
@@ -245,13 +245,19 @@ Team images are served by the API and built by `teamAvatarUrl(team)`, which retu
 `?v=`. `TeamAvatar` renders it with an initials fallback. This is a *team* crest, not a
 player avatar, so the `PlayerInfo`-only rule does not apply to it.
 
-Map screenshots:
+Map screenshots are served by the API:
 
 ```
-https://utbt.net/images/screenshots/{mapName}.png
+{API_BASE_URL}/screenshots/{encodeURIComponent(mapName)}.png
 ```
 
-Fallback: `default.png`. `MapThumbnail` handles both.
+Fallback: `default.png` on the same path. `MapThumbnail` handles both; it also
+accepts an optional `version` prop (use the map's `screenshot_updated`) appended
+as a cache-busting `?v=`. Map payloads expose `has_screenshot` +
+`screenshot_updated`; staff replace/remove screenshots via
+`uploadMapScreenshot` / `deleteMapScreenshot` in `api.ts`. The legacy
+`https://utbt.net/images/screenshots/{mapName}.png` URL keeps serving the same
+files for previously shipped builds — new code must use the API URL.
 
 Region flags (server list):
 

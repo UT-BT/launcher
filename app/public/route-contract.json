@@ -9,6 +9,8 @@
     { "path": "/players/:playerId", "view": "player-detail", "kind": "player", "param": "playerId" },
     { "path": "/teams", "view": "teams", "kind": "list.teams" },
     { "path": "/teams/:teamId", "view": "team-detail", "kind": "team", "param": "teamId" },
+    { "path": "/events", "view": "events", "kind": "list.events" },
+    { "path": "/events/:eventSlug", "view": "event-detail", "kind": "event", "param": "eventSlug" },
     { "path": "/world-records", "view": "world-records", "kind": "list.world-records" },
     { "path": "/cap-it-all", "view": "cap-it-all", "kind": "list.cap-it-all" },
     { "path": "/caps/:capId", "view": "cap-detail", "kind": "cap", "param": "capId" },

@@ -29,6 +29,10 @@ export function titleForRoute(view: string, params: NavParams): string {
             return `Teams — ${SITE_NAME}`
         case 'team-detail':
             return `Team — ${SITE_NAME}`
+        case 'events':
+            return `Events — ${SITE_NAME}`
+        case 'event-detail':
+            return `Event — ${SITE_NAME}`
         case 'world-records':
             return `World records — ${SITE_NAME}`
         case 'cap-it-all':
