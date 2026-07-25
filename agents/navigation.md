@@ -10,7 +10,7 @@ not_here:
   - "where page state / persistence lives → state-patterns.md"
   - "the PlayerInfo / CapTimeLink components that trigger nav → shared-components.md"
 sections: [the-model, navigate-is-the-only-entry-point, url-sync-web-build, page-views-vs-detail-pages, the-sidebar-registry, event-driven-navigation, sidebar-new-badges, page-refresh-registry, per-entry-state]
-last_verified: 2026-07-24
+last_verified: 2026-07-25
 verify_against:
   - app/components/main/Main.tsx
   - app/components/layout/AppLayout.tsx
@@ -165,6 +165,11 @@ calls `onViewChange` (`navigate`). Below the `lg` breakpoint the same sidebar
 `agents/web-target.md`, responsive-layout). To add a sidebar page: add the
 `renderView` case **and** a `navSections` item. (Settings is **not** a view — it's
 a modal opened from the user dropdown / the `open-settings` window event.)
+
+The closed mobile drawer is marked `inert` so its hidden controls cannot receive
+focus or clicks. `AppLayout` listens to the same `1023px` media-query boundary as
+the `lg` shell styles and removes `inert` when the sidebar becomes desktop-visible;
+keep those states synchronized when changing the responsive navigation.
 
 **Gated pages** (e.g. `admin`): hide the nav item (`buildNavSections` only appends
 the Staff group when `isStaff(userProfile)`, helpers in `app/utils/roles.ts`) **and**

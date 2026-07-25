@@ -48,6 +48,21 @@ test('mobile drawer is keyboard accessible', async ({ page, isMobile }) => {
   await expect(menu).toBeFocused()
 })
 
+test('navigation remains interactive after closing the mobile drawer and resizing to desktop', async ({ page, isMobile }) => {
+  test.skip(isMobile)
+  await page.setViewportSize({ width: 390, height: 844 })
+
+  await page.getByRole('button', { name: 'Open navigation' }).click()
+  const navigation = page.locator('aside#app-navigation')
+  await navigation.getByRole('button', { name: 'Maps' }).click()
+  await expect(navigation).toHaveAttribute('inert', '')
+
+  await page.setViewportSize({ width: 1280, height: 800 })
+  await expect(navigation).not.toHaveAttribute('inert', '')
+  await navigation.getByRole('button', { name: 'Players' }).click()
+  await expect(page).toHaveURL(/\/players$/)
+})
+
 test('primary pages have no serious accessibility violations', async ({ page }) => {
   const results = await new AxeBuilder({ page })
     .disableRules(['color-contrast'])
