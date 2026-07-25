@@ -42,6 +42,10 @@ export default defineConfig({
   },
   renderer: {
     root: './app',
+    // app/public/ holds web-only files (favicons, manifest, robots, OG card).
+    // The desktop build gets its icon from electron-builder.yml and would only
+    // ship them as dead weight.
+    publicDir: false,
     define: {
       __WEB_TARGET__: 'false',
     },

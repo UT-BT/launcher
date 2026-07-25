@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { Map as MapIcon, Plus, Pencil, RefreshCw, X, ImagePlus, AlertTriangle, Search, Megaphone, Gauge, Loader2, CheckCircle2, Link2 } from 'lucide-react'
+import { Map as MapIcon, Plus, Pencil, RefreshCw, X, ImagePlus, ImageOff, AlertTriangle, Search, Megaphone, Gauge, Loader2, CheckCircle2, Link2 } from 'lucide-react'
 import {
   fetchAdminMaps, fetchAdminMapsCount, createMap, updateMap, fetchAdminUsers, fetchAdminMapTags,
   fetchMapvoteStatus, setMapvoteAnnouncement, regenerateMapvote, toActiveTitle,
-  fetchDifficultySyncPreview, applyDifficultySync,
+  fetchDifficultySyncPreview, applyDifficultySync, uploadMapScreenshot, deleteMapScreenshot,
   type AdminMapRow, type AdminMapSort, type AdminUserRow, type MapvoteStatus, type DifficultySyncChange,
 } from '@/app/utils/api'
 import { cn } from '@/lib/utils'
@@ -277,10 +277,15 @@ function MapFormModal({ open, onClose, token, editing, onSaved, allTags }: {
   const [supersedeAck, setSupersedeAck] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [shot, setShot] = useState<{ has: boolean; version: string | null }>({ has: false, version: null })
+  const [shotBusy, setShotBusy] = useState(false)
+  const shotInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (!open) return
     setError(null); setBusy(false); setUrl(''); setChangelog(''); setPrecededBy(null); setTransferRecords(false); setSupersedeAck(false)
+    setShotBusy(false)
+    setShot({ has: editing?.has_screenshot ?? false, version: editing?.screenshot_updated ?? null })
     if (editing) {
       setName(editing.name)
       setDifficulty(String(editing.difficulty ?? 5))
@@ -305,6 +310,24 @@ function MapFormModal({ open, onClose, token, editing, onSaved, allTags }: {
   const authorValid = authorMode === 'player' ? !!authorUser : !!authorStr.trim()
   const nameValid = isEdit || MAP_NAME_PREFIXES.some((p) => name.trim().startsWith(p))
   const blocked = busy || !authorValid || (!isEdit && (!name.trim() || !nameValid)) || (!!precededBy && transferRecords && !supersedeAck)
+
+  const runScreenshot = async (fn: () => Promise<AdminMapRow>) => {
+    setShotBusy(true); setError(null)
+    try {
+      const row = await fn()
+      setShot({ has: row.has_screenshot, version: row.screenshot_updated })
+      onSaved()
+    } catch (e) {
+      setError(errMessage(e))
+    } finally {
+      setShotBusy(false)
+    }
+  }
+
+  const pickScreenshot = async (file: File | null) => {
+    if (!file || !editing) return
+    await runScreenshot(() => uploadMapScreenshot(token, editing.name, file, file.name))
+  }
 
   const submit = async () => {
     setBusy(true); setError(null)
@@ -352,7 +375,7 @@ function MapFormModal({ open, onClose, token, editing, onSaved, allTags }: {
 
         {isEdit && editing && (
           <div className="flex justify-center">
-            <MapThumbnail mapName={editing.name} className="size-48" />
+            <MapThumbnail mapName={editing.name} className="size-48" version={shot.version} />
           </div>
         )}
 
@@ -440,7 +463,27 @@ function MapFormModal({ open, onClose, token, editing, onSaved, allTags }: {
         {isEdit && (
           <div className="space-y-1.5">
             {fieldLabel('Screenshot')}
-            <ActionButton tone="accent" icon={ImagePlus} disabled title="Coming soon">Add screenshot (coming soon)</ActionButton>
+            <div className="flex items-center gap-2">
+              <ActionButton tone="accent" icon={ImagePlus} loading={shotBusy} onClick={() => shotInputRef.current?.click()}>
+                {shot.has ? 'Replace screenshot' : 'Upload screenshot'}
+              </ActionButton>
+              {shot.has && (
+                <ActionButton tone="red" icon={ImageOff} disabled={shotBusy}
+                  onClick={() => { if (editing) void runScreenshot(() => deleteMapScreenshot(token, editing.name)) }}>
+                  Remove
+                </ActionButton>
+              )}
+              <input
+                ref={shotInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                className="hidden"
+                onChange={(e) => {
+                  void pickScreenshot(e.target.files?.[0] ?? null)
+                  e.target.value = ''
+                }}
+              />
+            </div>
           </div>
         )}
       </div>
@@ -957,7 +1000,7 @@ export function MapsManagementSection({ userProfile, onMapSelect }: AdminSection
         return (
           <DataTableCell key={id} align={align}>
             <div className="flex items-center gap-3 min-w-0">
-              <MapThumbnail mapName={m.name} className="size-11" />
+              <MapThumbnail mapName={m.name} className="size-11" version={m.screenshot_updated} />
               <MapLink name={m.name} onSelect={onMapSelect} className="font-medium text-sm" />
             </div>
           </DataTableCell>

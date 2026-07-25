@@ -11,7 +11,7 @@ not_here:
   - "how detail pages open via events (open-player / open-cap) → navigation.md"
   - "page/query state + persistence → state-patterns.md"
 sections: [hard-rule-playerinfo, player-cap-links, tables-datatable-primitives, columns-columnsmenu, filter-presets, tutorial, visual-primitives, ui-primitives, utilities, when-to-extract]
-last_verified: 2026-07-23
+last_verified: 2026-07-25
 verify_against: [app/components/shared/PlayerInfo.tsx, app/components/shared/DataTable.tsx, app/components/shared/CapTimeLink.tsx, app/components/shared/ColumnsMenu.tsx, app/components/shared/FilterPresetsMenu.tsx]
 ---
 
@@ -238,7 +238,7 @@ the whole thead during the step:
 
 | Component | Use for |
 |---|---|
-| `app/components/shared/MapThumbnail.tsx` | Any map screenshot tile. Pass `mapName` + `className` for sizing. Falls back to `default.png` on error. |
+| `app/components/shared/MapThumbnail.tsx` | Any map screenshot tile. Pass `mapName` + `className` for sizing. Falls back to `default.png` on error. Optional `version` (the map's `screenshot_updated`) appends a cache-busting `?v=` — pass it wherever a stale image after a staff replace would matter. |
 | `app/components/shared/ActiveFilterChip.tsx` | Removable blue-tinted chip for active filter pills shown above the data table. Props: `label`, `value`, `onClear`. Pages compose a row of these from their own filter state (one chip per filter value). |
 | `app/components/shared/FavoriteStar.tsx` | Generic favorite toggle. Prop is `name: string` (not `mapName`); pass whatever identifier you store (map name, server ID, etc.). |
 | `app/components/shared/IconActionButton.tsx` | Locked-style icon button used in table action cells. `variant: 'review' \| 'replay' \| 'download'` (orange for review, amber for replay, blue for download). Props: `icon` (lucide), `tooltip`, `onClick`, optional `loading`, `disabled`, `iconFill`. Stops click propagation by default so it works inside clickable rows. |

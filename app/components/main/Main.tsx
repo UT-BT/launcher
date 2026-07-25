@@ -88,6 +88,7 @@ import { writePendingHighlight, type HighlightView } from '@/app/hooks/useNewIte
 import { isStaff } from '@/app/utils/roles'
 import { capabilities, IS_WEB } from '@/app/platform'
 import { pushUrlForEntry, seedEntriesFromUrl, useUrlSync } from '@/app/components/navigation/useUrlSync'
+import { useDocumentMeta } from '@/app/components/navigation/useDocumentMeta'
 
 
 const MAPS_STATE_STORAGE_KEY = 'utbt:mapsPageState:v1'
@@ -474,6 +475,8 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
   const currentView = entry.view
   const canBack = cursor > 0
   const canForward = cursor < entries.length - 1
+
+  useDocumentMeta(currentView, entry.params)
 
   const navValue = useMemo<NavigationContextValue>(() => ({
     entry, currentView, navigate, back, forward, canBack, canForward, getEntryState, setEntryState,

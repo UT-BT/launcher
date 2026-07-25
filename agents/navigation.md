@@ -10,7 +10,7 @@ not_here:
   - "where page state / persistence lives → state-patterns.md"
   - "the PlayerInfo / CapTimeLink components that trigger nav → shared-components.md"
 sections: [the-model, navigate-is-the-only-entry-point, url-sync-web-build, page-views-vs-detail-pages, the-sidebar-registry, event-driven-navigation, sidebar-new-badges, page-refresh-registry, per-entry-state]
-last_verified: 2026-07-23
+last_verified: 2026-07-24
 verify_against:
   - app/components/main/Main.tsx
   - app/components/layout/AppLayout.tsx
@@ -18,6 +18,9 @@ verify_against:
   - app/components/navigation/useNavState.ts
   - app/components/navigation/routes.ts
   - app/components/navigation/useUrlSync.ts
+  - app/components/navigation/useDocumentMeta.ts
+  - app/components/navigation/titles.ts
+  - app/public/route-contract.json
 ---
 
 # Navigation
@@ -39,7 +42,7 @@ const [cursor, setCursor] = useState(0)
 - **`NavEntry`** (`app/components/navigation/NavigationContext.tsx`) =
   `{ id, view, params: NavParams, state: Record<string, unknown> }`. `id` is a
   monotonic counter; `state` is the per-entry bag (see below).
-- **`NavParams`** = `{ mapName?, playerId?, capId?, newsId?, teamId?, mapsNewOnly? }` — the params a
+- **`NavParams`** = `{ mapName?, playerId?, capId?, teamCapId?, newsId?, teamId?, mapsNewOnly? }` — the params a
   view can carry. Add a field here if a new detail page needs a different
   identifier, or if a page must open in a specific state. `mapsNewOnly` seeds the
   Maps page's new-only filter when opened from the Home "new maps" tile; `MapsPage`
@@ -102,6 +105,22 @@ Path scheme: `/` home, `/servers`, `/maps` (+`?new=1`), `/maps/:mapName`,
 `/cap-it-all`, `/caps/:capId`, `/team-caps/:teamCapId`, `/achievements`,
 `/news`, `/news/:newsId`, `/admin`; unknown → `/`. Adding a view = add both
 directions in `routes.ts`, same commit.
+
+**Adding a route is now a three-file change.** `app/public/route-contract.json`
+ships the same table for per-URL link previews (see `agents/web-target.md` → SEO
+and link previews), and `titles.ts` supplies the tab title.
+`routes.contract.test.ts` fails if any of the three drift — it asserts the
+contract's view list equals the `case` labels in `viewToPath`, round-trips every
+path, and requires a non-default title per view.
+
+**Document metadata.** `Main.tsx` calls `useDocumentMeta(currentView,
+entry.params)` right after resolving the active entry; it sets `document.title`
+and the canonical link on every navigation. Detail pages additionally call
+`useDocumentTitle(name)` once loaded — React flushes child effects before the
+parent's, so the generic title lands first and the specific one replaces it when
+data arrives. Do **not** hook this into `useUrlSync`'s effect: its deps are
+`[stackRef, setCursor, pushExternal]` and `stackRef` is a ref, so it does not
+re-run on navigation.
 
 ## Page-views vs detail-pages
 
