@@ -275,12 +275,12 @@ const AvatarStack = ({ players }: { players: Player[] }) => {
     const remaining = players.length - visible.length
     return (
         <div className="flex items-center -space-x-1.5">
-            {visible.map(p => {
+            {visible.map((p, i) => {
                 const isBot = p.id === SPECTATOR_BOT_ID
                 const avatar = avatarUrlFor(p)
                 return (
                     <div
-                        key={`${p.id}-${p.name}`}
+                        key={`${p.id}-${p.name}-${i}`}
                         className={cn(
                             'size-5 rounded-full overflow-hidden border-2 border-card bg-black/40 shrink-0 flex items-center justify-center',
                             p.is_spectator && 'opacity-50',
@@ -357,7 +357,7 @@ const PlayerListCell = ({ players, displayText, displayColor, singular, plural }
                     {sorted.length} {sorted.length === 1 ? singular : plural}
                 </div>
                 <div className="p-1 space-y-0.5">
-                    {sorted.map(p => <PlayerRow key={`${p.id}-${p.name}`} player={p} />)}
+                    {sorted.map((p, i) => <PlayerRow key={`${p.id}-${p.name}-${i}`} player={p} />)}
                 </div>
             </DropdownMenuContent>
         </DropdownMenu>
