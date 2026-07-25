@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /auth/callback
+
+Sitemap: https://utbt.net/sitemap.xml

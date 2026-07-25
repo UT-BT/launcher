@@ -5,6 +5,8 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useNavScrollRestore } from '@/app/components/navigation/useNavScrollRestore'
+import { useDocumentTitle } from '@/app/components/navigation/useDocumentMeta'
+import { SITE_NAME } from '@/app/components/navigation/titles'
 import { Modal } from '@/app/components/ui/modal'
 import { ReplayVideoModal } from '@/app/components/shared/ReplayVideoModal'
 import { DemoDownloadStatusModal } from '@/app/components/shared/DemoDownloadStatusModal'
@@ -152,6 +154,11 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
         (signal) => fetchTeamCapDetail(accessToken, teamCapId, signal),
         [accessToken, teamCapId, refreshKey],
         { enabled: !!teamCapId, errorMessage: 'Failed to load team run data.' },
+    )
+
+    useDocumentTitle(
+        detail ? `${displayMapName(detail.map)} — ${formatCapTime(detail.team_time_seconds ?? 0)}` : undefined,
+        SITE_NAME,
     )
 
     useRegisterPageRefresh({

@@ -10,7 +10,9 @@ import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshC
 import { useReplayWatch } from '@/app/hooks/useReplayWatch'
 import { useDemoDownload } from '@/app/hooks/useDemoDownload'
 import { useVideoCompareAvailability } from '@/app/hooks/useVideoCompareAvailability'
-import { formatCapTime } from '@/app/utils/format'
+import { displayMapName, formatCapTime } from '@/app/utils/format'
+import { useDocumentTitle } from '@/app/components/navigation/useDocumentMeta'
+import { SITE_NAME } from '@/app/components/navigation/titles'
 import {
     fetchCapDetail,
     fetchCapCheckpoints,
@@ -127,6 +129,11 @@ export function CapDetailPage({ capId, userProfile, onMapSelect }: CapDetailPage
     )
 
     const cap = detail?.cap
+    useDocumentTitle(
+        cap ? `${cap.alias ?? cap.user} — ${formatCapTime(cap.cap_time_seconds)} on ${displayMapName(cap.map)}` : undefined,
+        SITE_NAME,
+    )
+
     const nextFaster = detail?.neighbors.above?.[0]
     const gapToNext = nextFaster && cap
         ? cap.cap_time_seconds - nextFaster.cap_time_seconds

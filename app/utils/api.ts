@@ -81,6 +81,8 @@ export interface Map {
     silver_medal?: number
     bronze_medal?: number
     required_players: number
+    has_screenshot?: boolean
+    screenshot_updated?: string | null
 }
 
 export interface MapMetadata {
@@ -733,6 +735,8 @@ export interface AdminMapRow {
     preceded_by: string | null
     added: string | null
     required_players: number
+    has_screenshot: boolean
+    screenshot_updated: string | null
 }
 
 export type AdminMapSort = 'name' | 'difficulty' | 'active' | 'added'
@@ -776,6 +780,28 @@ export async function fetchAdminMapsCount(token: string, params: AdminMapsParams
 export async function fetchAdminMapTags(token: string, signal?: AbortSignal): Promise<string[]> {
     const data = await apiGet<{ items: string[] }>('/admin/maps/tags', { token, signal })
     return data.items
+}
+
+export async function uploadMapScreenshot(token: string, mapName: string, file: Blob, filename: string): Promise<AdminMapRow> {
+    const formData = new FormData()
+    formData.append('file', file, filename)
+    const res = await fetch(`${API_BASE_URL}/admin/maps/${encodeURIComponent(mapName)}/screenshot`, {
+        method: 'POST',
+        headers: bearerHeaders(token),
+        body: formData,
+    })
+    if (!res.ok) {
+        throw await apiErrorFor(res)
+    }
+    const json = await res.json()
+    if (json && json.success && json.data) {
+        return json.data as AdminMapRow
+    }
+    throw new Error('Invalid response format from server')
+}
+
+export async function deleteMapScreenshot(token: string, mapName: string): Promise<AdminMapRow> {
+    return apiGet<AdminMapRow>(`/admin/maps/${encodeURIComponent(mapName)}/screenshot`, { token, method: 'DELETE' })
 }
 
 export interface MapvoteStatus {

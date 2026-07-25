@@ -1,0 +1,87 @@
+name: Build and Deploy Web
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: web-main
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      # typecheck -> lint -> unit tests -> production build -> bundle budget
+      - run: npm run quality:web
+        env:
+          VITE_SITE_ORIGIN: https://utbt.net
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-web
+          path: dist-web/
+          retention-days: 7
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Deploys are gated on a protected environment so the cutover and every
+    # release after it need an explicit approval, not just a push to main.
+    environment: production
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist-web
+          path: dist-web
+
+      - name: Add SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts
+
+      # Ship to a new release dir, then flip the symlink atomically.
+      - name: Upload release
+        env:
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          RELEASE="${DEPLOY_PATH}/releases/${GITHUB_SHA}"
+          ssh -i ~/.ssh/id_ed25519 "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" \
+            "mkdir -p '${RELEASE}'"
+          rsync -az --delete -e "ssh -i ~/.ssh/id_ed25519" \
+            dist-web/ "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:${RELEASE}/"
+
+      - name: Activate release and prune old ones
+        env:
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          ssh -i ~/.ssh/id_ed25519 "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" \
+            "DEPLOY_PATH='${DEPLOY_PATH}' SHA='${GITHUB_SHA}' bash -euo pipefail" <<'EOF'
+            RELEASE="${DEPLOY_PATH}/releases/${SHA}"
+            test -f "${RELEASE}/index.html"
+            ln -sfn "${RELEASE}" "${DEPLOY_PATH}/current.tmp"
+            mv -Tf "${DEPLOY_PATH}/current.tmp" "${DEPLOY_PATH}/current"
+            ls -1dt "${DEPLOY_PATH}"/releases/* | tail -n +6 | xargs -r rm -rf
+          EOF
+
+      - name: Verify
+        run: |
+          curl -fsS -o /dev/null -w 'home %{http_code}\n'  https://utbt.net/
+          curl -fsS https://utbt.net/ | grep -q 'og:image' || (echo "og tags missing"; exit 1)
+          curl -fsS -o /dev/null -w 'images %{http_code}\n' https://utbt.net/images/screenshots/default.png
+          curl -fsS -o /dev/null -w 'screens %{http_code}\n' https://api.utbt.net/screenshots/default.png

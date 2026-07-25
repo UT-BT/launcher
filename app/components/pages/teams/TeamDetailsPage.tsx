@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { requestLogin } from '@/app/components/shared/AuthRequiredModal'
 import { useNavScrollRestore } from '@/app/components/navigation/useNavScrollRestore'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
+import { useDocumentTitle } from '@/app/components/navigation/useDocumentMeta'
+import { SITE_NAME } from '@/app/components/navigation/titles'
 import { Button } from '@/app/components/ui/button'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import {
@@ -36,6 +38,8 @@ export function TeamDetailsPage({ teamId, userProfile, onExitToGallery }: TeamDe
     const [joining, setJoining] = useState(false)
     const [inviteBusy, setInviteBusy] = useState(false)
     const scrollRef = useRef<HTMLDivElement>(null)
+
+    useDocumentTitle(team?.name, SITE_NAME)
 
     const load = useCallback(async (background = false) => {
         if (!background) setLoading(true)
