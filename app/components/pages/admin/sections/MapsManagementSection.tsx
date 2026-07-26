@@ -3,7 +3,7 @@ import { Map as MapIcon, Plus, Pencil, RefreshCw, X, ImagePlus, ImageOff, AlertT
 import {
   fetchAdminMaps, fetchAdminMapsCount, createMap, updateMap, fetchAdminUsers, fetchAdminMapTags,
   fetchMapvoteStatus, setMapvoteAnnouncement, regenerateMapvote, toActiveTitle,
-  fetchDifficultySyncPreview, applyDifficultySync, uploadMapScreenshot, deleteMapScreenshot,
+  fetchDifficultySyncPreview, applyDifficultySync, deleteMapScreenshot,
   type AdminMapRow, type AdminMapSort, type AdminUserRow, type MapvoteStatus, type DifficultySyncChange,
 } from '@/app/utils/api'
 import { cn } from '@/lib/utils'
@@ -30,6 +30,7 @@ import {
   DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow, DataTableCell, DataTableEmpty,
   DataTableSkeletonRow, type SortDirection, type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
+import { MapScreenshotModal } from '@/app/components/modals/MapScreenshotModal'
 
 const MAPVOTE_STALE_KEY = 'utbt:admin:maps:mapvoteStale:v1'
 const DIFFICULTY_OPTIONS = Array.from({ length: 10 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) }))
@@ -279,12 +280,12 @@ function MapFormModal({ open, onClose, token, editing, onSaved, allTags }: {
   const [error, setError] = useState<string | null>(null)
   const [shot, setShot] = useState<{ has: boolean; version: string | null }>({ has: false, version: null })
   const [shotBusy, setShotBusy] = useState(false)
-  const shotInputRef = useRef<HTMLInputElement>(null)
+  const [shotModalOpen, setShotModalOpen] = useState(false)
 
   useEffect(() => {
     if (!open) return
     setError(null); setBusy(false); setUrl(''); setChangelog(''); setPrecededBy(null); setTransferRecords(false); setSupersedeAck(false)
-    setShotBusy(false)
+    setShotBusy(false); setShotModalOpen(false)
     setShot({ has: editing?.has_screenshot ?? false, version: editing?.screenshot_updated ?? null })
     if (editing) {
       setName(editing.name)
@@ -324,9 +325,9 @@ function MapFormModal({ open, onClose, token, editing, onSaved, allTags }: {
     }
   }
 
-  const pickScreenshot = async (file: File | null) => {
-    if (!file || !editing) return
-    await runScreenshot(() => uploadMapScreenshot(token, editing.name, file, file.name))
+  const applyScreenshot = (has: boolean, version: string | null) => {
+    setShot({ has, version })
+    onSaved()
   }
 
   const submit = async () => {
@@ -464,7 +465,7 @@ function MapFormModal({ open, onClose, token, editing, onSaved, allTags }: {
           <div className="space-y-1.5">
             {fieldLabel('Screenshot')}
             <div className="flex items-center gap-2">
-              <ActionButton tone="accent" icon={ImagePlus} loading={shotBusy} onClick={() => shotInputRef.current?.click()}>
+              <ActionButton tone="accent" icon={ImagePlus} loading={shotBusy} onClick={() => setShotModalOpen(true)}>
                 {shot.has ? 'Replace screenshot' : 'Upload screenshot'}
               </ActionButton>
               {shot.has && (
@@ -473,20 +474,22 @@ function MapFormModal({ open, onClose, token, editing, onSaved, allTags }: {
                   Remove
                 </ActionButton>
               )}
-              <input
-                ref={shotInputRef}
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                className="hidden"
-                onChange={(e) => {
-                  void pickScreenshot(e.target.files?.[0] ?? null)
-                  e.target.value = ''
-                }}
-              />
             </div>
           </div>
         )}
       </div>
+
+      {editing && (
+        <MapScreenshotModal
+          open={shotModalOpen}
+          onClose={() => setShotModalOpen(false)}
+          accessToken={token}
+          mapName={editing.name}
+          hasScreenshot={shot.has}
+          screenshotVersion={shot.version}
+          onUploaded={(updated) => applyScreenshot(updated.has_screenshot ?? true, updated.screenshot_updated ?? null)}
+        />
+      )}
     </Modal>
   )
 }

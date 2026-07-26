@@ -25,6 +25,8 @@ import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshC
 import { useMapDownload } from '@/app/hooks/useMapDownload'
 import { MapDownloadStatusModal } from '@/app/components/shared/MapDownloadStatusModal'
 import { ReviewModal } from '@/app/components/modals/ReviewModal'
+import { MapScreenshotModal } from '@/app/components/modals/MapScreenshotModal'
+import { isStaff } from '@/app/utils/roles'
 import { PlaytimeBreakdownModal } from '@/app/components/modals/PlaytimeBreakdownModal'
 import { CapTimeDistributionModal } from '@/app/components/modals/CapTimeDistributionModal'
 import { HeroSection } from './mapDetail/HeroSection'
@@ -49,6 +51,7 @@ const MAP_METADATA_COLUMNS = [
     'name', 'added', 'difficulty', 'active', 'tags', 'author', 'author_str', 'author_ref',
     'world_record', 'champion_medal', 'gold_medal', 'silver_medal', 'bronze_medal',
     'required_players', 'url', 'preceded_by', 'superseded_by', 'changelog',
+    'has_screenshot', 'screenshot_updated',
 ]
 
 export function MapDetailPage({
@@ -71,6 +74,7 @@ export function MapDetailPage({
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [reviewModalOpen, setReviewModalOpen] = useState(false)
+    const [screenshotModalOpen, setScreenshotModalOpen] = useState(false)
     const [wrModalOpen, setWrModalOpen] = useState(false)
     const [playtimeModalOpen, setPlaytimeModalOpen] = useState(false)
     const [distributionModalOpen, setDistributionModalOpen] = useState(false)
@@ -154,6 +158,8 @@ export function MapDetailPage({
     } : undefined
 
     const isInactive = map?.active === false
+    const isMapAuthor = currentUserId != null && map?.author_ref != null && String(map.author_ref) === String(currentUserId)
+    const canEditScreenshot = !!accessToken && (isStaff(userProfile) || (isMapAuthor && !isInactive))
 
     const scrollRef = useRef<HTMLDivElement>(null)
     const onScroll = useNavScrollRestore(scrollRef, !loading)
@@ -171,6 +177,8 @@ export function MapDetailPage({
                 accessToken={accessToken}
                 onMapSelect={onMapSelect}
                 requiredPlayers={requiredPlayers}
+                canEditScreenshot={canEditScreenshot}
+                onEditScreenshot={() => setScreenshotModalOpen(true)}
                 onDownload={() => mapDownload.start(mapName)}
                 isDownloading={mapDownload.download?.status === 'downloading'}
                 chart={
@@ -268,6 +276,20 @@ export function MapDetailPage({
                 mapName={mapName}
                 initialScores={initialReviewScores}
                 onSuccess={() => setRefreshKey(k => k + 1)}
+            />
+
+            <MapScreenshotModal
+                open={screenshotModalOpen}
+                onClose={() => setScreenshotModalOpen(false)}
+                accessToken={accessToken}
+                mapName={mapName}
+                hasScreenshot={!!map?.has_screenshot}
+                screenshotVersion={map?.screenshot_updated}
+                onUploaded={updated => setMap(prev => prev ? {
+                    ...prev,
+                    has_screenshot: updated.has_screenshot,
+                    screenshot_updated: updated.screenshot_updated,
+                } : prev)}
             />
 
             <Suspense fallback={null}>

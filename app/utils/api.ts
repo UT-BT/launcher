@@ -104,6 +104,8 @@ export interface MapMetadata {
     preceded_by?: string | null
     superseded_by?: string | null
     changelog?: string | null
+    has_screenshot?: boolean
+    screenshot_updated?: string | null
 }
 
 export interface BestCap {
@@ -130,6 +132,7 @@ export interface MapListParams {
     offset?: number
     name?: string
     author?: string
+    authorRef?: string | number
     tag?: string
     difficulty?: number
     difficultyMin?: number
@@ -825,24 +828,6 @@ export async function fetchAdminMapsCount(token: string, params: AdminMapsParams
 export async function fetchAdminMapTags(token: string, signal?: AbortSignal): Promise<string[]> {
     const data = await apiGet<{ items: string[] }>('/admin/maps/tags', { token, signal })
     return data.items
-}
-
-export async function uploadMapScreenshot(token: string, mapName: string, file: Blob, filename: string): Promise<AdminMapRow> {
-    const formData = new FormData()
-    formData.append('file', file, filename)
-    const res = await fetch(`${API_BASE_URL}/admin/maps/${encodeURIComponent(mapName)}/screenshot`, {
-        method: 'POST',
-        headers: bearerHeaders(token),
-        body: formData,
-    })
-    if (!res.ok) {
-        throw await apiErrorFor(res)
-    }
-    const json = await res.json()
-    if (json && json.success && json.data) {
-        return json.data as AdminMapRow
-    }
-    throw new Error('Invalid response format from server')
 }
 
 export async function deleteMapScreenshot(token: string, mapName: string): Promise<AdminMapRow> {
@@ -1580,6 +1565,7 @@ function buildMapQuery(params: MapListParams, defaultActive = true): string {
     if (params.offset !== undefined) usp.set('offset', String(params.offset))
     if (params.name) usp.set('name', params.name)
     if (params.author) usp.set('author', params.author)
+    if (params.authorRef !== undefined) usp.set('author_ref', String(params.authorRef))
     if (params.tag) usp.set('tag', params.tag)
     if (params.difficulty !== undefined) usp.set('difficulty', String(params.difficulty))
     if (params.difficultyMin !== undefined) usp.set('difficulty_min', String(params.difficultyMin))
@@ -1661,11 +1647,30 @@ export async function fetchMapAuthors(accessToken: string, activeOnly = true): P
     }
 }
 
+export async function uploadOwnMapScreenshot(accessToken: string, mapName: string, file: Blob, filename: string): Promise<MapMetadata> {
+    const formData = new FormData()
+    formData.append('file', file, filename)
+    const res = await fetch(`${API_BASE_URL}/maps/${encodeURIComponent(mapName)}/screenshot`, {
+        method: 'POST',
+        headers: bearerHeaders(accessToken),
+        body: formData,
+    })
+    if (!res.ok) {
+        throw await apiErrorFor(res)
+    }
+    const json = await res.json()
+    if (json && json.success && json.data) {
+        return json.data as MapMetadata
+    }
+    throw new Error('Invalid response format from server')
+}
+
 export async function fetchMapsCount(accessToken: string, params: MapCountParams = {}): Promise<number> {
     try {
         const usp = new URLSearchParams()
         if (params.name) usp.set('name', params.name)
         if (params.author) usp.set('author', params.author)
+        if (params.authorRef !== undefined) usp.set('author_ref', String(params.authorRef))
         if (params.tag) usp.set('tag', params.tag)
         if (params.difficulty !== undefined) usp.set('difficulty', String(params.difficulty))
         if (params.difficultyMin !== undefined) usp.set('difficulty_min', String(params.difficultyMin))

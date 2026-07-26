@@ -11,8 +11,8 @@ not_here:
   - "IPC channels (window.conveyor.*) → lib/conveyor/README.md"
   - "how UI state persists in localStorage → state-patterns.md"
   - "the procedure to wire a new endpoint into the UI → skill: consume-api-data"
-sections: [backend-api, errors, admin-api, cap-detail-page-endpoints, world-records-page-endpoints, team-maps-and-team-runs, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites, account-state-and-badges]
-last_verified: 2026-07-25
+sections: [backend-api, errors, admin-api, changing-a-map-screenshot, cap-detail-page-endpoints, world-records-page-endpoints, team-maps-and-team-runs, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites, account-state-and-badges]
+last_verified: 2026-07-26
 verify_against: [app/utils/api.ts, app/utils/patreon.ts, app/utils/server-utils.ts]
 ---
 
@@ -34,7 +34,7 @@ full loop).
 
 | Category | Functions |
 |---|---|
-| Maps | `fetchMaps`, `fetchMapsCount`, `fetchMapsMetadata`, `fetchMapsFuzzy`, `fetchMapAuthors`, `buildMapQuery` |
+| Maps | `fetchMaps`, `fetchMapsCount`, `fetchMapsMetadata`, `fetchMapsFuzzy`, `fetchMapAuthors`, `buildMapQuery`, `uploadOwnMapScreenshot` |
 | Records | `fetchWorldRecords`, `fetchWorldRecordsCount`, `fetchRushers`, `fetchRecordsCount`, `fetchWorldRecordsForMaps`, `fetchWorldRecordProgression`, `fetchBestCaps`, `fetchMapLeaderboard` |
 | Team runs | `fetchTeamMapLeaderboard`, `fetchTeamRunStatus` (→ [Team maps & team runs](#team-maps-and-team-runs)) |
 | Per-map per-user counts | `fetchUserCapCountForMap` |
@@ -254,11 +254,34 @@ Map screenshots are served by the API:
 
 Fallback: `default.png` on the same path. `MapThumbnail` handles both; it also
 accepts an optional `version` prop (use the map's `screenshot_updated`) appended
-as a cache-busting `?v=`. Map payloads expose `has_screenshot` +
-`screenshot_updated`; staff replace/remove screenshots via
-`uploadMapScreenshot` / `deleteMapScreenshot` in `api.ts`. The legacy
+as a cache-busting `?v=`. **Always pass `version` where a screenshot can be
+replaced in-session** — without it a replaced screenshot keeps serving from cache.
+Map payloads expose `has_screenshot` + `screenshot_updated`; both need to be in the
+`columns` list of any fetch whose UI shows them (`MAP_METADATA_COLUMNS` in
+`MapDetailPage`, `AUTHORED_MAP_COLUMNS` in `AuthoredMapsCard`). The legacy
 `https://utbt.net/images/screenshots/{mapName}.png` URL keeps serving the same
 files for previously shipped builds — new code must use the API URL.
+
+### Changing a map screenshot
+
+`uploadOwnMapScreenshot` (`POST /maps/{mapName}/screenshot`) is the **only** upload
+path, used by mappers and staff alike — the admin dashboard calls it too, so there is
+one crop UI and one contract. `deleteMapScreenshot` stays in the staff slice; there is
+no mapper-facing delete.
+
+The API authorizes the upload itself: the caller must be the map's linked
+`author_ref` (a matching `author_str` name grants nothing) and the map must still be
+active, otherwise it answers 403. Staff bypass both conditions. The renderer mirrors
+that check to decide whether to *show* the control (`MapDetailPage`,
+`AuthoredMapsCard`, `MapsManagementSection`) — never treat the client-side check as
+the authorization.
+
+`MapScreenshotModal` is the single UI for both surfaces. Screenshots render as
+squares, so it crops client-side: drag to pan, slider to zoom, then a canvas exports
+a square PNG of at most 1024 px. Zoom is capped so the crop never falls below the
+256 px minimum the API enforces, and the API centre-crops anything that arrives
+uncropped. `onUploaded` hands back the updated map so the caller can refresh
+`has_screenshot` + `screenshot_updated` without a full page reload.
 
 Region flags (server list):
 

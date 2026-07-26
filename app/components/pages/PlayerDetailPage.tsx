@@ -6,6 +6,7 @@ import { SITE_NAME } from '@/app/components/navigation/titles'
 import {
     fetchUserSummary,
     fetchUserActivity,
+    fetchMapsCount,
     type UserSummary,
     type UserProfile,
     type UserActivityBucket,
@@ -25,6 +26,7 @@ import { ReviewsAuthoredCard } from './playerDetail/ReviewsAuthoredCard'
 import { FavoriteMapsCard } from './playerDetail/FavoriteMapsCard'
 import { UncappedMapsCard } from './playerDetail/UncappedMapsCard'
 import { PlayerAchievementsCard } from './playerDetail/PlayerAchievementsCard'
+import { AuthoredMapsCard } from './playerDetail/AuthoredMapsCard'
 import { MainSectionTabs, type PlayerDetailTab } from './playerDetail/MainSectionTabs'
 
 const PlayerActivityChart = lazy(() => import('./playerDetail/PlayerActivityChart'))
@@ -47,11 +49,12 @@ export function PlayerDetailPage({
     const [refreshKey, setRefreshKey] = useState(0)
     const refreshCooldown = useRefreshCooldown()
 
-    const [activeTab, setActiveTab] = useNavState<PlayerDetailTab>('player.activeTab', 'caps')
+    const [storedTab, setActiveTab] = useNavState<PlayerDetailTab>('player.activeTab', 'caps')
     const [changeTitleOpen, setChangeTitleOpen] = useState(false)
 
     const [activity, setActivity] = useState<UserActivityBucket[]>([])
     const [chartLoading, setChartLoading] = useState(true)
+    const [authoredMapCount, setAuthoredMapCount] = useState<number | null>(null)
 
     const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -85,8 +88,18 @@ export function PlayerDetailPage({
         return () => { cancelled = true }
     }, [accessToken, userId, summary, refreshKey])
 
+    useEffect(() => {
+        let cancelled = false
+        if (!summary) return
+        fetchMapsCount(accessToken, { authorRef: userId })
+            .then(n => { if (!cancelled) setAuthoredMapCount(n) })
+            .catch(() => { if (!cancelled) setAuthoredMapCount(0) })
+        return () => { cancelled = true }
+    }, [accessToken, userId, summary, refreshKey])
+
     const counts = summary?.counts ?? null
     const medals = summary?.medals ?? null
+    const activeTab: PlayerDetailTab = storedTab === 'maps' && authoredMapCount === 0 ? 'caps' : storedTab
 
     const tabs: { value: PlayerDetailTab; label: string; count?: number; hidden?: boolean }[] = [
         { value: 'caps', label: 'All Caps', count: counts?.total_caps },
@@ -96,6 +109,7 @@ export function PlayerDetailPage({
         { value: 'playtime', label: 'Playtime by Map' },
         { value: 'uncapped', label: 'Uncapped Maps', count: counts?.uncapped_maps },
         { value: 'achievements', label: 'Achievements' },
+        { value: 'maps', label: 'Maps Authored', count: authoredMapCount ?? undefined, hidden: !authoredMapCount },
     ]
 
     return (
@@ -208,6 +222,16 @@ export function PlayerDetailPage({
                             <PlayerAchievementsCard
                                 accessToken={accessToken}
                                 userId={userId}
+                                tabsSlot={<MainSectionTabs tabs={tabs} active={activeTab} onChange={setActiveTab} />}
+                            />
+                        )}
+
+                        {activeTab === 'maps' && (
+                            <AuthoredMapsCard
+                                accessToken={accessToken}
+                                userId={userId}
+                                isSelf={isSelf}
+                                onMapSelect={onMapSelect}
                                 tabsSlot={<MainSectionTabs tabs={tabs} active={activeTab} onChange={setActiveTab} />}
                             />
                         )}
