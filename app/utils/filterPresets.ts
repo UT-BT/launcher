@@ -1,3 +1,7 @@
+import { useEffect, useState } from 'react'
+
+import { getSynced, setSynced, subscribeSynced } from '@/app/utils/userState'
+
 export interface FilterPreset<TFilters> {
     id: string
     name: string
@@ -10,26 +14,32 @@ export function loadPresets<T>(
     storageKey: string,
     migrate?: (filters: PresetFilterShape) => PresetFilterShape,
 ): FilterPreset<T>[] {
-    try {
-        const raw = localStorage.getItem(storageKey)
-        if (!raw) return []
-        const parsed = JSON.parse(raw)
-        if (!Array.isArray(parsed)) return []
-        return parsed.map((p: { filters?: PresetFilterShape }) => {
+    const parsed = getSynced<unknown>(storageKey, [])
+    if (!Array.isArray(parsed)) return []
+    const presets: FilterPreset<T>[] = []
+    for (const p of parsed as { filters?: PresetFilterShape }[]) {
+        try {
             if (migrate && p?.filters) p.filters = migrate(p.filters)
-            return p as FilterPreset<T>
-        })
-    } catch {
-        return []
+            presets.push(p as FilterPreset<T>)
+        } catch { /* skip malformed presets, e.g. written by another client version */ }
     }
+    return presets
 }
 
 export function persistPresets<T>(storageKey: string, presets: FilterPreset<T>[]): void {
-    try {
-        localStorage.setItem(storageKey, JSON.stringify(presets))
-    } catch {
-        return
-    }
+    setSynced(storageKey, presets)
+}
+
+export function useSyncedPresets<T>(
+    storageKey: string,
+    migrate?: (filters: PresetFilterShape) => PresetFilterShape,
+) {
+    const [presets, setPresets] = useState<FilterPreset<T>[]>(() => loadPresets<T>(storageKey, migrate))
+    useEffect(
+        () => subscribeSynced(storageKey, () => setPresets(loadPresets<T>(storageKey, migrate))),
+        [storageKey, migrate],
+    )
+    return [presets, setPresets] as const
 }
 
 export function newPresetId(): string {

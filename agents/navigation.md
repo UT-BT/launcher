@@ -197,24 +197,39 @@ news `ArticleCard`.
 
 ## Sidebar "new" badges + new-item highlight (not navigation)
 
-Two cross-cutting signals decorate the UI around navigation but are **not**
-navigation events — `Main.tsx` doesn't turn them into `navigate()` calls, so they
-don't belong in the table above:
+The sidebar count pills (Maps / World Records / Events / News) show "new items
+since this account last visited that page". They decorate the UI around
+navigation but are **not** navigation events:
 
-- **`summary-badges`** — dispatched by `Home.tsx` after it loads the summary
-  (`{ maps, worldRecords }`, each `{ count, newestIso }`). `Main.tsx` holds the
-  badge state and renders the sidebar count pills via the `getNavBadge` prop it
-  threads into `AppLayout` (AppLayout is display-only here).
-- **`highlight-new`** — dispatched by `Main.tsx`'s `markViewed()` (folded into
-  `navigate()`), consumed by `useNewItemHighlight` on the Maps / World Records
-  pages to briefly ring rows added since the last visit. A pending hand-off is
-  also written to `sessionStorage` (`writePendingHighlight`) for the page that
-  mounts right after navigating.
+- **Badge source** — `Main.tsx` fetches per-account badge counts + seen markers
+  from the API at boot, on sign-in, and on window focus (so a visit on another
+  device clears the pill here too). Counts are **server-computed against the
+  account's seen markers**; a `null` count means "never visited" and renders no
+  pill. Signed-out users get no badges at all. `Main.tsx` renders the pills via
+  the `getNavBadge` prop it threads into `AppLayout` (AppLayout is
+  display-only here).
+- **`markViewed(view)`** — fired at the top of `navigate()` (before its
+  same-view early-return, so re-clicking the active sidebar item still clears
+  the pill) and from `pushExternal()` (web back/forward + deep links). It
+  optimistically zeroes the badge, advances the seen marker on the server to
+  the badge fetch's server-side `as_of` snapshot (not wall-clock now — items
+  added after the fetch stay "new" on the next fetch), and for Maps / World
+  Records fires the highlight below. Marks attempted before the badge fetch
+  resolves are queued and replayed when it lands; the entry view of a deep
+  link is marked as soon as badges load.
+- **`highlight-new`** — dispatched by `markViewed()`, consumed by
+  `useNewItemHighlight` on the Maps / World Records pages to briefly ring rows
+  added since the previous seen marker. A pending hand-off is also written to
+  `sessionStorage` (`writePendingHighlight`) for the page that mounts right
+  after navigating.
 
 Because `markViewed()` lives inside `navigate()`, opening Maps / World Records from
 **either** the sidebar **or** the Home tiles clears the "new" badge and fires the
-highlight identically. Seen-stamps persist in `localStorage`
-(`utbt:newMapsSeen:v1` / `utbt:newRecordsSeen:v1`).
+highlight identically. Legacy per-device seen-stamps
+(`utbt:newMapsSeen:v1` / `utbt:newRecordsSeen:v1` / `utbt:newEventsSeen:v1` /
+`utbt:newsSeen:v1`) seed the account marker once after sign-in; each key is
+removed only after its seeding call succeeded, so a transient failure retries
+on the next badge fetch instead of losing the stamp.
 
 ## Page refresh registry (not navigation)
 

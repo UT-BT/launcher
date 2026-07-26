@@ -12,6 +12,7 @@ import { IS_WEB, platformAuth } from '@/app/platform'
 import { fetchUserProfile, UserProfile, fetchLatestActivity } from '@/app/utils/api'
 import { getTelemetryConsent, identifyTelemetry, initializeTelemetry, trackOutcome } from '@/app/utils/telemetry'
 import { AnalyticsConsentBanner } from '@/app/components/AnalyticsConsentBanner'
+import { initUserStateSync, stopUserStateSync } from '@/app/utils/userState'
 
 import './styles/index.css'
 
@@ -153,7 +154,12 @@ export default function App() {
 
   useEffect(() => {
     identifyTelemetry(userProfile?.accessToken)
-  }, [userProfile?.accessToken])
+    if (userProfile?.accessToken) {
+      void initUserStateSync(userProfile.accessToken, userProfile.discordId)
+    } else {
+      stopUserStateSync()
+    }
+  }, [userProfile?.accessToken, userProfile?.discordId])
 
   useEffect(() => {
     const handleRefreshProfile = async () => {
