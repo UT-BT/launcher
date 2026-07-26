@@ -52,7 +52,7 @@ import {
     DIFFICULTY_TIER_OPTIONS, DIFFICULTY_TIER_LABEL, expandDifficultyTiers,
     type DifficultyTierValue,
 } from '@/app/utils/difficulty'
-import { loadPresets, persistPresets, newPresetId, presetFiltersMatch } from '@/app/utils/filterPresets'
+import { persistPresets, newPresetId, presetFiltersMatch, useSyncedPresets } from '@/app/utils/filterPresets'
 
 export type WorldRecordsMode = 'records' | 'rushers'
 export type WorldRecordsSortField = 'map' | 'holder' | 'time' | 'difficulty' | 'date'
@@ -343,7 +343,7 @@ export function WorldRecordsPage({
         [filterOptions],
     )
 
-    const [presets, setPresets] = useState<WorldRecordsPreset[]>(() => loadPresets<WorldRecordsPresetFilters>(PRESETS_KEY))
+    const [presets, setPresets] = useSyncedPresets<WorldRecordsPresetFilters>(PRESETS_KEY)
     const [activePresetId, setActivePresetId] = useState<string | null>(null)
 
     const serverParams = useMemo<WorldRecordsServerParams>(() => {

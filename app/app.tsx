@@ -10,6 +10,7 @@ const UpdateModal = lazy(() => import('@/app/components/updater/UpdateModal').th
 import { useLogger } from '@/app/hooks/use-logger'
 import { IS_WEB, platformAuth } from '@/app/platform'
 import { fetchUserProfile, UserProfile, logLauncherStartup, fetchLatestActivity } from '@/app/utils/api'
+import { initUserStateSync, stopUserStateSync } from '@/app/utils/userState'
 
 import './styles/index.css'
 
@@ -148,8 +149,11 @@ export default function App() {
   useEffect(() => {
     if (userProfile?.accessToken) {
       logLauncherStartup(userProfile.accessToken)
+      void initUserStateSync(userProfile.accessToken, userProfile.discordId)
+    } else {
+      stopUserStateSync()
     }
-  }, [userProfile?.accessToken])
+  }, [userProfile?.accessToken, userProfile?.discordId])
 
   useEffect(() => {
     const handleRefreshProfile = async () => {

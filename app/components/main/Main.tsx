@@ -83,7 +83,8 @@ import { PatreonModal } from '@/app/components/modals/PatreonModal'
 import type { ServerPreset } from '@/app/utils/server-utils'
 import { useFavorites } from '@/app/hooks/useFavorites'
 import { loadPatreonMembers } from '@/app/utils/patreon'
-import { fetchAchievementDefinitions, fetchEvents, fetchMyAchievements } from '@/app/utils/api'
+import { fetchAchievementDefinitions, fetchMyAchievements, fetchNavBadges, markSectionSeen, type BadgeSection } from '@/app/utils/api'
+import { getSynced, setSynced, subscribeSynced } from '@/app/utils/userState'
 import { writePendingHighlight, type HighlightView } from '@/app/hooks/useNewItemHighlight'
 import { isStaff } from '@/app/utils/roles'
 import { capabilities, IS_WEB } from '@/app/platform'
@@ -105,37 +106,26 @@ const SERVER_FAVORITES_STORAGE_KEY = 'utbt:serverFavorites:v2'
 
 const HISTORY_CAP = 50
 
-interface BadgeInfo {
-  count: number
-  newestIso: string | null
+const BADGE_SECTIONS: Record<string, BadgeSection> = {
+  'maps': 'maps',
+  'world-records': 'world_records',
+  'events': 'events',
+  'news': 'news',
 }
 
-const BADGE_STORAGE_KEYS: Record<string, string> = {
+const LEGACY_SEEN_KEYS: Record<string, string> = {
   'maps': 'utbt:newMapsSeen:v1',
   'world-records': 'utbt:newRecordsSeen:v1',
   'events': 'utbt:newEventsSeen:v1',
+  'news': 'utbt:newsSeen:v1',
 }
 
-function parseEventStamp(value: string | null | undefined): number {
-  if (!value) return NaN
-  return Date.parse(value.includes('T') ? value : `${value.replace(' ', 'T')}Z`)
-}
-
-function readSeen(key: string): string | null {
+function readLegacySeen(view: string): string | null {
   if (typeof window === 'undefined') return null
   try {
-    return window.localStorage.getItem(key)
+    return window.localStorage.getItem(LEGACY_SEEN_KEYS[view])
   } catch {
     return null
-  }
-}
-
-function writeSeen(key: string, value: string): void {
-  if (typeof window === 'undefined') return
-  try {
-    window.localStorage.setItem(key, value)
-  } catch {
-    return
   }
 }
 
@@ -208,27 +198,13 @@ function usePageState<T extends object>(
 }
 
 function loadPersistedServerPresets(): ServerPreset[] {
-  if (typeof window === 'undefined') return []
-  try {
-    const raw = window.localStorage.getItem(SERVER_PRESETS_STORAGE_KEY)
-    if (!raw) return []
-    const parsed = JSON.parse(raw)
-    return Array.isArray(parsed) ? parsed as ServerPreset[] : []
-  } catch {
-    return []
-  }
+  const raw = getSynced<unknown>(SERVER_PRESETS_STORAGE_KEY, [])
+  return Array.isArray(raw) ? raw as ServerPreset[] : []
 }
 
 function loadPersistedServerFavorites(): Set<string> {
-  if (typeof window === 'undefined') return new Set()
-  try {
-    const raw = window.localStorage.getItem(SERVER_FAVORITES_STORAGE_KEY)
-    if (!raw) return new Set()
-    const parsed = JSON.parse(raw)
-    return Array.isArray(parsed) ? new Set(parsed as string[]) : new Set()
-  } catch {
-    return new Set()
-  }
+  const raw = getSynced<unknown>(SERVER_FAVORITES_STORAGE_KEY, [])
+  return Array.isArray(raw) ? new Set(raw as string[]) : new Set()
 }
 
 export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').UserProfile }) {
@@ -264,9 +240,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
 
   const updateServerPresets = useCallback((next: ServerPreset[]) => {
     setServerPresets(next)
-    try {
-      window.localStorage.setItem(SERVER_PRESETS_STORAGE_KEY, JSON.stringify(next))
-    } catch { /* ignore */ }
+    setSynced(SERVER_PRESETS_STORAGE_KEY, next)
   }, [])
 
   const toggleServerFavorite = useCallback((serverId: string) => {
@@ -274,11 +248,18 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
       const next = new Set(prev)
       if (next.has(serverId)) next.delete(serverId)
       else next.add(serverId)
-      try {
-        window.localStorage.setItem(SERVER_FAVORITES_STORAGE_KEY, JSON.stringify(Array.from(next)))
-      } catch { /* ignore */ }
+      setSynced(SERVER_FAVORITES_STORAGE_KEY, Array.from(next))
       return next
     })
+  }, [])
+
+  useEffect(() => {
+    const unsubPresets = subscribeSynced(SERVER_PRESETS_STORAGE_KEY, () => setServerPresets(loadPersistedServerPresets()))
+    const unsubFavorites = subscribeSynced(SERVER_FAVORITES_STORAGE_KEY, () => setFavoriteServerIds(loadPersistedServerFavorites()))
+    return () => {
+      unsubPresets()
+      unsubFavorites()
+    }
   }, [])
 
   const accessToken = userProfile?.accessToken
@@ -338,84 +319,111 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
     toggleFavorite(mapName)
   }, [accessToken, toggleFavorite])
 
-  const [badges, setBadges] = useState<Record<string, BadgeInfo>>({})
-  const [seen, setSeen] = useState<Record<string, string | null>>(() => ({
-    'maps': readSeen(BADGE_STORAGE_KEYS['maps']),
-    'world-records': readSeen(BADGE_STORAGE_KEYS['world-records']),
-    'events': readSeen(BADGE_STORAGE_KEYS['events']),
-  }))
-  const seenRef = useRef(seen)
-  seenRef.current = seen
-  const badgesRef = useRef(badges)
-  badgesRef.current = badges
-
-  useEffect(() => {
-    const handler = (e: Event) => {
-      const detail = (e as CustomEvent).detail as { maps?: BadgeInfo; worldRecords?: BadgeInfo } | undefined
-      setBadges(prev => ({
-        ...prev,
-        'maps': detail?.maps ?? { count: 0, newestIso: null },
-        'world-records': detail?.worldRecords ?? { count: 0, newestIso: null },
-      }))
-    }
-    window.addEventListener('summary-badges', handler)
-    return () => window.removeEventListener('summary-badges', handler)
-  }, [])
-
-  useEffect(() => {
-    let cancelled = false
-    fetchEvents('')
-      .then(events => {
-        if (cancelled) return
-        const last = parseEventStamp(seenRef.current['events'])
-        const stamps = events
-          .map(event => parseEventStamp(event.created_at ?? event.signup_opens_at ?? event.starts_at))
-          .filter(Number.isFinite)
-        const newest = stamps.length > 0 ? Math.max(...stamps) : NaN
-        const count = Number.isFinite(last)
-          ? stamps.filter(stamp => stamp > last).length
-          : stamps.length
-        setBadges(prev => ({
-          ...prev,
-          'events': {
-            count,
-            newestIso: Number.isFinite(newest) ? new Date(newest).toISOString() : null,
-          },
-        }))
-      })
-      .catch(() => undefined)
-    return () => { cancelled = true }
-  }, [])
-
-  const badgeVisible = useCallback((view: string): boolean => {
-    const b = badges[view]
-    if (!b || b.count <= 0) return false
-    const last = seen[view]
-    if (!last) return true
-    return b.newestIso != null && Date.parse(b.newestIso) > Date.parse(last)
-  }, [badges, seen])
+  const [badgeCounts, setBadgeCounts] = useState<Record<string, number | null>>({})
+  const [badgeSeen, setBadgeSeen] = useState<Record<string, string | null>>({})
+  const badgeCountsRef = useRef(badgeCounts)
+  badgeCountsRef.current = badgeCounts
+  const badgeSeenRef = useRef(badgeSeen)
+  badgeSeenRef.current = badgeSeen
+  const badgesLoadedRef = useRef(false)
+  const badgesAsOfRef = useRef<string | null>(null)
+  const pendingViewedRef = useRef(new Set<string>())
+  const accessTokenRef = useRef(accessToken)
+  accessTokenRef.current = accessToken
 
   const markViewed = useCallback((view: string) => {
-    if (!BADGE_STORAGE_KEYS[view]) return
-    const b = badgesRef.current[view]
-    if (!b || b.count <= 0) return
-    const last = seenRef.current[view]
-    const visible = !last || (b.newestIso != null && Date.parse(b.newestIso) > Date.parse(last))
-    if (!visible) return
-    const stamp = b.newestIso ?? new Date().toISOString()
-    writeSeen(BADGE_STORAGE_KEYS[view], stamp)
-    setSeen(s => ({ ...s, [view]: stamp }))
-    if (view === 'maps' || view === 'world-records') {
-      writePendingHighlight(view as HighlightView, last)
-      window.dispatchEvent(new CustomEvent('highlight-new', { detail: { view, since: last } }))
+    const section = BADGE_SECTIONS[view]
+    if (!section) return
+    const token = accessTokenRef.current
+    if (!token) return
+    if (!badgesLoadedRef.current) {
+      pendingViewedRef.current.add(view)
+      return
     }
+    const count = badgeCountsRef.current[view]
+    if (count === 0) return
+    const previousSeen = badgeSeenRef.current[view] ?? null
+    const stamp = badgesAsOfRef.current ?? new Date().toISOString()
+    badgeCountsRef.current = { ...badgeCountsRef.current, [view]: 0 }
+    badgeSeenRef.current = { ...badgeSeenRef.current, [view]: stamp }
+    setBadgeCounts(prev => ({ ...prev, [view]: 0 }))
+    setBadgeSeen(prev => ({ ...prev, [view]: stamp }))
+    if ((view === 'maps' || view === 'world-records') && count != null && count > 0) {
+      writePendingHighlight(view as HighlightView, previousSeen)
+      window.dispatchEvent(new CustomEvent('highlight-new', { detail: { view, since: previousSeen } }))
+    }
+    markSectionSeen(token, section, stamp).catch(() => undefined)
   }, [])
 
+  // Badges are server-computed against per-user seen markers ("new since my
+  // last visit"), so they need the badges endpoint rather than the heavier
+  // summary payload, and they refetch on focus to pick up marks made on
+  // another device. Legacy per-device localStorage markers seed the server
+  // marker once, then are removed.
+  const refreshBadges = useCallback(async () => {
+    const token = accessTokenRef.current
+    if (!token) {
+      badgesLoadedRef.current = false
+      pendingViewedRef.current.clear()
+      setBadgeCounts({})
+      setBadgeSeen({})
+      return
+    }
+    try {
+      let nav = await fetchNavBadges(token)
+      const migrations = Object.entries(BADGE_SECTIONS).filter(([view, section]) =>
+        nav.seen[section] === null && readLegacySeen(view) !== null)
+      if (migrations.length > 0) {
+        const migrated = await Promise.all(migrations.map(([view, section]) =>
+          markSectionSeen(token, section, readLegacySeen(view) ?? undefined).then(() => view).catch(() => null)))
+        migrated.forEach(view => {
+          if (view === null) return
+          try { window.localStorage.removeItem(LEGACY_SEEN_KEYS[view]) } catch { /* ignore */ }
+        })
+        nav = await fetchNavBadges(token)
+      }
+      if (accessTokenRef.current !== token) return
+      badgesAsOfRef.current = nav.as_of ?? new Date().toISOString()
+      const counts: Record<string, number | null> = {}
+      const seen: Record<string, string | null> = {}
+      for (const [view, section] of Object.entries(BADGE_SECTIONS)) {
+        counts[view] = nav.sections[section]?.count ?? null
+        seen[view] = nav.seen[section] ?? null
+      }
+      badgeCountsRef.current = counts
+      badgeSeenRef.current = seen
+      badgesLoadedRef.current = true
+      setBadgeCounts(counts)
+      setBadgeSeen(seen)
+      const toMark = new Set(pendingViewedRef.current)
+      pendingViewedRef.current.clear()
+      toMark.add(stackRef.current.entries[stackRef.current.cursor].view)
+      toMark.forEach(view => markViewed(view))
+    } catch { /* offline or an older API: no badges this session */ }
+  }, [markViewed])
+
+  useEffect(() => {
+    void refreshBadges()
+  }, [refreshBadges, accessToken])
+
+  useEffect(() => {
+    const onFocus = () => {
+      if (accessTokenRef.current) void refreshBadges()
+    }
+    window.addEventListener('focus', onFocus)
+    return () => window.removeEventListener('focus', onFocus)
+  }, [refreshBadges])
+
+  const badgeVisible = useCallback((view: string): boolean => {
+    const count = badgeCounts[view]
+    return count != null && count > 0
+  }, [badgeCounts])
+
   const navigate = useCallback((view: string, params: NavParams = {}) => {
+    markViewed(view)
     const { entries: cur, cursor: curIdx } = stackRef.current
     const active = cur[curIdx]
     if (active.view === view && paramsEqual(active.params, params)) return
-    markViewed(view)
     const entry = { id: nextIdRef.current++, view, params, state: {} }
     let next = [...cur.slice(0, curIdx + 1), entry]
     let nextCursor = next.length - 1
@@ -430,6 +438,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
   }, [markViewed])
 
   const pushExternal = useCallback((view: string, params: NavParams) => {
+    markViewed(view)
     const { entries: cur, cursor: curIdx } = stackRef.current
     const entry = { id: nextIdRef.current++, view, params, state: {} }
     let next = [...cur.slice(0, curIdx + 1), entry]
@@ -442,7 +451,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
     setEntries(next)
     setCursor(nextCursor)
     return entry.id
-  }, [])
+  }, [markViewed])
 
   const urlNav = useUrlSync({ stackRef, setCursor, pushExternal })
 
@@ -783,6 +792,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
       default:
         return <Home
           userProfile={userProfile as any}
+          newsSeenIso={badgeSeen['news'] ?? null}
           favoriteMapNames={favoriteMapNames}
           caches={homeCaches}
           onCachesChange={setHomeCaches}
@@ -811,7 +821,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
       )}
       <div className="flex-1 overflow-hidden">
         <NavigationContext.Provider value={navValue}>
-          <AppLayout currentView={currentView} onViewChange={navigate} getNavBadge={(view) => badgeVisible(view) ? badges[view].count : null} userProfile={userProfile} installationStatus={installationStatus}>
+          <AppLayout currentView={currentView} onViewChange={navigate} getNavBadge={(view) => badgeVisible(view) ? badgeCounts[view] : null} userProfile={userProfile} installationStatus={installationStatus}>
             <Suspense fallback={
               <div className="space-y-4 pt-2">
                 <div className="h-10 w-64 bg-hairline/5 rounded-lg animate-pulse" />

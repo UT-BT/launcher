@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { getSynced, setSynced, subscribeSynced } from '@/app/utils/userState'
 
 interface TutorialState {
     seen: boolean
@@ -8,30 +9,30 @@ interface TutorialState {
 const DEFAULT: TutorialState = { seen: false, version: 1 }
 
 function load(key: string): TutorialState {
-    if (typeof window === 'undefined') return DEFAULT
-    try {
-        const raw = window.localStorage.getItem(key)
-        if (!raw) return DEFAULT
-        const parsed = JSON.parse(raw)
-        return { ...DEFAULT, ...parsed }
-    } catch {
-        return DEFAULT
-    }
+    const stored = getSynced<Partial<TutorialState> | null>(key, null)
+    return stored ? { ...DEFAULT, ...stored } : DEFAULT
 }
 
 export function useTutorialState(storageKey: string) {
     const [state, setState] = useState<TutorialState>(() => load(storageKey))
 
-    useEffect(() => {
-        try {
-            window.localStorage.setItem(storageKey, JSON.stringify(state))
-        } catch {
-            // localStorage may be full or unavailable; swallow.
-        }
-    }, [state, storageKey])
+    useEffect(() => subscribeSynced(storageKey, () => setState(load(storageKey))), [storageKey])
 
-    const markSeen = useCallback(() => setState(s => ({ ...s, seen: true })), [])
-    const resetSeen = useCallback(() => setState(s => ({ ...s, seen: false })), [])
+    const markSeen = useCallback(() => {
+        setState(s => {
+            const next = { ...s, seen: true }
+            setSynced(storageKey, next)
+            return next
+        })
+    }, [storageKey])
+
+    const resetSeen = useCallback(() => {
+        setState(s => {
+            const next = { ...s, seen: false }
+            setSynced(storageKey, next)
+            return next
+        })
+    }, [storageKey])
 
     return {
         seen: state.seen,

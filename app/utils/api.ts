@@ -230,10 +230,11 @@ export interface ApiRequestOptions {
     headers?: { [key: string]: string }
     signal?: AbortSignal
     timeoutMs?: number
+    keepalive?: boolean
 }
 
 export async function apiRequest(path: string, opts: ApiRequestOptions = {}): Promise<Response> {
-    const { token, method = 'GET', body, headers = {}, signal, timeoutMs = DEFAULT_TIMEOUT_MS } = opts
+    const { token, method = 'GET', body, headers = {}, signal, timeoutMs = DEFAULT_TIMEOUT_MS, keepalive } = opts
     const controller = new AbortController()
     const onAbort = () => controller.abort(signal?.reason)
     if (signal) {
@@ -246,6 +247,7 @@ export async function apiRequest(path: string, opts: ApiRequestOptions = {}): Pr
         return await fetch(url, {
             method,
             signal: controller.signal,
+            keepalive,
             headers: {
                 ...bearerHeaders(token),
                 ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
@@ -303,6 +305,47 @@ export async function apiGetList<T>(path: string, opts: ApiRequestOptions = {}):
         return Array.isArray(json.data) ? (json.data as T[]) : []
     }
     throw new Error('Invalid response format from server')
+}
+
+export type BadgeSection = 'maps' | 'world_records' | 'events' | 'news'
+
+export type SeenMarkers = { [K in BadgeSection]: string | null }
+
+export interface UserStateBlob {
+    [key: string]: unknown
+}
+
+export interface UserStateDoc {
+    state: UserStateBlob
+    seen: SeenMarkers
+    updated_at: string | null
+}
+
+export interface NavBadges {
+    sections: { [K in BadgeSection]: { count: number | null } }
+    seen: SeenMarkers
+    as_of?: string
+}
+
+export async function fetchUserState(token: string): Promise<UserStateDoc> {
+    return apiGet<UserStateDoc>('/user_state/', { token })
+}
+
+export async function mergeUserState(token: string, state: UserStateBlob, keepalive = false): Promise<UserStateDoc> {
+    return apiGet<UserStateDoc>('/user_state/', { token, method: 'PUT', body: { state }, keepalive })
+}
+
+export async function markSectionSeen(token: string, section: BadgeSection, seenAtIso?: string): Promise<SeenMarkers> {
+    const data = await apiGet<{ seen: SeenMarkers }>(`/user_state/seen/${section}`, {
+        token,
+        method: 'PUT',
+        body: seenAtIso ? { seen_at: seenAtIso } : {},
+    })
+    return data.seen
+}
+
+export async function fetchNavBadges(token: string): Promise<NavBadges> {
+    return apiGet<NavBadges>('/v2/summary/badges', { token })
 }
 
 export async function fetchUserProfile(accessToken: string): Promise<UserProfile> {

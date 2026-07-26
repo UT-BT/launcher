@@ -37,8 +37,6 @@ import { MedalHuntCard } from './home/MedalHuntCard'
 import { capabilities, fetchGatewayServers } from '@/app/platform'
 import { requestLogin } from '@/app/components/shared/AuthRequiredModal'
 
-const NEWS_SEEN_KEY = 'utbt:newsSeen:v1'
-
 const ACCENTS: Record<string, SectionAccent> = {
     worldRecords: { tick: 'bg-blue-400' },
     hotMaps: { tick: 'bg-accent-400' },
@@ -83,6 +81,7 @@ export const DEFAULT_HOME_CACHES: HomePageCaches = {
 interface HomeProps {
     userProfile?: UserProfile
     installationStatus?: 'valid' | 'no-install' | 'unsupported' | null
+    newsSeenIso?: string | null
     favoriteMapNames: Set<string>
     caches: HomePageCaches
     onCachesChange: (updater: (prev: HomePageCaches) => HomePageCaches) => void
@@ -106,7 +105,7 @@ const EMPTY_SUMMARY: Summary = {
 }
 
 export function Home({
-    userProfile, installationStatus, favoriteMapNames,
+    userProfile, installationStatus, newsSeenIso, favoriteMapNames,
     caches, onCachesChange, achievementsCaches, onEnsureAchievements,
     onToggleFavorite, onMapSelect,
     onViewServers, onViewMaps, onViewNewMaps, onViewWorldRecords, onViewPlayers, onViewNews,
@@ -114,7 +113,6 @@ export function Home({
     const refreshCooldown = useRefreshCooldown()
     const { summary, hotMaps, news, newsCategories, userSummary, servers } = caches
     const hasCachedData = summary !== null
-    const [newsSeen] = useState<string | null>(() => localStorage.getItem(NEWS_SEEN_KEY))
     const [loading, setLoading] = useState(!hasCachedData)
     const [error, setError] = useState<string | null>(null)
     const [reviewOpen, setReviewOpen] = useState(false)
@@ -154,18 +152,6 @@ export function Home({
                 servers: serverData,
                 userSummary: userSummaryData,
                 lastRefreshIso: new Date().toISOString(),
-            }))
-            window.dispatchEvent(new CustomEvent('summary-badges', {
-                detail: {
-                    maps: {
-                        count: summaryData.global.newMaps,
-                        newestIso: summaryData.newMaps?.[0]?.added ?? null,
-                    },
-                    worldRecords: {
-                        count: summaryData.global.newRecords,
-                        newestIso: summaryData.recentWorldRecords?.[0]?.added ?? null,
-                    },
-                },
             }))
         } catch (err) {
             if (!isActive()) return
@@ -280,12 +266,6 @@ export function Home({
         [achievementsCaches.definitions],
     )
 
-    useEffect(() => {
-        if (news.length === 0) return
-        const newest = news.reduce((max, a) => (a.publishedAt > max ? a.publishedAt : max), '')
-        if (newest) localStorage.setItem(NEWS_SEEN_KEY, newest)
-    }, [news])
-
     if (!userProfile && !capabilities.anonymousBrowse) {
         return (
             <div className="flex h-full items-center justify-center">
@@ -345,7 +325,7 @@ export function Home({
             <NewsCard
                 articles={newsFeed}
                 categories={newsCategoryMap}
-                newSince={newsSeen}
+                newSince={newsSeenIso ?? null}
                 className="grid grid-cols-1 md:grid-cols-1 gap-3 space-y-0 overflow-y-auto pr-1 [scrollbar-width:thin] [scrollbar-color:rgba(148,163,184,0.25)_transparent] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-hairline/20"
             />
         </SpotlightSection>

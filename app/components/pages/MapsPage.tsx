@@ -28,7 +28,7 @@ import { PaginationBar } from '@/app/components/ui/pagination'
 import { MultiFilterDropdown } from '@/app/components/ui/multi-filter-dropdown'
 import { FilterPanelRow } from '@/app/components/ui/filter-panel-row'
 import { FilterPresetsMenu } from '@/app/components/shared/FilterPresetsMenu'
-import { loadPresets, persistPresets, newPresetId, presetFiltersMatch } from '@/app/utils/filterPresets'
+import { persistPresets, newPresetId, presetFiltersMatch, useSyncedPresets } from '@/app/utils/filterPresets'
 import { DIFFICULTY_TIER_RANGES as DIFFICULTY_RANGES } from '@/app/utils/difficulty'
 import { ColumnsMenu } from '@/app/components/shared/ColumnsMenu'
 import { ActiveFilterChip } from '@/app/components/shared/ActiveFilterChip'
@@ -655,7 +655,7 @@ export function MapsPage({
     const [error, setError] = useState<string | null>(null)
     const [searchResults, setSearchResults] = useState<Map[]>([])
     const [reviewsModalMap, setReviewsModalMap] = useState<string | null>(null)
-    const [presets, setPresets] = useState<MapsPreset[]>(() => loadPresets<PresetFilters>(PRESETS_KEY, migratePresetFilters))
+    const [presets, setPresets] = useSyncedPresets<PresetFilters>(PRESETS_KEY, migratePresetFilters)
     const [presetsMenuOpen, setPresetsMenuOpen] = useState(false)
     const [columnVisibility, setColumnVisibility] = useState<Record<ColumnId, boolean>>(() => loadColumnVisibility())
     const [expandedTagMaps, setExpandedTagMaps] = useState<Set<string>>(() => new Set())

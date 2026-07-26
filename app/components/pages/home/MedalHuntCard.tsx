@@ -16,6 +16,7 @@ import {
   TvMinimalPlay,
 } from 'lucide-react'
 import { fetchMap, fetchMedalHunt, type MapMetadata, type MedalHuntOpportunity } from '@/app/utils/api'
+import { getSynced, setSynced, subscribeSynced } from '@/app/utils/userState'
 import { toOpportunities, type Opportunity, type TargetMedal } from '@/app/utils/medalHunt'
 import { displayMapName, formatCapTime, formatDelta } from '@/app/utils/format'
 import { getMedalIcon } from '@/app/utils/medals'
@@ -103,18 +104,13 @@ function hiddenStorageKey(userId?: string | number | null): string {
 }
 
 function readHiddenMapNames(userId?: string | number | null): string[] {
-  try {
-    const raw = localStorage.getItem(hiddenStorageKey(userId))
-    const parsed = raw ? JSON.parse(raw) : []
-    if (!Array.isArray(parsed)) return []
-    return parsed.filter((item, index, arr) => typeof item === 'string' && arr.indexOf(item) === index)
-  } catch {
-    return []
-  }
+  const parsed = getSynced<unknown>(hiddenStorageKey(userId), [])
+  if (!Array.isArray(parsed)) return []
+  return parsed.filter((item, index, arr) => typeof item === 'string' && arr.indexOf(item) === index)
 }
 
 function writeHiddenMapNames(userId: string | number | null | undefined, hidden: string[]) {
-  localStorage.setItem(hiddenStorageKey(userId), JSON.stringify(hidden))
+  setSynced(hiddenStorageKey(userId), hidden)
 }
 
 function getScrollParent(element: HTMLElement | null): HTMLElement | Window {
@@ -235,6 +231,7 @@ export function MedalHuntCard({
     setHiddenMapNames(readHiddenMapNames(userId))
     setPage(1)
     setShowHidden(false)
+    return subscribeSynced(hiddenStorageKey(userId), () => setHiddenMapNames(readHiddenMapNames(userId)))
   }, [userId])
 
   const hiddenMaps = useMemo(() => new Set(hiddenMapNames), [hiddenMapNames])

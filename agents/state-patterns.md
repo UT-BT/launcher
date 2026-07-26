@@ -2,17 +2,18 @@
 doc: state-patterns
 read_when:
   - "adding or changing a primary page's state, filters, sort, columns, or pagination"
-  - "deciding where a piece of UI state lives (per-visit vs persisted vs cache)"
+  - "deciding where a piece of UI state lives (per-visit vs persisted vs cache vs account-synced)"
   - "adding a localStorage key, a filter preset, or tutorial state"
+  - "making a preference follow the signed-in user across devices"
   - "wiring detail-page transient UI (tabs/search/scroll) that must survive Back/Forward"
-keywords: [usePageState, useNavState, localStorage, PREF_KEYS, caches, querySig, presets, tutorial, persistence, controlled-page]
-provides: "the three state tiers, the localStorage key convention, and how pages are controlled + hoisted"
+keywords: [usePageState, useNavState, localStorage, PREF_KEYS, caches, querySig, presets, tutorial, persistence, controlled-page, userState, synced, badges, seen]
+provides: "the state tiers (incl. the account-synced tier), the localStorage key convention, and how pages are controlled + hoisted"
 not_here:
   - "the navigation stack / navigate() / renderView wiring → navigation.md"
   - "the shared components used (FilterPresetsMenu, ColumnsMenu, Tutorial) → shared-components.md"
-sections: [controlled-pages-with-hoisted-state, navigation-history-per-entry-ui-state, localstorage-persistence, filter-presets, tutorial-state, favorites, naming-conventions]
-last_verified: 2026-07-22
-verify_against: [app/components/main/Main.tsx, app/components/navigation/useNavState.ts, app/hooks/useAsync.ts]
+sections: [controlled-pages-with-hoisted-state, navigation-history-per-entry-ui-state, account-synced-state, localstorage-persistence, filter-presets, tutorial-state, favorites, naming-conventions]
+last_verified: 2026-07-25
+verify_against: [app/components/main/Main.tsx, app/components/navigation/useNavState.ts, app/hooks/useAsync.ts, app/utils/userState.ts]
 ---
 
 # State patterns
@@ -149,6 +150,50 @@ Rules for `useNavState`:
   bag. Page-type cases are intentionally NOT keyed (one reused instance).
 - Scroll: use `useNavScrollRestore(ref, loadingDone)` for detail scroll containers.
 
+## Account-synced state (`app/utils/userState.ts`)
+
+A fourth tier: preferences that follow the **signed-in account across devices**
+(the same person uses the desktop app and the website). The store is a synced
+localStorage mirror — reads are synchronous, writes hit localStorage immediately,
+and for whitelisted keys the change is also pushed to the user's server-side
+state (debounced ~1.5 s, dirty-keys-only shallow merge, flushed on
+`pagehide`/tab-hidden). Signed out or offline it behaves exactly like plain
+localStorage.
+
+API: `getSynced(key, fallback)` / `setSynced(key, value)` /
+`subscribeSynced(key, cb)`; `initUserStateSync(token, accountId)` runs at
+sign-in (`app/app.tsx`) — server values win and overwrite localStorage
+(subscribers fire) except for keys dirtied while the fetch was in flight, and
+local-only values upload once as a migration; `stopUserStateSync()` on
+sign-out. The store remembers which account last synced
+(`utbt:syncAccount:v1`): signing in as a different account purges all synced
+keys first, so one machine's leftovers never upload into another account.
+Failed flushes retry with exponential backoff (1.5 s → 60 s cap); the
+`pagehide` flush drops `keepalive` for blobs near the 64 KB keepalive quota.
+
+Rules:
+
+- **Which keys sync is a whitelist** (`isSyncedKey` in `userState.ts`): theme,
+  tutorial seen-flags, server favorites + presets, Maps/World-Records filter
+  presets, admin `:filters:v1` presets, Medal Hunt dismissals. Everything else
+  (column layout, page sizes, panel-open flags, ui-scale, replay volume, recent
+  servers, auth) is **deliberately device-local** — layout preferences differ
+  between a 4K desktop and a phone. Add a key to the whitelist only if the user
+  would expect it to follow their account.
+- Consumers go through the store's helpers, never raw
+  `localStorage.getItem/setItem`, for any whitelisted key — and should
+  `subscribeSynced` if a server value arriving after mount must re-render.
+- Values must be JSON round-trippable; keys keep the `utbt:<thing>:v<n>`
+  convention (bump the version to abandon a bad shape — old versions just stop
+  syncing).
+- **"New since last visit" markers are NOT in this store.** The sidebar badge
+  counts for Maps / World Records / Events / News are computed **server-side**
+  against per-account seen markers. `Main.tsx` fetches them at boot + on window
+  focus, `markViewed` (fired from `navigate()`/deep links) optimistically zeroes
+  a badge and advances the marker. Signed-out users get no badges. See
+  `agents/navigation.md` (sidebar-new-badges) and `agents/data-sources.md` for
+  the endpoints.
+
 ## localStorage persistence
 
 ### Conventions
@@ -157,8 +202,9 @@ Rules for `useNavState`:
   incompatibly.
 - **Persist preferences, not query state or caches.** For primary pages, only
   pref fields persist (handled by `usePageState`/`loadPrefs` in `Main.tsx`).
-  Query state is per-entry; caches refetch per launch. Other localStorage users
-  (presets, favorites, tutorial seen-flags, dismissed patch) persist directly.
+  Query state is per-entry; caches refetch per launch. Other persisted state
+  (presets, favorites, tutorial seen-flags) goes through the account-synced
+  store above when whitelisted, plain localStorage otherwise.
 - **Merge over defaults on load.** Persisted JSON may be missing fields you've
   added since (or have stale fields you've removed). `loadPrefs` does this for
   page prefs (picks `prefKeys`, falls back to the default for missing keys). Any
@@ -178,38 +224,52 @@ function loadFoo(): Foo {
 
 ### Current storage keys
 
-The `utbt:*State:v1` keys below are written by `usePageState` and now hold the
-page's **preference fields only** (the `*_PREF_KEYS` subset), not full query state.
+The `utbt:*State:v1` keys below are written by `usePageState` and hold the
+page's **preference fields only** (the `*_PREF_KEYS` subset), not full query
+state. **Synced?** = whitelisted in the account-synced store (follows the
+signed-in user across devices); everything else is device-local.
 
-| Key | Owner | Contents |
-|---|---|---|
-| `utbt:mapsPageState:v1` | `Main.tsx` (`usePageState`) | Maps prefs: `filtersPanelOpen`, `pageSizePreference` |
-| `utbt:mapsColumns:v1` | `MapsPage` | `Record<ColumnId, boolean>` |
-| `utbt:mapsColumnOrder:v1` | `MapsPage` | `ColumnId[]` |
-| `utbt:mapsPresets:v1` | `MapsPage` | `MapsPreset[]` |
-| `utbt:mapsPageTutorial:v1` | `MapsPage` (via hook) | `{ seen, version }` |
-| `utbt:serversState:v1` | `Main.tsx` (`usePageState`) | Servers prefs: column visibility/order, `filtersPanelOpen` |
-| `utbt:serverPresets:v1` | `Main.tsx` | `ServerPreset[]` |
-| `utbt:serverFavorites:v2` | `Main.tsx` | `string[]` (server IDs) |
-| `utbt:serversPageTutorial:v1` | `ServerBrowserPage` (via hook) | `{ seen, version }` |
-| `utbt:playersState:v1` | `Main.tsx` (`usePageState`) | Players prefs: column visibility/order, `pageSizePreference` |
-| `utbt:playersPageTutorial:v1` | `PlayersPage` (via hook) | `{ seen, version }` |
-| `utbt:capItAllState:v1` | `Main.tsx` (`usePageState`) | Cap-It-All prefs: `pageSizePreference` |
-| `utbt:worldRecordsState:v1` | `Main.tsx` (`usePageState`) | World Records prefs: column visibility/order, `pageSizePreference` |
-| `utbt:achievementsState:v1` | `Main.tsx` (`usePageState`) | none (no pref fields → nothing persisted) |
-| `utbt:teamsState:v1` | `Main.tsx` (`usePageState`) | none persisted (no pref fields); per-entry query state = team-gallery search/page + directory access filter + sort field + sort direction + scroll. Gallery caches (`myTeam`, `invitations`) live in the shared singleton, refreshed on mount and updated from each mutation's fresh `TeamDetail`. The role-aware `team-detail` page fetches its own `/teams/<id>` + `/me/team`; leave/disband/join/accept/decline invalidate the gallery cache and route back. |
-| `utbt:newMapsSeen:v1` | `Main.tsx` (`markViewed`) | ISO timestamp of the newest map the user has seen — gates the Maps "new" sidebar badge + row highlight |
-| `utbt:newRecordsSeen:v1` | `Main.tsx` (`markViewed`) | ISO timestamp of the newest WR the user has seen — gates the World Records "new" badge + highlight |
-| `utbt:adminState:v1` | `Main.tsx` (`usePageState`) | Admin page pref: `activeSection`. Each admin section owns its own table state: column visibility/order in `utbt:admin:<section>:cols:v2` + saved filters in `utbt:admin:<section>:filters:v1` (both localStorage, via `useAdminTable`/`useAdminFilterPresets`); transient sort/filter/search/page via `useNavState('admin.<section>.<field>')` so it restores on Back/Forward. No caches singleton. |
-| `utbt:dismissedPatch:v1` | `Home` | `string` (patch tag the user dismissed) |
-| `utbt:theme:v1` | `ThemeProvider` (app-global) | `{ id }` — selected theme (`classic`/`red`/`aurum`/`amethyst`/`emerald`/`rose`/`light`/`black`) |
-| `utbt:webAuth:v1` | `app/platform/web/auth-web.ts` (**web build only**) | `AuthProfile` — Discord identity + access/refresh tokens + expiry; the web equivalent of the desktop main-process auth config |
-| `utbt-server-browser-settings` | DEPRECATED | (old shape — can ignore) |
+| Key | Owner | Synced? | Contents |
+|---|---|---|---|
+| `utbt:mapsPageState:v1` | `Main.tsx` (`usePageState`) | no | Maps prefs: `filtersPanelOpen`, `pageSizePreference` |
+| `utbt:mapsColumns:v1` | `MapsPage` | no | `Record<ColumnId, boolean>` |
+| `utbt:mapsColumnOrder:v1` | `MapsPage` | no | `ColumnId[]` |
+| `utbt:mapsPresets:v1` | `MapsPage` (via `filterPresets.ts`) | **yes** | `MapsPreset[]` |
+| `utbt:mapsPageTutorial:v1` | `MapsPage` (via hook) | **yes** | `{ seen, version }` |
+| `utbt:serversState:v1` | `Main.tsx` (`usePageState`) | no | Servers prefs: column visibility/order, `filtersPanelOpen` |
+| `utbt:serverPresets:v1` | `Main.tsx` | **yes** | `ServerPreset[]` |
+| `utbt:serverFavorites:v2` | `Main.tsx` | **yes** | `string[]` (server IDs) |
+| `utbt:serversPageTutorial:v1` | `ServerBrowserPage` (via hook) | **yes** | `{ seen, version }` |
+| `utbt:playersState:v1` | `Main.tsx` (`usePageState`) | no | Players prefs: column visibility/order, `pageSizePreference` |
+| `utbt:playersPageTutorial:v1` | `PlayersPage` (via hook) | **yes** | `{ seen, version }` |
+| `utbt:capItAllState:v1` | `Main.tsx` (`usePageState`) | no | Cap-It-All prefs: `pageSizePreference` |
+| `utbt:worldRecordsState:v1` | `Main.tsx` (`usePageState`) | no | World Records prefs: column visibility/order, `pageSizePreference`, `filtersPanelOpen` |
+| `utbt:worldRecordsPresets:v1` | `WorldRecordsPage` (via `filterPresets.ts`) | **yes** | `FilterPreset[]` |
+| `utbt:achievementsState:v1` | `Main.tsx` (`usePageState`) | no | none (no pref fields → nothing persisted) |
+| `utbt:teamsState:v1` | `Main.tsx` (`usePageState`) | no | none persisted (no pref fields); per-entry query state = team-gallery search/page + directory access filter + sort field + sort direction + scroll. Gallery caches (`myTeam`, `invitations`) live in the shared singleton, refreshed on mount and updated from each mutation's fresh `TeamDetail`. The role-aware `team-detail` page fetches its own `/teams/<id>` + `/me/team`; leave/disband/join/accept/decline invalidate the gallery cache and route back. |
+| `utbt:eventsState:v1` | `Main.tsx` (`usePageState`) | no | none persisted (no pref fields) |
+| `utbt:adminState:v1` | `Main.tsx` (`usePageState`) | no | Admin page pref: `activeSection`. Each admin section owns its own table state: column visibility/order in `utbt:admin:<section>:cols:v2` (device-local) + saved filters in `utbt:admin:<section>:filters:v1` (**synced**, via `useAdminFilterPresets` → `filterPresets.ts`); transient sort/filter/search/page via `useNavState('admin.<section>.<field>')` so it restores on Back/Forward. No caches singleton. |
+| `utbt:homeMedalHuntHidden:v1:<userId>` | `MedalHuntCard` | **yes** | `string[]` map names dismissed from the home Medal Hunt card (already user-suffixed; the suffix is kept inside the per-account blob) |
+| `utbt:theme:v1` | `ThemeProvider` (app-global) | **yes** | `{ id }` — selected theme (`classic`/`red`/`aurum`/`amethyst`/`emerald`/`rose`/`light`/`black`) |
+| `utbt:recentServers:v1` | `app/utils/server-utils.ts` | no | last 5 joined servers (desktop game launches) |
+| `utbt:replayVideoVolume:v1` | `app/utils/replayVideoVolume.ts` | no | replay player volume `0..1` |
+| `utbt:patreon:v1` | `app/utils/patreon.ts` | no | cached patron tier map, 1 h TTL (pure cache) |
+| `ui-scale` | `LauncherGeneralSettings` | no | renderer zoom percent (pre-dates the key convention) |
+| `utbt:webAuth:v1` | `app/platform/web/auth-web.ts` (**web build only**) | never | `AuthProfile` — Discord identity + access/refresh tokens + expiry; the web equivalent of the desktop main-process auth config. Secrets never sync. |
+| `utbt:syncAccount:v1` | `userState.ts` (store-internal) | never | Discord id of the account that last synced on this device; a different id at sign-in purges all synced keys before syncing (no cross-account bleed) |
+| `utbt-server-browser-settings` | DEPRECATED | — | (old shape — can ignore) |
 
-`utbt:theme:v1` is an **app-global** preference (like `ui-scale`), not per-page —
-read + written directly by `app/theme/ThemeProvider.tsx` with merge-over-defaults,
-not via `usePageState`. A pre-paint inline script in `app/index.html` applies it
-before first paint to avoid a flash.
+Legacy per-device badge markers (`utbt:newMapsSeen:v1`, `utbt:newRecordsSeen:v1`,
+`utbt:newEventsSeen:v1`, `utbt:newsSeen:v1`) are **migration inputs only**: on the
+first badge fetch after sign-in, a still-unset server marker is seeded from the
+local value and the local key is removed once that seeding call succeeds (a
+failed seed keeps the key and retries on the next badge fetch). No code writes
+them anymore.
+
+`utbt:theme:v1` is an **app-global** preference, not per-page — read + written
+by `app/theme/ThemeProvider.tsx` through the synced store. A pre-paint inline
+script in `app/index.html` still reads the raw localStorage value (the store
+mirrors it) so the theme applies before first paint without a flash.
 
 `utbt:highlightSince:<view>` (`maps` / `world-records`) is the one **sessionStorage**
 key — a transient navigate-time hand-off written by `markViewed` (inside `Main.tsx`'s
@@ -268,11 +328,13 @@ Driven by `Main.tsx`:
 
 Don't bypass `toggleFavorite` in `Main.tsx`.
 
-### Server favorites — local only
+### Server favorites — account-synced
 
-No backend. Stored in `localStorage` (`utbt:serverFavorites:v2`). Keyed by
+Stored under `utbt:serverFavorites:v2` through the synced store (follows the
+account across devices; plain localStorage when signed out). Keyed by
 `server.id` (NOT hostname — hostnames can change). Plain set + immediate
-serialize on toggle.
+serialize on toggle; `Main.tsx` subscribes so a value arriving from another
+device re-renders.
 
 ## Naming conventions
 
