@@ -166,6 +166,11 @@ calls `onViewChange` (`navigate`). Below the `lg` breakpoint the same sidebar
 `renderView` case **and** a `navSections` item. (Settings is **not** a view — it's
 a modal opened from the user dropdown / the `open-settings` window event.)
 
+The closed mobile drawer is marked `inert` so its hidden controls cannot receive
+focus or clicks. `AppLayout` listens to the same `1023px` media-query boundary as
+the `lg` shell styles and removes `inert` when the sidebar becomes desktop-visible;
+keep those states synchronized when changing the responsive navigation.
+
 **Gated pages** (e.g. `admin`): hide the nav item (`buildNavSections` only appends
 the Staff group when `isStaff(userProfile)`, helpers in `app/utils/roles.ts`) **and**
 guard the `renderView` case — `admin` passes `forceDenied={!isStaff(userProfile)}` so

@@ -114,6 +114,9 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
     const [loginError, setLoginError] = useState<string | null>(() => auth.consumeLoginError())
     const [mobileNavOpen, setMobileNavOpen] = useState(false)
+    const [isMobileViewport, setIsMobileViewport] = useState(
+        () => window.matchMedia('(max-width: 1023px)').matches,
+    )
     const mobileMenuButtonRef = useRef<HTMLButtonElement>(null)
     const sidebarRef = useRef<HTMLElement>(null)
 
@@ -153,11 +156,19 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
     }, [])
 
     useEffect(() => {
+        const mobileQuery = window.matchMedia('(max-width: 1023px)')
+        const handleViewportChange = (event: MediaQueryListEvent) => setIsMobileViewport(event.matches)
+
+        setIsMobileViewport(mobileQuery.matches)
+        mobileQuery.addEventListener('change', handleViewportChange)
+        return () => mobileQuery.removeEventListener('change', handleViewportChange)
+    }, [])
+
+    useEffect(() => {
         const sidebar = sidebarRef.current
         if (!sidebar) return
 
-        const mobile = window.matchMedia('(max-width: 1023px)').matches
-        if (!mobile) {
+        if (!isMobileViewport) {
             sidebar.removeAttribute('inert')
             return
         }
@@ -202,7 +213,7 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
             sidebar.setAttribute('inert', '')
             menuButton?.focus()
         }
-    }, [mobileNavOpen])
+    }, [isMobileViewport, mobileNavOpen])
 
     const isInstallValid = installationStatus === 'valid'
 
