@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 import { DEFAULT_THEME_ID, isThemeId } from './themes'
+import { getSynced, setSynced, subscribeSynced } from '@/app/utils/userState'
 
 const STORAGE_KEY = 'utbt:theme:v1'
 
@@ -11,14 +12,8 @@ interface ThemeContextValue {
 const ThemeContext = createContext<ThemeContextValue | null>(null)
 
 function loadThemeId(): string {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return DEFAULT_THEME_ID
-    const parsed = JSON.parse(raw) as { id?: string }
-    return isThemeId(parsed.id) ? parsed.id : DEFAULT_THEME_ID
-  } catch {
-    return DEFAULT_THEME_ID
-  }
+  const stored = getSynced<{ id?: string } | null>(STORAGE_KEY, null)
+  return stored && isThemeId(stored.id) ? stored.id : DEFAULT_THEME_ID
 }
 
 function applyThemeId(id: string) {
@@ -38,15 +33,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     applyThemeId(themeId)
   }, [themeId])
 
+  useEffect(() => subscribeSynced(STORAGE_KEY, () => setThemeIdState(loadThemeId())), [])
+
   const setThemeId = useCallback((id: string) => {
     const next = isThemeId(id) ? id : DEFAULT_THEME_ID
     applyThemeId(next)
     setThemeIdState(next)
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ id: next }))
-    } catch (err) {
-      console.error('Failed to persist theme preference', err)
-    }
+    setSynced(STORAGE_KEY, { id: next })
   }, [])
 
   return <ThemeContext.Provider value={{ themeId, setThemeId }}>{children}</ThemeContext.Provider>

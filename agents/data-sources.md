@@ -11,7 +11,7 @@ not_here:
   - "IPC channels (window.conveyor.*) → lib/conveyor/README.md"
   - "how UI state persists in localStorage → state-patterns.md"
   - "the procedure to wire a new endpoint into the UI → skill: consume-api-data"
-sections: [backend-api, errors, admin-api, cap-detail-page-endpoints, world-records-page-endpoints, team-maps-and-team-runs, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites]
+sections: [backend-api, errors, admin-api, cap-detail-page-endpoints, world-records-page-endpoints, team-maps-and-team-runs, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites, account-state-and-badges]
 last_verified: 2026-07-25
 verify_against: [app/utils/api.ts, app/utils/patreon.ts, app/utils/server-utils.ts]
 ---
@@ -45,6 +45,7 @@ full loop).
 | Cap detail | `fetchCapDetail`, `fetchCapCheckpoints` |
 | Achievements | `fetchMyAchievements`, `fetchAchievementDefinitions` |
 | Home / summary | `fetchSummary` (homepage feed), `fetchHotMaps` (→ `GET /v2/summary/hot_maps` → `HotMap[]`), `fetchMedalHunt` (→ `GET /v2/summary/medal_hunt` → `MedalHuntOpportunity[]`), `fetchPendingReviews` |
+| Account state / badges | `fetchUserState` / `mergeUserState` (per-account preference blob keyed by the `utbt:*` storage names, shallow-merged per key; consumed only by `app/utils/userState.ts` — see `agents/state-patterns.md`), `fetchNavBadges` (per-section "new since my last visit" counts + seen markers; `count: null` = never visited = no badge), `markSectionSeen(token, section, seenAtIso?)` (advances one marker; omitted stamp = server now). All require a real bearer — signed-out users have no account state and no badges. |
 | Profile | `UserProfile` type (incl. `team` clan-tag summary), `getAvatarUrl(userId)`, `toActiveTitle` |
 | Teams | `createTeam`, `fetchTeams`, `fetchTeam`, `updateTeam`, `disbandTeam`, `transferTeamOwnership`, `fetchTeamMembers`, `inviteToTeam`, `joinTeam`, `acceptTeamInvite`, `declineTeamInvite`, `leaveTeam`, `denyTeamMember`, `unblockTeamMember`, `kickTeamMember` (optional `block`), `setTeamMemberRole`, `setTeamMemberNumber`, `fetchTeamActivity`, `fetchTeamAudit`, `fetchLineups`, `createLineup`, `updateLineup`, `deleteLineup`, `fetchMyTeam`, `setMyTagHidden`, `fetchMyInvitations`, `uploadTeamAvatar`, `deleteTeamAvatar`, `teamAvatarUrl` (clans + lineups; mutations return the fresh `TeamDetail`; validation failures surface the server's message — see [Errors](#errors)) |
 | Admin (staff-only) | the moderator/admin dashboard slice — see [Admin API](#admin-api) |
@@ -333,8 +334,10 @@ Components read it via `usePatreonTier(userId)` (returns `0|1|2|3`, lazy-loads o
 first use). `Main.tsx` warm-loads it once on mount. Clear the localStorage key to
 force a refetch.
 
-## Server favorites — local only
+## Server favorites — account-synced
 
-Server favorites are launcher-local (no API endpoint). Stored in `localStorage`
-under `utbt:serverFavorites:v2`, keyed by `server.id` (NOT hostname — hostnames
-can change). Managed in `Main.tsx` as `favoriteServerIds` + `toggleServerFavorite`.
+Server favorites live under `utbt:serverFavorites:v2` in the account-synced
+store (`app/utils/userState.ts`) — they follow the signed-in account across
+devices and degrade to plain localStorage when signed out. Keyed by `server.id`
+(NOT hostname — hostnames can change). Managed in `Main.tsx` as
+`favoriteServerIds` + `toggleServerFavorite`.

@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
 import {
-  loadPresets, persistPresets, newPresetId, presetFiltersMatch, type FilterPreset,
+  persistPresets, newPresetId, presetFiltersMatch, useSyncedPresets, type FilterPreset,
 } from '@/app/utils/filterPresets'
 
 export function useAdminFilterPresets<TFilters extends object>(opts: {
@@ -10,13 +10,13 @@ export function useAdminFilterPresets<TFilters extends object>(opts: {
   onApply: (f: TFilters) => void
 }) {
   const { storageKey, current, isDefault, onApply } = opts
-  const [presets, setPresets] = useState<FilterPreset<TFilters>[]>(() => loadPresets<TFilters>(storageKey))
+  const [presets, setPresets] = useSyncedPresets<TFilters>(storageKey)
   const [activeId, setActiveId] = useState<string | null>(null)
 
   const persist = useCallback((next: FilterPreset<TFilters>[]) => {
     setPresets(next)
     persistPresets(storageKey, next)
-  }, [storageKey])
+  }, [storageKey, setPresets])
 
   const onSave = useCallback((name: string, filters: TFilters) => {
     const id = newPresetId()
