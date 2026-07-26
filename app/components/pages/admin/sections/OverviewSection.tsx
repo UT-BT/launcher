@@ -57,7 +57,7 @@ const AXIS_LINE = 'rgba(255,255,255,0.06)'
 
 const WINDOWS: ActivityWindow[] = ['24h', '1w', '1m', '1y']
 
-type SeriesKey = 'caps' | 'players' | 'playtime_hours' | 'new_users' | 'new_maps' | 'achievements' | 'launcher_logins'
+type SeriesKey = 'caps' | 'players' | 'playtime_hours' | 'new_users' | 'new_maps' | 'achievements' | 'web_sessions' | 'desktop_sessions'
 
 const SERIES: { key: SeriesKey; title: string; unit: string; color: string; gradientId: string }[] = [
   { key: 'caps', title: 'Caps', unit: 'caps', color: ACCENT, gradientId: 'ovCaps' },
@@ -66,7 +66,8 @@ const SERIES: { key: SeriesKey; title: string; unit: string; color: string; grad
   { key: 'new_users', title: 'New Users', unit: 'new users', color: CHART_CYAN, gradientId: 'ovUsers' },
   { key: 'new_maps', title: 'New Maps', unit: 'new maps', color: CHART_AMBER, gradientId: 'ovMaps' },
   { key: 'achievements', title: 'Achievements Unlocked', unit: 'unlocked', color: CHART_PINK, gradientId: 'ovAch' },
-  { key: 'launcher_logins', title: 'Launcher Logins', unit: 'logins', color: CHART_TEAL, gradientId: 'ovLogins' },
+  { key: 'web_sessions', title: 'Website Sessions', unit: 'sessions', color: CHART_CYAN, gradientId: 'ovWebSessions' },
+  { key: 'desktop_sessions', title: 'Desktop App Sessions', unit: 'sessions', color: CHART_TEAL, gradientId: 'ovDesktopSessions' },
 ]
 
 type ChartPoint = AdminActivity['points'][number] & { label: string }

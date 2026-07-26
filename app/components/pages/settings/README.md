@@ -10,8 +10,11 @@ not_here:
   - "the ini IPC channel + path safety → lib/conveyor/README.md, lib/main/README.md"
   - "launcher-pref localStorage state → agents/state-patterns.md"
 sections: [layout-sections, launcher-vs-game-panels, the-ini-flow, constants-ts, shared-controls]
-last_verified: 2026-06-16
+last_verified: 2026-07-26
 verify_against:
+  - app/components/layout/AppLayout.tsx
+  - app/components/pages/SettingsWeb.tsx
+  - app/components/pages/SettingsDesktop.tsx
   - app/components/pages/settings/SettingsLayout.tsx
   - app/components/pages/settings/constants.ts
   - app/components/pages/settings/SettingsComponents.tsx
@@ -19,9 +22,11 @@ verify_against:
 
 # Settings subsystem
 
-Settings is a **modal, not a nav view** — `SettingsModal` is mounted in
-`AppLayout` and opened from the user dropdown or the `open-settings` window event
-(optionally with an `initialSection`). It does not go through `navigate()`.
+Settings is a **modal, not a nav view**. `AppLayout` lazy-loads a target-specific
+web or desktop modal, opened from the user dropdown or the `open-settings` window
+event (optionally with an `initialSection`). Individual non-default panels are
+lazy chunks so opening Settings does not load every editor. It does not go through
+`navigate()`.
 
 ## Layout + sections
 

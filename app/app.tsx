@@ -9,7 +9,9 @@ const LoginPage = lazy(() => import('@/app/components/pages/LoginPage').then(m =
 const UpdateModal = lazy(() => import('@/app/components/updater/UpdateModal').then(m => ({ default: m.UpdateModal })))
 import { useLogger } from '@/app/hooks/use-logger'
 import { IS_WEB, platformAuth } from '@/app/platform'
-import { fetchUserProfile, UserProfile, logLauncherStartup, fetchLatestActivity } from '@/app/utils/api'
+import { fetchUserProfile, UserProfile, fetchLatestActivity } from '@/app/utils/api'
+import { getTelemetryConsent, identifyTelemetry, initializeTelemetry, trackOutcome } from '@/app/utils/telemetry'
+import { AnalyticsConsentBanner } from '@/app/components/AnalyticsConsentBanner'
 import { initUserStateSync, stopUserStateSync } from '@/app/utils/userState'
 
 import './styles/index.css'
@@ -29,6 +31,7 @@ export default function App() {
   const [appPhase, setAppPhase] = useState<'splash' | 'login' | 'main'>('splash')
   const [userProfile, setUserProfile] = useState<UserProfile | undefined>(undefined)
   const [initError, setInitError] = useState<{ message: string; retry: () => void } | null>(null)
+  const [needsAnalyticsChoice, setNeedsAnalyticsChoice] = useState(() => getTelemetryConsent() === null)
 
   const initPromiseRef = useRef<Promise<InitResult> | null>(null)
 
@@ -61,6 +64,8 @@ export default function App() {
       return { status: 'error', error: error instanceof Error ? error : new Error(String(error)) }
     }
   }, [logger])
+
+  useEffect(() => { initializeTelemetry() }, [])
 
   // Start preloading immediately on mount
   useEffect(() => {
@@ -132,6 +137,7 @@ export default function App() {
 
   const handleLoginSuccess = async () => {
     logger.info('Login successful, proceeding to main')
+    trackOutcome('login_succeeded')
     initPromiseRef.current = preloadData()
     const result = await initPromiseRef.current
     if (result.status === 'loggedin') {
@@ -147,8 +153,8 @@ export default function App() {
   }
 
   useEffect(() => {
+    identifyTelemetry(userProfile?.accessToken)
     if (userProfile?.accessToken) {
-      logLauncherStartup(userProfile.accessToken)
       void initUserStateSync(userProfile.accessToken, userProfile.discordId)
     } else {
       stopUserStateSync()
@@ -203,6 +209,10 @@ export default function App() {
         <Suspense fallback={null}>
           <UpdateModal />
         </Suspense>
+      )}
+
+      {appPhase === 'main' && needsAnalyticsChoice && (
+        <AnalyticsConsentBanner onChoice={() => setNeedsAnalyticsChoice(false)} />
       )}
 
       <ErrorModal

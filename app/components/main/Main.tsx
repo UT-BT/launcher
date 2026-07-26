@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef, lazy, Suspense, type Dispatch, type SetStateAction } from 'react'
 import { AppLayout } from '@/app/components/layout/AppLayout'
+import { trackPage } from '@/app/utils/telemetry'
 import {
   NavigationContext,
   paramsEqual,
@@ -486,6 +487,8 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
   const canForward = cursor < entries.length - 1
 
   useDocumentMeta(currentView, entry.params)
+
+  useEffect(() => { trackPage(currentView) }, [entry.id, currentView])
 
   const navValue = useMemo<NavigationContextValue>(() => ({
     entry, currentView, navigate, back, forward, canBack, canForward, getEntryState, setEntryState,

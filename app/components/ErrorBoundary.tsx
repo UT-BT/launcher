@@ -1,5 +1,6 @@
 import { Component, ErrorInfo, ReactNode } from 'react'
 import { Button } from '@/app/components/ui/button'
+import { trackError } from '@/app/utils/telemetry'
 
 interface Props {
   children: ReactNode
@@ -26,6 +27,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    trackError('ui_crash')
     if (window.logging) {
       window.logging.error('ErrorBoundary caught an error', 'ErrorBoundary', { error: error.toString(), componentStack: errorInfo.componentStack })
     } else {

@@ -1,4 +1,4 @@
-import { LayoutDashboard, Tag, UserCog, Flag, Map as MapIcon, Package, ShieldAlert, ScrollText, Newspaper, Swords, ShieldCheck } from 'lucide-react'
+import { LayoutDashboard, Tag, UserCog, Flag, Map as MapIcon, Package, ShieldAlert, ScrollText, Newspaper, Swords, ShieldCheck, Activity } from 'lucide-react'
 import { ADMIN_DASHBOARD_ROLES, ADMIN_ONLY_ROLES } from '@/app/utils/roles'
 import type { AdminSection, AdminGroup, AdminSectionId } from './types'
 import { OverviewSection } from './sections/OverviewSection'
@@ -12,6 +12,7 @@ import { AntiCheatSection } from './sections/AntiCheatSection'
 import { AuditLogsSection } from './sections/AuditLogsSection'
 import { EventsManagementSection } from './sections/EventsManagementSection'
 import { RoleManagementSection } from './sections/RoleManagementSection'
+import { UsageHealthSection } from './sections/UsageHealthSection'
 
 export const ADMIN_GROUPS: AdminGroup[] = [
   { id: 'overview', title: 'Overview' },
@@ -24,6 +25,7 @@ export const ADMIN_GROUPS: AdminGroup[] = [
 
 export const ADMIN_SECTIONS: AdminSection[] = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard, group: 'overview', roles: ADMIN_DASHBOARD_ROLES, Component: OverviewSection },
+  { id: 'usage-health', label: 'Usage & Health', icon: Activity, group: 'overview', roles: ADMIN_DASHBOARD_ROLES, Component: UsageHealthSection },
   { id: 'user-management', label: 'User Management', icon: UserCog, group: 'community', roles: ADMIN_DASHBOARD_ROLES, Component: UserManagementSection },
   { id: 'title-management', label: 'Title Management', icon: Tag, group: 'community', roles: ADMIN_DASHBOARD_ROLES, Component: TitleManagementSection },
   { id: 'news-management', label: 'News', icon: Newspaper, group: 'community', roles: ADMIN_DASHBOARD_ROLES, Component: NewsManagementSection },

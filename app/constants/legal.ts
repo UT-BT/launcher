@@ -36,41 +36,46 @@ For any questions regarding these Terms, please contact us at hello@utbt.net.
 `;
 
 export const PRIVACY_POLICY = `
-**Last Updated: ${new Date().toLocaleDateString()}**
+**Last Updated: July 25, 2026**
 
-**1. Introduction**
-UTBT.net ("we," "us," or "our") respects your privacy. This Privacy Policy explains how we collect, use, and protect your information when you use the UTBT Launcher and our associated servers.
+**1. Controller and Contact**
+The controller for UTBT.net is the community administrator, soupy. Privacy and data-rights requests can be sent to hello@utbt.net.
 
-**2. Information We Collect**
-We collect the following types of information:
-*   **Account Information:** When you log in via Discord, we collect your Discord ID, Username, and Avatar.
-*   **Technical Information:** We collect your IP address and Hardware ID (HWID) when you connect to our servers or use the Launcher.
-*   **Usage Data:** We may collect data related to your game activity, such as server joins and playtimr, capture statistics, and uploaded replay files (Demos).
+**2. Data We Process**
+* **Account data:** Discord identifier, username, avatar, account roles, moderation status, and selected profile information.
+* **Community and game data:** Maps, records, captures, playtime, achievements, teams, uploaded demos, and other content you submit or generate through the service. Some game statistics and submitted content are public.
+* **Security data:** IP addresses, hardware identifiers, authentication records, moderation records, and technical logs where needed to secure the service, investigate abuse, enforce bans, and prevent cheating.
+* **Optional analytics:** If you consent, a random visitor identifier, session times, web or desktop surface, build version, coarse operating-system/browser/viewport/referrer categories, allowlisted pages, key action counters, coarse error categories, and visible time. Analytics never include route parameters, searches, map/player identifiers, or text you enter.
 
-**3. How We Use Your Information**
-We use your information for the following purposes:
-*   **Service Provision:** To authenticate your identity and allow you to access the Launcher and game servers.
-*   **Security & Moderation:** To prevent cheating, enforce bans, and protect the community. HWIDs and IP addresses are primarily used for this purpose.
-*   **Public API:** We provide public APIs for game statistics. While your Username and Game Stats may be public, **we strictly omit your IP address and Hardware ID from all public API responses.**
-*   **Internal Improvements:** To analyze usage trends and improve the Service.
+**3. Purposes and Legal Bases**
+* Account authentication and requested community features are processed as necessary to provide the service you request.
+* Security, abuse prevention, moderation, service reliability, and public community statistics are processed for our legitimate interests in safely operating the community. We balance these interests against user rights, minimize the information used, and allow objections where applicable.
+* Optional launcher analytics are processed only with your consent. Analytics are disabled until you accept. Refusing or withdrawing consent does not restrict the service.
+* Information may be processed when necessary to comply with a legal obligation or respond to a lawful request.
 
-**4. Data Storage**
-Your data is stored on:
-*   **Local Device:** Configuration and some cached data are stored locally on your computer.
-*   **Backend Servers:** Account, Technical, and Usage data are stored on our secure backend servers.
+**4. Local Storage and Analytics Choice**
+Before consent, we do not create an analytics visitor identifier or analytics session and do not send analytics events. Your analytics preference is stored locally so the launcher can respect it. If you accept, a random visitor identifier persists locally and a session snapshot is stored for session continuity. You can change the choice at any time under Settings â†’ Privacy. Withdrawal stops collection, clears analytics storage, and requests deletion of identifiable raw visitor sessions.
 
-**5. Data Sharing**
-We **do not** sell, trade, or rent your personal identification information to others. We do not share your data with third-party services, except as required by law or to protect our rights.
+**5. Retention**
+Raw launcher analytics sessions are retained for no more than 90 days unless deleted sooner. Daily and monthly statistics that no longer identify a person may be retained indefinitely. Other records are retained only as long as needed for their stated purpose; security and moderation records may be retained while necessary to protect the community or enforce an active restriction.
 
-**6. User Content**
-Any content you upload, such as Replay files (Demos) or chat messages, may be publicly accessible to other users of the Service. Please be aware of what you share.
+**6. Recipients, Processors, and Transfers**
+We do not sell personal data or use analytics for advertising. Data may be processed by infrastructure providers that host the application, database, files, network, authentication, backups, and email, and by authorized community administrators who need access for their role. Providers are limited by contract and access controls. If a provider processes data outside the European Economic Area, we use an applicable lawful transfer mechanism, such as an adequacy decision or Standard Contractual Clauses. Current provider information is available from hello@utbt.net.
 
-**7. Children's Privacy**
-Our Service is not intended for anyone under the age of 13. We do not knowingly collect personal information from children under 13. If we become aware that we have collected personal information from a child under 13, we will take steps to delete that information.
+**7. Public Information**
+Aliases, game statistics, records, achievements, teams, and content intentionally submitted to public community features may be publicly accessible. IP addresses, hardware identifiers, analytics visitor hashes, and private authentication details are excluded from public APIs.
 
 **8. Your Rights**
-You may contact us to request information about the data we hold about you or to request its deletion. Please note that deleting certain data (like Discord ID linkage) may prevent you from using the Service.
+Depending on the circumstances, you may request access, a copy, correction, deletion, restriction, or portability of your personal data, and may object to processing based on legitimate interests. You may withdraw analytics consent at any time without affecting processing that occurred before withdrawal. Settings â†’ Privacy provides analytics export and deletion controls; other requests can be sent to hello@utbt.net. We normally respond within one month and may need to verify your identity.
 
-**9. Contact Us**
-If you have any questions about this Privacy Policy, please contact us at hello@utbt.net.
+You may lodge a complaint with the data protection supervisory authority that is competent where you live, work, or believe an infringement occurred.
+
+**9. Automated Decisions and Children**
+We do not use launcher analytics for advertising, eligibility decisions, or other decisions producing legal or similarly significant effects. The service is not directed to children under 16. A parent or guardian may contact us about a child's information.
+
+**10. Security and Changes**
+We use access controls, pseudonymisation, bounded collection, retention limits, and operational safeguards appropriate to this community service. No system is completely secure. Material policy changes will be communicated in the launcher or website before they take effect where required.
+
+**11. Contact**
+Privacy and data-rights requests: hello@utbt.net
 `;

@@ -14,7 +14,10 @@ import {
 import { Button } from '@/app/components/ui/button'
 import { NavHistoryBar } from '@/app/components/navigation/NavHistoryBar'
 
-const SettingsModal = lazy(() => import('@/app/components/modals/SettingsModal').then(m => ({ default: m.SettingsModal })))
+const loadSettingsModal = () => IS_WEB
+    ? import('@/app/components/modals/SettingsModalWeb').then(m => ({ default: m.SettingsModalWeb }))
+    : import('@/app/components/modals/SettingsModalDesktop').then(m => ({ default: m.SettingsModalDesktop }))
+const SettingsModal = lazy(loadSettingsModal)
 const ChangeTitleModal = lazy(() => import('@/app/components/modals/ChangeTitleModal').then(m => ({ default: m.ChangeTitleModal })))
 import { PageRefreshProvider } from '@/app/components/navigation/PageRefreshContext'
 
@@ -62,7 +65,7 @@ import { Tooltip } from '@/app/components/ui/tooltip'
 import { usePatreonTier } from '@/app/utils/patreon'
 import { PatreonBadge } from '@/app/components/shared/PatreonBadge'
 import { isStaff } from '@/app/utils/roles'
-import { usePlatform } from '@/app/platform'
+import { IS_WEB, usePlatform } from '@/app/platform'
 
 function buildNavSections(userProfile?: UserProfile): NavSection[] {
     if (!isStaff(userProfile)) return BASE_NAV_SECTIONS
@@ -352,7 +355,7 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                 </nav>
 
                 <div className="p-4 border-t border-hairline/10 relative z-10">
-                    {!userProfile ? (
+                                        {!userProfile ? (
                         <div className="space-y-2">
                             {loginError && (
                                 <p className="px-1 text-xs text-red-400 text-center">{loginError}</p>
@@ -364,6 +367,7 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                                 <FaDiscord className="size-4" />
                                 <span>Login with Discord</span>
                             </button>
+
                         </div>
                     ) : (
                     <DropdownMenu>
@@ -432,6 +436,8 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                             </DropdownMenuItem>
                             {capabilities.settingsModal && (
                                 <DropdownMenuItem
+                                    onPointerEnter={() => void loadSettingsModal()}
+                                    onFocus={() => void loadSettingsModal()}
                                     onClick={() => setIsSettingsOpen(true)}
                                     className="text-muted-foreground focus:text-foreground focus:bg-hairline/10 cursor-pointer mb-1"
                                 >
@@ -517,12 +523,23 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
             }
 
             {capabilities.settingsModal && isSettingsOpen && (
-                <Suspense fallback={null}>
+                <Suspense fallback={
+                    <div className="fixed top-[var(--window-titlebar-height)] right-0 bottom-0 left-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+                        <div className="w-[95%] lg:w-[70%] max-w-7xl h-[90vh] rounded-xl border border-border bg-card shadow-2xl p-6 animate-pulse" aria-label="Loading settings">
+                            <div className="h-7 w-32 rounded bg-hairline/10" />
+                            <div className="mt-8 grid grid-cols-[14rem_1fr] gap-8">
+                                <div className="h-64 rounded-xl bg-hairline/5" />
+                                <div className="h-48 rounded-xl bg-hairline/5" />
+                            </div>
+                        </div>
+                    </div>
+                }>
                     <SettingsModal
                         isOpen={isSettingsOpen}
                         onClose={() => setIsSettingsOpen(false)}
                         initialSection={settingsInitialSection}
                         unlockExclusive={patreonTier > 0 || (userProfile?.utbt_role ?? 0) > 0}
+                        installationStatus={installationStatus}
                     />
                 </Suspense>
             )}

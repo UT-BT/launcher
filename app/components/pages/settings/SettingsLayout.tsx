@@ -1,10 +1,12 @@
 import { cn } from "@/lib/utils"
-import { Monitor, User, Keyboard, Volume2, Gamepad2, HardDrive, Settings, FileVideo, Palette } from "lucide-react"
+import { Monitor, User, Keyboard, Volume2, Gamepad2, HardDrive, Settings, FileVideo, Palette, ShieldCheck } from "lucide-react"
+import { IS_WEB } from '@/app/platform'
 
 export type SettingsSectionId =
     | 'launcher-general'
     | 'launcher-appearance'
     | 'launcher-demos'
+    | 'launcher-privacy'
     | 'game-installation'
     | 'game-player'
     | 'game-controls'
@@ -26,13 +28,19 @@ export function SettingsLayout({ currentSection, onSectionChange, children, isGa
     const sidebarItems = [
         {
             group: "Launcher",
-            items: [
-                { id: 'launcher-general', label: 'General', icon: Settings },
-                { id: 'launcher-appearance', label: 'Appearance', icon: Palette },
-                { id: 'launcher-demos', label: 'Demos', icon: FileVideo },
-            ]
+            items: IS_WEB
+                ? [
+                    { id: 'launcher-appearance', label: 'Appearance', icon: Palette },
+                    { id: 'launcher-privacy', label: 'Privacy', icon: ShieldCheck },
+                ]
+                : [
+                    { id: 'launcher-general', label: 'General', icon: Settings },
+                    { id: 'launcher-appearance', label: 'Appearance', icon: Palette },
+                    { id: 'launcher-demos', label: 'Demos', icon: FileVideo },
+                    { id: 'launcher-privacy', label: 'Privacy', icon: ShieldCheck },
+                ]
         },
-        {
+        ...(!IS_WEB ? [{
             group: "Unreal Tournament",
             items: [
                 { id: 'game-installation', label: 'Installation', icon: HardDrive },
@@ -42,8 +50,8 @@ export function SettingsLayout({ currentSection, onSectionChange, children, isGa
                 { id: 'game-audio', label: 'Audio', icon: Volume2, disabled: !isGameValid },
                 { id: 'game-gameplay', label: 'Gameplay', icon: Gamepad2, disabled: !isGameValid },
             ]
-        }
-    ] as const
+        }] : [])
+    ]
 
     return (
         <div className="flex h-full overflow-hidden">

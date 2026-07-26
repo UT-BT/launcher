@@ -10,7 +10,7 @@ not_here:
   - "IPC channel contract → lib/conveyor/README.md"
   - "build commands reference → agents/build.md"
 sections: [overview, platform-layer, capability-gates, web-auth, anonymous-browsing, shareable-urls, responsive-layout, performance, build, seo-and-link-previews, hosting-note]
-last_verified: 2026-07-24
+last_verified: 2026-07-26
 verify_against:
   - app/public/route-contract.json
   - app/components/navigation/useDocumentMeta.ts
@@ -66,7 +66,7 @@ desktop-only UI and swaps a handful of bridge calls for browser equivalents.
 |---|---|---|
 | Launch/join/spectate, isGameRunning | hidden | `capabilities.game` in `AppLayout`, `Home`, `ServerBrowserPage`, `RecentServersCard` |
 | Ping column / server pings | hidden/skipped | `capabilities.ping` (ServerBrowserPage `displayColumnOrder`, RecentServersCard) |
-| Settings modal + all ini panels | never mounted | `capabilities.settingsModal` in `AppLayout` |
+| Settings modal | web-specific Appearance + Privacy panels; game/ini panels are never fetched | `capabilities.settingsModal` + target-specific lazy modal in `AppLayout` |
 | Install banner / patches | off — `validateInstallation` early-returns | `capabilities.install` in `Main.tsx` |
 | Favorites ini side-sync | skipped; DB favorites unchanged | `capabilities.ini` in `useFavorites` |
 | Self-updater | provider inert, UI renders nothing | `capabilities.updater` in `useUpdater` |
@@ -184,8 +184,9 @@ split (enforced by convention, check bundle output when touching imports):
   `news-detail`, `team-detail`) and `AdminPage` are `React.lazy` in `Main.tsx`
   (one `<Suspense>` wraps `renderView()`); `AdminPage`'s state constants live in
   `admin/types.ts` so Main's static import doesn't drag the dashboard in.
-- `LoginPage` + `UpdateModal` are lazy in `app.tsx`; `SettingsModal` +
-  `ChangeTitleModal` are lazy in `AppLayout` and mount only while open. This
+- `LoginPage` + `UpdateModal` are lazy in `app.tsx`; target-specific Settings
+  modals + `ChangeTitleModal` are lazy in `AppLayout` and mount only while open.
+  Settings panels are split per section, and web never fetches desktop game panels. This
   keeps react-markdown, framer-motion, recharts, and the entire settings tree
   out of the entry chunk (~1.79MB → ~1.10MB, gzip ~324kB).
 - Rule: a module only needed after a user action (a modal, a detail page, an
