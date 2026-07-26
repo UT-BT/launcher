@@ -43,8 +43,8 @@ export function AuthoredMapsCard({ accessToken, userId, isSelf, onMapSelect, tab
     const [editing, setEditing] = useState<ApiMap | null>(null)
     const [overrides, setOverrides] = useState<Record<string, ScreenshotState>>({})
 
-    const { data, loading } = useAsync<ApiMap[]>(
-        () => fetchMaps(accessToken ?? '', { authorRef: userId, columns: AUTHORED_MAP_COLUMNS }),
+    const { data, loading, error } = useAsync<ApiMap[]>(
+        () => fetchMaps(accessToken ?? '', { authorRef: String(userId), columns: AUTHORED_MAP_COLUMNS }),
         [accessToken, userId],
         { enabled: true, errorMessage: 'Failed to load authored maps.' },
     )
@@ -110,7 +110,7 @@ export function AuthoredMapsCard({ accessToken, userId, isSelf, onMapSelect, tab
                     {tabsSlot}
                 </div>
                 <div className="flex items-center gap-2 w-full sm:w-auto">
-                    {isSelf && missingCount > 0 && (
+                    {isSelf && (missingCount > 0 || needsScreenshot) && (
                         <button
                             type="button"
                             onClick={() => { setNeedsScreenshot(!needsScreenshot); setPage(1) }}
@@ -154,6 +154,8 @@ export function AuthoredMapsCard({ accessToken, userId, isSelf, onMapSelect, tab
                         Array.from({ length: 5 }).map((_, i) => (
                             <DataTableSkeletonRow key={i} columnCount={visibleColumnCount} />
                         ))
+                    ) : error ? (
+                        <DataTableEmpty colSpan={visibleColumnCount} message={error} />
                     ) : visibleRows.length === 0 ? (
                         <DataTableEmpty
                             colSpan={visibleColumnCount}

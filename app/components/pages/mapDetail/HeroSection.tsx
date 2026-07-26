@@ -46,6 +46,7 @@ export function HeroSection({
                         <MapThumbnail
                             mapName={mapName}
                             version={map?.screenshot_updated}
+                            fit="blend"
                             className="w-full h-full aspect-video lg:aspect-square rounded-lg border border-hairline/10"
                         />
                         {canEditScreenshot && (

@@ -1627,7 +1627,7 @@ export function MapsPage({
             case 'thumbnail':
                 return (
                     <DataTableCell key={id}>
-                        <MapThumbnail mapName={map.name} className="w-12 h-12" />
+                        <MapThumbnail mapName={map.name} version={map.screenshot_updated} className="w-12 h-12" />
                     </DataTableCell>
                 )
             case 'name': {

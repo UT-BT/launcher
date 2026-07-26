@@ -1,6 +1,6 @@
 import { Fragment, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { ScrollText, RefreshCw, ChevronRight, ChevronDown, ArrowRight, Undo2 } from 'lucide-react'
-import { fetchAuditLog, fetchAuditLogCount, rollbackAudit, type AuditEntry } from '@/app/utils/api'
+import { fetchAuditLog, fetchAuditLogCount, rollbackAudit, type AuditEntry, type AuditParams } from '@/app/utils/api'
 import { toActiveTitle } from '@/app/utils/api'
 import type { AdminSectionProps } from '../types'
 import { SectionShell } from '../components/SectionShell'
@@ -34,6 +34,12 @@ const ACTION_OPTIONS = ACTIONS.map((a) => ({ value: a, label: a || 'All actions'
 const TARGET_TYPES = ['', 'user', 'cap', 'title', 'map', 'map_author', 'patch', 'mapvote']
 const TARGET_OPTIONS = TARGET_TYPES.map((t) => ({ value: t, label: t || 'All targets' }))
 
+const ACTORS_OPTIONS = [
+  { value: 'staff', label: 'Staff actions' },
+  { value: 'players', label: 'Player actions' },
+  { value: 'all', label: 'Everyone' },
+]
+
 const COLUMNS: AdminColumn[] = [
   { id: 'time', label: 'Time' },
   { id: 'actor', label: 'Actor' },
@@ -60,6 +66,7 @@ interface AuditFilters {
   search: string
   action: string
   targetType: string
+  actors: string
 }
 
 interface DetailDiff { before?: unknown; after?: unknown }
@@ -351,6 +358,7 @@ export function AuditLogsSection({ userProfile, onMapSelect, onNavigate }: Admin
   const [search, setSearch] = useNavState('admin.audit.search', '')
   const [action, setAction] = useNavState('admin.audit.action', '')
   const [targetType, setTargetType] = useNavState('admin.audit.targetType', '')
+  const [actors, setActors] = useNavState('admin.audit.actors', 'staff')
   const [offset, setOffset] = useNavState('admin.audit.offset', 0)
   const [expanded, setExpanded] = useNavState<string | null>('admin.audit.expanded', null)
   const [rows, setRows] = useState<AuditEntry[]>([])
@@ -360,27 +368,27 @@ export function AuditLogsSection({ userProfile, onMapSelect, onNavigate }: Admin
   const [rollbackTarget, setRollbackTarget] = useState<AuditEntry | null>(null)
   const [rollbackBusy, setRollbackBusy] = useState(false)
 
-  useResetOnChange(() => setOffset(0), [search, action, targetType, PAGE])
+  useResetOnChange(() => setOffset(0), [search, action, targetType, actors, PAGE])
 
-  useEffect(() => { setExpanded(null) }, [search, action, targetType, offset, setExpanded])
+  useEffect(() => { setExpanded(null) }, [search, action, targetType, actors, offset, setExpanded])
 
   const load = useCallback((signal?: AbortSignal) => {
     if (!token) return
     setLoading(true)
     setError(null)
-    const params = { search: search || undefined, action: action || undefined, targetType: targetType || undefined, limit: PAGE, offset }
+    const params = { search: search || undefined, action: action || undefined, targetType: targetType || undefined, actors: actors as AuditParams['actors'], limit: PAGE, offset }
     fetchAuditLog(token, params, signal)
       .then((items) => { setRows(items); setLoading(false) })
       .catch((e) => { if (!signal?.aborted) { setError(errMessage(e)); setLoading(false) } })
-  }, [token, search, action, targetType, offset, PAGE])
+  }, [token, search, action, targetType, actors, offset, PAGE])
 
   const loadCount = useCallback((signal?: AbortSignal) => {
     if (!token) return
-    const params = { search: search || undefined, action: action || undefined, targetType: targetType || undefined }
+    const params = { search: search || undefined, action: action || undefined, targetType: targetType || undefined, actors: actors as AuditParams['actors'] }
     fetchAuditLogCount(token, params, signal)
       .then((count) => setTotal(count))
       .catch(() => { /* ignore */ })
-  }, [token, search, action, targetType])
+  }, [token, search, action, targetType, actors])
 
   useEffect(() => {
     const ctrl = new AbortController()
@@ -399,25 +407,26 @@ export function AuditLogsSection({ userProfile, onMapSelect, onNavigate }: Admin
   const toggle = (id: string) => setExpanded(expanded === id ? null : id)
 
   const filters: AuditFilters = useMemo(
-    () => ({ search, action, targetType }),
-    [search, action, targetType],
+    () => ({ search, action, targetType, actors }),
+    [search, action, targetType, actors],
   )
   const applyFilters = useCallback((f: AuditFilters) => {
-    setSearch(f.search); setAction(f.action); setTargetType(f.targetType)
-  }, [setSearch, setAction, setTargetType])
+    setSearch(f.search); setAction(f.action); setTargetType(f.targetType); setActors(f.actors || 'staff')
+  }, [setSearch, setAction, setTargetType, setActors])
   const resetFilters = useCallback(() => {
-    setSearch(''); setAction(''); setTargetType('')
-  }, [setSearch, setAction, setTargetType])
+    setSearch(''); setAction(''); setTargetType(''); setActors('staff')
+  }, [setSearch, setAction, setTargetType, setActors])
 
   const presets = useAdminFilterPresets<AuditFilters>({
     storageKey: 'utbt:admin:audit:filters:v1',
     current: filters,
-    isDefault: (f) => !f.search && !f.action && !f.targetType,
+    isDefault: (f) => !f.search && !f.action && !f.targetType && (!f.actors || f.actors === 'staff'),
     onApply: applyFilters,
   })
 
   const actionLabel = ACTION_OPTIONS.find((o) => o.value === action)?.label ?? action
   const targetLabel = TARGET_OPTIONS.find((o) => o.value === targetType)?.label ?? targetType
+  const actorsLabel = ACTORS_OPTIONS.find((o) => o.value === actors)?.label ?? actors
 
   const doRollback = useCallback(async () => {
     if (!token || !rollbackTarget) return
@@ -512,6 +521,7 @@ export function AuditLogsSection({ userProfile, onMapSelect, onNavigate }: Admin
           {search && <ActiveFilterChip label="Search" value={search} onClear={() => setSearch('')} />}
           {action && <ActiveFilterChip label="Action" value={actionLabel} onClear={() => setAction('')} />}
           {targetType && <ActiveFilterChip label="Target" value={targetLabel} onClear={() => setTargetType('')} />}
+          {actors !== 'staff' && <ActiveFilterChip label="Actors" value={actorsLabel} onClear={() => setActors('staff')} />}
         </div>
       )}
 
@@ -525,6 +535,10 @@ export function AuditLogsSection({ userProfile, onMapSelect, onNavigate }: Admin
             <div className="flex flex-col gap-1">
               <span className={PANEL_LABEL}>Target</span>
               <AdminSelect value={targetType} onChange={setTargetType} options={TARGET_OPTIONS} ariaLabel="Filter by target type" className="min-w-36" />
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className={PANEL_LABEL}>Actors</span>
+              <AdminSelect value={actors} onChange={setActors} options={ACTORS_OPTIONS} ariaLabel="Filter by actor kind" className="min-w-36" />
             </div>
           </FilterPanelRow>
           <div className="flex items-center justify-between gap-3 pt-2 border-t border-hairline/5">

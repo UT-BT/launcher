@@ -48,7 +48,7 @@ full loop).
 | Account state / badges | `fetchUserState` / `mergeUserState` (per-account preference blob keyed by the `utbt:*` storage names, shallow-merged per key; consumed only by `app/utils/userState.ts` — see `agents/state-patterns.md`), `fetchNavBadges` (per-section "new since my last visit" counts + seen markers; `count: null` = never visited = no badge), `markSectionSeen(token, section, seenAtIso?)` (advances one marker; omitted stamp = server now). All require a real bearer — signed-out users have no account state and no badges. |
 | Profile | `UserProfile` type (incl. `team` clan-tag summary), `getAvatarUrl(userId)`, `toActiveTitle` |
 | Teams | `createTeam`, `fetchTeams`, `fetchTeam`, `updateTeam`, `disbandTeam`, `transferTeamOwnership`, `fetchTeamMembers`, `inviteToTeam`, `joinTeam`, `acceptTeamInvite`, `declineTeamInvite`, `leaveTeam`, `denyTeamMember`, `unblockTeamMember`, `kickTeamMember` (optional `block`), `setTeamMemberRole`, `setTeamMemberNumber`, `fetchTeamActivity`, `fetchTeamAudit`, `fetchLineups`, `createLineup`, `updateLineup`, `deleteLineup`, `fetchMyTeam`, `setMyTagHidden`, `fetchMyInvitations`, `uploadTeamAvatar`, `deleteTeamAvatar`, `teamAvatarUrl` (clans + lineups; mutations return the fresh `TeamDetail`; validation failures surface the server's message — see [Errors](#errors)) |
-| Admin (staff-only) | the moderator/admin dashboard slice — see [Admin API](#admin-api) |
+| Admin (staff-only) | the moderator/admin dashboard slice — see [Admin API](#admin-api). `fetchAuditLog`/`fetchAuditLogCount` take `actors` (`staff` default / `players` / `all`): the default keeps player-written rows, such as a mapper replacing their own screenshot, out of the staff feed |
 
 Most fetchers take `accessToken` first (Discord OAuth bearer). On the web build,
 logged-out pages pass the `ANONYMOUS_TOKEN` sentinel (exported from `api.ts`)
@@ -254,8 +254,9 @@ Map screenshots are served by the API:
 
 Fallback: `default.png` on the same path. `MapThumbnail` handles both; it also
 accepts an optional `version` prop (use the map's `screenshot_updated`) appended
-as a cache-busting `?v=`. **Always pass `version` where a screenshot can be
-replaced in-session** — without it a replaced screenshot keeps serving from cache.
+as a cache-busting `?v=`. The API serves screenshots `Cache-Control: no-cache`, so a
+replacement is picked up on the next revalidation even without `version` — pass it
+anyway wherever you have it, since it makes the swap instant and skips the round trip.
 Map payloads expose `has_screenshot` + `screenshot_updated`; both need to be in the
 `columns` list of any fetch whose UI shows them (`MAP_METADATA_COLUMNS` in
 `MapDetailPage`, `AUTHORED_MAP_COLUMNS` in `AuthoredMapsCard`). The legacy
@@ -276,12 +277,23 @@ that check to decide whether to *show* the control (`MapDetailPage`,
 `AuthoredMapsCard`, `MapsManagementSection`) — never treat the client-side check as
 the authorization.
 
-`MapScreenshotModal` is the single UI for both surfaces. Screenshots render as
+`MapScreenshotModal` is the single UI for all three surfaces. Screenshots render as
 squares, so it crops client-side: drag to pan, slider to zoom, then a canvas exports
-a square PNG of at most 1024 px. Zoom is capped so the crop never falls below the
-256 px minimum the API enforces, and the API centre-crops anything that arrives
-uncropped. `onUploaded` hands back the updated map so the caller can refresh
-`has_screenshot` + `screenshot_updated` without a full page reload.
+a square PNG of at most 1024 px. The crop maths run off the frame's **measured** width, not
+the 320 px maximum — on a narrow phone the box shrinks, and a hardcoded size would
+export a region wider than the one on screen. That measurement is keyed on `open`,
+because `ui/modal.tsx` returns `null` while closed and a mount-only observer would
+never see the element. Zoom is capped so
+the crop never falls below the 256 px minimum the API enforces, and the API
+centre-crops anything that arrives uncropped. `onUploaded` hands back the updated map
+so the caller can refresh `has_screenshot` + `screenshot_updated` without a full page
+reload.
+
+Stored screenshots are always square. Surfaces that are **not** square must not
+centre-crop them a second time: pass `fit="blend"` to `MapThumbnail` (contains the
+square and fills the rest with a blurred copy of it) or make the box `aspect-square`.
+The heroes use `blend`; the homepage poster grid is square, because a blur per tile
+would blow the CSS runtime budget.
 
 Region flags (server list):
 

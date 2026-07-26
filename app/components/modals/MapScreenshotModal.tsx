@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { ImagePlus, Loader2, ZoomIn } from 'lucide-react'
 import { Modal } from '@/app/components/ui/modal'
 import { Button } from '@/app/components/ui/button'
@@ -8,7 +8,7 @@ import { uploadOwnMapScreenshot, type MapMetadata } from '@/app/utils/api'
 import { displayMapName } from '@/app/utils/format'
 import { cn } from '@/lib/utils'
 
-const FRAME = 320
+const MAX_FRAME = 320
 const OUTPUT_SIZE = 1024
 const MIN_SOURCE_EDGE = 256
 const MAX_ZOOM = 4
@@ -29,10 +29,6 @@ interface Loaded {
     objectUrl: string
 }
 
-function clampOffset(value: number, displayed: number) {
-    return Math.min(0, Math.max(FRAME - displayed, value))
-}
-
 export function MapScreenshotModal({
     open, onClose, accessToken, mapName, hasScreenshot, screenshotVersion, onUploaded,
 }: MapScreenshotModalProps) {
@@ -44,9 +40,30 @@ export function MapScreenshotModal({
     const [dragOver, setDragOver] = useState(false)
 
     const inputRef = useRef<HTMLInputElement>(null)
+    const frameRef = useRef<HTMLDivElement>(null)
     const dragOrigin = useRef<{ pointerX: number; pointerY: number; x: number; y: number } | null>(null)
+    const pickGeneration = useRef(0)
+
+    const [frame, setFrame] = useState(MAX_FRAME)
+
+    useLayoutEffect(() => {
+        if (!open) return
+        const element = frameRef.current
+        if (!element) return
+        const measure = () => setFrame(element.getBoundingClientRect().width || MAX_FRAME)
+        measure()
+        const observer = new ResizeObserver(measure)
+        observer.observe(element)
+        return () => observer.disconnect()
+    }, [open])
+
+    const clampOffset = useCallback(
+        (value: number, displayed: number) => Math.min(0, Math.max(frame - displayed, value)),
+        [frame],
+    )
 
     const reset = useCallback(() => {
+        pickGeneration.current += 1
         setLoaded(null)
         setZoom(1)
         setOffset({ x: 0, y: 0 })
@@ -65,31 +82,50 @@ export function MapScreenshotModal({
 
     const sourceEdgePixels = loaded ? Math.min(loaded.image.naturalWidth, loaded.image.naturalHeight) : 0
     const maxZoom = loaded ? Math.max(1, Math.min(MAX_ZOOM, sourceEdgePixels / MIN_SOURCE_EDGE)) : MAX_ZOOM
-    const baseScale = loaded ? FRAME / sourceEdgePixels : 1
-    const displayedWidth = loaded ? loaded.image.naturalWidth * baseScale * zoom : FRAME
-    const displayedHeight = loaded ? loaded.image.naturalHeight * baseScale * zoom : FRAME
+    const baseScale = loaded ? frame / sourceEdgePixels : 1
+    const displayedWidth = loaded ? loaded.image.naturalWidth * baseScale * zoom : frame
+    const displayedHeight = loaded ? loaded.image.naturalHeight * baseScale * zoom : frame
+
+    useEffect(() => {
+        if (!loaded) return
+        setOffset(prev => ({
+            x: Math.min(0, Math.max(frame - displayedWidth, prev.x)),
+            y: Math.min(0, Math.max(frame - displayedHeight, prev.y)),
+        }))
+    }, [loaded, frame, displayedWidth, displayedHeight])
 
     const accept = (file: File | null | undefined) => {
         if (!file) return
+        pickGeneration.current += 1
+        const generation = pickGeneration.current
         setError(null)
 
         const objectUrl = URL.createObjectURL(file)
         const image = new Image()
+        const isStale = () => generation !== pickGeneration.current
+
         image.onload = () => {
+            if (isStale()) {
+                URL.revokeObjectURL(objectUrl)
+                return
+            }
             if (Math.min(image.naturalWidth, image.naturalHeight) < MIN_SOURCE_EDGE) {
                 URL.revokeObjectURL(objectUrl)
+                setLoaded(null)
                 setError(`That image is only ${image.naturalWidth} × ${image.naturalHeight}. Screenshots need to be at least ${MIN_SOURCE_EDGE} × ${MIN_SOURCE_EDGE}.`)
                 return
             }
-            const cover = FRAME / Math.min(image.naturalWidth, image.naturalHeight)
+            const cover = frame / Math.min(image.naturalWidth, image.naturalHeight)
             const width = image.naturalWidth * cover
             const height = image.naturalHeight * cover
             setLoaded({ image, objectUrl })
             setZoom(1)
-            setOffset({ x: (FRAME - width) / 2, y: (FRAME - height) / 2 })
+            setOffset({ x: (frame - width) / 2, y: (frame - height) / 2 })
         }
         image.onerror = () => {
             URL.revokeObjectURL(objectUrl)
+            if (isStale()) return
+            setLoaded(null)
             setError('That file could not be read as an image. Use a PNG, JPG or WEBP.')
         }
         image.src = objectUrl
@@ -100,12 +136,12 @@ export function MapScreenshotModal({
         const clamped = Math.min(maxZoom, Math.max(1, next))
         const width = loaded.image.naturalWidth * baseScale * clamped
         const height = loaded.image.naturalHeight * baseScale * clamped
-        const centreX = (FRAME / 2 - offset.x) / (displayedWidth || 1)
-        const centreY = (FRAME / 2 - offset.y) / (displayedHeight || 1)
+        const centreX = (frame / 2 - offset.x) / (displayedWidth || 1)
+        const centreY = (frame / 2 - offset.y) / (displayedHeight || 1)
         setZoom(clamped)
         setOffset({
-            x: clampOffset(FRAME / 2 - centreX * width, width),
-            y: clampOffset(FRAME / 2 - centreY * height, height),
+            x: clampOffset(frame / 2 - centreX * width, width),
+            y: clampOffset(frame / 2 - centreY * height, height),
         })
     }
 
@@ -132,7 +168,7 @@ export function MapScreenshotModal({
         setError(null)
         try {
             const scale = baseScale * zoom
-            const sourceEdge = FRAME / scale
+            const sourceEdge = frame / scale
             const sourceX = -offset.x / scale
             const sourceY = -offset.y / scale
             const outputEdge = Math.min(OUTPUT_SIZE, Math.round(sourceEdge))
@@ -181,6 +217,7 @@ export function MapScreenshotModal({
 
                 <div className="flex flex-col items-center gap-3">
                     <div
+                        ref={frameRef}
                         onPointerDown={onPointerDown}
                         onPointerMove={onPointerMove}
                         onPointerUp={endDrag}
@@ -198,7 +235,7 @@ export function MapScreenshotModal({
                             loaded ? 'cursor-grab active:cursor-grabbing border-accent-500/40' : 'cursor-pointer border-dashed border-hairline/20 hover:border-accent-500/40',
                             dragOver && 'border-accent-500/60',
                         )}
-                        style={{ width: FRAME, height: FRAME, maxWidth: '100%' }}
+                        style={{ width: MAX_FRAME, height: frame, maxWidth: '100%' }}
                     >
                         {loaded ? (
                             <img
@@ -236,7 +273,7 @@ export function MapScreenshotModal({
                     </div>
 
                     {loaded && (
-                        <div className="w-full flex items-center gap-3" style={{ maxWidth: FRAME }}>
+                        <div className="w-full flex items-center gap-3" style={{ maxWidth: MAX_FRAME }}>
                             <ZoomIn className="size-3.5 text-muted-foreground shrink-0" />
                             <Slider
                                 min={1}

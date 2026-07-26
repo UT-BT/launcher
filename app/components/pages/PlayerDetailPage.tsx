@@ -89,9 +89,13 @@ export function PlayerDetailPage({
     }, [accessToken, userId, summary, refreshKey])
 
     useEffect(() => {
+        setAuthoredMapCount(null)
+    }, [userId])
+
+    useEffect(() => {
         let cancelled = false
         if (!summary) return
-        fetchMapsCount(accessToken, { authorRef: userId })
+        fetchMapsCount(accessToken, { authorRef: String(userId) })
             .then(n => { if (!cancelled) setAuthoredMapCount(n) })
             .catch(() => { if (!cancelled) setAuthoredMapCount(0) })
         return () => { cancelled = true }

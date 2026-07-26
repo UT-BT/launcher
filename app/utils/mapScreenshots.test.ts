@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { fetchMaps, fetchMapsCount, uploadOwnMapScreenshot } from './api'
+import { fetchAuditLog, fetchMaps, fetchMapsCount, fetchMapsMetadata, uploadOwnMapScreenshot } from './api'
 
 function okJson(data: unknown) {
     return new Response(JSON.stringify({ success: true, data }), {
@@ -45,6 +45,39 @@ describe('authored-map queries', () => {
         await fetchMaps('token', { authorRef: '385522602552328214' })
 
         expect(requestedUrl(fetchMock).searchParams.get('author_ref')).toBe('385522602552328214')
+    })
+})
+
+describe('screenshot cache busting', () => {
+    it('asks for the fields every MapThumbnail needs to bust its cache', async () => {
+        const fetchMock = vi.fn().mockResolvedValue(okJson([]))
+        vi.stubGlobal('fetch', fetchMock)
+
+        await fetchMapsMetadata('token')
+
+        const columns = (requestedUrl(fetchMock).searchParams.get('columns') ?? '').split(',')
+        expect(columns).toContain('screenshot_updated')
+        expect(columns).toContain('has_screenshot')
+    })
+})
+
+describe('audit log actor scoping', () => {
+    it('defaults to the staff feed so mapper uploads do not bury staff actions', async () => {
+        const fetchMock = vi.fn().mockResolvedValue(okJson({ items: [] }))
+        vi.stubGlobal('fetch', fetchMock)
+
+        await fetchAuditLog('token', { actors: 'staff' })
+
+        expect(requestedUrl(fetchMock).searchParams.get('actors')).toBe('staff')
+    })
+
+    it('can widen to player actions when staff go looking for abuse', async () => {
+        const fetchMock = vi.fn().mockResolvedValue(okJson({ items: [] }))
+        vi.stubGlobal('fetch', fetchMock)
+
+        await fetchAuditLog('token', { actors: 'players' })
+
+        expect(requestedUrl(fetchMock).searchParams.get('actors')).toBe('players')
     })
 })
 

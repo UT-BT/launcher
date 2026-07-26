@@ -528,6 +528,7 @@ export interface AuditParams {
     actor?: string
     action?: string
     targetType?: string
+    actors?: 'staff' | 'players' | 'all'
     search?: string
     limit?: number
     offset?: number
@@ -558,6 +559,7 @@ function auditQuery(params: AuditParams): string {
     if (params.actor) qs.set('actor', params.actor)
     if (params.action) qs.set('action', params.action)
     if (params.targetType) qs.set('target_type', params.targetType)
+    if (params.actors) qs.set('actors', params.actors)
     if (params.search) qs.set('search', params.search)
     if (params.limit != null) qs.set('limit', String(params.limit))
     if (params.offset != null) qs.set('offset', String(params.offset))
@@ -1555,7 +1557,7 @@ const DEFAULT_MAP_COLUMNS = [
 const MAP_METADATA_COLUMNS = [
     'name', 'added', 'difficulty', 'tags', 'author', 'author_str', 'author_ref',
     'world_record', 'champion_medal', 'gold_medal', 'silver_medal', 'bronze_medal',
-    'required_players',
+    'required_players', 'has_screenshot', 'screenshot_updated',
 ]
 
 function buildMapQuery(params: MapListParams, defaultActive = true): string {

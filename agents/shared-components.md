@@ -238,7 +238,7 @@ the whole thead during the step:
 
 | Component | Use for |
 |---|---|
-| `app/components/shared/MapThumbnail.tsx` | Any map screenshot tile. Pass `mapName` + `className` for sizing. Falls back to `default.png` on error. Optional `version` (the map's `screenshot_updated`) appends a cache-busting `?v=` — pass it wherever a screenshot can be replaced in-session, or the old image keeps rendering from cache. |
+| `app/components/shared/MapThumbnail.tsx` | Any map screenshot tile. Pass `mapName` + `className` for sizing. Falls back to `default.png` on error. Optional `version` (the map's `screenshot_updated`) appends a cache-busting `?v=` — pass it wherever you have it so a replacement swaps instantly. Stored screenshots are square; in a non-square box pass `fit="blend"` (contains the image over a blurred copy of itself) instead of letting `object-cover` crop it a second time. |
 | `app/components/modals/MapScreenshotModal.tsx` | The one UI for changing a map screenshot, shared by the map hero and the profile Maps Authored tab. Square crop with drag-to-pan + zoom, uploads a canvas-rendered PNG, and hands the updated map back through `onUploaded`. Gate on who may open it (linked author or staff) at the call site — see `agents/data-sources.md`. |
 | `app/components/shared/ActiveFilterChip.tsx` | Removable blue-tinted chip for active filter pills shown above the data table. Props: `label`, `value`, `onClear`. Pages compose a row of these from their own filter state (one chip per filter value). |
 | `app/components/shared/FavoriteStar.tsx` | Generic favorite toggle. Prop is `name: string` (not `mapName`); pass whatever identifier you store (map name, server ID, etc.). |
