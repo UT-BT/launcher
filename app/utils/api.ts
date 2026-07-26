@@ -533,6 +533,8 @@ export interface AdminActivityPoint {
     new_users: number
     achievements: number
     launcher_logins: number
+    web_sessions: number
+    desktop_sessions: number
 }
 
 export interface AdminActivity {
@@ -2365,7 +2367,7 @@ export async function fetchMapReviews(accessToken: string, mapName: string): Pro
 
         if (!response.ok) {
             // It's possible there are no reviews, so generic errors might be expected.
-            // But we should throw if it's a real error. 
+            // But we should throw if it's a real error.
             // The backend returns empty list if no reviews usually, unless error.
             throw new Error(`Failed to fetch map reviews: ${response.statusText} (${response.status})`)
         }
@@ -3849,4 +3851,33 @@ export async function setUserRole(accessToken: string, userId: string, role: num
 
 export async function revokeUserRole(accessToken: string, userId: string): Promise<{ ok: boolean; effective_role: number }> {
     return apiGet(`/admin/roles/${encodeURIComponent(userId)}`, { token: accessToken, method: 'DELETE' })
+}
+
+export interface AdminUsageCount { key: string; count: number }
+export interface AdminUsage {
+  window: ActivityWindow
+  bucket: 'hour' | 'day' | 'month'
+  summary: {
+    active_now: { web: number; desktop: number }
+    sessions: number
+    visitor_metric: { label: string; value: number }
+    user_metric: { label: string; value: number }
+    page_views: number
+    engaged_hours: number
+    avg_session_seconds: number
+    error_sessions: number
+    authenticated_sessions: number
+    anonymous_sessions: number
+  }
+  points: Array<{ t: string; web_sessions: number; desktop_sessions: number; web_visitors: number; desktop_visitors: number; signed_in_users: number; page_views: number; error_sessions: number }>
+  breakdowns: { pages: AdminUsageCount[]; outcomes: AdminUsageCount[]; errors: AdminUsageCount[]; versions: AdminUsageCount[]; operating_systems: AdminUsageCount[]; browsers: AdminUsageCount[]; viewports: AdminUsageCount[]; referrers: AdminUsageCount[] }
+}
+export interface AdminUsageRecent {
+  items: Array<{ user_id: string; alias?: string; active_title?: ActiveTitle | null; surface: 'web' | 'desktop'; active: boolean; client_version?: string; os_family?: string; browser_family?: string; viewport_class?: string; last_view: string; started_at: string; last_seen_at: string; visible_seconds: number; page_views: number }>
+}
+export function fetchAdminUsage(token: string, window: ActivityWindow, signal?: AbortSignal): Promise<AdminUsage> {
+  return apiGet<AdminUsage>(`/admin/usage?window=${window}`, { token, signal })
+}
+export function fetchAdminUsageRecent(token: string, signal?: AbortSignal): Promise<AdminUsageRecent> {
+  return apiGet<AdminUsageRecent>('/admin/usage/recent', { token, signal })
 }

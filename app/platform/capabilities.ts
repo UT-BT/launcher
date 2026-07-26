@@ -30,6 +30,6 @@ export const WEB_CAPABILITIES: PlatformCapabilities = {
     updater: false,
     desktopFiles: false,
     windowChrome: false,
-    settingsModal: false,
+    settingsModal: true,
     anonymousBrowse: true,
 }

@@ -1,6 +1,7 @@
 /// <reference types="electron-vite/node" />
 
 declare const __WEB_TARGET__: boolean
+declare const __APP_VERSION__: string
 
 interface ImportMetaEnv {
   readonly VITE_API_BASE_URL?: string

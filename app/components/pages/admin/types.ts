@@ -8,6 +8,7 @@ export type AdminGroupId = 'overview' | 'community' | 'events' | 'game-content' 
 
 export type AdminSectionId =
   | 'overview'
+  | 'usage-health'
   | 'title-management'
   | 'user-management'
   | 'news-management'

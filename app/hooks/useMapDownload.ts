@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { downloadMapZip } from '@/app/utils/api'
 import { saveMapZip } from '@/app/platform'
+import { trackOutcome } from '@/app/utils/telemetry'
 
 export type MapDownloadState =
     | { status: 'downloading'; mapName: string }
@@ -12,6 +13,7 @@ export function useMapDownload() {
 
     const start = async (mapName: string) => {
         setDownload({ status: 'downloading', mapName })
+        trackOutcome('map_download_started')
         let buffer: ArrayBuffer
         try {
             buffer = await downloadMapZip(mapName)
@@ -23,6 +25,7 @@ export function useMapDownload() {
                     : 'fetch-error'
             console.error('Map download failed:', err)
             setDownload({ status: 'error', mapName, reason })
+            trackOutcome('map_download_failed')
             return
         }
 
@@ -30,6 +33,7 @@ export function useMapDownload() {
             const bytes = new Uint8Array(buffer)
             const res = await saveMapZip(mapName, bytes)
             if (res.ok) {
+                trackOutcome('map_download_succeeded')
                 setDownload({
                     status: 'success',
                     mapName,

@@ -2,6 +2,7 @@ import { resolve } from 'path'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
+import packageJson from './package.json'
 
 const aliases = {
   '@/app': resolve(__dirname, 'app'),
@@ -48,6 +49,7 @@ export default defineConfig({
     publicDir: false,
     define: {
       __WEB_TARGET__: 'false',
+      __APP_VERSION__: JSON.stringify(packageJson.version),
     },
     build: {
       rollupOptions: {

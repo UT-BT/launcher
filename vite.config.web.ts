@@ -2,6 +2,7 @@ import { resolve } from 'path'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { defineConfig, type Plugin } from 'vite'
+import packageJson from './package.json'
 
 const SITE_ORIGIN = process.env.VITE_SITE_ORIGIN ?? 'https://utbt.net'
 
@@ -62,6 +63,7 @@ export default defineConfig({
   root: 'app',
   define: {
     __WEB_TARGET__: 'true',
+    __APP_VERSION__: JSON.stringify(process.env.VITE_BUILD_SHA || packageJson.version),
   },
   resolve: {
     alias: {
