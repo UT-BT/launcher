@@ -234,6 +234,13 @@ const sanitizePresetFilters = (raw: Partial<Record<keyof WorldRecordsPresetFilte
     sortDir: raw.sortDir === 'asc' ? 'asc' : 'desc',
 })
 
+const presetFiltersValid = (raw: unknown): boolean => {
+    if (!raw || typeof raw !== 'object') return false
+    const r = raw as Record<string, unknown>
+    return asStringArray(r.difficultyFilters).every(v => KNOWN_WR_DIFFICULTY_VALUES.has(v))
+        && asStringArray(r.timeFilters).every(v => KNOWN_TIME_BUCKET_VALUES.has(v))
+}
+
 const PRESETS_KEY = 'utbt:worldRecordsPresets:v1'
 
 const TABLE_ROW_HEIGHT_PX = 56
@@ -364,7 +371,7 @@ export function WorldRecordsPage({
         [filterOptions],
     )
 
-    const [presets, setPresets] = useSyncedPresets<WorldRecordsPresetFilters>(PRESETS_KEY)
+    const [presets, setPresets] = useSyncedPresets<WorldRecordsPresetFilters>(PRESETS_KEY, undefined, presetFiltersValid)
     const [activePresetId, setActivePresetId] = useState<string | null>(null)
 
     const serverParams = useMemo<WorldRecordsServerParams>(() => {

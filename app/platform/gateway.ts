@@ -12,10 +12,14 @@ async function fetchGatewayJson<T>(path: string): Promise<T> {
 
 export function normaliseGatewayServers(raw: unknown): Server[] {
     return asArray<any>(raw)
-        .filter(server => server && typeof server === 'object' && (server.id != null || server.ip != null))
+        .filter(server => server && typeof server === 'object' && (server.id != null || server.ip != null || server.hostname != null))
         .map(server => ({
             ...server,
-            id: server.id != null ? String(server.id) : `${asStr(server.ip)}:${asNum(server.hostport)}`,
+            id: server.id != null
+                ? String(server.id)
+                : server.ip != null
+                    ? `${asStr(server.ip)}:${asNum(server.hostport)}`
+                    : asStr(server.hostname),
             ip: asStr(server.ip),
             hostname: asStr(server.hostname),
             hostport: asNum(server.hostport),

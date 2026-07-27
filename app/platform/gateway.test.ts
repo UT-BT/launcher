@@ -10,7 +10,13 @@ describe('normaliseGatewayServers', () => {
     })
 
     it('drops entries without a usable identity', () => {
-        expect(normaliseGatewayServers([null, 'x', {}, { hostname: 'no id or ip' }])).toEqual([])
+        expect(normaliseGatewayServers([null, 'x', {}, { player_count: 3 }])).toEqual([])
+    })
+
+    it('keeps a hostname-only row and derives its id from the hostname', () => {
+        const [server] = normaliseGatewayServers([{ hostname: 'UTBT Duel #1' }])
+        expect(server.id).toBe('UTBT Duel #1')
+        expect(server.players).toEqual([])
     })
 
     it('defaults missing fields on a partially scraped server', () => {

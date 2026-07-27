@@ -395,6 +395,22 @@ const sanitizePresetFilters = (raw: Partial<Record<keyof PresetFilters, unknown>
     sortDir: raw.sortDir === 'desc' ? 'desc' : 'asc',
 })
 
+const presetFiltersValid = (raw: unknown): boolean => {
+    if (!raw || typeof raw !== 'object') return false
+    const r = raw as Record<string, unknown>
+    const enumKeys: [string, Set<string>][] = [
+        ['difficultyFilters', KNOWN_DIFFICULTY_VALUES],
+        ['ratingFilters', KNOWN_RATING_VALUES],
+        ['aestheticsFilters', KNOWN_RATING_VALUES],
+        ['learningFilters', KNOWN_RATING_VALUES],
+        ['luckFilters', KNOWN_LUCK_VALUES],
+        ['recordTimeFilters', KNOWN_RECORD_TIME_VALUES],
+        ['cappedFilters', KNOWN_CAPPED_VALUES],
+        ['ratedFilters', KNOWN_RATED_VALUES],
+    ]
+    return enumKeys.every(([key, known]) => asStringArray(r[key]).every(v => known.has(v)))
+}
+
 const RECORD_TIME_LABELS: Record<RecordTimeTier, string> = {
     all: 'Any time',
     sub15: 'Under 15s',
@@ -695,7 +711,7 @@ export function MapsPage({
     const [error, setError] = useState<string | null>(null)
     const [searchResults, setSearchResults] = useState<Map[]>([])
     const [reviewsModalMap, setReviewsModalMap] = useState<string | null>(null)
-    const [presets, setPresets] = useSyncedPresets<PresetFilters>(PRESETS_KEY, migratePresetFilters)
+    const [presets, setPresets] = useSyncedPresets<PresetFilters>(PRESETS_KEY, migratePresetFilters, presetFiltersValid)
     const [presetsMenuOpen, setPresetsMenuOpen] = useState(false)
     const [columnVisibility, setColumnVisibility] = useState<Record<ColumnId, boolean>>(() => loadColumnVisibility())
     const [expandedTagMaps, setExpandedTagMaps] = useState<Set<string>>(() => new Set())
