@@ -9,14 +9,40 @@ import { StatCard } from '../components/StatCard'
 import { Feedback, errMessage } from '../components/controls'
 import { DataTableCell, DataTableHeaderCell, DataTableHeaderRow, DataTableRow, DataTableShell } from '@/app/components/shared/DataTable'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
+import { CHART_CYAN, CHART_TEAL } from '@/app/utils/chartColors'
 
 const WINDOWS: ActivityWindow[] = ['24h', '1w', '1m', '1y']
+const AXIS_TICK = 'var(--muted-foreground)'
+const AXIS_LINE = 'rgb(var(--hairline-rgb) / 0.12)'
+const GRID_STROKE = 'rgb(var(--hairline-rgb) / 0.08)'
 const RECENT_COLUMNS = [
   { id: 'player', width: '14rem', required: true },
   { id: 'surface', width: '6rem', priority: 30 },
   { id: 'view', width: '8rem', priority: 20 },
   { id: 'seen', width: '11rem', priority: 40 },
 ]
+
+function SessionsTooltip({ active, payload, label }: {
+  active?: boolean
+  payload?: { name?: string; value?: number; color?: string; dataKey?: string | number }[]
+  label?: string | number
+}) {
+  if (!active || !payload?.length) return null
+  return (
+    <div className="rounded-lg border border-hairline/15 bg-card/95 px-3 py-2 shadow-xl backdrop-blur-sm">
+      <div className="text-[11px] text-muted-foreground mb-1">{new Date(String(label)).toLocaleString()}</div>
+      <div className="space-y-1">
+        {payload.map((entry) => (
+          <div key={String(entry.dataKey)} className="flex items-center gap-2">
+            <span className="size-2 rounded-full shrink-0" style={{ background: entry.color }} />
+            <span className="text-xs text-muted-foreground">{entry.name}</span>
+            <span className="text-sm font-semibold text-foreground tabular-nums ml-auto">{Number(entry.value ?? 0).toLocaleString()}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 export function UsageHealthSection({ userProfile }: AdminSectionProps) {
   const token = userProfile?.accessToken
@@ -65,12 +91,35 @@ export function UsageHealthSection({ userProfile }: AdminSectionProps) {
           <div className="h-72 rounded-xl border border-hairline/5 bg-card/30 p-3">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={data.points}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,.06)" />
-                <XAxis dataKey="t" tickFormatter={(v) => new Date(v).toLocaleDateString([], { month: 'short', day: 'numeric' })} />
-                <YAxis />
-                <Tooltip labelFormatter={(v) => new Date(String(v)).toLocaleString()} />
-                <Area type="monotone" dataKey="web_sessions" stackId="sessions" stroke="#38bdf8" fill="#38bdf855" name="Web sessions" />
-                <Area type="monotone" dataKey="desktop_sessions" stackId="sessions" stroke="#2dd4bf" fill="#2dd4bf55" name="Desktop sessions" />
+                <defs>
+                  <linearGradient id="usageWebFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={CHART_CYAN} stopOpacity={0.45} />
+                    <stop offset="100%" stopColor={CHART_CYAN} stopOpacity={0.05} />
+                  </linearGradient>
+                  <linearGradient id="usageDesktopFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={CHART_TEAL} stopOpacity={0.45} />
+                    <stop offset="100%" stopColor={CHART_TEAL} stopOpacity={0.05} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} vertical={false} />
+                <XAxis
+                  dataKey="t"
+                  tick={{ fill: AXIS_TICK, fontSize: 10 }}
+                  axisLine={{ stroke: AXIS_LINE }}
+                  tickLine={{ stroke: AXIS_LINE }}
+                  minTickGap={16}
+                  tickFormatter={(v) => new Date(v).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                />
+                <YAxis
+                  tick={{ fill: AXIS_TICK, fontSize: 10 }}
+                  axisLine={{ stroke: AXIS_LINE }}
+                  tickLine={{ stroke: AXIS_LINE }}
+                  allowDecimals={false}
+                  width={40}
+                />
+                <Tooltip content={<SessionsTooltip />} cursor={{ stroke: AXIS_LINE }} />
+                <Area type="monotone" dataKey="web_sessions" stackId="sessions" stroke={CHART_CYAN} strokeWidth={2} fill="url(#usageWebFill)" dot={false} name="Web sessions" />
+                <Area type="monotone" dataKey="desktop_sessions" stackId="sessions" stroke={CHART_TEAL} strokeWidth={2} fill="url(#usageDesktopFill)" dot={false} name="Desktop sessions" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
