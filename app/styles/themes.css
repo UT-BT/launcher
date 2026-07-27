@@ -280,6 +280,57 @@
   --chart-teal: #0d9488;
 }
 
+:root[data-theme='slate-blue-squared'] {
+  --background: hsl(218 30% 11%);
+  --foreground: hsl(210 28% 93%);
+  --card: hsl(218 28% 13%);
+  --card-foreground: hsl(210 28% 93%);
+  --popover: hsl(218 28% 13%);
+  --popover-foreground: hsl(210 28% 93%);
+  --primary: hsl(210 28% 93%);
+  --primary-foreground: hsl(218 30% 11%);
+  --secondary: hsl(218 22% 18%);
+  --secondary-foreground: hsl(210 22% 86%);
+  --muted: hsl(218 22% 18%);
+  --muted-foreground: hsl(215 24% 72%);
+  --accent: hsl(218 22% 18%);
+  --accent-foreground: hsl(210 22% 86%);
+  --border: hsl(218 20% 20%);
+  --input: hsl(218 20% 20%);
+  --ring: hsl(215 35% 58%);
+
+  /* Squared chrome - keep rounded-full (avatars/pills) unchanged */
+  --radius: 0;
+  --radius-xs: 0;
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+  --radius-2xl: 0;
+  --radius-3xl: 0;
+  --radius-4xl: 0;
+
+  --accent-50: oklch(0.95 0.02 245);
+  --accent-100: oklch(0.9 0.035 245);
+  --accent-200: oklch(0.82 0.06 245);
+  --accent-300: oklch(0.72 0.09 245);
+  --accent-400: oklch(0.62 0.12 245);
+  --accent-500: oklch(0.55 0.13 245);
+  --accent-600: oklch(0.48 0.12 245);
+  --accent-700: oklch(0.4 0.1 245);
+  --accent-800: oklch(0.32 0.08 245);
+  --accent-900: oklch(0.26 0.06 245);
+  --accent-950: oklch(0.18 0.04 245);
+  --accent-glow-rgb: 96 140 200;
+
+  --nebula-1: 96, 140, 200;
+  --nebula-2: 56, 90, 150;
+  --nebula-3: 120, 155, 210;
+  --nebula-4: 40, 65, 120;
+
+  --window-c-titlebar-background: hsl(218 28% 9%);
+}
+
 :root[data-theme='light'] select {
   color-scheme: light !important;
 }
@@ -290,6 +341,7 @@
 }
 
 :root[data-theme='light'] .nebula-bg,
-:root[data-theme='black'] .nebula-bg {
+:root[data-theme='black'] .nebula-bg,
+:root[data-theme='slate-blue-squared'] .nebula-bg {
   display: none;
 }
