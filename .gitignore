@@ -2,6 +2,8 @@ node_modules
 dist
 dist-web
 out
+test-results
+playwright-report
 .DS_Store
 *.log*
 temp

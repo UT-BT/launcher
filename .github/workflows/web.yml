@@ -74,6 +74,11 @@ jobs:
             "DEPLOY_PATH='${DEPLOY_PATH}' SHA='${GITHUB_SHA}' bash -euo pipefail" <<'EOF'
             RELEASE="${DEPLOY_PATH}/releases/${SHA}"
             test -f "${RELEASE}/index.html"
+            if [ -d "${DEPLOY_PATH}/current/assets" ]; then
+              mkdir -p "${RELEASE}/assets"
+              rsync -a --ignore-existing "${DEPLOY_PATH}/current/assets/" "${RELEASE}/assets/"
+              find "${RELEASE}/assets" -type f -mtime +30 -delete
+            fi
             ln -sfn "${RELEASE}" "${DEPLOY_PATH}/current.tmp"
             mv -Tf "${DEPLOY_PATH}/current.tmp" "${DEPLOY_PATH}/current"
             ls -1dt "${DEPLOY_PATH}"/releases/* | tail -n +6 | xargs -r rm -rf
