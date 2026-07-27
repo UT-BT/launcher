@@ -361,6 +361,40 @@ const RECORD_TIME_MAX: Record<Exclude<RecordTimeTier, 'all' | 'over300'>, number
     sub300: 300,
 }
 
+const KNOWN_DIFFICULTY_VALUES = new Set<string>(Object.keys(DIFFICULTY_RANGES))
+const KNOWN_RATING_VALUES = new Set<string>(Object.keys(RATING_RANGES))
+const KNOWN_LUCK_VALUES = new Set<string>(Object.keys(LUCK_RANGES))
+const KNOWN_RECORD_TIME_VALUES = new Set<string>([...Object.keys(RECORD_TIME_MAX), 'over300'])
+const KNOWN_CAPPED_VALUES = new Set<string>([
+    'uncapped', 'capped', 'verified', 'casual', 'bronze', 'silver', 'gold', 'champion', 'world_record',
+])
+const KNOWN_RATED_VALUES = new Set<string>(['rated', 'unrated'])
+const KNOWN_SORT_FIELDS = new Set<string>([
+    'name', 'author', 'added', 'difficulty', 'world_record', 'pb', 'rating', 'my_rating', 'medal',
+])
+
+const asStringArray = (v: unknown): string[] =>
+    Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []
+
+const sanitizePresetFilters = (raw: Partial<Record<keyof PresetFilters, unknown>>): PresetFilters => ({
+    search: typeof raw.search === 'string' ? raw.search : '',
+    authorFilters: asStringArray(raw.authorFilters),
+    tagFilters: asStringArray(raw.tagFilters),
+    yearFilters: asStringArray(raw.yearFilters),
+    difficultyFilters: asStringArray(raw.difficultyFilters).filter((v): v is DifficultyValue => KNOWN_DIFFICULTY_VALUES.has(v)),
+    ratingFilters: asStringArray(raw.ratingFilters).filter((v): v is RatingValue => KNOWN_RATING_VALUES.has(v)),
+    aestheticsFilters: asStringArray(raw.aestheticsFilters).filter((v): v is RatingValue => KNOWN_RATING_VALUES.has(v)),
+    learningFilters: asStringArray(raw.learningFilters).filter((v): v is RatingValue => KNOWN_RATING_VALUES.has(v)),
+    luckFilters: asStringArray(raw.luckFilters).filter((v): v is LuckValue => KNOWN_LUCK_VALUES.has(v)),
+    recordTimeFilters: asStringArray(raw.recordTimeFilters).filter((v): v is RecordTimeValue => KNOWN_RECORD_TIME_VALUES.has(v)),
+    cappedFilters: asStringArray(raw.cappedFilters).filter((v): v is CappedFilterValue => KNOWN_CAPPED_VALUES.has(v)),
+    ratedFilters: asStringArray(raw.ratedFilters).filter((v): v is RatedValue => KNOWN_RATED_VALUES.has(v)),
+    newOnly: Boolean(raw.newOnly),
+    favoritesOnly: Boolean(raw.favoritesOnly),
+    sortBy: typeof raw.sortBy === 'string' && KNOWN_SORT_FIELDS.has(raw.sortBy) ? raw.sortBy as SortField : DEFAULT_MAPS_STATE.sortBy,
+    sortDir: raw.sortDir === 'desc' ? 'desc' : 'asc',
+})
+
 const RECORD_TIME_LABELS: Record<RecordTimeTier, string> = {
     all: 'Any time',
     sub15: 'Under 15s',
@@ -612,21 +646,27 @@ function mapHasMatchingTag(m: Map | MapMetadata, term: string): boolean {
 
 function isMapInDifficultyTier(difficulty: number, tier: DifficultyTier): boolean {
     if (tier === 'all') return true
-    const [min, max] = DIFFICULTY_RANGES[tier]
+    const range = DIFFICULTY_RANGES[tier]
+    if (!range) return false
+    const [min, max] = range
     return difficulty >= min && difficulty <= max
 }
 
 function isInRatingTier(value: number | undefined, tier: RatingTier): boolean {
     if (tier === 'all') return true
     if (value === undefined) return false
-    const [min, max] = RATING_RANGES[tier]
+    const range = RATING_RANGES[tier]
+    if (!range) return false
+    const [min, max] = range
     return value >= min && value <= max
 }
 
 function isInLuckTier(value: number | undefined, tier: LuckTier): boolean {
     if (tier === 'all') return true
     if (value === undefined) return false
-    const [min, max] = LUCK_RANGES[tier]
+    const range = LUCK_RANGES[tier]
+    if (!range) return false
+    const [min, max] = range
     return value >= min && value <= max
 }
 
@@ -1392,7 +1432,7 @@ export function MapsPage({
         setActivePresetId(p.id)
         onStateChange(prev => ({
             ...prev,
-            ...p.filters,
+            ...sanitizePresetFilters(p.filters ?? {}),
             currentPage: 1,
             scrollTop: 0,
         }))

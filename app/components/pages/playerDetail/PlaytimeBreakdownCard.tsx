@@ -186,7 +186,7 @@ export function PlaytimeBreakdownCard({ accessToken, userId, onMapSelect, tabsSl
                                 {isVisible('sessions') && (
                                     <DataTableCell align="right">
                                         <span className="text-xs font-mono tabular-nums text-muted-foreground">
-                                            {row.sessions.toLocaleString()}
+                                            {(row.sessions ?? 0).toLocaleString()}
                                         </span>
                                     </DataTableCell>
                                 )}

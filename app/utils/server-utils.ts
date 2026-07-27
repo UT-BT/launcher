@@ -20,6 +20,23 @@ export const DEFAULT_FILTERS: FilterState = {
     favoritesOnly: false,
 }
 
+const SERVER_TYPE_VALUES = new Set<string>(['Certified', 'Duel', 'Casual', 'Unknown'])
+const CAPACITY_VALUES = new Set<string>(['empty', 'full', 'has-players'])
+
+const asStringArray = (v: unknown): string[] =>
+    Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []
+
+export function sanitizeServerFilters(v: unknown): FilterState {
+    if (!v || typeof v !== 'object' || Array.isArray(v)) return { ...DEFAULT_FILTERS }
+    const raw = v as Record<string, unknown>
+    return {
+        types: asStringArray(raw.types).filter((t): t is ServerType => SERVER_TYPE_VALUES.has(t)),
+        regions: asStringArray(raw.regions),
+        capacity: asStringArray(raw.capacity).filter((c): c is CapacityValue => CAPACITY_VALUES.has(c)),
+        favoritesOnly: Boolean(raw.favoritesOnly),
+    }
+}
+
 export interface ServerPresetFilters {
     filters: FilterState
     sortBy: ServerSortField

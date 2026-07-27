@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatCapTime, formatDelta, displayMapName } from './format'
+import { formatCapTime, formatDelta, displayMapName, parseApiDate } from './format'
 
 describe('formatCapTime', () => {
     it('rounds float64 representation error up to the stored millisecond', () => {
@@ -39,7 +39,43 @@ describe('formatDelta', () => {
 })
 
 describe('displayMapName', () => {
-    it('strips BT prefixes', () => {
-        expect(displayMapName('CTF-BT-Example')).toBe('Example')
+    it('strips the shared prefixes', () => {
+        expect(displayMapName('CTF-BT-Krypton')).toBe('Krypton')
+        expect(displayMapName('CTF-BT+Krypton')).toBe('Krypton')
+    })
+
+    it('returns an empty string for null and undefined', () => {
+        expect(displayMapName(null)).toBe('')
+        expect(displayMapName(undefined)).toBe('')
+    })
+})
+
+describe('parseApiDate', () => {
+    it('parses space-separated naive datetimes as UTC', () => {
+        const d = parseApiDate('2026-07-27 02:25:00.123456')
+        expect(d).not.toBeNull()
+        expect(d!.getTime()).toBe(Date.UTC(2026, 6, 27, 2, 25, 0, 123))
+    })
+
+    it('parses offset-less ISO datetimes as UTC', () => {
+        const d = parseApiDate('2026-07-27T02:25:00')
+        expect(d!.getTime()).toBe(Date.UTC(2026, 6, 27, 2, 25, 0))
+    })
+
+    it('parses offsetted ISO datetimes', () => {
+        const d = parseApiDate('2026-07-27T02:25:00+00:00')
+        expect(d!.getTime()).toBe(Date.UTC(2026, 6, 27, 2, 25, 0))
+    })
+
+    it('parses RFC-1123 datetimes', () => {
+        const d = parseApiDate('Sun, 27 Jul 2026 02:25:00 GMT')
+        expect(d!.getTime()).toBe(Date.UTC(2026, 6, 27, 2, 25, 0))
+    })
+
+    it('returns null for garbage, empty, and non-string input', () => {
+        expect(parseApiDate('not a date')).toBeNull()
+        expect(parseApiDate('')).toBeNull()
+        expect(parseApiDate(null)).toBeNull()
+        expect(parseApiDate(42)).toBeNull()
     })
 })

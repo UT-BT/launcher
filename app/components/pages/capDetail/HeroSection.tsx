@@ -168,7 +168,7 @@ export function HeroSection({
                             <>
                                 <MiniStat label="Rank">
                                     <span className="text-foreground">#{rank}</span>{' '}
-                                    <span className="text-[10px] text-muted-foreground font-normal">of {total.toLocaleString()}</span>
+                                    <span className="text-[10px] text-muted-foreground font-normal">of {(total ?? 0).toLocaleString()}</span>
                                 </MiniStat>
                                 <MiniStat label="Δ WR">
                                     <span className={isWr ? 'text-muted-foreground' : deltaClass(deltaWr)}>

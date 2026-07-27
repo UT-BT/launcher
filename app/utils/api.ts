@@ -286,6 +286,23 @@ async function apiErrorFor(res: Response): Promise<ApiError> {
     return new ApiError(res.status, reason, `Request failed (${res.status})`)
 }
 
+export function asNum(v: unknown, fallback = 0): number {
+    const n = Number(v)
+    return v === null || v === undefined || v === '' || Number.isNaN(n) ? fallback : n
+}
+
+export function asArray<T>(v: unknown): T[] {
+    return Array.isArray(v) ? (v as T[]) : []
+}
+
+export function asNonEmptyObj<T extends object>(v: unknown): T | null {
+    return v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length > 0 ? (v as T) : null
+}
+
+export function asStr(v: unknown, fallback = ''): string {
+    return typeof v === 'string' ? v : fallback
+}
+
 export async function apiGet<T>(path: string, opts: ApiRequestOptions = {}): Promise<T> {
     const res = await apiRequest(path, opts)
     if (!res.ok) {
@@ -294,6 +311,18 @@ export async function apiGet<T>(path: string, opts: ApiRequestOptions = {}): Pro
     const json = await res.json()
     if (json && json.success && json.data !== null && json.data !== undefined) {
         return json.data as T
+    }
+    throw new Error('Invalid response format from server')
+}
+
+export async function apiGetOr<T>(path: string, fallback: T, opts: ApiRequestOptions = {}): Promise<T> {
+    const res = await apiRequest(path, opts)
+    if (!res.ok) {
+        throw await apiErrorFor(res)
+    }
+    const json = await res.json()
+    if (json && json.success) {
+        return json.data === null || json.data === undefined ? fallback : (json.data as T)
     }
     throw new Error('Invalid response format from server')
 }
@@ -1690,8 +1719,8 @@ export async function fetchMapsCount(accessToken: string, params: MapCountParams
         }
 
         const json = await response.json()
-        if (json.success && json.data) {
-            return json.data.count as number
+        if (json.success) {
+            return asNum(json.data?.count)
         }
 
         throw new Error('Invalid response format from server')
@@ -1993,10 +2022,13 @@ export async function fetchTeamMapLeaderboard(
         throw new Error(`Failed to fetch team leaderboard: ${res.statusText} (${res.status})`)
     }
     const json = await res.json()
-    if (!json.success || !Array.isArray(json.data)) {
+    if (!json.success) {
         throw new Error('Invalid team leaderboard response')
     }
-    return json.data as TeamLeaderboardEntry[]
+    return asArray<TeamLeaderboardEntry>(json.data).map(entry => ({
+        ...entry,
+        members: asArray(entry.members),
+    }))
 }
 
 export interface TeamMapUserStats {
@@ -2121,8 +2153,17 @@ export async function fetchTeamCapDetail(
         })
         if (!res.ok) return null
         const json = await res.json()
-        if (json.success && json.data) return json.data as TeamCapDetail
-        return null
+        if (!json.success || !json.data || typeof json.data !== 'object') return null
+        const raw = json.data
+        const server = raw.server && typeof raw.server === 'object' ? raw.server : {}
+        return {
+            ...raw,
+            members: asArray(raw.members),
+            total_on_map: asNum(raw.total_on_map),
+            medals: asNonEmptyObj<TeamCapMedalThresholds>(raw.medals),
+            deltas: asNonEmptyObj<TeamCapDeltas>(raw.deltas),
+            server: { name: server.name ?? null, region: server.region ?? null },
+        } as TeamCapDetail
     } catch {
         return null
     }
@@ -2232,9 +2273,53 @@ export interface CapDetail {
     server: { name: string | null; region: string | null }
 }
 
+function normaliseCapDeltas(raw: any): CapDeltas {
+    const d = raw && typeof raw === 'object' ? raw : {}
+    return {
+        wr: d.wr ?? null,
+        champion: d.champion ?? null,
+        gold: d.gold ?? null,
+        silver: d.silver ?? null,
+        bronze: d.bronze ?? null,
+    }
+}
+
+function normaliseCapMedals(raw: any): CapMedalThresholds {
+    const m = raw && typeof raw === 'object' ? raw : {}
+    return {
+        world_record: m.world_record ?? null,
+        champion: m.champion ?? null,
+        gold: m.gold ?? null,
+        silver: m.silver ?? null,
+        bronze: m.bronze ?? null,
+    }
+}
+
+function normaliseCapDetail(raw: any): CapDetail | null {
+    if (!raw || typeof raw !== 'object' || !raw.cap || typeof raw.cap !== 'object') return null
+    const neighbors = raw.neighbors && typeof raw.neighbors === 'object' ? raw.neighbors : {}
+    const server = raw.server && typeof raw.server === 'object' ? raw.server : {}
+    return {
+        cap: raw.cap,
+        checkpoints: asArray(raw.checkpoints),
+        has_checkpoints: Boolean(raw.has_checkpoints),
+        compare_candidates: asArray(raw.compare_candidates),
+        wr_checkpoints: asArray(raw.wr_checkpoints),
+        wr_cap_id: raw.wr_cap_id ?? null,
+        wr_time_seconds: raw.wr_time_seconds ?? null,
+        rank_on_map: asNum(raw.rank_on_map),
+        total_on_map: asNum(raw.total_on_map),
+        neighbors: { above: asArray(neighbors.above), below: asArray(neighbors.below) },
+        deltas: normaliseCapDeltas(raw.deltas),
+        medals: normaliseCapMedals(raw.medals),
+        server: { name: server.name ?? null, region: server.region ?? null },
+    }
+}
+
 export async function fetchCapDetail(accessToken: string, capId: string, signal?: AbortSignal): Promise<CapDetail | null> {
     try {
-        return await apiGet<CapDetail>(`/caps/${encodeURIComponent(capId)}/detail`, { token: accessToken, signal })
+        const raw = await apiGet<unknown>(`/caps/${encodeURIComponent(capId)}/detail`, { token: accessToken, signal })
+        return normaliseCapDetail(raw)
     } catch (e) {
         console.error('fetchCapDetail failed', e)
         return null
@@ -2266,8 +2351,8 @@ export async function fetchRecordsCount(accessToken: string, addedSince?: string
         }
 
         const json = await response.json()
-        if (json.success && json.data) {
-            return json.data.count as number
+        if (json.success) {
+            return asNum(json.data?.count)
         }
 
         throw new Error('Invalid response format from server')
@@ -2509,7 +2594,18 @@ export async function fetchSummary(accessToken: string): Promise<Summary> {
     })
     if (!response.ok) throw new Error('Failed to fetch summary')
     const json = await response.json()
-    return json.data
+    const data = json?.data && typeof json.data === 'object' ? json.data : {}
+    return {
+        ...data,
+        global: {
+            newMaps: asNum(data.global?.newMaps),
+            newRecords: asNum(data.global?.newRecords),
+        },
+        achievements: asArray(data.achievements),
+        recentWorldRecords: asArray(data.recentWorldRecords),
+        newMaps: asArray(data.newMaps),
+        latestPatch: data.latestPatch ?? null,
+    }
 }
 
 export interface HotMap {
@@ -2552,7 +2648,7 @@ export async function fetchPendingReviews(
     )
     if (!response.ok) throw new Error('Failed to fetch pending reviews')
     const json = await response.json()
-    return json.data
+    return { total: asNum(json.data?.total), items: asArray(json.data?.items) }
 }
 
 export async function fetchSummaryCaps(accessToken: string, limit = 50, offset = 0): Promise<SummaryCap[]> {
@@ -2561,7 +2657,7 @@ export async function fetchSummaryCaps(accessToken: string, limit = 50, offset =
     })
     if (!response.ok) throw new Error('Failed to fetch summary caps')
     const json = await response.json()
-    return json.data
+    return asArray(json.data)
 }
 
 export async function submitSummaryReview(accessToken: string, review: {
@@ -2720,6 +2816,38 @@ function normaliseActiveTitle(raw: any): ActiveTitle | null {
     }
 }
 
+function normaliseUserSummaryMedals(raw: any, userId: string | number): UserSummaryMedals {
+    const medals = raw && typeof raw === 'object' ? raw : {}
+    return {
+        user_id: medals.user_id != null ? String(medals.user_id) : String(userId),
+        world_records: asNum(medals.world_records),
+        champion_medals: asNum(medals.champion_medals),
+        gold_medals: asNum(medals.gold_medals),
+        silver_medals: asNum(medals.silver_medals),
+        bronze_medals: asNum(medals.bronze_medals),
+        certified_caps: asNum(medals.certified_caps),
+        points: asNum(medals.points),
+        rank: asNum(medals.rank),
+    }
+}
+
+function normaliseUserSummaryCounts(raw: any): UserSummaryCounts {
+    const counts = raw && typeof raw === 'object' ? raw : {}
+    return {
+        total_caps: asNum(counts.total_caps),
+        verified_caps: asNum(counts.verified_caps),
+        disallowed_caps: asNum(counts.disallowed_caps),
+        certified_caps: asNum(counts.certified_caps),
+        unique_maps: asNum(counts.unique_maps),
+        uncapped_maps: asNum(counts.uncapped_maps),
+        total_playtime_seconds: asNum(counts.total_playtime_seconds),
+        spectator_playtime_seconds: asNum(counts.spectator_playtime_seconds),
+        map_review_count: asNum(counts.map_review_count),
+        wr_count: asNum(counts.wr_count),
+        favorite_count: asNum(counts.favorite_count),
+    }
+}
+
 export async function fetchUserSummary(accessToken: string, userId: string | number): Promise<UserSummary> {
     const response = await fetch(`${API_BASE_URL}/v2/summary/user/${encodeURIComponent(String(userId))}`, {
         headers: bearerHeaders(accessToken),
@@ -2733,7 +2861,7 @@ export async function fetchUserSummary(accessToken: string, userId: string | num
     }
     const data = json.data
     const profile = data.profile ?? {}
-    const activeBan = profile.active_ban && Object.keys(profile.active_ban).length ? profile.active_ban : null
+    const activeBan = asNonEmptyObj<UserSummaryProfile['active_ban'] & object>(profile.active_ban)
     const normalisedProfile: UserSummaryProfile = {
         id: profile.id != null ? String(profile.id) : String(userId),
         alias: profile.alias ?? null,
@@ -2746,10 +2874,10 @@ export async function fetchUserSummary(accessToken: string, userId: string | num
     }
     return {
         profile: normalisedProfile,
-        medals: data.medals,
-        counts: data.counts,
-        recentCaps: data.recentCaps ?? [],
-        recentWrs: data.recentWrs ?? [],
+        medals: normaliseUserSummaryMedals(data.medals, userId),
+        counts: normaliseUserSummaryCounts(data.counts),
+        recentCaps: asArray(data.recentCaps),
+        recentWrs: asArray(data.recentWrs),
     }
 }
 
@@ -2817,7 +2945,12 @@ export async function fetchAchievementDefinitions(accessToken: string): Promise<
     })
     if (!response.ok) return []
     const json = await response.json()
-    if (json?.success && Array.isArray(json.data?.achievements)) return json.data.achievements as AchievementDefinition[]
+    if (json?.success && Array.isArray(json.data?.achievements)) {
+        return (json.data.achievements as any[]).map(def => ({
+            ...def,
+            tiers: asArray(def.tiers),
+        })) as AchievementDefinition[]
+    }
     return []
 }
 
@@ -3234,11 +3367,19 @@ export async function fetchPlayers(accessToken: string, params: PlayerListParams
         throw new Error(`Failed to fetch players: ${response.statusText} (${response.status})`)
     }
     const json = await response.json()
-    if (json.success && Array.isArray(json.data)) {
-        return (json.data as any[]).map(row => ({
+    if (json.success) {
+        return asArray<any>(json.data).map(row => ({
             ...row,
             id: String(row.id),
             active_title: normaliseActiveTitle(row.active_title),
+            rank: asNum(row.rank),
+            points: asNum(row.points),
+            world_records: asNum(row.world_records),
+            champion_medals: asNum(row.champion_medals),
+            gold_medals: asNum(row.gold_medals),
+            silver_medals: asNum(row.silver_medals),
+            bronze_medals: asNum(row.bronze_medals),
+            certified_caps: asNum(row.certified_caps),
         })) as PlayerListRow[]
     }
     throw new Error('Invalid response format from server')
@@ -3257,8 +3398,8 @@ export async function fetchPlayersCount(
         throw new Error(`Failed to fetch players count: ${response.statusText} (${response.status})`)
     }
     const json = await response.json()
-    if (json.success && json.data) {
-        return json.data.count as number
+    if (json.success) {
+        return asNum(json.data?.count)
     }
     throw new Error('Invalid response format from server')
 }
@@ -3438,8 +3579,21 @@ export interface TeamDirectoryParams {
     order?: 'asc' | 'desc'
 }
 
+function normaliseTeamDetail(raw: TeamDetail): TeamDetail {
+    return {
+        ...raw,
+        member_count: asNum((raw as any)?.member_count),
+        members: asArray((raw as any)?.members),
+        lineups: asArray((raw as any)?.lineups),
+    }
+}
+
+async function apiGetTeamDetail(path: string, opts: ApiRequestOptions = {}): Promise<TeamDetail> {
+    return normaliseTeamDetail(await apiGet<TeamDetail>(path, opts))
+}
+
 export async function createTeam(accessToken: string, input: CreateTeamInput): Promise<TeamDetail> {
-    return apiGet<TeamDetail>('/teams/', { token: accessToken, method: 'POST', body: input })
+    return apiGetTeamDetail('/teams/', { token: accessToken, method: 'POST', body: input })
 }
 
 export async function fetchTeams(accessToken: string, params: TeamDirectoryParams = {}): Promise<TeamDirectoryPage> {
@@ -3454,7 +3608,7 @@ export async function fetchTeams(accessToken: string, params: TeamDirectoryParam
 }
 
 export async function fetchTeam(accessToken: string, teamId: string): Promise<TeamDetail> {
-    return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}`, { token: accessToken })
+    return apiGetTeamDetail(`/teams/${encodeURIComponent(teamId)}`, { token: accessToken })
 }
 
 export async function fetchTeamActivity(
@@ -3492,7 +3646,7 @@ export async function fetchTeamAudit(
 }
 
 export async function updateTeam(accessToken: string, teamId: string, input: UpdateTeamInput): Promise<TeamDetail> {
-    return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}`, { token: accessToken, method: 'PATCH', body: input })
+    return apiGetTeamDetail(`/teams/${encodeURIComponent(teamId)}`, { token: accessToken, method: 'PATCH', body: input })
 }
 
 export async function disbandTeam(accessToken: string, teamId: string): Promise<{ id: string; disbanded: boolean }> {
@@ -3500,7 +3654,7 @@ export async function disbandTeam(accessToken: string, teamId: string): Promise<
 }
 
 export async function transferTeamOwnership(accessToken: string, teamId: string, user: string): Promise<TeamDetail> {
-    return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}/transfer`, { token: accessToken, method: 'POST', body: { user } })
+    return apiGetTeamDetail(`/teams/${encodeURIComponent(teamId)}/transfer`, { token: accessToken, method: 'POST', body: { user } })
 }
 
 export async function fetchTeamMembers(accessToken: string, teamId: string): Promise<TeamMember[]> {
@@ -3508,19 +3662,19 @@ export async function fetchTeamMembers(accessToken: string, teamId: string): Pro
 }
 
 export async function inviteToTeam(accessToken: string, teamId: string, user: string): Promise<TeamDetail> {
-    return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}/invite`, { token: accessToken, method: 'POST', body: { user } })
+    return apiGetTeamDetail(`/teams/${encodeURIComponent(teamId)}/invite`, { token: accessToken, method: 'POST', body: { user } })
 }
 
 export async function joinTeam(accessToken: string, teamId: string): Promise<TeamDetail> {
-    return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}/join`, { token: accessToken, method: 'POST' })
+    return apiGetTeamDetail(`/teams/${encodeURIComponent(teamId)}/join`, { token: accessToken, method: 'POST' })
 }
 
 export async function acceptTeamInvite(accessToken: string, teamId: string): Promise<TeamDetail> {
-    return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}/accept`, { token: accessToken, method: 'POST' })
+    return apiGetTeamDetail(`/teams/${encodeURIComponent(teamId)}/accept`, { token: accessToken, method: 'POST' })
 }
 
 export async function declineTeamInvite(accessToken: string, teamId: string): Promise<TeamDetail> {
-    return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}/decline`, { token: accessToken, method: 'POST' })
+    return apiGetTeamDetail(`/teams/${encodeURIComponent(teamId)}/decline`, { token: accessToken, method: 'POST' })
 }
 
 export async function leaveTeam(accessToken: string, teamId: string): Promise<{ id: string; left: boolean }> {
@@ -3528,23 +3682,23 @@ export async function leaveTeam(accessToken: string, teamId: string): Promise<{ 
 }
 
 export async function denyTeamMember(accessToken: string, teamId: string, user: string): Promise<TeamDetail> {
-    return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}/members/${encodeURIComponent(user)}/deny`, { token: accessToken, method: 'POST' })
+    return apiGetTeamDetail(`/teams/${encodeURIComponent(teamId)}/members/${encodeURIComponent(user)}/deny`, { token: accessToken, method: 'POST' })
 }
 
 export async function unblockTeamMember(accessToken: string, teamId: string, user: string): Promise<TeamDetail> {
-    return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}/members/${encodeURIComponent(user)}/unblock`, { token: accessToken, method: 'POST' })
+    return apiGetTeamDetail(`/teams/${encodeURIComponent(teamId)}/members/${encodeURIComponent(user)}/unblock`, { token: accessToken, method: 'POST' })
 }
 
 export async function kickTeamMember(accessToken: string, teamId: string, user: string, block = false): Promise<TeamDetail> {
-    return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}/members/${encodeURIComponent(user)}/kick`, { token: accessToken, method: 'POST', body: { block } })
+    return apiGetTeamDetail(`/teams/${encodeURIComponent(teamId)}/members/${encodeURIComponent(user)}/kick`, { token: accessToken, method: 'POST', body: { block } })
 }
 
 export async function setTeamMemberRole(accessToken: string, teamId: string, user: string, role: 'admin' | 'member'): Promise<TeamDetail> {
-    return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}/members/${encodeURIComponent(user)}/role`, { token: accessToken, method: 'POST', body: { role } })
+    return apiGetTeamDetail(`/teams/${encodeURIComponent(teamId)}/members/${encodeURIComponent(user)}/role`, { token: accessToken, method: 'POST', body: { role } })
 }
 
 export async function setTeamMemberNumber(accessToken: string, teamId: string, user: string, number: number | null): Promise<TeamDetail> {
-    return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}/members/${encodeURIComponent(user)}/number`, { token: accessToken, method: 'POST', body: { number } })
+    return apiGetTeamDetail(`/teams/${encodeURIComponent(teamId)}/members/${encodeURIComponent(user)}/number`, { token: accessToken, method: 'POST', body: { number } })
 }
 
 export function teamAvatarUrl(team: Pick<TeamCore, 'id' | 'has_avatar' | 'avatar_updated'>): string | null {
@@ -3566,13 +3720,13 @@ export async function uploadTeamAvatar(accessToken: string, teamId: string, file
     }
     const json = await res.json()
     if (json && json.success && json.data) {
-        return json.data as TeamDetail
+        return normaliseTeamDetail(json.data as TeamDetail)
     }
     throw new Error('Invalid response format from server')
 }
 
 export async function deleteTeamAvatar(accessToken: string, teamId: string): Promise<TeamDetail> {
-    return apiGet<TeamDetail>(`/teams/${encodeURIComponent(teamId)}/avatar`, { token: accessToken, method: 'DELETE' })
+    return apiGetTeamDetail(`/teams/${encodeURIComponent(teamId)}/avatar`, { token: accessToken, method: 'DELETE' })
 }
 
 export async function fetchLineups(accessToken: string, teamId: string): Promise<Lineup[]> {
@@ -3593,12 +3747,12 @@ export async function deleteLineup(accessToken: string, teamId: string, lineupId
 
 export async function fetchMyTeam(accessToken: string): Promise<TeamDetail | null> {
     const data = await apiGet<{ team: TeamDetail | null }>('/me/team', { token: accessToken })
-    return data.team
+    return data.team ? normaliseTeamDetail(data.team) : null
 }
 
 export async function setMyTagHidden(accessToken: string, tagHidden: boolean): Promise<TeamDetail | null> {
     const data = await apiGet<{ team: TeamDetail | null }>('/me/team', { token: accessToken, method: 'PATCH', body: { tag_hidden: tagHidden } })
-    return data.team
+    return data.team ? normaliseTeamDetail(data.team) : null
 }
 
 export async function fetchMyInvitations(accessToken: string): Promise<TeamCore[]> {

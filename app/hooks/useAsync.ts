@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { asArray, asNum } from '@/app/utils/api'
 
 export interface UseAsyncResult<T> {
     data: T | undefined
@@ -108,8 +109,8 @@ export function usePaginatedQuery<T>(opts: {
         fetchPageRef.current({ limit: pageSize, offset: (page - 1) * pageSize, signal: controller.signal })
             .then((res) => {
                 if (controller.signal.aborted) return
-                setItems(res.items)
-                setTotal(res.total)
+                setItems(asArray(res?.items))
+                setTotal(asNum(res?.total))
             })
             .catch((err) => {
                 if (controller.signal.aborted || (err as { name?: string })?.name === 'AbortError') return

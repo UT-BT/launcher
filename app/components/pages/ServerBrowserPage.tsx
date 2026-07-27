@@ -16,7 +16,8 @@ import { useLogger } from '@/app/hooks/use-logger'
 import {
     CapacityValue, DEFAULT_FILTERS, FilterState, ServerPreset, ServerPresetFilters,
     ServerSortField, ServerType, SortDir, filterServers, getGameStatusText, getRegionFlag,
-    getServerRegion, getServerType, rememberRecentServer, sortServers, trimServerName,
+    getServerRegion, getServerType, rememberRecentServer, sanitizeServerFilters, sortServers,
+    trimServerName,
 } from '@/app/utils/server-utils'
 import { ErrorModal } from '@/app/components/ErrorModal'
 import { Tooltip } from '@/app/components/ui/tooltip'
@@ -191,6 +192,8 @@ const newPresetId = (): string => {
     try { return crypto.randomUUID() }
     catch { return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}` }
 }
+
+const SORT_FIELD_VALUES = new Set<string>(['type', 'name', 'map', 'region', 'ping', 'players', 'spectators'])
 
 const filtersEqual = (a: FilterState, b: FilterState): boolean => {
     const sameArr = (x: string[], y: string[]) => {
@@ -453,7 +456,7 @@ export function ServerBrowserPage({
         if (!silent) setLoading(true)
         setError(null)
         try {
-            const data = await fetchGatewayServers<Server[]>()
+            const data = await fetchGatewayServers()
             onCachesChange(() => ({
                 servers: data,
                 lastRefreshIso: new Date().toISOString(),
@@ -502,11 +505,13 @@ export function ServerBrowserPage({
         return Array.from(regions).sort()
     }, [caches.servers])
 
+    const filters = useMemo(() => sanitizeServerFilters(state.filters), [state.filters])
+
     const processedServers = useMemo(() => {
-        let result = filterServers(caches.servers, state.filters, favoriteServerIds)
+        let result = filterServers(caches.servers, filters, favoriteServerIds)
         result = sortServers(result, state.sortBy, state.sortDir)
         return result
-    }, [caches.servers, state.filters, state.sortBy, state.sortDir, favoriteServerIds])
+    }, [caches.servers, filters, state.sortBy, state.sortDir, favoriteServerIds])
 
     const totalPlayerCount = useMemo(
         () => processedServers.reduce((sum, s) => sum + s.player_count, 0),
@@ -595,18 +600,18 @@ export function ServerBrowserPage({
     }, [onStateChange])
 
     const activeFilterCount = (
-        (state.filters.types.length > 0 ? 1 : 0) +
-        (state.filters.regions.length > 0 ? 1 : 0) +
-        (state.filters.capacity.length > 0 ? 1 : 0) +
-        (state.filters.favoritesOnly ? 1 : 0)
+        (filters.types.length > 0 ? 1 : 0) +
+        (filters.regions.length > 0 ? 1 : 0) +
+        (filters.capacity.length > 0 ? 1 : 0) +
+        (filters.favoritesOnly ? 1 : 0)
     )
     const hasActiveFilters = activeFilterCount > 0
 
     const captureCurrentPreset = useCallback((): ServerPresetFilters => ({
-        filters: state.filters,
+        filters,
         sortBy: state.sortBy,
         sortDir: state.sortDir,
-    }), [state.filters, state.sortBy, state.sortDir])
+    }), [filters, state.sortBy, state.sortDir])
 
     const handleSavePreset = (name: string, payload: ServerPresetFilters) => {
         const id = newPresetId()
@@ -617,11 +622,12 @@ export function ServerBrowserPage({
 
     const handleLoadPreset = (p: ServerPreset) => {
         setActivePresetId(p.id)
+        const raw = p.filters as Partial<ServerPresetFilters> | undefined
         onStateChange(prev => ({
             ...prev,
-            filters: p.filters.filters,
-            sortBy: p.filters.sortBy,
-            sortDir: p.filters.sortDir,
+            filters: sanitizeServerFilters(raw?.filters),
+            sortBy: typeof raw?.sortBy === 'string' && SORT_FIELD_VALUES.has(raw.sortBy) ? raw.sortBy : prev.sortBy,
+            sortDir: raw?.sortDir === 'asc' || raw?.sortDir === 'desc' ? raw.sortDir : prev.sortDir,
             scrollTop: 0,
         }))
     }
@@ -635,11 +641,11 @@ export function ServerBrowserPage({
 
     useEffect(() => {
         if (!activePreset) return
-        const matches = filtersEqual(state.filters, activePreset.filters.filters)
-            && state.sortBy === activePreset.filters.sortBy
-            && state.sortDir === activePreset.filters.sortDir
+        const matches = filtersEqual(filters, sanitizeServerFilters(activePreset.filters?.filters))
+            && state.sortBy === activePreset.filters?.sortBy
+            && state.sortDir === activePreset.filters?.sortDir
         if (!matches) setActivePresetId(null)
-    }, [activePreset, state.filters, state.sortBy, state.sortDir])
+    }, [activePreset, filters, state.sortBy, state.sortDir])
 
     const lastRefreshLabel = useMemo(() => {
         if (!caches.lastRefreshIso) return null
@@ -1064,44 +1070,44 @@ export function ServerBrowserPage({
 
             {hasActiveFilters && (
                 <div className="flex flex-wrap items-center gap-2 shrink-0">
-                    {state.filters.types.map(t => (
+                    {filters.types.map(t => (
                         <ActiveFilterChip
                             key={`type-${t}`}
                             label="Type"
                             value={t}
                             onClear={() => updateFilters({
-                                ...state.filters,
-                                types: state.filters.types.filter(x => x !== t),
+                                ...filters,
+                                types: filters.types.filter(x => x !== t),
                             })}
                         />
                     ))}
-                    {state.filters.regions.map(r => (
+                    {filters.regions.map(r => (
                         <ActiveFilterChip
                             key={`region-${r}`}
                             label="Region"
                             value={r}
                             onClear={() => updateFilters({
-                                ...state.filters,
-                                regions: state.filters.regions.filter(x => x !== r),
+                                ...filters,
+                                regions: filters.regions.filter(x => x !== r),
                             })}
                         />
                     ))}
-                    {state.filters.capacity.map(c => (
+                    {filters.capacity.map(c => (
                         <ActiveFilterChip
                             key={`capacity-${c}`}
                             label="Capacity"
                             value={CAPACITY_OPTIONS.find(([v]) => v === c)?.[1] ?? c}
                             onClear={() => updateFilters({
-                                ...state.filters,
-                                capacity: state.filters.capacity.filter(x => x !== c),
+                                ...filters,
+                                capacity: filters.capacity.filter(x => x !== c),
                             })}
                         />
                     ))}
-                    {state.filters.favoritesOnly && (
+                    {filters.favoritesOnly && (
                         <ActiveFilterChip
                             label="Favorites only"
                             value="On"
-                            onClear={() => updateFilters({ ...state.filters, favoritesOnly: false })}
+                            onClear={() => updateFilters({ ...filters, favoritesOnly: false })}
                         />
                     )}
                 </div>
@@ -1112,14 +1118,14 @@ export function ServerBrowserPage({
                     <FilterPanelRow label="Server">
                         <MultiFilterDropdown
                             label="Type"
-                            values={state.filters.types}
-                            onChange={v => updateFilters({ ...state.filters, types: v as ServerType[] })}
+                            values={filters.types}
+                            onChange={v => updateFilters({ ...filters, types: v as ServerType[] })}
                             options={TYPE_OPTIONS}
                         />
                         <MultiFilterDropdown
                             label="Region"
-                            values={state.filters.regions}
-                            onChange={v => updateFilters({ ...state.filters, regions: v })}
+                            values={filters.regions}
+                            onChange={v => updateFilters({ ...filters, regions: v })}
                             options={availableRegions.map(r => [r, r] as [string, string])}
                             searchable
                         />
@@ -1128,15 +1134,15 @@ export function ServerBrowserPage({
                     <FilterPanelRow label="Status">
                         <MultiFilterDropdown
                             label="Capacity"
-                            values={state.filters.capacity}
-                            onChange={v => updateFilters({ ...state.filters, capacity: v as CapacityValue[] })}
+                            values={filters.capacity}
+                            onChange={v => updateFilters({ ...filters, capacity: v as CapacityValue[] })}
                             options={CAPACITY_OPTIONS}
                         />
                         <label className="flex items-center gap-2 px-3 py-2 bg-card/50 border border-hairline/10 rounded-md text-sm text-foreground cursor-pointer hover:border-hairline/20 self-end">
                             <input
                                 type="checkbox"
-                                checked={state.filters.favoritesOnly}
-                                onChange={e => updateFilters({ ...state.filters, favoritesOnly: e.target.checked })}
+                                checked={filters.favoritesOnly}
+                                onChange={e => updateFilters({ ...filters, favoritesOnly: e.target.checked })}
                                 className="accent-yellow-400 cursor-pointer"
                             />
                             <span>Favorites only</span>

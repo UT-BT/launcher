@@ -575,7 +575,7 @@ export function TeamLeaderboardTable({
     ) : pageRows.map(({ entry, rank }) => {
         const medalIcon = entry.verified ? medalIconForInt(entry.medal) : null
         const medalLabel = medalLabelForInt(entry.medal)
-        const isOwn = currentUserId != null && entry.members.some(m => String(m.user) === String(currentUserId))
+        const isOwn = currentUserId != null && (entry.members ?? []).some(m => String(m.user) === String(currentUserId))
         const isCurrentRun =
             (highlightTeamCapId != null && String(entry.id) === String(highlightTeamCapId)) ||
             (highlightMemberKey != null && String(entry.user) === String(highlightMemberKey))
@@ -584,7 +584,7 @@ export function TeamLeaderboardTable({
             <div key={entry.id} role="listitem" className={cn('grid grid-cols-[auto_minmax(0,1fr)_auto] gap-3 p-3 border-b border-hairline/5 last:border-0', highlightRow && 'bg-emerald-500/[0.05]')}>
                 <span className="pt-0.5 text-xs font-bold font-mono text-muted-foreground tabular-nums">#{rank}</span>
                 <div className="min-w-0 space-y-1.5">
-                    {entry.members.map(member => (
+                    {(entry.members ?? []).map(member => (
                         <div key={member.cap_id} className="flex items-center gap-1.5 min-w-0">
                             <PlayerInfo
                                 userId={member.user}
@@ -693,7 +693,7 @@ export function TeamLeaderboardTable({
                             pageRows.map(({ entry, rank }) => {
                                 const medalIcon = entry.verified ? medalIconForInt(entry.medal) : null
                                 const medalLabel = medalLabelForInt(entry.medal)
-                                const isOwn = currentUserId != null && entry.members.some(m => String(m.user) === String(currentUserId))
+                                const isOwn = currentUserId != null && (entry.members ?? []).some(m => String(m.user) === String(currentUserId))
                                 const isCurrentRun =
                                     (highlightTeamCapId != null && String(entry.id) === String(highlightTeamCapId)) ||
                                     (highlightMemberKey != null && String(entry.user) === String(highlightMemberKey))
@@ -711,7 +711,7 @@ export function TeamLeaderboardTable({
                                         </DataTableCell>
                                         <DataTableCell>
                                             <div className="flex flex-col gap-1.5 py-0.5 min-w-0">
-                                                {entry.members.map(member => (
+                                                {(entry.members ?? []).map(member => (
                                                     <div key={member.cap_id} className="flex items-center gap-1.5 min-w-0">
                                                         <PlayerInfo
                                                             userId={member.user}

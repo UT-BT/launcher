@@ -137,7 +137,7 @@ export function Home({
                 fetchHotMaps(token).catch(() => [] as HotMap[]),
                 fetchNews(token).catch(() => [] as NewsArticle[]),
                 fetchNewsCategories(token).catch(() => [] as NewsCategoryDef[]),
-                fetchGatewayServers<Server[]>().catch(() => [] as Server[]),
+                fetchGatewayServers().catch(() => [] as Server[]),
                 userProfile?.id
                     ? fetchUserSummary(token, userProfile.id).catch(() => null as UserSummary | null)
                     : Promise.resolve(null),
@@ -311,7 +311,7 @@ export function Home({
     const data = summary ?? EMPTY_SUMMARY
     const recentWRs = data.recentWorldRecords ?? []
     const newMaps = data.newMaps ?? []
-    const playersOnline = servers === null ? null : servers.reduce((sum, s) => sum + s.player_count, 0)
+    const playersOnline = Array.isArray(servers) ? servers.reduce((sum, s) => sum + s.player_count, 0) : null
 
     const renderNewsSection = (span: string) => (
         <SpotlightSection
@@ -424,7 +424,7 @@ export function Home({
                     userId={userProfile.id ?? undefined}
                     alias={userProfile.alias}
                     title={userProfile.active_title ?? null}
-                    worldRecords={userSummary?.medals.world_records ?? null}
+                    worldRecords={userSummary?.medals?.world_records ?? null}
                 />
                 )}
                 {!userProfile && (
@@ -441,7 +441,7 @@ export function Home({
                     className={userProfile ? "lg:col-span-6" : "lg:col-span-12"}
                     accessToken={userProfile?.accessToken}
                     playersOnline={playersOnline}
-                    newMaps={data.global.newMaps}
+                    newMaps={data.global?.newMaps ?? 0}
                     totalMaps={caches.mapsCount}
                     totalPlayers={caches.playersCount}
                     onCountsLoaded={handleCountsLoaded}

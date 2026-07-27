@@ -25,6 +25,7 @@ export function useAdminFilterPresets<TFilters extends object>(opts: {
   }, [presets, persist])
 
   const onLoad = useCallback((preset: FilterPreset<TFilters>) => {
+    if (!preset.filters || typeof preset.filters !== 'object' || Array.isArray(preset.filters)) return
     setActiveId(preset.id)
     onApply(preset.filters)
   }, [onApply])

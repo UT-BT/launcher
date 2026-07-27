@@ -47,8 +47,8 @@ function NeighborRow({ rank, userId, alias, title, time, capId, highlight, curre
 export function RankContextCard({
     rank, total, capTime, capUser, capAlias, capTitle, neighbors, currentUserId,
 }: RankContextCardProps) {
-    const above = neighbors.above ?? []
-    const below = neighbors.below ?? []
+    const above = neighbors?.above ?? []
+    const below = neighbors?.below ?? []
 
     let topRows: CapNeighbor[]
     let bottomRows: CapNeighbor[]
@@ -84,7 +84,7 @@ export function RankContextCard({
 
             <div className="px-4 py-4 flex items-baseline gap-2">
                 <span className="text-3xl font-bold font-mono tabular-nums text-foreground">#{rank}</span>
-                <span className="text-sm text-muted-foreground">of {total.toLocaleString()}</span>
+                <span className="text-sm text-muted-foreground">of {(total ?? 0).toLocaleString()}</span>
             </div>
 
             <div className="px-2 pb-3 space-y-1">

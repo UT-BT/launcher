@@ -54,7 +54,9 @@ desktop-only UI and swaps a handful of bridge calls for browser equivalents.
   Desktop passes through `window.auth`; web uses `web/auth-web.ts`.
 - `gateway.ts` — `fetchGatewayServers()` / `fetchGatewayPatrons()`: desktop goes
   through `window.conveyor.game.*`; web fetches the gateway (`/server-info`,
-  `/patreon`) directly.
+  `/patreon`) directly. `fetchGatewayServers` runs both branches through
+  `normaliseGatewayServers` (typed `Server[]`; partial rows get defaults,
+  identity-less entries are dropped) so pages never see a malformed payload.
 - `external.ts` — `openExternal(url)`: conveyor on desktop, `window.open`
   (noopener) on web.
 - `downloads.ts` — demo/map saves: desktop writes into the game install; web

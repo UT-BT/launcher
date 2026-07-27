@@ -85,7 +85,7 @@ export function MedalShowcaseCard({ medals, loading }: MedalShowcaseCardProps) {
                                 <div className="h-4 w-10 bg-hairline/5 rounded animate-pulse" />
                             ) : (
                                 <span className="text-sm font-mono tabular-nums font-bold text-foreground shrink-0">
-                                    {value.toLocaleString()}
+                                    {(value ?? 0).toLocaleString()}
                                 </span>
                             )}
                         </div>

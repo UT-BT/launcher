@@ -13,15 +13,20 @@ type PresetFilterShape = Record<string, unknown>
 export function loadPresets<T>(
     storageKey: string,
     migrate?: (filters: PresetFilterShape) => PresetFilterShape,
+    validate?: (filters: unknown) => boolean,
 ): FilterPreset<T>[] {
     const parsed = getSynced<unknown>(storageKey, [])
     if (!Array.isArray(parsed)) return []
     const presets: FilterPreset<T>[] = []
-    for (const p of parsed as { filters?: PresetFilterShape }[]) {
+    for (const p of parsed as { id?: unknown; name?: unknown; filters?: PresetFilterShape }[]) {
         try {
-            if (migrate && p?.filters) p.filters = migrate(p.filters)
+            if (typeof p?.id !== 'string' || typeof p?.name !== 'string' || !p?.filters || typeof p.filters !== 'object') continue
+            if (migrate) p.filters = migrate(p.filters)
+            if (validate && !validate(p.filters)) continue
             presets.push(p as FilterPreset<T>)
-        } catch { /* skip malformed presets, e.g. written by another client version */ }
+        } catch {
+            continue
+        }
     }
     return presets
 }
@@ -33,11 +38,12 @@ export function persistPresets<T>(storageKey: string, presets: FilterPreset<T>[]
 export function useSyncedPresets<T>(
     storageKey: string,
     migrate?: (filters: PresetFilterShape) => PresetFilterShape,
+    validate?: (filters: unknown) => boolean,
 ) {
-    const [presets, setPresets] = useState<FilterPreset<T>[]>(() => loadPresets<T>(storageKey, migrate))
+    const [presets, setPresets] = useState<FilterPreset<T>[]>(() => loadPresets<T>(storageKey, migrate, validate))
     useEffect(
-        () => subscribeSynced(storageKey, () => setPresets(loadPresets<T>(storageKey, migrate))),
-        [storageKey, migrate],
+        () => subscribeSynced(storageKey, () => setPresets(loadPresets<T>(storageKey, migrate, validate))),
+        [storageKey, migrate, validate],
     )
     return [presets, setPresets] as const
 }

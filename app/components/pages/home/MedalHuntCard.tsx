@@ -273,7 +273,7 @@ export function MedalHuntCard({
               : sortField === 'date'
                 ? a.worldRecordAddedTime - b.worldRecordAddedTime
                 : a.improvement - b.improvement
-        const fallback = a.mapName.localeCompare(b.mapName)
+        const fallback = (a.mapName ?? '').localeCompare(b.mapName ?? '')
         const value = sortValue === 0 ? fallback : sortValue
         return sortDir === 'asc' ? value : -value
       })
