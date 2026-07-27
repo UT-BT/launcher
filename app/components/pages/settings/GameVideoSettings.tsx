@@ -386,7 +386,7 @@ export function GameVideoSettings() {
                 </SettingsSection>
             )}
 
-            <Modal isOpen={showImportModal} onClose={() => setShowImportModal(false)} title="Import Video Settings" footer={null}>
+            <Modal isOpen={showImportModal} onClose={() => setShowImportModal(false)} title="Import Video Settings" footer={null} portal>
                 <div className="space-y-4">
                     <p className="text-sm text-muted-foreground">
                         {importError ? <span className="text-red-500">{importError}</span> : "Are you sure you want to import these settings? This will overwrite your current configuration."}

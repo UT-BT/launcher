@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { Keyboard, Download, Upload, AlertTriangle, Zap, Star, Wand2, Layout } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -413,14 +414,15 @@ export function GameInputSettings() {
             ))}
 
             {/* Editing Overlay */}
-            {editingBind && (
-                <div data-modal-backdrop className="fixed top-[var(--window-titlebar-height)] right-0 bottom-0 left-64 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center animate-in fade-in duration-200">
+            {editingBind && createPortal(
+                <div data-modal-backdrop className="fixed top-[var(--window-titlebar-height)] right-0 bottom-0 left-0 lg:left-64 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
                     <div className="bg-card border border-border p-6 rounded-lg shadow-lg max-w-sm w-full text-center space-y-4 animate-in zoom-in-95 duration-200">
                         <h3 className="text-lg font-bold">Press any key</h3>
                         <p className="text-muted-foreground">Press a key to bind to <b>{BIND_CATEGORIES.flatMap(c => c.binds).find(b => b.command === editingBind.command)?.label}</b></p>
                         <p className="text-xs text-muted-foreground">Press ESC to cancel</p>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
             {/* Conflict Dialog */}
@@ -428,6 +430,7 @@ export function GameInputSettings() {
                 isOpen={!!conflictInfo}
                 onClose={() => setConflictInfo(null)}
                 title="Bind Conflict"
+                portal
                 className="max-w-lg"
                 backdropClassName="left-64"
                 footer={
@@ -450,7 +453,7 @@ export function GameInputSettings() {
                 </div>
             </Modal>
 
-            <Modal isOpen={showImportModal} onClose={() => setShowImportModal(false)} title="Import Binds" footer={null}>
+            <Modal isOpen={showImportModal} onClose={() => setShowImportModal(false)} title="Import Binds" footer={null} portal>
                 <div className="space-y-4">
                     <p className="text-sm text-muted-foreground">
                         {importError ? <span className="text-red-500">{importError}</span> : "Are you sure you want to import these binds? exact existing binds will be wiped and replaced."}

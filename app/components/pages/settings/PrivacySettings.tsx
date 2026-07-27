@@ -47,16 +47,16 @@ export function PrivacySettings() {
         <h2 className="text-xl font-semibold flex items-center gap-2"><ShieldCheck className="size-5" /> Privacy & Data</h2>
         <p className="text-sm text-muted-foreground mt-1">Control optional usage analytics and exercise your data rights.</p>
       </div>
-      <div className="rounded-xl border border-border/50 bg-card/30 p-4 flex items-center justify-between gap-4">
-        <div><div className="font-medium">Pseudonymous usage analytics</div><div className="text-sm text-muted-foreground">Off by default. No analytics identifier is created until you accept.</div></div>
+      <div className="rounded-xl border border-border/50 bg-card/30 p-4 flex flex-col items-start gap-3 @md/panel:flex-row @md/panel:items-center @md/panel:justify-between @md/panel:gap-4">
+        <div className="min-w-0"><div className="font-medium">Pseudonymous usage analytics</div><div className="text-sm text-muted-foreground">Off by default. No analytics identifier is created until you accept.</div></div>
         <button
-          className={`rounded-lg px-4 py-2 text-sm ${consent === 'granted' ? 'bg-primary text-primary-foreground' : 'border border-border'}`}
+          className={`shrink-0 rounded-lg px-4 py-2 text-sm ${consent === 'granted' ? 'bg-primary text-primary-foreground' : 'border border-border'}`}
           onClick={() => void setTelemetryConsent(consent !== 'granted')}
         >{consent === 'granted' ? 'Enabled' : 'Disabled'}</button>
       </div>
       <div className="flex flex-wrap gap-2">
-        <button className="rounded-lg border border-border px-4 py-2 text-sm" onClick={() => void exportAccountData()}>Export my usage data</button>
-        <button className="rounded-lg border border-red-500/40 px-4 py-2 text-sm text-red-300" onClick={() => void erase()}>Delete my usage data</button>
+        <button className="flex-1 rounded-lg border border-border px-4 py-2 text-sm whitespace-nowrap @md/panel:flex-none" onClick={() => void exportAccountData()}>Export my usage data</button>
+        <button className="flex-1 rounded-lg border border-red-500/40 px-4 py-2 text-sm text-red-300 whitespace-nowrap @md/panel:flex-none" onClick={() => void erase()}>Delete my usage data</button>
       </div>
       {status && <p className="text-sm text-muted-foreground">{status}</p>}
       <details className="rounded-xl border border-border/50 p-4" onToggle={(event) => setPolicyOpen(event.currentTarget.open)}>

@@ -53,6 +53,7 @@ export function DesktopSettings({ initialSection, unlockExclusive, installationS
             onSectionChange={setCurrentSection}
             isGameValid={installationStatus === 'valid'}
             launcherVersion={__APP_VERSION__}
+            initialDetail={Boolean(initialSection)}
         >
             <Suspense fallback={<PanelLoading />}>{panel}</Suspense>
         </SettingsLayout>

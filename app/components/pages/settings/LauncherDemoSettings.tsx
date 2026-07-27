@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Video, ChevronDown, AlertTriangle } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
+import { cn } from '@/lib/utils'
 import { Switch } from '@/app/components/ui/switch'
 import { SettingsSection, SettingsRow } from './SettingsComponents'
 import {
@@ -140,12 +141,12 @@ export function LauncherDemoSettings() {
                 >
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild disabled={disabled}>
-                            <Button variant="outline" className="w-[200px] justify-between font-normal">
+                            <Button variant="outline" className="w-full @md/panel:w-[200px] justify-between font-normal">
                                 {autoDemoUpload}
                                 <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
                             </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent className="w-[200px]" align="end">
+                        <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[200px]" align="end">
                             <DropdownMenuRadioGroup value={autoDemoUpload} onValueChange={handleAutoDemoUploadChange}>
                                 <DropdownMenuRadioItem value="Never">Never</DropdownMenuRadioItem>
                                 <DropdownMenuRadioItem value="World Records Only">World Records Only</DropdownMenuRadioItem>
@@ -161,12 +162,12 @@ export function LauncherDemoSettings() {
                 >
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild disabled={disabled || autoDemoUpload === 'Never'}>
-                            <Button variant="outline" className={`w-[200px] justify-between font-normal ${disabled || autoDemoUpload === 'Never' ? 'opacity-50' : ''}`}>
+                            <Button variant="outline" className={cn('w-full @md/panel:w-[200px] justify-between font-normal', (disabled || autoDemoUpload === 'Never') && 'opacity-50')}>
                                 {discardedDemoAction === 'Move to Folder' ? "Move to 'Discarded' Folder" : discardedDemoAction}
                                 <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
                             </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent className="w-[200px]" align="end">
+                        <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[200px]" align="end">
                             <DropdownMenuRadioGroup value={discardedDemoAction} onValueChange={handleDiscardedDemoActionChange}>
                                 <DropdownMenuRadioItem value="Do Nothing">Do Nothing</DropdownMenuRadioItem>
                                 <DropdownMenuRadioItem value="Move to Folder">Move to 'Discarded' Folder</DropdownMenuRadioItem>
@@ -182,12 +183,12 @@ export function LauncherDemoSettings() {
                 >
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild disabled={disabled || autoDemoUpload === 'Never'}>
-                            <Button variant="outline" className={`w-[200px] justify-between font-normal ${disabled || autoDemoUpload === 'Never' ? 'opacity-50' : ''}`}>
+                            <Button variant="outline" className={cn('w-full @md/panel:w-[200px] justify-between font-normal', (disabled || autoDemoUpload === 'Never') && 'opacity-50')}>
                                 {demoPostAction === 'Move to Folder' ? "Move to 'Uploaded' Folder" : demoPostAction}
                                 <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
                             </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent className="w-[200px]" align="end">
+                        <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[200px]" align="end">
                             <DropdownMenuRadioGroup value={demoPostAction} onValueChange={handleDemoPostActionChange}>
                                 <DropdownMenuRadioItem value="Do Nothing">Do Nothing</DropdownMenuRadioItem>
                                 <DropdownMenuRadioItem value="Move to Folder">Move to 'Uploaded' Folder</DropdownMenuRadioItem>

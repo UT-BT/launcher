@@ -1,6 +1,7 @@
 import { Button } from '@/app/components/ui/button'
 import { X } from 'lucide-react'
 import { useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { cn } from '@/lib/utils'
 
 interface ModalProps {
@@ -15,6 +16,7 @@ interface ModalProps {
     maxWidth?: string
     maxHeight?: string
     leftAction?: React.ReactNode
+    portal?: boolean
 }
 
 export function Modal({
@@ -29,6 +31,7 @@ export function Modal({
     maxWidth,
     maxHeight,
     leftAction,
+    portal,
 }: ModalProps) {
     const modalRef = useRef<HTMLDivElement>(null)
     const closeButtonRef = useRef<HTMLButtonElement>(null)
@@ -96,7 +99,7 @@ export function Modal({
 
     if (!isOpen) return null
 
-    return (
+    const overlay = (
         <div
             data-modal-backdrop
             className={cn(
@@ -154,4 +157,6 @@ export function Modal({
             </div>
         </div>
     )
+
+    return portal ? createPortal(overlay, document.body) : overlay
 }

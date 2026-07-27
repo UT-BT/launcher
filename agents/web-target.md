@@ -10,7 +10,7 @@ not_here:
   - "IPC channel contract → lib/conveyor/README.md"
   - "build commands reference → agents/build.md"
 sections: [overview, platform-layer, capability-gates, web-auth, anonymous-browsing, shareable-urls, responsive-layout, performance, build, seo-and-link-previews, hosting-note]
-last_verified: 2026-07-26
+last_verified: 2026-07-27
 verify_against:
   - app/public/route-contract.json
   - app/components/navigation/useDocumentMeta.ts
@@ -154,7 +154,12 @@ don't reintroduce centering).
 - Content padding scales `p-4 sm:p-6 lg:p-8`; the app root uses `h-dvh` (mobile
   browser toolbars) and the web entry zeroes `--window-titlebar-height`.
 - Modals: `offsetSidebar` pads left only at `lg+` (`lg:pl-64`) so they center on
-  phones.
+  phones. A modal with its own internal rail must not assume the modal is wide:
+  Settings collapses its 288px rail into a drill-down once the modal body drops
+  below 768px and sizes panel contents by named container query — see
+  `app/components/pages/settings/README.md` → Responsive behavior. Any
+  `position: fixed` overlay rendered inside a container-query ancestor must be
+  portalled to `document.body` or containment traps it.
 - **Tables:** every tabular surface passes `responsive={{ columns, ...,
   compactContent }}` — priorities drop cosmetic columns first, the core metric
   is `required`, and below the required-fit width rows render as stacked cards

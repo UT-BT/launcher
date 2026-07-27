@@ -31,6 +31,7 @@ export function WebSettings({ initialSection, unlockExclusive }: WebSettingsProp
             onSectionChange={setCurrentSection}
             isGameValid={false}
             launcherVersion={__APP_VERSION__}
+            initialDetail={requested === 'launcher-privacy'}
         >
             <Suspense fallback={<PanelLoading />}>
                 {currentSection === 'launcher-privacy'
