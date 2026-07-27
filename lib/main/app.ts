@@ -25,8 +25,8 @@ export function createAppWindow(): void {
     ? "'self' https://gateway.utbt.net https://api.utbt.net https://api.utmapdownload.com"
     : "'self' https://gateway.utbt.net https://api.utbt.net https://api.utmapdownload.com http://localhost http://127.0.0.1 ws://localhost:5173"
   const imgSrc = app.isPackaged
-    ? "'self' data: res: https://utbt.net https://gateway.utbt.net https://api.utbt.net https://flagcdn.com https://cdn.discordapp.com"
-    : "'self' data: res: https://utbt.net https://gateway.utbt.net https://api.utbt.net https://flagcdn.com https://cdn.discordapp.com http://localhost http://127.0.0.1"
+    ? "'self' data: blob: res: https://utbt.net https://gateway.utbt.net https://api.utbt.net https://flagcdn.com https://cdn.discordapp.com"
+    : "'self' data: blob: res: https://utbt.net https://gateway.utbt.net https://api.utbt.net https://flagcdn.com https://cdn.discordapp.com http://localhost http://127.0.0.1"
   const csp = [
     "default-src 'self'",
     `script-src ${scriptSrc}`,

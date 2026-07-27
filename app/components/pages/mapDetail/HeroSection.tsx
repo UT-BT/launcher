@@ -1,4 +1,4 @@
-import { Download, Calendar, Star, Sparkles, Loader2, User, Users } from 'lucide-react'
+import { Download, Calendar, Star, Sparkles, Loader2, User, Users, ImagePlus } from 'lucide-react'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
@@ -22,11 +22,13 @@ interface HeroSectionProps {
     accessToken?: string
     onMapSelect?: (mapName: string) => void
     requiredPlayers?: number
+    canEditScreenshot?: boolean
+    onEditScreenshot?: () => void
 }
 
 export function HeroSection({
     mapName, map, avgOverall, reviewCount, isFavorited, onToggleFavorite, onDownload, isDownloading, chart,
-    accessToken, onMapSelect, requiredPlayers,
+    accessToken, onMapSelect, requiredPlayers, canEditScreenshot, onEditScreenshot,
 }: HeroSectionProps) {
     const difficulty = map?.difficulty
     const author = map?.author_str ?? (map?.author != null ? String(map.author) : null)
@@ -40,10 +42,24 @@ export function HeroSection({
         <div className="bg-card/30 border border-hairline/5 rounded-xl overflow-hidden shrink-0">
             <div className="flex flex-col lg:flex-row">
                 <div className="lg:w-64 lg:h-64 shrink-0 p-2">
-                    <MapThumbnail
-                        mapName={mapName}
-                        className="w-full h-full aspect-video lg:aspect-square rounded-lg border border-hairline/10"
-                    />
+                    <div className="relative w-full h-full">
+                        <MapThumbnail
+                            mapName={mapName}
+                            version={map?.screenshot_updated}
+                            fit="blend"
+                            className="w-full h-full aspect-video lg:aspect-square rounded-lg border border-hairline/10"
+                        />
+                        {canEditScreenshot && (
+                            <button
+                                type="button"
+                                onClick={onEditScreenshot}
+                                className="absolute bottom-2 right-2 inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-black/70 border border-hairline/20 text-[11px] font-semibold text-foreground/90 hover:bg-black/85 hover:text-foreground hover:border-accent-500/50 transition-colors cursor-pointer"
+                            >
+                                <ImagePlus className="size-3.5" />
+                                {map?.has_screenshot ? 'Change' : 'Add screenshot'}
+                            </button>
+                        )}
+                    </div>
                 </div>
                 <div className="flex-1 p-4 flex flex-col gap-3 min-w-0">
                     <div className="flex flex-wrap items-center justify-between gap-3">

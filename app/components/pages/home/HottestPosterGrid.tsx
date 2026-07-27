@@ -48,7 +48,7 @@ export function HottestPosterGrid({ maps, favoriteMapNames, onToggleFavorite, on
                     >
                         <MapThumbnail
                             mapName={map.name}
-                            className="w-full aspect-video rounded-none border-0 transition-transform duration-500 group-hover:scale-[1.03]"
+                            className="w-full aspect-square rounded-none border-0 transition-transform duration-500 group-hover:scale-[1.03]"
                         />
                     </button>
                     <div className="p-2.5 space-y-1">

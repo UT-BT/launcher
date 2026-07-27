@@ -11,7 +11,7 @@ not_here:
   - "the IPC channel/api/handler pattern → lib/conveyor/README.md"
   - "renderer HTTP calls → agents/data-sources.md"
 sections: [services, the-renderer-main-boundary, file-path-safety, opening-urls, config-storage, ini-access, window-security-csp]
-last_verified: 2026-07-21
+last_verified: 2026-07-26
 verify_against:
   - lib/main/app.ts
   - lib/main/config.ts
@@ -104,3 +104,7 @@ HTTP failing with a CSP error usually means the host is missing from this list.
 `connect-src` and `img-src` are each built twice, packaged vs dev, because dev talks to a
 localhost API. Adding a host to only one of them produces the worst kind of bug: works in
 `npm run dev`, silently blocked in the shipped build (or the reverse). Change both.
+
+`img-src` also allows `data:` and `blob:` so the renderer can preview an image the user
+just picked — `MapScreenshotModal` renders the chosen file from an object URL before
+uploading it. Dropping either scheme leaves that preview blank with no network error.
