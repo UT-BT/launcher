@@ -261,3 +261,11 @@ the marked `<head>` region per URL and falls back to the plain
 `<!--utbt-head-*-->` markers**. How that is served, and the cutover steps, live
 outside this repo. `.github/workflows/web.yml` builds `dist-web/` and publishes
 it.
+
+**Stale-chunk recovery.** Assets are content-hashed and pages lazy-load, so a
+tab opened before a deploy can request a chunk the new release no longer
+references. Two layers keep that from stranding users: the deploy workflow
+copies the previous release's `assets/` into each new release (no-clobber,
+pruned after 30 days), and `app/renderer-web.tsx` listens for Vite's
+`vite:preloadError` and does a one-shot reload (sessionStorage-throttled to
+once per minute) so the session picks up the fresh `index.html`.
