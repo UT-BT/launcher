@@ -5,6 +5,9 @@ import { trackError } from '@/app/utils/telemetry'
 interface Props {
   children: ReactNode
   fallback?: ReactNode
+  variant?: 'root' | 'view'
+  context?: string
+  onNavigateHome?: () => void
 }
 
 interface State {
@@ -27,11 +30,16 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    trackError('ui_crash')
+    trackError('ui_crash', this.props.context)
     if (window.logging) {
-      window.logging.error('ErrorBoundary caught an error', 'ErrorBoundary', { error: error.toString(), componentStack: errorInfo.componentStack })
+      window.logging.error('ErrorBoundary caught an error', 'ErrorBoundary', {
+        context: this.props.context,
+        message: error.message,
+        error: error.toString(),
+        componentStack: errorInfo.componentStack
+      })
     } else {
-      console.error('ErrorBoundary caught an error', error, errorInfo.componentStack)
+      console.error('ErrorBoundary caught an error', this.props.context, error, errorInfo.componentStack)
     }
     this.setState({
       error,
@@ -49,16 +57,18 @@ export class ErrorBoundary extends Component<Props, State> {
         return this.props.fallback
       }
 
+      const isView = this.props.variant === 'view'
+
       return (
         <div className="page-container">
-          <div className="nebula-bg" aria-hidden="true" />
+          {!isView && <div className="nebula-bg" aria-hidden="true" />}
           <div className="page-content">
             <div className="glass-card">
               <h1 className="section-title">Something went wrong</h1>
               <p className="subtitle">
                 An unexpected error occurred. Please try refreshing the application.
               </p>
-              
+
               {process.env.NODE_ENV === 'development' && this.state.error && (
                 <details className="mt-4 p-4 bg-gray-800 rounded text-left text-sm">
                   <summary className="cursor-pointer mb-2 font-semibold">
@@ -70,13 +80,25 @@ export class ErrorBoundary extends Component<Props, State> {
                   </pre>
                 </details>
               )}
-              
+
               <div className="actions-section">
                 <Button onClick={this.handleReset} className="enhanced-button">
                   Try Again
                 </Button>
-                <Button 
-                  variant="ghost" 
+                {isView && this.props.onNavigateHome && (
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      this.props.onNavigateHome?.()
+                      this.handleReset()
+                    }}
+                    className="enhanced-button"
+                  >
+                    Go Home
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
                   onClick={() => window.location.reload()}
                   className="enhanced-button"
                 >

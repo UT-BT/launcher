@@ -10,7 +10,7 @@ not_here:
   - "where page state / persistence lives → state-patterns.md"
   - "the PlayerInfo / CapTimeLink components that trigger nav → shared-components.md"
 sections: [the-model, navigate-is-the-only-entry-point, url-sync-web-build, page-views-vs-detail-pages, the-sidebar-registry, event-driven-navigation, sidebar-new-badges, page-refresh-registry, per-entry-state]
-last_verified: 2026-07-25
+last_verified: 2026-07-27
 verify_against:
   - app/components/main/Main.tsx
   - app/components/layout/AppLayout.tsx
@@ -124,7 +124,12 @@ re-run on navigation.
 
 ## Page-views vs detail-pages
 
-`renderView()` switches on `currentView`. Two kinds of case:
+`renderView()` switches on `currentView`. The whole thing is wrapped in a
+per-view `ErrorBoundary` (`variant="view"`, keyed on `entry.id`) around the
+lazy-loading `Suspense`, so a page crash shows an inline error card with the
+shell and nav stack intact, and any navigation automatically resets the
+boundary. The root boundaries in the renderer entries stay as last resort.
+Two kinds of case:
 
 | Kind | Views | Keyed? | Why |
 |---|---|---|---|

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef, lazy, Suspense, type Dispatch, type SetStateAction } from 'react'
 import { AppLayout } from '@/app/components/layout/AppLayout'
+import { ErrorBoundary } from '@/app/components/ErrorBoundary'
 import { trackPage } from '@/app/utils/telemetry'
 import {
   NavigationContext,
@@ -481,7 +482,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
       : e))
   }, [])
 
-  const entry = entries[cursor]
+  const entry = entries[cursor] ?? entries[entries.length - 1]
   const currentView = entry.view
   const canBack = cursor > 0
   const canForward = cursor < entries.length - 1
@@ -825,14 +826,16 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
       <div className="flex-1 overflow-hidden">
         <NavigationContext.Provider value={navValue}>
           <AppLayout currentView={currentView} onViewChange={navigate} getNavBadge={(view) => badgeVisible(view) ? badgeCounts[view] : null} userProfile={userProfile} installationStatus={installationStatus}>
-            <Suspense fallback={
-              <div className="space-y-4 pt-2">
-                <div className="h-10 w-64 bg-hairline/5 rounded-lg animate-pulse" />
-                <div className="h-72 bg-hairline/5 rounded-xl animate-pulse" />
-              </div>
-            }>
-              {renderView()}
-            </Suspense>
+            <ErrorBoundary key={entry.id} variant="view" context={currentView} onNavigateHome={() => navigate('home')}>
+              <Suspense fallback={
+                <div className="space-y-4 pt-2">
+                  <div className="h-10 w-64 bg-hairline/5 rounded-lg animate-pulse" />
+                  <div className="h-72 bg-hairline/5 rounded-xl animate-pulse" />
+                </div>
+              }>
+                {renderView()}
+              </Suspense>
+            </ErrorBoundary>
           </AppLayout>
         </NavigationContext.Provider>
       </div>

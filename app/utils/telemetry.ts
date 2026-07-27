@@ -189,10 +189,11 @@ export function trackOutcome(key: string) {
   save()
   void flushTelemetry()
 }
-export function trackError(key: 'api_network' | 'api_timeout' | 'api_server' | 'ui_crash') {
+export function trackError(key: 'api_network' | 'api_timeout' | 'api_server' | 'ui_crash', dimension?: string) {
   if (getTelemetryConsent() !== 'granted') return
   if (!state) ensureState()
   increment(state!.errors, key)
+  if (dimension) increment(state!.errors, `${key}:${dimension}`)
   save()
 }
 function onPageHide() { void flushTelemetry(true) }
