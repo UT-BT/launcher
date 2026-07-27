@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { ADMIN_GROUPS } from './registry'
 import type { AdminSection, AdminSectionId } from './types'
@@ -69,17 +68,9 @@ export function AdminLayout({ sections, activeSection, onSectionChange, children
 
       <main className="flex-1 min-w-0 overflow-x-clip">
         <div className="w-full lg:pl-8 max-lg:pl-0 pl-6 pr-1 pt-1 pb-8">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeSection}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.2 }}
-            >
-              {children}
-            </motion.div>
-          </AnimatePresence>
+          <div key={activeSection} className="animate-in fade-in duration-200">
+            {children}
+          </div>
         </div>
       </main>
     </div>
