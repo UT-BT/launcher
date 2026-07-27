@@ -68,6 +68,13 @@ export const THEMES: ThemeMeta[] = [
     swatch: '#000000',
     group: 'solid',
   },
+  {
+    id: 'slate-blue-squared',
+    label: 'Slate Blue Squared',
+    description: 'Dark slate blue with squared corners',
+    swatch: '#3d5f8a',
+    group: 'solid',
+  },
 ]
 
 export const DEFAULT_THEME_ID = 'classic'
