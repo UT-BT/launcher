@@ -50,6 +50,7 @@ const STATUS_OPTIONS: { value: MapStatus; label: string }[] = [
 const MAP_COLUMNS: AdminColumn[] = [
   { id: 'map', label: 'Map', required: true },
   { id: 'author', label: 'Author' },
+  { id: 'added', label: 'Added' },
   { id: 'difficulty', label: 'Difficulty' },
   { id: 'players', label: 'Players' },
   { id: 'tags', label: 'Tags' },
@@ -61,6 +62,7 @@ const MAP_COLUMNS: AdminColumn[] = [
 const LAYOUT: Record<string, { width?: string; align?: 'left' | 'center' | 'right' }> = {
   map: { align: 'left' },
   author: { width: '15rem', align: 'left' },
+  added: { width: '8rem', align: 'left' },
   difficulty: { width: '6rem', align: 'center' },
   players: { width: '7rem', align: 'center' },
   tags: { width: '16rem', align: 'left' },
@@ -70,11 +72,11 @@ const LAYOUT: Record<string, { width?: string; align?: 'left' | 'center' | 'righ
 }
 
 const SORTABLE: Record<string, AdminMapSort> = {
-  map: 'name', difficulty: 'difficulty', status: 'active',
+  map: 'name', added: 'added', difficulty: 'difficulty', status: 'active',
 }
 
 const PRIORITY: Record<string, number> = {
-  status: 70, difficulty: 70, players: 70, author: 30, tags: 30, superseded: 30,
+  status: 70, difficulty: 70, players: 70, added: 50, author: 30, tags: 30, superseded: 30,
 }
 
 interface MapFilters {
@@ -865,8 +867,8 @@ export function MapsManagementSection({ userProfile, onMapSelect }: AdminSection
   const [tag, setTag] = useNavState('admin.maps.tag', '')
   const [difficulty, setDifficulty] = useNavState('admin.maps.difficulty', '')
   const [status, setStatus] = useNavState<MapStatus>('admin.maps.status', 'all')
-  const [sort, setSort] = useNavState<AdminMapSort>('admin.maps.sort', 'name')
-  const [order, setOrder] = useNavState<'asc' | 'desc'>('admin.maps.order', 'asc')
+  const [sort, setSort] = useNavState<AdminMapSort>('admin.maps.sort', 'added')
+  const [order, setOrder] = useNavState<'asc' | 'desc'>('admin.maps.order', 'desc')
   const [offset, setOffset] = useNavState('admin.maps.offset', 0)
   const [expandedTags, setExpandedTags] = useNavState<string[]>('admin.maps.expandedTags', [])
   const [rows, setRows] = useState<AdminMapRow[]>([])
@@ -1016,6 +1018,12 @@ export function MapsManagementSection({ userProfile, onMapSelect }: AdminSection
             ) : (
               <span className="text-sm text-muted-foreground truncate">{m.author_str || '—'}</span>
             )}
+          </DataTableCell>
+        )
+      case 'added':
+        return (
+          <DataTableCell key={id} align={align} className="text-muted-foreground text-xs whitespace-nowrap" title={m.added ?? ''}>
+            {relTime(m.added)}
           </DataTableCell>
         )
       case 'difficulty':
