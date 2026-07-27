@@ -9,7 +9,7 @@ import { useUpdater } from '@/app/hooks/useUpdater'
 type MinimizeAction = 'taskbar' | 'tray'
 type CloseAction = 'quit' | 'tray'
 
-const selectClass = "flex h-9 w-[220px] rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+const selectClass = "flex h-9 w-full @md/panel:w-[220px] rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
 
 export function LauncherGeneralSettings() {
     const [uiScale, setUiScale] = useState(100)
@@ -123,7 +123,7 @@ export function LauncherGeneralSettings() {
                     label="Scale"
                     description={`Adjust the scale of the user interface.`}
                 >
-                    <div className="flex items-center gap-4 w-48">
+                    <div className="flex items-center gap-4 w-full @md/panel:w-48">
                         <span className="text-xs font-mono w-8">{uiScale}%</span>
                         <Slider
                             min={75}
