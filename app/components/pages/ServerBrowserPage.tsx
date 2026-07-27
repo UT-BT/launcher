@@ -6,7 +6,6 @@ import {
     Twitch, Eye, SlidersHorizontal, AlertCircle,
     Clock, Flag,
 } from 'lucide-react'
-import type { ActiveTitle } from '@/app/utils/api'
 import { Modal } from '@/app/components/ui/modal'
 import { Tutorial } from '@/app/components/shared/Tutorial'
 import { useTutorialState } from '@/app/components/shared/useTutorialState'
@@ -17,8 +16,10 @@ import {
     CapacityValue, DEFAULT_FILTERS, FilterState, ServerPreset, ServerPresetFilters,
     ServerSortField, ServerType, SortDir, filterServers, getGameStatusText, getRegionFlag,
     getServerRegion, getServerType, rememberRecentServer, sanitizeServerFilters, sortServers,
-    trimServerName,
+    trimServerName, type Server, type ServerPlayer,
 } from '@/app/utils/server-utils'
+
+export type { Server }
 import { ErrorModal } from '@/app/components/ErrorModal'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import { Button } from '@/app/components/ui/button'
@@ -41,36 +42,7 @@ import {
     DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
 } from '@/app/components/ui/dropdown-menu'
 
-interface Player {
-    id: string
-    name: string
-    ping: number
-    time: number
-    team: number
-    deaths: number
-    is_spectator: boolean
-    alias?: string | null
-    active_title?: ActiveTitle | null
-}
-
-export interface Server {
-    id: string
-    ip: string
-    hostname: string
-    hostport: number
-    map_name: string
-    player_count: number
-    max_players: number
-    spectators: number
-    time_limit_minutes: number
-    remaining_time_seconds: number
-    goal_team_score: number
-    red_team_score: number
-    blue_team_score: number
-    certified_records: boolean
-    players: Player[]
-    ping?: number
-}
+type Player = ServerPlayer
 
 export type ServerColumnId =
     | 'thumbnail' | 'type' | 'name' | 'map' | 'region' | 'ping'

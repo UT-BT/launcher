@@ -24,6 +24,7 @@ import {
     fetchRushers,
     fetchWorldRecordProgression,
     fetchWorldRecordFilterOptions,
+    asStringArray,
 } from '@/app/utils/api'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { TeamHolders } from '@/app/components/shared/TeamHolders'
@@ -219,9 +220,6 @@ const KNOWN_TIME_BUCKET_VALUES = new Set<string>(TIME_BUCKETS.map(b => b.value))
 const KNOWN_TIMEFRAME_VALUES = new Set<string>(TIMEFRAME_OPTIONS.map(o => o.value))
 const KNOWN_WR_SORT_FIELDS = new Set<string>(['map', 'holder', 'time', 'difficulty', 'date'])
 
-const asStringArray = (v: unknown): string[] =>
-    Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []
-
 const sanitizePresetFilters = (raw: Partial<Record<keyof WorldRecordsPresetFilters, unknown>>): WorldRecordsPresetFilters => ({
     search: typeof raw.search === 'string' ? raw.search : '',
     difficultyFilters: asStringArray(raw.difficultyFilters).filter((v): v is WrDifficultyTierValue => KNOWN_WR_DIFFICULTY_VALUES.has(v)),
@@ -233,6 +231,15 @@ const sanitizePresetFilters = (raw: Partial<Record<keyof WorldRecordsPresetFilte
     sortBy: typeof raw.sortBy === 'string' && KNOWN_WR_SORT_FIELDS.has(raw.sortBy) ? raw.sortBy as WorldRecordsSortField : DEFAULT_WORLD_RECORDS_STATE.sortBy,
     sortDir: raw.sortDir === 'asc' ? 'asc' : 'desc',
 })
+
+const pickPresetFilters = (raw: Partial<Record<keyof WorldRecordsPresetFilters, unknown>>): Partial<WorldRecordsPresetFilters> => {
+    const sanitized = sanitizePresetFilters(raw)
+    const picked: Partial<WorldRecordsPresetFilters> = {}
+    for (const key of Object.keys(sanitized) as (keyof WorldRecordsPresetFilters)[]) {
+        if (key in raw) (picked as Record<string, unknown>)[key] = sanitized[key]
+    }
+    return picked
+}
 
 const presetFiltersValid = (raw: unknown): boolean => {
     if (!raw || typeof raw !== 'object') return false
@@ -598,7 +605,7 @@ export function WorldRecordsPage({
 
     const handleLoadPreset = (p: WorldRecordsPreset) => {
         setActivePresetId(p.id)
-        onStateChange(prev => ({ ...prev, ...sanitizePresetFilters(p.filters ?? {}), currentPage: 1, scrollTop: 0 }))
+        onStateChange(prev => ({ ...prev, ...pickPresetFilters(p.filters ?? {}), currentPage: 1, scrollTop: 0 }))
     }
 
     const handleDeletePreset = (p: WorldRecordsPreset) => {

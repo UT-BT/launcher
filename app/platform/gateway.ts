@@ -1,5 +1,5 @@
 import { GATEWAY_BASE_URL, asArray, asNum, asStr } from '@/app/utils/api'
-import type { Server } from '@/app/components/pages/ServerBrowserPage'
+import type { Server } from '@/app/utils/server-utils'
 import { IS_WEB } from './target'
 
 async function fetchGatewayJson<T>(path: string): Promise<T> {

@@ -303,6 +303,10 @@ export function asStr(v: unknown, fallback = ''): string {
     return typeof v === 'string' ? v : fallback
 }
 
+export function asStringArray(v: unknown): string[] {
+    return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []
+}
+
 export async function apiGet<T>(path: string, opts: ApiRequestOptions = {}): Promise<T> {
     const res = await apiRequest(path, opts)
     if (!res.ok) {
@@ -1719,8 +1723,8 @@ export async function fetchMapsCount(accessToken: string, params: MapCountParams
         }
 
         const json = await response.json()
-        if (json.success) {
-            return asNum(json.data?.count)
+        if (json.success && json.data) {
+            return asNum(json.data.count)
         }
 
         throw new Error('Invalid response format from server')
@@ -2022,7 +2026,7 @@ export async function fetchTeamMapLeaderboard(
         throw new Error(`Failed to fetch team leaderboard: ${res.statusText} (${res.status})`)
     }
     const json = await res.json()
-    if (!json.success) {
+    if (!json.success || (json.data != null && !Array.isArray(json.data))) {
         throw new Error('Invalid team leaderboard response')
     }
     return asArray<TeamLeaderboardEntry>(json.data).map(entry => ({
@@ -2135,7 +2139,7 @@ export interface TeamCapDetail {
     is_combination_best_unverified: boolean
     wr_time_seconds: number | null
     rank_on_map: number | null
-    total_on_map: number
+    total_on_map: number | null
     medals: TeamCapMedalThresholds | null
     deltas: TeamCapDeltas | null
     server: { name: string | null; region: string | null }
@@ -2159,7 +2163,7 @@ export async function fetchTeamCapDetail(
         return {
             ...raw,
             members: asArray(raw.members),
-            total_on_map: asNum(raw.total_on_map),
+            total_on_map: raw.total_on_map == null ? null : asNum(raw.total_on_map),
             medals: asNonEmptyObj<TeamCapMedalThresholds>(raw.medals),
             deltas: asNonEmptyObj<TeamCapDeltas>(raw.deltas),
             server: { name: server.name ?? null, region: server.region ?? null },
@@ -2265,8 +2269,8 @@ export interface CapDetail {
     wr_checkpoints: CapCheckpoint[]
     wr_cap_id: string | null
     wr_time_seconds: number | null
-    rank_on_map: number
-    total_on_map: number
+    rank_on_map: number | null
+    total_on_map: number | null
     neighbors: { above: CapNeighbor[]; below: CapNeighbor[] }
     deltas: CapDeltas
     medals: CapMedalThresholds
@@ -2307,8 +2311,8 @@ function normaliseCapDetail(raw: any): CapDetail | null {
         wr_checkpoints: asArray(raw.wr_checkpoints),
         wr_cap_id: raw.wr_cap_id ?? null,
         wr_time_seconds: raw.wr_time_seconds ?? null,
-        rank_on_map: asNum(raw.rank_on_map),
-        total_on_map: asNum(raw.total_on_map),
+        rank_on_map: raw.rank_on_map == null ? null : asNum(raw.rank_on_map),
+        total_on_map: raw.total_on_map == null ? null : asNum(raw.total_on_map),
         neighbors: { above: asArray(neighbors.above), below: asArray(neighbors.below) },
         deltas: normaliseCapDeltas(raw.deltas),
         medals: normaliseCapMedals(raw.medals),
@@ -2351,8 +2355,8 @@ export async function fetchRecordsCount(accessToken: string, addedSince?: string
         }
 
         const json = await response.json()
-        if (json.success) {
-            return asNum(json.data?.count)
+        if (json.success && json.data) {
+            return asNum(json.data.count)
         }
 
         throw new Error('Invalid response format from server')
@@ -3398,8 +3402,8 @@ export async function fetchPlayersCount(
         throw new Error(`Failed to fetch players count: ${response.statusText} (${response.status})`)
     }
     const json = await response.json()
-    if (json.success) {
-        return asNum(json.data?.count)
+    if (json.success && json.data) {
+        return asNum(json.data.count)
     }
     throw new Error('Invalid response format from server')
 }

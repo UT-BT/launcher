@@ -171,7 +171,8 @@ describe('fetchCapDetail normalisation', () => {
         expect(detail!.checkpoints).toEqual([])
         expect(detail!.compare_candidates).toEqual([])
         expect(detail!.server).toEqual({ name: null, region: null })
-        expect(detail!.total_on_map).toBe(0)
+        expect(detail!.total_on_map).toBeNull()
+        expect(detail!.rank_on_map).toBeNull()
     })
 
     it('returns null when the payload has no cap', async () => {

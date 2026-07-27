@@ -11,7 +11,7 @@ import { Tooltip } from '@/app/components/ui/tooltip'
 import {
     UserProfile, Map, MapMetadata, MapReview, BestCap,
     fetchMaps, fetchMapsCount, fetchMapsMetadata, fetchMapsFuzzy, fetchAllMapReviews, fetchMapAuthors,
-    fetchBestCaps, fetchWorldRecordsForMaps,
+    fetchBestCaps, fetchWorldRecordsForMaps, asStringArray,
 } from '@/app/utils/api'
 
 import { MapReviewsModal } from '@/app/components/modals/MapReviewsModal'
@@ -373,9 +373,6 @@ const KNOWN_SORT_FIELDS = new Set<string>([
     'name', 'author', 'added', 'difficulty', 'world_record', 'pb', 'rating', 'my_rating', 'medal',
 ])
 
-const asStringArray = (v: unknown): string[] =>
-    Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []
-
 const sanitizePresetFilters = (raw: Partial<Record<keyof PresetFilters, unknown>>): PresetFilters => ({
     search: typeof raw.search === 'string' ? raw.search : '',
     authorFilters: asStringArray(raw.authorFilters),
@@ -394,6 +391,15 @@ const sanitizePresetFilters = (raw: Partial<Record<keyof PresetFilters, unknown>
     sortBy: typeof raw.sortBy === 'string' && KNOWN_SORT_FIELDS.has(raw.sortBy) ? raw.sortBy as SortField : DEFAULT_MAPS_STATE.sortBy,
     sortDir: raw.sortDir === 'desc' ? 'desc' : 'asc',
 })
+
+const pickPresetFilters = (raw: Partial<Record<keyof PresetFilters, unknown>>): Partial<PresetFilters> => {
+    const sanitized = sanitizePresetFilters(raw)
+    const picked: Partial<PresetFilters> = {}
+    for (const key of Object.keys(sanitized) as (keyof PresetFilters)[]) {
+        if (key in raw) (picked as Record<string, unknown>)[key] = sanitized[key]
+    }
+    return picked
+}
 
 const presetFiltersValid = (raw: unknown): boolean => {
     if (!raw || typeof raw !== 'object') return false
@@ -1448,7 +1454,7 @@ export function MapsPage({
         setActivePresetId(p.id)
         onStateChange(prev => ({
             ...prev,
-            ...sanitizePresetFilters(p.filters ?? {}),
+            ...pickPresetFilters(p.filters ?? {}),
             currentPage: 1,
             scrollTop: 0,
         }))
