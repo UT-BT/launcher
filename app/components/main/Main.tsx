@@ -826,7 +826,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
       <div className="flex-1 overflow-hidden">
         <NavigationContext.Provider value={navValue}>
           <AppLayout currentView={currentView} onViewChange={navigate} getNavBadge={(view) => badgeVisible(view) ? badgeCounts[view] : null} userProfile={userProfile} installationStatus={installationStatus}>
-            <ErrorBoundary key={entry.id} variant="view" context={currentView} onNavigateHome={() => navigate('home')}>
+            <ErrorBoundary key={entry.id} variant="view" context={currentView} onNavigateHome={currentView === 'home' ? undefined : () => navigate('home')}>
               <Suspense fallback={
                 <div className="space-y-4 pt-2">
                   <div className="h-10 w-64 bg-hairline/5 rounded-lg animate-pulse" />

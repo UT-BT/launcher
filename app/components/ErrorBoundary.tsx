@@ -16,6 +16,19 @@ interface State {
   errorInfo?: ErrorInfo
 }
 
+const CHUNK_ERROR_PATTERNS = [
+  'dynamically imported module',
+  'Importing a module script failed',
+  'ChunkLoadError',
+  'Failed to load module script',
+]
+
+function isChunkLoadError(error?: Error): boolean {
+  if (!error) return false
+  const text = `${error.name}: ${error.message}`
+  return CHUNK_ERROR_PATTERNS.some(pattern => text.includes(pattern))
+}
+
 export class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props)
@@ -48,6 +61,10 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   handleReset = () => {
+    if (isChunkLoadError(this.state.error)) {
+      window.location.reload()
+      return
+    }
     this.setState({ hasError: false, error: undefined, errorInfo: undefined })
   }
 
@@ -70,7 +87,7 @@ export class ErrorBoundary extends Component<Props, State> {
               </p>
 
               {process.env.NODE_ENV === 'development' && this.state.error && (
-                <details className="mt-4 p-4 bg-gray-800 rounded text-left text-sm">
+                <details className="mt-4 p-4 bg-card/80 rounded text-left text-sm">
                   <summary className="cursor-pointer mb-2 font-semibold">
                     Error Details (Development)
                   </summary>

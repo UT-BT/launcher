@@ -193,7 +193,7 @@ export function trackError(key: 'api_network' | 'api_timeout' | 'api_server' | '
   if (getTelemetryConsent() !== 'granted') return
   if (!state) ensureState()
   increment(state!.errors, key)
-  if (dimension) increment(state!.errors, `${key}:${dimension}`)
+  if (dimension) increment(state!.errors, `${key}:${pageKey(dimension)}`)
   save()
 }
 function onPageHide() { void flushTelemetry(true) }
