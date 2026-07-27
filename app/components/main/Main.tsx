@@ -424,8 +424,8 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
   const navigate = useCallback((view: string, params: NavParams = {}) => {
     markViewed(view)
     const { entries: cur, cursor: curIdx } = stackRef.current
-    const active = cur[curIdx]
-    if (active.view === view && paramsEqual(active.params, params)) return
+    const active = cur[curIdx] ?? cur[cur.length - 1]
+    if (active?.view === view && paramsEqual(active.params, params)) return
     const entry = { id: nextIdRef.current++, view, params, state: {} }
     let next = [...cur.slice(0, curIdx + 1), entry]
     let nextCursor = next.length - 1
