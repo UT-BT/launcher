@@ -10,5 +10,4 @@ export const registerUpdaterHandlers = (_window: BrowserWindow) => {
   handle('updater:download', () => updaterService.download())
   handle('updater:quitAndInstall', () => updaterService.quitAndInstall())
   handle('updater:getState', () => updaterService.getState())
-  handle('updater:setAllowPrerelease', (value) => updaterService.setAllowPrerelease(value))
 }

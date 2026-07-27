@@ -311,21 +311,11 @@ artifacts.
 > Never **squash** or **back-merge** `main` into `staging` to "sync" them — that
 > rewrites history into a divergent commit and breaks the ahead/behind alignment.
 
-### Prereleases
-
-Use a hyphenated version in step 2; everything else is identical:
-
-```bash
-npm --no-git-tag-version version 1.7.0-rc.1
-git commit -am "chore(release): v1.7.0-rc.1"
-```
-
-Once this reaches `main`, the workflow detects the hyphen, marks the GitHub Release
-as a prerelease, and does not set it as "latest".
-
 ### Notes
 
 - `npm version` updates both `package.json` and `package-lock.json`.
+- Releases must use a stable `X.Y.Z` version. Use the `staging` branch for
+  pre-release testing.
 - The build reads the version from `package.json`; the matching `vX.Y.Z` tag and
   GitHub Release are created automatically by CI. Do not create release tags by
   hand.

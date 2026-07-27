@@ -11,7 +11,7 @@ not_here:
   - "the step-by-step add-a-channel procedure → .claude/skills/add-ipc-channel/SKILL.md"
   - "the main-process services behind the handlers → lib/main/README.md"
 sections: [overview, the-channel-inventory, calling-from-the-renderer, adding-a-channel, event-bridges, conventions]
-last_verified: 2026-07-22
+last_verified: 2026-07-27
 verify_against:
   - lib/conveyor/api/index.ts
   - lib/conveyor/schemas/index.ts
@@ -56,7 +56,7 @@ channel is one triple kept in three folders:
 | `favorites` | `readIni()` → `{ ok, mapNames }`, `writeIni(mapNames)` — favorites in the user's `UTBT.ini` |
 | `maps` | `extractToInstall(mapName, bytes)` → extract a map zip into the install dir without overwriting |
 | `demos` | `saveToSystem(filename, bytes)` → write a demo into `{install}/System` |
-| `updater` | `check(manual?)`, `download()`, `quitAndInstall()`, `getState()`, `setAllowPrerelease(value)` |
+| `updater` | `check(manual?)`, `download()`, `quitAndInstall()`, `getState()` |
 | `logging` | `log/info/warn/error/debug(message, context?, data?)`, `getLogFilePath()`, `getRecentLogs(lines?)` |
 
 Renderer method names and channel names sometimes differ (e.g.

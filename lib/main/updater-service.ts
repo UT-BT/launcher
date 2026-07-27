@@ -1,8 +1,6 @@
-import { app, net, type BrowserWindow } from 'electron'
+import { app, type BrowserWindow } from 'electron'
 import { autoUpdater } from 'electron-updater'
-import * as semver from 'semver'
 import { loggingService } from './logging-service'
-import { getUpdaterConfig, setUpdaterConfig } from './config'
 
 const GITHUB_OWNER = 'UT-BT'
 const GITHUB_REPO = 'launcher'
@@ -27,7 +25,6 @@ export type UpdaterState = {
   transferred?: number
   total?: number
   error?: string
-  allowPrerelease: boolean
   currentVersion: string
   lastCheckTrigger: 'auto' | 'manual' | null
   lastCheckedAt?: string
@@ -42,7 +39,6 @@ class UpdaterService {
   constructor() {
     this.state = {
       phase: 'idle',
-      allowPrerelease: getUpdaterConfig().allowPrerelease,
       currentVersion: app.getVersion(),
       lastCheckTrigger: null,
     }
@@ -53,7 +49,7 @@ class UpdaterService {
 
     autoUpdater.autoDownload = false
     autoUpdater.autoInstallOnAppQuit = false
-    autoUpdater.allowPrerelease = this.state.allowPrerelease
+    autoUpdater.allowPrerelease = false
     autoUpdater.logger = {
       info: (msg: unknown) => loggingService.info(String(msg), 'Updater'),
       warn: (msg: unknown) => loggingService.warn(String(msg), 'Updater'),
@@ -86,11 +82,7 @@ class UpdaterService {
       lastCheckTrigger: this.lastTrigger,
     })
     try {
-      if (this.state.allowPrerelease) {
-        await this.configurePrereleaseFeed()
-      } else {
-        this.useDefaultFeed()
-      }
+      this.useDefaultFeed()
       await autoUpdater.checkForUpdates()
     } catch (err) {
       const rawMessage = err instanceof Error ? err.message : String(err)
@@ -121,53 +113,8 @@ class UpdaterService {
     autoUpdater.quitAndInstall(false, true)
   }
 
-  setAllowPrerelease(value: boolean): void {
-    setUpdaterConfig({ allowPrerelease: value })
-    autoUpdater.allowPrerelease = value
-    this.update({ allowPrerelease: value })
-  }
-
   private useDefaultFeed(): void {
     autoUpdater.setFeedURL({ provider: 'github', owner: GITHUB_OWNER, repo: GITHUB_REPO })
-  }
-
-  private async configurePrereleaseFeed(): Promise<void> {
-    try {
-      const tag = await this.resolveHighestTag()
-      if (tag) {
-        autoUpdater.setFeedURL({
-          provider: 'generic',
-          url: `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/download/${tag}/`,
-        })
-        return
-      }
-      loggingService.warn('No installable release found in feed', 'Updater')
-    } catch (err) {
-      loggingService.warn('Release resolution failed; using default GitHub provider', 'Updater', {
-        message: err instanceof Error ? err.message : String(err),
-      })
-    }
-    this.useDefaultFeed()
-  }
-
-  private async resolveHighestTag(): Promise<string | null> {
-    const feedUrl = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases.atom`
-    const res = await net.fetch(feedUrl, { headers: { accept: 'application/atom+xml' } })
-    if (!res.ok) {
-      throw new Error(`releases.atom returned HTTP ${res.status}`)
-    }
-    const xml = await res.text()
-
-    const candidates: Array<{ tag: string; version: semver.SemVer }> = []
-    for (const match of xml.matchAll(/\/releases\/tag\/([^"<]+)/g)) {
-      const tag = match[1]
-      const version = semver.parse(tag.replace(/^v/i, ''))
-      if (version) candidates.push({ tag, version })
-    }
-    if (candidates.length === 0) return null
-
-    candidates.sort((a, b) => semver.rcompare(a.version, b.version))
-    return candidates[0].tag
   }
 
   private wireEvents(): void {
@@ -246,7 +193,7 @@ class UpdaterService {
 
   private friendlyError(raw: string): string {
     if (/Cannot find latest\.yml/i.test(raw) && /404/.test(raw)) {
-      return 'The latest release is missing update metadata (latest.yml). Try toggling release candidates off, or wait for a newer build.'
+      return 'The latest release is missing update metadata (latest.yml). Please wait for a newer build.'
     }
     if (/ENOTFOUND|ECONNREFUSED|ETIMEDOUT|net::|getaddrinfo/i.test(raw)) {
       return 'Could not reach GitHub to check for updates. Check your internet connection.'

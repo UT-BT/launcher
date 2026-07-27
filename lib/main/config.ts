@@ -41,12 +41,7 @@ type LauncherConfig = {
   auth?: AuthConfig
   demoWatcher?: DemoWatcherConfig
   activeProfile?: string
-  updater?: UpdaterConfig
   windowBehavior?: WindowBehaviorConfig
-}
-
-export type UpdaterConfig = {
-  allowPrerelease: boolean
 }
 
 const CONFIG_FILE_NAME = 'config.json'
@@ -70,7 +65,17 @@ export function readConfig(): LauncherConfig {
       return {}
     }
     const raw = readFileSync(file, 'utf-8')
-    return JSON.parse(raw) as LauncherConfig
+    const stored = JSON.parse(raw) as LauncherConfig & { updater?: unknown }
+    if ('updater' in stored) {
+      const { updater: _updater, ...config } = stored
+      try {
+        writeConfig(config)
+      } catch {
+        // Keep the rest of the config usable if legacy-key cleanup cannot be persisted yet.
+      }
+      return config
+    }
+    return stored
   } catch {
     return {}
   }
@@ -209,21 +214,6 @@ export function getDemoWatcherConfig(): DemoWatcherConfig {
 export function setDemoWatcherConfig(demoWatcher: DemoWatcherConfig): void {
   const current = readConfig()
   const next: LauncherConfig = { ...current, demoWatcher }
-  writeConfig(next)
-}
-
-export function getUpdaterConfig(): UpdaterConfig {
-  const config = readConfig()
-  return config.updater ?? { allowPrerelease: false }
-}
-
-export function setUpdaterConfig(updater: Partial<UpdaterConfig>): void {
-  const current = readConfig()
-  const currentUpdater = current.updater ?? { allowPrerelease: false }
-  const next: LauncherConfig = {
-    ...current,
-    updater: { ...currentUpdater, ...updater },
-  }
   writeConfig(next)
 }
 

@@ -5,5 +5,4 @@ export class UpdaterApi extends ConveyorApi {
   download = () => this.invoke('updater:download')
   quitAndInstall = () => this.invoke('updater:quitAndInstall')
   getState = () => this.invoke('updater:getState')
-  setAllowPrerelease = (value: boolean) => this.invoke('updater:setAllowPrerelease', value)
 }

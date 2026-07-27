@@ -11,7 +11,7 @@ not_here:
   - "the IPC channel/api/handler pattern → lib/conveyor/README.md"
   - "renderer HTTP calls → agents/data-sources.md"
 sections: [services, the-renderer-main-boundary, file-path-safety, opening-urls, config-storage, ini-access, window-security-csp]
-last_verified: 2026-07-26
+last_verified: 2026-07-27
 verify_against:
   - lib/main/app.ts
   - lib/main/config.ts
@@ -39,7 +39,7 @@ handlers/`) are thin and delegate to these.
 | `game-service` | Launch/validate the UT99 install, detect running game |
 | `demo-watcher-service` | Watch the demo folder, parse `.dem` headers, auto-upload per config |
 | `patch-service` | Download + install the UTBT patch, version checks |
-| `updater-service` | Launcher auto-update (electron-updater), prerelease channel |
+| `updater-service` | Stable launcher auto-updates (electron-updater) |
 | `tray-service` | System-tray icon + right-click menu, minimize/close-to-tray interception (window `close`/`minimize` events + `before-quit` flag), start-on-startup login item |
 | `gateway-service` | HTTP client for the gateway host (avatars, patrons, server list) |
 | `installation-service` | Install detection/validation, ISO download orchestration |
@@ -79,7 +79,7 @@ external links and stray navigations leave the app safely.
 `config.ts` persists `config.json` under `app.getPath('userData')/config`, written
 atomically (tmp + rename). Typed accessors only — don't read the file directly:
 `getUt99InstallPath` / `setUt99InstallPath`, `getGatewayConfig`, `getInstalledPatch`,
-`getDemoWatcherConfig`, `getUpdaterConfig`, `getActiveProfile`, `getAuthConfig`,
+`getDemoWatcherConfig`, `getActiveProfile`, `getAuthConfig`,
 `getWindowBehavior` (minimize/close-to-tray + start-on-startup, applied by `tray-service`).
 
 **Secrets are encrypted at rest.** Auth access/refresh tokens go through Electron
