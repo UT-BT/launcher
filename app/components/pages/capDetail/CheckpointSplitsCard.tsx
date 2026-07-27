@@ -62,7 +62,7 @@ function NoSplits({ message }: { message: string }) {
 }
 
 export function CheckpointSplitsCard({
-    hasCheckpoints, checkpoints, capTime, baseline, baselineTime, baselineLabel,
+    hasCheckpoints, checkpoints = [], capTime, baseline, baselineTime, baselineLabel,
     compareOptions, selectedCompareId, onSelectCompare, comparing,
 }: CheckpointSplitsCardProps) {
     const baseByZone = useMemo(
@@ -190,7 +190,7 @@ export function CheckpointSplitsCard({
                                         {isVisible('split') && (
                                             <DataTableCell align="right">
                                                 <span className="text-xs font-mono tabular-nums text-muted-foreground">
-                                                    {segment.toFixed(3)}
+                                                    {segment != null ? segment.toFixed(3) : '—'}
                                                 </span>
                                             </DataTableCell>
                                         )}

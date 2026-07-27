@@ -70,7 +70,7 @@ export function TeamDetailsPage({ teamId, userProfile, onExitToGallery }: TeamDe
     const onScroll = useNavScrollRestore(scrollRef, !loading)
 
     const isOwnTeam = team != null && myTeamId != null && myTeamId === team.id
-    const myMembership = team ? team.members.find(m => String(m.user) === String(myUserId)) : undefined
+    const myMembership = team ? (team.members ?? []).find(m => String(m.user) === String(myUserId)) : undefined
     const iInvited = myMembership?.status === 'invited'
     const iBlocked = myMembership?.status === 'blocked'
     const meMember = isOwnTeam ? myMembership : undefined
@@ -78,7 +78,7 @@ export function TeamDetailsPage({ teamId, userProfile, onExitToGallery }: TeamDe
     const isOwner = viewerRole === 'owner'
     const isManager = viewerRole === 'owner' || viewerRole === 'admin'
     const canLeave = isOwnTeam && !isOwner
-    const hasOtherActiveMembers = team ? team.members.some(m => m.status === 'active' && String(m.user) !== String(myUserId)) : false
+    const hasOtherActiveMembers = team ? (team.members ?? []).some(m => m.status === 'active' && String(m.user) !== String(myUserId)) : false
 
     const join = async () => {
         if (!accessToken || !team) return
@@ -208,13 +208,13 @@ export function TeamDetailsPage({ teamId, userProfile, onExitToGallery }: TeamDe
                                 <TeamActivityPanel
                                     accessToken={browseToken}
                                     teamId={team.id}
-                                    hasMembers={team.members.some(m => m.status === 'active')}
+                                    hasMembers={(team.members ?? []).some(m => m.status === 'active')}
                                     selfUserId={myUserId}
                                 />
                                 <TeamWorldRecordsPanel
                                     accessToken={browseToken}
                                     teamId={team.id}
-                                    memberIds={team.members.filter(m => m.status === 'active').map(m => m.user)}
+                                    memberIds={(team.members ?? []).filter(m => m.status === 'active').map(m => m.user)}
                                     selfUserId={myUserId}
                                 />
                             </div>

@@ -24,12 +24,12 @@ export function PersonalProgressSnapshot({ summary }: { summary: UserSummary | n
     }
 
     const stats = [
-        { label: 'Rank', value: summary.medals.rank > 0 ? `#${formatStat(summary.medals.rank)}` : 'Unranked' },
-        { label: 'Points', value: formatStat(summary.medals.points) },
-        { label: 'Certified', value: formatStat(summary.counts.certified_caps) },
-        { label: 'Unique Maps', value: formatStat(summary.counts.unique_maps) },
-        { label: 'Uncapped', value: formatStat(summary.counts.uncapped_maps) },
-        { label: 'Playtime', value: formatDurationCompact(summary.counts.total_playtime_seconds) },
+        { label: 'Rank', value: (summary.medals?.rank ?? 0) > 0 ? `#${formatStat(summary.medals?.rank)}` : 'Unranked' },
+        { label: 'Points', value: formatStat(summary.medals?.points) },
+        { label: 'Certified', value: formatStat(summary.counts?.certified_caps) },
+        { label: 'Unique Maps', value: formatStat(summary.counts?.unique_maps) },
+        { label: 'Uncapped', value: formatStat(summary.counts?.uncapped_maps) },
+        { label: 'Playtime', value: formatDurationCompact(summary.counts?.total_playtime_seconds) },
     ]
 
     return (

@@ -93,7 +93,7 @@ export function CapDetailPage({ capId, userProfile, onMapSelect }: CapDetailPage
     }, [capId])
 
     useEffect(() => {
-        if (!detail || detail.cap.id !== capId || defaultedFor.current === capId) return
+        if (!detail || detail?.cap?.id !== capId || defaultedFor.current === capId) return
         defaultedFor.current = capId
         setCompareCapId(nearestByTime(detail.compare_candidates, detail.cap.cap_time_seconds)?.id ?? null)
     }, [detail, capId])
@@ -134,7 +134,7 @@ export function CapDetailPage({ capId, userProfile, onMapSelect }: CapDetailPage
         SITE_NAME,
     )
 
-    const nextFaster = detail?.neighbors.above?.[0]
+    const nextFaster = detail?.neighbors?.above?.[0]
     const gapToNext = nextFaster && cap
         ? cap.cap_time_seconds - nextFaster.cap_time_seconds
         : null
@@ -180,7 +180,7 @@ export function CapDetailPage({ capId, userProfile, onMapSelect }: CapDetailPage
                         mapName={cap.map}
                         rank={detail.rank_on_map}
                         total={detail.total_on_map}
-                        deltaWr={detail.deltas.wr}
+                        deltaWr={detail.deltas?.wr ?? null}
                         gapToNext={gapToNext}
                         isWr={isWr}
                         teamRun={teamRun}

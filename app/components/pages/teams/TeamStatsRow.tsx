@@ -55,7 +55,7 @@ export function TeamStatsRow({ accessToken, team }: TeamStatsRowProps) {
 
     return (
         <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
-            <StatTile icon={Users2} label="Members" value={team.member_count.toLocaleString()} accent="text-accent-300" />
+            <StatTile icon={Users2} label="Members" value={fmt(team.member_count)} accent="text-accent-300" />
             <StatTile icon={Trophy} label="World Records" value={fmt(counts?.world_records)} accent="text-blue-300" loading={loading} />
             <StatTile icon={Flag} label="Total Caps" value={fmt(counts?.caps)} accent="text-amber-300" loading={loading} />
             <StatTile icon={CalendarDays} label="Created" value={team.added ? formatAddedDate(team.added) : '—'} accent="text-emerald-300" />

@@ -36,7 +36,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
 function goalTextFor(def: AchievementDefinition, tier: AchievementTier): string {
     return tier.is_all
         ? (def.goal_all ?? 'Complete it')
-        : (def.goal ?? 'Reach {n}').replace('{n}', tier.threshold.toLocaleString())
+        : (def.goal ?? 'Reach {n}').replace('{n}', (tier.threshold ?? 0).toLocaleString())
 }
 
 function remainingTextFor(
@@ -272,7 +272,7 @@ function AchievementRow({ def, progress, anonymous }: { def: AchievementDefiniti
     const [showTitles, setShowTitles] = useState(false)
     const Icon = ICON_MAP[def.icon] ?? Award
     const maxed = progress.maxed
-    const isBadge = def.tiers.length === 1            // single-tier "earn it" achievement
+    const isBadge = (def.tiers ?? []).length === 1    // single-tier "earn it" achievement
     const rIdx = progress.current_level - 1           // rarity index of current tier (-1 when locked)
     const rarity = progress.current_level >= 1 ? rarityOf(rIdx) : null
     const goal = progress.next_threshold ?? progress.max_threshold
@@ -318,8 +318,8 @@ function AchievementRow({ def, progress, anonymous }: { def: AchievementDefiniti
                     <div className="flex flex-col gap-1.5 w-60">
                         <div className="flex items-center justify-between text-[11px]">
                             <span className="font-mono tabular-nums text-foreground/90">
-                                {anonymous ? 'Sign in to track progress' : progress.current_value.toLocaleString()}
-                                {!anonymous && <span className="text-muted-foreground"> / {goal.toLocaleString()}</span>}
+                                {anonymous ? 'Sign in to track progress' : (progress.current_value ?? 0).toLocaleString()}
+                                {!anonymous && <span className="text-muted-foreground"> / {(goal ?? 0).toLocaleString()}</span>}
                             </span>
                             <span className={cn('font-semibold', maxed ? 'text-emerald-300' : 'text-muted-foreground')}>
                                 {maxed ? (isBadge ? 'Earned' : 'Complete') : `${progress.percent_to_next}%`}
@@ -330,13 +330,13 @@ function AchievementRow({ def, progress, anonymous }: { def: AchievementDefiniti
                             <div className="text-[10px] text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-0.5">
                                 <span>
                                     {progress.current.label}:{' '}
-                                    <span className="text-foreground/80 font-medium tabular-nums">{progress.current.value.toLocaleString()}</span>
+                                    <span className="text-foreground/80 font-medium tabular-nums">{(progress.current?.value ?? 0).toLocaleString()}</span>
                                 </span>
                                 {progress.current.extra && (
                                     <span className="flex items-center gap-1">
                                         <Snowflake className="size-2.5 text-sky-300/80" />
                                         {progress.current.extra.label}:{' '}
-                                        <span className="text-foreground/80 font-medium tabular-nums">{progress.current.extra.value.toLocaleString()}</span>
+                                        <span className="text-foreground/80 font-medium tabular-nums">{(progress.current?.extra?.value ?? 0).toLocaleString()}</span>
                                     </span>
                                 )}
                             </div>
@@ -359,7 +359,7 @@ function AchievementRow({ def, progress, anonymous }: { def: AchievementDefiniti
                 <div className="relative border-t border-hairline/5 px-5 py-3">
                     <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-2">Title rewards</div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-2">
-                        {def.tiers.map((tier, s) => {
+                        {(def.tiers ?? []).map((tier, s) => {
                             const earned = s <= progress.current_tier
                             const isNext = !progress.maxed && s === progress.current_tier + 1
                             const r = rarityOf(tier.level - 1)

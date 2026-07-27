@@ -24,6 +24,7 @@ import {
     fetchRushers,
     fetchWorldRecordProgression,
     fetchWorldRecordFilterOptions,
+    asStringArray,
 } from '@/app/utils/api'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { TeamHolders } from '@/app/components/shared/TeamHolders'
@@ -209,8 +210,42 @@ const TIME_BUCKET_BY_VALUE: Record<WrTimeBucket, { min?: number; max?: number }>
     Object.fromEntries(TIME_BUCKETS.map(b => [b.value, { min: b.min, max: b.max }])) as Record<WrTimeBucket, { min?: number; max?: number }>
 
 function timeBucketRange(v: WrTimeBucket): string {
-    const { min, max } = TIME_BUCKET_BY_VALUE[v]
-    return `${min ?? ''}-${max ?? ''}`
+    const bucket = TIME_BUCKET_BY_VALUE[v]
+    if (!bucket) return ''
+    return `${bucket.min ?? ''}-${bucket.max ?? ''}`
+}
+
+const KNOWN_WR_DIFFICULTY_VALUES = new Set<string>(DIFFICULTY_TIER_OPTIONS.map(([v]) => v))
+const KNOWN_TIME_BUCKET_VALUES = new Set<string>(TIME_BUCKETS.map(b => b.value))
+const KNOWN_TIMEFRAME_VALUES = new Set<string>(TIMEFRAME_OPTIONS.map(o => o.value))
+const KNOWN_WR_SORT_FIELDS = new Set<string>(['map', 'holder', 'time', 'difficulty', 'date'])
+
+const sanitizePresetFilters = (raw: Partial<Record<keyof WorldRecordsPresetFilters, unknown>>): WorldRecordsPresetFilters => ({
+    search: typeof raw.search === 'string' ? raw.search : '',
+    difficultyFilters: asStringArray(raw.difficultyFilters).filter((v): v is WrDifficultyTierValue => KNOWN_WR_DIFFICULTY_VALUES.has(v)),
+    holderFilters: asStringArray(raw.holderFilters),
+    timeFilters: asStringArray(raw.timeFilters).filter((v): v is WrTimeBucket => KNOWN_TIME_BUCKET_VALUES.has(v)),
+    yearFilters: asStringArray(raw.yearFilters),
+    timeframe: typeof raw.timeframe === 'string' && KNOWN_TIMEFRAME_VALUES.has(raw.timeframe) ? raw.timeframe as WrTimeframe : 'all',
+    favoritesOnly: Boolean(raw.favoritesOnly),
+    sortBy: typeof raw.sortBy === 'string' && KNOWN_WR_SORT_FIELDS.has(raw.sortBy) ? raw.sortBy as WorldRecordsSortField : DEFAULT_WORLD_RECORDS_STATE.sortBy,
+    sortDir: raw.sortDir === 'asc' ? 'asc' : 'desc',
+})
+
+const pickPresetFilters = (raw: Partial<Record<keyof WorldRecordsPresetFilters, unknown>>): Partial<WorldRecordsPresetFilters> => {
+    const sanitized = sanitizePresetFilters(raw)
+    const picked: Partial<WorldRecordsPresetFilters> = {}
+    for (const key of Object.keys(sanitized) as (keyof WorldRecordsPresetFilters)[]) {
+        if (key in raw) (picked as Record<string, unknown>)[key] = sanitized[key]
+    }
+    return picked
+}
+
+const presetFiltersValid = (raw: unknown): boolean => {
+    if (!raw || typeof raw !== 'object') return false
+    const r = raw as Record<string, unknown>
+    return asStringArray(r.difficultyFilters).every(v => KNOWN_WR_DIFFICULTY_VALUES.has(v))
+        && asStringArray(r.timeFilters).every(v => KNOWN_TIME_BUCKET_VALUES.has(v))
 }
 
 const PRESETS_KEY = 'utbt:worldRecordsPresets:v1'
@@ -343,7 +378,7 @@ export function WorldRecordsPage({
         [filterOptions],
     )
 
-    const [presets, setPresets] = useSyncedPresets<WorldRecordsPresetFilters>(PRESETS_KEY)
+    const [presets, setPresets] = useSyncedPresets<WorldRecordsPresetFilters>(PRESETS_KEY, undefined, presetFiltersValid)
     const [activePresetId, setActivePresetId] = useState<string | null>(null)
 
     const serverParams = useMemo<WorldRecordsServerParams>(() => {
@@ -364,7 +399,7 @@ export function WorldRecordsPage({
             difficulties: expandDifficultyTiers(state.difficultyFilters).join(',') || undefined,
             users: state.holderFilters.join(',') || undefined,
             years: state.yearFilters.join(',') || undefined,
-            timeRanges: state.timeFilters.map(timeBucketRange).join(',') || undefined,
+            timeRanges: state.timeFilters.map(timeBucketRange).filter(Boolean).join(',') || undefined,
             favoritesEmpty,
         }
     }, [isRushers, debouncedSearch, state.sortBy, state.sortDir, state.timeframe, state.difficultyFilters, state.holderFilters, state.timeFilters, state.yearFilters, state.favoritesOnly, favoriteMapNames])
@@ -570,7 +605,7 @@ export function WorldRecordsPage({
 
     const handleLoadPreset = (p: WorldRecordsPreset) => {
         setActivePresetId(p.id)
-        onStateChange(prev => ({ ...prev, ...p.filters, currentPage: 1, scrollTop: 0 }))
+        onStateChange(prev => ({ ...prev, ...pickPresetFilters(p.filters ?? {}), currentPage: 1, scrollTop: 0 }))
     }
 
     const handleDeletePreset = (p: WorldRecordsPreset) => {
@@ -907,7 +942,7 @@ export function WorldRecordsPage({
                     </div>
                     {isTeamRow ? (
                         <TeamHolders
-                            members={r.members!.map(m => ({
+                            members={(r.members ?? []).map(m => ({
                                 userId: m.user,
                                 alias: m.alias,
                                 activeTitle: m.active_title,

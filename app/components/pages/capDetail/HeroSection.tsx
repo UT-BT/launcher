@@ -11,8 +11,8 @@ import type { CapRecord, TeamRunStatus } from '@/app/utils/api'
 interface HeroSectionProps {
     cap: CapRecord
     mapName: string
-    rank: number
-    total: number
+    rank: number | null
+    total: number | null
     deltaWr: number | null
     gapToNext: number | null
     isWr: boolean
@@ -167,8 +167,8 @@ export function HeroSection({
                         ) : (
                             <>
                                 <MiniStat label="Rank">
-                                    <span className="text-foreground">#{rank}</span>{' '}
-                                    <span className="text-[10px] text-muted-foreground font-normal">of {total.toLocaleString()}</span>
+                                    <span className="text-foreground">{rank != null ? `#${rank}` : '—'}</span>{' '}
+                                    <span className="text-[10px] text-muted-foreground font-normal">of {total != null ? total.toLocaleString() : '—'}</span>
                                 </MiniStat>
                                 <MiniStat label="Δ WR">
                                     <span className={isWr ? 'text-muted-foreground' : deltaClass(deltaWr)}>

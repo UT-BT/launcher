@@ -20,7 +20,9 @@ export const DIFFICULTY_TIER_LABEL: Record<DifficultyTierValue, string> =
 export function expandDifficultyTiers(tiers: DifficultyTierValue[]): number[] {
     const out = new Set<number>()
     for (const t of tiers) {
-        const [lo, hi] = DIFFICULTY_TIER_RANGES[t]
+        const range = DIFFICULTY_TIER_RANGES[t]
+        if (!range) continue
+        const [lo, hi] = range
         for (let d = lo; d <= hi; d++) out.add(d)
     }
     return [...out].sort((a, b) => a - b)

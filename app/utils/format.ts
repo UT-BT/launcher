@@ -24,9 +24,16 @@ export function formatAddedDate(added: string): string {
 }
 
 function parseServerDate(added: string): Date {
+    if (/^[A-Za-z]{3},/.test(added.trim())) return new Date(added)
     const iso = added.includes('T') ? added : added.replace(' ', 'T')
     const withZone = /[zZ]|[+-]\d\d:?\d\d$/.test(iso) ? iso : `${iso}Z`
     return new Date(withZone)
+}
+
+export function parseApiDate(value: unknown): Date | null {
+    if (typeof value !== 'string' || value.trim() === '') return null
+    const d = parseServerDate(value)
+    return isNaN(d.getTime()) ? null : d
 }
 
 export function formatTimeAgo(added: string): string {
@@ -53,6 +60,7 @@ export function isNew(added: string): boolean {
     return new Date(added) >= cutoff
 }
 
-export function displayMapName(name: string): string {
+export function displayMapName(name: string | null | undefined): string {
+    if (typeof name !== 'string') return ''
     return name.replace('CTF-BT-', '').replace('CTF-BT+', '')
 }

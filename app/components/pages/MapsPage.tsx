@@ -11,7 +11,7 @@ import { Tooltip } from '@/app/components/ui/tooltip'
 import {
     UserProfile, Map, MapMetadata, MapReview, BestCap,
     fetchMaps, fetchMapsCount, fetchMapsMetadata, fetchMapsFuzzy, fetchAllMapReviews, fetchMapAuthors,
-    fetchBestCaps, fetchWorldRecordsForMaps,
+    fetchBestCaps, fetchWorldRecordsForMaps, asStringArray,
 } from '@/app/utils/api'
 
 import { MapReviewsModal } from '@/app/components/modals/MapReviewsModal'
@@ -361,6 +361,62 @@ const RECORD_TIME_MAX: Record<Exclude<RecordTimeTier, 'all' | 'over300'>, number
     sub300: 300,
 }
 
+const KNOWN_DIFFICULTY_VALUES = new Set<string>(Object.keys(DIFFICULTY_RANGES))
+const KNOWN_RATING_VALUES = new Set<string>(Object.keys(RATING_RANGES))
+const KNOWN_LUCK_VALUES = new Set<string>(Object.keys(LUCK_RANGES))
+const KNOWN_RECORD_TIME_VALUES = new Set<string>([...Object.keys(RECORD_TIME_MAX), 'over300'])
+const KNOWN_CAPPED_VALUES = new Set<string>([
+    'uncapped', 'capped', 'verified', 'casual', 'bronze', 'silver', 'gold', 'champion', 'world_record',
+])
+const KNOWN_RATED_VALUES = new Set<string>(['rated', 'unrated'])
+const KNOWN_SORT_FIELDS = new Set<string>([
+    'name', 'author', 'added', 'difficulty', 'world_record', 'pb', 'rating', 'my_rating', 'medal',
+])
+
+const sanitizePresetFilters = (raw: Partial<Record<keyof PresetFilters, unknown>>): PresetFilters => ({
+    search: typeof raw.search === 'string' ? raw.search : '',
+    authorFilters: asStringArray(raw.authorFilters),
+    tagFilters: asStringArray(raw.tagFilters),
+    yearFilters: asStringArray(raw.yearFilters),
+    difficultyFilters: asStringArray(raw.difficultyFilters).filter((v): v is DifficultyValue => KNOWN_DIFFICULTY_VALUES.has(v)),
+    ratingFilters: asStringArray(raw.ratingFilters).filter((v): v is RatingValue => KNOWN_RATING_VALUES.has(v)),
+    aestheticsFilters: asStringArray(raw.aestheticsFilters).filter((v): v is RatingValue => KNOWN_RATING_VALUES.has(v)),
+    learningFilters: asStringArray(raw.learningFilters).filter((v): v is RatingValue => KNOWN_RATING_VALUES.has(v)),
+    luckFilters: asStringArray(raw.luckFilters).filter((v): v is LuckValue => KNOWN_LUCK_VALUES.has(v)),
+    recordTimeFilters: asStringArray(raw.recordTimeFilters).filter((v): v is RecordTimeValue => KNOWN_RECORD_TIME_VALUES.has(v)),
+    cappedFilters: asStringArray(raw.cappedFilters).filter((v): v is CappedFilterValue => KNOWN_CAPPED_VALUES.has(v)),
+    ratedFilters: asStringArray(raw.ratedFilters).filter((v): v is RatedValue => KNOWN_RATED_VALUES.has(v)),
+    newOnly: Boolean(raw.newOnly),
+    favoritesOnly: Boolean(raw.favoritesOnly),
+    sortBy: typeof raw.sortBy === 'string' && KNOWN_SORT_FIELDS.has(raw.sortBy) ? raw.sortBy as SortField : DEFAULT_MAPS_STATE.sortBy,
+    sortDir: raw.sortDir === 'desc' ? 'desc' : 'asc',
+})
+
+const pickPresetFilters = (raw: Partial<Record<keyof PresetFilters, unknown>>): Partial<PresetFilters> => {
+    const sanitized = sanitizePresetFilters(raw)
+    const picked: Partial<PresetFilters> = {}
+    for (const key of Object.keys(sanitized) as (keyof PresetFilters)[]) {
+        if (key in raw) (picked as Record<string, unknown>)[key] = sanitized[key]
+    }
+    return picked
+}
+
+const presetFiltersValid = (raw: unknown): boolean => {
+    if (!raw || typeof raw !== 'object') return false
+    const r = raw as Record<string, unknown>
+    const enumKeys: [string, Set<string>][] = [
+        ['difficultyFilters', KNOWN_DIFFICULTY_VALUES],
+        ['ratingFilters', KNOWN_RATING_VALUES],
+        ['aestheticsFilters', KNOWN_RATING_VALUES],
+        ['learningFilters', KNOWN_RATING_VALUES],
+        ['luckFilters', KNOWN_LUCK_VALUES],
+        ['recordTimeFilters', KNOWN_RECORD_TIME_VALUES],
+        ['cappedFilters', KNOWN_CAPPED_VALUES],
+        ['ratedFilters', KNOWN_RATED_VALUES],
+    ]
+    return enumKeys.every(([key, known]) => asStringArray(r[key]).every(v => known.has(v)))
+}
+
 const RECORD_TIME_LABELS: Record<RecordTimeTier, string> = {
     all: 'Any time',
     sub15: 'Under 15s',
@@ -612,21 +668,27 @@ function mapHasMatchingTag(m: Map | MapMetadata, term: string): boolean {
 
 function isMapInDifficultyTier(difficulty: number, tier: DifficultyTier): boolean {
     if (tier === 'all') return true
-    const [min, max] = DIFFICULTY_RANGES[tier]
+    const range = DIFFICULTY_RANGES[tier]
+    if (!range) return false
+    const [min, max] = range
     return difficulty >= min && difficulty <= max
 }
 
 function isInRatingTier(value: number | undefined, tier: RatingTier): boolean {
     if (tier === 'all') return true
     if (value === undefined) return false
-    const [min, max] = RATING_RANGES[tier]
+    const range = RATING_RANGES[tier]
+    if (!range) return false
+    const [min, max] = range
     return value >= min && value <= max
 }
 
 function isInLuckTier(value: number | undefined, tier: LuckTier): boolean {
     if (tier === 'all') return true
     if (value === undefined) return false
-    const [min, max] = LUCK_RANGES[tier]
+    const range = LUCK_RANGES[tier]
+    if (!range) return false
+    const [min, max] = range
     return value >= min && value <= max
 }
 
@@ -655,7 +717,7 @@ export function MapsPage({
     const [error, setError] = useState<string | null>(null)
     const [searchResults, setSearchResults] = useState<Map[]>([])
     const [reviewsModalMap, setReviewsModalMap] = useState<string | null>(null)
-    const [presets, setPresets] = useSyncedPresets<PresetFilters>(PRESETS_KEY, migratePresetFilters)
+    const [presets, setPresets] = useSyncedPresets<PresetFilters>(PRESETS_KEY, migratePresetFilters, presetFiltersValid)
     const [presetsMenuOpen, setPresetsMenuOpen] = useState(false)
     const [columnVisibility, setColumnVisibility] = useState<Record<ColumnId, boolean>>(() => loadColumnVisibility())
     const [expandedTagMaps, setExpandedTagMaps] = useState<Set<string>>(() => new Set())
@@ -1392,7 +1454,7 @@ export function MapsPage({
         setActivePresetId(p.id)
         onStateChange(prev => ({
             ...prev,
-            ...p.filters,
+            ...pickPresetFilters(p.filters ?? {}),
             currentPage: 1,
             scrollTop: 0,
         }))

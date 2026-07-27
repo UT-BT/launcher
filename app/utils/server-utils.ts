@@ -1,4 +1,35 @@
-import { Server } from '@/app/components/pages/ServerBrowserPage'
+import { asStringArray, type ActiveTitle } from '@/app/utils/api'
+
+export interface ServerPlayer {
+    id: string
+    name: string
+    ping: number
+    time: number
+    team: number
+    deaths: number
+    is_spectator: boolean
+    alias?: string | null
+    active_title?: ActiveTitle | null
+}
+
+export interface Server {
+    id: string
+    ip: string
+    hostname: string
+    hostport: number
+    map_name: string
+    player_count: number
+    max_players: number
+    spectators: number
+    time_limit_minutes: number
+    remaining_time_seconds: number
+    goal_team_score: number
+    red_team_score: number
+    blue_team_score: number
+    certified_records: boolean
+    players: ServerPlayer[]
+    ping?: number
+}
 
 export type ServerType = 'Certified' | 'Duel' | 'Casual' | 'Unknown'
 export type ServerSortField =
@@ -18,6 +49,20 @@ export const DEFAULT_FILTERS: FilterState = {
     regions: [],
     capacity: [],
     favoritesOnly: false,
+}
+
+const SERVER_TYPE_VALUES = new Set<string>(['Certified', 'Duel', 'Casual', 'Unknown'])
+const CAPACITY_VALUES = new Set<string>(['empty', 'full', 'has-players'])
+
+export function sanitizeServerFilters(v: unknown): FilterState {
+    if (!v || typeof v !== 'object' || Array.isArray(v)) return { ...DEFAULT_FILTERS }
+    const raw = v as Record<string, unknown>
+    return {
+        types: asStringArray(raw.types).filter((t): t is ServerType => SERVER_TYPE_VALUES.has(t)),
+        regions: asStringArray(raw.regions),
+        capacity: asStringArray(raw.capacity).filter((c): c is CapacityValue => CAPACITY_VALUES.has(c)),
+        favoritesOnly: Boolean(raw.favoritesOnly),
+    }
 }
 
 export interface ServerPresetFilters {

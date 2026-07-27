@@ -300,6 +300,16 @@ const captureCurrentFilters = () => ({
 })
 ```
 
+Presets are account-synced, so another device or app version can write shapes
+or enum values this build doesn't know. `loadPresets` / `useSyncedPresets`
+(`app/utils/filterPresets.ts`) skip entries without a string `id`/`name` and an
+object `filters`, and accept an optional `validate` predicate (after `migrate`)
+— presets failing it are skipped, siblings survive. Pages must also sanitize on
+apply: never blind-spread `preset.filters` into state; filter enum arrays to
+the page's known values and validate sort fields (see `handleLoadPreset` in
+MapsPage / WorldRecordsPage / ServerBrowserPage and `sanitizeServerFilters` in
+`app/utils/server-utils.ts`).
+
 ## Tutorial state
 
 Use `useTutorialState(storageKey)` from

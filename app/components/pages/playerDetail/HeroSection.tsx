@@ -237,28 +237,28 @@ export function HeroSection({ userId, summary, loading, isSelf, chart, onChangeT
                 <HeroStat
                     icon={Activity}
                     label="Total Caps"
-                    value={loading ? null : counts ? counts.total_caps.toLocaleString() : '—'}
-                    subtext={counts ? `${counts.verified_caps.toLocaleString()} verified · ${counts.certified_caps.toLocaleString()} certified` : undefined}
+                    value={loading ? null : counts ? (counts.total_caps ?? 0).toLocaleString() : '—'}
+                    subtext={counts ? `${(counts.verified_caps ?? 0).toLocaleString()} verified · ${(counts.certified_caps ?? 0).toLocaleString()} certified` : undefined}
                     accent="text-blue-300"
                 />
                 <HeroStat
                     icon={MapIcon}
                     label="Maps Capped"
-                    value={loading ? null : counts ? counts.unique_maps.toLocaleString() : '—'}
-                    subtext={counts ? `${counts.uncapped_maps.toLocaleString()} left` : undefined}
+                    value={loading ? null : counts ? (counts.unique_maps ?? 0).toLocaleString() : '—'}
+                    subtext={counts ? `${(counts.uncapped_maps ?? 0).toLocaleString()} left` : undefined}
                     accent="text-foreground"
                 />
                 <HeroStat
                     icon={Trophy}
                     label="World Records"
-                    value={loading ? null : counts ? counts.wr_count.toLocaleString() : '—'}
+                    value={loading ? null : counts ? (counts.wr_count ?? 0).toLocaleString() : '—'}
                     accent="text-yellow-300"
                 />
                 <HeroStat
                     icon={Clock}
                     label="Total Playtime"
-                    value={loading ? null : counts ? `${Math.round(counts.total_playtime_seconds / 3600).toLocaleString()} h` : '—'}
-                    subtext={counts && counts.spectator_playtime_seconds > 0
+                    value={loading ? null : counts ? `${Math.round((counts.total_playtime_seconds ?? 0) / 3600).toLocaleString()} h` : '—'}
+                    subtext={counts && (counts.spectator_playtime_seconds ?? 0) > 0
                         ? `${formatHoursShort(counts.spectator_playtime_seconds)} spec`
                         : undefined}
                     accent="text-amber-300"
@@ -266,7 +266,7 @@ export function HeroSection({ userId, summary, loading, isSelf, chart, onChangeT
                 <HeroStat
                     icon={MessageSquare}
                     label="Reviews"
-                    value={loading ? null : counts ? counts.map_review_count.toLocaleString() : '—'}
+                    value={loading ? null : counts ? (counts.map_review_count ?? 0).toLocaleString() : '—'}
                     accent="text-purple-300"
                 />
             </div>

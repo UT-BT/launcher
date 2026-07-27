@@ -5,8 +5,8 @@ import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
 import type { ActiveTitle, CapNeighbor } from '@/app/utils/api'
 
 interface RankContextCardProps {
-    rank: number
-    total: number
+    rank: number | null
+    total: number | null
     capTime: number
     capUser: string | number
     capAlias?: string | null
@@ -16,7 +16,7 @@ interface RankContextCardProps {
 }
 
 interface NeighborRowProps {
-    rank: number
+    rank: number | null
     userId: string | number
     alias?: string | null
     title?: ActiveTitle | null
@@ -33,7 +33,7 @@ function NeighborRow({ rank, userId, alias, title, time, capId, highlight, curre
             'flex items-center gap-2 px-3 py-2 rounded-lg',
             highlight ? 'bg-accent-500/10 border border-accent-500/30' : 'hover:bg-hairline/[0.03]',
         )}>
-            <span className="w-8 text-xs font-bold font-mono text-muted-foreground tabular-nums shrink-0">#{rank}</span>
+            <span className="w-8 text-xs font-bold font-mono text-muted-foreground tabular-nums shrink-0">{rank != null ? `#${rank}` : '—'}</span>
             <div className="min-w-0 flex-1">
                 <PlayerInfo userId={userId} alias={alias} title={title} size="sm" highlight={isYou} showYouBadge={isYou} />
             </div>
@@ -47,8 +47,8 @@ function NeighborRow({ rank, userId, alias, title, time, capId, highlight, curre
 export function RankContextCard({
     rank, total, capTime, capUser, capAlias, capTitle, neighbors, currentUserId,
 }: RankContextCardProps) {
-    const above = neighbors.above ?? []
-    const below = neighbors.below ?? []
+    const above = neighbors?.above ?? []
+    const below = neighbors?.below ?? []
 
     let topRows: CapNeighbor[]
     let bottomRows: CapNeighbor[]
@@ -83,8 +83,8 @@ export function RankContextCard({
             </div>
 
             <div className="px-4 py-4 flex items-baseline gap-2">
-                <span className="text-3xl font-bold font-mono tabular-nums text-foreground">#{rank}</span>
-                <span className="text-sm text-muted-foreground">of {total.toLocaleString()}</span>
+                <span className="text-3xl font-bold font-mono tabular-nums text-foreground">{rank != null ? `#${rank}` : '—'}</span>
+                <span className="text-sm text-muted-foreground">of {total != null ? total.toLocaleString() : '—'}</span>
             </div>
 
             <div className="px-2 pb-3 space-y-1">

@@ -62,7 +62,7 @@ function StatChip({ label, value }: { label: string; value: number }) {
   return (
     <span className="inline-flex items-center gap-1.5 rounded-md border border-hairline/10 bg-card/30 px-2.5 py-1 text-xs">
       <span className="text-muted-foreground uppercase tracking-wider text-[10px]">{label}</span>
-      <span className="tabular-nums font-semibold text-foreground">{value.toLocaleString()}</span>
+      <span className="tabular-nums font-semibold text-foreground">{(value ?? 0).toLocaleString()}</span>
     </span>
   )
 }

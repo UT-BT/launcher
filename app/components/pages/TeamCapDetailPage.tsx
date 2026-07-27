@@ -122,7 +122,7 @@ function TeamRankContextCard({
                             <span className="w-8 text-xs font-bold font-mono text-muted-foreground tabular-nums shrink-0">#{rowRank}</span>
                             <div className="min-w-0 flex-1">
                                 <TeamHolders
-                                    members={entry.members.map(m => ({
+                                    members={(entry.members ?? []).map(m => ({
                                         userId: m.user,
                                         alias: m.alias,
                                         activeTitle: m.active_title ?? null,
@@ -221,7 +221,7 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
 
     const downloadAllDemos = async () => {
         if (!detail || demoBatch) return
-        const withDemos = detail.members.filter(m => m.has_demo)
+        const withDemos = (detail.members ?? []).filter(m => m.has_demo)
         if (withDemos.length === 0) return
         setDemoBatch({ total: withDemos.length, done: 0 })
         for (const member of withDemos) {
@@ -243,7 +243,7 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
         if (!detail) return
         const req = ++compareReqRef.current
         setCompareState('resolving')
-        const eligible = detail.members.filter(member => member.has_demo)
+        const eligible = (detail.members ?? []).filter(member => member.has_demo)
         const resolved = await mapWithConcurrency(eligible, 3, async member => {
             if (member.cap_time_seconds == null) return null
             const url = await resolveCompareVideoUrl(member.cap_id)

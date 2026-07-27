@@ -12,7 +12,7 @@ not_here:
   - "how UI state persists in localStorage → state-patterns.md"
   - "the procedure to wire a new endpoint into the UI → skill: consume-api-data"
 sections: [backend-api, errors, admin-api, changing-a-map-screenshot, cap-detail-page-endpoints, world-records-page-endpoints, team-maps-and-team-runs, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites, account-state-and-badges]
-last_verified: 2026-07-26
+last_verified: 2026-07-27
 verify_against: [app/utils/api.ts, app/utils/patreon.ts, app/utils/server-utils.ts]
 ---
 
@@ -25,6 +25,13 @@ The launcher reads its data over HTTPS from `https://api.utbt.net` (prod) or
 don't hand-roll `fetch` calls in components.
 
 Responses use a `{ success, data }` envelope; the helpers unwrap it for you.
+The server may omit the `data` key entirely on empty results, serialize absent
+numerics as empty strings, and send `{}` for absent nested objects — fetchers
+must normalise those at the fetch layer, never in components. Use the exported
+coercion helpers (`asNum`, `asArray`, `asNonEmptyObj`, `asStr`) plus `apiGetOr`
+(fallback when `data` is absent) and follow the `normaliseCapItAllRows` /
+`fetchUserSummary` pattern when adding a fetcher. Dates arrive in several
+formats; parse them with `parseApiDate` from `app/utils/format.ts`.
 When a launcher need exceeds what the API exposes, get the field added to the
 API rather than working around it in the renderer (the
 [`consume-api-data` skill](../.claude/skills/consume-api-data/SKILL.md) walks the
