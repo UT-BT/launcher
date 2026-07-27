@@ -13,7 +13,7 @@ const selectClass = "flex h-9 w-full @md/panel:w-[220px] rounded-md border borde
 
 export function LauncherGeneralSettings() {
     const [uiScale, setUiScale] = useState(100)
-    const { state, check, download, install, setAllowPrerelease } = useUpdater()
+    const { state, check, download, install } = useUpdater()
 
     const [minimizeAction, setMinimizeAction] = useState<MinimizeAction>('taskbar')
     const [closeAction, setCloseAction] = useState<CloseAction>('quit')
@@ -206,15 +206,6 @@ export function LauncherGeneralSettings() {
                     >
                         {updateAction.label}
                     </Button>
-                </SettingsRow>
-                <SettingsRow
-                    label="Include release candidates"
-                    description="Opt in to early-access RC builds. RC versions may be unstable; disable to stay on stable releases only."
-                >
-                    <Switch
-                        checked={state.allowPrerelease}
-                        onCheckedChange={(v) => { void setAllowPrerelease(v) }}
-                    />
                 </SettingsRow>
             </SettingsSection>
         </div>

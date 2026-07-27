@@ -31,23 +31,24 @@ jobs:
           node-version: 20
           cache: npm
 
-      - name: Derive version, tag, and whether to release
+      - name: Derive stable version, tag, and whether to release
         id: meta
         shell: pwsh
         run: |
           $pkg = Get-Content package.json | ConvertFrom-Json
           $version = $pkg.version
           if (-not $version) { throw "package.json version is empty" }
+          if ($version -notmatch '^\d+\.\d+\.\d+$') {
+            throw "Only stable X.Y.Z versions can be released; got '$version'. Test changes on staging before release."
+          }
           $tag = "v$version"
-          $isPrerelease = $version -match '-'
           $tagExists = [bool](git tag -l $tag)
           $release = if ($tagExists) { 'false' } else { 'true' }
           "version=$version"         | Out-File -FilePath $env:GITHUB_OUTPUT -Append
           "tag=$tag"                 | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-          "prerelease=$isPrerelease" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
           "release=$release"         | Out-File -FilePath $env:GITHUB_OUTPUT -Append
           if ($release -eq 'true') {
-            Write-Host "Releasing $tag (prerelease: $isPrerelease)"
+            Write-Host "Releasing stable version $tag"
           } else {
             Write-Host "Tag $tag already exists; this push does not bump the version, so nothing to release."
           }
@@ -79,8 +80,8 @@ jobs:
           target_commitish: ${{ github.sha }}
           name: UTBT Launcher v${{ steps.meta.outputs.version }}
           generate_release_notes: true
-          prerelease: ${{ steps.meta.outputs.prerelease == 'true' }}
-          make_latest: ${{ steps.meta.outputs.prerelease == 'true' && 'false' || 'true' }}
+          prerelease: false
+          make_latest: true
           files: |
             dist/*.exe
             dist/*.blockmap

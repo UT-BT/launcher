@@ -21,7 +21,6 @@ const updaterStateSchema = z.object({
   transferred: z.number().optional(),
   total: z.number().optional(),
   error: z.string().optional(),
-  allowPrerelease: z.boolean(),
   currentVersion: z.string(),
   lastCheckTrigger: z.union([z.literal('auto'), z.literal('manual'), z.null()]),
   lastCheckedAt: z.string().optional(),
@@ -43,10 +42,6 @@ export const updaterIpcSchema = {
   'updater:getState': {
     args: z.tuple([]),
     return: updaterStateSchema,
-  },
-  'updater:setAllowPrerelease': {
-    args: z.tuple([z.boolean()]),
-    return: z.void(),
   },
 }
 

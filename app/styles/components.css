@@ -326,13 +326,6 @@
   color: rgb(239, 68, 68);
 }
 
-.update-modal-rc-warning {
-  font-size: 0.75rem;
-  color: rgba(251, 191, 36, 0.9);
-  margin-bottom: 0.75rem;
-  font-style: italic;
-}
-
 .update-modal-progress-container {
   margin-bottom: 0.75rem;
   display: flex;

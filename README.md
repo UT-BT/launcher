@@ -2,7 +2,6 @@
 
 # UTBT Launcher
 [![stable](https://img.shields.io/github/v/release/UT-BT/launcher?sort=semver&label=stable)](https://github.com/UT-BT/launcher/releases/latest)
-[![rc](https://img.shields.io/github/v/release/UT-BT/launcher?include_prereleases&sort=semver&label=rc&color=orange)](https://github.com/UT-BT/launcher/releases)
 
 Gone are the days of finding ISOs, manually downloading and applying patches, and trying to figure out what settings you need to get involved in the BunnyTrack community.
 

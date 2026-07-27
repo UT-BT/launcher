@@ -4,7 +4,6 @@ import { capabilities } from '@/app/platform'
 
 const DEFAULT_STATE: UpdaterStateSnapshot = {
   phase: 'idle',
-  allowPrerelease: false,
   currentVersion: '',
   lastCheckTrigger: null,
 }
@@ -17,7 +16,6 @@ type UpdaterContextValue = {
   check: (manual?: boolean) => Promise<void>
   download: () => Promise<void>
   install: () => Promise<void>
-  setAllowPrerelease: (value: boolean) => Promise<void>
 }
 
 const UpdaterContext = createContext<UpdaterContextValue | null>(null)
@@ -70,11 +68,6 @@ export function UpdaterProvider({ children }: { children: ReactNode }) {
     await window.conveyor.updater.quitAndInstall()
   }, [])
 
-  const setAllowPrerelease = useCallback(async (value: boolean) => {
-    if (!capabilities.updater) return
-    await window.conveyor.updater.setAllowPrerelease(value)
-  }, [])
-
   const openModal = useCallback(() => setModalOpen(true), [])
   const closeModal = useCallback(() => setModalOpen(false), [])
 
@@ -86,8 +79,7 @@ export function UpdaterProvider({ children }: { children: ReactNode }) {
     check,
     download,
     install,
-    setAllowPrerelease,
-  }), [state, isModalOpen, openModal, closeModal, check, download, install, setAllowPrerelease])
+  }), [state, isModalOpen, openModal, closeModal, check, download, install])
 
   return <UpdaterContext.Provider value={value}>{children}</UpdaterContext.Provider>
 }
