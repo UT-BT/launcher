@@ -3,8 +3,6 @@ import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshC
 import {
     fetchAchievementDefinitions,
     fetchMyAchievements,
-    type AchievementDefinition,
-    type AchievementProgress,
     type UserProfile,
 } from '@/app/utils/api'
 import {
@@ -14,33 +12,9 @@ import {
     type AchievementStatusFilter,
 } from './achievements/AchievementsShowcase'
 
+import type { AchievementsPageCaches, AchievementsPageState } from './AchievementsPage.types'
+
 export type { AchievementStatusFilter }
-
-export interface AchievementsPageState {
-    statusFilter: AchievementStatusFilter
-    scrollTop: number
-}
-
-export type AchievementsCacheStatus = 'idle' | 'loading' | 'ready' | 'error'
-
-export interface AchievementsPageCaches {
-    definitions: AchievementDefinition[]
-    progress: AchievementProgress[]
-    lastRefreshIso: string | null
-    status: AchievementsCacheStatus
-}
-
-export const DEFAULT_ACHIEVEMENTS_STATE: AchievementsPageState = {
-    statusFilter: 'all',
-    scrollTop: 0,
-}
-
-export const DEFAULT_ACHIEVEMENTS_CACHES: AchievementsPageCaches = {
-    definitions: [],
-    progress: [],
-    lastRefreshIso: null,
-    status: 'idle',
-}
 
 interface AchievementsPageProps {
     userProfile?: UserProfile

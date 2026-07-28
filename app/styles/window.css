@@ -1,5 +1,4 @@
 :root {
-  color-scheme: dark;
   --window-icon-height: 14px;
   --window-title-margin: 32px;
   --window-titlebar-height: 26px;
@@ -27,7 +26,6 @@
 }
 
 :root:not(.dark) {
-  color-scheme: light;
   --window-titlebar-font-weight: 500;
   --window-c-popup-font-weight: 500;
 

@@ -66,6 +66,7 @@ import { usePatreonTier } from '@/app/utils/patreon'
 import { PatreonBadge } from '@/app/components/shared/PatreonBadge'
 import { isStaff } from '@/app/utils/roles'
 import { IS_WEB, usePlatform } from '@/app/platform'
+import { prefetchPage } from '@/app/components/main/pageLoaders'
 
 function buildNavSections(userProfile?: UserProfile): NavSection[] {
     if (!isStaff(userProfile)) return BASE_NAV_SECTIONS
@@ -319,6 +320,8 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                                 return (
                                 <button
                                     key={item.id}
+                                    onPointerEnter={() => prefetchPage(item.id)}
+                                    onFocus={() => prefetchPage(item.id)}
                                     onClick={() => changeView(item.id)}
                                     className={cn(
                                         "w-full flex items-center gap-3 px-4 py-3 [@media(max-height:800px)]:py-2 rounded-lg transition-all duration-200 cursor-pointer group relative overflow-hidden",

@@ -5,7 +5,7 @@ import { Modal } from '@/app/components/ui/modal'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
 import {
     fetchMyInvitations, fetchMyTeam,
-    type TeamCore, type TeamDetail, type TeamSort, type UserProfile,
+    type TeamDetail, type TeamSort, type UserProfile,
 } from '@/app/utils/api'
 import { capabilities } from '@/app/platform'
 import { CreateTeamForm } from './teams/CreateTeamForm'
@@ -14,37 +14,7 @@ import { InvitationsSection } from './teams/InvitationsSection'
 import { ErrorBanner, refreshUserProfile, teamErrorMessage } from './teams/teamsShared'
 import { requestLogin } from '@/app/components/shared/AuthRequiredModal'
 
-export interface TeamsPageState {
-    directorySearch: string
-    directoryPage: number
-    directoryAccess: TeamAccessFilter
-    directorySort: TeamSort
-    directorySortDir: 'asc' | 'desc'
-    scrollTop: number
-}
-
-export interface TeamsPageCaches {
-    myTeam: TeamDetail | null
-    invitations: TeamCore[]
-    loaded: boolean
-    lastRefreshIso: string | null
-}
-
-export const DEFAULT_TEAMS_STATE: TeamsPageState = {
-    directorySearch: '',
-    directoryPage: 1,
-    directoryAccess: 'all',
-    directorySort: 'added',
-    directorySortDir: 'asc',
-    scrollTop: 0,
-}
-
-export const DEFAULT_TEAMS_CACHES: TeamsPageCaches = {
-    myTeam: null,
-    invitations: [],
-    loaded: false,
-    lastRefreshIso: null,
-}
+import type { TeamsPageCaches, TeamsPageState } from './TeamsPage.types'
 
 interface TeamsPageProps {
     userProfile?: UserProfile

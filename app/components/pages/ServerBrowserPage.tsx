@@ -14,12 +14,17 @@ import { cn } from '@/lib/utils'
 import { useLogger } from '@/app/hooks/use-logger'
 import {
     CapacityValue, DEFAULT_FILTERS, FilterState, ServerPreset, ServerPresetFilters,
-    ServerSortField, ServerType, SortDir, filterServers, getGameStatusText, getRegionFlag,
+    ServerSortField, ServerType, filterServers, getGameStatusText, getRegionFlag,
     getServerRegion, getServerType, rememberRecentServer, sanitizeServerFilters, sortServers,
     trimServerName, type Server, type ServerPlayer,
 } from '@/app/utils/server-utils'
 
 export type { Server }
+import type {
+    ServerBrowserCaches,
+    ServerBrowserState,
+    ServerColumnId,
+} from './ServerBrowserPage.types'
 import { ErrorModal } from '@/app/components/ErrorModal'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import { Button } from '@/app/components/ui/button'
@@ -43,25 +48,6 @@ import {
 } from '@/app/components/ui/dropdown-menu'
 
 type Player = ServerPlayer
-
-export type ServerColumnId =
-    | 'thumbnail' | 'type' | 'name' | 'map' | 'region' | 'ping'
-    | 'players' | 'spectators' | 'status' | 'actions'
-
-export interface ServerBrowserState {
-    filters: FilterState
-    sortBy: ServerSortField
-    sortDir: SortDir
-    filtersPanelOpen: boolean
-    columnVisibility: Record<ServerColumnId, boolean>
-    columnOrder: ServerColumnId[]
-    scrollTop: number
-}
-
-export interface ServerBrowserCaches {
-    servers: Server[]
-    lastRefreshIso: string | null
-}
 
 const SERVER_COLUMN_LABELS: Record<ServerColumnId, string> = {
     thumbnail: 'Thumbnail',
@@ -89,23 +75,6 @@ const COLUMN_LAYOUT: Record<ServerColumnId, { width?: string; align?: 'left' | '
     actions: { width: '12rem', align: 'center' },
 }
 
-const DEFAULT_COLUMN_ORDER: ServerColumnId[] = [
-    'thumbnail', 'type', 'name', 'map', 'region', 'ping', 'players', 'spectators', 'status', 'actions',
-]
-
-const DEFAULT_COLUMN_VISIBILITY: Record<ServerColumnId, boolean> = {
-    thumbnail: true,
-    type: true,
-    name: true,
-    map: true,
-    region: true,
-    ping: true,
-    players: true,
-    spectators: true,
-    status: true,
-    actions: true,
-}
-
 const REQUIRED_COLUMNS: ReadonlySet<ServerColumnId> = new Set(['name', 'actions'])
 
 const RESPONSIVE_REQUIRED_COLUMNS: ReadonlySet<ServerColumnId> = new Set([
@@ -127,21 +96,6 @@ const SORTABLE_COLUMNS: Partial<Record<ServerColumnId, ServerSortField>> = {
     ping: 'ping',
     players: 'players',
     spectators: 'spectators',
-}
-
-export const DEFAULT_SERVERS_STATE: ServerBrowserState = {
-    filters: DEFAULT_FILTERS,
-    sortBy: 'players',
-    sortDir: 'desc',
-    filtersPanelOpen: false,
-    columnVisibility: DEFAULT_COLUMN_VISIBILITY,
-    columnOrder: DEFAULT_COLUMN_ORDER,
-    scrollTop: 0,
-}
-
-export const DEFAULT_SERVERS_CACHES: ServerBrowserCaches = {
-    servers: [],
-    lastRefreshIso: null,
 }
 
 const SPECTATOR_BOT_ID = '1348765109580861534'

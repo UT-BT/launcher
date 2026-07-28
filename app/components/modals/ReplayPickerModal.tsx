@@ -12,7 +12,7 @@ import {
     fetchMapLeaderboard, fetchTeamMapLeaderboard, fetchDemoStatus, getFirstPersonVideoUrl,
     LeaderboardEntry, TeamLeaderboardEntry, MapMetadata,
 } from '@/app/utils/api'
-import { computeMedalTier, TIER_ICONS, TIER_LABELS, MedalTier } from '@/app/components/pages/MapsPage'
+import { computeMedalTier, TIER_ICONS, TIER_LABELS, type MedalTier } from '@/app/components/pages/maps/medals'
 import { formatCapTime, displayMapName } from '@/app/utils/format'
 
 interface ReplayPickerModalProps {

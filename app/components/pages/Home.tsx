@@ -6,7 +6,7 @@ import {
     Summary, SummaryWorldRecord, HotMap, NewsArticle, NewsCategoryDef,
     UserSummary, MedalHuntOpportunity, PendingReviewsPage,
 } from '@/app/utils/api'
-import type { AchievementsPageCaches } from '@/app/components/pages/AchievementsPage'
+import type { AchievementsPageCaches } from '@/app/components/pages/AchievementsPage.types'
 import { Button } from '@/app/components/ui/button'
 import { Modal } from '@/app/components/ui/modal'
 import { ReviewModal } from '@/app/components/modals/ReviewModal'
@@ -15,7 +15,7 @@ import { ReplayVideoModal } from '@/app/components/shared/ReplayVideoModal'
 import { useReplayWatch } from '@/app/hooks/useReplayWatch'
 import { useRefreshCooldown } from '@/app/hooks/useRefreshCooldown'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
-import type { Server } from '@/app/components/pages/ServerBrowserPage'
+import type { Server } from '@/app/utils/server-utils'
 import {
     forgetRecentServer, readRecentServers, rememberRecentServer,
     type RecentServerEntry,

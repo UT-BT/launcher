@@ -51,53 +51,35 @@ import { formatCapTime, formatAddedDate, displayMapName } from '@/app/utils/form
 import { difficultyTextColor } from '@/app/utils/scoreColors'
 import {
     DIFFICULTY_TIER_OPTIONS, DIFFICULTY_TIER_LABEL, expandDifficultyTiers,
-    type DifficultyTierValue,
 } from '@/app/utils/difficulty'
 import { persistPresets, newPresetId, presetFiltersMatch, useSyncedPresets } from '@/app/utils/filterPresets'
 
-export type WorldRecordsMode = 'records' | 'rushers'
-export type WorldRecordsSortField = 'map' | 'holder' | 'time' | 'difficulty' | 'date'
-export type WorldRecordsSortDir = 'asc' | 'desc'
-export type WrDifficultyTierValue = DifficultyTierValue
-export type WrTimeframe = 'all' | '7d' | '30d' | '90d' | '1y'
-export type WrTimeBucket = 'u30' | '30-60' | '60-120' | '120-300' | 'o300'
-export type WorldRecordsColumnId = 'map' | 'holder' | 'time' | 'difficulty' | 'date' | 'actions'
+import {
+    DEFAULT_WORLD_RECORDS_STATE,
+    type WorldRecordsColumnId,
+    type WorldRecordsMode,
+    type WorldRecordsPageCaches,
+    type WorldRecordsPageState,
+    type WorldRecordsPresetFilters,
+    type WorldRecordsSortDir,
+    type WorldRecordsSortField,
+    type WrDifficultyTierValue,
+    type WrTimeBucket,
+    type WrTimeframe,
+} from './WorldRecordsPage.types'
 
-export interface WorldRecordsPageState {
-    mode: WorldRecordsMode
-    search: string
-    difficultyFilters: WrDifficultyTierValue[]
-    holderFilters: string[]
-    timeFilters: WrTimeBucket[]
-    yearFilters: string[]
-    timeframe: WrTimeframe
-    favoritesOnly: boolean
-    sortBy: WorldRecordsSortField
-    sortDir: WorldRecordsSortDir
-    columnVisibility: Record<WorldRecordsColumnId, boolean>
-    columnOrder: WorldRecordsColumnId[]
-    currentPage: number
-    pageSizePreference: number | 'auto'
-    filtersPanelOpen: boolean
-    scrollTop: number
-}
-
-export type WorldRecordsPresetFilters = Pick<WorldRecordsPageState,
-    'search' | 'difficultyFilters' | 'holderFilters' | 'timeFilters' | 'yearFilters'
-    | 'timeframe' | 'favoritesOnly' | 'sortBy' | 'sortDir'>
+export type {
+    WorldRecordsColumnId,
+    WorldRecordsMode,
+    WorldRecordsPresetFilters,
+    WorldRecordsSortDir,
+    WorldRecordsSortField,
+    WrDifficultyTierValue,
+    WrTimeBucket,
+    WrTimeframe,
+} from './WorldRecordsPage.types'
 
 type WorldRecordsPreset = FilterPreset<WorldRecordsPresetFilters>
-
-export interface WorldRecordsPageCaches {
-    recordRows: WorldRecord[]
-    recordTotal: number
-    rusherRows: RusherRow[]
-    rusherTotal: number
-    totalRecords: number
-    maxRusherCount: number
-    querySig: string | null
-    lastRefreshIso: string | null
-}
 
 export const WORLD_RECORDS_COLUMN_LABELS: Record<WorldRecordsColumnId, string> = {
     map: 'Map',
@@ -107,8 +89,6 @@ export const WORLD_RECORDS_COLUMN_LABELS: Record<WorldRecordsColumnId, string> =
     date: 'Date Set',
     actions: 'Actions',
 }
-
-const DEFAULT_COLUMN_ORDER: WorldRecordsColumnId[] = ['map', 'holder', 'time', 'difficulty', 'date', 'actions']
 
 const REQUIRED_COLUMNS: ReadonlySet<WorldRecordsColumnId> = new Set(['map', 'holder', 'time'])
 
@@ -137,45 +117,6 @@ const RUSHER_COLUMNS: ResponsiveColumn[] = [
 ]
 
 const RUSHER_COLUMN_IDS: RusherColumnId[] = RUSHER_COLUMNS.map(c => c.id as RusherColumnId)
-
-const DEFAULT_COLUMN_VISIBILITY: Record<WorldRecordsColumnId, boolean> = {
-    map: true,
-    holder: true,
-    time: true,
-    difficulty: true,
-    date: true,
-    actions: true,
-}
-
-export const DEFAULT_WORLD_RECORDS_STATE: WorldRecordsPageState = {
-    mode: 'records',
-    search: '',
-    difficultyFilters: [],
-    holderFilters: [],
-    timeFilters: [],
-    yearFilters: [],
-    timeframe: 'all',
-    favoritesOnly: false,
-    sortBy: 'date',
-    sortDir: 'desc',
-    columnVisibility: DEFAULT_COLUMN_VISIBILITY,
-    columnOrder: DEFAULT_COLUMN_ORDER,
-    currentPage: 1,
-    pageSizePreference: 'auto',
-    filtersPanelOpen: false,
-    scrollTop: 0,
-}
-
-export const DEFAULT_WORLD_RECORDS_CACHES: WorldRecordsPageCaches = {
-    recordRows: [],
-    recordTotal: 0,
-    rusherRows: [],
-    rusherTotal: 0,
-    totalRecords: 0,
-    maxRusherCount: 0,
-    querySig: null,
-    lastRefreshIso: null,
-}
 
 const MODES: { value: WorldRecordsMode; label: string; icon: LucideIcon }[] = [
     { value: 'records', label: 'Records', icon: ListOrdered },

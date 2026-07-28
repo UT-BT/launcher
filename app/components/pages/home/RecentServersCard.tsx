@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Eye, Minus, Play, Server as ServerIcon } from 'lucide-react'
 import { Tooltip } from '@/app/components/ui/tooltip'
-import type { Server } from '@/app/components/pages/ServerBrowserPage'
+import type { Server } from '@/app/utils/server-utils'
 import {
     getRegionFlag, getServerRegion, trimServerName, type RecentServerEntry,
 } from '@/app/utils/server-utils'
