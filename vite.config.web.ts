@@ -96,5 +96,26 @@ export default defineConfig({
     outDir: resolve(__dirname, 'dist-web'),
     emptyOutDir: true,
     manifest: true,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          // Exactly one pinned chunk, and only the packages that every page
+          // already needs. The site redeploys on every push to main, so holding
+          // React still across a deploy is worth ~45KB gzip to returning users.
+          //
+          // Do NOT widen this to `id.includes('node_modules')`. That would sweep
+          // recharts, framer-motion and react-markdown into a chunk the entry
+          // statically imports and modulepreloads, undoing every split above and
+          // making the first paint bigger, not smaller.
+          //
+          // radix stays in the same chunk as react-dom on purpose: splitting a
+          // module-scope React consumer away from react-dom is the classic cause
+          // of a production-only "Cannot access '...' before initialization".
+          if (/node_modules[\\/](react|react-dom|scheduler|@radix-ui)[\\/]/.test(id)) {
+            return 'vendor-react'
+          }
+        },
+      },
+    },
   },
 })
