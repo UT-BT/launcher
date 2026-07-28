@@ -10,7 +10,7 @@ not_here:
   - "IPC channel contract → lib/conveyor/README.md"
   - "build commands reference → agents/build.md"
 sections: [overview, platform-layer, capability-gates, web-auth, anonymous-browsing, shareable-urls, responsive-layout, performance, build, seo-and-link-previews, hosting-note]
-last_verified: 2026-07-27
+last_verified: 2026-07-28
 verify_against:
   - app/public/route-contract.json
   - app/components/navigation/useDocumentMeta.ts
@@ -21,7 +21,8 @@ verify_against:
   - app/platform/gateway.ts
   - app/platform/downloads.ts
   - app/platform/web/auth-web.ts
-  - app/renderer.tsx
+  - vite.entry.ts
+  - app/components/main/pageLoaders.ts
   - app/components/navigation/NavHistoryBar.tsx
   - app/components/splash/WebBootScreen.tsx
   - scripts/check-web-bundle.mjs
@@ -184,24 +185,52 @@ relative to it needs the `lg:` variant. Screenshot-verify new surfaces at
 
 ## Performance
 
-The web entry chunk must stay lean — phones parse it on first visit. Current
-split (enforced by convention, check bundle output when touching imports):
+The web entry chunk must stay lean — phones parse it on first visit. The initial
+payload is currently **~169 KiB JS + 27 KiB CSS gzip**, enforced by
+`npm run check:bundle`.
 
-- Detail pages (`maps-detail`, `player-detail`, `cap-detail`, `team-cap-detail`,
-  `news-detail`, `team-detail`) and `AdminPage` are `React.lazy` in `Main.tsx`
-  (one `<Suspense>` wraps `renderView()`); `AdminPage`'s state constants live in
-  `admin/types.ts` so Main's static import doesn't drag the dashboard in.
+- **Every primary page except `Home` is `React.lazy`**, built from the shared
+  loaders in `app/components/main/pageLoaders.ts`. `Home` stays eager: it is the
+  default view and the `pathToNav` fallback for any unrecognised path.
+- Detail pages and `AdminPage` are lazy too; one `<Suspense>` wraps `renderView()`.
 - `LoginPage` + `UpdateModal` are lazy in `app.tsx`; target-specific Settings
   modals + `ChangeTitleModal` are lazy in `AppLayout` and mount only while open.
-  Settings panels are split per section, and web never fetches desktop game panels. This
-  keeps react-markdown, framer-motion, recharts, and the entire settings tree
-  out of the entry chunk (~1.79MB → ~1.10MB, gzip ~324kB).
+  Settings panels are split per section, and web never fetches desktop game panels.
+- `MarkdownBody` and the privacy-policy text are lazy behind
+  `AnalyticsConsentBanner`'s modal, keeping react-markdown and its
+  micromark/mdast/hast tree out of the entry. The banner itself stays eager — it
+  renders for every first-time visitor, exactly the cohort whose LCP matters.
+- **Lazy alone is not enough.** `lazy()` on a page whose module `Main.tsx` also
+  imports a *value* from is a silent no-op: the page lands back in the entry,
+  nothing errors, and only the budget moves. That is why each page's state
+  constants live in `<PageName>.types.ts` and the medal helpers in
+  `pages/maps/medals.ts`. `app/components/main/pageLoaders.test.ts` asserts
+  `Main.tsx` never takes a value import from a lazily-loaded page.
 - Rule: a module only needed after a user action (a modal, a detail page, an
   admin surface) gets `lazy()` + a mount gate, not a static import. Primary
-  sidebar pages stay eager — they are the app.
-- `npm run check:bundle` enforces both the gzip budget for the largest chunk
-  and the absence of desktop-only markers in every web asset — run it after
-  touching imports or platform gates.
+  sidebar pages are lazy **and prefetched** — the sidebar prefetches on
+  `pointerenter`/`focus`, `renderer-web.tsx` prefetches the landing route's chunk
+  before React mounts, and desktop warms all of them on `requestIdleCallback`.
+- `react`, `react-dom`, `scheduler` and `@radix-ui/*` are pinned into a
+  `vendor-react` chunk (`manualChunks` in `vite.config.web.ts`) so they survive a
+  deploy in the browser cache. Do **not** widen that rule to all of
+  `node_modules`: it would pull recharts, framer-motion and react-markdown back
+  onto the first-paint path, and splitting radix away from react-dom risks a
+  production-only "cannot access before initialization". Smoke-test any change
+  with `preview:web`, never `dev:web` — dev cannot reproduce a TDZ split failure.
+- `npm run check:bundle` reads `dist-web/.vite/manifest.json` and measures the
+  real **initial payload** (the entry plus its transitive static imports plus
+  their CSS), not the largest chunk. It also asserts the structure of
+  `dist-web/index.html`: exactly one module script, at least one
+  `<link rel="stylesheet">`, an entry chunk over 50 KiB gzip, and every asset tag
+  after the `<!--utbt-head-end-->` marker. Run it after touching imports or
+  platform gates.
+- Bundled art in `app/assets/` ships as **WebP**; the PNGs beside it are the
+  editable sources. Regenerate with `node scripts/optimize-assets.mjs` and commit
+  both. `app/public/` stays PNG — those are favicons, PWA icons and the OG card,
+  which social scrapers and manifests require.
+- Avatars are requested at the size they render via `avatarSizeFor()`
+  (`app/utils/api.ts`), not the gateway's 256 default.
 - Performance is not only bundle size: the page also has a CSS runtime budget
   (compositor / RAM / CPU — phones and the Electron shell share a machine with
   the game). Rules live in `agents/styling.md` → CSS runtime cost; headline:
@@ -214,10 +243,21 @@ split (enforced by convention, check bundle output when touching imports):
 | `npm run build:web` | Static production build into `dist-web/`. |
 | `npm run preview:web` | Serve the production build locally. |
 
-`app/renderer.tsx` is a dispatcher that dynamic-imports `renderer-desktop.tsx`
-or `renderer-web.tsx` based on `__WEB_TARGET__`; Rollup drops the unused branch
-per target. One `app/index.html` serves both. `electron-builder.yml` excludes
-`dist-web/**` and `vite.config.web.ts` from the packaged app.
+One `app/index.html` serves both targets. It names `/renderer-web.tsx` directly,
+and the desktop build rewrites that `src` to `/renderer-desktop.tsx` via the
+`rendererEntry()` plugin in `vite.entry.ts`, which throws if the expected string
+is missing rather than silently doing nothing.
+
+**Do not reintroduce a dynamic-import dispatcher here.** Vite discovers the entry
+by parsing `index.html`, and only a statically named entry gets its stylesheet
+`<link>` and modulepreload hints emitted into the document. Behind a runtime
+`import()` the browser cannot see either until the shim has been fetched and
+executed — two extra serial round trips before anything can paint, and the CSS
+arrives injected by JavaScript. `check:bundle`'s 50 KiB entry floor exists to
+catch exactly that regression.
+
+`electron-builder.yml` excludes `dist-web/**` and `vite.config.web.ts` from the
+packaged app.
 
 ## SEO and link previews
 
