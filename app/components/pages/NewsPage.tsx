@@ -6,6 +6,7 @@ import { useRefreshCooldown } from '@/app/hooks/useRefreshCooldown'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
 import { useNavScrollRestore } from '@/app/components/navigation/useNavScrollRestore'
 import { useNavState } from '@/app/components/navigation/useNavState'
+import { useNewItemHighlight } from '@/app/hooks/useNewItemHighlight'
 import { ArticleCard } from '@/app/components/pages/home/news/NewsCard'
 import { fetchNews, fetchNewsCategories, type NewsArticle, type NewsCategoryDef, type UserProfile } from '@/app/utils/api'
 
@@ -19,6 +20,7 @@ export function NewsPage({ userProfile }: NewsPageProps) {
     const [refreshKey, setRefreshKey] = useState(0)
     const scrollRef = useRef<HTMLDivElement>(null)
     const [filter, setFilter] = useNavState<string>('news.filter', 'all')
+    const skipScrollRestoreRef = useRef(false)
 
     const { data, loading, error } = useAsync<{ news: NewsArticle[]; categories: NewsCategoryDef[] }>(
         async (signal) => {
@@ -32,7 +34,7 @@ export function NewsPage({ userProfile }: NewsPageProps) {
         { enabled: true, errorMessage: 'Failed to load the news feed.' },
     )
 
-    const onScroll = useNavScrollRestore(scrollRef, !loading)
+    const onScroll = useNavScrollRestore(scrollRef, !loading && !skipScrollRestoreRef.current)
 
     useRegisterPageRefresh({
         onRefresh: () => refreshCooldown.trigger(() => setRefreshKey(k => k + 1)),
@@ -40,6 +42,11 @@ export function NewsPage({ userProfile }: NewsPageProps) {
         disabled: !refreshCooldown.canRefresh,
         tooltip: refreshCooldown.canRefresh ? 'Refresh' : `Wait ${refreshCooldown.remainingSeconds}s`,
     })
+
+    const highlight = useNewItemHighlight('news', () => {
+        skipScrollRestoreRef.current = true
+        setFilter('all')
+    }, data != null)
 
     const items = useMemo(() => data?.news ?? [], [data])
     const categories = useMemo(() => data?.categories ?? [], [data])
@@ -49,6 +56,8 @@ export function NewsPage({ userProfile }: NewsPageProps) {
         () => (filter === 'all' ? items : items.filter(a => a.category === filter)),
         [items, filter],
     )
+
+    const firstNewIdx = filtered.findIndex(a => highlight.isNew(a.publishedAt))
 
     return (
         <div ref={scrollRef} onScroll={onScroll} className="h-full overflow-y-auto custom-scrollbar">
@@ -98,7 +107,18 @@ export function NewsPage({ userProfile }: NewsPageProps) {
 
                 {filtered.length > 0 && (
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
-                        {filtered.map(a => <ArticleCard key={a.id} article={a} category={categoryMap.get(a.category) ?? null} />)}
+                        {filtered.map((a, index) => {
+                            const isNew = highlight.isNew(a.publishedAt)
+                            return (
+                                <ArticleCard
+                                    key={a.id}
+                                    article={a}
+                                    category={categoryMap.get(a.category) ?? null}
+                                    articleRef={isNew && index === firstNewIdx ? highlight.registerFirstNew : undefined}
+                                    className={isNew ? 'bg-accent-500/[0.07] ring-1 ring-inset ring-accent-500/40' : undefined}
+                                />
+                            )
+                        })}
                     </div>
                 )}
             </div>

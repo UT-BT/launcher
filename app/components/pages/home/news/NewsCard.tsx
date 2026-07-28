@@ -43,11 +43,13 @@ export function ArticleCard({
     category,
     isNew,
     articleRef,
+    className,
 }: {
     article: NewsArticle
     category?: NewsCategoryDef | null
     isNew?: boolean
     articleRef?: Ref<HTMLDivElement>
+    className?: string
 }) {
     const open = () => openNews(article.id)
     return (
@@ -57,7 +59,10 @@ export function ArticleCard({
             tabIndex={0}
             onClick={open}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open() } }}
-            className="group bg-card/30 border border-hairline/5 rounded-xl overflow-hidden cursor-pointer transition-colors hover:border-hairline/15 hover:bg-card/40"
+            className={cn(
+                'group bg-card/30 border border-hairline/5 rounded-xl overflow-hidden cursor-pointer transition-colors hover:border-hairline/15 hover:bg-card/40',
+                className,
+            )}
         >
             <div className="px-4 py-3 space-y-1.5">
                 <div className="flex items-center justify-between gap-2">

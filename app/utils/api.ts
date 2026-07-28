@@ -3785,6 +3785,7 @@ export interface EventSummary {
     team_count: number
     registered_team_count: number
     created_at: string | null
+    published_at?: string | null
 }
 
 export interface EventDetail extends EventSummary {

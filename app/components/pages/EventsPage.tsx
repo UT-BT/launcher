@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { CalendarDays, ChevronRight, Trophy, Users2 } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { useNewItemHighlight } from '@/app/hooks/useNewItemHighlight'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
 import { ErrorBanner } from '@/app/components/pages/teams/teamsShared'
 import { eventErrorMessage, fetchEvents, type EventSummary, type UserProfile } from '@/app/utils/api'
@@ -41,6 +43,11 @@ export function EventsPage({ userProfile, state, onStateChange, caches, onCaches
     const scrollRef = useRef<HTMLDivElement | null>(null)
     const cachesRef = useRef(caches)
     cachesRef.current = caches
+    const skipScrollRestoreRef = useRef(false)
+
+    const highlight = useNewItemHighlight('events', () => {
+        skipScrollRestoreRef.current = true
+    }, caches.loaded)
 
     const load = useCallback(async (background = false) => {
         if (!background) setLoading(true)
@@ -63,6 +70,7 @@ export function EventsPage({ userProfile, state, onStateChange, caches, onCaches
     useEffect(() => { void load(cachesRef.current.loaded) }, [load])
 
     useEffect(() => {
+        if (skipScrollRestoreRef.current) return
         if (scrollRef.current && !loading) scrollRef.current.scrollTop = state.scrollTop
     }, [loading, state.scrollTop])
 
@@ -71,6 +79,11 @@ export function EventsPage({ userProfile, state, onStateChange, caches, onCaches
         refreshing: loading,
         tooltip: 'Refresh',
     })
+
+    const isNewEvent = (event: EventSummary) =>
+        event.status !== 'draft' && highlight.isNew(event.published_at ?? event.created_at)
+
+    const firstNewIdx = caches.events.findIndex(isNewEvent)
 
     return (
         <div className="space-y-4 h-full flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-0 duration-500">
@@ -102,13 +115,18 @@ export function EventsPage({ userProfile, state, onStateChange, caches, onCaches
                     </div>
                 ) : (
                     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                        {caches.events.map(event => {
+                        {caches.events.map((event, index) => {
                             const dates = [formatEventDate(event.starts_at), formatEventDate(event.ends_at)].filter(Boolean)
+                            const isNew = isNewEvent(event)
                             return (
                                 <button
                                     key={event.id}
+                                    ref={isNew && index === firstNewIdx ? highlight.registerFirstNew : undefined}
                                     onClick={() => onEventSelect(event.slug)}
-                                    className="text-left p-4 rounded-xl bg-card/30 border border-hairline/5 hover:border-accent-500/40 hover:bg-card/50 transition-colors cursor-pointer space-y-3 group"
+                                    className={cn(
+                                        'text-left p-4 rounded-xl bg-card/30 border border-hairline/5 hover:border-accent-500/40 hover:bg-card/50 transition-colors cursor-pointer space-y-3 group',
+                                        isNew && 'bg-accent-500/[0.07] ring-1 ring-inset ring-accent-500/40',
+                                    )}
                                 >
                                     <div className="flex items-start justify-between gap-2">
                                         <h2 className="text-base font-semibold text-foreground leading-snug">{event.name}</h2>

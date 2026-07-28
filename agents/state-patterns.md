@@ -271,7 +271,7 @@ by `app/theme/ThemeProvider.tsx` through the synced store. A pre-paint inline
 script in `app/index.html` still reads the raw localStorage value (the store
 mirrors it) so the theme applies before first paint without a flash.
 
-`utbt:highlightSince:<view>` (`maps` / `world-records`) is the one **sessionStorage**
+`utbt:highlightSince:<view>` (`maps` / `world-records` / `events` / `news`) is the one **sessionStorage**
 key — a transient navigate-time hand-off written by `markViewed` (inside `Main.tsx`'s
 `navigate()`) via `writePendingHighlight` and consumed **once** on the next page mount by
 `useNewItemHighlight`. It is **not** a persisted preference; it just tells the
