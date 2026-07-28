@@ -1,18 +1,3 @@
-/**
- * Regenerates the WebP copies of app/assets/*.png.
- *
- * The PNGs stay in the repo as the editable source; the committed .webp files
- * next to them are what the app actually imports. Run this after changing any
- * source PNG, then commit both.
- *
- *   node scripts/optimize-assets.mjs
- *
- * Dimensions are deliberately preserved. Every one of these is 256x256 and gets
- * rendered far smaller (medals at 12-20px, the logo at up to 96px), so there is
- * room to downscale -- but the desktop splash animation scales the logo up, and
- * a future page could render a medal larger. Format alone gets ~two thirds off
- * without having to reason about any of that.
- */
 import { readdir, stat, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'

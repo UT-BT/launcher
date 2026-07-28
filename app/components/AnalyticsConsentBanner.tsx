@@ -3,10 +3,6 @@ import { createPortal } from 'react-dom'
 import { setTelemetryConsent } from '@/app/utils/telemetry'
 import { Modal } from '@/app/components/ui/modal'
 
-// This banner renders for every first-time visitor, so it stays eager -- but the
-// policy text and the markdown renderer behind it are only ever needed if
-// someone opens the modal, and together they are the largest thing that would
-// otherwise sit on the first-paint path.
 const PrivacyPolicyBody = lazy(() =>
   import('@/app/components/shared/PrivacyPolicyBody').then(m => ({ default: m.PrivacyPolicyBody }))
 )

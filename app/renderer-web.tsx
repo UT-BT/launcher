@@ -19,10 +19,6 @@ window.addEventListener('vite:preloadError', event => {
 
 document.documentElement.style.setProperty('--window-titlebar-height', '0px')
 
-// Start the landing route's chunk before React mounts. App boot already blocks
-// on a profile round-trip before it can render anything past the boot screen, so
-// this fetch rides along in dead time and the page is usually resident by the
-// time it is needed -- no Suspense fallback on a cold, direct hit to /maps.
 prefetchPage(pathToNav(window.location.pathname, window.location.search).view)
 
 void handleOAuthCallbackIfPresent().finally(() => {

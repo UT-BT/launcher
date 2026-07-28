@@ -11,13 +11,6 @@ const DEFAULT_DESCRIPTION =
   'BunnyTrack Maps, Records, Players, Teams and Servers for Unreal Tournament 1999.'
 const DEFAULT_IMAGE_ALT = 'UTBT.net — Unreal Tournament 1999 BunnyTrack'
 
-// Deliberately outside the utbt-head markers: the backend rewrites that block
-// per URL, and these are the same on every page.
-//
-// api.utbt.net appears twice on purpose. Anonymous and CORS requests use
-// separate connection pools, and that origin serves both -- map screenshots as
-// plain <img> (anonymous) and the JSON the page is built from via fetch (CORS).
-// A single preconnect would warm one pool and leave the other cold.
 const PRECONNECT_TAGS = `
     <link rel="preconnect" href="https://api.utbt.net" />
     <link rel="preconnect" href="https://api.utbt.net" crossorigin />
@@ -99,18 +92,6 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
-          // Exactly one pinned chunk, and only the packages that every page
-          // already needs. The site redeploys on every push to main, so holding
-          // React still across a deploy is worth ~45KB gzip to returning users.
-          //
-          // Do NOT widen this to `id.includes('node_modules')`. That would sweep
-          // recharts, framer-motion and react-markdown into a chunk the entry
-          // statically imports and modulepreloads, undoing every split above and
-          // making the first paint bigger, not smaller.
-          //
-          // radix stays in the same chunk as react-dom on purpose: splitting a
-          // module-scope React consumer away from react-dom is the classic cause
-          // of a production-only "Cannot access '...' before initialization".
           if (/node_modules[\\/](react|react-dom|scheduler|@radix-ui)[\\/]/.test(id)) {
             return 'vendor-react'
           }

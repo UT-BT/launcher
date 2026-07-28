@@ -202,9 +202,6 @@ describe('avatar urls', () => {
     })
 
     it('never exceeds the gateway default, which the OG card renderer depends on', () => {
-        // DataService composites avatars at 240px for Open Graph cards, and those
-        // are cached for 30 days by nginx and indefinitely by Discord. Nothing the
-        // launcher requests should push the gateway past its 256 default.
         for (const px of [20, 24, 32, 48, 128]) {
             expect(avatarSizeFor(px)).toBeLessThanOrEqual(256)
         }

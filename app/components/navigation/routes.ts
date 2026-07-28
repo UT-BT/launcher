@@ -32,11 +32,6 @@ export function viewToPath(view: string, params: NavParams): string {
     }
 }
 
-// decodeURIComponent throws URIError on a malformed escape (`/maps/50%`, a
-// truncated `%E0%A4`). Crawlers and hand-edited links produce these, and this
-// runs both during render and, for the boot-time chunk prefetch, at module scope
-// before the ErrorBoundary exists -- where a throw is an unrecoverable blank
-// page. A segment we cannot decode simply will not match a route, landing on Home.
 function decodeSegment(segment: string): string {
     try {
         return decodeURIComponent(segment)

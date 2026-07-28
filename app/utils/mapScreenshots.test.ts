@@ -133,8 +133,6 @@ describe('screenshot urls', () => {
     })
 
     it('keeps the canonical PNG reachable, since a derivative can be missing', () => {
-        // write_derivatives is best-effort on the API side so an upload never
-        // fails on a WebP error -- the PNG is the contract, the WebP is not.
         const url = screenshotUrlFor('canonical', 'CTF-BT-Cupola', 'hero')
         expect(url).toContain('/screenshots/CTF-BT-Cupola.png')
         expect(url).not.toContain('derived')

@@ -1,19 +1,13 @@
 import { API_BASE_URL } from '@/app/utils/api'
 
-/**
- * Which stored derivative to request. The API keeps a WebP at each of these
- * widths beside the canonical PNG; pick the one that covers the rendered box on
- * a 2x display.
- */
 export type MapThumbnailSize = 'thumb' | 'card' | 'hero'
 
 export const SCREENSHOT_SIZE_PX: Record<MapThumbnailSize, number> = {
-    thumb: 96,   // list rows and inline cells, ~28-48px
-    card: 256,   // poster grids and medium tiles, ~96-192px
-    hero: 1024,  // detail-page heroes and full-bleed backdrops
+    thumb: 96,
+    card: 256,
+    hero: 1024,
 }
 
-/** Blurred backdrops never need more than the smallest derivative. */
 export const SCREENSHOT_BLUR_PX = SCREENSHOT_SIZE_PX.thumb
 
 export type ScreenshotStage = 'derived' | 'canonical' | 'default'
@@ -45,13 +39,6 @@ export function screenshotUrlFor(
     return defaultScreenshotUrl()
 }
 
-/**
- * Derived WebP -> canonical PNG -> default, in that order.
- *
- * The canonical step is not redundant: derivative writes are best-effort on the
- * API side (a failed WebP must never fail a mapper's upload), so a WebP can be
- * missing while the PNG is perfectly fine.
- */
 export function nextScreenshotStage(stage: ScreenshotStage): ScreenshotStage {
     return stage === 'derived' ? 'canonical' : 'default'
 }

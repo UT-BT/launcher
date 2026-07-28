@@ -5,12 +5,6 @@ import { PAGE_LOADERS } from './pageLoaders'
 
 const mainSource = readFileSync(resolve(__dirname, 'Main.tsx'), 'utf8')
 
-/**
- * These guard a split that fails silently. `lazy()` on a page whose module Main
- * also imports a value from (a DEFAULT_*_STATE, a helper) is a no-op: the page
- * lands back in the entry chunk, nothing errors, and the only symptom is the
- * bundle budget creeping up. check:bundle catches the size; these name the cause.
- */
 describe('Main.tsx page imports', () => {
     const staticImports = [...mainSource.matchAll(/^import\s+(type\s+)?([\s\S]*?)from\s+'([^']+)'/gm)]
         .map(match => ({

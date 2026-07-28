@@ -3,16 +3,10 @@ import { IS_WEB } from '@/app/platform/target'
 
 export const GATEWAY_BASE_URL = (import.meta.env.VITE_GATEWAY_BASE_URL || 'https://gateway.utbt.net').replace(/\/$/, '')
 
-// Discord's CDN only serves powers of two, and the gateway snaps anything else
-// back to its own default -- so an arbitrary number silently gets you 256.
 const AVATAR_CDN_SIZES = [16, 32, 64, 128, 256, 512, 1024] as const
 
-/** Smallest CDN size that still covers `displayPx` on a 2x display. */
 export function avatarSizeFor(displayPx: number): number {
     const wanted = displayPx * 2
-    // Falls back to the LARGEST listed size, not the gateway default: a box
-    // bigger than anything on the list wants more pixels, and quietly handing it
-    // something smaller than it would have got by default is a downgrade.
     return AVATAR_CDN_SIZES.find(size => size >= wanted) ?? AVATAR_CDN_SIZES[AVATAR_CDN_SIZES.length - 1]
 }
 

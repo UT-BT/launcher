@@ -44,12 +44,6 @@ function checkBudget(label, actual, budget) {
   }
 }
 
-/**
- * The set of files a browser fetches before it can paint: the HTML entry, every
- * chunk it statically imports (transitively), and the stylesheets attached to
- * any of them. Dynamic imports are deliberately excluded -- those are the lazy
- * chunks, and pulling them in here would make the number meaningless.
- */
 function collectInitialPayload(manifest, entryKey) {
   const visited = new Set()
   const javaScript = new Set()
@@ -129,12 +123,6 @@ if (stylesheets.length === 0) {
   )
 }
 
-/**
- * The single most useful assertion here. If index.html ever points at a small
- * dispatcher module that import()s the real entry, everything above still looks
- * fine while the browser has to make two extra serial round trips before paint.
- * A real entry is never this small.
- */
 const entryGzip = await gzipBytesOf(entryFile)
 if (entryGzip < minEntryGzipBytes) {
   fail(
