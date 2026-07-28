@@ -2,7 +2,7 @@ import { ReactNode, lazy, Suspense, useEffect, useMemo, useRef, useState } from 
 import { FaDiscord } from 'react-icons/fa'
 import { Home, Server, Map as MapIcon, Trophy, Settings, LogOut, Play, User, Users, Users2, Flag, Award, ShieldAlert, Newspaper, Menu, Swords } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import logo from '@/app/assets/logo.png'
+import logo from '@/app/assets/logo.webp'
 import {
     DropdownMenu,
     DropdownMenuContent,

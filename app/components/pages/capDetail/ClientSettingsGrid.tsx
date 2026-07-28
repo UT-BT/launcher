@@ -78,7 +78,7 @@ export function ClientSettingsGrid({ cap, server }: ClientSettingsGridProps) {
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 items-stretch">
                     <Tile label="Server Region" value={
                         <span className="inline-flex items-center justify-center gap-1.5">
-                            {region && <img src={getRegionFlag(region)} alt={region} className="size-4 rounded-sm object-cover" />}
+                            {region && <img src={getRegionFlag(region)} alt={region} width={16} height={16} loading="lazy" decoding="async" className="size-4 rounded-sm object-cover" />}
                             <span className="truncate">{region ?? '—'}</span>
                         </span>
                     } />

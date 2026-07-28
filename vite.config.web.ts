@@ -11,6 +11,19 @@ const DEFAULT_DESCRIPTION =
   'BunnyTrack Maps, Records, Players, Teams and Servers for Unreal Tournament 1999.'
 const DEFAULT_IMAGE_ALT = 'UTBT.net — Unreal Tournament 1999 BunnyTrack'
 
+// Deliberately outside the utbt-head markers: the backend rewrites that block
+// per URL, and these are the same on every page.
+//
+// api.utbt.net appears twice on purpose. Anonymous and CORS requests use
+// separate connection pools, and that origin serves both -- map screenshots as
+// plain <img> (anonymous) and the JSON the page is built from via fetch (CORS).
+// A single preconnect would warm one pool and leave the other cold.
+const PRECONNECT_TAGS = `
+    <link rel="preconnect" href="https://api.utbt.net" />
+    <link rel="preconnect" href="https://api.utbt.net" crossorigin />
+    <link rel="preconnect" href="https://gateway.utbt.net" crossorigin />
+    <link rel="dns-prefetch" href="https://flagcdn.com" />`
+
 const ICON_TAGS = `
     <link rel="icon" href="/favicon.ico" sizes="32x32" />
     <link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96" />
@@ -53,7 +66,7 @@ function webHead(): Plugin {
           .replace(/^[ \t]*<title>[\s\S]*?<\/title>\r?\n?/m, '')
           .replace(/^[ \t]*<meta\s+name="description"[^>]*>\r?\n?/m, '')
           .replace(/^[ \t]*<meta\s+name="theme-color"[^>]*>\r?\n?/m, '')
-          .replace('</head>', `${ICON_TAGS}\n${DEFAULT_HEAD}\n  </head>`)
+          .replace('</head>', `${PRECONNECT_TAGS}\n${ICON_TAGS}\n${DEFAULT_HEAD}\n  </head>`)
       },
     },
   }

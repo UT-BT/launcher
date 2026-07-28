@@ -707,6 +707,10 @@ export function ServerBrowserPage({
                             <img
                                 src={getRegionFlag(region)}
                                 alt={region}
+                                width={24}
+                                height={16}
+                                loading="lazy"
+                                decoding="async"
                                 className="h-4 w-6 object-cover rounded-[2px] border border-hairline/10"
                             />
                         </Tooltip>
@@ -873,6 +877,10 @@ export function ServerBrowserPage({
                     <img
                         src={getRegionFlag(region)}
                         alt={region}
+                        width={24}
+                        height={16}
+                        loading="lazy"
+                        decoding="async"
                         className="h-4 w-6 shrink-0 object-cover rounded-[2px] border border-hairline/10"
                     />
                     {onMapSelect ? (

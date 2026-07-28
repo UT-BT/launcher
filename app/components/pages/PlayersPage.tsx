@@ -25,11 +25,11 @@ import {
 import { formatAddedDate } from '@/app/utils/format'
 import { ROLE_LABELS } from '@/app/utils/roles'
 
-import championIcon from '@/app/assets/champion.png'
-import goldIcon from '@/app/assets/gold.png'
-import silverIcon from '@/app/assets/silver.png'
-import bronzeIcon from '@/app/assets/bronze.png'
-import worldRecordIcon from '@/app/assets/world_record.png'
+import championIcon from '@/app/assets/champion.webp'
+import goldIcon from '@/app/assets/gold.webp'
+import silverIcon from '@/app/assets/silver.webp'
+import bronzeIcon from '@/app/assets/bronze.webp'
+import worldRecordIcon from '@/app/assets/world_record.webp'
 
 import type {
     PlayerColumnId,
