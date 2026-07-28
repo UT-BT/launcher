@@ -6,6 +6,8 @@ import {
     asNonEmptyObj,
     asNum,
     asStr,
+    avatarSizeFor,
+    getAvatarUrl,
     bearerHeaders,
     fetchCapDetail,
     fetchSummary,
@@ -180,5 +182,36 @@ describe('fetchCapDetail normalisation', () => {
         vi.stubGlobal('fetch', fetchMock)
 
         await expect(fetchCapDetail('', 'c1')).resolves.toBeNull()
+    })
+})
+
+describe('avatar urls', () => {
+    it('asks for the smallest CDN size that covers a 2x display', () => {
+        expect(avatarSizeFor(20)).toBe(64)
+        expect(avatarSizeFor(24)).toBe(64)
+        expect(avatarSizeFor(32)).toBe(64)
+        expect(avatarSizeFor(48)).toBe(128)
+        expect(avatarSizeFor(128)).toBe(256)
+    })
+
+    it('only ever returns a size Discord actually serves', () => {
+        const allowed = [16, 32, 64, 128, 256, 512, 1024]
+        for (let px = 1; px <= 600; px++) {
+            expect(allowed).toContain(avatarSizeFor(px))
+        }
+    })
+
+    it('never exceeds the gateway default, which the OG card renderer depends on', () => {
+        // DataService composites avatars at 240px for Open Graph cards, and those
+        // are cached for 30 days by nginx and indefinitely by Discord. Nothing the
+        // launcher requests should push the gateway past its 256 default.
+        for (const px of [20, 24, 32, 48, 128]) {
+            expect(avatarSizeFor(px)).toBeLessThanOrEqual(256)
+        }
+    })
+
+    it('omits the size param entirely when none is given', () => {
+        expect(getAvatarUrl('123456789')).not.toContain('size=')
+        expect(getAvatarUrl('123456789', 64)).toContain('?size=64')
     })
 })

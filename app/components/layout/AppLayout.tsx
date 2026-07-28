@@ -60,7 +60,7 @@ const BASE_NAV_SECTIONS: NavSection[] = [
     },
 ]
 
-import { UserProfile, getAvatarUrl } from '@/app/utils/api'
+import { UserProfile, avatarSizeFor, getAvatarUrl } from '@/app/utils/api'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import { usePatreonTier } from '@/app/utils/patreon'
 import { PatreonBadge } from '@/app/components/shared/PatreonBadge'
@@ -387,8 +387,12 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                                     <div className="size-8 rounded-full bg-gradient-to-br from-accent-500 to-red-500 p-[1px]">
                                         {userProfile?.id ? (
                                             <img
-                                                src={getAvatarUrl(userProfile.id)}
+                                                src={getAvatarUrl(userProfile.id, avatarSizeFor(32))}
                                                 alt="Avatar"
+                                                width={32}
+                                                height={32}
+                                                loading="lazy"
+                                                decoding="async"
                                                 className="w-full h-full rounded-full object-cover"
                                                 onError={e => {
                                                     const fallbackIdx = userProfile.discordId

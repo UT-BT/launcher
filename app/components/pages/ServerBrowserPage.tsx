@@ -37,6 +37,7 @@ import { ColumnsMenu } from '@/app/components/shared/ColumnsMenu'
 import { capabilities, fetchGatewayServers } from '@/app/platform'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { ActiveFilterChip } from '@/app/components/shared/ActiveFilterChip'
+import { avatarSizeFor, getAvatarUrl } from '@/app/utils/api'
 import { displayMapName } from '@/app/utils/format'
 import {
     DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow,
@@ -144,9 +145,11 @@ const TypeIcon = ({ type, className = 'size-4' }: { type: ServerType, className?
     }
 }
 
+const SERVER_PLAYER_AVATAR_PX = 20
+
 const avatarUrlFor = (player: Player): string | null =>
     player.id && player.id.length > 5
-        ? `https://gateway.utbt.net/users/${player.id}/avatar`
+        ? getAvatarUrl(player.id, avatarSizeFor(SERVER_PLAYER_AVATAR_PX))
         : null
 
 const PlayerRow = ({ player }: { player: Player }) => {
@@ -221,6 +224,10 @@ const AvatarStack = ({ players }: { players: Player[] }) => {
                             <img
                                 src={avatar}
                                 alt=""
+                                width={SERVER_PLAYER_AVATAR_PX}
+                                height={SERVER_PLAYER_AVATAR_PX}
+                                loading="lazy"
+                                decoding="async"
                                 className="w-full h-full object-cover"
                                 onError={(e) => {
                                     (e.target as HTMLImageElement).src =
