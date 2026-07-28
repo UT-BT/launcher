@@ -94,7 +94,7 @@ export function HeroSection({
                     >
                         <MapThumbnail
                             mapName={mapName}
-                            size="hero"
+                            size="card"
                             priority
                             className="w-full h-full aspect-video lg:aspect-square rounded-lg border border-hairline/10"
                         />

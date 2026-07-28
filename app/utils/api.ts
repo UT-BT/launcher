@@ -10,7 +10,10 @@ const AVATAR_CDN_SIZES = [16, 32, 64, 128, 256, 512, 1024] as const
 /** Smallest CDN size that still covers `displayPx` on a 2x display. */
 export function avatarSizeFor(displayPx: number): number {
     const wanted = displayPx * 2
-    return AVATAR_CDN_SIZES.find(size => size >= wanted) ?? 256
+    // Falls back to the LARGEST listed size, not the gateway default: a box
+    // bigger than anything on the list wants more pixels, and quietly handing it
+    // something smaller than it would have got by default is a downgrade.
+    return AVATAR_CDN_SIZES.find(size => size >= wanted) ?? AVATAR_CDN_SIZES[AVATAR_CDN_SIZES.length - 1]
 }
 
 export function getAvatarUrl(userId: string | number, size?: number): string {

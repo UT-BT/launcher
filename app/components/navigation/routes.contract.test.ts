@@ -71,3 +71,22 @@ describe('route contract', () => {
         expect(title.length).toBeGreaterThan(0)
     })
 })
+
+describe('malformed urls', () => {
+    // pathToNav runs at module scope in renderer-web.tsx for the boot-time chunk
+    // prefetch, before any ErrorBoundary exists. A throw there is a blank page.
+    it('does not throw on a malformed percent escape', () => {
+        for (const path of ['/maps/50%', '/maps/%', '/players/%zz', '/maps/%E0%A4%A', '/%']) {
+            expect(() => pathToNav(path, '')).not.toThrow()
+        }
+    })
+
+    it('still resolves a view for an undecodable path instead of failing', () => {
+        expect(pathToNav('/maps/50%', '').view).toBeTruthy()
+        expect(pathToNav('/%', '').view).toBe('home')
+    })
+
+    it('decodes ordinary escaped map names as before', () => {
+        expect(pathToNav('/maps/CTF-BT-CM24%20Winter', '').params.mapName).toBe('CTF-BT-CM24 Winter')
+    })
+})

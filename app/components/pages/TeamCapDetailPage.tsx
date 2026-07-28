@@ -320,7 +320,7 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
                                 >
                                     <MapThumbnail
                                         mapName={detail.map}
-                                        size="hero"
+                                        size="card"
                                         priority
                                         className="w-full h-full aspect-video lg:aspect-square rounded-lg border border-hairline/10"
                                     />
