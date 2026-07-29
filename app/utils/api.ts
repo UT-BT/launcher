@@ -3,8 +3,16 @@ import { IS_WEB } from '@/app/platform/target'
 
 export const GATEWAY_BASE_URL = (import.meta.env.VITE_GATEWAY_BASE_URL || 'https://gateway.utbt.net').replace(/\/$/, '')
 
-export function getAvatarUrl(userId: string | number): string {
-    return `${GATEWAY_BASE_URL}/users/${userId}/avatar`
+const AVATAR_CDN_SIZES = [16, 32, 64, 128, 256, 512, 1024] as const
+
+export function avatarSizeFor(displayPx: number): number {
+    const wanted = displayPx * 2
+    return AVATAR_CDN_SIZES.find(size => size >= wanted) ?? AVATAR_CDN_SIZES[AVATAR_CDN_SIZES.length - 1]
+}
+
+export function getAvatarUrl(userId: string | number, size?: number): string {
+    const url = `${GATEWAY_BASE_URL}/users/${userId}/avatar`
+    return size ? `${url}?size=${size}` : url
 }
 
 export interface UserTitle {

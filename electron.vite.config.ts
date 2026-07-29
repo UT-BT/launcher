@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import packageJson from './package.json'
+import { rendererEntry } from './vite.entry'
 
 const aliases = {
   '@/app': resolve(__dirname, 'app'),
@@ -61,6 +62,6 @@ export default defineConfig({
     resolve: {
       alias: aliases,
     },
-    plugins: [tailwindcss(), react()],
+    plugins: [tailwindcss(), react(), rendererEntry('/renderer-desktop.tsx')],
   },
 })

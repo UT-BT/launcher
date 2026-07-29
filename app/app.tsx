@@ -14,8 +14,6 @@ import { getTelemetryConsent, identifyTelemetry, initializeTelemetry, trackOutco
 import { AnalyticsConsentBanner } from '@/app/components/AnalyticsConsentBanner'
 import { initUserStateSync, stopUserStateSync } from '@/app/utils/userState'
 
-import './styles/index.css'
-
 let globalAppMounted = false
 
 type InitResult =

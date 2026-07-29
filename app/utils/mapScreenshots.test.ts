@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { fetchAuditLog, fetchMaps, fetchMapsCount, fetchMapsMetadata, uploadOwnMapScreenshot } from './api'
+import { nextScreenshotStage, screenshotUrlFor } from './mapScreenshots'
 
 function okJson(data: unknown) {
     return new Response(JSON.stringify({ success: true, data }), {
@@ -115,5 +116,47 @@ describe('mapper screenshot upload', () => {
 
         await expect(uploadOwnMapScreenshot('token', 'CTF-BT-SlideV2', new Blob(['x']), 'shot.png'))
             .rejects.toThrow(/author of this map/)
+    })
+})
+
+describe('screenshot urls', () => {
+    it('requests the derivative that matches the rendered box', () => {
+        expect(screenshotUrlFor('derived', 'CTF-BT-Cupola', 'thumb')).toContain('/screenshots/derived/96/')
+        expect(screenshotUrlFor('derived', 'CTF-BT-Cupola', 'card')).toContain('/screenshots/derived/256/')
+        expect(screenshotUrlFor('derived', 'CTF-BT-Cupola', 'hero')).toContain('/screenshots/derived/1024/')
+    })
+
+    it('falls back derived -> canonical -> default and then stays put', () => {
+        expect(nextScreenshotStage('derived')).toBe('canonical')
+        expect(nextScreenshotStage('canonical')).toBe('default')
+        expect(nextScreenshotStage('default')).toBe('default')
+    })
+
+    it('keeps the canonical PNG reachable, since a derivative can be missing', () => {
+        const url = screenshotUrlFor('canonical', 'CTF-BT-Cupola', 'hero')
+        expect(url).toContain('/screenshots/CTF-BT-Cupola.png')
+        expect(url).not.toContain('derived')
+    })
+
+    it('escapes map names with characters that are legal on disk but not in a URL', () => {
+        for (const name of ['CTF-BT+[LUN]HANGTIME!!!-V2', 'CTF-BT-CM24 Winter', 'CTF-BT-#Forgotten', 'CTF-BT+D!@blo']) {
+            for (const stage of ['derived', 'canonical'] as const) {
+                const url = screenshotUrlFor(stage, name, 'thumb')
+                const path = url.split('?')[0]
+                expect(path).not.toContain(' ')
+                expect(path).not.toContain('#')
+                expect(decodeURIComponent(path.split('/').pop()!.replace(/\.(webp|png)$/, ''))).toBe(name)
+            }
+        }
+    })
+
+    it('carries the cache buster onto derivatives, not just the png', () => {
+        expect(screenshotUrlFor('derived', 'CTF-BT-Cupola', 'thumb', 12345)).toContain('?v=12345')
+        expect(screenshotUrlFor('canonical', 'CTF-BT-Cupola', 'thumb', 12345)).toContain('?v=12345')
+        expect(screenshotUrlFor('derived', 'CTF-BT-Cupola', 'thumb')).not.toContain('?v=')
+    })
+
+    it('never busts the shared default, which is not per-map', () => {
+        expect(screenshotUrlFor('default', 'CTF-BT-Cupola', 'thumb', 12345)).toMatch(/\/screenshots\/default\.png$/)
     })
 })

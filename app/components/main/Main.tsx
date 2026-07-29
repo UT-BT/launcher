@@ -10,64 +10,66 @@ import {
   type NavigationContextValue,
 } from '@/app/components/navigation/NavigationContext'
 import { Home, DEFAULT_HOME_CACHES, type HomePageCaches } from '@/app/components/pages/Home'
+import { PAGE_LOADERS, warmAllPages } from '@/app/components/main/pageLoaders'
 import {
-  ServerBrowserPage,
   DEFAULT_SERVERS_STATE,
   DEFAULT_SERVERS_CACHES,
   type ServerBrowserState,
   type ServerBrowserCaches,
-} from '@/app/components/pages/ServerBrowserPage'
+} from '@/app/components/pages/ServerBrowserPage.types'
 import {
-  MapsPage,
   DEFAULT_MAPS_STATE,
   DEFAULT_MAPS_CACHES,
   type MapsPageState,
   type MapsPageCaches,
-} from '@/app/components/pages/MapsPage'
+} from '@/app/components/pages/MapsPage.types'
 import {
-  PlayersPage,
   DEFAULT_PLAYERS_STATE,
   DEFAULT_PLAYERS_CACHES,
   type PlayersPageState,
   type PlayersPageCaches,
-} from '@/app/components/pages/PlayersPage'
+} from '@/app/components/pages/PlayersPage.types'
 import {
-  CapItAllPage,
   DEFAULT_CAP_IT_ALL_STATE,
   DEFAULT_CAP_IT_ALL_CACHES,
   type CapItAllPageState,
   type CapItAllPageCaches,
-} from '@/app/components/pages/CapItAllPage'
+} from '@/app/components/pages/CapItAllPage.types'
 import {
-  WorldRecordsPage,
   DEFAULT_WORLD_RECORDS_STATE,
   DEFAULT_WORLD_RECORDS_CACHES,
   type WorldRecordsPageState,
   type WorldRecordsPageCaches,
-} from '@/app/components/pages/WorldRecordsPage'
+} from '@/app/components/pages/WorldRecordsPage.types'
 import {
-  AchievementsPage,
   DEFAULT_ACHIEVEMENTS_STATE,
   DEFAULT_ACHIEVEMENTS_CACHES,
   type AchievementsPageState,
   type AchievementsPageCaches,
-} from '@/app/components/pages/AchievementsPage'
+} from '@/app/components/pages/AchievementsPage.types'
 import {
-  TeamsPage,
   DEFAULT_TEAMS_STATE,
   DEFAULT_TEAMS_CACHES,
   type TeamsPageState,
   type TeamsPageCaches,
-} from '@/app/components/pages/TeamsPage'
+} from '@/app/components/pages/TeamsPage.types'
 import {
-  EventsPage,
   DEFAULT_EVENTS_STATE,
   DEFAULT_EVENTS_CACHES,
   type EventsPageState,
   type EventsPageCaches,
-} from '@/app/components/pages/EventsPage'
-import { NewsPage } from '@/app/components/pages/NewsPage'
+} from '@/app/components/pages/EventsPage.types'
 import { DEFAULT_ADMIN_STATE, type AdminPageState } from '@/app/components/pages/admin/types'
+
+const ServerBrowserPage = lazy(PAGE_LOADERS.servers)
+const MapsPage = lazy(PAGE_LOADERS.maps)
+const PlayersPage = lazy(PAGE_LOADERS.players)
+const CapItAllPage = lazy(PAGE_LOADERS['cap-it-all'])
+const WorldRecordsPage = lazy(PAGE_LOADERS['world-records'])
+const AchievementsPage = lazy(PAGE_LOADERS.achievements)
+const TeamsPage = lazy(PAGE_LOADERS.teams)
+const EventsPage = lazy(PAGE_LOADERS.events)
+const NewsPage = lazy(PAGE_LOADERS.news)
 
 const TeamDetailsPage = lazy(() => import('@/app/components/pages/teams/TeamDetailsPage').then(m => ({ default: m.TeamDetailsPage })))
 const EventDetailPage = lazy(() => import('@/app/components/pages/EventDetailPage').then(m => ({ default: m.EventDetailPage })))
@@ -238,6 +240,11 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
 
   useEffect(() => {
     void loadPatreonMembers()
+  }, [])
+
+  useEffect(() => {
+    if (IS_WEB) return
+    warmAllPages()
   }, [])
 
   const updateServerPresets = useCallback((next: ServerPreset[]) => {

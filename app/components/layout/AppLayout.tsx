@@ -2,7 +2,7 @@ import { ReactNode, lazy, Suspense, useEffect, useMemo, useRef, useState } from 
 import { FaDiscord } from 'react-icons/fa'
 import { Home, Server, Map as MapIcon, Trophy, Settings, LogOut, Play, User, Users, Users2, Flag, Award, ShieldAlert, Newspaper, Menu, Swords } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import logo from '@/app/assets/logo.png'
+import logo from '@/app/assets/logo.webp'
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -60,12 +60,13 @@ const BASE_NAV_SECTIONS: NavSection[] = [
     },
 ]
 
-import { UserProfile, getAvatarUrl } from '@/app/utils/api'
+import { UserProfile, avatarSizeFor, getAvatarUrl } from '@/app/utils/api'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import { usePatreonTier } from '@/app/utils/patreon'
 import { PatreonBadge } from '@/app/components/shared/PatreonBadge'
 import { isStaff } from '@/app/utils/roles'
 import { IS_WEB, usePlatform } from '@/app/platform'
+import { prefetchPage } from '@/app/components/main/pageLoaders'
 
 function buildNavSections(userProfile?: UserProfile): NavSection[] {
     if (!isStaff(userProfile)) return BASE_NAV_SECTIONS
@@ -319,6 +320,8 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                                 return (
                                 <button
                                     key={item.id}
+                                    onPointerEnter={() => prefetchPage(item.id)}
+                                    onFocus={() => prefetchPage(item.id)}
                                     onClick={() => changeView(item.id)}
                                     className={cn(
                                         "w-full flex items-center gap-3 px-4 py-3 [@media(max-height:800px)]:py-2 rounded-lg transition-all duration-200 cursor-pointer group relative overflow-hidden",
@@ -384,8 +387,12 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                                     <div className="size-8 rounded-full bg-gradient-to-br from-accent-500 to-red-500 p-[1px]">
                                         {userProfile?.id ? (
                                             <img
-                                                src={getAvatarUrl(userProfile.id)}
+                                                src={getAvatarUrl(userProfile.id, avatarSizeFor(32))}
                                                 alt="Avatar"
+                                                width={32}
+                                                height={32}
+                                                loading="lazy"
+                                                decoding="async"
                                                 className="w-full h-full rounded-full object-cover"
                                                 onError={e => {
                                                     const fallbackIdx = userProfile.discordId

@@ -29,6 +29,16 @@ jobs:
         env:
           VITE_SITE_ORIGIN: https://utbt.net
 
+      # nginx serves these via gzip_static. Precompressing at -9 beats the level
+      # 6 it would manage on the fly, and costs nothing at request time. The 1k
+      # floor matches gzip_min_length; below that the .gz is not worth the inode.
+      - name: Precompress assets for gzip_static
+        run: |
+          find dist-web -type f -size +1k \
+            \( -name '*.js' -o -name '*.css' -o -name '*.json' -o -name '*.svg' \) \
+            -exec gzip -9 -k {} \;
+          echo "precompressed $(find dist-web -name '*.gz' | wc -l) files"
+
       - uses: actions/upload-artifact@v4
         with:
           name: dist-web
@@ -90,3 +100,18 @@ jobs:
           curl -fsS https://utbt.net/ | grep -q 'og:image' || (echo "og tags missing"; exit 1)
           curl -fsS -o /dev/null -w 'images %{http_code}\n' https://utbt.net/images/screenshots/default.png
           curl -fsS -o /dev/null -w 'screens %{http_code}\n' https://api.utbt.net/screenshots/default.png
+
+          # The shell must carry a real stylesheet link. If the entry ever falls
+          # back to a dispatcher shim, the CSS is injected by JS instead and the
+          # page paints unstyled until the whole bundle parses.
+          curl -fsS https://utbt.net/ | grep -q 'rel="stylesheet"' \
+            || (echo "stylesheet link missing from shell"; exit 1)
+
+          # A real GET with the body discarded, not HEAD: nginx's gzip filter
+          # works on the response body, so a HEAD can come back without the
+          # Content-Encoding header even when compression is correctly on.
+          ASSET="$(curl -fsS https://utbt.net/ | grep -o '/assets/[^"]*\.js' | head -1)"
+          test -n "${ASSET}" || (echo "no asset script found in shell"; exit 1)
+          curl -fsS -o /dev/null -D - -H 'Accept-Encoding: gzip' "https://utbt.net${ASSET}" \
+            | grep -qi '^content-encoding:' \
+            || (echo "assets served uncompressed - check gzip_types / gzip_static"; exit 1)

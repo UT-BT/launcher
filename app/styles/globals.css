@@ -78,6 +78,18 @@
     --radius: 0.5rem;
   }
 }
+
+/* Kept unlayered, matching where these used to live in window.css. That file is
+   desktop-only now, but color-scheme drives native form controls and scrollbars
+   on both targets, so it has to stay in the shared sheet. */
+:root {
+  color-scheme: dark;
+}
+
+:root:not(.dark) {
+  color-scheme: light;
+}
+
 @keyframes legendaryAvatarPulse {
   0%, 100% { transform: scale(1); filter: brightness(1); }
   50% { transform: scale(1.02); filter: brightness(1.1); }

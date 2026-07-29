@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Eye, Minus, Play, Server as ServerIcon } from 'lucide-react'
 import { Tooltip } from '@/app/components/ui/tooltip'
-import type { Server } from '@/app/components/pages/ServerBrowserPage'
+import type { Server } from '@/app/utils/server-utils'
 import {
     getRegionFlag, getServerRegion, trimServerName, type RecentServerEntry,
 } from '@/app/utils/server-utils'
@@ -104,6 +104,10 @@ export function RecentServersCard({ recentServers, liveServers, installationStat
                                 <img
                                     src={getRegionFlag(region)}
                                     alt={region}
+                                    width={20}
+                                    height={14}
+                                    loading="lazy"
+                                    decoding="async"
                                     className="h-3.5 w-5 object-cover rounded-[2px] border border-hairline/10"
                                 />
                             </div>
@@ -115,6 +119,10 @@ export function RecentServersCard({ recentServers, liveServers, installationStat
                             <img
                                 src={getRegionFlag(region)}
                                 alt={region}
+                                width={24}
+                                height={16}
+                                loading="lazy"
+                                decoding="async"
                                 className="h-4 w-6 object-cover rounded-[2px] border border-hairline/10"
                             />
                         </Tooltip>

@@ -378,7 +378,7 @@ function MapFormModal({ open, onClose, token, editing, onSaved, allTags }: {
 
         {isEdit && editing && (
           <div className="flex justify-center">
-            <MapThumbnail mapName={editing.name} className="size-48" version={shot.version} />
+            <MapThumbnail mapName={editing.name} size="card" className="size-48" version={shot.version} />
           </div>
         )}
 

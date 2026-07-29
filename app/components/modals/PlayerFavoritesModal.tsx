@@ -99,6 +99,7 @@ export function PlayerFavoritesModal({
                                 >
                                     <MapThumbnail
                                         mapName={name}
+                                        size="card"
                                         className="aspect-square w-full rounded border border-hairline/10 group-hover:border-hairline/30 transition-colors"
                                     />
                                 </button>

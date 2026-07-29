@@ -75,6 +75,7 @@ export function FavoriteMapsCard({
                             >
                                 <MapThumbnail
                                     mapName={name}
+                                    size="card"
                                     className="aspect-square rounded border border-hairline/10 group-hover:border-hairline/30 transition-colors"
                                 />
                                 <span className="text-[10px] font-medium text-muted-foreground group-hover:text-foreground truncate transition-colors">

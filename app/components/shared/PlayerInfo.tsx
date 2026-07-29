@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { cn } from '@/lib/utils'
-import { ActiveTitle, getAvatarUrl } from '@/app/utils/api'
+import { ActiveTitle, avatarSizeFor, getAvatarUrl } from '@/app/utils/api'
 import { getAvatarBorderStyle, getTitleTextStyle } from '@/app/utils/titleStyles'
 import { useTheme } from '@/app/theme/ThemeProvider'
 import { usePatreonTier } from '@/app/utils/patreon'
@@ -30,14 +30,16 @@ function isAvatarableUserId(userId?: string | number): userId is string | number
     return String(userId).length > 5
 }
 
-function PlayerAvatar({ userId, alias, title, sizePx, isLight }: {
+export function PlayerAvatar({ userId, alias, title, sizePx, isLight, priority = false, className }: {
     userId: string | number
     alias?: string | null
     title?: ActiveTitle | null
     sizePx: number
     isLight: boolean
+    priority?: boolean
+    className?: string
 }) {
-    const src = getAvatarUrl(userId)
+    const src = getAvatarUrl(userId, avatarSizeFor(sizePx))
     const fallback = `https://cdn.discordapp.com/embed/avatars/${Number(userId) % 5}.png`
     const borderStyle = useMemo(() => getAvatarBorderStyle(title, isLight), [title, isLight])
     return (
@@ -46,7 +48,8 @@ function PlayerAvatar({ userId, alias, title, sizePx, isLight }: {
             alt={alias || String(userId)}
             width={sizePx}
             height={sizePx}
-            loading="lazy"
+            loading={priority ? 'eager' : 'lazy'}
+            fetchPriority={priority ? 'high' : undefined}
             decoding="async"
             style={{
                 width: sizePx,
@@ -54,7 +57,7 @@ function PlayerAvatar({ userId, alias, title, sizePx, isLight }: {
                 objectFit: 'cover',
                 ...borderStyle,
             }}
-            className="rounded-full shrink-0"
+            className={cn('rounded-full shrink-0', className)}
             onError={e => { (e.target as HTMLImageElement).src = fallback }}
         />
     )

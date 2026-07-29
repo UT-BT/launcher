@@ -86,9 +86,14 @@ calling it done:
 - Pagination is the shared `PaginationBar` (mobile touch bar comes free).
 - Header/toolbars wrap (`flex-wrap`); no `truncate` beside a `shrink-0` group.
 - New view added to `routes.ts` both directions (web deep links).
-- Bundle: primary page stays eager, but any modal/detail it opens is `lazy()`;
-  `npm run check:bundle` still passes. No per-row `backdrop-blur` / infinite
-  animations (`agents/styling.md` → CSS runtime cost).
+- Bundle: the page's `DEFAULT_*_STATE` / `DEFAULT_*_CACHES` and its state types
+  live in `<PageName>.types.ts`, the component is registered in
+  `app/components/main/pageLoaders.ts`, and `Main.tsx` imports the component only
+  via `lazy(PAGE_LOADERS.<view>)` plus `type`-only imports from `.types.ts`.
+  A value import from the page module in `Main.tsx` silently undoes the split —
+  `app/components/main/pageLoaders.test.ts` fails if you do. Any modal or detail
+  the page opens is `lazy()` too. `npm run check:bundle` still passes. No per-row
+  `backdrop-blur` / infinite animations (`agents/styling.md` → CSS runtime cost).
 
 ## Verify
 
