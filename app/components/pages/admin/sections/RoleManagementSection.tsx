@@ -86,8 +86,8 @@ export function RoleManagementSection({ userProfile }: AdminSectionProps) {
       <div>
         <h2 className="text-lg font-semibold text-foreground">Staff Roles</h2>
         <p className="text-xs text-muted-foreground">
-          Grant or revoke moderator, admin and cup admin roles. Removing an assignment may revert legacy staff to their
-          hardcoded role — set the role to User to force-demote them.
+          Grant or revoke moderator, admin and cup admin roles. Removing an assignment returns that person to the
+          standard User role.
         </p>
       </div>
 
@@ -174,7 +174,7 @@ export function RoleManagementSection({ userProfile }: AdminSectionProps) {
           <span>
             Remove the {ROLE_LABELS[revokeTarget?.role ?? 0]?.label ?? 'User'} assignment of{' '}
             <span className="font-medium text-foreground">{revokeTarget?.alias ?? revokeTarget?.user}</span>?
-            Legacy staff may revert to a hardcoded role — assign User instead to force-demote.
+            They will return to the standard User role.
           </span>
         }
         confirmLabel="Remove"
