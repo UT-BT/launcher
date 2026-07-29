@@ -3,6 +3,7 @@ import { CalendarDays, ChevronRight, Trophy, Users2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useNewItemHighlight } from '@/app/hooks/useNewItemHighlight'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
+import { NavLink } from '@/app/components/navigation/NavLink'
 import { ErrorBanner } from '@/app/components/pages/teams/teamsShared'
 import { eventErrorMessage, fetchEvents, type EventSummary, type UserProfile } from '@/app/utils/api'
 import { EventStatusBadge, formatEventDate, formatTeamSize } from './events/eventsShared'
@@ -100,12 +101,14 @@ export function EventsPage({ userProfile, state, onStateChange, caches, onCaches
                             const dates = [formatEventDate(event.starts_at), formatEventDate(event.ends_at)].filter(Boolean)
                             const isNew = isNewEvent(event)
                             return (
-                                <button
+                                <NavLink
                                     key={event.id}
-                                    ref={isNew && index === firstNewIdx ? highlight.registerFirstNew : undefined}
-                                    onClick={() => onEventSelect(event.slug)}
+                                    view="event-detail"
+                                    params={{ eventSlug: event.slug }}
+                                    elementRef={isNew && index === firstNewIdx ? highlight.registerFirstNew : undefined}
+                                    onActivate={() => onEventSelect(event.slug)}
                                     className={cn(
-                                        'text-left p-4 rounded-xl bg-card/30 border border-hairline/5 hover:border-accent-500/40 hover:bg-card/50 transition-colors cursor-pointer space-y-3 group',
+                                        'block text-left p-4 rounded-xl bg-card/30 border border-hairline/5 hover:border-accent-500/40 hover:bg-card/50 transition-colors cursor-pointer space-y-3 group',
                                         isNew && 'bg-accent-500/[0.07] ring-1 ring-inset ring-accent-500/40',
                                     )}
                                 >
@@ -123,7 +126,7 @@ export function EventsPage({ userProfile, state, onStateChange, caches, onCaches
                                     <div className="flex items-center gap-1 text-xs font-medium text-accent-300 group-hover:text-accent-200">
                                         {event.signups_open ? 'Sign up now' : 'View event'} <ChevronRight className="size-3.5" />
                                     </div>
-                                </button>
+                                </NavLink>
                             )
                         })}
                     </div>

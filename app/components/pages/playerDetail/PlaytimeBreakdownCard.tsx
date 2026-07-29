@@ -7,6 +7,7 @@ import { usePaginatedQuery } from '@/app/hooks/useAsync'
 import { useNavState } from '@/app/components/navigation/useNavState'
 import { formatAddedDate, displayMapName } from '@/app/utils/format'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
+import { MapNavLink } from '@/app/components/shared/MapNavLink'
 import {
     DataTableShell, DataTableHeaderRow, DataTableHeaderCell,
     DataTableRow, DataTableCell, DataTableEmpty, DataTableSkeletonRow,
@@ -170,9 +171,7 @@ export function PlaytimeBreakdownCard({ accessToken, userId, onMapSelect, tabsSl
                                     <DataTableCell>
                                         <div className="flex items-center gap-2 min-w-0">
                                             <MapThumbnail mapName={row.map} className="size-8 shrink-0" />
-                                            <span className="text-sm font-semibold text-foreground truncate">
-                                                {displayMapName(row.map)}
-                                            </span>
+                                            <MapNavLink mapName={row.map} onMapSelect={onMapSelect} className="text-sm font-semibold text-foreground truncate">{displayMapName(row.map)}</MapNavLink>
                                         </div>
                                     </DataTableCell>
                                 )}

@@ -2,7 +2,9 @@ import { useState, useEffect, useCallback } from 'react'
 import { ClipboardCheck, ChevronLeft, ChevronRight, Loader2, AlertTriangle, RefreshCw } from 'lucide-react'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
+import { MapNavLink } from '@/app/components/shared/MapNavLink'
 import { Button } from '@/app/components/ui/button'
+import { cn } from '@/lib/utils'
 import { displayMapName } from '@/app/utils/format'
 import { fetchPendingReviews, type PendingReview, type PendingReviewsPage } from '@/app/utils/api'
 
@@ -101,15 +103,14 @@ export function MapsToReviewCard({
                             key={r.id}
                             className="flex items-center gap-3 px-3 py-2.5 h-16 border-b border-hairline/5 last:border-0"
                         >
-                            <button
-                                type="button"
-                                onClick={onMapSelect ? () => onMapSelect(r.mapName) : undefined}
-                                disabled={!onMapSelect}
-                                aria-label={displayMapName(r.mapName)}
-                                className="shrink-0 enabled:cursor-pointer"
+                            <MapNavLink
+                                mapName={r.mapName}
+                                onMapSelect={onMapSelect}
+                                ariaLabel={displayMapName(r.mapName)}
+                                className={cn('shrink-0', onMapSelect && 'cursor-pointer')}
                             >
                                 <MapThumbnail mapName={r.mapName} className="size-10 rounded-md" />
-                            </button>
+                            </MapNavLink>
                             <div className="flex items-center gap-1 min-w-0">
                                 <FavoriteStar
                                     name={r.mapName}
@@ -120,14 +121,16 @@ export function MapsToReviewCard({
                             </div>
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-1 min-w-0">
-                                    <button
-                                        type="button"
-                                        onClick={onMapSelect ? () => onMapSelect(r.mapName) : undefined}
-                                        disabled={!onMapSelect}
-                                        className="min-w-0 truncate text-left text-sm font-semibold text-foreground leading-tight enabled:cursor-pointer enabled:hover:underline underline-offset-2"
+                                    <MapNavLink
+                                        mapName={r.mapName}
+                                        onMapSelect={onMapSelect}
+                                        className={cn(
+                                            'min-w-0 truncate text-left text-sm font-semibold text-foreground leading-tight underline-offset-2',
+                                            onMapSelect && 'cursor-pointer hover:underline',
+                                        )}
                                     >
                                         {displayMapName(r.mapName)}
-                                    </button>
+                                    </MapNavLink>
                                 </div>
                                 <span className="text-[11px] text-muted-foreground">Capped {r.timeAgo}</span>
                             </div>

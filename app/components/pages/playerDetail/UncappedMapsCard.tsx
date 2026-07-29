@@ -6,6 +6,7 @@ import { useNavState } from '@/app/components/navigation/useNavState'
 import { displayMapName } from '@/app/utils/format'
 import { difficultyBgColor } from '@/app/utils/scoreColors'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
+import { MapNavLink } from '@/app/components/shared/MapNavLink'
 import {
     DataTableShell, DataTableHeaderRow, DataTableHeaderCell,
     DataTableRow, DataTableCell, DataTableEmpty, DataTableSkeletonRow,
@@ -177,9 +178,7 @@ export function UncappedMapsCard({ accessToken, userId, onMapSelect, tabsSlot }:
                                     <DataTableCell>
                                         <div className="flex items-center gap-2 min-w-0">
                                             <MapThumbnail mapName={m.name} className="size-8 shrink-0" />
-                                            <span className="text-sm font-semibold text-foreground truncate">
-                                                {displayMapName(m.name)}
-                                            </span>
+                                            <MapNavLink mapName={m.name} onMapSelect={onMapSelect} className="text-sm font-semibold text-foreground truncate">{displayMapName(m.name)}</MapNavLink>
                                         </div>
                                     </DataTableCell>
                                 )}

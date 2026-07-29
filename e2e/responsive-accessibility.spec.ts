@@ -54,12 +54,12 @@ test('navigation remains interactive after closing the mobile drawer and resizin
 
   await page.getByRole('button', { name: 'Open navigation' }).click()
   const navigation = page.locator('aside#app-navigation')
-  await navigation.getByRole('button', { name: 'Maps' }).click()
+  await navigation.getByRole('link', { name: 'Maps' }).click()
   await expect(navigation).toHaveAttribute('inert', '')
 
   await page.setViewportSize({ width: 1280, height: 800 })
   await expect(navigation).not.toHaveAttribute('inert', '')
-  await navigation.getByRole('button', { name: 'Players' }).click()
+  await navigation.getByRole('link', { name: 'Players' }).click()
   await expect(page).toHaveURL(/\/players$/)
 })
 
@@ -74,9 +74,22 @@ test('closed navigation becomes inert when resizing from desktop to mobile', asy
   const menu = page.getByRole('button', { name: 'Open navigation' })
   await menu.click()
   await expect(navigation).not.toHaveAttribute('inert', '')
-  await navigation.getByRole('button', { name: 'Maps' }).click()
+  await navigation.getByRole('link', { name: 'Maps' }).click()
   await expect(page).toHaveURL(/\/maps$/)
   await expect(navigation).toHaveAttribute('inert', '')
+})
+
+test('navigation targets are real links that support new-tab clicks', async ({ page, isMobile }) => {
+  test.skip(isMobile)
+  const navigation = page.locator('aside#app-navigation')
+  await expect(navigation.getByRole('link', { name: 'Maps' })).toHaveAttribute('href', '/maps')
+  await expect(navigation.getByRole('link', { name: 'World Records' })).toHaveAttribute('href', '/world-records')
+
+  await navigation.getByRole('link', { name: 'Maps' }).click({ modifiers: ['ControlOrMeta'] })
+  await expect(page).toHaveURL(/\/$/)
+
+  await navigation.getByRole('link', { name: 'Maps' }).click()
+  await expect(page).toHaveURL(/\/maps$/)
 })
 
 test('settings drills down to a full-width panel on a phone', async ({ page }) => {

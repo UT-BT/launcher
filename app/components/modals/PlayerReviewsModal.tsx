@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils'
 import { Modal } from '@/app/components/ui/modal'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
+import { NavLink } from '@/app/components/navigation/NavLink'
 import { displayMapName } from '@/app/utils/format'
 import { scoreTextColor } from '@/app/utils/scoreColors'
 import { fetchMapReviewsByUser, type MapReview } from '@/app/utils/api'
@@ -125,16 +126,17 @@ export function PlayerReviewsModal({
                                     key={r.id}
                                     className="flex items-center gap-3 px-3 py-2 rounded-lg bg-hairline/[0.02] border border-hairline/5 hover:bg-hairline/[0.05] hover:border-hairline/15 transition-colors"
                                 >
-                                    <button
-                                        type="button"
-                                        onClick={() => { onMapSelect?.(r.map_name); onClose() }}
+                                    <NavLink
+                                        view="maps-detail"
+                                        params={{ mapName: r.map_name }}
+                                        onActivate={() => { onMapSelect?.(r.map_name); onClose() }}
                                         className="flex items-center gap-2.5 min-w-0 flex-1 cursor-pointer text-left"
                                     >
                                         <MapThumbnail mapName={r.map_name} className="size-10 shrink-0" />
                                         <span className="text-sm font-semibold text-foreground truncate min-w-0 hover:underline underline-offset-2">
                                             {displayMapName(r.map_name)}
                                         </span>
-                                    </button>
+                                    </NavLink>
 
                                     <div className="hidden sm:flex items-center gap-1 shrink-0">
                                         {METRICS.map(m => (

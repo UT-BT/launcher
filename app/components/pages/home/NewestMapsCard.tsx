@@ -1,6 +1,7 @@
 import { Map as MapIcon } from 'lucide-react'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
+import { MapNavLink } from '@/app/components/shared/MapNavLink'
 import { cn } from '@/lib/utils'
 import { displayMapName } from '@/app/utils/format'
 import { difficultyTextColor } from '@/app/utils/scoreColors'
@@ -36,15 +37,14 @@ export function NewestMapsCard({ maps, favoriteMapNames, onToggleFavorite, onMap
                         onMapSelect && 'hover:bg-hairline/[0.03]',
                     )}
                 >
-                    <button
-                        type="button"
-                        onClick={onMapSelect ? () => onMapSelect(map.name) : undefined}
-                        disabled={!onMapSelect}
-                        aria-label={displayMapName(map.name)}
-                        className="shrink-0 enabled:cursor-pointer"
+                    <MapNavLink
+                        mapName={map.name}
+                        onMapSelect={onMapSelect}
+                        ariaLabel={displayMapName(map.name)}
+                        className={cn('shrink-0', onMapSelect && 'cursor-pointer')}
                     >
                         <MapThumbnail mapName={map.name} className="size-10 rounded-md" />
-                    </button>
+                    </MapNavLink>
                     <div className="flex items-center gap-1 min-w-0">
                         <FavoriteStar
                             name={map.name}
@@ -55,14 +55,16 @@ export function NewestMapsCard({ maps, favoriteMapNames, onToggleFavorite, onMap
                     </div>
                     <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1 min-w-0">
-                            <button
-                                type="button"
-                                onClick={onMapSelect ? () => onMapSelect(map.name) : undefined}
-                                disabled={!onMapSelect}
-                                className="min-w-0 truncate text-left text-sm font-semibold text-foreground leading-tight enabled:cursor-pointer enabled:hover:underline underline-offset-2"
+                            <MapNavLink
+                                mapName={map.name}
+                                onMapSelect={onMapSelect}
+                                className={cn(
+                                    'min-w-0 truncate text-left text-sm font-semibold text-foreground leading-tight underline-offset-2',
+                                    onMapSelect && 'cursor-pointer hover:underline',
+                                )}
                             >
                                 {displayMapName(map.name)}
-                            </button>
+                            </MapNavLink>
                         </div>
                         <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground min-w-0">
                             <span className="truncate">{map.author ? `by ${map.author}` : 'Community map'}</span>

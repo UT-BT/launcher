@@ -23,6 +23,7 @@ import { getMedalIcon } from '@/app/utils/medals'
 import { difficultyTextColor } from '@/app/utils/scoreColors'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
+import { MapNavLink } from '@/app/components/shared/MapNavLink'
 import { ReplayVideoModal } from '@/app/components/shared/ReplayVideoModal'
 import { ReplayPickerModal } from '@/app/components/modals/ReplayPickerModal'
 import { Tooltip } from '@/app/components/ui/tooltip'
@@ -487,7 +488,7 @@ function OpportunityRow({
 }: OpportunityRowProps) {
   const icon = getMedalIcon(item.targetMedal)
   const canSelectMap = !isHiddenView && onMapSelect != null
-  const handleMapSelect = canSelectMap ? () => onMapSelect(item.mapName) : undefined
+  const mapSelect = canSelectMap ? onMapSelect : undefined
   const handleVisibilityChange = () => {
     if (isHiddenView) onRestoreMap(item.mapName)
     else onHideMap(item.mapName)
@@ -503,14 +504,16 @@ function OpportunityRow({
       >
         <div className="flex items-center gap-2 min-w-0">
           <FavoriteStar name={item.mapName} isFavorited={isFavorited} onToggle={onToggleFavorite} size="sm" />
-          <button
-            type="button"
-            onClick={handleMapSelect}
-            disabled={!canSelectMap}
-            className="min-w-0 flex-1 truncate text-left text-sm font-semibold text-foreground leading-tight enabled:cursor-pointer enabled:hover:underline underline-offset-2"
+          <MapNavLink
+            mapName={item.mapName}
+            onMapSelect={mapSelect}
+            className={cn(
+              'min-w-0 flex-1 truncate text-left text-sm font-semibold text-foreground leading-tight underline-offset-2',
+              canSelectMap && 'cursor-pointer hover:underline',
+            )}
           >
             {displayMapName(item.mapName)}
-          </button>
+          </MapNavLink>
           {item.difficulty > 0 && (
             <span className={cn('shrink-0 text-[11px] font-black tabular-nums', difficultyTextColor(item.difficulty))}>
               R{item.difficulty}
@@ -564,26 +567,27 @@ function OpportunityRow({
         canSelectMap && 'hover:bg-hairline/[0.03]'
       )}
     >
-      <button
-        type="button"
-        onClick={handleMapSelect}
-        disabled={!canSelectMap}
-        aria-label={displayMapName(item.mapName)}
-        className="shrink-0 enabled:cursor-pointer"
+      <MapNavLink
+        mapName={item.mapName}
+        onMapSelect={mapSelect}
+        ariaLabel={displayMapName(item.mapName)}
+        className={cn('shrink-0', canSelectMap && 'cursor-pointer')}
       >
         <MapThumbnail mapName={item.mapName} className="size-10 rounded-md" />
-      </button>
+      </MapNavLink>
       <FavoriteStar name={item.mapName} isFavorited={isFavorited} onToggle={onToggleFavorite} size="sm" />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 min-w-0">
-          <button
-            type="button"
-            onClick={handleMapSelect}
-            disabled={!canSelectMap}
-            className="min-w-0 truncate text-left text-sm font-semibold text-foreground leading-tight enabled:cursor-pointer enabled:hover:underline underline-offset-2"
+          <MapNavLink
+            mapName={item.mapName}
+            onMapSelect={mapSelect}
+            className={cn(
+              'min-w-0 truncate text-left text-sm font-semibold text-foreground leading-tight underline-offset-2',
+              canSelectMap && 'cursor-pointer hover:underline',
+            )}
           >
             {displayMapName(item.mapName)}
-          </button>
+          </MapNavLink>
           {item.difficulty > 0 && (
             <span className={cn('shrink-0 text-[11px] font-black tabular-nums', difficultyTextColor(item.difficulty))}>
               R{item.difficulty}

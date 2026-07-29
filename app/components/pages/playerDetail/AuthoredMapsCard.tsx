@@ -6,6 +6,7 @@ import { useNavState } from '@/app/components/navigation/useNavState'
 import { displayMapName, formatAddedDate } from '@/app/utils/format'
 import { difficultyBgColor } from '@/app/utils/scoreColors'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
+import { MapNavLink } from '@/app/components/shared/MapNavLink'
 import { MapScreenshotModal } from '@/app/components/modals/MapScreenshotModal'
 import {
     DataTableShell, DataTableHeaderRow, DataTableHeaderCell,
@@ -174,9 +175,7 @@ export function AuthoredMapsCard({ accessToken, userId, isSelf, onMapSelect, tab
                                     <DataTableCell>
                                         <div className="flex items-center gap-2 min-w-0">
                                             <MapThumbnail mapName={m.name} version={m.screenshot_updated} className="size-8 shrink-0" />
-                                            <span className="text-sm font-semibold text-foreground truncate">
-                                                {displayMapName(m.name)}
-                                            </span>
+                                            <MapNavLink mapName={m.name} onMapSelect={onMapSelect} className="text-sm font-semibold text-foreground truncate">{displayMapName(m.name)}</MapNavLink>
                                         </div>
                                     </DataTableCell>
                                 )}

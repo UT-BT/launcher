@@ -5,6 +5,7 @@ import { getAvatarBorderStyle, getTitleTextStyle } from '@/app/utils/titleStyles
 import { useTheme } from '@/app/theme/ThemeProvider'
 import { usePatreonTier } from '@/app/utils/patreon'
 import { PatreonBadge } from '@/app/components/shared/PatreonBadge'
+import { NavLink } from '@/app/components/navigation/NavLink'
 
 interface PlayerInfoProps {
     userId?: string | number
@@ -84,19 +85,6 @@ export function PlayerInfo({
     const titleSizeClass = size === 'lg' ? 'text-xs' : 'text-[11px]'
 
     const isClickable = isAvatarable && interactive
-    const handleClick = (e: React.MouseEvent) => {
-        if (!isClickable) return
-        e.stopPropagation()
-        openPlayer(userId!)
-    }
-    const onKeyDown = (e: React.KeyboardEvent) => {
-        if (!isClickable) return
-        if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault()
-            e.stopPropagation()
-            openPlayer(userId!)
-        }
-    }
 
     const wrapperClass = cn(
         presentation === 'avatar'
@@ -108,10 +96,6 @@ export function PlayerInfo({
         isClickable && 'w-fit max-w-full cursor-pointer hover:opacity-80 transition-opacity',
         className,
     )
-
-    const interactiveProps = isClickable
-        ? { role: 'button', tabIndex: 0, onClick: handleClick, onKeyDown }
-        : {}
 
     const nameBlock = (
         <div className={cn('flex flex-col min-w-0 leading-tight', layout === 'vertical' && 'items-center')}>
@@ -139,33 +123,50 @@ export function PlayerInfo({
         </div>
     )
 
-    if (presentation === 'avatar') {
-        return (
-            <div
-                className={cn(wrapperClass, highlight && 'rounded-full ring-1 ring-emerald-400/70')}
-                aria-label={displayName}
-                {...interactiveProps}
+    const avatarBody = presentation === 'avatar' ? (
+        isAvatarable ? (
+            <PlayerAvatar userId={userId!} alias={alias} title={title} sizePx={sizePx} isLight={isLight} />
+        ) : (
+            <span
+                className="inline-flex items-center justify-center rounded-full bg-hairline/10 border border-hairline/10 text-[9px] font-bold text-foreground uppercase"
+                style={{ width: sizePx, height: sizePx }}
             >
-                {isAvatarable ? (
-                    <PlayerAvatar userId={userId!} alias={alias} title={title} sizePx={sizePx} isLight={isLight} />
-                ) : (
-                    <span
-                        className="inline-flex items-center justify-center rounded-full bg-hairline/10 border border-hairline/10 text-[9px] font-bold text-foreground uppercase"
-                        style={{ width: sizePx, height: sizePx }}
-                    >
-                        {displayName.slice(0, 1)}
-                    </span>
-                )}
+                {displayName.slice(0, 1)}
+            </span>
+        )
+    ) : null
+
+    const body = presentation === 'avatar' ? avatarBody : (
+        <>
+            {isAvatarable && (
+                <PlayerAvatar userId={userId!} alias={alias} title={title} sizePx={sizePx} isLight={isLight} />
+            )}
+            {nameBlock}
+        </>
+    )
+
+    const outerClass = presentation === 'avatar'
+        ? cn(wrapperClass, highlight && 'rounded-full ring-1 ring-emerald-400/70')
+        : wrapperClass
+
+    if (!isClickable) {
+        return (
+            <div className={outerClass} aria-label={presentation === 'avatar' ? displayName : undefined}>
+                {body}
             </div>
         )
     }
 
     return (
-        <div className={wrapperClass} {...interactiveProps}>
-            {isAvatarable && (
-                <PlayerAvatar userId={userId!} alias={alias} title={title} sizePx={sizePx} isLight={isLight} />
-            )}
-            {nameBlock}
-        </div>
+        <NavLink
+            as="div"
+            view="player-detail"
+            params={{ playerId: String(userId) }}
+            onActivate={() => openPlayer(userId!)}
+            className={outerClass}
+            ariaLabel={presentation === 'avatar' ? displayName : undefined}
+        >
+            {body}
+        </NavLink>
     )
 }

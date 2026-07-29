@@ -13,6 +13,7 @@ import {
 } from '@/app/components/ui/dropdown-menu'
 import { Button } from '@/app/components/ui/button'
 import { NavHistoryBar } from '@/app/components/navigation/NavHistoryBar'
+import { NavLink } from '@/app/components/navigation/NavLink'
 
 const loadSettingsModal = () => IS_WEB
     ? import('@/app/components/modals/SettingsModalWeb').then(m => ({ default: m.SettingsModalWeb }))
@@ -279,12 +280,14 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                     !capabilities.game && 'max-lg:hidden max-lg:mb-0',
                 )}>
                     <Button
+                        asChild
                         variant="ghost"
                         className="w-full h-11 bg-accent-500/15 border border-accent-500/40 text-accent-200 hover:bg-accent-500/25 hover:text-foreground hover:border-accent-500/60 hover:shadow-[0_0_20px_rgba(59,130,246,0.25)] transition-all font-semibold rounded-lg"
-                        onClick={() => changeView('servers')}
                     >
-                        <Server className="size-4" />
-                        Join Server
+                        <NavLink view="servers" onActivate={() => changeView('servers')}>
+                            <Server className="size-4" />
+                            Join Server
+                        </NavLink>
                     </Button>
                     {capabilities.game && (isInstallValid ? (
                         <Button
@@ -318,11 +321,12 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                             {section.items.map((item) => {
                                 const badgeCount = getNavBadge?.(item.id) ?? null
                                 return (
-                                <button
+                                <NavLink
                                     key={item.id}
+                                    view={item.id}
                                     onPointerEnter={() => prefetchPage(item.id)}
                                     onFocus={() => prefetchPage(item.id)}
-                                    onClick={() => changeView(item.id)}
+                                    onActivate={() => changeView(item.id)}
                                     className={cn(
                                         "w-full flex items-center gap-3 px-4 py-3 [@media(max-height:800px)]:py-2 rounded-lg transition-all duration-200 cursor-pointer group relative overflow-hidden",
                                         currentView === item.id
@@ -350,7 +354,7 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                                             </span>
                                         </span>
                                     )}
-                                </button>
+                                </NavLink>
                                 )
                             })}
                         </div>

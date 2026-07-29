@@ -48,6 +48,7 @@ export function PatreonBadge({ tier, size = 'md' }: { tier: PatreonTier; size?: 
 
     const open = (e: React.MouseEvent | React.KeyboardEvent) => {
         e.stopPropagation()
+        e.preventDefault()
         openPatreonInfo()
     }
     const onKeyDown = (e: React.KeyboardEvent) => {

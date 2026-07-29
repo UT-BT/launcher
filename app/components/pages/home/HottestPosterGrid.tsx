@@ -1,6 +1,7 @@
 import { Clock, Eye, Flame } from 'lucide-react'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
+import { MapNavLink } from '@/app/components/shared/MapNavLink'
 import { cn } from '@/lib/utils'
 import { displayMapName } from '@/app/utils/format'
 import { difficultyTextColor } from '@/app/utils/scoreColors'
@@ -39,12 +40,11 @@ export function HottestPosterGrid({ maps, favoriteMapNames, onToggleFavorite, on
                     key={map.name}
                     className="group relative rounded-xl overflow-hidden border border-hairline/5 bg-card/30 hover:border-hairline/20 transition-colors"
                 >
-                    <button
-                        type="button"
-                        onClick={onMapSelect ? () => onMapSelect(map.name) : undefined}
-                        disabled={!onMapSelect}
-                        aria-label={displayMapName(map.name)}
-                        className="block w-full enabled:cursor-pointer"
+                    <MapNavLink
+                        mapName={map.name}
+                        onMapSelect={onMapSelect}
+                        ariaLabel={displayMapName(map.name)}
+                        className={cn('block w-full', onMapSelect && 'cursor-pointer')}
                     >
                         <MapThumbnail
                             mapName={map.name}
@@ -52,19 +52,18 @@ export function HottestPosterGrid({ maps, favoriteMapNames, onToggleFavorite, on
                             priority
                             className="w-full aspect-square rounded-none border-0 transition-transform duration-500 group-hover:scale-[1.03]"
                         />
-                    </button>
+                    </MapNavLink>
                     <div className="p-2.5 space-y-1">
                         <div className="flex items-center gap-1.5 min-w-0">
-                            <button
-                                type="button"
-                                onClick={onMapSelect ? () => onMapSelect(map.name) : undefined}
-                                disabled={!onMapSelect}
-                                className="min-w-0 text-left enabled:cursor-pointer group/name"
+                            <MapNavLink
+                                mapName={map.name}
+                                onMapSelect={onMapSelect}
+                                className={cn('min-w-0 text-left group/name', onMapSelect && 'cursor-pointer')}
                             >
                                 <span className="block truncate text-sm font-semibold text-foreground group-hover/name:underline underline-offset-2">
                                     {displayMapName(map.name)}
                                 </span>
-                            </button>
+                            </MapNavLink>
                             <FavoriteStar
                                 name={map.name}
                                 isFavorited={favoriteMapNames.has(map.name)}

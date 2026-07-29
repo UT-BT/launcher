@@ -16,6 +16,7 @@ import { FilterPanelRow } from '@/app/components/ui/filter-panel-row'
 import { FilterPresetsMenu } from '@/app/components/shared/FilterPresetsMenu'
 import { ActiveFilterChip } from '@/app/components/shared/ActiveFilterChip'
 import { useNavState } from '@/app/components/navigation/useNavState'
+import { NavLink } from '@/app/components/navigation/NavLink'
 import { cn } from '@/lib/utils'
 import {
   DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow, DataTableCell,
@@ -188,8 +189,8 @@ function PlayerRef({ id, alias }: { id?: string | null; alias?: string | null })
 function CapRef({ id }: { id?: string | null }) {
   if (!id) return <span className="text-muted-foreground">a cap</span>
   return (
-    <span>cap <button type="button" onClick={(ev) => { ev.stopPropagation(); openCap(id) }}
-      className="font-mono text-xs text-accent-300 cursor-pointer hover:underline decoration-dotted underline-offset-2">{String(id).slice(0, 8)}</button></span>
+    <span>cap <NavLink view="cap-detail" params={{ capId: String(id) }} onActivate={() => openCap(id)}
+      className="font-mono text-xs text-accent-300 cursor-pointer hover:underline decoration-dotted underline-offset-2">{String(id).slice(0, 8)}</NavLink></span>
   )
 }
 

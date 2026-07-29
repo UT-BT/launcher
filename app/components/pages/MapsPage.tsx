@@ -21,6 +21,8 @@ import { openCap, openTeamCap } from '@/app/components/shared/CapTimeLink'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
+import { MapNavLink } from '@/app/components/shared/MapNavLink'
+import { NavLink } from '@/app/components/navigation/NavLink'
 import { Tutorial } from '@/app/components/shared/Tutorial'
 import { useTutorialState } from '@/app/components/shared/useTutorialState'
 import { buildSteps } from '@/app/components/pages/maps/mapsTutorialSteps'
@@ -646,11 +648,11 @@ export function MapsPage({
     const presetsButtonRef = useRef<HTMLButtonElement | null>(null)
     const sortHeaderRef = useRef<HTMLButtonElement | null>(null)
     const firstRowFavRef = useRef<HTMLSpanElement | null>(null)
-    const firstRowWrRef = useRef<HTMLButtonElement | null>(null)
+    const firstRowWrRef = useRef<HTMLElement | null>(null)
     const firstRowReplayRef = useRef<HTMLButtonElement | null>(null)
     const firstRowRatingRef = useRef<HTMLButtonElement | null>(null)
     const firstRowMyRatingRef = useRef<HTMLButtonElement | null>(null)
-    const firstRowNameRef = useRef<HTMLButtonElement | null>(null)
+    const firstRowNameRef = useRef<HTMLElement | null>(null)
     const firstRowPbRef = useRef<HTMLElement | null>(null)
 
     const highlight = useNewItemHighlight('maps', () =>
@@ -1577,17 +1579,14 @@ export function MapsPage({
                                 </span>
 
                                 <Tooltip content="Open map details" side="top">
-                                    <button
-                                        ref={isFirstRow ? firstRowNameRef : undefined}
-                                        type="button"
-                                        onClick={e => {
-                                            e.stopPropagation()
-                                            onMapSelect(map.name)
-                                        }}
+                                    <MapNavLink
+                                        mapName={map.name}
+                                        onMapSelect={onMapSelect}
+                                        elementRef={isFirstRow ? firstRowNameRef : undefined}
                                         className="font-bold text-foreground hover:text-accent-300 underline-offset-4 transition-colors cursor-pointer text-left text-md truncate"
                                     >
                                         {displayMapName(map.name)}
-                                    </button>
+                                    </MapNavLink>
                                 </Tooltip>
 
                                 {mapNew && (
@@ -1674,6 +1673,7 @@ export function MapsPage({
                 }
                 const capId = wrHolder?.cap_id
                 const clickable = !!capId
+                const isTeamMap = (map.required_players ?? 0) > 1
                 const timeNode = (
                     <span className={cn(
                         "text-amber-300 transition-[color,text-shadow] duration-150 w-fit",
@@ -1684,20 +1684,19 @@ export function MapsPage({
                 )
                 const timeButton = clickable ? (
                     <Tooltip content="View cap details" side="top">
-                        <button
-                            ref={isFirstRow ? firstRowWrRef : undefined}
-                            type="button"
-                            onClick={e => {
-                                e.stopPropagation()
-                                if (capId) {
-                                    if ((map.required_players ?? 0) > 1) openTeamCap(capId)
-                                    else openCap(capId)
-                                }
+                        <NavLink
+                            elementRef={isFirstRow ? firstRowWrRef : undefined}
+                            view={isTeamMap ? 'team-cap-detail' : 'cap-detail'}
+                            params={isTeamMap ? { teamCapId: capId ?? '' } : { capId: capId ?? '' }}
+                            onActivate={() => {
+                                if (!capId) return
+                                if (isTeamMap) openTeamCap(capId)
+                                else openCap(capId)
                             }}
                             className="text-left cursor-pointer group/wr"
                         >
                             {timeNode}
-                        </button>
+                        </NavLink>
                     </Tooltip>
                 ) : (
                     <div ref={isFirstRow ? (firstRowWrRef as unknown as React.RefObject<HTMLDivElement | null>) : undefined} className="text-left">{timeNode}</div>
@@ -1729,6 +1728,7 @@ export function MapsPage({
                 const isWR = wr != null && wr > 0 && bestCap.cap_time_seconds - wr <= 0.0005
                 const pbCapId = bestCap.cap_id ?? undefined
                 const clickable = !!pbCapId
+                const isTeamMap = (map.required_players ?? 0) > 1
                 const timeText = (
                     <span className={cn(
                         pbTextColor(medalTier, isWR),
@@ -1741,20 +1741,19 @@ export function MapsPage({
                     <DataTableCell key={id} align="center" className="font-mono text-sm text-muted-foreground">
                         {clickable ? (
                             <Tooltip content="View cap details" side="top">
-                                <button
-                                    ref={isFirstRow ? (firstRowPbRef as React.RefObject<HTMLButtonElement | null>) : undefined}
-                                    type="button"
-                                    onClick={e => {
-                                        e.stopPropagation()
-                                        if (pbCapId) {
-                                            if ((map.required_players ?? 0) > 1) openTeamCap(pbCapId)
-                                            else openCap(pbCapId)
-                                        }
+                                <NavLink
+                                    elementRef={isFirstRow ? firstRowPbRef : undefined}
+                                    view={isTeamMap ? 'team-cap-detail' : 'cap-detail'}
+                                    params={isTeamMap ? { teamCapId: pbCapId ?? '' } : { capId: pbCapId ?? '' }}
+                                    onActivate={() => {
+                                        if (!pbCapId) return
+                                        if (isTeamMap) openTeamCap(pbCapId)
+                                        else openCap(pbCapId)
                                     }}
                                     className="flex flex-col leading-tight text-center cursor-pointer group/pb"
                                 >
                                     {timeText}
-                                </button>
+                                </NavLink>
                             </Tooltip>
                         ) : (
                             <div

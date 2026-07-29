@@ -9,6 +9,7 @@ import { getMedalIcon } from '@/app/utils/medals'
 import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
 import { TeamRosterBadge } from '@/app/components/shared/TeamRosterBadge'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
+import { MapNavLink } from '@/app/components/shared/MapNavLink'
 import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
 import { IconActionButton } from '@/app/components/shared/IconActionButton'
 import { ReplayVideoModal } from '@/app/components/shared/ReplayVideoModal'
@@ -185,9 +186,7 @@ export function PersonalBestsCard({
                                 disabled={!canEditFavorites}
                             />
                         )}
-                        <span className="text-sm font-semibold text-foreground truncate min-w-0">
-                            {displayMapName(pb.mapName)}
-                        </span>
+                        <MapNavLink mapName={pb.mapName} onMapSelect={onMapSelect} className="text-sm font-semibold text-foreground truncate min-w-0">{displayMapName(pb.mapName)}</MapNavLink>
                     </div>
                     <div className="flex items-center gap-2">{renderPbStatus(pb)}</div>
                 </div>
@@ -320,9 +319,7 @@ export function PersonalBestsCard({
                                                 )}
                                                 <div className="flex flex-col gap-1 min-w-0">
                                                     <div className="flex items-center gap-2 min-w-0">
-                                                        <span className="text-sm font-semibold text-foreground truncate min-w-0">
-                                                            {displayMapName(pb.mapName)}
-                                                        </span>
+                                                        <MapNavLink mapName={pb.mapName} onMapSelect={onMapSelect} className="text-sm font-semibold text-foreground truncate min-w-0">{displayMapName(pb.mapName)}</MapNavLink>
                                                         {pb.isTeam && (
                                                             <TeamRosterBadge members={pb.teamMembers} currentUserId={String(userId)} />
                                                         )}

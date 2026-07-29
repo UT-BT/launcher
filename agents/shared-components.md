@@ -4,15 +4,15 @@ read_when:
   - "writing JSX that shows a player, a table, a modal, a filter/columns menu, or a tutorial"
   - "about to hand-roll UI that might already be a shared component"
   - "deciding whether to extract a new shared component"
-keywords: [PlayerInfo, DataTable, Modal, ColumnsMenu, FilterPresetsMenu, Tutorial, CapTimeLink, MapThumbnail, PatreonBadge, shared]
+keywords: [PlayerInfo, DataTable, Modal, ColumnsMenu, FilterPresetsMenu, Tutorial, CapTimeLink, MapNavLink, NavLink, MapThumbnail, PatreonBadge, shared]
 provides: "the inventory of reusable components + when to use each"
 not_here:
   - "the class strings / design tokens → styling.md"
   - "how detail pages open via events (open-player / open-cap) → navigation.md"
   - "page/query state + persistence → state-patterns.md"
-sections: [hard-rule-playerinfo, player-cap-links, tables-datatable-primitives, columns-columnsmenu, filter-presets, tutorial, visual-primitives, ui-primitives, utilities, when-to-extract]
-last_verified: 2026-07-26
-verify_against: [app/components/shared/PlayerInfo.tsx, app/components/shared/DataTable.tsx, app/components/shared/CapTimeLink.tsx, app/components/shared/ColumnsMenu.tsx, app/components/shared/FilterPresetsMenu.tsx]
+sections: [hard-rule-playerinfo, player-cap-links, map-links, tables-datatable-primitives, columns-columnsmenu, filter-presets, tutorial, visual-primitives, ui-primitives, utilities, when-to-extract]
+last_verified: 2026-07-29
+verify_against: [app/components/shared/PlayerInfo.tsx, app/components/shared/DataTable.tsx, app/components/shared/CapTimeLink.tsx, app/components/shared/MapNavLink.tsx, app/components/shared/MapNameCell.tsx, app/components/shared/ColumnsMenu.tsx, app/components/shared/FilterPresetsMenu.tsx]
 ---
 
 # Shared components reference
@@ -107,13 +107,42 @@ event that `Main.tsx` turns into navigation. The **event architecture lives in
   <CapTimeLink capId={entry.id} seconds={entry.cap_time_seconds} className={...} />
   ```
 
-  It renders `formatCapTime(seconds)` and, when `capId` is a real cap id, makes it
-  a button that `stopPropagation`s (so it works inside rows that already open the
-  map) and dispatches `open-cap` → the Cap Detail page. Pass `capId={undefined}`
-  for aggregate times with no backing cap (medians, medal thresholds, distribution
-  buckets) — it falls back to plain text. Don't hand-roll `formatCapTime` in a
-  clickable span. `openCap(capId)` is also exported for the rare non-time trigger
-  (e.g. the movement "best run" link).
+  It renders `formatCapTime(seconds)` and, when `capId` (or `teamCapId`) is a real
+  id, makes it a `NavLink` that `stopPropagation`s (so it works inside rows that
+  already open the map) and dispatches `open-cap` / `open-team-cap` → the Cap Detail
+  page. Pass `capId={undefined}` for aggregate times with no backing cap (medians,
+  medal thresholds, distribution buckets) — it falls back to plain text. Don't
+  hand-roll `formatCapTime` in a clickable span. `openCap(capId)` is also exported
+  for the rare non-time trigger (e.g. the movement "best run" link).
+
+Both render through `NavLink`, so on the web build they are real `<a href>`
+elements — middle-click / ctrl-click / "Open in new tab" work. See
+`agents/navigation.md` → link semantics.
+
+## Map links
+
+Never wire a map click as a bare `<button onClick={() => onMapSelect(name)}>`.
+Render one of:
+
+- **`MapNameCell`** (`app/components/shared/MapNameCell.tsx`) — the table cell:
+  thumbnail + favorite star + name, thumbnail and name each linking to the map.
+- **`MapNavLink`** (`app/components/shared/MapNavLink.tsx`) — the generic wrapper
+  for any other clickable map surface (poster tiles, hero art, compact rows):
+
+  ```tsx
+  <MapNavLink mapName={map.name} onMapSelect={onMapSelect} className={...}>
+      <MapThumbnail mapName={map.name} className="size-10 rounded-md" />
+  </MapNavLink>
+  ```
+
+  Omitting `onMapSelect` renders a plain inert `<span>` — so the same JSX covers
+  the "not navigable here" case, and the click still reaches an enclosing
+  clickable row. It is a thin `NavLink` bound to
+  `maps-detail`, so the web build gets a real `/maps/<name>` anchor.
+
+`MapNameCell`/`MapNavLink` use `cn(...)` conditionals for their hover/cursor
+classes — do **not** reach for Tailwind's `enabled:` variant around them; `:enabled`
+never matches an `<a>`, so those rules silently die on the web build.
 
 ## Tables — `DataTable.*` primitives
 

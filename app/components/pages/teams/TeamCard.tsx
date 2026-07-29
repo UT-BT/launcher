@@ -1,6 +1,7 @@
 import { Users2, Calendar } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
+import { NavLink } from '@/app/components/navigation/NavLink'
 import { formatAddedDate } from '@/app/utils/format'
 import type { ActiveTitle, TeamCore } from '@/app/utils/api'
 import { AccessBadge, TagChip } from './teamsShared'
@@ -16,11 +17,12 @@ interface TeamCardProps {
 
 export function TeamCard({ team, ownerAlias, ownerTitle, isOwnTeam, onSelect }: TeamCardProps) {
     return (
-        <button
-            type="button"
-            onClick={() => onSelect(team.id)}
+        <NavLink
+            view="team-detail"
+            params={{ teamId: team.id }}
+            onActivate={() => onSelect(team.id)}
             className={cn(
-                'text-left w-full rounded-xl border p-4 space-y-3 transition-colors cursor-pointer',
+                'block text-left w-full rounded-xl border p-4 space-y-3 transition-colors cursor-pointer',
                 isOwnTeam
                     ? 'bg-accent-500/10 border-accent-500/50 hover:border-accent-500/70'
                     : 'bg-card/30 border-white/10 hover:border-white/20 hover:bg-card/50',
@@ -57,6 +59,6 @@ export function TeamCard({ team, ownerAlias, ownerTitle, isOwnTeam, onSelect }: 
                     <span>{team.added ? formatAddedDate(team.added) : '—'}</span>
                 </span>
             </div>
-        </button>
+        </NavLink>
     )
 }

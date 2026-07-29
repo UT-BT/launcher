@@ -12,6 +12,7 @@ import { TeamHolders } from '@/app/components/shared/TeamHolders'
 import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
 import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
+import { NavLink } from '@/app/components/navigation/NavLink'
 import { IconActionButton } from '@/app/components/shared/IconActionButton'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import { ReplayVideoModal } from '@/app/components/shared/ReplayVideoModal'
@@ -125,13 +126,14 @@ export function HistoryModal({
                     <div className="flex items-center gap-1.5 min-w-0">
                         <FavoriteStar name={cap.mapName} isFavorited={favoriteMapNames.has(cap.mapName)} onToggle={onToggleFavorite} size="md" />
                         {onMapSelect ? (
-                            <button
-                                type="button"
-                                onClick={() => { onMapSelect(cap.mapName); onOpenChange(false) }}
+                            <NavLink
+                                view="maps-detail"
+                                params={{ mapName: cap.mapName }}
+                                onActivate={() => { onMapSelect(cap.mapName); onOpenChange(false) }}
                                 className="font-bold text-foreground hover:text-accent-300 text-left truncate"
                             >
                                 {displayMapName(cap.mapName)}
-                            </button>
+                            </NavLink>
                         ) : <span className="font-bold text-foreground truncate">{displayMapName(cap.mapName)}</span>}
                     </div>
                     {cap.isTeam && cap.teamMembers?.length ? (
@@ -238,13 +240,14 @@ export function HistoryModal({
                                                     <div className="flex flex-col gap-1 min-w-0">
                                                         <div className="flex items-center gap-2 min-w-0">
                                                             {onMapSelect ? (
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => { onMapSelect(cap.mapName); onOpenChange(false) }}
+                                                                <NavLink
+                                                                    view="maps-detail"
+                                                                    params={{ mapName: cap.mapName }}
+                                                                    onActivate={() => { onMapSelect(cap.mapName); onOpenChange(false) }}
                                                                     className="font-bold text-foreground hover:text-accent-300 underline-offset-4 transition-colors cursor-pointer text-left text-md truncate"
                                                                 >
                                                                     {displayMapName(cap.mapName)}
-                                                                </button>
+                                                                </NavLink>
                                                             ) : (
                                                                 <span className="font-bold text-foreground text-md truncate">
                                                                     {displayMapName(cap.mapName)}
