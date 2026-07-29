@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils'
 import { useNewItemHighlight } from '@/app/hooks/useNewItemHighlight'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
 import { ErrorBanner } from '@/app/components/pages/teams/teamsShared'
-import { eventErrorMessage, fetchEvents, type UserProfile } from '@/app/utils/api'
+import { eventErrorMessage, fetchEvents, type EventSummary, type UserProfile } from '@/app/utils/api'
 import { EventStatusBadge, formatEventDate, formatTeamSize } from './events/eventsShared'
 import type { EventsPageCaches, EventsPageState } from './EventsPage.types'
 
