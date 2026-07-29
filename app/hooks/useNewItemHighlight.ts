@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 
-export type HighlightView = 'maps' | 'world-records'
+export type HighlightView = 'maps' | 'world-records' | 'events' | 'news'
 
 const FALLBACK_WINDOW_MS = 7 * 24 * 3600 * 1000
 const HIGHLIGHT_DURATION_MS = 7000
@@ -31,12 +31,19 @@ function consumePendingHighlight(view: HighlightView): string | null | undefined
     }
 }
 
+const NAIVE_DATETIME = /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/
+
+function parseTimestamp(value: string): number {
+    if (NAIVE_DATETIME.test(value)) return Date.parse(`${value.replace(' ', 'T')}Z`)
+    return Date.parse(value)
+}
+
 function sinceMs(since: string | null): number {
-    const parsed = since ? Date.parse(since) : NaN
+    const parsed = since ? parseTimestamp(since) : NaN
     return Number.isNaN(parsed) ? Date.now() - FALLBACK_WINDOW_MS : parsed
 }
 
-export function useNewItemHighlight(view: HighlightView, onActivate?: () => void) {
+export function useNewItemHighlight(view: HighlightView, onActivate?: () => void, itemsReady = true) {
     const [since, setSince] = useState<number | null>(null)
     const scrolledRef = useRef(false)
     const onActivateRef = useRef(onActivate)
@@ -62,14 +69,14 @@ export function useNewItemHighlight(view: HighlightView, onActivate?: () => void
     }, [view, activate])
 
     useEffect(() => {
-        if (since == null) return
+        if (since == null || !itemsReady) return
         const t = setTimeout(() => setSince(null), HIGHLIGHT_DURATION_MS)
         return () => clearTimeout(t)
-    }, [since])
+    }, [since, itemsReady])
 
     const isNew = useCallback((addedIso: string | null | undefined): boolean => {
         if (since == null || !addedIso) return false
-        const t = Date.parse(addedIso)
+        const t = parseTimestamp(addedIso)
         return !Number.isNaN(t) && t > since
     }, [since])
 

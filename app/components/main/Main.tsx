@@ -110,11 +110,15 @@ const SERVER_FAVORITES_STORAGE_KEY = 'utbt:serverFavorites:v2'
 
 const HISTORY_CAP = 50
 
-const BADGE_SECTIONS: Record<string, BadgeSection> = {
+const BADGE_SECTIONS = {
   'maps': 'maps',
   'world-records': 'world_records',
   'events': 'events',
   'news': 'news',
+} satisfies Record<HighlightView, BadgeSection>
+
+function isBadgedView(view: string): view is HighlightView {
+  return view in BADGE_SECTIONS
 }
 
 const LEGACY_SEEN_KEYS: Record<string, string> = {
@@ -340,9 +344,9 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
   const accessTokenRef = useRef(accessToken)
   accessTokenRef.current = accessToken
 
-  const markViewed = useCallback((view: string) => {
+  const markViewed = useCallback((view: string, { highlight = true } = {}) => {
+    if (!isBadgedView(view)) return
     const section = BADGE_SECTIONS[view]
-    if (!section) return
     const token = accessTokenRef.current
     if (!token) return
     if (!badgesLoadedRef.current) {
@@ -357,8 +361,9 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
     badgeSeenRef.current = { ...badgeSeenRef.current, [view]: stamp }
     setBadgeCounts(prev => ({ ...prev, [view]: 0 }))
     setBadgeSeen(prev => ({ ...prev, [view]: stamp }))
-    if ((view === 'maps' || view === 'world-records') && count != null && count > 0) {
-      writePendingHighlight(view as HighlightView, previousSeen)
+    if (highlight && count != null && count > 0) {
+      const activeView = stackRef.current.entries[stackRef.current.cursor]?.view
+      if (activeView !== view) writePendingHighlight(view, previousSeen)
       window.dispatchEvent(new CustomEvent('highlight-new', { detail: { view, since: previousSeen } }))
     }
     markSectionSeen(token, section, stamp).catch(() => undefined)
@@ -406,8 +411,9 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
       setBadgeSeen(seen)
       const toMark = new Set(pendingViewedRef.current)
       pendingViewedRef.current.clear()
-      toMark.add(stackRef.current.entries[stackRef.current.cursor].view)
       toMark.forEach(view => markViewed(view))
+      const activeView = stackRef.current.entries[stackRef.current.cursor].view
+      if (!toMark.has(activeView)) markViewed(activeView, { highlight: false })
     } catch { /* offline or an older API: no badges this session */ }
   }, [markViewed])
 
