@@ -32,8 +32,16 @@ export function viewToPath(view: string, params: NavParams): string {
     }
 }
 
+function decodeSegment(segment: string): string {
+    try {
+        return decodeURIComponent(segment)
+    } catch {
+        return segment
+    }
+}
+
 export function pathToNav(pathname: string, search: string): RouteTarget {
-    const segments = pathname.split('/').filter(Boolean).map(decodeURIComponent)
+    const segments = pathname.split('/').filter(Boolean).map(decodeSegment)
     const query = new URLSearchParams(search)
 
     if (segments.length === 0) return { view: 'home', params: {} }

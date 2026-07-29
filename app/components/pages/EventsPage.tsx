@@ -2,28 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { CalendarDays, ChevronRight, Trophy, Users2 } from 'lucide-react'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
 import { ErrorBanner } from '@/app/components/pages/teams/teamsShared'
-import { eventErrorMessage, fetchEvents, type EventSummary, type UserProfile } from '@/app/utils/api'
+import { eventErrorMessage, fetchEvents, type UserProfile } from '@/app/utils/api'
 import { EventStatusBadge, formatEventDate, formatTeamSize } from './events/eventsShared'
-
-export interface EventsPageState {
-    scrollTop: number
-}
-
-export interface EventsPageCaches {
-    events: EventSummary[]
-    loaded: boolean
-    lastRefreshIso: string | null
-}
-
-export const DEFAULT_EVENTS_STATE: EventsPageState = {
-    scrollTop: 0,
-}
-
-export const DEFAULT_EVENTS_CACHES: EventsPageCaches = {
-    events: [],
-    loaded: false,
-    lastRefreshIso: null,
-}
+import type { EventsPageCaches, EventsPageState } from './EventsPage.types'
 
 interface EventsPageProps {
     userProfile?: UserProfile

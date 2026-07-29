@@ -256,6 +256,7 @@ export function MapScreenshotModal({
                                     <MapThumbnail
                                         mapName={mapName}
                                         version={screenshotVersion}
+                                        size="hero"
                                         className="absolute inset-0 w-full h-full rounded-none border-0 opacity-25"
                                     />
                                 )}

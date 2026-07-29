@@ -5,7 +5,7 @@ import { useAutoPageSize } from '@/app/hooks/useAutoPageSize'
 import { useRefreshCooldown } from '@/app/hooks/useRefreshCooldown'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
 import {
-    UserProfile, CapItAllRow, CapItAllLeaderboardPage,
+    UserProfile, CapItAllLeaderboardPage,
     fetchCapItAllLeaderboard,
 } from '@/app/utils/api'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
@@ -14,6 +14,7 @@ import {
     DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow,
     DataTableCell, DataTableEmpty, DataTableSkeletonRow, type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
+import type { CapItAllPageCaches, CapItAllPageState } from './CapItAllPage.types'
 
 type CapItAllColumnId = 'rank' | 'player' | 'certified' | 'noncertified' | 'teammaps' | 'total'
 
@@ -25,36 +26,6 @@ const CAP_IT_ALL_COLUMNS: ResponsiveColumn[] = [
     { id: 'teammaps', width: '220px', priority: 40 },
     { id: 'total', width: '220px', required: true },
 ]
-
-export interface CapItAllPageState {
-    search: string
-    currentPage: number
-    pageSizePreference: number | 'auto'
-    scrollTop: number
-}
-
-export interface CapItAllPageCaches {
-    items: CapItAllRow[]
-    total: number
-    mapCount: number
-    lastRefreshIso: string | null
-    querySig: string | null
-}
-
-export const DEFAULT_CAP_IT_ALL_STATE: CapItAllPageState = {
-    search: '',
-    currentPage: 1,
-    pageSizePreference: 'auto',
-    scrollTop: 0,
-}
-
-export const DEFAULT_CAP_IT_ALL_CACHES: CapItAllPageCaches = {
-    items: [],
-    total: 0,
-    mapCount: 0,
-    lastRefreshIso: null,
-    querySig: null,
-}
 
 const TABLE_ROW_HEIGHT_PX = 56
 const TABLE_CHROME_PX = 300

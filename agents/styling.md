@@ -10,8 +10,8 @@ not_here:
   - "which component to use → shared-components.md"
   - "state / persistence → state-patterns.md"
 sections: [class-merging, tables-locked, responsive-columns, page-layout, filter-panel, buttons-toggle-states, form-inputs, card-backgrounds-borders, text, color-palette, animation, css-runtime-cost, donts]
-last_verified: 2026-07-23
-verify_against: [app/components/shared/DataTable.tsx, app/styles/globals.css, lib/utils.ts, app/hooks/useElementWidth.ts]
+last_verified: 2026-07-28
+verify_against: [app/components/shared/DataTable.tsx, app/styles/globals.css, app/styles/desktop.css, app/styles/index.css, lib/utils.ts, app/hooks/useElementWidth.ts]
 ---
 
 # Styling reference
@@ -348,6 +348,15 @@ identical structure and luminance, so there's nothing extra to QA between dark t
   `app/styles/window.css`, mapped to theme tokens (`--secondary`/`--popover`/
   `--foreground`/`--border`), so it follows every theme — white in Light,
   tinted-dark in the dark themes. Don't hardcode titlebar colours.
+
+  `window.css` is **desktop-only** — it is reached through `app/styles/desktop.css`,
+  which only `renderer-desktop.tsx` imports, so none of it ships to the website.
+  `color-scheme` deliberately does *not* live there: it drives native form
+  controls and scrollbars on both targets, so it sits in `globals.css`. Moving it
+  back into `window.css` would regress the website's `<select>` and scrollbar
+  rendering with no build error. On web, `renderer-web.tsx` sets
+  `--window-titlebar-height: 0px` before React mounts, which is what stands in
+  for the `:root` default — several shared components position against that var.
 
 Values live in `app/styles/themes.css` (`:root` = Classic, `:root[data-theme="…"]`
 for the rest). Registry + provider: `app/theme/themes.ts`, `app/theme/ThemeProvider.tsx`

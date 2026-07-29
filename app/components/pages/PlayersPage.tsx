@@ -25,18 +25,19 @@ import {
 import { formatAddedDate } from '@/app/utils/format'
 import { ROLE_LABELS } from '@/app/utils/roles'
 
-import championIcon from '@/app/assets/champion.png'
-import goldIcon from '@/app/assets/gold.png'
-import silverIcon from '@/app/assets/silver.png'
-import bronzeIcon from '@/app/assets/bronze.png'
-import worldRecordIcon from '@/app/assets/world_record.png'
+import championIcon from '@/app/assets/champion.webp'
+import goldIcon from '@/app/assets/gold.webp'
+import silverIcon from '@/app/assets/silver.webp'
+import bronzeIcon from '@/app/assets/bronze.webp'
+import worldRecordIcon from '@/app/assets/world_record.webp'
 
-export type SortDir = 'asc' | 'desc'
+import type {
+    PlayerColumnId,
+    PlayersPageCaches,
+    PlayersPageState,
+} from './PlayersPage.types'
 
-export type PlayerColumnId =
-    | 'rank' | 'player' | 'role' | 'points' | 'world_records'
-    | 'champion_medals' | 'gold_medals' | 'silver_medals' | 'bronze_medals'
-    | 'registered_at'
+export type { PlayerColumnId, SortDir } from './PlayersPage.types'
 
 const COLUMN_LABELS: Record<PlayerColumnId, string> = {
     rank: 'Rank',
@@ -51,11 +52,6 @@ const COLUMN_LABELS: Record<PlayerColumnId, string> = {
     registered_at: 'Member Since',
 }
 
-const DEFAULT_COLUMN_ORDER: PlayerColumnId[] = [
-    'rank', 'player', 'role', 'points', 'world_records',
-    'champion_medals', 'gold_medals', 'silver_medals', 'bronze_medals', 'registered_at',
-]
-
 const COLUMN_WIDTH: Partial<Record<PlayerColumnId, string>> = {
     rank: '5rem',
     role: '7rem',
@@ -66,19 +62,6 @@ const COLUMN_WIDTH: Partial<Record<PlayerColumnId, string>> = {
     silver_medals: '5.5rem',
     bronze_medals: '5.5rem',
     registered_at: '9rem',
-}
-
-const DEFAULT_COLUMN_VISIBILITY: Record<PlayerColumnId, boolean> = {
-    rank: true,
-    player: true,
-    role: true,
-    points: true,
-    world_records: true,
-    champion_medals: false,
-    gold_medals: false,
-    silver_medals: false,
-    bronze_medals: false,
-    registered_at: false,
 }
 
 const REQUIRED_COLUMNS: ReadonlySet<PlayerColumnId> = new Set<PlayerColumnId>(['player'])
@@ -114,42 +97,6 @@ const MEDAL_ICON: Partial<Record<PlayerColumnId, string>> = {
     gold_medals: goldIcon,
     silver_medals: silverIcon,
     bronze_medals: bronzeIcon,
-}
-
-export interface PlayersPageState {
-    search: string
-    sortBy: PlayerSortField
-    sortDir: SortDir
-    columnVisibility: Record<PlayerColumnId, boolean>
-    columnOrder: PlayerColumnId[]
-    currentPage: number
-    pageSizePreference: number | 'auto'
-    scrollTop: number
-}
-
-export interface PlayersPageCaches {
-    players: PlayerListRow[]
-    totalCount: number
-    lastRefreshIso: string | null
-    querySig: string | null
-}
-
-export const DEFAULT_PLAYERS_STATE: PlayersPageState = {
-    search: '',
-    sortBy: 'rank',
-    sortDir: 'asc',
-    columnVisibility: DEFAULT_COLUMN_VISIBILITY,
-    columnOrder: DEFAULT_COLUMN_ORDER,
-    currentPage: 1,
-    pageSizePreference: 'auto',
-    scrollTop: 0,
-}
-
-export const DEFAULT_PLAYERS_CACHES: PlayersPageCaches = {
-    players: [],
-    totalCount: 0,
-    lastRefreshIso: null,
-    querySig: null,
 }
 
 const TABLE_ROW_HEIGHT_PX = 56

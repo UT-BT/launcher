@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect, useCallback } from 'react'
 import { useLogger } from '@/app/hooks/use-logger'
-import logo from '@/app/assets/logo.png'
+import logo from '@/app/assets/logo.webp'
 
 interface SplashScreenProps {
   onReady: () => void

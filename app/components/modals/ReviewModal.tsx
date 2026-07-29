@@ -239,6 +239,7 @@ export function ReviewModal({ open, onOpenChange, accessToken, userId, mapName, 
                             {mapName && (
                                 <MapThumbnail
                                     mapName={mapName}
+                                    size="hero"
                                     className="absolute inset-0 w-full h-full rounded-none border-0 opacity-70"
                                 />
                             )}

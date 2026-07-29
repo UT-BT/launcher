@@ -1,0 +1,70 @@
+/* Desktop-only styles. Imported by renderer-desktop.tsx and nothing else, so
+   none of this ships to the website. The web renderer sets
+   --window-titlebar-height to 0px at startup, which is what stands in for the
+   :root default in window.css. */
+
+@import './window.css';
+
+.splash-logo {
+  animation: none;
+  transform: translateY(0) scale(1);
+  transition:
+    transform 2100ms cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    filter 2100ms cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    opacity 2100ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  filter: drop-shadow(0 0 18px rgba(255, 255, 255, 0.25));
+  opacity: 1;
+}
+
+.splash-container {
+  opacity: 1;
+  transform: scale(1);
+  transition: opacity 500ms ease, transform 500ms ease;
+}
+
+.splash-container.splash-complete {
+  opacity: 0;
+  transform: scale(1.06);
+}
+
+.splash-title,
+.splash-version {
+  transition: opacity 450ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.splash-container.splash-animating .splash-title,
+.splash-container.splash-animating .splash-version {
+  opacity: 0;
+}
+
+.splash-status {
+  transition: opacity 200ms ease;
+}
+
+.splash-container.splash-animating .splash-status {
+  opacity: 0;
+}
+
+
+.splash-container:not(.splash-animating) .splash-logo {
+  animation: splashGlow 2600ms ease-in-out infinite alternate;
+}
+
+@keyframes splashGlow {
+  0% {
+    filter:
+      drop-shadow(0 0 10px rgba(var(--utbt-blue-rgb), 0.35)) drop-shadow(0 0 28px rgba(var(--utbt-blue-rgb), 0.30)) drop-shadow(0 0 46px rgba(var(--utbt-blue-rgb), 0.25)) brightness(1.05) saturate(115%);
+  }
+
+  50% {
+    filter:
+      drop-shadow(0 0 12px rgba(var(--utbt-red-rgb), 0.45)) drop-shadow(0 0 32px rgba(var(--utbt-red-rgb), 0.35)) drop-shadow(0 0 60px rgba(var(--utbt-red-rgb), 0.30)) brightness(1.12) saturate(125%);
+  }
+}
+
+.splash-container.splash-animating .splash-logo {
+  animation: none;
+  transform: translateY(12px) scale(3);
+  filter: brightness(1.28) drop-shadow(0 0 110px rgba(56, 189, 248, 0.80));
+  opacity: 0;
+}

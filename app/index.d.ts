@@ -33,7 +33,7 @@ declare module '*.svg' {
   export default content
 }
 
-declare module '*.web' {
+declare module '*.webp' {
   const content: string
   export default content
 }

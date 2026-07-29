@@ -1,5 +1,5 @@
 import { Loader2 } from 'lucide-react'
-import logo from '@/app/assets/logo.png'
+import logo from '@/app/assets/logo.webp'
 import { Button } from '@/app/components/ui/button'
 
 interface WebBootScreenProps {

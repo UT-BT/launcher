@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { PRIVACY_POLICY } from '@/app/constants/legal'
 import { setTelemetryConsent } from '@/app/utils/telemetry'
 import { Modal } from '@/app/components/ui/modal'
-import { MarkdownBody } from '@/app/components/shared/MarkdownBody'
+
+const PrivacyPolicyBody = lazy(() =>
+  import('@/app/components/shared/PrivacyPolicyBody').then(m => ({ default: m.PrivacyPolicyBody }))
+)
 
 export function AnalyticsConsentBanner({ onChoice }: { onChoice: () => void }) {
   const [privacyOpen, setPrivacyOpen] = useState(false)
@@ -44,7 +46,11 @@ export function AnalyticsConsentBanner({ onChoice }: { onChoice: () => void }) {
         </div>
       </div>
       <Modal isOpen={privacyOpen} onClose={() => setPrivacyOpen(false)} title="Privacy Policy" className="max-w-3xl">
-        <MarkdownBody className="text-sm">{PRIVACY_POLICY}</MarkdownBody>
+        {privacyOpen && (
+          <Suspense fallback={null}>
+            <PrivacyPolicyBody className="text-sm" />
+          </Suspense>
+        )}
       </Modal>
     </>,
     document.body,

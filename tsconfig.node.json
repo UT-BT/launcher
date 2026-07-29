@@ -1,6 +1,6 @@
 {
   "extends": "@electron-toolkit/tsconfig/tsconfig.node.json",
-  "include": ["lib/main/index.d.ts", "electron.vite.config.*", "vite.config.web.ts", "lib/**/*", "resources/**/*", "app/**/*"],
+  "include": ["lib/main/index.d.ts", "electron.vite.config.*", "vite.config.web.ts", "vite.entry.ts", "lib/**/*", "resources/**/*", "app/**/*"],
   "compilerOptions": {
     "composite": true,
     "moduleResolution": "bundler",

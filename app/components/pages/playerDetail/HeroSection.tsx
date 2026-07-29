@@ -2,7 +2,7 @@ import { Calendar, ExternalLink, ShieldAlert, Trophy, Activity, MapIcon, Clock, 
 import { cn } from '@/lib/utils'
 import { formatAddedDate } from '@/app/utils/format'
 import { getAvatarBorderStyle, getTitleTextStyle } from '@/app/utils/titleStyles'
-import { getAvatarUrl, type UserSummary } from '@/app/utils/api'
+import { avatarSizeFor, getAvatarUrl, type UserSummary } from '@/app/utils/api'
 import { MetaPill } from '@/app/components/shared/MetaPill'
 import { PatreonBadge } from '@/app/components/shared/PatreonBadge'
 import { ROLE_LABELS } from '@/app/utils/roles'
@@ -98,10 +98,13 @@ export function HeroSection({ userId, summary, loading, isSelf, chart, onChangeT
         <div className="bg-card/30 border border-hairline/5 rounded-xl p-5 space-y-4 shrink-0">
             <div className="flex items-center gap-5 min-w-0">
                 <img
-                    src={getAvatarUrl(userId)}
+                    src={getAvatarUrl(userId, avatarSizeFor(AVATAR_PX))}
                     alt={alias ?? String(userId)}
                     width={AVATAR_PX}
                     height={AVATAR_PX}
+                    loading="eager"
+                    fetchPriority="high"
+                    decoding="async"
                     style={{
                         width: AVATAR_PX,
                         height: AVATAR_PX,

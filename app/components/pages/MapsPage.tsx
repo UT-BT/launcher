@@ -39,126 +39,57 @@ import {
 import { formatCapTime, formatAddedDate, isNew, displayMapName } from '@/app/utils/format'
 import { difficultyTextColor, difficultyBgColor, scoreTextColor, scoreBgColor } from '@/app/utils/scoreColors'
 
-import championIcon from '@/app/assets/champion.png'
-import goldIcon from '@/app/assets/gold.png'
-import silverIcon from '@/app/assets/silver.png'
-import bronzeIcon from '@/app/assets/bronze.png'
-import certifiedIcon from '@/app/assets/certified.png'
-import casualIcon from '@/app/assets/casual.png'
-import worldRecordIcon from '@/app/assets/world_record.png'
+import {
+    TIER_ICONS,
+    TIER_LABELS,
+    TIER_RANK,
+    computeMedalTier,
+    type MedalTier,
+} from './maps/medals'
+import {
+    DEFAULT_MAPS_CACHES,
+    DEFAULT_MAPS_STATE,
+    type AvgRatings,
+    type CappedFilterValue,
+    type DifficultyTier,
+    type DifficultyValue,
+    type LuckTier,
+    type LuckValue,
+    type MapsPageCaches,
+    type MapsPageState,
+    type PresetFilters,
+    type RatedValue,
+    type RatingTier,
+    type RatingValue,
+    type RecordTimeTier,
+    type RecordTimeValue,
+    type SortField,
+    type WRHolder,
+} from './MapsPage.types'
 
-export type RatingTier = 'all' | 'excellent' | 'good' | 'average' | 'poor'
-export type LuckTier = 'all' | 'low' | 'fair' | 'some' | 'high'
-export type RecordTimeTier = 'all' | 'sub15' | 'sub30' | 'sub45' | 'sub60' | 'sub90' | 'sub120' | 'sub180' | 'sub300' | 'over300'
-export type DifficultyTier = 'all' | 'beginner' | 'intermediate' | 'advanced' | 'expert'
-export type CappedFilter =
-    | 'all' | 'uncapped' | 'capped' | 'verified' | 'casual'
-    | 'bronze' | 'silver' | 'gold' | 'champion' | 'world_record'
+export type { MedalTier } from './maps/medals'
 
-export type RatedTier = 'all' | 'rated' | 'unrated'
-
-export type CappedFilterValue = Exclude<CappedFilter, 'all'>
-export type DifficultyValue = Exclude<DifficultyTier, 'all'>
-export type RatingValue = Exclude<RatingTier, 'all'>
-export type LuckValue = Exclude<LuckTier, 'all'>
-export type RecordTimeValue = Exclude<RecordTimeTier, 'all'>
-export type RatedValue = Exclude<RatedTier, 'all'>
-export type SortField = 'name' | 'author' | 'added' | 'difficulty' | 'world_record' | 'pb' | 'rating' | 'my_rating' | 'medal'
-export type SortDir = 'asc' | 'desc'
-
-export interface AvgRatings {
-    overall: number
-    aesthetics: number
-    learning: number
-    luck: number
-}
-
-export interface MapsPageState {
-    search: string
-    authorFilters: string[]
-    tagFilters: string[]
-    yearFilters: string[]
-    difficultyFilters: DifficultyValue[]
-    ratingFilters: RatingValue[]
-    aestheticsFilters: RatingValue[]
-    learningFilters: RatingValue[]
-    luckFilters: LuckValue[]
-    recordTimeFilters: RecordTimeValue[]
-    cappedFilters: CappedFilterValue[]
-    ratedFilters: RatedValue[]
-    newOnly: boolean
-    favoritesOnly: boolean
-    sortBy: SortField
-    sortDir: SortDir
-    currentPage: number
-    pageSizePreference: number | 'auto'
-    filtersPanelOpen: boolean
-    scrollTop: number
-}
-
-export interface WRHolder {
-    user_id: string
-    alias: string
-    cap_id?: string
-    color_r?: number
-    color_g?: number
-    color_b?: number
-}
-
-export interface MapsPageCaches {
-    metadata: MapMetadata[] | null
-    avgRatings: Record<string, AvgRatings>
-    myReviews: Record<string, MapReview>
-    authors: string[]
-    bestCaps: Record<string, BestCap>
-    wrHolders: Record<string, WRHolder>
-    wrHoldersFetched: string[]
-    pageMaps: Map[]
-    totalCount: number
-    metadataLoaded: boolean
-    reviewsLoaded: boolean
-    authorsLoaded: boolean
-    bestCapsLoaded: boolean
-}
-
-export const DEFAULT_MAPS_STATE: MapsPageState = {
-    search: '',
-    authorFilters: [],
-    tagFilters: [],
-    yearFilters: [],
-    difficultyFilters: [],
-    ratingFilters: [],
-    aestheticsFilters: [],
-    learningFilters: [],
-    luckFilters: [],
-    recordTimeFilters: [],
-    cappedFilters: [],
-    ratedFilters: [],
-    newOnly: false,
-    favoritesOnly: false,
-    sortBy: 'name',
-    sortDir: 'asc',
-    currentPage: 1,
-    pageSizePreference: 'auto',
-    filtersPanelOpen: false,
-    scrollTop: 0,
-}
-
-export const DEFAULT_MAPS_CACHES: MapsPageCaches = {
-    metadata: null,
-    avgRatings: {},
-    myReviews: {},
-    authors: [],
-    bestCaps: {},
-    wrHolders: {},
-    wrHoldersFetched: [],
-    pageMaps: [],
-    totalCount: 0,
-    metadataLoaded: false,
-    reviewsLoaded: false,
-    authorsLoaded: false,
-    bestCapsLoaded: false,
-}
+export type {
+    AvgRatings,
+    CappedFilter,
+    CappedFilterValue,
+    DifficultyTier,
+    DifficultyValue,
+    LuckTier,
+    LuckValue,
+    MapsPageCaches,
+    MapsPageState,
+    PresetFilters,
+    RatedTier,
+    RatedValue,
+    RatingTier,
+    RatingValue,
+    RecordTimeTier,
+    RecordTimeValue,
+    SortDir,
+    SortField,
+    WRHolder,
+} from './MapsPage.types'
 
 const PRESETS_KEY = 'utbt:mapsPresets:v1'
 const COLUMNS_KEY = 'utbt:mapsColumns:v1'
@@ -300,12 +231,6 @@ const normalizeColumnOrder = (order: ColumnId[]): ColumnId[] => {
     return next
 }
 
-export type PresetFilters = Pick<MapsPageState,
-    'search' | 'authorFilters' | 'tagFilters' | 'yearFilters' |
-    'difficultyFilters' | 'ratingFilters' | 'aestheticsFilters' | 'learningFilters' |
-    'luckFilters' | 'recordTimeFilters' | 'cappedFilters' | 'ratedFilters' | 'newOnly' | 'favoritesOnly' |
-    'sortBy' | 'sortDir'>
-
 export interface MapsPreset {
     id: string
     name: string
@@ -442,61 +367,6 @@ interface MapsPageProps {
     initialNewOnly?: boolean
 }
 
-
-export type MedalTier = 'uncapped' | 'casual' | 'verified' | 'bronze' | 'silver' | 'gold' | 'champion' | 'world_record'
-
-export const TIER_ICONS: Record<Exclude<MedalTier, 'uncapped'>, string> = {
-    casual: casualIcon,
-    verified: certifiedIcon,
-    bronze: bronzeIcon,
-    silver: silverIcon,
-    gold: goldIcon,
-    champion: championIcon,
-    world_record: worldRecordIcon,
-}
-
-export const TIER_LABELS: Record<MedalTier, string> = {
-    uncapped: 'Uncapped',
-    casual: 'Casual',
-    verified: 'Certified',
-    bronze: 'Bronze',
-    silver: 'Silver',
-    gold: 'Gold',
-    champion: 'Champion',
-    world_record: 'World Record',
-}
-
-const TIER_RANK: Record<MedalTier, number> = {
-    uncapped: 0,
-    casual: 1,
-    verified: 2,
-    bronze: 3,
-    silver: 4,
-    gold: 5,
-    champion: 6,
-    world_record: 7,
-}
-
-// Epsilon for matching a PB against a world record. Cap times are reported in
-// seconds with sub-millisecond noise from server round-trips, so an exact ===
-// comparison would never trigger the world_record tier.
-const WR_TIME_EPSILON_SECONDS = 0.0005
-
-export function computeMedalTier(
-    bestCap: BestCap | undefined,
-    map: (Pick<MapMetadata, 'bronze_medal' | 'silver_medal' | 'gold_medal' | 'champion_medal'> & { world_record?: number }) | undefined,
-): MedalTier {
-    if (!bestCap) return 'uncapped'
-    if (bestCap.cap_type !== 2) return 'casual'
-    if (!map) return 'verified'
-    const t = bestCap.cap_time_seconds
-    if (map.world_record != null && map.world_record > 0 && t - map.world_record <= WR_TIME_EPSILON_SECONDS) return 'world_record'
-    if (map.champion_medal != null && t <= map.champion_medal) return 'champion'
-    if (map.gold_medal != null && t <= map.gold_medal) return 'gold'
-    if (map.silver_medal != null && t <= map.silver_medal) return 'silver'
-    if (map.bronze_medal != null && t <= map.bronze_medal) return 'bronze'
-    return 'verified'
-}
 
 // Mock data shown in the first row while the tutorial is active so the PB,
 // World Record, ratings, and review cells always demo something visible.
