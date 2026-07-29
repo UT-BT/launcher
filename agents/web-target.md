@@ -10,9 +10,10 @@ not_here:
   - "IPC channel contract → lib/conveyor/README.md"
   - "build commands reference → agents/build.md"
 sections: [overview, platform-layer, capability-gates, web-auth, anonymous-browsing, shareable-urls, responsive-layout, performance, build, seo-and-link-previews, hosting-note]
-last_verified: 2026-07-28
+last_verified: 2026-07-29
 verify_against:
   - app/public/route-contract.json
+  - app/components/navigation/NavLink.tsx
   - app/components/navigation/useDocumentMeta.ts
   - app/components/navigation/titles.ts
   - app/platform/index.ts
@@ -78,6 +79,7 @@ desktop-only UI and swaps a handful of bridge calls for browser equivalents.
 | Titlebar / window controls / zoom | not mounted (web entry skips `WindowContextProvider`) | `app/renderer-web.tsx` |
 | Launcher telemetry (`logLauncherStartup`) | skipped | `IS_WEB` in `app/utils/api.ts` |
 | Nav bar (`NavHistoryBar` — Back/Forward + Refresh) | never rendered — browser chrome owns history and reload; pages revalidate on mount instead (see navigation.md, page-refresh-registry) | `IS_WEB` in `app/components/navigation/NavHistoryBar.tsx` |
+| Navigation triggers | render as real `<a href>` (new-tab / copy-link work); desktop keeps buttons | `NavLink` (`agents/navigation.md` → link semantics) |
 | Splash screen | replaced by `WebBootScreen` (logo + spinner, error+retry variant); `SplashScreen` is lazy and never fetched on web | `IS_WEB` in `app/app.tsx` |
 
 **Bundle split reality check:** desktop-only surfaces (`SplashScreen`,
@@ -135,7 +137,10 @@ real `accessToken`.
 
 Web-only URL sync mirrors the in-memory nav stack into the History API — the
 path scheme and the popstate model live in `agents/navigation.md`
-(`url-sync-web-build`). Deep links cold-load into the right view; a deep link
+(`url-sync-web-build`). The same `routes.ts` table backs `NavLink`, so every
+in-app navigation trigger is a real anchor on web (open-in-new-tab, middle-click,
+copy-link) and a plain button on desktop — see `agents/navigation.md`
+(`link-semantics`). Deep links cold-load into the right view; a deep link
 followed while logged out survives the OAuth redirect via the flow stash's
 `returnTo`.
 

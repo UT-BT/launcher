@@ -3,6 +3,7 @@ import { Star } from 'lucide-react'
 import { fetchUserFavorites } from '@/app/utils/api'
 import { displayMapName } from '@/app/utils/format'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
+import { MapNavLink } from '@/app/components/shared/MapNavLink'
 import { PlayerFavoritesModal } from '@/app/components/modals/PlayerFavoritesModal'
 
 interface FavoriteMapsCardProps {
@@ -66,10 +67,10 @@ export function FavoriteMapsCard({
                 <>
                     <div className="grid grid-cols-4 gap-2">
                         {preview.map(name => (
-                            <button
+                            <MapNavLink
                                 key={name}
-                                type="button"
-                                onClick={() => onMapSelect?.(name)}
+                                mapName={name}
+                                onMapSelect={onMapSelect}
                                 className="group flex flex-col gap-1 text-left cursor-pointer"
                                 title={displayMapName(name)}
                             >
@@ -81,7 +82,7 @@ export function FavoriteMapsCard({
                                 <span className="text-[10px] font-medium text-muted-foreground group-hover:text-foreground truncate transition-colors">
                                     {displayMapName(name)}
                                 </span>
-                            </button>
+                            </MapNavLink>
                         ))}
                     </div>
                     <button

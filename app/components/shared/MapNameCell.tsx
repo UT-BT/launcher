@@ -1,6 +1,7 @@
-import type { MouseEvent } from 'react'
+import { cn } from '@/lib/utils'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
+import { MapNavLink } from '@/app/components/shared/MapNavLink'
 import { displayMapName } from '@/app/utils/format'
 
 interface MapNameCellProps {
@@ -11,21 +12,18 @@ interface MapNameCellProps {
 }
 
 export function MapNameCell({ mapName, favorited, onToggleFavorite, onMapSelect }: MapNameCellProps) {
-    const select = onMapSelect
-        ? (e: MouseEvent) => { e.stopPropagation(); onMapSelect(mapName) }
-        : undefined
+    const disabled = !onMapSelect
 
     return (
         <div className="flex items-center gap-2.5 min-w-0">
-            <button
-                type="button"
-                onClick={select}
-                disabled={!onMapSelect}
-                aria-label={displayMapName(mapName)}
-                className="shrink-0 enabled:cursor-pointer"
+            <MapNavLink
+                mapName={mapName}
+                onMapSelect={onMapSelect}
+                ariaLabel={displayMapName(mapName)}
+                className={cn('shrink-0', !disabled && 'cursor-pointer')}
             >
                 <MapThumbnail mapName={mapName} className="size-9 rounded-md" />
-            </button>
+            </MapNavLink>
             <FavoriteStar
                 name={mapName}
                 isFavorited={favorited}
@@ -33,16 +31,18 @@ export function MapNameCell({ mapName, favorited, onToggleFavorite, onMapSelect 
                 size="sm"
                 className="shrink-0"
             />
-            <button
-                type="button"
-                onClick={select}
-                disabled={!onMapSelect}
-                className="min-w-0 text-left enabled:cursor-pointer group/map"
+            <MapNavLink
+                mapName={mapName}
+                onMapSelect={onMapSelect}
+                className={cn('min-w-0 text-left group/map', !disabled && 'cursor-pointer')}
             >
-                <span className="block truncate text-sm font-semibold text-foreground enabled:group-hover/map:underline underline-offset-2">
+                <span className={cn(
+                    'block truncate text-sm font-semibold text-foreground underline-offset-2',
+                    !disabled && 'group-hover/map:underline',
+                )}>
                     {displayMapName(mapName)}
                 </span>
-            </button>
+            </MapNavLink>
         </div>
     )
 }

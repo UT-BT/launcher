@@ -5,6 +5,7 @@ import { fetchMapReviewsByUser, type MapReview } from '@/app/utils/api'
 import { displayMapName } from '@/app/utils/format'
 import { scoreTextColor } from '@/app/utils/scoreColors'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
+import { MapNavLink } from '@/app/components/shared/MapNavLink'
 import { PlayerReviewsModal } from '@/app/components/modals/PlayerReviewsModal'
 
 interface ReviewsAuthoredCardProps {
@@ -63,10 +64,10 @@ export function ReviewsAuthoredCard({
             ) : (
                 <div className="space-y-1.5">
                     {preview.map(r => (
-                        <button
+                        <MapNavLink
                             key={r.id}
-                            type="button"
-                            onClick={() => onMapSelect?.(r.map_name)}
+                            mapName={r.map_name}
+                            onMapSelect={onMapSelect}
                             className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md bg-hairline/[0.02] border border-hairline/5 hover:bg-hairline/[0.05] hover:border-hairline/15 transition-colors cursor-pointer text-left"
                         >
                             <MapThumbnail mapName={r.map_name} className="size-7 shrink-0" />
@@ -80,7 +81,7 @@ export function ReviewsAuthoredCard({
                                 {r.overall}
                                 <span className="text-[9px] text-muted-foreground/60 font-normal ml-0.5">/10</span>
                             </span>
-                        </button>
+                        </MapNavLink>
                     ))}
                     <button
                         type="button"

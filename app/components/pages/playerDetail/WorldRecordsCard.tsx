@@ -7,6 +7,7 @@ import { formatAddedDate, displayMapName } from '@/app/utils/format'
 import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
 import { TeamRosterBadge } from '@/app/components/shared/TeamRosterBadge'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
+import { MapNavLink } from '@/app/components/shared/MapNavLink'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import {
     DataTableShell, DataTableHeaderRow, DataTableHeaderCell,
@@ -177,9 +178,7 @@ export function WorldRecordsCard({ accessToken, userId, totalCount, onMapSelect,
                                                 <MapThumbnail mapName={r.map} className="size-8 shrink-0" />
                                                 <div className="flex flex-col gap-1 min-w-0">
                                                     <div className="flex items-center gap-2 min-w-0">
-                                                        <span className="text-sm font-semibold text-foreground truncate">
-                                                            {displayMapName(r.map)}
-                                                        </span>
+                                                        <MapNavLink mapName={r.map} onMapSelect={onMapSelect} className="text-sm font-semibold text-foreground truncate">{displayMapName(r.map)}</MapNavLink>
                                                         {isTeamRow && (
                                                             <TeamRosterBadge
                                                                 members={r.members!.map(member => ({

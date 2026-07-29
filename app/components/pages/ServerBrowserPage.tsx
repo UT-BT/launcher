@@ -30,6 +30,7 @@ import { Tooltip } from '@/app/components/ui/tooltip'
 import { Button } from '@/app/components/ui/button'
 import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
+import { MapNavLink } from '@/app/components/shared/MapNavLink'
 import { MultiFilterDropdown } from '@/app/components/ui/multi-filter-dropdown'
 import { FilterPanelRow } from '@/app/components/ui/filter-panel-row'
 import { FilterPresetsMenu } from '@/app/components/shared/FilterPresetsMenu'
@@ -693,13 +694,13 @@ export function ServerBrowserPage({
                 return (
                     <DataTableCell key={id} align={align}>
                         {onMapSelect ? (
-                            <button
-                                type="button"
-                                onClick={(e) => { e.stopPropagation(); onMapSelect(server.map_name) }}
+                            <MapNavLink
+                                mapName={server.map_name}
+                                onMapSelect={onMapSelect}
                                 className="text-sm font-semibold text-foreground truncate inline-block max-w-[220px] align-middle text-left hover:text-accent-300 hover:underline underline-offset-2 transition-colors cursor-pointer"
                             >
                                 {displayMapName(server.map_name)}
-                            </button>
+                            </MapNavLink>
                         ) : (
                             <span className="text-sm font-semibold text-foreground truncate inline-block max-w-[220px] align-middle">
                                 {displayMapName(server.map_name)}
@@ -891,13 +892,13 @@ export function ServerBrowserPage({
                         className="h-4 w-6 shrink-0 object-cover rounded-[2px] border border-hairline/10"
                     />
                     {onMapSelect ? (
-                        <button
-                            type="button"
-                            onClick={() => onMapSelect(server.map_name)}
+                        <MapNavLink
+                            mapName={server.map_name}
+                            onMapSelect={onMapSelect}
                             className="text-sm font-semibold text-foreground truncate text-left hover:text-accent-300 hover:underline underline-offset-2 transition-colors cursor-pointer"
                         >
                             {displayMapName(server.map_name)}
-                        </button>
+                        </MapNavLink>
                     ) : (
                         <span className="text-sm font-semibold text-foreground truncate">
                             {displayMapName(server.map_name)}

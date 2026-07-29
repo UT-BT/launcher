@@ -30,6 +30,7 @@ import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { TeamHolders } from '@/app/components/shared/TeamHolders'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
+import { MapNavLink } from '@/app/components/shared/MapNavLink'
 import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
 import { IconActionButton } from '@/app/components/shared/IconActionButton'
 import { ReplayVideoModal } from '@/app/components/shared/ReplayVideoModal'
@@ -733,13 +734,13 @@ export function WorldRecordsPage({
                                     size="sm"
                                     className="shrink-0"
                                 />
-                                <button
-                                    type="button"
-                                    onClick={() => onMapSelect(r.map)}
+                                <MapNavLink
+                                    mapName={r.map}
+                                    onMapSelect={onMapSelect}
                                     className="font-bold text-foreground/90 truncate hover:text-foreground hover:underline underline-offset-2 cursor-pointer text-left"
                                 >
                                     {displayMapName(r.map)}
-                                </button>
+                                </MapNavLink>
                                 {isNew && (
                                     <span className="shrink-0 inline-flex items-center h-4 px-1.5 rounded-full bg-accent-500 text-white text-[9px] font-black uppercase tracking-wider">
                                         New
@@ -873,13 +874,13 @@ export function WorldRecordsPage({
                             size="sm"
                             className="shrink-0"
                         />
-                        <button
-                            type="button"
-                            onClick={() => onMapSelect(r.map)}
+                        <MapNavLink
+                            mapName={r.map}
+                            onMapSelect={onMapSelect}
                             className="font-bold text-foreground/90 truncate hover:text-foreground hover:underline underline-offset-2 cursor-pointer text-left"
                         >
                             {displayMapName(r.map)}
-                        </button>
+                        </MapNavLink>
                     </div>
                     {isTeamRow ? (
                         <TeamHolders

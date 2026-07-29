@@ -1,5 +1,6 @@
 import { cn } from '@/lib/utils'
 import { formatCapTime } from '@/app/utils/format'
+import { NavLink } from '@/app/components/navigation/NavLink'
 
 export function openCap(capId: string) {
     window.dispatchEvent(new CustomEvent('open-cap', { detail: { capId } }))
@@ -23,10 +24,10 @@ export function CapTimeLink({ capId, teamCapId, seconds, className, onNavigate }
         return <span className={className}>{formatCapTime(seconds)}</span>
     }
     return (
-        <button
-            type="button"
-            onClick={(e) => {
-                e.stopPropagation()
+        <NavLink
+            view={teamCapId ? 'team-cap-detail' : 'cap-detail'}
+            params={teamCapId ? { teamCapId } : { capId: capId! }}
+            onActivate={() => {
                 if (teamCapId) openTeamCap(teamCapId)
                 else openCap(capId!)
                 onNavigate?.()
@@ -37,6 +38,6 @@ export function CapTimeLink({ capId, teamCapId, seconds, className, onNavigate }
             )}
         >
             {formatCapTime(seconds)}
-        </button>
+        </NavLink>
     )
 }

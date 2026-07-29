@@ -4,15 +4,16 @@ read_when:
   - "adding a new view/page to the nav stack or sidebar"
   - "opening a detail page or wiring a click that navigates"
   - "anything touching Back/Forward, history, or per-entry state keying"
-keywords: [navigate, Main.tsx, AppLayout, NavEntry, useNavigation, open-player, open-cap, renderView, HISTORY_CAP, back, forward]
+keywords: [navigate, Main.tsx, AppLayout, NavEntry, useNavigation, open-player, open-cap, renderView, HISTORY_CAP, back, forward, NavLink, href, new tab]
 provides: "the whole navigation model: stack, navigate() funnel, renderView, sidebar registry, event-driven detail pages"
 not_here:
   - "where page state / persistence lives → state-patterns.md"
   - "the PlayerInfo / CapTimeLink components that trigger nav → shared-components.md"
-sections: [the-model, navigate-is-the-only-entry-point, url-sync-web-build, page-views-vs-detail-pages, the-sidebar-registry, event-driven-navigation, sidebar-new-badges, page-refresh-registry, per-entry-state]
-last_verified: 2026-07-27
+sections: [the-model, navigate-is-the-only-entry-point, url-sync-web-build, link-semantics, page-views-vs-detail-pages, the-sidebar-registry, event-driven-navigation, sidebar-new-badges, page-refresh-registry, per-entry-state]
+last_verified: 2026-07-29
 verify_against:
   - app/components/main/Main.tsx
+  - app/components/navigation/NavLink.tsx
   - app/components/layout/AppLayout.tsx
   - app/components/navigation/NavigationContext.tsx
   - app/components/navigation/useNavState.ts
@@ -121,6 +122,57 @@ parent's, so the generic title lands first and the specific one replaces it when
 data arrives. Do **not** hook this into `useUrlSync`'s effect: its deps are
 `[stackRef, setCursor, pushExternal]` and `stackRef` is a ref, so it does not
 re-run on navigation.
+
+## Link semantics (`NavLink`)
+
+Anything the user clicks to navigate must render through **`NavLink`**
+(`app/components/navigation/NavLink.tsx`) — never a bare `<button onClick={...}>`
+or a `div role="button"`.
+
+```tsx
+<NavLink view="player-detail" params={{ playerId: userId }} onActivate={() => openPlayer(userId)}>
+    {children}
+</NavLink>
+```
+
+- **Web build:** renders `<a href={viewToPath(view, params)}>`. Right-click "Open
+  link in new tab", middle-click, ctrl/cmd-click and "Copy link address" all work,
+  and the browser shows the target in the status bar. A modified click
+  (ctrl/meta/shift/alt, or any non-primary button) is left to the browser; a plain
+  click is `preventDefault`ed and handed to `onActivate`, so in-app navigation
+  still goes through the one `navigate()` funnel. This is **not** a second
+  navigation mechanism — the href mirrors `routes.ts`, exactly like URL sync.
+- **Desktop build:** renders a `<button type="button">` (or `as="div"` +
+  `role="button"` + Enter/Space handling when a button element would be invalid or
+  restyle the surface). No hrefs — the shell has no address bar.
+
+Other props: `disabled` (renders a plain inert `<span>` — for "not navigable
+here" states; clicks fall through to an enclosing clickable row instead of being
+swallowed by a disabled button), `stopPropagation` (default `true`, so a link inside a
+clickable row doesn't double-fire), `elementRef` (the underlying element, e.g. for
+tutorial anchors), `ariaLabel`, `title`, `onPointerEnter`/`onFocus` (chunk
+prefetch).
+
+Because the web branch is an `<a>`, Tailwind's `enabled:` variant does not apply
+(`:enabled` only matches form elements) — express disabled/hover styling with
+`cn(..., !disabled && '...')` instead.
+
+Two rules keep the markup valid:
+
+1. **Never nest a `NavLink` inside another `NavLink`** — nested anchors are invalid
+   HTML and the browser silently closes the outer one. When a card contains its own
+   links (an external article link, an interactive `PlayerInfo`), link the card's
+   *title* and its call-to-action instead of the whole card.
+2. `<tr>` rows stay plain click handlers. The row's name cell and time cell are
+   already links, which is what "open in a new tab" needs.
+3. An interactive descendant of a link (e.g. `PatreonBadge` inside `PlayerInfo`)
+   must call `preventDefault()` as well as `stopPropagation()`. Stopping
+   propagation only silences the React handler — the browser still follows the
+   enclosing anchor's href and hard-navigates the page.
+
+Shared components that already wrap `NavLink` for you: `PlayerInfo`,
+`CapTimeLink`, `MapNameCell`, `MapNavLink` (see `shared-components.md`), plus the
+sidebar items and Home section "See All" buttons.
 
 ## Page-views vs detail-pages
 

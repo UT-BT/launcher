@@ -3,6 +3,7 @@ import { ExternalLink, ChevronsRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatAddedDate } from '@/app/utils/format'
 import { openNews } from '@/app/components/navigation/openNews'
+import { NavLink } from '@/app/components/navigation/NavLink'
 import { getNewsIcon } from './icons'
 import type { NewsArticle, NewsCategoryDef } from './types'
 
@@ -67,7 +68,14 @@ export function ArticleCard({
             <div className="px-4 py-3 space-y-1.5">
                 <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 min-w-0">
-                        <p className="text-base font-semibold text-foreground leading-snug truncate">{article.title}</p>
+                        <NavLink
+                            view="news-detail"
+                            params={{ newsId: article.id }}
+                            onActivate={open}
+                            className="min-w-0 text-base font-semibold text-foreground leading-snug truncate text-left"
+                        >
+                            {article.title}
+                        </NavLink>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                         {isNew && <NewPill />}
@@ -77,10 +85,15 @@ export function ArticleCard({
                 <p className="text-sm text-muted-foreground line-clamp-3 leading-snug">{article.excerpt}</p>
                 <div className="flex items-center justify-between gap-3 pt-0.5">
                     <div className="flex items-center gap-3 min-w-0">
-                        <span className="inline-flex items-center gap-0.25 text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors">
+                        <NavLink
+                            view="news-detail"
+                            params={{ newsId: article.id }}
+                            onActivate={open}
+                            className="inline-flex items-center gap-0.25 text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors"
+                        >
                             Read more
                             <ChevronsRight className="size-3 translate-y-0.5 transition-transform group-hover:translate-x-0.5" />
-                        </span>
+                        </NavLink>
                         {article.linkUrl && (
                             <a
                                 href={article.linkUrl}

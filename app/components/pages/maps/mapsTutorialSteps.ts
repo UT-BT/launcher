@@ -11,11 +11,11 @@ export interface StepRefs {
     presetsButtonRef: React.RefObject<HTMLButtonElement | null>
     sortHeaderRef: React.RefObject<HTMLButtonElement | null>
     firstRowFavRef: React.RefObject<HTMLSpanElement | null>
-    firstRowWrRef: React.RefObject<HTMLButtonElement | null>
+    firstRowWrRef: React.RefObject<HTMLElement | null>
     firstRowReplayRef: React.RefObject<HTMLButtonElement | null>
     firstRowRatingRef: React.RefObject<HTMLButtonElement | null>
     firstRowMyRatingRef: React.RefObject<HTMLButtonElement | null>
-    firstRowNameRef: React.RefObject<HTMLButtonElement | null>
+    firstRowNameRef: React.RefObject<HTMLElement | null>
     firstRowPbRef: React.RefObject<HTMLElement | null>
 }
 
@@ -92,7 +92,7 @@ export function buildSteps(refs: StepRefs, actions: StepActions): TutorialStep[]
             id: 'world-record',
             title: 'Watch the world record',
             body: 'Click the World Record time to watch the replay of the current world record run.',
-            targetRef: refs.firstRowWrRef as React.RefObject<HTMLElement | null>,
+            targetRef: refs.firstRowWrRef,
         },
         {
             id: 'pb',

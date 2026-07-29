@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Search } from 'lucide-react'
 import { Modal } from '@/app/components/ui/modal'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
+import { NavLink } from '@/app/components/navigation/NavLink'
 import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
 import { displayMapName } from '@/app/utils/format'
 import { fetchUserFavorites } from '@/app/utils/api'
@@ -91,9 +92,10 @@ export function PlayerFavoritesModal({
                     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
                         {pageRows.map(name => (
                             <div key={name} className="group flex flex-col gap-1 relative">
-                                <button
-                                    type="button"
-                                    onClick={() => { onMapSelect?.(name); onClose() }}
+                                <NavLink
+                                    view="maps-detail"
+                                    params={{ mapName: name }}
+                                    onActivate={() => { onMapSelect?.(name); onClose() }}
                                     className="text-left cursor-pointer"
                                     title={displayMapName(name)}
                                 >
@@ -102,7 +104,7 @@ export function PlayerFavoritesModal({
                                         size="card"
                                         className="aspect-square w-full rounded border border-hairline/10 group-hover:border-hairline/30 transition-colors"
                                     />
-                                </button>
+                                </NavLink>
                                 {isSelf && onToggleFavorite && (
                                     <div className="absolute top-1 right-1">
                                         <FavoriteStar
@@ -114,13 +116,14 @@ export function PlayerFavoritesModal({
                                         />
                                     </div>
                                 )}
-                                <button
-                                    type="button"
-                                    onClick={() => { onMapSelect?.(name); onClose() }}
+                                <NavLink
+                                    view="maps-detail"
+                                    params={{ mapName: name }}
+                                    onActivate={() => { onMapSelect?.(name); onClose() }}
                                     className="text-[10px] font-medium text-muted-foreground group-hover:text-foreground truncate transition-colors text-left cursor-pointer"
                                 >
                                     {displayMapName(name)}
-                                </button>
+                                </NavLink>
                             </div>
                         ))}
                     </div>

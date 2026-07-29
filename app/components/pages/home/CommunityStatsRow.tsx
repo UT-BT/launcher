@@ -1,6 +1,8 @@
 import { useEffect } from 'react'
 import { Users, Map as MapIcon, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { NavLink } from '@/app/components/navigation/NavLink'
+import type { NavParams } from '@/app/components/navigation/NavigationContext'
 import { fetchMapsCount, fetchPlayersCount } from '@/app/utils/api'
 
 interface CommunityStatsRowProps {
@@ -23,13 +25,16 @@ interface StatTileProps {
     label: string
     primaryValue: string | null
     onPrimary?: () => void
+    primaryView: string
     secondaryValue: string | null
     secondaryLabel: string
     secondaryTone: string
     onSecondary?: () => void
+    secondaryView: string
+    secondaryParams?: NavParams
 }
 
-function StatTile({ icon: Icon, label, primaryValue, onPrimary, secondaryValue, secondaryLabel, secondaryTone, onSecondary }: StatTileProps) {
+function StatTile({ icon: Icon, label, primaryValue, onPrimary, primaryView, secondaryValue, secondaryLabel, secondaryTone, onSecondary, secondaryView, secondaryParams }: StatTileProps) {
     return (
         <div className="flex-1 bg-card/30 border border-hairline/5 rounded-2xl px-4 py-3 flex items-center gap-3">
             <div className="p-2 rounded-lg bg-hairline/5 text-foreground shrink-0">
@@ -41,23 +46,27 @@ function StatTile({ icon: Icon, label, primaryValue, onPrimary, secondaryValue, 
                     <div className="mt-1 h-5 w-16 bg-hairline/5 rounded animate-pulse" />
                 ) : (
                     <div className="flex items-baseline gap-2 flex-wrap">
-                        <button
-                            type="button"
-                            onClick={onPrimary}
+                        <NavLink
+                            view={primaryView}
+                            onActivate={() => onPrimary?.()}
                             disabled={!onPrimary}
-                            className="text-xl font-bold font-mono tabular-nums text-foreground leading-tight enabled:cursor-pointer enabled:hover:text-accent-300 transition-colors"
+                            className={cn(
+                                'text-xl font-bold font-mono tabular-nums text-foreground leading-tight transition-colors',
+                                onPrimary && 'cursor-pointer hover:text-accent-300',
+                            )}
                         >
                             {primaryValue}
-                        </button>
+                        </NavLink>
                         {secondaryValue !== null && (
-                            <button
-                                type="button"
-                                onClick={onSecondary}
+                            <NavLink
+                                view={secondaryView}
+                                params={secondaryParams}
+                                onActivate={() => onSecondary?.()}
                                 disabled={!onSecondary}
-                                className={cn('text-xs font-semibold tabular-nums transition-colors enabled:cursor-pointer', secondaryTone)}
+                                className={cn('text-xs font-semibold tabular-nums transition-colors', onSecondary && 'cursor-pointer', secondaryTone)}
                             >
                                 ({secondaryValue} {secondaryLabel})
-                            </button>
+                            </NavLink>
                         )}
                     </div>
                 )}
@@ -92,20 +101,25 @@ export function CommunityStatsRow({
                 label="Players"
                 primaryValue={typeof totalPlayers === 'number' ? totalPlayers.toLocaleString() : null}
                 onPrimary={onViewPlayers}
+                primaryView="players"
                 secondaryValue={playersOnline === null ? null : playersOnline.toLocaleString()}
                 secondaryLabel="online"
-                secondaryTone="text-emerald-300 enabled:hover:text-emerald-200"
+                secondaryTone={cn('text-emerald-300', onViewServers && 'hover:text-emerald-200')}
                 onSecondary={onViewServers}
+                secondaryView="servers"
             />
             <StatTile
                 icon={MapIcon}
                 label="Maps"
                 primaryValue={typeof totalMaps === 'number' ? totalMaps.toLocaleString() : null}
                 onPrimary={onViewMaps}
+                primaryView="maps"
                 secondaryValue={newMaps > 0 ? newMaps.toLocaleString() : null}
                 secondaryLabel="new"
-                secondaryTone="text-accent-300 enabled:hover:text-accent-200"
+                secondaryTone={cn('text-accent-300', onViewNewMaps && 'hover:text-accent-200')}
                 onSecondary={onViewNewMaps}
+                secondaryView="maps"
+                secondaryParams={{ mapsNewOnly: true }}
             />
         </div>
     )

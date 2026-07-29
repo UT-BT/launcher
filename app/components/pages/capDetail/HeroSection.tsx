@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Play, Download, Loader2, ShieldCheck, ShieldAlert, BadgeCheck, Users, Calendar, Columns2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
+import { MapNavLink } from '@/app/components/shared/MapNavLink'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import { displayMapName, formatCapTime, formatAddedDate } from '@/app/utils/format'
@@ -86,9 +87,9 @@ export function HeroSection({
         <div className="bg-card/30 border border-hairline/5 rounded-xl overflow-hidden shrink-0">
             <div className="flex flex-col lg:flex-row items-stretch">
                 <div className="lg:w-64 lg:h-64 shrink-0 p-2">
-                    <button
-                        type="button"
-                        onClick={() => onMapSelect?.(mapName)}
+                    <MapNavLink
+                        mapName={mapName}
+                        onMapSelect={onMapSelect}
                         className="block w-full h-full cursor-pointer"
                         title={`Open ${displayMapName(mapName)}`}
                     >
@@ -98,18 +99,18 @@ export function HeroSection({
                             priority
                             className="w-full h-full aspect-video lg:aspect-square rounded-lg border border-hairline/10"
                         />
-                    </button>
+                    </MapNavLink>
                 </div>
 
                 <div className="flex-1 p-4 flex flex-col justify-center gap-4 min-w-0">
                     <div className="flex flex-wrap items-start justify-between gap-3">
-                        <button
-                            type="button"
-                            onClick={() => onMapSelect?.(mapName)}
+                        <MapNavLink
+                            mapName={mapName}
+                            onMapSelect={onMapSelect}
                             className="text-2xl sm:text-3xl font-bold text-foreground leading-tight line-clamp-2 break-all hover:underline decoration-dotted underline-offset-4 cursor-pointer text-left min-w-0"
                         >
                             {displayMapName(mapName)}
-                        </button>
+                        </MapNavLink>
                         <div className="flex flex-wrap items-center gap-2">
                             <button
                                 type="button"

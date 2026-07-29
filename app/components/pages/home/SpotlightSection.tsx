@@ -2,6 +2,8 @@ import type { ReactNode } from 'react'
 import { ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/app/components/ui/button'
+import { NavLink } from '@/app/components/navigation/NavLink'
+import type { NavParams } from '@/app/components/navigation/NavigationContext'
 
 export interface SectionAccent {
     tick: string
@@ -12,11 +14,14 @@ interface SpotlightSectionProps {
     accent: SectionAccent
     actionLabel?: string
     onAction?: () => void
+    actionView?: string
+    actionParams?: NavParams
     className?: string
     children: ReactNode
 }
 
-export function SpotlightSection({ title, accent, actionLabel, onAction, className, children }: SpotlightSectionProps) {
+export function SpotlightSection({ title, accent, actionLabel, onAction, actionView, actionParams, className, children }: SpotlightSectionProps) {
+    const actionClass = 'h-7 shrink-0 text-[10px] font-bold text-muted-foreground hover:text-foreground uppercase tracking-widest gap-2 bg-hairline/5 border border-hairline/5'
     return (
         <section className={cn('group/section flex flex-col', className)}>
             <header className="flex items-center justify-between gap-3 mb-3 pr-1 h-8 shrink-0">
@@ -26,16 +31,17 @@ export function SpotlightSection({ title, accent, actionLabel, onAction, classNa
                         {title}
                     </span>
                 </h2>
-                {actionLabel && onAction && (
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={onAction}
-                        className="h-7 shrink-0 text-[10px] font-bold text-muted-foreground hover:text-foreground uppercase tracking-widest gap-2 bg-hairline/5 border border-hairline/5"
-                    >
+                {actionLabel && onAction && (actionView ? (
+                    <Button asChild variant="ghost" size="sm" className={actionClass}>
+                        <NavLink view={actionView} params={actionParams} onActivate={onAction}>
+                            {actionLabel} <ChevronRight className="size-3" />
+                        </NavLink>
+                    </Button>
+                ) : (
+                    <Button variant="ghost" size="sm" onClick={onAction} className={actionClass}>
                         {actionLabel} <ChevronRight className="size-3" />
                     </Button>
-                )}
+                ))}
             </header>
             {children}
         </section>

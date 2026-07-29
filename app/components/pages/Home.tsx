@@ -320,6 +320,7 @@ export function Home({
             accent={ACCENTS.news}
             actionLabel={onViewNews ? 'See All' : undefined}
             onAction={onViewNews}
+            actionView="news"
             className={span}
         >
             <NewsCard
@@ -338,6 +339,7 @@ export function Home({
             accent={ACCENTS.recentServers}
             actionLabel="See All"
             onAction={onViewServers}
+            actionView="servers"
             className={span}
         >
             <RecentServersCard
@@ -357,6 +359,7 @@ export function Home({
             accent={ACCENTS.hotMaps}
             actionLabel={onViewMaps ? 'See All' : undefined}
             onAction={onViewMaps}
+            actionView="maps"
             className={span}
         >
             <HottestPosterGrid
@@ -375,6 +378,7 @@ export function Home({
             accent={ACCENTS.newMaps}
             actionLabel={onViewMaps ? 'See All' : undefined}
             onAction={onViewMaps}
+            actionView="maps"
             className={span}
         >
             <NewestMapsCard
@@ -393,6 +397,7 @@ export function Home({
             accent={ACCENTS.worldRecords}
             actionLabel={onViewWorldRecords ? 'See All' : undefined}
             onAction={onViewWorldRecords}
+            actionView="world-records"
             className={span}
         >
             <LatestRecordsCard
