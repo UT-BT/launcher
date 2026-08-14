@@ -1,12 +1,18 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { CalendarDays, ChevronRight, Trophy, Users2 } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { CalendarDays, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useNewItemHighlight } from '@/app/hooks/useNewItemHighlight'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
 import { NavLink } from '@/app/components/navigation/NavLink'
-import { ErrorBanner } from '@/app/components/pages/teams/teamsShared'
-import { eventErrorMessage, fetchEvents, type EventSummary, type UserProfile } from '@/app/utils/api'
-import { EventStatusBadge, formatEventDate, formatTeamSize } from './events/eventsShared'
+import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
+import { Button } from '@/app/components/ui/button'
+import {
+    BIRTHDAY_GREETING_EMOJIS,
+    type BirthdayGreetingEmoji,
+    type CalendarBirthday,
+    type CalendarItem,
+    type UserProfile,
+} from '@/app/utils/api'
+import { fetchPrototypeCalendar, sendPrototypeGreeting } from '@/app/utils/birthdayPrototype'
 import type { EventsPageCaches, EventsPageState } from './EventsPage.types'
 
 interface EventsPageProps {
@@ -18,120 +24,189 @@ interface EventsPageProps {
     onEventSelect: (slug: string) => void
 }
 
-export function EventsPage({ userProfile, state, onStateChange, caches, onCachesChange, onEventSelect }: EventsPageProps) {
-    const browseToken = userProfile?.accessToken ?? ''
-    const [loading, setLoading] = useState(!caches.loaded)
+function monthBounds(monthKey: string) {
+    const [year, month] = monthKey.split('-').map(Number)
+    const first = new Date(year, month - 1, 1)
+    const last = new Date(year, month, 0)
+    const iso = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+    return { first, last, from: iso(first), to: iso(last) }
+}
+
+function moveMonth(monthKey: string, delta: number): string {
+    const { first } = monthBounds(monthKey)
+    first.setMonth(first.getMonth() + delta)
+    return `${first.getFullYear()}-${String(first.getMonth() + 1).padStart(2, '0')}`
+}
+
+export function EventsPage({ userProfile, state, onStateChange, onEventSelect }: EventsPageProps) {
+    const [items, setItems] = useState<CalendarItem[]>([])
+    const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
-    const scrollRef = useRef<HTMLDivElement | null>(null)
-    const cachesRef = useRef(caches)
-    cachesRef.current = caches
-    const skipScrollRestoreRef = useRef(false)
+    const [greetingUser, setGreetingUser] = useState<string | null>(null)
+    const [sending, setSending] = useState(false)
+    const bounds = useMemo(() => monthBounds(state.month), [state.month])
 
-    const highlight = useNewItemHighlight('events', () => {
-        skipScrollRestoreRef.current = true
-    }, caches.loaded)
-
-    const load = useCallback(async (background = false) => {
-        if (!background) setLoading(true)
+    const load = useCallback(async () => {
+        setLoading(true)
         setError(null)
         try {
-            const events = await fetchEvents(browseToken)
-            onCachesChange(prev => ({
-                ...prev,
-                events,
-                loaded: true,
-                lastRefreshIso: new Date().toISOString(),
-            }))
+            setItems(await fetchPrototypeCalendar(
+                userProfile?.accessToken ?? '',
+                userProfile?.id,
+                userProfile?.alias ?? userProfile?.username,
+                bounds.from,
+                bounds.to,
+            ))
         } catch (e) {
-            if (!background) setError(eventErrorMessage(e))
+            setError(e instanceof Error ? e.message : 'Could not load the calendar.')
         } finally {
-            if (!background) setLoading(false)
+            setLoading(false)
         }
-    }, [browseToken, onCachesChange])
+    }, [bounds.from, bounds.to, userProfile?.accessToken, userProfile?.alias, userProfile?.id, userProfile?.username])
 
-    useEffect(() => { void load(cachesRef.current.loaded) }, [load])
-
+    useEffect(() => { void load() }, [load])
     useEffect(() => {
-        if (skipScrollRestoreRef.current) return
-        if (scrollRef.current && !loading) scrollRef.current.scrollTop = state.scrollTop
-    }, [loading, state.scrollTop])
+        const reload = () => void load()
+        window.addEventListener('prototype-birthday-changed', reload)
+        return () => window.removeEventListener('prototype-birthday-changed', reload)
+    }, [load])
+    useRegisterPageRefresh({ onRefresh: () => void load(), refreshing: loading, tooltip: 'Refresh calendar' })
 
-    useRegisterPageRefresh({
-        onRefresh: () => void load(),
-        refreshing: loading,
-        tooltip: 'Refresh',
-    })
+    const itemsByDate = useMemo(() => {
+        const grouped = new Map<string, CalendarItem[]>()
+        for (const item of items) grouped.set(item.date, [...(grouped.get(item.date) ?? []), item])
+        return grouped
+    }, [items])
 
-    const isNewEvent = (event: EventSummary) =>
-        event.status !== 'draft' && highlight.isNew(event.published_at ?? event.created_at)
+    const cells = useMemo(() => {
+        const leading = (bounds.first.getDay() + 6) % 7
+        return [
+            ...Array.from({ length: leading }, () => null),
+            ...Array.from({ length: bounds.last.getDate() }, (_, index) => index + 1),
+        ]
+    }, [bounds.first, bounds.last])
 
-    const firstNewIdx = caches.events.findIndex(isNewEvent)
+    const greet = useCallback(async (birthday: CalendarBirthday, emoji: BirthdayGreetingEmoji) => {
+        if (!userProfile?.accessToken || sending) return
+        setSending(true)
+        setError(null)
+        try {
+            const updated = sendPrototypeGreeting(birthday, emoji)
+            setItems(current => current.map(item => item.type === 'birthday' && item.user_id === updated.user_id && item.date === updated.date ? updated : item))
+            setGreetingUser(null)
+        } catch (e) {
+            setError(e instanceof Error ? e.message : 'Could not send the birthday greeting.')
+        } finally {
+            setSending(false)
+        }
+    }, [sending, userProfile?.accessToken])
 
     return (
-        <div className="space-y-4 h-full flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-0 duration-500">
-            <div className="shrink-0">
-                <h1 className="text-2xl font-bold text-white leading-tight">Events</h1>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                    Cups and community tournaments — sign up, follow the teams, and don't miss a match.
-                </p>
+        <div className="space-y-4 animate-in fade-in duration-300">
+            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+                <div>
+                    <h1 className="text-2xl font-bold text-foreground">Community Calendar</h1>
+                    <p className="mt-0.5 text-xs text-muted-foreground">Events and community birthdays in one place.</p>
+                </div>
+                <div className="flex items-center gap-1">
+                    <Button variant="ghost" size="icon" onClick={() => onStateChange(prev => ({ ...prev, month: moveMonth(prev.month, -1) }))} aria-label="Previous month"><ChevronLeft /></Button>
+                    <div className="min-w-40 text-center text-sm font-semibold">
+                        {bounds.first.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
+                    </div>
+                    <Button variant="ghost" size="icon" onClick={() => onStateChange(prev => ({ ...prev, month: moveMonth(prev.month, 1) }))} aria-label="Next month"><ChevronRight /></Button>
+                </div>
             </div>
 
-            {error && <div className="shrink-0"><ErrorBanner message={error} /></div>}
+            {error && <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-300" role="alert">{error}</div>}
 
-            <div
-                ref={scrollRef}
-                onScroll={() => {
-                    if (scrollRef.current) {
-                        const top = scrollRef.current.scrollTop
-                        onStateChange(prev => (prev.scrollTop === top ? prev : { ...prev, scrollTop: top }))
-                    }
-                }}
-                className="flex-1 min-h-0 overflow-auto px-0.5 pb-2"
-            >
-                {loading && !caches.loaded ? (
-                    <div className="py-16 text-center text-sm text-muted-foreground">Loading events…</div>
-                ) : caches.events.length === 0 ? (
-                    <div className="py-16 text-center text-sm text-muted-foreground">
-                        <Trophy className="size-8 mx-auto mb-2 opacity-40" />
-                        No events yet. Check back soon!
-                    </div>
-                ) : (
-                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                        {caches.events.map((event, index) => {
-                            const dates = [formatEventDate(event.starts_at), formatEventDate(event.ends_at)].filter(Boolean)
-                            const isNew = isNewEvent(event)
-                            return (
-                                <NavLink
-                                    key={event.id}
-                                    view="event-detail"
-                                    params={{ eventSlug: event.slug }}
-                                    elementRef={isNew && index === firstNewIdx ? highlight.registerFirstNew : undefined}
-                                    onActivate={() => onEventSelect(event.slug)}
-                                    className={cn(
-                                        'block text-left p-4 rounded-xl bg-card/30 border border-hairline/5 hover:border-accent-500/40 hover:bg-card/50 transition-colors cursor-pointer space-y-3 group',
-                                        isNew && 'bg-accent-500/[0.07] ring-1 ring-inset ring-accent-500/40',
-                                    )}
-                                >
-                                    <div className="flex items-start justify-between gap-2">
-                                        <h2 className="text-base font-semibold text-foreground leading-snug">{event.name}</h2>
-                                        <EventStatusBadge event={event} className="mt-0.5" />
-                                    </div>
-                                    {event.summary && <p className="text-xs text-muted-foreground line-clamp-2">{event.summary}</p>}
-                                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
-                                        <span className="inline-flex items-center gap-1"><Users2 className="size-3" /> {formatTeamSize(event.team_size)} · {event.team_count} team{event.team_count === 1 ? '' : 's'}</span>
-                                        {dates.length > 0 && (
-                                            <span className="inline-flex items-center gap-1"><CalendarDays className="size-3" /> {dates.join(' – ')}</span>
+            <div className="grid grid-cols-7 gap-px overflow-hidden rounded-xl border border-hairline/10 bg-hairline/10">
+                {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
+                    <div key={day} className="bg-card px-1 py-2 text-center text-[10px] sm:text-xs font-semibold uppercase tracking-wide text-muted-foreground">{day}</div>
+                ))}
+                {cells.map((day, index) => {
+                    if (day == null) return <div key={`blank-${index}`} className="min-h-24 sm:min-h-32 bg-card/40" />
+                    const date = `${state.month}-${String(day).padStart(2, '0')}`
+                    const dayItems = itemsByDate.get(date) ?? []
+                    return (
+                        <div key={date} className="min-h-24 sm:min-h-32 bg-card p-1 sm:p-2">
+                            <div className="mb-1 text-[10px] sm:text-xs font-medium text-muted-foreground">{day}</div>
+                            <div className="space-y-1">
+                                {dayItems.map((item, itemIndex) => item.type === 'event' ? (
+                                    <NavLink
+                                        key={`event-${item.event.id}-${itemIndex}`}
+                                        view="event-detail"
+                                        params={{ eventSlug: item.event.slug }}
+                                        onActivate={() => onEventSelect(item.event.slug)}
+                                        className="block rounded-md border border-accent-500/20 bg-accent-500/10 px-1.5 py-1 text-[10px] sm:text-xs font-medium text-accent-200 hover:bg-accent-500/20 truncate"
+                                    >
+                                        <CalendarDays className="hidden sm:inline size-3 mr-1" />{item.event.name}
+                                    </NavLink>
+                                ) : (
+                                    <div key={`birthday-${item.user_id}-${itemIndex}`} className="relative">
+                                        <div
+                                            role="button"
+                                            tabIndex={0}
+                                            onClick={() => setGreetingUser(current => current === item.user_id ? null : item.user_id)}
+                                            onKeyDown={event => {
+                                                if (event.key === 'Enter' || event.key === ' ') {
+                                                    event.preventDefault()
+                                                    setGreetingUser(current => current === item.user_id ? null : item.user_id)
+                                                }
+                                            }}
+                                            className={cn(
+                                                'w-full rounded-md border border-pink-500/20 bg-pink-500/10 px-1.5 py-1 text-left text-[10px] sm:text-xs text-pink-200 hover:bg-pink-500/20 truncate cursor-pointer',
+                                                item.greeting_emoji && 'border-emerald-500/20 bg-emerald-500/10 text-emerald-200',
+                                            )}
+                                            title={item.greeting_emoji ? `Greeting sent: ${item.greeting_emoji}. Click to change it.` : `Wish ${item.alias ?? 'this player'} a happy birthday`}
+                                        >
+                                            <span className="flex items-center gap-1 min-w-0">
+                                                <span aria-hidden>🎂</span>
+                                                <PlayerInfo
+                                                    userId={item.user_id}
+                                                    alias={item.alias}
+                                                    title={item.active_title}
+                                                    size="sm"
+                                                    interactive={false}
+                                                    className="min-w-0 [&_img]:hidden sm:[&_img]:block"
+                                                />
+                                                {item.greeting_emoji && <span aria-label={`Greeting sent: ${item.greeting_emoji}`}>{item.greeting_emoji}</span>}
+                                            </span>
+                                        </div>
+                                        {greetingUser === item.user_id && (
+                                            <div className="absolute left-0 top-full z-20 mt-1 w-52 rounded-lg border border-hairline/10 bg-card p-2 shadow-xl">
+                                                <PlayerInfo userId={item.user_id} alias={item.alias} title={item.active_title} size="sm" />
+                                                {String(userProfile?.id) === item.user_id ? (
+                                                    <p className="mt-2 text-xs text-muted-foreground">This is your birthday.</p>
+                                                ) : userProfile?.accessToken ? (
+                                                    <div className="mt-2 flex gap-1" aria-label="Choose one birthday greeting">
+                                                        {BIRTHDAY_GREETING_EMOJIS.map(emoji => (
+                                                            <button
+                                                                key={emoji}
+                                                                type="button"
+                                                                disabled={sending}
+                                                                onClick={() => void greet(item, emoji)}
+                                                                className={cn(
+                                                                    'flex size-9 items-center justify-center rounded-md border text-lg hover:bg-hairline/10 disabled:opacity-50',
+                                                                    item.greeting_emoji === emoji ? 'border-accent-400 bg-accent-500/15' : 'border-transparent',
+                                                                )}
+                                                                aria-label={item.greeting_emoji ? `Replace greeting with ${emoji}` : `Send ${emoji}`}
+                                                                aria-pressed={item.greeting_emoji === emoji}
+                                                            >
+                                                                {sending ? <Loader2 className="size-4 animate-spin" /> : emoji}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                ) : <p className="mt-2 text-xs text-muted-foreground">Sign in to send a greeting.</p>}
+                                            </div>
                                         )}
                                     </div>
-                                    <div className="flex items-center gap-1 text-xs font-medium text-accent-300 group-hover:text-accent-200">
-                                        {event.signups_open ? 'Sign up now' : 'View event'} <ChevronRight className="size-3.5" />
-                                    </div>
-                                </NavLink>
-                            )
-                        })}
-                    </div>
-                )}
+                                ))}
+                            </div>
+                        </div>
+                    )
+                })}
             </div>
+            {loading && <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin" /> Loading calendar…</div>}
         </div>
     )
 }

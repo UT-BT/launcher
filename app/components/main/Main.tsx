@@ -144,7 +144,7 @@ const CAP_IT_ALL_PREF_KEYS: readonly (keyof CapItAllPageState)[] = ['pageSizePre
 const WORLD_RECORDS_PREF_KEYS: readonly (keyof WorldRecordsPageState)[] = ['columnVisibility', 'columnOrder', 'pageSizePreference', 'filtersPanelOpen']
 const ACHIEVEMENTS_PREF_KEYS: readonly (keyof AchievementsPageState)[] = []
 const TEAMS_PREF_KEYS: readonly (keyof TeamsPageState)[] = []
-const EVENTS_PREF_KEYS: readonly (keyof EventsPageState)[] = []
+const EVENTS_PREF_KEYS: readonly (keyof EventsPageState)[] = ['month']
 const ADMIN_PREF_KEYS: readonly (keyof AdminPageState)[] = ['activeSection']
 
 function pickKeys<T extends object>(o: T, keys: readonly (keyof T)[]): Partial<T> {
