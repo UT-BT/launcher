@@ -89,20 +89,16 @@ export function TeamsPage({ userProfile, state, onStateChange, caches, onCachesC
         onStateChange(prev => ({ ...prev, directorySearch: value }))
     }, [onStateChange])
 
-    const setDirectoryPage = useCallback((page: number) => {
-        onStateChange(prev => ({ ...prev, directoryPage: page }))
-    }, [onStateChange])
-
     const setDirectoryAccess = useCallback((value: TeamAccessFilter) => {
-        onStateChange(prev => ({ ...prev, directoryAccess: value, directoryPage: 1 }))
+        onStateChange(prev => ({ ...prev, directoryAccess: value }))
     }, [onStateChange])
 
     const setDirectorySort = useCallback((value: TeamSort) => {
-        onStateChange(prev => ({ ...prev, directorySort: value, directoryPage: 1 }))
+        onStateChange(prev => ({ ...prev, directorySort: value }))
     }, [onStateChange])
 
     const setDirectorySortDir = useCallback((value: 'asc' | 'desc') => {
-        onStateChange(prev => ({ ...prev, directorySortDir: value, directoryPage: 1 }))
+        onStateChange(prev => ({ ...prev, directorySortDir: value }))
     }, [onStateChange])
 
     if (!accessToken && !capabilities.anonymousBrowse) {
@@ -160,12 +156,10 @@ export function TeamsPage({ userProfile, state, onStateChange, caches, onCachesC
                             accessToken={browseToken}
                             myTeam={caches.myTeam}
                             search={state.directorySearch}
-                            page={state.directoryPage}
                             access={state.directoryAccess}
                             sort={state.directorySort}
                             sortDir={state.directorySortDir}
                             onSearchChange={setDirectorySearch}
-                            onPageChange={setDirectoryPage}
                             onAccessChange={setDirectoryAccess}
                             onSortChange={setDirectorySort}
                             onSortDirChange={setDirectorySortDir}

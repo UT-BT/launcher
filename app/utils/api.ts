@@ -165,9 +165,16 @@ export interface ActiveTitle {
     color_b: number
 }
 
-export function toActiveTitle(
-    t?: { name: string; rarity: number; color_r: number; color_g: number; color_b: number } | null,
-): ActiveTitle | null {
+/** An `active_title` straight off the wire, before rarity is clamped to 1-5. */
+export interface RawActiveTitle {
+    name: string
+    rarity: number
+    color_r: number
+    color_g: number
+    color_b: number
+}
+
+export function toActiveTitle(t?: RawActiveTitle | null): ActiveTitle | null {
     if (!t) return null
     const rarity = Math.min(5, Math.max(1, Math.round(t.rarity))) as 1 | 2 | 3 | 4 | 5
     return { name: t.name, rarity, color_r: t.color_r, color_g: t.color_g, color_b: t.color_b }
@@ -3488,7 +3495,23 @@ export async function fetchCapItAllLeaderboard(
 
 export type TeamRole = 'owner' | 'admin' | 'member'
 export type TeamMemberStatus = 'invited' | 'active' | 'blocked'
-export type TeamSort = 'added' | 'members' | 'name'
+export type TeamSort = 'added' | 'members' | 'name' | 'world_records' | 'caps' | 'playtime'
+
+/** Directory-wide placing per metric — 1 is best, ties share a rank. */
+export interface TeamRanks {
+    world_records: number | null
+    caps: number | null
+    playtime: number | null
+}
+
+/** Totals across a team's active members. Only the directory listing carries these. */
+export interface TeamStats {
+    caps: number
+    world_records: number
+    playtime_seconds: number
+    spectator_seconds: number
+    ranks: TeamRanks
+}
 
 export interface TeamCore {
     id: string
@@ -3499,10 +3522,14 @@ export interface TeamCore {
     tag_spaced: boolean
     is_open: boolean
     owner: string
+    /** Owner identity, served with the directory so cards never fan out per-owner lookups. */
+    owner_alias?: string | null
+    owner_title?: ActiveTitle | null
     member_count: number
     has_avatar: boolean
     avatar_updated: string | null
     added: string | null
+    stats?: TeamStats | null
 }
 
 export interface TeamMember {
@@ -3537,6 +3564,8 @@ export interface TeamDetail extends TeamCore {
 
 export interface TeamDirectoryPage {
     total: number
+    /** How many teams the ranks were computed over — the "of N" in "#3 of 15". */
+    ranked_teams: number
     teams: TeamCore[]
 }
 
@@ -3560,7 +3589,12 @@ export interface TeamActivityPage {
     total: number
     caps: number
     world_records: number
+    /** Number of playtime sessions, not their duration. */
     playtime: number
+    playtime_seconds: number
+    spectator_seconds: number
+    ranks: TeamRanks
+    ranked_teams: number
     items: TeamActivityItem[]
 }
 
@@ -3591,6 +3625,31 @@ export interface TeamDirectoryParams {
     order?: 'asc' | 'desc'
 }
 
+function asRank(value: unknown): number | null {
+    const rank = asNum(value, 0)
+    return rank > 0 ? rank : null
+}
+
+function normaliseTeamRanks(raw: unknown): TeamRanks {
+    const ranks = (raw ?? {}) as { [K in keyof TeamRanks]?: unknown }
+    return {
+        world_records: asRank(ranks.world_records),
+        caps: asRank(ranks.caps),
+        playtime: asRank(ranks.playtime),
+    }
+}
+
+function normaliseTeamStats(raw: unknown): TeamStats {
+    const stats = (raw ?? {}) as Partial<TeamStats>
+    return {
+        caps: asNum(stats.caps),
+        world_records: asNum(stats.world_records),
+        playtime_seconds: asNum(stats.playtime_seconds),
+        spectator_seconds: asNum(stats.spectator_seconds),
+        ranks: normaliseTeamRanks(stats.ranks),
+    }
+}
+
 function normaliseTeamDetail(raw: TeamDetail): TeamDetail {
     return {
         ...raw,
@@ -3616,7 +3675,19 @@ export async function fetchTeams(accessToken: string, params: TeamDirectoryParam
     if (params.isOpen !== undefined) usp.set('is_open', String(params.isOpen))
     if (params.sort) usp.set('sort', params.sort)
     if (params.order) usp.set('order', params.order)
-    return apiGet<TeamDirectoryPage>(`/teams/?${usp.toString()}`, { token: accessToken })
+    const page = await apiGet<TeamDirectoryPage>(`/teams/?${usp.toString()}`, { token: accessToken })
+    const teams = asArray<TeamCore>((page as any)?.teams)
+    return {
+        total: asNum((page as any)?.total, teams.length),
+        ranked_teams: asNum((page as any)?.ranked_teams, teams.length),
+        teams: teams.map(team => ({
+            ...team,
+            owner_alias: team.owner_alias || null,
+            owner_title: toActiveTitle(asNonEmptyObj<RawActiveTitle>((team as any)?.owner_title)),
+            member_count: asNum(team.member_count),
+            stats: normaliseTeamStats(team.stats),
+        })),
+    }
 }
 
 export async function fetchTeam(accessToken: string, teamId: string): Promise<TeamDetail> {
@@ -3630,7 +3701,18 @@ export async function fetchTeamActivity(
 ): Promise<TeamActivityPage> {
     const usp = new URLSearchParams()
     if (params.limit !== undefined) usp.set('limit', String(params.limit))
-    return apiGet<TeamActivityPage>(`/teams/${encodeURIComponent(teamId)}/activity?${usp.toString()}`, { token: accessToken })
+    const page = await apiGet<TeamActivityPage>(`/teams/${encodeURIComponent(teamId)}/activity?${usp.toString()}`, { token: accessToken })
+    return {
+        total: asNum((page as any)?.total),
+        caps: asNum((page as any)?.caps),
+        world_records: asNum((page as any)?.world_records),
+        playtime: asNum((page as any)?.playtime),
+        playtime_seconds: asNum((page as any)?.playtime_seconds),
+        spectator_seconds: asNum((page as any)?.spectator_seconds),
+        ranks: normaliseTeamRanks((page as any)?.ranks),
+        ranked_teams: asNum((page as any)?.ranked_teams),
+        items: asArray<TeamActivityItem>((page as any)?.items),
+    }
 }
 
 export type TeamAuditAction =

@@ -17,7 +17,12 @@ interface PlayerInfoProps {
     showYouBadge?: boolean
     className?: string
     interactive?: boolean
-    presentation?: 'full' | 'avatar'
+    /**
+     * `full` = avatar + name + title. `avatar` = crest only.
+     * `name` = the aliased name alone, sized to inherit from the surrounding text —
+     * for prose like "Created <date> by <player>" where avatar chrome would be noise.
+     */
+    presentation?: 'full' | 'avatar' | 'name'
 }
 
 const AVATAR_PX: Record<NonNullable<PlayerInfoProps['size']>, number> = {
@@ -89,9 +94,11 @@ export function PlayerInfo({
     const wrapperClass = cn(
         presentation === 'avatar'
             ? 'inline-flex items-center'
-            : layout === 'vertical'
-                ? 'flex flex-col items-center gap-1.5'
-                : 'flex items-center gap-2.5',
+            : presentation === 'name'
+                ? 'inline'
+                : layout === 'vertical'
+                    ? 'flex flex-col items-center gap-1.5'
+                    : 'flex items-center gap-2.5',
         'min-w-0',
         isClickable && 'w-fit max-w-full cursor-pointer hover:opacity-80 transition-opacity',
         className,
@@ -136,7 +143,13 @@ export function PlayerInfo({
         )
     ) : null
 
-    const body = presentation === 'avatar' ? avatarBody : (
+    const nameOnly = (
+        <span className={cn('font-medium text-foreground', isClickable && 'hover:underline underline-offset-2')}>
+            {displayName}
+        </span>
+    )
+
+    const body = presentation === 'avatar' ? avatarBody : presentation === 'name' ? nameOnly : (
         <>
             {isAvatarable && (
                 <PlayerAvatar userId={userId!} alias={alias} title={title} sizePx={sizePx} isLight={isLight} />
@@ -149,17 +162,21 @@ export function PlayerInfo({
         ? cn(wrapperClass, highlight && 'rounded-full ring-1 ring-emerald-400/70')
         : wrapperClass
 
+    // `name` renders inside running text, so its wrapper has to be phrasing content —
+    // a <div> there is invalid HTML and only survives on the `inline` class.
+    const Wrapper = presentation === 'name' ? 'span' : 'div'
+
     if (!isClickable) {
         return (
-            <div className={outerClass} aria-label={presentation === 'avatar' ? displayName : undefined}>
+            <Wrapper className={outerClass} aria-label={presentation === 'avatar' ? displayName : undefined}>
                 {body}
-            </div>
+            </Wrapper>
         )
     }
 
     return (
         <NavLink
-            as="div"
+            as={Wrapper}
             view="player-detail"
             params={{ playerId: String(userId) }}
             onActivate={() => openPlayer(userId!)}
