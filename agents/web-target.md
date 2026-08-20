@@ -287,6 +287,11 @@ ships the static half of that contract:
   `app/index.html` stays untouched and shared — the plugin lifts the shell's
   `<title>`, `description` and `theme-color` out so the document never carries a
   duplicate.
+- **`<!--utbt-body-->`** inside `<div id="app">` (`app/index.html`) marks where
+  the deployed site injects a crawler-readable server-rendered body per URL, so
+  search engines and JavaScript-less agents get real content instead of an
+  empty shell. `createRoot(...).render()` replaces it the moment the app
+  mounts, so the running app never sees it — leave the marker in place.
 
 Client-side, `useDocumentMeta` (called from `Main.tsx`) keeps the tab title and
 `<link rel="canonical">` in step with navigation, and detail pages call
