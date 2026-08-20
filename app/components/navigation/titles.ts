@@ -47,6 +47,8 @@ export function titleForRoute(view: string, params: NavParams): string {
             return `News — ${SITE_NAME}`
         case 'news-detail':
             return `News — ${SITE_NAME}`
+        case 'bunnytrack':
+            return `What is BunnyTrack? — ${SITE_NAME}`
         case 'admin':
             return `Admin — ${SITE_NAME}`
         default:

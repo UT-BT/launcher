@@ -18,6 +18,7 @@
     { "path": "/achievements", "view": "achievements", "kind": "list.achievements" },
     { "path": "/news", "view": "news", "kind": "list.news" },
     { "path": "/news/:newsId", "view": "news-detail", "kind": "news", "param": "newsId" },
+    { "path": "/bunnytrack", "view": "bunnytrack", "kind": "page.bunnytrack" },
     { "path": "/admin", "view": "admin", "kind": "admin" }
   ]
 }

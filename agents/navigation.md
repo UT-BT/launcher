@@ -10,7 +10,7 @@ not_here:
   - "where page state / persistence lives → state-patterns.md"
   - "the PlayerInfo / CapTimeLink components that trigger nav → shared-components.md"
 sections: [the-model, navigate-is-the-only-entry-point, url-sync-web-build, link-semantics, page-views-vs-detail-pages, the-sidebar-registry, event-driven-navigation, sidebar-new-badges, page-refresh-registry, per-entry-state]
-last_verified: 2026-07-29
+last_verified: 2026-08-20
 verify_against:
   - app/components/main/Main.tsx
   - app/components/navigation/NavLink.tsx
@@ -104,7 +104,7 @@ Model: **the in-memory stack stays master; browser history mirrors it.**
 Path scheme: `/` home, `/servers`, `/maps` (+`?new=1`), `/maps/:mapName`,
 `/players`, `/players/:playerId`, `/teams`, `/teams/:teamId`, `/world-records`,
 `/cap-it-all`, `/caps/:capId`, `/team-caps/:teamCapId`, `/achievements`,
-`/news`, `/news/:newsId`, `/admin`; unknown → `/`. Adding a view = add both
+`/news`, `/news/:newsId`, `/bunnytrack`, `/admin`; unknown → `/`. Adding a view = add both
 directions in `routes.ts`, same commit.
 
 **Adding a route is now a three-file change.** `app/public/route-contract.json`
