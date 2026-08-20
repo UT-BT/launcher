@@ -108,7 +108,6 @@ export function StatusBadge({ status }: { status: TeamMemberStatus }) {
     )
 }
 
-/** `compact` drops the badge to one word — the team cards have no room for two. */
 export function AccessBadge({ isOpen, compact }: { isOpen: boolean; compact?: boolean }) {
     return (
         <span className={cn(

@@ -165,7 +165,6 @@ export interface ActiveTitle {
     color_b: number
 }
 
-/** An `active_title` straight off the wire, before rarity is clamped to 1-5. */
 export interface RawActiveTitle {
     name: string
     rarity: number
@@ -3497,14 +3496,12 @@ export type TeamRole = 'owner' | 'admin' | 'member'
 export type TeamMemberStatus = 'invited' | 'active' | 'blocked'
 export type TeamSort = 'added' | 'members' | 'name' | 'world_records' | 'caps' | 'playtime'
 
-/** Directory-wide placing per metric — 1 is best, ties share a rank. */
 export interface TeamRanks {
     world_records: number | null
     caps: number | null
     playtime: number | null
 }
 
-/** Totals across a team's active members. Only the directory listing carries these. */
 export interface TeamStats {
     caps: number
     world_records: number
@@ -3522,7 +3519,6 @@ export interface TeamCore {
     tag_spaced: boolean
     is_open: boolean
     owner: string
-    /** Owner identity, served with the directory so cards never fan out per-owner lookups. */
     owner_alias?: string | null
     owner_title?: ActiveTitle | null
     member_count: number
@@ -3564,7 +3560,6 @@ export interface TeamDetail extends TeamCore {
 
 export interface TeamDirectoryPage {
     total: number
-    /** How many teams the ranks were computed over — the "of N" in "#3 of 15". */
     ranked_teams: number
     teams: TeamCore[]
 }
@@ -3589,7 +3584,6 @@ export interface TeamActivityPage {
     total: number
     caps: number
     world_records: number
-    /** Number of playtime sessions, not their duration. */
     playtime: number
     playtime_seconds: number
     spectator_seconds: number

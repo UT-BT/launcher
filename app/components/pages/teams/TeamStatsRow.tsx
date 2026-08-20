@@ -86,10 +86,7 @@ export function TeamStatsRow({ accessToken, team }: TeamStatsRowProps) {
 
     const loading = totals === null && hasMembers
     const fmt = (n: number | undefined) => (n == null ? '0' : n.toLocaleString())
-    // A team on zero has no meaningful placing, however the tie-break sorted it.
     const rankFor = (total: number | undefined, rank: number | null | undefined) => (total ? rank : null)
-    // Every ranked tile leads its sub-line with the same "of N teams" denominator, so a
-    // bare "#2" never reads as a different kind of number from tile to tile.
     const rankSub = (total: number | undefined, rank: number | null | undefined, extra?: string) => {
         const of = rankFor(total, rank) && totals?.ranked_teams
             ? `of ${totals.ranked_teams} teams`

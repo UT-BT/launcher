@@ -6,7 +6,6 @@ export function isTeamStatSort(sort: TeamSort): boolean {
     return TEAM_STAT_SORTS.includes(sort)
 }
 
-/** Compact hours for a team-wide playtime total, which spans minutes to thousands of hours. */
 export function formatTeamHours(seconds: number | null | undefined): string {
     const total = Math.max(0, seconds ?? 0)
     const hours = total / 3600

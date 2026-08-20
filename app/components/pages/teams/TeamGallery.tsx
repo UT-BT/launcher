@@ -64,7 +64,6 @@ export function TeamGallery({
         let cancelled = false
         setLoading(true)
         setError(null)
-        // limit 0 asks the API for the whole directory — it is a short, unpaginated list.
         fetchTeams(accessToken, {
             search: search || undefined,
             isOpen: accessToIsOpen(access),

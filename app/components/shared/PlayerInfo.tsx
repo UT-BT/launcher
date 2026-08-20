@@ -17,11 +17,6 @@ interface PlayerInfoProps {
     showYouBadge?: boolean
     className?: string
     interactive?: boolean
-    /**
-     * `full` = avatar + name + title. `avatar` = crest only.
-     * `name` = the aliased name alone, sized to inherit from the surrounding text —
-     * for prose like "Created <date> by <player>" where avatar chrome would be noise.
-     */
     presentation?: 'full' | 'avatar' | 'name'
 }
 
@@ -162,8 +157,6 @@ export function PlayerInfo({
         ? cn(wrapperClass, highlight && 'rounded-full ring-1 ring-emerald-400/70')
         : wrapperClass
 
-    // `name` renders inside running text, so its wrapper has to be phrasing content —
-    // a <div> there is invalid HTML and only survives on the `inline` class.
     const Wrapper = presentation === 'name' ? 'span' : 'div'
 
     if (!isClickable) {

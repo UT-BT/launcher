@@ -25,17 +25,12 @@ interface TeamMetricRowProps {
     icon: LucideIcon
     label: string
     value: string
-    /** Raw total behind `value` — a team on zero gets no rank, however it placed. */
     total: number
     rank?: number | null
     accent: string
     active?: boolean
 }
 
-/**
- * One line of the team stat sheet: label on the left, a dotted leader, then the
- * value and its directory rank hard against the right edge.
- */
 export function TeamMetricRow({ icon: Icon, label, value, total, rank, accent, active }: TeamMetricRowProps) {
     return (
         <div className={cn(

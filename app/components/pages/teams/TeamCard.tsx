@@ -36,8 +36,6 @@ export function TeamCard({ team, isOwnTeam, highlight, onSelect }: TeamCardProps
                 <div className="flex items-center gap-3 min-w-0">
                     <TeamAvatar team={team} size="md" />
                     <div className="min-w-0 flex-1 space-y-1">
-                        {/* Name and badges share one line: the name truncates so the badges,
-                            which are the shorter and more scannable half, always survive. */}
                         <div className="flex items-center gap-1.5 min-w-0">
                             <span
                                 title={team.name}
