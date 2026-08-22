@@ -17,7 +17,7 @@ interface PlayerInfoProps {
     showYouBadge?: boolean
     className?: string
     interactive?: boolean
-    presentation?: 'full' | 'avatar'
+    presentation?: 'full' | 'avatar' | 'name'
 }
 
 const AVATAR_PX: Record<NonNullable<PlayerInfoProps['size']>, number> = {
@@ -92,8 +92,8 @@ export function PlayerInfo({
             : layout === 'vertical'
                 ? 'flex flex-col items-center gap-1.5'
                 : 'flex items-center gap-2.5',
-        'min-w-0',
-        isClickable && 'w-fit max-w-full cursor-pointer hover:opacity-80 transition-opacity',
+        'min-w-0 max-w-full w-fit',
+        isClickable && 'cursor-pointer hover:opacity-80 transition-opacity',
         className,
     )
 
@@ -136,14 +136,18 @@ export function PlayerInfo({
         )
     ) : null
 
-    const body = presentation === 'avatar' ? avatarBody : (
-        <>
-            {isAvatarable && (
-                <PlayerAvatar userId={userId!} alias={alias} title={title} sizePx={sizePx} isLight={isLight} />
-            )}
-            {nameBlock}
-        </>
-    )
+    const body = presentation === 'avatar'
+        ? avatarBody
+        : presentation === 'name'
+            ? nameBlock
+            : (
+                <>
+                    {isAvatarable && (
+                        <PlayerAvatar userId={userId!} alias={alias} title={title} sizePx={sizePx} isLight={isLight} />
+                    )}
+                    {nameBlock}
+                </>
+            )
 
     const outerClass = presentation === 'avatar'
         ? cn(wrapperClass, highlight && 'rounded-full ring-1 ring-emerald-400/70')

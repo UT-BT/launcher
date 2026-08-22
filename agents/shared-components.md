@@ -11,7 +11,7 @@ not_here:
   - "how detail pages open via events (open-player / open-cap) → navigation.md"
   - "page/query state + persistence → state-patterns.md"
 sections: [hard-rule-playerinfo, player-cap-links, map-links, tables-datatable-primitives, columns-columnsmenu, filter-presets, tutorial, visual-primitives, ui-primitives, utilities, when-to-extract]
-last_verified: 2026-07-29
+last_verified: 2026-08-22
 verify_against: [app/components/shared/PlayerInfo.tsx, app/components/shared/DataTable.tsx, app/components/shared/CapTimeLink.tsx, app/components/shared/MapNavLink.tsx, app/components/shared/MapNameCell.tsx, app/components/shared/ColumnsMenu.tsx, app/components/shared/FilterPresetsMenu.tsx]
 ---
 
@@ -36,6 +36,8 @@ text or hand-roll an avatar `<img>`. Handles:
 - `horizontal` / `vertical` layout, `sm` / `md` / `lg` sizing
 - Avatar-only presentation for compact roster stacks, with the same fallback and
   active-title border styling
+- Name-only presentation for narrow table cells, keeping the click-through and
+  title/Patreon styling without the avatar
 
 Props are flat primitives — `userId`, `alias`, `title`. Never pass nested
 user/record shapes; destructure at the call site.
@@ -62,6 +64,12 @@ the API endpoint rather than working around it in the launcher (see the
 Use `presentation="avatar"` only inside compact identity collections such as
 `TeamAvatarStack`. The surrounding component must expose names through an
 accessible label or roster tooltip.
+
+Use `presentation="name"` when a narrow column has no room for an avatar (e.g.
+the Maps author column). The name still links to the player profile whenever
+`userId` is set, and falls back to plain uninteractive text when it is not — so
+linked and string-only authors need no branch at the call site. The wrapper is
+`w-fit`, so center it with `mx-auto` rather than `justify-center`.
 
 Rarity styling (1–5) lives in `app/utils/titleStyles.ts`
 (`getAvatarBorderStyle`, `getTitleTextStyle`, `getReadableTitleColor`, `hasTitle`).
