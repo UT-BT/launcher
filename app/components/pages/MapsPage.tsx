@@ -1638,7 +1638,7 @@ export function MapsPage({
             case 'author':
                 return (
                     <DataTableCell key={id} className="text-muted-foreground">
-                        <PlayerInfo alias={author || '—'} size="md" className="justify-center" />
+                        <PlayerInfo userId={map.author_ref} presentation="name" alias={author || '—'} size="md" className="mx-auto" />
                     </DataTableCell>
                 )
             case 'difficulty':

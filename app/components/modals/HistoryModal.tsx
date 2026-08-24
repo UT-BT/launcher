@@ -267,7 +267,7 @@ export function HistoryModal({
                                             </DataTableCell>
                                             {isVisible('author') && (
                                                 <DataTableCell align="center" className="text-muted-foreground">
-                                                    <PlayerInfo alias={cap.author} size="md" className="justify-center" />
+                                                    <PlayerInfo alias={cap.author} size="md" className="mx-auto" />
                                                 </DataTableCell>
                                             )}
                                             {isVisible('time') && (
