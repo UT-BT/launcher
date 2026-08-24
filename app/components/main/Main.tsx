@@ -78,6 +78,7 @@ const PlayerDetailPage = lazy(() => import('@/app/components/pages/PlayerDetailP
 const CapDetailPage = lazy(() => import('@/app/components/pages/CapDetailPage').then(m => ({ default: m.CapDetailPage })))
 const TeamCapDetailPage = lazy(() => import('@/app/components/pages/TeamCapDetailPage').then(m => ({ default: m.TeamCapDetailPage })))
 const NewsDetailPage = lazy(() => import('@/app/components/pages/NewsDetailPage').then(m => ({ default: m.NewsDetailPage })))
+const BunnyTrackPage = lazy(() => import('@/app/components/pages/BunnyTrackPage').then(m => ({ default: m.BunnyTrackPage })))
 const AdminPage = lazy(() => import('@/app/components/pages/admin/AdminPage').then(m => ({ default: m.AdminPage })))
 import { InstallationBanner } from '@/app/components/InstallationBanner'
 import { UpdateBanner } from '@/app/components/updater/UpdateBanner'
@@ -806,6 +807,8 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
           newsId={entry.params.newsId!}
           userProfile={userProfile as any}
         />
+      case 'bunnytrack':
+        return <BunnyTrackPage />
       default:
         return <Home
           userProfile={userProfile as any}

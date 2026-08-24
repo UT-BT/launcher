@@ -27,6 +27,7 @@ export function viewToPath(view: string, params: NavParams): string {
         case 'achievements': return '/achievements'
         case 'news': return '/news'
         case 'news-detail': return `/news/${encodeURIComponent(String(params.newsId ?? ''))}`
+        case 'bunnytrack': return '/bunnytrack'
         case 'admin': return '/admin'
         default: return '/'
     }
@@ -81,6 +82,7 @@ export function pathToNav(pathname: string, search: string): RouteTarget {
             }
             return { view: 'news', params: {} }
         }
+        case 'bunnytrack': return { view: 'bunnytrack', params: {} }
         case 'admin': return { view: 'admin', params: {} }
         default: return { view: 'home', params: {} }
     }

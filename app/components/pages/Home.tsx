@@ -15,6 +15,8 @@ import { ReplayVideoModal } from '@/app/components/shared/ReplayVideoModal'
 import { useReplayWatch } from '@/app/hooks/useReplayWatch'
 import { useRefreshCooldown } from '@/app/hooks/useRefreshCooldown'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
+import { NavLink } from '@/app/components/navigation/NavLink'
+import { useNavigation } from '@/app/components/navigation/NavigationContext'
 import type { Server } from '@/app/utils/server-utils'
 import {
     forgetRecentServer, readRecentServers, rememberRecentServer,
@@ -111,6 +113,7 @@ export function Home({
     onViewServers, onViewMaps, onViewNewMaps, onViewWorldRecords, onViewPlayers, onViewNews,
 }: HomeProps) {
     const refreshCooldown = useRefreshCooldown()
+    const { navigate } = useNavigation()
     const { summary, hotMaps, news, newsCategories, userSummary, servers } = caches
     const hasCachedData = summary !== null
     const [loading, setLoading] = useState(!hasCachedData)
@@ -437,6 +440,13 @@ export function Home({
                         <div>
                             <div className="font-semibold text-foreground">Make UTBT yours</div>
                             <p className="mt-1 text-sm text-muted-foreground">Sign in to track medals and achievements, review maps, and sync favorites.</p>
+                            <NavLink
+                                view="bunnytrack"
+                                onActivate={() => navigate('bunnytrack')}
+                                className="mt-2 inline-block text-sm font-medium text-accent-200 hover:text-foreground transition-colors"
+                            >
+                                New here? What is BunnyTrack? →
+                            </NavLink>
                         </div>
                         <Button onClick={() => requestLogin({ feature: 'personalize UTBT' })}>Continue with Discord</Button>
                     </div>

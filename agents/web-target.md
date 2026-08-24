@@ -10,7 +10,7 @@ not_here:
   - "IPC channel contract → lib/conveyor/README.md"
   - "build commands reference → agents/build.md"
 sections: [overview, platform-layer, capability-gates, web-auth, anonymous-browsing, shareable-urls, responsive-layout, performance, build, seo-and-link-previews, hosting-note]
-last_verified: 2026-07-29
+last_verified: 2026-08-20
 verify_against:
   - app/public/route-contract.json
   - app/components/navigation/NavLink.tsx
