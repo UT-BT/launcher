@@ -108,15 +108,15 @@ export function StatusBadge({ status }: { status: TeamMemberStatus }) {
     )
 }
 
-export function AccessBadge({ isOpen }: { isOpen: boolean }) {
+export function AccessBadge({ isOpen, compact }: { isOpen: boolean; compact?: boolean }) {
     return (
         <span className={cn(
-            'text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border',
+            'shrink-0 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border',
             isOpen
                 ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
                 : 'bg-white/5 text-muted-foreground border-white/10',
         )}>
-            {isOpen ? 'Open' : 'Invite Only'}
+            {isOpen ? 'Open' : compact ? 'Invite' : 'Invite Only'}
         </span>
     )
 }

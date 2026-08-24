@@ -3,7 +3,6 @@ import type { TeamAccessFilter } from './teams/TeamGallery'
 
 export interface TeamsPageState {
     directorySearch: string
-    directoryPage: number
     directoryAccess: TeamAccessFilter
     directorySort: TeamSort
     directorySortDir: 'asc' | 'desc'
@@ -19,10 +18,9 @@ export interface TeamsPageCaches {
 
 export const DEFAULT_TEAMS_STATE: TeamsPageState = {
     directorySearch: '',
-    directoryPage: 1,
     directoryAccess: 'all',
-    directorySort: 'added',
-    directorySortDir: 'asc',
+    directorySort: 'world_records',
+    directorySortDir: 'desc',
     scrollTop: 0,
 }
 

@@ -153,17 +153,19 @@ export function PlayerInfo({
         ? cn(wrapperClass, highlight && 'rounded-full ring-1 ring-emerald-400/70')
         : wrapperClass
 
+    const Wrapper = presentation === 'name' ? 'span' : 'div'
+
     if (!isClickable) {
         return (
-            <div className={outerClass} aria-label={presentation === 'avatar' ? displayName : undefined}>
+            <Wrapper className={outerClass} aria-label={presentation === 'avatar' ? displayName : undefined}>
                 {body}
-            </div>
+            </Wrapper>
         )
     }
 
     return (
         <NavLink
-            as="div"
+            as={Wrapper}
             view="player-detail"
             params={{ playerId: String(userId) }}
             onActivate={() => openPlayer(userId!)}

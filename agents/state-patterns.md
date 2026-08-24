@@ -12,7 +12,7 @@ not_here:
   - "the navigation stack / navigate() / renderView wiring → navigation.md"
   - "the shared components used (FilterPresetsMenu, ColumnsMenu, Tutorial) → shared-components.md"
 sections: [controlled-pages-with-hoisted-state, navigation-history-per-entry-ui-state, account-synced-state, localstorage-persistence, filter-presets, tutorial-state, favorites, naming-conventions]
-last_verified: 2026-07-27
+last_verified: 2026-08-20
 verify_against: [app/components/main/Main.tsx, app/components/navigation/useNavState.ts, app/hooks/useAsync.ts, app/utils/userState.ts]
 ---
 
@@ -246,7 +246,7 @@ signed-in user across devices); everything else is device-local.
 | `utbt:worldRecordsState:v1` | `Main.tsx` (`usePageState`) | no | World Records prefs: column visibility/order, `pageSizePreference`, `filtersPanelOpen` |
 | `utbt:worldRecordsPresets:v1` | `WorldRecordsPage` (via `filterPresets.ts`) | **yes** | `FilterPreset[]` |
 | `utbt:achievementsState:v1` | `Main.tsx` (`usePageState`) | no | none (no pref fields → nothing persisted) |
-| `utbt:teamsState:v1` | `Main.tsx` (`usePageState`) | no | none persisted (no pref fields); per-entry query state = team-gallery search/page + directory access filter + sort field + sort direction + scroll. Gallery caches (`myTeam`, `invitations`) live in the shared singleton, refreshed on mount and updated from each mutation's fresh `TeamDetail`. The role-aware `team-detail` page fetches its own `/teams/<id>` + `/me/team`; leave/disband/join/accept/decline invalidate the gallery cache and route back. |
+| `utbt:teamsState:v2` | `Main.tsx` (`usePageState`) | no | none persisted (no pref fields); per-entry query state = team-gallery search + directory access filter + sort field + sort direction + scroll. **v2 dropped `directoryPage`** — the gallery is unpaginated (it asks the API for `limit=0`, the whole directory) and defaults to World Records descending. Gallery caches (`myTeam`, `invitations`) live in the shared singleton, refreshed on mount and updated from each mutation's fresh `TeamDetail`. The role-aware `team-detail` page fetches its own `/teams/<id>` + `/me/team`; leave/disband/join/accept/decline invalidate the gallery cache and route back. |
 | `utbt:eventsState:v1` | `Main.tsx` (`usePageState`) | no | none persisted (no pref fields) |
 | `utbt:adminState:v1` | `Main.tsx` (`usePageState`) | no | Admin page pref: `activeSection`. Each admin section owns its own table state: column visibility/order in `utbt:admin:<section>:cols:v2` (device-local) + saved filters in `utbt:admin:<section>:filters:v1` (**synced**, via `useAdminFilterPresets` → `filterPresets.ts`); transient sort/filter/search/page via `useNavState('admin.<section>.<field>')` so it restores on Back/Forward. No caches singleton. |
 | `utbt:homeMedalHuntHidden:v1:<userId>` | `MedalHuntCard` | **yes** | `string[]` map names dismissed from the home Medal Hunt card (already user-suffixed; the suffix is kept inside the per-account blob) |
