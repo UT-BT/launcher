@@ -1,6 +1,6 @@
 import { ReactNode, lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { FaDiscord } from 'react-icons/fa'
-import { Home, Server, Map as MapIcon, Trophy, Settings, LogOut, Play, User, Users, Users2, Flag, Award, ShieldAlert, Newspaper, Menu, Swords } from 'lucide-react'
+import { Home, Server, Map as MapIcon, Trophy, Settings, LogOut, Play, User, Users, Users2, Flag, Award, ShieldAlert, Newspaper, Menu, CalendarDays } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import logo from '@/app/assets/logo.webp'
 import {
@@ -48,7 +48,7 @@ const BASE_NAV_SECTIONS: NavSection[] = [
             { id: 'maps', label: 'Maps', icon: MapIcon },
             { id: 'players', label: 'Players', icon: Users },
             { id: 'teams', label: 'Teams', icon: Users2 },
-            { id: 'events', label: 'Events', icon: Swords },
+            { id: 'events', label: 'Calendar', icon: CalendarDays },
             { id: 'servers', label: 'Servers', icon: Server },
         ],
     },
@@ -474,7 +474,7 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
             <main className="flex-1 overflow-y-auto relative z-10 pr-1 max-lg:pt-14 [scrollbar-width:thin] [scrollbar-color:rgba(148,163,184,0.25)_transparent] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-hairline/20">
                 <PageRefreshProvider>
                     <div className="p-4 sm:p-6 lg:p-8 min-h-full">
-                        <NavHistoryBar />
+                        <NavHistoryBar userProfile={userProfile} />
                         {children}
                     </div>
                 </PageRefreshProvider>

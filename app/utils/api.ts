@@ -71,6 +71,44 @@ export interface UserProfile extends AuthConfig {
     utbt_role?: number
     latest_activity?: LauncherActivity | null
     team?: UserTeamSummary | null
+    birthday?: BirthdaySettings | null
+}
+
+export interface BirthdaySettings {
+    day: number
+    month: number
+    visible: boolean
+}
+
+export const BIRTHDAY_GREETING_EMOJIS = ['🎉', '🎂', '🥳', '❤️', '💐'] as const
+export type BirthdayGreetingEmoji = typeof BIRTHDAY_GREETING_EMOJIS[number]
+
+export interface CalendarBirthday {
+    type: 'birthday'
+    date: string
+    user_id: string
+    alias: string | null
+    active_title?: ActiveTitle | null
+    greeting_emoji: BirthdayGreetingEmoji | null
+}
+
+export interface CalendarEvent {
+    type: 'event'
+    date: string
+    event: EventSummary
+}
+
+export type CalendarItem = CalendarBirthday | CalendarEvent
+
+export interface InboxNotification {
+    id: string
+    type: 'birthday_greeting' | string
+    actor_user_id: string | null
+    actor_alias: string | null
+    actor_title?: ActiveTitle | null
+    emoji: BirthdayGreetingEmoji | null
+    created_at: string
+    read_at: string | null
 }
 
 export interface Map {
@@ -394,6 +432,51 @@ export async function fetchNavBadges(token: string): Promise<NavBadges> {
 
 export async function fetchUserProfile(accessToken: string): Promise<UserProfile> {
     return apiGet<UserProfile>('/users/me', { token: accessToken })
+}
+
+export async function updateMyBirthday(accessToken: string, birthday: BirthdaySettings | null): Promise<BirthdaySettings | null> {
+    const data = await apiGet<{ birthday: BirthdaySettings | null }>('/users/me/birthday', {
+        token: accessToken,
+        method: 'PUT',
+        body: { birthday },
+    })
+    return data.birthday
+}
+
+export async function fetchCalendar(accessToken: string, from: string, to: string, signal?: AbortSignal): Promise<CalendarItem[]> {
+    const query = new URLSearchParams({ from, to })
+    const data = await apiGet<{ items: CalendarItem[] }>(`/calendar?${query.toString()}`, { token: accessToken, signal })
+    return asArray<CalendarItem>(data.items)
+}
+
+export async function sendBirthdayGreeting(
+    accessToken: string,
+    userId: string,
+    date: string,
+    emoji: BirthdayGreetingEmoji,
+): Promise<CalendarBirthday> {
+    const data = await apiGet<{ birthday: CalendarBirthday }>(`/birthdays/${encodeURIComponent(userId)}/greeting`, {
+        token: accessToken,
+        method: 'POST',
+        body: { date, emoji },
+    })
+    return data.birthday
+}
+
+export async function fetchInboxNotifications(accessToken: string, signal?: AbortSignal): Promise<InboxNotification[]> {
+    const data = await apiGet<{ items: InboxNotification[] }>('/notifications', { token: accessToken, signal })
+    return asArray<InboxNotification>(data.items)
+}
+
+export async function deleteInboxNotification(accessToken: string, notificationId: string): Promise<void> {
+    await apiGet<{ deleted: boolean }>(`/notifications/${encodeURIComponent(notificationId)}`, {
+        token: accessToken,
+        method: 'DELETE',
+    })
+}
+
+export async function markInboxNotificationsRead(accessToken: string): Promise<void> {
+    await apiGet<{ updated: number }>('/notifications/read', { token: accessToken, method: 'POST' })
 }
 
 export async function downloadDemo(capId: string): Promise<ArrayBuffer> {
