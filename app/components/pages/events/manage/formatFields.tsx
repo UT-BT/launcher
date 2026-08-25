@@ -1,0 +1,222 @@
+import type { ReactNode } from 'react'
+import { cn } from '@/lib/utils'
+import { AdminSelect } from '@/app/components/pages/admin/components/controls'
+import { teamInputClass } from '@/app/components/pages/teams/teamsShared'
+import type {
+    EventElimConfig, EventFormatSpec, EventGroupsConfig, EventStageKind, EventStageSpec, EventSwissConfig,
+} from '@/app/utils/api'
+
+/**
+ * The server reports every spec problem in one message, each entry written as
+ * `field.path: reason` and joined with `; `. Split it back apart so each control
+ * can show its own error.
+ */
+export function parseSpecErrors(message: string): Record<string, string> {
+    const errors: Record<string, string> = {}
+
+    for (const entry of message.split(';')) {
+        const at = entry.indexOf(':')
+        if (at < 0) continue
+
+        const path = entry.slice(0, at).trim()
+        const reason = entry.slice(at + 1).trim()
+        if (path && reason && !errors[path]) errors[path] = reason
+    }
+
+    return errors
+}
+
+export interface FieldProps {
+    label: string
+    path?: string
+    errors?: Record<string, string>
+    hint?: string
+    className?: string
+}
+
+export function Field({ label, path, errors, hint, className, children }: FieldProps & { children: ReactNode }) {
+    const error = path ? errors?.[path] : undefined
+
+    return (
+        <div className={cn('space-y-1 min-w-0', className)}>
+            <label className="block text-[10px] uppercase tracking-wider text-muted-foreground font-medium">{label}</label>
+            {children}
+            {error
+                ? <p className="text-[11px] text-red-300">{error}</p>
+                : hint ? <p className="text-[11px] text-muted-foreground/70">{hint}</p> : null}
+        </div>
+    )
+}
+
+export function TextField({ value, onChange, placeholder, disabled, ...field }: FieldProps & {
+    value: string
+    onChange: (value: string) => void
+    placeholder?: string
+    disabled?: boolean
+}) {
+    const invalid = field.path ? !!field.errors?.[field.path] : false
+
+    return (
+        <Field {...field}>
+            <input
+                value={value}
+                disabled={disabled}
+                onChange={event => onChange(event.target.value)}
+                placeholder={placeholder}
+                className={cn(teamInputClass, 'w-full h-8 py-1 text-xs disabled:opacity-50', invalid && 'border-red-500/50')}
+            />
+        </Field>
+    )
+}
+
+export function NumberField({ value, onChange, min, max, disabled, ...field }: FieldProps & {
+    value: number | null
+    onChange: (value: number) => void
+    min?: number
+    max?: number
+    disabled?: boolean
+}) {
+    const invalid = field.path ? !!field.errors?.[field.path] : false
+
+    return (
+        <Field {...field}>
+            <input
+                type="number"
+                value={value ?? ''}
+                min={min}
+                max={max}
+                disabled={disabled}
+                onChange={event => onChange(Number(event.target.value))}
+                className={cn(teamInputClass, 'w-full h-8 py-1 text-xs tabular-nums disabled:opacity-50', invalid && 'border-red-500/50')}
+            />
+        </Field>
+    )
+}
+
+export function SelectField<T extends string>({ value, onChange, options, disabled, ...field }: FieldProps & {
+    value: T
+    onChange: (value: T) => void
+    options: Array<{ value: T; label: string }>
+    disabled?: boolean
+}) {
+    return (
+        <Field {...field}>
+            <AdminSelect
+                value={value}
+                onChange={next => { if (!disabled) onChange(next as T) }}
+                options={options}
+                ariaLabel={field.label}
+                className="h-8 w-full text-xs"
+            />
+        </Field>
+    )
+}
+
+export function CheckField({ checked, onChange, label, hint, disabled }: {
+    checked: boolean
+    onChange: (value: boolean) => void
+    label: string
+    hint?: string
+    disabled?: boolean
+}) {
+    return (
+        <label className={cn('flex items-start gap-2 cursor-pointer select-none', disabled && 'opacity-50 cursor-not-allowed')}>
+            <input
+                type="checkbox"
+                checked={checked}
+                disabled={disabled}
+                onChange={event => onChange(event.target.checked)}
+                style={{ colorScheme: 'dark' }}
+                className="mt-0.5 size-3.5 accent-accent-500 cursor-pointer"
+            />
+            <span className="min-w-0">
+                <span className="block text-xs text-foreground leading-tight">{label}</span>
+                {hint && <span className="block text-[11px] text-muted-foreground/70 leading-tight">{hint}</span>}
+            </span>
+        </label>
+    )
+}
+
+export function SubCard({ title, action, children, className }: {
+    title: string
+    action?: ReactNode
+    children: ReactNode
+    className?: string
+}) {
+    return (
+        <div className={cn('rounded-lg border border-white/10 bg-card/30 p-3 space-y-2.5', className)}>
+            <div className="flex items-center justify-between gap-2">
+                <h4 className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">{title}</h4>
+                {action}
+            </div>
+            {children}
+        </div>
+    )
+}
+
+export const STAGE_KIND_OPTIONS: Array<{ value: EventStageKind; label: string }> = [
+    { value: 'groups', label: 'Group stage' },
+    { value: 'swiss', label: 'Record bracket (Swiss)' },
+    { value: 'single_elim', label: 'Single elimination' },
+]
+
+export const TIEBREAKER_LABELS: Record<string, string> = {
+    points: 'Total points',
+    map_diff: 'Map differential',
+    head_to_head: 'Direct confrontation',
+    caps_for: 'Total caps made',
+    caps_diff: 'Cap differential',
+    maps_won: 'Total maps won',
+    common_opponents: 'Common opponents',
+    deaths: 'Overall deaths',
+    seed: 'Tournament seeding',
+}
+
+export function defaultGroupsConfig(): EventGroupsConfig {
+    return {
+        group_count: 2,
+        group_size: 4,
+        seeding: 'tiered',
+        double_round_robin: false,
+        points: { win_2_0: 3, win_2_1: 2, loss_1_2: 1, loss_0_2: 0 },
+        tiebreakers: ['points', 'map_diff', 'head_to_head', 'caps_for', 'seed'],
+    }
+}
+
+export function defaultSwissConfig(): EventSwissConfig {
+    return {
+        wins_to_qualify: 2,
+        losses_to_eliminate: 2,
+        entry_records: [],
+        pairing: { method: 'fold', avoid_rematch: true, avoid_same_history: true, avoid_same_group: false },
+    }
+}
+
+export function defaultElimConfig(): EventElimConfig {
+    return {
+        size: 8,
+        third_place_match: false,
+        avoid_rematch: true,
+        seeding: 'pots',
+        pots: [{ key: 'all', label: 'All qualifiers', sources: [] }],
+        draw: { byes: [], matchups: [], remainder: 'fold_pairs' },
+    }
+}
+
+export function defaultConfigFor(kind: EventStageKind) {
+    if (kind === 'groups') return defaultGroupsConfig()
+    if (kind === 'swiss') return defaultSwissConfig()
+    return defaultElimConfig()
+}
+
+export function emptySpec(): EventFormatSpec {
+    return {
+        version: 1,
+        match_defaults: { best_of: 3, caps_to_win_map: 4, decider: null },
+        stages: [newStage('bracket', 'Bracket', 'single_elim')],
+    }
+}
+
+export function newStage(key: string, name: string, kind: EventStageKind): EventStageSpec {
+    return { key, name, kind, config: defaultConfigFor(kind), advancement: [], match_defaults: null }
+}

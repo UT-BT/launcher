@@ -6,27 +6,30 @@ import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshC
 import { MarkdownBody } from '@/app/components/shared/MarkdownBody'
 import { ErrorBanner } from '@/app/components/pages/teams/teamsShared'
 import {
-    eventErrorMessage, fetchEvent, fetchEventLfp, fetchEventTeams, fetchMyEventStatus,
-    type EventDetail, type EventLfpEntry, type EventTeam, type MyEventStatus, type UserProfile,
+    eventErrorMessage, fetchEvent, fetchEventBracket, fetchEventLfp, fetchEventTeams, fetchMyEventStatus,
+    type EventBracket, type EventDetail, type EventLfpEntry, type EventTeam, type MyEventStatus, type UserProfile,
 } from '@/app/utils/api'
 import { EventStatusBadge, formatEventDate, formatEventDateTime, formatTeamSize } from './events/eventsShared'
 import { EventTeamsList } from './events/EventTeamsList'
 import { EventLfpList } from './events/EventLfpList'
 import { SignupPanel } from './events/SignupPanel'
 import { ManagePanel } from './events/ManagePanel'
+import { BracketTab } from './events/bracket/BracketTab'
 
-export type EventTab = 'info' | 'teams' | 'players' | 'signup' | 'manage'
+export type EventTab = 'info' | 'teams' | 'bracket' | 'players' | 'signup' | 'manage'
 
 interface EventDetailPageProps {
     eventSlug: string
     userProfile?: UserProfile
     initialTab?: string
+    onMapSelect?: (mapName: string) => void
     onBack: () => void
 }
 
 const BASE_TABS: { id: EventTab; label: string }[] = [
     { id: 'info', label: 'Info' },
     { id: 'teams', label: 'Teams' },
+    { id: 'bracket', label: 'Bracket' },
     { id: 'players', label: 'Looking for Partner' },
     { id: 'signup', label: 'Signup' },
 ]
@@ -35,7 +38,7 @@ const MANAGE_TAB: { id: EventTab; label: string } = { id: 'manage', label: 'Mana
 
 const TABS = [...BASE_TABS, MANAGE_TAB]
 
-export function EventDetailPage({ eventSlug, userProfile, initialTab, onBack }: EventDetailPageProps) {
+export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelect, onBack }: EventDetailPageProps) {
     const accessToken = userProfile?.accessToken
     const browseToken = accessToken ?? ''
     const validInitial = TABS.some(tab => tab.id === initialTab) ? initialTab as EventTab : 'info'
@@ -44,6 +47,7 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onBack }: 
     const [event, setEvent] = useState<EventDetail | null>(null)
     const [teams, setTeams] = useState<EventTeam[]>([])
     const [lfp, setLfp] = useState<EventLfpEntry[]>([])
+    const [bracket, setBracket] = useState<EventBracket | null>(null)
     const [my, setMy] = useState<MyEventStatus | null>(null)
     const [loading, setLoading] = useState(true)
     const [myLoading, setMyLoading] = useState(!!accessToken)
@@ -68,6 +72,15 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onBack }: 
         }
     }, [browseToken, eventSlug])
 
+    // A bracket is optional: an event without one, or an older API, just has no tab.
+    const loadBracket = useCallback(async () => {
+        try {
+            setBracket(await fetchEventBracket(browseToken, eventSlug))
+        } catch {
+            setBracket(null)
+        }
+    }, [browseToken, eventSlug])
+
     const loadMy = useCallback(async () => {
         if (!accessToken) {
             setMy(null)
@@ -86,14 +99,16 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onBack }: 
 
     useEffect(() => { void load() }, [load])
     useEffect(() => { void loadMy() }, [loadMy])
+    useEffect(() => { void loadBracket() }, [loadBracket])
 
     const refresh = useCallback(() => {
         void load(true)
         void loadMy()
-    }, [load, loadMy])
+        void loadBracket()
+    }, [load, loadMy, loadBracket])
 
     useRegisterPageRefresh({
-        onRefresh: () => { void load(); void loadMy() },
+        onRefresh: () => { void load(); void loadMy(); void loadBracket() },
         refreshing: loading,
         tooltip: 'Refresh',
     })
@@ -117,8 +132,9 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onBack }: 
     const signupCloses = formatEventDateTime(event.signup_closes_at)
     const signupOpens = formatEventDateTime(event.signup_opens_at)
     const canManage = !!my?.can_manage
-    const visibleTabs = canManage ? TABS : BASE_TABS
-    const activeTab = tab === 'manage' && !canManage ? 'info' : tab
+    const hasBracket = (bracket?.stages.length ?? 0) > 0
+    const visibleTabs = (canManage ? TABS : BASE_TABS).filter(t => t.id !== 'bracket' || hasBracket)
+    const activeTab = (tab === 'manage' && !canManage) || (tab === 'bracket' && !hasBracket) ? 'info' : tab
 
     return (
         <div className="h-full flex flex-col overflow-hidden space-y-4 animate-in fade-in slide-in-from-bottom-0 duration-500">
@@ -195,6 +211,7 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onBack }: 
                     </div>
                 )}
                 {activeTab === 'teams' && <EventTeamsList teams={teams} teamSize={event.team_size} loading={loading} />}
+                {activeTab === 'bracket' && <BracketTab bracket={bracket} loading={loading} onMapSelect={onMapSelect} />}
                 {activeTab === 'players' && <EventLfpList entries={lfp} loading={loading} />}
                 {activeTab === 'signup' && (
                     <div className="max-w-2xl">
@@ -209,15 +226,16 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onBack }: 
                     </div>
                 )}
                 {activeTab === 'manage' && canManage && accessToken && (
-                    <div className="max-w-3xl">
-                        <ManagePanel
-                            accessToken={accessToken}
-                            slug={eventSlug}
-                            event={event}
-                            lfp={lfp}
-                            onRefresh={refresh}
-                        />
-                    </div>
+                    <ManagePanel
+                        accessToken={accessToken}
+                        slug={eventSlug}
+                        event={event}
+                        lfp={lfp}
+                        bracket={bracket}
+                        onBracketChange={setBracket}
+                        onMapSelect={onMapSelect}
+                        onRefresh={refresh}
+                    />
                 )}
             </div>
         </div>

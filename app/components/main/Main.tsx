@@ -756,6 +756,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
           eventSlug={entry.params.eventSlug!}
           userProfile={userProfile}
           initialTab={entry.params.eventTab}
+          onMapSelect={openMap}
           onBack={() => navigate('events')}
         />
       case 'admin':

@@ -13,6 +13,7 @@ export type AdminSectionId =
   | 'user-management'
   | 'news-management'
   | 'events-management'
+  | 'formats-management'
   | 'caps-management'
   | 'maps-management'
   | 'patches-management'
