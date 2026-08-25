@@ -12,7 +12,7 @@ interface Column {
 }
 
 /**
- * A record bracket reads as columns: every live team sits in its win-loss
+ * A Swiss bracket reads as columns: every live team sits in its win-loss
  * column until it hits the qualify or eliminate threshold and leaves the stage.
  */
 function buildColumns(stage: EventBracketStage, config: EventSwissConfig | null): Column[] {

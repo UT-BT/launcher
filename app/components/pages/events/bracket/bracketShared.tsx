@@ -38,7 +38,7 @@ export const STAGE_STATUS_LABELS: Record<EventStageStatus, string> = {
 
 export const STAGE_KIND_LABELS: Record<EventStageKind, string> = {
     groups: 'Group stage',
-    swiss: 'Record bracket',
+    swiss: 'Swiss bracket',
     single_elim: 'Single elimination',
 }
 

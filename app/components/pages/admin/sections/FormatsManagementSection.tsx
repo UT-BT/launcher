@@ -181,7 +181,7 @@ export function FormatsManagementSection({ userProfile }: AdminSectionProps) {
                             </div>
                             <div className="space-y-1 sm:col-span-2">
                                 <label className={PANEL_LABEL}>Summary</label>
-                                <Input value={draft.summary} onChange={e => setDraft({ ...draft, summary: e.target.value })} placeholder="Three groups, a record bracket, then a knockout." />
+                                <Input value={draft.summary} onChange={e => setDraft({ ...draft, summary: e.target.value })} placeholder="Three groups, a Swiss bracket, then a knockout." />
                             </div>
                         </div>
 

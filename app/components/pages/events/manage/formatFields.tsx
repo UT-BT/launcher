@@ -157,7 +157,7 @@ export function SubCard({ title, action, children, className }: {
 
 export const STAGE_KIND_OPTIONS: Array<{ value: EventStageKind; label: string }> = [
     { value: 'groups', label: 'Group stage' },
-    { value: 'swiss', label: 'Record bracket (Swiss)' },
+    { value: 'swiss', label: 'Swiss bracket' },
     { value: 'single_elim', label: 'Single elimination' },
 ]
 
