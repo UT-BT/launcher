@@ -3925,6 +3925,7 @@ export interface MyEventStatus {
     lfp: EventLfpEntry | null
     volunteer: EventVolunteer | null
     can_manage?: boolean
+    can_manage_bracket?: boolean
 }
 
 export interface EventSignupFields {
@@ -4173,4 +4174,471 @@ export function fetchAdminUsage(token: string, window: ActivityWindow, signal?: 
 }
 export function fetchAdminUsageRecent(token: string, signal?: AbortSignal): Promise<AdminUsageRecent> {
   return apiGet<AdminUsageRecent>('/admin/usage/recent', { token, signal })
+}
+
+export type EventStageKind = 'groups' | 'swiss' | 'single_elim'
+export type EventStageStatus = 'pending' | 'active' | 'complete'
+export type EventEntrantStatus = 'active' | 'qualified' | 'eliminated'
+export type EventMatchStatus = 'pending' | 'scheduled' | 'live' | 'complete' | 'bye' | 'forfeit' | 'cancelled'
+export type EventMapKind = 'normal' | 'decider'
+export type EventSide = 'a' | 'b'
+export type EventMatchMode = 'first_to' | 'all_maps'
+export type EventTiebreaker =
+    | 'points' | 'map_diff' | 'head_to_head' | 'caps_for' | 'caps_diff'
+    | 'maps_won' | 'common_opponents' | 'deaths' | 'seed'
+
+export const EVENT_TIEBREAKERS: EventTiebreaker[] = [
+    'points', 'map_diff', 'head_to_head', 'caps_for', 'caps_diff',
+    'maps_won', 'common_opponents', 'deaths', 'seed',
+]
+
+export interface EventPointsRow {
+    maps_won: number
+    maps_lost: number
+    points: number
+}
+
+export interface EventDeciderSpec {
+    kind: 'time_attack'
+    rounds_to_win: number
+    max_rounds: number
+}
+
+export interface EventMatchDefaults {
+    best_of: number
+    caps_to_win_map: number
+    mode: EventMatchMode
+    decider: EventDeciderSpec | null
+}
+
+export interface EventGroupsConfig {
+    group_count: number
+    group_size: number
+    seeding: 'tiered' | 'snake' | 'random' | 'manual'
+    double_round_robin: boolean
+    points: EventPointsRow[]
+    tiebreakers: EventTiebreaker[]
+}
+
+export interface EventSwissEntryRecord {
+    group_rank: number
+    wins: number
+    losses: number
+    entry_round: number
+}
+
+export interface EventSwissConfig {
+    wins_to_qualify: number
+    losses_to_eliminate: number
+    entry_records: EventSwissEntryRecord[]
+    pairing: {
+        method: 'fold' | 'adjacent' | 'random'
+        avoid_rematch: boolean
+        avoid_same_history: boolean
+        avoid_same_group: boolean
+    }
+}
+
+export interface EventPotSource {
+    stage: string
+    rank: number | null
+    qualified_round: number | null
+    limit: number | null
+    order: 'best' | 'worst'
+}
+
+export interface EventPot {
+    key: string
+    label: string | null
+    sources: EventPotSource[]
+}
+
+export interface EventElimConfig {
+    size: number
+    third_place_match: boolean
+    avoid_rematch: boolean
+    seeding: 'pots' | 'by_seed'
+    pots: EventPot[]
+    draw: {
+        byes: Array<{ pot: string; count: number }>
+        matchups: Array<{ a_pot: string; b_pot: string; count: number }>
+        remainder: 'random_pairs' | 'fold_pairs'
+    }
+}
+
+export type EventStageConfig = EventGroupsConfig | EventSwissConfig | EventElimConfig
+
+export interface EventAdvancementRule {
+    to_stage: string
+    label: string | null
+    from_rank?: number
+    to_rank?: number
+    outcome?: 'qualified'
+}
+
+export interface EventStageSpec {
+    key: string
+    name: string
+    kind: EventStageKind
+    config: EventStageConfig
+    advancement: EventAdvancementRule[]
+    match_defaults: EventMatchDefaults | null
+}
+
+export interface EventFormatSpec {
+    version: number
+    match_defaults: EventMatchDefaults
+    stages: EventStageSpec[]
+}
+
+export interface EventFormatTemplate {
+    id: string
+    slug: string
+    name: string
+    summary: string | null
+    is_public: boolean
+    created_by: string | null
+    created_at: string | null
+    updated_at: string | null
+    spec?: EventFormatSpec
+}
+
+export interface EventBracketTeamRef {
+    id: string
+    name: string | null
+    seed: number | null
+    status: EventTeamStatus | null
+}
+
+export interface EventMatchCapLink {
+    cap_id: string
+    side: EventSide
+    user: string
+    alias: string | null
+    map: string | null
+    cap_time_seconds: number | null
+    added: string | null
+}
+
+export interface EventMatchMap {
+    id: string
+    ordinal: number
+    map: string | null
+    kind: EventMapKind
+    picked_by: EventSide | null
+    caps_a: number | null
+    caps_b: number | null
+    deaths_a: number | null
+    deaths_b: number | null
+    winner_side: EventSide | null
+    started_at: string | null
+    ended_at: string | null
+    notes: string | null
+    caps?: EventMatchCapLink[]
+}
+
+export interface EventMatch {
+    id: string
+    stage_id: string
+    group_id: string | null
+    round_no: number
+    round_label: string | null
+    ordinal: number
+    team_a: EventBracketTeamRef | null
+    team_b: EventBracketTeamRef | null
+    slot_a_label: string | null
+    slot_b_label: string | null
+    best_of: number
+    caps_to_win: number
+    mode: EventMatchMode
+    status: EventMatchStatus
+    winner_team_id: string | null
+    is_draw: boolean
+    score_a: number | null
+    score_b: number | null
+    caps_a: number | null
+    caps_b: number | null
+    deaths_a: number | null
+    deaths_b: number | null
+    scheduled_at: string | null
+    stream_url: string | null
+    notes: string | null
+    published: boolean
+    winner_to_match_id: string | null
+    winner_to_slot: EventSide | null
+    loser_to_match_id: string | null
+    loser_to_slot: EventSide | null
+    maps?: EventMatchMap[]
+}
+
+export interface EventStandingRow {
+    team_id: string
+    team: EventBracketTeamRef | null
+    rank: number
+    seed: number | null
+    played: number
+    wins: number
+    draws: number
+    losses: number
+    points: number
+    maps_won: number
+    maps_lost: number
+    map_diff: number
+    caps_for: number
+    caps_against: number
+    caps_diff: number
+    deaths: number | null
+}
+
+export interface EventBracketGroup {
+    id: string
+    name: string
+    ordinal: number
+    standings: EventStandingRow[]
+}
+
+export interface EventBracketEntrant {
+    team_id: string
+    team: EventBracketTeamRef | null
+    group_id: string | null
+    seed: number | null
+    pot: string | null
+    source_rank: number | null
+    wins: number
+    losses: number
+    status: EventEntrantStatus
+    final_rank: number | null
+    rank_override: number | null
+    qualified_round: number | null
+}
+
+export interface EventBracketStage {
+    id: string
+    key: string
+    name: string
+    kind: EventStageKind
+    ordinal: number
+    status: EventStageStatus
+    published: boolean
+    config: EventStageConfig | null
+    groups: EventBracketGroup[]
+    entrants: EventBracketEntrant[]
+    matches: EventMatch[]
+}
+
+export interface EventBracket {
+    published: boolean
+    format: {
+        template: Pick<EventFormatTemplate, 'id' | 'slug' | 'name' | 'summary'> | null
+        spec: EventFormatSpec | null
+    }
+    stages: EventBracketStage[]
+}
+
+export interface EventStageDraw {
+    stage: EventBracketStage
+    relaxed: string[]
+    round_no?: number
+    dry_run: boolean
+}
+
+export interface EventCapCandidate {
+    cap_id: string
+    user: string
+    alias: string | null
+    side: EventSide | null
+    map: string | null
+    cap_time_seconds: number | null
+    added: string | null
+    verified: boolean
+}
+
+export interface EventMatchMapInput {
+    ordinal?: number
+    map?: string | null
+    kind?: EventMapKind
+    picked_by?: EventSide | null
+    caps_a?: number | null
+    caps_b?: number | null
+    deaths_a?: number | null
+    deaths_b?: number | null
+    winner_side?: EventSide | null
+    started_at?: string | null
+    ended_at?: string | null
+    notes?: string | null
+}
+
+export interface EventMatchInput {
+    stage_key?: string
+    group_id?: string | null
+    team_a_id?: string | null
+    team_b_id?: string | null
+    slot_a_label?: string | null
+    slot_b_label?: string | null
+    round_no?: number
+    round_label?: string | null
+    ordinal?: number
+    best_of?: number
+    caps_to_win?: number
+    mode?: EventMatchMode
+    status?: EventMatchStatus
+    scheduled_at?: string | null
+    stream_url?: string | null
+    notes?: string | null
+    published?: boolean
+}
+
+export interface EventDrawOptions {
+    dryRun?: boolean
+    force?: boolean
+    seed?: number
+}
+
+function eventDrawQuery(options: EventDrawOptions = {}): string {
+    const usp = new URLSearchParams()
+    if (options.dryRun) usp.set('dry_run', '1')
+    if (options.force) usp.set('force', '1')
+    if (options.seed !== undefined) usp.set('seed', String(options.seed))
+    const qs = usp.toString()
+    return qs ? `?${qs}` : ''
+}
+
+function eventPath(slug: string, suffix = ''): string {
+    return `/tournaments/${encodeURIComponent(slug)}${suffix}`
+}
+
+export async function fetchEventBracket(accessToken: string, slug: string, signal?: AbortSignal): Promise<EventBracket> {
+    return apiGet<EventBracket>(eventPath(slug, '/bracket'), { token: accessToken, signal })
+}
+
+export async function fetchEventMatch(accessToken: string, slug: string, matchId: string, signal?: AbortSignal): Promise<EventMatch> {
+    const data = await apiGet<{ match: EventMatch }>(eventPath(slug, `/matches/${encodeURIComponent(matchId)}`), { token: accessToken, signal })
+    return data.match
+}
+
+export async function fetchEventFormats(accessToken: string, signal?: AbortSignal): Promise<EventFormatTemplate[]> {
+    const data = await apiGet<{ items: EventFormatTemplate[] }>('/tournaments/formats', { token: accessToken, signal })
+    return data.items ?? []
+}
+
+export async function fetchEventFormat(accessToken: string, formatSlug: string, signal?: AbortSignal): Promise<EventFormatTemplate> {
+    const data = await apiGet<{ format: EventFormatTemplate }>(`/tournaments/formats/${encodeURIComponent(formatSlug)}`, { token: accessToken, signal })
+    return data.format
+}
+
+export interface EventFormatInput {
+    slug?: string
+    name?: string
+    summary?: string | null
+    is_public?: boolean
+    spec?: EventFormatSpec
+}
+
+export async function createEventFormat(accessToken: string, input: EventFormatInput): Promise<EventFormatTemplate> {
+    const data = await apiGet<{ format: EventFormatTemplate }>('/tournaments/formats', { token: accessToken, method: 'POST', body: input })
+    return data.format
+}
+
+export async function updateEventFormat(accessToken: string, formatSlug: string, input: EventFormatInput): Promise<EventFormatTemplate> {
+    const data = await apiGet<{ format: EventFormatTemplate }>(`/tournaments/formats/${encodeURIComponent(formatSlug)}`, { token: accessToken, method: 'PATCH', body: input })
+    return data.format
+}
+
+export async function deleteEventFormat(accessToken: string, formatSlug: string): Promise<{ deleted: boolean }> {
+    return apiGet(`/tournaments/formats/${encodeURIComponent(formatSlug)}`, { token: accessToken, method: 'DELETE' })
+}
+
+export async function setEventFormat(accessToken: string, slug: string, input: { format_slug?: string; spec?: EventFormatSpec }): Promise<EventBracket> {
+    return apiGet<EventBracket>(eventPath(slug, '/admin/format'), { token: accessToken, method: 'PUT', body: input })
+}
+
+export async function updateEventFormatSpec(accessToken: string, slug: string, spec: EventFormatSpec, keepTemplate = false): Promise<EventBracket> {
+    return apiGet<EventBracket>(eventPath(slug, '/admin/format'), { token: accessToken, method: 'PATCH', body: { spec, keep_template: keepTemplate } })
+}
+
+export async function setEventBracketPublished(accessToken: string, slug: string, published: boolean): Promise<EventBracket> {
+    return apiGet<EventBracket>(eventPath(slug, '/admin/bracket'), { token: accessToken, method: 'PATCH', body: { published } })
+}
+
+export async function setEventSeeds(accessToken: string, slug: string, seeds: Array<{ team_id: string; seed: number | null }>): Promise<Array<EventBracketTeamRef & { team_id: string }>> {
+    const data = await apiGet<{ items: Array<EventBracketTeamRef & { team_id: string }> }>(eventPath(slug, '/admin/seeds'), { token: accessToken, method: 'PUT', body: { seeds } })
+    return data.items ?? []
+}
+
+export async function updateEventStage(accessToken: string, slug: string, stageKey: string, input: { name?: string; status?: EventStageStatus; published?: boolean }): Promise<EventBracket> {
+    return apiGet<EventBracket>(eventPath(slug, `/admin/stages/${encodeURIComponent(stageKey)}`), { token: accessToken, method: 'PATCH', body: input })
+}
+
+export async function generateEventStage(accessToken: string, slug: string, stageKey: string, options: EventDrawOptions = {}): Promise<EventStageDraw> {
+    return apiGet<EventStageDraw>(eventPath(slug, `/admin/stages/${encodeURIComponent(stageKey)}/generate${eventDrawQuery(options)}`), { token: accessToken, method: 'POST' })
+}
+
+export async function generateEventRound(accessToken: string, slug: string, stageKey: string, options: EventDrawOptions = {}): Promise<EventStageDraw> {
+    return apiGet<EventStageDraw>(eventPath(slug, `/admin/stages/${encodeURIComponent(stageKey)}/rounds${eventDrawQuery(options)}`), { token: accessToken, method: 'POST' })
+}
+
+export async function resetEventStage(accessToken: string, slug: string, stageKey: string): Promise<EventBracket> {
+    return apiGet<EventBracket>(eventPath(slug, `/admin/stages/${encodeURIComponent(stageKey)}`), { token: accessToken, method: 'DELETE' })
+}
+
+export async function updateEventGroup(accessToken: string, slug: string, groupId: string, input: { name?: string; team_ids?: string[] }): Promise<EventBracket> {
+    return apiGet<EventBracket>(eventPath(slug, `/admin/groups/${encodeURIComponent(groupId)}`), { token: accessToken, method: 'PATCH', body: input })
+}
+
+export async function createEventMatch(accessToken: string, slug: string, input: EventMatchInput): Promise<EventMatch> {
+    const data = await apiGet<{ match: EventMatch }>(eventPath(slug, '/admin/matches'), { token: accessToken, method: 'POST', body: input })
+    return data.match
+}
+
+export async function updateEventMatch(accessToken: string, slug: string, matchId: string, input: EventMatchInput): Promise<EventMatch> {
+    const data = await apiGet<{ match: EventMatch }>(eventPath(slug, `/admin/matches/${encodeURIComponent(matchId)}`), { token: accessToken, method: 'PATCH', body: input })
+    return data.match
+}
+
+export async function deleteEventMatch(accessToken: string, slug: string, matchId: string): Promise<{ id: string; deleted: boolean }> {
+    return apiGet(eventPath(slug, `/admin/matches/${encodeURIComponent(matchId)}`), { token: accessToken, method: 'DELETE' })
+}
+
+export async function setEventMatchResult(accessToken: string, slug: string, matchId: string, input: { maps?: EventMatchMapInput[]; forfeit_winner?: EventSide | null }): Promise<EventMatch> {
+    const data = await apiGet<{ match: EventMatch }>(eventPath(slug, `/admin/matches/${encodeURIComponent(matchId)}/result`), { token: accessToken, method: 'PUT', body: input })
+    return data.match
+}
+
+export async function clearEventMatchResult(accessToken: string, slug: string, matchId: string): Promise<EventMatch> {
+    const data = await apiGet<{ match: EventMatch }>(eventPath(slug, `/admin/matches/${encodeURIComponent(matchId)}/result`), { token: accessToken, method: 'DELETE' })
+    return data.match
+}
+
+export async function fetchEventCapCandidates(
+    accessToken: string,
+    slug: string,
+    matchId: string,
+    params: { map?: string | null; from?: string | null; to?: string | null } = {},
+    signal?: AbortSignal,
+): Promise<EventCapCandidate[]> {
+    const usp = new URLSearchParams()
+    if (params.map) usp.set('map', params.map)
+    if (params.from) usp.set('from', params.from)
+    if (params.to) usp.set('to', params.to)
+    const qs = usp.toString()
+    const data = await apiGet<{ items: EventCapCandidate[] }>(
+        eventPath(slug, `/admin/matches/${encodeURIComponent(matchId)}/cap-candidates${qs ? `?${qs}` : ''}`),
+        { token: accessToken, signal },
+    )
+    return data.items ?? []
+}
+
+export async function linkEventMatchMapCaps(
+    accessToken: string,
+    slug: string,
+    matchId: string,
+    ordinal: number,
+    caps: Array<{ cap_id: string; side?: EventSide }>,
+    keepCounts = false,
+): Promise<EventMatch> {
+    const data = await apiGet<{ match: EventMatch }>(
+        eventPath(slug, `/admin/matches/${encodeURIComponent(matchId)}/maps/${ordinal}/caps`),
+        { token: accessToken, method: 'PUT', body: { caps, keep_counts: keepCounts } },
+    )
+    return data.match
 }

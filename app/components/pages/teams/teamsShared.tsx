@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react'
+import { useId, type ReactNode } from 'react'
+import { ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ActiveTitle, TeamMemberStatus } from '@/app/utils/api'
 
@@ -48,27 +49,59 @@ export function ErrorBanner({ message }: { message: string | null }) {
     )
 }
 
-export function SectionCard({ title, subtitle, action, children, className, accentClass = 'bg-accent-400' }: {
+export function SectionCard({
+    title, subtitle, action, children, className, accentClass = 'bg-accent-400', collapsible, open = true, onOpenChange,
+}: {
     title: string
     subtitle?: string
     action?: ReactNode
     children: ReactNode
     className?: string
     accentClass?: string
+    collapsible?: boolean
+    open?: boolean
+    onOpenChange?: (open: boolean) => void
 }) {
+    const bodyId = useId()
+    const expanded = !collapsible || open
+
+    const heading = (
+        <>
+            <span className={cn('h-4 w-1 rounded-full shrink-0', accentClass)} />
+            {collapsible && (
+                <ChevronRight className={cn(
+                    'size-3.5 shrink-0 text-muted-foreground transition-transform',
+                    expanded && 'rotate-90',
+                )} />
+            )}
+            <div className="min-w-0 text-left">
+                <h2 className="text-sm font-semibold text-foreground leading-tight">{title}</h2>
+                {subtitle && <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">{subtitle}</p>}
+            </div>
+        </>
+    )
+
     return (
-        <section className={cn('bg-card/30 border border-hairline/5 rounded-xl p-4 space-y-4', className)}>
-            <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0 flex items-center gap-2.5">
-                    <span className={cn('h-4 w-1 rounded-full shrink-0', accentClass)} />
-                    <div className="min-w-0">
-                        <h2 className="text-sm font-semibold text-foreground leading-tight">{title}</h2>
-                        {subtitle && <p className="text-[11px] text-muted-foreground leading-tight mt-0.5">{subtitle}</p>}
-                    </div>
-                </div>
+        <section className={cn('bg-card/30 border border-hairline/5 rounded-xl p-4', expanded ? 'space-y-4' : '', className)}>
+            {/* Wraps on the card's own width, so a narrow column drops the actions
+                onto their own line instead of crushing the heading. */}
+            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+                {collapsible ? (
+                    <button
+                        type="button"
+                        onClick={() => onOpenChange?.(!open)}
+                        aria-expanded={expanded}
+                        aria-controls={bodyId}
+                        className="min-w-0 flex-1 basis-64 flex items-center gap-2.5 cursor-pointer rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/60"
+                    >
+                        {heading}
+                    </button>
+                ) : (
+                    <div className="min-w-0 flex-1 basis-64 flex items-center gap-2.5">{heading}</div>
+                )}
                 {action}
             </div>
-            {children}
+            {expanded && <div id={bodyId} className="space-y-4">{children}</div>}
         </section>
     )
 }

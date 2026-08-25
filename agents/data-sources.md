@@ -11,9 +11,9 @@ not_here:
   - "IPC channels (window.conveyor.*) → lib/conveyor/README.md"
   - "how UI state persists in localStorage → state-patterns.md"
   - "the procedure to wire a new endpoint into the UI → skill: consume-api-data"
-sections: [backend-api, errors, admin-api, changing-a-map-screenshot, cap-detail-page-endpoints, world-records-page-endpoints, team-maps-and-team-runs, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites, account-state-and-badges]
-last_verified: 2026-08-20
-verify_against: [app/utils/api.ts, app/utils/patreon.ts, app/utils/server-utils.ts]
+sections: [backend-api, errors, admin-api, event-brackets, changing-a-map-screenshot, cap-detail-page-endpoints, world-records-page-endpoints, team-maps-and-team-runs, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites, account-state-and-badges]
+last_verified: 2026-08-25
+verify_against: [app/utils/api.ts, app/utils/patreon.ts, app/utils/server-utils.ts, app/components/pages/events/manage/formatFields.tsx]
 ---
 
 # Data sources
@@ -55,6 +55,8 @@ full loop).
 | Account state / badges | `fetchUserState` / `mergeUserState` (per-account preference blob keyed by the `utbt:*` storage names, shallow-merged per key; consumed only by `app/utils/userState.ts` — see `agents/state-patterns.md`), `fetchNavBadges` (per-section "new since my last visit" counts + seen markers; `count: null` = never visited = no badge), `markSectionSeen(token, section, seenAtIso?)` (advances one marker; omitted stamp = server now). All require a real bearer — signed-out users have no account state and no badges. |
 | Profile | `UserProfile` type (incl. `team` clan-tag summary), `getAvatarUrl(userId)`, `toActiveTitle` |
 | Teams | `createTeam`, `fetchTeams`, `fetchTeam`, `updateTeam`, `disbandTeam`, `transferTeamOwnership`, `fetchTeamMembers`, `inviteToTeam`, `joinTeam`, `acceptTeamInvite`, `declineTeamInvite`, `leaveTeam`, `denyTeamMember`, `unblockTeamMember`, `kickTeamMember` (optional `block`), `setTeamMemberRole`, `setTeamMemberNumber`, `fetchTeamActivity`, `fetchTeamAudit`, `fetchLineups`, `createLineup`, `updateLineup`, `deleteLineup`, `fetchMyTeam`, `setMyTagHidden`, `fetchMyInvitations`, `uploadTeamAvatar`, `deleteTeamAvatar`, `teamAvatarUrl` (clans + lineups; mutations return the fresh `TeamDetail`; validation failures surface the server's message — see [Errors](#errors)). `fetchTeams` rows carry a `stats` block (`caps`, `world_records`, `playtime_seconds`, `spectator_seconds`, plus `ranks` per metric) totalled over the team's active members, and `sort` accepts those three metrics on top of `added`/`name`/`members`; pass `limit: 0` for the whole directory (the gallery is unpaginated). Ranks are **directory-wide** — searching or filtering never renumbers them — and `ranked_teams` is the "of N". Ties share a rank. A team on zero for a metric still comes back ranked; the UI drops the chip rather than showing a meaningless placing. Rows also carry `owner_alias` + `owner_title`, so render the owner straight from the directory row — never fan out a profile request per card. `fetchTeamActivity` returns the same totals and ranks for one team alongside its feed. |
+| Events | `fetchEvents`, `fetchEvent`, `fetchEventTeams`, `fetchEventLfp`, `fetchMyEventStatus`, `createEventTeam`, `inviteEventPartner`, `acceptEventInvite`, `declineEventInvite`, `updateEventTeam`, `deleteEventTeam`, `joinEventLfp`, `leaveEventLfp`, `setEventVolunteer`, `deleteEventVolunteer` (cup signups; an event is addressed by its `slug`) |
+| Event brackets | `fetchEventBracket`, `fetchEventMatch` (→ [Event brackets](#event-brackets)); manager-only: `fetchEventFormats`, `setEventBracketPublished`, `setEventFormat`, `updateEventFormatSpec`, `setEventSeeds`, `updateEventStage`, `generateEventStage`, `generateEventRound`, `resetEventStage`, `updateEventGroup`, `createEventMatch`, `updateEventMatch`, `deleteEventMatch`, `setEventMatchResult`, `clearEventMatchResult`, `fetchEventCapCandidates`, `linkEventMatchMapCaps`; staff-only: `createEventFormat`, `updateEventFormat`, `deleteEventFormat`, `fetchEventFormat` |
 | Admin (staff-only) | the moderator/admin dashboard slice — see [Admin API](#admin-api). `fetchAuditLog`/`fetchAuditLogCount` take `actors` (`staff` default / `players` / `all`): the default keeps player-written rows, such as a mapper replacing their own screenshot, out of the staff feed |
 
 Most fetchers take `accessToken` first (Discord OAuth bearer). On the web build,
@@ -96,6 +98,74 @@ sep  = ' ' if tag_spaced else ''
 
 `'numbered'` without an assigned number renders as `'plain'`. A member with `tag_hidden`
 comes back from the API untagged everywhere, so nothing client-side needs to special-case it.
+
+### Event brackets
+
+An event's competition is described by a **format**: an ordered list of stages,
+each with a `kind` the server knows how to draw (`groups`, `swiss`,
+`single_elim` — round-robin is `groups` with one group). The launcher renders
+whatever `fetchEventBracket` returns and **never computes standings, pairings or
+match winners itself** — those are all server-side.
+
+`fetchEventBracket(token, slug)` → `{ published, format: { template, spec }, stages[] }`.
+Each stage carries `groups[]` (with computed `standings`), `entrants[]` and
+`matches[]` (each with its `maps[]`). Per-map cap links come back only from
+`fetchEventMatch`, not the bracket list.
+
+**`published` is the whole-surface gate.** Until an event manager turns it on, a
+player gets no stages, no standings and no format at all — so the Bracket tab
+never renders for them, and nothing a manager does while building an event reaches
+the site. Managers always get the full payload, which is why `BracketTab` can
+treat "unpublished but I can see stages" as proof the viewer manages the event and
+show its warning banner. Per-stage `published` is the finer control inside a
+published bracket. An event with no format, or an older API, answers nothing and
+the tab stays hidden the same way.
+
+A match result is authored as its **map rows** — `caps_a`/`caps_b` per map decide
+the map, and map wins decide the match. `setEventMatchResult` treats the submitted
+`maps` array as the whole truth: ordinals it omits are deleted. Optional
+`deaths_a`/`deaths_b` feed the deaths tiebreaker where a format uses one.
+
+A map is won by whoever reaches `caps_to_win`; caps are bounded to `0..caps_to_win`
+on both sides, since a side stops capping the moment it gets there. A map the
+**time limit** ended short of the target has no winner until one is named —
+`winner_side` on the map row does that, and the map then counts in full. `Final`
+and `Forfeit` are **derived** from the result, never set directly: the match editor
+offers only the states an admin owns (`pending`, `scheduled`, `live`, `bye`,
+`cancelled`) so the form cannot claim an outcome the server then overrules.
+`mapWinnerOf` and `seriesProgress` in `bracket/bracketShared.tsx` mirror the
+server's rules so the editor can say what a result still needs.
+
+How map wins settle the match depends on the match's `mode`:
+
+- `first_to` — a race to a majority. Complete the moment one side reaches it, so
+  the series length is always odd and the match cannot be drawn.
+- `all_maps` — every map is played. Complete only once all of them have a winner;
+  an even split sets `is_draw`, leaving `winner_team_id` null with the status
+  still `complete`.
+
+A stage can override the whole match format, which is how a group stage plays four
+maps with draws while the knockout stages stay Best of 3. A `swiss` or
+`single_elim` stage that allows draws is rejected by the server.
+
+Group points are a **scoreline table** — `EventPointsRow[]` of
+`{maps_won, maps_lost, points}`, each team reading its own line, so a draw row
+pays both sides the same and a 4-0 can outscore a 3-1. Standings carry
+`wins` / `draws` / `losses`. `scorelinesFor`, `defaultPointsTable` and
+`syncPointsTable` in `formatFields.tsx` mirror the server so the builder can offer
+exactly the scorelines a series can produce; `withSyncedPoints` keeps a table in
+step after the series length or mode changes.
+`fetchEventCapCandidates` + `linkEventMatchMapCaps` attach the real caps behind a
+played map, which fills the counts in and gives the public view per-cap times —
+a convenience, never a requirement.
+
+Format validation returns one 400 whose message lists every problem as
+`field.path: reason`, joined with `; `. `parseSpecErrors`
+(`app/components/pages/events/manage/formatFields.tsx`) splits it back apart so
+`FormatBuilder` can show each error against its own control.
+
+Attaching a format to an event **copies** it, so editing a shared template later
+never reshapes an event that is already running.
 
 ### Medal Hunt (`fetchMedalHunt`)
 
