@@ -6,6 +6,7 @@ import {
     eventErrorMessage, fetchEventAdminTeams,
     type EventBracket, type EventDetail, type EventGroupsConfig, type EventLfpEntry, type EventTeam,
 } from '@/app/utils/api'
+import { EventRosterProvider } from './TeamRoster'
 import { SignupsPanel } from './manage/SignupsPanel'
 import { FormatPanel } from './manage/FormatPanel'
 import { SeedingPanel } from './manage/SeedingPanel'
@@ -60,6 +61,7 @@ export function ManagePanel({
     }, [bracket])
 
     return (
+        <EventRosterProvider teams={teams}>
         <div className="space-y-4">
             <ErrorBanner message={teamsError} />
 
@@ -123,5 +125,6 @@ export function ManagePanel({
                 />
             )}
         </div>
+        </EventRosterProvider>
     )
 }

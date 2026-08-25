@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { cn } from '@/lib/utils'
 import type { EventBracketStage, EventMatch } from '@/app/utils/api'
 import { MatchCard, teamLabel } from './bracketShared'
+import { TeamName } from '../TeamRoster'
 
 interface Round {
     no: number
@@ -28,7 +29,9 @@ function buildRounds(stage: EventBracketStage): Round[] {
 function ByeCard({ match }: { match: EventMatch }) {
     return (
         <div className="rounded-lg border border-dashed border-white/10 bg-card/20 px-2.5 py-2 flex items-center gap-2 min-w-0">
-            <span className="truncate text-sm text-muted-foreground">{teamLabel(match.team_a, match.slot_a_label)}</span>
+            <TeamName teamId={match.team_a?.id} className="truncate text-sm text-muted-foreground">
+                {teamLabel(match.team_a, match.slot_a_label)}
+            </TeamName>
             <span className="ml-auto shrink-0 text-[10px] uppercase tracking-wider text-muted-foreground/70">bye</span>
         </div>
     )

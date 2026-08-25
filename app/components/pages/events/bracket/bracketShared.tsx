@@ -3,6 +3,7 @@ import { formatCapTime } from '@/app/utils/format'
 import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { MapNavLink } from '@/app/components/shared/MapNavLink'
+import { TeamName } from '../TeamRoster'
 import type {
     EventBracketStage, EventBracketTeamRef, EventEntrantStatus, EventMatch, EventMatchMap,
     EventMatchStatus, EventSide, EventStageKind, EventStageStatus,
@@ -142,13 +143,13 @@ function TeamRow({ team, fallback, score, won, decided }: {
 
     return (
         <div className="flex items-baseline gap-2 min-w-0">
-            <span className={cn(
+            <TeamName teamId={team?.id} className={cn(
                 'truncate text-sm',
                 !known && 'italic text-muted-foreground',
                 won ? 'text-white font-semibold' : decided ? 'text-muted-foreground' : 'text-foreground',
             )}>
                 {teamLabel(team, fallback)}
-            </span>
+            </TeamName>
             {team?.seed != null && (
                 <span className="shrink-0 text-[10px] text-muted-foreground/70 tabular-nums">#{team.seed}</span>
             )}

@@ -15,6 +15,7 @@ import { EventLfpList } from './events/EventLfpList'
 import { SignupPanel } from './events/SignupPanel'
 import { ManagePanel } from './events/ManagePanel'
 import { BracketTab } from './events/bracket/BracketTab'
+import { EventRosterProvider } from './events/TeamRoster'
 
 export type EventTab = 'info' | 'teams' | 'bracket' | 'players' | 'signup' | 'manage'
 
@@ -194,6 +195,7 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
             </div>
 
             <div className="flex-1 min-h-0 overflow-auto px-0.5 pb-2">
+                <EventRosterProvider teams={teams}>
                 {activeTab === 'info' && (
                     <div className="space-y-6 max-w-3xl">
                         {event.summary && <p className="text-sm text-foreground">{event.summary}</p>}
@@ -238,6 +240,7 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
                         onRefresh={refresh}
                     />
                 )}
+                </EventRosterProvider>
             </div>
         </div>
     )

@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils'
 import { ActionButton } from '@/app/components/pages/admin/components/controls'
 import { useNavState } from '@/app/components/navigation/useNavState'
 import { ErrorBanner, SectionCard } from '@/app/components/pages/teams/teamsShared'
+import { TeamName } from '../TeamRoster'
 import { eventErrorMessage, setEventSeeds, type EventTeam } from '@/app/utils/api'
 
 interface SeedingPanelProps {
@@ -164,7 +165,9 @@ export function SeedingPanel({ accessToken, slug, teams, tierSize, onSaved }: Se
                                 <span className="w-7 shrink-0 text-center text-sm tabular-nums text-muted-foreground">
                                     {row.seed ?? '—'}
                                 </span>
-                                <span className="min-w-0 truncate text-sm text-foreground">{row.name}</span>
+                                <TeamName teamId={row.id} className="truncate text-sm text-foreground">
+                                    {row.name}
+                                </TeamName>
                                 {tier != null && (
                                     <span className="shrink-0 text-[10px] text-muted-foreground/70">tier {tier}</span>
                                 )}

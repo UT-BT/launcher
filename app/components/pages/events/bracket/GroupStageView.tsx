@@ -8,6 +8,7 @@ import type {
     EventBracketGroup, EventBracketStage, EventGroupsConfig, EventStageSpec, EventStandingRow,
 } from '@/app/utils/api'
 import { MatchCard, stageRounds } from './bracketShared'
+import { TeamName } from '../TeamRoster'
 
 const COLUMNS: ResponsiveColumn[] = [
     { id: 'rank', width: '3rem', required: true },
@@ -52,7 +53,9 @@ function StandingsTable({ rows, bands, drawsPossible }: {
                 <div key={row.team_id} role="listitem" className="px-3 py-2 flex items-center gap-3">
                     <span className="w-5 shrink-0 tabular-nums text-muted-foreground text-sm">{row.rank}</span>
                     <div className="min-w-0 flex-1">
-                        <div className="truncate text-sm text-foreground">{row.team?.name ?? '—'}</div>
+                        <TeamName teamId={row.team_id} className="block truncate text-sm text-foreground">
+                            {row.team?.name ?? '—'}
+                        </TeamName>
                         <div className="text-[11px] text-muted-foreground tabular-nums">
                             {recordOf(row, drawsPossible)} · maps {row.maps_won}–{row.maps_lost} · caps {row.caps_for}
                         </div>
@@ -92,7 +95,9 @@ function StandingsTable({ rows, bands, drawsPossible }: {
                             </DataTableCell>
                             <DataTableCell>
                                 <div className="min-w-0">
-                                    <div className="truncate text-foreground">{row.team?.name ?? '—'}</div>
+                                    <TeamName teamId={row.team_id} className="block truncate text-foreground">
+                                        {row.team?.name ?? '—'}
+                                    </TeamName>
                                     {band && <div className="text-[10px] text-accent-300/80 truncate">{band}</div>}
                                 </div>
                             </DataTableCell>

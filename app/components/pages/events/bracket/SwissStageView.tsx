@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { cn } from '@/lib/utils'
 import type { EventBracketEntrant, EventBracketStage, EventSwissConfig } from '@/app/utils/api'
 import { Chip, ENTRANT_STATUS_STYLES, MatchCard, stageRounds } from './bracketShared'
+import { TeamName } from '../TeamRoster'
 
 interface Column {
     key: string
@@ -68,7 +69,9 @@ function buildColumns(stage: EventBracketStage, config: EventSwissConfig | null)
 function EntrantRow({ entrant, showRound }: { entrant: EventBracketEntrant; showRound: boolean }) {
     return (
         <div className="flex items-center gap-2 py-1 min-w-0">
-            <span className="truncate text-sm text-foreground">{entrant.team?.name ?? '—'}</span>
+            <TeamName teamId={entrant.team_id} className="truncate text-sm text-foreground">
+                {entrant.team?.name ?? '—'}
+            </TeamName>
             {entrant.source_rank != null && (
                 <span className="shrink-0 text-[10px] text-muted-foreground/70">from {ordinal(entrant.source_rank)}</span>
             )}
