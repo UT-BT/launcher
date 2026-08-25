@@ -4433,6 +4433,8 @@ export interface EventBracketStage {
 }
 
 export interface EventBracket {
+    /** False = players see nothing at all: no stages, no standings, not even the format. */
+    published: boolean
     format: {
         template: Pick<EventFormatTemplate, 'id' | 'slug' | 'name' | 'summary'> | null
         spec: EventFormatSpec | null
@@ -4559,6 +4561,10 @@ export async function setEventFormat(accessToken: string, slug: string, input: {
 
 export async function updateEventFormatSpec(accessToken: string, slug: string, spec: EventFormatSpec, keepTemplate = false): Promise<EventBracket> {
     return apiGet<EventBracket>(eventPath(slug, '/admin/format'), { token: accessToken, method: 'PATCH', body: { spec, keep_template: keepTemplate } })
+}
+
+export async function setEventBracketPublished(accessToken: string, slug: string, published: boolean): Promise<EventBracket> {
+    return apiGet<EventBracket>(eventPath(slug, '/admin/bracket'), { token: accessToken, method: 'PATCH', body: { published } })
 }
 
 export async function setEventSeeds(accessToken: string, slug: string, seeds: Array<{ team_id: string; seed: number | null }>): Promise<Array<EventBracketTeamRef & { team_id: string }>> {

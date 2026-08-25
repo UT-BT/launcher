@@ -6,9 +6,12 @@ import { ConfirmModal } from '@/app/components/shared/ConfirmModal'
 import { ErrorBanner, SectionCard } from '@/app/components/pages/teams/teamsShared'
 import {
     createEventMatch, eventErrorMessage, fetchEventBracket, generateEventRound, generateEventStage,
-    resetEventStage, updateEventStage,
+    resetEventStage, setEventBracketPublished, updateEventStage,
     type EventBracket, type EventBracketStage, type EventMatch,
 } from '@/app/utils/api'
+
+/** Not a stage key, so it can share the per-stage busy state without colliding. */
+const PUBLISH_KEY = '__bracket__'
 import { MatchCard, RELAXED_LABELS, STAGE_STATUS_LABELS } from '../bracket/bracketShared'
 import { MatchEditorModal } from './MatchEditorModal'
 
@@ -32,6 +35,7 @@ export function BracketPanel({ accessToken, slug, bracket, onBracketChange, onMa
     const [error, setError] = useState<string | null>(null)
     const [notices, setNotices] = useState<Record<string, string>>({})
     const [resetTarget, setResetTarget] = useState<EventBracketStage | null>(null)
+    const [confirmPublish, setConfirmPublish] = useState(false)
     const [editing, setEditing] = useState<EventMatch | null>(null)
 
     const refresh = useCallback(async () => {
@@ -92,6 +96,36 @@ export function BracketPanel({ accessToken, slug, bracket, onBracketChange, onMa
         <div className="space-y-4">
             <ErrorBanner message={error} />
 
+            <SectionCard
+                title={bracket.published ? 'Live for players' : 'Hidden from players'}
+                subtitle={bracket.published
+                    ? 'Everyone can see the published stages of this bracket.'
+                    : 'Build, draw and score freely — none of it reaches players yet.'}
+                accentClass={bracket.published ? 'bg-emerald-400' : 'bg-amber-400'}
+                action={
+                    <ActionButton
+                        tone={bracket.published ? 'amber' : 'emerald'}
+                        icon={bracket.published ? EyeOff : Eye}
+                        loading={busyStage === PUBLISH_KEY}
+                        onClick={() => {
+                            if (bracket.published) {
+                                void run(PUBLISH_KEY, () => setEventBracketPublished(accessToken, slug, false))
+                            } else {
+                                setConfirmPublish(true)
+                            }
+                        }}
+                    >
+                        {bracket.published ? 'Hide from players' : 'Publish to players'}
+                    </ActionButton>
+                }
+            >
+                <p className="text-[11px] text-muted-foreground">
+                    {bracket.published
+                        ? 'Individual stages still have their own switch below, so you can reveal the group stage while a later stage stays hidden.'
+                        : 'While this is off the event page shows no Bracket tab, no standings and no format — the same as before any of this existed. Turning it on reveals only the stages you have published below.'}
+                </p>
+            </SectionCard>
+
             {stages.map(stage => (
                 <StageCard
                     key={stage.key}
@@ -108,6 +142,19 @@ export function BracketPanel({ accessToken, slug, bracket, onBracketChange, onMa
                     onMapSelect={onMapSelect}
                 />
             ))}
+
+            <ConfirmModal
+                isOpen={confirmPublish}
+                onClose={() => setConfirmPublish(false)}
+                onConfirm={() => {
+                    setConfirmPublish(false)
+                    void run(PUBLISH_KEY, () => setEventBracketPublished(accessToken, slug, true))
+                }}
+                title="Publish the bracket"
+                message="Show this bracket to everyone?"
+                detail="Players will see the published stages, their standings and the tournament format. You can hide it again at any time."
+                confirmText="Publish"
+            />
 
             <ConfirmModal
                 isOpen={!!resetTarget}

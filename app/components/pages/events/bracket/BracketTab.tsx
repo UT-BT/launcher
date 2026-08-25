@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { EyeOff } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useNavState } from '@/app/components/navigation/useNavState'
 import type { EventBracket, EventBracketStage } from '@/app/utils/api'
@@ -50,6 +51,21 @@ export function BracketTab({ bracket, loading, onMapSelect }: {
 
     return (
         <div className="space-y-4">
+            {/* Players get an empty bracket entirely, so seeing this at all means
+                the viewer manages the event. */}
+            {!bracket?.published && (
+                <div className="flex items-start gap-2.5 p-3 rounded-lg border border-amber-500/30 bg-amber-500/10">
+                    <EyeOff className="size-4 text-amber-300 shrink-0 mt-0.5" />
+                    <div className="min-w-0 text-xs">
+                        <p className="font-medium text-amber-300">Only event managers can see this bracket.</p>
+                        <p className="text-amber-300/80 mt-0.5">
+                            Players see no Bracket tab, no standings and no format until you publish it
+                            from Manage → Bracket. Nothing you do here reaches them.
+                        </p>
+                    </div>
+                </div>
+            )}
+
             {stages.length > 1 && (
                 <div className="flex flex-wrap items-center gap-1.5">
                     {stages.map(stage => (
