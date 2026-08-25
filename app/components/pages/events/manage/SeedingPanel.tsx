@@ -9,7 +9,6 @@ interface SeedingPanelProps {
     accessToken: string
     slug: string
     teams: EventTeam[]
-    /** Teams per seeding tier — one team from each tier lands in each group. */
     tierSize: number | null
     onSaved: () => void
 }

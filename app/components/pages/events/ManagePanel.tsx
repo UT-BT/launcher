@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { useNavState } from '@/app/components/navigation/useNavState'
+import { ErrorBanner } from '@/app/components/pages/teams/teamsShared'
 import {
-    fetchEventAdminTeams,
+    eventErrorMessage, fetchEventAdminTeams,
     type EventBracket, type EventDetail, type EventGroupsConfig, type EventLfpEntry, type EventTeam,
 } from '@/app/utils/api'
 import { SignupsPanel } from './manage/SignupsPanel'
@@ -34,12 +35,14 @@ export function ManagePanel({
 }: ManagePanelProps) {
     const [tab, setTab] = useNavState<ManageTab>('event.manageTab', 'signups')
     const [teams, setTeams] = useState<EventTeam[]>([])
+    const [teamsError, setTeamsError] = useState<string | null>(null)
 
     const reloadTeams = useCallback(async () => {
         try {
             setTeams(await fetchEventAdminTeams(accessToken, slug))
-        } catch {
-            setTeams([])
+            setTeamsError(null)
+        } catch (e) {
+            setTeamsError(eventErrorMessage(e))
         }
     }, [accessToken, slug])
 
@@ -47,7 +50,6 @@ export function ManagePanel({
 
     const hasDrawnStages = (bracket?.stages ?? []).some(stage => stage.matches.length > 0)
 
-    // Tiers are as wide as the group count, so seeding can show which tier a seed lands in.
     const tierSize = useMemo(() => {
         const groupsStage = bracket?.format.spec?.stages.find(stage => stage.kind === 'groups')
         const count = (groupsStage?.config as EventGroupsConfig | undefined)?.group_count
@@ -56,6 +58,8 @@ export function ManagePanel({
 
     return (
         <div className="space-y-4">
+            <ErrorBanner message={teamsError} />
+
             <div className="flex items-center gap-1 border-b border-white/10 overflow-x-auto">
                 {TABS.map(entry => (
                     <button

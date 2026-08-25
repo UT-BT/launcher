@@ -69,12 +69,10 @@ export function sideOf(match: EventMatch, teamId: string | null | undefined): Ev
     return null
 }
 
-/** Only maps somebody actually played — the rest are empty slots. */
 export function playedMaps(maps: EventMatchMap[] | undefined): EventMatchMap[] {
     return (maps ?? []).filter(row => row.map || row.caps_a != null || row.caps_b != null || row.winner_side)
 }
 
-/** Who won a map. A hand-set winner beats the cap counts, exactly as the server does. */
 export function mapWinnerOf(row: EventMatchMap, capsToWin: number): EventSide | null {
     if (row.winner_side) return row.winner_side
 
@@ -89,7 +87,6 @@ export function mapWinnerOf(row: EventMatchMap, capsToWin: number): EventSide | 
     return null
 }
 
-/** What still has to happen before a match counts. Mirrors the server's rules. */
 export function seriesProgress(match: Pick<EventMatch, 'best_of' | 'caps_to_win' | 'mode'>, maps: EventMatchMap[]) {
     const winners = maps.map(row => mapWinnerOf(row, match.caps_to_win))
     const decided = winners.filter(Boolean).length
@@ -107,7 +104,6 @@ export function seriesProgress(match: Pick<EventMatch, 'best_of' | 'caps_to_win'
         scoreB,
         complete,
         isDraw: complete && scoreA === scoreB,
-        // What the admin still has to enter for the result to count.
         remaining: match.mode === 'all_maps'
             ? Math.max(0, match.best_of - decided)
             : Math.max(0, needed - Math.max(scoreA, scoreB)),
@@ -171,9 +167,7 @@ function MapRow({ row, capsToWin, onMapSelect }: {
     capsToWin: number
     onMapSelect?: (mapName: string) => void
 }) {
-    const winner = row.winner_side
-        ?? (row.caps_a != null && row.caps_a >= capsToWin ? 'a'
-            : row.caps_b != null && row.caps_b >= capsToWin ? 'b' : null)
+    const winner = mapWinnerOf(row, capsToWin)
 
     return (
         <div className="flex items-center gap-2 text-[11px] min-w-0">
@@ -243,9 +237,19 @@ export function MatchCard({ match, showMaps = true, showCaps = false, onClick, o
     return (
         <div
             onClick={onClick}
+            role={onClick && 'button'}
+            tabIndex={onClick && 0}
+            onKeyDown={onClick && (event => {
+                if (event.target !== event.currentTarget) return
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault()
+                    onClick()
+                }
+            })}
             className={cn(
                 'rounded-lg border border-white/10 bg-card/40 p-2.5 space-y-1.5',
                 onClick && 'cursor-pointer hover:border-white/20 hover:bg-card/60 transition-colors',
+                onClick && 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/60',
                 className,
             )}
         >
@@ -299,4 +303,18 @@ export function formatMatchTime(iso: string | null): string {
 
 export function formatSeconds(seconds: number | null): string {
     return seconds == null ? '—' : formatCapTime(seconds)
+}
+
+export function toLocalInput(value: string | null): string {
+    if (!value) return ''
+    const date = new Date(value.includes('T') ? value : `${value.replace(' ', 'T')}Z`)
+    if (Number.isNaN(date.getTime())) return ''
+    const pad = (n: number) => String(n).padStart(2, '0')
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
+export function toIso(value: string): string | null {
+    if (!value) return null
+    const date = new Date(value)
+    return Number.isNaN(date.getTime()) ? null : date.toISOString()
 }

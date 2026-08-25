@@ -11,10 +11,6 @@ interface Column {
     tone: string
 }
 
-/**
- * A Swiss bracket reads as columns: every live team sits in its win-loss
- * column until it hits the qualify or eliminate threshold and leaves the stage.
- */
 function buildColumns(stage: EventBracketStage, config: EventSwissConfig | null): Column[] {
     const qualifiedAt = config?.wins_to_qualify ?? 2
     const eliminatedAt = config?.losses_to_eliminate ?? 2
@@ -131,7 +127,9 @@ export function SwissStageView({ stage, onMapSelect }: {
             </div>
 
             {rounds.map(round => {
-                const inRound = stage.matches.filter(match => match.round_no === round)
+                const inRound = stage.matches
+                    .filter(match => match.round_no === round)
+                    .sort((a, b) => a.ordinal - b.ordinal)
                 if (inRound.length === 0) return null
 
                 const labels = [...new Set(inRound.map(match => match.round_label).filter(Boolean))]

@@ -19,8 +19,43 @@ interface BuilderProps {
     disabled?: boolean
 }
 
+function nextKeyNumber(prefix: string, taken: string[]): number {
+    let number = taken.length + 1
+    while (taken.includes(`${prefix}${number}`)) number += 1
+    return number
+}
+
+function withCurrent(options: Array<{ value: string; label: string }>, value: string) {
+    return !value || options.some(option => option.value === value)
+        ? options
+        : [...options, { value, label: `${value} (unavailable)` }]
+}
+
+function retargetStage(stage: EventStageSpec, from: string, to: string): EventStageSpec {
+    const advancement = stage.advancement.map(rule => (rule.to_stage === from ? { ...rule, to_stage: to } : rule))
+    if (stage.kind !== 'single_elim') return { ...stage, advancement }
+
+    const config = stage.config as EventElimConfig
+    return {
+        ...stage,
+        advancement,
+        config: {
+            ...config,
+            pots: config.pots.map(pot => ({
+                ...pot,
+                sources: pot.sources.map(source => (source.stage === from ? { ...source, stage: to } : source)),
+            })),
+        },
+    }
+}
+
 function replaceStage(spec: EventFormatSpec, index: number, stage: EventStageSpec): EventFormatSpec {
-    return { ...spec, stages: spec.stages.map((entry, at) => (at === index ? stage : entry)) }
+    const stages = spec.stages.map((entry, at) => (at === index ? stage : entry))
+    const previous = spec.stages[index].key
+
+    return previous === stage.key
+        ? { ...spec, stages }
+        : { ...spec, stages: stages.map(entry => retargetStage(entry, previous, stage.key)) }
 }
 
 function IconButton({ icon: Icon, title, onClick, disabled, tone = 'muted' }: {
@@ -74,8 +109,6 @@ function RowList({ label, onAdd, addLabel, disabled, children }: {
     )
 }
 
-// ------------------------------------------------------------------ match format
-
 function MatchFormatEditor({ defaults, onChange, base, errors, disabled }: {
     defaults: EventMatchDefaults
     onChange: (defaults: EventMatchDefaults) => void
@@ -94,7 +127,6 @@ function MatchFormatEditor({ defaults, onChange, base, errors, disabled }: {
                     value={defaults.mode}
                     onChange={mode => set({
                         mode,
-                        // A race to a majority has to be an odd number of maps.
                         best_of: mode === 'first_to' && defaults.best_of % 2 === 0 ? defaults.best_of + 1 : defaults.best_of,
                         decider: mode === 'all_maps' ? null : defaults.decider,
                     })}
@@ -147,8 +179,6 @@ function MatchFormatEditor({ defaults, onChange, base, errors, disabled }: {
         </>
     )
 }
-
-// ------------------------------------------------------------------ groups
 
 function TiebreakerList({ value, onChange, path, errors, disabled }: {
     value: EventTiebreaker[]
@@ -222,8 +252,6 @@ function PointsTable({ table, defaults, onChange, base, errors, disabled }: {
     errors?: Record<string, string>
     disabled?: boolean
 }) {
-    // The rows are the scorelines this series can actually produce — the length
-    // and mode decide which exist, the admin decides what each is worth.
     const rows = syncPointsTable(table, defaults)
     const drawable = allowsDraws(defaults)
 
@@ -349,8 +377,6 @@ function GroupsEditor({ config, onChange, base, defaults, errors, disabled }: {
     )
 }
 
-// ------------------------------------------------------------------ swiss
-
 function SwissEditor({ config, onChange, base, errors, disabled }: {
     config: EventSwissConfig
     onChange: (config: EventSwissConfig) => void
@@ -440,8 +466,6 @@ function SwissEditor({ config, onChange, base, errors, disabled }: {
     )
 }
 
-// ------------------------------------------------------------------ single elim
-
 function ElimEditor({ config, onChange, base, stageKeys, errors, disabled }: {
     config: EventElimConfig
     onChange: (config: EventElimConfig) => void
@@ -455,6 +479,30 @@ function ElimEditor({ config, onChange, base, stageKeys, errors, disabled }: {
 
     const potOptions = config.pots.map(pot => ({ value: pot.key, label: pot.label || pot.key }))
     const stageOptions = stageKeys.map(key => ({ value: key, label: key }))
+
+    const renamePot = (at: number, key: string) => {
+        const previous = config.pots[at].key
+        const pots = config.pots.map((entry, index) => (index === at ? { ...entry, key } : entry))
+
+        if (previous === key) {
+            onChange({ ...config, pots })
+            return
+        }
+
+        onChange({
+            ...config,
+            pots,
+            draw: {
+                ...config.draw,
+                byes: config.draw.byes.map(bye => (bye.pot === previous ? { ...bye, pot: key } : bye)),
+                matchups: config.draw.matchups.map(matchup => ({
+                    ...matchup,
+                    a_pot: matchup.a_pot === previous ? key : matchup.a_pot,
+                    b_pot: matchup.b_pot === previous ? key : matchup.b_pot,
+                })),
+            },
+        })
+    }
 
     return (
         <div className="space-y-3">
@@ -473,7 +521,11 @@ function ElimEditor({ config, onChange, base, stageKeys, errors, disabled }: {
                 label="Qualification pots"
                 addLabel="Add pot"
                 disabled={disabled}
-                onAdd={() => set('pots', [...config.pots, { key: `pot${config.pots.length + 1}`, label: null, sources: [] }])}
+                onAdd={() => set('pots', [...config.pots, {
+                    key: `pot${nextKeyNumber('pot', config.pots.map(entry => entry.key))}`,
+                    label: null,
+                    sources: [],
+                }])}
             >
                 {config.pots.map((pot, index) => {
                     const potBase = `${base}.pots[${index}]`
@@ -483,7 +535,7 @@ function ElimEditor({ config, onChange, base, stageKeys, errors, disabled }: {
                     return (
                         <div key={index} className="rounded-md border border-white/5 bg-card/20 p-2.5 space-y-2">
                             <div className="grid gap-2 grid-cols-2 sm:grid-cols-[6rem_1fr_auto] items-end">
-                                <TextField label="Key" value={pot.key} onChange={value => setPot({ key: value })}
+                                <TextField label="Key" value={pot.key} onChange={value => renamePot(index, value)}
                                     path={`${potBase}.key`} errors={errors} disabled={disabled} />
                                 <TextField label="Label" value={pot.label ?? ''} onChange={value => setPot({ label: value || null })}
                                     placeholder="Group winners" path={`${potBase}.label`} errors={errors} disabled={disabled} />
@@ -501,13 +553,16 @@ function ElimEditor({ config, onChange, base, stageKeys, errors, disabled }: {
                                 return (
                                     <div key={sourceIndex} className="grid gap-2 grid-cols-2 sm:grid-cols-5 items-end pl-2 border-l border-white/5">
                                         <SelectField label="From stage" value={source.stage} onChange={value => setSource({ stage: value })}
-                                            options={stageOptions} path={`${sourceBase}.stage`} errors={errors} disabled={disabled} />
-                                        <NumberField label="Finished" value={source.rank} min={1} onChange={value => setSource({ rank: value, qualified_round: null })}
+                                            options={withCurrent(stageOptions, source.stage)} path={`${sourceBase}.stage`} errors={errors} disabled={disabled} />
+                                        <NumberField label="Finished" value={source.rank} min={1} nullable
+                                            onChange={value => setSource({ rank: value, qualified_round: null })}
                                             path={`${sourceBase}.rank`} errors={errors} disabled={disabled} />
-                                        <NumberField label="Qualified in round" value={source.qualified_round} min={1}
+                                        <NumberField label="Qualified in round" value={source.qualified_round} min={1} nullable
                                             onChange={value => setSource({ qualified_round: value, rank: null })}
                                             path={`${sourceBase}.qualified_round`} errors={errors} disabled={disabled} />
-                                        <NumberField label="Take at most" value={source.limit} min={1} onChange={value => setSource({ limit: value })}
+                                        <NumberField label="Take at most" value={source.limit} min={1} nullable
+                                            hint="Empty means no limit."
+                                            onChange={value => setSource({ limit: value })}
                                             path={`${sourceBase}.limit`} errors={errors} disabled={disabled} />
                                         <div className="flex justify-end pb-1">
                                             <IconButton icon={Trash2} title="Remove source" tone="red" disabled={disabled}
@@ -548,7 +603,7 @@ function ElimEditor({ config, onChange, base, stageKeys, errors, disabled }: {
                         <SelectField label="Pot" value={bye.pot} onChange={value => set('draw', {
                             ...config.draw,
                             byes: config.draw.byes.map((entry, at) => (at === index ? { ...entry, pot: value } : entry)),
-                        })} options={potOptions} path={`${base}.draw.byes[${index}].pot`} errors={errors} disabled={disabled} />
+                        })} options={withCurrent(potOptions, bye.pot)} path={`${base}.draw.byes[${index}].pot`} errors={errors} disabled={disabled} />
                         <NumberField label="Teams" value={bye.count} min={1} onChange={value => set('draw', {
                             ...config.draw,
                             byes: config.draw.byes.map((entry, at) => (at === index ? { ...entry, count: value } : entry)),
@@ -581,9 +636,9 @@ function ElimEditor({ config, onChange, base, stageKeys, errors, disabled }: {
                     return (
                         <div key={index} className="grid gap-2 grid-cols-2 sm:grid-cols-4 items-end">
                             <SelectField label="Pot" value={matchup.a_pot} onChange={value => setMatchup({ a_pot: value })}
-                                options={potOptions} path={`${base}.draw.matchups[${index}].a_pot`} errors={errors} disabled={disabled} />
+                                options={withCurrent(potOptions, matchup.a_pot)} path={`${base}.draw.matchups[${index}].a_pot`} errors={errors} disabled={disabled} />
                             <SelectField label="Versus pot" value={matchup.b_pot} onChange={value => setMatchup({ b_pot: value })}
-                                options={potOptions} path={`${base}.draw.matchups[${index}].b_pot`} errors={errors} disabled={disabled} />
+                                options={withCurrent(potOptions, matchup.b_pot)} path={`${base}.draw.matchups[${index}].b_pot`} errors={errors} disabled={disabled} />
                             <NumberField label="Matches" value={matchup.count} min={1} onChange={value => setMatchup({ count: value })}
                                 path={`${base}.draw.matchups[${index}].count`} errors={errors} disabled={disabled} />
                             <div className="flex justify-end pb-1">
@@ -611,8 +666,6 @@ function ElimEditor({ config, onChange, base, stageKeys, errors, disabled }: {
     )
 }
 
-// ------------------------------------------------------------------ stage
-
 function AdvancementEditor({ stage, index, spec, onChange, errors, disabled }: {
     stage: EventStageSpec
     index: number
@@ -625,7 +678,25 @@ function AdvancementEditor({ stage, index, spec, onChange, errors, disabled }: {
     const later = spec.stages.slice(index + 1).map(entry => ({ value: entry.key, label: entry.name || entry.key }))
 
     if (later.length === 0) {
-        return <p className="text-[11px] text-muted-foreground">This is the final stage — its winner takes the event.</p>
+        return (
+            <div className="space-y-1.5">
+                <p className="text-[11px] text-muted-foreground">This is the final event stage. This will determine the event winner.</p>
+                {stage.advancement.length > 0 && (
+                    <p className="text-[11px] text-amber-300">
+                        It still sends teams to{' '}
+                        {stage.advancement.map(rule => rule.to_stage).join(', ')} —{' '}
+                        <button
+                            type="button"
+                            disabled={disabled}
+                            onClick={() => onChange({ ...stage, advancement: [] })}
+                            className="underline cursor-pointer disabled:opacity-40"
+                        >
+                            drop those rules
+                        </button>.
+                    </p>
+                )}
+            </div>
+        )
     }
 
     const setRule = (at: number, patch: Partial<EventStageSpec['advancement'][number]>) =>
@@ -658,7 +729,7 @@ function AdvancementEditor({ stage, index, spec, onChange, errors, disabled }: {
                         <div className="sm:col-span-2 text-xs text-muted-foreground pb-2">Every qualifier</div>
                     )}
                     <SelectField label="Goes to" value={rule.to_stage} onChange={value => setRule(at, { to_stage: value })}
-                        options={later} path={`${base}[${at}].to_stage`} errors={errors} disabled={disabled} />
+                        options={withCurrent(later, rule.to_stage)} path={`${base}[${at}].to_stage`} errors={errors} disabled={disabled} />
                     <TextField label="Shown as" value={rule.label ?? ''} onChange={value => setRule(at, { label: value || null })}
                         placeholder="Playoff Stage" path={`${base}[${at}].label`} errors={errors} disabled={disabled} />
                     <div className="flex justify-end pb-1">
@@ -755,8 +826,6 @@ function StageCard({ stage, index, spec, onChange, onMove, onRemove, errors, dis
 }
 
 export function FormatBuilder({ spec, onChange, errors, disabled }: BuilderProps) {
-    // Any change to a match format can change which scorelines exist, so the
-    // group-stage points tables are resynced on the way out.
     const update = (next: EventFormatSpec) => onChange(withSyncedPoints(next))
 
     const move = (index: number, delta: number) => {
@@ -801,7 +870,10 @@ export function FormatBuilder({ spec, onChange, errors, disabled }: BuilderProps
             <button
                 type="button"
                 disabled={disabled}
-                onClick={() => update({ ...spec, stages: [...spec.stages, newStage(`stage${spec.stages.length + 1}`, `Stage ${spec.stages.length + 1}`, 'single_elim')] })}
+                onClick={() => {
+                    const number = nextKeyNumber('stage', spec.stages.map(entry => entry.key))
+                    update({ ...spec, stages: [...spec.stages, newStage(`stage${number}`, `Stage ${number}`, 'single_elim')] })
+                }}
                 className="w-full py-2 rounded-lg border border-dashed border-white/15 text-xs text-muted-foreground hover:text-white hover:border-white/25 transition-colors cursor-pointer disabled:opacity-40"
             >
                 <Plus className="inline size-3.5 mr-1" /> Add stage

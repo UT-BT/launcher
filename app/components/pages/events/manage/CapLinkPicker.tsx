@@ -7,7 +7,7 @@ import {
     eventErrorMessage, fetchEventCapCandidates,
     type EventCapCandidate, type EventMatchMap, type EventSide,
 } from '@/app/utils/api'
-import { formatSeconds } from '../bracket/bracketShared'
+import { formatSeconds, toIso, toLocalInput } from '../bracket/bracketShared'
 
 interface CapLinkPickerProps {
     accessToken: string
@@ -19,10 +19,6 @@ interface CapLinkPickerProps {
     onLink: (caps: Array<{ cap_id: string; side: EventSide }>) => Promise<void>
 }
 
-/**
- * Finds the real caps behind a played map. The counts stay editable afterwards —
- * this is a convenience, not the source of truth.
- */
 export function CapLinkPicker({ accessToken, slug, matchId, row, teamNames, disabled, onLink }: CapLinkPickerProps) {
     const [open, setOpen] = useState(false)
     const [loading, setLoading] = useState(false)
@@ -30,8 +26,8 @@ export function CapLinkPicker({ accessToken, slug, matchId, row, teamNames, disa
     const [error, setError] = useState<string | null>(null)
     const [candidates, setCandidates] = useState<EventCapCandidate[]>([])
     const [picked, setPicked] = useState<Record<string, EventSide>>({})
-    const [from, setFrom] = useState(row.started_at ?? '')
-    const [to, setTo] = useState(row.ended_at ?? '')
+    const [from, setFrom] = useState(() => toLocalInput(row.started_at))
+    const [to, setTo] = useState(() => toLocalInput(row.ended_at))
 
     const search = useCallback(async () => {
         setLoading(true)
@@ -39,8 +35,8 @@ export function CapLinkPicker({ accessToken, slug, matchId, row, teamNames, disa
         try {
             const rows = await fetchEventCapCandidates(accessToken, slug, matchId, {
                 map: row.map,
-                from: from || null,
-                to: to || null,
+                from: toIso(from),
+                to: toIso(to),
             })
             setCandidates(rows)
             setPicked(Object.fromEntries(

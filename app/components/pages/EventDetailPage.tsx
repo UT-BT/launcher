@@ -72,7 +72,6 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
         }
     }, [browseToken, eventSlug])
 
-    // A bracket is optional: an event without one, or an older API, just has no tab.
     const loadBracket = useCallback(async () => {
         try {
             setBracket(await fetchEventBracket(browseToken, eventSlug))

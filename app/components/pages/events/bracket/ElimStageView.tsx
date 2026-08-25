@@ -45,7 +45,6 @@ export function ElimStageView({ stage, onMapSelect }: {
     }
 
     return (
-        // The tree scrolls inside itself on narrow viewports; the page never does.
         <div className="overflow-x-auto pb-2">
             <div className="flex gap-4 min-w-max lg:min-w-0">
                 {rounds.map(round => (
@@ -55,7 +54,6 @@ export function ElimStageView({ stage, onMapSelect }: {
                         </h3>
                         <div className={cn(
                             'space-y-2',
-                            // Later rounds have fewer matches; centre them against the round before.
                             round.no > 1 && 'lg:flex lg:flex-col lg:justify-around lg:h-[calc(100%-1.5rem)]',
                         )}>
                             {round.matches.map(match => (

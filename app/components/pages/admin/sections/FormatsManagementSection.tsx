@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Input } from '@/app/components/ui/input'
@@ -61,18 +61,25 @@ export function FormatsManagementSection({ userProfile }: AdminSectionProps) {
 
     useEffect(() => { void load() }, [load])
 
+    const openRequest = useRef(0)
+
     const open = async (template: EventFormatTemplate) => {
+        const request = ++openRequest.current
         setError(null)
         setFieldErrors({})
-        setSelected(template.slug)
         try {
-            setDraft(draftFrom(await fetchEventFormat(token, template.slug)))
+            const loaded = draftFrom(await fetchEventFormat(token, template.slug))
+            if (request !== openRequest.current) return
+            setSelected(template.slug)
+            setDraft(loaded)
         } catch (e) {
+            if (request !== openRequest.current) return
             setError(eventErrorMessage(e))
         }
     }
 
     const startNew = () => {
+        openRequest.current += 1
         setSelected(null)
         setFieldErrors({})
         setError(null)

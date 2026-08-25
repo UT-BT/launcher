@@ -34,11 +34,8 @@ export function FormatPanel({ accessToken, slug, bracket, hasDrawnStages, onBrac
     }, [accessToken])
 
     useEffect(() => {
-        if (attached) {
-            setSpec(attached)
-            setDirty(false)
-        }
-    }, [attached])
+        if (attached && !dirty) setSpec(attached)
+    }, [attached, dirty])
 
     const options = useMemo(
         () => templates.map(template => ({ value: template.slug, label: template.name })),
@@ -56,7 +53,7 @@ export function FormatPanel({ accessToken, slug, bracket, hasDrawnStages, onBrac
             const message = eventErrorMessage(e)
             const parsed = parseSpecErrors(message)
             setFieldErrors(parsed)
-            setError(Object.keys(parsed).length ? 'The format has problems — see the highlighted fields.' : message)
+            setError(Object.keys(parsed).length ? 'The format has problems, see the highlighted fields.' : message)
         } finally {
             setBusy(false)
         }
@@ -85,7 +82,7 @@ export function FormatPanel({ accessToken, slug, bracket, hasDrawnStages, onBrac
             <SectionCard
                 title="Tournament format"
                 subtitle={bracket?.format.template
-                    ? `Based on the "${bracket.format.template.name}" template — edits here only affect this event.`
+                    ? `Based on the "${bracket.format.template.name}" template. Edits here only affect this event.`
                     : attached
                         ? 'A custom format, saved on this event alone.'
                         : 'Pick a template to start from, or build the stages yourself.'}

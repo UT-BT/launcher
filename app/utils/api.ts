@@ -4175,18 +4175,12 @@ export function fetchAdminUsageRecent(token: string, signal?: AbortSignal): Prom
   return apiGet<AdminUsageRecent>('/admin/usage/recent', { token, signal })
 }
 
-// --- Event brackets -------------------------------------------------------
-// A tournament format is data: an ordered list of stages, each with a kind the
-// server knows how to draw. The launcher renders what the server returns and
-// never computes standings or pairings itself.
-
 export type EventStageKind = 'groups' | 'swiss' | 'single_elim'
 export type EventStageStatus = 'pending' | 'active' | 'complete'
 export type EventEntrantStatus = 'active' | 'qualified' | 'eliminated'
 export type EventMatchStatus = 'pending' | 'scheduled' | 'live' | 'complete' | 'bye' | 'forfeit' | 'cancelled'
 export type EventMapKind = 'normal' | 'decider'
 export type EventSide = 'a' | 'b'
-/** `first_to` races to a majority and cannot be drawn; `all_maps` plays every map and can. */
 export type EventMatchMode = 'first_to' | 'all_maps'
 export type EventTiebreaker =
     | 'points' | 'map_diff' | 'head_to_head' | 'caps_for' | 'caps_diff'
@@ -4197,7 +4191,6 @@ export const EVENT_TIEBREAKERS: EventTiebreaker[] = [
     'maps_won', 'common_opponents', 'deaths', 'seed',
 ]
 
-/** Points for one team's scoreline. A 2-2 row pays both teams the same. */
 export interface EventPointsRow {
     maps_won: number
     maps_lost: number
@@ -4433,7 +4426,6 @@ export interface EventBracketStage {
 }
 
 export interface EventBracket {
-    /** False = players see nothing at all: no stages, no standings, not even the format. */
     published: boolean
     format: {
         template: Pick<EventFormatTemplate, 'id' | 'slug' | 'name' | 'summary'> | null

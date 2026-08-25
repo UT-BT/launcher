@@ -13,7 +13,6 @@ interface MapSearchInputProps {
     className?: string
 }
 
-/** Type-ahead over the live map list, the map counterpart of PlayerSearchInput. */
 export function MapSearchInput({
     accessToken, value, onChange, disabled, placeholder = 'Search maps…', className,
 }: MapSearchInputProps) {
@@ -53,6 +52,12 @@ export function MapSearchInput({
         return () => document.removeEventListener('mousedown', onDocClick)
     }, [])
 
+    const commit = () => {
+        const term = query.trim()
+        if (!term) onChange(null)
+        else if (term !== value) setQuery(value ?? '')
+    }
+
     const pick = (mapName: string) => {
         onChange(mapName)
         setQuery(mapName)
@@ -69,7 +74,10 @@ export function MapSearchInput({
                     disabled={disabled}
                     onFocus={() => setOpen(true)}
                     onChange={event => { setQuery(event.target.value); setOpen(true) }}
-                    onBlur={() => { if (!query.trim()) onChange(null) }}
+                    onBlur={event => {
+                        if (containerRef.current?.contains(event.relatedTarget as Node | null)) return
+                        commit()
+                    }}
                     placeholder={placeholder}
                     className={cn(teamInputClass, 'w-full h-8 py-1 pl-8 pr-7 text-xs disabled:opacity-50')}
                 />

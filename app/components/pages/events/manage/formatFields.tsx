@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import { AdminSelect } from '@/app/components/pages/admin/components/controls'
 import { teamInputClass } from '@/app/components/pages/teams/teamsShared'
@@ -7,11 +7,8 @@ import type {
     EventStageKind, EventStageSpec, EventSwissConfig,
 } from '@/app/utils/api'
 
-/**
- * The server reports every spec problem in one message, each entry written as
- * `field.path: reason` and joined with `; `. Split it back apart so each control
- * can show its own error.
- */
+const FIELD_PATH = /^[a-z_]+(\[\d+\])?(\.[a-z_]+(\[\d+\])?)*$/
+
 export function parseSpecErrors(message: string): Record<string, string> {
     const errors: Record<string, string> = {}
 
@@ -21,7 +18,7 @@ export function parseSpecErrors(message: string): Record<string, string> {
 
         const path = entry.slice(0, at).trim()
         const reason = entry.slice(at + 1).trim()
-        if (path && reason && !errors[path]) errors[path] = reason
+        if (path && reason && FIELD_PATH.test(path) && !errors[path]) errors[path] = reason
     }
 
     return errors
@@ -70,24 +67,49 @@ export function TextField({ value, onChange, placeholder, disabled, ...field }: 
     )
 }
 
-export function NumberField({ value, onChange, min, max, disabled, ...field }: FieldProps & {
+type NumberFieldProps = FieldProps & {
     value: number | null
-    onChange: (value: number) => void
     min?: number
     max?: number
     disabled?: boolean
-}) {
+} & (
+    | { nullable: true; onChange: (value: number | null) => void }
+    | { nullable?: false; onChange: (value: number) => void }
+)
+
+export function NumberField(props: NumberFieldProps) {
+    const { value, min, max, disabled } = props
+    const field: FieldProps = {
+        label: props.label,
+        path: props.path,
+        errors: props.errors,
+        hint: props.hint,
+        className: props.className,
+    }
     const invalid = field.path ? !!field.errors?.[field.path] : false
+    const [text, setText] = useState(value == null ? '' : String(value))
+
+    useEffect(() => { setText(value == null ? '' : String(value)) }, [value])
 
     return (
         <Field {...field}>
             <input
                 type="number"
-                value={value ?? ''}
+                value={text}
                 min={min}
                 max={max}
                 disabled={disabled}
-                onChange={event => onChange(Number(event.target.value))}
+                onChange={event => {
+                    const next = event.target.value
+                    setText(next)
+                    if (next === '') {
+                        if (props.nullable) props.onChange(null)
+                        return
+                    }
+                    const parsed = Number(next)
+                    if (!Number.isNaN(parsed)) props.onChange(parsed)
+                }}
+                onBlur={() => setText(value == null ? '' : String(value))}
                 className={cn(teamInputClass, 'w-full h-8 py-1 text-xs tabular-nums disabled:opacity-50', invalid && 'border-red-500/50')}
             />
         </Field>
@@ -180,12 +202,10 @@ export const DEFAULT_MATCH_DEFAULTS: EventMatchDefaults = {
     decider: null,
 }
 
-/** A match that plays every map can end level; a race to a majority cannot. */
 export function allowsDraws(defaults: EventMatchDefaults): boolean {
     return defaults.mode === 'all_maps' && defaults.best_of % 2 === 0
 }
 
-/** Every result a match of this shape can produce, best first. Mirrors the server. */
 export function scorelinesFor(defaults: EventMatchDefaults): Array<[number, number]> {
     const length = Math.max(1, defaults.best_of)
     let lines: Array<[number, number]>
@@ -213,7 +233,6 @@ export function defaultPointsTable(defaults: EventMatchDefaults): EventPointsRow
     }))
 }
 
-/** Rebuild the table for a changed series length, keeping points already set. */
 export function syncPointsTable(table: EventPointsRow[], defaults: EventMatchDefaults): EventPointsRow[] {
     const existing = new Map((table ?? []).map(row => [`${row.maps_won}-${row.maps_lost}`, row.points]))
 
@@ -227,7 +246,6 @@ export function effectiveDefaults(spec: EventFormatSpec, stage: EventStageSpec):
     return stage.match_defaults ?? spec.match_defaults ?? DEFAULT_MATCH_DEFAULTS
 }
 
-/** Keep every group stage's points table in step with the series it scores. */
 export function withSyncedPoints(spec: EventFormatSpec): EventFormatSpec {
     return {
         ...spec,

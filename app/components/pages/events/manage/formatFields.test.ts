@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { EventFormatSpec, EventGroupsConfig, EventMatchDefaults } from '@/app/utils/api'
 import {
-    allowsDraws, defaultPointsTable, effectiveDefaults, emptySpec, newStage, scorelinesFor,
+    allowsDraws, defaultPointsTable, effectiveDefaults, emptySpec, newStage, parseSpecErrors, scorelinesFor,
     syncPointsTable, withSyncedPoints,
 } from './formatFields'
 
@@ -104,5 +104,23 @@ describe('withSyncedPoints', () => {
         }
 
         expect(withSyncedPoints(spec).stages[0]).toEqual(spec.stages[0])
+    })
+})
+
+describe('parseSpecErrors', () => {
+    it('splits the field errors the server reports apart', () => {
+        expect(parseSpecErrors('stages[0].key: already used; match_defaults.best_of: must be odd')).toEqual({
+            'stages[0].key': 'already used',
+            'match_defaults.best_of': 'must be odd',
+        })
+    })
+
+    it('leaves a plain message alone so the caller can show it', () => {
+        expect(parseSpecErrors('Cannot change kind: stage already has matches')).toEqual({})
+    })
+
+    it('keeps the field errors out of a message that also carries prose', () => {
+        expect(parseSpecErrors('stages[1].config.group_count: must be at least 1; Not allowed: stage is drawn'))
+            .toEqual({ 'stages[1].config.group_count': 'must be at least 1' })
     })
 })

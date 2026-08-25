@@ -19,7 +19,6 @@ const COLUMNS: ResponsiveColumn[] = [
     { id: 'caps', width: '5.5rem', priority: 60 },
 ]
 
-/** Ranks that advance, mapped to the label the format gives them. */
 function advancementBands(specStage: EventStageSpec | null): Map<number, string> {
     const bands = new Map<number, string>()
 
@@ -34,9 +33,8 @@ function advancementBands(specStage: EventStageSpec | null): Map<number, string>
     return bands
 }
 
-/** Only show the draws column where the format can actually produce one. */
-function recordOf(row: EventStandingRow): string {
-    return row.draws ? `${row.wins}–${row.draws}–${row.losses}` : `${row.wins}–${row.losses}`
+function recordOf(row: EventStandingRow, drawsPossible: boolean): string {
+    return drawsPossible ? `${row.wins}–${row.draws}–${row.losses}` : `${row.wins}–${row.losses}`
 }
 
 function StandingsTable({ rows, bands, drawsPossible }: {
@@ -56,7 +54,7 @@ function StandingsTable({ rows, bands, drawsPossible }: {
                     <div className="min-w-0 flex-1">
                         <div className="truncate text-sm text-foreground">{row.team?.name ?? '—'}</div>
                         <div className="text-[11px] text-muted-foreground tabular-nums">
-                            {recordOf(row)} · maps {row.maps_won}–{row.maps_lost} · caps {row.caps_for}
+                            {recordOf(row, drawsPossible)} · maps {row.maps_won}–{row.maps_lost} · caps {row.caps_for}
                         </div>
                     </div>
                     <span className="shrink-0 tabular-nums text-sm font-semibold text-foreground">{row.points}</span>
@@ -81,7 +79,10 @@ function StandingsTable({ rows, bands, drawsPossible }: {
             </DataTableHeaderRow>
             <tbody>
                 {rows.length === 0 ? (
-                    <DataTableEmpty colSpan={7} message="No teams in this group yet." />
+                    <DataTableEmpty
+                        colSpan={3 + ['record', 'maps', 'diff', 'caps'].filter(shows).length}
+                        message="No teams in this group yet."
+                    />
                 ) : rows.map(row => {
                     const band = bands.get(row.rank)
                     return (
@@ -96,7 +97,7 @@ function StandingsTable({ rows, bands, drawsPossible }: {
                                 </div>
                             </DataTableCell>
                             <DataTableCell align="right" className="tabular-nums font-semibold text-foreground">{row.points}</DataTableCell>
-                            {shows('record') && <DataTableCell align="right" className="tabular-nums text-muted-foreground">{recordOf(row)}</DataTableCell>}
+                            {shows('record') && <DataTableCell align="right" className="tabular-nums text-muted-foreground">{recordOf(row, drawsPossible)}</DataTableCell>}
                             {shows('maps') && <DataTableCell align="right" className="tabular-nums text-muted-foreground">{row.maps_won}–{row.maps_lost}</DataTableCell>}
                             {shows('diff') && (
                                 <DataTableCell align="right" className={cn(
@@ -178,7 +179,9 @@ function GroupPanel({ stage, group, bands, rounds, drawsPossible, onMapSelect }:
             {showMatches && (
                 <div className="space-y-3">
                     {rounds.map(round => {
-                        const inRound = matches.filter(match => match.round_no === round)
+                        const inRound = matches
+                            .filter(match => match.round_no === round)
+                            .sort((a, b) => a.ordinal - b.ordinal)
                         if (inRound.length === 0) return null
 
                         return (

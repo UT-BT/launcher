@@ -22,7 +22,6 @@ export function BracketTab({ bracket, loading, onMapSelect }: {
     const stages = useMemo(() => bracket?.stages ?? [], [bracket])
     const [stageKey, setStageKey] = useNavState<string>('event.bracketStage', '')
 
-    // Default to whatever is actually happening, not always the first stage.
     const active = useMemo(() => {
         const chosen = stages.find(stage => stage.key === stageKey)
         if (chosen) return chosen
@@ -51,8 +50,6 @@ export function BracketTab({ bracket, loading, onMapSelect }: {
 
     return (
         <div className="space-y-4">
-            {/* Players get an empty bracket entirely, so seeing this at all means
-                the viewer manages the event. */}
             {!bracket?.published && (
                 <div className="flex items-start gap-2.5 p-3 rounded-lg border border-amber-500/30 bg-amber-500/10">
                     <EyeOff className="size-4 text-amber-300 shrink-0 mt-0.5" />
@@ -60,7 +57,7 @@ export function BracketTab({ bracket, loading, onMapSelect }: {
                         <p className="font-medium text-amber-300">Only event managers can see this bracket.</p>
                         <p className="text-amber-300/80 mt-0.5">
                             Players see no Bracket tab, no standings and no format until you publish it
-                            from Manage → Bracket. Nothing you do here reaches them.
+                            from Manage → Bracket.
                         </p>
                     </div>
                 </div>

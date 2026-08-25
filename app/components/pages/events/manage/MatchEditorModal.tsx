@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/app/components/ui/button'
@@ -13,16 +13,11 @@ import {
     type EventMatchStatus, type EventSide,
 } from '@/app/utils/api'
 import {
-    Chip, DRAW_STYLE, MATCH_STATUS_LABELS, MATCH_STATUS_STYLES, mapWinnerOf, seriesProgress,
+    Chip, DRAW_STYLE, MATCH_STATUS_LABELS, MATCH_STATUS_STYLES, mapWinnerOf, seriesProgress, sideOf, toIso, toLocalInput,
 } from '../bracket/bracketShared'
 import { CapLinkPicker } from './CapLinkPicker'
 import { Field, SubCard } from './formatFields'
 
-/**
- * Only the states an admin actually chooses. `complete`, `forfeit` and a draw are
- * *derived* from the result — offering them here would let the form claim an
- * outcome the server then overrules, which is exactly how edits used to vanish.
- */
 const STATUS_OPTIONS: Array<{ value: EventMatchStatus; label: string }> = [
     { value: 'pending', label: 'Not played' },
     { value: 'scheduled', label: 'Scheduled' },
@@ -43,25 +38,10 @@ interface Form {
     published: boolean
 }
 
-function toLocalInput(value: string | null): string {
-    if (!value) return ''
-    const date = new Date(value.includes('T') ? value : `${value.replace(' ', 'T')}Z`)
-    if (Number.isNaN(date.getTime())) return ''
-    const pad = (n: number) => String(n).padStart(2, '0')
-    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
-}
-
-function toIso(value: string): string | null {
-    if (!value) return null
-    const date = new Date(value)
-    return Number.isNaN(date.getTime()) ? null : date.toISOString()
-}
-
 function formFrom(match: EventMatch): Form {
     return {
         teamA: match.team_a?.id ?? '',
         teamB: match.team_b?.id ?? '',
-        // A derived outcome is not a choice, so the dropdown falls back to its cause.
         status: DERIVED_STATUSES.includes(match.status) ? 'pending' : match.status,
         scheduledAt: toLocalInput(match.scheduled_at),
         streamUrl: match.stream_url ?? '',
@@ -105,7 +85,6 @@ export function MatchEditorModal({ accessToken, slug, match: initial, entrants, 
     const [error, setError] = useState<string | null>(null)
     const [notice, setNotice] = useState<string | null>(null)
 
-    /** One place that pulls every field back from the server, so nothing goes stale. */
     const syncFrom = useCallback((fresh: EventMatch) => {
         setMatch(fresh)
         setForm(formFrom(fresh))
@@ -117,7 +96,24 @@ export function MatchEditorModal({ accessToken, slug, match: initial, entrants, 
         syncFrom(await fetchEventMatch(accessToken, slug, initial.id))
     }, [accessToken, slug, initial.id, syncFrom])
 
-    useEffect(() => { void reload().catch(() => undefined) }, [reload])
+    const mergeFrom = useCallback((fresh: EventMatch, replaceOrdinal?: number) => {
+        setMatch(fresh)
+        const byOrdinal = new Map((fresh.maps ?? []).map(row => [row.ordinal, row]))
+        setMaps(current => current.map(row => {
+            const server = byOrdinal.get(row.ordinal)
+            if (!server) return row
+            return row.ordinal === replaceOrdinal ? server : { ...row, caps: server.caps }
+        }))
+    }, [])
+
+    const dirtyRef = useRef(dirty)
+    dirtyRef.current = dirty
+
+    useEffect(() => {
+        void fetchEventMatch(accessToken, slug, initial.id)
+            .then(fresh => (dirtyRef.current ? mergeFrom(fresh) : syncFrom(fresh)))
+            .catch(() => undefined)
+    }, [accessToken, slug, initial.id, syncFrom, mergeFrom])
 
     const run = async (action: () => Promise<unknown>, message?: string) => {
         setBusy(true)
@@ -131,6 +127,20 @@ export function MatchEditorModal({ accessToken, slug, match: initial, entrants, 
         } catch (e) {
             setError(eventErrorMessage(e))
         } finally {
+            setBusy(false)
+        }
+    }
+
+    const remove = async () => {
+        setBusy(true)
+        setError(null)
+        setNotice(null)
+        try {
+            await deleteEventMatch(accessToken, slug, match.id)
+            onSaved()
+            onClose()
+        } catch (e) {
+            setError(eventErrorMessage(e))
             setBusy(false)
         }
     }
@@ -157,7 +167,8 @@ export function MatchEditorModal({ accessToken, slug, match: initial, entrants, 
 
     const progress = useMemo(() => seriesProgress(match, maps), [match, maps])
 
-    // Both halves of the form go in one request, so a save can never drop the other.
+    const recordedForfeit = match.status === 'forfeit' ? sideOf(match, match.winner_team_id) : null
+
     const save = (forfeit?: EventSide) => run(async () => {
         await updateEventMatch(accessToken, slug, match.id, {
             team_a_id: form.teamA || null,
@@ -170,7 +181,7 @@ export function MatchEditorModal({ accessToken, slug, match: initial, entrants, 
         })
         await setEventMatchResult(accessToken, slug, match.id, {
             maps: maps.map(toMapInput),
-            forfeit_winner: forfeit ?? null,
+            forfeit_winner: forfeit ?? recordedForfeit,
         })
     }, forfeit ? 'Forfeit recorded.' : 'Saved.')
 
@@ -190,7 +201,6 @@ export function MatchEditorModal({ accessToken, slug, match: initial, entrants, 
             onChange={event => {
                 if (event.target.value === '') return onChange(null)
 
-                // `min`/`max` only guard the spinner, so clamp what gets typed too.
                 const typed = Math.floor(Number(event.target.value))
                 if (Number.isNaN(typed)) return
 
@@ -325,8 +335,6 @@ export function MatchEditorModal({ accessToken, slug, match: initial, entrants, 
                         <p className="text-[11px] text-muted-foreground">No map slots on this match.</p>
                     ) : maps.map(row => {
                         const winner = mapWinnerOf(row, match.caps_to_win)
-                        // Caps entered, nobody reached the target, no winner named:
-                        // almost always a map the time limit ended.
                         const undecided = !winner && (row.caps_a != null || row.caps_b != null)
 
                         return (
@@ -429,7 +437,9 @@ export function MatchEditorModal({ accessToken, slug, match: initial, entrants, 
                                         disabled={busy}
                                         onLink={async caps => {
                                             await linkEventMatchMapCaps(accessToken, slug, match.id, row.ordinal, caps)
-                                            await reload()
+                                            const fresh = await fetchEventMatch(accessToken, slug, match.id)
+                                            if (dirtyRef.current) mergeFrom(fresh, row.ordinal)
+                                            else syncFrom(fresh)
                                             onSaved()
                                         }}
                                     />
@@ -459,10 +469,7 @@ export function MatchEditorModal({ accessToken, slug, match: initial, entrants, 
                     <button
                         type="button"
                         disabled={busy}
-                        onClick={() => void run(async () => {
-                            await deleteEventMatch(accessToken, slug, match.id)
-                            onClose()
-                        })}
+                        onClick={() => void remove()}
                         className="text-[11px] text-red-300 hover:underline cursor-pointer disabled:opacity-40"
                     >
                         Delete this match

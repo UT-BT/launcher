@@ -10,7 +10,6 @@ import {
     type EventBracket, type EventBracketStage, type EventMatch,
 } from '@/app/utils/api'
 
-/** Not a stage key, so it can share the per-stage busy state without colliding. */
 const PUBLISH_KEY = '__bracket__'
 import { MatchCard, RELAXED_LABELS, STAGE_STATUS_LABELS } from '../bracket/bracketShared'
 import { MatchEditorModal } from './MatchEditorModal'
@@ -35,6 +34,7 @@ export function BracketPanel({ accessToken, slug, bracket, onBracketChange, onMa
     const [error, setError] = useState<string | null>(null)
     const [notices, setNotices] = useState<Record<string, string>>({})
     const [resetTarget, setResetTarget] = useState<EventBracketStage | null>(null)
+    const [redrawTarget, setRedrawTarget] = useState<EventBracketStage | null>(null)
     const [confirmPublish, setConfirmPublish] = useState(false)
     const [editing, setEditing] = useState<EventMatch | null>(null)
 
@@ -100,7 +100,7 @@ export function BracketPanel({ accessToken, slug, bracket, onBracketChange, onMa
                 title={bracket.published ? 'Live for players' : 'Hidden from players'}
                 subtitle={bracket.published
                     ? 'Everyone can see the published stages of this bracket.'
-                    : 'Build, draw and score freely — none of it reaches players yet.'}
+                    : 'Build, draw and score freely. This is not visible to players yet.'}
                 accentClass={bracket.published ? 'bg-emerald-400' : 'bg-amber-400'}
                 action={
                     <ActionButton
@@ -122,7 +122,7 @@ export function BracketPanel({ accessToken, slug, bracket, onBracketChange, onMa
                 <p className="text-[11px] text-muted-foreground">
                     {bracket.published
                         ? 'Individual stages still have their own switch below, so you can reveal the group stage while a later stage stays hidden.'
-                        : 'While this is off the event page shows no Bracket tab, no standings and no format — the same as before any of this existed. Turning it on reveals only the stages you have published below.'}
+                        : 'While this is off the event page shows no Bracket tab, no standings and no format. Turning it on reveals only the stages you have published below.'}
                 </p>
             </SectionCard>
 
@@ -133,7 +133,7 @@ export function BracketPanel({ accessToken, slug, bracket, onBracketChange, onMa
                     busy={busyStage === stage.key}
                     notice={notices[stage.key] || null}
                     onPreview={() => void preview(stage)}
-                    onGenerate={force => void generate(stage, force)}
+                    onGenerate={force => force ? setRedrawTarget(stage) : void generate(stage, false)}
                     onNextRound={() => void nextRound(stage)}
                     onTogglePublished={() => void run(stage.key, () => updateEventStage(accessToken, slug, stage.key, { published: !stage.published }))}
                     onReset={() => setResetTarget(stage)}
@@ -154,6 +154,21 @@ export function BracketPanel({ accessToken, slug, bracket, onBracketChange, onMa
                 message="Show this bracket to everyone?"
                 detail="Players will see the published stages, their standings and the tournament format. You can hide it again at any time."
                 confirmText="Publish"
+            />
+
+            <ConfirmModal
+                isOpen={!!redrawTarget}
+                onClose={() => setRedrawTarget(null)}
+                onConfirm={() => {
+                    const stage = redrawTarget
+                    setRedrawTarget(null)
+                    if (stage) void generate(stage, true)
+                }}
+                title="Redraw stage"
+                message={`Redraw "${redrawTarget?.name}"?`}
+                detail="The current matches and every result recorded on them are deleted permanently, then the stage is drawn again from scratch."
+                confirmText="Redraw stage"
+                variant="error"
             />
 
             <ConfirmModal
@@ -209,6 +224,7 @@ function StageCard({
         for (const match of stage.matches) {
             grouped.set(match.round_no, [...(grouped.get(match.round_no) ?? []), match])
         }
+        for (const matches of grouped.values()) matches.sort((a, b) => a.ordinal - b.ordinal)
         return [...grouped.entries()].sort(([a], [b]) => a - b)
     }, [stage.matches])
 
