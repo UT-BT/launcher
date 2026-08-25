@@ -119,6 +119,16 @@ the map, and map wins decide the match. `setEventMatchResult` treats the submitt
 `maps` array as the whole truth: ordinals it omits are deleted. Optional
 `deaths_a`/`deaths_b` feed the deaths tiebreaker where a format uses one.
 
+A map is won by whoever reaches `caps_to_win`; caps are bounded to `0..caps_to_win`
+on both sides, since a side stops capping the moment it gets there. A map the
+**time limit** ended short of the target has no winner until one is named —
+`winner_side` on the map row does that, and the map then counts in full. `Final`
+and `Forfeit` are **derived** from the result, never set directly: the match editor
+offers only the states an admin owns (`pending`, `scheduled`, `live`, `bye`,
+`cancelled`) so the form cannot claim an outcome the server then overrules.
+`mapWinnerOf` and `seriesProgress` in `bracket/bracketShared.tsx` mirror the
+server's rules so the editor can say what a result still needs.
+
 How map wins settle the match depends on the match's `mode`:
 
 - `first_to` — a race to a majority. Complete the moment one side reaches it, so

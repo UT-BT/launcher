@@ -74,6 +74,46 @@ export function playedMaps(maps: EventMatchMap[] | undefined): EventMatchMap[] {
     return (maps ?? []).filter(row => row.map || row.caps_a != null || row.caps_b != null || row.winner_side)
 }
 
+/** Who won a map. A hand-set winner beats the cap counts, exactly as the server does. */
+export function mapWinnerOf(row: EventMatchMap, capsToWin: number): EventSide | null {
+    if (row.winner_side) return row.winner_side
+
+    const target = capsToWin || 0
+    const a = row.caps_a ?? 0
+    const b = row.caps_b ?? 0
+
+    if (row.caps_a == null && row.caps_b == null) return null
+    if (target && a >= target && a > b) return 'a'
+    if (target && b >= target && b > a) return 'b'
+
+    return null
+}
+
+/** What still has to happen before a match counts. Mirrors the server's rules. */
+export function seriesProgress(match: Pick<EventMatch, 'best_of' | 'caps_to_win' | 'mode'>, maps: EventMatchMap[]) {
+    const winners = maps.map(row => mapWinnerOf(row, match.caps_to_win))
+    const decided = winners.filter(Boolean).length
+    const scoreA = winners.filter(side => side === 'a').length
+    const scoreB = winners.filter(side => side === 'b').length
+
+    const needed = match.mode === 'all_maps' ? match.best_of : Math.floor(match.best_of / 2) + 1
+    const complete = match.mode === 'all_maps'
+        ? decided >= match.best_of
+        : scoreA >= needed || scoreB >= needed
+
+    return {
+        decided,
+        scoreA,
+        scoreB,
+        complete,
+        isDraw: complete && scoreA === scoreB,
+        // What the admin still has to enter for the result to count.
+        remaining: match.mode === 'all_maps'
+            ? Math.max(0, match.best_of - decided)
+            : Math.max(0, needed - Math.max(scoreA, scoreB)),
+    }
+}
+
 export function stageRounds(stage: EventBracketStage): number[] {
     return [...new Set(stage.matches.map(match => match.round_no))].sort((a, b) => a - b)
 }
