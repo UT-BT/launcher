@@ -25,15 +25,18 @@ interface ManagePanelProps {
     event: EventDetail
     lfp: EventLfpEntry[]
     bracket: EventBracket | null
+    canManageEvent: boolean
     onBracketChange: (bracket: EventBracket) => void
     onMapSelect?: (mapName: string) => void
     onRefresh: () => void
 }
 
 export function ManagePanel({
-    accessToken, slug, event, lfp, bracket, onBracketChange, onMapSelect, onRefresh,
+    accessToken, slug, event, lfp, bracket, canManageEvent, onBracketChange, onMapSelect, onRefresh,
 }: ManagePanelProps) {
-    const [tab, setTab] = useNavState<ManageTab>('event.manageTab', 'signups')
+    const tabs = canManageEvent ? TABS : TABS.filter(entry => entry.id !== 'signups')
+    const [storedTab, setTab] = useNavState<ManageTab>('event.manageTab', canManageEvent ? 'signups' : 'format')
+    const tab = tabs.some(entry => entry.id === storedTab) ? storedTab : tabs[0].id
     const [teams, setTeams] = useState<EventTeam[]>([])
     const [teamsError, setTeamsError] = useState<string | null>(null)
 
@@ -61,7 +64,7 @@ export function ManagePanel({
             <ErrorBanner message={teamsError} />
 
             <div className="flex items-center gap-1 border-b border-white/10 overflow-x-auto">
-                {TABS.map(entry => (
+                {tabs.map(entry => (
                     <button
                         key={entry.id}
                         onClick={() => setTab(entry.id)}
@@ -78,21 +81,21 @@ export function ManagePanel({
             </div>
 
             {tab === 'signups' && (
-                <div className="max-w-3xl">
-                    <SignupsPanel
-                        accessToken={accessToken}
-                        slug={slug}
-                        event={event}
-                        lfp={lfp}
-                        teams={teams}
-                        onReloadTeams={reloadTeams}
-                        onRefresh={onRefresh}
-                    />
-                </div>
+                <SignupsPanel
+                    accessToken={accessToken}
+                    slug={slug}
+                    event={event}
+                    lfp={lfp}
+                    teams={teams}
+                    onReloadTeams={reloadTeams}
+                    onRefresh={onRefresh}
+                />
             )}
 
             {tab === 'format' && (
-                <div className="max-w-4xl space-y-4">
+                // The seeding list is narrow and the builder is not, so on a wide
+                // screen they sit side by side instead of stacking.
+                <div className="grid gap-4 items-start 2xl:grid-cols-[26rem_minmax(0,1fr)]">
                     <SeedingPanel
                         accessToken={accessToken}
                         slug={slug}

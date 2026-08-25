@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AdminSelect, ActionButton } from '@/app/components/pages/admin/components/controls'
 import { ConfirmModal } from '@/app/components/shared/ConfirmModal'
+import { useNavState } from '@/app/components/navigation/useNavState'
 import { ErrorBanner, SectionCard } from '@/app/components/pages/teams/teamsShared'
 import {
     eventErrorMessage, fetchEventFormats, setEventFormat, updateEventFormatSpec,
@@ -28,6 +29,7 @@ export function FormatPanel({ accessToken, slug, bracket, hasDrawnStages, onBrac
     const [error, setError] = useState<string | null>(null)
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
     const [confirmReplace, setConfirmReplace] = useState<string | null>(null)
+    const [open, setOpen] = useNavState('event.manage.format', false)
 
     useEffect(() => {
         fetchEventFormats(accessToken).then(setTemplates).catch(() => setTemplates([]))
@@ -86,6 +88,9 @@ export function FormatPanel({ accessToken, slug, bracket, hasDrawnStages, onBrac
                     : attached
                         ? 'A custom format, saved on this event alone.'
                         : 'Pick a template to start from, or build the stages yourself.'}
+                collapsible
+                open={open}
+                onOpenChange={setOpen}
                 action={
                     <div className="flex items-center gap-2">
                         {options.length > 0 && (

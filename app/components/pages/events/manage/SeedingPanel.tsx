@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
-import { ArrowDown, ArrowUp } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { GripVertical } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ActionButton } from '@/app/components/pages/admin/components/controls'
-import { ErrorBanner, SectionCard, teamInputClass } from '@/app/components/pages/teams/teamsShared'
+import { useNavState } from '@/app/components/navigation/useNavState'
+import { ErrorBanner, SectionCard } from '@/app/components/pages/teams/teamsShared'
 import { eventErrorMessage, setEventSeeds, type EventTeam } from '@/app/utils/api'
 
 interface SeedingPanelProps {
@@ -38,25 +39,66 @@ export function SeedingPanel({ accessToken, slug, teams, tierSize, onSaved }: Se
     const [busy, setBusy] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [dirty, setDirty] = useState(false)
+    const [dragId, setDragId] = useState<string | null>(null)
+    const [open, setOpen] = useNavState('event.manage.seeding', false)
+    const listRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
         setRows(sortRows(registered.map(team => ({ id: team.id, name: team.name, seed: team.seed }))))
         setDirty(false)
     }, [registered])
 
-    const setSeed = (id: string, seed: number | null) => {
-        setRows(current => current.map(row => (row.id === id ? { ...row, seed } : row)))
+    // The order is the seeding, so a move renumbers everything under it.
+    const moveTo = (from: number, to: number) => {
+        if (from === to) return
+
+        setRows(current => {
+            if (from < 0 || to < 0 || from >= current.length || to >= current.length) return current
+
+            const next = [...current]
+            const [moved] = next.splice(from, 1)
+            next.splice(to, 0, moved)
+            return next.map((row, at) => ({ ...row, seed: at + 1 }))
+        })
         setDirty(true)
     }
 
-    const move = (index: number, delta: number) => {
-        const target = index + delta
-        if (target < 0 || target >= rows.length) return
-        const next = [...rows]
-        ;[next[index], next[target]] = [next[target], next[index]]
-        setRows(next.map((row, at) => ({ ...row, seed: at + 1 })))
-        setDirty(true)
+    const rowUnderPointer = (clientY: number) => {
+        const items = Array.from(listRef.current?.children ?? []) as HTMLElement[]
+        return items.findIndex(item => {
+            const rect = item.getBoundingClientRect()
+            return clientY >= rect.top && clientY <= rect.bottom
+        })
     }
+
+    // Listening on the window, not the handle: reordering moves the handle's DOM
+    // node, and a moved node loses its pointer capture — which would end the drag
+    // after a single swap.
+    const rowsRef = useRef(rows)
+    rowsRef.current = rows
+
+    useEffect(() => {
+        if (!dragId) return
+
+        const onMove = (event: PointerEvent) => {
+            const from = rowsRef.current.findIndex(row => row.id === dragId)
+            const to = rowUnderPointer(event.clientY)
+
+            if (from >= 0 && to >= 0) moveTo(from, to)
+        }
+
+        const stop = () => setDragId(null)
+
+        window.addEventListener('pointermove', onMove)
+        window.addEventListener('pointerup', stop)
+        window.addEventListener('pointercancel', stop)
+
+        return () => {
+            window.removeEventListener('pointermove', onMove)
+            window.removeEventListener('pointerup', stop)
+            window.removeEventListener('pointercancel', stop)
+        }
+    }, [dragId])
 
     const numberInOrder = () => {
         setRows(current => current.map((row, index) => ({ ...row, seed: index + 1 })))
@@ -82,86 +124,72 @@ export function SeedingPanel({ accessToken, slug, teams, tierSize, onSaved }: Se
         }
     }
 
-    const duplicates = useMemo(() => {
-        const seen = new Set<number>()
-        const clashing = new Set<number>()
-        for (const row of rows) {
-            if (row.seed == null) continue
-            if (seen.has(row.seed)) clashing.add(row.seed)
-            seen.add(row.seed)
-        }
-        return clashing
-    }, [rows])
-
     return (
         <SectionCard
             title="Seeding"
-            subtitle={tierSize
-                ? `Seed 1 is the strongest team. Tiers of ${tierSize} are split one per group.`
-                : 'Seed 1 is the strongest team. Seeds decide the draw and settle standings ties.'}
+            subtitle={`${rows.length} team${rows.length === 1 ? '' : 's'}, strongest first`}
+            collapsible
+            open={open}
+            onOpenChange={setOpen}
             action={
-                <div className="flex items-center gap-2">
-                    <ActionButton onClick={numberInOrder} disabled={busy}>Number in order</ActionButton>
+                <div className="flex flex-wrap items-center gap-2">
+                    <ActionButton onClick={numberInOrder} disabled={busy}>Renumber</ActionButton>
                     <ActionButton onClick={clearAll} disabled={busy}>Clear</ActionButton>
-                    <ActionButton tone="emerald" onClick={() => void save()} loading={busy} disabled={!dirty}>Save seeds</ActionButton>
+                    <ActionButton tone="emerald" onClick={() => void save()} loading={busy} disabled={!dirty}>Save</ActionButton>
                 </div>
             }
         >
             <ErrorBanner message={error} />
 
+            <p className="text-[11px] text-muted-foreground">
+                Drag a row by its handle to reorder. Seed 1 is the strongest team and seeds settle
+                standings ties{tierSize ? `; tiers of ${tierSize} are split one per group` : ''}.
+            </p>
+
             {rows.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No teams to seed yet.</p>
             ) : (
-                <div className="space-y-1">
+                <div ref={listRef} className={cn('space-y-0.5', dragId && 'select-none cursor-grabbing')}>
                     {rows.map((row, index) => {
                         const tier = tierSize && row.seed ? Math.ceil(row.seed / tierSize) : null
 
                         return (
-                            <div key={row.id} className="flex items-center gap-2 py-1 min-w-0">
-                                <input
-                                    type="number"
-                                    min={1}
-                                    value={row.seed ?? ''}
-                                    onChange={event => setSeed(row.id, event.target.value ? Number(event.target.value) : null)}
-                                    className={cn(
-                                        teamInputClass, 'h-8 w-16 py-1 text-xs tabular-nums shrink-0',
-                                        row.seed != null && duplicates.has(row.seed) && 'border-red-500/50',
-                                    )}
-                                />
+                            <div
+                                key={row.id}
+                                className={cn(
+                                    'flex items-center gap-2 rounded-md px-1.5 py-1.5 min-w-0 transition-colors',
+                                    dragId === row.id ? 'bg-accent-500/10 ring-1 ring-accent-400/40' : 'hover:bg-white/5',
+                                )}
+                            >
+                                <span className="w-7 shrink-0 text-center text-sm tabular-nums text-muted-foreground">
+                                    {row.seed ?? '—'}
+                                </span>
                                 <span className="min-w-0 truncate text-sm text-foreground">{row.name}</span>
                                 {tier != null && (
                                     <span className="shrink-0 text-[10px] text-muted-foreground/70">tier {tier}</span>
                                 )}
-                                <div className="ml-auto flex items-center shrink-0">
-                                    <button
-                                        type="button"
-                                        title="Move up"
-                                        onClick={() => move(index, -1)}
-                                        disabled={index === 0}
-                                        className="p-1 rounded-md text-muted-foreground hover:text-white hover:bg-white/5 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-                                    >
-                                        <ArrowUp className="size-3.5" />
-                                    </button>
-                                    <button
-                                        type="button"
-                                        title="Move down"
-                                        onClick={() => move(index, 1)}
-                                        disabled={index === rows.length - 1}
-                                        className="p-1 rounded-md text-muted-foreground hover:text-white hover:bg-white/5 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-                                    >
-                                        <ArrowDown className="size-3.5" />
-                                    </button>
-                                </div>
+                                <button
+                                    type="button"
+                                    aria-label={`Reorder ${row.name}`}
+                                    title="Drag to reorder"
+                                    disabled={busy}
+                                    onPointerDown={event => {
+                                        event.preventDefault()
+                                        setDragId(row.id)
+                                    }}
+                                    onKeyDown={event => {
+                                        if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return
+                                        event.preventDefault()
+                                        moveTo(index, index + (event.key === 'ArrowUp' ? -1 : 1))
+                                    }}
+                                    className="ml-auto shrink-0 p-1.5 rounded-md text-muted-foreground hover:text-white hover:bg-white/5 cursor-grab touch-none select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/60 disabled:opacity-40 active:cursor-grabbing"
+                                >
+                                    <GripVertical className="size-4" />
+                                </button>
                             </div>
                         )
                     })}
                 </div>
-            )}
-
-            {duplicates.size > 0 && (
-                <p className="text-[11px] text-amber-300">
-                    Two teams share seed {[...duplicates].join(', ')} — the draw will still run, but the tie order is arbitrary.
-                </p>
             )}
         </SectionCard>
     )

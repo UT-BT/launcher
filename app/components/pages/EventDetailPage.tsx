@@ -131,9 +131,10 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
     const signupCloses = formatEventDateTime(event.signup_closes_at)
     const signupOpens = formatEventDateTime(event.signup_opens_at)
     const canManage = !!my?.can_manage
+    const canManageBracket = !!my?.can_manage_bracket || canManage
     const hasBracket = (bracket?.stages.length ?? 0) > 0
-    const visibleTabs = (canManage ? TABS : BASE_TABS).filter(t => t.id !== 'bracket' || hasBracket)
-    const activeTab = (tab === 'manage' && !canManage) || (tab === 'bracket' && !hasBracket) ? 'info' : tab
+    const visibleTabs = (canManageBracket ? TABS : BASE_TABS).filter(t => t.id !== 'bracket' || hasBracket)
+    const activeTab = (tab === 'manage' && !canManageBracket) || (tab === 'bracket' && !hasBracket) ? 'info' : tab
 
     return (
         <div className="h-full flex flex-col overflow-hidden space-y-4 animate-in fade-in slide-in-from-bottom-0 duration-500">
@@ -224,13 +225,14 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
                         />
                     </div>
                 )}
-                {activeTab === 'manage' && canManage && accessToken && (
+                {activeTab === 'manage' && canManageBracket && accessToken && (
                     <ManagePanel
                         accessToken={accessToken}
                         slug={eventSlug}
                         event={event}
                         lfp={lfp}
                         bracket={bracket}
+                        canManageEvent={canManage}
                         onBracketChange={setBracket}
                         onMapSelect={onMapSelect}
                         onRefresh={refresh}

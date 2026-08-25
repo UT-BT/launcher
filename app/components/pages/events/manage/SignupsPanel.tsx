@@ -3,6 +3,7 @@ import { Check, Clock, Globe, Pencil, Trash2, UserMinus, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { ConfirmModal } from '@/app/components/shared/ConfirmModal'
+import { useNavState } from '@/app/components/navigation/useNavState'
 import { AdminSelect } from '@/app/components/pages/admin/components/controls'
 import { ErrorBanner, SectionCard, teamInputClass } from '@/app/components/pages/teams/teamsShared'
 import { formatEventDateTime } from '../eventsShared'
@@ -108,6 +109,11 @@ export function SignupsPanel({ accessToken, slug, event, lfp, teams, onReloadTea
     const [kickTarget, setKickTarget] = useState<{ team: EventTeam; member: EventTeamMember } | null>(null)
     const [lfpRemoveTarget, setLfpRemoveTarget] = useState<EventLfpEntry | null>(null)
 
+    const [openTeams, setOpenTeams] = useNavState('event.manage.teams', true)
+    const [openVolunteers, setOpenVolunteers] = useNavState('event.manage.volunteers', false)
+    const [openLfp, setOpenLfp] = useNavState('event.manage.lfp', false)
+    const [openAudit, setOpenAudit] = useNavState('event.manage.audit', false)
+
     const load = useCallback(async () => {
         setError(null)
         try {
@@ -160,11 +166,17 @@ export function SignupsPanel({ accessToken, slug, event, lfp, teams, onReloadTea
         <div className="space-y-4">
             <ErrorBanner message={error} />
 
-            <SectionCard title="Teams" subtitle={`${teams.length} team${teams.length === 1 ? '' : 's'} across all statuses`}>
+            <SectionCard
+                title="Teams"
+                subtitle={`${teams.length} team${teams.length === 1 ? '' : 's'} across all statuses`}
+                collapsible
+                open={openTeams}
+                onOpenChange={setOpenTeams}
+            >
                 {teams.length === 0 ? (
                     <p className="text-sm text-muted-foreground">No teams yet.</p>
                 ) : (
-                    <div className="space-y-3">
+                    <div className="grid gap-3 items-start 2xl:grid-cols-2">
                         {teams.map((team) => (
                             <div key={team.id} className="rounded-lg border border-white/10 bg-card/40 p-3 space-y-2">
                                 <div className="flex flex-wrap items-center gap-2">
@@ -230,7 +242,14 @@ export function SignupsPanel({ accessToken, slug, event, lfp, teams, onReloadTea
                 )}
             </SectionCard>
 
-            <SectionCard title="Volunteers" subtitle="Players and helpers who offered to stream, cast or admin">
+            <div className="grid gap-4 items-start xl:grid-cols-2 2xl:grid-cols-3">
+            <SectionCard
+                title="Volunteers"
+                subtitle="Players and helpers who offered to stream, cast or admin"
+                collapsible
+                open={openVolunteers}
+                onOpenChange={setOpenVolunteers}
+            >
                 {volunteers.length === 0 ? (
                     <p className="text-sm text-muted-foreground">No volunteers yet.</p>
                 ) : (
@@ -250,7 +269,13 @@ export function SignupsPanel({ accessToken, slug, event, lfp, teams, onReloadTea
                 )}
             </SectionCard>
 
-            <SectionCard title="Looking for Partner" subtitle="Remove stale entries — joining a team removes players automatically">
+            <SectionCard
+                title="Looking for Partner"
+                subtitle="Remove stale entries — joining a team removes players automatically"
+                collapsible
+                open={openLfp}
+                onOpenChange={setOpenLfp}
+            >
                 {lfp.length === 0 ? (
                     <p className="text-sm text-muted-foreground">Nobody is looking for a partner right now.</p>
                 ) : (
@@ -276,7 +301,13 @@ export function SignupsPanel({ accessToken, slug, event, lfp, teams, onReloadTea
             </SectionCard>
 
             {audit && audit.items.length > 0 && (
-                <SectionCard title="Recent activity" subtitle={`${audit.count} logged action${audit.count === 1 ? '' : 's'} for this event`}>
+                <SectionCard
+                    title="Recent activity"
+                    subtitle={`${audit.count} logged action${audit.count === 1 ? '' : 's'} for this event`}
+                    collapsible
+                    open={openAudit}
+                    onOpenChange={setOpenAudit}
+                >
                     <div className="space-y-1.5">
                         {audit.items.map((entry) => (
                             <div key={entry.id} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-xs">
@@ -289,6 +320,7 @@ export function SignupsPanel({ accessToken, slug, event, lfp, teams, onReloadTea
                     </div>
                 </SectionCard>
             )}
+            </div>
 
             <ConfirmModal
                 isOpen={!!deleteTarget}

@@ -3925,6 +3925,7 @@ export interface MyEventStatus {
     lfp: EventLfpEntry | null
     volunteer: EventVolunteer | null
     can_manage?: boolean
+    can_manage_bracket?: boolean
 }
 
 export interface EventSignupFields {

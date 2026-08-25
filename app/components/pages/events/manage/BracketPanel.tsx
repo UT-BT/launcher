@@ -3,6 +3,7 @@ import { Eye, EyeOff, Plus, RefreshCw, Shuffle, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ActionButton } from '@/app/components/pages/admin/components/controls'
 import { ConfirmModal } from '@/app/components/shared/ConfirmModal'
+import { useNavState } from '@/app/components/navigation/useNavState'
 import { ErrorBanner, SectionCard } from '@/app/components/pages/teams/teamsShared'
 import {
     createEventMatch, eventErrorMessage, fetchEventBracket, generateEventRound, generateEventStage,
@@ -216,6 +217,7 @@ function StageCard({
     onEditMatch: (match: EventMatch) => void
     onMapSelect?: (mapName: string) => void
 }) {
+    const [expanded, setExpanded] = useNavState(`event.manage.stage.${stage.key}`, false)
     const drawn = stage.matches.length > 0
     const open = stage.matches.filter(match => match.status === 'pending' || match.status === 'scheduled' || match.status === 'live').length
 
@@ -238,8 +240,11 @@ function StageCard({
             title={stage.name}
             subtitle={`${STAGE_STATUS_LABELS[stage.status]} · ${stage.matches.length} match${stage.matches.length === 1 ? '' : 'es'}${open ? ` · ${open} still open` : ''}`}
             accentClass={stage.published ? 'bg-emerald-400' : 'bg-white/20'}
+            collapsible
+            open={expanded}
+            onOpenChange={setExpanded}
             action={
-                <div className="flex flex-wrap items-center gap-2 justify-end">
+                <div className="flex flex-wrap items-center gap-2 justify-end shrink-0">
                     {!drawn && <ActionButton icon={Eye} onClick={onPreview} disabled={busy}>Preview draw</ActionButton>}
                     {!drawn && <ActionButton tone="emerald" icon={Shuffle} onClick={() => onGenerate(false)} loading={busy}>Draw stage</ActionButton>}
                     {drawn && stage.kind === 'swiss' && (
@@ -278,7 +283,7 @@ function StageCard({
                             <h4 className="text-[11px] uppercase tracking-wider text-muted-foreground">
                                 {matches[0]?.round_label ?? `Round ${round}`}
                             </h4>
-                            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 min-[2200px]:grid-cols-5">
                                 {matches.map(match => (
                                     <MatchCard
                                         key={match.id}
