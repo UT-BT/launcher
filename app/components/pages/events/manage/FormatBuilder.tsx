@@ -1,4 +1,5 @@
-import { ArrowDown, ArrowUp, GripVertical, Plus, Trash2 } from 'lucide-react'
+import { useState } from 'react'
+import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, GripVertical, Plus, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { EVENT_TIEBREAKERS } from '@/app/utils/api'
 import type {
@@ -7,9 +8,9 @@ import type {
 } from '@/app/utils/api'
 import { teamInputClass } from '@/app/components/pages/teams/teamsShared'
 import {
-    CheckField, NumberField, SelectField, STAGE_KIND_OPTIONS, SubCard, TextField,
-    TIEBREAKER_LABELS, allowsDraws, defaultConfigFor, defaultPointsTable, effectiveDefaults,
-    newStage, syncPointsTable, withSyncedPoints,
+    CheckField, NumberField, SelectField, STAGE_KIND_LABELS, STAGE_KIND_OPTIONS, STAGE_KIND_STYLES,
+    SubCard, TextField, TIEBREAKER_LABELS, allowsDraws, defaultConfigFor, defaultPointsTable,
+    effectiveDefaults, newStage, syncPointsTable, withSyncedPoints,
 } from './formatFields'
 
 interface BuilderProps {
@@ -756,21 +757,55 @@ function StageCard({ stage, index, spec, onChange, onMove, onRemove, errors, dis
     const earlierKeys = spec.stages.slice(0, index).map(entry => entry.key)
     const defaults = effectiveDefaults(spec, stage)
     const knockout = stage.kind === 'swiss' || stage.kind === 'single_elim'
+    const tone = STAGE_KIND_STYLES[stage.kind] ?? STAGE_KIND_STYLES.groups
+    const [open, setOpen] = useState(spec.stages.length === 1)
+    const problems = Object.keys(errors ?? {}).filter(path => path.startsWith(`${base}.`)).length
 
     const changeKind = (kind: EventStageKind) =>
         onChange({ ...stage, kind, config: defaultConfigFor(kind), advancement: [] })
 
     return (
-        <section className="rounded-xl border border-white/10 bg-card/40 p-3.5 space-y-3">
-            <div className="flex items-center gap-2">
-                <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Stage {index + 1}</span>
-                <div className="ml-auto flex items-center">
+        <section className="relative overflow-hidden rounded-xl border border-white/10 bg-card/40 p-3.5 pl-4 space-y-3">
+            <span className={cn('absolute left-0 inset-y-0 w-1', tone.stripe)} />
+
+            <div className="flex flex-wrap items-center gap-2">
+                <button
+                    type="button"
+                    onClick={() => setOpen(value => !value)}
+                    aria-expanded={open}
+                    className="min-w-0 flex-1 basis-56 flex items-center gap-2 cursor-pointer rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400/60"
+                >
+                    <ChevronRight className={cn('size-3.5 shrink-0 text-muted-foreground transition-transform', open && 'rotate-90')} />
+                    <span className={cn(
+                        'shrink-0 size-5 rounded-md border inline-flex items-center justify-center text-[10px] font-bold tabular-nums',
+                        tone.badge,
+                    )}>
+                        {index + 1}
+                    </span>
+                    <span className="min-w-0 truncate text-sm font-semibold text-foreground">
+                        {stage.name || `Stage ${index + 1}`}
+                    </span>
+                    <span className={cn(
+                        'shrink-0 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border',
+                        tone.chip,
+                    )}>
+                        {STAGE_KIND_LABELS[stage.kind] ?? stage.kind}
+                    </span>
+                    {problems > 0 && (
+                        <span className="shrink-0 text-[10px] font-medium text-red-300">
+                            {problems} problem{problems === 1 ? '' : 's'}
+                        </span>
+                    )}
+                </button>
+                <div className="ml-auto flex items-center shrink-0">
                     <IconButton icon={ArrowUp} title="Move up" onClick={() => onMove(-1)} disabled={disabled || index === 0} />
                     <IconButton icon={ArrowDown} title="Move down" onClick={() => onMove(1)} disabled={disabled || index === spec.stages.length - 1} />
                     <IconButton icon={Trash2} title="Remove stage" tone="red" onClick={onRemove} disabled={disabled || spec.stages.length === 1} />
                 </div>
             </div>
 
+            {!open ? null : (
+            <>
             <div className="grid gap-3 sm:grid-cols-3">
                 <TextField label="Name" value={stage.name} onChange={value => onChange({ ...stage, name: value })}
                     placeholder="Group Stage" path={`${base}.name`} errors={errors} disabled={disabled} />
@@ -821,6 +856,8 @@ function StageCard({ stage, index, spec, onChange, onMove, onRemove, errors, dis
             )}
 
             <AdvancementEditor stage={stage} index={index} spec={spec} onChange={onChange} errors={errors} disabled={disabled} />
+            </>
+            )}
         </section>
     )
 }
@@ -854,17 +891,23 @@ export function FormatBuilder({ spec, onChange, errors, disabled }: BuilderProps
             {errors?.stages && <p className="text-[11px] text-red-300">{errors.stages}</p>}
 
             {spec.stages.map((stage, index) => (
-                <StageCard
-                    key={index}
-                    stage={stage}
-                    index={index}
-                    spec={spec}
-                    errors={errors}
-                    disabled={disabled}
-                    onChange={next => update(replaceStage(spec, index, next))}
-                    onMove={delta => move(index, delta)}
-                    onRemove={() => update({ ...spec, stages: spec.stages.filter((_, at) => at !== index) })}
-                />
+                <div key={index} className="space-y-4">
+                    {index > 0 && (
+                        <div className="flex justify-center" aria-hidden="true">
+                            <ChevronDown className="size-4 text-muted-foreground/40" />
+                        </div>
+                    )}
+                    <StageCard
+                        stage={stage}
+                        index={index}
+                        spec={spec}
+                        errors={errors}
+                        disabled={disabled}
+                        onChange={next => update(replaceStage(spec, index, next))}
+                        onMove={delta => move(index, delta)}
+                        onRemove={() => update({ ...spec, stages: spec.stages.filter((_, at) => at !== index) })}
+                    />
+                </div>
             ))}
 
             <button

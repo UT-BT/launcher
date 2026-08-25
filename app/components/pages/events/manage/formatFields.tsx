@@ -183,6 +183,31 @@ export const STAGE_KIND_OPTIONS: Array<{ value: EventStageKind; label: string }>
     { value: 'single_elim', label: 'Single elimination' },
 ]
 
+export const STAGE_KIND_LABELS: Record<EventStageKind, string> = {
+    groups: 'Group stage',
+    swiss: 'Swiss bracket',
+    single_elim: 'Single elimination',
+}
+
+/** One colour per kind, so a stack of stages reads as distinct blocks at a glance. */
+export const STAGE_KIND_STYLES: Record<EventStageKind, { chip: string; badge: string; stripe: string }> = {
+    groups: {
+        chip: 'bg-sky-500/15 border-sky-500/40 text-sky-300',
+        badge: 'bg-sky-500/20 border-sky-500/40 text-sky-200',
+        stripe: 'bg-sky-400/60',
+    },
+    swiss: {
+        chip: 'bg-purple-500/15 border-purple-500/40 text-purple-300',
+        badge: 'bg-purple-500/20 border-purple-500/40 text-purple-200',
+        stripe: 'bg-purple-400/60',
+    },
+    single_elim: {
+        chip: 'bg-accent-500/15 border-accent-500/40 text-accent-300',
+        badge: 'bg-accent-500/20 border-accent-500/40 text-accent-200',
+        stripe: 'bg-accent-400/60',
+    },
+}
+
 export const TIEBREAKER_LABELS: Record<string, string> = {
     points: 'Total points',
     map_diff: 'Map differential',
