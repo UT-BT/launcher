@@ -7,7 +7,6 @@ import { useNavState } from '@/app/components/navigation/useNavState'
 import { AdminSelect } from '@/app/components/pages/admin/components/controls'
 import { ErrorBanner, SectionCard, teamInputClass } from '@/app/components/pages/teams/teamsShared'
 import { formatEventDateTime } from '../eventsShared'
-import { TeamName } from '../TeamRoster'
 import {
     deleteEventAdminTeam, fetchEventAuditLog, fetchEventVolunteers,
     kickEventTeamMember, removeEventLfp, updateEventAdminTeam, eventErrorMessage,
@@ -195,9 +194,7 @@ export function SignupsPanel({ accessToken, slug, event, lfp, teams, onReloadTea
                                         </div>
                                     ) : (
                                         <>
-                                            <TeamName teamId={team.id} className="font-medium text-foreground">
-                                                {team.name}
-                                            </TeamName>
+                                            <span className="font-medium text-foreground">{team.name}</span>
                                             <button
                                                 onClick={() => { setRenameTeamId(team.id); setRenameValue(team.name) }}
                                                 className="p-1 rounded-md text-muted-foreground hover:text-white hover:bg-white/5 cursor-pointer"
