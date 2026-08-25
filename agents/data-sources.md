@@ -118,6 +118,26 @@ A match result is authored as its **map rows** — `caps_a`/`caps_b` per map dec
 the map, and map wins decide the match. `setEventMatchResult` treats the submitted
 `maps` array as the whole truth: ordinals it omits are deleted. Optional
 `deaths_a`/`deaths_b` feed the deaths tiebreaker where a format uses one.
+
+How map wins settle the match depends on the match's `mode`:
+
+- `first_to` — a race to a majority. Complete the moment one side reaches it, so
+  the series length is always odd and the match cannot be drawn.
+- `all_maps` — every map is played. Complete only once all of them have a winner;
+  an even split sets `is_draw`, leaving `winner_team_id` null with the status
+  still `complete`.
+
+A stage can override the whole match format, which is how a group stage plays four
+maps with draws while the knockout stages stay Best of 3. A `swiss` or
+`single_elim` stage that allows draws is rejected by the server.
+
+Group points are a **scoreline table** — `EventPointsRow[]` of
+`{maps_won, maps_lost, points}`, each team reading its own line, so a draw row
+pays both sides the same and a 4-0 can outscore a 3-1. Standings carry
+`wins` / `draws` / `losses`. `scorelinesFor`, `defaultPointsTable` and
+`syncPointsTable` in `formatFields.tsx` mirror the server so the builder can offer
+exactly the scorelines a series can produce; `withSyncedPoints` keeps a table in
+step after the series length or mode changes.
 `fetchEventCapCandidates` + `linkEventMatchMapCaps` attach the real caps behind a
 played map, which fills the counts in and gives the public view per-cap times —
 a convenience, never a requirement.

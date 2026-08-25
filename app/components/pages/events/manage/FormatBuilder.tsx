@@ -2,12 +2,14 @@ import { ArrowDown, ArrowUp, GripVertical, Plus, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { EVENT_TIEBREAKERS } from '@/app/utils/api'
 import type {
-    EventElimConfig, EventFormatSpec, EventGroupsConfig, EventStageKind, EventStageSpec,
-    EventSwissConfig, EventTiebreaker,
+    EventElimConfig, EventFormatSpec, EventGroupsConfig, EventMatchDefaults, EventPointsRow,
+    EventStageKind, EventStageSpec, EventSwissConfig, EventTiebreaker,
 } from '@/app/utils/api'
+import { teamInputClass } from '@/app/components/pages/teams/teamsShared'
 import {
     CheckField, NumberField, SelectField, STAGE_KIND_OPTIONS, SubCard, TextField,
-    TIEBREAKER_LABELS, defaultConfigFor, newStage,
+    TIEBREAKER_LABELS, allowsDraws, defaultConfigFor, defaultPointsTable, effectiveDefaults,
+    newStage, syncPointsTable, withSyncedPoints,
 } from './formatFields'
 
 interface BuilderProps {
@@ -69,6 +71,80 @@ function RowList({ label, onAdd, addLabel, disabled, children }: {
         >
             {children}
         </SubCard>
+    )
+}
+
+// ------------------------------------------------------------------ match format
+
+function MatchFormatEditor({ defaults, onChange, base, errors, disabled }: {
+    defaults: EventMatchDefaults
+    onChange: (defaults: EventMatchDefaults) => void
+    base: string
+    errors?: Record<string, string>
+    disabled?: boolean
+}) {
+    const set = (patch: Partial<EventMatchDefaults>) => onChange({ ...defaults, ...patch })
+    const lengths = defaults.mode === 'all_maps' ? [1, 2, 3, 4, 5, 6, 7] : [1, 3, 5, 7]
+
+    return (
+        <>
+            <div className="grid gap-3 sm:grid-cols-3">
+                <SelectField
+                    label="Match runs"
+                    value={defaults.mode}
+                    onChange={mode => set({
+                        mode,
+                        // A race to a majority has to be an odd number of maps.
+                        best_of: mode === 'first_to' && defaults.best_of % 2 === 0 ? defaults.best_of + 1 : defaults.best_of,
+                        decider: mode === 'all_maps' ? null : defaults.decider,
+                    })}
+                    options={[
+                        { value: 'first_to' as const, label: 'Until it is won' },
+                        { value: 'all_maps' as const, label: 'Every map is played' },
+                    ]}
+                    hint={allowsDraws({ ...defaults }) ? 'A level series is a draw.' : 'There is always a winner.'}
+                    path={`${base}.mode`}
+                    errors={errors}
+                    disabled={disabled}
+                />
+                <SelectField
+                    label="Maps per match"
+                    value={String(defaults.best_of)}
+                    onChange={value => set({ best_of: Number(value) })}
+                    options={lengths.map(n => ({
+                        value: String(n),
+                        label: defaults.mode === 'all_maps' ? `${n} map${n === 1 ? '' : 's'}` : `Best of ${n}`,
+                    }))}
+                    path={`${base}.best_of`}
+                    errors={errors}
+                    disabled={disabled}
+                />
+                <NumberField label="Caps to win a map" value={defaults.caps_to_win_map} min={1}
+                    onChange={value => set({ caps_to_win_map: value })}
+                    path={`${base}.caps_to_win_map`} errors={errors} disabled={disabled} />
+            </div>
+
+            {defaults.mode === 'first_to' && (
+                <CheckField
+                    label="Decider on the last map"
+                    hint="A tied series ends on a separate round-based decider."
+                    checked={!!defaults.decider}
+                    disabled={disabled}
+                    onChange={value => set({ decider: value ? { kind: 'time_attack', rounds_to_win: 5, max_rounds: 9 } : null })}
+                />
+            )}
+
+            {defaults.mode === 'first_to' && defaults.decider && (
+                <div className="grid gap-3 sm:grid-cols-2">
+                    <NumberField label="Rounds to win" value={defaults.decider.rounds_to_win} min={1}
+                        onChange={value => set({ decider: { ...defaults.decider!, rounds_to_win: value } })}
+                        path={`${base}.decider.rounds_to_win`} errors={errors} disabled={disabled} />
+                    <NumberField label="Maximum rounds" value={defaults.decider.max_rounds} min={1}
+                        onChange={value => set({ decider: { ...defaults.decider!, max_rounds: value } })}
+                        path={`${base}.decider.max_rounds`} errors={errors} disabled={disabled} />
+                </div>
+            )}
+        </>
     )
 }
 
@@ -138,10 +214,84 @@ function TiebreakerList({ value, onChange, path, errors, disabled }: {
     )
 }
 
-function GroupsEditor({ config, onChange, base, errors, disabled }: {
+function PointsTable({ table, defaults, onChange, base, errors, disabled }: {
+    table: EventPointsRow[]
+    defaults: EventMatchDefaults
+    onChange: (table: EventPointsRow[]) => void
+    base: string
+    errors?: Record<string, string>
+    disabled?: boolean
+}) {
+    // The rows are the scorelines this series can actually produce — the length
+    // and mode decide which exist, the admin decides what each is worth.
+    const rows = syncPointsTable(table, defaults)
+    const drawable = allowsDraws(defaults)
+
+    return (
+        <SubCard title="Points per result">
+            <div className="space-y-1.5">
+                {rows.map((row, index) => {
+                    const drawn = row.maps_won === row.maps_lost
+
+                    return (
+                        <div key={`${row.maps_won}-${row.maps_lost}`} className="flex items-center gap-3">
+                            <span className={cn(
+                                'w-20 shrink-0 text-xs tabular-nums',
+                                drawn ? 'text-amber-300' : row.maps_won > row.maps_lost ? 'text-foreground' : 'text-muted-foreground',
+                            )}>
+                                {row.maps_won}–{row.maps_lost}
+                            </span>
+                            <span className="w-12 shrink-0 text-[11px] uppercase tracking-wider text-muted-foreground/70">
+                                {drawn ? 'draw' : row.maps_won > row.maps_lost ? 'win' : 'loss'}
+                            </span>
+                            <input
+                                type="number"
+                                min={0}
+                                value={row.points}
+                                disabled={disabled}
+                                onChange={event => onChange(rows.map((entry, at) => (
+                                    at === index ? { ...entry, points: Number(event.target.value) } : entry
+                                )))}
+                                className={cn(
+                                    teamInputClass, 'h-8 w-20 py-1 text-xs tabular-nums disabled:opacity-50',
+                                    errors?.[`${base}[${index}].points`] && 'border-red-500/50',
+                                )}
+                            />
+                            <span className="text-[11px] text-muted-foreground">
+                                {row.points === 1 ? 'point' : 'points'}
+                                {drawn && ' — to both teams'}
+                            </span>
+                        </div>
+                    )
+                })}
+            </div>
+
+            {errors?.[base] && <p className="text-[11px] text-red-300">{errors[base]}</p>}
+
+            <div className="flex items-center gap-2 pt-1 border-t border-white/5">
+                <p className="text-[11px] text-muted-foreground/70 min-w-0">
+                    {drawable
+                        ? 'Every map is played, so a level series stands as a draw and pays both teams the same.'
+                        : 'The series stops as soon as it is won, so it can never be drawn.'}
+                </p>
+                <button
+                    type="button"
+                    disabled={disabled}
+                    onClick={() => onChange(defaultPointsTable(defaults))}
+                    className="ml-auto shrink-0 text-[11px] text-muted-foreground hover:text-white cursor-pointer disabled:opacity-40"
+                >
+                    Reset
+                </button>
+            </div>
+        </SubCard>
+    )
+}
+
+function GroupsEditor({ config, onChange, base, defaults, errors, disabled }: {
     config: EventGroupsConfig
     onChange: (config: EventGroupsConfig) => void
     base: string
+    defaults: EventMatchDefaults
     errors?: Record<string, string>
     disabled?: boolean
 }) {
@@ -179,21 +329,14 @@ function GroupsEditor({ config, onChange, base, errors, disabled }: {
                 disabled={disabled}
             />
 
-            <SubCard title="Points per result">
-                <div className="grid gap-3 grid-cols-2 sm:grid-cols-4">
-                    <NumberField label="2–0 win" value={config.points.win_2_0} min={0} onChange={value => set('points', { ...config.points, win_2_0: value })}
-                        path={`${base}.points.win_2_0`} errors={errors} disabled={disabled} />
-                    <NumberField label="2–1 win" value={config.points.win_2_1} min={0} onChange={value => set('points', { ...config.points, win_2_1: value })}
-                        path={`${base}.points.win_2_1`} errors={errors} disabled={disabled} />
-                    <NumberField label="1–2 loss" value={config.points.loss_1_2} min={0} onChange={value => set('points', { ...config.points, loss_1_2: value })}
-                        path={`${base}.points.loss_1_2`} errors={errors} disabled={disabled} />
-                    <NumberField label="0–2 loss" value={config.points.loss_0_2} min={0} onChange={value => set('points', { ...config.points, loss_0_2: value })}
-                        path={`${base}.points.loss_0_2`} errors={errors} disabled={disabled} />
-                </div>
-                <p className="text-[11px] text-muted-foreground/70">
-                    In longer series a win with no maps dropped pays the 2–0 rate, any other win the 2–1 rate.
-                </p>
-            </SubCard>
+            <PointsTable
+                table={config.points}
+                defaults={defaults}
+                onChange={value => set('points', value)}
+                base={`${base}.points`}
+                errors={errors}
+                disabled={disabled}
+            />
 
             <TiebreakerList
                 value={config.tiebreakers}
@@ -540,6 +683,8 @@ function StageCard({ stage, index, spec, onChange, onMove, onRemove, errors, dis
 }) {
     const base = `stages[${index}]`
     const earlierKeys = spec.stages.slice(0, index).map(entry => entry.key)
+    const defaults = effectiveDefaults(spec, stage)
+    const knockout = stage.kind === 'swiss' || stage.kind === 'single_elim'
 
     const changeKind = (kind: EventStageKind) =>
         onChange({ ...stage, kind, config: defaultConfigFor(kind), advancement: [] })
@@ -565,8 +710,34 @@ function StageCard({ stage, index, spec, onChange, onMove, onRemove, errors, dis
                     path={`${base}.kind`} errors={errors} disabled={disabled} />
             </div>
 
+            <SubCard title="Match format">
+                <CheckField
+                    label="This stage plays a different match format"
+                    hint={knockout
+                        ? 'A knockout stage always needs a winner, so it cannot play an even number of maps.'
+                        : 'Otherwise it uses the format-wide setting above.'}
+                    checked={!!stage.match_defaults}
+                    disabled={disabled}
+                    onChange={value => onChange({
+                        ...stage,
+                        match_defaults: value ? { ...defaults } : null,
+                    })}
+                />
+
+                {stage.match_defaults && (
+                    <MatchFormatEditor
+                        defaults={stage.match_defaults}
+                        onChange={match_defaults => onChange({ ...stage, match_defaults })}
+                        base={`${base}.match_defaults`}
+                        errors={errors}
+                        disabled={disabled}
+                    />
+                )}
+            </SubCard>
+
             {stage.kind === 'groups' && (
-                <GroupsEditor config={stage.config as EventGroupsConfig} base={`${base}.config`} errors={errors} disabled={disabled}
+                <GroupsEditor config={stage.config as EventGroupsConfig} base={`${base}.config`} defaults={defaults}
+                    errors={errors} disabled={disabled}
                     onChange={config => onChange({ ...stage, config })} />
             )}
             {stage.kind === 'swiss' && (
@@ -584,54 +755,31 @@ function StageCard({ stage, index, spec, onChange, onMove, onRemove, errors, dis
 }
 
 export function FormatBuilder({ spec, onChange, errors, disabled }: BuilderProps) {
-    const defaults = spec.match_defaults
-    const setDefaults = (patch: Partial<typeof defaults>) =>
-        onChange({ ...spec, match_defaults: { ...defaults, ...patch } })
+    // Any change to a match format can change which scorelines exist, so the
+    // group-stage points tables are resynced on the way out.
+    const update = (next: EventFormatSpec) => onChange(withSyncedPoints(next))
 
     const move = (index: number, delta: number) => {
         const target = index + delta
         if (target < 0 || target >= spec.stages.length) return
         const stages = [...spec.stages]
         ;[stages[index], stages[target]] = [stages[target], stages[index]]
-        onChange({ ...spec, stages })
+        update({ ...spec, stages })
     }
 
     return (
         <div className="space-y-4">
             <SubCard title="Match format">
-                <div className="grid gap-3 sm:grid-cols-2">
-                    <SelectField
-                        label="Maps per match"
-                        value={String(defaults.best_of)}
-                        onChange={value => setDefaults({ best_of: Number(value) })}
-                        options={[1, 3, 5, 7].map(n => ({ value: String(n), label: `Best of ${n}` }))}
-                        path="match_defaults.best_of"
-                        errors={errors}
-                        disabled={disabled}
-                    />
-                    <NumberField label="Caps to win a map" value={defaults.caps_to_win_map} min={1}
-                        onChange={value => setDefaults({ caps_to_win_map: value })}
-                        path="match_defaults.caps_to_win_map" errors={errors} disabled={disabled} />
-                </div>
-
-                <CheckField
-                    label="Decider on the last map"
-                    hint="A tied series ends on a separate round-based decider."
-                    checked={!!defaults.decider}
+                <MatchFormatEditor
+                    defaults={spec.match_defaults}
+                    onChange={match_defaults => update({ ...spec, match_defaults })}
+                    base="match_defaults"
+                    errors={errors}
                     disabled={disabled}
-                    onChange={value => setDefaults({ decider: value ? { kind: 'time_attack', rounds_to_win: 5, max_rounds: 9 } : null })}
                 />
-
-                {defaults.decider && (
-                    <div className="grid gap-3 sm:grid-cols-2">
-                        <NumberField label="Rounds to win" value={defaults.decider.rounds_to_win} min={1}
-                            onChange={value => setDefaults({ decider: { ...defaults.decider!, rounds_to_win: value } })}
-                            path="match_defaults.decider.rounds_to_win" errors={errors} disabled={disabled} />
-                        <NumberField label="Maximum rounds" value={defaults.decider.max_rounds} min={1}
-                            onChange={value => setDefaults({ decider: { ...defaults.decider!, max_rounds: value } })}
-                            path="match_defaults.decider.max_rounds" errors={errors} disabled={disabled} />
-                    </div>
-                )}
+                <p className="text-[11px] text-muted-foreground/70">
+                    Applies to every stage that does not set its own.
+                </p>
             </SubCard>
 
             {errors?.stages && <p className="text-[11px] text-red-300">{errors.stages}</p>}
@@ -644,16 +792,16 @@ export function FormatBuilder({ spec, onChange, errors, disabled }: BuilderProps
                     spec={spec}
                     errors={errors}
                     disabled={disabled}
-                    onChange={next => onChange(replaceStage(spec, index, next))}
+                    onChange={next => update(replaceStage(spec, index, next))}
                     onMove={delta => move(index, delta)}
-                    onRemove={() => onChange({ ...spec, stages: spec.stages.filter((_, at) => at !== index) })}
+                    onRemove={() => update({ ...spec, stages: spec.stages.filter((_, at) => at !== index) })}
                 />
             ))}
 
             <button
                 type="button"
                 disabled={disabled}
-                onClick={() => onChange({ ...spec, stages: [...spec.stages, newStage(`stage${spec.stages.length + 1}`, `Stage ${spec.stages.length + 1}`, 'single_elim')] })}
+                onClick={() => update({ ...spec, stages: [...spec.stages, newStage(`stage${spec.stages.length + 1}`, `Stage ${spec.stages.length + 1}`, 'single_elim')] })}
                 className="w-full py-2 rounded-lg border border-dashed border-white/15 text-xs text-muted-foreground hover:text-white hover:border-white/25 transition-colors cursor-pointer disabled:opacity-40"
             >
                 <Plus className="inline size-3.5 mr-1" /> Add stage

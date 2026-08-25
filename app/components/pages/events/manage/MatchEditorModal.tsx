@@ -221,7 +221,9 @@ export function MatchEditorModal({ accessToken, slug, match: initial, entrants, 
                 </SubCard>
 
                 <SubCard
-                    title={`Maps — best of ${match.best_of}, first to ${match.caps_to_win} caps`}
+                    title={match.mode === 'all_maps'
+                        ? `Maps — all ${match.best_of} played, first to ${match.caps_to_win} caps (a level series is a draw)`
+                        : `Maps — best of ${match.best_of}, first to ${match.caps_to_win} caps`}
                     action={
                         <button
                             type="button"

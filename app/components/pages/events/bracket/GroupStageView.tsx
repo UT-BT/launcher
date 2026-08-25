@@ -34,7 +34,16 @@ function advancementBands(specStage: EventStageSpec | null): Map<number, string>
     return bands
 }
 
-function StandingsTable({ rows, bands }: { rows: EventStandingRow[]; bands: Map<number, string> }) {
+/** Only show the draws column where the format can actually produce one. */
+function recordOf(row: EventStandingRow): string {
+    return row.draws ? `${row.wins}–${row.draws}–${row.losses}` : `${row.wins}–${row.losses}`
+}
+
+function StandingsTable({ rows, bands, drawsPossible }: {
+    rows: EventStandingRow[]
+    bands: Map<number, string>
+    drawsPossible: boolean
+}) {
     const [visible, setVisible] = useState<Set<string>>(() => new Set(COLUMNS.map(column => column.id)))
     const onResolve = useCallback((ids: Set<string>) => setVisible(ids), [])
     const shows = (id: string) => visible.has(id)
@@ -47,7 +56,7 @@ function StandingsTable({ rows, bands }: { rows: EventStandingRow[]; bands: Map<
                     <div className="min-w-0 flex-1">
                         <div className="truncate text-sm text-foreground">{row.team?.name ?? '—'}</div>
                         <div className="text-[11px] text-muted-foreground tabular-nums">
-                            {row.wins}W {row.losses}L · maps {row.maps_won}–{row.maps_lost} · caps {row.caps_for}
+                            {recordOf(row)} · maps {row.maps_won}–{row.maps_lost} · caps {row.caps_for}
                         </div>
                     </div>
                     <span className="shrink-0 tabular-nums text-sm font-semibold text-foreground">{row.points}</span>
@@ -65,7 +74,7 @@ function StandingsTable({ rows, bands }: { rows: EventStandingRow[]; bands: Map<
                 <DataTableHeaderCell width="3rem" align="right">#</DataTableHeaderCell>
                 <DataTableHeaderCell width="12rem">Team</DataTableHeaderCell>
                 <DataTableHeaderCell width="4rem" align="right">Pts</DataTableHeaderCell>
-                {shows('record') && <DataTableHeaderCell width="5rem" align="right">W–L</DataTableHeaderCell>}
+                {shows('record') && <DataTableHeaderCell width="5rem" align="right">{drawsPossible ? 'W–D–L' : 'W–L'}</DataTableHeaderCell>}
                 {shows('maps') && <DataTableHeaderCell width="5.5rem" align="right">Maps</DataTableHeaderCell>}
                 {shows('diff') && <DataTableHeaderCell width="4rem" align="right">Diff</DataTableHeaderCell>}
                 {shows('caps') && <DataTableHeaderCell width="5.5rem" align="right">Caps</DataTableHeaderCell>}
@@ -87,7 +96,7 @@ function StandingsTable({ rows, bands }: { rows: EventStandingRow[]; bands: Map<
                                 </div>
                             </DataTableCell>
                             <DataTableCell align="right" className="tabular-nums font-semibold text-foreground">{row.points}</DataTableCell>
-                            {shows('record') && <DataTableCell align="right" className="tabular-nums text-muted-foreground">{row.wins}–{row.losses}</DataTableCell>}
+                            {shows('record') && <DataTableCell align="right" className="tabular-nums text-muted-foreground">{recordOf(row)}</DataTableCell>}
                             {shows('maps') && <DataTableCell align="right" className="tabular-nums text-muted-foreground">{row.maps_won}–{row.maps_lost}</DataTableCell>}
                             {shows('diff') && (
                                 <DataTableCell align="right" className={cn(
@@ -119,27 +128,31 @@ export function GroupStageView({ stage, specStage, onMapSelect }: {
     }
 
     const config = stage.config as EventGroupsConfig | null
+    const points = config?.points ?? []
+    const drawsPossible = points.some(row => row.maps_won === row.maps_lost)
 
     return (
         <div className="space-y-6">
-            {config?.points && (
+            {points.length > 0 && (
                 <p className="text-[11px] text-muted-foreground">
-                    {`2–0 win ${config.points.win_2_0} pts · 2–1 win ${config.points.win_2_1} · 1–2 loss ${config.points.loss_1_2} · 0–2 loss ${config.points.loss_0_2}`}
+                    {points.map(row => `${row.maps_won}–${row.maps_lost} ${row.points} pt${row.points === 1 ? '' : 's'}`).join(' · ')}
                 </p>
             )}
 
             {stage.groups.map(group => (
-                <GroupPanel key={group.id} stage={stage} group={group} bands={bands} rounds={rounds} onMapSelect={onMapSelect} />
+                <GroupPanel key={group.id} stage={stage} group={group} bands={bands} rounds={rounds}
+                    drawsPossible={drawsPossible} onMapSelect={onMapSelect} />
             ))}
         </div>
     )
 }
 
-function GroupPanel({ stage, group, bands, rounds, onMapSelect }: {
+function GroupPanel({ stage, group, bands, rounds, drawsPossible, onMapSelect }: {
     stage: EventBracketStage
     group: EventBracketGroup
     bands: Map<number, string>
     rounds: number[]
+    drawsPossible: boolean
     onMapSelect?: (mapName: string) => void
 }) {
     const [showMatches, setShowMatches] = useState(false)
@@ -160,7 +173,7 @@ function GroupPanel({ stage, group, bands, rounds, onMapSelect }: {
                 )}
             </div>
 
-            <StandingsTable rows={group.standings} bands={bands} />
+            <StandingsTable rows={group.standings} bands={bands} drawsPossible={drawsPossible} />
 
             {showMatches && (
                 <div className="space-y-3">

@@ -4186,6 +4186,8 @@ export type EventEntrantStatus = 'active' | 'qualified' | 'eliminated'
 export type EventMatchStatus = 'pending' | 'scheduled' | 'live' | 'complete' | 'bye' | 'forfeit' | 'cancelled'
 export type EventMapKind = 'normal' | 'decider'
 export type EventSide = 'a' | 'b'
+/** `first_to` races to a majority and cannot be drawn; `all_maps` plays every map and can. */
+export type EventMatchMode = 'first_to' | 'all_maps'
 export type EventTiebreaker =
     | 'points' | 'map_diff' | 'head_to_head' | 'caps_for' | 'caps_diff'
     | 'maps_won' | 'common_opponents' | 'deaths' | 'seed'
@@ -4195,11 +4197,11 @@ export const EVENT_TIEBREAKERS: EventTiebreaker[] = [
     'maps_won', 'common_opponents', 'deaths', 'seed',
 ]
 
-export interface EventPointsTable {
-    win_2_0: number
-    win_2_1: number
-    loss_1_2: number
-    loss_0_2: number
+/** Points for one team's scoreline. A 2-2 row pays both teams the same. */
+export interface EventPointsRow {
+    maps_won: number
+    maps_lost: number
+    points: number
 }
 
 export interface EventDeciderSpec {
@@ -4211,6 +4213,7 @@ export interface EventDeciderSpec {
 export interface EventMatchDefaults {
     best_of: number
     caps_to_win_map: number
+    mode: EventMatchMode
     decider: EventDeciderSpec | null
 }
 
@@ -4219,7 +4222,7 @@ export interface EventGroupsConfig {
     group_size: number
     seeding: 'tiered' | 'snake' | 'random' | 'manual'
     double_round_robin: boolean
-    points: EventPointsTable
+    points: EventPointsRow[]
     tiebreakers: EventTiebreaker[]
 }
 
@@ -4353,8 +4356,10 @@ export interface EventMatch {
     slot_b_label: string | null
     best_of: number
     caps_to_win: number
+    mode: EventMatchMode
     status: EventMatchStatus
     winner_team_id: string | null
+    is_draw: boolean
     score_a: number | null
     score_b: number | null
     caps_a: number | null
@@ -4379,6 +4384,7 @@ export interface EventStandingRow {
     seed: number | null
     played: number
     wins: number
+    draws: number
     losses: number
     points: number
     maps_won: number
@@ -4479,6 +4485,7 @@ export interface EventMatchInput {
     ordinal?: number
     best_of?: number
     caps_to_win?: number
+    mode?: EventMatchMode
     status?: EventMatchStatus
     scheduled_at?: string | null
     stream_url?: string | null

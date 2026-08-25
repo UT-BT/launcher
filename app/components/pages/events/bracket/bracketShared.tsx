@@ -18,6 +18,8 @@ export const MATCH_STATUS_LABELS: Record<EventMatchStatus, string> = {
     cancelled: 'Cancelled',
 }
 
+export const DRAW_STYLE = 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+
 export const MATCH_STATUS_STYLES: Record<EventMatchStatus, string> = {
     pending: 'bg-white/5 text-muted-foreground border-white/10',
     scheduled: 'bg-sky-500/15 text-sky-300 border-sky-500/30',
@@ -87,8 +89,10 @@ export function Chip({ className, children }: { className?: string; children: Re
     )
 }
 
-export function MatchStatusChip({ status }: { status: EventMatchStatus }) {
-    return <Chip className={MATCH_STATUS_STYLES[status]}>{MATCH_STATUS_LABELS[status]}</Chip>
+export function MatchStatusChip({ match }: { match: Pick<EventMatch, 'status' | 'is_draw'> }) {
+    if (match.is_draw) return <Chip className={DRAW_STYLE}>Draw</Chip>
+
+    return <Chip className={MATCH_STATUS_STYLES[match.status]}>{MATCH_STATUS_LABELS[match.status]}</Chip>
 }
 
 function TeamRow({ team, fallback, score, won, decided }: {
@@ -211,14 +215,14 @@ export function MatchCard({ match, showMaps = true, showCaps = false, onClick, o
                     fallback={match.slot_a_label}
                     score={match.score_a}
                     won={winnerSide === 'a'}
-                    decided={decided}
+                    decided={decided && !match.is_draw}
                 />
                 <TeamRow
                     team={match.team_b}
                     fallback={match.slot_b_label}
                     score={match.score_b}
                     won={winnerSide === 'b'}
-                    decided={decided}
+                    decided={decided && !match.is_draw}
                 />
             </div>
 
@@ -235,7 +239,7 @@ export function MatchCard({ match, showMaps = true, showCaps = false, onClick, o
 
             {(match.status !== 'pending' || match.scheduled_at || footer) && (
                 <div className="flex flex-wrap items-center gap-2 pt-1">
-                    {match.status !== 'pending' && <MatchStatusChip status={match.status} />}
+                    {match.status !== 'pending' && <MatchStatusChip match={match} />}
                     {match.scheduled_at && match.status !== 'complete' && (
                         <span className="text-[11px] text-muted-foreground">{formatMatchTime(match.scheduled_at)}</span>
                     )}

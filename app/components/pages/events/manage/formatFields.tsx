@@ -3,7 +3,8 @@ import { cn } from '@/lib/utils'
 import { AdminSelect } from '@/app/components/pages/admin/components/controls'
 import { teamInputClass } from '@/app/components/pages/teams/teamsShared'
 import type {
-    EventElimConfig, EventFormatSpec, EventGroupsConfig, EventStageKind, EventStageSpec, EventSwissConfig,
+    EventElimConfig, EventFormatSpec, EventGroupsConfig, EventMatchDefaults, EventPointsRow,
+    EventStageKind, EventStageSpec, EventSwissConfig,
 } from '@/app/utils/api'
 
 /**
@@ -172,13 +173,84 @@ export const TIEBREAKER_LABELS: Record<string, string> = {
     seed: 'Tournament seeding',
 }
 
+export const DEFAULT_MATCH_DEFAULTS: EventMatchDefaults = {
+    best_of: 3,
+    caps_to_win_map: 4,
+    mode: 'first_to',
+    decider: null,
+}
+
+/** A match that plays every map can end level; a race to a majority cannot. */
+export function allowsDraws(defaults: EventMatchDefaults): boolean {
+    return defaults.mode === 'all_maps' && defaults.best_of % 2 === 0
+}
+
+/** Every result a match of this shape can produce, best first. Mirrors the server. */
+export function scorelinesFor(defaults: EventMatchDefaults): Array<[number, number]> {
+    const length = Math.max(1, defaults.best_of)
+    let lines: Array<[number, number]>
+
+    if (defaults.mode === 'all_maps') {
+        lines = Array.from({ length: length + 1 }, (_, index): [number, number] => [length - index, index])
+    } else {
+        const needed = Math.floor(length / 2) + 1
+        lines = [
+            ...Array.from({ length: needed }, (_, lost): [number, number] => [needed, lost]),
+            ...Array.from({ length: needed }, (_, index): [number, number] => [needed - 1 - index, needed]),
+        ]
+    }
+
+    return lines.sort((a, b) => (a[1] - a[0]) - (b[1] - b[0]) || b[0] - a[0])
+}
+
+export function defaultPointsTable(defaults: EventMatchDefaults): EventPointsRow[] {
+    const lines = scorelinesFor(defaults)
+
+    return lines.map(([maps_won, maps_lost], index) => ({
+        maps_won,
+        maps_lost,
+        points: lines.length - 1 - index,
+    }))
+}
+
+/** Rebuild the table for a changed series length, keeping points already set. */
+export function syncPointsTable(table: EventPointsRow[], defaults: EventMatchDefaults): EventPointsRow[] {
+    const existing = new Map((table ?? []).map(row => [`${row.maps_won}-${row.maps_lost}`, row.points]))
+
+    return defaultPointsTable(defaults).map(row => ({
+        ...row,
+        points: existing.get(`${row.maps_won}-${row.maps_lost}`) ?? row.points,
+    }))
+}
+
+export function effectiveDefaults(spec: EventFormatSpec, stage: EventStageSpec): EventMatchDefaults {
+    return stage.match_defaults ?? spec.match_defaults ?? DEFAULT_MATCH_DEFAULTS
+}
+
+/** Keep every group stage's points table in step with the series it scores. */
+export function withSyncedPoints(spec: EventFormatSpec): EventFormatSpec {
+    return {
+        ...spec,
+        stages: spec.stages.map(stage => {
+            if (stage.kind !== 'groups') return stage
+
+            const config = stage.config as EventGroupsConfig
+
+            return {
+                ...stage,
+                config: { ...config, points: syncPointsTable(config.points, effectiveDefaults(spec, stage)) },
+            }
+        }),
+    }
+}
+
 export function defaultGroupsConfig(): EventGroupsConfig {
     return {
         group_count: 2,
         group_size: 4,
         seeding: 'tiered',
         double_round_robin: false,
-        points: { win_2_0: 3, win_2_1: 2, loss_1_2: 1, loss_0_2: 0 },
+        points: defaultPointsTable(DEFAULT_MATCH_DEFAULTS),
         tiebreakers: ['points', 'map_diff', 'head_to_head', 'caps_for', 'seed'],
     }
 }
@@ -212,7 +284,7 @@ export function defaultConfigFor(kind: EventStageKind) {
 export function emptySpec(): EventFormatSpec {
     return {
         version: 1,
-        match_defaults: { best_of: 3, caps_to_win_map: 4, decider: null },
+        match_defaults: { ...DEFAULT_MATCH_DEFAULTS },
         stages: [newStage('bracket', 'Bracket', 'single_elim')],
     }
 }
