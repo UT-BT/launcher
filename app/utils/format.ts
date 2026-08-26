@@ -18,8 +18,8 @@ export function formatDelta(seconds: number): string {
 }
 
 export function formatAddedDate(added: string): string {
-    const d = new Date(added)
-    if (isNaN(d.getTime())) return '—'
+    const d = parseApiDate(added)
+    if (!d) return '—'
     return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: '2-digit' })
 }
 
@@ -36,28 +36,37 @@ export function parseApiDate(value: unknown): Date | null {
     return isNaN(d.getTime()) ? null : d
 }
 
-export function formatTimeAgo(added: string): string {
-    const then = parseServerDate(added)
-    if (isNaN(then.getTime())) return '—'
-    const secs = Math.floor((Date.now() - then.getTime()) / 1000)
-    if (secs < 45) return 'just now'
+const JUST_NOW_SECONDS = 45
+
+function formatSpan(secs: number): string {
     const mins = Math.floor(secs / 60)
-    if (mins < 60) return `${Math.max(1, mins)}m ago`
+    if (mins < 60) return `${Math.max(1, mins)}m`
     const hours = Math.floor(mins / 60)
-    if (hours < 24) return `${hours}h ago`
+    if (hours < 24) return `${hours}h`
     const days = Math.floor(hours / 24)
-    if (days < 7) return `${days}d ago`
-    if (days < 30) return `${Math.floor(days / 7)}w ago`
-    if (days < 365) return `${Math.floor(days / 30)}mo ago`
-    return `${Math.floor(days / 365)}y ago`
+    if (days < 7) return `${days}d`
+    if (days < 30) return `${Math.floor(days / 7)}w`
+    if (days < 365) return `${Math.floor(days / 30)}mo`
+    return `${Math.floor(days / 365)}y`
+}
+
+export function formatTimeAgo(added: string): string {
+    const then = parseApiDate(added)
+    if (!then) return '—'
+    const secs = Math.floor((Date.now() - then.getTime()) / 1000)
+    if (secs <= -JUST_NOW_SECONDS) return `in ${formatSpan(-secs)}`
+    if (secs < JUST_NOW_SECONDS) return 'just now'
+    return `${formatSpan(secs)} ago`
 }
 
 const NEW_MAP_WINDOW_DAYS = 30
 
 export function isNew(added: string): boolean {
+    const d = parseApiDate(added)
+    if (!d) return false
     const cutoff = new Date()
     cutoff.setDate(cutoff.getDate() - NEW_MAP_WINDOW_DAYS)
-    return new Date(added) >= cutoff
+    return d >= cutoff
 }
 
 export function displayMapName(name: string | null | undefined): string {
