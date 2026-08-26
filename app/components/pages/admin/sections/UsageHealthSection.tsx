@@ -14,14 +14,14 @@ import { parseApiDate } from '@/app/utils/format'
 
 const WINDOWS: ActivityWindow[] = ['24h', '1w', '1m', '1y']
 const TICK_FORMATS: Record<AdminUsage['bucket'], Intl.DateTimeFormatOptions> = {
-  hour: { hour: 'numeric' },
-  day: { month: 'short', day: 'numeric' },
-  month: { month: 'short', year: 'numeric' },
+  hour: { hour: 'numeric', timeZone: 'UTC' },
+  day: { month: 'short', day: 'numeric', timeZone: 'UTC' },
+  month: { month: 'short', year: 'numeric', timeZone: 'UTC' },
 }
 const POINT_FORMATS: Record<AdminUsage['bucket'], Intl.DateTimeFormatOptions> = {
-  hour: { month: 'short', day: 'numeric', hour: 'numeric' },
-  day: { weekday: 'short', month: 'short', day: 'numeric' },
-  month: { month: 'long', year: 'numeric' },
+  hour: { month: 'short', day: 'numeric', hour: 'numeric', timeZone: 'UTC', timeZoneName: 'short' },
+  day: { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' },
+  month: { month: 'long', year: 'numeric', timeZone: 'UTC' },
 }
 
 function formatBucket(value: unknown, bucket: AdminUsage['bucket'], formats: Record<AdminUsage['bucket'], Intl.DateTimeFormatOptions>): string {

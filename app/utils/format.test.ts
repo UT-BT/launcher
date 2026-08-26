@@ -72,6 +72,11 @@ describe('parseApiDate', () => {
         expect(d!.getTime()).toBe(Date.UTC(2026, 6, 27, 2, 25, 0))
     })
 
+    it('parses a bare calendar date as UTC midnight', () => {
+        expect(parseApiDate('2026-08-26')!.toISOString()).toBe('2026-08-26T00:00:00.000Z')
+        expect(parseApiDate('  2026-08-26  ')!.toISOString()).toBe('2026-08-26T00:00:00.000Z')
+    })
+
     it('returns null for garbage, empty, and non-string input', () => {
         expect(parseApiDate('not a date')).toBeNull()
         expect(parseApiDate('')).toBeNull()
@@ -139,6 +144,14 @@ describe('formatAddedDate', () => {
         expect(formatAddedDate('2026-08-26T22:30:00+00:00')).toBe(expected)
     })
 
+    it('renders a date-only value as that calendar day in every viewer zone', () => {
+        const expected = new Date(Date.UTC(2026, 7, 26))
+            .toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: '2-digit', timeZone: 'UTC' })
+
+        expect(formatAddedDate('2026-08-26')).toBe(expected)
+        expect(formatAddedDate('2026-08-26')).not.toBe('—')
+    })
+
     it('returns a dash for unparseable input', () => {
         expect(formatAddedDate('not a date')).toBe('—')
     })
@@ -158,6 +171,11 @@ describe('isNew', () => {
     it('accepts both serialization styles for the same instant', () => {
         expect(isNew('2026-08-20 08:00:00')).toBe(true)
         expect(isNew('2026-08-20T08:00:00+00:00')).toBe(true)
+    })
+
+    it('accepts a bare calendar date', () => {
+        expect(isNew('2026-08-20')).toBe(true)
+        expect(isNew('2026-06-20')).toBe(false)
     })
 
     it('rejects stamps outside the window and unparseable input', () => {

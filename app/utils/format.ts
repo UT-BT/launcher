@@ -17,15 +17,22 @@ export function formatDelta(seconds: number): string {
     return formatCapTime(seconds)
 }
 
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/
+const HAS_TIME = /\d{2}:\d{2}/
+
 export function formatAddedDate(added: string): string {
     const d = parseApiDate(added)
     if (!d) return '—'
-    return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: '2-digit' })
+    const options: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'short', day: '2-digit' }
+    if (DATE_ONLY.test(added.trim())) options.timeZone = 'UTC'
+    return d.toLocaleDateString(undefined, options)
 }
 
 function parseServerDate(added: string): Date {
-    if (/^[A-Za-z]{3},/.test(added.trim())) return new Date(added)
-    const iso = added.includes('T') ? added : added.replace(' ', 'T')
+    const value = added.trim()
+    if (/^[A-Za-z]{3},/.test(value)) return new Date(value)
+    const iso = value.includes('T') ? value : value.replace(' ', 'T')
+    if (!HAS_TIME.test(iso)) return new Date(iso)
     const withZone = /[zZ]|[+-]\d\d:?\d\d$/.test(iso) ? iso : `${iso}Z`
     return new Date(withZone)
 }

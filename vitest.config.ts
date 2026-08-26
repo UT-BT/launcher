@@ -4,6 +4,7 @@ import { defineConfig } from 'vitest/config'
 export default defineConfig({
   define: {
     __WEB_TARGET__: 'false',
+    __APP_VERSION__: '"0.0.0-test"',
   },
   resolve: {
     alias: {
