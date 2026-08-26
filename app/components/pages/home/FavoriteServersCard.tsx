@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import { Eye, LogIn, Play, Star } from 'lucide-react'
+import { AlertTriangle, Eye, LogIn, Play, Star } from 'lucide-react'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import { Button } from '@/app/components/ui/button'
 import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
@@ -11,6 +11,7 @@ import { capabilities } from '@/app/platform'
 
 interface FavoriteServersCardProps {
     favoriteServerIds: Set<string>
+    loadFailed: boolean
     liveServers: Server[]
     installationStatus?: 'valid' | 'no-install' | 'unsupported' | null
     signedIn: boolean
@@ -20,17 +21,17 @@ interface FavoriteServersCardProps {
     onViewServers?: () => void
 }
 
-function EmptyState({ children }: { children: ReactNode }) {
+function EmptyState({ icon, children }: { icon?: ReactNode, children: ReactNode }) {
     return (
         <div className="bg-card/30 border border-hairline/5 rounded-xl flex flex-col items-center justify-center gap-3 px-4 py-8 text-center">
-            <Star className="size-6 text-violet-300/70" />
+            {icon ?? <Star className="size-6 text-violet-300/70" />}
             {children}
         </div>
     )
 }
 
 export function FavoriteServersCard({
-    favoriteServerIds, liveServers, installationStatus, signedIn,
+    favoriteServerIds, loadFailed, liveServers, installationStatus, signedIn,
     onJoin, onToggleFavorite, onSignIn, onViewServers,
 }: FavoriteServersCardProps) {
     const liveById = useMemo(() => new Map(liveServers.map(server => [server.id, server])), [liveServers])
@@ -73,6 +74,14 @@ export function FavoriteServersCard({
                     <LogIn className="size-3.5" />
                     Continue with Discord
                 </Button>
+            </EmptyState>
+        )
+    }
+
+    if (loadFailed) {
+        return (
+            <EmptyState icon={<AlertTriangle className="size-6 text-amber-400/80" />}>
+                <p className="text-xs text-muted-foreground">We couldn&apos;t load your favorite servers. Your stars are safe &mdash; refresh to try again.</p>
             </EmptyState>
         )
     }

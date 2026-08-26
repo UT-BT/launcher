@@ -310,7 +310,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
     toggleFavorite(mapName)
   }, [accessToken, toggleFavorite])
 
-  const { favoriteServerIds, toggle: toggleServerFavorite } = useServerFavorites(accessToken, userId)
+  const { favoriteServerIds, favoritesLoadFailed: favoriteServersLoadFailed, toggle: toggleServerFavorite } = useServerFavorites(accessToken, userId)
 
   const toggleServerFavoriteOrLogin = useCallback((serverId: string) => {
     if (!accessToken) {
@@ -685,6 +685,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
           installationStatus={installationStatus}
           favoriteMapNames={favoriteMapNames}
           favoriteServerIds={favoriteServerIds}
+          favoriteServersLoadFailed={favoriteServersLoadFailed}
           caches={homeCaches}
           onCachesChange={setHomeCaches}
           achievementsCaches={achievementsCaches}
@@ -847,6 +848,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
           newsSeenIso={badgeSeen['news'] ?? null}
           favoriteMapNames={favoriteMapNames}
           favoriteServerIds={favoriteServerIds}
+          favoriteServersLoadFailed={favoriteServersLoadFailed}
           caches={homeCaches}
           onCachesChange={setHomeCaches}
           achievementsCaches={achievementsCaches}

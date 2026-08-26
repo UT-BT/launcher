@@ -341,10 +341,15 @@ Don't bypass `toggleFavorite` in `Main.tsx`.
 
 Server favorites are **not** UI state and are not in the synced localStorage
 store. They are their own account resource on the API, loaded by
-`app/hooks/useServerFavorites.ts` and owned by `Main.tsx` exactly like map
-favorites: optimistic toggle, write, rollback on failure. Keyed by the server's
-API `id` (NOT hostname or `ip:port` — both can change; the API rejects anything
-that is not a resolved server id).
+`app/hooks/useServerFavorites.ts` and owned by `Main.tsx`: optimistic toggle,
+write, rollback on failure. Keyed by the server's API `id` (NOT hostname or
+`ip:port` — both can change; the API rejects anything that is not a resolved
+server id).
+
+Unlike `useFavorites` (maps), the server-favorites hook serialises toggles per
+server id and rolls back by reversing the one failed operation against the live
+set rather than restoring a snapshot, and it distinguishes a failed read
+(`favoritesLoadFailed`) from an empty one. See `agents/data-sources.md`.
 
 Signed out there are no favorites at all: the set is empty and
 `toggleServerFavoriteOrLogin` in `Main.tsx` raises the sign-in modal instead of

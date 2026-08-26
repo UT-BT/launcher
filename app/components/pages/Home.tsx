@@ -80,6 +80,7 @@ interface HomeProps {
     newsSeenIso?: string | null
     favoriteMapNames: Set<string>
     favoriteServerIds: Set<string>
+    favoriteServersLoadFailed: boolean
     caches: HomePageCaches
     onCachesChange: (updater: (prev: HomePageCaches) => HomePageCaches) => void
     achievementsCaches: AchievementsPageCaches
@@ -104,6 +105,7 @@ const EMPTY_SUMMARY: Summary = {
 
 export function Home({
     userProfile, installationStatus, newsSeenIso, favoriteMapNames, favoriteServerIds,
+    favoriteServersLoadFailed,
     caches, onCachesChange, achievementsCaches, onEnsureAchievements,
     onToggleFavorite, onToggleServerFavorite, onMapSelect,
     onViewServers, onViewMaps, onViewNewMaps, onViewWorldRecords, onViewPlayers, onViewNews,
@@ -340,6 +342,7 @@ export function Home({
         >
             <FavoriteServersCard
                 favoriteServerIds={favoriteServerIds}
+                loadFailed={favoriteServersLoadFailed}
                 liveServers={servers ?? []}
                 installationStatus={installationStatus}
                 signedIn={Boolean(userProfile?.accessToken)}

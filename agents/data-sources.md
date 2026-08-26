@@ -463,8 +463,21 @@ follow the signed-in account across the desktop launcher and the website with no
 local tier at all. Fetchers live in `app/utils/api.ts`
 (`fetchUserFavoriteServers` / `addFavoriteServer` / `removeFavoriteServer`,
 against `/user_favorite_servers`); `app/hooks/useServerFavorites.ts` owns the
-set and the optimistic toggle (write, rollback on failure), and `Main.tsx`
-exposes it as `favoriteServerIds` + `toggleServerFavoriteOrLogin`.
+set and the optimistic toggle, and `Main.tsx` exposes it as `favoriteServerIds`
++ `favoriteServersLoadFailed` + `toggleServerFavoriteOrLogin`.
+
+Two rules the hook enforces, because getting either wrong makes the launcher
+delete a favorite the user still wants:
+
+- **Toggles serialise per server id.** A second click on a star waits for the
+  first write to settle, so a double click resolves to one net state instead of
+  racing a POST against a DELETE. A failed write is undone by reversing that one
+  operation against the live set — never by restoring a snapshot, which would
+  wipe another server's toggle that succeeded in the meantime.
+- **A failed read is not an empty list.** `fetchUserFavoriteServers` throws on a
+  non-OK response like its sibling writers; the hook catches it and raises
+  `favoritesLoadFailed`, and Home's card says so instead of rendering the "you
+  have no favorites" empty state with every star dark.
 
 **Keyed by the server's API `id`**, never a hostname or `ip:port` — those change,
 and the API rejects anything that is not a resolved server id. `id` is on every

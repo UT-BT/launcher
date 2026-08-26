@@ -2777,25 +2777,20 @@ export interface UserFavoriteServer {
 }
 
 export async function fetchUserFavoriteServers(accessToken: string, userId?: string | number): Promise<string[]> {
-    try {
-        const url = userId !== undefined && userId !== null && userId !== ''
-            ? `${API_BASE_URL}/user_favorite_servers/?user=${encodeURIComponent(String(userId))}`
-            : `${API_BASE_URL}/user_favorite_servers/`
-        const response = await fetch(url, {
-            headers: bearerHeaders(accessToken)
-        })
-        if (!response.ok) {
-            throw new Error(`Failed to fetch server favorites: ${response.statusText} (${response.status})`)
-        }
-        const json = await response.json()
-        if (json.success && Array.isArray(json.data)) {
-            return (json.data as UserFavoriteServer[]).map((row) => row.server_id)
-        }
-        return []
-    } catch (error) {
-        console.error('Error fetching server favorites:', error)
-        return []
+    const url = userId !== undefined && userId !== null && userId !== ''
+        ? `${API_BASE_URL}/user_favorite_servers/?user=${encodeURIComponent(String(userId))}`
+        : `${API_BASE_URL}/user_favorite_servers/`
+    const response = await fetch(url, {
+        headers: bearerHeaders(accessToken)
+    })
+    if (!response.ok) {
+        throw new Error(`Failed to fetch server favorites: ${response.statusText} (${response.status})`)
     }
+    const json = await response.json()
+    if (json.success && Array.isArray(json.data)) {
+        return (json.data as UserFavoriteServer[]).map((row) => row.server_id)
+    }
+    return []
 }
 
 export async function addFavoriteServer(accessToken: string, serverId: string): Promise<void> {

@@ -235,9 +235,17 @@ describe('server favorites', () => {
         expect(fetchMock.mock.calls[0][0]).toContain('?user=228152236587483136')
     })
 
-    it('degrades to no favorites rather than throwing when the read fails', async () => {
+    it('surfaces a failed read instead of passing it off as an empty favorites list', async () => {
         vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('', { status: 500 })))
-        vi.stubGlobal('console', { ...console, error: vi.fn() })
+
+        await expect(fetchUserFavoriteServers('token', '1')).rejects.toThrow(/500/)
+    })
+
+    it('treats a success envelope with no data key as no favorites', async () => {
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ success: true }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+        })))
 
         expect(await fetchUserFavoriteServers('token', '1')).toEqual([])
     })
