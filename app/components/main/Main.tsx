@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef, lazy, Suspense, type Dispatch, type SetStateAction } from 'react'
 import { AppLayout } from '@/app/components/layout/AppLayout'
 import { ErrorBoundary } from '@/app/components/ErrorBoundary'
-import { ConfirmModal } from '@/app/components/shared/ConfirmModal'
 import { trackPage } from '@/app/utils/telemetry'
 import {
   NavigationContext,
@@ -80,6 +79,7 @@ const CapDetailPage = lazy(() => import('@/app/components/pages/CapDetailPage').
 const TeamCapDetailPage = lazy(() => import('@/app/components/pages/TeamCapDetailPage').then(m => ({ default: m.TeamCapDetailPage })))
 const NewsDetailPage = lazy(() => import('@/app/components/pages/NewsDetailPage').then(m => ({ default: m.NewsDetailPage })))
 const AdminPage = lazy(() => import('@/app/components/pages/admin/AdminPage').then(m => ({ default: m.AdminPage })))
+const ConfirmModal = lazy(() => import('@/app/components/shared/ConfirmModal').then(m => ({ default: m.ConfirmModal })))
 import { InstallationBanner } from '@/app/components/InstallationBanner'
 import { UpdateBanner } from '@/app/components/updater/UpdateBanner'
 import { FavoritesSyncModal } from '@/app/components/shared/FavoritesSyncModal'
@@ -907,21 +907,25 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
       />
       <PatreonModal />
       <AuthRequiredModal request={loginRequest} onClose={() => setLoginRequest(null)} />
-      <ConfirmModal
-        isOpen={!!pendingLeave}
-        onClose={() => setPendingLeave(null)}
-        onConfirm={() => {
-          const target = pendingLeave
-          setPendingLeave(null)
-          if (target?.move) target.move()
-          else if (target?.view) commitNavigate(target.view, target.params ?? {})
-        }}
-        title="Leave without saving?"
-        message={pendingLeave?.message ?? ''}
-        detail="Anything you have not saved is lost."
-        confirmText="Leave"
-        variant="error"
-      />
+      {pendingLeave && (
+        <Suspense fallback={null}>
+          <ConfirmModal
+            isOpen
+            onClose={() => setPendingLeave(null)}
+            onConfirm={() => {
+              const target = pendingLeave
+              setPendingLeave(null)
+              if (target.move) target.move()
+              else if (target.view) commitNavigate(target.view, target.params ?? {})
+            }}
+            title="Leave without saving?"
+            message={pendingLeave.message}
+            detail="Anything you have not saved is lost."
+            confirmText="Leave"
+            variant="error"
+          />
+        </Suspense>
+      )}
     </div>
   )
 }
