@@ -641,6 +641,7 @@ export interface AdminActivity {
     requestedEnd: string | null
     partialFrom: string | null
     dayResolutionSeries: string[]
+    unavailableSeries: string[]
     points: AdminActivityPoint[]
 }
 
@@ -681,6 +682,7 @@ export async function fetchAdminActivity(token: string, range: AdminActivityRang
         requestedEnd: toNullableIso(raw.requested_end),
         partialFrom: toNullableIso(raw.partial_from),
         dayResolutionSeries: asStringArray(raw.day_resolution_series),
+        unavailableSeries: asStringArray(raw.unavailable_series),
         points: asArray<unknown>(raw.points).map(toActivityPoint),
     }
 }

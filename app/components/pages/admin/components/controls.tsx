@@ -1,4 +1,4 @@
-import { useState, useEffect, type ReactNode } from 'react'
+import { useState, useEffect, useRef, type ReactNode } from 'react'
 import { Search, Loader2, X, ChevronLeft, ChevronRight, ChevronDown, Check, Copy, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Input } from '@/app/components/ui/input'
@@ -282,20 +282,55 @@ export interface DateRangeSelection {
   end: string
 }
 
+export const DATE_COMMIT_DELAY_MS = 400
+
 function DateField({ label, value, max, onChange }: {
   label: string
   value: string
   max: string
   onChange: (v: string) => void
 }) {
+  const [draft, setDraft] = useState(value)
+  const pending = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const cancel = () => {
+    if (pending.current === null) return
+    clearTimeout(pending.current)
+    pending.current = null
+  }
+
+  useEffect(() => {
+    cancel()
+    setDraft(value)
+  }, [value])
+
+  useEffect(() => cancel, [])
+
+  const schedule = (next: string) => {
+    setDraft(next)
+    cancel()
+    pending.current = setTimeout(() => {
+      pending.current = null
+      onChange(next)
+    }, DATE_COMMIT_DELAY_MS)
+  }
+
+  const commitNow = () => {
+    if (pending.current === null) return
+    cancel()
+    onChange(draft)
+  }
+
   return (
     <label className="flex items-center gap-1.5 flex-1 min-w-[10.5rem]">
       <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium shrink-0">{label}</span>
       <input
         type="date"
-        value={value}
+        value={draft}
         max={max}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => schedule(e.target.value)}
+        onBlur={commitNow}
+        onKeyDown={(e) => { if (e.key === 'Enter') commitNow() }}
         style={{ colorScheme: 'dark' }}
         className={cn(
           'h-8 w-full min-w-0 px-2 rounded-md border border-hairline/10 bg-card/30 text-xs text-foreground',

@@ -8,13 +8,14 @@ export interface WeekBucket {
     value: number
 }
 
-const SHORT_DATE: Intl.DateTimeFormatOptions = { month: 'short', day: '2-digit', year: 'numeric' }
+const SHORT_DATE: Intl.DateTimeFormatOptions = { month: 'short', day: '2-digit', year: 'numeric', timeZone: 'UTC' }
+const SHORT_DAY: Intl.DateTimeFormatOptions = { month: 'short', day: '2-digit', timeZone: 'UTC' }
 
 export function formatWeekRange(startMs: number, endMs: number): string {
     const start = new Date(startMs)
     const end = new Date(endMs)
-    if (start.getFullYear() === end.getFullYear()) {
-        return `${start.toLocaleDateString(undefined, { month: 'short', day: '2-digit' })} – ${end.toLocaleDateString(undefined, SHORT_DATE)}`
+    if (start.getUTCFullYear() === end.getUTCFullYear()) {
+        return `${start.toLocaleDateString(undefined, SHORT_DAY)} – ${end.toLocaleDateString(undefined, SHORT_DATE)}`
     }
     return `${start.toLocaleDateString(undefined, SHORT_DATE)} – ${end.toLocaleDateString(undefined, SHORT_DATE)}`
 }
@@ -179,4 +180,14 @@ export function splitPartialSeries<T extends { t: string | null; partial?: boole
             partialValue: partial || index === joinIndex ? value : null,
         }
     })
+}
+
+export function needsPointMarkers(series: PartialSeriesPoint[]): boolean {
+    let solid = 0
+    let dashed = 0
+    for (const point of series) {
+        if (point.value !== null) solid += 1
+        if (point.partialValue !== null) dashed += 1
+    }
+    return solid === 1 || dashed === 1
 }

@@ -13,7 +13,7 @@ not_here:
   - "the procedure to wire a new endpoint into the UI → skill: consume-api-data"
 sections: [backend-api, errors, admin-api, event-brackets, changing-a-map-screenshot, cap-detail-page-endpoints, world-records-page-endpoints, team-maps-and-team-runs, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites, account-state-and-badges]
 last_verified: 2026-08-26
-verify_against: [app/utils/api.ts, app/utils/chartBuckets.ts, app/utils/patreon.ts, app/utils/server-utils.ts, app/components/pages/events/manage/formatFields.tsx, app/components/pages/events/bracket/bracketShared.tsx]
+verify_against: [app/utils/api.ts, app/utils/chartBuckets.ts, app/components/pages/admin/components/controls.tsx, app/utils/patreon.ts, app/utils/server-utils.ts, app/components/pages/events/manage/formatFields.tsx, app/components/pages/events/bracket/bracketShared.tsx]
 ---
 
 # Data sources
@@ -236,9 +236,12 @@ just shortcuts that fill those two dates. The server owns the granularity and an
 with `bucket` (`hour`/`day`/`week`/`month`, chosen from the span so a decade never
 asks for daily points — `bucketForSpanDays` mirrors the same ladder for labelling
 before the response lands), the effective bucket-aligned `start`/`end` it actually
-queried, the `requestedStart`/`requestedEnd` that were asked for, `partialFrom`, and
+queried, the `requestedStart`/`requestedEnd` that were asked for, `partialFrom`,
 `dayResolutionSeries` (series whose true resolution is coarser than `bucket`;
-`new_users` is day-resolution at hourly granularity).
+`new_users` is day-resolution at hourly granularity) and `unavailableSeries` (series
+this range cannot answer at all — session history is not kept far enough back for an
+hourly range months in the past). Both lists are series keys, and each chart labels
+itself from them rather than drawing an unexplained flat zero.
 
 Both edges snap OUTWARD to whole buckets, so the chart's first bucket is never a
 short one — that partial-bucket mismatch is what used to make every series dip at the
@@ -248,8 +251,18 @@ bucket is usually still accumulating; it carries `partial: true` rather than bei
 dropped, and `splitPartialSeries` moves those buckets onto a second dashed series so
 an in-progress period reads as in-progress instead of as a crash. Call
 `validateRange` before fetching — the server rejects a reversed range, a start in the
-future, or a span over `MAX_RANGE_YEARS` with a 400 whose message surfaces through
-`ApiError`.
+future, an empty `start=`/`end=`, or a span over `MAX_RANGE_YEARS` with a 400 whose
+message surfaces through `ApiError`.
+
+**Every bucket timestamp is a UTC instant, so every label must be formatted with
+`timeZone: 'UTC'`** (`formatWeekRange` already is). Formatting them in the viewer's
+zone shifts the header and the week labels by a day — east of UTC a Monday-start week
+renders as an 8-day span — and contradicts the `UTC` marker on the date inputs. The
+date inputs debounce by `DATE_COMMIT_DELAY_MS` (400ms, and commit on blur/Enter)
+before the range is applied, because a native date input fires `change` on every
+year-spinner step and each commit is a fresh set of aggregate queries; preset buttons
+stay immediate. A single-bucket range (the `Today` preset just after UTC midnight)
+draws nothing as a line, so `needsPointMarkers` turns on dots for it.
 
 The map-author fetchers back `MapAuthorsModal` (opened from the Maps section). A map
 credited to a plain name (`author_str`) scores for nobody; linking it to a player

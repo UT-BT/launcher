@@ -7,7 +7,9 @@ import {
     RANGE_PRESETS,
     asChartBucket,
     bucketForSpanDays,
+    formatWeekRange,
     isoDay,
+    needsPointMarkers,
     parseIsoDay,
     presetById,
     presetRange,
@@ -197,5 +199,59 @@ describe('splitPartialSeries', () => {
 
     it('handles an empty series', () => {
         expect(splitPartialSeries([], value, label)).toEqual([])
+    })
+})
+
+describe('formatWeekRange', () => {
+    it('labels a UTC week with its own UTC days, not the local ones', () => {
+        const monday = Date.UTC(2026, 7, 24)
+        const label = formatWeekRange(monday, monday + 7 * DAY_MS - 1)
+        expect(label).toContain('24')
+        expect(label).toContain('30')
+        expect(label).not.toContain('31')
+    })
+
+    it('spells out both years when a week crosses new year', () => {
+        const monday = Date.UTC(2026, 11, 28)
+        const label = formatWeekRange(monday, monday + 7 * DAY_MS - 1)
+        expect(label).toContain('2026')
+        expect(label).toContain('2027')
+    })
+})
+
+describe('needsPointMarkers', () => {
+    const label = (p: { t: string | null }) => p.t ?? ''
+    const value = (p: { value: number }) => p.value
+
+    it('marks a lone partial bucket that would otherwise draw nothing', () => {
+        const out = splitPartialSeries([point('a', 5, true)], value, label)
+        expect(out.map((p) => p.value)).toEqual([null])
+        expect(out.map((p) => p.partialValue)).toEqual([5])
+        expect(needsPointMarkers(out)).toBe(true)
+    })
+
+    it('marks a lone complete bucket too', () => {
+        expect(needsPointMarkers(splitPartialSeries([point('a', 5)], value, label))).toBe(true)
+    })
+
+    it('marks a two bucket series whose second bucket is partial', () => {
+        const out = splitPartialSeries([point('a', 5), point('b', 1, true)], value, label)
+        expect(needsPointMarkers(out)).toBe(true)
+    })
+
+    it('leaves an ordinary series to draw plain lines', () => {
+        const solid = splitPartialSeries([point('a', 1), point('b', 2), point('c', 3)], value, label)
+        expect(needsPointMarkers(solid)).toBe(false)
+
+        const trailing = splitPartialSeries(
+            [point('a', 1), point('b', 2), point('c', 3, true)],
+            value,
+            label,
+        )
+        expect(needsPointMarkers(trailing)).toBe(false)
+    })
+
+    it('asks for nothing on an empty series', () => {
+        expect(needsPointMarkers([])).toBe(false)
     })
 })

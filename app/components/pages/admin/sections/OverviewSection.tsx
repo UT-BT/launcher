@@ -10,8 +10,8 @@ import {
 } from '@/app/utils/api'
 import {
   BUCKET_LABEL, DAY_MS, RANGE_PRESETS, asChartBucket, bucketForSpanDays, formatWeekRange,
-  isoDay, presetById, presetRange, rangeSpanDays, splitPartialSeries, validateRange,
-  type ChartBucket, type PartialSeriesPoint,
+  isoDay, needsPointMarkers, presetById, presetRange, rangeSpanDays, splitPartialSeries,
+  validateRange, type ChartBucket, type PartialSeriesPoint,
 } from '@/app/utils/chartBuckets'
 import { cn } from '@/lib/utils'
 import type { AdminSectionProps, Tone } from '../types'
@@ -98,23 +98,25 @@ function loadRange(nowMs: number): DateRangeSelection {
   }
 }
 
+const UTC = 'UTC'
+
 function formatLabel(t: string | null, bucket: ChartBucket): string {
   if (!t) return ''
   const d = new Date(t)
   if (Number.isNaN(d.getTime())) return ''
-  if (bucket === 'hour') return d.toLocaleTimeString([], { hour: '2-digit' })
-  if (bucket === 'month') return d.toLocaleDateString([], { month: 'short', year: '2-digit' })
-  return d.toLocaleDateString([], { month: 'short', day: 'numeric' })
+  if (bucket === 'hour') return d.toLocaleTimeString([], { hour: '2-digit', timeZone: UTC })
+  if (bucket === 'month') return d.toLocaleDateString([], { month: 'short', year: '2-digit', timeZone: UTC })
+  return d.toLocaleDateString([], { month: 'short', day: 'numeric', timeZone: UTC })
 }
 
 function formatFull(t: string | null, bucket: ChartBucket): string {
   if (!t) return ''
   const d = new Date(t)
   if (Number.isNaN(d.getTime())) return ''
-  if (bucket === 'hour') return d.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric' })
-  if (bucket === 'month') return d.toLocaleDateString([], { month: 'long', year: 'numeric' })
+  if (bucket === 'hour') return d.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', timeZone: UTC })
+  if (bucket === 'month') return d.toLocaleDateString([], { month: 'long', year: 'numeric', timeZone: UTC })
   if (bucket === 'week') return formatWeekRange(d.getTime(), d.getTime() + 7 * DAY_MS - 1)
-  return d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
+  return d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric', timeZone: UTC })
 }
 
 function formatSpan(startIso: string | null, endIso: string | null): string {
@@ -122,8 +124,14 @@ function formatSpan(startIso: string | null, endIso: string | null): string {
   const start = new Date(startIso)
   const lastInstant = new Date(new Date(endIso).getTime() - 1)
   if (Number.isNaN(start.getTime()) || Number.isNaN(lastInstant.getTime())) return ''
-  const opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', year: 'numeric' }
+  const opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', year: 'numeric', timeZone: UTC }
   return `${start.toLocaleDateString([], opts)} – ${lastInstant.toLocaleDateString([], opts)}`
+}
+
+function seriesNote(key: SeriesKey, dayResolution: string[], unavailable: string[]): string | undefined {
+  if (unavailable.includes(key)) return 'not kept this far back'
+  if (dayResolution.includes(key)) return 'daily totals'
+  return undefined
 }
 
 function formatValue(v: number, unit: string): string {
@@ -169,6 +177,7 @@ const ActivityChart = memo(function ActivityChart({ title, dataKey, color, gradi
     () => splitPartialSeries(points, (p) => p[dataKey], (p) => formatLabel(p.t, bucket)),
     [points, dataKey, bucket],
   )
+  const showDots = needsPointMarkers(series)
   return (
     <div className="bg-card/30 border border-hairline/5 rounded-xl p-3">
       <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
@@ -213,7 +222,7 @@ const ActivityChart = memo(function ActivityChart({ title, dataKey, color, gradi
               stroke={color}
               strokeWidth={2}
               fill={`url(#${gradientId})`}
-              dot={false}
+              dot={showDots ? { r: 3, fill: color, stroke: color } : false}
               isAnimationActive={false}
             />
             <Area
@@ -224,7 +233,7 @@ const ActivityChart = memo(function ActivityChart({ title, dataKey, color, gradi
               strokeDasharray="4 3"
               strokeOpacity={0.75}
               fill={`url(#${gradientId}Partial)`}
-              dot={false}
+              dot={showDots ? { r: 3, fill: color, stroke: color, fillOpacity: 0.75 } : false}
               isAnimationActive={false}
             />
           </AreaChart>
@@ -286,6 +295,7 @@ export function OverviewSection({ userProfile, onNavigate }: AdminSectionProps) 
   const hasPoints = points.length > 0
   const spanLabel = formatSpan(activity?.start ?? null, activity?.end ?? null)
   const dayResolution = activity?.dayResolutionSeries ?? []
+  const unavailable = activity?.unavailableSeries ?? []
 
   return (
     <SectionShell title="Overview" icon={LayoutDashboard}>
@@ -344,7 +354,7 @@ export function OverviewSection({ userProfile, onNavigate }: AdminSectionProps) 
                 gradientId={s.gradientId}
                 bucket={bucket}
                 points={points}
-                note={dayResolution.includes(s.key) ? 'daily totals' : undefined}
+                note={seriesNote(s.key, dayResolution, unavailable)}
               />
             ))}
           </div>
