@@ -4,6 +4,8 @@ import { cn } from '@/lib/utils'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { MapNavLink } from '@/app/components/shared/MapNavLink'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
+import { CapTimeLink, openTeamCap } from '@/app/components/shared/CapTimeLink'
+import { NavLink } from '@/app/components/navigation/NavLink'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import { displayMapName, formatCapTime, formatAddedDate } from '@/app/utils/format'
 import { medalIconForInt, medalLabelForInt, formatSignedDelta, deltaClass } from './capStats'
@@ -164,7 +166,15 @@ export function HeroSection({
                         {teamRun ? (
                             <MiniStat label="Team Time">
                                 <span className="text-foreground">
-                                    {teamRun.team_time_seconds == null ? '—' : formatCapTime(teamRun.team_time_seconds)}
+                                    {teamRun.team_time_seconds == null ? (
+                                        '—'
+                                    ) : (
+                                        <CapTimeLink
+                                            teamCapId={teamRun.team_cap_id}
+                                            seconds={teamRun.team_time_seconds}
+                                            className="text-foreground"
+                                        />
+                                    )}
                                 </span>
                             </MiniStat>
                         ) : (
@@ -190,9 +200,14 @@ export function HeroSection({
                     {teamRun && (
                         <div className="rounded-lg border border-hairline/10 bg-hairline/[0.02] p-3">
                             <div className="flex items-center justify-between gap-2 mb-2">
-                                <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
+                                <NavLink
+                                    view="team-cap-detail"
+                                    params={{ teamCapId: teamRun.team_cap_id }}
+                                    onActivate={() => openTeamCap(teamRun.team_cap_id)}
+                                    className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium hover:text-foreground hover:underline decoration-dotted underline-offset-2 cursor-pointer"
+                                >
                                     Team run
-                                </span>
+                                </NavLink>
                                 <span className={cn(
                                     'inline-flex items-center gap-1 h-6 px-2 rounded-md border text-[11px] font-semibold',
                                     teamRun.state === 'verified'

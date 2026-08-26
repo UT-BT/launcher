@@ -5,15 +5,15 @@ read_when:
   - "adding or changing a helper in app/utils/api.ts"
   - "needing an avatar, map screenshot, region flag, or map-download URL"
   - "wiring map/server favorites or Patreon tier lookups"
-keywords: [api.ts, fetch, endpoint, accessToken, avatar, MapThumbnail, favorites, patreon, downloadMapZip, world_records, caps]
+keywords: [api.ts, fetch, endpoint, accessToken, avatar, MapThumbnail, favorites, patreon, downloadMapZip, world_records, caps, team caps, demo_cap_id, replay]
 provides: "the client-side API contract the launcher consumes + asset URLs + favorites/patreon sync models"
 not_here:
   - "IPC channels (window.conveyor.*) → lib/conveyor/README.md"
   - "how UI state persists in localStorage → state-patterns.md"
   - "the procedure to wire a new endpoint into the UI → skill: consume-api-data"
-sections: [backend-api, errors, admin-api, event-brackets, changing-a-map-screenshot, cap-detail-page-endpoints, world-records-page-endpoints, team-maps-and-team-runs, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites, account-state-and-badges]
+sections: [backend-api, errors, admin-api, event-brackets, changing-a-map-screenshot, cap-detail-page-endpoints, world-records-page-endpoints, team-maps-and-team-runs, linking-and-replaying-a-team-result, replay-availability, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites, account-state-and-badges]
 last_verified: 2026-08-26
-verify_against: [app/utils/api.ts, app/utils/patreon.ts, app/utils/server-utils.ts, app/components/pages/events/manage/formatFields.tsx, app/components/pages/events/bracket/bracketShared.tsx]
+verify_against: [app/utils/api.ts, app/hooks/useReplayWatch.ts, app/hooks/replayMessages.ts, app/hooks/useDemoDownload.ts, app/utils/patreon.ts, app/utils/server-utils.ts, app/components/pages/events/manage/formatFields.tsx, app/components/pages/events/bracket/bracketShared.tsx]
 ---
 
 # Data sources
@@ -48,7 +48,7 @@ full loop).
 | Players | `fetchPlayers`, `fetchPlayersCount` (→ `/v2/players`, server-side alias search/sort/pagination + medals; row type `PlayerListRow`) |
 | Reviews | `fetchMapReviews`, `fetchAllMapReviews`, `submitSummaryReview` |
 | Favorites | `fetchUserFavorites`, `addFavoriteMap`, `removeFavoriteMap`, `replaceFavoriteMaps` |
-| Demos | `fetchDemoStatus`, `getFirstPersonVideoUrl`, `downloadDemo` |
+| Demos / replays | `resolveReplayForCap` (one call → `{state, url}` where `state` is `ready` / `converting` / `unavailable` / `error`), `fetchDemoStatus`, `getFirstPersonVideoUrl`, `downloadDemo` |
 | Cap detail | `fetchCapDetail`, `fetchCapCheckpoints` |
 | Achievements | `fetchMyAchievements`, `fetchAchievementDefinitions` |
 | Home / summary | `fetchSummary` (homepage feed), `fetchHotMaps` (→ `GET /v2/summary/hot_maps` → `HotMap[]`), `fetchMedalHunt` (→ `GET /v2/summary/medal_hunt` → `MedalHuntOpportunity[]`), `fetchPendingReviews` |
@@ -244,6 +244,8 @@ it is a Discord id large enough to lose precision as a JS number.
 
 The Cap Detail page (`app/components/pages/CapDetailPage.tsx`, opened by clicking
 any cap time — see `CapTimeLink` / the `open-cap` event in `agents/navigation.md`).
+A **team** run has its own page (`TeamCapDetailPage`, `open-team-cap`) and its own
+endpoint — see [Team maps & team runs](#team-maps-and-team-runs).
 
 - **`GET /caps/<cap_id>/detail`** → `CapDetail`. Enriched single cap: the full
   `cap` record (movement/client fields) + parsed `checkpoints` and
@@ -267,7 +269,10 @@ fastest cap on every map.
   by the player-detail WR card), `users`/`difficulties`/`years` (CSV `IN`),
   `time_ranges` (CSV of `min-max` cap-second bands, OR'd), `map` (fuzzy), `maps`
   (CSV exact), `added_since`, and `count=true`. Each row carries **`active_title`**
-  (selected title) and map **`difficulty`**. The page paginates **server-side**,
+  (selected title) and map **`difficulty`**. Team-map WRs come back in the same
+  list with `members[]` populated, `user_id: null`, and `team_cap_id` set — link
+  and replay those through the team ids (see
+  [Linking and replaying a team result](#linking-and-replaying-a-team-result)). The page paginates **server-side**,
   one page at a time, mirroring `PlayersPage` — `fetchWorldRecords` for the page +
   `fetchWorldRecordsCount` (`count=true`) for the total, with a per-page cache +
   neighbour prefetch. Search / difficulty / timeframe / favorites are pushed to
@@ -303,19 +308,94 @@ run (or the roster has no verified run).
   (`fetchTeamMapLeaderboard`). One row per member combination:
   `{ id, map, added, cap_time_seconds (team time), complete, verified, disallowed,
   state, team_size, user
-  (';'-joined member ids), medal, members }`, where each `members[]` entry is
+  (';'-joined member ids), medal, demo_cap_id, members }`, where each `members[]` entry is
   `{ user, alias, cap_id, cap_time_seconds, verified }`. Options →
   `verified_limit`, `unverified_limit`, `member` (single member id), `before`
   (pagination cursor), `columns`.
 - **`GET /caps/team_runs/<team_run_id>`** → `TeamRunStatus`
-  (`fetchTeamRunStatus`): `{ complete, team_time_seconds, team_cap_id, members,
-  is_combination_best_verified, is_combination_best_unverified, is_world_record }`.
+  (`fetchTeamRunStatus`): `{ complete, team_time_seconds, team_cap_id, demo_cap_id,
+  members, is_combination_best_verified, is_combination_best_unverified, is_world_record }`.
   Used to render a run's per-member breakdown and to gate what the demo watcher
   auto-uploads for team maps.
+- **`GET /caps/team_caps/<team_cap_id>/detail`** → `TeamCapDetail`
+  (`fetchTeamCapDetail`). Powers the Team Cap Detail page: the aggregate
+  (`team_time_seconds`, `state`, `medal`, `rank_on_map` / `total_on_map`,
+  `medals` + `deltas`, `server`) plus `members[]` with a per-member `has_demo`,
+  and the run's `demo` / `demo_cap_id` (below).
 - A cap may belong to a team run: `/caps` rows and the Cap Detail `cap`
   (`/caps/<id>/detail`) carry **`team_run_id`** (`string | null`), and
   `GET /caps?btpog_ids=<id>&columns=cap_type,team_run_id` returns it alongside
   `cap_type`.
+
+### Linking and replaying a team result
+
+Two ids exist for a team result and they are not interchangeable:
+
+- the **team cap id** identifies the run and is what a time links to
+  (`CapTimeLink teamCapId=…` → the Team Cap Detail route). It is **not** a cap id
+  — there is no solo cap behind it, so passing it as `capId` 404s.
+- the **run demo cap id** (`demo_cap_id` / `demoCapId`) is the *member* cap whose
+  demo represents the run, and is what the replay and demo-download calls take.
+
+The API resolves the run demo, so never derive it in the renderer. A team's time is
+its slowest member's, so that member's demo is the only one that spans the run; the
+API picks it, breaks a tie deterministically, and falls back to the next-slowest
+member that actually has a demo. `demo_cap_id` is **null** when no member of the run
+has a demo at all — treat that as "no replay for this run" (disable the button), not
+as "still processing".
+
+Every payload that can carry a team result carries the pair, under the naming its
+surface already uses:
+
+| Payload | Team id | Run demo id |
+|---|---|---|
+| `Record` (`/v2/world_records/`, `fetchWorldRecordsForMaps`) | `team_cap_id` (null for solo) | `demo_cap_id` |
+| `WorldRecordProgressionEntry` | `team_cap_id` | `demo_cap_id` |
+| `TeamLeaderboardEntry` | `id` | `demo_cap_id` |
+| `TeamCapDetail` | `team_cap_id` | `demo_cap_id` + a `demo` object |
+| `TeamRunStatus`, `TeamMapUserStats` | `team_cap_id` | `demo_cap_id` |
+| `SummaryWorldRecord`, `Summary['achievements']`, `SummaryCap` | `id` / `teamCapId` | `demoCapId` |
+| `UserCapRow`, `UserPersonalBestRow` | `teamCapId` | `demoCapId` |
+| `TeamActivityItem` | `team_cap_id` (null for solo) | `demo_cap_id` |
+
+On solo rows `demo_cap_id` is simply that row's own cap id, so a call site can pass
+it unconditionally.
+
+`TeamCapDetail.demo` additionally describes *who* owns the run's replay —
+`{ cap_id, user, alias, cap_time_seconds, is_slowest, available }` — so the Team
+Cap Detail page can label the member whose demo it is playing. `available: false`
+means the roster has no demo on record; `demo_cap_id` is null in that case.
+
+**Read `is_slowest` before writing any copy about that replay.** When it is false
+the slowest member uploaded no demo, so what you get is a faster member's run: it
+ends *before* the team capped. Never call it "the team time" in that case, and show
+the owning member's own `cap_time_seconds`, not the team time, alongside it. Both
+strings live in `runDemoLabels.ts` (`app/components/shared/`), covered by
+`runDemoLabels.test.ts` — reuse them rather than re-wording them per page.
+
+### Replay availability
+
+`resolveReplayForCap(capId)` returns a `state`, and the UI must say different
+things for each:
+
+| `state` | Meaning | What to show |
+|---|---|---|
+| `ready` | a first-person video exists | play it |
+| `converting` | the demo exists and the pipeline can still finish it | "still being processed, try again later" |
+| `unavailable` | nothing will ever arrive: no demo for this id, or a finished conversion that produced no first-person track | "no replay has been uploaded for this run" |
+| `error` | the status service could not be reached, or the conversion itself failed | "could not load this replay" |
+
+The distinction matters: telling a user their run is "still converting" when the id
+they clicked has no demo at all sends them back to wait for something that will
+never arrive, and `converting` is only ever honest while the pipeline can still
+reach a first-person track. **Every** call site must read `state`, not just `url`,
+and map it through `replayErrorMessage` (`app/hooks/replayMessages.ts`) — a call
+site that collapses every non-`ready` state into one message states the inverse of
+the truth half the time. `useReplayWatch` does this for you; pass it a
+`loadingKey` when the id you are resolving differs from the row's own id (as it
+does for every team run) so the row's spinner still keys off the row. A call site
+holding its own error banner must also clear it on success, or a working replay
+opens under a stale failure.
 
 ## Avatar URLs
 

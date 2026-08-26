@@ -11,8 +11,10 @@ import {
     bearerHeaders,
     fetchCapDetail,
     fetchSummary,
+    fetchTeamCapDetail,
     fetchTeamMapLeaderboard,
     fetchUserSummary,
+    resolveReplayForCap,
 } from './api'
 
 function okJson(data: unknown) {
@@ -210,5 +212,114 @@ describe('avatar urls', () => {
     it('omits the size param entirely when none is given', () => {
         expect(getAvatarUrl('123456789')).not.toContain('size=')
         expect(getAvatarUrl('123456789', 64)).toContain('?size=64')
+    })
+})
+
+
+describe('fetchTeamCapDetail run demo normalisation', () => {
+    it('keeps the resolved run demo the API sent', async () => {
+        const demo = {
+            cap_id: 'member-slow',
+            user: '10',
+            alias: 'Slowpoke',
+            cap_time_seconds: 12,
+            is_slowest: true,
+            available: true,
+        }
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue(okJson({
+            id: 'tc1', team_cap_id: 'tc1', map: 'CTF-BT-Team',
+            members: [], demo, demo_cap_id: 'member-slow',
+        })))
+
+        const detail = await fetchTeamCapDetail('', 'tc1')
+
+        expect(detail!.demo).toEqual(demo)
+        expect(detail!.demo_cap_id).toBe('member-slow')
+    })
+
+    it('reports no run demo rather than inventing one', async () => {
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue(okJson({
+            id: 'tc1', team_cap_id: 'tc1', map: 'CTF-BT-Team', members: [],
+        })))
+
+        const detail = await fetchTeamCapDetail('', 'tc1')
+
+        expect(detail!.demo).toBeNull()
+        expect(detail!.demo_cap_id).toBeNull()
+    })
+})
+
+describe('replay resolution', () => {
+    function statusResponse(body: unknown, status = 200) {
+        return new Response(JSON.stringify(body), {
+            status,
+            headers: { 'Content-Type': 'application/json' },
+        })
+    }
+
+    it('plays a finished conversion', async () => {
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue(statusResponse({
+            response: { status: 4 },
+            videos: [{ type: 'first_person', url: 'https://videos.example/run.mp4' }],
+        })))
+
+        await expect(resolveReplayForCap('cap-1')).resolves.toEqual({
+            state: 'ready',
+            url: 'https://videos.example/run.mp4',
+        })
+    })
+
+    it('reports converting only while a demo is genuinely in the pipeline', async () => {
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue(statusResponse({ response: { status: 2 } })))
+
+        await expect(resolveReplayForCap('cap-1')).resolves.toEqual({ state: 'converting', url: null })
+    })
+
+    it('reports unavailable for an id the pipeline has never seen', async () => {
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue(statusResponse({ detail: 'not found' }, 404)))
+
+        await expect(resolveReplayForCap('team-cap-id')).resolves.toEqual({ state: 'unavailable', url: null })
+    })
+
+    it('reports a failed conversion as an error, not as a run nobody uploaded', async () => {
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue(statusResponse({ status: 'error' })))
+
+        await expect(resolveReplayForCap('cap-1')).resolves.toEqual({ state: 'error', url: null })
+    })
+
+    it('never calls out for a run with no resolved demo cap', async () => {
+        const fetchMock = vi.fn()
+        vi.stubGlobal('fetch', fetchMock)
+
+        await expect(resolveReplayForCap(null)).resolves.toEqual({ state: 'unavailable', url: null })
+        await expect(resolveReplayForCap(undefined)).resolves.toEqual({ state: 'unavailable', url: null })
+        expect(fetchMock).not.toHaveBeenCalled()
+    })
+
+    it('separates a transport failure from a missing replay', async () => {
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue(statusResponse({}, 503)))
+        await expect(resolveReplayForCap('cap-1')).resolves.toEqual({ state: 'error', url: null })
+
+        vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')))
+        await expect(resolveReplayForCap('cap-1')).resolves.toEqual({ state: 'error', url: null })
+    })
+
+    it('never promises a first-person track a finished conversion did not produce', async () => {
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue(statusResponse({
+            response: { status: 4 },
+            videos: [{ type: 'third_person', url: 'https://videos.example/tp.mp4' }],
+        })))
+
+        await expect(resolveReplayForCap('cap-1')).resolves.toEqual({ state: 'unavailable', url: null })
+    })
+
+    it('only reports converting for a state the pipeline can still leave', async () => {
+        for (const pipelineStatus of [0, 1, 2, 3]) {
+            vi.stubGlobal('fetch', vi.fn().mockResolvedValue(statusResponse({ response: { status: pipelineStatus } })))
+            await expect(resolveReplayForCap('cap-1')).resolves.toEqual({ state: 'converting', url: null })
+        }
+
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue(statusResponse({ response: { status: 4 }, videos: [] })))
+        await expect(resolveReplayForCap('cap-1')).resolves.toEqual({ state: 'unavailable', url: null })
     })
 })

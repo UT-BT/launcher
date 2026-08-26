@@ -95,7 +95,8 @@ export function RecentCapsCard({
                                 variant="replay"
                                 icon={Play}
                                 iconFill
-                                tooltip="Watch Replay"
+                                tooltip={cap.demoCapId ? 'Watch Replay' : 'No replay available for this run'}
+                                disabled={!cap.demoCapId}
                                 loading={loadingCapId === cap.id}
                                 onClick={() => onWatchReplay(cap)}
                             />
@@ -187,7 +188,8 @@ export function RecentCapsCard({
                                             variant="replay"
                                             icon={Play}
                                             iconFill
-                                            tooltip="Watch Replay"
+                                            tooltip={cap.demoCapId ? 'Watch Replay' : 'No replay available for this run'}
+                                            disabled={!cap.demoCapId}
                                             loading={loadingCapId === cap.id}
                                             onClick={() => onWatchReplay(cap)}
                                         />

@@ -360,8 +360,8 @@ export function WorldRecordProgressionModal({
                                         )}
                                     </span>
                                     <CapTimeLink
-                                        capId={entry.members && entry.members.length > 0 ? undefined : entry.cap_id}
-                                        teamCapId={entry.members && entry.members.length > 0 ? entry.cap_id : undefined}
+                                        capId={entry.team_cap_id ? undefined : entry.cap_id}
+                                        teamCapId={entry.team_cap_id ?? undefined}
                                         seconds={entry.cap_time_seconds}
                                         className="text-xs font-mono tabular-nums text-foreground/85 shrink-0"
                                     />

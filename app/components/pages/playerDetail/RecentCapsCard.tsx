@@ -308,7 +308,8 @@ export function RecentCapsCard({
                                 const d = new Date(cap.added)
                                 return isNaN(d.getTime()) ? cap.added : d.toLocaleString()
                             })() : '—'
-                            const canPlay = cap.verified && !cap.disallowed
+                            const demoCapId = cap.demoCapId ?? null
+                            const canPlay = cap.verified && !cap.disallowed && !!demoCapId
                             return (
                                 <DataTableRow
                                     key={cap.id}
@@ -379,11 +380,12 @@ export function RecentCapsCard({
                                                     variant="replay"
                                                     icon={canPlay ? Play : MessageSquareOff}
                                                     iconFill={canPlay}
-                                                    tooltip={canPlay ? 'Watch run' : 'No replay — cap not verified'}
+                                                    tooltip={canPlay ? 'Watch run' : cap.verified && !cap.disallowed ? 'No replay available for this run' : 'No replay — cap not verified'}
                                                     disabled={!canPlay}
                                                     loading={replay.loadingCapId === cap.id}
                                                     onClick={() => replay.openReplay({
-                                                        capId: cap.id,
+                                                        capId: demoCapId,
+                                                        loadingKey: cap.id,
                                                         mapName: cap.mapName,
                                                         time: cap.time,
                                                     })}
@@ -391,11 +393,12 @@ export function RecentCapsCard({
                                                 <IconActionButton
                                                     variant="download"
                                                     icon={Download}
-                                                    tooltip={canPlay ? 'Download demo' : 'No demo — cap not verified'}
+                                                    tooltip={canPlay ? 'Download demo' : cap.verified && !cap.disallowed ? 'No demo available for this run' : 'No demo — cap not verified'}
                                                     disabled={!canPlay}
                                                     onClick={() => demoDownload.start(
                                                         { id: cap.id, alias: undefined, cap_time_seconds: cap.time } as any,
                                                         cap.mapName,
+                                                        demoCapId,
                                                     )}
                                                 />
                                             </div>

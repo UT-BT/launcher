@@ -85,7 +85,8 @@ export function LatestRecordsCard({
                             variant="replay"
                             icon={Play}
                             iconFill
-                            tooltip="Watch Replay"
+                            tooltip={r.demoCapId ? 'Watch Replay' : 'No replay available for this run'}
+                            disabled={!r.demoCapId}
                             loading={loadingCapId === r.id}
                             onClick={() => onWatchReplay(r)}
                         />
@@ -185,7 +186,8 @@ export function LatestRecordsCard({
                                             variant="replay"
                                             icon={Play}
                                             iconFill
-                                            tooltip="Watch Replay"
+                                            tooltip={r.demoCapId ? 'Watch Replay' : 'No replay available for this run'}
+                                            disabled={!r.demoCapId}
                                             loading={loadingCapId === r.id}
                                             onClick={() => onWatchReplay(r)}
                                             />

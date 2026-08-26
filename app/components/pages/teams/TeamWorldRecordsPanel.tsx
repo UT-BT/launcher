@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
-import { CapTimeLink, openCap } from '@/app/components/shared/CapTimeLink'
+import { TeamHolders } from '@/app/components/shared/TeamHolders'
+import { CapTimeLink, openCap, openTeamCap } from '@/app/components/shared/CapTimeLink'
 import {
     DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow, DataTableCell,
     DataTableEmpty, DataTableSkeletonRow, type ResponsiveColumn, type SortDirection,
@@ -91,7 +92,8 @@ export function TeamWorldRecordsPanel({ accessToken, teamId, memberIds, selfUser
             This team holds no world records yet.
         </div>
     ) : records.map(r => {
-        const isOwn = selfUserId != null && String(r.user_id) === String(selfUserId)
+        const isTeamRow = !!r.team_cap_id
+        const isOwn = !isTeamRow && selfUserId != null && String(r.user_id) === String(selfUserId)
         return (
             <div
                 key={r.cap_id}
@@ -99,11 +101,24 @@ export function TeamWorldRecordsPanel({ accessToken, teamId, memberIds, selfUser
                 className={cn('grid grid-cols-[minmax(0,1fr)_auto] gap-3 p-3 border-b border-hairline/5 last:border-0', isOwn && 'bg-emerald-500/[0.05]')}
             >
                 <div className="min-w-0 space-y-1.5">
-                    <PlayerInfo userId={r.user_id} alias={r.alias} title={r.active_title} size="sm" highlight={isOwn} showYouBadge={isOwn} />
+                    {isTeamRow ? (
+                        <TeamHolders
+                            members={(r.members ?? []).map(m => ({ userId: m.user, alias: m.alias, activeTitle: m.active_title }))}
+                            size="sm"
+                            currentUserId={selfUserId}
+                        />
+                    ) : (
+                        <PlayerInfo userId={r.user_id} alias={r.alias} title={r.active_title} size="sm" highlight={isOwn} showYouBadge={isOwn} />
+                    )}
                     <span className="text-sm text-foreground truncate block">{displayMapName(r.map)}</span>
                 </div>
                 <div className="flex flex-col items-end justify-between gap-1.5">
-                    <CapTimeLink capId={r.cap_id} seconds={r.cap_time_seconds} className="font-mono tabular-nums font-bold text-blue-300" />
+                    <CapTimeLink
+                        capId={isTeamRow ? undefined : r.cap_id}
+                        teamCapId={isTeamRow ? r.cap_id : undefined}
+                        seconds={r.cap_time_seconds}
+                        className="font-mono tabular-nums font-bold text-blue-300"
+                    />
                     <span className="text-xs text-muted-foreground tabular-nums">{r.added ? formatAddedDate(r.added) : '—'}</span>
                 </div>
             </div>
@@ -143,11 +158,24 @@ export function TeamWorldRecordsPanel({ accessToken, teamId, memberIds, selfUser
                         <DataTableEmpty colSpan={visibleCount} message="This team holds no world records yet." />
                     ) : (
                         records.map(r => {
-                            const isOwn = selfUserId != null && String(r.user_id) === String(selfUserId)
+                            const isTeamRow = !!r.team_cap_id
+                            const isOwn = !isTeamRow && selfUserId != null && String(r.user_id) === String(selfUserId)
                             return (
-                                <DataTableRow key={r.cap_id} className={cn('cursor-pointer', isOwn && 'bg-emerald-500/[0.05]')} onClick={() => openCap(r.cap_id)}>
+                                <DataTableRow
+                                    key={r.cap_id}
+                                    className={cn('cursor-pointer', isOwn && 'bg-emerald-500/[0.05]')}
+                                    onClick={() => isTeamRow ? openTeamCap(r.cap_id) : openCap(r.cap_id)}
+                                >
                                     <DataTableCell>
-                                        <PlayerInfo userId={r.user_id} alias={r.alias} title={r.active_title} size="sm" highlight={isOwn} showYouBadge={isOwn} />
+                                        {isTeamRow ? (
+                                            <TeamHolders
+                                                members={(r.members ?? []).map(m => ({ userId: m.user, alias: m.alias, activeTitle: m.active_title }))}
+                                                size="sm"
+                                                currentUserId={selfUserId}
+                                            />
+                                        ) : (
+                                            <PlayerInfo userId={r.user_id} alias={r.alias} title={r.active_title} size="sm" highlight={isOwn} showYouBadge={isOwn} />
+                                        )}
                                     </DataTableCell>
                                     <DataTableCell>
                                         <span className="text-foreground truncate block">{displayMapName(r.map)}</span>
@@ -163,7 +191,12 @@ export function TeamWorldRecordsPanel({ accessToken, teamId, memberIds, selfUser
                                     )}
                                     {isVisible('time') && (
                                         <DataTableCell align="right">
-                                            <CapTimeLink capId={r.cap_id} seconds={r.cap_time_seconds} className="font-mono tabular-nums font-bold text-blue-300" />
+                                            <CapTimeLink
+                                                capId={isTeamRow ? undefined : r.cap_id}
+                                                teamCapId={isTeamRow ? r.cap_id : undefined}
+                                                seconds={r.cap_time_seconds}
+                                                className="font-mono tabular-nums font-bold text-blue-300"
+                                            />
                                         </DataTableCell>
                                     )}
                                     {isVisible('date') && (

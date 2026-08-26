@@ -1,9 +1,11 @@
 import { useState } from 'react'
-import { fetchDemoStatus, getFirstPersonVideoUrl } from '@/app/utils/api'
+import { resolveReplayForCap } from '@/app/utils/api'
+import { REPLAY_UNAVAILABLE_MESSAGE, replayErrorMessage } from '@/app/hooks/replayMessages'
 import type { ReplayVideoState } from '@/app/components/shared/ReplayVideoModal'
 
 interface OpenArgs {
-    capId: string
+    capId?: string | null
+    loadingKey?: string
     mapName: string
     time?: number
     alias?: string
@@ -14,19 +16,21 @@ export function useReplayWatch() {
     const [error, setError] = useState<string | null>(null)
     const [loadingCapId, setLoadingCapId] = useState<string | null>(null)
 
-    const openReplay = async ({ capId, mapName, time, alias }: OpenArgs) => {
-        if (!capId) return
-        setLoadingCapId(capId)
+    const openReplay = async ({ capId, loadingKey, mapName, time, alias }: OpenArgs) => {
+        const key = loadingKey ?? capId
+        if (!key) return
+        if (!capId) {
+            setError(REPLAY_UNAVAILABLE_MESSAGE)
+            return
+        }
+        setLoadingCapId(key)
         try {
-            const status = await fetchDemoStatus(capId)
-            const url = getFirstPersonVideoUrl(status)
-            if (url) {
+            const { state, url } = await resolveReplayForCap(capId)
+            if (state === 'ready' && url) {
                 setVideo({ url, mapName, time, alias })
             } else {
-                setError('Demo is still being processed by DemoConverter. Please try again later.')
+                setError(replayErrorMessage(state === 'ready' ? 'unavailable' : state))
             }
-        } catch {
-            setError('Could not load this replay. Please try again later.')
         } finally {
             setLoadingCapId(null)
         }

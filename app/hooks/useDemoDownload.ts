@@ -12,7 +12,8 @@ export type DemoDownloadState =
 export function useDemoDownload() {
     const [download, setDownload] = useState<DemoDownloadState | null>(null)
 
-    const start = async (entry: LeaderboardEntry, mapName: string) => {
+    const start = async (entry: LeaderboardEntry, mapName: string, demoCapId?: string | null) => {
+        const sourceCapId = demoCapId ?? entry.id
         const cleanMap = mapName.replace(/[^a-zA-Z0-9_-]/g, '_')
         const cleanAlias = (entry.alias || 'player').replace(/[^a-zA-Z0-9_-]/g, '_')
         const timeStr = formatCapTime(entry.cap_time_seconds).replace(/[:.]/g, '-')
@@ -20,7 +21,7 @@ export function useDemoDownload() {
         setDownload({ status: 'downloading', capId: entry.id, filename })
         trackOutcome('demo_download_started')
         try {
-            const buffer = await downloadDemo(entry.id)
+            const buffer = await downloadDemo(sourceCapId)
             const bytes = new Uint8Array(buffer)
             const res = await saveDemoFile(filename, bytes)
             if (res.ok) {

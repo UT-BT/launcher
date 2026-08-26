@@ -165,7 +165,8 @@ export function WorldRecordsCard({ accessToken, userId, totalCount, onMapSelect,
                                 const d = new Date(r.added)
                                 return isNaN(d.getTime()) ? r.added : d.toLocaleString()
                             })() : '—'
-                            const isTeamRow = r.members != null && r.members.length > 0
+                            const isTeamRow = !!r.team_cap_id
+                            const roster = r.members ?? []
                             return (
                                 <DataTableRow
                                     key={`${r.map}-${r.cap_id}`}
@@ -179,9 +180,9 @@ export function WorldRecordsCard({ accessToken, userId, totalCount, onMapSelect,
                                                 <div className="flex flex-col gap-1 min-w-0">
                                                     <div className="flex items-center gap-2 min-w-0">
                                                         <MapNavLink mapName={r.map} onMapSelect={onMapSelect} className="text-sm font-semibold text-foreground truncate">{displayMapName(r.map)}</MapNavLink>
-                                                        {isTeamRow && (
+                                                        {roster.length > 0 && (
                                                             <TeamRosterBadge
-                                                                members={r.members!.map(member => ({
+                                                                members={roster.map(member => ({
                                                                     userId: member.user,
                                                                     alias: member.alias,
                                                                     activeTitle: member.active_title,
