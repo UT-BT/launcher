@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import type { EventBracketGroup, EventMatch, EventMatchMap } from '@/app/utils/api'
-import { mapWinnerOf, matchOrder, seriesProgress } from './bracketShared'
+import type {
+    EventBracketGroup, EventBracketStage, EventFormatSpec, EventMatch, EventMatchMap,
+} from '@/app/utils/api'
+import { mapWinnerOf, matchOrder, seriesProgress, unfinishedFeeders } from './bracketShared'
 
 function mapRow(patch: Partial<EventMatchMap> = {}): EventMatchMap {
     return {
@@ -154,5 +156,67 @@ describe('matchOrder', () => {
         const order = [match({ id: 'second', ordinal: 1 }), match({ id: 'first', ordinal: 0 })]
             .sort(matchOrder([]))
         expect(order.map(row => row.id)).toEqual(['first', 'second'])
+    })
+})
+
+function stageRow(key: string, status: EventBracketStage['status']): EventBracketStage {
+    return {
+        id: key, key, name: key.toUpperCase(), kind: 'groups', ordinal: 0,
+        status, published: true, config: null, groups: [], entrants: [], matches: [],
+    }
+}
+
+function specWith(advancement: Array<{ from: string; to: string }>): EventFormatSpec {
+    const keys = [...new Set(advancement.flatMap(rule => [rule.from, rule.to]))]
+
+    return {
+        version: 1,
+        match_defaults: { best_of: 3, caps_to_win_map: 4, mode: 'first_to', decider: null },
+        stages: keys.map(key => ({
+            key, name: key, kind: 'groups' as const, config: null as never,
+            match_defaults: null,
+            advancement: advancement
+                .filter(rule => rule.from === key)
+                .map(rule => ({ to_stage: rule.to, label: null, from_rank: 1, to_rank: 2 })),
+        })),
+    } as EventFormatSpec
+}
+
+describe('unfinishedFeeders', () => {
+    const spec = specWith([{ from: 'groups', to: 'playoffs' }, { from: 'playoffs', to: 'final' }])
+
+    it('names a feeder that is still being played', () => {
+        const stages = [stageRow('groups', 'active'), stageRow('playoffs', 'pending')]
+
+        expect(unfinishedFeeders(spec, stages, 'playoffs').map(s => s.key)).toEqual(['groups'])
+    })
+
+    it('says nothing once the feeder is complete', () => {
+        const stages = [stageRow('groups', 'complete'), stageRow('playoffs', 'pending')]
+
+        expect(unfinishedFeeders(spec, stages, 'playoffs')).toEqual([])
+    })
+
+    it('only looks at the stages that actually feed this one', () => {
+        const stages = [stageRow('groups', 'active'), stageRow('playoffs', 'active')]
+
+        expect(unfinishedFeeders(spec, stages, 'final').map(s => s.key)).toEqual(['playoffs'])
+    })
+
+    it('reports every unfinished feeder when a stage has more than one', () => {
+        const twoWay = specWith([{ from: 'groups', to: 'final' }, { from: 'playoffs', to: 'final' }])
+        const stages = [stageRow('groups', 'active'), stageRow('playoffs', 'active')]
+
+        expect(unfinishedFeeders(twoWay, stages, 'final').map(s => s.key)).toEqual(['groups', 'playoffs'])
+    })
+
+    it('has nothing to say about a stage nothing feeds', () => {
+        const stages = [stageRow('groups', 'active')]
+
+        expect(unfinishedFeeders(spec, stages, 'groups')).toEqual([])
+    })
+
+    it('copes with no format attached', () => {
+        expect(unfinishedFeeders(null, [stageRow('groups', 'active')], 'playoffs')).toEqual([])
     })
 })

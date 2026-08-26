@@ -12,8 +12,8 @@ not_here:
   - "how UI state persists in localStorage → state-patterns.md"
   - "the procedure to wire a new endpoint into the UI → skill: consume-api-data"
 sections: [backend-api, errors, admin-api, event-brackets, changing-a-map-screenshot, cap-detail-page-endpoints, world-records-page-endpoints, team-maps-and-team-runs, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites, account-state-and-badges]
-last_verified: 2026-08-25
-verify_against: [app/utils/api.ts, app/utils/patreon.ts, app/utils/server-utils.ts, app/components/pages/events/manage/formatFields.tsx]
+last_verified: 2026-08-26
+verify_against: [app/utils/api.ts, app/utils/patreon.ts, app/utils/server-utils.ts, app/components/pages/events/manage/formatFields.tsx, app/components/pages/events/bracket/bracketShared.tsx]
 ---
 
 # Data sources
@@ -135,6 +135,16 @@ offers only the states an admin owns (`pending`, `scheduled`, `live`, `bye`,
 `cancelled`) so the form cannot claim an outcome the server then overrules.
 `mapWinnerOf` and `seriesProgress` in `bracket/bracketShared.tsx` mirror the
 server's rules so the editor can say what a result still needs.
+
+**Drawing a stage early.** A fed stage is seeded from its feeders' standings, and
+those exist from the moment a group stage is drawn — so "the top two in each
+group" resolves to the entry seeds long before it means anything. The server
+allows the draw (it only refuses when the feeders have produced nobody at all),
+so the launcher is what stops it being done by accident: `unfinishedFeeders`
+(`bracket/bracketShared.tsx`) reads the format's `advancement` rules against the
+live stage statuses, `BracketPanel` shows an amber line on any stage whose
+feeders are unfinished, and Draw/Redraw go through a confirm first. `Preview
+draw` is never gated — a dry run is the safe way to look.
 
 How map wins settle the match depends on the match's `mode`:
 

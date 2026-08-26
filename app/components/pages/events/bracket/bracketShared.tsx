@@ -5,7 +5,8 @@ import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { MapNavLink } from '@/app/components/shared/MapNavLink'
 import { TeamName } from '../TeamRoster'
 import type {
-    EventBracketGroup, EventBracketStage, EventBracketTeamRef, EventEntrantStatus, EventMatch, EventMatchMap,
+    EventBracketGroup, EventBracketStage, EventBracketTeamRef, EventEntrantStatus, EventFormatSpec,
+    EventMatch, EventMatchMap,
     EventMatchStatus, EventSide, EventStageKind, EventStageStatus,
 } from '@/app/utils/api'
 
@@ -130,6 +131,28 @@ export function matchOrder(groups: EventBracketGroup[] = []) {
         || a.ordinal - b.ordinal
         || a.id.localeCompare(b.id)
 }
+
+/**
+ * The stages feeding `stageKey` that still have matches to play.
+ *
+ * A fed stage is seeded from its feeders' standings, and those exist from the
+ * moment a group stage is drawn — so "the top two in each group" resolves long
+ * before it means anything. Drawing early succeeds and quietly fixes the
+ * pairings against a table that is still moving.
+ */
+export function unfinishedFeeders(
+    spec: EventFormatSpec | null | undefined,
+    stages: EventBracketStage[],
+    stageKey: string,
+): EventBracketStage[] {
+    const live = new Map(stages.map(stage => [stage.key, stage]))
+
+    return (spec?.stages ?? [])
+        .filter(entry => (entry.advancement ?? []).some(rule => rule.to_stage === stageKey))
+        .map(entry => live.get(entry.key))
+        .filter((stage): stage is EventBracketStage => !!stage && stage.status !== 'complete')
+}
+
 
 export function sortedMatches(stage: EventBracketStage): EventMatch[] {
     return [...stage.matches].sort(matchOrder(stage.groups))
