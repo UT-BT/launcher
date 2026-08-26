@@ -119,6 +119,7 @@ export interface MapMetadata {
 export interface BestCap {
     map: string
     cap_id?: string | null
+    team_cap_id?: string | null
     cap_time_seconds: number
     cap_type: number
     verified: boolean
@@ -213,6 +214,8 @@ export interface Record {
     color_b?: number
     active_title?: ActiveTitle | null
     difficulty?: number
+    team_cap_id?: string | null
+    demo_cap_id?: string | null
     members?: RecordTeamMember[] | null
 }
 
@@ -1872,6 +1875,8 @@ export interface WorldRecordProgressionEntry {
     cap_time_seconds: number
     added: string | null
     active_title: ActiveTitle | null
+    team_cap_id?: string | null
+    demo_cap_id?: string | null
     members?: SummaryTeamMember[] | null
 }
 
@@ -1994,6 +1999,7 @@ export interface TeamLeaderboardEntry {
     team_size: number
     user: string
     medal: number
+    demo_cap_id: string | null
     members: TeamRunMember[]
 }
 
@@ -2005,6 +2011,7 @@ export interface TeamRunStatus {
     invalid_reason?: string | null
     team_time_seconds: number | null
     team_cap_id: string
+    demo_cap_id: string | null
     members: TeamRunMember[]
     is_combination_best_verified: boolean
     is_combination_best_unverified: boolean
@@ -2059,6 +2066,7 @@ export interface TeamMapUserStats {
     total_runs: number
     team_cap_id: string | null
     team_run_id: string | null
+    demo_cap_id: string | null
     added: string | null
 }
 
@@ -2112,6 +2120,15 @@ export interface TeamCapDetailMember {
     cap?: CapRecord
 }
 
+export interface TeamCapRunDemo {
+    cap_id: string
+    user: string
+    alias: string
+    cap_time_seconds: number
+    is_slowest: boolean
+    available: boolean
+}
+
 export interface TeamCapMedalThresholds {
     world_record: number | null
     champion: number | null
@@ -2148,6 +2165,8 @@ export interface TeamCapDetail {
     completed_at: string | null
     verified_at: string | null
     members: TeamCapDetailMember[]
+    demo_cap_id: string | null
+    demo: TeamCapRunDemo | null
     is_world_record: boolean
     is_combination_best_verified: boolean
     is_combination_best_unverified: boolean
@@ -2180,6 +2199,8 @@ export async function fetchTeamCapDetail(
             total_on_map: raw.total_on_map == null ? null : asNum(raw.total_on_map),
             medals: asNonEmptyObj<TeamCapMedalThresholds>(raw.medals),
             deltas: asNonEmptyObj<TeamCapDeltas>(raw.deltas),
+            demo: asNonEmptyObj<TeamCapRunDemo>(raw.demo),
+            demo_cap_id: raw.demo_cap_id ?? null,
             server: { name: server.name ?? null, region: server.region ?? null },
         } as TeamCapDetail
     } catch {
@@ -2204,6 +2225,31 @@ export function getFirstPersonVideoUrl(status: DemoConverterStatus | null): stri
     if (status.response?.status !== 4) return null
     const fp = status.videos?.find(v => v.type === 'first_person')
     return fp?.url ?? null
+}
+
+export type ReplayState = 'ready' | 'converting' | 'unavailable' | 'error'
+
+export interface ReplayResolution {
+    state: ReplayState
+    url: string | null
+}
+
+const REPLAY_UNAVAILABLE: ReplayResolution = { state: 'unavailable', url: null }
+
+export async function resolveReplayForCap(capId: string | null | undefined): Promise<ReplayResolution> {
+    if (!capId) return REPLAY_UNAVAILABLE
+    try {
+        const res = await fetch(`${GATEWAY_BASE_URL}/democonverter/status/${encodeURIComponent(capId)}`)
+        if (res.status === 404) return REPLAY_UNAVAILABLE
+        if (!res.ok) return { state: 'error', url: null }
+        const data = await res.json() as DemoConverterStatus
+        if (data?.status === 'error') return REPLAY_UNAVAILABLE
+        const url = getFirstPersonVideoUrl(data)
+        if (url) return { state: 'ready', url }
+        return { state: 'converting', url: null }
+    } catch {
+        return { state: 'error', url: null }
+    }
 }
 
 export interface CapCheckpoint {
@@ -2552,6 +2598,7 @@ export interface SummaryWorldRecord {
     time: number
     added: string | null
     timeAgo: string
+    demoCapId?: string | null
     members?: SummaryTeamMember[] | null
 }
 
@@ -2580,6 +2627,7 @@ export interface Summary {
         verified: boolean
         isTeam?: boolean
         teamCapId?: string | null
+        demoCapId?: string | null
         teamMembers?: SummaryTeamMember[] | null
     }[]
     recentWorldRecords?: SummaryWorldRecord[]
@@ -2604,6 +2652,7 @@ export interface SummaryCap {
     isTeam?: boolean
     teamMembers?: SummaryTeamMember[] | null
     teamCapId?: string | null
+    demoCapId?: string | null
 }
 
 export async function fetchSummary(accessToken: string): Promise<Summary> {
@@ -3010,6 +3059,7 @@ export interface UserCapRow {
     isTeam: boolean
     teamMembers: SummaryTeamMember[] | null
     teamCapId: string | null
+    demoCapId: string | null
 }
 
 export interface UserCapsPage {
@@ -3032,6 +3082,7 @@ export interface UserPersonalBestRow {
     isTeam: boolean
     teamMembers: SummaryTeamMember[] | null
     teamCapId: string | null
+    demoCapId: string | null
 }
 
 export interface UserPersonalBestsPage {
@@ -3573,6 +3624,8 @@ export interface TeamActivityItem {
     title: ActiveTitle | null
     map: string | null
     cap_id: string | null
+    team_cap_id: string | null
+    demo_cap_id: string | null
     cap_time_seconds: number | null
     time_played_seconds: number | null
     medal: string | null

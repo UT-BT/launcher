@@ -10,6 +10,7 @@ import { DemoDownloadStatusModal } from '@/app/components/shared/DemoDownloadSta
 import { useDemoDownload } from '@/app/hooks/useDemoDownload'
 import {
     fetchMapLeaderboard, fetchTeamMapLeaderboard, fetchDemoStatus, getFirstPersonVideoUrl,
+    resolveReplayForCap,
     LeaderboardEntry, TeamLeaderboardEntry, MapMetadata,
 } from '@/app/utils/api'
 import { computeMedalTier, TIER_ICONS, TIER_LABELS, type MedalTier } from '@/app/components/pages/maps/medals'
@@ -59,6 +60,7 @@ export function ReplayPickerModal({
     const [loading, setLoading] = useState(false)
     const [rows, setRows] = useState<RunRow[]>([])
     const [teamRuns, setTeamRuns] = useState<TeamLeaderboardEntry[]>([])
+    const [resolvingTeamCapId, setResolvingTeamCapId] = useState<string | null>(null)
     const [error, setError] = useState<string | null>(null)
     const [page, setPage] = useState(1)
     const requestRef = useRef(0)
@@ -68,6 +70,30 @@ export function ReplayPickerModal({
     const isTeam = !compareMode && (mapMetadata?.required_players ?? 1) > 1
 
     const demoDownload = useDemoDownload()
+
+    const watchTeamRun = async (entry: TeamLeaderboardEntry) => {
+        if (!entry.demo_cap_id || !mapName) return
+        setResolvingTeamCapId(entry.id)
+        try {
+            const { url } = await resolveReplayForCap(entry.demo_cap_id)
+            if (url) {
+                onSelect(url, mapName, {
+                    id: entry.id,
+                    map: entry.map,
+                    user: entry.members?.[0]?.user ?? '',
+                    alias: (entry.members ?? []).map(m => m.alias).join(', '),
+                    cap_time_seconds: entry.cap_time_seconds,
+                    added: entry.added,
+                    cap_type: 2,
+                    verified: entry.verified,
+                } as LeaderboardEntry)
+            } else {
+                setError('No replay is available for this team run yet.')
+            }
+        } finally {
+            setResolvingTeamCapId(null)
+        }
+    }
 
     useEffect(() => {
         if (!open || !mapName) {
@@ -247,6 +273,50 @@ export function ReplayPickerModal({
                                         <span className="text-sm font-mono text-amber-300 shrink-0">
                                             {formatCapTime(entry.cap_time_seconds)}
                                         </span>
+                                        {entry.demo_cap_id ? (
+                                            <>
+                                                <Tooltip content="Watch the run" side="top">
+                                                    <button
+                                                        type="button"
+                                                        onClick={e => { e.stopPropagation(); watchTeamRun(entry) }}
+                                                        disabled={resolvingTeamCapId === entry.id}
+                                                        aria-label="Watch Replay"
+                                                        className="p-1.5 rounded-md text-rose-300/80 hover:text-rose-200 hover:bg-rose-500/15 transition-colors cursor-pointer shrink-0 disabled:opacity-40 disabled:cursor-default"
+                                                    >
+                                                        {resolvingTeamCapId === entry.id
+                                                            ? <Loader2 className="size-4 animate-spin" />
+                                                            : <Play className="size-4" />}
+                                                    </button>
+                                                </Tooltip>
+                                                <Tooltip content="Download Demo" side="top">
+                                                    <button
+                                                        type="button"
+                                                        onClick={e => {
+                                                            e.stopPropagation()
+                                                            if (mapName) {
+                                                                demoDownload.start(
+                                                                    {
+                                                                        id: entry.id,
+                                                                        alias: (entry.members ?? []).map(m => m.alias).join('_'),
+                                                                        cap_time_seconds: entry.cap_time_seconds,
+                                                                    } as LeaderboardEntry,
+                                                                    mapName,
+                                                                    entry.demo_cap_id,
+                                                                )
+                                                            }
+                                                        }}
+                                                        aria-label="Download demo"
+                                                        className="p-1.5 rounded-md text-accent-300/80 hover:text-accent-200 hover:bg-accent-500/15 transition-colors cursor-pointer shrink-0"
+                                                    >
+                                                        <Download className="size-4" />
+                                                    </button>
+                                                </Tooltip>
+                                            </>
+                                        ) : (
+                                            <span className="text-[10px] uppercase tracking-wider text-muted-foreground/60 shrink-0">
+                                                No replay
+                                            </span>
+                                        )}
                                         <ChevronRight className="size-4 text-accent-300/80 shrink-0" />
                                     </div>
                                 ))

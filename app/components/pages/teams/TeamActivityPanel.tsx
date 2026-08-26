@@ -103,7 +103,8 @@ export function TeamActivityPanel({ accessToken, teamId, hasMembers, selfUserId 
         if (item.cap_time_seconds == null) return <span className="text-muted-foreground/40">—</span>
         return (
             <CapTimeLink
-                capId={item.cap_id}
+                capId={item.team_cap_id ? undefined : item.cap_id}
+                teamCapId={item.team_cap_id ?? undefined}
                 seconds={item.cap_time_seconds}
                 className={cn('font-mono tabular-nums font-bold', item.type === 'world_record' ? 'text-blue-300' : 'text-amber-300')}
             />

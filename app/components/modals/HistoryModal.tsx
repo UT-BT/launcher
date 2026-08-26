@@ -162,10 +162,12 @@ export function HistoryModal({
                                 variant="replay"
                                 icon={Play}
                                 iconFill
-                                tooltip="Watch run"
+                                tooltip={cap.demoCapId ? 'Watch run' : 'No replay available for this run'}
+                                disabled={!cap.demoCapId}
                                 loading={replay.loadingCapId === cap.id}
                                 onClick={() => replay.openReplay({
-                                    capId: cap.id,
+                                    capId: cap.demoCapId ?? null,
+                                    loadingKey: cap.id,
                                     mapName: cap.mapName,
                                     time: cap.time,
                                     alias: userAlias ?? undefined,
@@ -306,10 +308,12 @@ export function HistoryModal({
                                                             variant="replay"
                                                             icon={Play}
                                                             iconFill
-                                                            tooltip="Watch run"
+                                                            tooltip={cap.demoCapId ? 'Watch run' : 'No replay available for this run'}
+                                                            disabled={!cap.demoCapId}
                                                             loading={isLoadingReplay}
                                                             onClick={() => replay.openReplay({
-                                                                capId: cap.id,
+                                                                capId: cap.demoCapId ?? null,
+                                                                loadingKey: cap.id,
                                                                 mapName: cap.mapName,
                                                                 time: cap.time,
                                                                 alias: userAlias ?? undefined,

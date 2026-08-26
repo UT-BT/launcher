@@ -3,6 +3,7 @@ import { resolve } from 'path'
 import { describe, expect, it } from 'vitest'
 import { pathToNav, viewToPath } from './routes'
 import { titleForRoute } from './titles'
+import { capTimeTarget } from '@/app/components/shared/capTimeTarget'
 import type { NavParams } from './NavigationContext'
 
 interface ContractRoute {
@@ -86,5 +87,65 @@ describe('malformed urls', () => {
 
     it('decodes ordinary escaped map names as before', () => {
         expect(pathToNav('/maps/CTF-BT-CM24%20Winter', '').params.mapName).toBe('CTF-BT-CM24 Winter')
+    })
+})
+
+
+describe('team cap deep links', () => {
+    const CAP_ID = SAMPLES.capId
+    const TEAM_CAP_ID = SAMPLES.teamCapId
+
+    it('keeps solo and team cap detail on separate paths', () => {
+        expect(viewToPath('cap-detail', { capId: CAP_ID })).toBe(`/caps/${CAP_ID}`)
+        expect(viewToPath('team-cap-detail', { teamCapId: TEAM_CAP_ID })).toBe(`/team-caps/${TEAM_CAP_ID}`)
+        expect(viewToPath('cap-detail', { capId: CAP_ID }))
+            .not.toBe(viewToPath('team-cap-detail', { teamCapId: TEAM_CAP_ID }))
+    })
+
+    it('never resolves a team cap url onto the solo cap page', () => {
+        const parsed = pathToNav(`/team-caps/${TEAM_CAP_ID}`, '')
+        expect(parsed.view).toBe('team-cap-detail')
+        expect(parsed.params.teamCapId).toBe(TEAM_CAP_ID)
+        expect(parsed.params.capId).toBeUndefined()
+    })
+
+    it('never resolves a solo cap url onto the team cap page', () => {
+        const parsed = pathToNav(`/caps/${CAP_ID}`, '')
+        expect(parsed.view).toBe('cap-detail')
+        expect(parsed.params.capId).toBe(CAP_ID)
+        expect(parsed.params.teamCapId).toBeUndefined()
+    })
+
+    it('falls back to home for a bare team cap path, as pathToNav does for caps', () => {
+        expect(pathToNav('/team-caps', '').view).toBe('home')
+        expect(pathToNav('/caps', '').view).toBe('home')
+    })
+
+    it('routes a team row through the team cap contract end to end', () => {
+        const target = capTimeTarget(undefined, TEAM_CAP_ID)!
+        const path = viewToPath(target.view, target.params)
+        const parsed = pathToNav(path, '')
+
+        expect(contract.routes.find(r => r.view === target.view)?.kind).toBe('team-cap')
+        expect(parsed.view).toBe('team-cap-detail')
+        expect(parsed.params.teamCapId).toBe(TEAM_CAP_ID)
+    })
+
+    it('routes a solo row through the cap contract end to end', () => {
+        const target = capTimeTarget(CAP_ID, null)!
+        const path = viewToPath(target.view, target.params)
+        const parsed = pathToNav(path, '')
+
+        expect(contract.routes.find(r => r.view === target.view)?.kind).toBe('cap')
+        expect(parsed.view).toBe('cap-detail')
+        expect(parsed.params.capId).toBe(CAP_ID)
+    })
+
+    it('gives the team cap route its own tab title', () => {
+        const soloTitle = titleForRoute('cap-detail', { capId: CAP_ID })
+        const teamTitle = titleForRoute('team-cap-detail', { teamCapId: TEAM_CAP_ID })
+
+        expect(teamTitle).not.toBe('UTBT.net')
+        expect(teamTitle).not.toBe(soloTitle)
     })
 })

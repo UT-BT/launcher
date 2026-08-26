@@ -285,9 +285,9 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
 
     const members = detail?.members ?? []
     const membersWithDemos = members.filter(m => m.has_demo)
-    const anchorMemberId = detail
-        ? (members.find(m => m.cap_time_seconds === detail.team_time_seconds)?.cap_id ?? members[0]?.cap_id ?? null)
-        : (members[0]?.cap_id ?? null)
+    const runDemo = detail?.demo ?? null
+    const runDemoCapId = detail?.demo_cap_id ?? null
+    const anchorMemberId = runDemo?.cap_id ?? members[0]?.cap_id ?? null
     const selectedMemberId = (selectedCapId && members.some(m => m.cap_id === selectedCapId))
         ? selectedCapId
         : anchorMemberId
@@ -337,6 +337,30 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
                                         {displayMapName(detail.map)}
                                     </button>
                                     <div className="flex flex-wrap items-center gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => replay.openReplay({
+                                                capId: runDemoCapId,
+                                                loadingKey: detail.team_cap_id,
+                                                mapName: detail.map,
+                                                time: detail.team_time_seconds ?? undefined,
+                                                alias: runDemo?.alias || undefined,
+                                            })}
+                                            disabled={!runDemoCapId || replay.loadingCapId === detail.team_cap_id}
+                                            className={cn(
+                                                'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border transition-colors text-xs font-semibold cursor-pointer',
+                                                'bg-accent-500/15 border-accent-500/40 text-accent-200 hover:bg-accent-500/25 hover:text-foreground hover:border-accent-500/60',
+                                                'disabled:opacity-50 disabled:cursor-not-allowed',
+                                            )}
+                                            title={runDemoCapId
+                                                ? `Watch the run from ${runDemo?.alias || 'the slowest member'}, whose time is the team time`
+                                                : 'No replay available for this run'}
+                                        >
+                                            {replay.loadingCapId === detail.team_cap_id
+                                                ? <Loader2 className="size-3.5 animate-spin" />
+                                                : <Play className="size-3.5" />}
+                                            Watch Replay
+                                        </button>
                                         <button
                                             type="button"
                                             onClick={startCompare}
@@ -523,6 +547,13 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
                                                                     : <ShieldAlert className="size-3.5 text-amber-300 shrink-0" />}
                                                             </Tooltip>
                                                         )}
+                                                        {member.cap_id === runDemoCapId && (
+                                                            <Tooltip content="This member's time is the team time, so their demo is the run's replay" side="top">
+                                                                <span className="ml-auto shrink-0 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border bg-accent-500/15 border-accent-500/40 text-accent-200">
+                                                                    Run demo
+                                                                </span>
+                                                            </Tooltip>
+                                                        )}
                                                     </div>
 
                                                     <div className="flex items-center justify-between gap-2">
@@ -541,13 +572,15 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
                                                                         alias: member.alias ?? undefined,
                                                                     })
                                                                 }}
-                                                                disabled={!member.verified || replay.loadingCapId === member.cap_id}
+                                                                disabled={!member.has_demo || replay.loadingCapId === member.cap_id}
                                                                 className={cn(
                                                                     'inline-flex items-center gap-1 px-2 py-1 rounded-md border transition-colors text-xs font-semibold cursor-pointer',
                                                                     'bg-accent-500/15 border-accent-500/40 text-accent-200 hover:bg-accent-500/25 hover:text-foreground hover:border-accent-500/60',
                                                                     'disabled:opacity-50 disabled:cursor-not-allowed',
                                                                 )}
-                                                                title={member.verified ? 'Watch Replay' : 'No replay — cap not verified'}
+                                                                title={member.has_demo
+                                                                    ? 'Watch Replay'
+                                                                    : member.verified ? 'No replay available for this cap' : 'No replay — cap not verified'}
                                                             >
                                                                 {replay.loadingCapId === member.cap_id
                                                                     ? <Loader2 className="size-3.5 animate-spin" />

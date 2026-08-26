@@ -11,8 +11,8 @@ not_here:
   - "how detail pages open via events (open-player / open-cap) → navigation.md"
   - "page/query state + persistence → state-patterns.md"
 sections: [hard-rule-playerinfo, player-cap-links, map-links, tables-datatable-primitives, columns-columnsmenu, filter-presets, tutorial, visual-primitives, ui-primitives, utilities, when-to-extract]
-last_verified: 2026-08-22
-verify_against: [app/components/shared/PlayerInfo.tsx, app/components/shared/DataTable.tsx, app/components/shared/CapTimeLink.tsx, app/components/shared/MapNavLink.tsx, app/components/shared/MapNameCell.tsx, app/components/shared/ColumnsMenu.tsx, app/components/shared/FilterPresetsMenu.tsx]
+last_verified: 2026-08-26
+verify_against: [app/components/shared/PlayerInfo.tsx, app/components/shared/DataTable.tsx, app/components/shared/CapTimeLink.tsx, app/components/shared/capTimeTarget.ts, app/components/shared/MapNavLink.tsx, app/components/shared/MapNameCell.tsx, app/components/shared/ColumnsMenu.tsx, app/components/shared/FilterPresetsMenu.tsx]
 ---
 
 # Shared components reference
@@ -122,6 +122,27 @@ event that `Main.tsx` turns into navigation. The **event architecture lives in
   medal thresholds, distribution buckets) — it falls back to plain text. Don't
   hand-roll `formatCapTime` in a clickable span. `openCap(capId)` is also exported
   for the rare non-time trigger (e.g. the movement "best run" link).
+
+  **A team run is a different entity with a different detail page.** Its id is a
+  *team cap* id and there is no solo cap behind it, so passing it as `capId` opens
+  a page that 404s. Any row that can be a team result must pass `teamCapId` and
+  leave `capId` undefined:
+
+  ```tsx
+  <CapTimeLink
+      capId={isTeamRow ? undefined : row.cap_id}
+      teamCapId={isTeamRow ? row.cap_id : undefined}
+      seconds={row.cap_time_seconds}
+  />
+  ```
+
+  Never infer team-ness from the map's `required_players` or from the shape of the
+  id — read the explicit `team_cap_id` / `members` the API sends for that row (see
+  `agents/data-sources.md`, "Team maps & team runs"). The routing decision itself
+  lives in `capTimeTarget(capId, teamCapId)`
+  (`app/components/shared/capTimeTarget.ts`), covered by
+  `capTimeTarget.test.ts` + `routes.contract.test.ts`; reuse it if you need the
+  target outside a `CapTimeLink`. `teamCapId` wins when both are passed.
 
 Both render through `NavLink`, so on the web build they are real `<a href>`
 elements — middle-click / ctrl-click / "Open in new tab" work. See

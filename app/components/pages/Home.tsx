@@ -221,7 +221,8 @@ export function Home({
 
     const handleWatchReplay = (record: SummaryWorldRecord) => {
         replay.openReplay({
-            capId: record.id,
+            capId: record.demoCapId ?? null,
+            loadingKey: record.id,
             mapName: record.mapName,
             time: record.time,
             alias: record.alias ?? undefined,
@@ -230,7 +231,8 @@ export function Home({
 
     const handleWatchAchievement = (cap: Summary['achievements'][number]) => {
         replay.openReplay({
-            capId: cap.id,
+            capId: cap.demoCapId ?? null,
+            loadingKey: cap.id,
             mapName: cap.mapName,
             time: cap.time,
             alias: userProfile?.alias ?? undefined,

@@ -1231,6 +1231,7 @@ export function MapsPage({
                         user_id: r.user_id,
                         alias: r.alias,
                         cap_id: r.cap_id,
+                        team_cap_id: r.team_cap_id ?? null,
                         color_r: r.color_r,
                         color_g: r.color_g,
                         color_b: r.color_b,
@@ -1673,7 +1674,7 @@ export function MapsPage({
                 }
                 const capId = wrHolder?.cap_id
                 const clickable = !!capId
-                const isTeamMap = (map.required_players ?? 0) > 1
+                const isTeamMap = !!wrHolder?.team_cap_id
                 const timeNode = (
                     <span className={cn(
                         "text-amber-300 transition-[color,text-shadow] duration-150 w-fit",
@@ -1726,9 +1727,9 @@ export function MapsPage({
                     )
                 }
                 const isWR = wr != null && wr > 0 && bestCap.cap_time_seconds - wr <= 0.0005
-                const pbCapId = bestCap.cap_id ?? undefined
+                const pbCapId = bestCap.team_cap_id ?? bestCap.cap_id ?? undefined
                 const clickable = !!pbCapId
-                const isTeamMap = (map.required_players ?? 0) > 1
+                const isTeamMap = !!bestCap.team_cap_id
                 const timeText = (
                     <span className={cn(
                         pbTextColor(medalTier, isWR),

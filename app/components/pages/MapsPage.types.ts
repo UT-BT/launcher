@@ -30,6 +30,7 @@ export interface WRHolder {
     user_id: string
     alias: string
     cap_id?: string
+    team_cap_id?: string | null
     color_r?: number
     color_g?: number
     color_b?: number

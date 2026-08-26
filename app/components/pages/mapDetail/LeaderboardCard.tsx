@@ -499,7 +499,53 @@ const TEAM_LEADERBOARD_COLUMNS: ResponsiveColumn[] = [
     { id: 'time', width: '8rem', required: true },
     { id: 'status', width: '7rem', required: true },
     { id: 'date', width: '8rem', required: true },
+    { id: 'actions', width: '6rem', required: true },
 ]
+
+interface TeamRunActionsProps {
+    entry: TeamLeaderboardEntry
+    replay: ReturnType<typeof useReplayWatch>
+    demoDownload: ReturnType<typeof useDemoDownload>
+}
+
+function TeamRunActions({ entry, replay, demoDownload }: TeamRunActionsProps) {
+    const demoCapId = entry.demo_cap_id ?? null
+    return (
+        <>
+            <IconActionButton
+                variant="replay"
+                icon={demoCapId ? Play : MessageSquareOff}
+                iconFill={!!demoCapId}
+                tooltip={demoCapId ? 'Watch run' : 'No replay available for this run'}
+                disabled={!demoCapId}
+                loading={replay.loadingCapId === entry.id}
+                onClick={() => replay.openReplay({
+                    capId: demoCapId,
+                    loadingKey: entry.id,
+                    mapName: entry.map,
+                    time: entry.cap_time_seconds,
+                    alias: (entry.members ?? []).map(m => m.alias).join(', ') || undefined,
+                })}
+            />
+            <IconActionButton
+                variant="download"
+                icon={Download}
+                tooltip={demoCapId ? 'Download demo' : 'No demo available for this run'}
+                disabled={!demoCapId}
+                onClick={() => demoDownload.start(
+                    {
+                        id: entry.id,
+                        alias: (entry.members ?? []).map(m => m.alias).join('_'),
+                        cap_time_seconds: entry.cap_time_seconds,
+                        map: entry.map,
+                    } as LeaderboardEntry,
+                    entry.map,
+                    demoCapId,
+                )}
+            />
+        </>
+    )
+}
 
 interface TeamLeaderboardTableProps {
     teamLeaderboard: TeamLeaderboardEntry[]
@@ -512,6 +558,8 @@ interface TeamLeaderboardTableProps {
 export function TeamLeaderboardTable({
     teamLeaderboard, loading, currentUserId, highlightTeamCapId, highlightMemberKey,
 }: TeamLeaderboardTableProps) {
+    const replay = useReplayWatch()
+    const demoDownload = useDemoDownload()
     const [tab, setTab] = useNavState<TeamTab>('teamLeaderboard.tab', 'verified')
     const [sortBy, setSortBy] = useNavState<TeamSortField>('teamLeaderboard.sortBy', 'rank')
     const [sortDir, setSortDir] = useNavState<SortDir>('teamLeaderboard.sortDir', 'asc')
@@ -602,15 +650,18 @@ export function TeamLeaderboardTable({
                         {medalIcon && <img src={medalIcon} alt={medalLabel} className="size-4 object-contain" />}
                         <CapTimeLink teamCapId={entry.id} seconds={entry.cap_time_seconds} className="font-mono tabular-nums font-bold text-foreground" />
                     </div>
-                    <span className={cn(
-                        'inline-flex items-center gap-1 h-6 px-2 rounded-md border text-[10px] font-semibold',
-                        entry.verified
-                            ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
-                            : 'bg-hairline/5 border-hairline/10 text-muted-foreground',
-                    )}>
-                        {entry.verified ? <ShieldCheck className="size-3" /> : <ShieldAlert className="size-3" />}
-                        {entry.state === 'incomplete' ? 'Incomplete' : entry.verified ? 'Verified' : 'Certified'}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                        <span className={cn(
+                            'inline-flex items-center gap-1 h-6 px-2 rounded-md border text-[10px] font-semibold',
+                            entry.verified
+                                ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
+                                : 'bg-hairline/5 border-hairline/10 text-muted-foreground',
+                        )}>
+                            {entry.verified ? <ShieldCheck className="size-3" /> : <ShieldAlert className="size-3" />}
+                            {entry.state === 'incomplete' ? 'Incomplete' : entry.verified ? 'Verified' : 'Certified'}
+                        </span>
+                        <TeamRunActions entry={entry} replay={replay} demoDownload={demoDownload} />
+                    </div>
                 </div>
             </div>
         )
@@ -681,14 +732,15 @@ export function TeamLeaderboardTable({
                         >
                             Date
                         </DataTableHeaderCell>
+                        <DataTableHeaderCell align="center" width="6rem"><span className="sr-only">Replay</span></DataTableHeaderCell>
                     </DataTableHeaderRow>
                     <tbody>
                         {loading ? (
                             Array.from({ length: 5 }).map((_, i) => (
-                                <DataTableSkeletonRow key={i} columnCount={6} />
+                                <DataTableSkeletonRow key={i} columnCount={7} />
                             ))
                         ) : pageRows.length === 0 ? (
-                            <DataTableEmpty colSpan={6} message="No team runs yet." />
+                            <DataTableEmpty colSpan={7} message="No team runs yet." />
                         ) : (
                             pageRows.map(({ entry, rank }) => {
                                 const medalIcon = entry.verified ? medalIconForInt(entry.medal) : null
@@ -765,6 +817,11 @@ export function TeamLeaderboardTable({
                                                 </span>
                                             </Tooltip>
                                         </DataTableCell>
+                                        <DataTableCell align="center" className="px-2">
+                                            <div className="flex items-center justify-center gap-1">
+                                                <TeamRunActions entry={entry} replay={replay} demoDownload={demoDownload} />
+                                            </div>
+                                        </DataTableCell>
                                     </DataTableRow>
                                 )
                             })
@@ -787,6 +844,20 @@ export function TeamLeaderboardTable({
                     </div>
                 )}
             </div>
+
+            <ReplayVideoModal state={replay.video} onClose={replay.clearVideo} />
+
+            <Modal
+                isOpen={replay.error !== null}
+                onClose={replay.clearError}
+                title="Replay not available"
+                className="w-[95%] sm:w-[440px] max-w-md"
+                offsetSidebar
+            >
+                <p className="text-sm text-muted-foreground">{replay.error}</p>
+            </Modal>
+
+            <DemoDownloadStatusModal state={demoDownload.download} onClose={demoDownload.clear} />
         </div>
     )
 }

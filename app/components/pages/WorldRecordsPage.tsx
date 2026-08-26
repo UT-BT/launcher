@@ -809,7 +809,8 @@ export function WorldRecordsPage({
                         </Tooltip>
                     </DataTableCell>
                 )
-            case 'actions':
+            case 'actions': {
+                const demoCapId = r.demo_cap_id ?? null
                 return (
                     <DataTableCell key={id} align="center" className="px-2">
                         <div className="flex items-center justify-center gap-1">
@@ -817,10 +818,12 @@ export function WorldRecordsPage({
                                 variant="replay"
                                 icon={Play}
                                 iconFill
-                                tooltip="Watch run"
+                                tooltip={demoCapId ? 'Watch run' : 'No replay available for this run'}
+                                disabled={!demoCapId}
                                 loading={replay.loadingCapId === r.cap_id}
                                 onClick={() => replay.openReplay({
-                                    capId: r.cap_id,
+                                    capId: demoCapId,
+                                    loadingKey: r.cap_id,
                                     mapName: r.map,
                                     time: r.cap_time_seconds,
                                     alias: r.alias ?? undefined,
@@ -829,16 +832,19 @@ export function WorldRecordsPage({
                             <IconActionButton
                                 variant="download"
                                 icon={Download}
-                                tooltip="Download demo"
+                                tooltip={demoCapId ? 'Download demo' : 'No demo available for this run'}
+                                disabled={!demoCapId}
                                 onClick={() => demoDownload.start(
                                     { id: r.cap_id, alias: r.alias, cap_time_seconds: r.cap_time_seconds } as unknown as LeaderboardEntry,
                                     r.map,
+                                    demoCapId,
                                 )}
                             />
                             <WorldRecordHistoryTrigger onClick={() => openHistory(r.map)} />
                         </div>
                     </DataTableCell>
                 )
+            }
         }
     }
 
