@@ -5,7 +5,7 @@ import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { MapNavLink } from '@/app/components/shared/MapNavLink'
 import { TeamName } from '../TeamRoster'
 import type {
-    EventBracketStage, EventBracketTeamRef, EventEntrantStatus, EventMatch, EventMatchMap,
+    EventBracketGroup, EventBracketStage, EventBracketTeamRef, EventEntrantStatus, EventMatch, EventMatchMap,
     EventMatchStatus, EventSide, EventStageKind, EventStageStatus,
 } from '@/app/utils/api'
 
@@ -113,6 +113,26 @@ export function seriesProgress(match: Pick<EventMatch, 'best_of' | 'caps_to_win'
 
 export function stageRounds(stage: EventBracketStage): number[] {
     return [...new Set(stage.matches.map(match => match.round_no))].sort((a, b) => a - b)
+}
+
+/**
+ * Order matches the way the API does. `ordinal` restarts per group, so a group
+ * stage has one match per group sharing every (round, ordinal) — sorting on those
+ * alone leaves ties, and a tie that resolves differently after a save is what
+ * makes the list jump around when a result is entered.
+ */
+export function matchOrder(groups: EventBracketGroup[] = []) {
+    const rank = new Map(groups.map(group => [group.id, group.ordinal]))
+
+    return (a: EventMatch, b: EventMatch): number =>
+        a.round_no - b.round_no
+        || (rank.get(a.group_id ?? '') ?? -1) - (rank.get(b.group_id ?? '') ?? -1)
+        || a.ordinal - b.ordinal
+        || a.id.localeCompare(b.id)
+}
+
+export function sortedMatches(stage: EventBracketStage): EventMatch[] {
+    return [...stage.matches].sort(matchOrder(stage.groups))
 }
 
 export function Chip({ className, children }: { className?: string; children: React.ReactNode }) {

@@ -9,14 +9,15 @@ provides: "the whole navigation model: stack, navigate() funnel, renderView, sid
 not_here:
   - "where page state / persistence lives → state-patterns.md"
   - "the PlayerInfo / CapTimeLink components that trigger nav → shared-components.md"
-sections: [the-model, navigate-is-the-only-entry-point, url-sync-web-build, link-semantics, page-views-vs-detail-pages, the-sidebar-registry, event-driven-navigation, sidebar-new-badges, page-refresh-registry, per-entry-state]
-last_verified: 2026-07-29
+sections: [the-model, navigate-is-the-only-entry-point, leave-guards, url-sync-web-build, link-semantics, page-views-vs-detail-pages, the-sidebar-registry, event-driven-navigation, sidebar-new-badges, page-refresh-registry, per-entry-state]
+last_verified: 2026-08-26
 verify_against:
   - app/components/main/Main.tsx
   - app/components/navigation/NavLink.tsx
   - app/components/layout/AppLayout.tsx
   - app/components/navigation/NavigationContext.tsx
   - app/components/navigation/useNavState.ts
+  - app/components/navigation/useUnsavedChanges.ts
   - app/components/navigation/routes.ts
   - app/components/navigation/useUrlSync.ts
   - app/components/navigation/useDocumentMeta.ts
@@ -80,6 +81,38 @@ bar never renders (`IS_WEB`; browser chrome owns history and reload).
 parallel back stack. Sidebar clicks, `openMap`, and the `open-*` events all call
 `navigate()`. This is hard rule 6. (URL sync below is not a second mechanism —
 it mirrors this stack, it never drives it except on external entry.)
+
+## Leave guards (unsaved work)
+
+A view whose edits live only in component state registers a guard, and `navigate`,
+`back` and `forward` all consult it before moving:
+
+```ts
+useUnsavedChanges(dirty, 'The tournament format has edits you have not saved yet.')
+```
+
+`useUnsavedChanges` (`app/components/navigation/useUnsavedChanges.ts`) does two
+things: it registers the guard through `registerLeaveGuard` on the navigation
+context, and it arms `beforeunload`. Both are needed — the guard catches in-app
+moves, `beforeunload` catches a reload, a closed tab, and the real anchor links the
+web build uses for nav targets.
+
+When a guard returns a message, `Main` parks the move in `pendingLeave` and opens a
+confirm modal; confirming calls `commitNavigate` (or the parked `back`/`forward`),
+which goes around the guard rather than through it. Navigating to the view you are
+already on skips the check, so clicking the current sidebar item never prompts.
+
+Two things to keep right:
+
+- **Always return the unregister function.** `registerLeaveGuard` returns it and the
+  hook returns it straight from `useEffect`. A guard that outlives its view blocks
+  the whole app.
+- **Read the flag through a ref.** The guard closure is registered once; reading
+  `dirty` directly would freeze it at its first value.
+
+Unmounting a view is NOT navigation, so a guard cannot catch it. A panel that
+unmounts on a local tab switch has to ask for itself — `ManagePanel` tracks the
+Format tab's dirty flag and shows its own confirm before switching.
 
 ## URL sync (web build)
 

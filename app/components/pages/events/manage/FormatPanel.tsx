@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AdminSelect, ActionButton } from '@/app/components/pages/admin/components/controls'
 import { ConfirmModal } from '@/app/components/shared/ConfirmModal'
 import { useNavState } from '@/app/components/navigation/useNavState'
+import { useUnsavedChanges } from '@/app/components/navigation/useUnsavedChanges'
 import { ErrorBanner, SectionCard } from '@/app/components/pages/teams/teamsShared'
 import {
     eventErrorMessage, fetchEventFormats, setEventFormat, updateEventFormatSpec,
@@ -10,15 +11,20 @@ import {
 import { FormatBuilder } from './FormatBuilder'
 import { emptySpec, parseSpecErrors } from './formatFields'
 
+const UNSAVED_WARNING = 'The tournament format has edits you have not saved yet.'
+
 interface FormatPanelProps {
     accessToken: string
     slug: string
     bracket: EventBracket | null
     hasDrawnStages: boolean
     onBracketChange: (bracket: EventBracket) => void
+    onDirtyChange?: (dirty: boolean) => void
 }
 
-export function FormatPanel({ accessToken, slug, bracket, hasDrawnStages, onBracketChange }: FormatPanelProps) {
+export function FormatPanel({
+    accessToken, slug, bracket, hasDrawnStages, onBracketChange, onDirtyChange,
+}: FormatPanelProps) {
     const attached = bracket?.format.spec ?? null
 
     const [templates, setTemplates] = useState<EventFormatTemplate[]>([])
@@ -30,6 +36,13 @@ export function FormatPanel({ accessToken, slug, bracket, hasDrawnStages, onBrac
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
     const [confirmReplace, setConfirmReplace] = useState<string | null>(null)
     const [open, setOpen] = useNavState('event.manage.format', false)
+
+    useUnsavedChanges(dirty, UNSAVED_WARNING)
+
+    useEffect(() => { onDirtyChange?.(dirty) }, [dirty, onDirtyChange])
+
+    // The panel unmounts when the manage tab changes, and the spec lives here.
+    useEffect(() => () => onDirtyChange?.(false), [onDirtyChange])
 
     useEffect(() => {
         fetchEventFormats(accessToken).then(setTemplates).catch(() => setTemplates([]))
@@ -110,6 +123,12 @@ export function FormatPanel({ accessToken, slug, bracket, hasDrawnStages, onBrac
                 }
             >
                 <ErrorBanner message={error} />
+
+                {dirty && (
+                    <p className="text-[11px] text-amber-300">
+                        Unsaved changes. {attached ? 'Save format' : 'Apply format'} to keep them — leaving this tab discards them.
+                    </p>
+                )}
 
                 {hasDrawnStages && (
                     <p className="text-[11px] text-amber-300">

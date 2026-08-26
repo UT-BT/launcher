@@ -12,7 +12,7 @@ import {
 } from '@/app/utils/api'
 
 const PUBLISH_KEY = '__bracket__'
-import { MatchCard, RELAXED_LABELS, STAGE_STATUS_LABELS } from '../bracket/bracketShared'
+import { MatchCard, RELAXED_LABELS, STAGE_STATUS_LABELS, sortedMatches } from '../bracket/bracketShared'
 import { MatchEditorModal } from './MatchEditorModal'
 
 interface BracketPanelProps {
@@ -225,12 +225,12 @@ function StageCard({
 
     const rounds = useMemo(() => {
         const grouped = new Map<number, EventMatch[]>()
-        for (const match of stage.matches) {
+        // sortedMatches first, so entering a result never reshuffles the list.
+        for (const match of sortedMatches(stage)) {
             grouped.set(match.round_no, [...(grouped.get(match.round_no) ?? []), match])
         }
-        for (const matches of grouped.values()) matches.sort((a, b) => a.ordinal - b.ordinal)
         return [...grouped.entries()].sort(([a], [b]) => a - b)
-    }, [stage.matches])
+    }, [stage])
 
     const groupNames = useMemo(
         () => new Map(stage.groups.map(group => [group.id, group.name])),
