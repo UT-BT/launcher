@@ -5,7 +5,7 @@ import { Activity } from 'lucide-react'
 import type { UserActivityBucket } from '@/app/utils/api'
 import { WEEK_MS, formatWeekRange } from '@/app/utils/chartBuckets'
 
-type Mode = 'caps' | 'playtime'
+type Mode = 'playtime' | 'caps'
 
 interface PlayerActivityChartProps {
     activity: UserActivityBucket[]
@@ -19,7 +19,7 @@ function formatWeekLabel(iso: string): string {
 }
 
 export default function PlayerActivityChart({ activity, loading }: PlayerActivityChartProps) {
-    const [mode, setMode] = useState<Mode>('caps')
+    const [mode, setMode] = useState<Mode>('playtime')
 
     const data = useMemo(() => {
         return activity.map(b => {
@@ -45,7 +45,7 @@ export default function PlayerActivityChart({ activity, loading }: PlayerActivit
                     </div>
                 </div>
                 <div className="flex items-center gap-1">
-                    {(['caps', 'playtime'] as Mode[]).map(m => (
+                    {(['playtime', 'caps'] as Mode[]).map(m => (
                         <button
                             key={m}
                             type="button"
@@ -92,7 +92,7 @@ export default function PlayerActivityChart({ activity, loading }: PlayerActivit
                                 axisLine={false}
                                 tickLine={false}
                                 width={32}
-                                allowDecimals={false}
+                                allowDecimals={mode === 'playtime'}
                             />
                             <Tooltip
                                 contentStyle={{
