@@ -2,12 +2,14 @@ import { useCallback, useEffect, useState } from 'react'
 import { ArrowLeft, CalendarDays, Users2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useNavState } from '@/app/components/navigation/useNavState'
+import { useUnsavedChanges } from '@/app/components/navigation/useUnsavedChanges'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
 import { MarkdownBody } from '@/app/components/shared/MarkdownBody'
 import { ErrorBanner } from '@/app/components/pages/teams/teamsShared'
 import {
     eventErrorMessage, fetchEvent, fetchEventBracket, fetchEventLfp, fetchEventTeams, fetchMyEventStatus,
-    type EventBracket, type EventDetail, type EventLfpEntry, type EventTeam, type MyEventStatus, type UserProfile,
+    type EventBracket, type EventDetail, type EventFormatSpec, type EventLfpEntry, type EventTeam,
+    type MyEventStatus, type UserProfile,
 } from '@/app/utils/api'
 import { EventStatusBadge, formatEventDate, formatEventDateTime, formatTeamSize } from './events/eventsShared'
 import { EventTeamsList } from './events/EventTeamsList'
@@ -112,6 +114,13 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
         refreshing: loading,
         tooltip: 'Refresh',
     })
+
+    // The format builder's unsaved edit lives here, above every tab on this page,
+    // so switching tab — inner or outer — cannot throw it away. Only leaving the
+    // page or reloading does, which is exactly what the guard warns about.
+    const [formatDraft, setFormatDraft] = useState<EventFormatSpec | null>(null)
+
+    useUnsavedChanges(formatDraft !== null, 'The tournament format has edits you have not saved yet.')
 
     if (loading && !event) {
         return <div className="h-full flex items-center justify-center text-sm text-muted-foreground">Loading event…</div>
@@ -238,6 +247,8 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
                         onBracketChange={setBracket}
                         onMapSelect={onMapSelect}
                         onRefresh={refresh}
+                        formatDraft={formatDraft}
+                        onFormatDraftChange={setFormatDraft}
                     />
                 )}
                 </EventRosterProvider>

@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AdminSelect, ActionButton } from '@/app/components/pages/admin/components/controls'
 import { ConfirmModal } from '@/app/components/shared/ConfirmModal'
 import { useNavState } from '@/app/components/navigation/useNavState'
-import { useUnsavedChanges } from '@/app/components/navigation/useUnsavedChanges'
 import { ErrorBanner, SectionCard } from '@/app/components/pages/teams/teamsShared'
 import {
     eventErrorMessage, fetchEventFormats, setEventFormat, updateEventFormatSpec,
@@ -11,46 +10,40 @@ import {
 import { FormatBuilder } from './FormatBuilder'
 import { emptySpec, parseSpecErrors } from './formatFields'
 
-const UNSAVED_WARNING = 'The tournament format has edits you have not saved yet.'
-
 interface FormatPanelProps {
     accessToken: string
     slug: string
     bracket: EventBracket | null
     hasDrawnStages: boolean
     onBracketChange: (bracket: EventBracket) => void
-    onDirtyChange?: (dirty: boolean) => void
+    /** The unsaved edit, or null when the builder is showing what is saved. */
+    draft: EventFormatSpec | null
+    onDraftChange: (draft: EventFormatSpec | null) => void
 }
 
 export function FormatPanel({
-    accessToken, slug, bracket, hasDrawnStages, onBracketChange, onDirtyChange,
+    accessToken, slug, bracket, hasDrawnStages, onBracketChange, draft, onDraftChange,
 }: FormatPanelProps) {
     const attached = bracket?.format.spec ?? null
 
     const [templates, setTemplates] = useState<EventFormatTemplate[]>([])
     const [templateSlug, setTemplateSlug] = useState('')
-    const [spec, setSpec] = useState<EventFormatSpec>(() => attached ?? emptySpec())
-    const [dirty, setDirty] = useState(false)
     const [busy, setBusy] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
     const [confirmReplace, setConfirmReplace] = useState<string | null>(null)
     const [open, setOpen] = useNavState('event.manage.format', false)
 
-    useUnsavedChanges(dirty, UNSAVED_WARNING)
-
-    useEffect(() => { onDirtyChange?.(dirty) }, [dirty, onDirtyChange])
-
-    // The panel unmounts when the manage tab changes, and the spec lives here.
-    useEffect(() => () => onDirtyChange?.(false), [onDirtyChange])
+    // The draft IS the unsaved state, so there is no separate flag to keep in
+    // step with it. It lives above this panel, which unmounts on a tab change.
+    // Memoised so an empty builder does not hand FormatBuilder a new spec object
+    // on every render.
+    const spec = useMemo(() => draft ?? attached ?? emptySpec(), [draft, attached])
+    const dirty = draft !== null
 
     useEffect(() => {
         fetchEventFormats(accessToken).then(setTemplates).catch(() => setTemplates([]))
     }, [accessToken])
-
-    useEffect(() => {
-        if (attached && !dirty) setSpec(attached)
-    }, [attached, dirty])
 
     const options = useMemo(
         () => templates.map(template => ({ value: template.slug, label: template.name })),
@@ -63,7 +56,7 @@ export function FormatPanel({
         setFieldErrors({})
         try {
             onBracketChange(await action())
-            setDirty(false)
+            onDraftChange(null)
         } catch (e) {
             const message = eventErrorMessage(e)
             const parsed = parseSpecErrors(message)
@@ -72,7 +65,7 @@ export function FormatPanel({
         } finally {
             setBusy(false)
         }
-    }, [onBracketChange])
+    }, [onBracketChange, onDraftChange])
 
     const applyTemplate = (slugToApply: string) => {
         void run(() => setEventFormat(accessToken, slug, { format_slug: slugToApply }))
@@ -126,7 +119,8 @@ export function FormatPanel({
 
                 {dirty && (
                     <p className="text-[11px] text-amber-300">
-                        Unsaved changes. {attached ? 'Save format' : 'Apply format'} to keep them — leaving this tab discards them.
+                        Unsaved changes. {attached ? 'Save format' : 'Apply format'} to keep them.
+                        They survive switching tabs, but not a reload.
                     </p>
                 )}
 
@@ -140,7 +134,7 @@ export function FormatPanel({
                     spec={spec}
                     errors={fieldErrors}
                     disabled={busy}
-                    onChange={next => { setSpec(next); setDirty(true) }}
+                    onChange={onDraftChange}
                 />
             </SectionCard>
 

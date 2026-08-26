@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { useNavState } from '@/app/components/navigation/useNavState'
-import { ConfirmModal } from '@/app/components/shared/ConfirmModal'
 import { ErrorBanner } from '@/app/components/pages/teams/teamsShared'
 import {
     eventErrorMessage, fetchEventAdminTeams,
-    type EventBracket, type EventDetail, type EventGroupsConfig, type EventLfpEntry, type EventTeam,
+    type EventBracket, type EventDetail, type EventFormatSpec, type EventGroupsConfig,
+    type EventLfpEntry, type EventTeam,
 } from '@/app/utils/api'
 import { EventRosterProvider } from './TeamRoster'
 import { SignupsPanel } from './manage/SignupsPanel'
@@ -31,28 +31,20 @@ interface ManagePanelProps {
     onBracketChange: (bracket: EventBracket) => void
     onMapSelect?: (mapName: string) => void
     onRefresh: () => void
+    /** Held above this panel so a tab change cannot throw the edit away. */
+    formatDraft: EventFormatSpec | null
+    onFormatDraftChange: (draft: EventFormatSpec | null) => void
 }
 
 export function ManagePanel({
-    accessToken, slug, event, lfp, bracket, canManageEvent, onBracketChange, onMapSelect, onRefresh,
+    accessToken, slug, event, lfp, bracket, canManageEvent, onBracketChange, onMapSelect,
+    onRefresh, formatDraft, onFormatDraftChange,
 }: ManagePanelProps) {
     const tabs = canManageEvent ? TABS : TABS.filter(entry => entry.id !== 'signups')
     const [storedTab, setTab] = useNavState<ManageTab>('event.manageTab', canManageEvent ? 'signups' : 'format')
     const tab = tabs.some(entry => entry.id === storedTab) ? storedTab : tabs[0].id
     const [teams, setTeams] = useState<EventTeam[]>([])
     const [teamsError, setTeamsError] = useState<string | null>(null)
-    // The Format tab keeps its edits in component state, so switching tabs
-    // unmounts them. Ask first rather than dropping the work silently.
-    const [formatDirty, setFormatDirty] = useState(false)
-    const [pendingTab, setPendingTab] = useState<ManageTab | null>(null)
-
-    const chooseTab = useCallback((next: ManageTab) => {
-        if (next !== 'format' && formatDirty) {
-            setPendingTab(next)
-            return
-        }
-        setTab(next)
-    }, [formatDirty, setTab])
 
     const reloadTeams = useCallback(async () => {
         try {
@@ -82,7 +74,7 @@ export function ManagePanel({
                 {tabs.map(entry => (
                     <button
                         key={entry.id}
-                        onClick={() => chooseTab(entry.id)}
+                        onClick={() => setTab(entry.id)}
                         className={cn(
                             'px-3 py-2 text-xs font-medium whitespace-nowrap border-b-2 -mb-px transition-colors cursor-pointer',
                             tab === entry.id
@@ -91,6 +83,12 @@ export function ManagePanel({
                         )}
                     >
                         {entry.label}
+                        {entry.id === 'format' && formatDraft && (
+                            <span
+                                aria-label="unsaved changes"
+                                className="ml-1.5 inline-block size-1.5 rounded-full bg-amber-300 align-middle"
+                            />
+                        )}
                     </button>
                 ))}
             </div>
@@ -124,7 +122,8 @@ export function ManagePanel({
                         bracket={bracket}
                         hasDrawnStages={hasDrawnStages}
                         onBracketChange={onBracketChange}
-                        onDirtyChange={setFormatDirty}
+                        draft={formatDraft}
+                        onDraftChange={onFormatDraftChange}
                     />
                 </div>
             )}
@@ -139,21 +138,6 @@ export function ManagePanel({
                 />
             )}
 
-            <ConfirmModal
-                isOpen={!!pendingTab}
-                onClose={() => setPendingTab(null)}
-                onConfirm={() => {
-                    const target = pendingTab
-                    setPendingTab(null)
-                    setFormatDirty(false)
-                    if (target) setTab(target)
-                }}
-                title="Leave without saving?"
-                message="The tournament format has edits you have not saved yet."
-                detail="Anything you have not saved is lost."
-                confirmText="Leave"
-                variant="error"
-            />
         </div>
         </EventRosterProvider>
     )

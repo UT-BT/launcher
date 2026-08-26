@@ -110,9 +110,16 @@ Two things to keep right:
 - **Read the flag through a ref.** The guard closure is registered once; reading
   `dirty` directly would freeze it at its first value.
 
-Unmounting a view is NOT navigation, so a guard cannot catch it. A panel that
-unmounts on a local tab switch has to ask for itself — `ManagePanel` tracks the
-Format tab's dirty flag and shows its own confirm before switching.
+Unmounting a view is NOT navigation, so a guard cannot catch it, and a guard
+belonging to a component that unmounts stops existing with it. **Put the guard —
+and the unsaved state it reads — above everything that unmounts.**
+
+Mirroring a child's dirty flag up through effects does not work: the child
+unmounts on a tab change, its reset races the parent's own update, and the flag
+sticks. `EventDetailPage` instead owns the format builder's draft outright and
+`FormatPanel` is controlled by it. The draft IS the unsaved state, so `dirty` is
+just `draft !== null` — there is no second value to keep in step, and switching
+tabs preserves the edit rather than destroying it.
 
 ## URL sync (web build)
 
