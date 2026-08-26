@@ -92,7 +92,7 @@ export function TeamWorldRecordsPanel({ accessToken, teamId, memberIds, selfUser
             This team holds no world records yet.
         </div>
     ) : records.map(r => {
-        const isTeamRow = !!(r.members && r.members.length > 0)
+        const isTeamRow = !!r.team_cap_id
         const isOwn = !isTeamRow && selfUserId != null && String(r.user_id) === String(selfUserId)
         return (
             <div
@@ -158,7 +158,7 @@ export function TeamWorldRecordsPanel({ accessToken, teamId, memberIds, selfUser
                         <DataTableEmpty colSpan={visibleCount} message="This team holds no world records yet." />
                     ) : (
                         records.map(r => {
-                            const isTeamRow = !!(r.members && r.members.length > 0)
+                            const isTeamRow = !!r.team_cap_id
                             const isOwn = !isTeamRow && selfUserId != null && String(r.user_id) === String(selfUserId)
                             return (
                                 <DataTableRow

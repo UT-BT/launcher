@@ -775,7 +775,7 @@ export function WorldRecordsPage({
                     </DataTableCell>
                 )
             case 'time': {
-                const isTeamRow = !!(r.members && r.members.length > 0)
+                const isTeamRow = !!r.team_cap_id
                 return (
                     <DataTableCell key={id} align="right">
                         <CapTimeLink
@@ -859,7 +859,7 @@ export function WorldRecordsPage({
             {recordsHaveFilter ? 'No world records match your filters.' : 'No world records found.'}
         </div>
     ) : recordPageRows.map(r => {
-        const isTeamRow = !!(r.members && r.members.length > 0)
+        const isTeamRow = !!r.team_cap_id
         const isSelf = selfId != null && r.user_id === String(selfId)
         const isNew = highlight.isNew(r.added)
         return (

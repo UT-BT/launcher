@@ -2220,9 +2220,11 @@ export async function fetchDemoStatus(capId: string): Promise<DemoConverterStatu
     }
 }
 
+const CONVERSION_FINISHED = 4
+
 export function getFirstPersonVideoUrl(status: DemoConverterStatus | null): string | null {
     if (!status || status.status === 'error') return null
-    if (status.response?.status !== 4) return null
+    if (status.response?.status !== CONVERSION_FINISHED) return null
     const fp = status.videos?.find(v => v.type === 'first_person')
     return fp?.url ?? null
 }
@@ -2235,20 +2237,22 @@ export interface ReplayResolution {
 }
 
 const REPLAY_UNAVAILABLE: ReplayResolution = { state: 'unavailable', url: null }
+const REPLAY_ERROR: ReplayResolution = { state: 'error', url: null }
 
 export async function resolveReplayForCap(capId: string | null | undefined): Promise<ReplayResolution> {
     if (!capId) return REPLAY_UNAVAILABLE
     try {
         const res = await fetch(`${GATEWAY_BASE_URL}/democonverter/status/${encodeURIComponent(capId)}`)
         if (res.status === 404) return REPLAY_UNAVAILABLE
-        if (!res.ok) return { state: 'error', url: null }
+        if (!res.ok) return REPLAY_ERROR
         const data = await res.json() as DemoConverterStatus
-        if (data?.status === 'error') return REPLAY_UNAVAILABLE
+        if (data?.status === 'error') return REPLAY_ERROR
         const url = getFirstPersonVideoUrl(data)
         if (url) return { state: 'ready', url }
+        if (data?.response?.status === CONVERSION_FINISHED) return REPLAY_UNAVAILABLE
         return { state: 'converting', url: null }
     } catch {
-        return { state: 'error', url: null }
+        return REPLAY_ERROR
     }
 }
 

@@ -366,6 +366,13 @@ it unconditionally.
 Cap Detail page can label the member whose demo it is playing. `available: false`
 means the roster has no demo on record; `demo_cap_id` is null in that case.
 
+**Read `is_slowest` before writing any copy about that replay.** When it is false
+the slowest member uploaded no demo, so what you get is a faster member's run: it
+ends *before* the team capped. Never call it "the team time" in that case, and show
+the owning member's own `cap_time_seconds`, not the team time, alongside it. Both
+strings live in `runDemoLabels.ts` (`app/components/shared/`), covered by
+`runDemoLabels.test.ts` — reuse them rather than re-wording them per page.
+
 ### Replay availability
 
 `resolveReplayForCap(capId)` returns a `state`, and the UI must say different
@@ -374,16 +381,21 @@ things for each:
 | `state` | Meaning | What to show |
 |---|---|---|
 | `ready` | a first-person video exists | play it |
-| `converting` | the demo exists and is still being processed | "still being processed, try again later" |
-| `unavailable` | there is no demo for this id | "no replay has been uploaded for this run" |
-| `error` | the status service could not be reached | "could not load this replay" |
+| `converting` | the demo exists and the pipeline can still finish it | "still being processed, try again later" |
+| `unavailable` | nothing will ever arrive: no demo for this id, or a finished conversion that produced no first-person track | "no replay has been uploaded for this run" |
+| `error` | the status service could not be reached, or the conversion itself failed | "could not load this replay" |
 
 The distinction matters: telling a user their run is "still converting" when the id
 they clicked has no demo at all sends them back to wait for something that will
-never arrive. `useReplayWatch` maps these through
-`replayErrorMessage` (`app/hooks/replayMessages.ts`); pass it a
+never arrive, and `converting` is only ever honest while the pipeline can still
+reach a first-person track. **Every** call site must read `state`, not just `url`,
+and map it through `replayErrorMessage` (`app/hooks/replayMessages.ts`) — a call
+site that collapses every non-`ready` state into one message states the inverse of
+the truth half the time. `useReplayWatch` does this for you; pass it a
 `loadingKey` when the id you are resolving differs from the row's own id (as it
-does for every team run) so the row's spinner still keys off the row.
+does for every team run) so the row's spinner still keys off the row. A call site
+holding its own error banner must also clear it on success, or a working replay
+opens under a stale failure.
 
 ## Avatar URLs
 

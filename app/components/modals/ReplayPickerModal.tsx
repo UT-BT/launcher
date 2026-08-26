@@ -8,6 +8,7 @@ import { TeamHolders } from '@/app/components/shared/TeamHolders'
 import { openTeamCap } from '@/app/components/shared/CapTimeLink'
 import { DemoDownloadStatusModal } from '@/app/components/shared/DemoDownloadStatusModal'
 import { useDemoDownload } from '@/app/hooks/useDemoDownload'
+import { replayErrorMessage } from '@/app/hooks/replayMessages'
 import {
     fetchMapLeaderboard, fetchTeamMapLeaderboard, fetchDemoStatus, getFirstPersonVideoUrl,
     resolveReplayForCap,
@@ -75,8 +76,9 @@ export function ReplayPickerModal({
         if (!entry.demo_cap_id || !mapName) return
         setResolvingTeamCapId(entry.id)
         try {
-            const { url } = await resolveReplayForCap(entry.demo_cap_id)
-            if (url) {
+            const { state, url } = await resolveReplayForCap(entry.demo_cap_id)
+            if (state === 'ready' && url) {
+                setError(null)
                 onSelect(url, mapName, {
                     id: entry.id,
                     map: entry.map,
@@ -88,7 +90,7 @@ export function ReplayPickerModal({
                     verified: entry.verified,
                 } as LeaderboardEntry)
             } else {
-                setError('No replay is available for this team run yet.')
+                setError(replayErrorMessage(state === 'ready' ? 'unavailable' : state))
             }
         } finally {
             setResolvingTeamCapId(null)

@@ -281,10 +281,10 @@ describe('replay resolution', () => {
         await expect(resolveReplayForCap('team-cap-id')).resolves.toEqual({ state: 'unavailable', url: null })
     })
 
-    it('reports unavailable when the pipeline answers with an error status', async () => {
+    it('reports a failed conversion as an error, not as a run nobody uploaded', async () => {
         vi.stubGlobal('fetch', vi.fn().mockResolvedValue(statusResponse({ status: 'error' })))
 
-        await expect(resolveReplayForCap('cap-1')).resolves.toEqual({ state: 'unavailable', url: null })
+        await expect(resolveReplayForCap('cap-1')).resolves.toEqual({ state: 'error', url: null })
     })
 
     it('never calls out for a run with no resolved demo cap', async () => {
@@ -304,12 +304,22 @@ describe('replay resolution', () => {
         await expect(resolveReplayForCap('cap-1')).resolves.toEqual({ state: 'error', url: null })
     })
 
-    it('treats a finished conversion with no first-person track as still converting', async () => {
+    it('never promises a first-person track a finished conversion did not produce', async () => {
         vi.stubGlobal('fetch', vi.fn().mockResolvedValue(statusResponse({
             response: { status: 4 },
             videos: [{ type: 'third_person', url: 'https://videos.example/tp.mp4' }],
         })))
 
-        await expect(resolveReplayForCap('cap-1')).resolves.toEqual({ state: 'converting', url: null })
+        await expect(resolveReplayForCap('cap-1')).resolves.toEqual({ state: 'unavailable', url: null })
+    })
+
+    it('only reports converting for a state the pipeline can still leave', async () => {
+        for (const pipelineStatus of [0, 1, 2, 3]) {
+            vi.stubGlobal('fetch', vi.fn().mockResolvedValue(statusResponse({ response: { status: pipelineStatus } })))
+            await expect(resolveReplayForCap('cap-1')).resolves.toEqual({ state: 'converting', url: null })
+        }
+
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue(statusResponse({ response: { status: 4 }, videos: [] })))
+        await expect(resolveReplayForCap('cap-1')).resolves.toEqual({ state: 'unavailable', url: null })
     })
 })

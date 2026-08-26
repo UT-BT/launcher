@@ -12,7 +12,7 @@ not_here:
   - "page/query state + persistence → state-patterns.md"
 sections: [hard-rule-playerinfo, player-cap-links, map-links, tables-datatable-primitives, columns-columnsmenu, filter-presets, tutorial, visual-primitives, ui-primitives, utilities, when-to-extract]
 last_verified: 2026-08-26
-verify_against: [app/components/shared/PlayerInfo.tsx, app/components/shared/DataTable.tsx, app/components/shared/CapTimeLink.tsx, app/components/shared/capTimeTarget.ts, app/components/shared/MapNavLink.tsx, app/components/shared/MapNameCell.tsx, app/components/shared/ColumnsMenu.tsx, app/components/shared/FilterPresetsMenu.tsx]
+verify_against: [app/components/shared/PlayerInfo.tsx, app/components/shared/DataTable.tsx, app/components/shared/CapTimeLink.tsx, app/components/shared/capTimeTarget.ts, app/components/shared/runDemoLabels.ts, app/components/shared/MapNavLink.tsx, app/components/shared/MapNameCell.tsx, app/components/shared/ColumnsMenu.tsx, app/components/shared/FilterPresetsMenu.tsx]
 ---
 
 # Shared components reference
@@ -136,10 +136,13 @@ event that `Main.tsx` turns into navigation. The **event architecture lives in
   />
   ```
 
-  Never infer team-ness from the map's `required_players` or from the shape of the
-  id — read the explicit `team_cap_id` / `members` the API sends for that row (see
-  `agents/data-sources.md`, "Team maps & team runs"). The routing decision itself
-  lives in `capTimeTarget(capId, teamCapId)`
+  Never infer team-ness from the map's `required_players`, from the shape of the
+  id, or from whether `members[]` came back non-empty — read the explicit
+  `team_cap_id` the API sends on that row (`null` on solo rows; see
+  `agents/data-sources.md`, "Team maps & team runs"). `members[]` decides how to
+  *render* a holder; `team_cap_id` decides where the row *links*, and a team row
+  routed on an empty roster lands on the solo cap page and 404s. The routing
+  decision itself lives in `capTimeTarget(capId, teamCapId)`
   (`app/components/shared/capTimeTarget.ts`), covered by
   `capTimeTarget.test.ts` + `routes.contract.test.ts`; reuse it if you need the
   target outside a `CapTimeLink`. `teamCapId` wins when both are passed.
@@ -327,6 +330,7 @@ the whole thead during the step:
 | `app/utils/roles.ts` | `ROLE_LABELS` — maps `utbt_role` (1=Moderator, 2=Admin, 3=Cup Admin; 0/undefined = no badge) to `{ label, className }`. Shared by the profile hero and Players page; use it for any role badge rather than re-defining the colors. Also `ROLE` (numeric enum), `ADMIN_DASHBOARD_ROLES` / `ADMIN_ONLY_ROLES` (allow-lists), `isStaff(profile)`, and `canActOn(actor, target)` — the staff-gating helpers behind the admin page. |
 | `app/utils/search.ts` | `fuzzyMatch(text, query)` — substring-first, ordered-subsequence fallback. |
 | `app/utils/server-utils.ts` | Server-specific: `trimServerName`, `getServerType`, `getServerRegion`, `getRegionFlag`, `getGameStatusText`, `sortServers`, `filterServers`. Types: `ServerType`, `FilterState`, `ServerSortField`, `SortDir`, `ServerPreset`, `ServerPresetFilters`. |
+| `app/components/shared/runDemoLabels.ts` | `runDemoWatchTitle`, `runDemoBadge`, `runDemoIsTeamTime` — the copy for a team run's replay, branched on `demo.is_slowest`. Use these instead of writing the strings inline: when the slowest member has no demo the replay ends before the team capped and must not be called the team time. |
 | `app/utils/api.ts` | Data fetching + URL builders. See `data-sources.md`. |
 
 ## When to extract a NEW shared component
