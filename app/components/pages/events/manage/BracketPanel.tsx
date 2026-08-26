@@ -8,7 +8,7 @@ import { ErrorBanner, SectionCard } from '@/app/components/pages/teams/teamsShar
 import {
     createEventMatch, eventErrorMessage, fetchEventBracket, generateEventRound, generateEventStage,
     resetEventStage, setEventBracketPublished, updateEventStage,
-    type EventBracket, type EventBracketStage, type EventMatch,
+    type EventBracket, type EventBracketStage, type EventMatch, type EventStageDraw,
 } from '@/app/utils/api'
 
 const PUBLISH_KEY = '__bracket__'
@@ -23,10 +23,12 @@ interface BracketPanelProps {
     onMapSelect?: (mapName: string) => void
 }
 
-function relaxedNotice(relaxed: string[]): string | null {
-    if (!relaxed.length) return null
-    const names = relaxed.map(name => RELAXED_LABELS[name] ?? name)
-    return `The draw could not avoid ${names.join(' or ')} — check the pairings before publishing.`
+function relaxedNotice(draw: EventStageDraw): string | null {
+    if (!draw.relaxed.length) return null
+    const names = draw.relaxed.map(name => RELAXED_LABELS[name] ?? name)
+    const pairs = (draw.rematches ?? []).map(pair => pair.join(' vs ')).join(', ')
+    const which = pairs ? ` (${pairs})` : ''
+    return `The draw could not avoid ${names.join(' or ')}${which} — check the pairings before publishing.`
 }
 
 export function BracketPanel({ accessToken, slug, bracket, onBracketChange, onMapSelect }: BracketPanelProps) {
@@ -61,7 +63,7 @@ export function BracketPanel({ accessToken, slug, bracket, onBracketChange, onMa
     const preview = (stage: EventBracketStage) => run(stage.key, async () => {
         const draw = await generateEventStage(accessToken, slug, stage.key, { dryRun: true })
         const summary = draw.stage.matches.length
-        const warning = relaxedNotice(draw.relaxed)
+        const warning = relaxedNotice(draw)
         setNotices(current => ({
             ...current,
             [stage.key]: `Preview: ${summary} match${summary === 1 ? '' : 'es'} would be drawn.${warning ? ` ${warning}` : ''}`,
@@ -70,13 +72,13 @@ export function BracketPanel({ accessToken, slug, bracket, onBracketChange, onMa
 
     const generate = (stage: EventBracketStage, force: boolean) => run(stage.key, async () => {
         const draw = await generateEventStage(accessToken, slug, stage.key, { force })
-        const warning = relaxedNotice(draw.relaxed)
+        const warning = relaxedNotice(draw)
         if (warning) setNotices(current => ({ ...current, [stage.key]: warning }))
     })
 
     const nextRound = (stage: EventBracketStage) => run(stage.key, async () => {
         const draw = await generateEventRound(accessToken, slug, stage.key)
-        const warning = relaxedNotice(draw.relaxed)
+        const warning = relaxedNotice(draw)
         setNotices(current => ({
             ...current,
             [stage.key]: warning ?? `Round ${draw.round_no} drawn.`,
