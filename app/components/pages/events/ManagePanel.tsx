@@ -4,7 +4,8 @@ import { useNavState } from '@/app/components/navigation/useNavState'
 import { ErrorBanner } from '@/app/components/pages/teams/teamsShared'
 import {
     eventErrorMessage, fetchEventAdminTeams,
-    type EventBracket, type EventDetail, type EventGroupsConfig, type EventLfpEntry, type EventTeam,
+    type EventBracket, type EventDetail, type EventFormatSpec, type EventGroupsConfig,
+    type EventLfpEntry, type EventTeam,
 } from '@/app/utils/api'
 import { EventRosterProvider } from './TeamRoster'
 import { SignupsPanel } from './manage/SignupsPanel'
@@ -30,10 +31,13 @@ interface ManagePanelProps {
     onBracketChange: (bracket: EventBracket) => void
     onMapSelect?: (mapName: string) => void
     onRefresh: () => void
+    formatDraft: EventFormatSpec | null
+    onFormatDraftChange: (draft: EventFormatSpec | null) => void
 }
 
 export function ManagePanel({
-    accessToken, slug, event, lfp, bracket, canManageEvent, onBracketChange, onMapSelect, onRefresh,
+    accessToken, slug, event, lfp, bracket, canManageEvent, onBracketChange, onMapSelect,
+    onRefresh, formatDraft, onFormatDraftChange,
 }: ManagePanelProps) {
     const tabs = canManageEvent ? TABS : TABS.filter(entry => entry.id !== 'signups')
     const [storedTab, setTab] = useNavState<ManageTab>('event.manageTab', canManageEvent ? 'signups' : 'format')
@@ -78,6 +82,12 @@ export function ManagePanel({
                         )}
                     >
                         {entry.label}
+                        {entry.id === 'format' && formatDraft && (
+                            <span
+                                aria-label="unsaved changes"
+                                className="ml-1.5 inline-block size-1.5 rounded-full bg-amber-300 align-middle"
+                            />
+                        )}
                     </button>
                 ))}
             </div>
@@ -111,6 +121,8 @@ export function ManagePanel({
                         bracket={bracket}
                         hasDrawnStages={hasDrawnStages}
                         onBracketChange={onBracketChange}
+                        draft={formatDraft}
+                        onDraftChange={onFormatDraftChange}
                     />
                 </div>
             )}
@@ -124,6 +136,7 @@ export function ManagePanel({
                     onMapSelect={onMapSelect}
                 />
             )}
+
         </div>
         </EventRosterProvider>
     )

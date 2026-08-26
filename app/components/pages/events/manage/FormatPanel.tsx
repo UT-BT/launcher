@@ -16,28 +16,29 @@ interface FormatPanelProps {
     bracket: EventBracket | null
     hasDrawnStages: boolean
     onBracketChange: (bracket: EventBracket) => void
+    draft: EventFormatSpec | null
+    onDraftChange: (draft: EventFormatSpec | null) => void
 }
 
-export function FormatPanel({ accessToken, slug, bracket, hasDrawnStages, onBracketChange }: FormatPanelProps) {
+export function FormatPanel({
+    accessToken, slug, bracket, hasDrawnStages, onBracketChange, draft, onDraftChange,
+}: FormatPanelProps) {
     const attached = bracket?.format.spec ?? null
 
     const [templates, setTemplates] = useState<EventFormatTemplate[]>([])
     const [templateSlug, setTemplateSlug] = useState('')
-    const [spec, setSpec] = useState<EventFormatSpec>(() => attached ?? emptySpec())
-    const [dirty, setDirty] = useState(false)
     const [busy, setBusy] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
     const [confirmReplace, setConfirmReplace] = useState<string | null>(null)
     const [open, setOpen] = useNavState('event.manage.format', false)
 
+    const spec = useMemo(() => draft ?? attached ?? emptySpec(), [draft, attached])
+    const dirty = draft !== null
+
     useEffect(() => {
         fetchEventFormats(accessToken).then(setTemplates).catch(() => setTemplates([]))
     }, [accessToken])
-
-    useEffect(() => {
-        if (attached && !dirty) setSpec(attached)
-    }, [attached, dirty])
 
     const options = useMemo(
         () => templates.map(template => ({ value: template.slug, label: template.name })),
@@ -50,7 +51,7 @@ export function FormatPanel({ accessToken, slug, bracket, hasDrawnStages, onBrac
         setFieldErrors({})
         try {
             onBracketChange(await action())
-            setDirty(false)
+            onDraftChange(null)
         } catch (e) {
             const message = eventErrorMessage(e)
             const parsed = parseSpecErrors(message)
@@ -59,7 +60,7 @@ export function FormatPanel({ accessToken, slug, bracket, hasDrawnStages, onBrac
         } finally {
             setBusy(false)
         }
-    }, [onBracketChange])
+    }, [onBracketChange, onDraftChange])
 
     const applyTemplate = (slugToApply: string) => {
         void run(() => setEventFormat(accessToken, slug, { format_slug: slugToApply }))
@@ -111,6 +112,13 @@ export function FormatPanel({ accessToken, slug, bracket, hasDrawnStages, onBrac
             >
                 <ErrorBanner message={error} />
 
+                {dirty && (
+                    <p className="text-[11px] text-amber-300">
+                        Unsaved changes. {attached ? 'Save format' : 'Apply format'} to keep them.
+                        They survive switching tabs, but not a reload.
+                    </p>
+                )}
+
                 {hasDrawnStages && (
                     <p className="text-[11px] text-amber-300">
                         Stages that already have matches cannot change kind. Reset a stage first to reshape it.
@@ -121,7 +129,7 @@ export function FormatPanel({ accessToken, slug, bracket, hasDrawnStages, onBrac
                     spec={spec}
                     errors={fieldErrors}
                     disabled={busy}
-                    onChange={next => { setSpec(next); setDirty(true) }}
+                    onChange={onDraftChange}
                 />
             </SectionCard>
 

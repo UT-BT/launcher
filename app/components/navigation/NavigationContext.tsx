@@ -29,6 +29,7 @@ export interface NavigationContextValue {
     canForward: boolean
     getEntryState: <T>(key: string, def: T) => T
     setEntryState: (key: string, value: unknown) => void
+    registerLeaveGuard: (key: string, prompt: () => string | null) => () => void
 }
 
 export const NavigationContext = createContext<NavigationContextValue | null>(null)

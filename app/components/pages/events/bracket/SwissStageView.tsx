@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { cn } from '@/lib/utils'
 import type { EventBracketEntrant, EventBracketStage, EventSwissConfig } from '@/app/utils/api'
-import { Chip, ENTRANT_STATUS_STYLES, MatchCard, stageRounds } from './bracketShared'
+import { Chip, ENTRANT_STATUS_STYLES, MatchCard, matchOrder, stageRounds } from './bracketShared'
 import { TeamName } from '../TeamRoster'
 
 interface Column {
@@ -132,7 +132,7 @@ export function SwissStageView({ stage, onMapSelect }: {
             {rounds.map(round => {
                 const inRound = stage.matches
                     .filter(match => match.round_no === round)
-                    .sort((a, b) => a.ordinal - b.ordinal)
+                    .sort(matchOrder(stage.groups))
                 if (inRound.length === 0) return null
 
                 const labels = [...new Set(inRound.map(match => match.round_label).filter(Boolean))]

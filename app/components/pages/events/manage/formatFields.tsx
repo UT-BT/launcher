@@ -212,6 +212,8 @@ export const TIEBREAKER_LABELS: Record<string, string> = {
     points: 'Total points',
     map_diff: 'Map differential',
     head_to_head: 'Direct confrontation',
+    wins: 'Most matches won',
+    losses: 'Fewest matches lost',
     caps_for: 'Total caps made',
     caps_diff: 'Cap differential',
     maps_won: 'Total maps won',

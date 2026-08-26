@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { cn } from '@/lib/utils'
 import type { EventBracketStage, EventMatch } from '@/app/utils/api'
-import { MatchCard, teamLabel } from './bracketShared'
+import { MatchCard, sortedMatches, teamLabel } from './bracketShared'
 import { TeamName } from '../TeamRoster'
 
 interface Round {
@@ -13,7 +13,7 @@ interface Round {
 function buildRounds(stage: EventBracketStage): Round[] {
     const byRound = new Map<number, EventMatch[]>()
 
-    for (const match of stage.matches) {
+    for (const match of sortedMatches(stage)) {
         byRound.set(match.round_no, [...(byRound.get(match.round_no) ?? []), match])
     }
 
@@ -22,7 +22,7 @@ function buildRounds(stage: EventBracketStage): Round[] {
         .map(([no, matches]) => ({
             no,
             label: matches[0]?.round_label ?? `Round ${no}`,
-            matches: matches.sort((a, b) => a.ordinal - b.ordinal),
+            matches,
         }))
 }
 

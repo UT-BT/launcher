@@ -8,11 +8,13 @@ import { ErrorBanner, SectionCard } from '@/app/components/pages/teams/teamsShar
 import {
     createEventMatch, eventErrorMessage, fetchEventBracket, generateEventRound, generateEventStage,
     resetEventStage, setEventBracketPublished, updateEventStage,
-    type EventBracket, type EventBracketStage, type EventMatch,
+    type EventBracket, type EventBracketStage, type EventMatch, type EventStageDraw,
 } from '@/app/utils/api'
 
 const PUBLISH_KEY = '__bracket__'
-import { MatchCard, RELAXED_LABELS, STAGE_STATUS_LABELS } from '../bracket/bracketShared'
+import {
+    MatchCard, RELAXED_LABELS, STAGE_STATUS_LABELS, sortedMatches, unfinishedFeeders,
+} from '../bracket/bracketShared'
 import { MatchEditorModal } from './MatchEditorModal'
 
 interface BracketPanelProps {
@@ -23,21 +25,37 @@ interface BracketPanelProps {
     onMapSelect?: (mapName: string) => void
 }
 
-function relaxedNotice(relaxed: string[]): string | null {
-    if (!relaxed.length) return null
-    const names = relaxed.map(name => RELAXED_LABELS[name] ?? name)
-    return `The draw could not avoid ${names.join(' or ')} — check the pairings before publishing.`
+function feederNames(feeders: EventBracketStage[]): string {
+    const names = feeders.map(stage => `"${stage.name}"`)
+
+    if (names.length <= 1) return names[0] ?? 'An earlier stage'
+
+    return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`
+}
+
+function relaxedNotice(draw: EventStageDraw): string | null {
+    if (!draw.relaxed.length) return null
+    const names = draw.relaxed.map(name => RELAXED_LABELS[name] ?? name)
+    const pairs = (draw.rematches ?? []).map(pair => pair.join(' vs ')).join(', ')
+    const which = pairs ? ` (${pairs})` : ''
+    return `The draw could not avoid ${names.join(' or ')}${which} — check the pairings before publishing.`
 }
 
 export function BracketPanel({ accessToken, slug, bracket, onBracketChange, onMapSelect }: BracketPanelProps) {
-    const stages = bracket?.stages ?? []
+    const stages = useMemo(() => bracket?.stages ?? [], [bracket])
     const [busyStage, setBusyStage] = useState<string | null>(null)
     const [error, setError] = useState<string | null>(null)
     const [notices, setNotices] = useState<Record<string, string>>({})
     const [resetTarget, setResetTarget] = useState<EventBracketStage | null>(null)
     const [redrawTarget, setRedrawTarget] = useState<EventBracketStage | null>(null)
+    const [earlyTarget, setEarlyTarget] = useState<{ stage: EventBracketStage; force: boolean } | null>(null)
     const [confirmPublish, setConfirmPublish] = useState(false)
     const [editing, setEditing] = useState<EventMatch | null>(null)
+
+    const pendingFor = useCallback(
+        (stage: EventBracketStage) => unfinishedFeeders(bracket?.format.spec, stages, stage.key),
+        [bracket, stages],
+    )
 
     const refresh = useCallback(async () => {
         onBracketChange(await fetchEventBracket(accessToken, slug))
@@ -61,7 +79,7 @@ export function BracketPanel({ accessToken, slug, bracket, onBracketChange, onMa
     const preview = (stage: EventBracketStage) => run(stage.key, async () => {
         const draw = await generateEventStage(accessToken, slug, stage.key, { dryRun: true })
         const summary = draw.stage.matches.length
-        const warning = relaxedNotice(draw.relaxed)
+        const warning = relaxedNotice(draw)
         setNotices(current => ({
             ...current,
             [stage.key]: `Preview: ${summary} match${summary === 1 ? '' : 'es'} would be drawn.${warning ? ` ${warning}` : ''}`,
@@ -70,13 +88,13 @@ export function BracketPanel({ accessToken, slug, bracket, onBracketChange, onMa
 
     const generate = (stage: EventBracketStage, force: boolean) => run(stage.key, async () => {
         const draw = await generateEventStage(accessToken, slug, stage.key, { force })
-        const warning = relaxedNotice(draw.relaxed)
+        const warning = relaxedNotice(draw)
         if (warning) setNotices(current => ({ ...current, [stage.key]: warning }))
     })
 
     const nextRound = (stage: EventBracketStage) => run(stage.key, async () => {
         const draw = await generateEventRound(accessToken, slug, stage.key)
-        const warning = relaxedNotice(draw.relaxed)
+        const warning = relaxedNotice(draw)
         setNotices(current => ({
             ...current,
             [stage.key]: warning ?? `Round ${draw.round_no} drawn.`,
@@ -134,7 +152,16 @@ export function BracketPanel({ accessToken, slug, bracket, onBracketChange, onMa
                     busy={busyStage === stage.key}
                     notice={notices[stage.key] || null}
                     onPreview={() => void preview(stage)}
-                    onGenerate={force => force ? setRedrawTarget(stage) : void generate(stage, false)}
+                    onGenerate={force => {
+                        if (pendingFor(stage).length) {
+                            setEarlyTarget({ stage, force })
+                        } else if (force) {
+                            setRedrawTarget(stage)
+                        } else {
+                            void generate(stage, false)
+                        }
+                    }}
+                    pendingFeeders={pendingFor(stage)}
                     onNextRound={() => void nextRound(stage)}
                     onTogglePublished={() => void run(stage.key, () => updateEventStage(accessToken, slug, stage.key, { published: !stage.published }))}
                     onReset={() => setResetTarget(stage)}
@@ -155,6 +182,30 @@ export function BracketPanel({ accessToken, slug, bracket, onBracketChange, onMa
                 message="Show this bracket to everyone?"
                 detail="Players will see the published stages, their standings and the tournament format. You can hide it again at any time."
                 confirmText="Publish"
+            />
+
+            <ConfirmModal
+                isOpen={!!earlyTarget}
+                onClose={() => setEarlyTarget(null)}
+                onConfirm={() => {
+                    const target = earlyTarget
+                    setEarlyTarget(null)
+                    if (target) void generate(target.stage, target.force)
+                }}
+                title="Draw before the results are in?"
+                message={earlyTarget
+                    ? `${feederNames(pendingFor(earlyTarget.stage))} still ${
+                        pendingFor(earlyTarget.stage).length === 1 ? 'has' : 'have'
+                    } matches to play.`
+                    : ''}
+                detail={
+                    'This stage is seeded from those standings, and they will keep moving as '
+                    + 'results come in. Drawing now fixes the pairings against a table that is '
+                    + 'not final, so you would have to redraw — which deletes any results '
+                    + 'recorded here. Wait unless you are rehearsing.'
+                }
+                confirmText="Draw anyway"
+                variant="error"
             />
 
             <ConfirmModal
@@ -202,12 +253,13 @@ export function BracketPanel({ accessToken, slug, bracket, onBracketChange, onMa
 }
 
 function StageCard({
-    stage, busy, notice, onPreview, onGenerate, onNextRound, onTogglePublished, onReset, onAddMatch,
-    onEditMatch, onMapSelect,
+    stage, busy, notice, pendingFeeders, onPreview, onGenerate, onNextRound, onTogglePublished,
+    onReset, onAddMatch, onEditMatch, onMapSelect,
 }: {
     stage: EventBracketStage
     busy: boolean
     notice: string | null
+    pendingFeeders: EventBracketStage[]
     onPreview: () => void
     onGenerate: (force: boolean) => void
     onNextRound: () => void
@@ -223,12 +275,11 @@ function StageCard({
 
     const rounds = useMemo(() => {
         const grouped = new Map<number, EventMatch[]>()
-        for (const match of stage.matches) {
+        for (const match of sortedMatches(stage)) {
             grouped.set(match.round_no, [...(grouped.get(match.round_no) ?? []), match])
         }
-        for (const matches of grouped.values()) matches.sort((a, b) => a.ordinal - b.ordinal)
         return [...grouped.entries()].sort(([a], [b]) => a - b)
-    }, [stage.matches])
+    }, [stage])
 
     const groupNames = useMemo(
         () => new Map(stage.groups.map(group => [group.id, group.name])),
@@ -265,6 +316,15 @@ function StageCard({
             }
         >
             {notice && <p className="text-[11px] text-amber-300">{notice}</p>}
+
+            {pendingFeeders.length > 0 && (
+                <p className="text-[11px] text-amber-300">
+                    {feederNames(pendingFeeders)} {pendingFeeders.length === 1 ? 'is' : 'are'} still
+                    being played, and this stage is seeded from those standings. Wait for them to
+                    finish before drawing it — “Preview draw” shows the pairings without fixing
+                    them.
+                </p>
+            )}
 
             {!stage.published && (
                 <p className="text-[11px] text-muted-foreground">

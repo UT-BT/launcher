@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef, lazy, Suspense, type Dispatch, type SetStateAction } from 'react'
 import { AppLayout } from '@/app/components/layout/AppLayout'
 import { ErrorBoundary } from '@/app/components/ErrorBoundary'
+import { ConfirmModal } from '@/app/components/shared/ConfirmModal'
 import { trackPage } from '@/app/utils/telemetry'
 import {
   NavigationContext,
@@ -434,7 +435,25 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
     return count != null && count > 0
   }, [badgeCounts])
 
-  const navigate = useCallback((view: string, params: NavParams = {}) => {
+  const leaveGuardsRef = useRef(new Map<string, () => string | null>())
+  const [pendingLeave, setPendingLeave] = useState<
+    { message: string; view?: string; params?: NavParams; move?: () => void }
+  | null>(null)
+
+  const registerLeaveGuard = useCallback((key: string, prompt: () => string | null) => {
+    leaveGuardsRef.current.set(key, prompt)
+    return () => { leaveGuardsRef.current.delete(key) }
+  }, [])
+
+  const leaveWarning = useCallback(() => {
+    for (const prompt of leaveGuardsRef.current.values()) {
+      const message = prompt()
+      if (message) return message
+    }
+    return null
+  }, [])
+
+  const commitNavigate = useCallback((view: string, params: NavParams = {}) => {
     markViewed(view)
     const { entries: cur, cursor: curIdx } = stackRef.current
     const active = cur[curIdx] ?? cur[cur.length - 1]
@@ -451,6 +470,31 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
     setCursor(nextCursor)
     pushUrlForEntry(entry)
   }, [markViewed])
+
+  const navigate = useCallback((view: string, params: NavParams = {}) => {
+    const { entries: cur, cursor: curIdx } = stackRef.current
+    const active = cur[curIdx] ?? cur[cur.length - 1]
+    const staying = active?.view === view && paramsEqual(active.params, params)
+    const message = staying ? null : leaveWarning()
+
+    if (message) {
+      setPendingLeave({ view, params, message })
+      return
+    }
+
+    commitNavigate(view, params)
+  }, [commitNavigate, leaveWarning])
+
+  const guarded = useCallback((move: () => void) => () => {
+    const message = leaveWarning()
+
+    if (message) {
+      setPendingLeave({ move, message })
+      return
+    }
+
+    move()
+  }, [leaveWarning])
 
   const pushExternal = useCallback((view: string, params: NavParams) => {
     markViewed(view)
@@ -472,8 +516,8 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
 
   const localBack = useCallback(() => setCursor(c => Math.max(0, c - 1)), [])
   const localForward = useCallback(() => setCursor(c => Math.min(stackRef.current.entries.length - 1, c + 1)), [])
-  const back = urlNav ? urlNav.back : localBack
-  const forward = urlNav ? urlNav.forward : localForward
+  const back = useMemo(() => guarded(urlNav ? urlNav.back : localBack), [guarded, urlNav, localBack])
+  const forward = useMemo(() => guarded(urlNav ? urlNav.forward : localForward), [guarded, urlNav, localForward])
 
   const getEntryState = useCallback(<T,>(key: string, def: T): T => {
     const { entries: cur, cursor: curIdx } = stackRef.current
@@ -506,7 +550,8 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
 
   const navValue = useMemo<NavigationContextValue>(() => ({
     entry, currentView, navigate, back, forward, canBack, canForward, getEntryState, setEntryState,
-  }), [entry, currentView, navigate, back, forward, canBack, canForward, getEntryState, setEntryState])
+    registerLeaveGuard,
+  }), [entry, currentView, navigate, back, forward, canBack, canForward, getEntryState, setEntryState, registerLeaveGuard])
 
   const [mapsState, setMapsState] = usePageState(MAPS_STATE_STORAGE_KEY, DEFAULT_MAPS_STATE, MAPS_PREF_KEYS, getEntryState, updateEntryState)
   const [serversState, setServersState] = usePageState(SERVERS_STATE_STORAGE_KEY, DEFAULT_SERVERS_STATE, SERVERS_PREF_KEYS, getEntryState, updateEntryState)
@@ -862,6 +907,21 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
       />
       <PatreonModal />
       <AuthRequiredModal request={loginRequest} onClose={() => setLoginRequest(null)} />
+      <ConfirmModal
+        isOpen={!!pendingLeave}
+        onClose={() => setPendingLeave(null)}
+        onConfirm={() => {
+          const target = pendingLeave
+          setPendingLeave(null)
+          if (target?.move) target.move()
+          else if (target?.view) commitNavigate(target.view, target.params ?? {})
+        }}
+        title="Leave without saving?"
+        message={pendingLeave?.message ?? ''}
+        detail="Anything you have not saved is lost."
+        confirmText="Leave"
+        variant="error"
+      />
     </div>
   )
 }
