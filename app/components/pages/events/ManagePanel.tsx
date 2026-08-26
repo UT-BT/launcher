@@ -31,7 +31,6 @@ interface ManagePanelProps {
     onBracketChange: (bracket: EventBracket) => void
     onMapSelect?: (mapName: string) => void
     onRefresh: () => void
-    /** Held above this panel so a tab change cannot throw the edit away. */
     formatDraft: EventFormatSpec | null
     onFormatDraftChange: (draft: EventFormatSpec | null) => void
 }

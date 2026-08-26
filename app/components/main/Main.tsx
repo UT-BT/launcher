@@ -913,7 +913,6 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
         onConfirm={() => {
           const target = pendingLeave
           setPendingLeave(null)
-          // The guard is still registered, so go around it rather than through it.
           if (target?.move) target.move()
           else if (target?.view) commitNavigate(target.view, target.params ?? {})
         }}

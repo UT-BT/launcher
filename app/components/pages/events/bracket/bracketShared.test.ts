@@ -129,7 +129,6 @@ describe('matchOrder', () => {
     })
 
     it('keeps a group together instead of interleaving on ordinal', () => {
-        // Every group restarts ordinal at 0, so round one has three ordinal-0 matches.
         const order = [
             match({ id: 'c0', group_id: 'gc', ordinal: 0 }),
             match({ id: 'a1', group_id: 'ga', ordinal: 1 }),

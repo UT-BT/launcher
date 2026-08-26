@@ -16,7 +16,6 @@ interface FormatPanelProps {
     bracket: EventBracket | null
     hasDrawnStages: boolean
     onBracketChange: (bracket: EventBracket) => void
-    /** The unsaved edit, or null when the builder is showing what is saved. */
     draft: EventFormatSpec | null
     onDraftChange: (draft: EventFormatSpec | null) => void
 }
@@ -34,10 +33,6 @@ export function FormatPanel({
     const [confirmReplace, setConfirmReplace] = useState<string | null>(null)
     const [open, setOpen] = useNavState('event.manage.format', false)
 
-    // The draft IS the unsaved state, so there is no separate flag to keep in
-    // step with it. It lives above this panel, which unmounts on a tab change.
-    // Memoised so an empty builder does not hand FormatBuilder a new spec object
-    // on every render.
     const spec = useMemo(() => draft ?? attached ?? emptySpec(), [draft, attached])
     const dirty = draft !== null
 

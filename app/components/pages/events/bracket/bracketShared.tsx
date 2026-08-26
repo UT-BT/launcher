@@ -116,12 +116,6 @@ export function stageRounds(stage: EventBracketStage): number[] {
     return [...new Set(stage.matches.map(match => match.round_no))].sort((a, b) => a - b)
 }
 
-/**
- * Order matches the way the API does. `ordinal` restarts per group, so a group
- * stage has one match per group sharing every (round, ordinal) — sorting on those
- * alone leaves ties, and a tie that resolves differently after a save is what
- * makes the list jump around when a result is entered.
- */
 export function matchOrder(groups: EventBracketGroup[] = []) {
     const rank = new Map(groups.map(group => [group.id, group.ordinal]))
 
@@ -132,14 +126,6 @@ export function matchOrder(groups: EventBracketGroup[] = []) {
         || a.id.localeCompare(b.id)
 }
 
-/**
- * The stages feeding `stageKey` that still have matches to play.
- *
- * A fed stage is seeded from its feeders' standings, and those exist from the
- * moment a group stage is drawn — so "the top two in each group" resolves long
- * before it means anything. Drawing early succeeds and quietly fixes the
- * pairings against a table that is still moving.
- */
 export function unfinishedFeeders(
     spec: EventFormatSpec | null | undefined,
     stages: EventBracketStage[],
@@ -152,7 +138,6 @@ export function unfinishedFeeders(
         .map(entry => live.get(entry.key))
         .filter((stage): stage is EventBracketStage => !!stage && stage.status !== 'complete')
 }
-
 
 export function sortedMatches(stage: EventBracketStage): EventMatch[] {
     return [...stage.matches].sort(matchOrder(stage.groups))

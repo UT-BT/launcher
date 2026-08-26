@@ -33,7 +33,6 @@ function feederNames(feeders: EventBracketStage[]): string {
     return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`
 }
 
-
 function relaxedNotice(draw: EventStageDraw): string | null {
     if (!draw.relaxed.length) return null
     const names = draw.relaxed.map(name => RELAXED_LABELS[name] ?? name)
@@ -43,8 +42,6 @@ function relaxedNotice(draw: EventStageDraw): string | null {
 }
 
 export function BracketPanel({ accessToken, slug, bracket, onBracketChange, onMapSelect }: BracketPanelProps) {
-    // Memoised because pendingFor closes over it; a fresh array every render would
-    // rebuild that callback and every stage card with it.
     const stages = useMemo(() => bracket?.stages ?? [], [bracket])
     const [busyStage, setBusyStage] = useState<string | null>(null)
     const [error, setError] = useState<string | null>(null)
@@ -278,7 +275,6 @@ function StageCard({
 
     const rounds = useMemo(() => {
         const grouped = new Map<number, EventMatch[]>()
-        // sortedMatches first, so entering a result never reshuffles the list.
         for (const match of sortedMatches(stage)) {
             grouped.set(match.round_no, [...(grouped.get(match.round_no) ?? []), match])
         }

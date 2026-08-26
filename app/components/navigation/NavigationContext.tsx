@@ -29,11 +29,6 @@ export interface NavigationContextValue {
     canForward: boolean
     getEntryState: <T>(key: string, def: T) => T
     setEntryState: (key: string, value: unknown) => void
-    /**
-     * Hold navigation while a view has unsaved work. `prompt` returns the warning
-     * to show, or null to let the move through. Returns an unregister function —
-     * a guard that outlives its view would block the app for good.
-     */
     registerLeaveGuard: (key: string, prompt: () => string | null) => () => void
 }
 

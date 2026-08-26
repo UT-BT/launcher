@@ -39,7 +39,6 @@ function recordOf(row: EventStandingRow, drawsPossible: boolean): string {
     return drawsPossible ? `${row.wins}–${row.draws}–${row.losses}` : `${row.wins}–${row.losses}`
 }
 
-/** Every match the team is in, played or still to come, earliest round first. */
 function matchesFor(matches: EventMatch[], teamId: string): EventMatch[] {
     return matches.filter(match => match.team_a?.id === teamId || match.team_b?.id === teamId)
 }

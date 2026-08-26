@@ -115,9 +115,6 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
         tooltip: 'Refresh',
     })
 
-    // The format builder's unsaved edit lives here, above every tab on this page,
-    // so switching tab — inner or outer — cannot throw it away. Only leaving the
-    // page or reloading does, which is exactly what the guard warns about.
     const [formatDraft, setFormatDraft] = useState<EventFormatSpec | null>(null)
 
     useUnsavedChanges(formatDraft !== null, 'The tournament format has edits you have not saved yet.')
