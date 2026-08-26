@@ -15,7 +15,7 @@ import { useLogger } from '@/app/hooks/use-logger'
 import {
     CapacityValue, DEFAULT_FILTERS, FilterState, ServerPreset, ServerPresetFilters,
     ServerSortField, ServerType, filterServers, getGameStatusText, getRegionFlag,
-    getServerRegion, getServerType, rememberRecentServer, sanitizeServerFilters, sortServers,
+    getServerRegion, getServerType, sanitizeServerFilters, sortServers,
     trimServerName, type Server, type ServerPlayer,
 } from '@/app/utils/server-utils'
 
@@ -474,7 +474,6 @@ export function ServerBrowserPage({
                 }
             }
             await window.conveyor.game.launchGame(server.ip, server.hostport)
-            rememberRecentServer(server)
         } catch (err) {
             logger.error('Failed to launch game', { error: err })
             setLaunchError(err instanceof Error ? err.message : 'An unknown error occurred while trying to launch the game.')
@@ -679,9 +678,9 @@ export function ServerBrowserPage({
                         <div className="flex items-center gap-2">
                             <span ref={isFirstRow ? firstRowFavRef : undefined} className="inline-flex">
                                 <FavoriteStar
-                                    name={server.id}
+                                    name={trimmed}
                                     isFavorited={favoriteServerIds.has(server.id)}
-                                    onToggle={onToggleServerFavorite}
+                                    onToggle={() => onToggleServerFavorite(server.id)}
                                     size="sm"
                                 />
                             </span>
@@ -870,9 +869,9 @@ export function ServerBrowserPage({
             <div key={server.id} role="listitem" className="p-3 border-b border-hairline/5 last:border-0 space-y-2">
                 <div className="flex items-center gap-2 min-w-0">
                     <FavoriteStar
-                        name={server.id}
+                        name={trimmed}
                         isFavorited={favoriteServerIds.has(server.id)}
-                        onToggle={onToggleServerFavorite}
+                        onToggle={() => onToggleServerFavorite(server.id)}
                         size="sm"
                     />
                     <TypeIcon type={type} />

@@ -12,7 +12,7 @@ not_here:
   - "the navigation stack / navigate() / renderView wiring → navigation.md"
   - "the shared components used (FilterPresetsMenu, ColumnsMenu, Tutorial) → shared-components.md"
 sections: [controlled-pages-with-hoisted-state, navigation-history-per-entry-ui-state, account-synced-state, localstorage-persistence, filter-presets, tutorial-state, favorites, naming-conventions]
-last_verified: 2026-08-20
+last_verified: 2026-08-26
 verify_against: [app/components/main/Main.tsx, app/components/navigation/useNavState.ts, app/hooks/useAsync.ts, app/utils/userState.ts]
 ---
 
@@ -174,10 +174,11 @@ Failed flushes retry with exponential backoff (1.5 s → 60 s cap); the
 Rules:
 
 - **Which keys sync is a whitelist** (`isSyncedKey` in `userState.ts`): theme,
-  tutorial seen-flags, server favorites + presets, Maps/World-Records filter
-  presets, admin `:filters:v1` presets, Medal Hunt dismissals. Everything else
-  (column layout, page sizes, panel-open flags, ui-scale, replay volume, recent
-  servers, auth) is **deliberately device-local** — layout preferences differ
+  tutorial seen-flags, server presets, Maps/World-Records filter presets, admin
+  `:filters:v1` presets, Medal Hunt dismissals. Map and server favorites are NOT
+  here — each is its own account resource on the API (see Favorites below).
+  Everything else (column layout, page sizes, panel-open flags, ui-scale, replay
+  volume, auth) is **deliberately device-local** — layout preferences differ
   between a 4K desktop and a phone. Add a key to the whitelist only if the user
   would expect it to follow their account.
 - Consumers go through the store's helpers, never raw
@@ -238,7 +239,6 @@ signed-in user across devices); everything else is device-local.
 | `utbt:mapsPageTutorial:v1` | `MapsPage` (via hook) | **yes** | `{ seen, version }` |
 | `utbt:serversState:v1` | `Main.tsx` (`usePageState`) | no | Servers prefs: column visibility/order, `filtersPanelOpen` |
 | `utbt:serverPresets:v1` | `Main.tsx` | **yes** | `ServerPreset[]` |
-| `utbt:serverFavorites:v2` | `Main.tsx` | **yes** | `string[]` (server IDs) |
 | `utbt:serversPageTutorial:v1` | `ServerBrowserPage` (via hook) | **yes** | `{ seen, version }` |
 | `utbt:playersState:v1` | `Main.tsx` (`usePageState`) | no | Players prefs: column visibility/order, `pageSizePreference` |
 | `utbt:playersPageTutorial:v1` | `PlayersPage` (via hook) | **yes** | `{ seen, version }` |
@@ -251,7 +251,6 @@ signed-in user across devices); everything else is device-local.
 | `utbt:adminState:v1` | `Main.tsx` (`usePageState`) | no | Admin page pref: `activeSection`. Each admin section owns its own table state: column visibility/order in `utbt:admin:<section>:cols:v2` (device-local) + saved filters in `utbt:admin:<section>:filters:v1` (**synced**, via `useAdminFilterPresets` → `filterPresets.ts`); transient sort/filter/search/page via `useNavState('admin.<section>.<field>')` so it restores on Back/Forward. No caches singleton. |
 | `utbt:homeMedalHuntHidden:v1:<userId>` | `MedalHuntCard` | **yes** | `string[]` map names dismissed from the home Medal Hunt card (already user-suffixed; the suffix is kept inside the per-account blob) |
 | `utbt:theme:v1` | `ThemeProvider` (app-global) | **yes** | `{ id }` — selected theme (`classic`/`red`/`aurum`/`amethyst`/`emerald`/`rose`/`light`/`black`) |
-| `utbt:recentServers:v1` | `app/utils/server-utils.ts` | no | last 5 joined servers (desktop game launches) |
 | `utbt:replayVideoVolume:v1` | `app/utils/replayVideoVolume.ts` | no | replay player volume `0..1` |
 | `utbt:patreon:v1` | `app/utils/patreon.ts` | no | cached patron tier map, 1 h TTL (pure cache) |
 | `ui-scale` | `LauncherGeneralSettings` | no | renderer zoom percent (pre-dates the key convention) |
@@ -338,13 +337,21 @@ Driven by `Main.tsx`:
 
 Don't bypass `toggleFavorite` in `Main.tsx`.
 
-### Server favorites — account-synced
+### Server favorites — account resource (no local tier)
 
-Stored under `utbt:serverFavorites:v2` through the synced store (follows the
-account across devices; plain localStorage when signed out). Keyed by
-`server.id` (NOT hostname — hostnames can change). Plain set + immediate
-serialize on toggle; `Main.tsx` subscribes so a value arriving from another
-device re-renders.
+Server favorites are **not** UI state and are not in the synced localStorage
+store. They are their own account resource on the API, loaded by
+`app/hooks/useServerFavorites.ts` and owned by `Main.tsx` exactly like map
+favorites: optimistic toggle, write, rollback on failure. Keyed by the server's
+API `id` (NOT hostname or `ip:port` — both can change; the API rejects anything
+that is not a resolved server id).
+
+Signed out there are no favorites at all: the set is empty and
+`toggleServerFavoriteOrLogin` in `Main.tsx` raises the sign-in modal instead of
+writing, so nothing is stored on the device.
+
+They were previously `utbt:serverFavorites:v2` in the synced store; that key is
+retired and no longer whitelisted.
 
 ## Naming conventions
 

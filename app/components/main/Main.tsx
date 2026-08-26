@@ -87,6 +87,7 @@ import { AuthRequiredModal, LOGIN_REQUIRED_EVENT, type LoginRequest } from '@/ap
 import { PatreonModal } from '@/app/components/modals/PatreonModal'
 import type { ServerPreset } from '@/app/utils/server-utils'
 import { useFavorites } from '@/app/hooks/useFavorites'
+import { useServerFavorites } from '@/app/hooks/useServerFavorites'
 import { loadPatreonMembers } from '@/app/utils/patreon'
 import { fetchAchievementDefinitions, fetchMyAchievements, fetchNavBadges, markSectionSeen, type BadgeSection } from '@/app/utils/api'
 import { getSynced, setSynced, subscribeSynced } from '@/app/utils/userState'
@@ -107,7 +108,6 @@ const TEAMS_STATE_STORAGE_KEY = 'utbt:teamsState:v2'
 const EVENTS_STATE_STORAGE_KEY = 'utbt:eventsState:v1'
 const ADMIN_STATE_STORAGE_KEY = 'utbt:adminState:v1'
 const SERVER_PRESETS_STORAGE_KEY = 'utbt:serverPresets:v1'
-const SERVER_FAVORITES_STORAGE_KEY = 'utbt:serverFavorites:v2'
 
 const HISTORY_CAP = 50
 
@@ -211,11 +211,6 @@ function loadPersistedServerPresets(): ServerPreset[] {
   return Array.isArray(raw) ? raw as ServerPreset[] : []
 }
 
-function loadPersistedServerFavorites(): Set<string> {
-  const raw = getSynced<unknown>(SERVER_FAVORITES_STORAGE_KEY, [])
-  return Array.isArray(raw) ? new Set(raw as string[]) : new Set()
-}
-
 export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').UserProfile }) {
   const [entries, setEntries] = useState<NavEntry[]>(seedEntriesFromUrl)
   const [cursor, setCursor] = useState(0)
@@ -233,7 +228,6 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
   const [teamsCaches, setTeamsCaches] = useState<TeamsPageCaches>(DEFAULT_TEAMS_CACHES)
   const [eventsCaches, setEventsCaches] = useState<EventsPageCaches>(DEFAULT_EVENTS_CACHES)
   const [serverPresets, setServerPresets] = useState<ServerPreset[]>(loadPersistedServerPresets)
-  const [favoriteServerIds, setFavoriteServerIds] = useState<Set<string>>(loadPersistedServerFavorites)
   const achievementsInFlightRef = useRef<Promise<void> | null>(null)
   const [loginRequest, setLoginRequest] = useState<LoginRequest | null>(null)
 
@@ -257,24 +251,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
     setSynced(SERVER_PRESETS_STORAGE_KEY, next)
   }, [])
 
-  const toggleServerFavorite = useCallback((serverId: string) => {
-    setFavoriteServerIds(prev => {
-      const next = new Set(prev)
-      if (next.has(serverId)) next.delete(serverId)
-      else next.add(serverId)
-      setSynced(SERVER_FAVORITES_STORAGE_KEY, Array.from(next))
-      return next
-    })
-  }, [])
-
-  useEffect(() => {
-    const unsubPresets = subscribeSynced(SERVER_PRESETS_STORAGE_KEY, () => setServerPresets(loadPersistedServerPresets()))
-    const unsubFavorites = subscribeSynced(SERVER_FAVORITES_STORAGE_KEY, () => setFavoriteServerIds(loadPersistedServerFavorites()))
-    return () => {
-      unsubPresets()
-      unsubFavorites()
-    }
-  }, [])
+  useEffect(() => subscribeSynced(SERVER_PRESETS_STORAGE_KEY, () => setServerPresets(loadPersistedServerPresets())), [])
 
   const accessToken = userProfile?.accessToken
   const userId = userProfile?.id ?? undefined
@@ -332,6 +309,16 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
     }
     toggleFavorite(mapName)
   }, [accessToken, toggleFavorite])
+
+  const { favoriteServerIds, toggle: toggleServerFavorite } = useServerFavorites(accessToken, userId)
+
+  const toggleServerFavoriteOrLogin = useCallback((serverId: string) => {
+    if (!accessToken) {
+      setLoginRequest({ feature: 'save favorites', description: 'Sign in to save favorite servers to your profile and sync them across the launcher and the website.' })
+      return
+    }
+    void toggleServerFavorite(serverId)
+  }, [accessToken, toggleServerFavorite])
 
   const [badgeCounts, setBadgeCounts] = useState<Record<string, number | null>>({})
   const [badgeSeen, setBadgeSeen] = useState<Record<string, string | null>>({})
@@ -697,11 +684,13 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
           userProfile={userProfile as any}
           installationStatus={installationStatus}
           favoriteMapNames={favoriteMapNames}
+          favoriteServerIds={favoriteServerIds}
           caches={homeCaches}
           onCachesChange={setHomeCaches}
           achievementsCaches={achievementsCaches}
           onEnsureAchievements={ensureAchievements}
           onToggleFavorite={toggleFavoriteOrLogin}
+          onToggleServerFavorite={toggleServerFavoriteOrLogin}
           onMapSelect={openMap}
           onViewServers={() => navigate('servers')}
           onViewMaps={() => navigate('maps')}
@@ -718,7 +707,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
           caches={serversCaches}
           onCachesChange={setServersCaches}
           favoriteServerIds={favoriteServerIds}
-          onToggleServerFavorite={toggleServerFavorite}
+          onToggleServerFavorite={toggleServerFavoriteOrLogin}
           presets={serverPresets}
           onPresetsChange={updateServerPresets}
           onMapSelect={openMap}
@@ -857,11 +846,13 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
           userProfile={userProfile as any}
           newsSeenIso={badgeSeen['news'] ?? null}
           favoriteMapNames={favoriteMapNames}
+          favoriteServerIds={favoriteServerIds}
           caches={homeCaches}
           onCachesChange={setHomeCaches}
           achievementsCaches={achievementsCaches}
           onEnsureAchievements={ensureAchievements}
           onToggleFavorite={toggleFavoriteOrLogin}
+          onToggleServerFavorite={toggleServerFavoriteOrLogin}
           onMapSelect={openMap}
           onViewServers={() => navigate('servers')}
           onViewMaps={() => navigate('maps')}
