@@ -1,9 +1,10 @@
-import { readFileSync } from 'fs'
-import { resolve } from 'path'
+import { readdirSync, readFileSync } from 'fs'
+import { join, relative, resolve, sep } from 'path'
 import { describe, expect, it } from 'vitest'
 import { pathToNav, viewToPath } from './routes'
 import { titleForRoute } from './titles'
 import { capTimeTarget } from '@/app/components/shared/capTimeTarget'
+import { isTeamRunRow, teamRunCapId } from '@/app/components/shared/runDemo'
 import type { NavParams } from './NavigationContext'
 
 interface ContractRoute {
@@ -147,5 +148,175 @@ describe('team cap deep links', () => {
 
         expect(teamTitle).not.toBe('UTBT.net')
         expect(teamTitle).not.toBe(soloTitle)
+    })
+})
+
+
+describe('team rows on an api that sends no team cap id', () => {
+    const TEAM_CAP_ID = SAMPLES.teamCapId
+    const CAP_ID = SAMPLES.capId
+
+    const legacyTeamRow = {
+        cap_id: TEAM_CAP_ID,
+        cap_time_seconds: 83.88,
+        user_id: null,
+        members: [
+            { cap_id: '934e9a03-4c72-4d1b-9f88-2a6b5c3d1e40', cap_time_seconds: 83.813, alias: 'dsn' },
+            { cap_id: '46a4177f-8d34-4e29-b7a1-5c9f0e2d3b17', cap_time_seconds: 83.88, alias: 'TriGGeR' },
+        ],
+    }
+
+    const legacySoloRow = {
+        cap_id: CAP_ID,
+        cap_time_seconds: 41.2,
+        user_id: '228152236587483136',
+        members: null,
+    }
+
+    it('still routes a team row to the team cap page', () => {
+        expect(isTeamRunRow(legacyTeamRow)).toBe(true)
+
+        const target = capTimeTarget(undefined, teamRunCapId(legacyTeamRow))!
+        const parsed = pathToNav(viewToPath(target.view, target.params), '')
+
+        expect(parsed.view).toBe('team-cap-detail')
+        expect(parsed.params.teamCapId).toBe(TEAM_CAP_ID)
+        expect(parsed.params.capId).toBeUndefined()
+    })
+
+    it('still routes a solo row to the solo cap page', () => {
+        expect(isTeamRunRow(legacySoloRow)).toBe(false)
+
+        const target = capTimeTarget(legacySoloRow.cap_id, teamRunCapId(legacySoloRow))!
+        const parsed = pathToNav(viewToPath(target.view, target.params), '')
+
+        expect(parsed.view).toBe('cap-detail')
+        expect(parsed.params.capId).toBe(CAP_ID)
+    })
+
+    it('prefers the explicit team cap id once the api sends one', () => {
+        const upgraded = { ...legacyTeamRow, team_cap_id: SAMPLES.teamCapId, cap_id: CAP_ID }
+
+        expect(teamRunCapId(upgraded)).toBe(SAMPLES.teamCapId)
+    })
+})
+
+const RENDERER_ROOT = resolve(__dirname, '../..')
+const SHARED_REPLAY_HOOK = 'hooks/useReplayWatch.ts'
+
+const KNOWN_INDIVIDUAL_CAP_IDS: Record<string, string[]> = {
+    'components/pages/CapDetailPage.tsx': ['cap.id'],
+    'components/pages/TeamCapDetailPage.tsx': ['member.cap_id'],
+    'components/pages/mapDetail/LeaderboardCard.tsx': ['entry.id'],
+}
+
+interface RendererSource {
+    path: string
+    text: string
+}
+
+function collectRendererSources(dir: string, acc: RendererSource[] = []): RendererSource[] {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const full = join(dir, entry.name)
+        if (entry.isDirectory()) {
+            collectRendererSources(full, acc)
+            continue
+        }
+        if (!/\.tsx?$/.test(entry.name) || /\.test\.tsx?$/.test(entry.name)) continue
+        acc.push({ path: relative(RENDERER_ROOT, full).split(sep).join('/'), text: readFileSync(full, 'utf8') })
+    }
+    return acc
+}
+
+function balancedBlocks(text: string, marker: string): string[] {
+    const blocks: string[] = []
+    let at = text.indexOf(marker)
+    while (at !== -1) {
+        const open = at + marker.length - 1
+        let depth = 0
+        let i = open
+        for (; i < text.length; i++) {
+            const ch = text[i]
+            if (ch === '(' || ch === '{' || ch === '[') depth++
+            else if (ch === ')' || ch === '}' || ch === ']') {
+                depth--
+                if (depth === 0) break
+            }
+        }
+        blocks.push(text.slice(open + 1, i))
+        at = text.indexOf(marker, at + marker.length)
+    }
+    return blocks
+}
+
+function topLevelArgs(block: string): string[] {
+    const args: string[] = []
+    let depth = 0
+    let start = 0
+    for (let i = 0; i < block.length; i++) {
+        const ch = block[i]
+        if (ch === '(' || ch === '{' || ch === '[') depth++
+        else if (ch === ')' || ch === '}' || ch === ']') depth--
+        else if (ch === ',' && depth === 0) {
+            args.push(block.slice(start, i))
+            start = i + 1
+        }
+    }
+    args.push(block.slice(start))
+    return args.map(arg => arg.trim()).filter(arg => arg.length > 0)
+}
+
+function capIdArgument(block: string): string | null {
+    const match = block.match(/(?:^|[\s,{])capId\s*:\s*([^,\n]+)/)
+    return match ? match[1].trim() : null
+}
+
+function namesARunDemo(expression: string, path: string): boolean {
+    if (/demo/i.test(expression)) return true
+    return (KNOWN_INDIVIDUAL_CAP_IDS[path] ?? []).includes(expression)
+}
+
+describe('ids handed to the demo converter', () => {
+    const sources = collectRendererSources(RENDERER_ROOT)
+
+    it('scans the call sites it is meant to police', () => {
+        const watchers = sources.filter(source => source.text.includes('openReplay({'))
+        const downloaders = sources.filter(source => source.text.includes('demoDownload.start('))
+
+        expect(watchers.length).toBeGreaterThan(5)
+        expect(downloaders.length).toBeGreaterThan(5)
+    })
+
+    it('never watches a replay from a team cap id', () => {
+        for (const { path, text } of sources) {
+            for (const block of balancedBlocks(text, 'openReplay(')) {
+                const expression = capIdArgument(block)
+                if (expression == null) continue
+                expect(expression, `${path} openReplay capId`).not.toMatch(/team/i)
+                expect(namesARunDemo(expression, path), `${path} openReplay capId ${expression}`).toBe(true)
+            }
+        }
+    })
+
+    it('never downloads a demo from a team cap id', () => {
+        for (const { path, text } of sources) {
+            for (const block of balancedBlocks(text, 'demoDownload.start(')) {
+                const args = topLevelArgs(block)
+                expect(args.length, `${path} demoDownload.start`).toBeGreaterThanOrEqual(2)
+                expect(args[0], `${path} demoDownload.start row`).not.toMatch(/team/i)
+                if (args.length < 3) continue
+                expect(args[2], `${path} demoDownload.start demo id`).not.toMatch(/team/i)
+                expect(namesARunDemo(args[2], path), `${path} demoDownload.start demo id ${args[2]}`).toBe(true)
+            }
+        }
+    })
+
+    it('never resolves a replay from a team cap id outside the shared watcher', () => {
+        for (const { path, text } of sources) {
+            if (path === SHARED_REPLAY_HOOK) continue
+            for (const block of balancedBlocks(text, 'resolveReplayForCap(')) {
+                expect(block.trim(), `${path} resolveReplayForCap`).not.toMatch(/team/i)
+            }
+        }
     })
 })

@@ -11,9 +11,9 @@ not_here:
   - "IPC channels (window.conveyor.*) → lib/conveyor/README.md"
   - "how UI state persists in localStorage → state-patterns.md"
   - "the procedure to wire a new endpoint into the UI → skill: consume-api-data"
-sections: [backend-api, errors, admin-api, event-brackets, changing-a-map-screenshot, cap-detail-page-endpoints, world-records-page-endpoints, team-maps-and-team-runs, linking-and-replaying-a-team-result, replay-availability, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites, account-state-and-badges]
-last_verified: 2026-08-26
-verify_against: [app/utils/api.ts, app/hooks/useReplayWatch.ts, app/hooks/replayMessages.ts, app/hooks/useDemoDownload.ts, app/utils/patreon.ts, app/utils/server-utils.ts, app/components/pages/events/manage/formatFields.tsx, app/components/pages/events/bracket/bracketShared.tsx]
+sections: [backend-api, errors, admin-api, event-brackets, changing-a-map-screenshot, cap-detail-page-endpoints, world-records-page-endpoints, team-maps-and-team-runs, linking-and-replaying-a-team-result, when-the-team-fields-are-missing, replay-availability, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites, account-state-and-badges]
+last_verified: 2026-08-27
+verify_against: [app/utils/api.ts, app/components/shared/runDemo.ts, app/hooks/useReplayWatch.ts, app/hooks/replayMessages.ts, app/hooks/useDemoDownload.ts, app/utils/patreon.ts, app/utils/server-utils.ts, app/components/pages/events/manage/formatFields.tsx, app/components/pages/events/bracket/bracketShared.tsx]
 ---
 
 # Data sources
@@ -337,9 +337,9 @@ Two ids exist for a team result and they are not interchangeable:
 - the **run demo cap id** (`demo_cap_id` / `demoCapId`) is the *member* cap whose
   demo represents the run, and is what the replay and demo-download calls take.
 
-The API resolves the run demo, so never derive it in the renderer. A team's time is
-its slowest member's, so that member's demo is the only one that spans the run; the
-API picks it, breaks a tie deterministically, and falls back to the next-slowest
+The API resolves the run demo and its answer is always authoritative. A team's time
+is its slowest member's, so that member's demo is the only one that spans the run;
+the API picks it, breaks a tie deterministically, and falls back to the next-slowest
 member that actually has a demo. `demo_cap_id` is **null** when no member of the run
 has a demo at all — treat that as "no replay for this run" (disable the button), not
 as "still processing".
@@ -369,9 +369,44 @@ means the roster has no demo on record; `demo_cap_id` is null in that case.
 **Read `is_slowest` before writing any copy about that replay.** When it is false
 the slowest member uploaded no demo, so what you get is a faster member's run: it
 ends *before* the team capped. Never call it "the team time" in that case, and show
-the owning member's own `cap_time_seconds`, not the team time, alongside it. Both
-strings live in `runDemoLabels.ts` (`app/components/shared/`), covered by
-`runDemoLabels.test.ts` — reuse them rather than re-wording them per page.
+the owning member's own `cap_time_seconds`, not the team time, alongside it. When
+the whole `demo` object is absent the copy must claim nothing about whose replay it
+is, even though `runDemo.ts` can still name a cap id to play. All three strings live
+in `runDemoLabels.ts` (`app/components/shared/`), keyed by `runDemoKind`
+(`team-time` / `closest` / `unknown`) and covered by `runDemoLabels.test.ts` —
+reuse them rather than re-wording them per page.
+
+### When the team fields are missing
+
+`team_cap_id` and `demo_cap_id` are newer than the rest of these payloads, so a
+launcher build can meet an API that has not started sending them. Reading them
+directly makes the UI wrong the moment that happens — every replay button renders
+disabled and every team time links to a page that 404s — so **any row rendered
+from a payload that also carries a `members[]` roster must not read either field
+directly.** Those rows go through `app/components/shared/runDemo.ts`, which
+prefers the server field and derives the same answer from the roster when it is
+absent:
+
+| Question | Helper | Rule |
+|---|---|---|
+| is this row a team result, and what is its team cap id? | `isTeamRunRow` / `teamRunCapId` | `team_cap_id` → else a non-empty `members[]`, whose row `cap_id` is the team cap id |
+| which cap id does the replay / download take? | `runDemoCapId`, `capRowDemoCapId`, `recordFeedDemoCapId` | `demo_cap_id` → else the slowest eligible member's `cap_id` → else the row's own cap id, never when that id is the team cap id |
+
+The roster fallback mirrors the server: skip disallowed members and members with no
+time, take the slowest (ties broken on `user` then `cap_id`), and — only where the
+payload carries `has_demo`, which the team-cap detail routes do — widen to the next
+member that actually has one. Where `has_demo` is absent the slowest member's id is
+returned and the replay resolver decides, exactly as the solo path already does.
+
+The roster-less payloads (`TeamRunStatus`, `TeamMapUserStats`, `TeamActivityItem`,
+`BestCap`) read `team_cap_id` straight, because there is nothing to derive from and
+their behaviour without it is already a correct solo link. The long-standing
+`isTeam` / `teamCapId` / `demoCapId` fields on the summary and user-cap payloads are
+also read straight — those have always been sent.
+
+This is the one place the launcher derives a value the API also computes, and it
+exists only so a launcher release never depends on an API release landing first.
+It is not licence to derive anything else client-side — hard rule 8 still stands.
 
 ### Replay availability
 

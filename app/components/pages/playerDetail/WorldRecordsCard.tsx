@@ -5,6 +5,7 @@ import { usePaginatedQuery } from '@/app/hooks/useAsync'
 import { useNavState } from '@/app/components/navigation/useNavState'
 import { formatAddedDate, displayMapName } from '@/app/utils/format'
 import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
+import { teamRunCapId } from '@/app/components/shared/runDemo'
 import { TeamRosterBadge } from '@/app/components/shared/TeamRosterBadge'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { MapNavLink } from '@/app/components/shared/MapNavLink'
@@ -165,7 +166,7 @@ export function WorldRecordsCard({ accessToken, userId, totalCount, onMapSelect,
                                 const d = new Date(r.added)
                                 return isNaN(d.getTime()) ? r.added : d.toLocaleString()
                             })() : '—'
-                            const isTeamRow = !!r.team_cap_id
+                            const rowTeamCapId = teamRunCapId(r)
                             const roster = r.members ?? []
                             return (
                                 <DataTableRow
@@ -198,8 +199,8 @@ export function WorldRecordsCard({ accessToken, userId, totalCount, onMapSelect,
                                     {isVisible('time') && (
                                         <DataTableCell align="right">
                                             <CapTimeLink
-                                                capId={isTeamRow ? undefined : r.cap_id}
-                                                teamCapId={isTeamRow ? r.cap_id : undefined}
+                                                capId={rowTeamCapId ? undefined : r.cap_id}
+                                                teamCapId={rowTeamCapId ?? undefined}
                                                 seconds={r.cap_time_seconds}
                                                 className="text-sm font-mono tabular-nums font-bold text-blue-200"
                                             />

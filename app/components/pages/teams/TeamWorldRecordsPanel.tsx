@@ -4,6 +4,7 @@ import { Button } from '@/app/components/ui/button'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { TeamHolders } from '@/app/components/shared/TeamHolders'
 import { CapTimeLink, openCap, openTeamCap } from '@/app/components/shared/CapTimeLink'
+import { teamRunCapId } from '@/app/components/shared/runDemo'
 import {
     DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow, DataTableCell,
     DataTableEmpty, DataTableSkeletonRow, type ResponsiveColumn, type SortDirection,
@@ -92,7 +93,8 @@ export function TeamWorldRecordsPanel({ accessToken, teamId, memberIds, selfUser
             This team holds no world records yet.
         </div>
     ) : records.map(r => {
-        const isTeamRow = !!r.team_cap_id
+        const rowTeamCapId = teamRunCapId(r)
+        const isTeamRow = !!rowTeamCapId
         const isOwn = !isTeamRow && selfUserId != null && String(r.user_id) === String(selfUserId)
         return (
             <div
@@ -114,8 +116,8 @@ export function TeamWorldRecordsPanel({ accessToken, teamId, memberIds, selfUser
                 </div>
                 <div className="flex flex-col items-end justify-between gap-1.5">
                     <CapTimeLink
-                        capId={isTeamRow ? undefined : r.cap_id}
-                        teamCapId={isTeamRow ? r.cap_id : undefined}
+                        capId={rowTeamCapId ? undefined : r.cap_id}
+                        teamCapId={rowTeamCapId ?? undefined}
                         seconds={r.cap_time_seconds}
                         className="font-mono tabular-nums font-bold text-blue-300"
                     />
@@ -158,13 +160,14 @@ export function TeamWorldRecordsPanel({ accessToken, teamId, memberIds, selfUser
                         <DataTableEmpty colSpan={visibleCount} message="This team holds no world records yet." />
                     ) : (
                         records.map(r => {
-                            const isTeamRow = !!r.team_cap_id
+                            const rowTeamCapId = teamRunCapId(r)
+                            const isTeamRow = !!rowTeamCapId
                             const isOwn = !isTeamRow && selfUserId != null && String(r.user_id) === String(selfUserId)
                             return (
                                 <DataTableRow
                                     key={r.cap_id}
                                     className={cn('cursor-pointer', isOwn && 'bg-emerald-500/[0.05]')}
-                                    onClick={() => isTeamRow ? openTeamCap(r.cap_id) : openCap(r.cap_id)}
+                                    onClick={() => rowTeamCapId ? openTeamCap(rowTeamCapId) : openCap(r.cap_id)}
                                 >
                                     <DataTableCell>
                                         {isTeamRow ? (
@@ -192,8 +195,8 @@ export function TeamWorldRecordsPanel({ accessToken, teamId, memberIds, selfUser
                                     {isVisible('time') && (
                                         <DataTableCell align="right">
                                             <CapTimeLink
-                                                capId={isTeamRow ? undefined : r.cap_id}
-                                                teamCapId={isTeamRow ? r.cap_id : undefined}
+                                                capId={rowTeamCapId ? undefined : r.cap_id}
+                                                teamCapId={rowTeamCapId ?? undefined}
                                                 seconds={r.cap_time_seconds}
                                                 className="font-mono tabular-nums font-bold text-blue-300"
                                             />

@@ -15,6 +15,7 @@ import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { TeamHolders } from '@/app/components/shared/TeamHolders'
 import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
 import { runDemoBadge, runDemoWatchTitle } from '@/app/components/shared/runDemoLabels'
+import { runDemoCapId } from '@/app/components/shared/runDemo'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import { useAsync } from '@/app/hooks/useAsync'
 import { useRefreshCooldown } from '@/app/hooks/useRefreshCooldown'
@@ -287,9 +288,9 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
     const members = detail?.members ?? []
     const membersWithDemos = members.filter(m => m.has_demo)
     const runDemo = detail?.demo ?? null
-    const runDemoCapId = detail?.demo_cap_id ?? null
+    const runDemoMemberCapId = runDemoCapId({ demoCapId: detail?.demo_cap_id, members })
     const runDemoLabels = runDemoBadge(runDemo)
-    const anchorMemberId = runDemo?.cap_id ?? members[0]?.cap_id ?? null
+    const anchorMemberId = runDemo?.cap_id ?? runDemoMemberCapId ?? members[0]?.cap_id ?? null
     const selectedMemberId = (selectedCapId && members.some(m => m.cap_id === selectedCapId))
         ? selectedCapId
         : anchorMemberId
@@ -342,19 +343,19 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
                                         <button
                                             type="button"
                                             onClick={() => replay.openReplay({
-                                                capId: runDemoCapId,
+                                                capId: runDemoMemberCapId,
                                                 loadingKey: detail.team_cap_id,
                                                 mapName: detail.map,
                                                 time: runDemo?.cap_time_seconds ?? detail.team_time_seconds ?? undefined,
                                                 alias: runDemo?.alias || undefined,
                                             })}
-                                            disabled={!runDemoCapId || replay.loadingCapId === detail.team_cap_id}
+                                            disabled={!runDemoMemberCapId || replay.loadingCapId === detail.team_cap_id}
                                             className={cn(
                                                 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border transition-colors text-xs font-semibold cursor-pointer',
                                                 'bg-accent-500/15 border-accent-500/40 text-accent-200 hover:bg-accent-500/25 hover:text-foreground hover:border-accent-500/60',
                                                 'disabled:opacity-50 disabled:cursor-not-allowed',
                                             )}
-                                            title={runDemoWatchTitle(runDemo, runDemoCapId)}
+                                            title={runDemoWatchTitle(runDemo, runDemoMemberCapId)}
                                         >
                                             {replay.loadingCapId === detail.team_cap_id
                                                 ? <Loader2 className="size-3.5 animate-spin" />
@@ -547,13 +548,13 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
                                                                     : <ShieldAlert className="size-3.5 text-amber-300 shrink-0" />}
                                                             </Tooltip>
                                                         )}
-                                                        {member.cap_id === runDemoCapId && (
+                                                        {member.cap_id === runDemoMemberCapId && (
                                                             <Tooltip content={runDemoLabels.tooltip} side="top">
                                                                 <span className={cn(
                                                                     'ml-auto shrink-0 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border',
-                                                                    runDemoLabels.isTeamTime
-                                                                        ? 'bg-accent-500/15 border-accent-500/40 text-accent-200'
-                                                                        : 'bg-amber-500/15 border-amber-500/40 text-amber-200',
+                                                                    runDemoLabels.kind === 'closest'
+                                                                        ? 'bg-amber-500/15 border-amber-500/40 text-amber-200'
+                                                                        : 'bg-accent-500/15 border-accent-500/40 text-accent-200',
                                                                 )}>
                                                                     {runDemoLabels.label}
                                                                 </span>

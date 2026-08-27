@@ -7,6 +7,7 @@ import { getMedalIcon } from '@/app/utils/medals'
 import { getTeamDisplay } from '@/app/utils/team'
 import { medalIconForInt, medalLabelForInt } from '@/app/components/pages/capDetail/capStats'
 import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
+import { runDemoCapId } from '@/app/components/shared/runDemo'
 import { computeMedalTier, TIER_LABELS, type MedalTier } from '@/app/components/pages/maps/medals'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { IconActionButton } from '@/app/components/shared/IconActionButton'
@@ -509,7 +510,7 @@ interface TeamRunActionsProps {
 }
 
 function TeamRunActions({ entry, replay, demoDownload }: TeamRunActionsProps) {
-    const demoCapId = entry.demo_cap_id ?? null
+    const demoCapId = runDemoCapId({ demoCapId: entry.demo_cap_id, members: entry.members })
     return (
         <>
             <IconActionButton

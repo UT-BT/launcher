@@ -6,6 +6,7 @@ import { Tooltip } from '@/app/components/ui/tooltip'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { TeamHolders } from '@/app/components/shared/TeamHolders'
 import { openTeamCap } from '@/app/components/shared/CapTimeLink'
+import { runDemoCapId } from '@/app/components/shared/runDemo'
 import { DemoDownloadStatusModal } from '@/app/components/shared/DemoDownloadStatusModal'
 import { useDemoDownload } from '@/app/hooks/useDemoDownload'
 import { replayErrorMessage } from '@/app/hooks/replayMessages'
@@ -72,11 +73,11 @@ export function ReplayPickerModal({
 
     const demoDownload = useDemoDownload()
 
-    const watchTeamRun = async (entry: TeamLeaderboardEntry) => {
-        if (!entry.demo_cap_id || !mapName) return
+    const watchTeamRun = async (entry: TeamLeaderboardEntry, demoCapId: string | null) => {
+        if (!demoCapId || !mapName) return
         setResolvingTeamCapId(entry.id)
         try {
-            const { state, url } = await resolveReplayForCap(entry.demo_cap_id)
+            const { state, url } = await resolveReplayForCap(demoCapId)
             if (state === 'ready' && url) {
                 setError(null)
                 onSelect(url, mapName, {
@@ -217,7 +218,11 @@ export function ReplayPickerModal({
     }, [rows, clampedPage])
     const teamPageRows = useMemo(() => {
         const start = (clampedPage - 1) * PAGE_SIZE
-        return teamRuns.slice(start, start + PAGE_SIZE).map((entry, i) => ({ entry, rank: start + i + 1 }))
+        return teamRuns.slice(start, start + PAGE_SIZE).map((entry, i) => ({
+            entry,
+            rank: start + i + 1,
+            demoCapId: runDemoCapId({ demoCapId: entry.demo_cap_id, members: entry.members }),
+        }))
     }, [teamRuns, clampedPage])
 
     return (
@@ -255,7 +260,7 @@ export function ReplayPickerModal({
                     <>
                         <div className="space-y-1.5">
                             {isTeam ? (
-                                teamPageRows.map(({ entry, rank }) => (
+                                teamPageRows.map(({ entry, rank, demoCapId }) => (
                                     <div
                                         key={entry.id}
                                         role="button"
@@ -275,12 +280,12 @@ export function ReplayPickerModal({
                                         <span className="text-sm font-mono text-amber-300 shrink-0">
                                             {formatCapTime(entry.cap_time_seconds)}
                                         </span>
-                                        {entry.demo_cap_id ? (
+                                        {demoCapId ? (
                                             <>
                                                 <Tooltip content="Watch the run" side="top">
                                                     <button
                                                         type="button"
-                                                        onClick={e => { e.stopPropagation(); watchTeamRun(entry) }}
+                                                        onClick={e => { e.stopPropagation(); watchTeamRun(entry, demoCapId) }}
                                                         disabled={resolvingTeamCapId === entry.id}
                                                         aria-label="Watch Replay"
                                                         className="p-1.5 rounded-md text-rose-300/80 hover:text-rose-200 hover:bg-rose-500/15 transition-colors cursor-pointer shrink-0 disabled:opacity-40 disabled:cursor-default"
@@ -303,7 +308,7 @@ export function ReplayPickerModal({
                                                                         cap_time_seconds: entry.cap_time_seconds,
                                                                     } as LeaderboardEntry,
                                                                     mapName,
-                                                                    entry.demo_cap_id,
+                                                                    demoCapId,
                                                                 )
                                                             }
                                                         }}

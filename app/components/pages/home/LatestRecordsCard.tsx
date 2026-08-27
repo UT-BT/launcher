@@ -8,6 +8,7 @@ import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { TeamAvatarStack } from '@/app/components/shared/TeamAvatarStack'
 import { MapNameCell } from '@/app/components/shared/MapNameCell'
 import { CapTimeLink, openCap, openTeamCap } from '@/app/components/shared/CapTimeLink'
+import { recordFeedDemoCapId } from '@/app/components/shared/runDemo'
 import { IconActionButton } from '@/app/components/shared/IconActionButton'
 import { cn } from '@/lib/utils'
 import type { SummaryWorldRecord } from '@/app/utils/api'
@@ -46,6 +47,7 @@ export function LatestRecordsCard({
     const compactRows = rows.map(r => {
         const isOwn = currentUserId != null && r.userId === currentUserId
         const isTeamRow = !!(r.members && r.members.length > 0)
+        const demoCapId = recordFeedDemoCapId(r)
         return (
             <div
                 key={r.id}
@@ -85,8 +87,8 @@ export function LatestRecordsCard({
                             variant="replay"
                             icon={Play}
                             iconFill
-                            tooltip={r.demoCapId ? 'Watch Replay' : 'No replay available for this run'}
-                            disabled={!r.demoCapId}
+                            tooltip={demoCapId ? 'Watch Replay' : 'No replay available for this run'}
+                            disabled={!demoCapId}
                             loading={loadingCapId === r.id}
                             onClick={() => onWatchReplay(r)}
                         />
@@ -127,6 +129,7 @@ export function LatestRecordsCard({
                 {rows.map(r => {
                     const isOwn = currentUserId != null && r.userId === currentUserId
                     const isTeamRow = !!(r.members && r.members.length > 0)
+                    const demoCapId = recordFeedDemoCapId(r)
                     return (
                         <DataTableRow
                             key={r.id}
@@ -186,8 +189,8 @@ export function LatestRecordsCard({
                                             variant="replay"
                                             icon={Play}
                                             iconFill
-                                            tooltip={r.demoCapId ? 'Watch Replay' : 'No replay available for this run'}
-                                            disabled={!r.demoCapId}
+                                            tooltip={demoCapId ? 'Watch Replay' : 'No replay available for this run'}
+                                            disabled={!demoCapId}
                                             loading={loadingCapId === r.id}
                                             onClick={() => onWatchReplay(r)}
                                             />

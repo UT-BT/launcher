@@ -10,6 +10,7 @@ import { Button } from '@/app/components/ui/button'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { TeamHolders } from '@/app/components/shared/TeamHolders'
 import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
+import { teamRunCapId } from '@/app/components/shared/runDemo'
 import { cn } from '@/lib/utils'
 import { formatCapTime, formatAddedDate, formatDelta, displayMapName } from '@/app/utils/format'
 import type { ActiveTitle, WorldRecordProgressionEntry } from '@/app/utils/api'
@@ -323,6 +324,7 @@ export function WorldRecordProgressionModal({
                             const isOwn = currentUserId != null && entry.user_id != null && String(entry.user_id) === String(currentUserId)
                             const isCurrent = entry === current
                             const isHovered = hoverIdx === wrIdx
+                            const entryTeamCapId = teamRunCapId(entry)
                             return (
                                 <li
                                     key={`${entry.cap_id}-${entry.added ?? ''}`}
@@ -360,8 +362,8 @@ export function WorldRecordProgressionModal({
                                         )}
                                     </span>
                                     <CapTimeLink
-                                        capId={entry.team_cap_id ? undefined : entry.cap_id}
-                                        teamCapId={entry.team_cap_id ?? undefined}
+                                        capId={entryTeamCapId ? undefined : entry.cap_id}
+                                        teamCapId={entryTeamCapId ?? undefined}
                                         seconds={entry.cap_time_seconds}
                                         className="text-xs font-mono tabular-nums text-foreground/85 shrink-0"
                                     />

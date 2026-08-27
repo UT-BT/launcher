@@ -12,6 +12,7 @@ import { Modal } from '@/app/components/ui/modal'
 import { ReviewModal } from '@/app/components/modals/ReviewModal'
 import { HistoryModal } from '@/app/components/modals/HistoryModal'
 import { ReplayVideoModal } from '@/app/components/shared/ReplayVideoModal'
+import { capRowDemoCapId, recordFeedDemoCapId } from '@/app/components/shared/runDemo'
 import { useReplayWatch } from '@/app/hooks/useReplayWatch'
 import { useRefreshCooldown } from '@/app/hooks/useRefreshCooldown'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
@@ -221,7 +222,7 @@ export function Home({
 
     const handleWatchReplay = (record: SummaryWorldRecord) => {
         replay.openReplay({
-            capId: record.demoCapId ?? null,
+            capId: recordFeedDemoCapId(record),
             loadingKey: record.id,
             mapName: record.mapName,
             time: record.time,
@@ -231,7 +232,7 @@ export function Home({
 
     const handleWatchAchievement = (cap: Summary['achievements'][number]) => {
         replay.openReplay({
-            capId: cap.demoCapId ?? null,
+            capId: capRowDemoCapId(cap),
             loadingKey: cap.id,
             mapName: cap.mapName,
             time: cap.time,

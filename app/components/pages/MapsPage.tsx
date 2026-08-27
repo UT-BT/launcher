@@ -18,6 +18,7 @@ import { MapReviewsModal } from '@/app/components/modals/MapReviewsModal'
 import { ReplayPickerModal } from '@/app/components/modals/ReplayPickerModal'
 import { ReplayVideoPlayer } from '@/app/components/shared/ReplayVideoModal'
 import { openCap, openTeamCap } from '@/app/components/shared/CapTimeLink'
+import { teamRunCapId } from '@/app/components/shared/runDemo'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
@@ -1231,7 +1232,7 @@ export function MapsPage({
                         user_id: r.user_id,
                         alias: r.alias,
                         cap_id: r.cap_id,
-                        team_cap_id: r.team_cap_id ?? null,
+                        team_cap_id: teamRunCapId(r),
                         color_r: r.color_r,
                         color_g: r.color_g,
                         color_b: r.color_b,
@@ -1672,9 +1673,10 @@ export function MapsPage({
                         </DataTableCell>
                     )
                 }
-                const capId = wrHolder?.cap_id
+                const wrTeamCapId = wrHolder?.team_cap_id ?? null
+                const isTeamMap = !!wrTeamCapId
+                const capId = isTeamMap ? wrTeamCapId : wrHolder?.cap_id
                 const clickable = !!capId
-                const isTeamMap = !!wrHolder?.team_cap_id
                 const timeNode = (
                     <span className={cn(
                         "text-amber-300 transition-[color,text-shadow] duration-150 w-fit",

@@ -32,6 +32,7 @@ import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
 import { MapNavLink } from '@/app/components/shared/MapNavLink'
 import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
+import { recordFeedDemoCapId, teamRunCapId } from '@/app/components/shared/runDemo'
 import { IconActionButton } from '@/app/components/shared/IconActionButton'
 import { ReplayVideoModal } from '@/app/components/shared/ReplayVideoModal'
 import { DemoDownloadStatusModal } from '@/app/components/shared/DemoDownloadStatusModal'
@@ -775,12 +776,12 @@ export function WorldRecordsPage({
                     </DataTableCell>
                 )
             case 'time': {
-                const isTeamRow = !!r.team_cap_id
+                const rowTeamCapId = teamRunCapId(r)
                 return (
                     <DataTableCell key={id} align="right">
                         <CapTimeLink
-                            capId={isTeamRow ? undefined : r.cap_id}
-                            teamCapId={isTeamRow ? r.cap_id : undefined}
+                            capId={rowTeamCapId ? undefined : r.cap_id}
+                            teamCapId={rowTeamCapId ?? undefined}
                             seconds={r.cap_time_seconds}
                             className="font-mono font-black tabular-nums text-blue-300 tracking-tight"
                         />
@@ -810,7 +811,7 @@ export function WorldRecordsPage({
                     </DataTableCell>
                 )
             case 'actions': {
-                const demoCapId = r.demo_cap_id ?? null
+                const demoCapId = recordFeedDemoCapId({ id: r.cap_id, demoCapId: r.demo_cap_id, members: r.members })
                 return (
                     <DataTableCell key={id} align="center" className="px-2">
                         <div className="flex items-center justify-center gap-1">
@@ -859,7 +860,8 @@ export function WorldRecordsPage({
             {recordsHaveFilter ? 'No world records match your filters.' : 'No world records found.'}
         </div>
     ) : recordPageRows.map(r => {
-        const isTeamRow = !!r.team_cap_id
+        const rowTeamCapId = teamRunCapId(r)
+        const isTeamRow = !!rowTeamCapId
         const isSelf = selfId != null && r.user_id === String(selfId)
         const isNew = highlight.isNew(r.added)
         return (
@@ -910,8 +912,8 @@ export function WorldRecordsPage({
                 </div>
                 <div className="flex flex-col items-end justify-between gap-2">
                     <CapTimeLink
-                        capId={isTeamRow ? undefined : r.cap_id}
-                        teamCapId={isTeamRow ? r.cap_id : undefined}
+                        capId={rowTeamCapId ? undefined : r.cap_id}
+                        teamCapId={rowTeamCapId ?? undefined}
                         seconds={r.cap_time_seconds}
                         className="font-mono font-black tabular-nums text-blue-300 tracking-tight"
                     />

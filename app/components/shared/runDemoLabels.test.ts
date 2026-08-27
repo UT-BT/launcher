@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { NO_RUN_DEMO_TITLE, runDemoBadge, runDemoWatchTitle } from './runDemoLabels'
+import { NO_RUN_DEMO_TITLE, runDemoBadge, runDemoIsTeamTime, runDemoWatchTitle } from './runDemoLabels'
 import type { TeamCapRunDemo } from '@/app/utils/api'
 
 const SLOWEST: TeamCapRunDemo = {
@@ -42,13 +42,32 @@ describe('run demo labels', () => {
     })
 
     it('names the member badge after what the demo actually is', () => {
-        expect(runDemoBadge(SLOWEST)).toMatchObject({ isTeamTime: true, label: 'Run demo' })
-        expect(runDemoBadge(FASTER_FALLBACK)).toMatchObject({ isTeamTime: false, label: 'Closest demo' })
+        expect(runDemoBadge(SLOWEST)).toMatchObject({ kind: 'team-time', label: 'Run demo' })
+        expect(runDemoBadge(FASTER_FALLBACK)).toMatchObject({ kind: 'closest', label: 'Closest demo' })
         expect(runDemoBadge(FASTER_FALLBACK).tooltip).not.toContain("time is the team time")
     })
 
     it('treats an unresolved demo as not the team time rather than assuming', () => {
-        expect(runDemoBadge(null).isTeamTime).toBe(false)
-        expect(runDemoBadge(undefined).isTeamTime).toBe(false)
+        expect(runDemoIsTeamTime(null)).toBe(false)
+        expect(runDemoIsTeamTime(undefined)).toBe(false)
+        expect(runDemoBadge(null).kind).toBe('unknown')
+        expect(runDemoBadge(undefined).kind).toBe('unknown')
+    })
+
+    it('claims nothing about the owner when the payload carries no demo description', () => {
+        const title = runDemoWatchTitle(null, 'cap-derived-from-roster')
+
+        expect(title).not.toBe(NO_RUN_DEMO_TITLE)
+        expect(title).not.toContain('team time')
+        expect(title.toLowerCase()).not.toContain('slowest')
+        expect(title.toLowerCase()).not.toContain('ends before')
+    })
+
+    it('makes no claim in the badge when the payload carries no demo description', () => {
+        const badge = runDemoBadge(null)
+
+        expect(badge.tooltip).not.toContain('team time')
+        expect(badge.tooltip.toLowerCase()).not.toContain('slowest')
+        expect(badge.tooltip.toLowerCase()).not.toContain('ends before')
     })
 })

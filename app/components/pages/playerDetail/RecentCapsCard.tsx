@@ -7,6 +7,7 @@ import { useNavState } from '@/app/components/navigation/useNavState'
 import { formatAddedDate, displayMapName } from '@/app/utils/format'
 import { getMedalIcon } from '@/app/utils/medals'
 import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
+import { capRowDemoCapId } from '@/app/components/shared/runDemo'
 import { TeamRosterBadge } from '@/app/components/shared/TeamRosterBadge'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { MapNavLink } from '@/app/components/shared/MapNavLink'
@@ -308,7 +309,7 @@ export function RecentCapsCard({
                                 const d = new Date(cap.added)
                                 return isNaN(d.getTime()) ? cap.added : d.toLocaleString()
                             })() : '—'
-                            const demoCapId = cap.demoCapId ?? null
+                            const demoCapId = capRowDemoCapId(cap)
                             const canPlay = cap.verified && !cap.disallowed && !!demoCapId
                             return (
                                 <DataTableRow

@@ -10,6 +10,7 @@ import {
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { TeamHolders } from '@/app/components/shared/TeamHolders'
 import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
+import { capRowDemoCapId } from '@/app/components/shared/runDemo'
 import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { NavLink } from '@/app/components/navigation/NavLink'
@@ -119,6 +120,7 @@ export function HistoryModal({
         </div>
     ) : caps.map(cap => {
         const medalIcon = getMedalIcon(cap.medal)
+        const demoCapId = capRowDemoCapId(cap)
         return (
             <div key={cap.id} role="listitem" className="grid grid-cols-[3rem_minmax(0,1fr)_auto] gap-3 p-3 border-b border-hairline/5 last:border-0">
                 <MapThumbnail mapName={cap.mapName} className="size-12" />
@@ -162,11 +164,11 @@ export function HistoryModal({
                                 variant="replay"
                                 icon={Play}
                                 iconFill
-                                tooltip={cap.demoCapId ? 'Watch run' : 'No replay available for this run'}
-                                disabled={!cap.demoCapId}
+                                tooltip={demoCapId ? 'Watch run' : 'No replay available for this run'}
+                                disabled={!demoCapId}
                                 loading={replay.loadingCapId === cap.id}
                                 onClick={() => replay.openReplay({
-                                    capId: cap.demoCapId ?? null,
+                                    capId: demoCapId,
                                     loadingKey: cap.id,
                                     mapName: cap.mapName,
                                     time: cap.time,
@@ -222,6 +224,7 @@ export function HistoryModal({
                             ) : (
                                 caps.map(cap => {
                                     const medalIcon = getMedalIcon(cap.medal)
+                                    const demoCapId = capRowDemoCapId(cap)
                                     const isLoadingReplay = replay.loadingCapId === cap.id
 
                                     return (
@@ -308,11 +311,11 @@ export function HistoryModal({
                                                             variant="replay"
                                                             icon={Play}
                                                             iconFill
-                                                            tooltip={cap.demoCapId ? 'Watch run' : 'No replay available for this run'}
-                                                            disabled={!cap.demoCapId}
+                                                            tooltip={demoCapId ? 'Watch run' : 'No replay available for this run'}
+                                                            disabled={!demoCapId}
                                                             loading={isLoadingReplay}
                                                             onClick={() => replay.openReplay({
-                                                                capId: cap.demoCapId ?? null,
+                                                                capId: demoCapId,
                                                                 loadingKey: cap.id,
                                                                 mapName: cap.mapName,
                                                                 time: cap.time,
