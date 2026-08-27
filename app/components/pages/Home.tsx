@@ -16,10 +16,6 @@ import { useReplayWatch } from '@/app/hooks/useReplayWatch'
 import { useRefreshCooldown } from '@/app/hooks/useRefreshCooldown'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
 import type { Server } from '@/app/utils/server-utils'
-import {
-    forgetRecentServer, readRecentServers, rememberRecentServer,
-    type RecentServerEntry,
-} from '@/app/utils/server-utils'
 
 import { SpotlightSection, type SectionAccent } from './home/SpotlightSection'
 import { CommunityStatsRow } from './home/CommunityStatsRow'
@@ -32,7 +28,7 @@ import { MapsToReviewCard } from './home/MapsToReviewCard'
 import { NewsCard } from './home/news/NewsCard'
 import { PersonalProgressSnapshot } from './home/PersonalProgressSnapshot'
 import { AchievementProgressPreview } from './home/AchievementProgressPreview'
-import { RecentServersCard } from './home/RecentServersCard'
+import { FavoriteServersCard } from './home/FavoriteServersCard'
 import { MedalHuntCard } from './home/MedalHuntCard'
 import { capabilities, fetchGatewayServers } from '@/app/platform'
 import { requestLogin } from '@/app/components/shared/AuthRequiredModal'
@@ -47,7 +43,7 @@ const ACCENTS: Record<string, SectionAccent> = {
     personal: { tick: 'bg-amber-400' },
     medalHunt: { tick: 'bg-red-500 shadow-[0_0_10px_rgba(248,113,113,0.65)]' },
     achievements: { tick: 'bg-emerald-400' },
-    recentServers: { tick: 'bg-violet-400' },
+    favoriteServers: { tick: 'bg-violet-400' },
 }
 
 export interface HomePageCaches {
@@ -83,11 +79,14 @@ interface HomeProps {
     installationStatus?: 'valid' | 'no-install' | 'unsupported' | null
     newsSeenIso?: string | null
     favoriteMapNames: Set<string>
+    favoriteServerIds: Set<string>
+    favoriteServersLoadFailed: boolean
     caches: HomePageCaches
     onCachesChange: (updater: (prev: HomePageCaches) => HomePageCaches) => void
     achievementsCaches: AchievementsPageCaches
     onEnsureAchievements: (force?: boolean) => void
     onToggleFavorite: (mapName: string) => void
+    onToggleServerFavorite: (serverId: string) => void
     onMapSelect?: (mapName: string) => void
     onViewServers?: () => void
     onViewMaps?: () => void
@@ -105,9 +104,10 @@ const EMPTY_SUMMARY: Summary = {
 }
 
 export function Home({
-    userProfile, installationStatus, newsSeenIso, favoriteMapNames,
+    userProfile, installationStatus, newsSeenIso, favoriteMapNames, favoriteServerIds,
+    favoriteServersLoadFailed,
     caches, onCachesChange, achievementsCaches, onEnsureAchievements,
-    onToggleFavorite, onMapSelect,
+    onToggleFavorite, onToggleServerFavorite, onMapSelect,
     onViewServers, onViewMaps, onViewNewMaps, onViewWorldRecords, onViewPlayers, onViewNews,
 }: HomeProps) {
     const refreshCooldown = useRefreshCooldown()
@@ -119,7 +119,6 @@ export function Home({
     const [historyOpen, setHistoryOpen] = useState(false)
     const [launchError, setLaunchError] = useState<string | null>(null)
     const [activeReviewMap, setActiveReviewMap] = useState<string | null>(null)
-    const [recentServers, setRecentServers] = useState<RecentServerEntry[]>(() => readRecentServers())
     const [reviewsRefreshKey, setReviewsRefreshKey] = useState(0)
     const [refreshKey, setRefreshKey] = useState(0)
     const mountedRef = useRef(true)
@@ -237,7 +236,7 @@ export function Home({
         })
     }
 
-    const handleJoinServer = async (server: Server | RecentServerEntry, asSpectator: boolean) => {
+    const handleJoinServer = async (server: Server, asSpectator: boolean) => {
         if (!capabilities.game) return
         try {
             if (window.conveyor?.ini) {
@@ -252,7 +251,6 @@ export function Home({
                 }
             }
             await window.conveyor.game.launchGame(server.ip, server.hostport)
-            setRecentServers(rememberRecentServer(server))
         } catch (err) {
             console.error('Failed to launch game:', err)
             setLaunchError(err instanceof Error ? err.message : 'Failed to launch the game.')
@@ -332,22 +330,26 @@ export function Home({
         </SpotlightSection>
     )
 
-    const renderRecentServersSection = (span: string) => (
+    const renderFavoriteServersSection = (span: string) => (
         <SpotlightSection
-            key="recent-servers"
-            title="Your Recent Servers"
-            accent={ACCENTS.recentServers}
+            key="favorite-servers"
+            title="Your Favorite Servers"
+            accent={ACCENTS.favoriteServers}
             actionLabel="See All"
             onAction={onViewServers}
             actionView="servers"
             className={span}
         >
-            <RecentServersCard
-                recentServers={recentServers}
+            <FavoriteServersCard
+                favoriteServerIds={favoriteServerIds}
+                loadFailed={favoriteServersLoadFailed}
                 liveServers={servers ?? []}
                 installationStatus={installationStatus}
+                signedIn={Boolean(userProfile?.accessToken)}
                 onJoin={handleJoinServer}
-                onHide={(serverId) => setRecentServers(forgetRecentServer(serverId))}
+                onToggleFavorite={onToggleServerFavorite}
+                onSignIn={() => requestLogin({ feature: 'save favorite servers', description: 'Sign in to save favorite servers to your profile and sync them across the launcher and the website.' })}
+                onViewServers={onViewServers}
             />
         </SpotlightSection>
     )
@@ -414,7 +416,7 @@ export function Home({
 
     const anonymousSections = [
         ...(newsFeed.length > 0 ? [renderNewsSection] : []),
-        renderRecentServersSection,
+        renderFavoriteServersSection,
         renderHottestMapsSection,
         renderNewestMapsSection,
         renderLatestRecordsSection,
@@ -470,7 +472,7 @@ export function Home({
                 ) : (<>
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
                     {newsFeed.length > 0 && renderNewsSection('lg:col-span-6')}
-                    {renderRecentServersSection(newsFeed.length > 0 ? 'lg:col-span-6' : 'lg:col-span-12')}
+                    {renderFavoriteServersSection(newsFeed.length > 0 ? 'lg:col-span-6' : 'lg:col-span-12')}
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
