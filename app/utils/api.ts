@@ -2815,6 +2815,53 @@ export async function replaceFavoriteMaps(accessToken: string, mapNames: string[
     return []
 }
 
+export interface UserFavoriteServer {
+    user: string
+    server_id: string
+    created_at: string
+}
+
+export async function fetchUserFavoriteServers(accessToken: string, userId?: string | number): Promise<string[]> {
+    const url = userId !== undefined && userId !== null && userId !== ''
+        ? `${API_BASE_URL}/user_favorite_servers/?user=${encodeURIComponent(String(userId))}`
+        : `${API_BASE_URL}/user_favorite_servers/`
+    const response = await fetch(url, {
+        headers: bearerHeaders(accessToken)
+    })
+    if (!response.ok) {
+        throw new Error(`Failed to fetch server favorites: ${response.statusText} (${response.status})`)
+    }
+    const json = await response.json()
+    if (json.success && Array.isArray(json.data)) {
+        return (json.data as UserFavoriteServer[]).map((row) => row.server_id)
+    }
+    return []
+}
+
+export async function addFavoriteServer(accessToken: string, serverId: string): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/user_favorite_servers/`, {
+        method: 'POST',
+        headers: {
+            ...bearerHeaders(accessToken),
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ server_id: serverId })
+    })
+    if (!response.ok) {
+        throw new Error(`Failed to add server favorite: ${response.statusText} (${response.status})`)
+    }
+}
+
+export async function removeFavoriteServer(accessToken: string, serverId: string): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/user_favorite_servers/${encodeURIComponent(serverId)}`, {
+        method: 'DELETE',
+        headers: bearerHeaders(accessToken)
+    })
+    if (!response.ok) {
+        throw new Error(`Failed to remove server favorite: ${response.statusText} (${response.status})`)
+    }
+}
+
 export interface UserSummaryProfile {
     id: string
     alias: string | null

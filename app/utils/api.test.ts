@@ -13,6 +13,9 @@ import {
     fetchSummary,
     fetchTeamMapLeaderboard,
     fetchUserSummary,
+    fetchUserFavoriteServers,
+    addFavoriteServer,
+    removeFavoriteServer,
 } from './api'
 
 function okJson(data: unknown) {
@@ -210,5 +213,66 @@ describe('avatar urls', () => {
     it('omits the size param entirely when none is given', () => {
         expect(getAvatarUrl('123456789')).not.toContain('size=')
         expect(getAvatarUrl('123456789', 64)).toContain('?size=64')
+    })
+})
+
+describe('server favorites', () => {
+    it('reduces the favorites payload to server ids in the order the API returned them', async () => {
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue(okJson([
+            { user: '1', server_id: 'b', created_at: '2026-01-01 00:00:00' },
+            { user: '1', server_id: 'a', created_at: '2026-01-02 00:00:00' },
+        ])))
+
+        expect(await fetchUserFavoriteServers('token', '1')).toEqual(['b', 'a'])
+    })
+
+    it('scopes the read to a user id when one is known', async () => {
+        const fetchMock = vi.fn().mockResolvedValue(okJson([]))
+        vi.stubGlobal('fetch', fetchMock)
+
+        await fetchUserFavoriteServers('token', '228152236587483136')
+
+        expect(fetchMock.mock.calls[0][0]).toContain('?user=228152236587483136')
+    })
+
+    it('surfaces a failed read instead of passing it off as an empty favorites list', async () => {
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('', { status: 500 })))
+
+        await expect(fetchUserFavoriteServers('token', '1')).rejects.toThrow(/500/)
+    })
+
+    it('treats a success envelope with no data key as no favorites', async () => {
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ success: true }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+        })))
+
+        expect(await fetchUserFavoriteServers('token', '1')).toEqual([])
+    })
+
+    it('adds a favorite by posting the resolved server id', async () => {
+        const fetchMock = vi.fn().mockResolvedValue(okJson({}))
+        vi.stubGlobal('fetch', fetchMock)
+
+        await addFavoriteServer('token', '0f9d5f7a-2b41-4c8e-9a3d-6d2f1b8c4e77')
+
+        const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+        expect(url).toMatch(/\/user_favorite_servers\/$/)
+        expect(init.method).toBe('POST')
+        expect(JSON.parse(init.body as string)).toEqual({ server_id: '0f9d5f7a-2b41-4c8e-9a3d-6d2f1b8c4e77' })
+    })
+
+    it('removes a favorite by id and surfaces a failed write to the caller', async () => {
+        const fetchMock = vi.fn().mockResolvedValue(okJson({}))
+        vi.stubGlobal('fetch', fetchMock)
+
+        await removeFavoriteServer('token', '0f9d5f7a-2b41-4c8e-9a3d-6d2f1b8c4e77')
+
+        const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+        expect(url).toMatch(/\/user_favorite_servers\/0f9d5f7a-2b41-4c8e-9a3d-6d2f1b8c4e77$/)
+        expect(init.method).toBe('DELETE')
+
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('', { status: 401 })))
+        await expect(removeFavoriteServer('token', 'x')).rejects.toThrow()
     })
 })

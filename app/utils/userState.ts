@@ -5,7 +5,6 @@ const SYNCED_KEYS = new Set([
     'utbt:mapsPageTutorial:v1',
     'utbt:playersPageTutorial:v1',
     'utbt:serversPageTutorial:v1',
-    'utbt:serverFavorites:v2',
     'utbt:serverPresets:v1',
     'utbt:mapsPresets:v1',
     'utbt:worldRecordsPresets:v1',
