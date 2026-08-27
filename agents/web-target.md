@@ -10,7 +10,7 @@ not_here:
   - "IPC channel contract → lib/conveyor/README.md"
   - "build commands reference → agents/build.md"
 sections: [overview, platform-layer, capability-gates, web-auth, anonymous-browsing, shareable-urls, responsive-layout, performance, build, seo-and-link-previews, hosting-note]
-last_verified: 2026-07-29
+last_verified: 2026-08-26
 verify_against:
   - app/public/route-contract.json
   - app/components/navigation/NavLink.tsx
@@ -68,11 +68,12 @@ desktop-only UI and swaps a handful of bridge calls for browser equivalents.
 
 | Feature | Web behavior | Gate |
 |---|---|---|
-| Launch/join/spectate, isGameRunning | hidden | `capabilities.game` in `AppLayout`, `Home`, `ServerBrowserPage`, `RecentServersCard` |
-| Ping column / server pings | hidden/skipped | `capabilities.ping` (ServerBrowserPage `displayColumnOrder`, RecentServersCard) |
+| Launch/join/spectate, isGameRunning | hidden | `capabilities.game` in `AppLayout`, `Home`, `ServerBrowserPage`, `FavoriteServersCard` |
+| Ping column / server pings | hidden/skipped | `capabilities.ping` (ServerBrowserPage `displayColumnOrder`, FavoriteServersCard) |
 | Settings modal | web-specific Appearance + Privacy panels; game/ini panels are never fetched | `capabilities.settingsModal` + target-specific lazy modal in `AppLayout` |
 | Install banner / patches | off — `validateInstallation` early-returns | `capabilities.install` in `Main.tsx` |
-| Favorites ini side-sync | skipped; DB favorites unchanged | `capabilities.ini` in `useFavorites` |
+| Map-favorites ini side-sync | skipped; account favorites unchanged | `capabilities.ini` in `useFavorites` |
+| Server favorites | identical — the account resource is target-agnostic; only the card's join/spectate buttons are desktop-only | `capabilities.game` in `FavoriteServersCard` |
 | Self-updater | provider inert, UI renders nothing | `capabilities.updater` in `useUpdater` |
 | Demo/map downloads | browser download | `app/platform/downloads.ts` |
 | File logging | console fallback (warn/error) | `use-logger.ts` |

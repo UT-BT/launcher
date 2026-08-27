@@ -13,7 +13,7 @@ not_here:
   - "the procedure to wire a new endpoint into the UI → skill: consume-api-data"
 sections: [backend-api, errors, admin-api, event-brackets, changing-a-map-screenshot, cap-detail-page-endpoints, world-records-page-endpoints, team-maps-and-team-runs, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites, account-state-and-badges]
 last_verified: 2026-08-26
-verify_against: [app/utils/api.ts, app/utils/patreon.ts, app/utils/server-utils.ts, app/components/pages/events/manage/formatFields.tsx, app/components/pages/events/bracket/bracketShared.tsx]
+verify_against: [app/utils/api.ts, app/utils/patreon.ts, app/utils/server-utils.ts, app/hooks/useServerFavorites.ts, app/components/pages/events/manage/formatFields.tsx, app/components/pages/events/bracket/bracketShared.tsx]
 ---
 
 # Data sources
@@ -456,10 +456,38 @@ Components read it via `usePatreonTier(userId)` (returns `0|1|2|3`, lazy-loads o
 first use). `Main.tsx` warm-loads it once on mount. Clear the localStorage key to
 force a refetch.
 
-## Server favorites — account-synced
+## Server favorites — server-side, per account
 
-Server favorites live under `utbt:serverFavorites:v2` in the account-synced
-store (`app/utils/userState.ts`) — they follow the signed-in account across
-devices and degrade to plain localStorage when signed out. Keyed by `server.id`
-(NOT hostname — hostnames can change). Managed in `Main.tsx` as
-`favoriteServerIds` + `toggleServerFavorite`.
+Server favorites are their own account resource on the API, not UI state: they
+follow the signed-in account across the desktop launcher and the website with no
+local tier at all. Fetchers live in `app/utils/api.ts`
+(`fetchUserFavoriteServers` / `addFavoriteServer` / `removeFavoriteServer`,
+against `/user_favorite_servers`); `app/hooks/useServerFavorites.ts` owns the
+set and the optimistic toggle, and `Main.tsx` exposes it as `favoriteServerIds`
++ `favoriteServersLoadFailed` + `toggleServerFavoriteOrLogin`.
+
+Two rules the hook enforces, because getting either wrong makes the launcher
+delete a favorite the user still wants:
+
+- **Toggles serialise per server id.** A second click on a star waits for the
+  first write to settle, so a double click resolves to one net state instead of
+  racing a POST against a DELETE. A failed write is undone by reversing that one
+  operation against the live set — never by restoring a snapshot, which would
+  wipe another server's toggle that succeeded in the meantime.
+- **A failed read is not an empty list.** `fetchUserFavoriteServers` throws on a
+  non-OK response like its sibling writers; the hook catches it and raises
+  `favoritesLoadFailed`, and Home's card says so instead of rendering the "you
+  have no favorites" empty state with every star dark.
+
+**Keyed by the server's API `id`**, never a hostname or `ip:port` — those change,
+and the API rejects anything that is not a resolved server id. `id` is on every
+row of the server list (`fetchGatewayServers()` → `Server.id`), so the star in
+the Servers tab and the Home "Your Favorite Servers" card both key off the same
+value.
+
+Signed out there are no favorites: the set is empty, the star raises the sign-in
+modal instead of writing, and Home's card shows a sign-in prompt. Home renders
+the favorites that appear in the current live server list, so a favorite that is
+not currently listed is simply absent rather than shown as a stale row. Joining
+is desktop-only (`capabilities.game`); the web card is the same list without the
+join/spectate buttons.
