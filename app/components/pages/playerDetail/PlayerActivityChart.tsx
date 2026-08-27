@@ -4,8 +4,7 @@ import { cn } from '@/lib/utils'
 import { Activity } from 'lucide-react'
 import type { UserActivityBucket } from '@/app/utils/api'
 import { WEEK_MS, formatWeekRange } from '@/app/utils/chartBuckets'
-
-type Mode = 'caps' | 'playtime'
+import { defaultActivityMode, formatHours, type ActivityMode } from './activityChart'
 
 interface PlayerActivityChartProps {
     activity: UserActivityBucket[]
@@ -19,7 +18,8 @@ function formatWeekLabel(iso: string): string {
 }
 
 export default function PlayerActivityChart({ activity, loading }: PlayerActivityChartProps) {
-    const [mode, setMode] = useState<Mode>('caps')
+    const [selectedMode, setSelectedMode] = useState<ActivityMode | null>(null)
+    const mode = selectedMode ?? defaultActivityMode(activity)
 
     const data = useMemo(() => {
         return activity.map(b => {
@@ -45,11 +45,11 @@ export default function PlayerActivityChart({ activity, loading }: PlayerActivit
                     </div>
                 </div>
                 <div className="flex items-center gap-1">
-                    {(['caps', 'playtime'] as Mode[]).map(m => (
+                    {(['playtime', 'caps'] as ActivityMode[]).map(m => (
                         <button
                             key={m}
                             type="button"
-                            onClick={() => setMode(m)}
+                            onClick={() => setSelectedMode(m)}
                             className={cn(
                                 'h-5 px-1.5 rounded text-[9px] font-bold uppercase tracking-wider border transition-colors cursor-pointer',
                                 mode === m
@@ -91,8 +91,9 @@ export default function PlayerActivityChart({ activity, loading }: PlayerActivit
                                 tick={{ fill: '#9ca3af', fontSize: 10 }}
                                 axisLine={false}
                                 tickLine={false}
-                                width={32}
-                                allowDecimals={false}
+                                width={40}
+                                allowDecimals={mode === 'playtime'}
+                                tickFormatter={v => (mode === 'playtime' ? formatHours(Number(v)) : String(v))}
                             />
                             <Tooltip
                                 contentStyle={{
@@ -106,7 +107,7 @@ export default function PlayerActivityChart({ activity, loading }: PlayerActivit
                                 labelFormatter={(_label, payload) => payload?.[0]?.payload?.rangeLabel ?? _label}
                                 formatter={(v) => {
                                     const n = Number(v ?? 0)
-                                    return [mode === 'playtime' ? `${n.toFixed(1)} h` : String(n), yLabel] as [string, string]
+                                    return [mode === 'playtime' ? `${formatHours(n)} h` : String(n), yLabel] as [string, string]
                                 }}
                             />
                             <Area
