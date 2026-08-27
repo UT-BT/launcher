@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useState } from 'react'
 import {
   LayoutDashboard, Flag, Ban, AlertTriangle, Activity, Users, Map as MapIcon, Tag,
   Database, ArrowRight, type LucideIcon,
@@ -6,13 +6,18 @@ import {
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import {
   fetchAdminOverview, fetchAdminActivity,
-  type AdminOverview, type AdminActivity, type ActivityWindow,
+  type AdminOverview, type AdminActivity,
 } from '@/app/utils/api'
+import {
+  BUCKET_LABEL, DAY_MS, RANGE_PRESETS, asChartBucket, bucketForSpanDays, formatWeekRange,
+  isoDay, needsPointMarkers, presetById, presetRange, rangeSpanDays, splitPartialSeries,
+  validateRange, type ChartBucket, type PartialSeriesPoint,
+} from '@/app/utils/chartBuckets'
 import { cn } from '@/lib/utils'
 import type { AdminSectionProps, Tone } from '../types'
 import { SectionShell } from '../components/SectionShell'
 import { StatCard } from '../components/StatCard'
-import { ActionButton, Feedback, errMessage } from '../components/controls'
+import { ActionButton, DateRangeControl, Feedback, errMessage, type DateRangeSelection } from '../components/controls'
 import { TONE_CHIP } from '../components/tone'
 import { CHART_EMERALD, CHART_VIOLET, CHART_CYAN, CHART_AMBER, CHART_PINK, CHART_TEAL } from '@/app/utils/chartColors'
 
@@ -55,7 +60,8 @@ const AXIS_TICK = 'var(--muted-foreground, #94a3b8)'
 const GRID_STROKE = 'rgba(255,255,255,0.05)'
 const AXIS_LINE = 'rgba(255,255,255,0.06)'
 
-const WINDOWS: ActivityWindow[] = ['24h', '1w', '1m', '1y']
+const RANGE_STORAGE_KEY = 'utbt:admin:overview:range:v1'
+const DEFAULT_PRESET_ID = '7d'
 
 type SeriesKey = 'caps' | 'players' | 'playtime_hours' | 'new_users' | 'new_maps' | 'achievements' | 'web_sessions' | 'desktop_sessions'
 
@@ -70,24 +76,62 @@ const SERIES: { key: SeriesKey; title: string; unit: string; color: string; grad
   { key: 'desktop_sessions', title: 'Desktop App Sessions', unit: 'sessions', color: CHART_TEAL, gradientId: 'ovDesktopSessions' },
 ]
 
-type ChartPoint = AdminActivity['points'][number] & { label: string }
-
-function formatLabel(t: string | null, bucket: string): string {
-  if (!t) return ''
-  const d = new Date(t)
-  if (Number.isNaN(d.getTime())) return ''
-  if (bucket === 'hour') return d.toLocaleTimeString([], { hour: '2-digit' })
-  if (bucket === 'month') return d.toLocaleDateString([], { month: 'short', year: '2-digit' })
-  return d.toLocaleDateString([], { month: 'short', day: 'numeric' })
+function defaultRange(nowMs: number): DateRangeSelection {
+  const preset = presetById(DEFAULT_PRESET_ID) ?? RANGE_PRESETS[0]
+  return { presetId: preset.id, ...presetRange(preset.days, nowMs) }
 }
 
-function formatFull(t: string | null, bucket: string): string {
+function loadRange(nowMs: number): DateRangeSelection {
+  const base = defaultRange(nowMs)
+  if (typeof window === 'undefined') return base
+  try {
+    const raw = window.localStorage.getItem(RANGE_STORAGE_KEY)
+    if (!raw) return base
+    const saved = JSON.parse(raw) as Partial<DateRangeSelection>
+    const preset = typeof saved.presetId === 'string' ? presetById(saved.presetId) : null
+    if (preset) return { presetId: preset.id, ...presetRange(preset.days, nowMs) }
+    const start = typeof saved.start === 'string' ? saved.start : base.start
+    const end = typeof saved.end === 'string' ? saved.end : base.end
+    return validateRange(start, end, isoDay(nowMs)) ? base : { presetId: null, start, end }
+  } catch {
+    return base
+  }
+}
+
+const UTC = 'UTC'
+
+function formatLabel(t: string | null, bucket: ChartBucket): string {
   if (!t) return ''
   const d = new Date(t)
   if (Number.isNaN(d.getTime())) return ''
-  if (bucket === 'hour') return d.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric' })
-  if (bucket === 'month') return d.toLocaleDateString([], { month: 'long', year: 'numeric' })
-  return d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
+  if (bucket === 'hour') return d.toLocaleTimeString([], { hour: '2-digit', timeZone: UTC })
+  if (bucket === 'month') return d.toLocaleDateString([], { month: 'short', year: '2-digit', timeZone: UTC })
+  return d.toLocaleDateString([], { month: 'short', day: 'numeric', timeZone: UTC })
+}
+
+function formatFull(t: string | null, bucket: ChartBucket): string {
+  if (!t) return ''
+  const d = new Date(t)
+  if (Number.isNaN(d.getTime())) return ''
+  if (bucket === 'hour') return d.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', timeZone: UTC })
+  if (bucket === 'month') return d.toLocaleDateString([], { month: 'long', year: 'numeric', timeZone: UTC })
+  if (bucket === 'week') return formatWeekRange(d.getTime(), d.getTime() + 7 * DAY_MS - 1)
+  return d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric', timeZone: UTC })
+}
+
+function formatSpan(startIso: string | null, endIso: string | null): string {
+  if (!startIso || !endIso) return ''
+  const start = new Date(startIso)
+  const lastInstant = new Date(new Date(endIso).getTime() - 1)
+  if (Number.isNaN(start.getTime()) || Number.isNaN(lastInstant.getTime())) return ''
+  const opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', year: 'numeric', timeZone: UTC }
+  return `${start.toLocaleDateString([], opts)} – ${lastInstant.toLocaleDateString([], opts)}`
+}
+
+function seriesNote(key: SeriesKey, dayResolution: string[], unavailable: string[]): string | undefined {
+  if (unavailable.includes(key)) return 'not kept this far back'
+  if (dayResolution.includes(key)) return 'daily totals'
+  return undefined
 }
 
 function formatValue(v: number, unit: string): string {
@@ -99,43 +143,57 @@ function formatValue(v: number, unit: string): string {
 
 function ChartTooltip({ active, payload, unit, bucket }: {
   active?: boolean
-  payload?: { value: number; color?: string; payload: ChartPoint }[]
+  payload?: { value: number | null; color?: string; payload: PartialSeriesPoint }[]
   unit: string
-  bucket: string
+  bucket: ChartBucket
 }) {
   if (!active || !payload?.length) return null
-  const p = payload[0]
+  const entry = payload.find((p) => p.value !== null && p.value !== undefined)
+  if (!entry) return null
+  const point = entry.payload
   return (
     <div className="rounded-lg border border-hairline/15 bg-card/95 px-3 py-2 shadow-xl backdrop-blur-sm">
-      <div className="text-[11px] text-muted-foreground mb-1">{formatFull(p.payload.t, bucket)}</div>
+      <div className="text-[11px] text-muted-foreground mb-1">{formatFull(point.t, bucket)}</div>
       <div className="flex items-center gap-2">
-        <span className="size-2 rounded-full shrink-0" style={{ background: p.color }} />
-        <span className="text-sm font-semibold text-foreground tabular-nums">{formatValue(p.value, unit)}</span>
+        <span className="size-2 rounded-full shrink-0" style={{ background: entry.color }} />
+        <span className="text-sm font-semibold text-foreground tabular-nums">{formatValue(entry.value ?? 0, unit)}</span>
       </div>
+      {point.partial && <div className="text-[11px] text-amber-300 mt-1">Still in progress</div>}
     </div>
   )
 }
 
-const ActivityChart = memo(function ActivityChart({ title, dataKey, color, gradientId, unit, bucket, points }: {
+const ActivityChart = memo(function ActivityChart({ title, dataKey, color, gradientId, unit, bucket, points, note }: {
   title: string
   dataKey: SeriesKey
   color: string
   gradientId: string
   unit: string
-  bucket: string
-  points: ChartPoint[]
+  bucket: ChartBucket
+  points: AdminActivity['points']
+  note?: string
 }) {
+  const series = useMemo(
+    () => splitPartialSeries(points, (p) => p[dataKey], (p) => formatLabel(p.t, bucket)),
+    [points, dataKey, bucket],
+  )
+  const showDots = needsPointMarkers(series)
   return (
     <div className="bg-card/30 border border-hairline/5 rounded-xl p-3">
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
         <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">{title}</span>
+        {note && <span className="text-[10px] text-muted-foreground">{note}</span>}
       </div>
       <div className="h-40">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={points} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
+          <AreaChart data={series} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
             <defs>
               <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor={color} stopOpacity={0.35} />
+                <stop offset="100%" stopColor={color} stopOpacity={0} />
+              </linearGradient>
+              <linearGradient id={`${gradientId}Partial`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={color} stopOpacity={0.12} />
                 <stop offset="100%" stopColor={color} stopOpacity={0} />
               </linearGradient>
             </defs>
@@ -160,11 +218,23 @@ const ActivityChart = memo(function ActivityChart({ title, dataKey, color, gradi
             />
             <Area
               type="monotone"
-              dataKey={dataKey}
+              dataKey="value"
               stroke={color}
               strokeWidth={2}
               fill={`url(#${gradientId})`}
-              dot={false}
+              dot={showDots ? { r: 3, fill: color, stroke: color } : false}
+              isAnimationActive={false}
+            />
+            <Area
+              type="monotone"
+              dataKey="partialValue"
+              stroke={color}
+              strokeWidth={2}
+              strokeDasharray="4 3"
+              strokeOpacity={0.75}
+              fill={`url(#${gradientId}Partial)`}
+              dot={showDots ? { r: 3, fill: color, stroke: color, fillOpacity: 0.75 } : false}
+              isAnimationActive={false}
             />
           </AreaChart>
         </ResponsiveContainer>
@@ -179,9 +249,21 @@ export function OverviewSection({ userProfile, onNavigate }: AdminSectionProps) 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const [activityWindow, setActivityWindow] = useState<ActivityWindow>('1w')
+  const todayIso = useMemo(() => isoDay(Date.now()), [])
+  const [range, setRange] = useState<DateRangeSelection>(() => loadRange(Date.now()))
   const [activity, setActivity] = useState<AdminActivity | null>(null)
   const [activityLoading, setActivityLoading] = useState(true)
+
+  const rangeError = validateRange(range.start, range.end, todayIso)
+
+  const applyRange = useCallback((next: DateRangeSelection) => {
+    const preset = presetById(next.presetId)
+    const resolved = preset ? { presetId: preset.id, ...presetRange(preset.days, Date.now()) } : next
+    setRange(resolved)
+    try {
+      window.localStorage.setItem(RANGE_STORAGE_KEY, JSON.stringify(resolved))
+    } catch { /* ignore */ }
+  }, [])
 
   useEffect(() => {
     if (!token) return
@@ -195,23 +277,25 @@ export function OverviewSection({ userProfile, onNavigate }: AdminSectionProps) 
   }, [token])
 
   useEffect(() => {
-    if (!token) return
+    if (!token || rangeError) return
     const ctrl = new AbortController()
     setActivityLoading(true)
-    fetchAdminActivity(token, activityWindow, ctrl.signal)
+    fetchAdminActivity(token, { start: range.start, end: range.end }, ctrl.signal)
       .then((d) => { setActivity(d); setActivityLoading(false) })
       .catch((e) => { if (!ctrl.signal.aborted) { setError(errMessage(e)); setActivityLoading(false) } })
     return () => ctrl.abort()
-  }, [token, activityWindow])
+  }, [token, range.start, range.end, rangeError])
 
   const v = (key: keyof AdminOverview['stats']) => (loading || !data ? '—' : data.stats[key])
 
-  const bucket = activity?.bucket ?? 'day'
-  const chartData = useMemo<ChartPoint[]>(
-    () => (activity?.points ?? []).map((p) => ({ ...p, label: formatLabel(p.t, activity?.bucket ?? 'day') })),
-    [activity],
-  )
-  const hasPoints = chartData.length > 0
+  const bucket = activity
+    ? asChartBucket(activity.bucket)
+    : bucketForSpanDays(rangeError ? 1 : rangeSpanDays(range.start, range.end))
+  const points = activity?.points ?? []
+  const hasPoints = points.length > 0
+  const spanLabel = formatSpan(activity?.start ?? null, activity?.end ?? null)
+  const dayResolution = activity?.dayResolutionSeries ?? []
+  const unavailable = activity?.unavailableSeries ?? []
 
   return (
     <SectionShell title="Overview" icon={LayoutDashboard}>
@@ -235,31 +319,27 @@ export function OverviewSection({ userProfile, onNavigate }: AdminSectionProps) 
       </div>
 
       <div className="space-y-3">
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Activity</span>
-          <div className="flex items-center gap-1.5">
-            {WINDOWS.map((w) => (
-              <button
-                key={w}
-                type="button"
-                onClick={() => setActivityWindow(w)}
-                className={cn(
-                  'h-7 px-2.5 rounded-md border text-xs cursor-pointer transition-colors',
-                  activityWindow === w
-                    ? 'bg-accent-500/15 border-accent-500/40 text-accent-200'
-                    : 'border-hairline/10 bg-card/30 text-muted-foreground hover:text-foreground',
-                )}
-              >
-                {w}
-              </button>
-            ))}
+        <div className="flex flex-col gap-2">
+          <div className="flex items-baseline justify-between gap-3 flex-wrap">
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Activity</span>
+            <span className="text-xs text-muted-foreground">
+              {spanLabel ? `${spanLabel} · ` : ''}{BUCKET_LABEL[bucket]}
+              {activity?.partialFrom ? ' · dashed = still in progress' : ''}
+            </span>
           </div>
+          <DateRangeControl
+            value={range}
+            presets={RANGE_PRESETS}
+            maxDate={todayIso}
+            error={rangeError}
+            onChange={applyRange}
+          />
         </div>
 
         {!hasPoints ? (
           <div className="bg-card/30 border border-hairline/5 rounded-xl p-4">
-            <div className="h-40 flex items-center justify-center text-sm text-muted-foreground">
-              {activityLoading ? 'Loading…' : 'No activity in this window.'}
+            <div className="h-40 flex items-center justify-center text-sm text-muted-foreground text-center px-4">
+              {rangeError ? 'Adjust the dates to load activity.' : activityLoading ? 'Loading…' : 'No activity in this range.'}
             </div>
           </div>
         ) : (
@@ -273,7 +353,8 @@ export function OverviewSection({ userProfile, onNavigate }: AdminSectionProps) 
                 color={s.color}
                 gradientId={s.gradientId}
                 bucket={bucket}
-                points={chartData}
+                points={points}
+                note={seriesNote(s.key, dayResolution, unavailable)}
               />
             ))}
           </div>

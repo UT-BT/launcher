@@ -1,4 +1,4 @@
-import { useState, useEffect, type ReactNode } from 'react'
+import { useState, useEffect, useRef, type ReactNode } from 'react'
 import { Search, Loader2, X, ChevronLeft, ChevronRight, ChevronDown, Check, Copy, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Input } from '@/app/components/ui/input'
@@ -273,5 +273,116 @@ export function Copyable({ value, className, mono = true }: { value: string; cla
         {copied ? <Check className="size-3.5 text-emerald-300" /> : <Copy className="size-3.5" />}
       </button>
     </span>
+  )
+}
+
+export interface DateRangeSelection {
+  presetId: string | null
+  start: string
+  end: string
+}
+
+export const DATE_COMMIT_DELAY_MS = 400
+
+function DateField({ label, value, max, onChange }: {
+  label: string
+  value: string
+  max: string
+  onChange: (v: string) => void
+}) {
+  const [draft, setDraft] = useState(value)
+  const pending = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const cancel = () => {
+    if (pending.current === null) return
+    clearTimeout(pending.current)
+    pending.current = null
+  }
+
+  useEffect(() => {
+    cancel()
+    setDraft(value)
+  }, [value])
+
+  useEffect(() => cancel, [])
+
+  const schedule = (next: string) => {
+    setDraft(next)
+    cancel()
+    pending.current = setTimeout(() => {
+      pending.current = null
+      onChange(next)
+    }, DATE_COMMIT_DELAY_MS)
+  }
+
+  const commitNow = () => {
+    if (pending.current === null) return
+    cancel()
+    onChange(draft)
+  }
+
+  return (
+    <label className="flex items-center gap-1.5 flex-1 min-w-[10.5rem]">
+      <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium shrink-0">{label}</span>
+      <input
+        type="date"
+        value={draft}
+        max={max}
+        onChange={(e) => schedule(e.target.value)}
+        onBlur={commitNow}
+        onKeyDown={(e) => { if (e.key === 'Enter') commitNow() }}
+        style={{ colorScheme: 'dark' }}
+        className={cn(
+          'h-8 w-full min-w-0 px-2 rounded-md border border-hairline/10 bg-card/30 text-xs text-foreground',
+          'outline-none focus:border-accent-500/50 cursor-pointer',
+        )}
+      />
+    </label>
+  )
+}
+
+export function DateRangeControl({ value, presets, maxDate, error, onChange }: {
+  value: DateRangeSelection
+  presets: { id: string; label: string }[]
+  maxDate: string
+  error?: string | null
+  onChange: (next: DateRangeSelection) => void
+}) {
+  return (
+    <div className="flex flex-col gap-2 w-full">
+      <div className="flex flex-wrap items-center gap-1.5">
+        {presets.map((preset) => (
+          <button
+            key={preset.id}
+            type="button"
+            onClick={() => onChange({ presetId: preset.id, start: value.start, end: value.end })}
+            className={cn(
+              'h-7 px-2.5 rounded-md border text-xs cursor-pointer transition-colors',
+              value.presetId === preset.id
+                ? 'bg-accent-500/15 border-accent-500/40 text-accent-200'
+                : 'border-hairline/10 bg-card/30 text-muted-foreground hover:text-foreground',
+            )}
+          >
+            {preset.label}
+          </button>
+        ))}
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <DateField
+          label="From"
+          value={value.start}
+          max={maxDate}
+          onChange={(start) => onChange({ presetId: null, start, end: value.end })}
+        />
+        <DateField
+          label="To"
+          value={value.end}
+          max={maxDate}
+          onChange={(end) => onChange({ presetId: null, start: value.start, end })}
+        />
+        <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">UTC</span>
+      </div>
+      {error && <span className="text-xs text-red-300">{error}</span>}
+    </div>
   )
 }

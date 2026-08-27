@@ -621,13 +621,13 @@ export type ActivityWindow = '24h' | '1w' | '1m' | '1y'
 
 export interface AdminActivityPoint {
     t: string | null
+    partial: boolean
     caps: number
     players: number
     playtime_hours: number
     new_maps: number
     new_users: number
     achievements: number
-    launcher_logins: number
     web_sessions: number
     desktop_sessions: number
 }
@@ -635,11 +635,56 @@ export interface AdminActivityPoint {
 export interface AdminActivity {
     window: string
     bucket: string
+    start: string | null
+    end: string | null
+    requestedStart: string | null
+    requestedEnd: string | null
+    partialFrom: string | null
+    dayResolutionSeries: string[]
+    unavailableSeries: string[]
     points: AdminActivityPoint[]
 }
 
-export async function fetchAdminActivity(token: string, window: ActivityWindow, signal?: AbortSignal): Promise<AdminActivity> {
-    return apiGet<AdminActivity>(`/admin/overview/activity?window=${window}`, { token, signal })
+export interface AdminActivityRange {
+    start: string
+    end: string
+}
+
+function toActivityPoint(raw: unknown): AdminActivityPoint {
+    const row = (raw ?? {}) as { [key: string]: unknown }
+    return {
+        t: typeof row.t === 'string' ? row.t : null,
+        partial: row.partial === true,
+        caps: asNum(row.caps),
+        players: asNum(row.players),
+        playtime_hours: asNum(row.playtime_hours),
+        new_maps: asNum(row.new_maps),
+        new_users: asNum(row.new_users),
+        achievements: asNum(row.achievements),
+        web_sessions: asNum(row.web_sessions),
+        desktop_sessions: asNum(row.desktop_sessions),
+    }
+}
+
+function toNullableIso(value: unknown): string | null {
+    return typeof value === 'string' && value ? value : null
+}
+
+export async function fetchAdminActivity(token: string, range: AdminActivityRange, signal?: AbortSignal): Promise<AdminActivity> {
+    const query = new URLSearchParams({ start: range.start, end: range.end })
+    const raw = await apiGet<{ [key: string]: unknown }>(`/admin/overview/activity?${query.toString()}`, { token, signal })
+    return {
+        window: asStr(raw.window, 'custom'),
+        bucket: asStr(raw.bucket, 'day'),
+        start: toNullableIso(raw.start),
+        end: toNullableIso(raw.end),
+        requestedStart: toNullableIso(raw.requested_start),
+        requestedEnd: toNullableIso(raw.requested_end),
+        partialFrom: toNullableIso(raw.partial_from),
+        dayResolutionSeries: asStringArray(raw.day_resolution_series),
+        unavailableSeries: asStringArray(raw.unavailable_series),
+        points: asArray<unknown>(raw.points).map(toActivityPoint),
+    }
 }
 
 export interface AdminUsersParams {
