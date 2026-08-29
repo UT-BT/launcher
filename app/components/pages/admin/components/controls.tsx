@@ -7,6 +7,7 @@ import { Modal } from '@/app/components/ui/modal'
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
 } from '@/app/components/ui/dropdown-menu'
+import { parseApiDate } from '@/app/utils/format'
 import type { Tone } from '../types'
 import { TONE_BTN } from './tone'
 
@@ -102,9 +103,9 @@ export function Feedback({ message, tone = 'accent', onDismiss }: {
 }
 
 export function relTime(iso: string | null): string {
-  if (!iso) return ''
-  const then = new Date(iso).getTime()
-  if (Number.isNaN(then)) return ''
+  const parsed = parseApiDate(iso)
+  if (!parsed) return ''
+  const then = parsed.getTime()
   const diff = Date.now() - then
   const future = diff < 0
   const s = Math.abs(diff) / 1000
@@ -113,21 +114,20 @@ export function relTime(iso: string | null): string {
   else if (s < 3600) text = `${Math.floor(s / 60)}m`
   else if (s < 86400) text = `${Math.floor(s / 3600)}h`
   else if (s < 2592000) text = `${Math.floor(s / 86400)}d`
-  else return new Date(iso).toLocaleDateString()
+  else return parsed.toLocaleDateString()
   return future ? `in ${text}` : `${text} ago`
 }
 
 export function formatDateTime(iso: string | null): string {
-  if (!iso) return ''
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return ''
-  return d.toLocaleString()
+  const parsed = parseApiDate(iso)
+  if (!parsed) return ''
+  return parsed.toLocaleString()
 }
 
 export function relTimeLong(iso: string | null): string {
-  if (!iso) return ''
-  const then = new Date(iso).getTime()
-  if (Number.isNaN(then)) return ''
+  const parsed = parseApiDate(iso)
+  if (!parsed) return ''
+  const then = parsed.getTime()
   const diff = Date.now() - then
   const future = diff < 0
   const s = Math.abs(diff) / 1000

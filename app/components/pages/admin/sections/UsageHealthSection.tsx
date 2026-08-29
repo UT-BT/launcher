@@ -6,12 +6,28 @@ import { ROLE } from '@/app/utils/roles'
 import type { AdminSectionProps } from '../types'
 import { SectionShell } from '../components/SectionShell'
 import { StatCard } from '../components/StatCard'
-import { Feedback, errMessage } from '../components/controls'
+import { Feedback, errMessage, formatDateTime } from '../components/controls'
 import { DataTableCell, DataTableHeaderCell, DataTableHeaderRow, DataTableRow, DataTableShell } from '@/app/components/shared/DataTable'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { CHART_CYAN, CHART_TEAL } from '@/app/utils/chartColors'
+import { parseApiDate } from '@/app/utils/format'
 
 const WINDOWS: ActivityWindow[] = ['24h', '1w', '1m', '1y']
+const TICK_FORMATS: Record<AdminUsage['bucket'], Intl.DateTimeFormatOptions> = {
+  hour: { hour: 'numeric', timeZone: 'UTC' },
+  day: { month: 'short', day: 'numeric', timeZone: 'UTC' },
+  month: { month: 'short', year: 'numeric', timeZone: 'UTC' },
+}
+const POINT_FORMATS: Record<AdminUsage['bucket'], Intl.DateTimeFormatOptions> = {
+  hour: { month: 'short', day: 'numeric', hour: 'numeric', timeZone: 'UTC', timeZoneName: 'short' },
+  day: { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' },
+  month: { month: 'long', year: 'numeric', timeZone: 'UTC' },
+}
+
+function formatBucket(value: unknown, bucket: AdminUsage['bucket'], formats: Record<AdminUsage['bucket'], Intl.DateTimeFormatOptions>): string {
+  const parsed = parseApiDate(typeof value === 'string' ? value : String(value ?? ''))
+  return parsed ? parsed.toLocaleString(undefined, formats[bucket]) : ''
+}
 const AXIS_TICK = 'var(--muted-foreground)'
 const AXIS_LINE = 'rgb(var(--hairline-rgb) / 0.12)'
 const GRID_STROKE = 'rgb(var(--hairline-rgb) / 0.08)'
@@ -22,15 +38,16 @@ const RECENT_COLUMNS = [
   { id: 'seen', width: '11rem', priority: 40 },
 ]
 
-function SessionsTooltip({ active, payload, label }: {
+function SessionsTooltip({ active, payload, label, bucket }: {
   active?: boolean
   payload?: { name?: string; value?: number; color?: string; dataKey?: string | number }[]
   label?: string | number
+  bucket: AdminUsage['bucket']
 }) {
   if (!active || !payload?.length) return null
   return (
     <div className="rounded-lg border border-hairline/15 bg-card/95 px-3 py-2 shadow-xl backdrop-blur-sm">
-      <div className="text-[11px] text-muted-foreground mb-1">{new Date(String(label)).toLocaleString()}</div>
+      <div className="text-[11px] text-muted-foreground mb-1">{formatBucket(label, bucket, POINT_FORMATS)}</div>
       <div className="space-y-1">
         {payload.map((entry) => (
           <div key={String(entry.dataKey)} className="flex items-center gap-2">
@@ -108,7 +125,7 @@ export function UsageHealthSection({ userProfile }: AdminSectionProps) {
                   axisLine={{ stroke: AXIS_LINE }}
                   tickLine={{ stroke: AXIS_LINE }}
                   minTickGap={16}
-                  tickFormatter={(v) => new Date(v).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                  tickFormatter={(v) => formatBucket(v, data.bucket, TICK_FORMATS)}
                 />
                 <YAxis
                   tick={{ fill: AXIS_TICK, fontSize: 10 }}
@@ -117,7 +134,7 @@ export function UsageHealthSection({ userProfile }: AdminSectionProps) {
                   allowDecimals={false}
                   width={40}
                 />
-                <Tooltip content={<SessionsTooltip />} cursor={{ stroke: AXIS_LINE }} />
+                <Tooltip content={<SessionsTooltip bucket={data.bucket} />} cursor={{ stroke: AXIS_LINE }} />
                 <Area type="monotone" dataKey="web_sessions" stackId="sessions" stroke={CHART_CYAN} strokeWidth={2} fill="url(#usageWebFill)" dot={false} name="Web sessions" />
                 <Area type="monotone" dataKey="desktop_sessions" stackId="sessions" stroke={CHART_TEAL} strokeWidth={2} fill="url(#usageDesktopFill)" dot={false} name="Desktop sessions" />
               </AreaChart>
@@ -148,7 +165,7 @@ export function UsageHealthSection({ userProfile }: AdminSectionProps) {
                       <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
                         <span className="capitalize">{item.surface}</span>
                         <span>{item.last_view.replaceAll('_', ' ')}</span>
-                        <span>{new Date(item.last_seen_at).toLocaleString()}</span>
+                        <span>{formatDateTime(item.last_seen_at)}</span>
                       </div>
                     </div>
                   )),
@@ -166,7 +183,7 @@ export function UsageHealthSection({ userProfile }: AdminSectionProps) {
                       <DataTableCell width="14rem"><PlayerInfo userId={item.user_id} alias={item.alias} title={toActiveTitle(item.active_title)} size="sm" /></DataTableCell>
                       {recentColumnVisible('surface') && <DataTableCell align="center" width="6rem" className="capitalize">{item.surface}</DataTableCell>}
                       {recentColumnVisible('view') && <DataTableCell align="center" width="8rem">{item.last_view.replaceAll('_', ' ')}</DataTableCell>}
-                      {recentColumnVisible('seen') && <DataTableCell align="center" width="11rem">{new Date(item.last_seen_at).toLocaleString()}</DataTableCell>}
+                      {recentColumnVisible('seen') && <DataTableCell align="center" width="11rem">{formatDateTime(item.last_seen_at)}</DataTableCell>}
                     </DataTableRow>
                   ))}
                 </tbody>

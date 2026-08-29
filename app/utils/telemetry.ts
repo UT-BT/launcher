@@ -21,12 +21,15 @@ const CONSENT_KEY = 'utbt:analyticsConsent:v1'
 const VISITOR_KEY = 'utbt:analyticsVisitor:v1'
 const SESSION_KEY = 'utbt:analyticsSession:v1'
 const MAX_IDLE_MS = 30 * 60 * 1000
+const MAX_SESSION_MS = 4 * 60 * 60 * 1000
 const FLUSH_MS = 60 * 1000
 let token: string | undefined
 let state: TelemetryState | null = null
 let timer: number | undefined
 let initialized = false
 let flushing = false
+let flushQueued = false
+let queuedKeepalive = false
 let currentView = 'home'
 
 export function getTelemetryConsent(): Consent {
@@ -119,20 +122,24 @@ const os = () => {
 }
 const viewport = () => innerWidth < 640 ? 'phone' : innerWidth < 1024 ? 'tablet' : 'desktop'
 const sameUtcDay = (a: number, b: number) => new Date(a).toISOString().slice(0, 10) === new Date(b).toISOString().slice(0, 10)
+const isCurrentSession = (session: TelemetryState, now: number) =>
+  now - session.lastVisibleAt < MAX_IDLE_MS
+  && now - session.startedAt < MAX_SESSION_MS
+  && sameUtcDay(now, session.startedAt)
+
+function startSession(view: string, now: number): TelemetryState {
+  const key = pageKey(view)
+  return {
+    sessionId: uuid(), visitorId: visitorId(), startedAt: now, lastVisibleAt: now,
+    sequence: 0, entryView: key, lastView: key, pageViews: {}, outcomes: {},
+    errors: {}, visibleSeconds: 0,
+  }
+}
 
 function ensureState(view = 'home') {
   const now = Date.now()
   const stored = read<TelemetryState>(sessionStorage, SESSION_KEY)
-  if (stored && now - stored.lastVisibleAt < MAX_IDLE_MS && sameUtcDay(now, stored.startedAt)) {
-    state = stored
-  } else {
-    const key = pageKey(view)
-    state = {
-      sessionId: uuid(), visitorId: visitorId(), startedAt: now, lastVisibleAt: now,
-      sequence: 0, entryView: key, lastView: key, pageViews: {}, outcomes: {},
-      errors: {}, visibleSeconds: 0,
-    }
-  }
+  state = stored && isCurrentSession(stored, now) ? stored : startSession(view, now)
   save()
 }
 
@@ -146,7 +153,7 @@ export function initializeTelemetry(accessToken?: string) {
   }
   if (initialized) return
   initialized = true
-  timer = window.setInterval(() => void flushTelemetry(), FLUSH_MS)
+  startFlushTimer()
   document.addEventListener('visibilitychange', onVisibility)
   window.addEventListener('pagehide', onPageHide)
   void flushTelemetry()
@@ -161,8 +168,7 @@ export function identifyTelemetry(accessToken?: string) {
 }
 
 export function disableTelemetry() {
-  if (timer !== undefined) window.clearInterval(timer)
-  timer = undefined
+  stopFlushTimer()
   initialized = false
   document.removeEventListener('visibilitychange', onVisibility)
   window.removeEventListener('pagehide', onPageHide)
@@ -196,26 +202,45 @@ export function trackError(key: 'api_network' | 'api_timeout' | 'api_server' | '
   if (dimension) increment(state!.errors, `${key}:${pageKey(dimension)}`)
   save()
 }
+function startFlushTimer() {
+  if (timer !== undefined) return
+  timer = window.setInterval(() => void flushTelemetry(), FLUSH_MS)
+}
+function stopFlushTimer() {
+  if (timer !== undefined) window.clearInterval(timer)
+  timer = undefined
+}
 function onPageHide() { void flushTelemetry(true) }
 function onVisibility() {
   if (!state) return
   const now = Date.now()
   if (document.visibilityState === 'hidden') {
+    stopFlushTimer()
     state.visibleSeconds += Math.max(0, Math.round((now - state.lastVisibleAt) / 1000))
     state.lastVisibleAt = now
     save()
     void flushTelemetry(true)
   } else {
-    if (now - state.lastVisibleAt >= MAX_IDLE_MS || !sameUtcDay(now, state.startedAt)) {
-      ensureState(state.lastView)
-      trackPage(state!.lastView)
-    }
+    if (!isCurrentSession(state, now)) rotateSession(state.lastView)
     state!.lastVisibleAt = now
+    if (initialized) startFlushTimer()
   }
 }
+function rotateSession(view: string) {
+  state = startSession(view, Date.now())
+  increment(state.pageViews, pageKey(view))
+  save()
+}
+
 export async function flushTelemetry(keepalive = false) {
-  if (getTelemetryConsent() !== 'granted' || !state || flushing) return
+  if (getTelemetryConsent() !== 'granted' || !state) return
+  if (flushing) {
+    flushQueued = true
+    queuedKeepalive = queuedKeepalive || keepalive
+    return
+  }
   flushing = true
+  let delivered = false
   try {
     if (document.visibilityState === 'visible') {
       const now = Date.now()
@@ -237,5 +262,17 @@ export async function flushTelemetry(keepalive = false) {
         visible_seconds: state.visibleSeconds,
       }),
     })
-  } catch { /* telemetry must never affect launcher behavior */ } finally { flushing = false }
+    delivered = true
+  } catch { /* telemetry must never affect launcher behavior */ } finally {
+    flushing = false
+    if (delivered && state && document.visibilityState === 'visible' && !isCurrentSession(state, Date.now())) {
+      rotateSession(state.lastView)
+    }
+    if (flushQueued) {
+      flushQueued = false
+      const pendingKeepalive = queuedKeepalive
+      queuedKeepalive = false
+      void flushTelemetry(pendingKeepalive)
+    }
+  }
 }
