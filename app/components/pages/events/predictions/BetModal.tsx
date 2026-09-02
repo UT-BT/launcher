@@ -63,7 +63,11 @@ export function BetModal({ slug, accessToken, market, config, wallet, onClose, o
     const [quoting, setQuoting] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [busy, setBusy] = useState(false)
-    const requestKey = useRef(`${market.id}-${Date.now()}-${Math.random().toString(36).slice(2)}`)
+    // Scoped to this modal AND to what is being predicted. Keyed on the modal
+    // alone, a lost response followed by the user changing side or stake and
+    // resubmitting would replay the FIRST bet and report it as the new one — the
+    // server matches the key without looking at side or stake.
+    const attempt = useRef(`${market.id}-${Date.now()}-${Math.random().toString(36).slice(2)}`)
 
     const balance = wallet.balance
     const minStake = config.min_stake ?? 1
@@ -108,7 +112,7 @@ export function BetModal({ slug, accessToken, market, config, wallet, onClose, o
             await placeEventPredictionBet(accessToken, slug, market.match_id, {
                 side,
                 stake,
-                idempotency_key: requestKey.current,
+                idempotency_key: `${attempt.current}-${side}-${stake}`,
             })
             onPlaced()
             onClose()
