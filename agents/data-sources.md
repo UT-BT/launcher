@@ -12,7 +12,7 @@ not_here:
   - "how UI state persists in localStorage → state-patterns.md"
   - "the procedure to wire a new endpoint into the UI → skill: consume-api-data"
 sections: [backend-api, errors, admin-api, event-brackets, changing-a-map-screenshot, cap-detail-page-endpoints, world-records-page-endpoints, team-maps-and-team-runs, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites, account-state-and-badges]
-last_verified: 2026-08-26
+last_verified: 2026-09-02
 verify_against: [app/utils/api.ts, app/utils/chartBuckets.ts, app/components/pages/admin/components/controls.tsx, app/utils/patreon.ts, app/utils/server-utils.ts, app/hooks/useServerFavorites.ts, app/components/pages/events/manage/formatFields.tsx, app/components/pages/events/bracket/bracketShared.tsx]
 ---
 
@@ -148,11 +148,17 @@ draw` is never gated — a dry run is the safe way to look.
 
 How map wins settle the match depends on the match's `mode`:
 
-- `first_to` — a race to a majority. Complete the moment one side reaches it, so
-  the series length is always odd and the match cannot be drawn.
-- `all_maps` — every map is played. Complete only once all of them have a winner;
-  an even split sets `is_draw`, leaving `winner_team_id` null with the status
-  still `complete`.
+- `first_to` — a race to a majority of `best_of`. Complete the moment one side
+  reaches it; anything entered on a later map is a dead rubber and does not
+  count. `best_of` may be even, which is how "first to three of four" works.
+- `all_maps` — every map is played and the higher map count takes it.
+
+**A map can be played and won by nobody**, because the time limit can beat the cap
+target. Length is therefore measured in maps *played* (`mapPlayed`: any caps, or a
+named `winner_side`), not maps won, so a four-map race settles on any of thirteen
+scorelines — 3-0 and 0-0 included — and never reaches 4-0. A level series only
+counts as a result where the stage allows it, which is why `seriesProgress` takes
+`drawsAllowed` and `BracketPanel` passes `stage.kind === 'groups'`.
 
 A stage can override the whole match format, which is how a group stage plays four
 maps with draws while the knockout stages stay Best of 3. A `swiss` or

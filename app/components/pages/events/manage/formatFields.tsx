@@ -212,6 +212,7 @@ export const TIEBREAKER_LABELS: Record<string, string> = {
     points: 'Total points',
     map_diff: 'Map differential',
     head_to_head: 'Direct confrontation',
+    map_win_pct: 'Map win percentage',
     wins: 'Most matches won',
     losses: 'Fewest matches lost',
     caps_for: 'Total caps made',
@@ -230,33 +231,28 @@ export const DEFAULT_MATCH_DEFAULTS: EventMatchDefaults = {
 }
 
 export function allowsDraws(defaults: EventMatchDefaults): boolean {
-    return defaults.mode === 'all_maps' && defaults.best_of % 2 === 0
+    return defaults.best_of % 2 === 0
 }
 
 export function scorelinesFor(defaults: EventMatchDefaults): Array<[number, number]> {
     const length = Math.max(1, defaults.best_of)
-    let lines: Array<[number, number]>
+    const ceiling = defaults.mode === 'all_maps' ? length : Math.floor(length / 2) + 1
+    const lines: Array<[number, number]> = []
 
-    if (defaults.mode === 'all_maps') {
-        lines = Array.from({ length: length + 1 }, (_, index): [number, number] => [length - index, index])
-    } else {
-        const needed = Math.floor(length / 2) + 1
-        lines = [
-            ...Array.from({ length: needed }, (_, lost): [number, number] => [needed, lost]),
-            ...Array.from({ length: needed }, (_, index): [number, number] => [needed - 1 - index, needed]),
-        ]
+    for (let won = 0; won <= Math.min(ceiling, length); won += 1) {
+        for (let lost = 0; lost <= Math.min(ceiling, length - won); lost += 1) {
+            lines.push([won, lost])
+        }
     }
 
     return lines.sort((a, b) => (a[1] - a[0]) - (b[1] - b[0]) || b[0] - a[0])
 }
 
 export function defaultPointsTable(defaults: EventMatchDefaults): EventPointsRow[] {
-    const lines = scorelinesFor(defaults)
-
-    return lines.map(([maps_won, maps_lost], index) => ({
+    return scorelinesFor(defaults).map(([maps_won, maps_lost]) => ({
         maps_won,
         maps_lost,
-        points: lines.length - 1 - index,
+        points: maps_won > maps_lost ? 3 : maps_won === maps_lost ? 1 : 0,
     }))
 }
 

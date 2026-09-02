@@ -89,26 +89,54 @@ export function mapWinnerOf(row: EventMatchMap, capsToWin: number): EventSide | 
     return null
 }
 
-export function seriesProgress(match: Pick<EventMatch, 'best_of' | 'caps_to_win' | 'mode'>, maps: EventMatchMap[]) {
-    const winners = maps.map(row => mapWinnerOf(row, match.caps_to_win))
-    const decided = winners.filter(Boolean).length
-    const scoreA = winners.filter(side => side === 'a').length
-    const scoreB = winners.filter(side => side === 'b').length
+export function mapWasContested(row: EventMatchMap): boolean {
+    return row.winner_side !== null || row.caps_a !== null || row.caps_b !== null
+}
 
-    const needed = match.mode === 'all_maps' ? match.best_of : Math.floor(match.best_of / 2) + 1
-    const complete = match.mode === 'all_maps'
-        ? decided >= match.best_of
-        : scoreA >= needed || scoreB >= needed
+/**
+ * Mirrors the server's rule so the editor can say what a result still needs.
+ *
+ * A map can be played and won by nobody, so the length is counted in maps
+ * played rather than maps won. A race also stops the moment it is won, and
+ * anything after that never counted.
+ */
+export function seriesProgress(
+    match: Pick<EventMatch, 'best_of' | 'caps_to_win' | 'mode'>,
+    maps: EventMatchMap[],
+    drawsAllowed = false,
+) {
+    const race = match.mode !== 'all_maps'
+    const needed = race ? Math.floor(match.best_of / 2) + 1 : match.best_of
+
+    let scoreA = 0
+    let scoreB = 0
+    let played = 0
+    let settled = false
+
+    for (const row of maps) {
+        if (settled) break
+
+        const side = mapWinnerOf(row, match.caps_to_win)
+        if (mapWasContested(row)) played += 1
+        if (side === 'a') scoreA += 1
+        if (side === 'b') scoreB += 1
+        settled = race && (scoreA >= needed || scoreB >= needed)
+    }
+
+    const won = race && (scoreA >= needed || scoreB >= needed)
+    const level = scoreA === scoreB
+    const complete = won || (played >= match.best_of && (!level || drawsAllowed))
 
     return {
-        decided,
+        decided: scoreA + scoreB,
+        played,
         scoreA,
         scoreB,
         complete,
-        isDraw: complete && scoreA === scoreB,
-        remaining: match.mode === 'all_maps'
-            ? Math.max(0, match.best_of - decided)
-            : Math.max(0, needed - Math.max(scoreA, scoreB)),
+        isDraw: complete && level,
+        remaining: won ? 0 : Math.max(0, race
+            ? Math.min(needed - Math.max(scoreA, scoreB), match.best_of - played)
+            : match.best_of - played),
     }
 }
 

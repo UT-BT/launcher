@@ -69,10 +69,10 @@ describe('seriesProgress', () => {
             mapRow({ ordinal: 3, caps_a: 1, caps_b: 4 }),
         ]
 
-        expect(seriesProgress(bo4, maps)).toMatchObject({ complete: true, isDraw: true, scoreA: 2, scoreB: 2 })
+        expect(seriesProgress(bo4, maps, true)).toMatchObject({ complete: true, isDraw: true, scoreA: 2, scoreB: 2 })
     })
 
-    it('a map nobody won blocks a four-map series from finishing', () => {
+    it('a map nobody won still counts towards the length', () => {
         const maps = [
             mapRow({ ordinal: 0, caps_a: 4, caps_b: 1 }),
             mapRow({ ordinal: 1, caps_a: 4, caps_b: 2 }),
@@ -80,7 +80,18 @@ describe('seriesProgress', () => {
             mapRow({ ordinal: 3, caps_a: 3, caps_b: 1 }),
         ]
 
-        expect(seriesProgress(bo4, maps)).toMatchObject({ decided: 3, complete: false, remaining: 1 })
+        expect(seriesProgress(bo4, maps, true))
+            .toMatchObject({ decided: 3, played: 4, complete: true, isDraw: false, remaining: 0 })
+    })
+
+    it('a level series that cannot be drawn stays open', () => {
+        const maps = [
+            mapRow({ ordinal: 0, caps_a: 4, caps_b: 1 }),
+            mapRow({ ordinal: 1, caps_a: 1, caps_b: 4 }),
+            mapRow({ ordinal: 2, caps_a: 3, caps_b: 1 }),
+        ]
+
+        expect(seriesProgress(bo3, maps, false)).toMatchObject({ scoreA: 1, scoreB: 1, complete: false })
     })
 
     it('a race to a majority ends as soon as it is won', () => {

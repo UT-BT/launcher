@@ -4276,11 +4276,11 @@ export type EventMapKind = 'normal' | 'decider'
 export type EventSide = 'a' | 'b'
 export type EventMatchMode = 'first_to' | 'all_maps'
 export type EventTiebreaker =
-    | 'points' | 'map_diff' | 'head_to_head' | 'wins' | 'losses' | 'caps_for' | 'caps_diff'
+    | 'points' | 'map_diff' | 'map_win_pct' | 'head_to_head' | 'wins' | 'losses' | 'caps_for' | 'caps_diff'
     | 'maps_won' | 'common_opponents' | 'deaths' | 'seed'
 
 export const EVENT_TIEBREAKERS: EventTiebreaker[] = [
-    'points', 'map_diff', 'head_to_head', 'wins', 'losses', 'caps_for', 'caps_diff',
+    'points', 'map_diff', 'map_win_pct', 'head_to_head', 'wins', 'losses', 'caps_for', 'caps_diff',
     'maps_won', 'common_opponents', 'deaths', 'seed',
 ]
 

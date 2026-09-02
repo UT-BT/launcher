@@ -72,11 +72,15 @@ interface MatchEditorModalProps {
     slug: string
     match: EventMatch
     entrants: EventBracketEntrant[]
+    /** Only a group stage can settle level; a knockout has to find a winner. */
+    drawsAllowed: boolean
     onClose: () => void
     onSaved: () => void
 }
 
-export function MatchEditorModal({ accessToken, slug, match: initial, entrants, onClose, onSaved }: MatchEditorModalProps) {
+export function MatchEditorModal({
+    accessToken, slug, match: initial, entrants, drawsAllowed, onClose, onSaved,
+}: MatchEditorModalProps) {
     const [match, setMatch] = useState(initial)
     const [form, setForm] = useState<Form>(() => formFrom(initial))
     const [maps, setMaps] = useState<EventMatchMap[]>(initial.maps ?? [])
@@ -165,7 +169,7 @@ export function MatchEditorModal({ accessToken, slug, match: initial, entrants, 
         b: match.team_b?.name ?? 'Side B',
     }
 
-    const progress = useMemo(() => seriesProgress(match, maps), [match, maps])
+    const progress = useMemo(() => seriesProgress(match, maps, drawsAllowed), [match, maps, drawsAllowed])
 
     const recordedForfeit = match.status === 'forfeit' ? sideOf(match, match.winner_team_id) : null
 
@@ -246,9 +250,9 @@ export function MatchEditorModal({ accessToken, slug, match: initial, entrants, 
                         <span className="text-[11px] text-muted-foreground/70">
                             {progress.complete
                                 ? 'The result is complete and counts towards the standings.'
-                                : match.mode === 'all_maps'
-                                    ? `${progress.remaining} more map${progress.remaining === 1 ? '' : 's'} to record — all ${match.best_of} must have a winner before this counts.`
-                                    : `${progress.remaining} more map win${progress.remaining === 1 ? '' : 's'} needed to settle the match.`}
+                                : progress.remaining > 0
+                                    ? `${progress.remaining} more map${progress.remaining === 1 ? '' : 's'} to record — a map the time limit ended still counts.`
+                                    : 'Level, and this stage needs a winner — name one on a map, or record a forfeit.'}
                         </span>
                     </div>
 
@@ -309,8 +313,8 @@ export function MatchEditorModal({ accessToken, slug, match: initial, entrants, 
 
                 <SubCard
                     title={match.mode === 'all_maps'
-                        ? `Maps — all ${match.best_of} played, first to ${match.caps_to_win} caps (a level series is a draw)`
-                        : `Maps — best of ${match.best_of}, first to ${match.caps_to_win} caps`}
+                        ? `Maps — all ${match.best_of} played, first to ${match.caps_to_win} caps`
+                        : `Maps — best of ${match.best_of}, first to ${Math.floor(match.best_of / 2) + 1} maps and ${match.caps_to_win} caps`}
                     action={
                         <button
                             type="button"
