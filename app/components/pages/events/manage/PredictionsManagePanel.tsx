@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { AlertTriangle } from 'lucide-react'
+import { AlertTriangle, RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/app/components/ui/button'
 import { ErrorBanner } from '@/app/components/pages/teams/teamsShared'
+import { Tooltip } from '@/app/components/ui/tooltip'
 import {
     eventErrorMessage, fetchEventPredictionAdminMarkets, syncEventPredictions,
     updateEventPredictionConfig, updateEventPredictionMarket,
@@ -12,6 +13,10 @@ import { formatMatchTime } from '../bracket/bracketShared'
 import {
     MarketStatusChip, evenMarketPriceAfter, formatCoins, formatPercent, liquidityForPriceAfter,
 } from '../predictions/predictionsShared'
+
+const PER_MATCH_HINT =
+    'Prevents users from betting significant portions of their wealth on one match. Share of what a '
+    + 'player is worth right now, so it stays fair as they win or lose'
 
 const EMPTY: PredictionAdminMarkets = { items: [], unscheduled_open_count: 0, config: { enabled: false } }
 
@@ -64,9 +69,13 @@ export function PredictionsManagePanel({ accessToken, slug }: { accessToken: str
     // The biggest prediction a player can make on day one, which is the stake every
     // liquidity explanation below is written against.
     const referenceStake = useMemo(
-        () => Math.max(1, Math.floor((grant * pct) / 100)),
+        () => Math.floor((grant * pct) / 100),
         [grant, pct],
     )
+    // Everything below is derived from the biggest prediction a player can make.
+    // With no starting coins or no percentage there is no such thing, and the
+    // presets would solve against a stake of zero and hand back nonsense.
+    const economySet = grant > 0 && pct > 0 && referenceStake > 0
     const priceAfter = evenMarketPriceAfter(referenceStake, liquidity)
 
     if (!draft) {
@@ -102,7 +111,9 @@ export function PredictionsManagePanel({ accessToken, slug }: { accessToken: str
                     <NumberField
                         label="Max per match"
                         suffix="%"
-                        hint={`Prevents users from betting significant portions of their wealth on one match. Share of what a player is worth right now, so it stays fair as they win or lose — ${pct}% is ${formatCoins(referenceStake)} coins at the starting balance.`}
+                        hint={PER_MATCH_HINT + (economySet
+                            ? ` — ${pct}% is ${formatCoins(referenceStake)} coins at the starting balance.`
+                            : '.')}
                         value={draft.max_stake_pct}
                         onChange={value => set({ max_stake_pct: value })}
                     />
@@ -132,6 +143,7 @@ export function PredictionsManagePanel({ accessToken, slug }: { accessToken: str
                     liquidity={liquidity}
                     referenceStake={referenceStake}
                     priceAfter={priceAfter}
+                    ready={economySet}
                     onChange={value => set({ liquidity_b: value })}
                 />
 
@@ -150,7 +162,7 @@ export function PredictionsManagePanel({ accessToken, slug }: { accessToken: str
                     />
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2 pt-1">
+                <div className="flex items-center gap-2 pt-1">
                     <Button
                         onClick={() => run(
                             () => updateEventPredictionConfig(accessToken, slug, draft),
@@ -160,21 +172,27 @@ export function PredictionsManagePanel({ accessToken, slug }: { accessToken: str
                     >
                         Save settings
                     </Button>
-                    <div className="flex flex-col">
+
+                    <Tooltip
+                        className="ml-auto"
+                        content={
+                            <span className="font-normal tracking-normal">
+                                Re-reads every match and fixes any market that drifted — opens ones that should be
+                                open, closes ones past their time, settles finished ones. Runs by itself every couple
+                                of minutes; this is for when you would rather not wait.
+                            </span>
+                        }
+                    >
                         <Button
                             variant="ghost"
+                            size="sm"
                             disabled={busy}
-                            className="self-start"
                             onClick={() => run(() => syncEventPredictions(accessToken, slug), 'Markets re-checked.')}
                         >
-                            Re-check all markets
+                            <RefreshCw className="size-3.5 mr-1.5" />
+                            Re-check markets
                         </Button>
-                        <span className="text-[11px] text-muted-foreground">
-                            Re-reads every match and fixes any market that drifted — opens ones that should be open,
-                            closes ones past their time, settles finished ones. This runs by itself every couple of
-                            minutes; the button is for when you do not want to wait.
-                        </span>
-                    </div>
+                    </Tooltip>
                 </div>
             </div>
 
@@ -208,15 +226,18 @@ export function PredictionsManagePanel({ accessToken, slug }: { accessToken: str
     )
 }
 
-function LiquidityField({ liquidity, referenceStake, priceAfter, onChange }: {
+function LiquidityField({ liquidity, referenceStake, priceAfter, ready, onChange }: {
     liquidity: number
     referenceStake: number
     priceAfter: number
+    ready: boolean
     onChange: (value: number) => void
 }) {
-    const active = LIQUIDITY_PRESETS.find(
-        preset => Math.abs(liquidityForPriceAfter(referenceStake, preset.targetPrice) - liquidity) < 60,
-    )
+    const active = ready
+        ? LIQUIDITY_PRESETS.find(
+            preset => Math.abs(liquidityForPriceAfter(referenceStake, preset.targetPrice) - liquidity) < 60,
+        )
+        : undefined
 
     return (
         <div className="p-3 rounded-lg border border-white/10 bg-card/30 space-y-3">
@@ -228,20 +249,22 @@ function LiquidityField({ liquidity, referenceStake, priceAfter, onChange }: {
                 </p>
             </div>
 
-            <div className="grid gap-2 sm:grid-cols-3">
+            <div className={cn('grid gap-2 sm:grid-cols-3', !ready && 'opacity-40')}>
                 {LIQUIDITY_PRESETS.map(preset => {
-                    const value = liquidityForPriceAfter(referenceStake, preset.targetPrice)
+                    const value = ready ? liquidityForPriceAfter(referenceStake, preset.targetPrice) : 0
 
                     return (
                         <button
                             key={preset.id}
                             type="button"
+                            disabled={!ready}
                             onClick={() => onChange(value)}
                             className={cn(
                                 'p-2.5 rounded-lg border text-left transition-colors',
                                 active?.id === preset.id
                                     ? 'border-accent-500/60 bg-accent-500/10'
-                                    : 'border-white/10 bg-card/50 hover:border-white/20',
+                                    : 'border-white/10 bg-card/50',
+                                ready ? 'hover:border-white/20' : 'cursor-not-allowed',
                             )}
                         >
                             <div className="text-sm font-semibold text-white">{preset.label}</div>
@@ -263,12 +286,18 @@ function LiquidityField({ liquidity, referenceStake, priceAfter, onChange }: {
                 {!active && <span className="text-[11px] text-muted-foreground">Custom</span>}
             </div>
 
-            <p className="text-xs text-white/80">
-                Right now, one maximum prediction of{' '}
-                <span className="tabular-nums font-semibold">{formatCoins(referenceStake)}</span> coins on an even match
-                moves it from <span className="tabular-nums">50%</span> to{' '}
-                <span className="tabular-nums font-semibold text-accent-300">{formatPercent(priceAfter)}</span>.
-            </p>
+            {ready ? (
+                <p className="text-xs text-white/80">
+                    Right now, one maximum prediction of{' '}
+                    <span className="tabular-nums font-semibold">{formatCoins(referenceStake)}</span> coins on an even
+                    match moves it from <span className="tabular-nums">50%</span> to{' '}
+                    <span className="tabular-nums font-semibold text-accent-300">{formatPercent(priceAfter)}</span>.
+                </p>
+            ) : (
+                <p className="text-xs text-amber-300/90">
+                    Set starting coins and a max per match above, and this will show exactly what each option does.
+                </p>
+            )}
         </div>
     )
 }
