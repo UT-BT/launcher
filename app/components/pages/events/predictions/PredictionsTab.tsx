@@ -157,6 +157,18 @@ export function PredictionsTab({
         )
     }
 
+    if (data.bracket_published === false) {
+        return (
+            <div className="p-6 flex flex-col items-center gap-2 text-center">
+                <p className="text-sm text-white/90">Waiting on the bracket.</p>
+                <p className="text-xs text-muted-foreground max-w-md">
+                    Predictions are set up for this event, but markets only open on matches players can see.
+                    Publish the bracket under Manage &rarr; Bracket and every drawn match gets a market.
+                </p>
+            </div>
+        )
+    }
+
     const wallet = data.wallet
     const grant = data.config.initial_grant ?? 0
 

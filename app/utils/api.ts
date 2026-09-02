@@ -4831,6 +4831,8 @@ export interface PredictionStageRef {
 
 export interface PredictionsOverview {
     enabled: boolean
+    /** Enabled but unpublished means configured with nothing to price yet. */
+    bracket_published?: boolean
     config: PredictionConfig
     stages: PredictionStageRef[]
     markets: PredictionMarket[]
@@ -4914,6 +4916,7 @@ export interface PredictionBetResult {
 export interface PredictionAdminMarkets {
     items: PredictionMarket[]
     unscheduled_open_count: number
+    bracket_published?: boolean
     config: PredictionConfig
 }
 
