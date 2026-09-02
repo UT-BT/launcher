@@ -7,9 +7,10 @@ import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshC
 import { MarkdownBody } from '@/app/components/shared/MarkdownBody'
 import { ErrorBanner } from '@/app/components/pages/teams/teamsShared'
 import {
-    eventErrorMessage, fetchEvent, fetchEventBracket, fetchEventLfp, fetchEventTeams, fetchMyEventStatus,
+    eventErrorMessage, fetchEvent, fetchEventBracket, fetchEventLfp, fetchEventPredictions,
+    fetchEventTeams, fetchMyEventStatus,
     type EventBracket, type EventDetail, type EventFormatSpec, type EventLfpEntry, type EventTeam,
-    type MyEventStatus, type UserProfile,
+    type MyEventStatus, type PredictionsOverview, type UserProfile,
 } from '@/app/utils/api'
 import { EventStatusBadge, formatEventDate, formatEventDateTime, formatTeamSize } from './events/eventsShared'
 import { EventTeamsList } from './events/EventTeamsList'
@@ -18,8 +19,10 @@ import { SignupPanel } from './events/SignupPanel'
 import { ManagePanel } from './events/ManagePanel'
 import { BracketTab } from './events/bracket/BracketTab'
 import { EventRosterProvider } from './events/TeamRoster'
+import { PredictionsTab } from './events/predictions/PredictionsTab'
+import { PredictionOddsProvider } from './events/predictions/predictionsShared'
 
-export type EventTab = 'info' | 'teams' | 'bracket' | 'players' | 'signup' | 'manage'
+export type EventTab = 'info' | 'teams' | 'bracket' | 'predictions' | 'players' | 'signup' | 'manage'
 
 interface EventDetailPageProps {
     eventSlug: string
@@ -33,6 +36,7 @@ const BASE_TABS: { id: EventTab; label: string }[] = [
     { id: 'info', label: 'Info' },
     { id: 'teams', label: 'Teams' },
     { id: 'bracket', label: 'Bracket' },
+    { id: 'predictions', label: 'Predictions' },
     { id: 'players', label: 'Looking for Partner' },
     { id: 'signup', label: 'Signup' },
 ]
@@ -52,6 +56,8 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
     const [lfp, setLfp] = useState<EventLfpEntry[]>([])
     const [bracket, setBracket] = useState<EventBracket | null>(null)
     const [my, setMy] = useState<MyEventStatus | null>(null)
+    const [predictions, setPredictions] = useState<PredictionsOverview | null>(null)
+    const [predictionsLoaded, setPredictionsLoaded] = useState(false)
     const [loading, setLoading] = useState(true)
     const [myLoading, setMyLoading] = useState(!!accessToken)
     const [error, setError] = useState<string | null>(null)
@@ -83,6 +89,21 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
         }
     }, [browseToken, eventSlug])
 
+    const loadPredictions = useCallback(async (enabled: boolean) => {
+        if (!enabled) {
+            setPredictions(null)
+            setPredictionsLoaded(true)
+            return
+        }
+        try {
+            setPredictions(await fetchEventPredictions(browseToken, eventSlug))
+        } catch {
+            setPredictions(null)
+        } finally {
+            setPredictionsLoaded(true)
+        }
+    }, [browseToken, eventSlug])
+
     const loadMy = useCallback(async () => {
         if (!accessToken) {
             setMy(null)
@@ -102,15 +123,21 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
     useEffect(() => { void load() }, [load])
     useEffect(() => { void loadMy() }, [loadMy])
     useEffect(() => { void loadBracket() }, [loadBracket])
+    useEffect(() => { void loadPredictions(!!event?.predictions_enabled) }, [loadPredictions, event?.predictions_enabled])
+
+    const refreshPredictions = useCallback(() => {
+        void loadPredictions(!!event?.predictions_enabled)
+    }, [loadPredictions, event?.predictions_enabled])
 
     const refresh = useCallback(() => {
         void load(true)
         void loadMy()
         void loadBracket()
-    }, [load, loadMy, loadBracket])
+        refreshPredictions()
+    }, [load, loadMy, loadBracket, refreshPredictions])
 
     useRegisterPageRefresh({
-        onRefresh: () => { void load(); void loadMy(); void loadBracket() },
+        onRefresh: () => { void load(); void loadMy(); void loadBracket(); refreshPredictions() },
         refreshing: loading,
         tooltip: 'Refresh',
     })
@@ -139,9 +166,14 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
     const signupOpens = formatEventDateTime(event.signup_opens_at)
     const canManage = !!my?.can_manage
     const canManageBracket = !!my?.can_manage_bracket || canManage
-    const hasBracket = (bracket?.stages.length ?? 0) > 0
-    const visibleTabs = (canManageBracket ? TABS : BASE_TABS).filter(t => t.id !== 'bracket' || hasBracket)
-    const activeTab = (tab === 'manage' && !canManageBracket) || (tab === 'bracket' && !hasBracket) ? 'info' : tab
+    const hasBracket = (bracket?.stages?.length ?? 0) > 0
+    const predictionsOn = !!event.predictions_enabled
+    const visibleTabs = (canManageBracket ? TABS : BASE_TABS)
+        .filter(t => t.id !== 'bracket' || hasBracket)
+        .filter(t => t.id !== 'predictions' || predictionsOn)
+    const activeTab = (tab === 'manage' && !canManageBracket)
+        || (tab === 'bracket' && !hasBracket)
+        || (tab === 'predictions' && !predictionsOn) ? 'info' : tab
 
     return (
         <div className="h-full flex flex-col overflow-hidden space-y-4 animate-in fade-in slide-in-from-bottom-0 duration-500">
@@ -202,6 +234,7 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
 
             <div className="flex-1 min-h-0 overflow-auto px-0.5 pb-2">
                 <EventRosterProvider teams={teams}>
+                <PredictionOddsProvider markets={predictions?.markets ?? []}>
                 {activeTab === 'info' && (
                     <div className="space-y-6 max-w-3xl">
                         {event.summary && <p className="text-sm text-foreground">{event.summary}</p>}
@@ -220,6 +253,16 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
                 )}
                 {activeTab === 'teams' && <EventTeamsList teams={teams} teamSize={event.team_size} loading={loading} />}
                 {activeTab === 'bracket' && <BracketTab bracket={bracket} loading={loading} onMapSelect={onMapSelect} />}
+                {activeTab === 'predictions' && predictionsOn && (
+                    <PredictionsTab
+                        slug={eventSlug}
+                        userProfile={userProfile}
+                        data={predictions}
+                        loaded={predictionsLoaded}
+                        onRefresh={refreshPredictions}
+                        onMapSelect={onMapSelect}
+                    />
+                )}
                 {activeTab === 'players' && <EventLfpList entries={lfp} loading={loading} />}
                 {activeTab === 'signup' && (
                     <div className="max-w-2xl">
@@ -241,13 +284,14 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
                         lfp={lfp}
                         bracket={bracket}
                         canManageEvent={canManage}
-                        onBracketChange={setBracket}
+                        onBracketChange={next => { setBracket(next); refreshPredictions() }}
                         onMapSelect={onMapSelect}
                         onRefresh={refresh}
                         formatDraft={formatDraft}
                         onFormatDraftChange={setFormatDraft}
                     />
                 )}
+                </PredictionOddsProvider>
                 </EventRosterProvider>
             </div>
         </div>

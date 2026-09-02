@@ -30,6 +30,7 @@ import { PersonalProgressSnapshot } from './home/PersonalProgressSnapshot'
 import { AchievementProgressPreview } from './home/AchievementProgressPreview'
 import { FavoriteServersCard } from './home/FavoriteServersCard'
 import { MedalHuntCard } from './home/MedalHuntCard'
+import { ClosingSoonBanner } from './home/ClosingSoonBanner'
 import { capabilities, fetchGatewayServers } from '@/app/platform'
 import { requestLogin } from '@/app/components/shared/AuthRequiredModal'
 
@@ -424,6 +425,8 @@ export function Home({
 
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-0 duration-500 pb-12 pt-2">
+            {userProfile && <ClosingSoonBanner accessToken={userProfile.accessToken} />}
+
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
                 {userProfile && (
                 <YouDoorway

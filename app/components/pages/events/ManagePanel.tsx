@@ -12,13 +12,15 @@ import { SignupsPanel } from './manage/SignupsPanel'
 import { FormatPanel } from './manage/FormatPanel'
 import { SeedingPanel } from './manage/SeedingPanel'
 import { BracketPanel } from './manage/BracketPanel'
+import { PredictionsManagePanel } from './manage/PredictionsManagePanel'
 
-type ManageTab = 'signups' | 'format' | 'bracket'
+type ManageTab = 'signups' | 'format' | 'bracket' | 'predictions'
 
 const TABS: { id: ManageTab; label: string }[] = [
     { id: 'signups', label: 'Signups' },
     { id: 'format', label: 'Format' },
     { id: 'bracket', label: 'Bracket' },
+    { id: 'predictions', label: 'Predictions' },
 ]
 
 interface ManagePanelProps {
@@ -135,6 +137,10 @@ export function ManagePanel({
                     onBracketChange={onBracketChange}
                     onMapSelect={onMapSelect}
                 />
+            )}
+
+            {tab === 'predictions' && (
+                <PredictionsManagePanel accessToken={accessToken} slug={slug} onRefresh={onRefresh} />
             )}
 
         </div>
