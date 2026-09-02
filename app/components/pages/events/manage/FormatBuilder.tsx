@@ -135,9 +135,9 @@ function MatchFormatEditor({ defaults, onChange, base, errors, disabled, needsAW
                         { value: 'first_to' as const, label: 'Until it is won' },
                         { value: 'all_maps' as const, label: 'Every map is played' },
                     ]}
-                    hint={needsAWinner
-                        ? 'This stage needs a winner, so a level series stays open.'
-                        : 'A level series is a draw.'}
+                    hint={defaults.mode === 'all_maps'
+                        ? 'Every map is played, whatever the score.'
+                        : `Stops as soon as one side reaches ${Math.floor(defaults.best_of / 2) + 1}.`}
                     path={`${base}.mode`}
                     errors={errors}
                     disabled={disabled}
@@ -152,6 +152,9 @@ function MatchFormatEditor({ defaults, onChange, base, errors, disabled, needsAW
                             ? `${n} map${n === 1 ? '' : 's'}`
                             : `Best of ${n} — first to ${Math.floor(n / 2) + 1}`,
                     }))}
+                    hint={needsAWinner
+                        ? 'This stage needs a winner, so the count must be odd.'
+                        : 'An even count lets the two sides split them, which is a draw.'}
                     path={`${base}.best_of`}
                     errors={errors}
                     disabled={disabled}
