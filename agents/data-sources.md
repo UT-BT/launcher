@@ -189,9 +189,11 @@ Coin-backed prediction markets on bracket matches, one market per match. Fetcher
 the `…EventPrediction…` family in `app/utils/api.ts`; the UI lives in
 `app/components/pages/events/predictions/`.
 
-**The tab only exists when the API says so.** `EventDetail.predictions_enabled` already
-accounts for the staff-only preview gate, so it is the single flag — the Predictions tab is filtered out of `BASE_TABS` when it is false, and
-no prediction request is made at all. Don't probe an endpoint to work this out.
+**The tab only exists when the API says so.** `EventDetail.predictions_enabled` is the
+single flag: the Predictions tab is filtered out of `BASE_TABS` when it is false and no
+prediction request is made at all. Treat it as the whole answer — it already accounts for
+whatever the server uses to decide, and probing an endpoint to second-guess it will be
+wrong.
 
 **One fetch, two consumers.** `EventDetailPage` owns `fetchEventPredictions` and passes
 the result both to `PredictionsTab` and to `PredictionOddsProvider`, which is what lets
@@ -202,9 +204,9 @@ read the context — do not add a second fetch.
 **Prices are 0–1 floats, not percentages**, and `price_a + price_b` is always 1.
 `formatPercent` is the only thing that should turn them into text.
 
-**The per-match cap is per player, and the server resolves it.** `wallet.max_stake`
-is already `max_stake_pct` applied to that player's net worth — do not recompute it
-from `config.max_stake_pct`, and do not assume it is the same for two players.
+**The per-match cap is per player, and arrives resolved.** Use `wallet.max_stake` as
+given: it is specific to that player and to that moment, so it must not be derived from
+anything in `config`, cached across players, or assumed to hold after a settlement.
 
 **A payout is `Math.floor(shares)`.** `position.shares` is the payout the server locked
 in when the prediction was made and it never changes afterwards, whatever the price does.
@@ -241,11 +243,12 @@ mutation the launcher makes.
 and an empty leaderboard all answer with no `data` key, and `apiGet` would surface that
 as `Invalid response format from server` in front of the user.
 
-**Manager surface** (`can_manage_bracket` only, from `MyEventStatus`): the settings and
-per-market controls in `manage/PredictionsManagePanel.tsx`, plus `manage/OpenMarketWarning.tsx`
-in the match editor. That warning exists because scoring a match whose market is still
-open refunds every prediction on it — it is correct behaviour and the quietest way to
-lose a round, so the manager is told before they score and given a one-click close.
+**Manager surface**, gated on the `can_manage_bracket` field of `MyEventStatus`: the
+settings and per-market controls in `manage/PredictionsManagePanel.tsx`, and
+`manage/MarketControl.tsx` inside the match editor. The latter is there because scoring a
+match while its market is still open refunds every prediction on it, which is easy to do
+by accident and quiet when it happens — so the manager sees the state and a one-click
+close before they score.
 
 ### Medal Hunt (`fetchMedalHunt`)
 
