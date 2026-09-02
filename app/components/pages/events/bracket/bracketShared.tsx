@@ -89,7 +89,7 @@ export function mapWinnerOf(row: EventMatchMap, capsToWin: number): EventSide | 
     return null
 }
 
-export function mapPlayed(row: EventMatchMap): boolean {
+export function mapWasContested(row: EventMatchMap): boolean {
     return row.winner_side !== null || row.caps_a !== null || row.caps_b !== null
 }
 
@@ -117,7 +117,7 @@ export function seriesProgress(
         if (settled) break
 
         const side = mapWinnerOf(row, match.caps_to_win)
-        if (mapPlayed(row)) played += 1
+        if (mapWasContested(row)) played += 1
         if (side === 'a') scoreA += 1
         if (side === 'b') scoreB += 1
         settled = race && (scoreA >= needed || scoreB >= needed)

@@ -9,7 +9,7 @@ import type {
 import { teamInputClass } from '@/app/components/pages/teams/teamsShared'
 import {
     CheckField, NumberField, SelectField, STAGE_KIND_LABELS, STAGE_KIND_OPTIONS, STAGE_KIND_STYLES,
-    SubCard, TextField, TIEBREAKER_LABELS, allowsDraws, defaultConfigFor, defaultPointsTable,
+    SubCard, TextField, TIEBREAKER_LABELS, defaultConfigFor, defaultPointsTable,
     effectiveDefaults, newStage, syncPointsTable, withSyncedPoints,
 } from './formatFields'
 
@@ -110,15 +110,16 @@ function RowList({ label, onAdd, addLabel, disabled, children }: {
     )
 }
 
-function MatchFormatEditor({ defaults, onChange, base, errors, disabled }: {
+function MatchFormatEditor({ defaults, onChange, base, errors, disabled, needsAWinner }: {
     defaults: EventMatchDefaults
     onChange: (defaults: EventMatchDefaults) => void
     base: string
     errors?: Record<string, string>
     disabled?: boolean
+    needsAWinner?: boolean
 }) {
     const set = (patch: Partial<EventMatchDefaults>) => onChange({ ...defaults, ...patch })
-    const lengths = [1, 2, 3, 4, 5, 6, 7]
+    const lengths = needsAWinner ? [1, 3, 5, 7] : [1, 2, 3, 4, 5, 6, 7]
 
     return (
         <>
@@ -134,9 +135,9 @@ function MatchFormatEditor({ defaults, onChange, base, errors, disabled }: {
                         { value: 'first_to' as const, label: 'Until it is won' },
                         { value: 'all_maps' as const, label: 'Every map is played' },
                     ]}
-                    hint={allowsDraws({ ...defaults })
-                        ? 'An even number of maps can end level, so a group stage can draw.'
-                        : 'An odd number of maps always separates the two sides.'}
+                    hint={needsAWinner
+                        ? 'This stage needs a winner, so a level series stays open.'
+                        : 'A level series is a draw.'}
                     path={`${base}.mode`}
                     errors={errors}
                     disabled={disabled}
@@ -257,7 +258,6 @@ function PointsTable({ table, defaults, onChange, base, errors, disabled }: {
     disabled?: boolean
 }) {
     const rows = syncPointsTable(table, defaults)
-    const drawable = allowsDraws(defaults)
 
     return (
         <SubCard title="Points per result">
@@ -302,9 +302,8 @@ function PointsTable({ table, defaults, onChange, base, errors, disabled }: {
 
             <div className="flex items-center gap-2 pt-1 border-t border-white/5">
                 <p className="text-[11px] text-muted-foreground/70 min-w-0">
-                    {drawable
-                        ? 'Every map is played, so a level series stands as a draw and pays both teams the same.'
-                        : 'The series stops as soon as it is won, so it can never be drawn.'}
+                    {'A map the time limit ended is played but won by nobody, so a series can '
+                        + 'finish on any of these. A level one pays both teams the same.'}
                 </p>
                 <button
                     type="button"
@@ -840,6 +839,7 @@ function StageCard({ stage, index, spec, onChange, onMove, onRemove, errors, dis
                         base={`${base}.match_defaults`}
                         errors={errors}
                         disabled={disabled}
+                        needsAWinner={stage.kind !== 'groups'}
                     />
                 )}
             </SubCard>
@@ -885,6 +885,7 @@ export function FormatBuilder({ spec, onChange, errors, disabled }: BuilderProps
                     base="match_defaults"
                     errors={errors}
                     disabled={disabled}
+                    needsAWinner={spec.stages.some(stage => stage.kind !== 'groups' && !stage.match_defaults)}
                 />
                 <p className="text-[11px] text-muted-foreground/70">
                     Applies to every stage that does not set its own.
