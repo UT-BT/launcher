@@ -4754,6 +4754,8 @@ export interface PredictionConfig {
     settlement_hold_minutes?: number
     roster_bets_allowed?: boolean
     void_on_result_while_open?: boolean
+    /** Markets still run while this is on; it only gates who can see them. */
+    staff_only?: boolean
     updated_at?: string | null
 }
 
@@ -5030,4 +5032,74 @@ export async function updateEventPredictionMarket(
 
 export async function syncEventPredictions(accessToken: string, slug: string): Promise<{ changed: number }> {
     return apiGetOr<{ changed: number }>(predictionsPath(slug, '/admin/sync'), { changed: 0 }, { token: accessToken, method: 'POST' })
+}
+
+export interface PredictionFormEntry {
+    match_id: string
+    stage: string | null
+    round_label: string | null
+    opponent: string | null
+    outcome: 'win' | 'loss' | 'draw' | null
+    score: number | null
+    opponent_score: number | null
+    scheduled_at: string | null
+}
+
+export interface PredictionMapRecord {
+    map: string
+    played: number
+    won: number
+    lost: number
+    caps_for: number
+    caps_against: number
+}
+
+export interface PredictionTeamInsight {
+    team_id: string
+    name: string | null
+    record: { win: number; loss: number; draw: number }
+    form: PredictionFormEntry[]
+    maps: PredictionMapRecord[]
+}
+
+export interface PredictionMatchup {
+    available: boolean
+    team_a?: PredictionTeamInsight | null
+    team_b?: PredictionTeamInsight | null
+    head_to_head?: {
+        played: number
+        record: { win: number; loss: number; draw: number }
+        matches: PredictionFormEntry[]
+    }
+}
+
+export interface UpcomingPredictionMarket extends PredictionMarket {
+    tournament_slug: string
+    tournament_name: string
+}
+
+export async function fetchEventPredictionInsights(
+    accessToken: string,
+    slug: string,
+    matchId: string,
+    signal?: AbortSignal,
+): Promise<PredictionMatchup> {
+    return apiGetOr<PredictionMatchup>(
+        predictionsPath(slug, `/markets/${encodeURIComponent(matchId)}/insights`),
+        { available: false },
+        { token: accessToken, signal },
+    )
+}
+
+export async function fetchUpcomingPredictions(
+    accessToken: string,
+    limit = 4,
+    signal?: AbortSignal,
+): Promise<UpcomingPredictionMarket[]> {
+    const data = await apiGetOr<{ items: UpcomingPredictionMarket[] }>(
+        `/me/predictions/upcoming?limit=${limit}`,
+        { items: [] },
+        { token: accessToken, signal },
+    )
+    return data.items ?? []
 }

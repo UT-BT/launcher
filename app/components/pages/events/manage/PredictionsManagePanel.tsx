@@ -101,6 +101,13 @@ export function PredictionsManagePanel({ accessToken, slug }: { accessToken: str
                     onChange={value => set({ enabled: value })}
                 />
 
+                <Toggle
+                    label="Staff only, for now"
+                    hint="Markets still open, close and settle exactly as they will for players — this only hides the Predictions tab from everyone but staff, cup admins and this event's managers. Turn it off to go live."
+                    checked={!!draft.staff_only}
+                    onChange={value => set({ staff_only: value })}
+                />
+
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     <NumberField
                         label="Starting coins"

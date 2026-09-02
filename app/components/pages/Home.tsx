@@ -30,6 +30,7 @@ import { PersonalProgressSnapshot } from './home/PersonalProgressSnapshot'
 import { AchievementProgressPreview } from './home/AchievementProgressPreview'
 import { FavoriteServersCard } from './home/FavoriteServersCard'
 import { MedalHuntCard } from './home/MedalHuntCard'
+import { UpcomingPredictionsCard } from './home/UpcomingPredictionsCard'
 import { capabilities, fetchGatewayServers } from '@/app/platform'
 import { requestLogin } from '@/app/components/shared/AuthRequiredModal'
 
@@ -44,6 +45,7 @@ const ACCENTS: Record<string, SectionAccent> = {
     medalHunt: { tick: 'bg-red-500 shadow-[0_0_10px_rgba(248,113,113,0.65)]' },
     achievements: { tick: 'bg-emerald-400' },
     favoriteServers: { tick: 'bg-violet-400' },
+    predictions: { tick: 'bg-sky-400' },
 }
 
 export interface HomePageCaches {
@@ -474,6 +476,11 @@ export function Home({
                     {newsFeed.length > 0 && renderNewsSection('lg:col-span-6')}
                     {renderFavoriteServersSection(newsFeed.length > 0 ? 'lg:col-span-6' : 'lg:col-span-12')}
                 </div>
+
+                <UpcomingPredictionsCard
+                    accessToken={userProfile.accessToken}
+                    accent={ACCENTS.predictions}
+                />
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
                     <SpotlightSection title="Your Progress" accent={ACCENTS.personal} className="lg:col-span-6">

@@ -189,8 +189,8 @@ Coin-backed prediction markets on bracket matches, one market per match. Fetcher
 the `…EventPrediction…` family in `app/utils/api.ts`; the UI lives in
 `app/components/pages/events/predictions/`.
 
-**The tab only exists when the API says so.** `EventDetail.predictions_enabled` is the
-single flag — the Predictions tab is filtered out of `BASE_TABS` when it is false, and
+**The tab only exists when the API says so.** `EventDetail.predictions_enabled` already
+accounts for the staff-only preview gate, so it is the single flag — the Predictions tab is filtered out of `BASE_TABS` when it is false, and
 no prediction request is made at all. Don't probe an endpoint to work this out.
 
 **One fetch, two consumers.** `EventDetailPage` owns `fetchEventPredictions` and passes
@@ -219,6 +219,18 @@ from the previewed one if somebody else predicts in between.
 not.** `parseApiInstant` in `predictionsShared.tsx` handles both by treating a bare
 `YYYY-MM-DD HH:MM:SS` as UTC. Use it rather than `new Date(...)` for anything a countdown
 depends on — `closes_at` is a real deadline and an hours-off render is a lie about it.
+
+**Matchup insights and the homepage strip are separate reads.**
+`fetchEventPredictionInsights` is fetched lazily when a card is expanded, not with
+the market list, because most cards are never opened.
+`fetchUpcomingPredictions` (`/me/predictions/upcoming`) backs
+`home/UpcomingPredictionsCard`, which owns its own `SpotlightSection` and returns
+`null` when empty -- most viewers have no event running, and a titled empty section
+is worse than no section.
+
+**Markets sort by `closes_at`, not by bracket position.** The only question on this
+page is what can still be predicted on and how long is left. A market with no close
+time sorts last; it is not upcoming in any useful sense.
 
 **Writes go to `api.utbt.net`, never the gateway**, like every other authenticated
 mutation the launcher makes.

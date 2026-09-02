@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
+import { EyeOff } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/app/components/ui/button'
 import { ErrorBanner } from '@/app/components/pages/teams/teamsShared'
@@ -11,7 +12,7 @@ import {
 import { BetModal } from './BetModal'
 import { MarketCard } from './MarketCard'
 import { PredictionsLeaderboard } from './PredictionsLeaderboard'
-import { CoinAmount, formatCoins, useNow } from './predictionsShared'
+import { CoinAmount, formatCoins, parseApiInstant, useNow } from './predictionsShared'
 
 type PredictionsView = 'markets' | 'mine' | 'leaderboard'
 
@@ -29,7 +30,38 @@ const EMPTY: PredictionsOverview = {
     wallet: null,
 }
 
-const OPEN_FIRST: Record<string, number> = { open: 0, resolved: 1, closed: 2, settled: 3, voided: 4 }
+const CLOSING_SOON_MS = 2 * 60 * 60 * 1000
+
+/** What a predictor is scanning for, in the order they care about it. */
+const SECTIONS: Array<{ id: string; title: string; blurb?: string }> = [
+    { id: 'closing', title: 'Closing soon' },
+    { id: 'open', title: 'Open for predictions' },
+    { id: 'awaiting', title: 'Under way', blurb: 'Closed to new predictions, waiting on a result.' },
+    { id: 'paying', title: 'Paying out' },
+    { id: 'done', title: 'Finished' },
+]
+
+/**
+ * Markets sort by when they stop taking predictions, not by bracket position: the
+ * only question on this page is what can still be predicted on and how long is
+ * left. A market with no deadline sorts last — it is not "upcoming" in any useful
+ * sense, and the manage panel flags those separately.
+ */
+function sortKey(market: PredictionMarket): number {
+    return parseApiInstant(market.closes_at)
+        ?? parseApiInstant(market.match?.scheduled_at)
+        ?? Number.POSITIVE_INFINITY
+}
+
+function sectionFor(market: PredictionMarket, now: number): string {
+    if (market.status === 'open') {
+        const closes = parseApiInstant(market.closes_at)
+        return closes !== null && closes - now < CLOSING_SOON_MS ? 'closing' : 'open'
+    }
+    if (market.status === 'closed') return 'awaiting'
+    if (market.status === 'resolved') return 'paying'
+    return 'done'
+}
 
 interface PredictionsTabProps {
     slug: string
@@ -38,9 +70,12 @@ interface PredictionsTabProps {
     data: PredictionsOverview | null
     loaded: boolean
     onRefresh: () => void
+    onMapSelect?: (mapName: string) => void
 }
 
-export function PredictionsTab({ slug, userProfile, data: incoming, loaded, onRefresh }: PredictionsTabProps) {
+export function PredictionsTab({
+    slug, userProfile, data: incoming, loaded, onRefresh, onMapSelect,
+}: PredictionsTabProps) {
     const accessToken = userProfile?.accessToken
     const browseToken = accessToken ?? ''
     const data = incoming ?? EMPTY
@@ -79,32 +114,32 @@ export function PredictionsTab({ slug, userProfile, data: incoming, loaded, onRe
         setBetting(market)
     }, [accessToken, data.wallet, claim])
 
-    const grouped = useMemo(() => {
-        const byStage = new Map<string, PredictionMarket[]>()
+    const mine = view === 'mine'
 
-        for (const market of data.markets) {
-            const key = market.stage_id ?? 'other'
-            const bucket = byStage.get(key)
+    const sections = useMemo(() => {
+        const source = mine ? data.markets.filter(market => market.your_position) : data.markets
+        const buckets = new Map<string, PredictionMarket[]>()
+
+        for (const market of source) {
+            const id = sectionFor(market, now)
+            const bucket = buckets.get(id)
             if (bucket) bucket.push(market)
-            else byStage.set(key, [market])
+            else buckets.set(id, [market])
         }
 
-        for (const bucket of byStage.values()) {
-            bucket.sort((left, right) =>
-                (OPEN_FIRST[left.status] ?? 9) - (OPEN_FIRST[right.status] ?? 9))
+        for (const bucket of buckets.values()) {
+            bucket.sort((left, right) => sortKey(left) - sortKey(right))
         }
 
-        return data.stages
-            .map(stage => ({ stage, markets: byStage.get(stage.id) ?? [] }))
-            .filter(entry => entry.markets.length > 0)
-    }, [data.markets, data.stages])
+        return SECTIONS
+            .map(section => ({ ...section, markets: buckets.get(section.id) ?? [] }))
+            .filter(section => section.markets.length > 0)
+    }, [data.markets, mine, now])
 
     if (!loaded) {
         return <div className="p-6 text-center text-sm text-muted-foreground">Loading predictions…</div>
     }
 
-    // Loaded with nothing is a failed fetch, not an event without predictions:
-    // the tab only renders when the event says predictions are on.
     if (incoming === null) {
         return (
             <div className="p-6 flex flex-col items-center gap-3">
@@ -129,6 +164,14 @@ export function PredictionsTab({ slug, userProfile, data: incoming, loaded, onRe
         <div className="flex flex-col gap-4">
             <ErrorBanner message={error} />
 
+            {data.config.staff_only && (
+                <div className="p-2.5 rounded-lg border border-sky-500/30 bg-sky-500/10 text-sky-200 text-xs flex items-center gap-2">
+                    <EyeOff className="size-3.5 shrink-0" />
+                    Staff preview. Markets are running for real, but players cannot see this tab until the
+                    staff-only setting is switched off under Manage.
+                </div>
+            )}
+
             {wallet ? (
                 <div className="p-3 rounded-lg border border-white/10 bg-card/40 flex flex-wrap items-center gap-x-6 gap-y-2">
                     <Stat label="Coins" value={formatCoins(wallet.balance)} emphasis />
@@ -136,6 +179,7 @@ export function PredictionsTab({ slug, userProfile, data: incoming, loaded, onRe
                     <Stat label="Profit" value={<CoinAmount value={wallet.profit} signed />} />
                     {wallet.rank !== null && <Stat label="Rank" value={`#${wallet.rank}`} />}
                     <Stat label="Record" value={`${wallet.positions_won}–${wallet.positions_lost}`} />
+                    <Stat label="Max per match" value={formatCoins(wallet.max_stake)} />
                 </div>
             ) : (
                 <div className="p-4 rounded-lg border border-accent-500/30 bg-accent-500/10 flex flex-wrap items-center justify-between gap-3">
@@ -173,20 +217,47 @@ export function PredictionsTab({ slug, userProfile, data: incoming, loaded, onRe
 
             {view === 'leaderboard' ? (
                 <PredictionsLeaderboard slug={slug} accessToken={browseToken} viewerId={userProfile?.id ?? undefined} />
-            ) : (
-                <MarketSections
-                    groups={view === 'mine'
-                        ? grouped
-                            .map(entry => ({ ...entry, markets: entry.markets.filter(market => market.your_position) }))
-                            .filter(entry => entry.markets.length > 0)
-                        : grouped}
-                    now={now}
-                    canPredict={!!wallet}
-                    onPredict={openBet}
-                    emptyMessage={view === 'mine'
+            ) : sections.length === 0 ? (
+                <div className="p-6 text-center text-sm text-muted-foreground">
+                    {mine
                         ? 'You have not made any predictions in this event yet.'
                         : 'No matches are open for predictions yet.'}
-                />
+                </div>
+            ) : (
+                <div className="flex flex-col gap-5">
+                    {sections.map(section => (
+                        <div key={section.id} className="flex flex-col gap-2">
+                            <div className="flex items-baseline gap-2 flex-wrap">
+                                <h3 className={cn(
+                                    'text-xs font-bold uppercase tracking-wider',
+                                    section.id === 'closing' ? 'text-amber-300' : 'text-muted-foreground',
+                                )}>
+                                    {section.title}
+                                </h3>
+                                <span className="text-[11px] text-muted-foreground tabular-nums">
+                                    {section.markets.length}
+                                </span>
+                                {section.blurb && (
+                                    <span className="text-[11px] text-muted-foreground">{section.blurb}</span>
+                                )}
+                            </div>
+                            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                                {section.markets.map(market => (
+                                    <MarketCard
+                                        key={market.id}
+                                        slug={slug}
+                                        accessToken={browseToken}
+                                        market={market}
+                                        now={now}
+                                        canPredict={!!wallet}
+                                        onPredict={openBet}
+                                        onMapSelect={onMapSelect}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                </div>
             )}
 
             {betting && accessToken && wallet && (
@@ -200,39 +271,6 @@ export function PredictionsTab({ slug, userProfile, data: incoming, loaded, onRe
                     onPlaced={onRefresh}
                 />
             )}
-        </div>
-    )
-}
-
-function MarketSections({ groups, now, canPredict, onPredict, emptyMessage }: {
-    groups: Array<{ stage: { id: string; name: string }; markets: PredictionMarket[] }>
-    now: number
-    canPredict: boolean
-    onPredict: (market: PredictionMarket) => void
-    emptyMessage: string
-}) {
-    if (groups.length === 0) {
-        return <div className="p-6 text-center text-sm text-muted-foreground">{emptyMessage}</div>
-    }
-
-    return (
-        <div className="flex flex-col gap-5">
-            {groups.map(({ stage, markets }) => (
-                <div key={stage.id} className="flex flex-col gap-2">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{stage.name}</h3>
-                    <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-                        {markets.map(market => (
-                            <MarketCard
-                                key={market.id}
-                                market={market}
-                                now={now}
-                                canPredict={canPredict}
-                                onPredict={onPredict}
-                            />
-                        ))}
-                    </div>
-                </div>
-            ))}
         </div>
     )
 }

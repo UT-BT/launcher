@@ -263,6 +263,7 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
                         data={predictions}
                         loaded={predictionsLoaded}
                         onRefresh={refreshPredictions}
+                        onMapSelect={onMapSelect}
                     />
                 )}
                 {activeTab === 'players' && <EventLfpList entries={lfp} loading={loading} />}
