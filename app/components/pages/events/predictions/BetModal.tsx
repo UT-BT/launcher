@@ -10,8 +10,8 @@ import {
 } from '@/app/utils/api'
 import { formatCoins, formatMultiplier, formatPercent } from './predictionsShared'
 
-const QUICK_STAKES = [10, 25, 50, 100]
 const QUOTE_DEBOUNCE_MS = 250
+const PRESET_FRACTIONS = [25, 50]
 
 interface BetModalProps {
     slug: string
@@ -21,6 +21,37 @@ interface BetModalProps {
     wallet: PredictionWallet
     onClose: () => void
     onPlaced: () => void
+}
+
+/**
+ * Stake shortcuts as a share of what this player can actually put on this match,
+ * not fixed coin amounts: 10/25/50/100 is meaningless to someone holding 10,000.
+ * The floor is the configured minimum where there is one, and the ceiling is
+ * whichever of balance or per-match cap bites first.
+ */
+function stakePresets(ceiling: number, minStake: number): Array<{ label: string; value: number }> {
+    if (ceiling < minStake) return []
+
+    const candidates: Array<{ label: string; value: number }> = []
+
+    if (minStake > 1) candidates.push({ label: 'Min', value: minStake })
+
+    for (const fraction of PRESET_FRACTIONS) {
+        candidates.push({ label: `${fraction}%`, value: Math.floor((ceiling * fraction) / 100) })
+    }
+
+    candidates.push({ label: 'Max', value: ceiling })
+
+    const seen = new Set<number>()
+    const usable: Array<{ label: string; value: number }> = []
+
+    for (const preset of candidates) {
+        if (preset.value < minStake || preset.value > ceiling || seen.has(preset.value)) continue
+        seen.add(preset.value)
+        usable.push(preset)
+    }
+
+    return usable.sort((left, right) => left.value - right.value)
 }
 
 export function BetModal({ slug, accessToken, market, config, wallet, onClose, onPlaced }: BetModalProps) {
@@ -40,6 +71,7 @@ export function BetModal({ slug, accessToken, market, config, wallet, onClose, o
     const alreadyStaked = held?.stake ?? 0
     const allowance = perMatchCap > 0 ? Math.max(0, perMatchCap - alreadyStaked) : balance
     const ceiling = Math.min(balance, allowance)
+    const presets = useMemo(() => stakePresets(ceiling, minStake), [ceiling, minStake])
 
     const stake = Number.parseInt(stakeText, 10)
     const stakeValid = Number.isInteger(stake) && stake >= minStake && stake <= ceiling
@@ -99,6 +131,13 @@ export function BetModal({ slug, accessToken, market, config, wallet, onClose, o
         return null
     }, [ceiling, minStake, allowance, perMatchCap])
 
+    // How much of the return the stake's own price impact costs. At the current
+    // odds a stake would return 1/price if it moved nothing; it always moves
+    // something, and that gap is the whole reason a big prediction pays less.
+    const impact = quote && quote.stake > 0 && quote.payout > 0
+        ? (1 / quote.price_before) - (quote.payout / quote.stake)
+        : 0
+
     return (
         <Modal
             isOpen
@@ -107,8 +146,8 @@ export function BetModal({ slug, accessToken, market, config, wallet, onClose, o
             maxWidth="30rem"
             title={`${teamA} vs ${teamB}`}
             footer={
-                <div className="flex items-center justify-end gap-2">
-                    <Button variant="ghost" onClick={onClose} disabled={busy}>Cancel</Button>
+                <div className="p-4 border-t border-border bg-muted/50 flex items-center justify-end gap-2">
+                    <Button variant="outline" onClick={onClose} disabled={busy}>Cancel</Button>
                     <Button onClick={submit} disabled={!stakeValid || busy || !!disabledReason}>
                         {busy ? 'Placing…' : `Back ${sideName}`}
                     </Button>
@@ -167,34 +206,33 @@ export function BetModal({ slug, accessToken, market, config, wallet, onClose, o
                         max={ceiling}
                         value={stakeText}
                         onChange={event => setStakeText(event.target.value)}
-                        placeholder={`${minStake}–${formatCoins(ceiling)}`}
+                        placeholder={`${formatCoins(minStake)}–${formatCoins(ceiling)}`}
                         className="px-3 py-2 bg-card/50 border border-white/10 rounded-lg text-sm text-white tabular-nums placeholder:text-muted-foreground focus:outline-none focus:border-accent-500/50"
                     />
-                    <div className="flex flex-wrap gap-1.5">
-                        {QUICK_STAKES.filter(amount => amount <= ceiling).map(amount => (
-                            <button
-                                key={amount}
-                                type="button"
-                                onClick={() => setStakeText(String(amount))}
-                                className="px-2 py-1 rounded border border-white/10 bg-card/50 text-xs text-muted-foreground hover:text-white hover:border-white/20"
-                            >
-                                {amount}
-                            </button>
-                        ))}
-                        {ceiling >= minStake && (
-                            <button
-                                type="button"
-                                onClick={() => setStakeText(String(ceiling))}
-                                className="px-2 py-1 rounded border border-white/10 bg-card/50 text-xs text-muted-foreground hover:text-white hover:border-white/20"
-                            >
-                                Max {formatCoins(ceiling)}
-                            </button>
-                        )}
-                    </div>
+                    {presets.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                            {presets.map(preset => (
+                                <button
+                                    key={preset.label}
+                                    type="button"
+                                    title={`${formatCoins(preset.value)} coins`}
+                                    onClick={() => setStakeText(String(preset.value))}
+                                    className={cn(
+                                        'px-2 py-1 rounded border text-xs transition-colors',
+                                        stake === preset.value
+                                            ? 'border-accent-500/60 bg-accent-500/10 text-white'
+                                            : 'border-white/10 bg-card/50 text-muted-foreground hover:text-white hover:border-white/20',
+                                    )}
+                                >
+                                    {preset.label}
+                                </button>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
                 <div className="p-3 rounded-lg border border-white/10 bg-card/40 flex flex-col gap-1.5 text-sm">
-                    <Row label="Price now" value={formatPercent(price)} />
+                    <Row label="Odds now" value={formatPercent(price)} />
                     <Row
                         label="If they win, you get"
                         value={quote ? `${formatCoins(quote.payout)} coins` : '—'}
@@ -203,14 +241,28 @@ export function BetModal({ slug, accessToken, market, config, wallet, onClose, o
                     />
                     <Row label="Return" value={quote ? formatMultiplier(quote.stake, quote.payout) : '—'} muted={quoting} />
                     <Row
-                        label="Price after your bet"
-                        value={quote ? formatPercent(quote.price_after) : '—'}
+                        label="Your average price"
+                        value={quote ? formatPercent(quote.stake / quote.payout) : '—'}
+                        muted={quoting}
+                    />
+                    <Row
+                        label="Odds after your bet"
+                        value={quote ? `${formatPercent(quote.price_before)} → ${formatPercent(quote.price_after)}` : '—'}
                         muted={quoting}
                     />
                 </div>
 
+                {quote && impact > 0.005 && (
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                        <span className="text-white/80">Why the return drops as you stake more:</span>{' '}
+                        your own coins move the odds while they go in, so the last of them buys at a worse price than
+                        the first. Splitting the same total into several smaller predictions costs exactly the same —
+                        the price picks up where it left off.
+                    </p>
+                )}
+
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                    That payout is locked in the moment you confirm — the price can move afterwards, your return cannot.
+                    That payout is locked in the moment you confirm — the odds can move afterwards, your return cannot.
                     A prediction cannot be cancelled or sold. If the match is drawn, forfeited or cancelled, your stake
                     comes back.
                 </p>

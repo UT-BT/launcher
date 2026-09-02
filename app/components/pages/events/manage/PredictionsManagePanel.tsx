@@ -10,6 +10,7 @@ import {
     type PredictionAdminMarkets, type PredictionConfig, type PredictionMarket,
 } from '@/app/utils/api'
 import { formatMatchTime } from '../bracket/bracketShared'
+import { PredictionLedgerPanel } from './PredictionLedgerPanel'
 import {
     MarketStatusChip, evenMarketPriceAfter, formatCoins, formatPercent, liquidityForPriceAfter,
 } from '../predictions/predictionsShared'
@@ -224,6 +225,8 @@ export function PredictionsManagePanel({ accessToken, slug }: { accessToken: str
                     </span>
                 </div>
             )}
+
+            <PredictionLedgerPanel accessToken={accessToken} slug={slug} />
 
             <div className="space-y-2">
                 {data.items.length === 0 && (

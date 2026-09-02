@@ -5094,15 +5094,44 @@ export async function fetchEventPredictionInsights(
     )
 }
 
+/**
+ * Markets closing inside `withinHours`. Only ever returns markets with a real
+ * close time — an unscheduled match is not closing soon.
+ */
 export async function fetchUpcomingPredictions(
     accessToken: string,
-    limit = 4,
+    params: { limit?: number; withinHours?: number } = {},
     signal?: AbortSignal,
 ): Promise<UpcomingPredictionMarket[]> {
+    const usp = new URLSearchParams()
+    usp.set('limit', String(params.limit ?? 4))
+    usp.set('within_hours', String(params.withinHours ?? 3))
     const data = await apiGetOr<{ items: UpcomingPredictionMarket[] }>(
-        `/me/predictions/upcoming?limit=${limit}`,
+        `/me/predictions/upcoming?${usp.toString()}`,
         { items: [] },
         { token: accessToken, signal },
     )
     return data.items ?? []
+}
+
+export interface PredictionLedgerRow extends PredictionLedgerEntry {
+    user_id: string | null
+}
+
+export async function fetchEventPredictionLedger(
+    accessToken: string,
+    slug: string,
+    params: { limit?: number; offset?: number; kind?: string } = {},
+    signal?: AbortSignal,
+): Promise<{ total: number; items: PredictionLedgerRow[] }> {
+    const usp = new URLSearchParams()
+    if (params.limit !== undefined) usp.set('limit', String(params.limit))
+    if (params.offset !== undefined) usp.set('offset', String(params.offset))
+    if (params.kind) usp.set('kind', params.kind)
+    const qs = usp.toString()
+    return apiGetOr<{ total: number; items: PredictionLedgerRow[] }>(
+        predictionsPath(slug, `/admin/ledger${qs ? `?${qs}` : ''}`),
+        { total: 0, items: [] },
+        { token: accessToken, signal },
+    )
 }

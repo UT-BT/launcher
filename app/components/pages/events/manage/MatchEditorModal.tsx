@@ -16,7 +16,7 @@ import {
     Chip, DRAW_STYLE, MATCH_STATUS_LABELS, MATCH_STATUS_STYLES, mapWinnerOf, seriesProgress, sideOf, toIso, toLocalInput,
 } from '../bracket/bracketShared'
 import { CapLinkPicker } from './CapLinkPicker'
-import { OpenMarketWarning } from './OpenMarketWarning'
+import { MarketControl } from './MarketControl'
 import { Field, SubCard } from './formatFields'
 
 const STATUS_OPTIONS: Array<{ value: EventMatchStatus; label: string }> = [
@@ -237,7 +237,7 @@ export function MatchEditorModal({
                 <ErrorBanner message={error} />
                 {notice && <p className="text-xs text-emerald-300">{notice}</p>}
 
-                <OpenMarketWarning accessToken={accessToken} slug={slug} matchId={match.id} disabled={busy} />
+                <MarketControl accessToken={accessToken} slug={slug} matchId={match.id} disabled={busy} />
 
                 <SubCard title="Match">
                     <div className="flex flex-wrap items-center gap-2">

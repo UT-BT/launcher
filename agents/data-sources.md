@@ -224,9 +224,10 @@ depends on — `closes_at` is a real deadline and an hours-off render is a lie a
 `fetchEventPredictionInsights` is fetched lazily when a card is expanded, not with
 the market list, because most cards are never opened.
 `fetchUpcomingPredictions` (`/me/predictions/upcoming`) backs
-`home/UpcomingPredictionsCard`, which owns its own `SpotlightSection` and returns
-`null` when empty -- most viewers have no event running, and a titled empty section
-is worse than no section.
+`home/ClosingSoonBanner`, one line at the top of the homepage that returns `null`
+when nothing is closing. The API only returns markets with a real close time inside
+the window, and the banner re-filters against its own clock so a market that expires
+while the page is open drops off rather than counting down to nothing.
 
 **Markets sort by `closes_at`, not by bracket position.** The only question on this
 page is what can still be predicted on and how long is left. A market with no close
