@@ -287,7 +287,7 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
                         lfp={lfp}
                         bracket={bracket}
                         canManageEvent={canManage}
-                        onBracketChange={setBracket}
+                        onBracketChange={next => { setBracket(next); refreshPredictions() }}
                         onMapSelect={onMapSelect}
                         onRefresh={refresh}
                         formatDraft={formatDraft}
