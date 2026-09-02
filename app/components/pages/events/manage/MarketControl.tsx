@@ -79,7 +79,7 @@ export function MarketControl({ accessToken, slug, matchId, disabled }: {
                     {formatCoins(market.pool_stake)} staked across {market.position_count}
                 </span>
 
-                <div className="ml-auto flex items-center gap-1.5">
+                <div className="w-full sm:w-auto sm:ml-auto flex flex-wrap items-center gap-1.5">
                     {market.manual_override && (
                         <Button
                             size="sm"

@@ -198,7 +198,7 @@ export function PredictionsTab({
             )}
 
             {wallet ? (
-                <div className="p-3 rounded-lg border border-white/10 bg-card/40 flex flex-wrap items-center gap-x-6 gap-y-2">
+                <div className="p-3 rounded-lg border border-white/10 bg-card/40 grid grid-cols-3 gap-3 sm:flex sm:flex-wrap sm:items-center sm:gap-x-6 sm:gap-y-2">
                     <Stat label="Coins" value={formatCoins(wallet.balance)} emphasis />
                     <Stat label="In play" value={formatCoins(wallet.staked)} />
                     <Stat label="Profit" value={<CoinAmount value={wallet.profit} signed />} />

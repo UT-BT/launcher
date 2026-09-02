@@ -22,6 +22,7 @@ export function BackersModal({ slug, accessToken, market, viewerId, onClose }: {
 }) {
     const [backers, setBackers] = useState<PredictionBacker[]>([])
     const [totals, setTotals] = useState({ a: 0, b: 0 })
+    const [hidden, setHidden] = useState<string | null>(null)
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
@@ -29,7 +30,11 @@ export function BackersModal({ slug, accessToken, market, viewerId, onClose }: {
 
         const controller = new AbortController()
         fetchEventPredictionPositions(accessToken, slug, market.match_id, controller.signal)
-            .then(data => { setBackers(data.items); setTotals(data.totals) })
+            .then(data => {
+                setBackers(data.items)
+                setTotals(data.totals)
+                setHidden(data.visible ? null : (data.reason ?? 'Not available yet.'))
+            })
             .catch(() => setBackers([]))
             .finally(() => { if (!controller.signal.aborted) setLoading(false) })
 
@@ -61,7 +66,11 @@ export function BackersModal({ slug, accessToken, market, viewerId, onClose }: {
                     </div>
                 </div>
 
-                {backers.length === 0 ? (
+                {hidden ? (
+                    <p className="py-6 text-center text-sm text-muted-foreground max-w-sm mx-auto">
+                        {hidden}
+                    </p>
+                ) : backers.length === 0 ? (
                     <p className="py-6 text-center text-sm text-muted-foreground">
                         {loading ? 'Loading…' : 'Nobody has predicted on this match yet.'}
                     </p>
@@ -115,11 +124,13 @@ export function BackersModal({ slug, accessToken, market, viewerId, onClose }: {
                     </div>
                 )}
 
+                {!hidden && backers.length > 0 && (
                 <p className="text-[11px] text-muted-foreground leading-relaxed">
                     The multiplier is what each person locked in when they predicted, so earlier backers on a side
                     that has since become the favourite show a better return than the odds now offer. Current odds:{' '}
                     {formatPercent(market.price_a)} / {formatPercent(market.price_b)}.
                 </p>
+                )}
             </div>
         </Modal>
     )

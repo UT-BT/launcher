@@ -342,7 +342,7 @@ function MarketRow({ market, busy, onAction }: {
     const disabled = busy || !market.match_id
 
     return (
-        <div className="p-3 rounded-lg border border-white/10 bg-card/40 flex flex-wrap items-center gap-3">
+        <div className="p-3 rounded-lg border border-white/10 bg-card/40 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
             <div className="min-w-0 flex-1">
                 <div className="text-sm text-white truncate">
                     {market.team_a?.name || 'TBD'} <span className="text-muted-foreground">vs</span> {market.team_b?.name || 'TBD'}
@@ -358,9 +358,8 @@ function MarketRow({ market, busy, onAction }: {
                 )}
             </div>
 
-            <MarketStatusChip market={market} />
-
-            <div className="flex items-center gap-1.5">
+            <div className="flex flex-wrap items-center gap-1.5">
+                <MarketStatusChip market={market} />
                 {market.status === 'open' && (
                     <Button size="sm" variant="ghost" disabled={disabled} onClick={() => onAction({ override: 'closed' })}>
                         Close

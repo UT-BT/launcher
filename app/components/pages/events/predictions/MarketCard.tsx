@@ -72,7 +72,7 @@ export function MarketCard({
                     </div>
 
                     <div className="flex items-center gap-1.5">
-                        {market.position_count > 0 && (
+                        {market.position_count > 0 && market.status !== 'open' && (
                             <Button
                                 size="sm"
                                 variant="ghost"

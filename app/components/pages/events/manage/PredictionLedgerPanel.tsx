@@ -2,10 +2,11 @@ import { useCallback, useEffect, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/app/components/ui/button'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
+import { formatTimeAgo } from '@/app/utils/format'
 import {
     fetchEventPredictionLedger, type PredictionLedgerRow,
 } from '@/app/utils/api'
-import { formatCoins } from '../predictions/predictionsShared'
+import { formatCoins, parseApiInstant } from '../predictions/predictionsShared'
 
 const PAGE = 25
 
@@ -32,6 +33,12 @@ const KIND_STYLES: Record<string, string> = {
     payout: 'text-emerald-300',
     refund: 'text-amber-300',
     reversal: 'text-red-300',
+}
+
+function when(iso: string | null): string {
+    const at = parseApiInstant(iso)
+
+    return at === null ? '' : formatTimeAgo(new Date(at).toISOString())
 }
 
 /**
@@ -73,15 +80,15 @@ export function PredictionLedgerPanel({ accessToken, slug }: { accessToken: stri
     const pages = Math.max(1, Math.ceil(total / PAGE))
 
     return (
-        <div className="p-4 rounded-lg border border-white/10 bg-card/40 space-y-3">
-            <div className="flex flex-wrap items-center gap-2">
+        <div className="p-3 sm:p-4 rounded-lg border border-white/10 bg-card/40 space-y-3">
+            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
                 <div className="min-w-0">
                     <div className="text-sm font-semibold text-white">Coin activity</div>
                     <p className="text-[11px] text-muted-foreground">
                         Append-only. Every grant, prediction, payout, refund and reversal in this event.
                     </p>
                 </div>
-                <span className="ml-auto text-[11px] text-muted-foreground tabular-nums">
+                <span className="sm:ml-auto text-[11px] text-muted-foreground tabular-nums">
                     {total.toLocaleString()} entries
                 </span>
             </div>
@@ -111,24 +118,46 @@ export function PredictionLedgerPanel({ accessToken, slug }: { accessToken: stri
             ) : (
                 <div className="divide-y divide-hairline/5">
                     {rows.map(row => (
-                        <div key={row.id} className="py-1.5 flex items-center gap-2 min-w-0 text-xs">
-                            <div className="min-w-0 flex-1 flex items-center gap-2">
-                                {row.user_id
-                                    ? <PlayerInfo userId={row.user_id} alias={row.alias} size="sm" />
-                                    : <span className="text-muted-foreground">Erased account</span>}
-                                <span className={cn('shrink-0', KIND_STYLES[row.kind])}>
-                                    {KIND_LABELS[row.kind] ?? row.kind}
+                        <div key={row.id} className="py-2 flex flex-col gap-1">
+                            <div className="flex items-center gap-2 min-w-0 text-xs">
+                                <div className="min-w-0 flex-1 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                                    {row.user_id
+                                        ? <PlayerInfo userId={row.user_id} alias={row.alias} size="sm" />
+                                        : <span className="text-muted-foreground">Erased account</span>}
+                                    <span className={cn('shrink-0', KIND_STYLES[row.kind])}>
+                                        {KIND_LABELS[row.kind] ?? row.kind}
+                                    </span>
+                                </div>
+                                <span className={cn(
+                                    'shrink-0 tabular-nums font-medium',
+                                    row.amount > 0 ? 'text-emerald-300' : 'text-red-300',
+                                )}>
+                                    {row.amount > 0 ? '+' : '−'}{formatCoins(Math.abs(row.amount))}
+                                </span>
+                                <span className="shrink-0 w-14 sm:w-16 text-right tabular-nums text-muted-foreground">
+                                    {formatCoins(row.balance_after)}
                                 </span>
                             </div>
-                            <span className={cn(
-                                'shrink-0 tabular-nums font-medium',
-                                row.amount > 0 ? 'text-emerald-300' : 'text-red-300',
-                            )}>
-                                {row.amount > 0 ? '+' : '−'}{formatCoins(Math.abs(row.amount))}
-                            </span>
-                            <span className="shrink-0 w-16 text-right tabular-nums text-muted-foreground">
-                                {formatCoins(row.balance_after)}
-                            </span>
+
+                            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-muted-foreground pl-0.5">
+                                {row.market && (
+                                    <span className="truncate max-w-full">
+                                        {row.market.team_a || 'TBD'} v {row.market.team_b || 'TBD'}
+                                        {row.market.round_label && ` · ${row.market.round_label}`}
+                                    </span>
+                                )}
+                                {row.created_at && <span className="shrink-0">{when(row.created_at)}</span>}
+                                <span className="shrink-0">
+                                    {row.actor_alias
+                                        ? `by ${row.actor_alias}`
+                                        : row.kind === 'stake' || row.kind === 'grant' ? '' : 'automatic'}
+                                </span>
+                                {row.settlement_seq != null && row.settlement_seq > 1 && (
+                                    <span className="shrink-0 text-amber-300/80">
+                                        settlement #{row.settlement_seq}
+                                    </span>
+                                )}
+                            </div>
                         </div>
                     ))}
                 </div>

@@ -11,3 +11,4 @@ temp
 .claude/settings.local.json
 # Claude skills lockfile (local)
 skills-lock.json
+test-results/

@@ -4861,6 +4861,7 @@ export interface PredictionLedgerEntry {
     market_id: string | null
     settlement_seq: number | null
     note: string | null
+    actor_id?: string | null
     created_at: string | null
 }
 
@@ -5125,6 +5126,23 @@ export async function fetchUpcomingPredictions(
 export interface PredictionLedgerRow extends PredictionLedgerEntry {
     user_id: string | null
     alias: string | null
+    /** Who was in the request that moved the coins; null means the scheduler. */
+    actor_alias: string | null
+    market: {
+        match_id: string | null
+        team_a: string | null
+        team_b: string | null
+        round_label: string | null
+        status: string
+    } | null
+}
+
+export interface PredictionPositionsResponse {
+    /** False while the market is open — stakes are held back until it closes. */
+    visible: boolean
+    reason?: string
+    items: PredictionBacker[]
+    totals: { a: number; b: number }
 }
 
 export interface PredictionBacker extends PredictionPosition {
@@ -5139,10 +5157,10 @@ export async function fetchEventPredictionPositions(
     slug: string,
     matchId: string,
     signal?: AbortSignal,
-): Promise<{ items: PredictionBacker[]; totals: { a: number; b: number } }> {
-    return apiGetOr<{ items: PredictionBacker[]; totals: { a: number; b: number } }>(
+): Promise<PredictionPositionsResponse> {
+    return apiGetOr<PredictionPositionsResponse>(
         predictionsPath(slug, `/markets/${encodeURIComponent(matchId)}/positions`),
-        { items: [], totals: { a: 0, b: 0 } },
+        { visible: false, items: [], totals: { a: 0, b: 0 } },
         { token: accessToken, signal },
     )
 }

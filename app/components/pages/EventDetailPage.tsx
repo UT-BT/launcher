@@ -169,7 +169,7 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
     const signupOpens = formatEventDateTime(event.signup_opens_at)
     const canManage = !!my?.can_manage
     const canManageBracket = !!my?.can_manage_bracket || canManage
-    const hasBracket = (bracket?.stages.length ?? 0) > 0
+    const hasBracket = (bracket?.stages?.length ?? 0) > 0
     const predictionsOn = !!event.predictions_enabled
     const visibleTabs = (canManageBracket ? TABS : BASE_TABS)
         .filter(t => t.id !== 'bracket' || hasBracket)
