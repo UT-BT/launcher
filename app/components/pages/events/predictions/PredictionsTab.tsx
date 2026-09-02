@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { EyeOff } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/app/components/ui/button'
@@ -9,6 +9,7 @@ import {
     claimEventPredictionWallet, eventErrorMessage,
     type PredictionMarket, type PredictionsOverview, type UserProfile,
 } from '@/app/utils/api'
+import { BackersModal } from './BackersModal'
 import { BetModal } from './BetModal'
 import { MarketCard } from './MarketCard'
 import { PredictionsLeaderboard } from './PredictionsLeaderboard'
@@ -31,6 +32,7 @@ const EMPTY: PredictionsOverview = {
 }
 
 const CLOSING_SOON_MS = 2 * 60 * 60 * 1000
+const REFRESH_MS = 30_000
 
 /** What a predictor is scanning for, in the order they care about it. */
 const SECTIONS: Array<{ id: string; title: string; blurb?: string }> = [
@@ -82,8 +84,19 @@ export function PredictionsTab({
     const [error, setError] = useState<string | null>(null)
     const [claiming, setClaiming] = useState(false)
     const [betting, setBetting] = useState<PredictionMarket | null>(null)
+    const [backers, setBackers] = useState<PredictionMarket | null>(null)
     const [view, setView] = useNavState<PredictionsView>('event.predictionsView', 'markets')
     const now = useNow()
+
+    // Odds move whenever anybody else predicts, and a manager closing a market
+    // has to show up here without a page reload. Re-reads on open and then keeps
+    // itself honest; the interval dies with the tab, so it only runs while this
+    // is the tab being looked at.
+    useEffect(() => {
+        onRefresh()
+        const timer = setInterval(onRefresh, REFRESH_MS)
+        return () => clearInterval(timer)
+    }, [onRefresh])
 
     const claim = useCallback(async () => {
         if (!accessToken) {
@@ -263,6 +276,7 @@ export function PredictionsTab({
                                         now={now}
                                         canPredict={!!wallet}
                                         onPredict={openBet}
+                                        onShowBackers={setBackers}
                                         onMapSelect={onMapSelect}
                                     />
                                 ))}
@@ -270,6 +284,16 @@ export function PredictionsTab({
                         </div>
                     ))}
                 </div>
+            )}
+
+            {backers && (
+                <BackersModal
+                    slug={slug}
+                    accessToken={browseToken}
+                    market={backers}
+                    viewerId={userProfile?.id ?? undefined}
+                    onClose={() => setBackers(null)}
+                />
             )}
 
             {betting && accessToken && wallet && (

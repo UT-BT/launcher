@@ -45,11 +45,14 @@ export function MarketControl({ accessToken, slug, matchId, disabled }: {
         return () => controller.abort()
     }, [load])
 
-    const apply = useCallback(async (override: PredictionOverride | null) => {
+    const apply = useCallback(async (input: {
+        override?: PredictionOverride | null
+        unvoid?: boolean
+    }) => {
         setBusy(true)
         setError(null)
         try {
-            setMarket(await updateEventPredictionMarket(accessToken, slug, matchId, { override }))
+            setMarket(await updateEventPredictionMarket(accessToken, slug, matchId, input))
         } catch (e) {
             setError(eventErrorMessage(e))
         } finally {
@@ -60,7 +63,8 @@ export function MarketControl({ accessToken, slug, matchId, disabled }: {
     if (!market) return null
 
     const open = market.status === 'open'
-    const settled = market.status === 'settled' || market.status === 'voided'
+    const voided = market.status === 'voided'
+    const settled = market.status === 'settled'
     const locked = busy || disabled
 
     return (
@@ -82,20 +86,39 @@ export function MarketControl({ accessToken, slug, matchId, disabled }: {
                             variant="ghost"
                             disabled={locked}
                             title="Go back to opening and closing automatically"
-                            onClick={() => apply(null)}
+                            onClick={() => apply({ override: null })}
                         >
                             <RotateCcw className="size-3.5 mr-1.5" />
                             Automatic
                         </Button>
                     )}
-                    {!settled && (
+                    {!settled && !voided && (
                         <Button
                             size="sm"
                             variant={open ? 'secondary' : 'ghost'}
                             disabled={locked}
-                            onClick={() => apply(open ? 'closed' : 'open')}
+                            onClick={() => apply({ override: open ? 'closed' : 'open' })}
                         >
                             {open ? 'Close predictions' : 'Reopen predictions'}
+                        </Button>
+                    )}
+
+                    {voided && (
+                        <Button size="sm" variant="secondary" disabled={locked} onClick={() => apply({ unvoid: true })}>
+                            Undo refund
+                        </Button>
+                    )}
+
+                    {!settled && !voided && (
+                        <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled={locked}
+                            className="text-red-300 hover:text-red-200"
+                            title="Give every stake back and close this market for good"
+                            onClick={() => apply({ override: 'void' })}
+                        >
+                            Refund all
                         </Button>
                     )}
                 </div>
@@ -108,6 +131,13 @@ export function MarketControl({ accessToken, slug, matchId, disabled }: {
                         Still open. Scoring this match now voids the market and refunds all{' '}
                         <span className="tabular-nums">{market.position_count}</span> predictions.
                     </span>
+                </p>
+            )}
+
+            {market.outcome_reason && (
+                <p className="text-[11px] text-amber-200/90 leading-relaxed">
+                    {market.outcome_reason}
+                    {voided && ' Undo the refund if the match really was played — it will then settle on the result.'}
                 </p>
             )}
 

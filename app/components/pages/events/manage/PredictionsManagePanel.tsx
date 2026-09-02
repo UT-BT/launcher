@@ -28,7 +28,13 @@ const LIQUIDITY_PRESETS: Array<{ id: string; label: string; targetPrice: number;
     { id: 'volatile', label: 'Volatile', targetPrice: 0.72, blurb: 'Odds swing hard. Best for a small crowd, or for drama.' },
 ]
 
-export function PredictionsManagePanel({ accessToken, slug }: { accessToken: string; slug: string }) {
+export function PredictionsManagePanel({ accessToken, slug, onRefresh }: {
+    accessToken: string
+    slug: string
+    /** Reloads the event page's own copy: enabling predictions adds a tab, and
+     *  closing a market changes what the Predictions tab should show. */
+    onRefresh?: () => void
+}) {
     const [data, setData] = useState<PredictionAdminMarkets>(EMPTY)
     const [draft, setDraft] = useState<PredictionConfig | null>(null)
     const [busy, setBusy] = useState(false)
@@ -55,13 +61,14 @@ export function PredictionsManagePanel({ accessToken, slug }: { accessToken: str
         try {
             await action()
             await load()
+            onRefresh?.()
             if (message) setNotice(message)
         } catch (e) {
             setError(eventErrorMessage(e))
         } finally {
             setBusy(false)
         }
-    }, [load])
+    }, [load, onRefresh])
 
     const grant = draft?.initial_grant ?? 0
     const pct = draft?.max_stake_pct ?? 0
@@ -326,7 +333,11 @@ function LiquidityField({ liquidity, referenceStake, priceAfter, ready, onChange
 function MarketRow({ market, busy, onAction }: {
     market: PredictionMarket
     busy: boolean
-    onAction: (input: { override?: 'open' | 'closed' | 'void' | null; settle_now?: boolean }) => void
+    onAction: (input: {
+        override?: 'open' | 'closed' | 'void' | null
+        settle_now?: boolean
+        unvoid?: boolean
+    }) => void
 }) {
     const disabled = busy || !market.match_id
 
@@ -342,6 +353,9 @@ function MarketRow({ market, busy, onAction }: {
                     {' · '}{market.position_count} predictions
                     {market.closes_at ? ` · closes ${formatMatchTime(market.closes_at)}` : ' · no close time'}
                 </div>
+                {market.outcome_reason && (
+                    <div className="text-[11px] text-amber-200/80 mt-0.5">{market.outcome_reason}</div>
+                )}
             </div>
 
             <MarketStatusChip market={market} />
@@ -362,6 +376,11 @@ function MarketRow({ market, busy, onAction }: {
                         Pay out now
                     </Button>
                 )}
+                {market.status === 'voided' && (
+                    <Button size="sm" variant="ghost" disabled={disabled} onClick={() => onAction({ unvoid: true })}>
+                        Undo refund
+                    </Button>
+                )}
                 {market.status !== 'voided' && market.status !== 'settled' && (
                     <Button
                         size="sm"
@@ -370,7 +389,7 @@ function MarketRow({ market, busy, onAction }: {
                         className="text-red-300 hover:text-red-200"
                         onClick={() => onAction({ override: 'void' })}
                     >
-                        Void
+                        Refund all
                     </Button>
                 )}
             </div>

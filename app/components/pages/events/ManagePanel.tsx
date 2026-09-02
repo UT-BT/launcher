@@ -140,7 +140,7 @@ export function ManagePanel({
             )}
 
             {tab === 'predictions' && (
-                <PredictionsManagePanel accessToken={accessToken} slug={slug} />
+                <PredictionsManagePanel accessToken={accessToken} slug={slug} onRefresh={onRefresh} />
             )}
 
         </div>

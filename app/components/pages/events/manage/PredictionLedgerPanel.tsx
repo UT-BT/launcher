@@ -114,7 +114,7 @@ export function PredictionLedgerPanel({ accessToken, slug }: { accessToken: stri
                         <div key={row.id} className="py-1.5 flex items-center gap-2 min-w-0 text-xs">
                             <div className="min-w-0 flex-1 flex items-center gap-2">
                                 {row.user_id
-                                    ? <PlayerInfo userId={row.user_id} size="sm" />
+                                    ? <PlayerInfo userId={row.user_id} alias={row.alias} size="sm" />
                                     : <span className="text-muted-foreground">Erased account</span>}
                                 <span className={cn('shrink-0', KIND_STYLES[row.kind])}>
                                     {KIND_LABELS[row.kind] ?? row.kind}

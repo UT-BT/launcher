@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronDown, ChevronRight } from 'lucide-react'
+import { ChevronDown, ChevronRight, Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/app/components/ui/button'
 import type { EventSide, PredictionMarket } from '@/app/utils/api'
@@ -18,11 +18,12 @@ interface MarketCardProps {
     now: number
     canPredict: boolean
     onPredict: (market: PredictionMarket) => void
+    onShowBackers: (market: PredictionMarket) => void
     onMapSelect?: (mapName: string) => void
 }
 
 export function MarketCard({
-    slug, accessToken, market, now, canPredict, onPredict, onMapSelect,
+    slug, accessToken, market, now, canPredict, onPredict, onShowBackers, onMapSelect,
 }: MarketCardProps) {
     const [showInsights, setShowInsights] = useState(false)
     const held = market.your_position
@@ -70,12 +71,31 @@ export function MarketCard({
                         {settled && <span className="text-white/70">{settled}</span>}
                     </div>
 
-                    {market.status === 'open' && canPredict && (
-                        <Button size="sm" variant="secondary" onClick={() => onPredict(market)}>
-                            {held ? 'Add to prediction' : 'Predict'}
-                        </Button>
-                    )}
+                    <div className="flex items-center gap-1.5">
+                        {market.position_count > 0 && (
+                            <Button
+                                size="sm"
+                                variant="ghost"
+                                title="See who has predicted on this match"
+                                onClick={() => onShowBackers(market)}
+                            >
+                                <Users className="size-3.5 mr-1.5" />
+                                {market.position_count}
+                            </Button>
+                        )}
+                        {market.status === 'open' && canPredict && (
+                            <Button size="sm" variant="secondary" onClick={() => onPredict(market)}>
+                                {held ? 'Add to prediction' : 'Predict'}
+                            </Button>
+                        )}
+                    </div>
                 </div>
+
+                {market.outcome_reason && (
+                    <p className="text-[11px] text-amber-200/90 leading-relaxed">
+                        {market.outcome_reason}
+                    </p>
+                )}
 
                 {held && (
                     <div className="pt-2 border-t border-white/10 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">

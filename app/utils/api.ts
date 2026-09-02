@@ -4788,6 +4788,9 @@ export interface PredictionMarket {
     resolved_at: string | null
     settles_at: string | null
     settled_at: string | null
+    /** Plain-English "why nobody won", present only on a refund. */
+    outcome_reason?: string | null
+    result_key?: string | null
     team_a?: EventBracketTeamRef | null
     team_b?: EventBracketTeamRef | null
     your_position: PredictionPosition | null
@@ -5024,7 +5027,12 @@ export async function updateEventPredictionMarket(
     accessToken: string,
     slug: string,
     matchId: string,
-    input: { override?: PredictionOverride | null; settle_now?: boolean; liquidity_b?: number },
+    input: {
+        override?: PredictionOverride | null
+        settle_now?: boolean
+        unvoid?: boolean
+        liquidity_b?: number
+    },
 ): Promise<PredictionMarket> {
     const data = await apiGet<{ market: PredictionMarket }>(
         predictionsPath(slug, `/admin/markets/${encodeURIComponent(matchId)}`),
@@ -5116,6 +5124,27 @@ export async function fetchUpcomingPredictions(
 
 export interface PredictionLedgerRow extends PredictionLedgerEntry {
     user_id: string | null
+    alias: string | null
+}
+
+export interface PredictionBacker extends PredictionPosition {
+    user_id: string
+    alias: string | null
+    title: ActiveTitle | null
+    tag: string | null
+}
+
+export async function fetchEventPredictionPositions(
+    accessToken: string,
+    slug: string,
+    matchId: string,
+    signal?: AbortSignal,
+): Promise<{ items: PredictionBacker[]; totals: { a: number; b: number } }> {
+    return apiGetOr<{ items: PredictionBacker[]; totals: { a: number; b: number } }>(
+        predictionsPath(slug, `/markets/${encodeURIComponent(matchId)}/positions`),
+        { items: [], totals: { a: 0, b: 0 } },
+        { token: accessToken, signal },
+    )
 }
 
 export async function fetchEventPredictionLedger(
