@@ -195,7 +195,7 @@ export function PredictionsTab({ slug, userProfile, data: incoming, loaded, onRe
                     accessToken={accessToken}
                     market={betting}
                     config={data.config}
-                    balance={wallet.balance}
+                    wallet={wallet}
                     onClose={() => setBetting(null)}
                     onPlaced={onRefresh}
                 />

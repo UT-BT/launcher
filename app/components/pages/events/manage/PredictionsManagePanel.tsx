@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/app/components/ui/button'
@@ -9,18 +9,18 @@ import {
     type PredictionAdminMarkets, type PredictionConfig, type PredictionMarket,
 } from '@/app/utils/api'
 import { formatMatchTime } from '../bracket/bracketShared'
-import { MarketStatusChip, formatCoins, formatPercent } from '../predictions/predictionsShared'
-
-const NUMBER_FIELDS: Array<{ key: keyof PredictionConfig; label: string; hint: string }> = [
-    { key: 'initial_grant', label: 'Starting coins', hint: 'Granted once per player, no top-ups.' },
-    { key: 'max_stake_per_market', label: 'Max per match', hint: 'Keeps one big call from deciding the leaderboard.' },
-    { key: 'min_stake', label: 'Minimum stake', hint: '' },
-    { key: 'liquidity_b', label: 'Liquidity', hint: 'Higher moves the price less per prediction.' },
-    { key: 'settlement_hold_minutes', label: 'Payout hold (min)', hint: 'Results show first, coins move after this.' },
-    { key: 'close_buffer_seconds', label: 'Close early (sec)', hint: 'Shuts predictions before kick-off.' },
-]
+import {
+    MarketStatusChip, evenMarketPriceAfter, formatCoins, formatPercent, liquidityForPriceAfter,
+} from '../predictions/predictionsShared'
 
 const EMPTY: PredictionAdminMarkets = { items: [], unscheduled_open_count: 0, config: { enabled: false } }
+
+/** Named by what a big prediction visibly does, because "b = 1000" tells nobody anything. */
+const LIQUIDITY_PRESETS: Array<{ id: string; label: string; targetPrice: number; blurb: string }> = [
+    { id: 'steady', label: 'Steady', targetPrice: 0.56, blurb: 'Odds barely budge. Best when a lot of people will predict.' },
+    { id: 'balanced', label: 'Balanced', targetPrice: 0.62, blurb: 'A big prediction nudges the odds. Start here.' },
+    { id: 'volatile', label: 'Volatile', targetPrice: 0.72, blurb: 'Odds swing hard. Best for a small crowd, or for drama.' },
+]
 
 export function PredictionsManagePanel({ accessToken, slug }: { accessToken: string; slug: string }) {
     const [data, setData] = useState<PredictionAdminMarkets>(EMPTY)
@@ -57,14 +57,23 @@ export function PredictionsManagePanel({ accessToken, slug }: { accessToken: str
         }
     }, [load])
 
+    const grant = draft?.initial_grant ?? 0
+    const pct = draft?.max_stake_pct ?? 0
+    const liquidity = draft?.liquidity_b ?? 0
+
+    // The biggest prediction a player can make on day one, which is the stake every
+    // liquidity explanation below is written against.
+    const referenceStake = useMemo(
+        () => Math.max(1, Math.floor((grant * pct) / 100)),
+        [grant, pct],
+    )
+    const priceAfter = evenMarketPriceAfter(referenceStake, liquidity)
+
     if (!draft) {
         return <div className="p-4 text-sm text-muted-foreground">Loading prediction settings…</div>
     }
 
-    const save = () => run(
-        () => updateEventPredictionConfig(accessToken, slug, draft),
-        'Prediction settings saved.',
-    )
+    const set = (patch: Partial<PredictionConfig>) => setDraft({ ...draft, ...patch })
 
     return (
         <div className="space-y-4">
@@ -75,65 +84,97 @@ export function PredictionsManagePanel({ accessToken, slug }: { accessToken: str
                 </div>
             )}
 
-            <div className="p-4 rounded-lg border border-white/10 bg-card/40 space-y-4">
-                <label className="flex items-start gap-3 cursor-pointer">
-                    <input
-                        type="checkbox"
-                        checked={!!draft.enabled}
-                        onChange={event => setDraft({ ...draft, enabled: event.target.checked })}
-                        className="mt-1"
-                    />
-                    <span>
-                        <span className="text-sm font-semibold text-white">Predictions are running</span>
-                        <span className="block text-xs text-muted-foreground">
-                            Switching this off refunds every open prediction rather than abandoning it.
-                        </span>
-                    </span>
-                </label>
+            <div className="p-4 rounded-lg border border-white/10 bg-card/40 space-y-5">
+                <Toggle
+                    label="Predictions are running"
+                    hint="Switching this off refunds every open prediction rather than abandoning it."
+                    checked={!!draft.enabled}
+                    onChange={value => set({ enabled: value })}
+                />
 
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                    {NUMBER_FIELDS.map(field => (
-                        <label key={String(field.key)} className="flex flex-col gap-1">
-                            <span className="text-xs font-medium text-white/80">{field.label}</span>
-                            <input
-                                type="number"
-                                min={0}
-                                value={String(draft[field.key] ?? '')}
-                                onChange={event => setDraft({
-                                    ...draft,
-                                    [field.key]: Number(event.target.value),
-                                })}
-                                className="px-3 py-2 bg-card/50 border border-white/10 rounded-lg text-sm text-white tabular-nums focus:outline-none focus:border-accent-500/50"
-                            />
-                            {field.hint && <span className="text-[11px] text-muted-foreground">{field.hint}</span>}
-                        </label>
-                    ))}
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <NumberField
+                        label="Starting coins"
+                        hint="Handed out once, the first time a player opens Predictions. There are no top-ups, so this is the whole economy."
+                        value={draft.initial_grant}
+                        onChange={value => set({ initial_grant: value })}
+                    />
+                    <NumberField
+                        label="Max per match"
+                        suffix="%"
+                        hint={`Prevents users from betting significant portions of their wealth on one match. Share of what a player is worth right now, so it stays fair as they win or lose — ${pct}% is ${formatCoins(referenceStake)} coins at the starting balance.`}
+                        value={draft.max_stake_pct}
+                        onChange={value => set({ max_stake_pct: value })}
+                    />
+                    <NumberField
+                        label="Minimum stake"
+                        hint="The smallest prediction anyone can make. Keeps markets from filling with 1-coin noise."
+                        value={draft.min_stake}
+                        onChange={value => set({ min_stake: value })}
+                    />
+                    <NumberField
+                        label="Payout hold"
+                        suffix="min"
+                        hint="How long a finished match shows its result before coins actually move. Gives you a window to fix a mistyped score with nothing to claw back. Players see the outcome immediately either way."
+                        value={draft.settlement_hold_minutes}
+                        onChange={value => set({ settlement_hold_minutes: value })}
+                    />
+                    <NumberField
+                        label="Close early"
+                        suffix="sec"
+                        hint="Stops predictions this many seconds BEFORE the scheduled kick-off, instead of exactly on it. Set it if teams tend to start ahead of time. Zero closes on the dot."
+                        value={draft.close_buffer_seconds}
+                        onChange={value => set({ close_buffer_seconds: value })}
+                    />
                 </div>
 
-                <div className="flex flex-col gap-2">
+                <LiquidityField
+                    liquidity={liquidity}
+                    referenceStake={referenceStake}
+                    priceAfter={priceAfter}
+                    onChange={value => set({ liquidity_b: value })}
+                />
+
+                <div className="space-y-3 pt-1">
                     <Toggle
                         label="Players may back their own team"
-                        hint="They can never back the team they are playing against."
+                        hint="They can never back the team they are playing against, whichever way this is set."
                         checked={!!draft.roster_bets_allowed}
-                        onChange={value => setDraft({ ...draft, roster_bets_allowed: value })}
+                        onChange={value => set({ roster_bets_allowed: value })}
                     />
                     <Toggle
                         label="Void a market if a result lands while it is still open"
-                        hint="Stops anyone predicting a match they have already watched finish. Turning this off settles those matches normally."
+                        hint="Stops anyone predicting a match they have already watched finish. Leave this on unless you are sure every match gets a kick-off time or a Live flag before it is scored."
                         checked={!!draft.void_on_result_while_open}
-                        onChange={value => setDraft({ ...draft, void_on_result_while_open: value })}
+                        onChange={value => set({ void_on_result_while_open: value })}
                     />
                 </div>
 
-                <div className="flex items-center gap-2">
-                    <Button onClick={save} disabled={busy}>Save settings</Button>
+                <div className="flex flex-wrap items-center gap-2 pt-1">
                     <Button
-                        variant="ghost"
+                        onClick={() => run(
+                            () => updateEventPredictionConfig(accessToken, slug, draft),
+                            'Prediction settings saved.',
+                        )}
                         disabled={busy}
-                        onClick={() => run(() => syncEventPredictions(accessToken, slug), 'Markets reconciled.')}
                     >
-                        Reconcile markets
+                        Save settings
                     </Button>
+                    <div className="flex flex-col">
+                        <Button
+                            variant="ghost"
+                            disabled={busy}
+                            className="self-start"
+                            onClick={() => run(() => syncEventPredictions(accessToken, slug), 'Markets re-checked.')}
+                        >
+                            Re-check all markets
+                        </Button>
+                        <span className="text-[11px] text-muted-foreground">
+                            Re-reads every match and fixes any market that drifted — opens ones that should be open,
+                            closes ones past their time, settles finished ones. This runs by itself every couple of
+                            minutes; the button is for when you do not want to wait.
+                        </span>
+                    </div>
                 </div>
             </div>
 
@@ -163,6 +204,71 @@ export function PredictionsManagePanel({ accessToken, slug }: { accessToken: str
                     />
                 ))}
             </div>
+        </div>
+    )
+}
+
+function LiquidityField({ liquidity, referenceStake, priceAfter, onChange }: {
+    liquidity: number
+    referenceStake: number
+    priceAfter: number
+    onChange: (value: number) => void
+}) {
+    const active = LIQUIDITY_PRESETS.find(
+        preset => Math.abs(liquidityForPriceAfter(referenceStake, preset.targetPrice) - liquidity) < 60,
+    )
+
+    return (
+        <div className="p-3 rounded-lg border border-white/10 bg-card/30 space-y-3">
+            <div>
+                <div className="text-xs font-medium text-white/90">How much one prediction moves the odds</div>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                    Every market starts at 50/50 and the crowd moves it from there. This sets how far each prediction
+                    pushes it. Too sensitive and one player writes the odds; too stiff and the odds never react.
+                </p>
+            </div>
+
+            <div className="grid gap-2 sm:grid-cols-3">
+                {LIQUIDITY_PRESETS.map(preset => {
+                    const value = liquidityForPriceAfter(referenceStake, preset.targetPrice)
+
+                    return (
+                        <button
+                            key={preset.id}
+                            type="button"
+                            onClick={() => onChange(value)}
+                            className={cn(
+                                'p-2.5 rounded-lg border text-left transition-colors',
+                                active?.id === preset.id
+                                    ? 'border-accent-500/60 bg-accent-500/10'
+                                    : 'border-white/10 bg-card/50 hover:border-white/20',
+                            )}
+                        >
+                            <div className="text-sm font-semibold text-white">{preset.label}</div>
+                            <div className="text-[11px] text-muted-foreground">{preset.blurb}</div>
+                        </button>
+                    )
+                })}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+                <label className="text-[11px] text-muted-foreground">Exact value</label>
+                <input
+                    type="number"
+                    min={1}
+                    value={String(liquidity ?? '')}
+                    onChange={event => onChange(Number(event.target.value))}
+                    className="w-28 px-2 py-1 bg-card/50 border border-white/10 rounded text-sm text-white tabular-nums focus:outline-none focus:border-accent-500/50"
+                />
+                {!active && <span className="text-[11px] text-muted-foreground">Custom</span>}
+            </div>
+
+            <p className="text-xs text-white/80">
+                Right now, one maximum prediction of{' '}
+                <span className="tabular-nums font-semibold">{formatCoins(referenceStake)}</span> coins on an even match
+                moves it from <span className="tabular-nums">50%</span> to{' '}
+                <span className="tabular-nums font-semibold text-accent-300">{formatPercent(priceAfter)}</span>.
+            </p>
         </div>
     )
 }
@@ -222,6 +328,31 @@ function MarketRow({ market, busy, onAction }: {
     )
 }
 
+function NumberField({ label, hint, value, suffix, onChange }: {
+    label: string
+    hint: string
+    value: number | undefined
+    suffix?: string
+    onChange: (value: number) => void
+}) {
+    return (
+        <label className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-white/90">{label}</span>
+            <div className="flex items-center gap-1.5">
+                <input
+                    type="number"
+                    min={0}
+                    value={String(value ?? '')}
+                    onChange={event => onChange(Number(event.target.value))}
+                    className="w-full px-3 py-2 bg-card/50 border border-white/10 rounded-lg text-sm text-white tabular-nums focus:outline-none focus:border-accent-500/50"
+                />
+                {suffix && <span className="text-xs text-muted-foreground shrink-0">{suffix}</span>}
+            </div>
+            <span className="text-[11px] text-muted-foreground leading-relaxed">{hint}</span>
+        </label>
+    )
+}
+
 function Toggle({ label, hint, checked, onChange }: {
     label: string
     hint: string
@@ -229,7 +360,7 @@ function Toggle({ label, hint, checked, onChange }: {
     onChange: (value: boolean) => void
 }) {
     return (
-        <label className={cn('flex items-start gap-3 cursor-pointer')}>
+        <label className="flex items-start gap-3 cursor-pointer">
             <input
                 type="checkbox"
                 checked={checked}
@@ -238,7 +369,7 @@ function Toggle({ label, hint, checked, onChange }: {
             />
             <span>
                 <span className="text-sm text-white/90">{label}</span>
-                <span className="block text-xs text-muted-foreground">{hint}</span>
+                <span className="block text-[11px] text-muted-foreground leading-relaxed">{hint}</span>
             </span>
         </label>
     )

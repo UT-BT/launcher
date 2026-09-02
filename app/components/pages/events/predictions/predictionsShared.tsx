@@ -178,3 +178,27 @@ export function MatchOddsChip({ matchId }: { matchId: string | null | undefined 
         </span>
     )
 }
+
+
+/**
+ * Where an even market lands after one prediction of `stake`, given liquidity `b`.
+ *
+ * Same closed form the server prices with, at q_a = q_b = 0: buying `stake` moves
+ * the odds to X / (X + 1) where X = 2·e^(stake/b) − 1. It exists so a manager can
+ * be shown what a liquidity number actually DOES instead of guessing at it.
+ */
+export function evenMarketPriceAfter(stake: number, liquidity: number): number {
+    if (!(stake > 0) || !(liquidity > 0)) return 0.5
+
+    const x = 2 * Math.exp(stake / liquidity) - 1
+
+    return x / (x + 1)
+}
+
+/** The inverse: the liquidity that makes one `stake` prediction land on `price`. */
+export function liquidityForPriceAfter(stake: number, price: number): number {
+    const clamped = Math.min(0.95, Math.max(0.51, price))
+    const x = clamped / (1 - clamped)
+
+    return Math.round(stake / Math.log((x + 1) / 2))
+}

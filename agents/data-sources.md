@@ -202,6 +202,10 @@ read the context — do not add a second fetch.
 **Prices are 0–1 floats, not percentages**, and `price_a + price_b` is always 1.
 `formatPercent` is the only thing that should turn them into text.
 
+**The per-match cap is per player, and the server resolves it.** `wallet.max_stake`
+is already `max_stake_pct` applied to that player's net worth — do not recompute it
+from `config.max_stake_pct`, and do not assume it is the same for two players.
+
 **A payout is `Math.floor(shares)`.** `position.shares` is the payout the server locked
 in when the prediction was made and it never changes afterwards, whatever the price does.
 The UI must never recompute a payout from the current price — that number is history, not

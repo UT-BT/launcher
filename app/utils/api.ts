@@ -4748,7 +4748,7 @@ export interface PredictionConfig {
     enabled: boolean
     initial_grant?: number
     min_stake?: number
-    max_stake_per_market?: number
+    max_stake_pct?: number
     liquidity_b?: number
     close_buffer_seconds?: number
     settlement_hold_minutes?: number
@@ -4805,6 +4805,8 @@ export interface PredictionMarket {
 export interface PredictionWallet {
     id: string
     user_id: string
+    /** Resolved server-side: the cap is a share of this player's net worth. */
+    max_stake: number
     balance: number
     staked: number
     net_worth: number

@@ -6,6 +6,7 @@ import { ErrorBanner } from '@/app/components/pages/teams/teamsShared'
 import {
     eventErrorMessage, fetchEventPredictionQuote, placeEventPredictionBet,
     type EventSide, type PredictionConfig, type PredictionMarket, type PredictionQuote,
+    type PredictionWallet,
 } from '@/app/utils/api'
 import { formatCoins, formatMultiplier, formatPercent } from './predictionsShared'
 
@@ -17,12 +18,12 @@ interface BetModalProps {
     accessToken: string
     market: PredictionMarket
     config: PredictionConfig
-    balance: number
+    wallet: PredictionWallet
     onClose: () => void
     onPlaced: () => void
 }
 
-export function BetModal({ slug, accessToken, market, config, balance, onClose, onPlaced }: BetModalProps) {
+export function BetModal({ slug, accessToken, market, config, wallet, onClose, onPlaced }: BetModalProps) {
     const held = market.your_position
     const lockedSide = held?.side ?? null
     const [side, setSide] = useState<EventSide>(lockedSide ?? 'a')
@@ -33,10 +34,11 @@ export function BetModal({ slug, accessToken, market, config, balance, onClose, 
     const [busy, setBusy] = useState(false)
     const requestKey = useRef(`${market.id}-${Date.now()}-${Math.random().toString(36).slice(2)}`)
 
+    const balance = wallet.balance
     const minStake = config.min_stake ?? 1
-    const perMarketCap = config.max_stake_per_market ?? 0
+    const perMatchCap = wallet.max_stake
     const alreadyStaked = held?.stake ?? 0
-    const allowance = perMarketCap > 0 ? Math.max(0, perMarketCap - alreadyStaked) : balance
+    const allowance = perMatchCap > 0 ? Math.max(0, perMatchCap - alreadyStaked) : balance
     const ceiling = Math.min(balance, allowance)
 
     const stake = Number.parseInt(stakeText, 10)
@@ -91,11 +93,11 @@ export function BetModal({ slug, accessToken, market, config, balance, onClose, 
     const disabledReason = useMemo(() => {
         if (ceiling < minStake) {
             return allowance < minStake
-                ? `You have reached the ${formatCoins(perMarketCap)} limit for this match.`
+                ? `You have reached your ${formatCoins(perMatchCap)} limit for this match.`
                 : 'You do not have enough coins left.'
         }
         return null
-    }, [ceiling, minStake, allowance, perMarketCap])
+    }, [ceiling, minStake, allowance, perMatchCap])
 
     return (
         <Modal
@@ -155,7 +157,7 @@ export function BetModal({ slug, accessToken, market, config, balance, onClose, 
                     <div className="flex items-center justify-between text-xs text-muted-foreground">
                         <span>Stake</span>
                         <span className="tabular-nums">
-                            {formatCoins(balance)} available{perMarketCap > 0 && ` · ${formatCoins(allowance)} left on this match`}
+                            {formatCoins(balance)} available{perMatchCap > 0 && ` · ${formatCoins(allowance)} left on this match`}
                         </span>
                     </div>
                     <input
