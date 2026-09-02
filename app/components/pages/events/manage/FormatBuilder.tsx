@@ -118,7 +118,7 @@ function MatchFormatEditor({ defaults, onChange, base, errors, disabled }: {
     disabled?: boolean
 }) {
     const set = (patch: Partial<EventMatchDefaults>) => onChange({ ...defaults, ...patch })
-    const lengths = defaults.mode === 'all_maps' ? [1, 2, 3, 4, 5, 6, 7] : [1, 3, 5, 7]
+    const lengths = [1, 2, 3, 4, 5, 6, 7]
 
     return (
         <>
@@ -128,14 +128,15 @@ function MatchFormatEditor({ defaults, onChange, base, errors, disabled }: {
                     value={defaults.mode}
                     onChange={mode => set({
                         mode,
-                        best_of: mode === 'first_to' && defaults.best_of % 2 === 0 ? defaults.best_of + 1 : defaults.best_of,
                         decider: mode === 'all_maps' ? null : defaults.decider,
                     })}
                     options={[
                         { value: 'first_to' as const, label: 'Until it is won' },
                         { value: 'all_maps' as const, label: 'Every map is played' },
                     ]}
-                    hint={allowsDraws({ ...defaults }) ? 'A level series is a draw.' : 'There is always a winner.'}
+                    hint={allowsDraws({ ...defaults })
+                        ? 'An even number of maps can end level, so a group stage can draw.'
+                        : 'An odd number of maps always separates the two sides.'}
                     path={`${base}.mode`}
                     errors={errors}
                     disabled={disabled}
@@ -146,7 +147,9 @@ function MatchFormatEditor({ defaults, onChange, base, errors, disabled }: {
                     onChange={value => set({ best_of: Number(value) })}
                     options={lengths.map(n => ({
                         value: String(n),
-                        label: defaults.mode === 'all_maps' ? `${n} map${n === 1 ? '' : 's'}` : `Best of ${n}`,
+                        label: defaults.mode === 'all_maps'
+                            ? `${n} map${n === 1 ? '' : 's'}`
+                            : `Best of ${n} — first to ${Math.floor(n / 2) + 1}`,
                     }))}
                     path={`${base}.best_of`}
                     errors={errors}

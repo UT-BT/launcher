@@ -244,6 +244,7 @@ export function BracketPanel({ accessToken, slug, bracket, onBracketChange, onMa
                     slug={slug}
                     match={editing}
                     entrants={stages.find(stage => stage.id === editing.stage_id)?.entrants ?? []}
+                    drawsAllowed={stages.find(stage => stage.id === editing.stage_id)?.kind === 'groups'}
                     onClose={() => setEditing(null)}
                     onSaved={() => void refresh()}
                 />
