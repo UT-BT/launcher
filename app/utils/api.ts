@@ -3967,6 +3967,7 @@ export interface EventSummary {
 export interface EventDetail extends EventSummary {
     description: string | null
     rules: string | null
+    predictions_enabled?: boolean
 }
 
 export interface EventTeamMember {
@@ -4734,4 +4735,297 @@ export async function linkEventMatchMapCaps(
         { token: accessToken, method: 'PUT', body: { caps, keep_counts: keepCounts } },
     )
     return data.match
+}
+
+// ---------------------------------------------------------------- predictions
+
+export type PredictionMarketStatus = 'open' | 'closed' | 'resolved' | 'settled' | 'voided'
+export type PredictionOutcome = 'a' | 'b' | 'draw' | 'void'
+export type PredictionPositionStatus = 'open' | 'won' | 'lost' | 'refunded'
+export type PredictionOverride = 'open' | 'closed' | 'void'
+
+export interface PredictionConfig {
+    enabled: boolean
+    initial_grant?: number
+    min_stake?: number
+    max_stake_per_market?: number
+    liquidity_b?: number
+    close_buffer_seconds?: number
+    settlement_hold_minutes?: number
+    roster_bets_allowed?: boolean
+    void_on_result_while_open?: boolean
+    updated_at?: string | null
+}
+
+export interface PredictionPosition {
+    id: string
+    market_id: string
+    side: EventSide
+    stake: number
+    shares: number
+    payout: number
+    bet_count: number
+    status: PredictionPositionStatus
+    created_at?: string | null
+}
+
+export interface PredictionMarket {
+    id: string
+    match_id: string | null
+    stage_id: string | null
+    status: PredictionMarketStatus
+    outcome: PredictionOutcome | null
+    price_a: number
+    price_b: number
+    pool_stake: number
+    position_count: number
+    liquidity_b: number
+    manual_override: PredictionOverride | null
+    closes_at: string | null
+    closed_at: string | null
+    resolved_at: string | null
+    settles_at: string | null
+    settled_at: string | null
+    team_a?: EventBracketTeamRef | null
+    team_b?: EventBracketTeamRef | null
+    your_position: PredictionPosition | null
+    match?: {
+        id: string
+        round_no: number | null
+        round_label: string | null
+        ordinal: number | null
+        status: EventMatchStatus
+        scheduled_at: string | null
+        best_of: number | null
+        score_a: number | null
+        score_b: number | null
+    }
+}
+
+export interface PredictionWallet {
+    id: string
+    user_id: string
+    balance: number
+    staked: number
+    net_worth: number
+    granted: number
+    profit: number
+    bets_placed: number
+    positions_won: number
+    positions_lost: number
+    positions_refunded: number
+    rank: number | null
+}
+
+export interface PredictionStageRef {
+    id: string
+    stage_key: string
+    name: string
+    kind: string
+    ordinal: number
+}
+
+export interface PredictionsOverview {
+    enabled: boolean
+    config: PredictionConfig
+    stages: PredictionStageRef[]
+    markets: PredictionMarket[]
+    wallet: PredictionWallet | null
+}
+
+export interface PredictionQuote {
+    side: EventSide
+    stake: number
+    shares: number
+    payout: number
+    avg_price: number
+    price_before: number
+    price_after: number
+    remaining_allowance: number
+}
+
+export interface PredictionLedgerEntry {
+    id: string
+    kind: 'grant' | 'stake' | 'payout' | 'refund' | 'reversal'
+    amount: number
+    balance_after: number
+    market_id: string | null
+    settlement_seq: number | null
+    note: string | null
+    created_at: string | null
+}
+
+export interface PredictionHeldPosition extends PredictionPosition {
+    market: PredictionMarket
+}
+
+export interface PredictionWalletDetail {
+    claimed: boolean
+    wallet: PredictionWallet | null
+    positions: PredictionHeldPosition[]
+    ledger: PredictionLedgerEntry[]
+}
+
+export interface PredictionLeaderboardRow {
+    rank: number
+    user_id: string
+    alias: string | null
+    title: string | null
+    tag: string | null
+    balance: number
+    staked: number
+    net_worth: number
+    profit: number
+    bets_placed: number
+    positions_won: number
+    positions_lost: number
+    positions_refunded: number
+}
+
+export interface PredictionLeaderboard {
+    total: number
+    items: PredictionLeaderboardRow[]
+    your_rank: number | null
+}
+
+export interface PredictionBetResult {
+    bet: {
+        id: string
+        market_id: string
+        position_id: string
+        side: EventSide
+        stake: number
+        shares: number
+        payout: number
+        avg_price: number
+        price_a_before: number
+        price_a_after: number
+        created_at: string | null
+    }
+    market: PredictionMarket
+    wallet: PredictionWallet
+    replayed: boolean
+}
+
+export interface PredictionAdminMarkets {
+    items: PredictionMarket[]
+    unscheduled_open_count: number
+    config: PredictionConfig
+}
+
+const PREDICTIONS_OFF: PredictionsOverview = {
+    enabled: false,
+    config: { enabled: false },
+    stages: [],
+    markets: [],
+    wallet: null,
+}
+
+function predictionsPath(slug: string, suffix = ''): string {
+    return `/tournaments/${encodeURIComponent(slug)}/predictions${suffix}`
+}
+
+export async function fetchEventPredictions(accessToken: string, slug: string, signal?: AbortSignal): Promise<PredictionsOverview> {
+    return apiGetOr<PredictionsOverview>(predictionsPath(slug, '/'), PREDICTIONS_OFF, { token: accessToken, signal })
+}
+
+export async function fetchEventPredictionMarket(
+    accessToken: string,
+    slug: string,
+    matchId: string,
+    signal?: AbortSignal,
+): Promise<{ market: PredictionMarket; price_history: Array<{ created_at: string | null; price_a: number }> }> {
+    return apiGet(predictionsPath(slug, `/markets/${encodeURIComponent(matchId)}`), { token: accessToken, signal })
+}
+
+export async function fetchEventPredictionQuote(
+    accessToken: string,
+    slug: string,
+    matchId: string,
+    side: EventSide,
+    stake: number,
+    signal?: AbortSignal,
+): Promise<PredictionQuote> {
+    const usp = new URLSearchParams({ side, stake: String(stake) })
+    return apiGet<PredictionQuote>(
+        predictionsPath(slug, `/markets/${encodeURIComponent(matchId)}/quote?${usp.toString()}`),
+        { token: accessToken, signal },
+    )
+}
+
+export async function claimEventPredictionWallet(accessToken: string, slug: string): Promise<PredictionWallet> {
+    const data = await apiGet<{ wallet: PredictionWallet }>(predictionsPath(slug, '/wallet'), { token: accessToken, method: 'POST' })
+    return data.wallet
+}
+
+export async function fetchMyEventPredictions(accessToken: string, slug: string, signal?: AbortSignal): Promise<PredictionWalletDetail> {
+    return apiGetOr<PredictionWalletDetail>(
+        predictionsPath(slug, '/wallet'),
+        { claimed: false, wallet: null, positions: [], ledger: [] },
+        { token: accessToken, signal },
+    )
+}
+
+export async function placeEventPredictionBet(
+    accessToken: string,
+    slug: string,
+    matchId: string,
+    input: { side: EventSide; stake: number; idempotency_key?: string; max_slippage?: number },
+): Promise<PredictionBetResult> {
+    return apiGet<PredictionBetResult>(
+        predictionsPath(slug, `/markets/${encodeURIComponent(matchId)}/bets`),
+        { token: accessToken, method: 'POST', body: input },
+    )
+}
+
+export async function fetchEventPredictionLeaderboard(
+    accessToken: string,
+    slug: string,
+    params: { limit?: number; offset?: number } = {},
+    signal?: AbortSignal,
+): Promise<PredictionLeaderboard> {
+    const usp = new URLSearchParams()
+    if (params.limit !== undefined) usp.set('limit', String(params.limit))
+    if (params.offset !== undefined) usp.set('offset', String(params.offset))
+    const qs = usp.toString()
+    return apiGetOr<PredictionLeaderboard>(
+        predictionsPath(slug, `/leaderboard${qs ? `?${qs}` : ''}`),
+        { total: 0, items: [], your_rank: null },
+        { token: accessToken, signal },
+    )
+}
+
+export async function fetchEventPredictionConfig(accessToken: string, slug: string, signal?: AbortSignal): Promise<PredictionConfig> {
+    const data = await apiGet<{ config: PredictionConfig }>(predictionsPath(slug, '/admin/config'), { token: accessToken, signal })
+    return data.config
+}
+
+export async function updateEventPredictionConfig(accessToken: string, slug: string, input: Partial<PredictionConfig>): Promise<PredictionConfig> {
+    const data = await apiGet<{ config: PredictionConfig }>(predictionsPath(slug, '/admin/config'), { token: accessToken, method: 'PUT', body: input })
+    return data.config
+}
+
+export async function fetchEventPredictionAdminMarkets(accessToken: string, slug: string, signal?: AbortSignal): Promise<PredictionAdminMarkets> {
+    return apiGetOr<PredictionAdminMarkets>(
+        predictionsPath(slug, '/admin/markets'),
+        { items: [], unscheduled_open_count: 0, config: { enabled: false } },
+        { token: accessToken, signal },
+    )
+}
+
+export async function updateEventPredictionMarket(
+    accessToken: string,
+    slug: string,
+    matchId: string,
+    input: { override?: PredictionOverride | null; settle_now?: boolean; liquidity_b?: number },
+): Promise<PredictionMarket> {
+    const data = await apiGet<{ market: PredictionMarket }>(
+        predictionsPath(slug, `/admin/markets/${encodeURIComponent(matchId)}`),
+        { token: accessToken, method: 'PATCH', body: input },
+    )
+    return data.market
+}
+
+export async function syncEventPredictions(accessToken: string, slug: string): Promise<{ changed: number }> {
+    return apiGetOr<{ changed: number }>(predictionsPath(slug, '/admin/sync'), { changed: 0 }, { token: accessToken, method: 'POST' })
 }

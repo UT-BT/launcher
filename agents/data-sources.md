@@ -11,9 +11,9 @@ not_here:
   - "IPC channels (window.conveyor.*) → lib/conveyor/README.md"
   - "how UI state persists in localStorage → state-patterns.md"
   - "the procedure to wire a new endpoint into the UI → skill: consume-api-data"
-sections: [backend-api, errors, admin-api, event-brackets, changing-a-map-screenshot, cap-detail-page-endpoints, world-records-page-endpoints, team-maps-and-team-runs, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites, account-state-and-badges]
+sections: [backend-api, errors, admin-api, event-brackets, event-predictions, changing-a-map-screenshot, cap-detail-page-endpoints, world-records-page-endpoints, team-maps-and-team-runs, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites, account-state-and-badges]
 last_verified: 2026-09-02
-verify_against: [app/utils/api.ts, app/utils/chartBuckets.ts, app/components/pages/admin/components/controls.tsx, app/utils/patreon.ts, app/utils/server-utils.ts, app/hooks/useServerFavorites.ts, app/components/pages/events/manage/formatFields.tsx, app/components/pages/events/bracket/bracketShared.tsx]
+verify_against: [app/utils/api.ts, app/utils/chartBuckets.ts, app/components/pages/admin/components/controls.tsx, app/utils/patreon.ts, app/utils/server-utils.ts, app/hooks/useServerFavorites.ts, app/components/pages/events/manage/formatFields.tsx, app/components/pages/events/bracket/bracketShared.tsx, app/components/pages/events/predictions/predictionsShared.tsx, app/components/pages/events/predictions/PredictionsTab.tsx]
 ---
 
 # Data sources
@@ -182,6 +182,53 @@ Format validation returns one 400 whose message lists every problem as
 
 Attaching a format to an event **copies** it, so editing a shared template later
 never reshapes an event that is already running.
+
+### Event predictions
+
+Coin-backed prediction markets on bracket matches, one market per match. Fetchers are
+the `…EventPrediction…` family in `app/utils/api.ts`; the UI lives in
+`app/components/pages/events/predictions/`.
+
+**The tab only exists when the API says so.** `EventDetail.predictions_enabled` is the
+single flag — the Predictions tab is filtered out of `BASE_TABS` when it is false, and
+no prediction request is made at all. Don't probe an endpoint to work this out.
+
+**One fetch, two consumers.** `EventDetailPage` owns `fetchEventPredictions` and passes
+the result both to `PredictionsTab` and to `PredictionOddsProvider`, which is what lets
+`MatchCard` show a live odds chip anywhere in the bracket without any view threading
+markets down to it. That mirrors `EventRosterProvider`. If you add a third consumer,
+read the context — do not add a second fetch.
+
+**Prices are 0–1 floats, not percentages**, and `price_a + price_b` is always 1.
+`formatPercent` is the only thing that should turn them into text.
+
+**A payout is `Math.floor(shares)`.** `position.shares` is the payout the server locked
+in when the prediction was made and it never changes afterwards, whatever the price does.
+The UI must never recompute a payout from the current price — that number is history, not
+a live quote.
+
+**Quotes are indicative and reserve nothing.** `fetchEventPredictionQuote` is debounced
+in `BetModal` and re-priced by the server on submit, so the confirmed payout can differ
+from the previewed one if somebody else predicts in between.
+
+**Timestamps in prediction payloads carry an offset (`+00:00`); bracket payloads do
+not.** `parseApiInstant` in `predictionsShared.tsx` handles both by treating a bare
+`YYYY-MM-DD HH:MM:SS` as UTC. Use it rather than `new Date(...)` for anything a countdown
+depends on — `closes_at` is a real deadline and an hours-off render is a lie about it.
+
+**Writes go to `api.utbt.net`, never the gateway**, like every other authenticated
+mutation the launcher makes.
+
+**Empty is a legitimate answer.** The list, leaderboard and wallet fetchers use
+`apiGetOr` with a fully-formed fallback, because a disabled event, an unclaimed wallet
+and an empty leaderboard all answer with no `data` key, and `apiGet` would surface that
+as `Invalid response format from server` in front of the user.
+
+**Manager surface** (`can_manage_bracket` only, from `MyEventStatus`): the settings and
+per-market controls in `manage/PredictionsManagePanel.tsx`, plus `manage/OpenMarketWarning.tsx`
+in the match editor. That warning exists because scoring a match whose market is still
+open refunds every prediction on it — it is correct behaviour and the quietest way to
+lose a round, so the manager is told before they score and given a one-click close.
 
 ### Medal Hunt (`fetchMedalHunt`)
 

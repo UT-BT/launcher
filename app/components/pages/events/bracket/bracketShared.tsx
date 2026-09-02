@@ -4,6 +4,7 @@ import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { MapNavLink } from '@/app/components/shared/MapNavLink'
 import { TeamName } from '../TeamRoster'
+import { MatchOddsChip } from '../predictions/predictionsShared'
 import type {
     EventBracketGroup, EventBracketStage, EventBracketTeamRef, EventEntrantStatus, EventFormatSpec,
     EventMatch, EventMatchMap,
@@ -340,6 +341,7 @@ export function MatchCard({ match, showMaps = true, showCaps = false, onClick, o
 
             {(match.status !== 'pending' || match.scheduled_at || footer) && (
                 <div className="flex flex-wrap items-center gap-2 pt-1">
+                    <MatchOddsChip matchId={match.id} />
                     {match.status !== 'pending' && <MatchStatusChip match={match} />}
                     {match.scheduled_at && match.status !== 'complete' && (
                         <span className="text-[11px] text-muted-foreground">{formatMatchTime(match.scheduled_at)}</span>
