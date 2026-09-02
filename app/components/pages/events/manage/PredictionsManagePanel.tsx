@@ -74,15 +74,10 @@ export function PredictionsManagePanel({ accessToken, slug, onRefresh }: {
     const pct = draft?.max_stake_pct ?? 0
     const liquidity = draft?.liquidity_b ?? 0
 
-    // The biggest prediction a player can make on day one, which is the stake every
-    // liquidity explanation below is written against.
     const referenceStake = useMemo(
         () => Math.floor((grant * pct) / 100),
         [grant, pct],
     )
-    // Everything below is derived from the biggest prediction a player can make.
-    // With no starting coins or no percentage there is no such thing, and the
-    // presets would solve against a stake of zero and hand back nonsense.
     const economySet = grant > 0 && pct > 0 && referenceStake > 0
     const priceAfter = evenMarketPriceAfter(referenceStake, liquidity)
 

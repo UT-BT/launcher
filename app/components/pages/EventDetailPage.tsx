@@ -89,9 +89,6 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
         }
     }, [browseToken, eventSlug])
 
-    // Both the Predictions tab and the odds chips on the bracket read this, so it
-    // is fetched once here rather than twice in two sibling tabs. Gated on the
-    // event flag: an event without predictions makes no request at all.
     const loadPredictions = useCallback(async (enabled: boolean) => {
         if (!enabled) {
             setPredictions(null)

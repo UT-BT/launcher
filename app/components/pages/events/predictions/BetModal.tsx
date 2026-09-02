@@ -63,10 +63,8 @@ export function BetModal({ slug, accessToken, market, config, wallet, onClose, o
     const [quoting, setQuoting] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [busy, setBusy] = useState(false)
-    // Scoped to this modal AND to what is being predicted. Keyed on the modal
-    // alone, a lost response followed by the user changing side or stake and
-    // resubmitting would replay the FIRST bet and report it as the new one — the
-    // server matches the key without looking at side or stake.
+    // Side and stake are appended at submit: the server matches on the key
+    // alone, so a modal-scoped one would replay the first bet after an edit.
     const attempt = useRef(`${market.id}-${Date.now()}-${Math.random().toString(36).slice(2)}`)
 
     const balance = wallet.balance
@@ -135,9 +133,6 @@ export function BetModal({ slug, accessToken, market, config, wallet, onClose, o
         return null
     }, [ceiling, minStake, allowance, perMatchCap])
 
-    // How much of the return the stake's own price impact costs. At the current
-    // odds a stake would return 1/price if it moved nothing; it always moves
-    // something, and that gap is the whole reason a big prediction pays less.
     const impact = quote && quote.stake > 0 && quote.payout > 0
         ? (1 / quote.price_before) - (quote.payout / quote.stake)
         : 0

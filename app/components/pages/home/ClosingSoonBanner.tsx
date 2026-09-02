@@ -33,8 +33,6 @@ export function ClosingSoonBanner({ accessToken }: { accessToken: string }) {
         return () => controller.abort()
     }, [accessToken])
 
-    // Re-checked against the live clock so a market that runs out while the page
-    // is open drops off instead of counting down to nothing.
     const live = items.filter(market => {
         const closes = market.closes_at ? new Date(market.closes_at).getTime() : 0
         return closes > now

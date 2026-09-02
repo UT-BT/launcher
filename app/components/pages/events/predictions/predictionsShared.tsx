@@ -99,8 +99,7 @@ export function outcomeLabel(market: PredictionMarket): string | null {
     return winner ? `${winner} won` : 'Settled'
 }
 
-// Deliberately not `Chip` from bracketShared: that module imports the odds chip
-// below, and importing back would close the loop.
+// Not `Chip` from bracketShared: it imports the odds chip below, closing a loop.
 const CHIP_BASE =
     'shrink-0 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border'
 

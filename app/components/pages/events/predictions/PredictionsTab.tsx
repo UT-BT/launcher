@@ -88,10 +88,7 @@ export function PredictionsTab({
     const [view, setView] = useNavState<PredictionsView>('event.predictionsView', 'markets')
     const now = useNow()
 
-    // Odds move whenever anybody else predicts, and a manager closing a market
-    // has to show up here without a page reload. Re-reads on open and then keeps
-    // itself honest; the interval dies with the tab, so it only runs while this
-    // is the tab being looked at.
+    // The interval dies with the tab, so it only runs while this tab is open.
     useEffect(() => {
         onRefresh()
         const timer = setInterval(onRefresh, REFRESH_MS)
