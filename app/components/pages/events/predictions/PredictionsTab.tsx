@@ -167,7 +167,7 @@ export function PredictionsTab({
         )
     }
 
-    if (data.bracket_published === false) {
+    if (data.awaiting_bracket) {
         return (
             <div className="p-6 flex flex-col items-center gap-2 text-center">
                 <p className="text-sm text-white/90">Waiting on the bracket.</p>

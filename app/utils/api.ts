@@ -4834,8 +4834,11 @@ export interface PredictionStageRef {
 
 export interface PredictionsOverview {
     enabled: boolean
-    /** Enabled but unpublished means configured with nothing to price yet. */
-    bracket_published?: boolean
+    /**
+     * Set up, but with nothing this viewer may price yet. Not the same as the
+     * bracket being unpublished — a manager sees markets players cannot.
+     */
+    awaiting_bracket?: boolean
     config: PredictionConfig
     stages: PredictionStageRef[]
     markets: PredictionMarket[]
