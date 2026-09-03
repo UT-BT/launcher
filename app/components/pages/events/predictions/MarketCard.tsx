@@ -137,7 +137,7 @@ export function MarketCard({
                         {showInsights
                             ? <ChevronDown className="size-3 shrink-0" />
                             : <ChevronRight className="size-3 shrink-0" />}
-                        Form &amp; head-to-head
+                        Form and Head-to-Head
                     </button>
 
                     {showInsights && (
