@@ -98,15 +98,15 @@ export function PredictionsManagePanel({ accessToken, slug, onRefresh }: {
 
             <div className="p-4 rounded-lg border border-white/10 bg-card/40 space-y-5">
                 <Toggle
-                    label="Predictions are running"
+                    label="Predictions Enabled"
                     hint="Switching this off refunds every open prediction rather than abandoning it."
                     checked={!!draft.enabled}
                     onChange={value => set({ enabled: value })}
                 />
 
                 <Toggle
-                    label="Staff only, for now"
-                    hint="Markets still open, close and settle exactly as they will for players — this only hides the Predictions tab from everyone but staff, cup admins and this event's managers. Turn it off to go live."
+                    label="Staff Visibility Only"
+                    hint="Markets still open, close and settle exactly as they will for players. This hides the Predictions tab from everyone but staff that manage this event. Turn it off to go live."
                     checked={!!draft.staff_only}
                     onChange={value => set({ staff_only: value })}
                 />
@@ -114,7 +114,7 @@ export function PredictionsManagePanel({ accessToken, slug, onRefresh }: {
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     <NumberField
                         label="Starting coins"
-                        hint="Handed out once, the first time a player opens Predictions. There are no top-ups, so this is the whole economy."
+                        hint="Given the first time a player opens Predictions for this event."
                         value={draft.initial_grant}
                         onChange={value => set({ initial_grant: value })}
                     />
@@ -122,28 +122,28 @@ export function PredictionsManagePanel({ accessToken, slug, onRefresh }: {
                         label="Max per match"
                         suffix="%"
                         hint={PER_MATCH_HINT + (economySet
-                            ? ` — ${pct}% is ${formatCoins(referenceStake)} coins at the starting balance.`
+                            ? ` (${pct}% is ${formatCoins(referenceStake)} coins at the starting balance.)`
                             : '.')}
                         value={draft.max_stake_pct}
                         onChange={value => set({ max_stake_pct: value })}
                     />
                     <NumberField
                         label="Minimum stake"
-                        hint="The smallest prediction anyone can make. Keeps markets from filling with 1-coin noise."
+                        hint="The smallest prediction that can be made."
                         value={draft.min_stake}
                         onChange={value => set({ min_stake: value })}
                     />
                     <NumberField
                         label="Payout hold"
                         suffix="min"
-                        hint="How long a finished match shows its result before coins actually move. Gives you a window to fix a mistyped score with nothing to claw back. Players see the outcome immediately either way."
+                        hint="How long a finished match shows its result before coins actually move. Gives you a window to fix a mistyped score. Players see the outcome immediately either way."
                         value={draft.settlement_hold_minutes}
                         onChange={value => set({ settlement_hold_minutes: value })}
                     />
                     <NumberField
                         label="Close early"
                         suffix="sec"
-                        hint="Stops predictions this many seconds BEFORE the scheduled kick-off, instead of exactly on it. Set it if teams tend to start ahead of time. Zero closes on the dot."
+                        hint="Stops predictions this many seconds BEFORE the scheduled kick-off, instead of exactly on it."
                         value={draft.close_buffer_seconds}
                         onChange={value => set({ close_buffer_seconds: value })}
                     />
@@ -211,8 +211,7 @@ export function PredictionsManagePanel({ accessToken, slug, onRefresh }: {
                     <AlertTriangle className="size-4 shrink-0 mt-0.5" />
                     <span>
                         The bracket is not published, so no markets exist yet. A market only opens on a match
-                        players can see. Publish it under the Bracket tab and every drawn match gets one
-                        straight away.
+                        players can see.
                     </span>
                 </div>
             )}
@@ -223,7 +222,7 @@ export function PredictionsManagePanel({ accessToken, slug, onRefresh }: {
                     <span>
                         {data.unscheduled_open_count} open {data.unscheduled_open_count === 1 ? 'market has' : 'markets have'}
                         {' '}no scheduled close time. Give those matches a kick-off time, or close them by hand before
-                        scoring — otherwise scoring them refunds every prediction on them.
+                        scoring, otherwise scoring them refunds every prediction on them.
                     </span>
                 </div>
             )}
@@ -267,8 +266,8 @@ function LiquidityField({ liquidity, referenceStake, priceAfter, ready, onChange
             <div>
                 <div className="text-xs font-medium text-white/90">How much one prediction moves the odds</div>
                 <p className="text-[11px] text-muted-foreground mt-0.5">
-                    Every market starts at 50/50 and the crowd moves it from there. This sets how far each prediction
-                    pushes it. Too sensitive and one player writes the odds; too stiff and the odds never react.
+                    Every market starts at 50/50 and the bettors moves it from there. This sets how far each prediction
+                    pushes it. Too sensitive and one player manipulates the odds, too stiff and the odds never react to bets.
                 </p>
             </div>
 
@@ -367,12 +366,12 @@ function MarketRow({ market, busy, onAction }: {
                 )}
                 {market.status === 'resolved' && (
                     <Button size="sm" variant="secondary" disabled={disabled} onClick={() => onAction({ settle_now: true })}>
-                        Pay out now
+                        Pay Out
                     </Button>
                 )}
                 {market.status === 'voided' && (
                     <Button size="sm" variant="ghost" disabled={disabled} onClick={() => onAction({ unvoid: true })}>
-                        Undo refund
+                        Undo Refund
                     </Button>
                 )}
                 {market.status !== 'voided' && market.status !== 'settled' && (

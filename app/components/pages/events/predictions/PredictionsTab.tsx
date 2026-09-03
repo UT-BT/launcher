@@ -36,10 +36,10 @@ const REFRESH_MS = 30_000
 
 /** What a predictor is scanning for, in the order they care about it. */
 const SECTIONS: Array<{ id: string; title: string; blurb?: string }> = [
-    { id: 'closing', title: 'Closing soon' },
-    { id: 'open', title: 'Open for predictions' },
-    { id: 'awaiting', title: 'Under way', blurb: 'Closed to new predictions, waiting on a result.' },
-    { id: 'paying', title: 'Paying out' },
+    { id: 'closing', title: 'Closing Soon' },
+    { id: 'open', title: 'Open for Predictions' },
+    { id: 'awaiting', title: 'Underway', blurb: 'Closed to new predictions, waiting for a result.' },
+    { id: 'paying', title: 'Paying Out' },
     { id: 'done', title: 'Finished' },
 ]
 
@@ -210,7 +210,7 @@ export function PredictionsTab({
                             Claim {formatCoins(grant)} coins for this event
                         </div>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                            Back a team on any upcoming match. One grant per player, no top-ups.
+                            Bet on a team for any upcoming match. You can only claim coins once per event, so use them wisely.
                         </p>
                     </div>
                     <Button onClick={claim} disabled={claiming}>
