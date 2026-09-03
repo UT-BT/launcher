@@ -231,6 +231,11 @@ when nothing is closing. The API only returns markets with a real close time ins
 the window, and the banner re-filters against its own clock so a market that expires
 while the page is open drops off rather than counting down to nothing.
 
+**`awaiting_bracket` is the only thing that should gate the waiting screen.** It
+means "set up, but nothing you may price yet" — which is not the same as a bracket
+being unpublished, because a manager sees markets players cannot. Gating on a
+publish flag instead once made the tab discard markets the server had sent it.
+
 **Markets sort by `closes_at`, not by bracket position.** The only question on this
 page is what can still be predicted on and how long is left. A market with no close
 time sorts last; it is not upcoming in any useful sense.

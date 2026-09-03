@@ -207,12 +207,12 @@ export function PredictionsManagePanel({ accessToken, slug, onRefresh }: {
             </div>
 
             {draft.enabled && data.bracket_published === false && (
-                <div className="p-3 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-200 text-sm flex gap-2">
+                <div className="p-3 rounded-lg border border-sky-500/30 bg-sky-500/10 text-sky-200 text-sm flex gap-2">
                     <AlertTriangle className="size-4 shrink-0 mt-0.5" />
                     <span>
-                        The bracket is not published, so no markets exist yet. A market only opens on a match
-                        players can see. Publish it under the Bracket tab and every drawn match gets one
-                        straight away.
+                        The bracket is not published, so only staff and this event&apos;s managers can reach these
+                        markets. They are open and running either way &mdash; publish the bracket under the Bracket
+                        tab when you want players in.
                     </span>
                 </div>
             )}
