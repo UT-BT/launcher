@@ -5,14 +5,14 @@ read_when:
   - "adding or changing a helper in app/utils/api.ts"
   - "needing an avatar, map screenshot, region flag, or map-download URL"
   - "wiring map/server favorites or Patreon tier lookups"
-keywords: [api.ts, fetch, endpoint, accessToken, avatar, MapThumbnail, favorites, patreon, downloadMapZip, world_records, caps]
+keywords: [api.ts, fetch, endpoint, accessToken, avatar, MapThumbnail, favorites, patreon, downloadMapZip, world_records, caps, predictions, draw, odds]
 provides: "the client-side API contract the launcher consumes + asset URLs + favorites/patreon sync models"
 not_here:
   - "IPC channels (window.conveyor.*) → lib/conveyor/README.md"
   - "how UI state persists in localStorage → state-patterns.md"
   - "the procedure to wire a new endpoint into the UI → skill: consume-api-data"
 sections: [backend-api, errors, admin-api, event-brackets, event-predictions, changing-a-map-screenshot, cap-detail-page-endpoints, world-records-page-endpoints, team-maps-and-team-runs, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites, account-state-and-badges]
-last_verified: 2026-09-02
+last_verified: 2026-09-03
 verify_against: [app/utils/api.ts, app/utils/chartBuckets.ts, app/components/pages/admin/components/controls.tsx, app/utils/patreon.ts, app/utils/server-utils.ts, app/hooks/useServerFavorites.ts, app/components/pages/events/manage/formatFields.tsx, app/components/pages/events/bracket/bracketShared.tsx, app/components/pages/events/predictions/predictionsShared.tsx, app/components/pages/events/predictions/PredictionsTab.tsx]
 ---
 
@@ -201,17 +201,66 @@ the result both to `PredictionsTab` and to `PredictionOddsProvider`, which is wh
 markets down to it. That mirrors `EventRosterProvider`. If you add a third consumer,
 read the context — do not add a second fetch.
 
-**Prices are 0–1 floats, not percentages**, and `price_a + price_b` is always 1.
-`formatPercent` is the only thing that should turn them into text.
+**A market has two outcomes or three, and the server decides which.**
+`market.draws_allowed` is the flag: a group match races to three maps of four and
+can finish level, so the draw is a third thing to back and `price_draw` is a
+number; a knockout has to produce a winner and answers `price_draw: null`. Use
+`sidesOf(market)` from `predictionsShared.tsx` rather than writing `['a', 'b']`
+anywhere — that array is why the draw was invisible on every surface it was
+hard-coded into.
+
+`PredictionSide` (`'a' | 'draw' | 'b'`) is deliberately NOT the shared `EventSide`,
+which the bracket also uses and where a draw is a result rather than something to
+pick. Widening `EventSide` would quietly make `draw` a legal value in map picks and
+bracket slots.
+
+**Prices are 0–1 floats, not percentages**, and they sum to 1 across the outcomes
+the market offers — two of them or three. `formatPercent` is the only thing that
+should turn them into text.
+
+**Markets do not open at 50/50.** The server sets the opening odds from the event
+seeding and from results so far, and `opening_price_a|b|draw` is what the market
+opened at. Two consequences for the client: a price is never evidence that anybody
+has bet, and `priceDrift` is the only honest way to show that a market has moved.
+There is no rating in any payload and there is no client surface for one.
+
+**A price can move with nobody betting.** A result in one match re-rates two teams,
+which re-prices every later match either of them plays. `price_history` marks those
+points `source: 'model'` so a chart can say why the line jumped. It does **not**
+mean a standing position changed — see the payout rule below.
+
+**`evenMarketPriceAfter` is a yardstick, not a market.** It is still the server's
+closed form at zero shares and no prior, and its test still pins it to the server's
+number, but no real market opens even any more. It exists so the manage panel can
+compare two liquidity settings against a reference that does not move as the cup is
+played. Do not use it to describe an actual match.
 
 **The per-match cap is per player, and arrives resolved.** Use `wallet.max_stake` as
 given: it is specific to that player and to that moment, so it must not be derived from
 anything in `config`, cached across players, or assumed to hold after a settlement.
 
+**A prediction is paid at the price the board showed, not an average.** `quote.avg_price`
+equals `quote.price_before`, so "your odds" and "board odds" are one number — do not
+render them as two. The board still moves for the next player. One prediction beats
+splitting the same total, which is the opposite of what LMSR alone would do.
+
+**Send `max_slippage` on every bet.** The quote reserves nothing, so somebody else can
+move the market between the quote and the button. `BetModal` sends the quoted price plus
+a small tolerance and re-quotes when the server refuses; without it a player silently
+buys at whatever the price became.
+
 **A payout is `Math.floor(shares)`.** `position.shares` is the payout the server locked
 in when the prediction was made and it never changes afterwards, whatever the price does.
 The UI must never recompute a payout from the current price — that number is history, not
-a live quote.
+a live quote. This matters more than it used to: a market re-prices when a team is
+re-rated, so a held position routinely sits at odds nobody could buy at now, and
+that is correct rather than a bug to paper over.
+
+**One outcome per match, forever.** A player who holds a position can only add to
+it; the bet slip locks the other tiles off `your_position.side`. With three outcomes
+that is stricter, not looser. A draw settles as a WIN for its backers on a market
+that offered one and as a refund on one that did not, which is why `outcomeLabel`
+branches on `draws_allowed` rather than on the outcome alone.
 
 **Quotes are indicative and reserve nothing.** `fetchEventPredictionQuote` is debounced
 in `BetModal` and re-priced by the server on submit, so the confirmed payout can differ
@@ -242,6 +291,10 @@ mutation the launcher makes.
 `apiGetOr` with a fully-formed fallback, because a disabled event, an unclaimed wallet
 and an empty leaderboard all answer with no `data` key, and `apiGet` would surface that
 as `Invalid response format from server` in front of the user.
+
+**There is no ratings surface here, by decision.** The strengths behind the opening
+odds are readable only through a manager API call. Do not add a screen for them, and
+do not add a client-side model that tries to reconstruct one.
 
 **Manager surface**, gated on the `can_manage_bracket` field of `MyEventStatus`: the
 settings and per-market controls in `manage/PredictionsManagePanel.tsx`, and

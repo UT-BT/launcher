@@ -13,6 +13,7 @@ import { formatMatchTime } from '../bracket/bracketShared'
 import { PredictionLedgerPanel } from './PredictionLedgerPanel'
 import {
     MarketStatusChip, evenMarketPriceAfter, formatCoins, formatPercent, liquidityForPriceAfter,
+    priceOf, sidesOf,
 } from '../predictions/predictionsShared'
 
 const PER_MATCH_HINT =
@@ -266,8 +267,9 @@ function LiquidityField({ liquidity, referenceStake, priceAfter, ready, onChange
             <div>
                 <div className="text-xs font-medium text-white/90">How much one prediction moves the odds</div>
                 <p className="text-[11px] text-muted-foreground mt-0.5">
-                    Every market starts at 50/50 and the bettors moves it from there. This sets how far each prediction
-                    pushes it. Too sensitive and one player manipulates the odds, too stiff and the odds never react to bets.
+                    A market opens at the odds the seeding and the results so far imply, and each prediction pushes it
+                    from there. This sets how hard. Too sensitive and one player moves the odds on their own, too stiff
+                    and the crowd can never disagree with the opening price.
                 </p>
             </div>
 
@@ -310,10 +312,12 @@ function LiquidityField({ liquidity, referenceStake, priceAfter, ready, onChange
 
             {ready ? (
                 <p className="text-xs text-white/80">
-                    Right now, one maximum prediction of{' '}
-                    <span className="tabular-nums font-semibold">{formatCoins(referenceStake)}</span> coins on an even
-                    match moves it from <span className="tabular-nums">50%</span> to{' '}
-                    <span className="tabular-nums font-semibold text-accent-300">{formatPercent(priceAfter)}</span>.
+                    Measured against an even two-way match, because that is the one yardstick that does not move as the
+                    cup is played: one maximum prediction of{' '}
+                    <span className="tabular-nums font-semibold">{formatCoins(referenceStake)}</span> coins would take
+                    it from <span className="tabular-nums">50%</span> to{' '}
+                    <span className="tabular-nums font-semibold text-accent-300">{formatPercent(priceAfter)}</span>. A
+                    lopsided market moves less for the same coins.
                 </p>
             ) : (
                 <p className="text-xs text-amber-300/90">
@@ -342,7 +346,7 @@ function MarketRow({ market, busy, onAction }: {
                     {market.team_a?.name || 'TBD'} <span className="text-muted-foreground">vs</span> {market.team_b?.name || 'TBD'}
                 </div>
                 <div className="text-xs text-muted-foreground tabular-nums">
-                    {formatPercent(market.price_a)} / {formatPercent(market.price_b)}
+                    {sidesOf(market).map(side => formatPercent(priceOf(market, side))).join(' / ')}
                     {' · '}{formatCoins(market.pool_stake)} staked
                     {' · '}{market.position_count} predictions
                     {market.closes_at ? ` · closes ${formatMatchTime(market.closes_at)}` : ' · no close time'}
