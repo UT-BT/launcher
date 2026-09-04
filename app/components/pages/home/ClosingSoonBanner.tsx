@@ -5,7 +5,7 @@ import { NavLink } from '@/app/components/navigation/NavLink'
 import { useNavigation } from '@/app/components/navigation/NavigationContext'
 import { fetchUpcomingPredictions, type UpcomingPredictionMarket } from '@/app/utils/api'
 import {
-    formatCountdown, formatPercent, useNow,
+    formatCountdown, formatPercent, priceOf, sidesOf, useNow,
 } from '@/app/components/pages/events/predictions/predictionsShared'
 
 const WITHIN_HOURS = 3
@@ -69,7 +69,7 @@ export function ClosingSoonBanner({ accessToken }: { accessToken: string }) {
                                 {market.team_b?.name || 'TBD'}
                             </span>
                             <span className="shrink-0 tabular-nums text-muted-foreground">
-                                {formatPercent(market.price_a)}/{formatPercent(market.price_b)}
+                                {sidesOf(market).map(side => formatPercent(priceOf(market, side))).join('/')}
                             </span>
                             <span className={cn(
                                 'shrink-0 tabular-nums font-medium',

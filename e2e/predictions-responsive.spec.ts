@@ -17,8 +17,13 @@ function market(id: string, overrides: Record<string, unknown> = {}) {
         stage_id: 'stage-1',
         status: 'open',
         outcome: null,
+        draws_allowed: true,
         price_a: 0.62,
-        price_b: 0.38,
+        price_b: 0.11,
+        price_draw: 0.27,
+        opening_price_a: 0.58,
+        opening_price_b: 0.14,
+        opening_price_draw: 0.28,
         pool_stake: 12500,
         position_count: 9,
         liquidity_b: 9110,
@@ -187,7 +192,7 @@ test('expanding a matchup keeps the page within the viewport', async ({ page, is
 
     await page.goto(`/events/${SLUG}?tab=predictions`)
 
-    const toggle = page.getByRole('button', { name: /form & head-to-head/i }).first()
+    const toggle = page.getByRole('button', { name: /form and head-to-head/i }).first()
     await expect(toggle).toBeVisible()
     await toggle.click()
 

@@ -2,13 +2,14 @@ import { useState } from 'react'
 import { ChevronDown, ChevronRight, Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/app/components/ui/button'
-import type { EventSide, PredictionMarket } from '@/app/utils/api'
+import type { PredictionMarket, PredictionSide } from '@/app/utils/api'
 import { TeamName } from '../TeamRoster'
 import { formatMatchTime } from '../bracket/bracketShared'
 import { MatchupInsights } from './MatchupInsights'
 import {
-    CoinAmount, MarketStatusChip, PriceBar, formatCoins, formatCountdown, formatMultiplier,
-    formatPercent, outcomeLabel,
+    CoinAmount, MarketStatusChip, SIDE_BAR_STYLES, SIDE_TEXT_STYLES, formatCoins, formatCountdown,
+    formatMultiplier, formatOdds, formatPercent, openingPriceOf, outcomeLabel, priceDrift, priceOf,
+    sideLabel,
 } from './predictionsShared'
 
 interface MarketCardProps {
@@ -50,9 +51,9 @@ export function MarketCard({
                     <MarketStatusChip market={market} />
                 </div>
 
-                <div className="flex flex-col gap-1.5">
+                <div className="flex flex-col gap-0.5">
                     <SideRow market={market} side="a" />
-                    <PriceBar priceA={market.price_a} />
+                    {market.draws_allowed && <SideRow market={market} side="draw" />}
                     <SideRow market={market} side="b" />
                 </div>
 
@@ -102,7 +103,7 @@ export function MarketCard({
                         <span className="text-muted-foreground">
                             You backed{' '}
                             <span className="text-white/90 font-medium">
-                                {held.side === 'a' ? market.team_a?.name || 'Side A' : market.team_b?.name || 'Side B'}
+                                {sideLabel(market, held.side)}
                             </span>
                         </span>
                         <span className="text-muted-foreground tabular-nums">
@@ -156,28 +157,52 @@ export function MarketCard({
     )
 }
 
-function SideRow({ market, side }: { market: PredictionMarket; side: EventSide }) {
-    const team = side === 'a' ? market.team_a : market.team_b
-    const price = side === 'a' ? market.price_a : market.price_b
+function SideRow({ market, side }: { market: PredictionMarket; side: PredictionSide }) {
+    const team = side === 'a' ? market.team_a : side === 'b' ? market.team_b : null
+    const price = priceOf(market, side)
     const backed = market.your_position?.side === side
     const won = market.outcome === side
+    const drift = market.status === 'open' ? priceDrift(market, side) : null
+    const opened = market.status === 'open' ? openingPriceOf(market, side) : null
+    const share = Math.min(100, Math.max(0, price * 100))
+    const nameClass = cn(
+        'truncate text-sm',
+        won ? 'text-emerald-300 font-semibold' : backed ? 'text-white font-medium' : 'text-white/80',
+    )
 
     return (
-        <div className="flex items-center justify-between gap-2 min-w-0">
-            <TeamName
-                teamId={team?.id}
-                className={cn(
-                    'truncate text-sm',
-                    won ? 'text-emerald-300 font-semibold' : backed ? 'text-white font-medium' : 'text-white/80',
-                )}
-            >
-                {team?.name || 'TBD'}
-            </TeamName>
-            <span className={cn(
-                'shrink-0 text-sm tabular-nums',
-                side === 'a' ? 'text-accent-300' : 'text-red-300/90',
-            )}>
-                {formatPercent(price)}
+        <div className={cn(
+            'relative flex items-center gap-2 min-w-0 rounded pl-2 pr-2.5 py-1 overflow-hidden',
+            backed && 'ring-1 ring-inset ring-white/20',
+        )}>
+            <span
+                aria-hidden
+                className={cn('absolute inset-y-0 left-0', SIDE_BAR_STYLES[side], won ? 'opacity-45' : 'opacity-20')}
+                style={{ width: `${share}%` }}
+            />
+
+            <span className="relative min-w-0 flex-1">
+                {side === 'draw'
+                    ? <span className={nameClass}>Draw</span>
+                    : <TeamName teamId={team?.id} className={nameClass}>{team?.name || 'TBD'}</TeamName>}
+            </span>
+
+            <span className="relative shrink-0 flex items-baseline gap-1.5 tabular-nums">
+                <span className={cn(
+                    'w-7 text-right text-[10px]',
+                    drift ? (drift > 0 ? 'text-emerald-300/70' : 'text-red-300/60') : 'text-transparent',
+                )}>
+                    {drift ? `${drift > 0 ? '+' : ''}${drift}` : '0'}
+                </span>
+                <span
+                    className={cn('w-12 text-right text-sm font-semibold', SIDE_TEXT_STYLES[side])}
+                    title={opened !== null ? `Opened at ${formatOdds(opened)}` : undefined}
+                >
+                    {formatOdds(price)}
+                </span>
+                <span className="w-10 text-right text-[11px] text-muted-foreground">
+                    ({formatPercent(price)})
+                </span>
             </span>
         </div>
     )

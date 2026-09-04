@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 import { cn } from '@/lib/utils'
 import type {
     PredictionMarket, PredictionMarketStatus, PredictionOutcome, PredictionPositionStatus,
+    PredictionSide,
 } from '@/app/utils/api'
 
 export const MARKET_STATUS_LABELS: Record<PredictionMarketStatus, string> = {
@@ -45,6 +46,31 @@ export function formatSigned(value: number): string {
 export function formatPercent(price: number | null | undefined): string {
     return `${Math.round((price ?? 0) * 100)}%`
 }
+
+/**
+ * Decimal odds: what one staked coin comes back as in total if this side wins,
+ * which is the inverse of its price.
+ *
+ * The primary number on every prediction surface. A price is what the market
+ * believes; the odds are what the player is actually being offered, and only one
+ * of those is a decision.
+ *
+ * `price_floor` bounds the opening prior, NOT a traded price, so a heavily backed
+ * market can leave the other side at odds of several hundred. Long odds drop the
+ * decimals and then cap, because the number stops being a decision long before it
+ * stops growing and the column it sits in is fixed width.
+ */
+export function formatOdds(price: number | null | undefined): string {
+    if (!price || price <= 0) return '—'
+
+    const odds = 1 / price
+
+    if (odds >= 1000) return '999+'
+    if (odds >= 100) return String(Math.round(odds))
+
+    return odds.toFixed(2)
+}
+
 
 export function formatMultiplier(stake: number, payout: number): string {
     if (!stake || !payout) return '—'
@@ -90,11 +116,52 @@ export function formatCountdown(target: string | null | undefined, now: number):
     return `${seconds}s`
 }
 
+/**
+ * Which outcomes this market offers. A group match races to three maps of four
+ * and can finish level, so the draw is a third thing to back; a knockout has to
+ * produce a winner and offers two.
+ */
+export function sidesOf(market: PredictionMarket): PredictionSide[] {
+    return market.draws_allowed ? ['a', 'draw', 'b'] : ['a', 'b']
+}
+
+export function priceOf(market: PredictionMarket, side: PredictionSide): number {
+    if (side === 'a') return market.price_a
+    if (side === 'b') return market.price_b
+    return market.price_draw ?? 0
+}
+
+export function openingPriceOf(market: PredictionMarket, side: PredictionSide): number | null {
+    if (side === 'a') return market.opening_price_a ?? null
+    if (side === 'b') return market.opening_price_b ?? null
+    return market.opening_price_draw ?? null
+}
+
+export function sideLabel(market: PredictionMarket, side: PredictionSide): string {
+    if (side === 'draw') return 'Draw'
+    if (side === 'a') return market.team_a?.name || 'Side A'
+    return market.team_b?.name || 'Side B'
+}
+
+export const SIDE_TEXT_STYLES: Record<PredictionSide, string> = {
+    a: 'text-accent-300',
+    draw: 'text-sky-300',
+    b: 'text-red-300/90',
+}
+
+export const SIDE_BAR_STYLES: Record<PredictionSide, string> = {
+    a: 'bg-accent-400/80',
+    draw: 'bg-sky-400/70',
+    b: 'bg-red-500/50',
+}
+
 export function outcomeLabel(market: PredictionMarket): string | null {
     const outcome: PredictionOutcome | null = market.outcome
     if (!outcome) return null
-    if (outcome === 'draw') return 'Draw — everyone refunded'
     if (outcome === 'void') return 'Void — everyone refunded'
+    if (outcome === 'draw') {
+        return market.draws_allowed ? 'Drawn — the draw paid out' : 'Draw — everyone refunded'
+    }
     const winner = outcome === 'a' ? market.team_a?.name : market.team_b?.name
     return winner ? `${winner} won` : 'Settled'
 }
@@ -111,14 +178,14 @@ export function MarketStatusChip({ market }: { market: PredictionMarket }) {
     )
 }
 
-export function PriceBar({ priceA, className }: { priceA: number; className?: string }) {
-    const percent = Math.min(100, Math.max(0, Math.round(priceA * 100)))
+/**
+ * How far this market has moved from the odds it opened at, in points of
+ * probability. Null while the server has sent no opening price.
+ */
+export function priceDrift(market: PredictionMarket, side: PredictionSide): number | null {
+    const opened = openingPriceOf(market, side)
 
-    return (
-        <div className={cn('h-1.5 w-full rounded-full overflow-hidden bg-red-500/25 flex', className)}>
-            <div className="h-full bg-accent-400/80" style={{ width: `${percent}%` }} />
-        </div>
-    )
+    return opened === null ? null : Math.round((priceOf(market, side) - opened) * 100)
 }
 
 export function CoinAmount({ value, className, signed }: {
@@ -166,25 +233,39 @@ export function useMatchOdds(matchId: string | null | undefined): PredictionMark
     return matchId ? lookup.get(matchId) ?? null : null
 }
 
+/**
+ * Three numbers on a bracket card is already tight, so the percent signs go and
+ * the middle number is the draw when there is one.
+ */
 export function MatchOddsChip({ matchId }: { matchId: string | null | undefined }) {
     const market = useMatchOdds(matchId)
 
     if (!market || market.status !== 'open') return null
 
+    const parts = sidesOf(market).map(side => Math.round(priceOf(market, side) * 100))
+
     return (
-        <span className={cn(CHIP_BASE, 'bg-accent-500/10 text-accent-300 border-accent-500/25 tabular-nums')}>
-            {formatPercent(market.price_a)} / {formatPercent(market.price_b)}
+        <span
+            className={cn(CHIP_BASE, 'bg-accent-500/10 text-accent-300 border-accent-500/25 tabular-nums')}
+            title={sidesOf(market).map(side => (
+                `${sideLabel(market, side)} ${formatPercent(priceOf(market, side))}`
+            )).join(' · ')}
+        >
+            {parts.join(' · ')}
         </span>
     )
 }
 
 
 /**
- * Where an even market lands after one prediction of `stake`, given liquidity `b`.
+ * Where a HYPOTHETICAL even two-way market lands after one prediction of `stake`,
+ * given liquidity `b`.
  *
- * Same closed form the server prices with, at q_a = q_b = 0: buying `stake` moves
- * the odds to X / (X + 1) where X = 2·e^(stake/b) − 1. It exists so a manager can
- * be shown what a liquidity number actually DOES instead of guessing at it.
+ * A real market opens on the odds the event has decided, not on a coin flip, so
+ * this is a yardstick rather than a prediction about any particular match. It
+ * exists so a manager can be shown what a liquidity number actually DOES —
+ * comparing two settings needs a fixed reference, and 50/50 is the only one that
+ * does not move as the cup is played.
  */
 export function evenMarketPriceAfter(stake: number, liquidity: number): number {
     if (!(stake > 0) || !(liquidity > 0)) return 0.5
@@ -194,7 +275,7 @@ export function evenMarketPriceAfter(stake: number, liquidity: number): number {
     return x / (x + 1)
 }
 
-/** The inverse: the liquidity that makes one `stake` prediction land on `price`. */
+/** The inverse: the liquidity that moves that reference market to `price`. */
 export function liquidityForPriceAfter(stake: number, price: number): number {
     const clamped = Math.min(0.95, Math.max(0.51, price))
     const x = clamped / (1 - clamped)

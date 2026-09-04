@@ -4741,6 +4741,17 @@ export async function linkEventMatchMapCaps(
 
 export type PredictionMarketStatus = 'open' | 'closed' | 'resolved' | 'settled' | 'voided'
 export type PredictionOutcome = 'a' | 'b' | 'draw' | 'void'
+/**
+ * What you can back. Deliberately NOT the shared `EventSide`, which the bracket
+ * also uses and where a draw is a result rather than a thing to pick.
+ */
+export type PredictionSide = 'a' | 'draw' | 'b'
+/** A number per outcome. `Record` is taken in this file by the cap record type. */
+export interface PredictionBoard {
+    a?: number
+    draw?: number
+    b?: number
+}
 export type PredictionPositionStatus = 'open' | 'won' | 'lost' | 'refunded'
 export type PredictionOverride = 'open' | 'closed' | 'void'
 
@@ -4756,13 +4767,26 @@ export interface PredictionConfig {
     void_on_result_while_open?: boolean
     /** Markets still run while this is on; it only gates who can see them. */
     staff_only?: boolean
+    /**
+     * Opening odds are set server-side from the seeding and from results so far.
+     * The ratings behind them are never sent to a client and there is no field
+     * here for one; these settings only say how the server should behave.
+     */
+    rating_enabled?: boolean
+    rating_base?: number
+    rating_spread?: number
+    rating_scale?: number
+    rating_k?: number
+    prior_weight?: number
+    price_floor?: number
+    reanchor_open_markets?: boolean
     updated_at?: string | null
 }
 
 export interface PredictionPosition {
     id: string
     market_id: string
-    side: EventSide
+    side: PredictionSide
     stake: number
     shares: number
     payout: number
@@ -4777,8 +4801,20 @@ export interface PredictionMarket {
     stage_id: string | null
     status: PredictionMarketStatus
     outcome: PredictionOutcome | null
+    /** Whether this match can finish level, and so whether the draw is backable. */
+    draws_allowed: boolean
     price_a: number
     price_b: number
+    /** Null on a match that cannot be drawn. */
+    price_draw: number | null
+    /**
+     * What the market opened at, before anybody predicted on it. Prices move as
+     * predictions come in AND when a team's later matches are re-priced, so this
+     * is the only way to show that a market has drifted.
+     */
+    opening_price_a?: number | null
+    opening_price_b?: number | null
+    opening_price_draw?: number | null
     pool_stake: number
     position_count: number
     liquidity_b: number
@@ -4843,13 +4879,16 @@ export interface PredictionsOverview {
 }
 
 export interface PredictionQuote {
-    side: EventSide
+    side: PredictionSide
     stake: number
     shares: number
     payout: number
     avg_price: number
     price_before: number
     price_after: number
+    /** Every outcome's price, so the whole board can be shown moving at once. */
+    board_before?: PredictionBoard
+    board_after?: PredictionBoard
     remaining_allowance: number
 }
 
@@ -4903,13 +4942,15 @@ export interface PredictionBetResult {
         id: string
         market_id: string
         position_id: string
-        side: EventSide
+        side: PredictionSide
         stake: number
         shares: number
         payout: number
         avg_price: number
         price_a_before: number
         price_a_after: number
+        price_draw_before?: number | null
+        price_draw_after?: number | null
         created_at: string | null
     }
     market: PredictionMarket
@@ -4945,15 +4986,26 @@ export async function fetchEventPredictionMarket(
     slug: string,
     matchId: string,
     signal?: AbortSignal,
-): Promise<{ market: PredictionMarket; price_history: Array<{ created_at: string | null; price_a: number }> }> {
+): Promise<{ market: PredictionMarket; price_history: PredictionPricePoint[] }> {
     return apiGet(predictionsPath(slug, `/markets/${encodeURIComponent(matchId)}`), { token: accessToken, signal })
+}
+
+/**
+ * A point on a market's price line. `model` points are the odds moving with
+ * nobody betting, because a team was re-rated by a result in some other match.
+ */
+export interface PredictionPricePoint {
+    created_at: string | null
+    price_a: number
+    price_draw?: number | null
+    source?: 'prediction' | 'model'
 }
 
 export async function fetchEventPredictionQuote(
     accessToken: string,
     slug: string,
     matchId: string,
-    side: EventSide,
+    side: PredictionSide,
     stake: number,
     signal?: AbortSignal,
 ): Promise<PredictionQuote> {
@@ -4981,7 +5033,7 @@ export async function placeEventPredictionBet(
     accessToken: string,
     slug: string,
     matchId: string,
-    input: { side: EventSide; stake: number; idempotency_key?: string; max_slippage?: number },
+    input: { side: PredictionSide; stake: number; idempotency_key?: string; max_slippage?: number },
 ): Promise<PredictionBetResult> {
     return apiGet<PredictionBetResult>(
         predictionsPath(slug, `/markets/${encodeURIComponent(matchId)}/bets`),
@@ -5142,7 +5194,8 @@ export interface PredictionPositionsResponse {
     visible: boolean
     reason?: string
     items: PredictionBacker[]
-    totals: { a: number; b: number }
+    /** Keyed by the outcomes this market offers, so `draw` is absent on a knockout. */
+    totals: PredictionBoard
 }
 
 export interface PredictionBacker extends PredictionPosition {
@@ -5160,7 +5213,7 @@ export async function fetchEventPredictionPositions(
 ): Promise<PredictionPositionsResponse> {
     return apiGetOr<PredictionPositionsResponse>(
         predictionsPath(slug, `/markets/${encodeURIComponent(matchId)}/positions`),
-        { visible: false, items: [], totals: { a: 0, b: 0 } },
+        { visible: false, items: [], totals: {} },
         { token: accessToken, signal },
     )
 }

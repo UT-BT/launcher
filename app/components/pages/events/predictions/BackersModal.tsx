@@ -4,9 +4,12 @@ import { Modal } from '@/app/components/ui/modal'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import {
     fetchEventPredictionPositions,
-    type EventSide, type PredictionBacker, type PredictionMarket,
+    type PredictionBacker, type PredictionBoard, type PredictionMarket,
 } from '@/app/utils/api'
-import { CoinAmount, PriceBar, formatCoins, formatMultiplier, formatPercent } from './predictionsShared'
+import {
+    CoinAmount, SIDE_BAR_STYLES, SIDE_TEXT_STYLES, formatCoins, formatMultiplier,
+    formatPercent, priceOf, sideLabel, sidesOf,
+} from './predictionsShared'
 
 /**
  * Who is behind the price. A market's whole claim is that it aggregates what
@@ -21,7 +24,7 @@ export function BackersModal({ slug, accessToken, market, viewerId, onClose }: {
     onClose: () => void
 }) {
     const [backers, setBackers] = useState<PredictionBacker[]>([])
-    const [totals, setTotals] = useState({ a: 0, b: 0 })
+    const [totals, setTotals] = useState<PredictionBoard>({})
     const [hidden, setHidden] = useState<string | null>(null)
     const [loading, setLoading] = useState(true)
 
@@ -41,9 +44,10 @@ export function BackersModal({ slug, accessToken, market, viewerId, onClose }: {
         return () => controller.abort()
     }, [accessToken, slug, market.match_id])
 
+    const sides = sidesOf(market)
     const teamA = market.team_a?.name || 'Side A'
     const teamB = market.team_b?.name || 'Side B'
-    const pool = totals.a + totals.b
+    const pool = sides.reduce((sum, side) => sum + (totals[side] ?? 0), 0)
 
     return (
         <Modal
@@ -55,14 +59,22 @@ export function BackersModal({ slug, accessToken, market, viewerId, onClose }: {
         >
             <div className="flex flex-col gap-4">
                 <div className="flex flex-col gap-1.5">
-                    <div className="flex items-center justify-between gap-2 text-sm">
-                        <span className="truncate text-accent-300">{teamA}</span>
-                        <span className="truncate text-red-300/90">{teamB}</span>
+                    <div className="h-1.5 w-full rounded-full overflow-hidden bg-white/5 flex">
+                        {sides.map(side => (
+                            <div
+                                key={side}
+                                className={cn('h-full', SIDE_BAR_STYLES[side])}
+                                style={{ width: `${pool > 0 ? ((totals[side] ?? 0) / pool) * 100 : 100 / sides.length}%` }}
+                            />
+                        ))}
                     </div>
-                    <PriceBar priceA={pool > 0 ? totals.a / pool : 0.5} />
-                    <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground tabular-nums">
-                        <span>{formatCoins(totals.a)} staked</span>
-                        <span>{formatCoins(totals.b)} staked</span>
+                    <div className="flex items-center justify-between gap-2 text-xs tabular-nums">
+                        {sides.map(side => (
+                            <span key={side} className={cn('truncate', SIDE_TEXT_STYLES[side])}>
+                                {sideLabel(market, side)}{' '}
+                                <span className="text-muted-foreground">{formatCoins(totals[side] ?? 0)}</span>
+                            </span>
+                        ))}
                     </div>
                 </div>
 
@@ -76,7 +88,7 @@ export function BackersModal({ slug, accessToken, market, viewerId, onClose }: {
                     </p>
                 ) : (
                     <div className="flex flex-col">
-                        {(['a', 'b'] as EventSide[]).map(side => {
+                        {sides.map(side => {
                             const rows = backers.filter(row => row.side === side)
                             if (rows.length === 0) return null
 
@@ -85,9 +97,9 @@ export function BackersModal({ slug, accessToken, market, viewerId, onClose }: {
                                     <div className="flex items-center justify-between gap-2">
                                         <span className={cn(
                                             'text-xs font-bold uppercase tracking-wider',
-                                            side === 'a' ? 'text-accent-300' : 'text-red-300/90',
+                                            SIDE_TEXT_STYLES[side],
                                         )}>
-                                            {side === 'a' ? teamA : teamB}
+                                            {sideLabel(market, side)}
                                         </span>
                                         <span className="text-[11px] text-muted-foreground tabular-nums">
                                             {rows.length} {rows.length === 1 ? 'backer' : 'backers'}
@@ -128,7 +140,7 @@ export function BackersModal({ slug, accessToken, market, viewerId, onClose }: {
                 <p className="text-[11px] text-muted-foreground leading-relaxed">
                     The multiplier is what each person locked in when they predicted, so earlier backers on a side
                     that has since become the favourite show a better return than the odds now offer. Current odds:{' '}
-                    {formatPercent(market.price_a)} / {formatPercent(market.price_b)}.
+                    {sides.map(side => `${sideLabel(market, side)} ${formatPercent(priceOf(market, side))}`).join(', ')}.
                 </p>
                 )}
             </div>

@@ -5,13 +5,27 @@ import { Modal } from '@/app/components/ui/modal'
 import { ErrorBanner } from '@/app/components/pages/teams/teamsShared'
 import {
     eventErrorMessage, fetchEventPredictionQuote, placeEventPredictionBet,
-    type EventSide, type PredictionConfig, type PredictionMarket, type PredictionQuote,
-    type PredictionWallet,
+    type PredictionConfig, type PredictionMarket, type PredictionQuote,
+    type PredictionSide, type PredictionWallet,
 } from '@/app/utils/api'
-import { formatCoins, formatMultiplier, formatPercent } from './predictionsShared'
+import {
+    SIDE_TEXT_STYLES, formatCoins, formatOdds, formatPercent, priceOf, sideLabel, sidesOf,
+} from './predictionsShared'
 
 const QUOTE_DEBOUNCE_MS = 250
 const PRESET_FRACTIONS = [25, 50]
+
+/**
+ * How much worse than the quote a price may get before the server refuses the
+ * prediction outright.
+ *
+ * The quote reserves nothing, so somebody else can move the market between it
+ * being read and the button being pressed -- and on a cheap outcome one bet can
+ * move it a long way. Without a cap the second player silently buys at the new
+ * price. A small tolerance rather than none, because re-pricing at submit is
+ * exact and a zero-tolerance cap would reject on floating-point dust.
+ */
+const SLIPPAGE_TOLERANCE = 0.02
 
 interface BetModalProps {
     slug: string
@@ -57,10 +71,11 @@ function stakePresets(ceiling: number, minStake: number): Array<{ label: string;
 export function BetModal({ slug, accessToken, market, config, wallet, onClose, onPlaced }: BetModalProps) {
     const held = market.your_position
     const lockedSide = held?.side ?? null
-    const [side, setSide] = useState<EventSide>(lockedSide ?? 'a')
+    const [side, setSide] = useState<PredictionSide>(lockedSide ?? 'a')
     const [stakeText, setStakeText] = useState('')
     const [quote, setQuote] = useState<PredictionQuote | null>(null)
     const [quoting, setQuoting] = useState(false)
+    const [staleQuote, setStaleQuote] = useState(0)
     const [error, setError] = useState<string | null>(null)
     const [busy, setBusy] = useState(false)
     // Side and stake are appended at submit: the server matches on the key
@@ -78,6 +93,7 @@ export function BetModal({ slug, accessToken, market, config, wallet, onClose, o
     const stake = Number.parseInt(stakeText, 10)
     const stakeValid = Number.isInteger(stake) && stake >= minStake && stake <= ceiling
 
+    const sides = sidesOf(market)
     const teamA = market.team_a?.name || 'Side A'
     const teamB = market.team_b?.name || 'Side B'
 
@@ -100,7 +116,7 @@ export function BetModal({ slug, accessToken, market, config, wallet, onClose, o
             controller.abort()
             clearTimeout(timer)
         }
-    }, [accessToken, slug, market.match_id, side, stake, stakeValid])
+    }, [accessToken, slug, market.match_id, side, stake, stakeValid, staleQuote])
 
     const submit = useCallback(async () => {
         if (!stakeValid || !market.match_id) return
@@ -111,18 +127,20 @@ export function BetModal({ slug, accessToken, market, config, wallet, onClose, o
                 side,
                 stake,
                 idempotency_key: `${attempt.current}-${side}-${stake}`,
+                ...(quote ? { max_slippage: quote.avg_price * (1 + SLIPPAGE_TOLERANCE) } : {}),
             })
             onPlaced()
             onClose()
         } catch (e) {
             setError(eventErrorMessage(e))
+            setStaleQuote(nonce => nonce + 1)
         } finally {
             setBusy(false)
         }
-    }, [accessToken, slug, market.match_id, side, stake, stakeValid, onPlaced, onClose])
+    }, [accessToken, slug, market.match_id, side, stake, stakeValid, quote, onPlaced, onClose])
 
-    const sideName = side === 'a' ? teamA : teamB
-    const price = side === 'a' ? market.price_a : market.price_b
+    const sideName = sideLabel(market, side)
+    const price = priceOf(market, side)
 
     const disabledReason = useMemo(() => {
         if (ceiling < minStake) {
@@ -132,10 +150,6 @@ export function BetModal({ slug, accessToken, market, config, wallet, onClose, o
         }
         return null
     }, [ceiling, minStake, allowance, perMatchCap])
-
-    const impact = quote && quote.stake > 0 && quote.payout > 0
-        ? (1 / quote.price_before) - (quote.payout / quote.stake)
-        : 0
 
     return (
         <Modal
@@ -148,7 +162,7 @@ export function BetModal({ slug, accessToken, market, config, wallet, onClose, o
                 <div className="p-4 border-t border-border bg-muted/50 flex items-center justify-end gap-2">
                     <Button variant="outline" onClick={onClose} disabled={busy}>Cancel</Button>
                     <Button onClick={submit} disabled={!stakeValid || busy || !!disabledReason}>
-                        {busy ? 'Placing…' : `Back ${sideName}`}
+                        {busy ? 'Placing…' : side === 'draw' ? 'Back the draw' : `Back ${sideName}`}
                     </Button>
                 </div>
             }
@@ -158,16 +172,16 @@ export function BetModal({ slug, accessToken, market, config, wallet, onClose, o
 
                 {lockedSide && (
                     <div className="p-3 rounded-lg border border-sky-500/30 bg-sky-500/10 text-sky-200 text-sm">
-                        You are already backing <span className="font-semibold">{lockedSide === 'a' ? teamA : teamB}</span> on
-                        this match with {formatCoins(alreadyStaked)} coins. You can add to that side, but the other side is
+                        You are already backing <span className="font-semibold">{sideLabel(market, lockedSide)}</span> on
+                        this match with {formatCoins(alreadyStaked)} coins. You can add to that, but the other outcomes are
                         closed to you here.
                     </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-2">
-                    {(['a', 'b'] as EventSide[]).map(option => {
-                        const name = option === 'a' ? teamA : teamB
-                        const optionPrice = option === 'a' ? market.price_a : market.price_b
+                <div className={cn('grid gap-2', sides.length === 3 ? 'grid-cols-3' : 'grid-cols-2')}>
+                    {sides.map(option => {
+                        const name = sideLabel(market, option)
+                        const optionPrice = priceOf(market, option)
                         const locked = !!lockedSide && lockedSide !== option
 
                         return (
@@ -185,7 +199,14 @@ export function BetModal({ slug, accessToken, market, config, wallet, onClose, o
                                 )}
                             >
                                 <div className="text-sm font-semibold text-white truncate">{name}</div>
-                                <div className="text-xs text-muted-foreground tabular-nums">{formatPercent(optionPrice)} chance</div>
+                                <div className="flex items-baseline gap-1.5">
+                                    <span className={cn('text-lg font-bold tabular-nums', SIDE_TEXT_STYLES[option])}>
+                                        {formatOdds(optionPrice)}
+                                    </span>
+                                    <span className="text-[11px] text-muted-foreground tabular-nums">
+                                        {formatPercent(optionPrice)}
+                                    </span>
+                                </div>
                             </button>
                         )
                     })}
@@ -231,39 +252,53 @@ export function BetModal({ slug, accessToken, market, config, wallet, onClose, o
                 </div>
 
                 <div className="p-3 rounded-lg border border-white/10 bg-card/40 flex flex-col gap-1.5 text-sm">
-                    <Row label="Odds now" value={formatPercent(price)} />
+                    <Row label="Your odds" value={formatOdds(price)} />
                     <Row
-                        label="If they win, you get"
+                        label={side === 'draw' ? 'If it is drawn, you get' : 'If they win, you get'}
                         value={quote ? `${formatCoins(quote.payout)} coins` : '—'}
                         emphasis
                         muted={quoting}
                     />
-                    <Row label="Return" value={quote ? formatMultiplier(quote.stake, quote.payout) : '—'} muted={quoting} />
                     <Row
-                        label="Your average price"
-                        value={quote ? formatPercent(quote.stake / quote.payout) : '—'}
-                        muted={quoting}
-                    />
-                    <Row
-                        label="Odds after your bet"
-                        value={quote ? `${formatPercent(quote.price_before)} → ${formatPercent(quote.price_after)}` : '—'}
+                        label="Board after your prediction"
+                        value={quote ? `${formatOdds(quote.price_before)} → ${formatOdds(quote.price_after)}` : '—'}
                         muted={quoting}
                     />
                 </div>
 
-                {quote && impact > 0.005 && (
+                {quote && (
                     <p className="text-xs text-muted-foreground leading-relaxed">
-                        <span className="text-white/80">Why the return drops as you stake more:</span>{' '}
-                        your own coins move the odds while they go in, so the last of them buys at a worse price than
-                        the first. Splitting the same total into several smaller predictions costs exactly the same —
-                        the price picks up where it left off.
+                        <span className="text-white/80">You get the odds on the board.</span>{' '}
+                        Your prediction moves the price for whoever comes next, but not for you —
+                        the whole stake is struck at what you are looking at now. Getting in before
+                        the crowd is worth something, and putting it on in one go beats dribbling
+                        it in.
                     </p>
+                )}
+
+                {quote?.board_after && (
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground tabular-nums">
+                        <span className="text-white/70">Everyone else then sees</span>
+                        {sides.map(option => (
+                            <span key={option}>
+                                {sideLabel(market, option)}{' '}
+                                <span className="text-white/80">
+                                    {formatOdds(quote.board_after?.[option] ?? priceOf(market, option))}
+                                </span>
+                            </span>
+                        ))}
+                    </div>
                 )}
 
                 <p className="text-xs text-muted-foreground leading-relaxed">
                     That payout is locked in the moment you confirm — the odds can move afterwards, your return cannot.
-                    A prediction cannot be cancelled or sold. If the match is drawn, forfeited or cancelled, your stake
-                    comes back.
+                    If somebody moves the price before you press it, the prediction is refused rather than taken at
+                    the new odds.
+                    A prediction cannot be cancelled or sold, and you get one outcome per match.{' '}
+                    {market.draws_allowed
+                        ? 'This match can finish level, so the draw is one of the three things you can back.'
+                        : 'This match has to produce a winner, so there is no draw to back.'}{' '}
+                    If the match is forfeited or cancelled, your stake comes back.
                 </p>
 
                 {disabledReason && <ErrorBanner message={disabledReason} />}
