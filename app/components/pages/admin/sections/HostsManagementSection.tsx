@@ -5,15 +5,41 @@ import { Input } from '@/app/components/ui/input'
 import { Modal } from '@/app/components/ui/modal'
 import {
   fetchAdminHosts, createAdminHost, updateAdminHost, setAdminHostServers,
-  issueAdminHostToken, removeAdminHostToken,
-  type AdminHost, type AdminHostServer, type AdminHostToken,
+  issueAdminHostToken, removeAdminHostToken, updateAdminServer,
+  type AdminHost, type AdminHostServer, type AdminHostToken, type AdminServerUpdate,
 } from '@/app/utils/api'
 import { SectionShell } from '../components/SectionShell'
-import { ActionButton, ConfirmDialog, Copyable, Feedback, errMessage, relTime } from '../components/controls'
+import { ActionButton, AdminSelect, ConfirmDialog, Copyable, Feedback, errMessage, relTime } from '../components/controls'
 import { PANEL_LABEL } from '../components/shared'
 import type { AdminSectionProps } from '../types'
 
 const DEFAULT_AGENT_PORT = 80
+
+const SERVER_STATE_OPTIONS = [
+  { value: 'Online', label: 'Online' },
+  { value: 'Offline', label: 'Offline' },
+  { value: 'Maintenance', label: 'Maintenance' },
+]
+
+function ServerChip({ server, onClick }: { server: AdminHostServer; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={`Edit ${server.name}`}
+      className={cn(
+        'px-2 py-0.5 rounded-md border text-[11px] transition-colors cursor-pointer',
+        'border-hairline/20 bg-card/40 hover:bg-hairline/10 hover:border-hairline/40',
+        server.active ? 'text-foreground' : 'text-muted-foreground',
+      )}
+    >
+      {server.name}
+      {server.state && server.state !== 'Online' && (
+        <span className="ml-1.5 text-amber-300/80">{server.state}</span>
+      )}
+    </button>
+  )
+}
 
 function StatusPill({ active, activeLabel, inactiveLabel }: { active: boolean; activeLabel: string; inactiveLabel: string }) {
   return (
@@ -74,6 +100,7 @@ export function HostsManagementSection({ userProfile }: AdminSectionProps) {
   const [replaceTarget, setReplaceTarget] = useState<AdminHost | null>(null)
   const [removeTarget, setRemoveTarget] = useState<AdminHost | null>(null)
   const [issuedToken, setIssuedToken] = useState<{ host: string; secret: string; replaced: boolean } | null>(null)
+  const [editServer, setEditServer] = useState<AdminHostServer | null>(null)
 
   const load = useCallback((signal?: AbortSignal) => {
     setLoading(true)
@@ -168,6 +195,18 @@ export function HostsManagementSection({ userProfile }: AdminSectionProps) {
     setNotice(`Removed the token for “${host.name}”.`)
     load()
   })
+
+  const saveServer = (server: AdminHostServer, input: AdminServerUpdate) =>
+    run(`server:${server.id}`, async () => {
+      const result = await updateAdminServer(token, server.id, input)
+      setServers((prev) => prev.map((s) => (s.id === result.server.id ? result.server : s)))
+      setEditServer(null)
+      setNotice(
+        result.changed.length === 0
+          ? `No changes to the ${result.server.name} server.`
+          : `Updated ${result.changed.join(', ')} on the ${result.server.name} server.`,
+      )
+    })
 
   const openLinkEditor = (host: AdminHost) => {
     setLinkHost(host)
@@ -277,9 +316,7 @@ export function HostsManagementSection({ userProfile }: AdminSectionProps) {
                   ) : (
                     <div className="flex flex-wrap gap-1.5">
                       {linked.map((server) => (
-                        <span key={server.id} className="px-2 py-0.5 rounded-md border border-hairline/20 bg-card/40 text-[11px] text-foreground">
-                          {server.name}
-                        </span>
+                        <ServerChip key={server.id} server={server} onClick={() => setEditServer(server)} />
                       ))}
                     </div>
                   )}
@@ -300,13 +337,23 @@ export function HostsManagementSection({ userProfile }: AdminSectionProps) {
           <span className={PANEL_LABEL}>Servers not on any host ({unassigned.length})</span>
           <div className="flex flex-wrap gap-1.5">
             {unassigned.map((server) => (
-              <span key={server.id} className="px-2 py-0.5 rounded-md border border-hairline/20 bg-card/40 text-[11px] text-muted-foreground">
-                {server.name}
-              </span>
+              <ServerChip key={server.id} server={server} onClick={() => setEditServer(server)} />
             ))}
           </div>
         </div>
       )}
+
+      <Modal isOpen={!!editServer} onClose={() => setEditServer(null)} title={editServer?.name ?? 'Server'} offsetSidebar>
+        {editServer && (
+          <EditServerForm
+            server={editServer}
+            hosts={hosts}
+            busy={busy === `server:${editServer.id}`}
+            onCancel={() => setEditServer(null)}
+            onSave={(input) => saveServer(editServer, input)}
+          />
+        )}
+      </Modal>
 
       <Modal isOpen={!!editHost} onClose={() => setEditHost(null)} title={`Edit ${editHost?.name ?? ''}`} offsetSidebar>
         {editHost && (
@@ -465,6 +512,93 @@ function EditHostForm({ host, busy, onCancel, onSave }: {
           icon={Check}
           loading={busy}
           onClick={() => onSave({ region: region.trim() || null, ip: ip.trim() || null, agent_port: Number(port), active })}
+        >
+          Save
+        </ActionButton>
+      </div>
+    </div>
+  )
+}
+
+function EditServerForm({ server, hosts, busy, onCancel, onSave }: {
+  server: AdminHostServer
+  hosts: AdminHost[]
+  busy: boolean
+  onCancel: () => void
+  onSave: (input: AdminServerUpdate) => void
+}) {
+  const [name, setName] = useState(server.name)
+  const [region, setRegion] = useState(server.region ?? '')
+  const [ip, setIp] = useState(server.ip ?? '')
+  const [port, setPort] = useState(String(server.port))
+  const [state, setState] = useState(server.state ?? 'Online')
+  const [active, setActive] = useState(server.active)
+  const [certified, setCertified] = useState(server.certified_records)
+  const [hostRef, setHostRef] = useState(server.host_ref ?? '')
+
+  const hostOptions = [
+    { value: '', label: 'Not on a host' },
+    ...hosts.map((h) => ({ value: h.id, label: h.name })),
+  ]
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1 col-span-2">
+          <span className={PANEL_LABEL}>Name</span>
+          <Input value={name} onChange={(e) => setName(e.target.value)} className="h-9" maxLength={120} />
+        </div>
+        <div className="space-y-1">
+          <span className={PANEL_LABEL}>Address</span>
+          <Input value={ip} onChange={(e) => setIp(e.target.value)} className="h-9" placeholder="203.0.113.10" maxLength={45} />
+        </div>
+        <div className="space-y-1">
+          <span className={PANEL_LABEL}>Port</span>
+          <Input value={port} onChange={(e) => setPort(e.target.value)} className="h-9" inputMode="numeric" />
+        </div>
+        <div className="space-y-1">
+          <span className={PANEL_LABEL}>Region</span>
+          <Input value={region} onChange={(e) => setRegion(e.target.value)} className="h-9" maxLength={64} />
+        </div>
+        <div className="space-y-1">
+          <span className={PANEL_LABEL}>State</span>
+          <AdminSelect value={state} onChange={setState} options={SERVER_STATE_OPTIONS} ariaLabel="Server state" />
+        </div>
+        <div className="space-y-1 col-span-2">
+          <span className={PANEL_LABEL}>Game host</span>
+          <AdminSelect value={hostRef} onChange={setHostRef} options={hostOptions} ariaLabel="Game host" />
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        <ActionButton tone={active ? 'emerald' : 'amber'} onClick={() => setActive((v) => !v)}>
+          {active ? 'Listed' : 'Unlisted'}
+        </ActionButton>
+        <ActionButton tone={certified ? 'emerald' : 'amber'} onClick={() => setCertified((v) => !v)}>
+          {certified ? 'Certified records' : 'Casual records'}
+        </ActionButton>
+      </div>
+
+      <p className="text-[11px] text-muted-foreground">
+        Address and port must match what the server actually binds, or players cannot join it from the launcher. The port has to
+        be between 1000 and 10000.
+      </p>
+
+      <div className="flex justify-end gap-2 pt-1">
+        <ActionButton tone="amber" onClick={onCancel}>Cancel</ActionButton>
+        <ActionButton
+          icon={Check}
+          loading={busy}
+          onClick={() => onSave({
+            name: name.trim(),
+            region: region.trim(),
+            ip: ip.trim(),
+            port: Number(port),
+            state,
+            active,
+            certified_records: certified,
+            host_ref: hostRef || null,
+          })}
         >
           Save
         </ActionButton>

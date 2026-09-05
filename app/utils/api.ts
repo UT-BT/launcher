@@ -4251,8 +4251,23 @@ export interface AdminHostServer {
     id: string
     name: string
     region: string | null
+    ip: string | null
+    port: number
     active: boolean
+    certified_records: boolean
+    state: string | null
     host_ref: string | null
+}
+
+export interface AdminServerUpdate {
+    name?: string
+    region?: string
+    ip?: string
+    port?: number
+    active?: boolean
+    certified_records?: boolean
+    state?: string
+    host_ref?: string | null
 }
 
 export interface AdminHostsResponse {
@@ -4301,6 +4316,14 @@ export async function issueAdminHostToken(
 
 export async function removeAdminHostToken(accessToken: string, hostId: string): Promise<{ ok: boolean }> {
     return apiGet(`/admin/hosts/${encodeURIComponent(hostId)}/token`, { token: accessToken, method: 'DELETE' })
+}
+
+export async function updateAdminServer(
+    accessToken: string,
+    serverId: string,
+    input: AdminServerUpdate,
+): Promise<{ server: AdminHostServer; changed: string[] }> {
+    return apiGet(`/admin/servers/${encodeURIComponent(serverId)}`, { token: accessToken, method: 'PATCH', body: input })
 }
 
 export async function fetchAdminRoles(accessToken: string, signal?: AbortSignal): Promise<AdminRoleRow[]> {
