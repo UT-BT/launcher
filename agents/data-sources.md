@@ -349,7 +349,7 @@ only — never the security boundary. Fetchers grouped by dashboard section:
 | Maps | `fetchAdminMaps`, `fetchAdminMapsCount`, `fetchAdminMapTags`, `createMap`, `updateMap`, `fetchDifficultySyncPreview`, `applyDifficultySync`, `fetchMapvoteStatus`, `setMapvoteAnnouncement`, `regenerateMapvote` |
 | Map authors | `fetchMapAuthorStrings(+Count)`, `fetchLinkedMapAuthors`, `fetchMapAuthorCandidates`, `fetchMapAuthorPreview`, `linkMapAuthor`, `unlinkMapAuthor` |
 | Patches | `fetchAdminPatches`, `createPatch`, `updatePatch`, `setPatchActive`, `deletePatch`, `derivePatch` |
-| Game hosts (admin only) | `fetchAdminHosts`, `createAdminHost`, `updateAdminHost`, `setAdminHostServers`, `mintAdminHostToken`, `revokeAdminHostToken`. A minted token's plaintext comes back once and is never retrievable again - show it, let the admin copy it, and do not persist it anywhere in the renderer |
+| Game hosts (admin only) | `fetchAdminHosts`, `createAdminHost`, `updateAdminHost`, `setAdminHostServers`, `issueAdminHostToken`, `removeAdminHostToken`. A host holds exactly one token; issuing when one exists replaces it, and the server revokes the old one in the same transaction. The plaintext comes back once and is never retrievable again - show it, let the admin copy it, and do not persist it anywhere in the renderer. Both replace and remove are destructive and are behind a ConfirmDialog that states the consequence |
 | Anti-cheat | `fetchAcShared(+Count)`, `fetchAcCapDelta(+Count)`, `fetchAcLowFpsWr(+Count)`, `fetchAcIdentifier`, `fetchAcCapStats`, `fetchAcCapMapComparison`, `allowCap`, `unallowCap` |
 | Audit | `fetchAuditLog`, `fetchAuditLogCount`, `rollbackAudit` |
 

@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Server, Plus, KeyRound, Ban, Link2, Check, AlertTriangle, Pencil } from 'lucide-react'
+import { Server, Plus, KeyRound, Ban, Link2, Check, AlertTriangle, Pencil, RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Input } from '@/app/components/ui/input'
 import { Modal } from '@/app/components/ui/modal'
 import {
   fetchAdminHosts, createAdminHost, updateAdminHost, setAdminHostServers,
-  mintAdminHostToken, revokeAdminHostToken,
+  issueAdminHostToken, removeAdminHostToken,
   type AdminHost, type AdminHostServer, type AdminHostToken,
 } from '@/app/utils/api'
 import { SectionShell } from '../components/SectionShell'
@@ -30,21 +30,23 @@ function StatusPill({ active, activeLabel, inactiveLabel }: { active: boolean; a
   )
 }
 
-function TokenRow({ token, busy, onRevoke }: { token: AdminHostToken; busy: boolean; onRevoke: () => void }) {
+function TokenState({ token }: { token: AdminHostToken | null }) {
+  if (!token) {
+    return (
+      <p className="text-xs text-amber-300/90 flex items-center gap-1.5">
+        <AlertTriangle className="size-3" />
+        No token. This host's agent cannot fetch personal bests for its players.
+      </p>
+    )
+  }
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-hairline/10 bg-card/20 px-3 py-2">
       <KeyRound className="size-3.5 shrink-0 text-muted-foreground" />
       <span className="text-xs font-medium text-foreground">{token.name}</span>
-      <StatusPill active={token.active} activeLabel="Active" inactiveLabel="Revoked" />
       <span className="text-[11px] text-muted-foreground">{token.scopes.join(', ') || 'no scopes'}</span>
       <span className="text-[11px] text-muted-foreground">
         {token.last_seen_at ? `last seen ${relTime(token.last_seen_at)}` : 'never used'}
       </span>
-      {token.active && (
-        <ActionButton tone="red" icon={Ban} loading={busy} onClick={onRevoke} title="Revoke this token">
-          Revoke
-        </ActionButton>
-      )}
     </div>
   )
 }
@@ -69,8 +71,9 @@ export function HostsManagementSection({ userProfile }: AdminSectionProps) {
   const [editHost, setEditHost] = useState<AdminHost | null>(null)
   const [linkHost, setLinkHost] = useState<AdminHost | null>(null)
   const [linkSelection, setLinkSelection] = useState<Set<string>>(new Set())
-  const [revokeTarget, setRevokeTarget] = useState<AdminHostToken | null>(null)
-  const [mintedToken, setMintedToken] = useState<{ host: string; secret: string } | null>(null)
+  const [replaceTarget, setReplaceTarget] = useState<AdminHost | null>(null)
+  const [removeTarget, setRemoveTarget] = useState<AdminHost | null>(null)
+  const [issuedToken, setIssuedToken] = useState<{ host: string; secret: string; replaced: boolean } | null>(null)
 
   const load = useCallback((signal?: AbortSignal) => {
     setLoading(true)
@@ -130,7 +133,7 @@ export function HostsManagementSection({ userProfile }: AdminSectionProps) {
 
     setCreating(false)
     setDraftName(''); setDraftRegion(''); setDraftIp(''); setDraftPort(String(DEFAULT_AGENT_PORT))
-    setNotice(`Host “${draftName.trim()}” created. Mint a token for it next.`)
+    setNotice(`Host “${draftName.trim()}” created. Issue it a token next.`)
     load()
   })
 
@@ -152,15 +155,17 @@ export function HostsManagementSection({ userProfile }: AdminSectionProps) {
     setNotice(`Updated the servers on “${host.name}”.`)
   })
 
-  const mint = (host: AdminHost) => run(`mint:${host.id}`, async () => {
-    const result = await mintAdminHostToken(token, host.id, { name: host.name, scopes })
-    setMintedToken({ host: host.name, secret: result.token })
+  const issue = (host: AdminHost) => run(`token:${host.id}`, async () => {
+    const result = await issueAdminHostToken(token, host.id, { name: host.name, scopes })
+    setReplaceTarget(null)
+    setIssuedToken({ host: host.name, secret: result.token, replaced: result.replaced })
     load()
   })
 
-  const revoke = (target: AdminHostToken) => run(`revoke:${target.id}`, async () => {
-    await revokeAdminHostToken(token, target.id)
-    setRevokeTarget(null)
+  const removeToken = (host: AdminHost) => run(`token:${host.id}`, async () => {
+    await removeAdminHostToken(token, host.id)
+    setRemoveTarget(null)
+    setNotice(`Removed the token for “${host.name}”.`)
     load()
   })
 
@@ -232,7 +237,6 @@ export function HostsManagementSection({ userProfile }: AdminSectionProps) {
         <div className="space-y-3">
           {hosts.map((host) => {
             const linked = serversByHost.get(host.id) ?? []
-            const activeTokens = host.tokens.filter((t) => t.active)
             return (
               <div key={host.id} className="rounded-lg border border-hairline/10 bg-card/30 p-4 space-y-3">
                 <div className="flex flex-wrap items-start justify-between gap-3">
@@ -249,9 +253,20 @@ export function HostsManagementSection({ userProfile }: AdminSectionProps) {
                   <div className="flex flex-wrap items-center gap-2 shrink-0">
                     <ActionButton icon={Pencil} onClick={() => setEditHost(host)}>Edit</ActionButton>
                     <ActionButton icon={Link2} onClick={() => openLinkEditor(host)}>Servers</ActionButton>
-                    <ActionButton icon={KeyRound} loading={busy === `mint:${host.id}`} onClick={() => mint(host)}>
-                      Mint token
-                    </ActionButton>
+                    {host.token ? (
+                      <>
+                        <ActionButton tone="amber" icon={RefreshCw} onClick={() => setReplaceTarget(host)}>
+                          Replace token
+                        </ActionButton>
+                        <ActionButton tone="red" icon={Ban} onClick={() => setRemoveTarget(host)}>
+                          Remove token
+                        </ActionButton>
+                      </>
+                    ) : (
+                      <ActionButton icon={KeyRound} loading={busy === `token:${host.id}`} onClick={() => issue(host)}>
+                        Issue token
+                      </ActionButton>
+                    )}
                   </div>
                 </div>
 
@@ -271,27 +286,8 @@ export function HostsManagementSection({ userProfile }: AdminSectionProps) {
                 </div>
 
                 <div className="space-y-1">
-                  <span className={PANEL_LABEL}>Tokens</span>
-                  {host.tokens.length === 0 ? (
-                    <p className="text-xs text-muted-foreground">No token yet — this host's agent cannot authenticate.</p>
-                  ) : (
-                    <div className="space-y-1.5">
-                      {host.tokens.map((t) => (
-                        <TokenRow
-                          key={t.id}
-                          token={t}
-                          busy={busy === `revoke:${t.id}`}
-                          onRevoke={() => setRevokeTarget(t)}
-                        />
-                      ))}
-                    </div>
-                  )}
-                  {activeTokens.length > 1 && (
-                    <p className="text-[11px] text-amber-300/80 flex items-center gap-1.5">
-                      <AlertTriangle className="size-3" />
-                      More than one active token. Revoke the old one once the agent is running on the new one.
-                    </p>
-                  )}
+                  <span className={PANEL_LABEL}>Token</span>
+                  <TokenState token={host.token} />
                 </div>
               </div>
             )
@@ -372,34 +368,59 @@ export function HostsManagementSection({ userProfile }: AdminSectionProps) {
         </div>
       </Modal>
 
-      <Modal isOpen={!!mintedToken} onClose={() => setMintedToken(null)} title="Host token" offsetSidebar>
+      <Modal isOpen={!!issuedToken} onClose={() => setIssuedToken(null)} title="Host token" offsetSidebar>
         <div className="space-y-3">
           <p className="text-xs text-amber-300/90 flex items-start gap-1.5">
             <AlertTriangle className="size-3.5 shrink-0 mt-px" />
-            This is the only time this token is shown. Put it in the agent's config on {mintedToken?.host} now — it cannot be
-            retrieved later, only revoked and replaced.
+            This is the only time this token is shown. Put it in the agent's config on {issuedToken?.host} and restart it — the
+            token cannot be retrieved later, only replaced.
           </p>
-          <Copyable value={mintedToken?.secret ?? ''} />
+          {issuedToken?.replaced && (
+            <p className="text-xs text-muted-foreground">
+              The previous token is already revoked. Until the agent is restarted with this one, players on that host will not
+              see their personal best times in the mapvote.
+            </p>
+          )}
+          <Copyable value={issuedToken?.secret ?? ''} />
           <div className="flex justify-end">
-            <ActionButton icon={Check} onClick={() => setMintedToken(null)}>Done</ActionButton>
+            <ActionButton icon={Check} onClick={() => setIssuedToken(null)}>Done</ActionButton>
           </div>
         </div>
       </Modal>
 
       <ConfirmDialog
-        open={!!revokeTarget}
-        title="Revoke host token"
+        open={!!replaceTarget}
+        title="Replace host token"
         message={
           <span>
-            Revoke <span className="font-medium text-foreground">{revokeTarget?.name}</span>? The agent using it stops
-            authenticating within a minute, and its map list goes stale until it gets a new token.
+            This revokes the current token for <span className="font-medium text-foreground">{replaceTarget?.name}</span>{' '}
+            immediately and issues a new one. Until you put the new token in that host's agent config and restart it, players on
+            that host will not see their personal best times in the mapvote. The map list itself keeps working.
           </span>
         }
-        confirmLabel="Revoke"
+        confirmLabel="Replace token"
         tone="red"
-        busy={!!revokeTarget && busy === `revoke:${revokeTarget.id}`}
-        onConfirm={() => { if (revokeTarget) revoke(revokeTarget) }}
-        onCancel={() => setRevokeTarget(null)}
+        busy={!!replaceTarget && busy === `token:${replaceTarget.id}`}
+        onConfirm={() => { if (replaceTarget) issue(replaceTarget) }}
+        onCancel={() => setReplaceTarget(null)}
+      />
+
+      <ConfirmDialog
+        open={!!removeTarget}
+        title="Remove host token"
+        message={
+          <span>
+            This revokes the token for <span className="font-medium text-foreground">{removeTarget?.name}</span> and does not
+            replace it. That host's agent stops authenticating, so players on it lose their personal best times in the mapvote
+            until a new token is issued. The map list itself keeps working. This cannot be undone — the token can only be
+            reissued, never recovered.
+          </span>
+        }
+        confirmLabel="Remove token"
+        tone="red"
+        busy={!!removeTarget && busy === `token:${removeTarget.id}`}
+        onConfirm={() => { if (removeTarget) removeToken(removeTarget) }}
+        onCancel={() => setRemoveTarget(null)}
       />
     </SectionShell>
   )

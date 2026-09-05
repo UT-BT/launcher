@@ -4244,7 +4244,7 @@ export interface AdminHost {
     agent_port: number
     active: boolean
     created_at: string | null
-    tokens: AdminHostToken[]
+    token: AdminHostToken | null
 }
 
 export interface AdminHostServer {
@@ -4291,16 +4291,16 @@ export async function setAdminHostServers(
     })
 }
 
-export async function mintAdminHostToken(
+export async function issueAdminHostToken(
     accessToken: string,
     hostId: string,
     input: { name?: string; scopes?: string[] } = {},
-): Promise<{ token: string; service_token: AdminHostToken }> {
-    return apiGet(`/admin/hosts/${encodeURIComponent(hostId)}/tokens`, { token: accessToken, method: 'POST', body: input })
+): Promise<{ token: string; service_token: AdminHostToken; replaced: boolean }> {
+    return apiGet(`/admin/hosts/${encodeURIComponent(hostId)}/token`, { token: accessToken, method: 'PUT', body: input })
 }
 
-export async function revokeAdminHostToken(accessToken: string, tokenId: string): Promise<AdminHostToken> {
-    return apiGet(`/admin/hosts/tokens/${encodeURIComponent(tokenId)}/revoke`, { token: accessToken, method: 'POST' })
+export async function removeAdminHostToken(accessToken: string, hostId: string): Promise<{ ok: boolean }> {
+    return apiGet(`/admin/hosts/${encodeURIComponent(hostId)}/token`, { token: accessToken, method: 'DELETE' })
 }
 
 export async function fetchAdminRoles(accessToken: string, signal?: AbortSignal): Promise<AdminRoleRow[]> {
