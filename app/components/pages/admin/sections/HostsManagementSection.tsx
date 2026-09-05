@@ -12,11 +12,40 @@ import {
   type AdminHost, type AdminHostInput, type AdminHostServer, type AdminHostToken, type AdminServerUpdate,
 } from '@/app/utils/api'
 import { SectionShell } from '../components/SectionShell'
-import { ActionButton, AdminSelect, ConfirmDialog, Copyable, Feedback, errMessage, relTime } from '../components/controls'
+import { ActionButton, AdminSelect, ConfirmDialog, Copyable, Feedback, SearchInput, errMessage, relTime } from '../components/controls'
 import { PANEL_LABEL } from '../components/shared'
+import { TableControls } from '../components/TableControls'
+import { useAdminTable } from '../components/useAdminTable'
+import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
+import {
+  DataTableCell,
+  DataTableEmpty,
+  DataTableHeaderCell,
+  DataTableHeaderRow,
+  DataTableRow,
+  DataTableShell,
+  DataTableSkeletonRow,
+} from '@/app/components/shared/DataTable'
 import type { AdminSectionProps } from '../types'
 
 const DEFAULT_AGENT_PORT = 80
+const MAX_INLINE_SERVER_CHIPS = 3
+
+const COLUMNS = [
+  { id: 'host', label: 'Host', required: true },
+  { id: 'address', label: 'Address' },
+  { id: 'servers', label: 'Servers' },
+  { id: 'token', label: 'Token' },
+  { id: 'actions', label: 'Actions', required: true },
+]
+
+const RESPONSIVE_COLUMNS = [
+  { id: 'host', width: '14rem', required: true },
+  { id: 'actions', width: '17rem', required: true },
+  { id: 'servers', width: '18rem', priority: 40 },
+  { id: 'token', width: '13rem', priority: 30 },
+  { id: 'address', width: '11rem', priority: 20 },
+]
 
 const SERVER_STATE_OPTIONS = [
   { value: 'Online', label: 'Online' },
@@ -90,23 +119,24 @@ function StatusPill({ active, activeLabel, inactiveLabel }: { active: boolean; a
   )
 }
 
-function TokenState({ token }: { token: AdminHostToken | null }) {
+function TokenCell({ token }: { token: AdminHostToken | null }) {
   if (!token) {
     return (
-      <p className="text-xs text-amber-300/90 flex items-center gap-1.5">
-        <TriangleAlert className="size-3" />
-        No token. This host's agent cannot fetch personal bests for its players.
-      </p>
+      <span className="inline-flex items-center gap-1.5 text-[11px] text-amber-300/90">
+        <TriangleAlert className="size-3 shrink-0" />
+        No token
+      </span>
     )
   }
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-hairline/10 bg-card/20 px-3 py-2">
-      <KeyRound className="size-3.5 shrink-0 text-muted-foreground" />
-      <span className="text-xs font-medium text-foreground">{token.name}</span>
-      <span className="text-[11px] text-muted-foreground">{token.scopes.join(', ') || 'no scopes'}</span>
-      <span className="text-[11px] text-muted-foreground">
+    <div className="min-w-0">
+      <div className="flex items-center gap-1.5 text-xs text-foreground">
+        <KeyRound className="size-3 shrink-0 text-muted-foreground" />
+        <span className="truncate">{token.name}</span>
+      </div>
+      <div className="text-[11px] text-muted-foreground truncate">
         {token.last_seen_at ? `last seen ${relTime(token.last_seen_at)}` : 'never used'}
-      </span>
+      </div>
     </div>
   )
 }
@@ -118,6 +148,10 @@ export function HostsManagementSection({ userProfile }: AdminSectionProps) {
   const [servers, setServers] = useState<AdminHostServer[]>([])
   const [scopes, setScopes] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [search, setSearch] = useState('')
+  const [visibleColumns, setVisibleColumns] = useState<Set<string> | null>(null)
+  const [compact, setCompact] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
@@ -136,8 +170,9 @@ export function HostsManagementSection({ userProfile }: AdminSectionProps) {
   const [issuedToken, setIssuedToken] = useState<{ host: string; secret: string; replaced: boolean } | null>(null)
   const [editServer, setEditServer] = useState<AdminHostServer | null>(null)
 
-  const load = useCallback((signal?: AbortSignal) => {
-    setLoading(true)
+  const load = useCallback((signal?: AbortSignal, opts: { silent?: boolean } = {}) => {
+    if (opts.silent) setRefreshing(true)
+    else setLoading(true)
     setError(null)
     fetchAdminHosts(token, signal)
       .then((data) => {
@@ -146,7 +181,11 @@ export function HostsManagementSection({ userProfile }: AdminSectionProps) {
         setScopes(data.available_scopes ?? [])
       })
       .catch((e) => { if (!signal?.aborted) setError(errMessage(e)) })
-      .finally(() => { if (!signal?.aborted) setLoading(false) })
+      .finally(() => {
+        if (signal?.aborted) return
+        setLoading(false)
+        setRefreshing(false)
+      })
   }, [token])
 
   useEffect(() => {
@@ -167,6 +206,33 @@ export function HostsManagementSection({ userProfile }: AdminSectionProps) {
   }, [servers])
 
   const unassigned = useMemo(() => servers.filter((s) => !s.host_ref), [servers])
+
+  const table = useAdminTable('utbt:admin:hosts:cols:v1', COLUMNS, { defaultFiltersOpen: false })
+  const isVisible = table.isVisible
+  const resolveColumns = useCallback((ids: Set<string>) => setVisibleColumns(ids), [])
+  const shows = useCallback(
+    (id: string) => isVisible(id) && (!visibleColumns || visibleColumns.has(id)),
+    [isVisible, visibleColumns],
+  )
+
+  useRegisterPageRefresh({
+    onRefresh: () => load(undefined, { silent: true }),
+    refreshing,
+    disabled: !token,
+    tooltip: 'Refresh hosts',
+  })
+
+  const visibleHosts = useMemo(() => {
+    const needle = search.trim().toLowerCase()
+    if (!needle) return hosts
+    return hosts.filter((host) => (
+      host.name.toLowerCase().includes(needle) ||
+      (host.region ?? '').toLowerCase().includes(needle) ||
+      (host.ip ?? '').toLowerCase().includes(needle)
+    ))
+  }, [hosts, search])
+
+  const columnCount = 2 + (['address', 'servers', 'token'] as const).filter(shows).length
 
   const run = async (key: string, action: () => Promise<void>) => {
     setBusy(key)
@@ -257,6 +323,23 @@ export function HostsManagementSection({ userProfile }: AdminSectionProps) {
     ? servers.filter((s) => !s.host_ref || s.host_ref === linkHost.id || linkSelection.has(s.id))
     : []
 
+  const hostActions = (host: AdminHost) => (
+    <>
+      <ActionButton icon={Pencil} onClick={() => setEditHost(host)}>Edit</ActionButton>
+      <ActionButton icon={Link2} onClick={() => openLinkEditor(host)}>Servers</ActionButton>
+      {host.token ? (
+        <>
+          <ActionButton tone="amber" icon={RefreshCw} onClick={() => setReplaceTarget(host)}>Replace token</ActionButton>
+          <ActionButton tone="red" icon={Ban} onClick={() => setRemoveTarget(host)}>Remove token</ActionButton>
+        </>
+      ) : (
+        <ActionButton icon={KeyRound} loading={busy === `token:${host.id}`} onClick={() => issue(host)}>
+          Issue token
+        </ActionButton>
+      )}
+    </>
+  )
+
   return (
     <SectionShell
       title="Game Hosts"
@@ -296,72 +379,123 @@ export function HostsManagementSection({ userProfile }: AdminSectionProps) {
         </div>
       )}
 
-      {loading ? (
-        <p className="text-sm text-muted-foreground">Loading hosts…</p>
-      ) : hosts.length === 0 ? (
-        <div className="rounded-lg border border-hairline/10 bg-card/30 px-4 py-8 text-center space-y-1">
-          <p className="text-sm text-foreground">No hosts registered yet.</p>
-          <p className="text-xs text-muted-foreground">Add one for each box that runs game servers, then mint it a token.</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {hosts.map((host) => {
+      <div className="flex flex-wrap items-center gap-2">
+        <SearchInput value={search} onChange={setSearch} placeholder="Search hosts by name, region or address..." className="min-w-[14rem] flex-1" />
+        {!compact && <TableControls table={table} showFilters={false} />}
+      </div>
+
+      <DataTableShell
+        responsive={{
+          columns: RESPONSIVE_COLUMNS.filter((column) => column.required || isVisible(column.id)),
+          onResolve: resolveColumns,
+          onCompactChange: setCompact,
+          compactAriaLabel: 'Game hosts',
+          compactContent: visibleHosts.map((host) => {
             const linked = serversByHost.get(host.id) ?? []
             return (
-              <div key={host.id} className="rounded-lg border border-hairline/10 bg-card/30 p-4 space-y-3">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0 space-y-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-sm font-semibold text-foreground">{host.name}</span>
-                      <StatusPill active={host.active} activeLabel="Active" inactiveLabel="Disabled" />
-                      {host.region && <span className="text-[11px] text-muted-foreground">{host.region}</span>}
-                    </div>
-                    <div className="text-[11px] text-muted-foreground tabular-nums">
-                      {host.ip ? `${host.ip}:${host.agent_port}` : `agent port ${host.agent_port}`}
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2 shrink-0">
-                    <ActionButton icon={Pencil} onClick={() => setEditHost(host)}>Edit</ActionButton>
-                    <ActionButton icon={Link2} onClick={() => openLinkEditor(host)}>Servers</ActionButton>
-                    {host.token ? (
-                      <>
-                        <ActionButton tone="amber" icon={RefreshCw} onClick={() => setReplaceTarget(host)}>
-                          Replace token
-                        </ActionButton>
-                        <ActionButton tone="red" icon={Ban} onClick={() => setRemoveTarget(host)}>
-                          Remove token
-                        </ActionButton>
-                      </>
-                    ) : (
-                      <ActionButton icon={KeyRound} loading={busy === `token:${host.id}`} onClick={() => issue(host)}>
-                        Issue token
-                      </ActionButton>
-                    )}
-                  </div>
+              <div key={host.id} role="listitem" className="p-3 space-y-2 border-b border-hairline/5 last:border-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-medium">{host.name}</span>
+                  <StatusPill active={host.active} activeLabel="Active" inactiveLabel="Disabled" />
+                  {host.region && <span className="text-[11px] text-muted-foreground">{host.region}</span>}
                 </div>
-
-                <div className="space-y-1">
-                  <span className={PANEL_LABEL}>Servers on this host</span>
-                  {linked.length === 0 ? (
-                    <p className="text-xs text-muted-foreground">None linked yet.</p>
-                  ) : (
-                    <div className="flex flex-wrap gap-1.5">
-                      {linked.map((server) => (
-                        <ServerChip key={server.id} server={server} onClick={() => setEditServer(server)} />
-                      ))}
-                    </div>
-                  )}
+                <div className="text-[11px] text-muted-foreground tabular-nums">
+                  {host.ip ? `${host.ip}:${host.agent_port}` : `agent port ${host.agent_port}`}
                 </div>
-
-                <div className="space-y-1">
-                  <span className={PANEL_LABEL}>Token</span>
-                  <TokenState token={host.token} />
+                <TokenCell token={host.token} />
+                {linked.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {linked.map((server) => (
+                      <ServerChip key={server.id} server={server} onClick={() => setEditServer(server)} />
+                    ))}
+                  </div>
+                )}
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  {hostActions(host)}
                 </div>
               </div>
             )
+          }),
+        }}
+      >
+        <DataTableHeaderRow>
+          <DataTableHeaderCell width="14rem">Host</DataTableHeaderCell>
+          {shows('address') && <DataTableHeaderCell width="11rem">Address</DataTableHeaderCell>}
+          {shows('servers') && <DataTableHeaderCell width="18rem">Servers</DataTableHeaderCell>}
+          {shows('token') && <DataTableHeaderCell width="13rem">Token</DataTableHeaderCell>}
+          <DataTableHeaderCell align="right" width="17rem">Actions</DataTableHeaderCell>
+        </DataTableHeaderRow>
+        <tbody>
+          {loading && Array.from({ length: 4 }).map((_, index) => (
+            <DataTableSkeletonRow key={index} columnCount={columnCount} />
+          ))}
+
+          {!loading && visibleHosts.length === 0 && (
+            <DataTableEmpty
+              colSpan={columnCount}
+              message={hosts.length === 0 ? 'No hosts registered yet. Add one for each box that runs game servers, then mint it a token.' : 'No hosts match your search.'}
+            />
+          )}
+
+          {!loading && visibleHosts.map((host) => {
+            const linked = serversByHost.get(host.id) ?? []
+            const shown = linked.slice(0, MAX_INLINE_SERVER_CHIPS)
+            const overflow = linked.length - shown.length
+            return (
+              <DataTableRow key={host.id} className={cn(!host.active && 'opacity-60')}>
+                <DataTableCell width="14rem">
+                  <div className="min-w-0 space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-semibold truncate">{host.name}</span>
+                      <StatusPill active={host.active} activeLabel="Active" inactiveLabel="Disabled" />
+                    </div>
+                    {host.region && <div className="text-[11px] text-muted-foreground truncate">{host.region}</div>}
+                  </div>
+                </DataTableCell>
+
+                {shows('address') && (
+                  <DataTableCell width="11rem" className="tabular-nums text-xs text-muted-foreground">
+                    {host.ip ? `${host.ip}:${host.agent_port}` : `port ${host.agent_port}`}
+                  </DataTableCell>
+                )}
+
+                {shows('servers') && (
+                  <DataTableCell width="18rem">
+                    {linked.length === 0 ? (
+                      <span className="text-xs text-muted-foreground">None linked</span>
+                    ) : (
+                      <div className="flex flex-wrap gap-1.5">
+                        {shown.map((server) => (
+                          <ServerChip key={server.id} server={server} onClick={() => setEditServer(server)} />
+                        ))}
+                        {overflow > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => openLinkEditor(host)}
+                            className="px-2 py-0.5 rounded-md border border-hairline/20 bg-card/40 text-[11px] text-muted-foreground hover:text-foreground hover:border-hairline/40 transition-colors cursor-pointer"
+                          >
+                            +{overflow} more
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </DataTableCell>
+                )}
+
+                {shows('token') && (
+                  <DataTableCell width="13rem"><TokenCell token={host.token} /></DataTableCell>
+                )}
+
+                <DataTableCell align="right" width="17rem">
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    {hostActions(host)}
+                  </div>
+                </DataTableCell>
+              </DataTableRow>
+            )
           })}
-        </div>
-      )}
+        </tbody>
+      </DataTableShell>
 
       {unassigned.length > 0 && !loading && (
         <div className="rounded-lg border border-hairline/10 bg-card/20 px-4 py-3 space-y-1">
@@ -668,8 +802,7 @@ function EditServerModal({ server, hosts, busy, onCancel, onSave }: {
         </div>
 
         <p className="text-[11px] text-muted-foreground">
-          Address and port must match what the server actually binds, or players cannot join it from the launcher. The port has
-          to be between 1000 and 10000.
+          Address and port must match what the server actually binds, or players cannot join it from the launcher.
         </p>
       </div>
     </Modal>

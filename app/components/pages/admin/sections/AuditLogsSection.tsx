@@ -29,10 +29,13 @@ const ACTIONS = [
   'map.create', 'map.update', 'map.difficulty_sync', 'map.author_link', 'map.author_unlink',
   'patch.create', 'patch.update', 'patch.activate', 'patch.deactivate', 'patch.delete',
   'mapvote.regenerate', 'mapvote.announcement',
+  'host.create', 'host.update', 'host.servers',
+  'host.token.issue', 'host.token.replace', 'host.token.revoke',
+  'server.update',
 ]
 const ACTION_OPTIONS = ACTIONS.map((a) => ({ value: a, label: a || 'All actions' }))
 
-const TARGET_TYPES = ['', 'user', 'cap', 'title', 'map', 'map_author', 'patch', 'mapvote']
+const TARGET_TYPES = ['', 'user', 'cap', 'title', 'map', 'map_author', 'patch', 'mapvote', 'game_host', 'service_token', 'public_server']
 const TARGET_OPTIONS = TARGET_TYPES.map((t) => ({ value: t, label: t || 'All targets' }))
 
 const ACTORS_OPTIONS = [

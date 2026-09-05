@@ -4326,6 +4326,33 @@ export async function updateAdminServer(
     return apiGet(`/admin/servers/${encodeURIComponent(serverId)}`, { token: accessToken, method: 'PATCH', body: input })
 }
 
+export interface AdminServerProbe {
+    answering: boolean
+    map_name: string | null
+    num_players: number | null
+    max_players: number | null
+    updated_at: string | null
+    seconds_stale: number | null
+}
+
+export interface AdminOperationsServer extends AdminHostServer {
+    host_name: string | null
+    probe: AdminServerProbe
+}
+
+export interface AdminServerOperations {
+    hosts: AdminHost[]
+    servers: AdminOperationsServer[]
+    generated_at: string | null
+}
+
+export async function fetchAdminServerOperations(
+    accessToken: string,
+    signal?: AbortSignal,
+): Promise<AdminServerOperations> {
+    return apiGet('/admin/servers/operations', { token: accessToken, signal })
+}
+
 export async function fetchAdminRoles(accessToken: string, signal?: AbortSignal): Promise<AdminRoleRow[]> {
     const data = await apiGet<{ items: AdminRoleRow[] }>('/admin/roles', { token: accessToken, signal })
     return data.items ?? []
