@@ -9,7 +9,7 @@ import { Button } from '@/app/components/ui/button'
 import {
   fetchAdminHosts, createAdminHost, updateAdminHost, setAdminHostServers,
   issueAdminHostToken, removeAdminHostToken, updateAdminServer,
-  type AdminHost, type AdminHostServer, type AdminHostToken, type AdminServerUpdate,
+  type AdminHost, type AdminHostInput, type AdminHostServer, type AdminHostToken, type AdminServerUpdate,
 } from '@/app/utils/api'
 import { SectionShell } from '../components/SectionShell'
 import { ActionButton, AdminSelect, ConfirmDialog, Copyable, Feedback, errMessage, relTime } from '../components/controls'
@@ -43,6 +43,10 @@ const SERVER_STATE_META: Record<string, { Icon: typeof CircleCheck; className: s
   Online: { Icon: CircleCheck, className: 'text-emerald-400' },
   Offline: { Icon: CircleX, className: 'text-red-400' },
   Maintenance: { Icon: TriangleAlert, className: 'text-amber-400' },
+}
+
+function assertPort(port: number, label: string) {
+  if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error(`${label} must be between 1 and 65535.`)
 }
 
 function ModalFooter({ children }: { children: ReactNode }) {
@@ -179,7 +183,7 @@ export function HostsManagementSection({ userProfile }: AdminSectionProps) {
   const create = () => run('create', async () => {
     const port = Number(draftPort)
     if (!draftName.trim()) throw new Error('A host name is required.')
-    if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('Agent port must be between 1 and 65535.')
+    assertPort(port, 'Agent port')
 
     await createAdminHost(token, {
       name: draftName.trim(),
@@ -194,22 +198,18 @@ export function HostsManagementSection({ userProfile }: AdminSectionProps) {
     load()
   })
 
-  const saveEdit = (host: AdminHost, patch: Partial<AdminHost>) => run(`edit:${host.id}`, async () => {
-    await updateAdminHost(token, host.id, {
-      region: patch.region ?? host.region,
-      ip: patch.ip ?? host.ip,
-      agent_port: patch.agent_port ?? host.agent_port,
-      active: patch.active ?? host.active,
-    })
+  const saveEdit = (host: AdminHost, patch: Partial<AdminHostInput>) => run(`edit:${host.id}`, async () => {
+    if (patch.agent_port !== undefined) assertPort(patch.agent_port, 'Agent port')
+    await updateAdminHost(token, host.id, patch)
     setEditHost(null)
     load()
   })
 
   const saveLinks = (host: AdminHost) => run(`link:${host.id}`, async () => {
-    const result = await setAdminHostServers(token, host.id, Array.from(linkSelection))
-    setServers(result.servers ?? [])
+    await setAdminHostServers(token, host.id, Array.from(linkSelection))
     setLinkHost(null)
     setNotice(`Updated the servers on “${host.name}”.`)
+    load()
   })
 
   const issue = (host: AdminHost) => run(`token:${host.id}`, async () => {
@@ -228,6 +228,7 @@ export function HostsManagementSection({ userProfile }: AdminSectionProps) {
 
   const saveServer = (server: AdminHostServer, input: AdminServerUpdate) =>
     run(`server:${server.id}`, async () => {
+      if (input.port !== undefined) assertPort(input.port, 'Port')
       const result = await updateAdminServer(token, server.id, input)
       setServers((prev) => prev.map((s) => (s.id === result.server.id ? result.server : s)))
       setEditServer(null)
@@ -518,7 +519,7 @@ function EditHostModal({ host, busy, onCancel, onSave }: {
   host: AdminHost
   busy: boolean
   onCancel: () => void
-  onSave: (patch: Partial<AdminHost>) => void
+  onSave: (patch: Partial<AdminHostInput>) => void
 }) {
   const [region, setRegion] = useState(host.region ?? '')
   const [ip, setIp] = useState(host.ip ?? '')
