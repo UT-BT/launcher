@@ -170,6 +170,16 @@ The map-author fetchers back `MapAuthorsModal`, opened from Maps Management.
 - A video does not affect the mapvote, so a change reloads the row through `onReload`, not
   `onSaved`, and raises no "regenerate mapvote" banner.
 
+## Server operations (Moderators and Admins)
+
+- `fetchAdminServerOperations` returns every registered game server with the host it is
+  linked to and a `probe` block (`answering`, `map_name`, `num_players`, `max_players`,
+  `updated_at`, `seconds_stale`).
+- `answering` is computed by the server. Do not re-derive it from `seconds_stale`.
+- A server with no host link is shown as unlinked, never hidden.
+- Moderators and Admins both read this section; only Admins also see Game Hosts next to it
+  in the Infrastructure group.
+
 ## Game hosts (Admin only)
 
 - A host holds exactly one token. `issueAdminHostToken` (`PUT /admin/hosts/<id>/token`)
