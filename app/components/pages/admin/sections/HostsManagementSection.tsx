@@ -1,8 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Server, Plus, KeyRound, Ban, Link2, Check, AlertTriangle, Pencil, RefreshCw } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import {
+  Server, Plus, KeyRound, Ban, Link2, Check, TriangleAlert, Pencil, RefreshCw, CircleCheck, CircleX,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Input } from '@/app/components/ui/input'
 import { Modal } from '@/app/components/ui/modal'
+import { Button } from '@/app/components/ui/button'
 import {
   fetchAdminHosts, createAdminHost, updateAdminHost, setAdminHostServers,
   issueAdminHostToken, removeAdminHostToken, updateAdminServer,
@@ -21,22 +24,49 @@ const SERVER_STATE_OPTIONS = [
   { value: 'Maintenance', label: 'Maintenance' },
 ]
 
+const HOST_STATUS_OPTIONS = [
+  { value: 'true', label: 'Active' },
+  { value: 'false', label: 'Disabled' },
+]
+
+const SERVER_STATUS_OPTIONS = [
+  { value: 'true', label: 'Active' },
+  { value: 'false', label: 'Inactive' },
+]
+
+const SERVER_RECORDS_OPTIONS = [
+  { value: 'true', label: 'Certified records' },
+  { value: 'false', label: 'Casual records' },
+]
+
+const SERVER_STATE_META: Record<string, { Icon: typeof CircleCheck; className: string }> = {
+  Online: { Icon: CircleCheck, className: 'text-emerald-400' },
+  Offline: { Icon: CircleX, className: 'text-red-400' },
+  Maintenance: { Icon: TriangleAlert, className: 'text-amber-400' },
+}
+
+function ModalFooter({ children }: { children: ReactNode }) {
+  return <div className="p-4 border-t border-border bg-muted/50 flex justify-end gap-2">{children}</div>
+}
+
 function ServerChip({ server, onClick }: { server: AdminHostServer; onClick: () => void }) {
+  const meta = SERVER_STATE_META[server.state ?? ''] ?? SERVER_STATE_META.Offline
+  const StateIcon = meta.Icon
+
   return (
     <button
       type="button"
       onClick={onClick}
-      title={`Edit ${server.name}`}
+      title={`${server.name} — ${server.state ?? 'Unknown'}${server.active ? '' : ', inactive'}. Click to edit.`}
       className={cn(
-        'px-2 py-0.5 rounded-md border text-[11px] transition-colors cursor-pointer',
+        'px-2 py-0.5 rounded-md border text-[11px] inline-flex items-center gap-1.5 transition-colors cursor-pointer',
         'border-hairline/20 bg-card/40 hover:bg-hairline/10 hover:border-hairline/40',
         server.active ? 'text-foreground' : 'text-muted-foreground',
       )}
     >
+      <StateIcon className={cn('size-3 shrink-0', meta.className)} aria-hidden />
+      <span className="sr-only">{server.state ?? 'Unknown'}: </span>
       {server.name}
-      {server.state && server.state !== 'Online' && (
-        <span className="ml-1.5 text-amber-300/80">{server.state}</span>
-      )}
     </button>
   )
 }
@@ -60,7 +90,7 @@ function TokenState({ token }: { token: AdminHostToken | null }) {
   if (!token) {
     return (
       <p className="text-xs text-amber-300/90 flex items-center gap-1.5">
-        <AlertTriangle className="size-3" />
+        <TriangleAlert className="size-3" />
         No token. This host's agent cannot fetch personal bests for its players.
       </p>
     )
@@ -343,30 +373,43 @@ export function HostsManagementSection({ userProfile }: AdminSectionProps) {
         </div>
       )}
 
-      <Modal isOpen={!!editServer} onClose={() => setEditServer(null)} title={editServer?.name ?? 'Server'} offsetSidebar>
-        {editServer && (
-          <EditServerForm
-            server={editServer}
-            hosts={hosts}
-            busy={busy === `server:${editServer.id}`}
-            onCancel={() => setEditServer(null)}
-            onSave={(input) => saveServer(editServer, input)}
-          />
-        )}
-      </Modal>
+      {editServer && (
+        <EditServerModal
+          server={editServer}
+          hosts={hosts}
+          busy={busy === `server:${editServer.id}`}
+          onCancel={() => setEditServer(null)}
+          onSave={(input) => saveServer(editServer, input)}
+        />
+      )}
 
-      <Modal isOpen={!!editHost} onClose={() => setEditHost(null)} title={`Edit ${editHost?.name ?? ''}`} offsetSidebar>
-        {editHost && (
-          <EditHostForm
-            host={editHost}
-            busy={busy === `edit:${editHost.id}`}
-            onCancel={() => setEditHost(null)}
-            onSave={(patch) => saveEdit(editHost, patch)}
-          />
-        )}
-      </Modal>
+      {editHost && (
+        <EditHostModal
+          host={editHost}
+          busy={busy === `edit:${editHost.id}`}
+          onCancel={() => setEditHost(null)}
+          onSave={(patch) => saveEdit(editHost, patch)}
+        />
+      )}
 
-      <Modal isOpen={!!linkHost} onClose={() => setLinkHost(null)} title={`Servers on ${linkHost?.name ?? ''}`} offsetSidebar>
+      <Modal
+        isOpen={!!linkHost}
+        onClose={() => setLinkHost(null)}
+        title={`Servers on ${linkHost?.name ?? ''}`}
+        offsetSidebar
+        maxWidth="34rem"
+        footer={
+          <ModalFooter>
+            <Button variant="outline" onClick={() => setLinkHost(null)}>Cancel</Button>
+            <Button
+              onClick={() => { if (linkHost) saveLinks(linkHost) }}
+              disabled={!!linkHost && busy === `link:${linkHost.id}`}
+            >
+              {!!linkHost && busy === `link:${linkHost.id}` ? 'Saving…' : 'Save'}
+            </Button>
+          </ModalFooter>
+        }
+      >
         <div className="space-y-3">
           <p className="text-xs text-muted-foreground">
             Tick every server that runs on this box. A server already on another host is not listed — unlink it there first.
@@ -402,23 +445,24 @@ export function HostsManagementSection({ userProfile }: AdminSectionProps) {
               })}
             </div>
           )}
-          <div className="flex justify-end gap-2 pt-1">
-            <ActionButton tone="amber" onClick={() => setLinkHost(null)}>Cancel</ActionButton>
-            <ActionButton
-              icon={Check}
-              loading={!!linkHost && busy === `link:${linkHost.id}`}
-              onClick={() => { if (linkHost) saveLinks(linkHost) }}
-            >
-              Save
-            </ActionButton>
-          </div>
         </div>
       </Modal>
 
-      <Modal isOpen={!!issuedToken} onClose={() => setIssuedToken(null)} title="Host token" offsetSidebar>
+      <Modal
+        isOpen={!!issuedToken}
+        onClose={() => setIssuedToken(null)}
+        title="Host token"
+        offsetSidebar
+        maxWidth="34rem"
+        footer={
+          <ModalFooter>
+            <Button onClick={() => setIssuedToken(null)}>Done</Button>
+          </ModalFooter>
+        }
+      >
         <div className="space-y-3">
           <p className="text-xs text-amber-300/90 flex items-start gap-1.5">
-            <AlertTriangle className="size-3.5 shrink-0 mt-px" />
+            <TriangleAlert className="size-3.5 shrink-0 mt-px" />
             This is the only time this token is shown. Put it in the agent's config on {issuedToken?.host} and restart it — the
             token cannot be retrieved later, only replaced.
           </p>
@@ -429,9 +473,6 @@ export function HostsManagementSection({ userProfile }: AdminSectionProps) {
             </p>
           )}
           <Copyable value={issuedToken?.secret ?? ''} />
-          <div className="flex justify-end">
-            <ActionButton icon={Check} onClick={() => setIssuedToken(null)}>Done</ActionButton>
-          </div>
         </div>
       </Modal>
 
@@ -473,7 +514,7 @@ export function HostsManagementSection({ userProfile }: AdminSectionProps) {
   )
 }
 
-function EditHostForm({ host, busy, onCancel, onSave }: {
+function EditHostModal({ host, busy, onCancel, onSave }: {
   host: AdminHost
   busy: boolean
   onCancel: () => void
@@ -485,7 +526,24 @@ function EditHostForm({ host, busy, onCancel, onSave }: {
   const [active, setActive] = useState(host.active)
 
   return (
-    <div className="space-y-3">
+    <Modal
+      isOpen
+      onClose={onCancel}
+      title={`Edit ${host.name}`}
+      offsetSidebar
+      maxWidth="34rem"
+      footer={
+        <ModalFooter>
+          <Button variant="outline" onClick={onCancel} disabled={busy}>Cancel</Button>
+          <Button
+            disabled={busy}
+            onClick={() => onSave({ region: region.trim() || null, ip: ip.trim() || null, agent_port: Number(port), active })}
+          >
+            {busy ? 'Saving…' : 'Save'}
+          </Button>
+        </ModalFooter>
+      }
+    >
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1">
           <span className={PANEL_LABEL}>Region</span>
@@ -501,26 +559,19 @@ function EditHostForm({ host, busy, onCancel, onSave }: {
         </div>
         <div className="space-y-1">
           <span className={PANEL_LABEL}>Status</span>
-          <ActionButton tone={active ? 'emerald' : 'amber'} onClick={() => setActive((v) => !v)}>
-            {active ? 'Active' : 'Disabled'}
-          </ActionButton>
+          <AdminSelect
+            value={String(active)}
+            onChange={(v) => setActive(v === 'true')}
+            options={HOST_STATUS_OPTIONS}
+            ariaLabel="Host status"
+          />
         </div>
       </div>
-      <div className="flex justify-end gap-2 pt-1">
-        <ActionButton tone="amber" onClick={onCancel}>Cancel</ActionButton>
-        <ActionButton
-          icon={Check}
-          loading={busy}
-          onClick={() => onSave({ region: region.trim() || null, ip: ip.trim() || null, agent_port: Number(port), active })}
-        >
-          Save
-        </ActionButton>
-      </div>
-    </div>
+    </Modal>
   )
 }
 
-function EditServerForm({ server, hosts, busy, onCancel, onSave }: {
+function EditServerModal({ server, hosts, busy, onCancel, onSave }: {
   server: AdminHostServer
   hosts: AdminHost[]
   busy: boolean
@@ -542,8 +593,35 @@ function EditServerForm({ server, hosts, busy, onCancel, onSave }: {
   ]
 
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3">
+    <Modal
+      isOpen
+      onClose={onCancel}
+      title={server.name}
+      offsetSidebar
+      maxWidth="36rem"
+      footer={
+        <ModalFooter>
+          <Button variant="outline" onClick={onCancel} disabled={busy}>Cancel</Button>
+          <Button
+            disabled={busy}
+            onClick={() => onSave({
+              name: name.trim(),
+              region: region.trim(),
+              ip: ip.trim(),
+              port: Number(port),
+              state,
+              active,
+              certified_records: certified,
+              host_ref: hostRef || null,
+            })}
+          >
+            {busy ? 'Saving…' : 'Save'}
+          </Button>
+        </ModalFooter>
+      }
+    >
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1 col-span-2">
           <span className={PANEL_LABEL}>Name</span>
           <Input value={name} onChange={(e) => setName(e.target.value)} className="h-9" maxLength={120} />
@@ -564,45 +642,35 @@ function EditServerForm({ server, hosts, busy, onCancel, onSave }: {
           <span className={PANEL_LABEL}>State</span>
           <AdminSelect value={state} onChange={setState} options={SERVER_STATE_OPTIONS} ariaLabel="Server state" />
         </div>
+        <div className="space-y-1">
+          <span className={PANEL_LABEL}>Status</span>
+          <AdminSelect
+            value={String(active)}
+            onChange={(v) => setActive(v === 'true')}
+            options={SERVER_STATUS_OPTIONS}
+            ariaLabel="Server status"
+          />
+        </div>
+        <div className="space-y-1">
+          <span className={PANEL_LABEL}>Records</span>
+          <AdminSelect
+            value={String(certified)}
+            onChange={(v) => setCertified(v === 'true')}
+            options={SERVER_RECORDS_OPTIONS}
+            ariaLabel="Record certification"
+          />
+        </div>
         <div className="space-y-1 col-span-2">
           <span className={PANEL_LABEL}>Game host</span>
           <AdminSelect value={hostRef} onChange={setHostRef} options={hostOptions} ariaLabel="Game host" />
         </div>
-      </div>
+        </div>
 
-      <div className="flex flex-wrap gap-2">
-        <ActionButton tone={active ? 'emerald' : 'amber'} onClick={() => setActive((v) => !v)}>
-          {active ? 'Listed' : 'Unlisted'}
-        </ActionButton>
-        <ActionButton tone={certified ? 'emerald' : 'amber'} onClick={() => setCertified((v) => !v)}>
-          {certified ? 'Certified records' : 'Casual records'}
-        </ActionButton>
+        <p className="text-[11px] text-muted-foreground">
+          Address and port must match what the server actually binds, or players cannot join it from the launcher. The port has
+          to be between 1000 and 10000.
+        </p>
       </div>
-
-      <p className="text-[11px] text-muted-foreground">
-        Address and port must match what the server actually binds, or players cannot join it from the launcher. The port has to
-        be between 1000 and 10000.
-      </p>
-
-      <div className="flex justify-end gap-2 pt-1">
-        <ActionButton tone="amber" onClick={onCancel}>Cancel</ActionButton>
-        <ActionButton
-          icon={Check}
-          loading={busy}
-          onClick={() => onSave({
-            name: name.trim(),
-            region: region.trim(),
-            ip: ip.trim(),
-            port: Number(port),
-            state,
-            active,
-            certified_records: certified,
-            host_ref: hostRef || null,
-          })}
-        >
-          Save
-        </ActionButton>
-      </div>
-    </div>
+    </Modal>
   )
 }
