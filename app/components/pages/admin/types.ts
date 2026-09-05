@@ -20,6 +20,7 @@ export type AdminSectionId =
   | 'anti-cheat'
   | 'audit-logs'
   | 'role-management'
+  | 'hosts-management'
 
 export interface AdminSectionProps {
   userProfile?: UserProfile

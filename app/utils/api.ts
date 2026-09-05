@@ -4227,6 +4227,105 @@ export async function fetchEventAuditLog(accessToken: string, slug: string, para
     return apiGet(`/tournaments/${encodeURIComponent(slug)}/admin/audit${qs ? `?${qs}` : ''}`, { token: accessToken, signal })
 }
 
+export interface AdminHostToken {
+    id: string
+    name: string
+    scopes: string[]
+    active: boolean
+    created_at: string | null
+    last_seen_at: string | null
+}
+
+export interface AdminHost {
+    id: string
+    name: string
+    region: string | null
+    ip: string | null
+    agent_port: number
+    active: boolean
+    created_at: string | null
+    token: AdminHostToken | null
+}
+
+export interface AdminHostServer {
+    id: string
+    name: string
+    region: string | null
+    ip: string | null
+    port: number
+    active: boolean
+    certified_records: boolean
+    state: string | null
+    host_ref: string | null
+}
+
+export interface AdminServerUpdate {
+    name?: string
+    region?: string
+    ip?: string
+    port?: number
+    active?: boolean
+    certified_records?: boolean
+    state?: string
+    host_ref?: string | null
+}
+
+export interface AdminHostsResponse {
+    hosts: AdminHost[]
+    servers: AdminHostServer[]
+    available_scopes: string[]
+}
+
+export interface AdminHostInput {
+    name: string
+    region?: string | null
+    ip?: string | null
+    agent_port?: number
+    active?: boolean
+}
+
+export async function fetchAdminHosts(accessToken: string, signal?: AbortSignal): Promise<AdminHostsResponse> {
+    return apiGet('/admin/hosts', { token: accessToken, signal })
+}
+
+export async function createAdminHost(accessToken: string, input: AdminHostInput): Promise<AdminHost> {
+    return apiGet('/admin/hosts', { token: accessToken, method: 'POST', body: input })
+}
+
+export async function updateAdminHost(accessToken: string, hostId: string, input: Partial<AdminHostInput>): Promise<AdminHost> {
+    return apiGet(`/admin/hosts/${encodeURIComponent(hostId)}`, { token: accessToken, method: 'PATCH', body: input })
+}
+
+export async function setAdminHostServers(
+    accessToken: string,
+    hostId: string,
+    serverIds: string[],
+): Promise<{ host: AdminHost; servers: AdminHostServer[] }> {
+    return apiGet(`/admin/hosts/${encodeURIComponent(hostId)}/servers`, {
+        token: accessToken, method: 'PUT', body: { server_ids: serverIds },
+    })
+}
+
+export async function issueAdminHostToken(
+    accessToken: string,
+    hostId: string,
+    input: { name?: string; scopes?: string[] } = {},
+): Promise<{ token: string; service_token: AdminHostToken; replaced: boolean }> {
+    return apiGet(`/admin/hosts/${encodeURIComponent(hostId)}/token`, { token: accessToken, method: 'PUT', body: input })
+}
+
+export async function removeAdminHostToken(accessToken: string, hostId: string): Promise<{ ok: boolean }> {
+    return apiGet(`/admin/hosts/${encodeURIComponent(hostId)}/token`, { token: accessToken, method: 'DELETE' })
+}
+
+export async function updateAdminServer(
+    accessToken: string,
+    serverId: string,
+    input: AdminServerUpdate,
+): Promise<{ server: AdminHostServer; changed: string[] }> {
+    return apiGet(`/admin/servers/${encodeURIComponent(serverId)}`, { token: accessToken, method: 'PATCH', body: input })
+}
+
 export async function fetchAdminRoles(accessToken: string, signal?: AbortSignal): Promise<AdminRoleRow[]> {
     const data = await apiGet<{ items: AdminRoleRow[] }>('/admin/roles', { token: accessToken, signal })
     return data.items ?? []
