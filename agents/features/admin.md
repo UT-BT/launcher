@@ -180,6 +180,22 @@ The map-author fetchers back `MapAuthorsModal`, opened from Maps Management.
 - Moderators and Admins both read this section; only Admins also see Game Hosts next to it
   in the Infrastructure group.
 
+- `fetchAdminHostMetrics(token, hostId, window)` returns `{ window, bucket, points[] }`.
+  `bucket` is `sample` for 24h and `hour` for longer windows. Hourly points are averages,
+  so short spikes are smoothed away; the UI says so instead of implying the spike never
+  happened. The chart sits in `HostMetricsModal`, opened from the host's action menu.
+- `fetchAdminHealthEvents` is the append-only feed of state changes (`host.unreachable`,
+  `host.recovered`, `server.process_down`, `server.process_up`).
+- A server carries two independent liveness readings: `probe` (does it answer players) and
+  `runtime` (is the process alive on its host). Render both and never reconcile them.
+  `runtime.process_up` true with `probe.answering` false is a hung server, and that
+  disagreement is the point.
+- `runtime.known` false means the server was never polled and `runtime.stale` true means
+  the poller has not been round recently. Neither means down; do not draw them as down.
+- Row actions on Game Hosts and Server Operations go through `ActionMenu`
+  (`admin/components/`). An action a row cannot take is shown disabled, with the reason
+  as its title.
+
 ## Game hosts (Admin only)
 
 - A host holds exactly one token. `issueAdminHostToken` (`PUT /admin/hosts/<id>/token`)
