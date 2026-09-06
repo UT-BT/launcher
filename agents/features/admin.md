@@ -192,9 +192,19 @@ The map-author fetchers back `MapAuthorsModal`, opened from Maps Management.
   disagreement is the point.
 - `runtime.known` false means the server was never polled and `runtime.stale` true means
   the poller has not been round recently. Neither means down; do not draw them as down.
-- Row actions on Game Hosts and Server Operations go through `ActionMenu`
+- Game Hosts row actions go through `ActionMenu`
   (`admin/components/`). An action a row cannot take is shown disabled, with the reason
   as its title.
+
+- Alerts: `fetchAdminAlerts`, `acknowledgeAdminAlert`, `unacknowledgeAdminAlert`,
+  `resolveAdminAlert`, shown in `AlertsPanel` at the top of Server Operations. Hosts raise
+  them (map switch failed, anti-cheat did not start, map vote data not serving) and so does
+  the server's own polling (host unreachable, server process down).
+- Alerts are deduplicated by the server: one open alert per target, with `occurrences`
+  counting repeats. Never render each occurrence as its own row.
+- `status` is `open`, `acknowledged` or `resolved`. Resolving claims it was dealt with; it
+  fixes nothing, and a recurrence opens a fresh alert, so resolving early costs nothing.
+  Acknowledge and resolve are audited, and resolve takes a reason.
 
 ## Game hosts (Admin only)
 
