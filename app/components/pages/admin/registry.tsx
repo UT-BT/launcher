@@ -1,4 +1,4 @@
-import { LayoutDashboard, Tag, UserCog, Flag, Map as MapIcon, Package, ShieldAlert, ScrollText, Newspaper, Swords, Trophy, ShieldCheck, Activity, Server } from 'lucide-react'
+import { LayoutDashboard, Tag, UserCog, Flag, Map as MapIcon, Package, ShieldAlert, ScrollText, Newspaper, Swords, Trophy, ShieldCheck, Activity, Server, ServerCog } from 'lucide-react'
 import { ADMIN_DASHBOARD_ROLES, ADMIN_ONLY_ROLES } from '@/app/utils/roles'
 import type { AdminSection, AdminGroup, AdminSectionId } from './types'
 import { OverviewSection } from './sections/OverviewSection'
@@ -15,6 +15,7 @@ import { FormatsManagementSection } from './sections/FormatsManagementSection'
 import { RoleManagementSection } from './sections/RoleManagementSection'
 import { UsageHealthSection } from './sections/UsageHealthSection'
 import { HostsManagementSection } from './sections/HostsManagementSection'
+import { ServerOperationsSection } from './sections/ServerOperationsSection'
 
 export const ADMIN_GROUPS: AdminGroup[] = [
   { id: 'overview', title: 'Overview' },
@@ -22,6 +23,7 @@ export const ADMIN_GROUPS: AdminGroup[] = [
   { id: 'events', title: 'Events' },
   { id: 'game-content', title: 'Game Content' },
   { id: 'integrity', title: 'Integrity' },
+  { id: 'infrastructure', title: 'Infrastructure' },
   { id: 'system', title: 'System' },
 ]
 
@@ -39,7 +41,8 @@ export const ADMIN_SECTIONS: AdminSection[] = [
   { id: 'anti-cheat', label: 'Anti-Cheat', icon: ShieldAlert, group: 'integrity', roles: ADMIN_DASHBOARD_ROLES, Component: AntiCheatSection },
   { id: 'audit-logs', label: 'Audit Logs', icon: ScrollText, group: 'system', roles: ADMIN_DASHBOARD_ROLES, Component: AuditLogsSection },
   { id: 'role-management', label: 'Staff Roles', icon: ShieldCheck, group: 'system', roles: ADMIN_ONLY_ROLES, Component: RoleManagementSection },
-  { id: 'hosts-management', label: 'Game Hosts', icon: Server, group: 'system', roles: ADMIN_ONLY_ROLES, Component: HostsManagementSection },
+  { id: 'server-operations', label: 'Server Operations', icon: ServerCog, group: 'infrastructure', roles: ADMIN_DASHBOARD_ROLES, Component: ServerOperationsSection },
+  { id: 'hosts-management', label: 'Game Hosts', icon: Server, group: 'infrastructure', roles: ADMIN_ONLY_ROLES, Component: HostsManagementSection },
 ]
 
 export function visibleSections(utbtRole?: number): AdminSection[] {

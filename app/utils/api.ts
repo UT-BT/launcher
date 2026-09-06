@@ -4236,15 +4236,38 @@ export interface AdminHostToken {
     last_seen_at: string | null
 }
 
+export interface AdminHostRuntime {
+    known: boolean
+    reachable: boolean | null
+    agent_version?: string | null
+    polled_at: string | null
+    last_success_at?: string | null
+    last_error?: string | null
+    seconds_since_poll?: number | null
+    uptime_seconds?: number | null
+    cpu_percent?: number | null
+    load?: (number | null)[]
+    memory_percent?: number | null
+    memory_total_mb?: number | null
+    disk_percent?: number | null
+    disk_total_mb?: number | null
+    net_rx_bytes_sec?: number | null
+    net_tx_bytes_sec?: number | null
+    server_count?: number | null
+    servers_up?: number | null
+}
+
 export interface AdminHost {
     id: string
     name: string
     region: string | null
     ip: string | null
     agent_port: number
+    control_port: number | null
     active: boolean
     created_at: string | null
     token: AdminHostToken | null
+    runtime?: AdminHostRuntime
 }
 
 export interface AdminHostServer {
@@ -4281,6 +4304,7 @@ export interface AdminHostInput {
     region?: string | null
     ip?: string | null
     agent_port?: number
+    control_port?: number | null
     active?: boolean
 }
 
@@ -4324,6 +4348,163 @@ export async function updateAdminServer(
     input: AdminServerUpdate,
 ): Promise<{ server: AdminHostServer; changed: string[] }> {
     return apiGet(`/admin/servers/${encodeURIComponent(serverId)}`, { token: accessToken, method: 'PATCH', body: input })
+}
+
+export interface AdminServerProbe {
+    answering: boolean
+    map_name: string | null
+    num_players: number | null
+    max_players: number | null
+    updated_at: string | null
+    seconds_stale: number | null
+}
+
+export interface AdminServerRuntime {
+    known: boolean
+    process_up: boolean | null
+    stale: boolean
+    matched_by: string | null
+    pid: number | null
+    cpu_percent: number | null
+    memory_mb: number | null
+    uptime_seconds: number | null
+    observed_at: string | null
+    changed_at: string | null
+}
+
+export interface AdminOperationsServer extends AdminHostServer {
+    host_name: string | null
+    probe: AdminServerProbe
+    runtime: AdminServerRuntime
+}
+
+export interface AdminServerOperations {
+    hosts: AdminHost[]
+    servers: AdminOperationsServer[]
+    generated_at: string | null
+}
+
+export interface AdminHostMetricPoint {
+    at: string
+    cpu_percent: number | null
+    cpu_percent_max?: number | null
+    memory_percent: number | null
+    memory_percent_max?: number | null
+    disk_percent: number | null
+    load_1: number | null
+    net_rx_bytes_sec: number | null
+    net_tx_bytes_sec: number | null
+    servers_up: number | null
+}
+
+export type AdminMetricWindow = '24h' | '1w' | '1m'
+
+export interface AdminHostMetrics {
+    host: AdminHost
+    window: AdminMetricWindow
+    bucket: 'sample' | 'hour'
+    points: AdminHostMetricPoint[]
+}
+
+export interface AdminHealthEvent {
+    id: number
+    kind: string
+    host_ref: string | null
+    host_name: string | null
+    server_ref: string | null
+    server_name: string | null
+    observed_at: string
+    detail: { [key: string]: unknown } | null
+}
+
+export interface AdminAlert {
+    id: string
+    kind: string
+    severity: 'warning' | 'critical'
+    status: 'open' | 'acknowledged' | 'resolved'
+    host_ref: string | null
+    host_name: string | null
+    server_ref: string | null
+    server_name: string | null
+    raw_server: string | null
+    port: number | null
+    map_name: string | null
+    summary: string
+    details: { [key: string]: unknown } | null
+    occurrences: number
+    first_seen_at: string | null
+    last_seen_at: string | null
+    acknowledged_by: string | null
+    acknowledged_at: string | null
+    resolved_at: string | null
+    resolution: string | null
+}
+
+export interface AdminAlertsResponse {
+    items: AdminAlert[]
+    open_count: number
+    unresolved_count: number
+    kinds: string[]
+    limit: number
+    offset: number
+}
+
+export async function fetchAdminAlerts(
+    accessToken: string,
+    params: { status?: string; host?: string; server?: string; kind?: string; limit?: number } = {},
+    signal?: AbortSignal,
+): Promise<AdminAlertsResponse> {
+    const query = new URLSearchParams()
+    if (params.status) query.set('status', params.status)
+    if (params.host) query.set('host', params.host)
+    if (params.server) query.set('server', params.server)
+    if (params.kind) query.set('kind', params.kind)
+    if (params.limit !== undefined) query.set('limit', String(params.limit))
+    const suffix = query.toString() ? `?${query.toString()}` : ''
+    return apiGet(`/admin/alerts${suffix}`, { token: accessToken, signal })
+}
+
+export async function acknowledgeAdminAlert(accessToken: string, alertId: string, reason?: string): Promise<AdminAlert> {
+    return apiGet(`/admin/alerts/${encodeURIComponent(alertId)}/ack`, { token: accessToken, method: 'POST', body: { reason } })
+}
+
+export async function unacknowledgeAdminAlert(accessToken: string, alertId: string): Promise<AdminAlert> {
+    return apiGet(`/admin/alerts/${encodeURIComponent(alertId)}/unack`, { token: accessToken, method: 'POST' })
+}
+
+export async function resolveAdminAlert(accessToken: string, alertId: string, resolution?: string): Promise<AdminAlert> {
+    return apiGet(`/admin/alerts/${encodeURIComponent(alertId)}/resolve`, { token: accessToken, method: 'POST', body: { resolution } })
+}
+
+export async function fetchAdminHostMetrics(
+    accessToken: string,
+    hostId: string,
+    window: AdminMetricWindow,
+    signal?: AbortSignal,
+): Promise<AdminHostMetrics> {
+    return apiGet(`/admin/hosts/${encodeURIComponent(hostId)}/metrics?window=${window}`, { token: accessToken, signal })
+}
+
+export async function fetchAdminHealthEvents(
+    accessToken: string,
+    params: { server?: string; host?: string; kind?: string; limit?: number; offset?: number } = {},
+    signal?: AbortSignal,
+): Promise<{ items: AdminHealthEvent[]; limit: number; offset: number }> {
+    const query = new URLSearchParams()
+    if (params.server) query.set('server', params.server)
+    if (params.host) query.set('host', params.host)
+    if (params.kind) query.set('kind', params.kind)
+    if (params.limit !== undefined) query.set('limit', String(params.limit))
+    if (params.offset !== undefined) query.set('offset', String(params.offset))
+    const suffix = query.toString() ? `?${query.toString()}` : ''
+    return apiGet(`/admin/health-events${suffix}`, { token: accessToken, signal })
+}
+
+export async function fetchAdminServerOperations(
+    accessToken: string,
+    signal?: AbortSignal,
+): Promise<AdminServerOperations> {
+    return apiGet('/admin/servers/operations', { token: accessToken, signal })
 }
 
 export async function fetchAdminRoles(accessToken: string, signal?: AbortSignal): Promise<AdminRoleRow[]> {

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import {
-  Server, Plus, KeyRound, Ban, Link2, Check, TriangleAlert, Pencil, RefreshCw, CircleCheck, CircleX,
+  Server, Plus, KeyRound, Ban, Link2, Check, TriangleAlert, Pencil, RefreshCw, CircleCheck, CircleX, Activity,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Input } from '@/app/components/ui/input'
@@ -12,11 +12,44 @@ import {
   type AdminHost, type AdminHostInput, type AdminHostServer, type AdminHostToken, type AdminServerUpdate,
 } from '@/app/utils/api'
 import { SectionShell } from '../components/SectionShell'
-import { ActionButton, AdminSelect, ConfirmDialog, Copyable, Feedback, errMessage, relTime } from '../components/controls'
+import { ActionButton, AdminSelect, ConfirmDialog, Copyable, Feedback, SearchInput, errMessage, relTime } from '../components/controls'
 import { PANEL_LABEL } from '../components/shared'
+import { ActionMenu, type ActionMenuItem } from '../components/ActionMenu'
+import { HostMetricsModal } from './HostMetricsModal'
+import { TableControls } from '../components/TableControls'
+import { useAdminTable } from '../components/useAdminTable'
+import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
+import {
+  DataTableCell,
+  DataTableEmpty,
+  DataTableHeaderCell,
+  DataTableHeaderRow,
+  DataTableRow,
+  DataTableShell,
+  DataTableSkeletonRow,
+} from '@/app/components/shared/DataTable'
 import type { AdminSectionProps } from '../types'
 
 const DEFAULT_AGENT_PORT = 80
+const MAX_INLINE_SERVER_CHIPS = 3
+
+const COLUMNS = [
+  { id: 'host', label: 'Host', required: true },
+  { id: 'agent', label: 'Agent' },
+  { id: 'address', label: 'Address' },
+  { id: 'servers', label: 'Servers' },
+  { id: 'token', label: 'Token' },
+  { id: 'actions', label: 'Actions', required: true },
+]
+
+const RESPONSIVE_COLUMNS = [
+  { id: 'host', width: '14rem', required: true },
+  { id: 'actions', width: '5rem', required: true },
+  { id: 'agent', width: '10rem', priority: 45 },
+  { id: 'servers', width: '16rem', priority: 40 },
+  { id: 'token', width: '12rem', priority: 30 },
+  { id: 'address', width: '11rem', priority: 20 },
+]
 
 const SERVER_STATE_OPTIONS = [
   { value: 'Online', label: 'Online' },
@@ -90,23 +123,49 @@ function StatusPill({ active, activeLabel, inactiveLabel }: { active: boolean; a
   )
 }
 
-function TokenState({ token }: { token: AdminHostToken | null }) {
-  if (!token) {
+function AgentCell({ host }: { host: AdminHost }) {
+  const runtime = host.runtime
+  if (!runtime?.known) {
+    return <span className="text-xs text-muted-foreground">Not polled</span>
+  }
+  if (!runtime.reachable) {
     return (
-      <p className="text-xs text-amber-300/90 flex items-center gap-1.5">
-        <TriangleAlert className="size-3" />
-        No token. This host's agent cannot fetch personal bests for its players.
-      </p>
+      <div className="min-w-0">
+        <div className="text-xs text-red-300">Unreachable</div>
+        <div className="text-[11px] text-muted-foreground truncate" title={runtime.last_error ?? undefined}>
+          {runtime.polled_at ? relTime(runtime.polled_at) : 'never reached'}
+        </div>
+      </div>
     )
   }
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-hairline/10 bg-card/20 px-3 py-2">
-      <KeyRound className="size-3.5 shrink-0 text-muted-foreground" />
-      <span className="text-xs font-medium text-foreground">{token.name}</span>
-      <span className="text-[11px] text-muted-foreground">{token.scopes.join(', ') || 'no scopes'}</span>
-      <span className="text-[11px] text-muted-foreground">
-        {token.last_seen_at ? `last seen ${relTime(token.last_seen_at)}` : 'never used'}
+    <div className="min-w-0">
+      <div className="text-xs text-emerald-300">Online</div>
+      <div className="text-[11px] text-muted-foreground tabular-nums truncate">
+        {Math.round(runtime.cpu_percent ?? 0)}% cpu · {Math.round(runtime.memory_percent ?? 0)}% mem
+      </div>
+    </div>
+  )
+}
+
+function TokenCell({ token }: { token: AdminHostToken | null }) {
+  if (!token) {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-[11px] text-amber-300/90">
+        <TriangleAlert className="size-3 shrink-0" />
+        No token
       </span>
+    )
+  }
+  return (
+    <div className="min-w-0">
+      <div className="flex items-center gap-1.5 text-xs text-foreground">
+        <KeyRound className="size-3 shrink-0 text-muted-foreground" />
+        <span className="truncate">{token.name}</span>
+      </div>
+      <div className="text-[11px] text-muted-foreground truncate">
+        {token.last_seen_at ? `last seen ${relTime(token.last_seen_at)}` : 'never used'}
+      </div>
     </div>
   )
 }
@@ -118,6 +177,10 @@ export function HostsManagementSection({ userProfile }: AdminSectionProps) {
   const [servers, setServers] = useState<AdminHostServer[]>([])
   const [scopes, setScopes] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [search, setSearch] = useState('')
+  const [visibleColumns, setVisibleColumns] = useState<Set<string> | null>(null)
+  const [compact, setCompact] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
@@ -135,9 +198,11 @@ export function HostsManagementSection({ userProfile }: AdminSectionProps) {
   const [removeTarget, setRemoveTarget] = useState<AdminHost | null>(null)
   const [issuedToken, setIssuedToken] = useState<{ host: string; secret: string; replaced: boolean } | null>(null)
   const [editServer, setEditServer] = useState<AdminHostServer | null>(null)
+  const [metricsHost, setMetricsHost] = useState<AdminHost | null>(null)
 
-  const load = useCallback((signal?: AbortSignal) => {
-    setLoading(true)
+  const load = useCallback((signal?: AbortSignal, opts: { silent?: boolean } = {}) => {
+    if (opts.silent) setRefreshing(true)
+    else setLoading(true)
     setError(null)
     fetchAdminHosts(token, signal)
       .then((data) => {
@@ -146,7 +211,11 @@ export function HostsManagementSection({ userProfile }: AdminSectionProps) {
         setScopes(data.available_scopes ?? [])
       })
       .catch((e) => { if (!signal?.aborted) setError(errMessage(e)) })
-      .finally(() => { if (!signal?.aborted) setLoading(false) })
+      .finally(() => {
+        if (signal?.aborted) return
+        setLoading(false)
+        setRefreshing(false)
+      })
   }, [token])
 
   useEffect(() => {
@@ -167,6 +236,33 @@ export function HostsManagementSection({ userProfile }: AdminSectionProps) {
   }, [servers])
 
   const unassigned = useMemo(() => servers.filter((s) => !s.host_ref), [servers])
+
+  const table = useAdminTable('utbt:admin:hosts:cols:v1', COLUMNS, { defaultFiltersOpen: false })
+  const isVisible = table.isVisible
+  const resolveColumns = useCallback((ids: Set<string>) => setVisibleColumns(ids), [])
+  const shows = useCallback(
+    (id: string) => isVisible(id) && (!visibleColumns || visibleColumns.has(id)),
+    [isVisible, visibleColumns],
+  )
+
+  useRegisterPageRefresh({
+    onRefresh: () => load(undefined, { silent: true }),
+    refreshing,
+    disabled: !token,
+    tooltip: 'Refresh hosts',
+  })
+
+  const visibleHosts = useMemo(() => {
+    const needle = search.trim().toLowerCase()
+    if (!needle) return hosts
+    return hosts.filter((host) => (
+      host.name.toLowerCase().includes(needle) ||
+      (host.region ?? '').toLowerCase().includes(needle) ||
+      (host.ip ?? '').toLowerCase().includes(needle)
+    ))
+  }, [hosts, search])
+
+  const columnCount = 2 + (['address', 'servers', 'token'] as const).filter(shows).length
 
   const run = async (key: string, action: () => Promise<void>) => {
     setBusy(key)
@@ -200,6 +296,7 @@ export function HostsManagementSection({ userProfile }: AdminSectionProps) {
 
   const saveEdit = (host: AdminHost, patch: Partial<AdminHostInput>) => run(`edit:${host.id}`, async () => {
     if (patch.agent_port !== undefined) assertPort(patch.agent_port, 'Agent port')
+    if (patch.control_port !== undefined && patch.control_port !== null) assertPort(patch.control_port, 'Maintenance port')
     await updateAdminHost(token, host.id, patch)
     setEditHost(null)
     load()
@@ -257,6 +354,37 @@ export function HostsManagementSection({ userProfile }: AdminSectionProps) {
     ? servers.filter((s) => !s.host_ref || s.host_ref === linkHost.id || linkSelection.has(s.id))
     : []
 
+  const hostActions = (host: AdminHost) => {
+    const items: ActionMenuItem[] = [
+      {
+        key: 'metrics',
+        label: 'Host metrics',
+        icon: Activity,
+        hint: host.runtime?.known ? undefined : 'No readings yet',
+        onSelect: () => setMetricsHost(host),
+      },
+      { key: 'edit', label: 'Edit host', icon: Pencil, onSelect: () => setEditHost(host) },
+      {
+        key: 'servers',
+        label: 'Linked servers',
+        icon: Link2,
+        hint: `${(serversByHost.get(host.id) ?? []).length} linked`,
+        onSelect: () => openLinkEditor(host),
+      },
+    ]
+
+    if (host.token) {
+      items.push(
+        { key: 'replace', label: 'Replace token', icon: RefreshCw, tone: 'amber', separatorBefore: true, onSelect: () => setReplaceTarget(host) },
+        { key: 'revoke', label: 'Remove token', icon: Ban, tone: 'red', onSelect: () => setRemoveTarget(host) },
+      )
+    } else {
+      items.push({ key: 'issue', label: 'Issue token', icon: KeyRound, separatorBefore: true, onSelect: () => issue(host) })
+    }
+
+    return <ActionMenu items={items} heading={host.name} busy={busy === `token:${host.id}`} ariaLabel={`Actions for ${host.name}`} />
+  }
+
   return (
     <SectionShell
       title="Game Hosts"
@@ -296,72 +424,129 @@ export function HostsManagementSection({ userProfile }: AdminSectionProps) {
         </div>
       )}
 
-      {loading ? (
-        <p className="text-sm text-muted-foreground">Loading hosts…</p>
-      ) : hosts.length === 0 ? (
-        <div className="rounded-lg border border-hairline/10 bg-card/30 px-4 py-8 text-center space-y-1">
-          <p className="text-sm text-foreground">No hosts registered yet.</p>
-          <p className="text-xs text-muted-foreground">Add one for each box that runs game servers, then mint it a token.</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {hosts.map((host) => {
+      <div className="flex flex-wrap items-center gap-2">
+        <SearchInput value={search} onChange={setSearch} placeholder="Search hosts by name, region or address..." className="min-w-[14rem] flex-1" />
+        {!compact && <TableControls table={table} showFilters={false} />}
+      </div>
+
+      <DataTableShell
+        responsive={{
+          columns: RESPONSIVE_COLUMNS.filter((column) => column.required || isVisible(column.id)),
+          onResolve: resolveColumns,
+          onCompactChange: setCompact,
+          compactAriaLabel: 'Game hosts',
+          compactContent: visibleHosts.map((host) => {
             const linked = serversByHost.get(host.id) ?? []
             return (
-              <div key={host.id} className="rounded-lg border border-hairline/10 bg-card/30 p-4 space-y-3">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0 space-y-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-sm font-semibold text-foreground">{host.name}</span>
-                      <StatusPill active={host.active} activeLabel="Active" inactiveLabel="Disabled" />
-                      {host.region && <span className="text-[11px] text-muted-foreground">{host.region}</span>}
-                    </div>
-                    <div className="text-[11px] text-muted-foreground tabular-nums">
-                      {host.ip ? `${host.ip}:${host.agent_port}` : `agent port ${host.agent_port}`}
-                    </div>
+              <div key={host.id} role="listitem" className="p-3 space-y-2 border-b border-hairline/5 last:border-0">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-2 min-w-0">
+                    <span className="font-medium truncate">{host.name}</span>
+                    <StatusPill active={host.active} activeLabel="Active" inactiveLabel="Disabled" />
+                    {host.region && <span className="text-[11px] text-muted-foreground">{host.region}</span>}
                   </div>
-                  <div className="flex flex-wrap items-center gap-2 shrink-0">
-                    <ActionButton icon={Pencil} onClick={() => setEditHost(host)}>Edit</ActionButton>
-                    <ActionButton icon={Link2} onClick={() => openLinkEditor(host)}>Servers</ActionButton>
-                    {host.token ? (
-                      <>
-                        <ActionButton tone="amber" icon={RefreshCw} onClick={() => setReplaceTarget(host)}>
-                          Replace token
-                        </ActionButton>
-                        <ActionButton tone="red" icon={Ban} onClick={() => setRemoveTarget(host)}>
-                          Remove token
-                        </ActionButton>
-                      </>
-                    ) : (
-                      <ActionButton icon={KeyRound} loading={busy === `token:${host.id}`} onClick={() => issue(host)}>
-                        Issue token
-                      </ActionButton>
-                    )}
+                  {hostActions(host)}
+                </div>
+                <div className="text-[11px] text-muted-foreground tabular-nums">
+                  {host.ip ? `${host.ip}:${host.agent_port}` : `agent port ${host.agent_port}`}
+                </div>
+                <AgentCell host={host} />
+                <TokenCell token={host.token} />
+                {linked.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {linked.map((server) => (
+                      <ServerChip key={server.id} server={server} onClick={() => setEditServer(server)} />
+                    ))}
                   </div>
-                </div>
-
-                <div className="space-y-1">
-                  <span className={PANEL_LABEL}>Servers on this host</span>
-                  {linked.length === 0 ? (
-                    <p className="text-xs text-muted-foreground">None linked yet.</p>
-                  ) : (
-                    <div className="flex flex-wrap gap-1.5">
-                      {linked.map((server) => (
-                        <ServerChip key={server.id} server={server} onClick={() => setEditServer(server)} />
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-1">
-                  <span className={PANEL_LABEL}>Token</span>
-                  <TokenState token={host.token} />
-                </div>
+                )}
               </div>
             )
+          }),
+        }}
+      >
+        <DataTableHeaderRow>
+          <DataTableHeaderCell width="14rem">Host</DataTableHeaderCell>
+          {shows('agent') && <DataTableHeaderCell width="10rem">Agent</DataTableHeaderCell>}
+          {shows('address') && <DataTableHeaderCell width="11rem">Address</DataTableHeaderCell>}
+          {shows('servers') && <DataTableHeaderCell width="18rem">Servers</DataTableHeaderCell>}
+          {shows('token') && <DataTableHeaderCell width="13rem">Token</DataTableHeaderCell>}
+          <DataTableHeaderCell align="right" width="5rem">Actions</DataTableHeaderCell>
+        </DataTableHeaderRow>
+        <tbody>
+          {loading && Array.from({ length: 4 }).map((_, index) => (
+            <DataTableSkeletonRow key={index} columnCount={columnCount} />
+          ))}
+
+          {!loading && visibleHosts.length === 0 && (
+            <DataTableEmpty
+              colSpan={columnCount}
+              message={hosts.length === 0 ? 'No hosts registered yet. Add one for each box that runs game servers, then mint it a token.' : 'No hosts match your search.'}
+            />
+          )}
+
+          {!loading && visibleHosts.map((host) => {
+            const linked = serversByHost.get(host.id) ?? []
+            const shown = linked.slice(0, MAX_INLINE_SERVER_CHIPS)
+            const overflow = linked.length - shown.length
+            return (
+              <DataTableRow key={host.id} className={cn(!host.active && 'opacity-60')}>
+                <DataTableCell width="14rem">
+                  <div className="min-w-0 space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-semibold truncate">{host.name}</span>
+                      <StatusPill active={host.active} activeLabel="Active" inactiveLabel="Disabled" />
+                    </div>
+                    {host.region && <div className="text-[11px] text-muted-foreground truncate">{host.region}</div>}
+                  </div>
+                </DataTableCell>
+
+                {shows('agent') && (
+                  <DataTableCell width="10rem"><AgentCell host={host} /></DataTableCell>
+                )}
+
+                {shows('address') && (
+                  <DataTableCell width="11rem" className="tabular-nums text-xs text-muted-foreground">
+                    {host.ip ? `${host.ip}:${host.agent_port}` : `port ${host.agent_port}`}
+                  </DataTableCell>
+                )}
+
+                {shows('servers') && (
+                  <DataTableCell width="18rem">
+                    {linked.length === 0 ? (
+                      <span className="text-xs text-muted-foreground">None linked</span>
+                    ) : (
+                      <div className="flex flex-wrap gap-1.5">
+                        {shown.map((server) => (
+                          <ServerChip key={server.id} server={server} onClick={() => setEditServer(server)} />
+                        ))}
+                        {overflow > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => openLinkEditor(host)}
+                            className="px-2 py-0.5 rounded-md border border-hairline/20 bg-card/40 text-[11px] text-muted-foreground hover:text-foreground hover:border-hairline/40 transition-colors cursor-pointer"
+                          >
+                            +{overflow} more
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </DataTableCell>
+                )}
+
+                {shows('token') && (
+                  <DataTableCell width="13rem"><TokenCell token={host.token} /></DataTableCell>
+                )}
+
+                <DataTableCell align="right" width="5rem">
+                  <div className="flex items-center justify-end">
+                    {hostActions(host)}
+                  </div>
+                </DataTableCell>
+              </DataTableRow>
+            )
           })}
-        </div>
-      )}
+        </tbody>
+      </DataTableShell>
 
       {unassigned.length > 0 && !loading && (
         <div className="rounded-lg border border-hairline/10 bg-card/20 px-4 py-3 space-y-1">
@@ -372,6 +557,10 @@ export function HostsManagementSection({ userProfile }: AdminSectionProps) {
             ))}
           </div>
         </div>
+      )}
+
+      {metricsHost && token && (
+        <HostMetricsModal host={metricsHost} token={token} onClose={() => setMetricsHost(null)} />
       )}
 
       {editServer && (
@@ -524,6 +713,7 @@ function EditHostModal({ host, busy, onCancel, onSave }: {
   const [region, setRegion] = useState(host.region ?? '')
   const [ip, setIp] = useState(host.ip ?? '')
   const [port, setPort] = useState(String(host.agent_port))
+  const [controlPort, setControlPort] = useState(host.control_port === null ? '' : String(host.control_port))
   const [active, setActive] = useState(host.active)
 
   return (
@@ -538,7 +728,13 @@ function EditHostModal({ host, busy, onCancel, onSave }: {
           <Button variant="outline" onClick={onCancel} disabled={busy}>Cancel</Button>
           <Button
             disabled={busy}
-            onClick={() => onSave({ region: region.trim() || null, ip: ip.trim() || null, agent_port: Number(port), active })}
+            onClick={() => onSave({
+              region: region.trim() || null,
+              ip: ip.trim() || null,
+              agent_port: Number(port),
+              control_port: controlPort.trim() ? Number(controlPort) : null,
+              active,
+            })}
           >
             {busy ? 'Saving…' : 'Save'}
           </Button>
@@ -557,6 +753,16 @@ function EditHostModal({ host, busy, onCancel, onSave }: {
         <div className="space-y-1">
           <span className={PANEL_LABEL}>Agent port</span>
           <Input value={port} onChange={(e) => setPort(e.target.value)} className="h-9" inputMode="numeric" />
+        </div>
+        <div className="space-y-1">
+          <span className={PANEL_LABEL}>Maintenance port</span>
+          <Input
+            value={controlPort}
+            onChange={(e) => setControlPort(e.target.value)}
+            className="h-9"
+            inputMode="numeric"
+            placeholder="default"
+          />
         </div>
         <div className="space-y-1">
           <span className={PANEL_LABEL}>Status</span>
@@ -668,8 +874,7 @@ function EditServerModal({ server, hosts, busy, onCancel, onSave }: {
         </div>
 
         <p className="text-[11px] text-muted-foreground">
-          Address and port must match what the server actually binds, or players cannot join it from the launcher. The port has
-          to be between 1000 and 10000.
+          Address and port must match what the server actually binds, or players cannot join it from the launcher.
         </p>
       </div>
     </Modal>
