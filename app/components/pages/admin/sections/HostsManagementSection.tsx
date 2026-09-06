@@ -14,6 +14,7 @@ import {
 import { SectionShell } from '../components/SectionShell'
 import { ActionButton, AdminSelect, ConfirmDialog, Copyable, Feedback, SearchInput, errMessage, relTime } from '../components/controls'
 import { PANEL_LABEL } from '../components/shared'
+import { ActionMenu, type ActionMenuItem } from '../components/ActionMenu'
 import { TableControls } from '../components/TableControls'
 import { useAdminTable } from '../components/useAdminTable'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
@@ -41,7 +42,7 @@ const COLUMNS = [
 
 const RESPONSIVE_COLUMNS = [
   { id: 'host', width: '14rem', required: true },
-  { id: 'actions', width: '17rem', required: true },
+  { id: 'actions', width: '5rem', required: true },
   { id: 'servers', width: '18rem', priority: 40 },
   { id: 'token', width: '13rem', priority: 30 },
   { id: 'address', width: '11rem', priority: 20 },
@@ -323,22 +324,29 @@ export function HostsManagementSection({ userProfile }: AdminSectionProps) {
     ? servers.filter((s) => !s.host_ref || s.host_ref === linkHost.id || linkSelection.has(s.id))
     : []
 
-  const hostActions = (host: AdminHost) => (
-    <>
-      <ActionButton icon={Pencil} onClick={() => setEditHost(host)}>Edit</ActionButton>
-      <ActionButton icon={Link2} onClick={() => openLinkEditor(host)}>Servers</ActionButton>
-      {host.token ? (
-        <>
-          <ActionButton tone="amber" icon={RefreshCw} onClick={() => setReplaceTarget(host)}>Replace token</ActionButton>
-          <ActionButton tone="red" icon={Ban} onClick={() => setRemoveTarget(host)}>Remove token</ActionButton>
-        </>
-      ) : (
-        <ActionButton icon={KeyRound} loading={busy === `token:${host.id}`} onClick={() => issue(host)}>
-          Issue token
-        </ActionButton>
-      )}
-    </>
-  )
+  const hostActions = (host: AdminHost) => {
+    const items: ActionMenuItem[] = [
+      { key: 'edit', label: 'Edit host', icon: Pencil, onSelect: () => setEditHost(host) },
+      {
+        key: 'servers',
+        label: 'Linked servers',
+        icon: Link2,
+        hint: `${(serversByHost.get(host.id) ?? []).length} linked`,
+        onSelect: () => openLinkEditor(host),
+      },
+    ]
+
+    if (host.token) {
+      items.push(
+        { key: 'replace', label: 'Replace token', icon: RefreshCw, tone: 'amber', separatorBefore: true, onSelect: () => setReplaceTarget(host) },
+        { key: 'revoke', label: 'Remove token', icon: Ban, tone: 'red', onSelect: () => setRemoveTarget(host) },
+      )
+    } else {
+      items.push({ key: 'issue', label: 'Issue token', icon: KeyRound, separatorBefore: true, onSelect: () => issue(host) })
+    }
+
+    return <ActionMenu items={items} heading={host.name} busy={busy === `token:${host.id}`} ariaLabel={`Actions for ${host.name}`} />
+  }
 
   return (
     <SectionShell
@@ -394,10 +402,13 @@ export function HostsManagementSection({ userProfile }: AdminSectionProps) {
             const linked = serversByHost.get(host.id) ?? []
             return (
               <div key={host.id} role="listitem" className="p-3 space-y-2 border-b border-hairline/5 last:border-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-medium">{host.name}</span>
-                  <StatusPill active={host.active} activeLabel="Active" inactiveLabel="Disabled" />
-                  {host.region && <span className="text-[11px] text-muted-foreground">{host.region}</span>}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-2 min-w-0">
+                    <span className="font-medium truncate">{host.name}</span>
+                    <StatusPill active={host.active} activeLabel="Active" inactiveLabel="Disabled" />
+                    {host.region && <span className="text-[11px] text-muted-foreground">{host.region}</span>}
+                  </div>
+                  {hostActions(host)}
                 </div>
                 <div className="text-[11px] text-muted-foreground tabular-nums">
                   {host.ip ? `${host.ip}:${host.agent_port}` : `agent port ${host.agent_port}`}
@@ -410,9 +421,6 @@ export function HostsManagementSection({ userProfile }: AdminSectionProps) {
                     ))}
                   </div>
                 )}
-                <div className="flex flex-wrap items-center gap-2 pt-1">
-                  {hostActions(host)}
-                </div>
               </div>
             )
           }),
@@ -423,7 +431,7 @@ export function HostsManagementSection({ userProfile }: AdminSectionProps) {
           {shows('address') && <DataTableHeaderCell width="11rem">Address</DataTableHeaderCell>}
           {shows('servers') && <DataTableHeaderCell width="18rem">Servers</DataTableHeaderCell>}
           {shows('token') && <DataTableHeaderCell width="13rem">Token</DataTableHeaderCell>}
-          <DataTableHeaderCell align="right" width="17rem">Actions</DataTableHeaderCell>
+          <DataTableHeaderCell align="right" width="5rem">Actions</DataTableHeaderCell>
         </DataTableHeaderRow>
         <tbody>
           {loading && Array.from({ length: 4 }).map((_, index) => (
@@ -486,8 +494,8 @@ export function HostsManagementSection({ userProfile }: AdminSectionProps) {
                   <DataTableCell width="13rem"><TokenCell token={host.token} /></DataTableCell>
                 )}
 
-                <DataTableCell align="right" width="17rem">
-                  <div className="flex flex-wrap items-center justify-end gap-2">
+                <DataTableCell align="right" width="5rem">
+                  <div className="flex items-center justify-end">
                     {hostActions(host)}
                   </div>
                 </DataTableCell>
