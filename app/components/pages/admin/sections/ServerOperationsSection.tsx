@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { CircleCheck, CircleSlash, Server, ServerCog, Unlink } from 'lucide-react'
+import { CircleCheck, CircleHelp, CircleSlash, Server, ServerCog, TriangleAlert } from 'lucide-react'
 import { fetchAdminServerOperations, type AdminOperationsServer, type AdminServerOperations } from '@/app/utils/api'
 import { capabilities } from '@/app/platform'
 import { cn } from '@/lib/utils'
-import type { AdminSectionProps } from '../types'
+import type { AdminSectionProps, Tone } from '../types'
 import { SectionShell } from '../components/SectionShell'
 import { StatCard } from '../components/StatCard'
 import { TableControls } from '../components/TableControls'
@@ -24,28 +24,109 @@ const AUTO_REFRESH_MS = 30_000
 
 const COLUMNS = [
   { id: 'server', label: 'Server', required: true },
+  { id: 'health', label: 'Health', required: true },
   { id: 'host', label: 'Host' },
   { id: 'probe', label: 'Probe' },
+  { id: 'process', label: 'Process' },
   { id: 'players', label: 'Players' },
   { id: 'map', label: 'Map' },
   { id: 'region', label: 'Region' },
 ]
 
 const RESPONSIVE_COLUMNS = [
-  { id: 'server', width: '16rem', required: true },
-  { id: 'probe', width: '9rem', priority: 50 },
-  { id: 'host', width: '10rem', priority: 40 },
-  { id: 'players', width: '7rem', priority: 30 },
+  { id: 'server', width: '15rem', required: true },
+  { id: 'health', width: '9rem', required: true },
+  { id: 'host', width: '10rem', priority: 50 },
+  { id: 'players', width: '7rem', priority: 40 },
+  { id: 'probe', width: '8rem', priority: 30 },
+  { id: 'process', width: '8rem', priority: 25 },
   { id: 'map', width: '12rem', priority: 20 },
   { id: 'region', width: '8rem', priority: 10 },
 ]
 
 const STATUS_OPTIONS = [
   { value: 'all', label: 'All servers' },
+  { value: 'problems', label: 'Problems only' },
+  { value: 'hung', label: 'Hung' },
   { value: 'answering', label: 'Answering' },
   { value: 'down', label: 'Not answering' },
   { value: 'unlinked', label: 'Not linked to a host' },
 ]
+
+type Health = { key: 'healthy' | 'hung' | 'down' | 'unknown' | 'unlisted'; label: string; tone: Tone; hint: string }
+
+function healthOf(server: AdminOperationsServer): Health {
+  const answering = server.probe.answering
+  const runtime = server.runtime
+  const processKnown = runtime?.known && !runtime.stale
+
+  if (!server.active) {
+    return { key: 'unlisted', label: 'Inactive', tone: 'accent', hint: 'Not listed in the browser' }
+  }
+  if (answering) {
+    return { key: 'healthy', label: 'Healthy', tone: 'emerald', hint: 'Answering player queries' }
+  }
+  if (processKnown && runtime.process_up) {
+    return {
+      key: 'hung',
+      label: 'Hung',
+      tone: 'amber',
+      hint: 'The process is running but the server is not answering queries. A restart usually clears this.',
+    }
+  }
+  if (processKnown && runtime.process_up === false) {
+    return { key: 'down', label: 'Down', tone: 'red', hint: 'The process is not running on its host' }
+  }
+  return { key: 'unknown', label: 'No reply', tone: 'red', hint: 'Not answering, and its host has not reported in' }
+}
+
+const HEALTH_ICON = {
+  healthy: CircleCheck,
+  hung: TriangleAlert,
+  down: CircleSlash,
+  unknown: CircleHelp,
+  unlisted: CircleHelp,
+} as const
+
+const HEALTH_CLASS: Record<Tone, string> = {
+  emerald: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300',
+  amber: 'bg-amber-500/10 border-amber-500/30 text-amber-300',
+  red: 'bg-red-500/10 border-red-500/30 text-red-300',
+  accent: 'bg-card/40 border-hairline/20 text-muted-foreground',
+}
+
+function HealthPill({ server }: { server: AdminOperationsServer }) {
+  const health = healthOf(server)
+  const Icon = HEALTH_ICON[health.key]
+  return (
+    <span
+      title={health.hint}
+      className={cn(
+        'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border text-[11px] font-medium',
+        HEALTH_CLASS[health.tone],
+      )}
+    >
+      <Icon className="size-3" />
+      {health.label}
+    </span>
+  )
+}
+
+function ProcessCell({ server }: { server: AdminOperationsServer }) {
+  const runtime = server.runtime
+  if (!runtime?.known) return <span className="text-xs text-muted-foreground">Not polled</span>
+  if (runtime.stale) {
+    return <span className="text-xs text-muted-foreground" title={`Last seen ${relTime(runtime.observed_at)}`}>Stale</span>
+  }
+  return (
+    <span
+      className={cn('text-xs', runtime.process_up ? 'text-emerald-300' : 'text-red-300')}
+      title={runtime.matched_by ? `Matched by ${runtime.matched_by}` : undefined}
+    >
+      {runtime.process_up ? 'Running' : 'Stopped'}
+    </span>
+  )
+}
 
 function ProbePill({ server }: { server: AdminOperationsServer }) {
   const { answering, updated_at } = server.probe
@@ -141,6 +222,9 @@ export function ServerOperationsSection({ userProfile }: AdminSectionProps) {
     const rows = data?.servers ?? []
     const needle = search.trim().toLowerCase()
     return rows.filter((server) => {
+      const health = healthOf(server)
+      if (status === 'problems' && (health.key === 'healthy' || health.key === 'unlisted')) return false
+      if (status === 'hung' && health.key !== 'hung') return false
       if (status === 'answering' && !server.probe.answering) return false
       if (status === 'down' && server.probe.answering) return false
       if (status === 'unlinked' && server.host_ref) return false
@@ -157,15 +241,17 @@ export function ServerOperationsSection({ userProfile }: AdminSectionProps) {
   const totals = useMemo(() => {
     const rows = data?.servers ?? []
     const active = rows.filter((server) => server.active)
+    const hosts = data?.hosts ?? []
     return {
-      up: active.filter((server) => server.probe.answering).length,
-      down: active.filter((server) => !server.probe.answering).length,
-      unlinked: rows.filter((server) => !server.host_ref).length,
-      hosts: (data?.hosts ?? []).filter((host) => host.active).length,
+      up: active.filter((server) => healthOf(server).key === 'healthy').length,
+      hung: active.filter((server) => healthOf(server).key === 'hung').length,
+      down: active.filter((server) => ['down', 'unknown'].includes(healthOf(server).key)).length,
+      hostsOnline: hosts.filter((host) => host.active && host.runtime?.reachable).length,
+      hostsActive: hosts.filter((host) => host.active).length,
     }
   }, [data])
 
-  const columnCount = 1 + (['host', 'probe', 'players', 'map', 'region'] as const).filter(shows).length
+  const columnCount = 2 + (['host', 'probe', 'process', 'players', 'map', 'region'] as const).filter(shows).length
 
   return (
     <SectionShell
@@ -176,10 +262,15 @@ export function ServerOperationsSection({ userProfile }: AdminSectionProps) {
       <Feedback message={error} tone="red" onDismiss={() => setError(null)} />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatCard label="Answering" value={totals.up} icon={CircleCheck} tone="emerald" />
-        <StatCard label="Not answering" value={totals.down} icon={CircleSlash} tone={totals.down > 0 ? 'red' : 'accent'} />
-        <StatCard label="Unlinked" value={totals.unlinked} icon={Unlink} tone={totals.unlinked > 0 ? 'amber' : 'accent'} hint="No host assigned" />
-        <StatCard label="Active hosts" value={totals.hosts} icon={Server} />
+        <StatCard label="Healthy" value={totals.up} icon={CircleCheck} tone="emerald" />
+        <StatCard label="Hung" value={totals.hung} icon={TriangleAlert} tone={totals.hung > 0 ? 'amber' : 'accent'} hint="Running but not answering" />
+        <StatCard label="Down" value={totals.down} icon={CircleSlash} tone={totals.down > 0 ? 'red' : 'accent'} />
+        <StatCard
+          label="Hosts online"
+          value={`${totals.hostsOnline}/${totals.hostsActive}`}
+          icon={Server}
+          tone={totals.hostsOnline < totals.hostsActive ? 'amber' : 'accent'}
+        />
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -201,7 +292,7 @@ export function ServerOperationsSection({ userProfile }: AdminSectionProps) {
                   <div className="font-medium truncate">{server.name}</div>
                   <div className="text-xs text-muted-foreground truncate">{server.host_name ?? 'No host linked'}</div>
                 </div>
-                <ProbePill server={server} />
+                <HealthPill server={server} />
               </div>
               <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
                 <span>{server.probe.map_name ?? '--'}</span>
@@ -215,9 +306,11 @@ export function ServerOperationsSection({ userProfile }: AdminSectionProps) {
         }}
       >
         <DataTableHeaderRow>
-          <DataTableHeaderCell width="16rem">Server</DataTableHeaderCell>
+          <DataTableHeaderCell width="15rem">Server</DataTableHeaderCell>
+          <DataTableHeaderCell align="center" width="9rem">Health</DataTableHeaderCell>
           {shows('host') && <DataTableHeaderCell width="10rem">Host</DataTableHeaderCell>}
-          {shows('probe') && <DataTableHeaderCell align="center" width="9rem">Probe</DataTableHeaderCell>}
+          {shows('probe') && <DataTableHeaderCell align="center" width="8rem">Probe</DataTableHeaderCell>}
+          {shows('process') && <DataTableHeaderCell align="center" width="8rem">Process</DataTableHeaderCell>}
           {shows('players') && <DataTableHeaderCell align="center" width="7rem">Players</DataTableHeaderCell>}
           {shows('map') && <DataTableHeaderCell width="12rem">Map</DataTableHeaderCell>}
           {shows('region') && <DataTableHeaderCell width="8rem">Region</DataTableHeaderCell>}
@@ -233,19 +326,23 @@ export function ServerOperationsSection({ userProfile }: AdminSectionProps) {
 
           {!loading && servers.map((server) => (
             <DataTableRow key={server.id} className={cn(!server.active && 'opacity-50')}>
-              <DataTableCell width="16rem">
+              <DataTableCell width="15rem">
                 <div className="min-w-0">
                   <div className="font-medium truncate">{server.name}</div>
                   <div className="text-xs text-muted-foreground tabular-nums">{server.port}</div>
                 </div>
               </DataTableCell>
+              <DataTableCell align="center" width="9rem"><HealthPill server={server} /></DataTableCell>
               {shows('host') && (
                 <DataTableCell width="10rem">
                   {server.host_name ?? <span className="text-amber-300/80">Not linked</span>}
                 </DataTableCell>
               )}
               {shows('probe') && (
-                <DataTableCell align="center" width="9rem"><ProbePill server={server} /></DataTableCell>
+                <DataTableCell align="center" width="8rem"><ProbePill server={server} /></DataTableCell>
+              )}
+              {shows('process') && (
+                <DataTableCell align="center" width="8rem"><ProcessCell server={server} /></DataTableCell>
               )}
               {shows('players') && (
                 <DataTableCell align="center" width="7rem" className="tabular-nums">

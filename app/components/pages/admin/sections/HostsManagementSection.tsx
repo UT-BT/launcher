@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import {
-  Server, Plus, KeyRound, Ban, Link2, Check, TriangleAlert, Pencil, RefreshCw, CircleCheck, CircleX,
+  Server, Plus, KeyRound, Ban, Link2, Check, TriangleAlert, Pencil, RefreshCw, CircleCheck, CircleX, Activity,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Input } from '@/app/components/ui/input'
@@ -15,6 +15,7 @@ import { SectionShell } from '../components/SectionShell'
 import { ActionButton, AdminSelect, ConfirmDialog, Copyable, Feedback, SearchInput, errMessage, relTime } from '../components/controls'
 import { PANEL_LABEL } from '../components/shared'
 import { ActionMenu, type ActionMenuItem } from '../components/ActionMenu'
+import { HostMetricsModal } from './HostMetricsModal'
 import { TableControls } from '../components/TableControls'
 import { useAdminTable } from '../components/useAdminTable'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
@@ -34,6 +35,7 @@ const MAX_INLINE_SERVER_CHIPS = 3
 
 const COLUMNS = [
   { id: 'host', label: 'Host', required: true },
+  { id: 'agent', label: 'Agent' },
   { id: 'address', label: 'Address' },
   { id: 'servers', label: 'Servers' },
   { id: 'token', label: 'Token' },
@@ -43,8 +45,9 @@ const COLUMNS = [
 const RESPONSIVE_COLUMNS = [
   { id: 'host', width: '14rem', required: true },
   { id: 'actions', width: '5rem', required: true },
-  { id: 'servers', width: '18rem', priority: 40 },
-  { id: 'token', width: '13rem', priority: 30 },
+  { id: 'agent', width: '10rem', priority: 45 },
+  { id: 'servers', width: '16rem', priority: 40 },
+  { id: 'token', width: '12rem', priority: 30 },
   { id: 'address', width: '11rem', priority: 20 },
 ]
 
@@ -120,6 +123,31 @@ function StatusPill({ active, activeLabel, inactiveLabel }: { active: boolean; a
   )
 }
 
+function AgentCell({ host }: { host: AdminHost }) {
+  const runtime = host.runtime
+  if (!runtime?.known) {
+    return <span className="text-xs text-muted-foreground">Not polled</span>
+  }
+  if (!runtime.reachable) {
+    return (
+      <div className="min-w-0">
+        <div className="text-xs text-red-300">Unreachable</div>
+        <div className="text-[11px] text-muted-foreground truncate" title={runtime.last_error ?? undefined}>
+          {runtime.polled_at ? relTime(runtime.polled_at) : 'never reached'}
+        </div>
+      </div>
+    )
+  }
+  return (
+    <div className="min-w-0">
+      <div className="text-xs text-emerald-300">Online</div>
+      <div className="text-[11px] text-muted-foreground tabular-nums truncate">
+        {Math.round(runtime.cpu_percent ?? 0)}% cpu · {Math.round(runtime.memory_percent ?? 0)}% mem
+      </div>
+    </div>
+  )
+}
+
 function TokenCell({ token }: { token: AdminHostToken | null }) {
   if (!token) {
     return (
@@ -170,6 +198,7 @@ export function HostsManagementSection({ userProfile }: AdminSectionProps) {
   const [removeTarget, setRemoveTarget] = useState<AdminHost | null>(null)
   const [issuedToken, setIssuedToken] = useState<{ host: string; secret: string; replaced: boolean } | null>(null)
   const [editServer, setEditServer] = useState<AdminHostServer | null>(null)
+  const [metricsHost, setMetricsHost] = useState<AdminHost | null>(null)
 
   const load = useCallback((signal?: AbortSignal, opts: { silent?: boolean } = {}) => {
     if (opts.silent) setRefreshing(true)
@@ -267,6 +296,7 @@ export function HostsManagementSection({ userProfile }: AdminSectionProps) {
 
   const saveEdit = (host: AdminHost, patch: Partial<AdminHostInput>) => run(`edit:${host.id}`, async () => {
     if (patch.agent_port !== undefined) assertPort(patch.agent_port, 'Agent port')
+    if (patch.control_port !== undefined && patch.control_port !== null) assertPort(patch.control_port, 'Maintenance port')
     await updateAdminHost(token, host.id, patch)
     setEditHost(null)
     load()
@@ -326,6 +356,13 @@ export function HostsManagementSection({ userProfile }: AdminSectionProps) {
 
   const hostActions = (host: AdminHost) => {
     const items: ActionMenuItem[] = [
+      {
+        key: 'metrics',
+        label: 'Host metrics',
+        icon: Activity,
+        hint: host.runtime?.known ? undefined : 'No readings yet',
+        onSelect: () => setMetricsHost(host),
+      },
       { key: 'edit', label: 'Edit host', icon: Pencil, onSelect: () => setEditHost(host) },
       {
         key: 'servers',
@@ -413,6 +450,7 @@ export function HostsManagementSection({ userProfile }: AdminSectionProps) {
                 <div className="text-[11px] text-muted-foreground tabular-nums">
                   {host.ip ? `${host.ip}:${host.agent_port}` : `agent port ${host.agent_port}`}
                 </div>
+                <AgentCell host={host} />
                 <TokenCell token={host.token} />
                 {linked.length > 0 && (
                   <div className="flex flex-wrap gap-1.5">
@@ -428,6 +466,7 @@ export function HostsManagementSection({ userProfile }: AdminSectionProps) {
       >
         <DataTableHeaderRow>
           <DataTableHeaderCell width="14rem">Host</DataTableHeaderCell>
+          {shows('agent') && <DataTableHeaderCell width="10rem">Agent</DataTableHeaderCell>}
           {shows('address') && <DataTableHeaderCell width="11rem">Address</DataTableHeaderCell>}
           {shows('servers') && <DataTableHeaderCell width="18rem">Servers</DataTableHeaderCell>}
           {shows('token') && <DataTableHeaderCell width="13rem">Token</DataTableHeaderCell>}
@@ -460,6 +499,10 @@ export function HostsManagementSection({ userProfile }: AdminSectionProps) {
                     {host.region && <div className="text-[11px] text-muted-foreground truncate">{host.region}</div>}
                   </div>
                 </DataTableCell>
+
+                {shows('agent') && (
+                  <DataTableCell width="10rem"><AgentCell host={host} /></DataTableCell>
+                )}
 
                 {shows('address') && (
                   <DataTableCell width="11rem" className="tabular-nums text-xs text-muted-foreground">
@@ -514,6 +557,10 @@ export function HostsManagementSection({ userProfile }: AdminSectionProps) {
             ))}
           </div>
         </div>
+      )}
+
+      {metricsHost && token && (
+        <HostMetricsModal host={metricsHost} token={token} onClose={() => setMetricsHost(null)} />
       )}
 
       {editServer && (
@@ -666,6 +713,7 @@ function EditHostModal({ host, busy, onCancel, onSave }: {
   const [region, setRegion] = useState(host.region ?? '')
   const [ip, setIp] = useState(host.ip ?? '')
   const [port, setPort] = useState(String(host.agent_port))
+  const [controlPort, setControlPort] = useState(host.control_port === null ? '' : String(host.control_port))
   const [active, setActive] = useState(host.active)
 
   return (
@@ -680,7 +728,13 @@ function EditHostModal({ host, busy, onCancel, onSave }: {
           <Button variant="outline" onClick={onCancel} disabled={busy}>Cancel</Button>
           <Button
             disabled={busy}
-            onClick={() => onSave({ region: region.trim() || null, ip: ip.trim() || null, agent_port: Number(port), active })}
+            onClick={() => onSave({
+              region: region.trim() || null,
+              ip: ip.trim() || null,
+              agent_port: Number(port),
+              control_port: controlPort.trim() ? Number(controlPort) : null,
+              active,
+            })}
           >
             {busy ? 'Saving…' : 'Save'}
           </Button>
@@ -699,6 +753,16 @@ function EditHostModal({ host, busy, onCancel, onSave }: {
         <div className="space-y-1">
           <span className={PANEL_LABEL}>Agent port</span>
           <Input value={port} onChange={(e) => setPort(e.target.value)} className="h-9" inputMode="numeric" />
+        </div>
+        <div className="space-y-1">
+          <span className={PANEL_LABEL}>Maintenance port</span>
+          <Input
+            value={controlPort}
+            onChange={(e) => setControlPort(e.target.value)}
+            className="h-9"
+            inputMode="numeric"
+            placeholder="default"
+          />
         </div>
         <div className="space-y-1">
           <span className={PANEL_LABEL}>Status</span>
