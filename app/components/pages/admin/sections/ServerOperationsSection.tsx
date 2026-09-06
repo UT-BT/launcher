@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { CircleCheck, CircleHelp, CircleSlash, Server, ServerCog, TriangleAlert } from 'lucide-react'
+import { BellRing, CircleCheck, CircleHelp, CircleSlash, Server, ServerCog, TriangleAlert } from 'lucide-react'
 import { fetchAdminServerOperations, type AdminOperationsServer, type AdminServerOperations } from '@/app/utils/api'
 import { capabilities } from '@/app/platform'
 import { cn } from '@/lib/utils'
@@ -10,6 +10,7 @@ import { TableControls } from '../components/TableControls'
 import { useAdminTable } from '../components/useAdminTable'
 import { AdminSelect, Feedback, SearchInput, errMessage, relTime } from '../components/controls'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
+import { AlertsPanel } from './AlertsPanel'
 import {
   DataTableCell,
   DataTableEmpty,
@@ -157,6 +158,7 @@ export function ServerOperationsSection({ userProfile }: AdminSectionProps) {
   const [status, setStatus] = useState('all')
   const [visibleColumns, setVisibleColumns] = useState<Set<string> | null>(null)
   const [compact, setCompact] = useState(false)
+  const [openAlerts, setOpenAlerts] = useState(0)
 
   const table = useAdminTable('utbt:admin:serverops:cols:v1', COLUMNS, { defaultFiltersOpen: false })
   const abortRef = useRef<AbortController | null>(null)
@@ -261,7 +263,9 @@ export function ServerOperationsSection({ userProfile }: AdminSectionProps) {
     >
       <Feedback message={error} tone="red" onDismiss={() => setError(null)} />
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <AlertsPanel token={token} onCountChange={setOpenAlerts} />
+
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         <StatCard label="Healthy" value={totals.up} icon={CircleCheck} tone="emerald" />
         <StatCard label="Hung" value={totals.hung} icon={TriangleAlert} tone={totals.hung > 0 ? 'amber' : 'accent'} hint="Running but not answering" />
         <StatCard label="Down" value={totals.down} icon={CircleSlash} tone={totals.down > 0 ? 'red' : 'accent'} />
@@ -271,6 +275,7 @@ export function ServerOperationsSection({ userProfile }: AdminSectionProps) {
           icon={Server}
           tone={totals.hostsOnline < totals.hostsActive ? 'amber' : 'accent'}
         />
+        <StatCard label="Open alerts" value={openAlerts} icon={BellRing} tone={openAlerts > 0 ? 'amber' : 'accent'} />
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
