@@ -4093,6 +4093,16 @@ export async function fetchMySchedule(accessToken: string, signal?: AbortSignal)
     return data.items ?? []
 }
 
+export interface ScheduleOversightEntry extends ScheduleEntry {
+    overdue: boolean
+    stalled_since: string | null
+}
+
+export async function fetchEventScheduleOversight(accessToken: string, slug: string, signal?: AbortSignal): Promise<ScheduleOversightEntry[]> {
+    const data = await apiGet<{ items: ScheduleOversightEntry[] }>(`/tournaments/${encodeURIComponent(slug)}/admin/schedule`, { token: accessToken, signal })
+    return data.items ?? []
+}
+
 export async function createEventTeam(accessToken: string, slug: string, input: CreateEventTeamInput): Promise<EventTeam> {
     const data = await apiGet<{ team: EventTeam }>(`/tournaments/${encodeURIComponent(slug)}/teams`, { token: accessToken, method: 'POST', body: input })
     return data.team
@@ -4176,6 +4186,7 @@ export interface EventAuditEntry {
     id: string
     action: string
     team_id: string | null
+    match_id: string | null
     actor: string | null
     actor_alias: string | null
     target: string | null
@@ -4251,10 +4262,11 @@ export async function removeEventLfp(accessToken: string, slug: string, userId: 
     return apiGet(`/tournaments/${encodeURIComponent(slug)}/admin/lfp/${encodeURIComponent(userId)}`, { token: accessToken, method: 'DELETE' })
 }
 
-export async function fetchEventAuditLog(accessToken: string, slug: string, params: { limit?: number; offset?: number } = {}, signal?: AbortSignal): Promise<{ items: EventAuditEntry[]; count: number }> {
+export async function fetchEventAuditLog(accessToken: string, slug: string, params: { limit?: number; offset?: number; matchId?: string } = {}, signal?: AbortSignal): Promise<{ items: EventAuditEntry[]; count: number }> {
     const search = new URLSearchParams()
     if (params.limit != null) search.set('limit', String(params.limit))
     if (params.offset != null) search.set('offset', String(params.offset))
+    if (params.matchId) search.set('match_id', params.matchId)
     const qs = search.toString()
     return apiGet(`/tournaments/${encodeURIComponent(slug)}/admin/audit${qs ? `?${qs}` : ''}`, { token: accessToken, signal })
 }
