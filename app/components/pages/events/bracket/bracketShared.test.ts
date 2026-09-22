@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest'
 import type {
     EventBracketGroup, EventBracketStage, EventFormatSpec, EventMatch, EventMatchMap,
 } from '@/app/utils/api'
-import { mapWinnerOf, matchOrder, seriesProgress, unfinishedFeeders } from './bracketShared'
+import {
+    mapWinnerOf, matchOrder, nextOwnMatch, schedulingWindowLabel, schedulingWindowState, seriesProgress,
+    unfinishedFeeders,
+} from './bracketShared'
 
 function mapRow(patch: Partial<EventMatchMap> = {}): EventMatchMap {
     return {
@@ -118,7 +121,8 @@ function match(patch: Partial<EventMatch> = {}): EventMatch {
         best_of: 3, caps_to_win: 4, mode: 'first_to', status: 'pending',
         winner_team_id: null, is_draw: false, score_a: null, score_b: null,
         caps_a: null, caps_b: null, deaths_a: null, deaths_b: null,
-        scheduled_at: null, started_at: null, ended_at: null, stream_url: null,
+        scheduled_at: null, resolved_window: { opens_at: null, closes_at: null },
+        started_at: null, ended_at: null, stream_url: null,
         notes: null, published: true, maps: [],
         winner_to_match_id: null, winner_to_slot: null,
         loser_to_match_id: null, loser_to_slot: null,
@@ -228,5 +232,85 @@ describe('unfinishedFeeders', () => {
 
     it('copes with no format attached', () => {
         expect(unfinishedFeeders(null, [stageRow('groups', 'active')], 'playoffs')).toEqual([])
+    })
+})
+
+const NOW = new Date('2026-06-01T00:00:00Z').getTime()
+
+describe('schedulingWindowState', () => {
+    it('has not opened yet when the opens-at time is in the future', () => {
+        const window = { opens_at: '2026-06-02T00:00:00+00:00', closes_at: '2026-06-10T00:00:00+00:00' }
+        expect(schedulingWindowState(window, NOW)).toBe('not_open')
+    })
+
+    it('is open once opens-at has passed and closes-at has not', () => {
+        const window = { opens_at: '2026-05-01T00:00:00+00:00', closes_at: '2026-06-10T00:00:00+00:00' }
+        expect(schedulingWindowState(window, NOW)).toBe('open')
+    })
+
+    it('is closed once closes-at has passed', () => {
+        const window = { opens_at: '2026-05-01T00:00:00+00:00', closes_at: '2026-05-20T00:00:00+00:00' }
+        expect(schedulingWindowState(window, NOW)).toBe('closed')
+    })
+
+    it('is unknown when neither bound is set', () => {
+        expect(schedulingWindowState({ opens_at: null, closes_at: null }, NOW)).toBe('unknown')
+        expect(schedulingWindowState(null, NOW)).toBe('unknown')
+    })
+})
+
+describe('schedulingWindowLabel', () => {
+    it('names the opening time for a window that has not opened yet', () => {
+        const window = { opens_at: '2026-06-02T18:00:00+00:00', closes_at: null }
+        expect(schedulingWindowLabel('not_open', window, 'UTC')).toMatch(/^Opens /)
+    })
+
+    it('says the window closed with nothing booked', () => {
+        expect(schedulingWindowLabel('closed', { opens_at: null, closes_at: null }, 'UTC')).toBe('Scheduling window closed')
+    })
+
+    it('says a match is awaiting a time while its window is open', () => {
+        expect(schedulingWindowLabel('open', { opens_at: null, closes_at: null }, 'UTC')).toBe('Awaiting a time')
+    })
+
+    it('falls back to a generic message when there is no resolved window at all', () => {
+        expect(schedulingWindowLabel('unknown', null, 'UTC')).toBe('Not yet scheduled')
+    })
+})
+
+describe('nextOwnMatch', () => {
+    const myTeam = { id: 'mine', name: 'My Team', seed: 1, status: 'registered' as const }
+    const otherTeam = { id: 'other', name: 'Other Team', seed: 2, status: 'registered' as const }
+
+    function stageWith(matches: EventMatch[]): EventBracketStage {
+        return { ...stageRow('s', 'active'), matches }
+    }
+
+    it('picks the soonest future booked match involving my team', () => {
+        const soon = match({ id: 'soon', team_a: myTeam, team_b: otherTeam, status: 'scheduled', scheduled_at: '2026-06-02T00:00:00+00:00' })
+        const later = match({ id: 'later', team_a: myTeam, team_b: otherTeam, status: 'scheduled', scheduled_at: '2026-06-10T00:00:00+00:00' })
+        const stages = [stageWith([later, soon])]
+
+        expect(nextOwnMatch(stages, myTeam.id, NOW)?.id).toBe('soon')
+    })
+
+    it('ignores matches not involving my team', () => {
+        const theirs = match({ id: 'theirs', team_a: otherTeam, team_b: null, status: 'scheduled', scheduled_at: '2026-06-02T00:00:00+00:00' })
+        expect(nextOwnMatch([stageWith([theirs])], myTeam.id, NOW)).toBeNull()
+    })
+
+    it('ignores matches that are not booked yet', () => {
+        const pending = match({ id: 'pending', team_a: myTeam, team_b: otherTeam, status: 'pending', scheduled_at: null })
+        expect(nextOwnMatch([stageWith([pending])], myTeam.id, NOW)).toBeNull()
+    })
+
+    it('ignores a booked match whose time has already passed', () => {
+        const past = match({ id: 'past', team_a: myTeam, team_b: otherTeam, status: 'scheduled', scheduled_at: '2026-05-01T00:00:00+00:00' })
+        expect(nextOwnMatch([stageWith([past])], myTeam.id, NOW)).toBeNull()
+    })
+
+    it('returns null without a team id', () => {
+        const soon = match({ id: 'soon', team_a: myTeam, team_b: otherTeam, status: 'scheduled', scheduled_at: '2026-06-02T00:00:00+00:00' })
+        expect(nextOwnMatch([stageWith([soon])], null, NOW)).toBeNull()
     })
 })

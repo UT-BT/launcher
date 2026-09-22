@@ -1,5 +1,6 @@
 import { cn } from '@/lib/utils'
 import { formatCapTime } from '@/app/utils/format'
+import { formatSlotTime, parseApiInstant, useDisplayTimezone } from '@/app/utils/timezone'
 import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { MapNavLink } from '@/app/components/shared/MapNavLink'
@@ -8,7 +9,7 @@ import { MatchOddsChip } from '../predictions/predictionsShared'
 import type {
     EventBracketGroup, EventBracketStage, EventBracketTeamRef, EventEntrantStatus, EventFormatSpec,
     EventMatch, EventMatchMap,
-    EventMatchStatus, EventSide, EventStageKind, EventStageStatus,
+    EventMatchStatus, EventSide, EventStageKind, EventStageStatus, ResolvedWindow,
 } from '@/app/utils/api'
 
 export const MATCH_STATUS_LABELS: Record<EventMatchStatus, string> = {
@@ -70,6 +71,49 @@ export function sideOf(match: EventMatch, teamId: string | null | undefined): Ev
     if (match.team_a?.id === teamId) return 'a'
     if (match.team_b?.id === teamId) return 'b'
     return null
+}
+
+export type SchedulingWindowState = 'not_open' | 'open' | 'closed' | 'unknown'
+
+export const SCHEDULING_WINDOW_STYLES: Record<SchedulingWindowState, string> = {
+    not_open: 'bg-white/5 text-muted-foreground border-white/10',
+    open: 'bg-white/5 text-muted-foreground border-white/10',
+    closed: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
+    unknown: 'bg-white/5 text-muted-foreground border-white/10',
+}
+
+export function schedulingWindowState(window: ResolvedWindow | null | undefined, now: number): SchedulingWindowState {
+    const opensAt = parseApiInstant(window?.opens_at)
+    const closesAt = parseApiInstant(window?.closes_at)
+
+    if (opensAt !== null && now < opensAt) return 'not_open'
+    if (closesAt !== null && now >= closesAt) return 'closed'
+    if (opensAt === null && closesAt === null) return 'unknown'
+    return 'open'
+}
+
+export function schedulingWindowLabel(
+    state: SchedulingWindowState,
+    window: ResolvedWindow | null | undefined,
+    timezone: string,
+): string {
+    if (state === 'not_open' && window?.opens_at) return `Opens ${formatSlotTime(window.opens_at, timezone)}`
+    if (state === 'closed') return 'Scheduling window closed'
+    if (state === 'open') return 'Awaiting a time'
+    return 'Not yet scheduled'
+}
+
+export function nextOwnMatch(stages: EventBracketStage[], myTeamId: string | null, now: number): EventMatch | null {
+    if (!myTeamId) return null
+
+    const upcoming = stages
+        .flatMap(stage => stage.matches)
+        .filter(match => match.status === 'scheduled' && match.scheduled_at && sideOf(match, myTeamId))
+        .map(match => ({ match, at: parseApiInstant(match.scheduled_at) }))
+        .filter((row): row is { match: EventMatch; at: number } => row.at !== null && row.at > now)
+        .sort((a, b) => a.at - b.at)
+
+    return upcoming[0]?.match ?? null
 }
 
 export function playedMaps(maps: EventMatchMap[] | undefined): EventMatchMap[] {
@@ -291,6 +335,10 @@ export function MatchCard({ match, showMaps = true, showCaps = false, onClick, o
     const decided = isDecided(match)
     const winnerSide = sideOf(match, match.winner_team_id)
     const maps = showMaps ? playedMaps(match.maps) : []
+    const timezone = useDisplayTimezone()
+    const windowState = match.status === 'pending' && match.team_a && match.team_b
+        ? schedulingWindowState(match.resolved_window, Date.now())
+        : null
 
     return (
         <div
@@ -339,12 +387,17 @@ export function MatchCard({ match, showMaps = true, showCaps = false, onClick, o
                 </div>
             )}
 
-            {(match.status !== 'pending' || match.scheduled_at || footer) && (
+            {(match.status !== 'pending' || match.scheduled_at || windowState || footer) && (
                 <div className="flex flex-wrap items-center gap-2 pt-1">
                     <MatchOddsChip matchId={match.id} />
                     {match.status !== 'pending' && <MatchStatusChip match={match} />}
                     {match.scheduled_at && match.status !== 'complete' && (
-                        <span className="text-[11px] text-muted-foreground">{formatMatchTime(match.scheduled_at)}</span>
+                        <span className="text-[11px] text-muted-foreground">{formatSlotTime(match.scheduled_at, timezone)}</span>
+                    )}
+                    {windowState && (
+                        <Chip className={SCHEDULING_WINDOW_STYLES[windowState]}>
+                            {schedulingWindowLabel(windowState, match.resolved_window, timezone)}
+                        </Chip>
                     )}
                     {footer}
                 </div>

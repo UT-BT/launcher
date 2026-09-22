@@ -1,6 +1,8 @@
-import type { ScheduleEntry } from '@/app/utils/api'
-import { parseApiInstant } from '@/app/utils/timezone'
+import type { MyTournamentMembership, ScheduleEntry } from '@/app/utils/api'
+import { formatSlotTime, parseApiInstant } from '@/app/utils/timezone'
 import { teamLabel } from '../bracket/bracketShared'
+
+export { formatSlotTime, parseApiInstant }
 
 const SCHEDULABILITY_REASONS: Record<string, string> = {
     bracket_not_published: "This event's bracket has not been published yet.",
@@ -14,19 +16,23 @@ export function schedulabilityReason(reason: string | null): string {
     return SCHEDULABILITY_REASONS[reason] ?? 'This match cannot be scheduled right now.'
 }
 
-export function formatSlotTime(iso: string, timezone: string): string {
-    const at = parseApiInstant(iso)
-    if (at === null) return 'Unknown time'
+export function myTeamIdsByTournament(memberships: MyTournamentMembership[]): Map<string, string> {
+    const byTournament = new Map<string, string>()
 
-    const options: Intl.DateTimeFormatOptions = {
-        weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+    for (const membership of memberships) {
+        if (membership.membership_status === 'active') byTournament.set(membership.tournament.slug, membership.team.id)
     }
 
-    try {
-        return new Intl.DateTimeFormat(undefined, { ...options, timeZone: timezone }).format(at)
-    } catch {
-        return new Intl.DateTimeFormat(undefined, options).format(at)
-    }
+    return byTournament
+}
+
+export function awaitingMyResponseCount(schedule: ScheduleEntry[], memberships: MyTournamentMembership[]): number {
+    const myTeamIds = myTeamIdsByTournament(memberships)
+
+    return schedule.filter(entry => {
+        const myTeamId = myTeamIds.get(entry.tournament.slug)
+        return !!myTeamId && !!entry.proposal && entry.whose_turn === myTeamId
+    }).length
 }
 
 export function proposerName(entry: ScheduleEntry): string {

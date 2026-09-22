@@ -4061,6 +4061,19 @@ export async function fetchMyEventStatus(accessToken: string, slug: string, sign
     return apiGet<MyEventStatus>(`/tournaments/${encodeURIComponent(slug)}/me`, { token: accessToken, signal })
 }
 
+export type EventMembershipStatus = 'invited' | 'active'
+
+export interface MyTournamentMembership {
+    tournament: EventSummary
+    team: EventTeam
+    membership_status: EventMembershipStatus
+}
+
+export async function fetchMyTournaments(accessToken: string, signal?: AbortSignal): Promise<MyTournamentMembership[]> {
+    const data = await apiGet<{ items: MyTournamentMembership[] }>('/me/tournaments', { token: accessToken, signal })
+    return data.items ?? []
+}
+
 export type ScheduleProposalStatus = 'open' | 'accepted' | 'withdrawn' | 'superseded'
 
 export interface ScheduleSlot {
@@ -4573,6 +4586,11 @@ export interface EventMatchMap {
     caps?: EventMatchCapLink[]
 }
 
+export interface ResolvedWindow {
+    opens_at: string | null
+    closes_at: string | null
+}
+
 export interface EventMatch {
     id: string
     stage_id: string
@@ -4597,6 +4615,7 @@ export interface EventMatch {
     deaths_a: number | null
     deaths_b: number | null
     scheduled_at: string | null
+    resolved_window: ResolvedWindow
     stream_url: string | null
     notes: string | null
     published: boolean

@@ -1,15 +1,16 @@
-import { useCallback, useEffect, useState } from 'react'
-import { ArrowLeft, CalendarDays, Users2 } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { ArrowLeft, CalendarClock, CalendarDays, Users2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useNavState } from '@/app/components/navigation/useNavState'
 import { useUnsavedChanges } from '@/app/components/navigation/useUnsavedChanges'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
 import { MarkdownBody } from '@/app/components/shared/MarkdownBody'
 import { ErrorBanner } from '@/app/components/pages/teams/teamsShared'
+import { formatSlotTime, useDisplayTimezone } from '@/app/utils/timezone'
 import {
     eventErrorMessage, fetchEvent, fetchEventBracket, fetchEventLfp, fetchEventPredictions,
     fetchEventTeams, fetchMyEventStatus, fetchMySchedule,
-    type EventBracket, type EventDetail, type EventFormatSpec, type EventLfpEntry, type EventTeam,
+    type EventBracket, type EventDetail, type EventFormatSpec, type EventLfpEntry, type EventMatch, type EventTeam,
     type MyEventStatus, type PredictionsOverview, type ScheduleEntry, type UserProfile,
 } from '@/app/utils/api'
 import { EventStatusBadge, formatEventDate, formatEventDateTime, formatTeamSize, scheduleTabVisible } from './events/eventsShared'
@@ -18,10 +19,34 @@ import { EventLfpList } from './events/EventLfpList'
 import { SignupPanel } from './events/SignupPanel'
 import { ManagePanel } from './events/ManagePanel'
 import { BracketTab } from './events/bracket/BracketTab'
+import { nextOwnMatch, sideOf, teamLabel } from './events/bracket/bracketShared'
 import { EventRosterProvider } from './events/TeamRoster'
 import { PredictionsTab } from './events/predictions/PredictionsTab'
-import { PredictionOddsProvider } from './events/predictions/predictionsShared'
+import { PredictionOddsProvider, formatCountdown, useNow } from './events/predictions/predictionsShared'
 import { ScheduleTab } from './events/schedule/ScheduleTab'
+
+function NextMatchBanner({ match, myTeamId, now }: {
+    match: EventMatch
+    myTeamId: string
+    now: number
+}) {
+    const timezone = useDisplayTimezone()
+    const opponent = sideOf(match, myTeamId) === 'a' ? match.team_b : match.team_a
+    const scheduledAt = match.scheduled_at
+    const countdown = formatCountdown(scheduledAt, now)
+
+    if (!countdown || !scheduledAt) return null
+
+    return (
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-accent-500/25 bg-accent-500/10 px-3 py-2 text-xs shrink-0">
+            <CalendarClock className="size-3.5 shrink-0 text-accent-300" />
+            <span className="min-w-0 truncate text-foreground">
+                Your next match vs {teamLabel(opponent)} · {formatSlotTime(scheduledAt, timezone)}
+            </span>
+            <span className="ml-auto shrink-0 font-medium tabular-nums text-accent-300">{countdown}</span>
+        </div>
+    )
+}
 
 export type EventTab = 'info' | 'teams' | 'bracket' | 'predictions' | 'schedule' | 'players' | 'signup' | 'manage'
 
@@ -174,6 +199,10 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
 
     useUnsavedChanges(formatDraft !== null, 'The tournament format has edits you have not saved yet.')
 
+    const now = useNow(1000)
+    const myTeamId = my?.team?.id ?? null
+    const nextMatch = useMemo(() => nextOwnMatch(bracket?.stages ?? [], myTeamId, now), [bracket, myTeamId, now])
+
     if (loading && !event) {
         return <div className="h-full flex items-center justify-center text-sm text-muted-foreground">Loading event…</div>
     }
@@ -227,6 +256,7 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
                     {!event.signups_open && event.status === 'announced' && signupOpens && <span className="text-sky-300">Signups open {signupOpens}</span>}
                 </div>
                 {error && <ErrorBanner message={error} />}
+                {nextMatch && myTeamId && <NextMatchBanner match={nextMatch} myTeamId={myTeamId} now={now} />}
 
                 <div className="flex items-center gap-1 border-b border-white/10 overflow-x-auto">
                     {visibleTabs.map(t => {

@@ -89,7 +89,11 @@ import type { ServerPreset } from '@/app/utils/server-utils'
 import { useFavorites } from '@/app/hooks/useFavorites'
 import { useServerFavorites } from '@/app/hooks/useServerFavorites'
 import { loadPatreonMembers } from '@/app/utils/patreon'
-import { fetchAchievementDefinitions, fetchMyAchievements, fetchNavBadges, markSectionSeen, type BadgeSection } from '@/app/utils/api'
+import {
+  fetchAchievementDefinitions, fetchMyAchievements, fetchMySchedule, fetchMyTournaments, fetchNavBadges,
+  markSectionSeen, type BadgeSection,
+} from '@/app/utils/api'
+import { awaitingMyResponseCount } from '@/app/components/pages/events/schedule/scheduleShared'
 import { getSynced, setSynced, subscribeSynced } from '@/app/utils/userState'
 import { writePendingHighlight, type HighlightView } from '@/app/hooks/useNewItemHighlight'
 import { isStaff } from '@/app/utils/roles'
@@ -110,6 +114,7 @@ const ADMIN_STATE_STORAGE_KEY = 'utbt:adminState:v1'
 const SERVER_PRESETS_STORAGE_KEY = 'utbt:serverPresets:v1'
 
 const HISTORY_CAP = 50
+const SCHEDULE_AWARENESS_REFRESH_MS = 60_000
 
 const BADGE_SECTIONS = {
   'maps': 'maps',
@@ -421,6 +426,38 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
     const count = badgeCounts[view]
     return count != null && count > 0
   }, [badgeCounts])
+
+  const [awaitingScheduleCount, setAwaitingScheduleCount] = useState(0)
+
+  const refreshScheduleAwareness = useCallback(async () => {
+    const token = accessTokenRef.current
+    if (!token) {
+      setAwaitingScheduleCount(0)
+      return
+    }
+    try {
+      const [schedule, memberships] = await Promise.all([fetchMySchedule(token), fetchMyTournaments(token)])
+      if (accessTokenRef.current !== token) return
+      setAwaitingScheduleCount(awaitingMyResponseCount(schedule, memberships))
+    } catch {
+      setAwaitingScheduleCount(0)
+    }
+  }, [])
+
+  useEffect(() => {
+    void refreshScheduleAwareness()
+    if (!accessToken) return
+    const timer = setInterval(refreshScheduleAwareness, SCHEDULE_AWARENESS_REFRESH_MS)
+    return () => clearInterval(timer)
+  }, [refreshScheduleAwareness, accessToken])
+
+  useEffect(() => {
+    const onFocus = () => {
+      if (accessTokenRef.current) void refreshScheduleAwareness()
+    }
+    window.addEventListener('focus', onFocus)
+    return () => window.removeEventListener('focus', onFocus)
+  }, [refreshScheduleAwareness])
 
   const leaveGuardsRef = useRef(new Map<string, () => string | null>())
   const [pendingLeave, setPendingLeave] = useState<
@@ -877,7 +914,18 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
       )}
       <div className="flex-1 overflow-hidden">
         <NavigationContext.Provider value={navValue}>
-          <AppLayout currentView={currentView} onViewChange={navigate} getNavBadge={(view) => badgeVisible(view) ? badgeCounts[view] : null} userProfile={userProfile} installationStatus={installationStatus}>
+          <AppLayout
+            currentView={currentView}
+            onViewChange={navigate}
+            getNavBadge={(view) => view === 'events' && awaitingScheduleCount > 0
+              ? awaitingScheduleCount
+              : badgeVisible(view) ? badgeCounts[view] : null}
+            getNavBadgeTooltip={(view, count) => view === 'events' && awaitingScheduleCount > 0
+              ? `${count} match${count === 1 ? '' : 'es'} waiting on your team to pick a time`
+              : `${count} new since your last visit`}
+            userProfile={userProfile}
+            installationStatus={installationStatus}
+          >
             <ErrorBoundary key={entry.id} variant="view" context={currentView} onNavigateHome={currentView === 'home' ? undefined : () => navigate('home')}>
               <Suspense fallback={
                 <div className="space-y-4 pt-2">

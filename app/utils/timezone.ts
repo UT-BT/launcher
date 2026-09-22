@@ -25,6 +25,21 @@ export function parseApiInstant(iso: string | null | undefined): number | null {
     return Number.isNaN(parsed) ? null : parsed
 }
 
+export function formatSlotTime(iso: string, timezone: string): string {
+    const at = parseApiInstant(iso)
+    if (at === null) return 'Unknown time'
+
+    const options: Intl.DateTimeFormatOptions = {
+        weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+    }
+
+    try {
+        return new Intl.DateTimeFormat(undefined, { ...options, timeZone: timezone }).format(at)
+    } catch {
+        return new Intl.DateTimeFormat(undefined, options).format(at)
+    }
+}
+
 export function getDisplayTimezoneOverride(): string | null {
     return getSynced<string | null>(DISPLAY_TIMEZONE_KEY, null)
 }

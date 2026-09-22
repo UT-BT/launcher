@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseApiInstant } from './timezone'
+import { formatSlotTime, parseApiInstant } from './timezone'
 
 describe('parseApiInstant', () => {
     it('parses an offset-carrying timestamp', () => {
@@ -14,5 +14,17 @@ describe('parseApiInstant', () => {
         expect(parseApiInstant(null)).toBeNull()
         expect(parseApiInstant(undefined)).toBeNull()
         expect(parseApiInstant('not a date')).toBeNull()
+    })
+})
+
+describe('formatSlotTime', () => {
+    it('renders in the given IANA zone, never a typed abbreviation', () => {
+        const rendered = formatSlotTime('2026-09-25T18:00:00+00:00', 'America/New_York')
+        expect(rendered).not.toMatch(/UTC|GMT/)
+        expect(rendered.length).toBeGreaterThan(0)
+    })
+
+    it('falls back gracefully on an unparseable timestamp', () => {
+        expect(formatSlotTime('not a date', 'UTC')).toBe('Unknown time')
     })
 })

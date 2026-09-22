@@ -82,6 +82,7 @@ interface AppLayoutProps {
     currentView: string
     onViewChange: (view: string) => void
     getNavBadge?: (view: string) => number | null
+    getNavBadgeTooltip?: (view: string, count: number) => string
     userProfile?: UserProfile
     installationStatus?: 'valid' | 'no-install' | 'unsupported' | null
 }
@@ -114,7 +115,7 @@ function getRarityStyles(title: { rarity: number, color_r: number, color_g: numb
     return { containerStyle, titleStyle, containerClass, titleClass }
 }
 
-export function AppLayout({ children, currentView, onViewChange, getNavBadge, userProfile, installationStatus }: AppLayoutProps) {
+export function AppLayout({ children, currentView, onViewChange, getNavBadge, getNavBadgeTooltip, userProfile, installationStatus }: AppLayoutProps) {
     const { capabilities, auth } = usePlatform()
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
     const [loginError, setLoginError] = useState<string | null>(() => auth.consumeLoginError())
@@ -346,7 +347,7 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                                     {badgeCount != null && (
                                         <span
                                             className="relative z-10 ml-auto flex items-center"
-                                            title={`${badgeCount} new since your last visit`}
+                                            title={getNavBadgeTooltip?.(item.id, badgeCount) ?? `${badgeCount} new since your last visit`}
                                         >
                                             <span className="absolute inline-flex h-full w-full rounded-full bg-accent-400 opacity-60 animate-ping" />
                                             <span className="relative inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-accent-500 text-white text-[10px] font-black tabular-nums shadow-[0_0_10px_rgb(var(--accent-glow-rgb)/0.5)]">

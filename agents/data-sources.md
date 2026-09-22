@@ -5,7 +5,7 @@ read_when:
   - "adding or changing a helper in app/utils/api.ts"
   - "needing an avatar, map screenshot, region flag, or map-download URL"
   - "wiring map/server favorites or Patreon tier lookups"
-keywords: [api.ts, fetch, endpoint, accessToken, avatar, MapThumbnail, favorites, patreon, downloadMapZip, world_records, caps, predictions, draw, odds, schedule, proposal, slot, whose_turn]
+keywords: [api.ts, fetch, endpoint, accessToken, avatar, MapThumbnail, favorites, patreon, downloadMapZip, world_records, caps, predictions, draw, odds, schedule, proposal, slot, whose_turn, resolved_window, countdown, nav badge, fetchMyTournaments]
 provides: "the client-side API contract the launcher consumes + asset URLs + favorites/patreon sync models"
 not_here:
   - "IPC channels (window.conveyor.*) → lib/conveyor/README.md"
@@ -13,7 +13,7 @@ not_here:
   - "the procedure to wire a new endpoint into the UI → skill: consume-api-data"
 sections: [backend-api, errors, admin-api, event-brackets, event-scheduling, event-predictions, changing-a-map-screenshot, cap-detail-page-endpoints, world-records-page-endpoints, team-maps-and-team-runs, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites, account-state-and-badges]
 last_verified: 2026-09-22
-verify_against: [app/utils/api.ts, app/utils/chartBuckets.ts, app/components/pages/admin/components/controls.tsx, app/components/pages/admin/sections/HostsManagementSection.tsx, app/utils/patreon.ts, app/utils/server-utils.ts, app/hooks/useServerFavorites.ts, app/components/pages/events/manage/formatFields.tsx, app/components/pages/events/bracket/bracketShared.tsx, app/components/pages/events/predictions/predictionsShared.tsx, app/components/pages/events/predictions/PredictionsTab.tsx, app/components/pages/events/schedule/scheduleShared.tsx, app/components/pages/events/schedule/ScheduleTab.tsx, app/components/pages/events/eventsShared.tsx, app/components/pages/EventDetailPage.tsx, app/utils/timezone.ts, app/components/pages/events/manage/ScheduleOversightPanel.tsx, app/components/pages/events/ManagePanel.tsx]
+verify_against: [app/utils/api.ts, app/utils/chartBuckets.ts, app/components/pages/admin/components/controls.tsx, app/components/pages/admin/sections/HostsManagementSection.tsx, app/utils/patreon.ts, app/utils/server-utils.ts, app/hooks/useServerFavorites.ts, app/components/pages/events/manage/formatFields.tsx, app/components/pages/events/bracket/bracketShared.tsx, app/components/pages/events/predictions/predictionsShared.tsx, app/components/pages/events/predictions/PredictionsTab.tsx, app/components/pages/events/schedule/scheduleShared.tsx, app/components/pages/events/schedule/ScheduleTab.tsx, app/components/pages/events/eventsShared.tsx, app/components/pages/EventDetailPage.tsx, app/utils/timezone.ts, app/components/pages/events/manage/ScheduleOversightPanel.tsx, app/components/pages/events/ManagePanel.tsx, app/components/main/Main.tsx, app/components/layout/AppLayout.tsx]
 ---
 
 # Data sources
@@ -55,7 +55,7 @@ full loop).
 | Account state / badges | `fetchUserState` / `mergeUserState` (per-account preference blob keyed by the `utbt:*` storage names, shallow-merged per key; consumed only by `app/utils/userState.ts` — see `agents/state-patterns.md`), `fetchNavBadges` (per-section "new since my last visit" counts + seen markers; `count: null` = never visited = no badge), `markSectionSeen(token, section, seenAtIso?)` (advances one marker; omitted stamp = server now). All require a real bearer — signed-out users have no account state and no badges. |
 | Profile | `UserProfile` type (incl. `team` clan-tag summary), `getAvatarUrl(userId)`, `toActiveTitle` |
 | Teams | `createTeam`, `fetchTeams`, `fetchTeam`, `updateTeam`, `disbandTeam`, `transferTeamOwnership`, `fetchTeamMembers`, `inviteToTeam`, `joinTeam`, `acceptTeamInvite`, `declineTeamInvite`, `leaveTeam`, `denyTeamMember`, `unblockTeamMember`, `kickTeamMember` (optional `block`), `setTeamMemberRole`, `setTeamMemberNumber`, `fetchTeamActivity`, `fetchTeamAudit`, `fetchLineups`, `createLineup`, `updateLineup`, `deleteLineup`, `fetchMyTeam`, `setMyTagHidden`, `fetchMyInvitations`, `uploadTeamAvatar`, `deleteTeamAvatar`, `teamAvatarUrl` (clans + lineups; mutations return the fresh `TeamDetail`; validation failures surface the server's message — see [Errors](#errors)). `fetchTeams` rows carry a `stats` block (`caps`, `world_records`, `playtime_seconds`, `spectator_seconds`, plus `ranks` per metric) totalled over the team's active members, and `sort` accepts those three metrics on top of `added`/`name`/`members`; pass `limit: 0` for the whole directory (the gallery is unpaginated). Ranks are **directory-wide** — searching or filtering never renumbers them — and `ranked_teams` is the "of N". Ties share a rank. A team on zero for a metric still comes back ranked; the UI drops the chip rather than showing a meaningless placing. Rows also carry `owner_alias` + `owner_title`, so render the owner straight from the directory row — never fan out a profile request per card. `fetchTeamActivity` returns the same totals and ranks for one team alongside its feed. |
-| Events | `fetchEvents`, `fetchEvent`, `fetchEventTeams`, `fetchEventLfp`, `fetchMyEventStatus`, `createEventTeam`, `inviteEventPartner`, `acceptEventInvite`, `declineEventInvite`, `updateEventTeam`, `deleteEventTeam`, `joinEventLfp`, `leaveEventLfp`, `setEventVolunteer`, `deleteEventVolunteer` (cup signups; an event is addressed by its `slug`) |
+| Events | `fetchEvents`, `fetchEvent`, `fetchEventTeams`, `fetchEventLfp`, `fetchMyEventStatus`, `fetchMyTournaments` (→ `/me/tournaments`, every tournament the caller has a team membership in, each row `{tournament, team, membership_status}` — the cross-event "which team is mine, per event" lookup `fetchMySchedule` entries don't carry themselves), `createEventTeam`, `inviteEventPartner`, `acceptEventInvite`, `declineEventInvite`, `updateEventTeam`, `deleteEventTeam`, `joinEventLfp`, `leaveEventLfp`, `setEventVolunteer`, `deleteEventVolunteer` (cup signups; an event is addressed by its `slug`) |
 | Event scheduling | `fetchMySchedule`, manager-only: `fetchEventScheduleOversight`, `fetchEventAuditLog` (→ [Event scheduling](#event-scheduling)) |
 | Event brackets | `fetchEventBracket`, `fetchEventMatch` (→ [Event brackets](#event-brackets)); manager-only: `fetchEventFormats`, `setEventBracketPublished`, `setEventFormat`, `updateEventFormatSpec`, `setEventSeeds`, `updateEventStage`, `generateEventStage`, `generateEventRound`, `resetEventStage`, `updateEventGroup`, `createEventMatch`, `updateEventMatch`, `deleteEventMatch`, `setEventMatchResult`, `clearEventMatchResult`, `fetchEventCapCandidates`, `linkEventMatchMapCaps`; staff-only: `createEventFormat`, `updateEventFormat`, `deleteEventFormat`, `fetchEventFormat` |
 | Admin (staff-only) | the moderator/admin dashboard slice — see [Admin API](#admin-api). `fetchAuditLog`/`fetchAuditLogCount` take `actors` (`staff` default / `players` / `all`): the default keeps player-written rows, such as a mapper replacing their own screenshot, out of the staff feed |
@@ -112,6 +112,23 @@ match winners itself** — those are all server-side.
 Each stage carries `groups[]` (with computed `standings`), `entrants[]` and
 `matches[]` (each with its `maps[]`). Per-map cap links come back only from
 `fetchEventMatch`, not the bracket list.
+
+**Every `EventMatch` carries a `resolved_window: {opens_at, closes_at}`**
+(offset ISO strings or null), computed server-side from the match/stage/
+tournament dates — never a proposal or negotiation field, so a spectator
+reading the bracket only ever sees a booked time or this window, never who
+proposed what. `MatchCard` (`bracket/bracketShared.tsx`) renders a booked
+`scheduled_at` with `formatSlotTime`/`useDisplayTimezone()` (below), and for a
+still-`pending` match with both teams decided, derives a purely client-side
+`schedulingWindowState` from the window bounds against `Date.now()` — "opens
+`<date>`", "awaiting a time" or "window closed" — as its unscheduled
+indicator. This is client math, not a signal from `scheduling_service.
+is_overdue` (that boolean isn't on this payload and doesn't need to be, since
+the ticket that needs a true overdue flag is the manager oversight surface,
+already covered below). `EventDetailPage` separately scans every stage's
+matches for the viewer's own `scheduled` ones and shows a live countdown
+(`useNow`/`formatCountdown` from `predictions/predictionsShared.tsx`) to the
+soonest still-future one — `nextOwnMatch` in `bracketShared.tsx`.
 
 **`published` is the whole-surface gate.** Until an event manager turns it on, a
 player gets no stages, no standings and no format at all — so the Bracket tab
@@ -217,10 +234,34 @@ the slot has fallen inside the minimum lead time by the time of THIS fetch —
 it is re-derived on every poll, never cached or recomputed locally.
 
 **Every time renders in the viewer's resolved-or-pinned zone, never a typed
-abbreviation.** `formatSlotTime` (`scheduleShared.tsx`) takes the IANA zone
-from `useDisplayTimezone()` (`app/utils/timezone.ts`) and passes it straight
-to `Intl.DateTimeFormat`'s `timeZone` option — it does not attempt to render
-`PST`/`CET`/etc. as text.
+abbreviation.** `formatSlotTime` (`app/utils/timezone.ts` — `scheduleShared.tsx`
+re-exports it, same as it does `parseApiInstant`) takes the IANA zone from
+`useDisplayTimezone()` and passes it straight to `Intl.DateTimeFormat`'s
+`timeZone` option — it does not attempt to render `PST`/`CET`/etc. as text.
+`bracketShared.tsx`'s `MatchCard` uses the same function for a booked match's
+time on the bracket, rather than the older naive `formatMatchTime` in the same
+file (which still backs the predictions market card and the manage panel's
+market-close timestamp — untouched, out of scope for the bracket's own
+booked-time display).
+
+**Outside the schedule tab, "a proposal is waiting on my team" reuses only the
+sidebar badge's RENDERING, not its "new since last visit" persistence.**
+`AppLayout`'s `getNavBadge: (view) => number | null` pill (see
+`agents/navigation.md`) is fed, for the `events` item, by a second and
+unrelated count: `Main.tsx` polls `fetchMySchedule` + `fetchMyTournaments`
+together (on sign-in, on window focus, and every 60s while signed in) and
+reduces them with `awaitingMyResponseCount`/`myTeamIdsByTournament`
+(`scheduleShared.tsx`) — cross-referencing each pending entry's
+`tournament.slug` + `whose_turn` against the caller's own *active* team id in
+that tournament (`fetchMyTournaments`, → `/me/tournaments`, is what makes this
+cheap: one extra request for every tournament the caller rosters a team in,
+not an N+1 loop over every event on the platform). This count has no seen
+marker — it is not persisted, not cleared by visiting Events, and disappears
+on its own the moment the proposal is no longer waiting on the viewer. When
+it is nonzero it replaces (rather than adds to) the ordinary "new events"
+badge on that nav item, since the two counts mean different things and a
+sum would misstate both; `getNavBadgeTooltip` on `AppLayout` lets `Main.tsx`
+swap in wording that matches whichever count is actually showing.
 
 **`whose_turn` is a team id, not a role.** `null` means no proposal is open
 yet (either side may propose); otherwise it names the team expected to
