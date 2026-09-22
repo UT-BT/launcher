@@ -90,8 +90,9 @@ function ordinal(value: number): string {
     return `${value}${suffix}`
 }
 
-export function SwissStageView({ stage, onMapSelect }: {
+export function SwissStageView({ stage, now, onMapSelect }: {
     stage: EventBracketStage
+    now: number
     onMapSelect?: (mapName: string) => void
 }) {
     const config = stage.config as EventSwissConfig | null
@@ -147,7 +148,7 @@ export function SwissStageView({ stage, onMapSelect }: {
                         </div>
                         <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
                             {inRound.map(match => (
-                                <MatchCard key={match.id} match={match} onMapSelect={onMapSelect} />
+                                <MatchCard key={match.id} match={match} now={now} onMapSelect={onMapSelect} />
                             ))}
                         </div>
                     </section>

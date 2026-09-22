@@ -323,6 +323,7 @@ function CapList({ row }: { row: EventMatchMap }) {
 
 export interface MatchCardProps {
     match: EventMatch
+    now: number
     showMaps?: boolean
     showCaps?: boolean
     onClick?: () => void
@@ -331,13 +332,13 @@ export interface MatchCardProps {
     footer?: React.ReactNode
 }
 
-export function MatchCard({ match, showMaps = true, showCaps = false, onClick, onMapSelect, className, footer }: MatchCardProps) {
+export function MatchCard({ match, now, showMaps = true, showCaps = false, onClick, onMapSelect, className, footer }: MatchCardProps) {
     const decided = isDecided(match)
     const winnerSide = sideOf(match, match.winner_team_id)
     const maps = showMaps ? playedMaps(match.maps) : []
     const timezone = useDisplayTimezone()
     const windowState = match.status === 'pending' && match.team_a && match.team_b
-        ? schedulingWindowState(match.resolved_window, Date.now())
+        ? schedulingWindowState(match.resolved_window, now)
         : null
 
     return (

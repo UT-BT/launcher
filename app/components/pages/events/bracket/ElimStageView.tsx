@@ -37,8 +37,9 @@ function ByeCard({ match }: { match: EventMatch }) {
     )
 }
 
-export function ElimStageView({ stage, onMapSelect }: {
+export function ElimStageView({ stage, now, onMapSelect }: {
     stage: EventBracketStage
+    now: number
     onMapSelect?: (mapName: string) => void
 }) {
     const rounds = useMemo(() => buildRounds(stage), [stage])
@@ -62,7 +63,7 @@ export function ElimStageView({ stage, onMapSelect }: {
                             {round.matches.map(match => (
                                 match.status === 'bye'
                                     ? <ByeCard key={match.id} match={match} />
-                                    : <MatchCard key={match.id} match={match} onMapSelect={onMapSelect} />
+                                    : <MatchCard key={match.id} match={match} now={now} onMapSelect={onMapSelect} />
                             ))}
                         </div>
                     </div>

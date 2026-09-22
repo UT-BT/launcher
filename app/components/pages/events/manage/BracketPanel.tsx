@@ -15,6 +15,7 @@ const PUBLISH_KEY = '__bracket__'
 import {
     MatchCard, RELAXED_LABELS, STAGE_STATUS_LABELS, sortedMatches, unfinishedFeeders,
 } from '../bracket/bracketShared'
+import { useNow } from '../predictions/predictionsShared'
 import { MatchEditorModal } from './MatchEditorModal'
 
 interface BracketPanelProps {
@@ -51,6 +52,7 @@ export function BracketPanel({ accessToken, slug, bracket, onBracketChange, onMa
     const [earlyTarget, setEarlyTarget] = useState<{ stage: EventBracketStage; force: boolean } | null>(null)
     const [confirmPublish, setConfirmPublish] = useState(false)
     const [editing, setEditing] = useState<EventMatch | null>(null)
+    const now = useNow(60_000)
 
     const pendingFor = useCallback(
         (stage: EventBracketStage) => unfinishedFeeders(bracket?.format.spec, stages, stage.key),
@@ -149,6 +151,7 @@ export function BracketPanel({ accessToken, slug, bracket, onBracketChange, onMa
                 <StageCard
                     key={stage.key}
                     stage={stage}
+                    now={now}
                     busy={busyStage === stage.key}
                     notice={notices[stage.key] || null}
                     onPreview={() => void preview(stage)}
@@ -254,10 +257,11 @@ export function BracketPanel({ accessToken, slug, bracket, onBracketChange, onMa
 }
 
 function StageCard({
-    stage, busy, notice, pendingFeeders, onPreview, onGenerate, onNextRound, onTogglePublished,
+    stage, now, busy, notice, pendingFeeders, onPreview, onGenerate, onNextRound, onTogglePublished,
     onReset, onAddMatch, onEditMatch, onMapSelect,
 }: {
     stage: EventBracketStage
+    now: number
     busy: boolean
     notice: string | null
     pendingFeeders: EventBracketStage[]
@@ -349,6 +353,7 @@ function StageCard({
                                     <MatchCard
                                         key={match.id}
                                         match={match}
+                                        now={now}
                                         onClick={() => onEditMatch(match)}
                                         onMapSelect={onMapSelect}
                                         className={cn(!match.published && 'opacity-60')}

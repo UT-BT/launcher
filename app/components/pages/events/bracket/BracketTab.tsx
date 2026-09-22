@@ -3,6 +3,7 @@ import { EyeOff } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useNavState } from '@/app/components/navigation/useNavState'
 import type { EventBracket, EventBracketStage } from '@/app/utils/api'
+import { useNow } from '../predictions/predictionsShared'
 import { Chip, STAGE_KIND_LABELS, STAGE_STATUS_LABELS } from './bracketShared'
 import { GroupStageView } from './GroupStageView'
 import { SwissStageView } from './SwissStageView'
@@ -21,6 +22,7 @@ export function BracketTab({ bracket, loading, onMapSelect }: {
 }) {
     const stages = useMemo(() => bracket?.stages ?? [], [bracket])
     const [stageKey, setStageKey] = useNavState<string>('event.bracketStage', '')
+    const now = useNow(60_000)
 
     const active = useMemo(() => {
         const chosen = stages.find(stage => stage.key === stageKey)
@@ -91,9 +93,9 @@ export function BracketTab({ bracket, loading, onMapSelect }: {
                         <Chip className={STAGE_STATUS_STYLES[active.status]}>{STAGE_STATUS_LABELS[active.status]}</Chip>
                     </div>
 
-                    {active.kind === 'groups' && <GroupStageView stage={active} specStage={specStage} onMapSelect={onMapSelect} />}
-                    {active.kind === 'swiss' && <SwissStageView stage={active} onMapSelect={onMapSelect} />}
-                    {active.kind === 'single_elim' && <ElimStageView stage={active} onMapSelect={onMapSelect} />}
+                    {active.kind === 'groups' && <GroupStageView stage={active} specStage={specStage} now={now} onMapSelect={onMapSelect} />}
+                    {active.kind === 'swiss' && <SwissStageView stage={active} now={now} onMapSelect={onMapSelect} />}
+                    {active.kind === 'single_elim' && <ElimStageView stage={active} now={now} onMapSelect={onMapSelect} />}
                 </>
             )}
         </div>
