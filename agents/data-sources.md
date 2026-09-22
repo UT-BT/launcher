@@ -5,15 +5,15 @@ read_when:
   - "adding or changing a helper in app/utils/api.ts"
   - "needing an avatar, map screenshot, region flag, or map-download URL"
   - "wiring map/server favorites or Patreon tier lookups"
-keywords: [api.ts, fetch, endpoint, accessToken, avatar, MapThumbnail, favorites, patreon, downloadMapZip, world_records, caps, predictions, draw, odds]
+keywords: [api.ts, fetch, endpoint, accessToken, avatar, MapThumbnail, favorites, patreon, downloadMapZip, world_records, caps, predictions, draw, odds, schedule, proposal, slot, whose_turn]
 provides: "the client-side API contract the launcher consumes + asset URLs + favorites/patreon sync models"
 not_here:
   - "IPC channels (window.conveyor.*) → lib/conveyor/README.md"
   - "how UI state persists in localStorage → state-patterns.md"
   - "the procedure to wire a new endpoint into the UI → skill: consume-api-data"
-sections: [backend-api, errors, admin-api, event-brackets, event-predictions, changing-a-map-screenshot, cap-detail-page-endpoints, world-records-page-endpoints, team-maps-and-team-runs, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites, account-state-and-badges]
-last_verified: 2026-09-03
-verify_against: [app/utils/api.ts, app/utils/chartBuckets.ts, app/components/pages/admin/components/controls.tsx, app/components/pages/admin/sections/HostsManagementSection.tsx, app/utils/patreon.ts, app/utils/server-utils.ts, app/hooks/useServerFavorites.ts, app/components/pages/events/manage/formatFields.tsx, app/components/pages/events/bracket/bracketShared.tsx, app/components/pages/events/predictions/predictionsShared.tsx, app/components/pages/events/predictions/PredictionsTab.tsx]
+sections: [backend-api, errors, admin-api, event-brackets, event-scheduling, event-predictions, changing-a-map-screenshot, cap-detail-page-endpoints, world-records-page-endpoints, team-maps-and-team-runs, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites, account-state-and-badges]
+last_verified: 2026-09-22
+verify_against: [app/utils/api.ts, app/utils/chartBuckets.ts, app/components/pages/admin/components/controls.tsx, app/components/pages/admin/sections/HostsManagementSection.tsx, app/utils/patreon.ts, app/utils/server-utils.ts, app/hooks/useServerFavorites.ts, app/components/pages/events/manage/formatFields.tsx, app/components/pages/events/bracket/bracketShared.tsx, app/components/pages/events/predictions/predictionsShared.tsx, app/components/pages/events/predictions/PredictionsTab.tsx, app/components/pages/events/schedule/scheduleShared.tsx, app/components/pages/events/schedule/ScheduleTab.tsx, app/components/pages/events/eventsShared.tsx, app/components/pages/EventDetailPage.tsx, app/utils/timezone.ts]
 ---
 
 # Data sources
@@ -56,6 +56,7 @@ full loop).
 | Profile | `UserProfile` type (incl. `team` clan-tag summary), `getAvatarUrl(userId)`, `toActiveTitle` |
 | Teams | `createTeam`, `fetchTeams`, `fetchTeam`, `updateTeam`, `disbandTeam`, `transferTeamOwnership`, `fetchTeamMembers`, `inviteToTeam`, `joinTeam`, `acceptTeamInvite`, `declineTeamInvite`, `leaveTeam`, `denyTeamMember`, `unblockTeamMember`, `kickTeamMember` (optional `block`), `setTeamMemberRole`, `setTeamMemberNumber`, `fetchTeamActivity`, `fetchTeamAudit`, `fetchLineups`, `createLineup`, `updateLineup`, `deleteLineup`, `fetchMyTeam`, `setMyTagHidden`, `fetchMyInvitations`, `uploadTeamAvatar`, `deleteTeamAvatar`, `teamAvatarUrl` (clans + lineups; mutations return the fresh `TeamDetail`; validation failures surface the server's message — see [Errors](#errors)). `fetchTeams` rows carry a `stats` block (`caps`, `world_records`, `playtime_seconds`, `spectator_seconds`, plus `ranks` per metric) totalled over the team's active members, and `sort` accepts those three metrics on top of `added`/`name`/`members`; pass `limit: 0` for the whole directory (the gallery is unpaginated). Ranks are **directory-wide** — searching or filtering never renumbers them — and `ranked_teams` is the "of N". Ties share a rank. A team on zero for a metric still comes back ranked; the UI drops the chip rather than showing a meaningless placing. Rows also carry `owner_alias` + `owner_title`, so render the owner straight from the directory row — never fan out a profile request per card. `fetchTeamActivity` returns the same totals and ranks for one team alongside its feed. |
 | Events | `fetchEvents`, `fetchEvent`, `fetchEventTeams`, `fetchEventLfp`, `fetchMyEventStatus`, `createEventTeam`, `inviteEventPartner`, `acceptEventInvite`, `declineEventInvite`, `updateEventTeam`, `deleteEventTeam`, `joinEventLfp`, `leaveEventLfp`, `setEventVolunteer`, `deleteEventVolunteer` (cup signups; an event is addressed by its `slug`) |
+| Event scheduling | `fetchMySchedule` (→ [Event scheduling](#event-scheduling)) |
 | Event brackets | `fetchEventBracket`, `fetchEventMatch` (→ [Event brackets](#event-brackets)); manager-only: `fetchEventFormats`, `setEventBracketPublished`, `setEventFormat`, `updateEventFormatSpec`, `setEventSeeds`, `updateEventStage`, `generateEventStage`, `generateEventRound`, `resetEventStage`, `updateEventGroup`, `createEventMatch`, `updateEventMatch`, `deleteEventMatch`, `setEventMatchResult`, `clearEventMatchResult`, `fetchEventCapCandidates`, `linkEventMatchMapCaps`; staff-only: `createEventFormat`, `updateEventFormat`, `deleteEventFormat`, `fetchEventFormat` |
 | Admin (staff-only) | the moderator/admin dashboard slice — see [Admin API](#admin-api). `fetchAuditLog`/`fetchAuditLogCount` take `actors` (`staff` default / `players` / `all`): the default keeps player-written rows, such as a mapper replacing their own screenshot, out of the staff feed |
 
@@ -182,6 +183,50 @@ Format validation returns one 400 whose message lists every problem as
 
 Attaching a format to an event **copies** it, so editing a shared template later
 never reshapes an event that is already running.
+
+### Event scheduling
+
+Captain-arranged match times, read-only from this tab's side — proposing,
+countering, withdrawing and accepting a slot are a separate picker modal
+(a later ticket), reachable from here and from the bracket match card.
+
+**`fetchMySchedule` is cross-event, like `fetchMyPredictions`.** There is no
+per-event scheduling route; `EventDetailPage` fetches the caller's whole
+`/me/schedule` and filters to `item.tournament.slug === eventSlug` itself,
+the same trade-off `/me/predictions` already made. It only ever returns
+`pending` matches — once a match is booked (or otherwise decided) it simply
+stops appearing, so this tab never has to render a "scheduled" state.
+
+**The Schedule tab is visible to a rostered team member or a bracket
+manager** — `scheduleTabVisible` in `eventsShared.tsx`. A manager with no
+roster spot in the event still sees the tab (the same "rehearse the event"
+allowance the bracket and predictions surfaces give), but `fetchMySchedule`
+is keyed to the caller's OWN team memberships, so a non-playing manager sees
+an empty list here, not the whole event's negotiations — that full-event view
+is a separate manager-oversight surface, not this tab.
+
+**Slot timestamps carry an explicit UTC offset** (`+00:00`), unlike the
+zone-less bracket payloads (`match.scheduled_at` included) — the same split
+`agents/data-sources.md`'s prediction timestamps already document, and for
+the same server-side reason (see `agents/match-proposals.md` on the backend).
+`parseApiInstant` (`app/utils/timezone.ts`) handles it; `predictionsShared.tsx`
+re-exports the same function rather than keeping its own copy.
+
+**A slot's `expired` flag is server-computed, not client math.** It means
+the slot has fallen inside the minimum lead time by the time of THIS fetch —
+it is re-derived on every poll, never cached or recomputed locally.
+
+**Every time renders in the viewer's resolved-or-pinned zone, never a typed
+abbreviation.** `formatSlotTime` (`scheduleShared.tsx`) takes the IANA zone
+from `useDisplayTimezone()` (`app/utils/timezone.ts`) and passes it straight
+to `Intl.DateTimeFormat`'s `timeZone` option — it does not attempt to render
+`PST`/`CET`/etc. as text.
+
+**`whose_turn` is a team id, not a role.** `null` means no proposal is open
+yet (either side may propose); otherwise it names the team expected to
+respond next. `whoseTurnLabel` (`scheduleShared.tsx`) reads it against the
+viewer's own team id when they have one in this event, and falls back to
+naming the team by side for a manager who doesn't.
 
 ### Event predictions
 

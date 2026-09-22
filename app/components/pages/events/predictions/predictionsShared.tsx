@@ -4,6 +4,9 @@ import type {
     PredictionMarket, PredictionMarketStatus, PredictionOutcome, PredictionPositionStatus,
     PredictionSide,
 } from '@/app/utils/api'
+import { parseApiInstant } from '@/app/utils/timezone'
+
+export { parseApiInstant }
 
 export const MARKET_STATUS_LABELS: Record<PredictionMarketStatus, string> = {
     open: 'Open',
@@ -75,12 +78,6 @@ export function formatOdds(price: number | null | undefined): string {
 export function formatMultiplier(stake: number, payout: number): string {
     if (!stake || !payout) return '—'
     return `${(payout / stake).toFixed(2)}x`
-}
-
-export function parseApiInstant(iso: string | null | undefined): number | null {
-    if (!iso) return null
-    const parsed = new Date(iso.includes('T') ? iso : `${iso.replace(' ', 'T')}Z`).getTime()
-    return Number.isNaN(parsed) ? null : parsed
 }
 
 /**

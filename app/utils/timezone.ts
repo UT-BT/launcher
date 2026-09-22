@@ -19,6 +19,12 @@ export function browserResolvedTimezone(): string {
     }
 }
 
+export function parseApiInstant(iso: string | null | undefined): number | null {
+    if (!iso) return null
+    const parsed = new Date(iso.includes('T') ? iso : `${iso.replace(' ', 'T')}Z`).getTime()
+    return Number.isNaN(parsed) ? null : parsed
+}
+
 export function getDisplayTimezoneOverride(): string | null {
     return getSynced<string | null>(DISPLAY_TIMEZONE_KEY, null)
 }

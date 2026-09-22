@@ -4061,6 +4061,38 @@ export async function fetchMyEventStatus(accessToken: string, slug: string, sign
     return apiGet<MyEventStatus>(`/tournaments/${encodeURIComponent(slug)}/me`, { token: accessToken, signal })
 }
 
+export type ScheduleProposalStatus = 'open' | 'accepted' | 'withdrawn' | 'superseded'
+
+export interface ScheduleSlot {
+    starts_at: string
+    expired: boolean
+}
+
+export interface ScheduleProposal {
+    id: string
+    team_id: string
+    note: string | null
+    status: ScheduleProposalStatus
+    slots: ScheduleSlot[]
+    created_by: string
+    created_at: string
+    updated_at: string | null
+}
+
+export interface ScheduleEntry {
+    tournament: { id: string; slug: string; name: string }
+    match: EventMatch
+    schedulable: boolean
+    reason: string | null
+    whose_turn: string | null
+    proposal: ScheduleProposal | null
+}
+
+export async function fetchMySchedule(accessToken: string, signal?: AbortSignal): Promise<ScheduleEntry[]> {
+    const data = await apiGet<{ items: ScheduleEntry[] }>('/me/schedule', { token: accessToken, signal })
+    return data.items ?? []
+}
+
 export async function createEventTeam(accessToken: string, slug: string, input: CreateEventTeamInput): Promise<EventTeam> {
     const data = await apiGet<{ team: EventTeam }>(`/tournaments/${encodeURIComponent(slug)}/teams`, { token: accessToken, method: 'POST', body: input })
     return data.team
