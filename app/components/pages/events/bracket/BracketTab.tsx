@@ -15,10 +15,11 @@ const STAGE_STATUS_STYLES: Record<EventBracketStage['status'], string> = {
     complete: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
 }
 
-export function BracketTab({ bracket, loading, onMapSelect }: {
+export function BracketTab({ bracket, loading, onMapSelect, onScheduleMatch }: {
     bracket: EventBracket | null
     loading: boolean
     onMapSelect?: (mapName: string) => void
+    onScheduleMatch?: (matchId: string) => void
 }) {
     const stages = useMemo(() => bracket?.stages ?? [], [bracket])
     const [stageKey, setStageKey] = useNavState<string>('event.bracketStage', '')
@@ -93,9 +94,9 @@ export function BracketTab({ bracket, loading, onMapSelect }: {
                         <Chip className={STAGE_STATUS_STYLES[active.status]}>{STAGE_STATUS_LABELS[active.status]}</Chip>
                     </div>
 
-                    {active.kind === 'groups' && <GroupStageView stage={active} specStage={specStage} now={now} onMapSelect={onMapSelect} />}
-                    {active.kind === 'swiss' && <SwissStageView stage={active} now={now} onMapSelect={onMapSelect} />}
-                    {active.kind === 'single_elim' && <ElimStageView stage={active} now={now} onMapSelect={onMapSelect} />}
+                    {active.kind === 'groups' && <GroupStageView stage={active} specStage={specStage} now={now} onMapSelect={onMapSelect} onScheduleMatch={onScheduleMatch} />}
+                    {active.kind === 'swiss' && <SwissStageView stage={active} now={now} onMapSelect={onMapSelect} onScheduleMatch={onScheduleMatch} />}
+                    {active.kind === 'single_elim' && <ElimStageView stage={active} now={now} onMapSelect={onMapSelect} onScheduleMatch={onScheduleMatch} />}
                 </>
             )}
         </div>

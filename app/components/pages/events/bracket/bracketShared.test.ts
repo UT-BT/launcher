@@ -176,7 +176,7 @@ describe('matchOrder', () => {
 function stageRow(key: string, status: EventBracketStage['status']): EventBracketStage {
     return {
         id: key, key, name: key.toUpperCase(), kind: 'groups', ordinal: 0,
-        status, published: true, config: null, groups: [], entrants: [], matches: [],
+        status, published: true, expected_match_duration_minutes: null, config: null, groups: [], entrants: [], matches: [],
     }
 }
 

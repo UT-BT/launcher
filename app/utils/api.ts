@@ -281,8 +281,8 @@ export async function apiRequest(path: string, opts: ApiRequestOptions = {}): Pr
 export class ApiError extends Error {
     status: number
     reason?: string
-    constructor(status: number, reason: string | undefined, fallback: string) {
-        super(reason || fallback)
+    constructor(status: number, message: string | undefined, fallback: string, reason?: string) {
+        super(message || fallback)
         this.name = 'ApiError'
         this.status = status
         this.reason = reason
@@ -290,14 +290,17 @@ export class ApiError extends Error {
 }
 
 async function apiErrorFor(res: Response): Promise<ApiError> {
+    let message: string | undefined
     let reason: string | undefined
     try {
         const body = await res.json()
-        reason = body?.error || body?.reason || undefined
+        message = body?.error || body?.reason || undefined
+        reason = body?.code || undefined
     } catch {
+        message = undefined
         reason = undefined
     }
-    return new ApiError(res.status, reason, `Request failed (${res.status})`)
+    return new ApiError(res.status, message, `Request failed (${res.status})`, reason)
 }
 
 export function asNum(v: unknown, fallback = 0): number {
@@ -4675,6 +4678,7 @@ export interface EventBracketStage {
     ordinal: number
     status: EventStageStatus
     published: boolean
+    expected_match_duration_minutes: number | null
     config: EventStageConfig | null
     groups: EventBracketGroup[]
     entrants: EventBracketEntrant[]
@@ -4897,6 +4901,79 @@ export async function linkEventMatchMapCaps(
         { token: accessToken, method: 'PUT', body: { caps, keep_counts: keepCounts } },
     )
     return data.match
+}
+
+export interface ScheduleBookedMatch {
+    match_id: string
+    starts_at: string
+    ends_at: string
+}
+
+export interface ScheduleMatchTeamRef extends EventBracketTeamRef {
+    booked: ScheduleBookedMatch[]
+}
+
+export interface ScheduleMatchDetail extends Omit<EventMatch, 'team_a' | 'team_b'> {
+    team_a: ScheduleMatchTeamRef | null
+    team_b: ScheduleMatchTeamRef | null
+}
+
+export interface ScheduleEntryDetail {
+    tournament: { id: string; slug: string; name: string }
+    match: ScheduleMatchDetail
+    schedulable: boolean
+    reason: string | null
+    whose_turn: string | null
+    proposal: ScheduleProposal | null
+}
+
+export async function fetchMatchSchedule(
+    accessToken: string, slug: string, matchId: string, signal?: AbortSignal,
+): Promise<ScheduleEntryDetail> {
+    const data = await apiGet<{ schedule: ScheduleEntryDetail }>(
+        eventPath(slug, `/matches/${encodeURIComponent(matchId)}/schedule`),
+        { token: accessToken, signal },
+    )
+    return data.schedule
+}
+
+export interface ProposeMatchSlotsInput {
+    team_id?: string
+    note?: string | null
+    slots: string[]
+}
+
+export async function proposeMatchSlots(
+    accessToken: string, slug: string, matchId: string, input: ProposeMatchSlotsInput,
+): Promise<ScheduleEntryDetail> {
+    const data = await apiGet<{ schedule: ScheduleEntryDetail }>(
+        eventPath(slug, `/matches/${encodeURIComponent(matchId)}/proposal`),
+        { token: accessToken, method: 'POST', body: input },
+    )
+    return data.schedule
+}
+
+export async function withdrawMatchProposal(accessToken: string, slug: string, matchId: string): Promise<ScheduleEntryDetail> {
+    const data = await apiGet<{ schedule: ScheduleEntryDetail }>(
+        eventPath(slug, `/matches/${encodeURIComponent(matchId)}/proposal`),
+        { token: accessToken, method: 'DELETE' },
+    )
+    return data.schedule
+}
+
+export interface AcceptMatchProposalInput {
+    team_id?: string
+    slot_index: number
+}
+
+export async function acceptMatchProposal(
+    accessToken: string, slug: string, matchId: string, input: AcceptMatchProposalInput,
+): Promise<ScheduleEntryDetail> {
+    const data = await apiGet<{ schedule: ScheduleEntryDetail }>(
+        eventPath(slug, `/matches/${encodeURIComponent(matchId)}/proposal/accept`),
+        { token: accessToken, method: 'POST', body: input },
+    )
+    return data.schedule
 }
 
 // ---------------------------------------------------------------- predictions

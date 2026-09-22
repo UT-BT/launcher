@@ -5,7 +5,7 @@ read_when:
   - "adding or changing a helper in app/utils/api.ts"
   - "needing an avatar, map screenshot, region flag, or map-download URL"
   - "wiring map/server favorites or Patreon tier lookups"
-keywords: [api.ts, fetch, endpoint, accessToken, avatar, MapThumbnail, favorites, patreon, downloadMapZip, world_records, caps, predictions, draw, odds, schedule, proposal, slot, whose_turn, resolved_window, countdown, nav badge, fetchMyTournaments]
+keywords: [api.ts, fetch, endpoint, accessToken, avatar, MapThumbnail, favorites, patreon, downloadMapZip, world_records, caps, predictions, draw, odds, schedule, proposal, slot, whose_turn, resolved_window, countdown, nav badge, fetchMyTournaments, SlotPickerModal, slotGeneration, proposeMatchSlots, withdrawMatchProposal, acceptMatchProposal, fetchMatchSchedule, ApiError, expected_match_duration_minutes]
 provides: "the client-side API contract the launcher consumes + asset URLs + favorites/patreon sync models"
 not_here:
   - "IPC channels (window.conveyor.*) → lib/conveyor/README.md"
@@ -13,7 +13,7 @@ not_here:
   - "the procedure to wire a new endpoint into the UI → skill: consume-api-data"
 sections: [backend-api, errors, admin-api, event-brackets, event-scheduling, event-predictions, changing-a-map-screenshot, cap-detail-page-endpoints, world-records-page-endpoints, team-maps-and-team-runs, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites, account-state-and-badges]
 last_verified: 2026-09-22
-verify_against: [app/utils/api.ts, app/utils/chartBuckets.ts, app/components/pages/admin/components/controls.tsx, app/components/pages/admin/sections/HostsManagementSection.tsx, app/utils/patreon.ts, app/utils/server-utils.ts, app/hooks/useServerFavorites.ts, app/components/pages/events/manage/formatFields.tsx, app/components/pages/events/bracket/bracketShared.tsx, app/components/pages/events/predictions/predictionsShared.tsx, app/components/pages/events/predictions/PredictionsTab.tsx, app/components/pages/events/schedule/scheduleShared.tsx, app/components/pages/events/schedule/ScheduleTab.tsx, app/components/pages/events/eventsShared.tsx, app/components/pages/EventDetailPage.tsx, app/utils/timezone.ts, app/components/pages/events/manage/ScheduleOversightPanel.tsx, app/components/pages/events/ManagePanel.tsx, app/components/main/Main.tsx, app/components/layout/AppLayout.tsx]
+verify_against: [app/utils/api.ts, app/utils/chartBuckets.ts, app/components/pages/admin/components/controls.tsx, app/components/pages/admin/sections/HostsManagementSection.tsx, app/utils/patreon.ts, app/utils/server-utils.ts, app/hooks/useServerFavorites.ts, app/components/pages/events/manage/formatFields.tsx, app/components/pages/events/bracket/bracketShared.tsx, app/components/pages/events/bracket/BracketTab.tsx, app/components/pages/events/predictions/predictionsShared.tsx, app/components/pages/events/predictions/PredictionsTab.tsx, app/components/pages/events/schedule/scheduleShared.tsx, app/components/pages/events/schedule/ScheduleTab.tsx, app/components/pages/events/schedule/SlotPickerModal.tsx, app/components/pages/events/schedule/slotGeneration.ts, app/components/pages/events/eventsShared.tsx, app/components/pages/EventDetailPage.tsx, app/utils/timezone.ts, app/components/pages/events/manage/ScheduleOversightPanel.tsx, app/components/pages/events/ManagePanel.tsx, app/components/main/Main.tsx, app/components/layout/AppLayout.tsx]
 ---
 
 # Data sources
@@ -71,11 +71,17 @@ The web login flow itself uses `POST /auth/discord/token` + `/auth/discord/refre
 ### Errors
 
 A failed request answers `{ success: false, error: "<human-readable reason>" }` — the
-rate limiter is the one endpoint that uses `reason` instead. `apiErrorFor` in
-`app/utils/api.ts` reads `error` then falls back to `reason`, and both `apiGet` and
-`apiGetList` throw the resulting `ApiError` (`.status`, `.reason`, `.message`). Surface
-`e.message` in the UI — it already carries the server's explanation, falling back to
-`Request failed (<status>)` only when the body has none. **Don't use `res.statusText`**:
+rate limiter is the one endpoint that uses `reason` instead, and a handful of
+scheduling exceptions (see below) add a third field, `code`, alongside it. `apiErrorFor`
+in `app/utils/api.ts` builds `ApiError`'s two distinct fields from those: `.message`
+(and the `Error` itself) reads `error` then falls back to `reason`, exactly as before;
+`.reason` reads `code` only — it is `undefined` on the ordinary `{error}` shape every
+other endpoint still answers with. Surface `e.message` in the UI for a human-readable
+explanation, falling back to `Request failed (<status>)` only when the body has none;
+branch on `e.reason` only when you have a specific machine code to check for (see
+`MatchNotSchedulableException`/`ProposalSlotStaleException`/
+`ProposalSlotConflictsWithBookingException` in [Event scheduling](#event-scheduling)
+below — the only exceptions that currently set it). **Don't use `res.statusText`**:
 it is an empty string over HTTP/2, which is what prod serves.
 
 Server-side validation messages are the source of truth, but mirror any rule the user
@@ -112,6 +118,16 @@ match winners itself** — those are all server-side.
 Each stage carries `groups[]` (with computed `standings`), `entrants[]` and
 `matches[]` (each with its `maps[]`). Per-map cap links come back only from
 `fetchEventMatch`, not the bracket list.
+
+Each stage also carries `expected_match_duration_minutes` (`number | null`) — the
+manager-set override, or `null` to use the server's per-kind default. The slot
+picker (below) needs this to size a candidate slot and to check it against a
+team's other bookings, so it mirrors the server's fallback table client-side rather
+than leaving matches with no override undated:
+`DEFAULT_MATCH_DURATION_MINUTES_BY_KIND` in `schedule/slotGeneration.ts`
+(`groups: 75, swiss: 60, single_elim: 60`) — keep it in sync with
+`scheduling_service.DEFAULT_MATCH_DURATION_MINUTES_BY_KIND` on the backend if that
+table ever changes.
 
 **Every `EventMatch` carries a `resolved_window: {opens_at, closes_at}`**
 (offset ISO strings or null), computed server-side from the match/stage/
@@ -203,9 +219,90 @@ never reshapes an event that is already running.
 
 ### Event scheduling
 
-Captain-arranged match times, read-only from this tab's side — proposing,
-countering, withdrawing and accepting a slot are a separate picker modal
-(a later ticket), reachable from here and from the bracket match card.
+Captain-arranged match times. The Schedule tab's list (below) is read-only;
+proposing, countering, withdrawing and accepting a slot all happen in one modal,
+`schedule/SlotPickerModal.tsx`, reachable both from a card in that list and from a
+pending, both-teams-decided match card on the bracket (`schedulerEligible` in
+`bracket/bracketShared.tsx` gates the bracket entry point — `BracketTab` threads an
+`onScheduleMatch(matchId)` callback down through each stage view to `MatchCard`'s
+existing `onClick`). `EventDetailPage` owns the modal's open/closed state
+(`schedulerMatchId`) so either entry point opens the same instance, and passes it
+`bracket` (already loaded for the Bracket tab) purely to look up the opening
+match's stage for its `kind`/`expected_match_duration_minutes`.
+
+**The modal's own per-match fetch is a distinct type from the list's `ScheduleEntry`.**
+`fetchMatchSchedule(token, slug, matchId)` (→ `GET
+/tournaments/<slug>/matches/<matchId>/schedule` → `{ schedule }`) returns a
+`ScheduleEntryDetail`, not a `ScheduleEntry` — its `match` is a `ScheduleMatchDetail`
+whose `team_a`/`team_b` are `ScheduleMatchTeamRef`, which adds a `booked:
+{match_id, starts_at, ends_at}[]` array over the plain `EventBracketTeamRef` the
+bracket and the schedule list use. That is each team's *other* booked matches,
+computed server-side — the launcher never recomputes a team's booking calendar
+itself, only renders what this route hands it. `ScheduleMatchDetail` is otherwise
+assignable to (a superset of) `EventMatch`, so the existing `whoseTurnLabel` /
+`proposerName` / `schedulabilityReason` helpers (`scheduleShared.tsx`) accept it
+unchanged.
+
+**Writes go through three more fetchers, all on the same per-match base path:**
+`proposeMatchSlots(token, slug, matchId, { team_id?, note?, slots })` (→ `POST
+.../proposal`) creates or supersedes the match's one open proposal — the same route
+whether the match is still pending or (a separate, later ticket) already booked;
+`withdrawMatchProposal(token, slug, matchId)` (→ `DELETE .../proposal`, no body)
+withdraws it — only the proposing team or a manager may, and the route does not
+take a `team_id`, so the withdraw button's visibility is not gated on the acting-team
+selector below; `acceptMatchProposal(token, slug, matchId, { team_id?, slot_index })`
+(→ `POST .../proposal/accept`) books the match at one slot of the live offer. All
+three return the same `{ schedule: ScheduleEntryDetail }` envelope, so the modal
+never needs a second fetch after a write — it just replaces its state with the
+response.
+
+**`team_id` in the body is only for a manager acting without a roster spot.** A
+rostered player's own team is unambiguous and the server accepts the field being
+omitted for one — the modal still sends it whenever it knows the value (the
+viewer's own team, or whichever side a manager has picked from the "Acting as"
+selector that only renders when the viewer has no team of their own), matching
+what the other optional-team-id-bearing routes on this page already expect. A
+manager who hasn't picked a side yet has the propose/counter/accept controls
+disabled, because `create_proposal`/`accept_proposal` both raise
+`MissingRequiredFieldError` without it — `withdraw_match_proposal` does not, so
+withdraw stays enabled.
+
+**A failed accept can name the one slot that died, via `ApiError.reason` (see
+[Errors](#errors) above).** `slot_no_longer_valid` (the chosen slot fell inside the
+lead time or outside the window between the offer and the accept) and
+`slot_conflicts_with_booking` (a fresh conflict appeared) are the two recognized
+codes; the modal marks that `slot_index` dead with the server's message rather than
+refetching and guessing which slot changed. Any other `ApiError` — including a
+plain `slot_no_longer_valid`-shaped 409 from a route this modal doesn't call —
+falls back to a generic inline error instead.
+
+**Slot generation and the four unavailability reasons are pure functions**, deliberately
+split out of any component so they're covered directly by vitest rather than by
+component tests: `schedule/slotGeneration.ts` (+ its `.test.ts`) mirrors the
+backend's exact validation constants (`MAX_PROPOSAL_SLOTS = 5`, `MIN_LEAD_HOURS = 2`,
+`SLOT_BOUNDARY_MINUTES = 15` — `scheduling_proposal_service.py` on the backend) and
+its half-open-interval overlap rule for a booking conflict. `resolveGenerationWindow`
+walks every 15-minute-aligned instant from `max(opens_at, now rounded up)` through
+`closes_at` minus the match duration (so a generated candidate always still fits
+before the window closes; the later, `closes_at`-only bound the server itself
+enforces is what `slotAvailability`'s `outside_window` reason checks instead, since that
+function also has to judge a slot it did *not* generate — e.g. the opponent's own
+proposed times). `generateCandidateSlots` composes that with a 14-day forward cap
+when `closes_at` is null (`UNBOUNDED_WINDOW_HORIZON_DAYS`). Every step is done in
+epoch milliseconds, never wall-clock date arithmetic in a display zone, which is
+what the DST-transition test case in `slotGeneration.test.ts` pins down: consecutive
+generated instants stay exactly 15 minutes apart in absolute time straight through a
+US spring-forward/fall-back boundary, even though the wall clock in
+`America/New_York` jumps or repeats an hour that day. `slotAvailability` then judges
+one instant against the window, the boundary, the lead time and both teams' booked
+windows, in that order, returning the first reason that fails (`'outside_window' |
+'off_boundary' | 'inside_lead_time' | 'conflicts_with_booking'`) or `{available:
+true}`; `annotatedCandidateSlots` pairs every generated instant with its
+`slotAvailability` verdict for the modal to render — unavailable slots are shown
+struck through with their reason, never omitted from the grid. Component rendering,
+the modal's own poll (`REFRESH_MS = 30_000`, matching the schedule list's own
+interval) and its open/close behaviour are not covered by tests — only the two pure
+functions above are.
 
 **`fetchMySchedule` is cross-event, like `fetchMyPredictions`.** There is no
 per-event scheduling route; `EventDetailPage` fetches the caller's whole

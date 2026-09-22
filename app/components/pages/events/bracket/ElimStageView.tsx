@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { cn } from '@/lib/utils'
 import type { EventBracketStage, EventMatch } from '@/app/utils/api'
-import { MatchCard, sortedMatches, teamLabel } from './bracketShared'
+import { MatchCard, schedulerEligible, sortedMatches, teamLabel } from './bracketShared'
 import { TeamName } from '../TeamRoster'
 
 interface Round {
@@ -37,10 +37,11 @@ function ByeCard({ match }: { match: EventMatch }) {
     )
 }
 
-export function ElimStageView({ stage, now, onMapSelect }: {
+export function ElimStageView({ stage, now, onMapSelect, onScheduleMatch }: {
     stage: EventBracketStage
     now: number
     onMapSelect?: (mapName: string) => void
+    onScheduleMatch?: (matchId: string) => void
 }) {
     const rounds = useMemo(() => buildRounds(stage), [stage])
 
@@ -63,7 +64,8 @@ export function ElimStageView({ stage, now, onMapSelect }: {
                             {round.matches.map(match => (
                                 match.status === 'bye'
                                     ? <ByeCard key={match.id} match={match} />
-                                    : <MatchCard key={match.id} match={match} now={now} onMapSelect={onMapSelect} />
+                                    : <MatchCard key={match.id} match={match} now={now} onMapSelect={onMapSelect}
+                                        onClick={onScheduleMatch && schedulerEligible(match) ? () => onScheduleMatch(match.id) : undefined} />
                             ))}
                         </div>
                     </div>

@@ -24,6 +24,7 @@ import { EventRosterProvider } from './events/TeamRoster'
 import { PredictionsTab } from './events/predictions/PredictionsTab'
 import { PredictionOddsProvider, formatCountdown, useNow } from './events/predictions/predictionsShared'
 import { ScheduleTab } from './events/schedule/ScheduleTab'
+import { SlotPickerModal } from './events/schedule/SlotPickerModal'
 
 function NextMatchBanner({ match, myTeamId, now }: {
     match: EventMatch
@@ -196,6 +197,7 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
     })
 
     const [formatDraft, setFormatDraft] = useState<EventFormatSpec | null>(null)
+    const [schedulerMatchId, setSchedulerMatchId] = useState<string | null>(null)
 
     useUnsavedChanges(formatDraft !== null, 'The tournament format has edits you have not saved yet.')
 
@@ -312,13 +314,16 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
                     </div>
                 )}
                 {activeTab === 'teams' && <EventTeamsList teams={teams} teamSize={event.team_size} loading={loading} />}
-                {activeTab === 'bracket' && <BracketTab bracket={bracket} loading={loading} onMapSelect={onMapSelect} />}
+                {activeTab === 'bracket' && (
+                    <BracketTab bracket={bracket} loading={loading} onMapSelect={onMapSelect} onScheduleMatch={setSchedulerMatchId} />
+                )}
                 {activeTab === 'schedule' && canSeeSchedule && (
                     <ScheduleTab
                         myTeamId={my?.team?.id ?? null}
                         entries={schedule}
                         loaded={scheduleLoaded}
                         onRefresh={refreshSchedule}
+                        onOpenPicker={setSchedulerMatchId}
                     />
                 )}
                 {activeTab === 'predictions' && predictionsOn && (
@@ -362,6 +367,20 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
                 </PredictionOddsProvider>
                 </EventRosterProvider>
             </div>
+
+            {accessToken && schedulerMatchId && (
+                <SlotPickerModal
+                    isOpen
+                    onClose={() => setSchedulerMatchId(null)}
+                    slug={eventSlug}
+                    matchId={schedulerMatchId}
+                    accessToken={accessToken}
+                    myTeamId={myTeamId}
+                    canManage={canManageBracket}
+                    bracket={bracket}
+                    onChanged={refresh}
+                />
+            )}
         </div>
     )
 }

@@ -66,6 +66,10 @@ export function isDecided(match: EventMatch): boolean {
     return match.status === 'complete' || match.status === 'forfeit' || match.status === 'bye'
 }
 
+export function schedulerEligible(match: EventMatch): boolean {
+    return match.status === 'pending' && !!match.team_a && !!match.team_b
+}
+
 export function sideOf(match: EventMatch, teamId: string | null | undefined): EventSide | null {
     if (!teamId) return null
     if (match.team_a?.id === teamId) return 'a'

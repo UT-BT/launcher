@@ -15,9 +15,10 @@ interface ScheduleTabProps {
     entries: ScheduleEntry[] | null
     loaded: boolean
     onRefresh: () => void
+    onOpenPicker: (matchId: string) => void
 }
 
-export function ScheduleTab({ myTeamId, entries, loaded, onRefresh }: ScheduleTabProps) {
+export function ScheduleTab({ myTeamId, entries, loaded, onRefresh, onOpenPicker }: ScheduleTabProps) {
     useEffect(() => {
         onRefresh()
         const timer = setInterval(onRefresh, REFRESH_MS)
@@ -50,13 +51,17 @@ export function ScheduleTab({ myTeamId, entries, loaded, onRefresh }: ScheduleTa
     return (
         <div className="flex flex-col gap-2">
             {entries.map(entry => (
-                <ScheduleMatchCard key={entry.match.id} entry={entry} myTeamId={myTeamId} />
+                <ScheduleMatchCard key={entry.match.id} entry={entry} myTeamId={myTeamId} onOpenPicker={onOpenPicker} />
             ))}
         </div>
     )
 }
 
-function ScheduleMatchCard({ entry, myTeamId }: { entry: ScheduleEntry; myTeamId: string | null }) {
+function ScheduleMatchCard({ entry, myTeamId, onOpenPicker }: {
+    entry: ScheduleEntry
+    myTeamId: string | null
+    onOpenPicker: (matchId: string) => void
+}) {
     const timezone = useDisplayTimezone()
     const { match } = entry
     const myTurn = !!entry.proposal && !!myTeamId && entry.whose_turn === myTeamId
@@ -112,6 +117,12 @@ function ScheduleMatchCard({ entry, myTeamId }: { entry: ScheduleEntry; myTeamId
                             </div>
                         </div>
                     )}
+
+                    <div>
+                        <Button size="sm" variant="secondary" onClick={() => onOpenPicker(match.id)}>
+                            {entry.proposal ? 'Respond to offer' : 'Propose a time'}
+                        </Button>
+                    </div>
                 </>
             )}
         </div>
