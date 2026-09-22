@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
+import { EVENT_TIEBREAKERS } from '@/app/utils/api'
 import type { EventFormatSpec, EventGroupsConfig, EventMatchDefaults } from '@/app/utils/api'
 import {
     allowsDraws, defaultPointsTable, effectiveDefaults, emptySpec, newStage, parseSpecErrors, scorelinesFor,
-    syncPointsTable, withSyncedPoints,
+    syncPointsTable, TIEBREAKER_LABELS, withSyncedPoints,
 } from './formatFields'
 
 function defaults(patch: Partial<EventMatchDefaults> = {}): EventMatchDefaults {
@@ -132,6 +133,14 @@ describe('withSyncedPoints', () => {
         }
 
         expect(withSyncedPoints(spec).stages[0]).toEqual(spec.stages[0])
+    })
+})
+
+describe('TIEBREAKER_LABELS', () => {
+    it('has a readable label for every tiebreaker the backend accepts', () => {
+        for (const key of EVENT_TIEBREAKERS) {
+            expect(TIEBREAKER_LABELS[key]).toBeTruthy()
+        }
     })
 })
 
