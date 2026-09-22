@@ -8,6 +8,7 @@ const SYNCED_KEYS = new Set([
     'utbt:serverPresets:v1',
     'utbt:mapsPresets:v1',
     'utbt:worldRecordsPresets:v1',
+    'utbt:displayTimezone:v1',
 ])
 
 export function isSyncedKey(key: string): boolean {

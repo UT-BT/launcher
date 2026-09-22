@@ -1,5 +1,6 @@
 import { cn } from '@/lib/utils'
 import { teamInputClass } from '@/app/components/pages/teams/teamsShared'
+import { TIMEZONE_OPTIONS } from '@/app/utils/timezone'
 
 export interface SignupFieldsValue {
     timezone: string
@@ -65,14 +66,32 @@ export function SignupFieldsInputs({ value, onChange, disabled }: {
         <div className="space-y-3">
             <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">Timezone</label>
-                <input
-                    value={value.timezone}
-                    disabled={disabled}
-                    maxLength={64}
-                    onChange={e => onChange(prev => ({ ...prev, timezone: e.target.value }))}
-                    placeholder="e.g. Europe/Amsterdam or CET"
-                    className={cn(teamInputClass, 'w-full disabled:opacity-50')}
-                />
+                {TIMEZONE_OPTIONS.length > 0 ? (
+                    <select
+                        value={value.timezone}
+                        disabled={disabled}
+                        onChange={e => onChange(prev => ({ ...prev, timezone: e.target.value }))}
+                        style={{ colorScheme: 'dark' }}
+                        className={cn(teamInputClass, 'w-full disabled:opacity-50')}
+                    >
+                        {!value.timezone && <option value="">Select a timezone</option>}
+                        {value.timezone && !TIMEZONE_OPTIONS.includes(value.timezone) && (
+                            <option value={value.timezone} disabled>{value.timezone} (saved value, not a recognized timezone)</option>
+                        )}
+                        {TIMEZONE_OPTIONS.map(tz => (
+                            <option key={tz} value={tz}>{tz}</option>
+                        ))}
+                    </select>
+                ) : (
+                    <input
+                        value={value.timezone}
+                        disabled={disabled}
+                        maxLength={64}
+                        onChange={e => onChange(prev => ({ ...prev, timezone: e.target.value }))}
+                        placeholder="e.g. Europe/Amsterdam or CET"
+                        className={cn(teamInputClass, 'w-full disabled:opacity-50')}
+                    />
+                )}
             </div>
             <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">Availability</label>

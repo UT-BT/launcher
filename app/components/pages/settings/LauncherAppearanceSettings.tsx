@@ -1,9 +1,10 @@
-import { Palette, Contrast, Check, Lock, Heart } from 'lucide-react'
+import { Palette, Contrast, Check, Lock, Heart, Clock } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { SettingsSection } from './SettingsComponents'
+import { SettingsSection, SettingsRow } from './SettingsComponents'
 import { openExternal } from '@/app/platform'
 import { useTheme } from '@/app/theme/ThemeProvider'
 import { THEMES, type ThemeMeta } from '@/app/theme/themes'
+import { TIMEZONE_OPTIONS, browserResolvedTimezone, useDisplayTimezoneOverride } from '@/app/utils/timezone'
 
 interface LauncherAppearanceSettingsProps {
     unlockExclusive?: boolean
@@ -11,6 +12,7 @@ interface LauncherAppearanceSettingsProps {
 
 export function LauncherAppearanceSettings({ unlockExclusive }: LauncherAppearanceSettingsProps) {
     const { themeId, setThemeId } = useTheme()
+    const [timezoneOverride, setTimezoneOverride] = useDisplayTimezoneOverride()
 
     const renderCard = (theme: ThemeMeta) => {
         const active = theme.id === themeId
@@ -77,6 +79,25 @@ export function LauncherAppearanceSettings({ unlockExclusive }: LauncherAppearan
                 <div className="grid grid-cols-1 @md/panel:grid-cols-2 gap-3 p-4">
                     {solid.map(renderCard)}
                 </div>
+            </SettingsSection>
+
+            <SettingsSection title="Time Zone" icon={Clock}>
+                <SettingsRow
+                    label="Display time zone"
+                    description="Times across the launcher use your device's time zone unless you pin one here. Useful if you're travelling or your device is set to the wrong zone."
+                >
+                    <select
+                        value={timezoneOverride ?? ''}
+                        onChange={e => setTimezoneOverride(e.target.value || null)}
+                        style={{ colorScheme: 'dark' }}
+                        className="h-9 w-full @md/panel:w-64 rounded-md border border-hairline/10 bg-card/50 px-3 text-sm text-foreground"
+                    >
+                        <option value="">Browser default ({browserResolvedTimezone()})</option>
+                        {TIMEZONE_OPTIONS.map(tz => (
+                            <option key={tz} value={tz}>{tz}</option>
+                        ))}
+                    </select>
+                </SettingsRow>
             </SettingsSection>
         </div>
     )
