@@ -246,7 +246,8 @@ unchanged.
 **Writes go through three more fetchers, all on the same per-match base path:**
 `proposeMatchSlots(token, slug, matchId, { team_id?, note?, slots })` (→ `POST
 .../proposal`) creates or supersedes the match's one open proposal — the same route
-whether the match is still pending or (a separate, later ticket) already booked;
+whether the match is still pending or already booked, opening a reschedule (subject
+to the 12-hour captain freeze and market-bet gate the server enforces);
 `withdrawMatchProposal(token, slug, matchId)` (→ `DELETE .../proposal`, no body)
 withdraws it — only the proposing team or a manager may, and the route does not
 take a `team_id`, so the withdraw button's visibility is not gated on the acting-team
