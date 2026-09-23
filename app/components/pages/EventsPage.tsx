@@ -72,7 +72,7 @@ export function EventsPage({ userProfile, state, onStateChange, caches, onCaches
             <div className="shrink-0">
                 <h1 className="text-2xl font-bold text-white leading-tight">Events</h1>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                    Cups and community tournaments — sign up, follow the teams, and don't miss a match.
+                    Cups and community tournaments. Sign up, follow the teams, and don't miss a match!
                 </p>
             </div>
 

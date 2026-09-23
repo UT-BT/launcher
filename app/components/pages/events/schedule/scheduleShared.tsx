@@ -44,7 +44,7 @@ export function proposerName(entry: ScheduleEntry): string {
 }
 
 export function whoseTurnLabel(entry: ScheduleEntry, myTeamId: string | null): string {
-    if (!entry.proposal) return 'No offer yet — either side can propose a time.'
+    if (!entry.proposal) return 'No proposals yet, either side can propose a time.'
 
     const { team_a, team_b } = entry.match
 

@@ -299,7 +299,7 @@ export function SlotPickerModal({
                                 </div>
 
                                 {durationMinutes == null ? (
-                                    <p className="text-xs text-muted-foreground">Match details are still loading — try again shortly.</p>
+                                    <p className="text-xs text-muted-foreground">Match details are still loading, try again shortly.</p>
                                 ) : (
                                     <SlotGrid
                                         days={days}
