@@ -1,28 +1,55 @@
-import { useCallback, useEffect, useState } from 'react'
-import { ArrowLeft, CalendarDays, Users2 } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { ArrowLeft, CalendarClock, CalendarDays, Users2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useNavState } from '@/app/components/navigation/useNavState'
 import { useUnsavedChanges } from '@/app/components/navigation/useUnsavedChanges'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
 import { MarkdownBody } from '@/app/components/shared/MarkdownBody'
 import { ErrorBanner } from '@/app/components/pages/teams/teamsShared'
+import { formatSlotTime, useDisplayTimezone } from '@/app/utils/timezone'
 import {
     eventErrorMessage, fetchEvent, fetchEventBracket, fetchEventLfp, fetchEventPredictions,
-    fetchEventTeams, fetchMyEventStatus,
-    type EventBracket, type EventDetail, type EventFormatSpec, type EventLfpEntry, type EventTeam,
-    type MyEventStatus, type PredictionsOverview, type UserProfile,
+    fetchEventTeams, fetchMyEventStatus, fetchMySchedule,
+    type EventBracket, type EventDetail, type EventFormatSpec, type EventLfpEntry, type EventMatch, type EventTeam,
+    type MyEventStatus, type PredictionsOverview, type ScheduleEntry, type UserProfile,
 } from '@/app/utils/api'
-import { EventStatusBadge, formatEventDate, formatEventDateTime, formatTeamSize } from './events/eventsShared'
+import { EventStatusBadge, formatEventDate, formatEventDateTime, formatTeamSize, scheduleTabVisible } from './events/eventsShared'
 import { EventTeamsList } from './events/EventTeamsList'
 import { EventLfpList } from './events/EventLfpList'
 import { SignupPanel } from './events/SignupPanel'
 import { ManagePanel } from './events/ManagePanel'
 import { BracketTab } from './events/bracket/BracketTab'
+import { nextOwnMatch, sideOf, teamLabel } from './events/bracket/bracketShared'
 import { EventRosterProvider } from './events/TeamRoster'
 import { PredictionsTab } from './events/predictions/PredictionsTab'
-import { PredictionOddsProvider } from './events/predictions/predictionsShared'
+import { PredictionOddsProvider, formatCountdown, useNow } from './events/predictions/predictionsShared'
+import { ScheduleTab } from './events/schedule/ScheduleTab'
+import { SlotPickerModal } from './events/schedule/SlotPickerModal'
 
-export type EventTab = 'info' | 'teams' | 'bracket' | 'predictions' | 'players' | 'signup' | 'manage'
+function NextMatchBanner({ match, myTeamId, now }: {
+    match: EventMatch
+    myTeamId: string
+    now: number
+}) {
+    const timezone = useDisplayTimezone()
+    const opponent = sideOf(match, myTeamId) === 'a' ? match.team_b : match.team_a
+    const scheduledAt = match.scheduled_at
+    const countdown = formatCountdown(scheduledAt, now)
+
+    if (!countdown || !scheduledAt) return null
+
+    return (
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-accent-500/25 bg-accent-500/10 px-3 py-2 text-xs shrink-0">
+            <CalendarClock className="size-3.5 shrink-0 text-accent-300" />
+            <span className="min-w-0 truncate text-foreground">
+                Your next match vs {teamLabel(opponent)} · {formatSlotTime(scheduledAt, timezone)}
+            </span>
+            <span className="ml-auto shrink-0 font-medium tabular-nums text-accent-300">{countdown}</span>
+        </div>
+    )
+}
+
+export type EventTab = 'info' | 'teams' | 'bracket' | 'predictions' | 'schedule' | 'players' | 'signup' | 'manage'
 
 interface EventDetailPageProps {
     eventSlug: string
@@ -36,6 +63,7 @@ const BASE_TABS: { id: EventTab; label: string }[] = [
     { id: 'info', label: 'Info' },
     { id: 'teams', label: 'Teams' },
     { id: 'bracket', label: 'Bracket' },
+    { id: 'schedule', label: 'Schedule' },
     { id: 'predictions', label: 'Predictions' },
     { id: 'players', label: 'Looking for Partner' },
     { id: 'signup', label: 'Signup' },
@@ -58,6 +86,8 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
     const [my, setMy] = useState<MyEventStatus | null>(null)
     const [predictions, setPredictions] = useState<PredictionsOverview | null>(null)
     const [predictionsLoaded, setPredictionsLoaded] = useState(false)
+    const [schedule, setSchedule] = useState<ScheduleEntry[] | null>(null)
+    const [scheduleLoaded, setScheduleLoaded] = useState(false)
     const [loading, setLoading] = useState(true)
     const [myLoading, setMyLoading] = useState(!!accessToken)
     const [error, setError] = useState<string | null>(null)
@@ -120,31 +150,60 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
         }
     }, [accessToken, eventSlug])
 
+    const canSeeSchedule = scheduleTabVisible(!!my?.team, !!my?.can_manage_bracket || !!my?.can_manage)
+
+    const loadSchedule = useCallback(async (enabled: boolean) => {
+        if (!enabled || !accessToken) {
+            setSchedule(null)
+            setScheduleLoaded(true)
+            return
+        }
+        try {
+            const items = await fetchMySchedule(accessToken)
+            setSchedule(items.filter(item => item.tournament.slug === eventSlug))
+        } catch {
+            setSchedule(null)
+        } finally {
+            setScheduleLoaded(true)
+        }
+    }, [accessToken, eventSlug])
+
     useEffect(() => { void load() }, [load])
     useEffect(() => { void loadMy() }, [loadMy])
     useEffect(() => { void loadBracket() }, [loadBracket])
     useEffect(() => { void loadPredictions(!!event?.predictions_enabled) }, [loadPredictions, event?.predictions_enabled])
+    useEffect(() => { void loadSchedule(canSeeSchedule) }, [loadSchedule, canSeeSchedule])
 
     const refreshPredictions = useCallback(() => {
         void loadPredictions(!!event?.predictions_enabled)
     }, [loadPredictions, event?.predictions_enabled])
+
+    const refreshSchedule = useCallback(() => {
+        void loadSchedule(canSeeSchedule)
+    }, [loadSchedule, canSeeSchedule])
 
     const refresh = useCallback(() => {
         void load(true)
         void loadMy()
         void loadBracket()
         refreshPredictions()
-    }, [load, loadMy, loadBracket, refreshPredictions])
+        refreshSchedule()
+    }, [load, loadMy, loadBracket, refreshPredictions, refreshSchedule])
 
     useRegisterPageRefresh({
-        onRefresh: () => { void load(); void loadMy(); void loadBracket(); refreshPredictions() },
+        onRefresh: () => { void load(); void loadMy(); void loadBracket(); refreshPredictions(); refreshSchedule() },
         refreshing: loading,
         tooltip: 'Refresh',
     })
 
     const [formatDraft, setFormatDraft] = useState<EventFormatSpec | null>(null)
+    const [schedulerMatchId, setSchedulerMatchId] = useState<string | null>(null)
 
     useUnsavedChanges(formatDraft !== null, 'The tournament format has edits you have not saved yet.')
+
+    const now = useNow(1000)
+    const myTeamId = my?.team?.id ?? null
+    const nextMatch = useMemo(() => nextOwnMatch(bracket?.stages ?? [], myTeamId, now), [bracket, myTeamId, now])
 
     if (loading && !event) {
         return <div className="h-full flex items-center justify-center text-sm text-muted-foreground">Loading event…</div>
@@ -171,9 +230,12 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
     const visibleTabs = (canManageBracket ? TABS : BASE_TABS)
         .filter(t => t.id !== 'bracket' || hasBracket)
         .filter(t => t.id !== 'predictions' || predictionsOn)
+        .filter(t => t.id !== 'schedule' || canSeeSchedule)
+    const scheduleAwaitingCount = (schedule ?? []).filter(e => !!myTeamId && !!e.proposal && e.whose_turn === myTeamId).length
     const activeTab = (tab === 'manage' && !canManageBracket)
         || (tab === 'bracket' && !hasBracket)
-        || (tab === 'predictions' && !predictionsOn) ? 'info' : tab
+        || (tab === 'predictions' && !predictionsOn)
+        || (tab === 'schedule' && !canSeeSchedule) ? 'info' : tab
 
     return (
         <div className="h-full flex flex-col overflow-hidden space-y-4 animate-in fade-in slide-in-from-bottom-0 duration-500">
@@ -197,10 +259,13 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
                     {!event.signups_open && event.status === 'announced' && signupOpens && <span className="text-sky-300">Signups open {signupOpens}</span>}
                 </div>
                 {error && <ErrorBanner message={error} />}
+                {nextMatch && myTeamId && <NextMatchBanner match={nextMatch} myTeamId={myTeamId} now={now} />}
 
                 <div className="flex items-center gap-1 border-b border-white/10 overflow-x-auto">
                     {visibleTabs.map(t => {
                         const inviteCount = t.id === 'signup' ? (my?.invitations?.length ?? 0) : 0
+                        const scheduleCount = t.id === 'schedule' ? scheduleAwaitingCount : 0
+                        const badgeCount = inviteCount || scheduleCount
                         const signupCallout = t.id === 'signup' && event.signups_open && !my?.team
                         return (
                             <button
@@ -216,9 +281,12 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
                                 )}
                             >
                                 {t.label}
-                                {inviteCount > 0 ? (
-                                    <span className="min-w-4 h-4 px-1 inline-flex items-center justify-center rounded-full bg-accent-500 text-[10px] font-bold text-white leading-none">
-                                        {inviteCount}
+                                {badgeCount > 0 ? (
+                                    <span
+                                        title={scheduleCount > 0 ? `${scheduleCount} match${scheduleCount === 1 ? '' : 'es'} waiting on your team to pick a time` : undefined}
+                                        className="min-w-4 h-4 px-1 inline-flex items-center justify-center rounded-full bg-accent-500 text-[10px] font-bold text-white leading-none"
+                                    >
+                                        {badgeCount}
                                     </span>
                                 ) : signupCallout && activeTab !== t.id ? (
                                     <span className="relative flex size-1.5">
@@ -252,7 +320,18 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
                     </div>
                 )}
                 {activeTab === 'teams' && <EventTeamsList teams={teams} teamSize={event.team_size} loading={loading} />}
-                {activeTab === 'bracket' && <BracketTab bracket={bracket} loading={loading} onMapSelect={onMapSelect} />}
+                {activeTab === 'bracket' && (
+                    <BracketTab bracket={bracket} loading={loading} onMapSelect={onMapSelect} onScheduleMatch={setSchedulerMatchId} />
+                )}
+                {activeTab === 'schedule' && canSeeSchedule && (
+                    <ScheduleTab
+                        myTeamId={my?.team?.id ?? null}
+                        entries={schedule}
+                        loaded={scheduleLoaded}
+                        onRefresh={refreshSchedule}
+                        onOpenPicker={setSchedulerMatchId}
+                    />
+                )}
                 {activeTab === 'predictions' && predictionsOn && (
                     <PredictionsTab
                         slug={eventSlug}
@@ -294,6 +373,20 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
                 </PredictionOddsProvider>
                 </EventRosterProvider>
             </div>
+
+            {accessToken && schedulerMatchId && (
+                <SlotPickerModal
+                    isOpen
+                    onClose={() => setSchedulerMatchId(null)}
+                    slug={eventSlug}
+                    matchId={schedulerMatchId}
+                    accessToken={accessToken}
+                    myTeamId={myTeamId}
+                    canManage={canManageBracket}
+                    bracket={bracket}
+                    onChanged={refresh}
+                />
+            )}
         </div>
     )
 }

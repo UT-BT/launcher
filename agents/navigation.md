@@ -10,7 +10,7 @@ not_here:
   - "where page state / persistence lives → state-patterns.md"
   - "the PlayerInfo / CapTimeLink components that trigger nav → shared-components.md"
 sections: [the-model, navigate-is-the-only-entry-point, leave-guards, url-sync-web-build, link-semantics, page-views-vs-detail-pages, the-sidebar-registry, event-driven-navigation, sidebar-new-badges, page-refresh-registry, per-entry-state]
-last_verified: 2026-08-26
+last_verified: 2026-09-22
 verify_against:
   - app/components/main/Main.tsx
   - app/components/navigation/NavLink.tsx
@@ -338,6 +338,17 @@ navigation but are **not** navigation events:
   them as UTC: API timestamps come back both as offset-aware ISO and as naive
   `YYYY-MM-DD HH:MM:SS`, and a raw `Date.parse` reads the second form as local
   time.
+
+**Not every `getNavBadge` count is a "new since last visit" pill.** The
+`events` item can also show a live "a proposal is waiting on your team"
+count that has no seen marker and is never cleared by `markViewed` — it
+disappears on its own once it stops being true. `Main.tsx` computes it
+separately from `badgeCounts` and, when it is nonzero, it wins over the
+ordinary new-events count on that one nav item; `AppLayout`'s
+`getNavBadgeTooltip: (view, count) => string` prop lets the tooltip say which
+one is actually showing. Full derivation (`fetchMySchedule` +
+`fetchMyTournaments`, `awaitingMyResponseCount`) is in `agents/data-sources.md`
+("Event scheduling") — this doc only owns the pill/tooltip rendering contract.
 
 Because `markViewed()` lives inside `navigate()`, opening a badged page from
 **either** the sidebar **or** the Home tiles clears the "new" badge and fires the

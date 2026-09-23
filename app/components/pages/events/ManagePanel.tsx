@@ -13,13 +13,16 @@ import { FormatPanel } from './manage/FormatPanel'
 import { SeedingPanel } from './manage/SeedingPanel'
 import { BracketPanel } from './manage/BracketPanel'
 import { PredictionsManagePanel } from './manage/PredictionsManagePanel'
+import { ScheduleOversightPanel } from './manage/ScheduleOversightPanel'
+import { SchedulingWindowsPanel } from './manage/SchedulingWindowsPanel'
 
-type ManageTab = 'signups' | 'format' | 'bracket' | 'predictions'
+type ManageTab = 'signups' | 'format' | 'bracket' | 'schedule' | 'predictions'
 
 const TABS: { id: ManageTab; label: string }[] = [
     { id: 'signups', label: 'Signups' },
     { id: 'format', label: 'Format' },
     { id: 'bracket', label: 'Bracket' },
+    { id: 'schedule', label: 'Schedule' },
     { id: 'predictions', label: 'Predictions' },
 ]
 
@@ -137,6 +140,16 @@ export function ManagePanel({
                     onBracketChange={onBracketChange}
                     onMapSelect={onMapSelect}
                 />
+            )}
+
+            {tab === 'schedule' && (
+                <div className="flex flex-col gap-5">
+                    <div className="flex flex-col gap-2">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Windows</h3>
+                        <SchedulingWindowsPanel accessToken={accessToken} slug={slug} />
+                    </div>
+                    <ScheduleOversightPanel accessToken={accessToken} slug={slug} />
+                </div>
             )}
 
             {tab === 'predictions' && (

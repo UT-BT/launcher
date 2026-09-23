@@ -1,5 +1,6 @@
 import type { AuthConfig } from '@/lib/main/config'
 import { IS_WEB } from '@/app/platform/target'
+import { getImpersonatedUserId, IMPERSONATION_HEADER } from '@/app/utils/devImpersonation'
 
 export const GATEWAY_BASE_URL = (import.meta.env.VITE_GATEWAY_BASE_URL || 'https://gateway.utbt.net').replace(/\/$/, '')
 
@@ -235,7 +236,12 @@ export const API_BASE_URL = (
 ).replace(/\/$/, '')
 
 export function bearerHeaders(token?: string): { [key: string]: string } {
-    return token ? { Authorization: `Bearer ${token}` } : {}
+    const headers: { [key: string]: string } = token ? { Authorization: `Bearer ${token}` } : {}
+    if (import.meta.env.DEV) {
+        const impersonate = getImpersonatedUserId()
+        if (impersonate) headers[IMPERSONATION_HEADER] = impersonate
+    }
+    return headers
 }
 
 const DEFAULT_TIMEOUT_MS = 20_000
@@ -281,8 +287,8 @@ export async function apiRequest(path: string, opts: ApiRequestOptions = {}): Pr
 export class ApiError extends Error {
     status: number
     reason?: string
-    constructor(status: number, reason: string | undefined, fallback: string) {
-        super(reason || fallback)
+    constructor(status: number, message: string | undefined, fallback: string, reason?: string) {
+        super(message || fallback)
         this.name = 'ApiError'
         this.status = status
         this.reason = reason
@@ -290,14 +296,17 @@ export class ApiError extends Error {
 }
 
 async function apiErrorFor(res: Response): Promise<ApiError> {
+    let message: string | undefined
     let reason: string | undefined
     try {
         const body = await res.json()
-        reason = body?.error || body?.reason || undefined
+        message = body?.error || body?.reason || undefined
+        reason = body?.code || undefined
     } catch {
+        message = undefined
         reason = undefined
     }
-    return new ApiError(res.status, reason, `Request failed (${res.status})`)
+    return new ApiError(res.status, message, `Request failed (${res.status})`, reason)
 }
 
 export function asNum(v: unknown, fallback = 0): number {
@@ -4061,6 +4070,101 @@ export async function fetchMyEventStatus(accessToken: string, slug: string, sign
     return apiGet<MyEventStatus>(`/tournaments/${encodeURIComponent(slug)}/me`, { token: accessToken, signal })
 }
 
+export type EventMembershipStatus = 'invited' | 'active'
+
+export interface MyTournamentMembership {
+    tournament: EventSummary
+    team: EventTeam
+    membership_status: EventMembershipStatus
+}
+
+export async function fetchMyTournaments(accessToken: string, signal?: AbortSignal): Promise<MyTournamentMembership[]> {
+    const data = await apiGet<{ items: MyTournamentMembership[] }>('/me/tournaments', { token: accessToken, signal })
+    return data.items ?? []
+}
+
+export type ScheduleProposalStatus = 'open' | 'accepted' | 'withdrawn' | 'superseded'
+
+export interface ScheduleSlot {
+    starts_at: string
+    expired: boolean
+}
+
+export interface ScheduleProposal {
+    id: string
+    team_id: string
+    note: string | null
+    status: ScheduleProposalStatus
+    slots: ScheduleSlot[]
+    created_by: string
+    created_at: string
+    updated_at: string | null
+}
+
+export interface ScheduleEntry {
+    tournament: { id: string; slug: string; name: string }
+    match: EventMatch
+    slot_window: ResolvedWindow
+    schedulable: boolean
+    reason: string | null
+    whose_turn: string | null
+    proposal: ScheduleProposal | null
+}
+
+export async function fetchMySchedule(accessToken: string, signal?: AbortSignal): Promise<ScheduleEntry[]> {
+    const data = await apiGet<{ items: ScheduleEntry[] }>('/me/schedule', { token: accessToken, signal })
+    return data.items ?? []
+}
+
+export interface ScheduleOversightEntry extends ScheduleEntry {
+    overdue: boolean
+    stalled_since: string | null
+}
+
+export async function fetchEventScheduleOversight(accessToken: string, slug: string, signal?: AbortSignal): Promise<ScheduleOversightEntry[]> {
+    const data = await apiGet<{ items: ScheduleOversightEntry[] }>(`/tournaments/${encodeURIComponent(slug)}/admin/schedule`, { token: accessToken, signal })
+    return data.items ?? []
+}
+
+export interface EventSchedulingRoundWindow {
+    round_no: number
+    opens_at: string | null
+    closes_at: string | null
+}
+
+export interface EventSchedulingStage {
+    id: string
+    key: string
+    name: string
+    kind: EventStageKind
+    window_opens_at: string | null
+    window_closes_at: string | null
+    default_round_duration_days: number | null
+    expected_match_duration_minutes: number | null
+    effective_match_duration_minutes: number | null
+    rounds: EventSchedulingRoundWindow[]
+}
+
+export interface EventSchedulingConfig {
+    tournament: { starts_at: string | null; ends_at: string | null }
+    stages: EventSchedulingStage[]
+}
+
+export async function fetchEventScheduling(accessToken: string, slug: string, signal?: AbortSignal): Promise<EventSchedulingConfig> {
+    return apiGet<EventSchedulingConfig>(eventPath(slug, '/admin/scheduling'), { token: accessToken, signal })
+}
+
+export interface EventStageWindowInput {
+    window_opens_at?: string | null
+    window_closes_at?: string | null
+    default_round_duration_days?: number | null
+    expected_match_duration_minutes?: number | null
+}
+
+export async function updateEventStageWindow(accessToken: string, slug: string, stageKey: string, input: EventStageWindowInput): Promise<void> {
+    await apiGet(eventPath(slug, `/admin/stages/${encodeURIComponent(stageKey)}/window`), { token: accessToken, method: 'PATCH', body: input })
+}
+
 export async function createEventTeam(accessToken: string, slug: string, input: CreateEventTeamInput): Promise<EventTeam> {
     const data = await apiGet<{ team: EventTeam }>(`/tournaments/${encodeURIComponent(slug)}/teams`, { token: accessToken, method: 'POST', body: input })
     return data.team
@@ -4144,6 +4248,7 @@ export interface EventAuditEntry {
     id: string
     action: string
     team_id: string | null
+    match_id: string | null
     actor: string | null
     actor_alias: string | null
     target: string | null
@@ -4219,10 +4324,11 @@ export async function removeEventLfp(accessToken: string, slug: string, userId: 
     return apiGet(`/tournaments/${encodeURIComponent(slug)}/admin/lfp/${encodeURIComponent(userId)}`, { token: accessToken, method: 'DELETE' })
 }
 
-export async function fetchEventAuditLog(accessToken: string, slug: string, params: { limit?: number; offset?: number } = {}, signal?: AbortSignal): Promise<{ items: EventAuditEntry[]; count: number }> {
+export async function fetchEventAuditLog(accessToken: string, slug: string, params: { limit?: number; offset?: number; matchId?: string } = {}, signal?: AbortSignal): Promise<{ items: EventAuditEntry[]; count: number }> {
     const search = new URLSearchParams()
     if (params.limit != null) search.set('limit', String(params.limit))
     if (params.offset != null) search.set('offset', String(params.offset))
+    if (params.matchId) search.set('match_id', params.matchId)
     const qs = search.toString()
     return apiGet(`/tournaments/${encodeURIComponent(slug)}/admin/audit${qs ? `?${qs}` : ''}`, { token: accessToken, signal })
 }
@@ -4529,6 +4635,11 @@ export interface EventMatchMap {
     caps?: EventMatchCapLink[]
 }
 
+export interface ResolvedWindow {
+    opens_at: string | null
+    closes_at: string | null
+}
+
 export interface EventMatch {
     id: string
     stage_id: string
@@ -4553,6 +4664,7 @@ export interface EventMatch {
     deaths_a: number | null
     deaths_b: number | null
     scheduled_at: string | null
+    resolved_window: ResolvedWindow
     stream_url: string | null
     notes: string | null
     published: boolean
@@ -4612,6 +4724,7 @@ export interface EventBracketStage {
     ordinal: number
     status: EventStageStatus
     published: boolean
+    expected_match_duration_minutes: number | null
     config: EventStageConfig | null
     groups: EventBracketGroup[]
     entrants: EventBracketEntrant[]
@@ -4834,6 +4947,80 @@ export async function linkEventMatchMapCaps(
         { token: accessToken, method: 'PUT', body: { caps, keep_counts: keepCounts } },
     )
     return data.match
+}
+
+export interface ScheduleBookedMatch {
+    match_id: string
+    starts_at: string
+    ends_at: string
+}
+
+export interface ScheduleMatchTeamRef extends EventBracketTeamRef {
+    booked: ScheduleBookedMatch[]
+}
+
+export interface ScheduleMatchDetail extends Omit<EventMatch, 'team_a' | 'team_b'> {
+    team_a: ScheduleMatchTeamRef | null
+    team_b: ScheduleMatchTeamRef | null
+}
+
+export interface ScheduleEntryDetail {
+    tournament: { id: string; slug: string; name: string }
+    match: ScheduleMatchDetail
+    slot_window: ResolvedWindow
+    schedulable: boolean
+    reason: string | null
+    whose_turn: string | null
+    proposal: ScheduleProposal | null
+}
+
+export async function fetchMatchSchedule(
+    accessToken: string, slug: string, matchId: string, signal?: AbortSignal,
+): Promise<ScheduleEntryDetail> {
+    const data = await apiGet<{ schedule: ScheduleEntryDetail }>(
+        eventPath(slug, `/matches/${encodeURIComponent(matchId)}/schedule`),
+        { token: accessToken, signal },
+    )
+    return data.schedule
+}
+
+export interface ProposeMatchSlotsInput {
+    team_id?: string
+    note?: string | null
+    slots: string[]
+}
+
+export async function proposeMatchSlots(
+    accessToken: string, slug: string, matchId: string, input: ProposeMatchSlotsInput,
+): Promise<ScheduleEntryDetail> {
+    const data = await apiGet<{ schedule: ScheduleEntryDetail }>(
+        eventPath(slug, `/matches/${encodeURIComponent(matchId)}/proposal`),
+        { token: accessToken, method: 'POST', body: input },
+    )
+    return data.schedule
+}
+
+export async function withdrawMatchProposal(accessToken: string, slug: string, matchId: string): Promise<ScheduleEntryDetail> {
+    const data = await apiGet<{ schedule: ScheduleEntryDetail }>(
+        eventPath(slug, `/matches/${encodeURIComponent(matchId)}/proposal`),
+        { token: accessToken, method: 'DELETE' },
+    )
+    return data.schedule
+}
+
+export interface AcceptMatchProposalInput {
+    team_id?: string
+    slot_index: number
+}
+
+export async function acceptMatchProposal(
+    accessToken: string, slug: string, matchId: string, input: AcceptMatchProposalInput,
+): Promise<ScheduleEntryDetail> {
+    const data = await apiGet<{ schedule: ScheduleEntryDetail }>(
+        eventPath(slug, `/matches/${encodeURIComponent(matchId)}/proposal/accept`),
+        { token: accessToken, method: 'POST', body: input },
+    )
+    return data.schedule
 }
 
 // ---------------------------------------------------------------- predictions

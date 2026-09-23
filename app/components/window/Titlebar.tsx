@@ -6,7 +6,8 @@ import { AboutButton } from './AboutButton'
 import { SettingsButton } from './SettingsButton'
 import { UploadLogButton } from './UploadLogButton'
 import { GameProfilesButton } from './GameProfilesButton'
-import { TitlebarMenu } from './TitlebarMenu'
+import { DevImpersonateButton } from './DevImpersonateButton'
+import type { TitlebarMenu } from './TitlebarMenu'
 import { FaMinus, FaSquare, FaTimes, FaWindowRestore } from 'react-icons/fa'
 
 export const Titlebar = () => {
@@ -27,6 +28,7 @@ export const Titlebar = () => {
         <div className="titlebar-separator" />
         <GameProfilesButton />
         <UploadLogButton />
+        {import.meta.env.DEV && <DevImpersonateButton />}
       </div>
 
       {wcontext?.platform === 'win32' && <TitlebarControls />}

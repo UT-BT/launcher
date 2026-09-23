@@ -12,7 +12,7 @@ not_here:
   - "the navigation stack / navigate() / renderView wiring → navigation.md"
   - "the shared components used (FilterPresetsMenu, ColumnsMenu, Tutorial) → shared-components.md"
 sections: [controlled-pages-with-hoisted-state, navigation-history-per-entry-ui-state, account-synced-state, localstorage-persistence, filter-presets, tutorial-state, favorites, naming-conventions]
-last_verified: 2026-08-26
+last_verified: 2026-09-22
 verify_against: [app/components/main/Main.tsx, app/components/navigation/useNavState.ts, app/hooks/useAsync.ts, app/utils/userState.ts]
 ---
 
@@ -175,8 +175,9 @@ Rules:
 
 - **Which keys sync is a whitelist** (`isSyncedKey` in `userState.ts`): theme,
   tutorial seen-flags, server presets, Maps/World-Records filter presets, admin
-  `:filters:v1` presets, Medal Hunt dismissals. Map and server favorites are NOT
-  here — each is its own account resource on the API (see Favorites below).
+  `:filters:v1` presets, Medal Hunt dismissals, the display-timezone override.
+  Map and server favorites are NOT here — each is its own account resource on
+  the API (see Favorites below).
   Everything else (column layout, page sizes, panel-open flags, ui-scale, replay
   volume, auth) is **deliberately device-local** — layout preferences differ
   between a 4K desktop and a phone. Add a key to the whitelist only if the user
@@ -251,6 +252,7 @@ signed-in user across devices); everything else is device-local.
 | `utbt:adminState:v1` | `Main.tsx` (`usePageState`) | no | Admin page pref: `activeSection`. Each admin section owns its own table state: column visibility/order in `utbt:admin:<section>:cols:v2` (device-local) + saved filters in `utbt:admin:<section>:filters:v1` (**synced**, via `useAdminFilterPresets` → `filterPresets.ts`); transient sort/filter/search/page via `useNavState('admin.<section>.<field>')` so it restores on Back/Forward. The Overview section additionally keeps its chosen activity date range in `utbt:admin:overview:range:v1` (device-local, `{ presetId, start, end }`) — a saved preset id re-resolves to today's dates on load, so `10y` stays rolling rather than freezing the day it was picked. No caches singleton. |
 | `utbt:homeMedalHuntHidden:v1:<userId>` | `MedalHuntCard` | **yes** | `string[]` map names dismissed from the home Medal Hunt card (already user-suffixed; the suffix is kept inside the per-account blob) |
 | `utbt:theme:v1` | `ThemeProvider` (app-global) | **yes** | `{ id }` — selected theme (`classic`/`red`/`aurum`/`amethyst`/`emerald`/`rose`/`light`/`black`) |
+| `utbt:displayTimezone:v1` | `app/utils/timezone.ts` (app-global) | **yes** | IANA timezone string override, or `null` to fall back to the browser's resolved zone. Set from the `launcher-appearance` settings panel. |
 | `utbt:replayVideoVolume:v1` | `app/utils/replayVideoVolume.ts` | no | replay player volume `0..1` |
 | `utbt:patreon:v1` | `app/utils/patreon.ts` | no | cached patron tier map, 1 h TTL (pure cache) |
 | `ui-scale` | `LauncherGeneralSettings` | no | renderer zoom percent (pre-dates the key convention) |

@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { cn } from '@/lib/utils'
 import type { EventBracketEntrant, EventBracketStage, EventSwissConfig } from '@/app/utils/api'
-import { Chip, ENTRANT_STATUS_STYLES, MatchCard, matchOrder, stageRounds } from './bracketShared'
+import { Chip, ENTRANT_STATUS_STYLES, MatchCard, matchOrder, schedulerEligible, stageRounds } from './bracketShared'
 import { TeamName } from '../TeamRoster'
 
 interface Column {
@@ -90,9 +90,11 @@ function ordinal(value: number): string {
     return `${value}${suffix}`
 }
 
-export function SwissStageView({ stage, onMapSelect }: {
+export function SwissStageView({ stage, now, onMapSelect, onScheduleMatch }: {
     stage: EventBracketStage
+    now: number
     onMapSelect?: (mapName: string) => void
+    onScheduleMatch?: (matchId: string) => void
 }) {
     const config = stage.config as EventSwissConfig | null
     const columns = useMemo(() => buildColumns(stage, config), [stage, config])
@@ -147,7 +149,8 @@ export function SwissStageView({ stage, onMapSelect }: {
                         </div>
                         <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
                             {inRound.map(match => (
-                                <MatchCard key={match.id} match={match} onMapSelect={onMapSelect} />
+                                <MatchCard key={match.id} match={match} now={now} onMapSelect={onMapSelect}
+                                    onClick={onScheduleMatch && schedulerEligible(match) ? () => onScheduleMatch(match.id) : undefined} />
                             ))}
                         </div>
                     </section>

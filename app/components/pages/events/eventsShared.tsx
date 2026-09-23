@@ -57,6 +57,10 @@ export function formatTeamSize(teamSize: number): string {
     return teamSize > 1 ? `${teamSize}v${teamSize}` : '1v1'
 }
 
+export function scheduleTabVisible(hasTeam: boolean, canManageBracket: boolean): boolean {
+    return hasTeam || canManageBracket
+}
+
 export const BROWSER_TIMEZONE = (() => {
     try {
         return Intl.DateTimeFormat().resolvedOptions().timeZone ?? ''

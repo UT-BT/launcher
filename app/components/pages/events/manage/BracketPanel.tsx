@@ -15,6 +15,7 @@ const PUBLISH_KEY = '__bracket__'
 import {
     MatchCard, RELAXED_LABELS, STAGE_STATUS_LABELS, sortedMatches, unfinishedFeeders,
 } from '../bracket/bracketShared'
+import { useNow } from '../predictions/predictionsShared'
 import { MatchEditorModal } from './MatchEditorModal'
 
 interface BracketPanelProps {
@@ -41,6 +42,15 @@ function relaxedNotice(draw: EventStageDraw): string | null {
     return `The draw could not avoid ${names.join(' or ')}${which} — check the pairings before publishing.`
 }
 
+function bookedMatchCount(stage: EventBracketStage | null): number {
+    return stage ? stage.matches.filter(match => match.status === 'scheduled').length : 0
+}
+
+function bookingCancellationNotice(count: number): string {
+    if (count <= 0) return ''
+    return ` ${count} match${count === 1 ? '' : 'es'} already ${count === 1 ? 'has' : 'have'} a time agreed with both teams — ${count === 1 ? 'it' : 'they'} will be cancelled and both teams notified in Discord.`
+}
+
 export function BracketPanel({ accessToken, slug, bracket, onBracketChange, onMapSelect }: BracketPanelProps) {
     const stages = useMemo(() => bracket?.stages ?? [], [bracket])
     const [busyStage, setBusyStage] = useState<string | null>(null)
@@ -51,6 +61,7 @@ export function BracketPanel({ accessToken, slug, bracket, onBracketChange, onMa
     const [earlyTarget, setEarlyTarget] = useState<{ stage: EventBracketStage; force: boolean } | null>(null)
     const [confirmPublish, setConfirmPublish] = useState(false)
     const [editing, setEditing] = useState<EventMatch | null>(null)
+    const now = useNow(60_000)
 
     const pendingFor = useCallback(
         (stage: EventBracketStage) => unfinishedFeeders(bracket?.format.spec, stages, stage.key),
@@ -149,6 +160,7 @@ export function BracketPanel({ accessToken, slug, bracket, onBracketChange, onMa
                 <StageCard
                     key={stage.key}
                     stage={stage}
+                    now={now}
                     busy={busyStage === stage.key}
                     notice={notices[stage.key] || null}
                     onPreview={() => void preview(stage)}
@@ -218,7 +230,10 @@ export function BracketPanel({ accessToken, slug, bracket, onBracketChange, onMa
                 }}
                 title="Redraw stage"
                 message={`Redraw "${redrawTarget?.name}"?`}
-                detail="The current matches and every result recorded on them are deleted permanently, then the stage is drawn again from scratch."
+                detail={
+                    'The current matches and every result recorded on them are deleted permanently, then the stage is drawn again from scratch.'
+                    + bookingCancellationNotice(bookedMatchCount(redrawTarget))
+                }
                 confirmText="Redraw stage"
                 variant="error"
             />
@@ -233,7 +248,10 @@ export function BracketPanel({ accessToken, slug, bracket, onBracketChange, onMa
                 }}
                 title="Reset stage"
                 message={`Reset "${resetTarget?.name}"?`}
-                detail="Its matches, groups and results are deleted permanently. Later stages seeded from it will need redrawing."
+                detail={
+                    'Its matches, groups and results are deleted permanently. Later stages seeded from it will need redrawing.'
+                    + bookingCancellationNotice(bookedMatchCount(resetTarget))
+                }
                 confirmText="Reset stage"
                 variant="error"
             />
@@ -254,10 +272,11 @@ export function BracketPanel({ accessToken, slug, bracket, onBracketChange, onMa
 }
 
 function StageCard({
-    stage, busy, notice, pendingFeeders, onPreview, onGenerate, onNextRound, onTogglePublished,
+    stage, now, busy, notice, pendingFeeders, onPreview, onGenerate, onNextRound, onTogglePublished,
     onReset, onAddMatch, onEditMatch, onMapSelect,
 }: {
     stage: EventBracketStage
+    now: number
     busy: boolean
     notice: string | null
     pendingFeeders: EventBracketStage[]
@@ -349,6 +368,7 @@ function StageCard({
                                     <MatchCard
                                         key={match.id}
                                         match={match}
+                                        now={now}
                                         onClick={() => onEditMatch(match)}
                                         onMapSelect={onMapSelect}
                                         className={cn(!match.published && 'opacity-60')}
