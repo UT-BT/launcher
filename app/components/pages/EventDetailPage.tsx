@@ -231,6 +231,7 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
         .filter(t => t.id !== 'bracket' || hasBracket)
         .filter(t => t.id !== 'predictions' || predictionsOn)
         .filter(t => t.id !== 'schedule' || canSeeSchedule)
+    const scheduleAwaitingCount = (schedule ?? []).filter(e => !!myTeamId && !!e.proposal && e.whose_turn === myTeamId).length
     const activeTab = (tab === 'manage' && !canManageBracket)
         || (tab === 'bracket' && !hasBracket)
         || (tab === 'predictions' && !predictionsOn)
@@ -263,6 +264,8 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
                 <div className="flex items-center gap-1 border-b border-white/10 overflow-x-auto">
                     {visibleTabs.map(t => {
                         const inviteCount = t.id === 'signup' ? (my?.invitations?.length ?? 0) : 0
+                        const scheduleCount = t.id === 'schedule' ? scheduleAwaitingCount : 0
+                        const badgeCount = inviteCount || scheduleCount
                         const signupCallout = t.id === 'signup' && event.signups_open && !my?.team
                         return (
                             <button
@@ -278,9 +281,12 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
                                 )}
                             >
                                 {t.label}
-                                {inviteCount > 0 ? (
-                                    <span className="min-w-4 h-4 px-1 inline-flex items-center justify-center rounded-full bg-accent-500 text-[10px] font-bold text-white leading-none">
-                                        {inviteCount}
+                                {badgeCount > 0 ? (
+                                    <span
+                                        title={scheduleCount > 0 ? `${scheduleCount} match${scheduleCount === 1 ? '' : 'es'} waiting on your team to pick a time` : undefined}
+                                        className="min-w-4 h-4 px-1 inline-flex items-center justify-center rounded-full bg-accent-500 text-[10px] font-bold text-white leading-none"
+                                    >
+                                        {badgeCount}
                                     </span>
                                 ) : signupCallout && activeTab !== t.id ? (
                                     <span className="relative flex size-1.5">
