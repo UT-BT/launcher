@@ -155,9 +155,9 @@ export const SIDE_BAR_STYLES: Record<PredictionSide, string> = {
 export function outcomeLabel(market: PredictionMarket): string | null {
     const outcome: PredictionOutcome | null = market.outcome
     if (!outcome) return null
-    if (outcome === 'void') return 'Void — everyone refunded'
+    if (outcome === 'void') return 'Void: everyone refunded'
     if (outcome === 'draw') {
-        return market.draws_allowed ? 'Drawn — the draw paid out' : 'Draw — everyone refunded'
+        return market.draws_allowed ? 'Drawn: the draw paid out' : 'Draw: everyone refunded'
     }
     const winner = outcome === 'a' ? market.team_a?.name : market.team_b?.name
     return winner ? `${winner} won` : 'Settled'

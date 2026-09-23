@@ -82,7 +82,7 @@ describe('proposerName', () => {
 describe('whoseTurnLabel', () => {
     it('says no offer yet when there is no open proposal', () => {
         expect(whoseTurnLabel(entry({ proposal: null, whose_turn: null }), TEAM_A.id))
-            .toBe('No offer yet — either side can propose a time.')
+            .toBe('No proposals yet, either side can propose a time.')
     })
 
     it('tells the viewer it is their turn', () => {

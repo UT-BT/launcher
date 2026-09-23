@@ -271,7 +271,7 @@ export function SignupsPanel({ accessToken, slug, event, lfp, teams, onReloadTea
 
             <SectionCard
                 title="Looking for Partner"
-                subtitle="Remove stale entries — joining a team removes players automatically"
+                subtitle="Remove stale entries, joining a team removes players automatically"
                 collapsible
                 open={openLfp}
                 onOpenChange={setOpenLfp}

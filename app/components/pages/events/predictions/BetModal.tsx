@@ -260,7 +260,7 @@ export function BetModal({ slug, accessToken, market, config, wallet, onClose, o
                         muted={quoting}
                     />
                     <Row
-                        label="Board after your prediction"
+                        label="Odds after your prediction"
                         value={quote ? `${formatOdds(quote.price_before)} → ${formatOdds(quote.price_after)}` : '—'}
                         muted={quoting}
                     />
@@ -268,11 +268,8 @@ export function BetModal({ slug, accessToken, market, config, wallet, onClose, o
 
                 {quote && (
                     <p className="text-xs text-muted-foreground leading-relaxed">
-                        <span className="text-white/80">You get the odds on the board.</span>{' '}
-                        Your prediction moves the price for whoever comes next, but not for you —
-                        the whole stake is struck at what you are looking at now. Getting in before
-                        the crowd is worth something, and putting it on in one go beats dribbling
-                        it in.
+                        <span className="text-white/80">You get the odds shown on the screen.</span>{' '}
+                        Your prediction moves the price for whoever comes next, but not for you.
                     </p>
                 )}
 
@@ -291,13 +288,12 @@ export function BetModal({ slug, accessToken, market, config, wallet, onClose, o
                 )}
 
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                    That payout is locked in the moment you confirm — the odds can move afterwards, your return cannot.
-                    If somebody moves the price before you press it, the prediction is refused rather than taken at
-                    the new odds.
+                    That payout is locked in the moment you confirm. The odds can move afterwards, but your potential returns stay the same.
+                    If somebody has moved the price before you confirm, the prediction is refused rather than taken at the new odds.
                     A prediction cannot be cancelled or sold, and you get one outcome per match.{' '}
                     {market.draws_allowed
-                        ? 'This match can finish level, so the draw is one of the three things you can back.'
-                        : 'This match has to produce a winner, so there is no draw to back.'}{' '}
+                        ? 'This match can finish as a draw, so that is an option you can back.'
+                        : 'This match has to produce a winner, so there is no draw choice.'}{' '}
                     If the match is forfeited or cancelled, your stake comes back.
                 </p>
 
