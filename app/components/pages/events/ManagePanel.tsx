@@ -14,6 +14,7 @@ import { SeedingPanel } from './manage/SeedingPanel'
 import { BracketPanel } from './manage/BracketPanel'
 import { PredictionsManagePanel } from './manage/PredictionsManagePanel'
 import { ScheduleOversightPanel } from './manage/ScheduleOversightPanel'
+import { SchedulingWindowsPanel } from './manage/SchedulingWindowsPanel'
 
 type ManageTab = 'signups' | 'format' | 'bracket' | 'schedule' | 'predictions'
 
@@ -142,7 +143,13 @@ export function ManagePanel({
             )}
 
             {tab === 'schedule' && (
-                <ScheduleOversightPanel accessToken={accessToken} slug={slug} />
+                <div className="flex flex-col gap-5">
+                    <div className="flex flex-col gap-2">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Windows</h3>
+                        <SchedulingWindowsPanel accessToken={accessToken} slug={slug} />
+                    </div>
+                    <ScheduleOversightPanel accessToken={accessToken} slug={slug} />
+                </div>
             )}
 
             {tab === 'predictions' && (

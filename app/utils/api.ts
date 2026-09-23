@@ -4119,6 +4119,45 @@ export async function fetchEventScheduleOversight(accessToken: string, slug: str
     return data.items ?? []
 }
 
+export interface EventSchedulingRoundWindow {
+    round_no: number
+    opens_at: string | null
+    closes_at: string | null
+}
+
+export interface EventSchedulingStage {
+    id: string
+    key: string
+    name: string
+    kind: EventStageKind
+    window_opens_at: string | null
+    window_closes_at: string | null
+    default_round_duration_days: number | null
+    expected_match_duration_minutes: number | null
+    effective_match_duration_minutes: number | null
+    rounds: EventSchedulingRoundWindow[]
+}
+
+export interface EventSchedulingConfig {
+    tournament: { starts_at: string | null; ends_at: string | null }
+    stages: EventSchedulingStage[]
+}
+
+export async function fetchEventScheduling(accessToken: string, slug: string, signal?: AbortSignal): Promise<EventSchedulingConfig> {
+    return apiGet<EventSchedulingConfig>(eventPath(slug, '/admin/scheduling'), { token: accessToken, signal })
+}
+
+export interface EventStageWindowInput {
+    window_opens_at?: string | null
+    window_closes_at?: string | null
+    default_round_duration_days?: number | null
+    expected_match_duration_minutes?: number | null
+}
+
+export async function updateEventStageWindow(accessToken: string, slug: string, stageKey: string, input: EventStageWindowInput): Promise<void> {
+    await apiGet(eventPath(slug, `/admin/stages/${encodeURIComponent(stageKey)}/window`), { token: accessToken, method: 'PATCH', body: input })
+}
+
 export async function createEventTeam(accessToken: string, slug: string, input: CreateEventTeamInput): Promise<EventTeam> {
     const data = await apiGet<{ team: EventTeam }>(`/tournaments/${encodeURIComponent(slug)}/teams`, { token: accessToken, method: 'POST', body: input })
     return data.team
