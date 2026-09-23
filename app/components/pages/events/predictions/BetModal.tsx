@@ -260,7 +260,7 @@ export function BetModal({ slug, accessToken, market, config, wallet, onClose, o
                         muted={quoting}
                     />
                     <Row
-                        label="Board after your prediction"
+                        label="Odds after your prediction"
                         value={quote ? `${formatOdds(quote.price_before)} → ${formatOdds(quote.price_after)}` : '—'}
                         muted={quoting}
                     />
