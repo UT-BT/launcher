@@ -85,6 +85,7 @@ import { UpdateBanner } from '@/app/components/updater/UpdateBanner'
 import { FavoritesSyncModal } from '@/app/components/shared/FavoritesSyncModal'
 import { AuthRequiredModal, LOGIN_REQUIRED_EVENT, type LoginRequest } from '@/app/components/shared/AuthRequiredModal'
 import { PatreonModal } from '@/app/components/modals/PatreonModal'
+import { DevImpersonateModal, DevImpersonationBanner } from '@/app/components/modals/DevImpersonateModal'
 import type { ServerPreset } from '@/app/utils/server-utils'
 import { useFavorites } from '@/app/hooks/useFavorites'
 import { useServerFavorites } from '@/app/hooks/useServerFavorites'
@@ -905,6 +906,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
 
   return (
     <div className="h-dvh flex flex-col overflow-hidden">
+      {import.meta.env.DEV && <DevImpersonationBanner />}
       <UpdateBanner />
       {installationStatus && installationStatus !== 'valid' && (
         <InstallationBanner
@@ -948,6 +950,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
       />
       <PatreonModal />
       <AuthRequiredModal request={loginRequest} onClose={() => setLoginRequest(null)} />
+      {import.meta.env.DEV && <DevImpersonateModal />}
       {pendingLeave && (
         <Suspense fallback={null}>
           <ConfirmModal

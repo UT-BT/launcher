@@ -1,5 +1,6 @@
 import type { AuthConfig } from '@/lib/main/config'
 import { IS_WEB } from '@/app/platform/target'
+import { getImpersonatedUserId, IMPERSONATION_HEADER } from '@/app/utils/devImpersonation'
 
 export const GATEWAY_BASE_URL = (import.meta.env.VITE_GATEWAY_BASE_URL || 'https://gateway.utbt.net').replace(/\/$/, '')
 
@@ -235,7 +236,12 @@ export const API_BASE_URL = (
 ).replace(/\/$/, '')
 
 export function bearerHeaders(token?: string): { [key: string]: string } {
-    return token ? { Authorization: `Bearer ${token}` } : {}
+    const headers: { [key: string]: string } = token ? { Authorization: `Bearer ${token}` } : {}
+    if (import.meta.env.DEV) {
+        const impersonate = getImpersonatedUserId()
+        if (impersonate) headers[IMPERSONATION_HEADER] = impersonate
+    }
+    return headers
 }
 
 const DEFAULT_TIMEOUT_MS = 20_000
