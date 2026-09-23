@@ -199,18 +199,18 @@ describe('what a settled market says happened', () => {
     it('pays the draw on a match that offered one', () => {
         const market = aMarket({ status: 'settled', outcome: 'draw' })
 
-        expect(outcomeLabel(market)).toBe('Drawn — the draw paid out')
+        expect(outcomeLabel(market)).toBe('Drawn: the draw paid out')
     })
 
     it('refunds a draw on a match that did not offer one', () => {
         const market = aMarket({ status: 'settled', outcome: 'draw', draws_allowed: false })
 
-        expect(outcomeLabel(market)).toBe('Draw — everyone refunded')
+        expect(outcomeLabel(market)).toBe('Draw: everyone refunded')
     })
 
     it('names the winner otherwise', () => {
         expect(outcomeLabel(aMarket({ status: 'settled', outcome: 'a' }))).toBe('Puzzle Masters won')
-        expect(outcomeLabel(aMarket({ status: 'voided', outcome: 'void' }))).toBe('Void — everyone refunded')
+        expect(outcomeLabel(aMarket({ status: 'voided', outcome: 'void' }))).toBe('Void: everyone refunded')
         expect(outcomeLabel(aMarket())).toBeNull()
     })
 })
