@@ -34,6 +34,7 @@ function entry(patch: Partial<ScheduleEntry> = {}): ScheduleEntry {
     return {
         tournament: { id: 't1', slug: '2v2-cup', name: '2v2 Cup' },
         match: match(),
+        slot_window: { opens_at: null, closes_at: null },
         schedulable: true,
         reason: null,
         whose_turn: TEAM_B.id,

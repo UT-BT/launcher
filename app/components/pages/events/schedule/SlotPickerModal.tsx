@@ -9,21 +9,15 @@ import {
     type AcceptMatchProposalInput, type EventBracket, type ProposeMatchSlotsInput, type ScheduleEntryDetail,
 } from '@/app/utils/api'
 import { useNow } from '../predictions/predictionsShared'
-import { teamLabel } from '../bracket/bracketShared'
+import { teamLabel, toLocalInput } from '../bracket/bracketShared'
 import { proposerName, schedulabilityReason, whoseTurnLabel } from './scheduleShared'
 import {
-    MAX_PROPOSAL_SLOTS, annotatedCandidateSlots, effectiveMatchDurationMinutes, type SlotUnavailableReason,
+    MAX_PROPOSAL_SLOTS, SLOT_BOUNDARY_MINUTES, effectiveMatchDurationMinutes, pickerBounds, slotAvailability,
+    type SlotUnavailableReason,
 } from './slotGeneration'
 
 const REFRESH_MS = 30_000
 const NOTE_MAX_LENGTH = 500
-
-const SHORT_REASON_LABELS: Record<SlotUnavailableReason, string> = {
-    outside_window: 'outside window',
-    off_boundary: 'off boundary',
-    inside_lead_time: 'too soon',
-    conflicts_with_booking: 'booked',
-}
 
 const LONG_REASON_LABELS: Record<SlotUnavailableReason, string> = {
     outside_window: "Falls outside this match's scheduling window.",
@@ -53,7 +47,7 @@ export function SlotPickerModal({
     const [detail, setDetail] = useState<ScheduleEntryDetail | null>(null)
     const [loaded, setLoaded] = useState(false)
     const [loadError, setLoadError] = useState<string | null>(null)
-    const [selected, setSelected] = useState<number[]>([])
+    const [slotInputs, setSlotInputs] = useState<string[]>([''])
     const [note, setNote] = useState('')
     const [managerTeamId, setManagerTeamId] = useState<string | null>(null)
     const [submitting, setSubmitting] = useState(false)
@@ -79,7 +73,7 @@ export function SlotPickerModal({
         setDetail(null)
         setLoaded(false)
         setLoadError(null)
-        setSelected([])
+        setSlotInputs([''])
         setNote('')
         setManagerTeamId(null)
         setActionError(null)
@@ -90,6 +84,8 @@ export function SlotPickerModal({
     }, [isOpen, load])
 
     const actingTeamId = myTeamId ?? managerTeamId
+    const proposal = detail?.proposal ?? null
+    const isOwnProposal = !!proposal && !!actingTeamId && proposal.team_id === actingTeamId
 
     const stage = useMemo(
         () => bracket?.stages.find(row => row.id === detail?.match.stage_id) ?? null,
@@ -97,45 +93,69 @@ export function SlotPickerModal({
     )
     const durationMinutes = stage ? effectiveMatchDurationMinutes(stage) : null
 
-    const annotated = useMemo(() => {
-        if (!detail || durationMinutes == null) return []
+    const bounds = useMemo(() => {
+        if (!detail || durationMinutes == null) return null
+        return pickerBounds(detail.slot_window, durationMinutes, now)
+    }, [detail, durationMinutes, now])
+
+    const minInput = bounds ? toLocalInput(new Date(bounds.minMs).toISOString()) : undefined
+    const maxInput = bounds?.maxMs != null ? toLocalInput(new Date(bounds.maxMs).toISOString()) : undefined
+
+    const rowAvailability = useMemo(() => {
+        if (!detail || durationMinutes == null) return slotInputs.map(() => null)
         const bookedA = detail.match.team_a?.booked ?? []
         const bookedB = detail.match.team_b?.booked ?? []
-        return annotatedCandidateSlots(detail.match.resolved_window, durationMinutes, now, bookedA, bookedB)
-    }, [detail, durationMinutes, now])
+        return slotInputs.map(value => {
+            if (!value) return null
+            const ms = new Date(value).getTime()
+            if (Number.isNaN(ms)) return null
+            return { ms, availability: slotAvailability(ms, detail.slot_window, durationMinutes, now, bookedA, bookedB) }
+        })
+    }, [slotInputs, detail, durationMinutes, now])
+
+    const filledRows = rowAvailability.filter((row): row is NonNullable<typeof row> => row !== null)
+    const allFilledValid = filledRows.every(row => row.availability.available)
 
     useEffect(() => {
         setDeadSlots({})
-    }, [detail?.proposal?.id])
+        const ownSlots = isOwnProposal ? (proposal?.slots.map(slot => toLocalInput(slot.starts_at)) ?? []) : []
+        setSlotInputs(ownSlots.length > 0 ? ownSlots : [''])
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [detail?.proposal?.id, isOwnProposal])
 
     if (!isOpen) return null
 
-    const proposal = detail?.proposal ?? null
-    const isOwnProposal = !!proposal && !!actingTeamId && proposal.team_id === actingTeamId
     const isOpponentProposal = !!proposal && !isOwnProposal
     const booked = [detail?.match.team_a, detail?.match.team_b].filter((team): team is NonNullable<typeof team> => !!team)
 
-    const toggleSlot = (startsAt: number) => {
-        setSelected(current => {
-            if (current.includes(startsAt)) return current.filter(value => value !== startsAt)
-            if (current.length >= MAX_PROPOSAL_SLOTS) return current
-            return [...current, startsAt].sort((a, b) => a - b)
+    const setSlotAt = (index: number, value: string) => {
+        setSlotInputs(current => current.map((entry, i) => (i === index ? value : entry)))
+    }
+
+    const addSlotRow = () => {
+        setSlotInputs(current => (current.length >= MAX_PROPOSAL_SLOTS ? current : [...current, '']))
+    }
+
+    const removeSlotRow = (index: number) => {
+        setSlotInputs(current => {
+            const next = current.filter((_, i) => i !== index)
+            return next.length > 0 ? next : ['']
         })
     }
 
     const submitProposal = async () => {
-        if (selected.length === 0) return
+        if (filledRows.length === 0) return
         setSubmitting(true)
         setActionError(null)
         try {
             const input: ProposeMatchSlotsInput = {
-                slots: selected.map(startsAt => new Date(startsAt).toISOString()),
+                slots: filledRows.map(row => new Date(row.ms).toISOString()),
                 note: note.trim() || undefined,
             }
             if (actingTeamId) input.team_id = actingTeamId
             const schedule = await proposeMatchSlots(accessToken, slug, matchId, input)
             setDetail(schedule)
-            setSelected([])
+            setSlotInputs([''])
             setNote('')
             onChanged?.()
         } catch (e) {
@@ -292,46 +312,59 @@ export function SlotPickerModal({
                                         {!proposal ? 'Propose times' : isOwnProposal ? 'Update your times' : 'Counter with your own times'}
                                     </h4>
                                     <span className="text-[11px] text-muted-foreground tabular-nums shrink-0">
-                                        {selected.length}/{MAX_PROPOSAL_SLOTS} selected
+                                        {filledRows.length}/{MAX_PROPOSAL_SLOTS} added
                                     </span>
                                 </div>
 
                                 {durationMinutes == null ? (
                                     <p className="text-xs text-muted-foreground">Match details are still loading — try again shortly.</p>
                                 ) : (
-                                    <div className="flex flex-wrap gap-1.5">
-                                        {annotated.map(slot => {
-                                            const isSelected = selected.includes(slot.startsAt)
-                                            const atLimit = !isSelected && selected.length >= MAX_PROPOSAL_SLOTS
-                                            const disabled = !slot.availability.available || atLimit
+                                    <div className="space-y-2">
+                                        {slotInputs.map((value, index) => {
+                                            const row = rowAvailability[index]
                                             return (
-                                                <button
-                                                    key={slot.startsAt}
-                                                    type="button"
-                                                    disabled={disabled}
-                                                    onClick={() => toggleSlot(slot.startsAt)}
-                                                    title={!slot.availability.available ? LONG_REASON_LABELS[slot.availability.reason] : undefined}
-                                                    aria-label={!slot.availability.available
-                                                        ? `${formatSlotTime(new Date(slot.startsAt).toISOString(), timezone)} — unavailable: ${LONG_REASON_LABELS[slot.availability.reason]}`
-                                                        : undefined}
-                                                    className={cn(
-                                                        'flex flex-col items-center rounded-md border px-2.5 py-1.5 text-xs tabular-nums transition-colors',
-                                                        slot.availability.available
-                                                            ? isSelected
-                                                                ? 'bg-accent-500/20 border-accent-500/60 text-accent-200 cursor-pointer'
-                                                                : cn('bg-card/40 border-white/10 text-foreground cursor-pointer', !atLimit && 'hover:border-white/25')
-                                                            : 'bg-white/[0.02] border-white/5 text-muted-foreground/50 line-through cursor-not-allowed',
-                                                    )}
-                                                >
-                                                    <span>{formatSlotTime(new Date(slot.startsAt).toISOString(), timezone)}</span>
-                                                    {!slot.availability.available && (
-                                                        <span className="text-[9px] normal-case text-muted-foreground/60">
-                                                            {SHORT_REASON_LABELS[slot.availability.reason]}
-                                                        </span>
-                                                    )}
-                                                </button>
+                                                <div key={index} className="flex items-start gap-2">
+                                                    <div className="flex-1 min-w-0 space-y-1">
+                                                        <input
+                                                            type="datetime-local"
+                                                            step={SLOT_BOUNDARY_MINUTES * 60}
+                                                            min={minInput}
+                                                            max={maxInput}
+                                                            value={value}
+                                                            onChange={event => setSlotAt(index, event.target.value)}
+                                                            style={{ colorScheme: 'dark' }}
+                                                            className={cn(
+                                                                teamInputClass, 'w-full h-8 py-1 text-xs',
+                                                                row && !row.availability.available && 'border-red-500/50',
+                                                            )}
+                                                        />
+                                                        {row && (
+                                                            row.availability.available
+                                                                ? (
+                                                                    <p className="text-[11px] text-muted-foreground">
+                                                                        Proposing {formatSlotTime(new Date(row.ms).toISOString(), timezone)}
+                                                                    </p>
+                                                                )
+                                                                : <p className="text-[11px] text-red-300">{LONG_REASON_LABELS[row.availability.reason]}</p>
+                                                        )}
+                                                    </div>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        className="h-8 px-2 text-[11px] shrink-0"
+                                                        onClick={() => removeSlotRow(index)}
+                                                    >
+                                                        Remove
+                                                    </Button>
+                                                </div>
                                             )
                                         })}
+
+                                        {slotInputs.length < MAX_PROPOSAL_SLOTS && (
+                                            <Button size="sm" variant="secondary" className="text-[11px]" onClick={addSlotRow}>
+                                                + Add another time
+                                            </Button>
+                                        )}
                                     </div>
                                 )}
 
@@ -347,7 +380,7 @@ export function SlotPickerModal({
                                 <div className="flex justify-end">
                                     <Button
                                         size="sm"
-                                        disabled={selected.length === 0 || submitting || (!myTeamId && !managerTeamId)}
+                                        disabled={filledRows.length === 0 || !allFilledValid || submitting || (!myTeamId && !managerTeamId)}
                                         onClick={() => void submitProposal()}
                                     >
                                         {submitting ? 'Sending…' : !proposal ? 'Propose' : isOwnProposal ? 'Update proposal' : 'Counter'}

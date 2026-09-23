@@ -4098,6 +4098,7 @@ export interface ScheduleProposal {
 export interface ScheduleEntry {
     tournament: { id: string; slug: string; name: string }
     match: EventMatch
+    slot_window: ResolvedWindow
     schedulable: boolean
     reason: string | null
     whose_turn: string | null
@@ -4960,6 +4961,7 @@ export interface ScheduleMatchDetail extends Omit<EventMatch, 'team_a' | 'team_b
 export interface ScheduleEntryDetail {
     tournament: { id: string; slug: string; name: string }
     match: ScheduleMatchDetail
+    slot_window: ResolvedWindow
     schedulable: boolean
     reason: string | null
     whose_turn: string | null

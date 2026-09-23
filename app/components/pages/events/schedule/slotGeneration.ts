@@ -4,11 +4,9 @@ import { parseApiInstant } from '@/app/utils/timezone'
 export const MAX_PROPOSAL_SLOTS = 5
 export const MIN_LEAD_HOURS = 2
 export const SLOT_BOUNDARY_MINUTES = 15
-export const UNBOUNDED_WINDOW_HORIZON_DAYS = 14
 
 const SLOT_BOUNDARY_MS = SLOT_BOUNDARY_MINUTES * 60_000
 const MIN_LEAD_MS = MIN_LEAD_HOURS * 60 * 60_000
-const UNBOUNDED_WINDOW_HORIZON_MS = UNBOUNDED_WINDOW_HORIZON_DAYS * 24 * 60 * 60_000
 
 export const DEFAULT_MATCH_DURATION_MINUTES_BY_KIND: Record<EventStageKind, number> = {
     groups: 75,
@@ -22,41 +20,25 @@ export function effectiveMatchDurationMinutes(
     return stage.expected_match_duration_minutes ?? DEFAULT_MATCH_DURATION_MINUTES_BY_KIND[stage.kind]
 }
 
-function ceilToNextBoundary(instant: number): number {
+function ceilToSlotBoundary(instant: number): number {
     const remainder = instant % SLOT_BOUNDARY_MS
     return remainder === 0 ? instant : instant + (SLOT_BOUNDARY_MS - remainder)
 }
 
-export interface ResolvedSlotWindow {
-    start: number
-    end: number
+export interface PickerBounds {
+    minMs: number
+    maxMs: number | null
 }
 
-export function resolveGenerationWindow(
-    window: ResolvedWindow,
-    durationMinutes: number,
-    now: number,
-): ResolvedSlotWindow {
+export function pickerBounds(window: ResolvedWindow, durationMinutes: number, now: number): PickerBounds {
     const opensAt = parseApiInstant(window.opens_at)
     const closesAt = parseApiInstant(window.closes_at)
+    const leadFloor = ceilToSlotBoundary(now + MIN_LEAD_MS)
 
-    const start = Math.max(opensAt ?? -Infinity, ceilToNextBoundary(now))
-    const end = closesAt === null
-        ? start + UNBOUNDED_WINDOW_HORIZON_MS
-        : closesAt - durationMinutes * 60_000
-
-    return { start, end }
-}
-
-export function generateCandidateSlots(window: ResolvedWindow, durationMinutes: number, now: number): number[] {
-    const { start, end } = resolveGenerationWindow(window, durationMinutes, now)
-    const slots: number[] = []
-
-    for (let at = start; at <= end; at += SLOT_BOUNDARY_MS) {
-        slots.push(at)
+    return {
+        minMs: Math.max(opensAt ?? -Infinity, leadFloor),
+        maxMs: closesAt === null ? null : closesAt - durationMinutes * 60_000,
     }
-
-    return slots
 }
 
 export type SlotUnavailableReason = 'outside_window' | 'off_boundary' | 'inside_lead_time' | 'conflicts_with_booking'
@@ -101,22 +83,4 @@ export function slotAvailability(
     }
 
     return { available: true }
-}
-
-export interface AnnotatedSlot {
-    startsAt: number
-    availability: SlotAvailability
-}
-
-export function annotatedCandidateSlots(
-    window: ResolvedWindow,
-    durationMinutes: number,
-    now: number,
-    bookedByTeamA: BookedWindow[],
-    bookedByTeamB: BookedWindow[],
-): AnnotatedSlot[] {
-    return generateCandidateSlots(window, durationMinutes, now).map(startsAt => ({
-        startsAt,
-        availability: slotAvailability(startsAt, window, durationMinutes, now, bookedByTeamA, bookedByTeamB),
-    }))
 }

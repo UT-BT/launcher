@@ -4,15 +4,10 @@ import {
     MAX_PROPOSAL_SLOTS,
     MIN_LEAD_HOURS,
     SLOT_BOUNDARY_MINUTES,
-    annotatedCandidateSlots,
     effectiveMatchDurationMinutes,
-    generateCandidateSlots,
-    resolveGenerationWindow,
+    pickerBounds,
     slotAvailability,
 } from './slotGeneration'
-
-const HOUR = 60 * 60 * 1000
-const DAY = 24 * HOUR
 
 describe('constants', () => {
     it('mirror the backend validation constants exactly', () => {
@@ -36,90 +31,6 @@ describe('effectiveMatchDurationMinutes', () => {
     it('matches the DEFAULT_MATCH_DURATION_MINUTES_BY_KIND table for every kind', () => {
         for (const kind of Object.keys(DEFAULT_MATCH_DURATION_MINUTES_BY_KIND) as Array<keyof typeof DEFAULT_MATCH_DURATION_MINUTES_BY_KIND>) {
             expect(effectiveMatchDurationMinutes({ kind, expected_match_duration_minutes: null })).toBe(DEFAULT_MATCH_DURATION_MINUTES_BY_KIND[kind])
-        }
-    })
-})
-
-describe('resolveGenerationWindow', () => {
-    it('starts at opens_at when it is already on a boundary and after now', () => {
-        const now = Date.parse('2026-10-01T00:00:00Z')
-        const opensAt = Date.parse('2026-10-05T12:00:00Z')
-        const { start } = resolveGenerationWindow({ opens_at: '2026-10-05T12:00:00Z', closes_at: null }, 60, now)
-        expect(start).toBe(opensAt)
-    })
-
-    it('starts at now rounded up to the next 15-minute boundary when the window is already open', () => {
-        const now = Date.parse('2026-10-05T12:07:00Z')
-        const { start } = resolveGenerationWindow({ opens_at: '2026-10-01T00:00:00Z', closes_at: null }, 60, now)
-        expect(start).toBe(Date.parse('2026-10-05T12:15:00Z'))
-    })
-
-    it('leaves now untouched when it already lands on a boundary', () => {
-        const now = Date.parse('2026-10-05T12:15:00Z')
-        const { start } = resolveGenerationWindow({ opens_at: null, closes_at: null }, 60, now)
-        expect(start).toBe(now)
-    })
-
-    it('ends at closes_at minus the match duration, so every candidate still fits inside the window', () => {
-        const now = Date.parse('2026-10-01T00:00:00Z')
-        const { end } = resolveGenerationWindow(
-            { opens_at: '2026-10-05T12:00:00Z', closes_at: '2026-10-05T14:00:00Z' }, 45, now,
-        )
-        expect(end).toBe(Date.parse('2026-10-05T14:00:00Z') - 45 * 60_000)
-    })
-
-    it('caps an unbounded window (no closes_at) at a sane forward horizon', () => {
-        const now = Date.parse('2026-10-05T12:00:00Z')
-        const { start, end } = resolveGenerationWindow({ opens_at: null, closes_at: null }, 60, now)
-        expect(end - start).toBe(14 * DAY)
-    })
-})
-
-describe('generateCandidateSlots', () => {
-    it('generates every 15-minute-aligned instant across a short window', () => {
-        const now = Date.parse('2026-10-01T00:00:00Z')
-        const slots = generateCandidateSlots(
-            { opens_at: '2026-10-05T12:00:00Z', closes_at: '2026-10-05T13:00:00Z' }, 0, now,
-        )
-        expect(slots).toEqual([
-            Date.parse('2026-10-05T12:00:00Z'),
-            Date.parse('2026-10-05T12:15:00Z'),
-            Date.parse('2026-10-05T12:30:00Z'),
-            Date.parse('2026-10-05T12:45:00Z'),
-            Date.parse('2026-10-05T13:00:00Z'),
-        ])
-    })
-
-    it('produces no candidates once the window is too short to fit the match', () => {
-        const now = Date.parse('2026-10-01T00:00:00Z')
-        const slots = generateCandidateSlots(
-            { opens_at: '2026-10-05T12:00:00Z', closes_at: '2026-10-05T12:30:00Z' }, 60, now,
-        )
-        expect(slots).toEqual([])
-    })
-
-    it('holds every consecutive pair exactly 15 minutes apart across a US spring-forward DST transition', () => {
-        const now = Date.parse('2026-01-01T00:00:00Z')
-        const window = { opens_at: '2026-03-08T06:00:00Z', closes_at: '2026-03-08T08:00:00Z' }
-        const slots = generateCandidateSlots(window, 15, now)
-
-        expect(slots.length).toBeGreaterThan(4)
-
-        for (let i = 1; i < slots.length; i += 1) {
-            expect(slots[i] - slots[i - 1]).toBe(15 * 60_000)
-        }
-
-        expect(slots[0]).toBe(Date.parse('2026-03-08T06:00:00Z'))
-        expect(slots[slots.length - 1]).toBe(Date.parse('2026-03-08T07:45:00Z'))
-    })
-
-    it('holds every consecutive pair exactly 15 minutes apart across a US fall-back DST transition', () => {
-        const now = Date.parse('2026-01-01T00:00:00Z')
-        const window = { opens_at: '2026-11-01T05:00:00Z', closes_at: '2026-11-01T07:00:00Z' }
-        const slots = generateCandidateSlots(window, 15, now)
-
-        for (let i = 1; i < slots.length; i += 1) {
-            expect(slots[i] - slots[i - 1]).toBe(15 * 60_000)
         }
     })
 })
@@ -182,14 +93,28 @@ describe('slotAvailability', () => {
     })
 })
 
-describe('annotatedCandidateSlots', () => {
-    it('pairs every generated slot with its availability', () => {
-        const now = Date.parse('2026-10-05T10:00:00Z')
-        const window = { opens_at: '2026-10-05T10:00:00Z', closes_at: '2026-10-05T14:00:00Z' }
-        const annotated = annotatedCandidateSlots(window, 60, now, [], [])
+describe('pickerBounds', () => {
+    it('uses opens_at as the floor when it is already past the lead time', () => {
+        const now = Date.parse('2026-10-01T00:00:00Z')
+        const { minMs } = pickerBounds({ opens_at: '2026-10-05T12:00:00Z', closes_at: null }, 60, now)
+        expect(minMs).toBe(Date.parse('2026-10-05T12:00:00Z'))
+    })
 
-        expect(annotated.length).toBeGreaterThan(0)
-        expect(annotated.some(slot => !slot.availability.available && slot.availability.reason === 'inside_lead_time')).toBe(true)
-        expect(annotated.some(slot => slot.availability.available)).toBe(true)
+    it('floors at the lead time, rounded up to the next 15-minute mark, when it is later than opens_at', () => {
+        const now = Date.parse('2026-10-05T12:07:00Z')
+        const { minMs } = pickerBounds({ opens_at: '2026-10-01T00:00:00Z', closes_at: null }, 60, now)
+        expect(minMs).toBe(Date.parse('2026-10-05T14:15:00Z'))
+    })
+
+    it('has no max when the window has no closes_at', () => {
+        const { maxMs } = pickerBounds({ opens_at: null, closes_at: null }, 60, Date.parse('2026-10-01T00:00:00Z'))
+        expect(maxMs).toBeNull()
+    })
+
+    it('subtracts the match duration from closes_at, so a picked start still leaves room to finish inside the window', () => {
+        const { maxMs } = pickerBounds(
+            { opens_at: null, closes_at: '2026-10-05T14:00:00Z' }, 45, Date.parse('2026-10-01T00:00:00Z'),
+        )
+        expect(maxMs).toBe(Date.parse('2026-10-05T14:00:00Z') - 45 * 60_000)
     })
 })

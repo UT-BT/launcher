@@ -120,7 +120,7 @@ function ScheduleMatchCard({ entry, myTeamId, onOpenPicker }: {
 
                     <div>
                         <Button size="sm" variant="secondary" onClick={() => onOpenPicker(match.id)}>
-                            {entry.proposal ? 'Respond to offer' : 'Propose a time'}
+                            {!entry.proposal ? 'Propose a time' : myTurn ? 'Respond to offer' : 'Manage your offer'}
                         </Button>
                     </div>
                 </>
