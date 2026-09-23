@@ -1,12 +1,14 @@
 import type { EventStageKind, ResolvedWindow } from '@/app/utils/api'
-import { parseApiInstant } from '@/app/utils/timezone'
+import { parseApiInstant, startOfNextZonedDay, zonedDayKey } from '@/app/utils/timezone'
 
 export const MAX_PROPOSAL_SLOTS = 5
 export const MIN_LEAD_HOURS = 2
 export const SLOT_BOUNDARY_MINUTES = 15
+export const UNBOUNDED_WINDOW_HORIZON_DAYS = 14
 
 const SLOT_BOUNDARY_MS = SLOT_BOUNDARY_MINUTES * 60_000
 const MIN_LEAD_MS = MIN_LEAD_HOURS * 60 * 60_000
+const UNBOUNDED_WINDOW_HORIZON_MS = UNBOUNDED_WINDOW_HORIZON_DAYS * 24 * 60 * 60_000
 
 export const DEFAULT_MATCH_DURATION_MINUTES_BY_KIND: Record<EventStageKind, number> = {
     groups: 75,
@@ -83,4 +85,53 @@ export function slotAvailability(
     }
 
     return { available: true }
+}
+
+export interface CandidateSlot {
+    startsAt: number
+    availability: SlotAvailability
+}
+
+export interface CandidateDay {
+    key: string
+    startsAt: number
+    slots: CandidateSlot[]
+    availableCount: number
+}
+
+export function candidateDays(
+    window: ResolvedWindow,
+    durationMinutes: number,
+    now: number,
+    bookedByTeamA: BookedWindow[],
+    bookedByTeamB: BookedWindow[],
+    timezone: string,
+): CandidateDay[] {
+    const { minMs, maxMs } = pickerBounds(window, durationMinutes, now)
+    const start = ceilToSlotBoundary(minMs)
+    const end = maxMs ?? start + UNBOUNDED_WINDOW_HORIZON_MS
+    const days: CandidateDay[] = []
+
+    let cursor = start
+    while (cursor <= end) {
+        const dayEnd = startOfNextZonedDay(cursor, timezone)
+        const slots: CandidateSlot[] = []
+
+        for (let at = cursor; at <= end && at < dayEnd; at += SLOT_BOUNDARY_MS) {
+            slots.push({
+                startsAt: at,
+                availability: slotAvailability(at, window, durationMinutes, now, bookedByTeamA, bookedByTeamB),
+            })
+        }
+
+        days.push({
+            key: zonedDayKey(cursor, timezone),
+            startsAt: cursor,
+            slots,
+            availableCount: slots.filter(slot => slot.availability.available).length,
+        })
+        cursor = Math.max(ceilToSlotBoundary(dayEnd), cursor + SLOT_BOUNDARY_MS)
+    }
+
+    return days
 }

@@ -5,15 +5,15 @@ read_when:
   - "adding or changing a helper in app/utils/api.ts"
   - "needing an avatar, map screenshot, region flag, or map-download URL"
   - "wiring map/server favorites or Patreon tier lookups"
-keywords: [api.ts, fetch, endpoint, accessToken, avatar, MapThumbnail, favorites, patreon, downloadMapZip, world_records, caps, predictions, draw, odds, schedule, proposal, slot, whose_turn, resolved_window, countdown, nav badge, fetchMyTournaments, SlotPickerModal, slotGeneration, proposeMatchSlots, withdrawMatchProposal, acceptMatchProposal, fetchMatchSchedule, ApiError, expected_match_duration_minutes]
+keywords: [api.ts, fetch, endpoint, accessToken, avatar, MapThumbnail, favorites, patreon, downloadMapZip, world_records, caps, predictions, draw, odds, schedule, proposal, slot, whose_turn, resolved_window, countdown, nav badge, fetchMyTournaments, SlotPickerModal, SlotGrid, DateTimeField, slotGeneration, proposeMatchSlots, withdrawMatchProposal, acceptMatchProposal, fetchMatchSchedule, ApiError, expected_match_duration_minutes]
 provides: "the client-side API contract the launcher consumes + asset URLs + favorites/patreon sync models"
 not_here:
   - "IPC channels (window.conveyor.*) → lib/conveyor/README.md"
   - "how UI state persists in localStorage → state-patterns.md"
   - "the procedure to wire a new endpoint into the UI → skill: consume-api-data"
 sections: [backend-api, errors, admin-api, event-brackets, event-scheduling, event-predictions, changing-a-map-screenshot, cap-detail-page-endpoints, world-records-page-endpoints, team-maps-and-team-runs, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites, account-state-and-badges]
-last_verified: 2026-09-22
-verify_against: [app/utils/api.ts, app/utils/chartBuckets.ts, app/components/pages/admin/components/controls.tsx, app/components/pages/admin/sections/HostsManagementSection.tsx, app/utils/patreon.ts, app/utils/server-utils.ts, app/hooks/useServerFavorites.ts, app/components/pages/events/manage/formatFields.tsx, app/components/pages/events/bracket/bracketShared.tsx, app/components/pages/events/bracket/BracketTab.tsx, app/components/pages/events/predictions/predictionsShared.tsx, app/components/pages/events/predictions/PredictionsTab.tsx, app/components/pages/events/schedule/scheduleShared.tsx, app/components/pages/events/schedule/ScheduleTab.tsx, app/components/pages/events/schedule/SlotPickerModal.tsx, app/components/pages/events/schedule/slotGeneration.ts, app/components/pages/events/eventsShared.tsx, app/components/pages/EventDetailPage.tsx, app/utils/timezone.ts, app/components/pages/events/manage/ScheduleOversightPanel.tsx, app/components/pages/events/ManagePanel.tsx, app/components/main/Main.tsx, app/components/layout/AppLayout.tsx]
+last_verified: 2026-09-23
+verify_against: [app/utils/api.ts, app/utils/chartBuckets.ts, app/components/pages/admin/components/controls.tsx, app/components/pages/admin/sections/HostsManagementSection.tsx, app/utils/patreon.ts, app/utils/server-utils.ts, app/hooks/useServerFavorites.ts, app/components/pages/events/manage/formatFields.tsx, app/components/pages/events/bracket/bracketShared.tsx, app/components/pages/events/bracket/BracketTab.tsx, app/components/pages/events/predictions/predictionsShared.tsx, app/components/pages/events/predictions/PredictionsTab.tsx, app/components/pages/events/schedule/scheduleShared.tsx, app/components/pages/events/schedule/ScheduleTab.tsx, app/components/pages/events/schedule/SlotPickerModal.tsx, app/components/pages/events/schedule/slotGeneration.ts, app/components/pages/events/schedule/SlotGrid.tsx, app/components/pages/events/manage/DateTimeField.tsx, app/components/pages/events/eventsShared.tsx, app/components/pages/EventDetailPage.tsx, app/utils/timezone.ts, app/components/pages/events/manage/ScheduleOversightPanel.tsx, app/components/pages/events/ManagePanel.tsx, app/components/main/Main.tsx, app/components/layout/AppLayout.tsx]
 ---
 
 # Data sources
@@ -281,29 +281,42 @@ falls back to a generic inline error instead.
 split out of any component so they're covered directly by vitest rather than by
 component tests: `schedule/slotGeneration.ts` (+ its `.test.ts`) mirrors the
 backend's exact validation constants (`MAX_PROPOSAL_SLOTS = 5`, `MIN_LEAD_HOURS = 2`,
-`SLOT_BOUNDARY_MINUTES = 15` — `scheduling_proposal_service.py` on the backend) and
-its half-open-interval overlap rule for a booking conflict. `resolveGenerationWindow`
-walks every 15-minute-aligned instant from `max(opens_at, now rounded up)` through
-`closes_at` minus the match duration (so a generated candidate always still fits
-before the window closes; the later, `closes_at`-only bound the server itself
-enforces is what `slotAvailability`'s `outside_window` reason checks instead, since that
-function also has to judge a slot it did *not* generate — e.g. the opponent's own
-proposed times). `generateCandidateSlots` composes that with a 14-day forward cap
-when `closes_at` is null (`UNBOUNDED_WINDOW_HORIZON_DAYS`). Every step is done in
-epoch milliseconds, never wall-clock date arithmetic in a display zone, which is
-what the DST-transition test case in `slotGeneration.test.ts` pins down: consecutive
-generated instants stay exactly 15 minutes apart in absolute time straight through a
-US spring-forward/fall-back boundary, even though the wall clock in
-`America/New_York` jumps or repeats an hour that day. `slotAvailability` then judges
-one instant against the window, the boundary, the lead time and both teams' booked
-windows, in that order, returning the first reason that fails (`'outside_window' |
-'off_boundary' | 'inside_lead_time' | 'conflicts_with_booking'`) or `{available:
-true}`; `annotatedCandidateSlots` pairs every generated instant with its
-`slotAvailability` verdict for the modal to render — unavailable slots are shown
-struck through with their reason, never omitted from the grid. Component rendering,
-the modal's own poll (`REFRESH_MS = 30_000`, matching the schedule list's own
-interval) and its open/close behaviour are not covered by tests — only the two pure
-functions above are.
+`SLOT_BOUNDARY_MINUTES = 15`) and its half-open-interval overlap rule for a booking
+conflict. `pickerBounds` gives the earliest pickable start (`max(opens_at, now + lead
+time rounded up to a 15-minute mark)`) and the latest (`closes_at` minus the match
+duration, so a picked start still finishes before the window closes; the later,
+`closes_at`-only bound the server itself enforces is what `slotAvailability`'s
+`outside_window` reason checks instead, since that function also judges slots the
+grid did *not* generate — e.g. a stale slot of the team's own earlier offer).
+`candidateDays` walks every 15-minute-aligned instant between those bounds (capped at
+`UNBOUNDED_WINDOW_HORIZON_DAYS` when `closes_at` is null), pairs each with its
+`slotAvailability` verdict, and buckets them by calendar day **in the display
+timezone** — day boundaries come from `startOfNextZonedDay` (`app/utils/timezone.ts`),
+while the slots themselves step in epoch milliseconds, so a DST day simply has 92 or
+100 slots. `slotAvailability` judges one instant against the window, the boundary, the
+lead time and both teams' booked windows, in that order, returning the first reason
+that fails (`'outside_window' | 'off_boundary' | 'inside_lead_time' |
+'conflicts_with_booking'`) or `{available: true}`.
+
+**The picker is a day strip + time grid, not a free-form input** (`schedule/SlotGrid.tsx`).
+A 7-day paged strip lists every day of the window (days with no open slot are
+disabled); the chosen day shows its start times at 30-minute steps, or every 15 minutes
+with the "Quarter hours" toggle. Booked-conflict slots are struck through with their
+reason as a tooltip; clicking a slot toggles it into the proposal (up to 5), shown as
+removable chips above the strip. Picked times are re-judged by `slotAvailability` on
+every minute tick, so a chip that has since fallen inside the lead time turns red and
+blocks submit until removed. Nothing is typed, so an invalid time can't be entered.
+Component rendering, the modal's own poll (`REFRESH_MS = 30_000`, matching the
+schedule list's own interval) and its open/close behaviour are not covered by tests —
+only the pure functions above are.
+
+**Manager date-time fields go through `manage/DateTimeField.tsx`**, a native date input
+plus a 15-minute time `<select>`, whose value is a `YYYY-MM-DDTHH:mm` wall-clock string
+in the display timezone. `toZonedInput` / `fromZonedInput` (`app/utils/timezone.ts`)
+convert to and from API instants, so the scheduling-window panel and the match editor's
+"Scheduled" field read and write in the same zone every time is displayed in — never the
+machine's local zone. `CapLinkPicker`'s search range still uses the older
+`toLocalInput`/`toIso` pair.
 
 **`fetchMySchedule` is cross-event, like `fetchMyPredictions`.** There is no
 per-event scheduling route; `EventDetailPage` fetches the caller's whole

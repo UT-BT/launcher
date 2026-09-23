@@ -3,28 +3,19 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/app/components/ui/button'
 import { Modal } from '@/app/components/ui/modal'
 import { ErrorBanner, teamInputClass } from '@/app/components/pages/teams/teamsShared'
-import { formatSlotTime, useDisplayTimezone } from '@/app/utils/timezone'
+import { formatSlotTime, parseApiInstant, useDisplayTimezone } from '@/app/utils/timezone'
 import {
     ApiError, eventErrorMessage, fetchMatchSchedule, proposeMatchSlots, withdrawMatchProposal, acceptMatchProposal,
     type AcceptMatchProposalInput, type EventBracket, type ProposeMatchSlotsInput, type ScheduleEntryDetail,
 } from '@/app/utils/api'
 import { useNow } from '../predictions/predictionsShared'
-import { teamLabel, toLocalInput } from '../bracket/bracketShared'
+import { teamLabel } from '../bracket/bracketShared'
 import { proposerName, schedulabilityReason, whoseTurnLabel } from './scheduleShared'
-import {
-    MAX_PROPOSAL_SLOTS, SLOT_BOUNDARY_MINUTES, effectiveMatchDurationMinutes, pickerBounds, slotAvailability,
-    type SlotUnavailableReason,
-} from './slotGeneration'
+import { MAX_PROPOSAL_SLOTS, candidateDays, effectiveMatchDurationMinutes, slotAvailability } from './slotGeneration'
+import { SlotGrid } from './SlotGrid'
 
 const REFRESH_MS = 30_000
 const NOTE_MAX_LENGTH = 500
-
-const LONG_REASON_LABELS: Record<SlotUnavailableReason, string> = {
-    outside_window: "Falls outside this match's scheduling window.",
-    off_boundary: 'Not on a 15-minute mark.',
-    inside_lead_time: 'Needs at least two hours notice.',
-    conflicts_with_booking: 'Conflicts with a match one of the teams already has booked.',
-}
 
 interface SlotPickerModalProps {
     isOpen: boolean
@@ -47,7 +38,7 @@ export function SlotPickerModal({
     const [detail, setDetail] = useState<ScheduleEntryDetail | null>(null)
     const [loaded, setLoaded] = useState(false)
     const [loadError, setLoadError] = useState<string | null>(null)
-    const [slotInputs, setSlotInputs] = useState<string[]>([''])
+    const [selectedTimes, setSelectedTimes] = useState<number[]>([])
     const [note, setNote] = useState('')
     const [managerTeamId, setManagerTeamId] = useState<string | null>(null)
     const [submitting, setSubmitting] = useState(false)
@@ -73,7 +64,7 @@ export function SlotPickerModal({
         setDetail(null)
         setLoaded(false)
         setLoadError(null)
-        setSlotInputs([''])
+        setSelectedTimes([])
         setNote('')
         setManagerTeamId(null)
         setActionError(null)
@@ -93,33 +84,31 @@ export function SlotPickerModal({
     )
     const durationMinutes = stage ? effectiveMatchDurationMinutes(stage) : null
 
-    const bounds = useMemo(() => {
-        if (!detail || durationMinutes == null) return null
-        return pickerBounds(detail.slot_window, durationMinutes, now)
-    }, [detail, durationMinutes, now])
-
-    const minInput = bounds ? toLocalInput(new Date(bounds.minMs).toISOString()) : undefined
-    const maxInput = bounds?.maxMs != null ? toLocalInput(new Date(bounds.maxMs).toISOString()) : undefined
-
-    const rowAvailability = useMemo(() => {
-        if (!detail || durationMinutes == null) return slotInputs.map(() => null)
+    const days = useMemo(() => {
+        if (!detail || durationMinutes == null) return []
         const bookedA = detail.match.team_a?.booked ?? []
         const bookedB = detail.match.team_b?.booked ?? []
-        return slotInputs.map(value => {
-            if (!value) return null
-            const ms = new Date(value).getTime()
-            if (Number.isNaN(ms)) return null
-            return { ms, availability: slotAvailability(ms, detail.slot_window, durationMinutes, now, bookedA, bookedB) }
-        })
-    }, [slotInputs, detail, durationMinutes, now])
+        return candidateDays(detail.slot_window, durationMinutes, now, bookedA, bookedB, timezone)
+    }, [detail, durationMinutes, now, timezone])
 
-    const filledRows = rowAvailability.filter((row): row is NonNullable<typeof row> => row !== null)
-    const allFilledValid = filledRows.every(row => row.availability.available)
+    const selectedSlots = useMemo(() => {
+        if (!detail || durationMinutes == null) return []
+        const bookedA = detail.match.team_a?.booked ?? []
+        const bookedB = detail.match.team_b?.booked ?? []
+        return selectedTimes.map(startsAt => ({
+            startsAt,
+            availability: slotAvailability(startsAt, detail.slot_window, durationMinutes, now, bookedA, bookedB),
+        }))
+    }, [selectedTimes, detail, durationMinutes, now])
+
+    const allSelectedValid = selectedSlots.every(slot => slot.availability.available)
 
     useEffect(() => {
         setDeadSlots({})
-        const ownSlots = isOwnProposal ? (proposal?.slots.map(slot => toLocalInput(slot.starts_at)) ?? []) : []
-        setSlotInputs(ownSlots.length > 0 ? ownSlots : [''])
+        const ownSlots = isOwnProposal
+            ? (proposal?.slots.map(slot => parseApiInstant(slot.starts_at)).filter((ms): ms is number => ms !== null) ?? [])
+            : []
+        setSelectedTimes(ownSlots.sort((a, b) => a - b))
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [detail?.proposal?.id, isOwnProposal])
 
@@ -128,34 +117,27 @@ export function SlotPickerModal({
     const isOpponentProposal = !!proposal && !isOwnProposal
     const booked = [detail?.match.team_a, detail?.match.team_b].filter((team): team is NonNullable<typeof team> => !!team)
 
-    const setSlotAt = (index: number, value: string) => {
-        setSlotInputs(current => current.map((entry, i) => (i === index ? value : entry)))
-    }
-
-    const addSlotRow = () => {
-        setSlotInputs(current => (current.length >= MAX_PROPOSAL_SLOTS ? current : [...current, '']))
-    }
-
-    const removeSlotRow = (index: number) => {
-        setSlotInputs(current => {
-            const next = current.filter((_, i) => i !== index)
-            return next.length > 0 ? next : ['']
+    const toggleTime = (startsAt: number) => {
+        setSelectedTimes(current => {
+            if (current.includes(startsAt)) return current.filter(value => value !== startsAt)
+            if (current.length >= MAX_PROPOSAL_SLOTS) return current
+            return [...current, startsAt].sort((a, b) => a - b)
         })
     }
 
     const submitProposal = async () => {
-        if (filledRows.length === 0) return
+        if (selectedTimes.length === 0) return
         setSubmitting(true)
         setActionError(null)
         try {
             const input: ProposeMatchSlotsInput = {
-                slots: filledRows.map(row => new Date(row.ms).toISOString()),
+                slots: selectedTimes.map(startsAt => new Date(startsAt).toISOString()),
                 note: note.trim() || undefined,
             }
             if (actingTeamId) input.team_id = actingTeamId
             const schedule = await proposeMatchSlots(accessToken, slug, matchId, input)
             setDetail(schedule)
-            setSlotInputs([''])
+            setSelectedTimes([])
             setNote('')
             onChanged?.()
         } catch (e) {
@@ -312,60 +294,20 @@ export function SlotPickerModal({
                                         {!proposal ? 'Propose times' : isOwnProposal ? 'Update your times' : 'Counter with your own times'}
                                     </h4>
                                     <span className="text-[11px] text-muted-foreground tabular-nums shrink-0">
-                                        {filledRows.length}/{MAX_PROPOSAL_SLOTS} added
+                                        {selectedTimes.length}/{MAX_PROPOSAL_SLOTS} picked
                                     </span>
                                 </div>
 
                                 {durationMinutes == null ? (
                                     <p className="text-xs text-muted-foreground">Match details are still loading — try again shortly.</p>
                                 ) : (
-                                    <div className="space-y-2">
-                                        {slotInputs.map((value, index) => {
-                                            const row = rowAvailability[index]
-                                            return (
-                                                <div key={index} className="flex items-start gap-2">
-                                                    <div className="flex-1 min-w-0 space-y-1">
-                                                        <input
-                                                            type="datetime-local"
-                                                            step={SLOT_BOUNDARY_MINUTES * 60}
-                                                            min={minInput}
-                                                            max={maxInput}
-                                                            value={value}
-                                                            onChange={event => setSlotAt(index, event.target.value)}
-                                                            style={{ colorScheme: 'dark' }}
-                                                            className={cn(
-                                                                teamInputClass, 'w-full h-8 py-1 text-xs',
-                                                                row && !row.availability.available && 'border-red-500/50',
-                                                            )}
-                                                        />
-                                                        {row && (
-                                                            row.availability.available
-                                                                ? (
-                                                                    <p className="text-[11px] text-muted-foreground">
-                                                                        Proposing {formatSlotTime(new Date(row.ms).toISOString(), timezone)}
-                                                                    </p>
-                                                                )
-                                                                : <p className="text-[11px] text-red-300">{LONG_REASON_LABELS[row.availability.reason]}</p>
-                                                        )}
-                                                    </div>
-                                                    <Button
-                                                        size="sm"
-                                                        variant="outline"
-                                                        className="h-8 px-2 text-[11px] shrink-0"
-                                                        onClick={() => removeSlotRow(index)}
-                                                    >
-                                                        Remove
-                                                    </Button>
-                                                </div>
-                                            )
-                                        })}
-
-                                        {slotInputs.length < MAX_PROPOSAL_SLOTS && (
-                                            <Button size="sm" variant="secondary" className="text-[11px]" onClick={addSlotRow}>
-                                                + Add another time
-                                            </Button>
-                                        )}
-                                    </div>
+                                    <SlotGrid
+                                        days={days}
+                                        selected={selectedSlots}
+                                        max={MAX_PROPOSAL_SLOTS}
+                                        timezone={timezone}
+                                        onToggle={toggleTime}
+                                    />
                                 )}
 
                                 <textarea
@@ -380,7 +322,7 @@ export function SlotPickerModal({
                                 <div className="flex justify-end">
                                     <Button
                                         size="sm"
-                                        disabled={filledRows.length === 0 || !allFilledValid || submitting || (!myTeamId && !managerTeamId)}
+                                        disabled={selectedTimes.length === 0 || !allSelectedValid || submitting || (!myTeamId && !managerTeamId)}
                                         onClick={() => void submitProposal()}
                                     >
                                         {submitting ? 'Sending…' : !proposal ? 'Propose' : isOwnProposal ? 'Update proposal' : 'Counter'}

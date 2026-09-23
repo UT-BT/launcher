@@ -14,8 +14,10 @@ import {
     type EventMatchStatus, type EventSide,
 } from '@/app/utils/api'
 import {
-    Chip, DRAW_STYLE, MATCH_STATUS_LABELS, MATCH_STATUS_STYLES, mapWinnerOf, seriesProgress, sideOf, toIso, toLocalInput,
+    Chip, DRAW_STYLE, MATCH_STATUS_LABELS, MATCH_STATUS_STYLES, mapWinnerOf, seriesProgress, sideOf,
 } from '../bracket/bracketShared'
+import { fromZonedInput, toZonedInput, useDisplayTimezone } from '@/app/utils/timezone'
+import { DateTimeField } from './DateTimeField'
 import { CapLinkPicker } from './CapLinkPicker'
 import { MarketControl } from './MarketControl'
 import { Field, SubCard } from './formatFields'
@@ -40,12 +42,12 @@ interface Form {
     published: boolean
 }
 
-function formFrom(match: EventMatch): Form {
+function formFrom(match: EventMatch, timezone: string): Form {
     return {
         teamA: match.team_a?.id ?? '',
         teamB: match.team_b?.id ?? '',
         status: DERIVED_STATUSES.includes(match.status) ? 'pending' : match.status,
-        scheduledAt: toLocalInput(match.scheduled_at),
+        scheduledAt: toZonedInput(match.scheduled_at, timezone),
         streamUrl: match.stream_url ?? '',
         notes: match.notes ?? '',
         published: match.published,
@@ -83,8 +85,9 @@ interface MatchEditorModalProps {
 export function MatchEditorModal({
     accessToken, slug, match: initial, entrants, drawsAllowed, onClose, onSaved,
 }: MatchEditorModalProps) {
+    const timezone = useDisplayTimezone()
     const [match, setMatch] = useState(initial)
-    const [form, setForm] = useState<Form>(() => formFrom(initial))
+    const [form, setForm] = useState<Form>(() => formFrom(initial, timezone))
     const [maps, setMaps] = useState<EventMatchMap[]>(initial.maps ?? [])
     const [dirty, setDirty] = useState(false)
     const [busy, setBusy] = useState(false)
@@ -94,10 +97,10 @@ export function MatchEditorModal({
 
     const syncFrom = useCallback((fresh: EventMatch) => {
         setMatch(fresh)
-        setForm(formFrom(fresh))
+        setForm(formFrom(fresh, timezone))
         setMaps(fresh.maps ?? [])
         setDirty(false)
-    }, [])
+    }, [timezone])
 
     const reload = useCallback(async () => {
         syncFrom(await fetchEventMatch(accessToken, slug, initial.id))
@@ -181,7 +184,7 @@ export function MatchEditorModal({
             team_a_id: form.teamA || null,
             team_b_id: form.teamB || null,
             status: form.status,
-            scheduled_at: toIso(form.scheduledAt),
+            scheduled_at: fromZonedInput(form.scheduledAt, timezone),
             stream_url: form.streamUrl.trim() || null,
             notes: form.notes.trim() || null,
             published: form.published,
@@ -276,13 +279,11 @@ export function MatchEditorModal({
                                     options={STATUS_OPTIONS} ariaLabel="State" className="h-8 w-full text-xs" />
                             </Field>
                             <Field label="Scheduled">
-                                <input
-                                    type="datetime-local"
+                                <DateTimeField
                                     value={form.scheduledAt}
                                     disabled={busy}
-                                    onChange={event => setField('scheduledAt', event.target.value)}
-                                    style={{ colorScheme: 'dark' }}
-                                    className={cn(teamInputClass, 'w-full h-8 py-1 text-xs disabled:opacity-50')}
+                                    onChange={value => setField('scheduledAt', value)}
+                                    timezone={timezone}
                                 />
                             </Field>
                             <Field label="Stream" className="sm:col-span-2">

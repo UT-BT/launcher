@@ -6,10 +6,9 @@ import {
     eventErrorMessage, fetchEventScheduling, updateEventStageWindow,
     type EventSchedulingConfig, type EventSchedulingStage,
 } from '@/app/utils/api'
-import { toIso, toLocalInput } from '../bracket/bracketShared'
+import { fromZonedInput, toZonedInput, useDisplayTimezone } from '@/app/utils/timezone'
 import { Field, NumberField, SubCard } from './formatFields'
-import { teamInputClass } from '@/app/components/pages/teams/teamsShared'
-import { cn } from '@/lib/utils'
+import { DateTimeField } from './DateTimeField'
 
 export function SchedulingWindowsPanel({ accessToken, slug }: { accessToken: string; slug: string }) {
     const [config, setConfig] = useState<EventSchedulingConfig | null>(null)
@@ -70,28 +69,32 @@ function StageWindowCard({ stage, tournamentStartsAt, accessToken, slug, onSaved
     slug: string
     onSaved: () => void
 }) {
-    const [opensAt, setOpensAt] = useState(toLocalInput(stage.window_opens_at))
-    const [closesAt, setClosesAt] = useState(toLocalInput(stage.window_closes_at))
+    const timezone = useDisplayTimezone()
+    const [opensAt, setOpensAt] = useState(toZonedInput(stage.window_opens_at, timezone))
+    const [closesAt, setClosesAt] = useState(toZonedInput(stage.window_closes_at, timezone))
     const [roundDays, setRoundDays] = useState<number | null>(stage.default_round_duration_days)
     const [durationMinutes, setDurationMinutes] = useState<number | null>(stage.expected_match_duration_minutes)
     const [saving, setSaving] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
     useEffect(() => {
-        setOpensAt(toLocalInput(stage.window_opens_at))
-        setClosesAt(toLocalInput(stage.window_closes_at))
+        setOpensAt(toZonedInput(stage.window_opens_at, timezone))
+        setClosesAt(toZonedInput(stage.window_closes_at, timezone))
         setRoundDays(stage.default_round_duration_days)
         setDurationMinutes(stage.expected_match_duration_minutes)
-    }, [stage])
+    }, [stage, timezone])
 
     const dirty = (
-        toLocalInput(stage.window_opens_at) !== opensAt
-        || toLocalInput(stage.window_closes_at) !== closesAt
+        toZonedInput(stage.window_opens_at, timezone) !== opensAt
+        || toZonedInput(stage.window_closes_at, timezone) !== closesAt
         || stage.default_round_duration_days !== roundDays
         || stage.expected_match_duration_minutes !== durationMinutes
     )
 
-    const opensAtIso = toIso(opensAt)
+    const opensAtIso = fromZonedInput(opensAt, timezone)
+    const closesAtIso = fromZonedInput(closesAt, timezone)
+    const closesBeforeOpens = !!opensAtIso && !!closesAtIso
+        && new Date(closesAtIso).getTime() <= new Date(opensAtIso).getTime()
     const opensBeforeTournamentStart = !!opensAtIso && !!tournamentStartsAt
         && new Date(opensAtIso).getTime() < new Date(tournamentStartsAt).getTime()
 
@@ -106,8 +109,8 @@ function StageWindowCard({ stage, tournamentStartsAt, accessToken, slug, onSaved
         setError(null)
         try {
             await updateEventStageWindow(accessToken, slug, stage.key, {
-                window_opens_at: toIso(opensAt),
-                window_closes_at: toIso(closesAt),
+                window_opens_at: fromZonedInput(opensAt, timezone),
+                window_closes_at: fromZonedInput(closesAt, timezone),
                 default_round_duration_days: roundDays,
                 expected_match_duration_minutes: durationMinutes,
             })
@@ -117,38 +120,28 @@ function StageWindowCard({ stage, tournamentStartsAt, accessToken, slug, onSaved
         } finally {
             setSaving(false)
         }
-    }, [accessToken, slug, stage.key, opensAt, closesAt, roundDays, durationMinutes, onSaved])
+    }, [accessToken, slug, stage.key, opensAt, closesAt, roundDays, durationMinutes, onSaved, timezone])
 
     return (
         <SubCard
             title={stage.name}
             action={
-                <Button size="sm" onClick={() => void save()} disabled={!dirty || saving}>
+                <Button size="sm" onClick={() => void save()} disabled={!dirty || saving || closesBeforeOpens}>
                     {saving ? 'Saving…' : 'Save'}
                 </Button>
             }
         >
             <div className="grid gap-3 sm:grid-cols-2">
                 <Field label="Proposing opens" hint={opensHint}>
-                    <input
-                        type="datetime-local"
-                        value={opensAt}
-                        onChange={event => setOpensAt(event.target.value)}
-                        style={{ colorScheme: 'dark' }}
-                        className={cn(teamInputClass, 'w-full h-8 py-1 text-xs')}
-                    />
+                    <DateTimeField value={opensAt} onChange={setOpensAt} timezone={timezone} />
                 </Field>
                 <Field
                     label="Matches must complete by"
                     hint="Also the last moment a match time can be proposed for."
+                    path="window_closes_at"
+                    errors={closesBeforeOpens ? { window_closes_at: 'Must be after proposing opens.' } : undefined}
                 >
-                    <input
-                        type="datetime-local"
-                        value={closesAt}
-                        onChange={event => setClosesAt(event.target.value)}
-                        style={{ colorScheme: 'dark' }}
-                        className={cn(teamInputClass, 'w-full h-8 py-1 text-xs')}
-                    />
+                    <DateTimeField value={closesAt} onChange={setClosesAt} timezone={timezone} />
                 </Field>
                 <NumberField
                     label="Default round length (days)"

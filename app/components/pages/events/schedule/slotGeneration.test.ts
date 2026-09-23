@@ -4,6 +4,8 @@ import {
     MAX_PROPOSAL_SLOTS,
     MIN_LEAD_HOURS,
     SLOT_BOUNDARY_MINUTES,
+    UNBOUNDED_WINDOW_HORIZON_DAYS,
+    candidateDays,
     effectiveMatchDurationMinutes,
     pickerBounds,
     slotAvailability,
@@ -116,5 +118,52 @@ describe('pickerBounds', () => {
             { opens_at: null, closes_at: '2026-10-05T14:00:00Z' }, 45, Date.parse('2026-10-01T00:00:00Z'),
         )
         expect(maxMs).toBe(Date.parse('2026-10-05T14:00:00Z') - 45 * 60_000)
+    })
+})
+
+describe('candidateDays', () => {
+    const now = Date.parse('2026-10-05T10:00:00Z')
+
+    it('starts at the lead-time floor and stops so the match finishes by close', () => {
+        const window = { opens_at: '2026-10-05T00:00:00Z', closes_at: '2026-10-05T18:00:00Z' }
+        const days = candidateDays(window, 60, now, [], [], 'UTC')
+        expect(days).toHaveLength(1)
+        expect(days[0].key).toBe('2026-10-05')
+        expect(days[0].slots[0].startsAt).toBe(Date.parse('2026-10-05T12:00:00Z'))
+        expect(days[0].slots.at(-1)?.startsAt).toBe(Date.parse('2026-10-05T17:00:00Z'))
+        expect(days[0].availableCount).toBe(days[0].slots.length)
+    })
+
+    it('rounds a window opening off the 15-minute mark up to the next mark', () => {
+        const window = { opens_at: '2026-10-06T09:07:00Z', closes_at: '2026-10-06T12:00:00Z' }
+        const days = candidateDays(window, 60, now, [], [], 'UTC')
+        expect(days[0].slots[0].startsAt).toBe(Date.parse('2026-10-06T09:15:00Z'))
+    })
+
+    it('splits days on local midnight in the display timezone', () => {
+        const window = { opens_at: '2026-10-06T20:00:00Z', closes_at: '2026-10-07T03:00:00Z' }
+        const days = candidateDays(window, 60, now, [], [], 'Europe/Berlin')
+        expect(days.map(day => day.key)).toEqual(['2026-10-06', '2026-10-07'])
+        expect(days[1].slots[0].startsAt).toBe(Date.parse('2026-10-06T22:00:00Z'))
+    })
+
+    it('marks booked conflicts unavailable and counts only open slots', () => {
+        const window = { opens_at: '2026-10-06T12:00:00Z', closes_at: '2026-10-06T15:00:00Z' }
+        const booked = [{ starts_at: '2026-10-06T12:30:00Z', ends_at: '2026-10-06T13:30:00Z' }]
+        const [day] = candidateDays(window, 60, now, booked, [], 'UTC')
+        expect(day.slots.find(slot => slot.startsAt === Date.parse('2026-10-06T12:00:00Z'))?.availability)
+            .toEqual({ available: false, reason: 'conflicts_with_booking' })
+        expect(day.availableCount).toBe(day.slots.length - 6)
+    })
+
+    it('caps an unbounded window at the horizon', () => {
+        const window = { opens_at: null, closes_at: null }
+        const days = candidateDays(window, 60, now, [], [], 'UTC')
+        expect(days).toHaveLength(UNBOUNDED_WINDOW_HORIZON_DAYS + 1)
+    })
+
+    it('returns no days once the window is too close to closing', () => {
+        const window = { opens_at: '2026-10-05T00:00:00Z', closes_at: '2026-10-05T12:30:00Z' }
+        expect(candidateDays(window, 60, now, [], [], 'UTC')).toEqual([])
     })
 })
