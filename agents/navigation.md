@@ -9,8 +9,8 @@ provides: "the whole navigation model: stack, navigate() funnel, renderView, sid
 not_here:
   - "where page state / persistence lives → state-patterns.md"
   - "the PlayerInfo / CapTimeLink components that trigger nav → shared-components.md"
-sections: [the-model, navigate-is-the-only-entry-point, leave-guards, url-sync-web-build, link-semantics, page-views-vs-detail-pages, the-sidebar-registry, event-driven-navigation, sidebar-new-badges, page-refresh-registry, per-entry-state]
-last_verified: 2026-09-22
+sections: [the-model, navigate-is-the-only-entry-point, leave-guards, url-sync-web-build, link-semantics, page-views-vs-detail-pages, the-sidebar-registry, event-driven-navigation, sidebar-new-badges, page-refresh-registry, per-entry-state, shareable-match-links]
+last_verified: 2026-09-24
 verify_against:
   - app/components/main/Main.tsx
   - app/components/navigation/NavLink.tsx
@@ -22,6 +22,7 @@ verify_against:
   - app/components/navigation/useUrlSync.ts
   - app/components/navigation/useDocumentMeta.ts
   - app/components/navigation/titles.ts
+  - app/components/navigation/matchLinks.ts
   - app/public/route-contract.json
 ---
 
@@ -44,12 +45,16 @@ const [cursor, setCursor] = useState(0)
 - **`NavEntry`** (`app/components/navigation/NavigationContext.tsx`) =
   `{ id, view, params: NavParams, state: Record<string, unknown> }`. `id` is a
   monotonic counter; `state` is the per-entry bag (see below).
-- **`NavParams`** = `{ mapName?, playerId?, capId?, teamCapId?, newsId?, teamId?, mapsNewOnly? }` — the params a
-  view can carry. Add a field here if a new detail page needs a different
-  identifier, or if a page must open in a specific state. `mapsNewOnly` seeds the
-  Maps page's new-only filter when opened from the Home "new maps" tile; `MapsPage`
-  reads it via its `initialNewOnly` prop on mount. (Seed page state through params
-  like this — never by mutating another page's per-entry state before `navigate()`.)
+- **`NavParams`** = `{ mapName?, playerId?, capId?, teamCapId?, newsId?, teamId?, eventSlug?,
+  eventTab?, matchId?, mapsNewOnly? }` — the params a view can carry. Add a field
+  here if a new detail page needs a different identifier, or if a page must open
+  in a specific state. A view is not limited to one param — `match-pickban` reads
+  both `eventSlug` and `matchId` — but `paramsEqual` (below) must compare every
+  field the view uses, or a param-only change silently no-ops as "already here".
+  `mapsNewOnly` seeds the Maps page's new-only filter when opened from the Home
+  "new maps" tile; `MapsPage` reads it via its `initialNewOnly` prop on mount.
+  (Seed page state through params like this — never by mutating another page's
+  per-entry state before `navigate()`.)
 - The stack is **in-memory only** — it boots to a single `home` entry on every
   launch and is never persisted. (Preferences persist; history doesn't — see
   `state-patterns.md`.)
@@ -142,17 +147,27 @@ Model: **the in-memory stack stays master; browser history mirrors it.**
   and never becomes a view.
 
 Path scheme: `/` home, `/servers`, `/maps` (+`?new=1`), `/maps/:mapName`,
-`/players`, `/players/:playerId`, `/teams`, `/teams/:teamId`, `/world-records`,
-`/cap-it-all`, `/caps/:capId`, `/team-caps/:teamCapId`, `/achievements`,
-`/news`, `/news/:newsId`, `/admin`; unknown → `/`. Adding a view = add both
-directions in `routes.ts`, same commit.
+`/players`, `/players/:playerId`, `/teams`, `/teams/:teamId`, `/events`,
+`/events/:eventSlug` (+`?tab=`), `/events/:eventSlug/matches/:matchId`,
+`/world-records`, `/cap-it-all`, `/caps/:capId`, `/team-caps/:teamCapId`,
+`/achievements`, `/news`, `/news/:newsId`, `/admin`; unknown → `/`. Adding a view
+= add both directions in `routes.ts`, same commit.
+
+A route can carry more than one path param — `pathToNav` reads as many
+segments as it needs (`const [head, second, third, fourth] = segments`), not
+just the first two. `/events/:eventSlug/matches/:matchId` is the current
+example: the `events` case checks for a `matches/:matchId` tail under a given
+slug before falling back to the single-param `event-detail` case.
 
 **Adding a route is now a three-file change.** `app/public/route-contract.json`
 ships the same table for per-URL link previews (see `agents/web-target.md` → SEO
-and link previews), and `titles.ts` supplies the tab title.
+and link previews), and `titles.ts` supplies the tab title. Each contract entry
+takes a `params` array (in path order) instead of a single `param` — omit it for
+a route with no path params, list every param for one with several.
 `routes.contract.test.ts` fails if any of the three drift — it asserts the
 contract's view list equals the `case` labels in `viewToPath`, round-trips every
-path, and requires a non-default title per view.
+path (substituting a sample value per param), and requires a non-default title
+per view.
 
 **Document metadata.** `Main.tsx` calls `useDocumentMeta(currentView,
 entry.params)` right after resolving the active entry; it sets `document.title`
@@ -226,7 +241,7 @@ Two kinds of case:
 | Kind | Views | Keyed? | Why |
 |---|---|---|---|
 | **Page-views** | `home`, `servers`, `maps`, `players`, `teams`, `cap-it-all`, `world-records`, `achievements`, `news`, `admin` | **No** — one reused instance per view | Not-keyed means no remount between *entries of the same view*. It does **not** mean the component survives a view change: `renderView()` returns exactly one element, so `home` -> `maps` unmounts `Home`. State and data survive because they are hoisted to `Main` — per-entry via `usePageState`, data via a `caches` singleton — and read back on remount, **not** because the component stays mounted. A page-view that keeps data in its own `useState` refetches it on every visit. |
-| **Detail-pages** | `maps-detail`, `player-detail`, `cap-detail`, `news-detail`, `team-detail` | **Yes — `key={entry.id}`** | A new visit must remount so it refetches for the new param and `useNavState` re-reads the right entry's bag. |
+| **Detail-pages** | `maps-detail`, `player-detail`, `cap-detail`, `news-detail`, `team-detail`, `event-detail`, `match-pickban` | **Yes — `key={entry.id}`** | A new visit must remount so it refetches for the new param and `useNavState` re-reads the right entry's bag. |
 
 Detail cases pull their identifier from `entry.params` (`mapName!` / `playerId!` /
 `capId!` / `newsId!` / `teamId!`). Forgetting `key={entry.id}` on a detail case is a bug: the page keeps
@@ -393,3 +408,27 @@ so Back/Forward restore them):
 The tier rules, persistence, and `usePageState` wiring live in
 `state-patterns.md` — this doc owns the stack + routing; that one owns what's
 stored.
+
+## Shareable match links
+
+`app/components/navigation/matchLinks.ts` (`buildMatchLinks(eventSlug, matchId)`)
+returns absolute, public-origin URLs for a match — a **player link** (this
+page, `match-pickban`) and a **stream link** (the chromeless stream view). Both
+always use `VITE_SITE_ORIGIN` (default `https://utbt.net`, same env var as the
+static-HTML head — see `agents/web-target.md`), never `window.location.origin`:
+the desktop build has no usable site origin at runtime, so a link built from it
+would open nowhere for anyone else. This makes "Copy link" identical on both
+targets.
+
+**Path shapes** (decided here so later tickets have something to build against
+before the pages exist):
+
+- Player link — the in-app pick/ban page: `/events/:eventSlug/matches/:matchId`
+  (`match-pickban` view, in `routes.ts` / the route contract like any other
+  route).
+- Stream link — the chromeless OBS view: `/events/:eventSlug/matches/:matchId/stream`.
+  It is **not** a nav view — like `/auth/callback`, it must be handled before the
+  app shell, the boot auth check and the analytics consent banner mount, so it
+  never requires a login. It has no entry in `routes.ts` or the route contract.
+  `matchStreamPath(eventSlug, matchId)` builds just this path if a caller needs
+  it without an origin.

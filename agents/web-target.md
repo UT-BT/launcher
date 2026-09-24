@@ -10,12 +10,13 @@ not_here:
   - "IPC channel contract → lib/conveyor/README.md"
   - "build commands reference → agents/build.md"
 sections: [overview, platform-layer, capability-gates, web-auth, anonymous-browsing, shareable-urls, responsive-layout, performance, build, seo-and-link-previews, hosting-note]
-last_verified: 2026-08-26
+last_verified: 2026-09-24
 verify_against:
   - app/public/route-contract.json
   - app/components/navigation/NavLink.tsx
   - app/components/navigation/useDocumentMeta.ts
   - app/components/navigation/titles.ts
+  - app/components/navigation/matchLinks.ts
   - app/platform/index.ts
   - app/platform/capabilities.ts
   - app/platform/auth.ts
@@ -144,6 +145,12 @@ copy-link) and a plain button on desktop — see `agents/navigation.md`
 (`link-semantics`). Deep links cold-load into the right view; a deep link
 followed while logged out survives the OAuth redirect via the flow stash's
 `returnTo`.
+
+`app/components/navigation/matchLinks.ts` builds the "Copy link" targets for a
+match (player link + stream link) — see `agents/navigation.md` →
+`shareable-match-links` for the path shapes and why they always use
+`VITE_SITE_ORIGIN` instead of `window.location.origin` (desktop has no usable
+site origin at runtime).
 
 ## Responsive layout
 
@@ -296,7 +303,9 @@ deliberately **not** updated client-side: crawlers never see it, so it would be
 bytes for nothing.
 
 `VITE_SITE_ORIGIN` (default `https://utbt.net`) sets the origin baked into the
-default canonical and image URLs.
+default canonical and image URLs at build time (`vite.config.web.ts`) — and, via
+`import.meta.env.VITE_SITE_ORIGIN` at runtime, the origin `matchLinks.ts` uses
+for shareable match links on both targets (`shareable-urls` above).
 
 ## Hosting note
 

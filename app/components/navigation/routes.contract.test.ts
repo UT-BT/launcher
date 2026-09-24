@@ -9,7 +9,7 @@ interface ContractRoute {
     path: string
     view: string
     kind: string
-    param?: keyof NavParams
+    params?: (keyof NavParams)[]
 }
 
 const contract: { version: number; routes: ContractRoute[] } = JSON.parse(
@@ -28,17 +28,23 @@ const SAMPLES: Record<string, string> = {
     teamCapId: '3059e580-ef39-4cd4-9759-48dd6bda72c4',
     newsId: '42',
     eventSlug: '2v2-cup-2026',
+    matchId: '77',
 }
 
 function paramsFor(route: ContractRoute): NavParams {
-    if (!route.param) return {}
-    const raw = SAMPLES[route.param]
-    return { [route.param]: route.param === 'newsId' ? Number(raw) : raw } as NavParams
+    const result: NavParams = {}
+    for (const key of route.params ?? []) {
+        const raw = SAMPLES[key]
+        ;(result as Record<string, unknown>)[key] = key === 'newsId' ? Number(raw) : raw
+    }
+    return result
 }
 
 function concretePath(route: ContractRoute): string {
-    if (!route.param) return route.path
-    return route.path.replace(`:${route.param}`, encodeURIComponent(SAMPLES[route.param]))
+    return (route.params ?? []).reduce(
+        (path, key) => path.replace(`:${key}`, encodeURIComponent(SAMPLES[key])),
+        route.path,
+    )
 }
 
 describe('route contract', () => {
@@ -62,7 +68,9 @@ describe('route contract', () => {
 
         const parsed = pathToNav(concretePath(route), '')
         expect(parsed.view).toBe(route.view)
-        if (route.param) expect(parsed.params[route.param]).toBe(params[route.param])
+        for (const key of route.params ?? []) {
+            expect(parsed.params[key]).toBe(params[key])
+        }
     })
 
     it.each(contract.routes)('$kind has a non-default tab title', route => {
