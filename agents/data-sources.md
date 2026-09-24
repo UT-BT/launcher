@@ -6,15 +6,15 @@ read_when:
   - "needing an avatar, map screenshot, region flag, or map-download URL"
   - "wiring map/server favorites or Patreon tier lookups"
   - "reading a match's pick/ban state, sending a pick/ban command, or rendering from the pick/ban view model"
-keywords: [api.ts, fetch, endpoint, accessToken, avatar, MapThumbnail, favorites, patreon, downloadMapZip, world_records, caps, predictions, draw, odds, schedule, proposal, slot, whose_turn, resolved_window, countdown, nav badge, fetchMyTournaments, SlotPickerModal, SlotGrid, DateTimeField, slotGeneration, proposeMatchSlots, withdrawMatchProposal, acceptMatchProposal, fetchMatchSchedule, ApiError, expected_match_duration_minutes, fetchPickBanConfig, PickBanConfig, PickBanPoolMap, MapsTab, mapsShared, stagesWithPools, tagBadgeVariant, pick/ban, fetchPickBanState, ETag, If-None-Match, 304, X-Server-Now, server_now, clock offset, reveal_at, sendPickBanCommand, sendPickBanManagerCommand, pickBanErrorCode, fetchPickBanQueue, buildPickBanView]
+keywords: [api.ts, fetch, endpoint, accessToken, avatar, MapThumbnail, favorites, patreon, downloadMapZip, world_records, caps, predictions, draw, odds, schedule, proposal, slot, whose_turn, resolved_window, countdown, nav badge, fetchMyTournaments, SlotPickerModal, SlotGrid, DateTimeField, slotGeneration, proposeMatchSlots, withdrawMatchProposal, acceptMatchProposal, fetchMatchSchedule, ApiError, expected_match_duration_minutes, fetchPickBanConfig, PickBanConfig, PickBanPoolMap, MapsTab, mapsShared, stagesWithPools, tagBadgeVariant, pick/ban, fetchPickBanState, ETag, If-None-Match, 304, X-Server-Now, server_now, clock offset, reveal_at, sendPickBanCommand, sendPickBanManagerCommand, pickBanErrorCode, fetchPickBanQueue, buildPickBanView, setPickBanStageConfig, setPickBanStagePool, copyPickBanStagePool, pickBanEditor, stage pool]
 provides: "the client-side API contract the launcher consumes + asset URLs + favorites/patreon sync models"
 not_here:
   - "IPC channels (window.conveyor.*) → lib/conveyor/README.md"
   - "how UI state persists in localStorage → state-patterns.md"
   - "the procedure to wire a new endpoint into the UI → skill: consume-api-data"
-sections: [backend-api, errors, admin-api, event-brackets, event-scheduling, event-predictions, public-maps-tab-pick-ban-pools, event-pickban-sessions, changing-a-map-screenshot, cap-detail-page-endpoints, world-records-page-endpoints, team-maps-and-team-runs, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites, account-state-and-badges]
+sections: [backend-api, errors, admin-api, event-brackets, event-scheduling, event-predictions, public-maps-tab-pick-ban-pools, event-pickban-sessions, event-pick-ban-setup, changing-a-map-screenshot, cap-detail-page-endpoints, world-records-page-endpoints, team-maps-and-team-runs, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites, account-state-and-badges]
 last_verified: 2026-09-24
-verify_against: [app/utils/api.ts, app/utils/chartBuckets.ts, app/components/pages/admin/components/controls.tsx, app/components/pages/admin/sections/HostsManagementSection.tsx, app/utils/patreon.ts, app/utils/server-utils.ts, app/hooks/useServerFavorites.ts, app/components/pages/events/manage/formatFields.tsx, app/components/pages/events/bracket/bracketShared.tsx, app/components/pages/events/bracket/BracketTab.tsx, app/components/pages/events/predictions/predictionsShared.tsx, app/components/pages/events/predictions/PredictionsTab.tsx, app/components/pages/events/schedule/scheduleShared.tsx, app/components/pages/events/schedule/ScheduleTab.tsx, app/components/pages/events/schedule/SlotPickerModal.tsx, app/components/pages/events/schedule/slotGeneration.ts, app/components/pages/events/schedule/SlotGrid.tsx, app/components/pages/events/manage/DateTimeField.tsx, app/components/pages/events/eventsShared.tsx, app/components/pages/EventDetailPage.tsx, app/utils/timezone.ts, app/components/pages/events/manage/ScheduleOversightPanel.tsx, app/components/pages/events/ManagePanel.tsx, app/components/main/Main.tsx, app/components/layout/AppLayout.tsx, app/components/pages/events/maps/MapsTab.tsx, app/components/pages/events/maps/mapsShared.ts, app/components/pages/events/pickban/pickBanView.ts, app/components/pages/events/pickban/pickBanSession.ts, app/components/pages/events/pickban/clockOffset.ts]
+verify_against: [app/utils/api.ts, app/utils/chartBuckets.ts, app/components/pages/admin/components/controls.tsx, app/components/pages/admin/sections/HostsManagementSection.tsx, app/utils/patreon.ts, app/utils/server-utils.ts, app/hooks/useServerFavorites.ts, app/components/pages/events/manage/formatFields.tsx, app/components/pages/events/bracket/bracketShared.tsx, app/components/pages/events/bracket/BracketTab.tsx, app/components/pages/events/predictions/predictionsShared.tsx, app/components/pages/events/predictions/PredictionsTab.tsx, app/components/pages/events/schedule/scheduleShared.tsx, app/components/pages/events/schedule/ScheduleTab.tsx, app/components/pages/events/schedule/SlotPickerModal.tsx, app/components/pages/events/schedule/slotGeneration.ts, app/components/pages/events/schedule/SlotGrid.tsx, app/components/pages/events/manage/DateTimeField.tsx, app/components/pages/events/eventsShared.tsx, app/components/pages/EventDetailPage.tsx, app/utils/timezone.ts, app/components/pages/events/manage/ScheduleOversightPanel.tsx, app/components/pages/events/ManagePanel.tsx, app/components/main/Main.tsx, app/components/layout/AppLayout.tsx, app/components/pages/events/maps/MapsTab.tsx, app/components/pages/events/maps/mapsShared.ts, app/components/pages/events/pickban/pickBanView.ts, app/components/pages/events/pickban/pickBanSession.ts, app/components/pages/events/pickban/clockOffset.ts, app/components/pages/events/manage/pickban/pickBanEditor.ts, app/components/pages/events/manage/pickban/PickBanPanel.tsx]
 ---
 
 # Data sources
@@ -58,6 +58,7 @@ full loop).
 | Teams | `createTeam`, `fetchTeams`, `fetchTeam`, `updateTeam`, `disbandTeam`, `transferTeamOwnership`, `fetchTeamMembers`, `inviteToTeam`, `joinTeam`, `acceptTeamInvite`, `declineTeamInvite`, `leaveTeam`, `denyTeamMember`, `unblockTeamMember`, `kickTeamMember` (optional `block`), `setTeamMemberRole`, `setTeamMemberNumber`, `fetchTeamActivity`, `fetchTeamAudit`, `fetchLineups`, `createLineup`, `updateLineup`, `deleteLineup`, `fetchMyTeam`, `setMyTagHidden`, `fetchMyInvitations`, `uploadTeamAvatar`, `deleteTeamAvatar`, `teamAvatarUrl` (clans + lineups; mutations return the fresh `TeamDetail`; validation failures surface the server's message — see [Errors](#errors)). `fetchTeams` rows carry a `stats` block (`caps`, `world_records`, `playtime_seconds`, `spectator_seconds`, plus `ranks` per metric) totalled over the team's active members, and `sort` accepts those three metrics on top of `added`/`name`/`members`; pass `limit: 0` for the whole directory (the gallery is unpaginated). Ranks are **directory-wide** — searching or filtering never renumbers them — and `ranked_teams` is the "of N". Ties share a rank. A team on zero for a metric still comes back ranked; the UI drops the chip rather than showing a meaningless placing. Rows also carry `owner_alias` + `owner_title`, so render the owner straight from the directory row — never fan out a profile request per card. `fetchTeamActivity` returns the same totals and ranks for one team alongside its feed. |
 | Events | `fetchEvents`, `fetchEvent`, `fetchEventTeams`, `fetchEventLfp`, `fetchMyEventStatus`, `fetchMyTournaments` (→ `/me/tournaments`, every tournament the caller has a team membership in, each row `{tournament, team, membership_status}` — the cross-event "which team is mine, per event" lookup `fetchMySchedule` entries don't carry themselves), `createEventTeam`, `inviteEventPartner`, `acceptEventInvite`, `declineEventInvite`, `updateEventTeam`, `deleteEventTeam`, `joinEventLfp`, `leaveEventLfp`, `setEventVolunteer`, `deleteEventVolunteer` (cup signups; an event is addressed by its `slug`) |
 | Event scheduling | `fetchMySchedule`, manager-only: `fetchEventScheduleOversight`, `fetchEventAuditLog` (→ [Event scheduling](#event-scheduling)) |
+| Event pick/ban setup | `fetchPickBanConfig`; manager-only: `setPickBanStageConfig`, `setPickBanStagePool`, `copyPickBanStagePool` (→ [Event pick/ban setup](#event-pickban-setup)) |
 | Event brackets | `fetchEventBracket`, `fetchEventMatch` (→ [Event brackets](#event-brackets)); manager-only: `fetchEventFormats`, `setEventBracketPublished`, `setEventFormat`, `updateEventFormatSpec`, `setEventSeeds`, `updateEventStage`, `generateEventStage`, `generateEventRound`, `resetEventStage`, `updateEventGroup`, `createEventMatch`, `updateEventMatch`, `deleteEventMatch`, `setEventMatchResult`, `clearEventMatchResult`, `fetchEventCapCandidates`, `linkEventMatchMapCaps`; staff-only: `createEventFormat`, `updateEventFormat`, `deleteEventFormat`, `fetchEventFormat` |
 | Admin (staff-only) | the moderator/admin dashboard slice — see [Admin API](#admin-api). `fetchAuditLog`/`fetchAuditLogCount` take `actors` (`staff` default / `players` / `all`): the default keeps player-written rows, such as a mapper replacing their own screenshot, out of the staff feed |
 | Event pick/ban sessions | `fetchPickBanState` (ETag-aware), `sendPickBanCommand`, `sendPickBanManagerCommand`, `postPickBanCommand`, `pickBanErrorCode`; manager-only: `fetchPickBanQueue` (→ [Event pick/ban sessions](#event-pickban-sessions)) |
@@ -653,6 +654,82 @@ While a step is inside its reveal lead, the side that locked it sees it as `lock
 its card flagged `lockedIn`. Everyone else still sees the step being awaited. `canLock` is
 re-derived when a spotlight or the intro ends, so a captain can act without waiting for the
 next poll. The server's `can_lock_now` only overrides it for a payload read while awaiting.
+
+### Event pick/ban setup
+
+Each stage of an event's format carries an optional pick/ban **block** and a tagged
+**map pool**. Manage → Pick/Ban (`manage/pickban/`) edits both, one card per stage.
+
+`fetchPickBanConfig(token, slug)` → `{ stages[] }` lists **every stage in the format,
+in format order**, including playoff and final stages that are not drawn yet, so they
+can be set up ahead of time. It is a public read, visible whenever the event is, and
+answers `{ stages: [] }` when no format is attached. Each stage carries:
+
+- `key`, `name` and `best_of` (the stage's effective match default)
+- `pick_ban` — the block, or `null` when the stage has none yet:
+  `preset_id` (`bo4_picks` / `bo3_ban_pick` / `bo5_ban_pick`, or `null` for a custom
+  sequence), `sequence` (`steps: [{actor: 'A' | 'B', action: 'ban' | 'pick'}]` plus
+  `ban_down`), `exclusions` (`[{tag, min_pre_cup_seed}]`) and `pacing` in seconds
+  (`intro`, `spotlight`, `ban_down_spotlight`, `decider_spotlight`)
+- `counts` (`lettered_picks`, `lettered_bans`, `maps_yielded`, `full_sequence_minimum`,
+  `absolute_minimum`) and `sequence_mismatch` (`maps_yielded !== best_of`); `null` and
+  `false` without a block
+- `pool` — `[{map, tags, screenshot_version}]` in saved order
+- `pool_status` — `{normal, exempt}`, each `{size, status}` with status
+  `full_sequence` / `bans_dropped` / `too_small`. `exempt` is the pool minus every map
+  carrying an exclusion tag, and is `null` when the block has no exclusion rules.
+
+Writes (bracket managers only):
+
+| Helper | Does |
+|---|---|
+| `setPickBanStageConfig(token, slug, stageKey, input)` | Replaces one stage's block. `input` is `{preset_id, exclusions?, pacing?}` **or** `{sequence, exclusions?, pacing?}`, never both. Choosing a preset copies its steps into the block, so a later change to the shipped presets never reshapes a configured stage. |
+| `setPickBanStagePool(token, slug, stageKey, pool)` | Replaces the stage's whole pool (`[{map, tags}]`, order = array order). Idempotent. |
+| `copyPickBanStagePool(token, slug, stageKey, fromStageKey)` | Copies another stage's **saved** pool, tags included. It writes straight away, so the editor confirms first. |
+
+**Rules the editor mirrors** (`manage/pickban/pickBanEditor.ts`, so problems show while
+typing instead of after a round trip):
+
+- The preset steps (`PICK_BAN_PRESET_SEQUENCES`) and the counts: maps yielded = lettered
+  picks + 1 with a ban-down; full-sequence minimum adds the lettered bans; the absolute
+  minimum drops every ban. Pool status is `full_sequence` at or above the full minimum,
+  `bans_dropped` down to the absolute minimum, `too_small` below it. A unit test pins the
+  counts of all three presets to the API's numbers — keep both in sync if a preset
+  changes.
+- Tags are trimmed, non-empty, at most 32 characters and matched case-insensitively
+  ("Hard" is just a tag). Pacing is a whole number from 0 to 60 (defaults 5 / 10 / 4 / 10).
+  An exclusion threshold is a whole number of at least 1.
+
+**Warnings** (pool too small or dropping bans, for normal and for exempt matches, and a
+sequence whose map count differs from the stage's best-of) come from the draft while a
+stage has unsaved edits, and from `pool_status` / `sequence_mismatch` once it doesn't.
+Both paths produce the same `PickBanWarning` list, and a test asserts they agree for
+the same stage, so saving never changes what the card says.
+
+**Errors.** A rejected block answers 422 with `field.path: reason` entries joined by
+`; ` — the path is relative to the block (`preset_id`, `sequence`, `pacing.intro`,
+`exclusions[0].tag`), or prefixed `stages[<index>].pick_ban.` when the whole-format
+validation rejected it. `configErrors` strips this stage's prefix and places each entry
+next to its field; anything it cannot place becomes the card's error. A rejected pool is
+one sentence: `Map '<name>' …` is pinned to that map's row, and a bare tag reason reads
+"A tag …".
+
+**Keeping the Format tab honest.** A full-format save sends every stage's block back, so
+a stale spec would silently revert the pick/ban setup. After a block is saved the tab
+re-fetches the config, refreshes the bracket (whose `format.spec` the Format tab edits)
+and writes the new block into an open format draft (`withStagePickBan`).
+
+**Unsaved edits** live in `EventDetailPage` as `pickBanDrafts` (keyed by stage key), with
+the same leave guard as the format draft (see `navigation.md` → leave guards). A stage
+has a draft only while it differs from its saved state (`settledDraft`), so undoing an
+edit clears it, and drafts for stages the format no longer has are dropped on load.
+Saving sends the block and the pool separately, only for the part that changed; if one
+half fails, the other half is kept and only the failed half stays unsaved.
+
+The Manage panel's sub-tabs are one registry, `MANAGE_TABS` in `ManagePanel.tsx`: an
+entry is `{id, label, eventManagersOnly?, hasUnsavedChanges?, render(context)}`, so a new
+tab is a single entry. The Pick/Ban tab's panel is lazy, since only managers ever open
+it. The match queue goes below the stage cards in `PickBanPanel`.
 
 ### Medal Hunt (`fetchMedalHunt`)
 

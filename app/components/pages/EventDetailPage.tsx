@@ -26,6 +26,7 @@ import { stagesWithPools } from './events/maps/mapsShared'
 import { PredictionsTab } from './events/predictions/PredictionsTab'
 import { PredictionOddsProvider, formatCountdown, useNow } from './events/predictions/predictionsShared'
 import { ScheduleTab } from './events/schedule/ScheduleTab'
+import type { PickBanDrafts } from './events/manage/pickban/pickBanEditor'
 import { SlotPickerModal } from './events/schedule/SlotPickerModal'
 
 function NextMatchBanner({ match, myTeamId, now }: {
@@ -211,9 +212,11 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
     })
 
     const [formatDraft, setFormatDraft] = useState<EventFormatSpec | null>(null)
+    const [pickBanDrafts, setPickBanDrafts] = useState<PickBanDrafts>({})
     const [schedulerMatchId, setSchedulerMatchId] = useState<string | null>(null)
 
     useUnsavedChanges(formatDraft !== null, 'The tournament format has edits you have not saved yet.')
+    useUnsavedChanges(Object.keys(pickBanDrafts).length > 0, 'The pick/ban setup has edits you have not saved yet.')
 
     const now = useNow(1000)
     const myTeamId = my?.team?.id ?? null
@@ -389,6 +392,8 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
                         onRefresh={refresh}
                         formatDraft={formatDraft}
                         onFormatDraftChange={setFormatDraft}
+                        pickBanDrafts={pickBanDrafts}
+                        onPickBanDraftsChange={setPickBanDrafts}
                     />
                 )}
                 </PredictionOddsProvider>
