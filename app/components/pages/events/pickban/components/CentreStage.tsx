@@ -76,7 +76,7 @@ export function CentreStage({ view, summaryAction, className }: CentreStageProps
             )}
         >
             <p aria-live="polite" className="sr-only">{paused ? 'Paused.' : stageAnnouncement(view)}</p>
-            <AnimatePresence mode="wait" initial={false} custom={direction}>
+            <AnimatePresence mode="popLayout" initial={false} custom={direction}>
                 <motion.div
                     key={view.scene.key}
                     custom={direction}

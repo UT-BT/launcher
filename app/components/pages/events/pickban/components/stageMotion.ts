@@ -15,6 +15,8 @@ const SCENE_ENTER_S = 0.35
 
 const SCENE_EXIT_S = 0.15
 
+const BACKWARD_HANDOFF_S = 0.45
+
 const CHIP_S = 0.25
 
 function backwardsOnly(target: TargetAndTransition): (direction: PickBanSceneDirection) => TargetAndTransition {
@@ -23,7 +25,11 @@ function backwardsOnly(target: TargetAndTransition): (direction: PickBanSceneDir
 
 export const SCENE_VARIANTS: Variants = {
     hidden: (direction: PickBanSceneDirection) => ({ opacity: 0, y: direction < 0 ? -12 : 12 }),
-    shown: { opacity: 1, y: 0, transition: { duration: SCENE_ENTER_S, ease: EASE_OUT } },
+    shown: (direction: PickBanSceneDirection) => ({
+        opacity: 1,
+        y: 0,
+        transition: { duration: SCENE_ENTER_S, ease: EASE_OUT, delay: direction < 0 ? BACKWARD_HANDOFF_S : 0 },
+    }),
     gone: (direction: PickBanSceneDirection) => (direction < 0
         ? { opacity: 0, y: 12, transition: { duration: SCENE_EXIT_S, ease: EASE_IN, when: 'afterChildren' } }
         : { opacity: 0, transition: { duration: SCENE_EXIT_S, ease: EASE_IN } }),
