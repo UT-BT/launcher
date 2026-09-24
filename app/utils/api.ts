@@ -5521,3 +5521,111 @@ export async function fetchEventPredictionLedger(
         { token: accessToken, signal },
     )
 }
+
+export type PickBanActor = 'A' | 'B'
+
+export type PickBanSequenceAction = 'ban' | 'pick'
+
+export type PickBanPresetId = 'bo4_picks' | 'bo3_ban_pick' | 'bo5_ban_pick'
+
+export const PICK_BAN_PRESET_IDS: PickBanPresetId[] = ['bo4_picks', 'bo3_ban_pick', 'bo5_ban_pick']
+
+export interface PickBanSequenceStep {
+    actor: PickBanActor
+    action: PickBanSequenceAction
+}
+
+export interface PickBanSequence {
+    steps: PickBanSequenceStep[]
+    ban_down: boolean
+}
+
+export interface PickBanExclusionRule {
+    tag: string
+    min_pre_cup_seed: number
+}
+
+export interface PickBanPacing {
+    intro: number
+    spotlight: number
+    ban_down_spotlight: number
+    decider_spotlight: number
+}
+
+export interface PickBanBlock {
+    preset_id: PickBanPresetId | null
+    sequence: PickBanSequence
+    exclusions: PickBanExclusionRule[]
+    pacing: PickBanPacing
+}
+
+export interface PickBanCounts {
+    lettered_picks: number
+    lettered_bans: number
+    maps_yielded: number
+    full_sequence_minimum: number
+    absolute_minimum: number
+}
+
+export type PickBanPoolSizeStatus = 'full_sequence' | 'bans_dropped' | 'too_small'
+
+export interface PickBanPoolSize {
+    size: number
+    status: PickBanPoolSizeStatus
+}
+
+export interface PickBanPoolStatus {
+    normal: PickBanPoolSize
+    exempt: PickBanPoolSize | null
+}
+
+export interface PickBanPoolMap {
+    map: string
+    tags: string[]
+    screenshot_version: string | null
+}
+
+export interface PickBanStageConfig {
+    key: string
+    name: string
+    best_of: number
+    pick_ban: PickBanBlock | null
+    counts: PickBanCounts | null
+    sequence_mismatch: boolean
+    pool: PickBanPoolMap[]
+    pool_status: PickBanPoolStatus | null
+}
+
+export interface PickBanConfig {
+    stages: PickBanStageConfig[]
+}
+
+export interface PickBanPoolEntryInput {
+    map: string
+    tags: string[]
+}
+
+export interface PickBanStagePoolEntry extends PickBanPoolEntryInput {
+    ordinal: number
+}
+
+export type PickBanStageConfigInput =
+    | { preset_id: PickBanPresetId; exclusions?: PickBanExclusionRule[]; pacing?: Partial<PickBanPacing> }
+    | { sequence: PickBanSequence; exclusions?: PickBanExclusionRule[]; pacing?: Partial<PickBanPacing> }
+
+export async function fetchPickBanConfig(accessToken: string | undefined, slug: string, signal?: AbortSignal): Promise<PickBanConfig> {
+    const data = await apiGetOr<PickBanConfig>(eventPath(slug, '/pick-ban/config'), { stages: [] }, { token: accessToken, signal })
+    return { stages: data.stages ?? [] }
+}
+
+export async function setPickBanStageConfig(accessToken: string, slug: string, stageKey: string, input: PickBanStageConfigInput): Promise<{ stage_key: string; pick_ban: PickBanBlock | null }> {
+    return apiGet(eventPath(slug, `/admin/pick-ban/stages/${encodeURIComponent(stageKey)}/config`), { token: accessToken, method: 'PUT', body: input })
+}
+
+export async function setPickBanStagePool(accessToken: string, slug: string, stageKey: string, pool: PickBanPoolEntryInput[]): Promise<{ stage_key: string; pool: PickBanStagePoolEntry[] }> {
+    return apiGet(eventPath(slug, `/admin/pick-ban/stages/${encodeURIComponent(stageKey)}/pool`), { token: accessToken, method: 'PUT', body: { pool } })
+}
+
+export async function copyPickBanStagePool(accessToken: string, slug: string, stageKey: string, fromStageKey: string): Promise<{ stage_key: string; pool: PickBanStagePoolEntry[] }> {
+    return apiGet(eventPath(slug, `/admin/pick-ban/stages/${encodeURIComponent(stageKey)}/pool/copy`), { token: accessToken, method: 'POST', body: { from_stage_key: fromStageKey } })
+}
