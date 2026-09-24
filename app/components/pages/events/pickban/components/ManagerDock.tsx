@@ -12,6 +12,7 @@ import {
 } from '../managerDock'
 import type { UseManagerDockResult } from '../useManagerDock'
 import { CaptainDock, Rejection } from './CaptainDock'
+import { EditFinalEditor } from './EditFinalEditor'
 import { PickBanBannerNote } from './PickBanBannerNote'
 import { PICK_BAN_TONES, teamTone } from './pickBanTone'
 
@@ -44,7 +45,8 @@ export function ManagerDock({ manager, slug, accessToken, children }: ManagerDoc
     const [picker, setPicker] = useState<Picker | null>(null)
     const { dock } = manager
     if (!dock) return null
-    const { actFor, busy } = dock
+    const { actFor, busy, confirm, finalEditor } = dock
+    const finalBody = finalEditor?.body ?? null
     if (picker !== null && !(picker === 'sequence' ? dock.overrideSequence : dock.handOver)) setPicker(null)
 
     return (
@@ -93,17 +95,43 @@ export function ManagerDock({ manager, slug, accessToken, children }: ManagerDoc
                     ))}
                     {dock.overrideSequence && <DockButton disabled={busy} onClick={() => setPicker('sequence')}>Change sequence…</DockButton>}
                     {dock.handOver && <DockButton disabled={busy} onClick={() => setPicker('hand-over')}>Hand over…</DockButton>}
+                    {dock.editFinal && <DockButton disabled={busy} onClick={manager.openFinalEditor}>Edit final maps…</DockButton>}
                 </div>
                 {dock.startBlockedBy && <p className="text-xs text-amber-300">Start is blocked: {dock.startBlockedBy}</p>}
             </section>
 
-            {dock.confirm && (
+            {finalEditor && !confirm && (
                 <DockModal
-                    title={dock.confirm.title}
-                    onClose={manager.dismissConfirm}
-                    action={<Button variant="destructive" disabled={busy} onClick={manager.confirm}>{dock.confirm.confirmLabel}</Button>}
+                    title="Edit the final maps"
+                    onClose={manager.closeFinalEditor}
+                    dismissLabel="Discard"
+                    maxWidth="48rem"
+                    action={(
+                        <Button disabled={busy || !finalBody} onClick={() => { if (finalBody) manager.run({ command: 'edit-final', body: finalBody }) }}>
+                            {finalEditor.saving ? 'Saving…' : 'Save…'}
+                        </Button>
+                    )}
                 >
-                    <p className="text-sm text-muted-foreground">{dock.confirm.message}</p>
+                    <EditFinalEditor
+                        editor={finalEditor}
+                        resultsWarning={dock.resultsWarning}
+                        onChange={manager.changeFinalEditor}
+                        onDismissRejection={manager.dismiss}
+                    />
+                </DockModal>
+            )}
+            {confirm && (
+                <DockModal
+                    title={confirm.title}
+                    onClose={manager.dismissConfirm}
+                    dismissLabel={confirm.dismissLabel}
+                    action={(
+                        <Button variant={confirm.command === 'edit-final' ? 'default' : 'destructive'} disabled={busy} onClick={manager.confirm}>
+                            {confirm.confirmLabel}
+                        </Button>
+                    )}
+                >
+                    <p className="text-sm text-muted-foreground">{confirm.message}</p>
                 </DockModal>
             )}
             {picker === 'sequence' && (
@@ -135,17 +163,25 @@ function DockButton({ tone, className, ...props }: ComponentProps<'button'> & { 
     return <button type="button" className={cn(BUTTON, TONES[tone ?? 'neutral'], className)} {...props} />
 }
 
-function DockModal({ title, onClose, action, children }: { title: string; onClose: () => void; action?: ReactNode; children: ReactNode }) {
+function DockModal({ title, onClose, action, dismissLabel, maxWidth = '34rem', children }: {
+    title: string
+    onClose: () => void
+    action?: ReactNode
+    dismissLabel?: string
+    maxWidth?: string
+    children: ReactNode
+}) {
     return (
         <Modal
             isOpen
             onClose={onClose}
             offsetSidebar
-            maxWidth="34rem"
+            portal
+            maxWidth={maxWidth}
             title={title}
             footer={
                 <div className="flex shrink-0 items-center justify-end gap-2 border-t border-border bg-muted/50 p-4">
-                    <Button variant="outline" onClick={onClose}>{action ? 'Keep it' : 'Close'}</Button>
+                    <Button variant="outline" onClick={onClose}>{dismissLabel ?? (action ? 'Keep it' : 'Close')}</Button>
                     {action}
                 </div>
             }

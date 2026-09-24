@@ -19,17 +19,16 @@ import {
     type CaptainDock,
     type StepChoice,
 } from './captainPlay'
+import { finalDraftOf, finalEditorOf, type FinalDraft, type FinalEditor } from './editFinal'
 import { PICK_BAN_PRESET_LABELS } from './pickBanCopy'
 import { blockingReasonLabel } from './pickBanStatus'
 import type { PickBanBanner, PickBanManagerControls, PickBanTeamPanel, PickBanView } from './pickBanView'
-
-export type ManagerCommand = Exclude<PickBanManagerCommand, 'edit-final'>
 
 type ButtonCommand = 'open' | 'start' | 'swap' | 'pause' | 'resume' | 'undo' | 'restart' | 'cancel'
 
 type WithoutVersion<B> = B extends unknown ? Omit<B, 'version'> : never
 
-type BodyOf<C extends ManagerCommand> = WithoutVersion<PickBanManagerCommandBodies[C]>
+type BodyOf<C extends PickBanManagerCommand> = WithoutVersion<PickBanManagerCommandBodies[C]>
 
 export type ManagerRequest =
     | { command: ButtonCommand }
@@ -37,20 +36,30 @@ export type ManagerRequest =
     | { command: 'override-sequence'; body: BodyOf<'override-sequence'> }
     | { command: 'hand-over'; body: BodyOf<'hand-over'> }
     | { command: 'lock'; body: BodyOf<'lock'> }
+    | { command: 'edit-final'; body: BodyOf<'edit-final'> }
 
-type ConfirmedCommand = 'restart' | 'cancel'
+export type ManagerAction = ManagerRequest | { command: 'reopen' }
+
+export type ManagerCommand = ManagerAction['command']
+
+type ButtonAction = ButtonCommand | 'reopen'
+
+type ConfirmedCommand = 'reopen' | 'restart' | 'cancel' | 'edit-final'
+
+type ConfirmedAction = Extract<ManagerAction, { command: ConfirmedCommand }>
 
 export interface ManagerPlay {
     selection: StepChoice | null
     submitting: ManagerCommand | null
     lockingIn: StepChoice | null
-    confirming: ConfirmedCommand | null
+    confirming: ConfirmedAction | null
+    editing: FinalDraft | null
     rejected: ManagerCommand | null
     rejection: string | null
 }
 
 export interface ManagerButton {
-    command: ButtonCommand
+    command: ButtonAction
     label: string
     disabled: boolean
 }
@@ -60,6 +69,7 @@ export interface ManagerConfirm {
     title: string
     message: string
     confirmLabel: string
+    dismissLabel: string
 }
 
 export interface ManagerAChoice {
@@ -87,6 +97,11 @@ export interface ManagerSequenceChoice {
     body: BodyOf<'override-sequence'>
 }
 
+export interface ManagerFinalEditor extends FinalEditor {
+    saving: boolean
+    rejection: string | null
+}
+
 export interface ManagerActFor {
     side: PickBanSide | null
     ab: PickBanActor | null
@@ -103,6 +118,8 @@ export interface ManagerDock {
     chooseA: ManagerAChoice[] | null
     overrideSequence: boolean
     handOver: ManagerHandOverTeam[] | null
+    editFinal: boolean
+    finalEditor: ManagerFinalEditor | null
     confirm: ManagerConfirm | null
     actFor: ManagerActFor | null
     rejection: string | null
@@ -118,6 +135,7 @@ export const IDLE_MANAGER_PLAY: ManagerPlay = {
     submitting: null,
     lockingIn: null,
     confirming: null,
+    editing: null,
     rejected: null,
     rejection: null,
 }
@@ -131,32 +149,53 @@ const CONTROL_OF: Record<Exclude<ManagerCommand, 'lock'>, keyof PickBanManagerCo
     pause: 'pause',
     resume: 'resume',
     undo: 'undo',
+    reopen: 'reopen',
     restart: 'restart',
     cancel: 'cancel',
     'hand-over': 'handOver',
+    'edit-final': 'editFinal',
 }
 
-const BUTTON_LABELS: Record<ButtonCommand, string> = {
+const BUTTON_LABELS: Record<ButtonAction, string> = {
     open: 'Open lobby',
     start: 'Start',
     swap: 'Swap A/B',
     pause: 'Pause',
     resume: 'Resume',
     undo: 'Undo last step',
+    reopen: 'Reopen',
     restart: 'Restart',
     cancel: 'Cancel pick/ban',
 }
 
 const RESULTS_WARNING = 'Results are already entered for this match, so the pick/ban can’t start or change the maps it wrote.'
 
-const CONFIRMATIONS: Record<ConfirmedCommand, Pick<ManagerConfirm, 'title' | 'message'>> = {
+const KEEP_IT = 'Keep it'
+
+const CONFIRMATIONS: Record<ConfirmedCommand, Omit<ManagerConfirm, 'command'>> = {
+    reopen: {
+        title: 'Reopen the pick/ban?',
+        message: 'The last ban or pick is undone, with the decider after it if there is one, and the pick/ban waits on that step again. The maps it wrote into the match are removed, and any edits to the final maps are discarded.',
+        confirmLabel: BUTTON_LABELS.reopen,
+        dismissLabel: KEEP_IT,
+    },
     restart: {
         title: 'Restart the pick/ban?',
         message: 'Every ban and pick so far is undone and both teams go back to the lobby. Both Ready marks clear, and any maps this pick/ban wrote into the match are removed.',
+        confirmLabel: BUTTON_LABELS.restart,
+        dismissLabel: KEEP_IT,
     },
     cancel: {
         title: 'Cancel the pick/ban?',
         message: 'This ends the pick/ban for good. Its bans and picks won’t count, and any maps it wrote into the match are removed. You can open a new lobby afterwards.',
+        confirmLabel: BUTTON_LABELS.cancel,
+        dismissLabel: KEEP_IT,
+    },
+    'edit-final': {
+        title: 'Save the edited final maps?',
+        message: 'The match’s maps are rewritten to your list, in its order, with the picks and decider you set. The final summary is marked Edited, and the timeline keeps the bans and picks as they were played.',
+        confirmLabel: 'Save final maps',
+        dismissLabel: 'Keep editing',
     },
 }
 
@@ -175,17 +214,21 @@ const REJECTIONS: Record<Exclude<PickBanErrorCode, PickBanBlockingReason>, strin
     wrong_status: 'The session moved on just before your click, so that no longer applies.',
 }
 
-const HAND_OVER_REFUSED = 'That player can’t take control: pick an active roster member of that side’s team.'
+const INVALID_REQUEST_REJECTIONS: Partial<Record<ManagerCommand, string>> = {
+    'hand-over': 'That player can’t take control: pick an active roster member of that side’s team.',
+    'edit-final': 'The server didn’t accept that final list. Refresh the page, check the maps and try again.',
+}
 
 function rejectionMessage(command: ManagerCommand | null, error: unknown): string {
     const code = pickBanErrorCode(error)
-    if (command === 'hand-over' && code === 'invalid_request') return HAND_OVER_REFUSED
+    const invalidRequest = command && code === 'invalid_request' ? INVALID_REQUEST_REJECTIONS[command] : undefined
+    if (invalidRequest) return invalidRequest
     if (code) return code in REJECTIONS ? REJECTIONS[code as keyof typeof REJECTIONS] : `${blockingReasonLabel(code, 'lobby')}.`
     return unwordedRejection(error)
 }
 
-function needsConfirmation(command: ManagerCommand): command is ConfirmedCommand {
-    return command in CONFIRMATIONS
+function needsConfirmation(action: ManagerAction): action is ConfirmedAction {
+    return action.command in CONFIRMATIONS
 }
 
 function allowed(controls: PickBanManagerControls, command: ManagerCommand): boolean {
@@ -274,13 +317,23 @@ function actForOf(view: PickBanView, play: ManagerPlay): ManagerActFor | null {
     }
 }
 
+function managerFinalEditorOf(view: PickBanView, play: ManagerPlay, controls: PickBanManagerControls): ManagerFinalEditor | null {
+    if (!play.editing || !controls.editFinal) return null
+    return {
+        ...finalEditorOf(play.editing, view),
+        saving: play.submitting === 'edit-final',
+        rejection: play.rejected === 'edit-final' ? play.rejection : null,
+    }
+}
+
 export function managerDockOf(view: PickBanView, play: ManagerPlay): ManagerDock | null {
     const controls = view.affordances.manager
     if (!controls) return null
     const busy = play.submitting !== null
+    const finalEditor = managerFinalEditorOf(view, play, controls)
     return {
         busy,
-        buttons: (Object.keys(BUTTON_LABELS) as ButtonCommand[])
+        buttons: (Object.keys(BUTTON_LABELS) as ButtonAction[])
             .filter((command) => controls[CONTROL_OF[command]])
             .map((command) => ({ command, label: BUTTON_LABELS[command], disabled: busy || !allowed(controls, command) })),
         startBlockedBy: controls.startBlockedBy && blockingReasonLabel(controls.startBlockedBy, view.status),
@@ -291,37 +344,69 @@ export function managerDockOf(view: PickBanView, play: ManagerPlay): ManagerDock
             : null,
         overrideSequence: controls.overrideSequence,
         handOver: controls.handOver ? panelsOf(view).map(handOverTeamOf) : null,
-        confirm: play.confirming && allowed(controls, play.confirming)
-            ? { command: play.confirming, ...CONFIRMATIONS[play.confirming], confirmLabel: BUTTON_LABELS[play.confirming] }
+        editFinal: controls.editFinal,
+        finalEditor,
+        confirm: play.confirming && allowed(controls, play.confirming.command)
+            ? { command: play.confirming.command, ...CONFIRMATIONS[play.confirming.command] }
             : null,
         actFor: actForOf(view, play),
-        rejection: play.rejected === 'lock' ? null : play.rejection,
+        rejection: play.rejected === 'lock' || finalEditor?.rejection ? null : play.rejection,
     }
 }
 
-export function beginManagerCommand(play: ManagerPlay, view: PickBanView, request: ManagerRequest): ManagerSubmission | null {
+function accepts(view: PickBanView, play: ManagerPlay, command: ManagerCommand): boolean {
     const controls = view.affordances.manager
-    if (!controls || play.submitting !== null || !allowed(controls, request.command)) return null
-    if (needsConfirmation(request.command) && play.confirming !== request.command) {
-        return { play: { ...play, confirming: request.command }, request: null }
+    return controls !== null && play.submitting === null && allowed(controls, command)
+}
+
+function submitted(play: ManagerPlay, action: ManagerAction): ManagerSubmission {
+    return {
+        play: { ...play, submitting: action.command, lockingIn: null, confirming: null, rejected: null, rejection: null },
+        request: action.command === 'reopen' ? { command: 'undo' } : action,
     }
-    return { play: { ...play, submitting: request.command, lockingIn: null, confirming: null, rejected: null, rejection: null }, request }
+}
+
+export function beginManagerCommand(play: ManagerPlay, view: PickBanView, action: ManagerAction): ManagerSubmission | null {
+    if (!accepts(view, play, action.command)) return null
+    if (needsConfirmation(action)) return { play: { ...play, confirming: action }, request: null }
+    return submitted(play, action)
 }
 
 export function confirmManagerCommand(play: ManagerPlay, view: PickBanView): ManagerSubmission | null {
-    return play.confirming ? beginManagerCommand(play, view, { command: play.confirming }) : null
+    const { confirming } = play
+    return confirming && accepts(view, play, confirming.command) ? submitted(play, confirming) : null
 }
 
 export function dismissManagerConfirm(play: ManagerPlay): ManagerPlay {
     return { ...play, confirming: null }
 }
 
+export function openFinalEditor(play: ManagerPlay, view: PickBanView): ManagerPlay {
+    return accepts(view, play, 'edit-final') ? { ...play, editing: finalDraftOf(view) } : play
+}
+
+export function changeFinalEditor(play: ManagerPlay, change: (draft: FinalDraft) => FinalDraft): ManagerPlay {
+    return play.editing ? { ...play, editing: change(play.editing) } : play
+}
+
+export function closeFinalEditor(play: ManagerPlay): ManagerPlay {
+    const closed = { ...play, editing: null }
+    return play.rejected === 'edit-final' ? dismissManagerRejection(closed) : closed
+}
+
 export function settleManagerPlay(play: ManagerPlay, view: PickBanView): ManagerPlay {
     const controls = view.affordances.manager
-    const staleConfirm = play.confirming !== null && !(controls && allowed(controls, play.confirming))
+    const applies = (command: ManagerCommand) => controls !== null && allowed(controls, command)
+    const staleConfirm = play.confirming !== null && !applies(play.confirming.command)
     const staleLock = play.lockingIn !== null && play.submitting === null && optimisticLockOf(view, play) === null
-    if (!staleConfirm && !staleLock) return play
-    return { ...play, confirming: staleConfirm ? null : play.confirming, lockingIn: staleLock ? null : play.lockingIn }
+    const staleEditor = play.editing !== null && !applies('edit-final')
+    if (!staleConfirm && !staleLock && !staleEditor) return play
+    return {
+        ...play,
+        confirming: staleConfirm ? null : play.confirming,
+        lockingIn: staleLock ? null : play.lockingIn,
+        editing: staleEditor ? null : play.editing,
+    }
 }
 
 export function selectActForMap(play: ManagerPlay, view: PickBanView, map: string): ManagerPlay {
@@ -343,7 +428,7 @@ export function beginActForLock(play: ManagerPlay, view: PickBanView): ManagerSu
 }
 
 export function managerCommandSucceeded(play: ManagerPlay): ManagerPlay {
-    return { ...play, submitting: null, selection: null }
+    return { ...play, submitting: null, selection: null, editing: play.submitting === 'edit-final' ? null : play.editing }
 }
 
 export function managerCommandRejected(play: ManagerPlay, error: unknown): ManagerPlay {

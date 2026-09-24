@@ -8,7 +8,7 @@ read_when:
   - "reading a match's pick/ban state, sending a pick/ban command, or rendering from the pick/ban view model"
   - "rendering the manager match queue, or changing which stable codes it shows as a blocking reason"
   - "finding a pick/ban session from the bracket, a match card, the event page or the Schedule tab without a direct link"
-keywords: [api.ts, fetch, endpoint, accessToken, avatar, MapThumbnail, favorites, patreon, downloadMapZip, world_records, caps, predictions, draw, odds, schedule, proposal, slot, whose_turn, resolved_window, countdown, nav badge, fetchMyTournaments, SlotPickerModal, SlotGrid, DateTimeField, slotGeneration, proposeMatchSlots, withdrawMatchProposal, acceptMatchProposal, fetchMatchSchedule, ApiError, expected_match_duration_minutes, fetchPickBanConfig, PickBanConfig, PickBanPoolMap, MapsTab, mapsShared, stagesWithPools, tagBadgeVariant, pick/ban, fetchPickBanState, ETag, If-None-Match, 304, X-Server-Now, server_now, clock offset, reveal_at, sendPickBanCommand, sendPickBanManagerCommand, hover, selection_preview, pickBanErrorCode, captain controls, CaptainDock, useCaptainPlay, fetchPickBanQueue, PickBanQueueEntry, PickBanQueueRow, toQueueRow, canOpenLobby, blockingReasonLabel, PickBanQueuePanel, pickBanStatusBadge, statusOfPhase, buildPickBanView, setPickBanStageConfig, setPickBanStagePool, copyPickBanStagePool, pickBanEditor, stage pool, buildMatchLinks, matchStreamPath, createPoller, pick_ban_status, MatchPickBanStatus, pickBanCardAffordance, PickBanCardPill, pickBanMapLabel, MyPickBanSession, pick_ban_session, PickBanLink, PickBanJoinBanner, pickBanEntryPoints, Join banner, scene, sceneDirection, playsEntrance, usePickBanPreload, usePickBanSound, cuesToPlay, pickBanSoundCues, pickBanSoundPlayer, PickBanSoundCueKind, sound=0, manager dock, ManagerDock, useManagerDock, managerDockOf, hand-over, act for team]
+keywords: [api.ts, fetch, endpoint, accessToken, avatar, MapThumbnail, favorites, patreon, downloadMapZip, world_records, caps, predictions, draw, odds, schedule, proposal, slot, whose_turn, resolved_window, countdown, nav badge, fetchMyTournaments, SlotPickerModal, SlotGrid, DateTimeField, slotGeneration, proposeMatchSlots, withdrawMatchProposal, acceptMatchProposal, fetchMatchSchedule, ApiError, expected_match_duration_minutes, fetchPickBanConfig, PickBanConfig, PickBanPoolMap, MapsTab, mapsShared, stagesWithPools, tagBadgeVariant, pick/ban, fetchPickBanState, ETag, If-None-Match, 304, X-Server-Now, server_now, clock offset, reveal_at, sendPickBanCommand, sendPickBanManagerCommand, hover, selection_preview, pickBanErrorCode, captain controls, CaptainDock, useCaptainPlay, fetchPickBanQueue, PickBanQueueEntry, PickBanQueueRow, toQueueRow, canOpenLobby, blockingReasonLabel, PickBanQueuePanel, pickBanStatusBadge, statusOfPhase, buildPickBanView, setPickBanStageConfig, setPickBanStagePool, copyPickBanStagePool, pickBanEditor, stage pool, buildMatchLinks, matchStreamPath, createPoller, pick_ban_status, MatchPickBanStatus, pickBanCardAffordance, PickBanCardPill, pickBanMapLabel, MyPickBanSession, pick_ban_session, PickBanLink, PickBanJoinBanner, pickBanEntryPoints, Join banner, scene, sceneDirection, playsEntrance, usePickBanPreload, usePickBanSound, cuesToPlay, pickBanSoundCues, pickBanSoundPlayer, PickBanSoundCueKind, sound=0, manager dock, ManagerDock, useManagerDock, managerDockOf, hand-over, act for team, Reopen, edit-final, PickBanEditFinalEntry, Edit final]
 provides: "the client-side API contract the launcher consumes + asset URLs + favorites/patreon sync models"
 not_here:
   - "IPC channels (window.conveyor.*) → lib/conveyor/README.md"
@@ -670,7 +670,21 @@ waits for a poll. Every body except Open's carries the expected `version`.
 - The body shapes are typed in `PickBanParticipantCommandBodies` and
   `PickBanManagerCommandBodies`. `hand-over` takes a `side` and a `user_id` (an active
   roster member of that side's team, or `null` to give control back to the captain).
-  `edit-final` is typed loosely until its body is settled.
+- **Reopen** is `undo` sent while the session is `complete`. It removes the last human
+  step, plus the automatic decider after it, and returns the session to `running`,
+  awaiting that step. The map slots the session wrote are cleared back to what they held
+  before, and an edited final list is discarded (`edited` goes back to `false`). It is
+  refused with `results_present` while results exist.
+- **Edit final** (`edit-final`, `complete` only) takes `{ maps, version }`: the whole
+  final list in play order, each entry a `PickBanEditFinalEntry` `{ map, picked_by,
+  decider }`. It is refused with `invalid_request` (422) unless every rule holds:
+  - the list isn't empty
+  - every map is a non-excluded card of `pool`, and none repeats
+  - at most one entry is the decider, and it is the last
+  - the decider has `picked_by: null`, and every other entry has `team_a` or `team_b`
+
+  It is refused with `results_present` (409) while results exist. The returned state has
+  `edited: true`, and the step log in `plan` stays as it was played.
 - `postPickBanCommand` is the untyped transport under both. Screens call the session
   store's `sendCommand` / `sendManagerCommand` (see `agents/state-patterns.md`), which fill
   in the version themselves. They send one command at a time and read the version only once
@@ -914,25 +928,33 @@ only from the view model, through the pick/ban visual core (see
   - `override-sequence` with `{ preset_id }` or `{ from_stage_key }`, in the lobby. The
     picker loads the stages with `fetchPickBanConfig` only when it opens, and offers every
     preset plus each stage that has a block.
-  - `pause` / `resume`, `undo`, and `hand-over` with `{ side, user_id }`, picked from that
-    side's roster in the payload (choosing the captain sends `user_id: null`)
+  - `pause` / `resume`, `undo` (Undo last step, while running or paused), and `hand-over`
+    with `{ side, user_id }`, picked from that side's roster in the payload (choosing the
+    captain sends `user_id: null`)
+  - Reopen, which sends `undo` on a complete session
+  - `edit-final` with `{ maps }`, from the Edit final maps… editor on a complete session.
+    The editor starts from the final summary, offers the non-excluded pool and both
+    teams, and checks the same rules the server does before Save is enabled.
   - `lock` with `{ side, map, plan_index }` to act for the awaited side: select a card, then
     Lock in, with the same optimistic "Locked in" a captain gets, kept until the step
     reveals. A manager never sends `hover`. On the viewer's own turn as captain, the
     captain controls handle it instead. Between turns the act-for strip stays, locked with
     the countdown and who is up next, so nothing below it moves from Start to the last
     lock-in.
-  - `restart` and `cancel`, each only after a confirmation that says what will be lost
+  - `restart` and `cancel`; they, Reopen and an edit-final save each run only after a
+    confirmation that says what will change
   - Copy player link and Copy stream link (`buildMatchLinks`)
 
   The dock disables its buttons while a command is in flight, and shows nothing
   optimistic apart from the act-for lock-in. A refusal shows its specific reason; a
   `version_conflict` asks the manager to check the session and try again, and nothing
   retries by itself. A `hand-over` refused with `invalid_request` says to pick an active
-  roster member of that side's team; every other command keeps the general words for that
-  code. `resultsPresent` shows a warning in any status (Restart and Cancel stay enabled, and
-  the server's refusal is worded if one comes), and a voided session shows its banner in
-  the dock with Open offered again.
+  roster member of that side's team, and an `edit-final` refused with it says the list
+  wasn't accepted; every other command keeps the general words for that code. A refused
+  edit shows inside the editor, which keeps the list. `resultsPresent` shows a warning in
+  any status (Reopen, Restart, Cancel and Edit final stay enabled, and the server's refusal
+  is worded if one comes), and a voided session shows its banner in the dock with Open
+  offered again.
 
 `e2e/pickban-watch.spec.ts` serves the pick/ban read from fixtures with a server clock
 that runs in real time. It checks seven things:
