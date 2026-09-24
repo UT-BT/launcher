@@ -287,10 +287,10 @@ function sampleStageOpacity(page: Page, selector: string, text: string, duration
             const element = Array.from(document.querySelectorAll<HTMLElement>(`section[aria-label="Pick/ban stage"] ${selector}`))
                 .find(candidate => candidate.textContent?.includes(text))
             if (element) seen.push(Number(getComputedStyle(element).opacity))
-            if (performance.now() - startedAt < durationMs) requestAnimationFrame(sample)
+            if (performance.now() - startedAt < durationMs) setTimeout(sample, 4)
             else resolve(seen)
         }
-        requestAnimationFrame(sample)
+        sample()
     }), [selector, text, durationMs] as const)
 }
 
