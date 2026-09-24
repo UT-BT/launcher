@@ -1,4 +1,7 @@
-import { Fragment, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import {
+    Fragment, Suspense, lazy, useCallback, useEffect, useMemo, useState,
+    type Dispatch, type ReactNode, type SetStateAction,
+} from 'react'
 import { cn } from '@/lib/utils'
 import { useNavState } from '@/app/components/navigation/useNavState'
 import { ErrorBanner } from '@/app/components/pages/teams/teamsShared'
@@ -15,6 +18,9 @@ import { BracketPanel } from './manage/BracketPanel'
 import { PredictionsManagePanel } from './manage/PredictionsManagePanel'
 import { ScheduleOversightPanel } from './manage/ScheduleOversightPanel'
 import { SchedulingWindowsPanel } from './manage/SchedulingWindowsPanel'
+import type { PickBanDrafts } from './manage/pickban/pickBanEditor'
+
+const PickBanPanel = lazy(() => import('./manage/pickban/PickBanPanel').then(m => ({ default: m.PickBanPanel })))
 
 interface ManagePanelProps {
     accessToken: string
@@ -27,7 +33,9 @@ interface ManagePanelProps {
     onMapSelect?: (mapName: string) => void
     onRefresh: () => void
     formatDraft: EventFormatSpec | null
-    onFormatDraftChange: (draft: EventFormatSpec | null) => void
+    onFormatDraftChange: Dispatch<SetStateAction<EventFormatSpec | null>>
+    pickBanDrafts: PickBanDrafts
+    onPickBanDraftsChange: Dispatch<SetStateAction<PickBanDrafts>>
 }
 
 type ManageTabContext = Omit<ManagePanelProps, 'canManageEvent'> & {
@@ -98,6 +106,24 @@ const MANAGE_TABS: ManageTab[] = [
                 onBracketChange={context.onBracketChange}
                 onMapSelect={context.onMapSelect}
             />
+        ),
+    },
+    {
+        id: 'pickban',
+        label: 'Pick/Ban',
+        hasUnsavedChanges: context => Object.keys(context.pickBanDrafts).length > 0,
+        render: context => (
+            <Suspense fallback={<p className="text-xs text-muted-foreground">Loading the pick/ban setup…</p>}>
+                <PickBanPanel
+                    accessToken={context.accessToken}
+                    slug={context.slug}
+                    drafts={context.pickBanDrafts}
+                    onDraftsChange={context.onPickBanDraftsChange}
+                    onFormatDraftChange={context.onFormatDraftChange}
+                    onBracketChange={context.onBracketChange}
+                    onMapSelect={context.onMapSelect}
+                />
+            </Suspense>
         ),
     },
     {

@@ -4581,6 +4581,7 @@ export interface EventStageSpec {
     config: EventStageConfig
     advancement: EventAdvancementRule[]
     match_defaults: EventMatchDefaults | null
+    pick_ban?: PickBanBlock | null
 }
 
 export interface EventFormatSpec {

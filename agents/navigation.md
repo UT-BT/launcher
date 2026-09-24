@@ -124,7 +124,8 @@ unmounts on a tab change, its reset races the parent's own update, and the flag
 sticks. `EventDetailPage` instead owns the format builder's draft outright and
 `FormatPanel` is controlled by it. The draft IS the unsaved state, so `dirty` is
 just `draft !== null` — there is no second value to keep in step, and switching
-tabs preserves the edit rather than destroying it.
+tabs preserves the edit rather than destroying it. Manage → Pick/Ban follows the same
+pattern with `pickBanDrafts`, one draft per stage key, dirty whenever any key exists.
 
 ## URL sync (web build)
 
