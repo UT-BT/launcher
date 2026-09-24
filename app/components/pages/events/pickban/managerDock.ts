@@ -82,6 +82,7 @@ export interface ManagerHandOverTeam {
 }
 
 export interface ManagerSequenceChoice {
+    key: string
     label: string
     body: BodyOf<'override-sequence'>
 }
@@ -213,10 +214,10 @@ function handOverTeamOf({ side, ab, name, members }: PickBanTeamPanel): ManagerH
 
 export function sequenceChoices(stages: PickBanStageConfig[]): ManagerSequenceChoice[] {
     return [
-        ...PICK_BAN_PRESET_IDS.map((id) => ({ label: PICK_BAN_PRESET_LABELS[id], body: { preset_id: id } })),
+        ...PICK_BAN_PRESET_IDS.map((id) => ({ key: `preset:${id}`, label: PICK_BAN_PRESET_LABELS[id], body: { preset_id: id } })),
         ...stages
             .filter((stage) => stage.pick_ban)
-            .map((stage) => ({ label: `${stage.name} (Bo${stage.best_of})`, body: { from_stage_key: stage.key } })),
+            .map((stage) => ({ key: `stage:${stage.key}`, label: `${stage.name} (Bo${stage.best_of})`, body: { from_stage_key: stage.key } })),
     ]
 }
 

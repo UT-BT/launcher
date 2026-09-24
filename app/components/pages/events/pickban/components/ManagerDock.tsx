@@ -185,7 +185,7 @@ function SequencePicker({ slug, accessToken, onClose, onApply }: {
                     style={{ colorScheme: 'dark' }}
                     className="h-11 rounded-lg border border-hairline/10 bg-card/50 px-3 text-sm text-foreground focus:border-accent-500/50 focus:outline-none"
                 >
-                    {choices.map(({ label }, index) => <option key={label} value={index}>{label}</option>)}
+                    {choices.map(({ key, label }, index) => <option key={key} value={index}>{label}</option>)}
                 </select>
                 {stages === null && 'Loading the other stages…'}
             </label>

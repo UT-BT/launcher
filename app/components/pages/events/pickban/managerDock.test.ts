@@ -278,11 +278,17 @@ describe('lobby setup', () => {
         expect(beginManagerCommand(IDLE_MANAGER_PLAY, running, override)).toBeNull()
 
         expect(sequenceChoices([stageConfig('groups', 'Groups', 4, true), stageConfig('final', 'Final', 5, false)])).toEqual([
-            { label: 'Bo4 · four picks', body: { preset_id: 'bo4_picks' } },
-            { label: 'Bo3 · bans, picks, decider', body: { preset_id: 'bo3_ban_pick' } },
-            { label: 'Bo5 · bans, picks, bans, decider', body: { preset_id: 'bo5_ban_pick' } },
-            { label: 'Groups (Bo4)', body: { from_stage_key: 'groups' } },
+            { key: 'preset:bo4_picks', label: 'Bo4 · four picks', body: { preset_id: 'bo4_picks' } },
+            { key: 'preset:bo3_ban_pick', label: 'Bo3 · bans, picks, decider', body: { preset_id: 'bo3_ban_pick' } },
+            { key: 'preset:bo5_ban_pick', label: 'Bo5 · bans, picks, bans, decider', body: { preset_id: 'bo5_ban_pick' } },
+            { key: 'stage:groups', label: 'Groups (Bo4)', body: { from_stage_key: 'groups' } },
         ])
+    })
+
+    it('keys each override option uniquely, even when two stages share a name and best-of', () => {
+        const keys = sequenceChoices([stageConfig('group-a', 'Groups', 4, true), stageConfig('group-b', 'Groups', 4, true)]).map((choice) => choice.key)
+
+        expect(new Set(keys).size).toBe(keys.length)
     })
 })
 

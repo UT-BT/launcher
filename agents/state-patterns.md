@@ -512,7 +512,8 @@ confirmation, and the last refusal with the command it answered.
   `dismissManagerRejection` clears the refusal. A refusal without a stable code falls back
   to the captain's `unwordedRejection` (the unreachable-network words, else the error's own
   message). `sequenceChoices(stages)` lists the override
-  options: every preset, then each stage that has a block.
+  options: every preset, then each stage that has a block, each keyed by its preset id or
+  stage key so two stages with the same name and best-of never collide.
 - `settleManagerPlay(play, view)` drops a confirmation the session no longer allows, and an
   act-for lock-in whose step is awaited again (an undo, by anyone). Any later manager
   command drops the lock-in too. So neither comes back later, and a step the team locks
