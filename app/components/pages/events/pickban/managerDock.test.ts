@@ -1,16 +1,20 @@
 import { describe, expect, it } from 'vitest'
 import { ApiError, PICK_BAN_ERROR_CODES, type PickBanStageConfig, type PickBanState } from '@/app/utils/api'
 import { buildPickBanView, type PickBanView } from './pickBanView'
+import { moveFinalEntry } from './editFinal'
 import {
     IDLE_MANAGER_PLAY,
     beginActForLock,
     beginManagerCommand,
+    changeFinalEditor,
+    closeFinalEditor,
     confirmManagerCommand,
     dismissManagerConfirm,
     dismissManagerRejection,
     managerCommandRejected,
     managerCommandSucceeded,
     managerDockOf,
+    openFinalEditor,
     selectActForMap,
     sequenceChoices,
     settleManagerPlay,
@@ -133,7 +137,7 @@ describe('running a whole session', () => {
         expect(done.summary.map((entry) => entry.map)).toEqual([CHARLIE, DELTA, GOLF])
         expect(managerDockOf(done, play)).toMatchObject({
             actFor: null,
-            buttons: [{ command: 'restart' }, { command: 'cancel' }],
+            buttons: [{ command: 'reopen' }, { command: 'restart' }, { command: 'cancel' }],
         })
     })
 })
@@ -219,13 +223,13 @@ describe('warnings', () => {
         expect(managerDockOf(viewAt(asManager(pickBanState()), T0), IDLE_MANAGER_PLAY)?.resultsWarning).toBeNull()
     })
 
-    it('warns on a complete session with results too, leaving Restart and Cancel to the server’s refusal', () => {
+    it('warns on a complete session with results too, leaving Reopen, Restart and Cancel to the server’s refusal', () => {
         const done = (resultsPresent: boolean) =>
             managerDockOf(viewAt(asManager({ ...completedRun(), results_present: resultsPresent }), T0 + 3_600_000), IDLE_MANAGER_PLAY)
 
         expect(done(true)).toMatchObject({
             resultsWarning: RESULTS_WARNING,
-            buttons: [{ command: 'restart', disabled: false }, { command: 'cancel', disabled: false }],
+            buttons: [{ command: 'reopen', disabled: false }, { command: 'restart', disabled: false }, { command: 'cancel', disabled: false }],
         })
         expect(done(false)?.resultsWarning).toBeNull()
     })
@@ -526,6 +530,7 @@ describe('restarting and cancelling', () => {
             title: 'Restart the pick/ban?',
             message: 'Every ban and pick so far is undone and both teams go back to the lobby. Both Ready marks clear, and any maps this pick/ban wrote into the match are removed.',
             confirmLabel: 'Restart',
+            dismissLabel: 'Keep it',
         })
 
         const confirmed = confirmManagerCommand(asked!.play, view)
@@ -560,5 +565,165 @@ describe('restarting and cancelling', () => {
         const settled = settleManagerPlay(asked, lobby)
         expect(managerDockOf(running(), settled)?.confirm).toBeNull()
         expect(settleManagerPlay(asked, running())).toBe(asked)
+    })
+})
+
+describe('reopening', () => {
+    const AFTER = T0 + 3_600_000
+    const complete = () => viewAt(asManager(completedRun()), AFTER)
+
+    it('offers Reopen on a complete session and sends undo once confirmed, saying what happens first', () => {
+        const view = complete()
+        expect(managerDockOf(view, IDLE_MANAGER_PLAY)?.buttons).toContainEqual({ command: 'reopen', label: 'Reopen', disabled: false })
+
+        const asked = beginManagerCommand(IDLE_MANAGER_PLAY, view, { command: 'reopen' })
+        expect(asked?.request).toBeNull()
+        expect(managerDockOf(view, asked!.play)?.confirm).toEqual({
+            command: 'reopen',
+            title: 'Reopen the pick/ban?',
+            message: 'The last ban or pick is undone, with the decider after it if there is one, and the pick/ban waits on that step again. The maps it wrote into the match are removed, and any edits to the final maps are discarded.',
+            confirmLabel: 'Reopen',
+            dismissLabel: 'Keep it',
+        })
+
+        const confirmed = confirmManagerCommand(asked!.play, view)
+        expect(confirmed?.request).toEqual({ command: 'undo' })
+        expect(managerDockOf(view, confirmed!.play)).toMatchObject({ busy: true, confirm: null })
+    })
+
+    it('leaves a running or paused session to Undo, which sends at once', () => {
+        const firstBan = locked(readAt(started(), AWAITING_A), BRAVO, AWAITING_A + 100)
+        const at = unlockAt(firstBan) + 1_000
+        const running = viewAt(asManager(readAt(firstBan, at)), at)
+        const onHold = viewAt(asManager(paused(firstBan, at)), at + 5_000)
+
+        for (const view of [running, onHold]) {
+            expect(managerDockOf(view, IDLE_MANAGER_PLAY)?.buttons.map((button) => button.command)).not.toContain('reopen')
+            expect(beginManagerCommand(IDLE_MANAGER_PLAY, view, { command: 'reopen' })).toBeNull()
+            expect(beginManagerCommand(IDLE_MANAGER_PLAY, view, { command: 'undo' })?.request).toEqual({ command: 'undo' })
+        }
+        expect(managerDockOf(complete(), IDLE_MANAGER_PLAY)?.buttons.map((button) => button.command)).not.toContain('undo')
+        expect(beginManagerCommand(IDLE_MANAGER_PLAY, complete(), { command: 'undo' })).toBeNull()
+    })
+
+    it('drops a pending Reopen once the session is running again, rather than undoing another step', () => {
+        const asked = beginManagerCommand(IDLE_MANAGER_PLAY, complete(), { command: 'reopen' })!.play
+        const reopenedElsewhere = undone(asManager(completedRun()), AFTER)
+        const running = viewAt(reopenedElsewhere, unlockAt(reopenedElsewhere) + 1_000)
+
+        expect(managerDockOf(running, asked)?.confirm).toBeNull()
+        expect(confirmManagerCommand(asked, running)).toBeNull()
+        expect(managerDockOf(complete(), settleManagerPlay(asked, running))?.confirm).toBeNull()
+    })
+})
+
+describe('editing the final maps', () => {
+    const AFTER = T0 + 3_600_000
+    const complete = () => viewAt(asManager(completedRun()), AFTER)
+    const edited: Extract<ManagerRequest, { command: 'edit-final' }> = {
+        command: 'edit-final',
+        body: {
+            maps: [
+                { map: DELTA, picked_by: 'team_a', decider: false },
+                { map: CHARLIE, picked_by: 'team_b', decider: false },
+                { map: GOLF, picked_by: null, decider: true },
+            ],
+        },
+    }
+
+    it('is offered on a complete session only', () => {
+        expect(managerDockOf(complete(), IDLE_MANAGER_PLAY)?.editFinal).toBe(true)
+        expect(managerDockOf(viewAt(asManager(pickBanState()), T0), IDLE_MANAGER_PLAY)?.editFinal).toBe(false)
+        expect(managerDockOf(viewAt(asManager(readAt(started(), AWAITING_A)), AWAITING_A), IDLE_MANAGER_PLAY)?.editFinal).toBe(false)
+        expect(beginManagerCommand(IDLE_MANAGER_PLAY, viewAt(asManager(pickBanState()), T0), edited)).toBeNull()
+    })
+
+    it('asks before saving, saying what changes, then sends the list as it was confirmed', () => {
+        const view = complete()
+
+        const asked = beginManagerCommand(IDLE_MANAGER_PLAY, view, edited)
+        expect(asked?.request).toBeNull()
+        expect(managerDockOf(view, asked!.play)?.confirm).toEqual({
+            command: 'edit-final',
+            title: 'Save the edited final maps?',
+            message: 'The match’s maps are rewritten to your list, in its order, with the picks and decider you set. The final summary is marked Edited, and the timeline keeps the bans and picks as they were played.',
+            confirmLabel: 'Save final maps',
+            dismissLabel: 'Keep editing',
+        })
+
+        const confirmed = confirmManagerCommand(asked!.play, view)
+        expect(confirmed?.request).toEqual(edited)
+        expect(managerDockOf(view, confirmed!.play)).toMatchObject({ busy: true, confirm: null })
+    })
+
+    it('opens an editor on the final summary, saves the edited list through the confirmation and closes once it is in', () => {
+        const view = complete()
+        const opened = openFinalEditor(IDLE_MANAGER_PLAY, view)
+        expect(managerDockOf(view, opened)?.finalEditor?.rows.map((row) => row.map)).toEqual([CHARLIE, DELTA, GOLF])
+
+        const reordered = changeFinalEditor(opened, (draft) => moveFinalEntry(draft, 0, 1))
+        const editor = managerDockOf(view, reordered)!.finalEditor!
+        expect(editor).toMatchObject({ saving: false, rejection: null })
+        expect(editor.body).toEqual(edited.body)
+
+        const asked = beginManagerCommand(reordered, view, { command: 'edit-final', body: editor.body! })!
+        expect(managerDockOf(view, dismissManagerConfirm(asked.play))?.finalEditor?.body).toEqual(edited.body)
+
+        const saving = confirmManagerCommand(asked.play, view)!
+        expect(saving.request).toEqual(edited)
+        expect(managerDockOf(view, saving.play)?.finalEditor).toMatchObject({ saving: true })
+
+        const saved = asManager({ ...completedRun(), edited: true })
+        expect(managerDockOf(viewAt(saved, AFTER), managerCommandSucceeded(saving.play))?.finalEditor).toBeNull()
+    })
+
+    it('opens only while Edit final applies, and never while a command is in flight', () => {
+        const running = viewAt(asManager(readAt(started(), AWAITING_A)), AWAITING_A)
+        expect(openFinalEditor(IDLE_MANAGER_PLAY, running)).toBe(IDLE_MANAGER_PLAY)
+
+        const reopening = beginManagerCommand(IDLE_MANAGER_PLAY, complete(), { command: 'reopen' })!
+        const busy = confirmManagerCommand(reopening.play, complete())!.play
+        expect(openFinalEditor(busy, complete())).toBe(busy)
+    })
+
+    it('keeps the draft and shows a refusal inside the editor, and closing it drops both', () => {
+        const view = complete()
+        const opened = changeFinalEditor(openFinalEditor(IDLE_MANAGER_PLAY, view), (draft) => moveFinalEntry(draft, 0, 1))
+        const body = managerDockOf(view, opened)!.finalEditor!.body!
+        const saving = confirmManagerCommand(beginManagerCommand(opened, view, { command: 'edit-final', body })!.play, view)!.play
+
+        const refused = managerCommandRejected(saving, new ApiError(422, 'The server’s own words', 'Request failed', 'invalid_request'))
+        expect(managerDockOf(view, refused)).toMatchObject({
+            busy: false,
+            rejection: null,
+            finalEditor: { saving: false, rejection: 'The server didn’t accept that final list. Refresh the page, check the maps and try again.' },
+        })
+        expect(managerDockOf(view, refused)?.finalEditor?.rows.map((row) => row.map)).toEqual([DELTA, CHARLIE, GOLF])
+
+        const closed = closeFinalEditor(refused)
+        expect(managerDockOf(view, closed)).toMatchObject({ finalEditor: null, rejection: null })
+    })
+
+    it('closes the editor and drops a pending save once the session is no longer complete', () => {
+        const view = complete()
+        const opened = openFinalEditor(IDLE_MANAGER_PLAY, view)
+        const asked = beginManagerCommand(opened, view, { command: 'edit-final', body: managerDockOf(view, opened)!.finalEditor!.body! })!.play
+        const reopenedElsewhere = undone(asManager(completedRun()), AFTER)
+        const running = viewAt(reopenedElsewhere, unlockAt(reopenedElsewhere) + 1_000)
+
+        expect(managerDockOf(running, asked)).toMatchObject({ finalEditor: null, confirm: null })
+        expect(confirmManagerCommand(asked, running)).toBeNull()
+
+        const settled = settleManagerPlay(asked, running)
+        expect(managerDockOf(view, settled)).toMatchObject({ finalEditor: null, confirm: null })
+        expect(settleManagerPlay(opened, view)).toBe(opened)
+    })
+
+    it('words a refused Reopen or edit that comes from results already entered', () => {
+        const withResults = viewAt(asManager({ ...completedRun(), results_present: true }), AFTER)
+        const resultsPresent = new ApiError(409, 'The server’s own words', 'Request failed', 'results_present')
+        const reopening = confirmManagerCommand(beginManagerCommand(IDLE_MANAGER_PLAY, withResults, { command: 'reopen' })!.play, withResults)!.play
+
+        expect(managerDockOf(withResults, managerCommandRejected(reopening, resultsPresent))?.rejection).toBe('Results already entered.')
     })
 })

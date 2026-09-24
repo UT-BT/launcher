@@ -5873,6 +5873,12 @@ export interface PickBanParticipantCommandBodies {
 
 export type PickBanOverrideSequenceBody = ({ preset_id: PickBanPresetId } | { from_stage_key: string }) & { version: number }
 
+export interface PickBanEditFinalEntry {
+    map: string
+    picked_by: PickBanSide | null
+    decider: boolean
+}
+
 export interface PickBanManagerCommandBodies {
     open: undefined
     start: { version: number }
@@ -5886,7 +5892,7 @@ export interface PickBanManagerCommandBodies {
     'override-sequence': PickBanOverrideSequenceBody
     lock: { side: PickBanSide; map: string; plan_index: number; version: number }
     'hand-over': { side: PickBanSide; user_id: string | null; version: number }
-    'edit-final': { version: number; [field: string]: unknown }
+    'edit-final': { maps: PickBanEditFinalEntry[]; version: number }
 }
 
 export type PickBanParticipantCommand = keyof PickBanParticipantCommandBodies
