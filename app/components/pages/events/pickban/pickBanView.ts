@@ -2,6 +2,7 @@ import type {
     PickBanActor,
     PickBanBlockingReason,
     PickBanExclusion,
+    PickBanFinalMap,
     PickBanMember,
     PickBanPacing,
     PickBanPhase,
@@ -93,7 +94,7 @@ export interface PickBanTurn {
 export interface PickBanSummaryEntry {
     key: number
     mapNumber: number
-    stepIndex: number
+    stepIndex: number | null
     map: string | null
     screenshotVersion: string | null
     side: PickBanSide | null
@@ -291,9 +292,17 @@ function exclusionReasonOf(state: PickBanState, exclusion: PickBanExclusion | nu
     return `${exclusion.tag} maps are excluded because ${triggers} (${exclusion.min_pre_cup_seed} or higher).`
 }
 
+function actorLabelForActor(state: PickBanState, actor: PickBanActor | null, side: PickBanSide | null): string {
+    if (actor === null) return 'Decider'
+    return teamNameOf(state, side) ?? `Team ${actor}`
+}
+
 function actorLabelOf(state: PickBanState, step: PickBanPlanStep): string {
-    if (step.actor === null) return 'Decider'
-    return teamNameOf(state, step.side) ?? `Team ${step.actor}`
+    return actorLabelForActor(state, step.actor, step.side)
+}
+
+function abOfSide(state: PickBanState, side: PickBanSide | null): PickBanActor | null {
+    return side === null ? null : side === state.a_side ? 'A' : 'B'
 }
 
 function actionLabelOf(state: PickBanState, step: PickBanPlanStep): string {
@@ -486,8 +495,28 @@ function cardsOf(moment: Moment, awaitedStep: PickBanPlanStep | null, canChoose:
     })
 }
 
+function finalSummaryOf(state: PickBanState, finalMaps: PickBanFinalMap[]): PickBanSummaryEntry[] {
+    return [...finalMaps]
+        .sort((a, b) => a.map_number - b.map_number)
+        .map((entry) => {
+            const ab = abOfSide(state, entry.side)
+            return {
+                key: entry.map_number,
+                mapNumber: entry.map_number,
+                stepIndex: state.plan.find((step) => step.map_number === entry.map_number)?.index ?? null,
+                map: entry.map,
+                screenshotVersion: screenshotVersionOf(state, entry.map),
+                side: entry.side,
+                ab,
+                actorLabel: actorLabelForActor(state, ab, entry.side),
+                decider: entry.decider,
+            }
+        })
+}
+
 function summaryOf(moment: Moment): PickBanSummaryEntry[] {
     const { state, clock } = moment
+    if (state.edited && state.final_maps !== null) return finalSummaryOf(state, state.final_maps)
     return moment.steps
         .filter((step): step is PickBanPlanStep & { map_number: number } => step.map_number !== null)
         .sort((a, b) => a.map_number - b.map_number)

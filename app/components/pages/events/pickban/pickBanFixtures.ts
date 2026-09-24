@@ -1,5 +1,6 @@
 import type {
     PickBanActor,
+    PickBanFinalMap,
     PickBanMember,
     PickBanPlanStep,
     PickBanPoolCard,
@@ -116,6 +117,10 @@ export function planOf(rows: PlanRow[]): PickBanPlanStep[] {
     }))
 }
 
+export function finalMapOf(mapNumber: number, map: string, side: PickBanSide | null, decider = false): PickBanFinalMap {
+    return { map_number: mapNumber, map, side, decider }
+}
+
 export function pickBanState(overrides: Partial<PickBanState> = {}): PickBanState {
     return {
         id: 'session-1',
@@ -171,6 +176,7 @@ export function pickBanState(overrides: Partial<PickBanState> = {}): PickBanStat
         completed_at: null,
         ended_at: null,
         edited: false,
+        final_maps: null,
         end_reason: null,
         warnings: [],
         results_present: false,

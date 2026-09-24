@@ -645,6 +645,11 @@ re-derives it between polls from the absolute timestamps: `intro_ends_at`,
 - **Results.** `results_present` is `true` whenever the match has results entered, in
   every status (a complete session included). Start, Restart, Reopen, Edit final and a
   Cancel that would clear written map slots are refused while it holds.
+- **The final map list.** `final_maps` is `null` unless the session is `complete`; then it is
+  the ordered (play order) list of `{ map_number, map, side, decider }` that actually played
+  — the manager-edited list when `edited` is `true`, otherwise the maps as the steps decided
+  them. `side` is `null` for the decider. After an Edit final, `plan` still shows what was
+  originally locked in; only `final_maps` carries the corrected list.
 - **Gate controls on `capabilities`, never on `viewer.roster_captain`.**
   `capabilities.acting_side` is the side the viewer acts for as captain or acting captain.
   A captain replaced by an acting captain has `acting_side: null`.
@@ -789,7 +794,11 @@ pure and tested without a DOM. It returns:
 - `skippedBans`: the payload's `skipped_bans`, one entry per dropped ban in the same order,
   with `beforeIndex` (its `before_index`) so a timeline can draw it in place
 - `summary`, in play order (`map_number`), with each map's `actorLabel` and a slot reserved
-  for every map from the start
+  for every map from the start. Once a manager has edited the final list (`edited` is `true`
+  and `final_maps` isn't `null`), the summary is built from `final_maps` instead of the plan
+  steps, shown all at once with no reveal gating — `side`/`ab` come from comparing each
+  entry's side to `a_side`, and `actorLabel`/`decider` read the same as ever. Otherwise it is
+  exactly the plan-derived summary described above.
 - `teams.left` (A) and `teams.right` (B), falling back to `team_a` on the left while A is
   undetermined
 - `banners`: voided, cancelled, paused, skipped bans and warnings
