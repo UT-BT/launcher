@@ -7,7 +7,6 @@ import { fetchPickBanConfig, type PickBanSide, type PickBanStageConfig } from '@
 import {
     sequenceChoices,
     type ManagerButton,
-    type ManagerDock as ManagerDockModel,
     type ManagerHandOverTeam,
     type ManagerSequenceChoice,
 } from '../managerDock'
@@ -17,7 +16,6 @@ import { PickBanBannerNote } from './PickBanBannerNote'
 import { PICK_BAN_TONES, teamTone } from './pickBanTone'
 
 interface ManagerDockProps {
-    dock: ManagerDockModel
     manager: UseManagerDockResult
     slug: string
     accessToken: string | undefined
@@ -42,8 +40,10 @@ const TONE_OF: Partial<Record<ManagerButton['command'], keyof typeof TONES>> = {
     cancel: 'red',
 }
 
-export function ManagerDock({ dock, manager, slug, accessToken, children }: ManagerDockProps) {
+export function ManagerDock({ manager, slug, accessToken, children }: ManagerDockProps) {
     const [picker, setPicker] = useState<Picker | null>(null)
+    const { dock } = manager
+    if (!dock) return null
     const { actFor, busy } = dock
     if (picker !== null && !(picker === 'sequence' ? dock.overrideSequence : dock.handOver)) setPicker(null)
 

@@ -893,7 +893,8 @@ only from the view model, through the pick/ban visual core (see
 - **Manager dock.** For a viewer with `capabilities.can_manage`, the page layers
   `useManagerDock` over the captain-played view (see `agents/state-patterns.md`) and renders
   a `ManagerDock` below the pool, so nothing it shows or hides moves the stage, the
-  timeline or the grid. It is absent for captains, teammates and spectators, and the
+  timeline or the grid. `ManagerDock.tsx` is `lazy()` behind `manager.dock` with a `null`
+  fallback, so only managers fetch it; the model and the hook stay static. It is absent for captains, teammates and spectators, and the
   stream view never renders it. Each control shows only while `affordances.manager`
   allows it, and calls `sendManagerCommand`, which adds the expected `version` and adopts
   the returned state:
