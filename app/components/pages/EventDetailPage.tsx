@@ -187,6 +187,11 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
         }
     }, [accessToken, eventSlug])
 
+    const refreshMyQuietly = useCallback(() => {
+        if (!accessToken || document.visibilityState === 'hidden') return
+        fetchMyEventStatus(accessToken, eventSlug).then(setMy, () => undefined)
+    }, [accessToken, eventSlug])
+
     const canSeeSchedule = scheduleTabVisible(!!my?.team, !!my?.can_manage_bracket || !!my?.can_manage)
 
     const loadSchedule = useCallback(async (enabled: boolean) => {
@@ -208,9 +213,9 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
     useEffect(() => { void load() }, [load])
     useEffect(() => { void loadMy() }, [loadMy])
     useEffect(() => {
-        const timer = setInterval(() => { void loadMy() }, PICK_BAN_ME_REFRESH_MS)
+        const timer = setInterval(refreshMyQuietly, PICK_BAN_ME_REFRESH_MS)
         return () => clearInterval(timer)
-    }, [loadMy])
+    }, [refreshMyQuietly])
     useEffect(() => { void loadBracket() }, [loadBracket])
     useEffect(() => { void loadPredictions(!!event?.predictions_enabled) }, [loadPredictions, event?.predictions_enabled])
     useEffect(() => { void loadSchedule(canSeeSchedule) }, [loadSchedule, canSeeSchedule])
