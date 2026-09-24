@@ -2,8 +2,10 @@ import { useEffect } from 'react'
 import { CalendarClock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/app/components/ui/button'
+import { useNavigation } from '@/app/components/navigation/NavigationContext'
+import { NavLink } from '@/app/components/navigation/NavLink'
 import { useDisplayTimezone } from '@/app/utils/timezone'
-import type { ScheduleEntry } from '@/app/utils/api'
+import type { MyPickBanSession, ScheduleEntry } from '@/app/utils/api'
 import { teamLabel } from '../bracket/bracketShared'
 import { TeamName } from '../TeamRoster'
 import { formatSlotTime, proposerName, schedulabilityReason, whoseTurnLabel } from './scheduleShared'
@@ -16,9 +18,11 @@ interface ScheduleTabProps {
     loaded: boolean
     onRefresh: () => void
     onOpenPicker: (matchId: string) => void
+    eventSlug: string
+    pickBanSession?: MyPickBanSession | null
 }
 
-export function ScheduleTab({ myTeamId, entries, loaded, onRefresh, onOpenPicker }: ScheduleTabProps) {
+export function ScheduleTab({ myTeamId, entries, loaded, onRefresh, onOpenPicker, eventSlug, pickBanSession = null }: ScheduleTabProps) {
     useEffect(() => {
         onRefresh()
         const timer = setInterval(onRefresh, REFRESH_MS)
@@ -51,25 +55,29 @@ export function ScheduleTab({ myTeamId, entries, loaded, onRefresh, onOpenPicker
     return (
         <div className="flex flex-col gap-2">
             {entries.map(entry => (
-                <ScheduleMatchCard key={entry.match.id} entry={entry} myTeamId={myTeamId} onOpenPicker={onOpenPicker} />
+                <ScheduleMatchCard key={entry.match.id} entry={entry} myTeamId={myTeamId} onOpenPicker={onOpenPicker}
+                    eventSlug={eventSlug} pickBanOpen={pickBanSession?.match_id === entry.match.id} />
             ))}
         </div>
     )
 }
 
-function ScheduleMatchCard({ entry, myTeamId, onOpenPicker }: {
+function ScheduleMatchCard({ entry, myTeamId, onOpenPicker, eventSlug, pickBanOpen }: {
     entry: ScheduleEntry
     myTeamId: string | null
     onOpenPicker: (matchId: string) => void
+    eventSlug: string
+    pickBanOpen: boolean
 }) {
     const timezone = useDisplayTimezone()
+    const { navigate } = useNavigation()
     const { match } = entry
     const myTurn = !!entry.proposal && !!myTeamId && entry.whose_turn === myTeamId
 
     return (
         <div className={cn(
             'rounded-lg border bg-card/40 p-3 flex flex-col gap-2',
-            myTurn ? 'border-accent-500/40' : 'border-white/10',
+            pickBanOpen ? 'border-emerald-500/40' : myTurn ? 'border-accent-500/40' : 'border-white/10',
         )}>
             <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-1.5 min-w-0 text-sm font-medium text-white">
@@ -85,6 +93,21 @@ function ScheduleMatchCard({ entry, myTeamId, onOpenPicker }: {
                     {match.round_label || `Round ${match.round_no}`}
                 </span>
             </div>
+
+            {pickBanOpen && (
+                <NavLink
+                    view="match-pickban"
+                    params={{ eventSlug, matchId: match.id }}
+                    onActivate={() => navigate('match-pickban', { eventSlug, matchId: match.id })}
+                    className="flex items-center gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1.5 text-xs cursor-pointer hover:bg-emerald-500/15 transition-colors"
+                >
+                    <span className="relative flex size-1.5 shrink-0">
+                        <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 animate-ping" />
+                        <span className="relative inline-flex size-1.5 rounded-full bg-emerald-400" />
+                    </span>
+                    <span className="text-foreground font-medium">Pick/Ban open – Join</span>
+                </NavLink>
+            )}
 
             {!entry.schedulable ? (
                 <p className="text-xs text-muted-foreground">{schedulabilityReason(entry.reason)}</p>

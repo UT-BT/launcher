@@ -90,11 +90,13 @@ function ordinal(value: number): string {
     return `${value}${suffix}`
 }
 
-export function SwissStageView({ stage, now, onMapSelect, onScheduleMatch }: {
+export function SwissStageView({ stage, now, onMapSelect, onScheduleMatch, eventSlug, myTeamId }: {
     stage: EventBracketStage
     now: number
     onMapSelect?: (mapName: string) => void
     onScheduleMatch?: (matchId: string) => void
+    eventSlug?: string
+    myTeamId?: string | null
 }) {
     const config = stage.config as EventSwissConfig | null
     const columns = useMemo(() => buildColumns(stage, config), [stage, config])
@@ -149,7 +151,7 @@ export function SwissStageView({ stage, now, onMapSelect, onScheduleMatch }: {
                         </div>
                         <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
                             {inRound.map(match => (
-                                <MatchCard key={match.id} match={match} now={now} onMapSelect={onMapSelect}
+                                <MatchCard key={match.id} match={match} now={now} onMapSelect={onMapSelect} eventSlug={eventSlug} myTeamId={myTeamId}
                                     onClick={onScheduleMatch && schedulerEligible(match) ? () => onScheduleMatch(match.id) : undefined} />
                             ))}
                         </div>

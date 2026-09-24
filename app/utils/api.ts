@@ -4021,6 +4021,11 @@ export interface EventVolunteer {
     note: string | null
 }
 
+export interface MyPickBanSession {
+    match_id: string
+    status: 'lobby' | 'running' | 'paused'
+}
+
 export interface MyEventStatus {
     team: EventTeam | null
     invitations: EventTeam[]
@@ -4028,6 +4033,7 @@ export interface MyEventStatus {
     volunteer: EventVolunteer | null
     can_manage?: boolean
     can_manage_bracket?: boolean
+    pick_ban_session: MyPickBanSession | null
 }
 
 export interface EventSignupFields {
@@ -4480,6 +4486,8 @@ export type EventEntrantStatus = 'active' | 'qualified' | 'eliminated'
 export type EventMatchStatus = 'pending' | 'scheduled' | 'live' | 'complete' | 'bye' | 'forfeit' | 'cancelled'
 export type EventMapKind = 'normal' | 'decider'
 export type EventSide = 'a' | 'b'
+/** The match's *current* pick/ban session only — a cancelled or voided one, or none at all, both read `'none'`. */
+export type MatchPickBanStatus = 'none' | 'lobby' | 'running' | 'paused' | 'complete'
 export type EventMatchMode = 'first_to' | 'all_maps'
 export type EventTiebreaker =
     | 'points' | 'map_diff' | 'map_win_pct' | 'head_to_head' | 'wins' | 'losses' | 'caps_for' | 'caps_diff'
@@ -4673,6 +4681,7 @@ export interface EventMatch {
     winner_to_slot: EventSide | null
     loser_to_match_id: string | null
     loser_to_slot: EventSide | null
+    pick_ban_status: MatchPickBanStatus
     maps?: EventMatchMap[]
 }
 
