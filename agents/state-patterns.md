@@ -8,13 +8,14 @@ read_when:
   - "wiring detail-page transient UI (tabs/search/scroll) that must survive Back/Forward"
   - "polling server state on an interval, or following a live pick/ban session"
   - "holding a pick/ban captain's selection, optimistic lock-in or refusal message"
-keywords: [usePageState, useNavState, localStorage, PREF_KEYS, caches, querySig, presets, tutorial, persistence, controlled-page, userState, synced, badges, seen, polling, createPoller, visibility, usePickBanSession, usePickBanView, mergePickBanState, structural sharing, clock offset, reconnecting, captainPlay, useCaptainPlay, withCaptainPlay, captainDockOf, optimistic lock-in]
+  - "sending the pick/ban selection preview (hover), or ordering pick/ban commands so each carries a fresh version"
+keywords: [usePageState, useNavState, localStorage, PREF_KEYS, caches, querySig, presets, tutorial, persistence, controlled-page, userState, synced, badges, seen, polling, createPoller, visibility, usePickBanSession, usePickBanView, mergePickBanState, structural sharing, clock offset, reconnecting, captainPlay, useCaptainPlay, withCaptainPlay, captainDockOf, optimistic lock-in, hover, hoverOf, createHoverSender, HOVER_DEBOUNCE_MS, selection preview, command queue]
 provides: "the state tiers (incl. the account-synced tier), the localStorage key convention, how pages are controlled + hoisted, and the polling live-data tier"
 not_here:
   - "the navigation stack / navigate() / renderView wiring → navigation.md"
   - "the shared components used (FilterPresetsMenu, ColumnsMenu, Tutorial) → shared-components.md"
 sections: [controlled-pages-with-hoisted-state, navigation-history-per-entry-ui-state, account-synced-state, localstorage-persistence, filter-presets, tutorial-state, favorites, polling-live-data, naming-conventions]
-last_verified: 2026-09-24
+last_verified: 2026-09-25
 verify_against: [app/components/main/Main.tsx, app/components/navigation/useNavState.ts, app/hooks/useAsync.ts, app/utils/userState.ts, app/utils/poller.ts, app/components/pages/events/pickban/pickBanSession.ts, app/components/pages/events/pickban/usePickBanSession.ts, app/components/pages/events/pickban/mergePickBanState.ts, app/components/pages/events/pickban/captainPlay.ts, app/components/pages/events/pickban/useCaptainPlay.ts]
 ---
 
@@ -414,8 +415,14 @@ the data. Like `useServerFavorites`, it is a `useSyncExternalStore` store. Its s
   in the current `version`. They apply the returned state at once, so the actor never waits
   for a poll, and resample the clock. A refused command triggers an immediate poll, then
   rethrows the `ApiError`.
+- **One command at a time.** Every command, participant or manager, runs after the one
+  before it has settled, and only then reads the `version` to send. Every command bumps the
+  version, a hover included, so this is what lets a Lock in pressed while a hover is in
+  flight go out with the version that hover answered with instead of failing with
+  `version_conflict`. A refused command doesn't hold up the next one.
 
-**Captain play** (`events/pickban/captainPlay.ts`, pure, Vitest without a DOM) is the
+**Captain play** (`events/pickban/captainPlay.ts`, pure apart from the hover sender below,
+Vitest without a DOM) is the
 captain's own transient state on top of the polled data. It lives in `useState` on the match
 page for as long as the page is mounted, and is never persisted or put in nav state. Its
 `CaptainPlay` holds four things:
@@ -448,9 +455,27 @@ Screens never read those fields. They go through the functions below.
   worded message (the server's own message for any code without wording), and the selection
   is kept for another try.
 
+**Selection preview.** While the viewer's own side is choosing, every other viewer and the
+stream view see which map it has selected. Two pieces in `captainPlay.ts` decide what to send
+and when:
+
+- `hoverOf(play, view)` is the hover body (`{ map }`) for the captain's current selection,
+  or `null`. It is `null` unless the dock is `choose`, which only a captain or acting
+  captain gets on their side's turn, never a manager acting for a team. It is also `null`
+  once Lock in is pressed, and for a map the board already shows as `previewed`, so
+  selecting the same map again sends nothing.
+- `createHoverSender(target, send)` debounces it. `request()` restarts a
+  `HOVER_DEBOUNCE_MS` (300 ms) timer. When the timer fires, it asks `target()` for the body
+  right then, so a Lock in, a pause or an already-previewed map in between sends nothing.
+  It never sends the map whose hover is still in flight. `cancel()` drops a pending hover.
+  A failed hover is swallowed: no refusal message, no busy state, and it never blocks
+  Lock in.
+
 `useCaptainPlay(view, sendCommand)` (`events/pickban/useCaptainPlay.ts`) wires it to the
 store. It keeps the latest play in a ref as well as in state, so a second click in the same
-tick is refused before React re-renders.
+tick is refused before React re-renders. `select` also requests a hover. `lockIn` cancels a
+pending hover before it submits, and the store's one-command-at-a-time rule covers a hover
+already in flight. The pending hover is cancelled on unmount too.
 
 **Hooks** (`events/pickban/usePickBanSession.ts`):
 

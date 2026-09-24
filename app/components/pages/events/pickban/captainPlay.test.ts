@@ -1,14 +1,17 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError, type PickBanState } from '@/app/utils/api'
 import { buildPickBanView, type PickBanView } from './pickBanView'
 import {
+    HOVER_DEBOUNCE_MS,
     IDLE_CAPTAIN_PLAY,
     beginLock,
     beginReadyToggle,
     captainDockOf,
     commandRejected,
     commandSucceeded,
+    createHoverSender,
     dismissRejection,
+    hoverOf,
     selectMap,
     withCaptainPlay,
 } from './captainPlay'
@@ -303,6 +306,130 @@ describe('ready toggle', () => {
         expect(view.stagePhase).toBe('lobby')
         expect(captainDockOf(view, IDLE_CAPTAIN_PLAY)?.controls).toEqual({ kind: 'locked', reason: 'intro', countdown: null, next: null })
         expect(beginReadyToggle(IDLE_CAPTAIN_PLAY, view)).toBeNull()
+    })
+})
+
+describe('selection preview', () => {
+    const previewing = (state: PickBanState, map: string): PickBanState => ({
+        ...state,
+        version: state.version + 1,
+        selection_preview: { side: 'team_a', map, at: state.server_now },
+    })
+
+    it('previews the map the captain selected on their own turn, and nothing before they select one', () => {
+        const view = captainAView()
+
+        expect(hoverOf(selectMap(IDLE_CAPTAIN_PLAY, view, BRAVO), view)).toEqual({ map: BRAVO })
+        expect(hoverOf(IDLE_CAPTAIN_PLAY, view)).toBeNull()
+    })
+
+    it('sends nothing for a map the board already shows as previewed, and the new map once the selection moves', () => {
+        const view = viewAt(asCaptain(previewing(readAt(started(), AWAITING_A), BRAVO), 'team_a'), AWAITING_A)
+        const play = selectMap(IDLE_CAPTAIN_PLAY, view, BRAVO)
+
+        expect(hoverOf(play, view)).toBeNull()
+        expect(hoverOf(selectMap(play, view, ALPHA), view)).toEqual({ map: ALPHA })
+    })
+
+    it('sends nothing once Lock in is pressed', () => {
+        const view = captainAView()
+        const submission = beginLock(selectMap(IDLE_CAPTAIN_PLAY, view, BRAVO), view)!
+
+        expect(hoverOf(submission.play, view)).toBeNull()
+    })
+
+    it('previews for an acting captain, never for anyone else looking at the same moment', () => {
+        const awaiting = readAt(started(), AWAITING_A)
+        const play = selectMap(IDLE_CAPTAIN_PLAY, captainAView(), BRAVO)
+
+        expect(hoverOf(play, viewAt(asActingCaptain(awaiting, 'team_a'), AWAITING_A))).toEqual({ map: BRAVO })
+        for (const viewer of [asSpectator(awaiting), asTeammate(awaiting, 'team_a'), asReplacedCaptain(awaiting, 'team_a'), asManager(awaiting), asCaptain(awaiting, 'team_b')]) {
+            expect(hoverOf(play, viewAt(viewer, AWAITING_A))).toBeNull()
+        }
+    })
+
+    it('sends nothing while the turn is locked by a pause, and previews the kept selection again after it', () => {
+        const awaiting = readAt(started(), AWAITING_A)
+        const play = selectMap(IDLE_CAPTAIN_PLAY, captainAView(), BRAVO)
+        const pausedState = paused(awaiting, AWAITING_A + 500)
+
+        expect(hoverOf(play, viewAt(asCaptain(pausedState, 'team_a'), AWAITING_A + 1_000))).toBeNull()
+        expect(hoverOf(play, viewAt(asCaptain(resumed(pausedState, AWAITING_A + 30_000), 'team_a'), AWAITING_A + 31_000))).toEqual({ map: BRAVO })
+    })
+})
+
+describe('sending the selection preview', () => {
+    beforeEach(() => { vi.useFakeTimers() })
+    afterEach(() => { vi.useRealTimers() })
+
+    function sender(target: () => { map: string } | null, send = vi.fn((_body: { map: string }) => Promise.resolve())) {
+        return { send, hover: createHoverSender(target, send) }
+    }
+
+    it('sends one hover for the latest selection once the clicks settle for the debounce', async () => {
+        let selected = ALPHA
+        const { send, hover } = sender(() => ({ map: selected }))
+
+        hover.request()
+        await vi.advanceTimersByTimeAsync(HOVER_DEBOUNCE_MS - 100)
+        selected = BRAVO
+        hover.request()
+        await vi.advanceTimersByTimeAsync(HOVER_DEBOUNCE_MS - 1)
+        expect(send).not.toHaveBeenCalled()
+
+        await vi.advanceTimersByTimeAsync(1)
+        expect(send.mock.calls).toEqual([[{ map: BRAVO }]])
+    })
+
+    it('drops a pending hover when Lock in cancels it', async () => {
+        const { send, hover } = sender(() => ({ map: BRAVO }))
+
+        hover.request()
+        hover.cancel()
+        await vi.advanceTimersByTimeAsync(HOVER_DEBOUNCE_MS * 2)
+
+        expect(send).not.toHaveBeenCalled()
+    })
+
+    it('sends nothing when there is nothing to preview by the time the debounce ends', async () => {
+        let target: { map: string } | null = { map: BRAVO }
+        const { send, hover } = sender(() => target)
+
+        hover.request()
+        target = null
+        await vi.advanceTimersByTimeAsync(HOVER_DEBOUNCE_MS)
+
+        expect(send).not.toHaveBeenCalled()
+    })
+
+    it('does not send the map again while the hover for it is still in flight', async () => {
+        let answer: () => void = () => undefined
+        const send = vi.fn((_body: { map: string }) => new Promise<void>((resolve) => { answer = resolve }))
+        const { hover } = sender(() => ({ map: BRAVO }), send)
+
+        hover.request()
+        await vi.advanceTimersByTimeAsync(HOVER_DEBOUNCE_MS)
+        hover.request()
+        await vi.advanceTimersByTimeAsync(HOVER_DEBOUNCE_MS)
+        expect(send).toHaveBeenCalledTimes(1)
+
+        answer()
+        await vi.advanceTimersByTimeAsync(0)
+        hover.request()
+        await vi.advanceTimersByTimeAsync(HOVER_DEBOUNCE_MS)
+        expect(send).toHaveBeenCalledTimes(2)
+    })
+
+    it('swallows a refused hover and keeps sending later ones', async () => {
+        const send = vi.fn((_body: { map: string }) => Promise.reject(new ApiError(429, undefined, 'Request failed')))
+        const { hover } = sender(() => ({ map: BRAVO }), send)
+
+        hover.request()
+        await vi.advanceTimersByTimeAsync(HOVER_DEBOUNCE_MS)
+        hover.request()
+        await vi.advanceTimersByTimeAsync(HOVER_DEBOUNCE_MS)
+
+        expect(send).toHaveBeenCalledTimes(2)
     })
 })
 
