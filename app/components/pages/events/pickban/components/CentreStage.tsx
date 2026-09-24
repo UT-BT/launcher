@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { displayMapName } from '@/app/utils/format'
 import type {
+    PickBanBanner,
     PickBanCardView,
     PickBanCountdown,
     PickBanTeamPanel,
@@ -20,6 +21,12 @@ interface CentreStageProps {
     summaryAction?: ReactNode
     className?: string
 }
+
+const TURN_SQUARE = 'w-32 @md/stage:w-44 @[80rem]/stage:w-72 max-w-[calc(100cqh-10rem)]'
+
+const REVEAL_WIDTH = 'w-36 @md/stage:w-48 @3xl/stage:w-60 @[80rem]/stage:w-96 max-w-[calc(100cqh-7.5rem)]'
+
+const DISCARDED = 'Its bans and picks don’t count.'
 
 function stageAnnouncement(view: PickBanView): string {
     switch (view.stagePhase) {
@@ -44,7 +51,7 @@ export function CentreStage({ view, summaryAction, className }: CentreStageProps
         <section
             aria-label="Pick/ban stage"
             className={cn(
-                '@container/stage relative flex items-center justify-center overflow-hidden rounded-xl border border-hairline/10 bg-card/30 p-4',
+                '@container-size/stage relative flex items-center justify-center overflow-hidden rounded-xl border border-hairline/10 bg-card/30 p-4',
                 onTheClock && cn('bg-gradient-to-b to-transparent', onTheClock.wash),
                 className,
             )}
@@ -98,17 +105,37 @@ function StageContent({ view, summaryAction }: { view: PickBanView; summaryActio
                 </div>
             )
         case 'cancelled':
-            return <StageNotice icon={Ban} title="Pick/ban cancelled" detail="Nothing from this session was kept." />
+            return <StageNotice icon={Ban} title="Pick/ban cancelled" reason={endReasonOf(view.banners)} detail={DISCARDED} />
         case 'voided':
-            return <StageNotice icon={CircleSlash} title="Pick/ban voided" detail="The match changed after this session opened." />
+            return (
+                <StageNotice
+                    icon={CircleSlash}
+                    title="Pick/ban voided"
+                    reason={endReasonOf(view.banners) ?? 'The match changed after this session opened.'}
+                    detail={DISCARDED}
+                />
+            )
     }
 }
 
-function StageNotice({ icon: Icon, title, detail }: { icon: LucideIcon; title: string; detail: string }) {
+function endReasonOf(banners: PickBanBanner[]): string | null {
+    for (const banner of banners) {
+        if (banner.kind === 'voided' || banner.kind === 'cancelled') return banner.reason
+    }
+    return null
+}
+
+function StageNotice({ icon: Icon, title, reason = null, detail }: {
+    icon: LucideIcon
+    title: string
+    reason?: string | null
+    detail: string
+}) {
     return (
         <div className="flex max-w-sm flex-col items-center gap-2 text-center">
             <Icon className="size-8 text-muted-foreground" />
             <h2 className="text-lg font-semibold text-foreground">{title}</h2>
+            {reason && <p title={reason} className="line-clamp-3 break-words text-sm text-foreground">{reason}</p>}
             <p className="text-sm text-muted-foreground">{detail}</p>
         </div>
     )
@@ -202,7 +229,7 @@ export function TurnCard({ turn, previewCard, stepCount, mapCount }: {
             </p>
             {previewCard ? (
                 <div className="flex flex-col items-center gap-2">
-                    <div className={cn('relative aspect-square w-32 overflow-hidden rounded-xl border-2 ring-4 @md/stage:w-44 @[80rem]/stage:w-72', tone.border, tone.ring)}>
+                    <div className={cn('relative aspect-square overflow-hidden rounded-xl border-2 ring-4', TURN_SQUARE, tone.border, tone.ring)}>
                         <MapThumbnail
                             mapName={previewCard.map}
                             version={previewCard.screenshotVersion}
@@ -215,7 +242,7 @@ export function TurnCard({ turn, previewCard, stepCount, mapCount }: {
                     <p className={cn('text-[11px] font-bold uppercase tracking-wider', tone.text)}>{who} is considering this map</p>
                 </div>
             ) : (
-                <div className={cn('flex aspect-square w-32 flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed @md/stage:w-44 @[80rem]/stage:w-72', tone.line)}>
+                <div className={cn('flex aspect-square flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed', TURN_SQUARE, tone.line)}>
                     <Icon className={cn('size-8 opacity-60', tone.text)} />
                     <p className="px-3 text-xs text-muted-foreground">
                         {turn.lockedIn ? 'Locked in, revealing now' : `Waiting for ${who} to lock in`}
@@ -243,7 +270,8 @@ export function RevealCard({ entry, countdown, upNext }: {
         <div className="flex w-full flex-col items-center gap-2.5 text-center @md/stage:gap-3">
             <div
                 className={cn(
-                    'relative flex aspect-square w-36 items-center justify-center overflow-hidden rounded-2xl border-[3px] @md/stage:w-48 @3xl/stage:w-60 @[80rem]/stage:w-96',
+                    'relative flex aspect-square items-center justify-center overflow-hidden rounded-2xl border-[3px]',
+                    REVEAL_WIDTH,
                     tone.border,
                     decider && cn('ring-4', tone.ring),
                 )}
@@ -281,7 +309,7 @@ export function RevealCard({ entry, countdown, upNext }: {
                     {entry.actedByAdmin && <span className="text-muted-foreground"> · set by an admin</span>}
                 </p>
             </div>
-            <CountdownBar countdown={countdown} tone={decider ? 'gold' : stepTone(entry.actor)} className="w-36 @md/stage:w-48 @3xl/stage:w-60 @[80rem]/stage:w-96" />
+            <CountdownBar countdown={countdown} tone={decider ? 'gold' : stepTone(entry.actor)} className={REVEAL_WIDTH} />
             <p className={cn('text-xs text-muted-foreground', !upNext && 'invisible')}>
                 Up next: {upNext?.actionLabel ?? ''}
             </p>

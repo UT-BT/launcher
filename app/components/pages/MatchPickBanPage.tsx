@@ -75,10 +75,6 @@ export function MatchPickBanPage({ eventSlug, matchId, userProfile, onBackToEven
                 </div>
             </header>
 
-            {view?.banners.filter(banner => banner.kind === 'voided' || banner.kind === 'cancelled' || banner.kind === 'warning').map(banner => (
-                <PickBanBannerNote key={banner.key} banner={banner} />
-            ))}
-
             {view ? (
                 <PickBanBody view={view} summaryAction={bracketLink} />
             ) : session.loading ? (
@@ -97,7 +93,7 @@ function matchSubtitle(view: PickBanView): string {
 }
 
 function PickBanBody({ view, summaryAction }: { view: PickBanView; summaryAction: ReactNode }) {
-    const skipped = view.banners.find(banner => banner.kind === 'skipped_bans')
+    const notes = view.banners.filter(banner => banner.kind === 'skipped_bans' || banner.kind === 'warning')
     const eligibleCount = view.cards.filter(card => card.state !== 'excluded').length
     const exclusionReasons = [...new Set(view.cards.flatMap(card => card.state === 'excluded' && card.exclusionReason ? [card.exclusionReason] : []))]
 
@@ -118,7 +114,9 @@ function PickBanBody({ view, summaryAction }: { view: PickBanView; summaryAction
                     Steps · {view.timeline.length}
                 </h2>
                 <StepTimeline entries={view.timeline} skippedBans={view.skippedBans} />
-                {skipped && <PickBanBannerNote banner={skipped} />}
+                {notes.map(banner => (
+                    <PickBanBannerNote key={banner.key} banner={banner} />
+                ))}
             </section>
 
             <section className="space-y-2.5 rounded-xl border border-hairline/5 bg-card/30 p-3 sm:p-4">

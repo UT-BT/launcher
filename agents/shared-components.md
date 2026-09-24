@@ -299,19 +299,19 @@ label from a name and a letter.
 | `TeamPanel` | `panel: PickBanTeamPanel \| null`, `className?` | The A/B chip, stage seed chip, team name, a reserved "On the clock" row, and every member through `PlayerInfo` with a presence dot and a captain or acting-captain badge. Tinted and ringed in the side's colour. |
 | `PoolGrid` / `PoolCard` | `cards`, `previewActor` (the side whose selection preview is shown), `className?` | Square `MapThumbnail` cards. Banned: grey with a "BANNED" stamp in the banning side's colour. Picked: the picker's colour and "Map N". Decider: gold. Excluded: faded, "Excluded · <tag> maps", and the full reason in the title and screen-reader text. |
 | `StepTimeline` | `entries`, `skippedBans`, `className?` | One chip per plan step (icon, actor and action, a ring on the current step), a divider between segments, and a dashed "Skipped" chip wherever a ban was dropped. |
-| `CentreStage` | `view`, `summaryAction?`, `className?` | Switches on `view.stagePhase`: a not-open or lobby card (Ready per side), the A-vs-B intro with a countdown, the turn indicator (team, Ban or Pick, and the previewed map), the reveal, the final summary, or a cancelled or voided notice. A paused overlay sits over whatever the pause froze. `summaryAction` renders under the summary. The size comes from `className`. |
+| `CentreStage` | `view`, `summaryAction?`, `className?` | Switches on `view.stagePhase`: a not-open or lobby card (Ready per side), the A-vs-B intro with a countdown, the turn indicator (team, Ban or Pick, and the previewed map), the reveal, the final summary, or a cancelled or voided notice carrying the session's end reason and that its bans and picks don't count. A paused overlay sits over whatever the pause froze. `summaryAction` renders under the summary. It is a size container (`@container-size/stage`), so `className` must give it a definite height inside a box of definite width. The turn and reveal squares cap themselves by that height (`cqh`), so every state fits whatever fixed height the layout reserves. |
 | `IntroCard`, `TurnCard`, `RevealCard` | exported from `CentreStage.tsx` | The stage's building blocks, for a layout that places them differently. |
 | `FinalSummary` | `entries`, `className?` | Maps in play order, who picked each, the decider in gold, and a placeholder for any slot not revealed yet. |
-| `CountdownText` / `CountdownBar` | `countdown`, `tone` (bar only), `className?` | A countdown and a shrinking bar, painted on animation frames from `countdown.endsAt` straight into the DOM, so nothing re-renders per frame. A frozen countdown holds still at `remainingMs`. |
+| `CountdownText` / `CountdownBar` | `countdown`, `tone` (bar only), `className?` | A countdown and a shrinking bar, painted on animation frames from `countdown.endsAt` straight into the DOM, so nothing re-renders per frame. A frozen countdown holds still at `remainingMs`. With reduced motion on (`prefers-reduced-motion: reduce`, the switch `shared.css` already honours), the bar steps once a second with the text instead of gliding. |
 | `PickBanBannerNote` | `banner`, `className?` | One view-model banner (voided, cancelled, paused, skipped bans or a warning) with its icon and tint. |
 | `PickBanStatusChip` | `status: PickBanSessionStatus`, `className?` | A session status in the words and colours of `pickBanStatus.ts`: Not open, Cancelled and Voided muted, Lobby in the accent, Live emerald, Paused amber, Complete neutral. The Manage queue and the watch page both use it, so a status reads the same everywhere. |
 | `pickBanTone.ts` | `PICK_BAN_TONES`, `teamTone(ab)`, `stepTone(actor)` | Class sets for A, B, gold and neutral. A step with no actor is the decider, so it is gold. |
 
-They size themselves with container queries (`@container/stage`, `/team`, `/grid`), not
-viewport breakpoints, so they work the same in a phone column, beside the sidebar at 4K and
-in a fixed stage. Keys are the view model's (`side`, member id, map name, plan index,
-map number), so a poll never remounts them. There is no animation yet: a new reveal
-simply swaps in.
+They size themselves with container queries (`@container-size/stage`, `/team`, `/grid`),
+not viewport breakpoints, so they work the same in a phone column, beside the sidebar at 4K
+and in a fixed stage. Keys are the view model's (member id, map name, plan index, map
+number), and the two team panels sit in fixed left and right slots, so a poll never
+remounts them. The countdown bars are the only motion so far: a new reveal simply swaps in.
 
 ## UI primitives (`app/components/ui/`)
 

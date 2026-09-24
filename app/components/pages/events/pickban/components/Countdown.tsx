@@ -1,9 +1,27 @@
-import { useLayoutEffect, useRef } from 'react'
+import { useLayoutEffect, useRef, useSyncExternalStore } from 'react'
 import { cn } from '@/lib/utils'
 import type { PickBanCountdown } from '../pickBanView'
 import { PICK_BAN_TONES, type PickBanTone } from './pickBanTone'
 
 type CountdownPainter = (element: HTMLElement, remainingMs: number, fraction: number) => void
+
+const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)'
+
+const REDUCED_MOTION_STEP_MS = 1_000
+
+function subscribeToReducedMotion(onChange: () => void): () => void {
+    const query = window.matchMedia(REDUCED_MOTION_QUERY)
+    query.addEventListener('change', onChange)
+    return () => query.removeEventListener('change', onChange)
+}
+
+function prefersReducedMotion(): boolean {
+    return window.matchMedia(REDUCED_MOTION_QUERY).matches
+}
+
+function usePrefersReducedMotion(): boolean {
+    return useSyncExternalStore(subscribeToReducedMotion, prefersReducedMotion, () => false)
+}
 
 function formatRemaining(remainingMs: number): string {
     const seconds = Math.ceil(remainingMs / 1000)
@@ -18,7 +36,7 @@ const paintBar: CountdownPainter = (element, _remainingMs, fraction) => {
     element.style.transform = `scaleX(${fraction})`
 }
 
-function useCountdownFrame<E extends HTMLElement>(countdown: PickBanCountdown | null, paint: CountdownPainter) {
+function useCountdownFrame<E extends HTMLElement>(countdown: PickBanCountdown | null, paint: CountdownPainter, stepMs = 0) {
     const ref = useRef<E>(null)
     const endsAt = countdown?.endsAt ?? null
     const frozenMs = countdown && countdown.endsAt === null ? countdown.remainingMs : null
@@ -27,7 +45,10 @@ function useCountdownFrame<E extends HTMLElement>(countdown: PickBanCountdown | 
     useLayoutEffect(() => {
         const element = ref.current
         if (!element) return
-        const draw = (remainingMs: number) => paint(element, remainingMs, totalMs > 0 ? Math.min(1, remainingMs / totalMs) : 0)
+        const draw = (remainingMs: number) => {
+            const shownMs = stepMs > 0 ? Math.ceil(remainingMs / stepMs) * stepMs : remainingMs
+            paint(element, shownMs, totalMs > 0 ? Math.min(1, shownMs / totalMs) : 0)
+        }
         if (endsAt === null) {
             draw(frozenMs ?? 0)
             return
@@ -40,7 +61,7 @@ function useCountdownFrame<E extends HTMLElement>(countdown: PickBanCountdown | 
         }
         tick()
         return () => cancelAnimationFrame(frame)
-    }, [endsAt, frozenMs, totalMs, paint])
+    }, [endsAt, frozenMs, totalMs, paint, stepMs])
 
     return ref
 }
@@ -55,7 +76,8 @@ export function CountdownBar({ countdown, tone, className }: {
     tone: PickBanTone
     className?: string
 }) {
-    const ref = useCountdownFrame<HTMLDivElement>(countdown, paintBar)
+    const reducedMotion = usePrefersReducedMotion()
+    const ref = useCountdownFrame<HTMLDivElement>(countdown, paintBar, reducedMotion ? REDUCED_MOTION_STEP_MS : 0)
     return (
         <div aria-hidden className={cn('h-1 w-full overflow-hidden rounded-full bg-hairline/10', className)}>
             <div ref={ref} className={cn('h-full w-full origin-left will-change-transform', PICK_BAN_TONES[tone].solid)} />

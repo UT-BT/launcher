@@ -740,24 +740,29 @@ only from the view model, through the pick/ban visual core (see
   nothing. A small fixed "Reconnecting…" toast shows only while `reconnecting` is set.
 - **Timing.** Reveals and phase changes land on `usePickBanView`'s boundary timer, so a step
   appears at its `reveal_at` even when no poll arrives then. Countdowns and progress bars
-  paint on animation frames.
-- **Stable keys.** Team panels are keyed by side, members by user id, cards by map name,
-  timeline steps by plan index, skipped bans by their order in `skipped_bans` and summary
-  slots by map number.
-- **Fixed layout.** The centre stage has a fixed height at each width. The timeline, every
-  pool card and every summary slot exist from the lobby on. The "On the clock" row in each
+  paint on animation frames. With reduced motion on, the bars step once a second instead.
+- **Stable keys.** The team panels sit in fixed left and right slots. Members are keyed by
+  user id, cards by map name, timeline steps by plan index, skipped bans by their order in
+  `skipped_bans` and summary slots by map number.
+- **Fixed layout.** The centre stage has a fixed height at each width, and every state's
+  content scales to fit inside it. The timeline, every pool card and every summary slot
+  exist from the lobby on. The "On the clock" row in each
   team panel is always there, and hidden when it's not that side's turn.
-- **Banners.** Voided, cancelled and warnings show above the stage. Paused is an overlay on
-  the stage, over whatever the pause froze (`stagePhase`). Skipped bans are a note under
-  the timeline, with a dashed chip where each dropped ban would have been
-  (`skippedBans`). Each excluded map's reason is listed in words under the pool, so it can
+- **Banners.** Nothing is ever inserted above the stage, so no notice arriving mid-session
+  can push it down. A voided or cancelled session's reason shows in the stage's own notice,
+  which the stage switches to in place. Paused is an overlay on the stage, over whatever
+  the pause froze (`stagePhase`). Skipped bans and warnings are notes under the timeline,
+  with a dashed chip where each dropped ban would have been (`skippedBans`). Each excluded map's reason is listed in words under the pool, so it can
   be read on a touch screen too.
 
 `e2e/pickban-watch.spec.ts` serves the pick/ban read from fixtures with a server clock
-that runs in real time. It checks three things: a phone width in the lobby, live and
+that runs in real time. It checks five things: a phone width in the lobby, live and
 complete states; a lock-in that arrives early being revealed at its `reveal_at`, at the
-same moment on two pages; and polls, 304s included, that keep the same nodes and the
-same layout.
+same moment on two pages; the centre stage keeping one height per width from 360px to
+3840px while every state (lobby, intro, turn, ban, pick and decider reveals, paused,
+summary, cancelled) fits inside it; the countdown bar gliding, and stepping once a second
+with reduced motion on; and polls, 304s included, that keep the same nodes and the same
+layout.
 
 ### Event pick/ban setup
 

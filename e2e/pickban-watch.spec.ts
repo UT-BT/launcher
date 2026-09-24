@@ -6,8 +6,10 @@ import {
     LEAD_MS,
     T0,
     asSpectator,
+    iso,
     locked,
     lockedInTurn,
+    paused,
     pickBanState,
     readAt,
     started,
@@ -17,8 +19,11 @@ const SLUG = 'watch-cup'
 const MATCH = 'match-1'
 const PAGE_PATH = `/events/${SLUG}/matches/${MATCH}`
 const [ALPHA, BRAVO, CHARLIE, DELTA, ECHO, FOXTROT] = ELIGIBLE_MAPS
-const INTRO_END = T0 + LEAD_MS + INTRO_MS
+const INTRO_START = T0 + LEAD_MS
+const INTRO_END = INTRO_START + INTRO_MS
 const FIRST_LOCK = INTRO_END + 10_000
+const HOLD_MS = 600_000
+const STAGE_WIDTHS = [360, 1024, 1440, 1920, 2240, 2560, 3840]
 const CORS = {
     'access-control-allow-origin': '*',
     'access-control-allow-headers': '*',
@@ -72,6 +77,43 @@ async function horizontalOverflow(page: Page): Promise<number> {
 }
 
 const stage = (page: Page) => page.getByLabel('Pick/ban stage')
+
+function revealOf(state: PickBanState, index: number): number {
+    return Date.parse(state.plan[index].reveal_at!)
+}
+
+function held(state: PickBanState): PickBanState {
+    const reveals = state.plan.flatMap(step => (step.reveal_at ? [Date.parse(step.reveal_at)] : []))
+    const seconds = HOLD_MS / 1000
+    return {
+        ...state,
+        pacing: { intro: seconds, spotlight: seconds, ban_down_spotlight: seconds, decider_spotlight: seconds },
+        spotlight_ends_at: reveals.length > 0 ? iso(Math.max(...reveals) + HOLD_MS) : state.spotlight_ends_at,
+    }
+}
+
+async function stageFit(page: Page) {
+    return page.evaluate(() => {
+        const section = document.querySelector('section[aria-label="Pick/ban stage"]') as HTMLElement
+        const box = section.getBoundingClientRect()
+        const style = getComputedStyle(section)
+        const inner = {
+            top: box.top + parseFloat(style.borderTopWidth) + parseFloat(style.paddingTop),
+            bottom: box.bottom - parseFloat(style.borderBottomWidth) - parseFloat(style.paddingBottom),
+            left: box.left + parseFloat(style.borderLeftWidth) + parseFloat(style.paddingLeft),
+            right: box.right - parseFloat(style.borderRightWidth) - parseFloat(style.paddingRight),
+        }
+        const escaped = Array.from(section.querySelectorAll<HTMLElement>('*'))
+            .filter(element => !element.closest('.sr-only') && !element.matches('.inset-0'))
+            .filter(element => {
+                const rect = element.getBoundingClientRect()
+                if (rect.width === 0 || rect.height === 0) return false
+                return rect.top < inner.top - 1 || rect.bottom > inner.bottom + 1 || rect.left < inner.left - 1 || rect.right > inner.right + 1
+            })
+            .map(element => `${element.tagName.toLowerCase()} "${(element.textContent ?? '').slice(0, 40)}"`)
+        return { height: Math.round(box.height), escaped }
+    })
+}
 
 test('an anonymous visitor watches the lobby, a live step and the summary at a phone width', async ({ page, isMobile }) => {
     test.skip(!isMobile)
@@ -139,7 +181,103 @@ test('a lock-in delivered early is revealed at its reveal_at, at the same moment
     await context.close()
 })
 
-test('polls, including 304s, never remount, flash or shift the page', async ({ page, isMobile }) => {
+test('the centre stage keeps one height per width and fits every state inside it', async ({ page, isMobile }) => {
+    test.skip(isMobile)
+    test.setTimeout(180_000)
+
+    const firstBan = held(locked(started(), ALPHA, FIRST_LOCK))
+    const firstPick = held(lockedInTurn(started(), [ALPHA, BRAVO, CHARLIE]))
+    const decider = held(lockedInTurn(started(), [ALPHA, BRAVO, CHARLIE, DELTA, ECHO, FOXTROT]))
+    const scenarios: { name: string; state: PickBanState; at: number; expectText: RegExp }[] = [
+        { name: 'lobby', state: pickBanState(), at: T0 - 60_000, expectText: /Waiting for an admin to start/ },
+        {
+            name: 'intro',
+            state: { ...held(started()), intro_ends_at: iso(INTRO_START + HOLD_MS) },
+            at: INTRO_START + 1_000,
+            expectText: /Starting/,
+        },
+        {
+            name: 'awaiting',
+            state: { ...readAt(started(), INTRO_END + 1_000), selection_preview: { side: 'team_a', map: ALPHA, at: iso(INTRO_END + 500) } },
+            at: INTRO_END + 1_000,
+            expectText: /considering this map/,
+        },
+        { name: 'ban reveal', state: firstBan, at: revealOf(firstBan, 0) + 1_000, expectText: /BANNED/ },
+        { name: 'pick reveal', state: firstPick, at: revealOf(firstPick, 2) + 1_000, expectText: /picks map 1/ },
+        { name: 'decider reveal', state: decider, at: revealOf(decider, 6) + 1_000, expectText: /last map standing/ },
+        { name: 'paused', state: paused(firstBan, revealOf(firstBan, 0) + 1_000), at: revealOf(firstBan, 0) + 5_000, expectText: /Session paused/ },
+        {
+            name: 'summary',
+            state: lockedInTurn(started(), [ALPHA, BRAVO, CHARLIE, DELTA, ECHO, FOXTROT]),
+            at: T0 + 3_600_000,
+            expectText: /Maps in play order/,
+        },
+        {
+            name: 'cancelled',
+            state: pickBanState({
+                status: 'cancelled',
+                phase: 'cancelled',
+                end_reason: 'Match postponed.',
+                warnings: ['Results were already entered, so the map slots were left alone.'],
+            }),
+            at: T0,
+            expectText: /Match postponed/,
+        },
+    ]
+
+    const heights = new Map<number, Map<string, number>>()
+    for (const scenario of scenarios) {
+        await page.unrouteAll()
+        await serve(page, fakeServer(scenario.at, () => scenario.state))
+        await page.setViewportSize({ width: STAGE_WIDTHS[0], height: 1_100 })
+        await page.goto(PAGE_PATH)
+        await expect(stage(page)).toContainText(scenario.expectText)
+
+        for (const width of STAGE_WIDTHS) {
+            await page.setViewportSize({ width, height: 1_100 })
+            await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))
+            const fit = await stageFit(page)
+            expect(fit.escaped, `${scenario.name} at ${width}px`).toEqual([])
+            expect(await horizontalOverflow(page), `${scenario.name} at ${width}px`).toBeLessThanOrEqual(1)
+            heights.set(width, (heights.get(width) ?? new Map()).set(scenario.name, fit.height))
+        }
+    }
+
+    for (const [width, byScenario] of heights) {
+        expect(new Set(byScenario.values()).size, `stage heights at ${width}px: ${JSON.stringify([...byScenario])}`).toBe(1)
+    }
+})
+
+test('the countdown bar glides, and steps once a second with reduced motion on', async ({ page, isMobile }) => {
+    test.skip(isMobile)
+
+    const intro = { ...held(started()), intro_ends_at: iso(INTRO_START + HOLD_MS) }
+    const barPositions = () => page.evaluate(() => new Promise<number>(resolve => {
+        const bar = document.querySelector('section[aria-label="Pick/ban stage"] .origin-left') as HTMLElement
+        const seen = new Set<string>()
+        const startedAt = performance.now()
+        const sample = () => {
+            seen.add(bar.style.transform)
+            if (performance.now() - startedAt < 2_500) requestAnimationFrame(sample)
+            else resolve(seen.size)
+        }
+        requestAnimationFrame(sample)
+    }))
+
+    for (const reducedMotion of ['no-preference', 'reduce'] as const) {
+        await page.emulateMedia({ reducedMotion })
+        await page.unrouteAll()
+        await serve(page, fakeServer(INTRO_START + 1_000, () => intro))
+        await page.goto(PAGE_PATH)
+        await expect(stage(page)).toContainText(/Starting/)
+
+        const positions = await barPositions()
+        if (reducedMotion === 'reduce') expect(positions).toBeLessThanOrEqual(4)
+        else expect(positions).toBeGreaterThan(20)
+    }
+})
+
+test('polls, including 304s and a warning arriving mid-session, never remount, flash or shift the page', async ({ page, isMobile }) => {
     test.skip(isMobile)
 
     const lobby = pickBanState()
@@ -150,6 +288,7 @@ test('polls, including 304s, never remount, flash or shift the page', async ({ p
             ...lobby.teams,
             team_b: { ...lobby.teams.team_b!, members: lobby.teams.team_b!.members.map((m, i) => (i === 1 ? { ...m, online: false } : m)) },
         },
+        warnings: ['Results were already entered, so the map slots were left alone.'],
     }
     const server = fakeServer(T0 - 60_000, serverTime => (serverTime < T0 - 55_000 ? lobby : flipped))
     await serve(page, server)
@@ -182,6 +321,7 @@ test('polls, including 304s, never remount, flash or shift the page', async ({ p
     await expect.poll(() => server.servedUnchanged, { timeout: 15_000 }).toBeGreaterThanOrEqual(3)
     await expect.poll(() => server.firstServed.has(flipped.version), { timeout: 15_000 }).toBe(true)
     await expect(page.getByText('1 of 2 online')).toBeVisible()
+    await expect(page.getByText('Results were already entered')).toBeVisible()
 
     const after = await probe()
     expect(after.cardProbe).toBe('kept')

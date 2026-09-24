@@ -421,6 +421,10 @@ change (it reads `useTheme`), so they update live.
 - Tutorial card: `animate-in fade-in slide-in-from-bottom-4 duration-200`
 - Skeleton: `animate-pulse` with `bg-white/5`
 - Legendary title/avatar: `legendaryAvatarPulse` / `legendaryTitlePulse` keyframes in `globals.css`
+- **Reduced motion.** `shared.css` cuts every CSS animation and transition to nothing under
+  `prefers-reduced-motion: reduce`. Motion driven from JS (an animation-frame loop writing
+  styles) never sees that rule, so it must read the same media query itself and step
+  coarsely instead of gliding, as `CountdownBar` does.
 
 ### CSS runtime cost (RAM/CPU)
 
