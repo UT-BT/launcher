@@ -8,8 +8,9 @@ import { MapSearchInput } from '@/app/components/shared/MapSearchInput'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { copyPickBanStagePool, eventErrorMessage, type PickBanPoolMap, type PickBanStageConfig } from '@/app/utils/api'
 import { SubCard } from '../formatFields'
+import { tagKey } from '../../pickBanTags'
 import {
-    addPoolMap, movePoolMap, poolError, poolHasMap, removePoolMap, tagKey, withPoolTag, withoutPoolTag,
+    addPoolMap, movePoolMap, poolError, poolHasMap, removePoolMap, withPoolTag, withoutPoolTag,
     type PickBanStageDraft,
 } from './pickBanEditor'
 

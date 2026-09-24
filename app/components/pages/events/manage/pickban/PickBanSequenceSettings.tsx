@@ -4,7 +4,7 @@ import { AdminSelect } from '@/app/components/pages/admin/components/controls'
 import { PICK_BAN_PRESET_IDS, type PickBanPresetId, type PickBanSequence, type PickBanStageConfig } from '@/app/utils/api'
 import { Field, NumberField, SubCard, TextField } from '../formatFields'
 import {
-    PICK_BAN_PACING_KEYS, PICK_BAN_PACING_MAX_SECONDS, sequenceCounts, withPreset,
+    PICK_BAN_PACING_KEYS, PICK_BAN_PACING_MAX_SECONDS, presetDrifted, sequenceCounts, withPreset,
     type PickBanExclusionDraft, type PickBanPacingKey, type PickBanStageDraft,
 } from './pickBanEditor'
 
@@ -144,6 +144,12 @@ export function PickBanSequenceSettings({ stage, draft, errors, disabled, onChan
                         className={cn('h-8 w-full text-xs', errors.sequence && 'border-red-500/50')}
                     />
                 </Field>
+                {presetDrifted(draft) && (
+                    <p className="text-[11px] leading-snug text-amber-300">
+                        These steps come from an older version of this preset. Saving keeps them as a custom sequence;
+                        choose the preset again to take its current steps.
+                    </p>
+                )}
                 {draft.sequence && <SequencePreview sequence={draft.sequence} />}
             </SubCard>
 

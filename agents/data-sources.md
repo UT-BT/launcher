@@ -14,7 +14,7 @@ not_here:
   - "the procedure to wire a new endpoint into the UI → skill: consume-api-data"
 sections: [backend-api, errors, admin-api, event-brackets, event-scheduling, event-predictions, public-maps-tab-pick-ban-pools, event-pickban-sessions, event-pick-ban-setup, changing-a-map-screenshot, cap-detail-page-endpoints, world-records-page-endpoints, team-maps-and-team-runs, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites, account-state-and-badges]
 last_verified: 2026-09-24
-verify_against: [app/utils/api.ts, app/utils/chartBuckets.ts, app/components/pages/admin/components/controls.tsx, app/components/pages/admin/sections/HostsManagementSection.tsx, app/utils/patreon.ts, app/utils/server-utils.ts, app/hooks/useServerFavorites.ts, app/components/pages/events/manage/formatFields.tsx, app/components/pages/events/bracket/bracketShared.tsx, app/components/pages/events/bracket/BracketTab.tsx, app/components/pages/events/predictions/predictionsShared.tsx, app/components/pages/events/predictions/PredictionsTab.tsx, app/components/pages/events/schedule/scheduleShared.tsx, app/components/pages/events/schedule/ScheduleTab.tsx, app/components/pages/events/schedule/SlotPickerModal.tsx, app/components/pages/events/schedule/slotGeneration.ts, app/components/pages/events/schedule/SlotGrid.tsx, app/components/pages/events/manage/DateTimeField.tsx, app/components/pages/events/eventsShared.tsx, app/components/pages/EventDetailPage.tsx, app/utils/timezone.ts, app/components/pages/events/manage/ScheduleOversightPanel.tsx, app/components/pages/events/ManagePanel.tsx, app/components/main/Main.tsx, app/components/layout/AppLayout.tsx, app/components/pages/events/maps/MapsTab.tsx, app/components/pages/events/maps/mapsShared.ts, app/components/pages/events/pickban/pickBanView.ts, app/components/pages/events/pickban/pickBanSession.ts, app/components/pages/events/pickban/clockOffset.ts, app/components/pages/events/manage/pickban/pickBanEditor.ts, app/components/pages/events/manage/pickban/PickBanPanel.tsx]
+verify_against: [app/utils/api.ts, app/utils/chartBuckets.ts, app/components/pages/admin/components/controls.tsx, app/components/pages/admin/sections/HostsManagementSection.tsx, app/utils/patreon.ts, app/utils/server-utils.ts, app/hooks/useServerFavorites.ts, app/components/pages/events/manage/formatFields.tsx, app/components/pages/events/bracket/bracketShared.tsx, app/components/pages/events/bracket/BracketTab.tsx, app/components/pages/events/predictions/predictionsShared.tsx, app/components/pages/events/predictions/PredictionsTab.tsx, app/components/pages/events/schedule/scheduleShared.tsx, app/components/pages/events/schedule/ScheduleTab.tsx, app/components/pages/events/schedule/SlotPickerModal.tsx, app/components/pages/events/schedule/slotGeneration.ts, app/components/pages/events/schedule/SlotGrid.tsx, app/components/pages/events/manage/DateTimeField.tsx, app/components/pages/events/eventsShared.tsx, app/components/pages/EventDetailPage.tsx, app/utils/timezone.ts, app/components/pages/events/manage/ScheduleOversightPanel.tsx, app/components/pages/events/ManagePanel.tsx, app/components/main/Main.tsx, app/components/layout/AppLayout.tsx, app/components/pages/events/maps/MapsTab.tsx, app/components/pages/events/maps/mapsShared.ts, app/components/pages/events/pickban/pickBanView.ts, app/components/pages/events/pickban/pickBanSession.ts, app/components/pages/events/pickban/clockOffset.ts, app/components/pages/events/manage/pickban/pickBanEditor.ts, app/components/pages/events/manage/pickban/PickBanPanel.tsx, app/components/pages/events/manage/pickban/PickBanStageCard.tsx, app/components/pages/events/pickBanTags.ts]
 ---
 
 # Data sources
@@ -705,8 +705,17 @@ typing instead of after a round trip):
   counts of all three presets to the API's numbers — keep both in sync if a preset
   changes.
 - Tags are trimmed, non-empty, at most 32 characters and matched case-insensitively
-  ("Hard" is just a tag). Pacing is a whole number from 0 to 60 (defaults 5 / 10 / 4 / 10).
+  ("Hard" is just a tag). The match itself is `tagKey` / `sameTag` in
+  `events/pickBanTags.ts`, shared with the Maps tab's badges so that tab never loads the
+  lazy editor module. Pacing is a whole number from 0 to 60 (defaults 5 / 10 / 4 / 10).
   An exclusion threshold is a whole number of at least 1.
+
+**A preset is re-sent only when re-copying it changes nothing.** `configInput` sends
+`preset_id` only when the draft's steps equal the shipped preset's: the admin just chose
+it, or the saved copy still matches it. Otherwise it sends the saved steps as `sequence`,
+so saving pacing or exclusions never swaps in a preset that changed after the stage
+copied it (the stage then reads as a custom sequence). `presetDrifted` flags that case
+under the preset dropdown, and choosing the preset again takes its current steps.
 
 **Warnings** (pool too small or dropping bans, for normal and for exempt matches, and a
 sequence whose map count differs from the stage's best-of) come from the draft while a
@@ -726,6 +735,11 @@ one sentence: `Map '<name>' …` is pinned to that map's row, and a bare tag rea
 a stale spec would silently revert the pick/ban setup. After a block is saved the tab
 re-fetches the config, refreshes the bracket (whose `format.spec` the Format tab edits)
 and writes the new block into an open format draft (`withStagePickBan`).
+
+**Keeping the Maps tab current.** `EventDetailPage` loads the config once for the public
+Maps tab, which only shows once some stage has a pool. Every successful save or copy here
+re-fetches the config and hands it up (`onPickBanConfigChange`), so saving the first pool
+shows the Maps tab without a reload.
 
 **Unsaved edits** live in `EventDetailPage` as `pickBanDrafts` (keyed by stage key), with
 the same leave guard as the format draft (see `navigation.md` → leave guards). A stage

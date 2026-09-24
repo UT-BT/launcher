@@ -18,11 +18,12 @@ export interface PickBanPanelProps {
     onDraftsChange: Dispatch<SetStateAction<PickBanDrafts>>
     onFormatDraftChange: Dispatch<SetStateAction<EventFormatSpec | null>>
     onBracketChange: (bracket: EventBracket) => void
+    onConfigChange: (config: PickBanConfig) => void
     onMapSelect?: (mapName: string) => void
 }
 
 export function PickBanPanel({
-    accessToken, slug, drafts, onDraftsChange, onFormatDraftChange, onBracketChange, onMapSelect,
+    accessToken, slug, drafts, onDraftsChange, onFormatDraftChange, onBracketChange, onConfigChange, onMapSelect,
 }: PickBanPanelProps) {
     const [config, setConfig] = useState<PickBanConfig | null>(null)
     const [error, setError] = useState<string | null>(null)
@@ -48,14 +49,18 @@ export function PickBanPanel({
     }, [onDraftsChange])
 
     const rebaseAfterWrite = useCallback(async (stageKey: string, written: { config: boolean; pool: boolean }) => {
-        const fresh = (await reload())?.stages.find(stage => stage.key === stageKey)
+        const next = await reload()
+        if (!next) return
+
+        onConfigChange(next)
+        const fresh = next.stages.find(stage => stage.key === stageKey)
         if (!fresh) return
 
         onDraftsChange(current => {
             const draft = current[stageKey]
             return draft ? withDraft(current, stageKey, rebaseDraft(fresh, draft, written)) : current
         })
-    }, [reload, onDraftsChange])
+    }, [reload, onConfigChange, onDraftsChange])
 
     const handleSaved = useCallback(async (stageKey: string, written: { config: boolean; pool: boolean }, block: PickBanBlock | null) => {
         await rebaseAfterWrite(stageKey, written)
