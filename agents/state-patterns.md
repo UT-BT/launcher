@@ -420,7 +420,8 @@ the data. Like `useServerFavorites`, it is a `useSyncExternalStore` store. Its s
   re-renders by itself at the view's `nextBoundaryAt`, so reveals and phase changes land on
   their timestamps rather than whenever a poll arrives.
 - It deliberately doesn't re-render every frame. Drive continuous countdowns and progress
-  bars from `countdown.endsAt` (local epoch ms) on animation frames.
+  bars from `countdown.endsAt` (local epoch ms) on animation frames. `CountdownText` and
+  `CountdownBar` (`events/pickban/components/Countdown.tsx`) already do this.
 
 ## Naming conventions
 

@@ -9,7 +9,7 @@ provides: "the whole navigation model: stack, navigate() funnel, renderView, sid
 not_here:
   - "where page state / persistence lives → state-patterns.md"
   - "the PlayerInfo / CapTimeLink components that trigger nav → shared-components.md"
-sections: [the-model, navigate-is-the-only-entry-point, leave-guards, url-sync-web-build, link-semantics, page-views-vs-detail-pages, the-sidebar-registry, event-driven-navigation, sidebar-new-badges, page-refresh-registry, per-entry-state, shareable-match-links]
+sections: [the-model, navigate-is-the-only-entry-point, leave-guards, url-sync-web-build, link-semantics, page-views-vs-detail-pages, the-sidebar-registry, event-driven-navigation, sidebar-new-badges, page-refresh-registry, per-entry-state, shareable-match-links, match-pickban-page]
 last_verified: 2026-09-24
 verify_against:
   - app/components/main/Main.tsx
@@ -25,6 +25,7 @@ verify_against:
   - app/components/navigation/matchLinks.ts
   - app/public/route-contract.json
   - app/components/pages/EventDetailPage.tsx
+  - app/components/pages/MatchPickBanPage.tsx
 ---
 
 # Navigation
@@ -441,3 +442,22 @@ before the pages exist):
   never requires a login. It has no entry in `routes.ts` or the route contract.
   `matchStreamPath(eventSlug, matchId)` builds just this path if a caller needs
   it without an origin.
+
+## Match pick/ban page
+
+`MatchPickBanPage` (`match-pickban`) is a detail page: lazy, keyed by `entry.id`, and
+reading `eventSlug` and `matchId` from the entry's params. It needs no login, and the
+web build opens it straight from a deep link.
+
+- **Title.** Once the payload is in, `useDocumentTitle` sets `<A> vs <B> — Pick/Ban`.
+- **Back to event.** A `NavLink` to `event-detail` that calls the `onBackToEvent` prop
+  `Main.tsx` passes in.
+- **Back to the bracket.** Once the session is complete, the summary carries a
+  `NavLink` to `event-detail` with `eventTab: 'bracket'`. It navigates through
+  `useNavigation().navigate`, so it is a real `/events/<slug>?tab=bracket` anchor on web
+  and one `navigate()` call on both targets.
+- **Copy link** copies `buildMatchLinks(eventSlug, matchId).playerLink` (above), so the
+  copied URL is the public site's on desktop too.
+
+What the page renders, and how it keeps polling invisible, is in `agents/data-sources.md`
+(the watch page, under pick/ban sessions).
