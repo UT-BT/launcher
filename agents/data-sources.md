@@ -677,15 +677,24 @@ row's own actions.
 **The view model.** `buildPickBanView(state, { clockOffsetMs, now })` in `pickBanView.ts` is
 pure and tested without a DOM. It returns:
 
+- `match`: the heading, `title` (A's name first, `TBD` for a missing team), the stage name,
+  round label and best-of
 - the re-derived `phase` (`'none'` when there's no session), and a `countdown` whose
   `endsAt` is a **local-clock** epoch ms. A frozen countdown has `endsAt: null` and a fixed
   `remainingMs`.
-- `turn`, with `actionLabel` and whether the viewer acts, and `spotlight`, the step being
-  revealed
+- `stagePhase`: the same as `phase`, except that while paused it keeps the phase the pause
+  froze (`intro`, `awaiting` or `spotlight`), so a paused overlay can sit over it
+- `turn`, with `actionLabel`, the `mapNumber` a pick decides (`null` for a ban) and whether
+  the viewer acts, and `spotlight`, the step being revealed
 - `cards`: `available`, `banned`, `picked`, `decider` or `excluded`, with the acting side,
-  step number, map number, exclusion reason and the `previewed`, `lockedIn` and
+  step number, map number, exclusion reason (the raw `exclusion` plus `exclusionReason`, a
+  sentence naming the team and seed that triggered it) and the `previewed`, `lockedIn` and
   `selectable` flags
-- `timeline`: `upcoming`, `current`, `locked_in` or `revealed`
+- `timeline`: `upcoming`, `current`, `locked_in` or `revealed`, with each step's team name, and
+  its map and screenshot version once revealed
+- `skippedBans`: one entry per lettered ban the plan dropped. Bans are dropped from the end
+  of the sequence, and `beforeIndex` is the plan index the skipped ban would have preceded,
+  so a timeline can draw it in place.
 - `summary`, in play order (`map_number`), with a slot reserved for every map from the start
 - `teams.left` (A) and `teams.right` (B), falling back to `team_a` on the left while A is
   undetermined
@@ -698,6 +707,37 @@ While a step is inside its reveal lead, the side that locked it sees it as `lock
 its card flagged `lockedIn`. Everyone else still sees the step being awaited. `canLock` is
 re-derived when a spotlight or the intro ends, so a captain can act without waiting for the
 next poll. The server's `can_lock_now` only overrides it for a payload read while awaiting.
+
+**The watch page** (`MatchPickBanPage.tsx`). Anyone who can see the match can open it. It
+reads with the viewer's token when there is one and anonymously otherwise, and it renders
+only from the view model, through the pick/ban visual core (see
+`agents/shared-components.md`).
+
+- **First load.** A skeleton of the page's own layout shows only while `loading && !state`.
+  If the first load fails, a card says the pick/ban isn't available (401, 403 or 404) or
+  that it is retrying, and the store keeps polling behind it.
+- **After that, polls are silent.** New data changes the page in place, and a 304 changes
+  nothing. A small fixed "Reconnecting…" toast shows only while `reconnecting` is set.
+- **Timing.** Reveals and phase changes land on `usePickBanView`'s boundary timer, so a step
+  appears at its `reveal_at` even when no poll arrives then. Countdowns and progress bars
+  paint on animation frames.
+- **Stable keys.** Team panels are keyed by side, members by user id, cards by map name,
+  timeline steps by plan index, skipped bans by sequence position and summary slots by map
+  number.
+- **Fixed layout.** The centre stage has a fixed height at each width. The timeline, every
+  pool card and every summary slot exist from the lobby on. The "On the clock" row in each
+  team panel is always there, and hidden when it's not that side's turn.
+- **Banners.** Voided, cancelled and warnings show above the stage. Paused is an overlay on
+  the stage, over whatever the pause froze (`stagePhase`). Skipped bans are a note under
+  the timeline, with a dashed chip where each dropped ban would have been
+  (`skippedBans`). Each excluded map's reason is listed in words under the pool, so it can
+  be read on a touch screen too.
+
+`e2e/pickban-watch.spec.ts` serves the pick/ban read from fixtures with a server clock
+that runs in real time. It checks three things: a phone width in the lobby, live and
+complete states; a lock-in that arrives early being revealed at its `reveal_at`, at the
+same moment on two pages; and polls, 304s included, that keep the same nodes and the
+same layout.
 
 ### Event pick/ban setup
 

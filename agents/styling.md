@@ -10,7 +10,7 @@ not_here:
   - "which component to use → shared-components.md"
   - "state / persistence → state-patterns.md"
 sections: [class-merging, tables-locked, responsive-columns, page-layout, filter-panel, buttons-toggle-states, form-inputs, card-backgrounds-borders, text, color-palette, animation, css-runtime-cost, donts]
-last_verified: 2026-07-28
+last_verified: 2026-09-24
 verify_against: [app/components/shared/DataTable.tsx, app/styles/globals.css, app/styles/desktop.css, app/styles/index.css, lib/utils.ts, app/hooks/useElementWidth.ts]
 ---
 
@@ -323,6 +323,12 @@ Game identity, not chrome — keep these **literal**, never route through `accen
 - **Functional** — destructive `red`, success `emerald`, warning `amber`/`rose` are
   usability constants and also overlap brand, so they stay fixed too.
 - Splash / login / marketing gradients (`shared.css`, `--utbt-*`) — a brand moment.
+- **Pick/ban sides** — team A crimson `pickban-a` (`#e6394f`), team B azure `pickban-b`
+  (`#1fa6e6`) and the decider's gold `pickban-gold` (`#f0b429`). They are defined once, in
+  the `@theme` block of `globals.css`, so every colour utility and opacity step works
+  (`text-pickban-a`, `border-pickban-b/45`, `bg-pickban-gold/20`), and no theme overrides
+  them, Light included. Pick/ban components read them through `PICK_BAN_TONES`
+  (`events/pickban/components/pickBanTone.ts`) rather than spelling the classes out.
 
 ## Themes
 

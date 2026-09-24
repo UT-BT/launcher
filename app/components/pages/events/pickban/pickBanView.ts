@@ -19,6 +19,8 @@ import { parseApiInstant } from '@/app/utils/timezone'
 
 export type PickBanViewPhase = PickBanPhase | 'none'
 
+export type PickBanStagePhase = Exclude<PickBanViewPhase, 'paused'>
+
 export type PickBanCardState = 'available' | 'banned' | 'picked' | 'decider' | 'excluded'
 
 export type PickBanStepStatus = 'upcoming' | 'current' | 'locked_in' | 'revealed'
@@ -38,12 +40,20 @@ export interface PickBanTimelineEntry {
     action: PickBanStepAction
     actor: PickBanActor | null
     side: PickBanSide | null
+    teamName: string | null
     mapNumber: number | null
     status: PickBanStepStatus
     map: string | null
+    screenshotVersion: string | null
     actedBy: PickBanUserRef | null
     actedByAdmin: boolean
     revealAt: number | null
+}
+
+export interface PickBanSkippedBan {
+    key: string
+    actor: PickBanActor
+    beforeIndex: number
 }
 
 export interface PickBanCardView {
@@ -58,6 +68,7 @@ export interface PickBanCardView {
     stepNumber: number | null
     mapNumber: number | null
     exclusion: PickBanExclusion | null
+    exclusionReason: string | null
     previewed: boolean
     lockedIn: boolean
     selectable: boolean
@@ -71,6 +82,7 @@ export interface PickBanTurn {
     teamName: string | null
     action: PickBanStepAction
     segment: PickBanSegment
+    mapNumber: number | null
     actionLabel: string
     viewerActs: boolean
     lockedIn: boolean
@@ -81,6 +93,7 @@ export interface PickBanSummaryEntry {
     mapNumber: number
     stepIndex: number
     map: string | null
+    screenshotVersion: string | null
     side: PickBanSide | null
     ab: PickBanActor | null
     teamName: string | null
@@ -106,6 +119,13 @@ export interface PickBanTeamPanel {
     ready: PickBanReady | null
     onTurn: boolean
     viewerTeam: boolean
+}
+
+export interface PickBanMatchHeading {
+    title: string
+    stageName: string
+    roundLabel: string | null
+    bestOf: number
 }
 
 export interface PickBanManagerControls {
@@ -135,13 +155,16 @@ export interface PickBanAffordances {
 }
 
 export interface PickBanView {
+    match: PickBanMatchHeading
     status: PickBanSessionStatus
     phase: PickBanViewPhase
+    stagePhase: PickBanStagePhase
     countdown: PickBanCountdown | null
     turn: PickBanTurn | null
     spotlight: PickBanTimelineEntry | null
     cards: PickBanCardView[]
     timeline: PickBanTimelineEntry[]
+    skippedBans: PickBanSkippedBan[]
     summary: PickBanSummaryEntry[]
     teams: { left: PickBanTeamPanel | null; right: PickBanTeamPanel | null }
     banners: PickBanBanner[]
@@ -217,6 +240,10 @@ function teamNameOf(state: PickBanState, side: PickBanSide | null): string | nul
     return side ? state.teams[side]?.name ?? null : null
 }
 
+function screenshotVersionOf(state: PickBanState, map: string | null): string | null {
+    return map === null ? null : state.pool.find((card) => card.map === map)?.screenshot_version ?? null
+}
+
 function viewerActs(state: PickBanState, step: PickBanPlanStep): boolean {
     return step.side !== null && step.side === state.capabilities.acting_side
 }
@@ -226,24 +253,24 @@ function warningMessage(warning: PickBanWarning): string {
     return warning.message || warning.code || 'Warning'
 }
 
+function exclusionReasonOf(state: PickBanState, exclusion: PickBanExclusion | null): string | null {
+    if (!exclusion) return null
+    const triggers = exclusion.triggered_by
+        .map((trigger) => `${teamNameOf(state, trigger.side) ?? trigger.team_id} has pre-cup seed ${trigger.pre_cup_seed}`)
+        .join(' and ')
+    if (!triggers) return `${exclusion.tag} maps are excluded for this match.`
+    return `${exclusion.tag} maps are excluded because ${triggers} (${exclusion.min_pre_cup_seed} or higher).`
+}
+
 function actionLabel(step: PickBanPlanStep, teamName: string | null): string {
     if (step.action === 'decider') return 'Decider'
     const who = teamName ?? (step.actor ? `Team ${step.actor}` : 'Team')
     return `${who} ${step.action === 'ban' ? 'bans' : 'picks'}`
 }
 
-function viewPhase(status: PickBanSessionStatus, livePhase: LivePhase): PickBanViewPhase {
-    switch (status) {
-        case 'none':
-            return 'none'
-        case 'paused':
-            return 'paused'
-        case 'running':
-        case 'complete':
-            return livePhase
-        default:
-            return status
-    }
+function stagePhaseOf(status: PickBanSessionStatus, livePhase: LivePhase): PickBanStagePhase {
+    if (status === 'none' || status === 'cancelled' || status === 'voided') return status
+    return livePhase
 }
 
 function momentOf(state: PickBanState, { clockOffsetMs, now }: PickBanClock): Moment {
@@ -354,13 +381,26 @@ function timelineOf(moment: Moment, inProgress: boolean): PickBanTimelineEntry[]
             action: step.action,
             actor: step.actor,
             side: step.side,
+            teamName: teamNameOf(state, step.side),
             mapNumber: step.map_number,
             status,
             map: revealed ? step.map : null,
+            screenshotVersion: revealed ? screenshotVersionOf(state, step.map) : null,
             actedBy: revealed ? step.acted_by : null,
             actedByAdmin: revealed && step.acted_by_admin,
             revealAt: revealAt === null ? null : moment.toLocal(revealAt),
         }
+    })
+}
+
+function skippedBansOf(state: PickBanState): PickBanSkippedBan[] {
+    const steps = state.sequence?.steps ?? []
+    const banPositions = steps.flatMap((step, position) => (step.action === 'ban' ? [position] : []))
+    const dropped = new Set(banPositions.slice(Math.max(0, banPositions.length - state.dropped_bans)))
+    return steps.flatMap((step, position) => {
+        if (!dropped.has(position)) return []
+        const keptBefore = steps.slice(0, position).filter((_, earlier) => !dropped.has(earlier)).length
+        return [{ key: `skipped-${position}`, actor: step.actor, beforeIndex: keptBefore }]
     })
 }
 
@@ -386,6 +426,7 @@ function cardsOf(moment: Moment, awaitedStep: PickBanPlanStep | null, canChoose:
             stepNumber: step ? step.index + 1 : null,
             mapNumber: step?.map_number ?? null,
             exclusion: poolCard.exclusion,
+            exclusionReason: exclusionReasonOf(state, poolCard.exclusion),
             previewed: available
                 && awaitedStep !== null
                 && preview !== null
@@ -402,16 +443,20 @@ function summaryOf(moment: Moment): PickBanSummaryEntry[] {
     return moment.steps
         .filter((step): step is PickBanPlanStep & { map_number: number } => step.map_number !== null)
         .sort((a, b) => a.map_number - b.map_number)
-        .map((step) => ({
-            key: step.map_number,
-            mapNumber: step.map_number,
-            stepIndex: step.index,
-            map: isRevealedAt(step, clock) ? step.map : null,
-            side: step.side,
-            ab: step.actor,
-            teamName: teamNameOf(state, step.side),
-            decider: step.action === 'decider',
-        }))
+        .map((step) => {
+            const map = isRevealedAt(step, clock) ? step.map : null
+            return {
+                key: step.map_number,
+                mapNumber: step.map_number,
+                stepIndex: step.index,
+                map,
+                screenshotVersion: screenshotVersionOf(state, map),
+                side: step.side,
+                ab: step.actor,
+                teamName: teamNameOf(state, step.side),
+                decider: step.action === 'decider',
+            }
+        })
 }
 
 function turnOf(moment: Moment, inProgress: boolean): PickBanTurn | null {
@@ -427,6 +472,7 @@ function turnOf(moment: Moment, inProgress: boolean): PickBanTurn | null {
         teamName,
         action: currentStep.action,
         segment: currentStep.segment,
+        mapNumber: currentStep.map_number,
         actionLabel: actionLabel(currentStep, teamName),
         viewerActs: acts,
         lockedIn: acts && currentStep === pendingStep,
@@ -449,6 +495,16 @@ function panelOf(moment: Moment, side: PickBanSide, awaitedStep: PickBanPlanStep
         ready: state.ready[side],
         onTurn: awaitedStep !== null && awaitedStep.side === side,
         viewerTeam: state.viewer.side === side,
+    }
+}
+
+function matchHeadingOf(state: PickBanState, leftSide: PickBanSide): PickBanMatchHeading {
+    const nameOf = (side: PickBanSide) => teamNameOf(state, side) ?? 'TBD'
+    return {
+        title: `${nameOf(leftSide)} vs ${nameOf(otherSide(leftSide))}`,
+        stageName: state.match.stage_name,
+        roundLabel: state.match.round_label,
+        bestOf: state.match.best_of,
     }
 }
 
@@ -487,15 +543,19 @@ export function buildPickBanView(state: PickBanState, clock: PickBanClock): Pick
     const timeline = timelineOf(moment, inProgress)
     const spotlightIndex = timing.phase === 'spotlight' ? moment.lastRevealed?.index : undefined
     const leftSide = state.a_side ?? 'team_a'
+    const stagePhase = stagePhaseOf(state.status, timing.phase)
 
     return {
+        match: matchHeadingOf(state, leftSide),
         status: state.status,
-        phase: viewPhase(state.status, timing.phase),
+        phase: state.status === 'paused' ? 'paused' : stagePhase,
+        stagePhase,
         countdown: countdownOf(moment, timing),
         turn: turnOf(moment, inProgress),
         spotlight: timeline.find((entry) => entry.index === spotlightIndex) ?? null,
         cards: cardsOf(moment, awaitedStep, canChoose),
         timeline,
+        skippedBans: skippedBansOf(state),
         summary: summaryOf(moment),
         teams: { left: panelOf(moment, leftSide, awaitedStep), right: panelOf(moment, otherSide(leftSide), awaitedStep) },
         banners: bannersOf(moment),
