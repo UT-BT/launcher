@@ -440,7 +440,11 @@ targets.
   app shell, the boot auth check and the analytics consent banner mount, so it
   never requires a login. It has no entry in `routes.ts` or the route contract.
   `matchStreamPath(eventSlug, matchId)` builds just this path if a caller needs
-  it without an origin.
+  it without an origin; `parseStreamPath(pathname)` (same file) reads it back to
+  `{ eventSlug, matchId }` and is the check `app/renderer-web.tsx` runs before
+  deciding whether to mount the app shell at all — see `agents/web-target.md` →
+  `pre-shell-routes` for the mount itself and why the path stays out of the
+  route contract on purpose.
 
 ## Match pick/ban page
 

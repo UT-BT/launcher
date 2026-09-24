@@ -9,7 +9,7 @@ provides: "the web build target: platform layer, capability gates, per-bridge we
 not_here:
   - "IPC channel contract → lib/conveyor/README.md"
   - "build commands reference → agents/build.md"
-sections: [overview, platform-layer, capability-gates, web-auth, anonymous-browsing, shareable-urls, responsive-layout, performance, build, seo-and-link-previews, hosting-note]
+sections: [overview, platform-layer, capability-gates, web-auth, pre-shell-routes, anonymous-browsing, shareable-urls, responsive-layout, performance, build, seo-and-link-previews, hosting-note]
 last_verified: 2026-09-24
 verify_against:
   - app/public/route-contract.json
@@ -30,6 +30,7 @@ verify_against:
   - scripts/check-web-bundle.mjs
   - app/renderer-web.tsx
   - vite.config.web.ts
+  - app/components/pages/events/pickban/stream/mountStreamRoot.tsx
 ---
 
 # Web target
@@ -123,6 +124,42 @@ The Discord app must list `<origin>/auth/callback` as a redirect URI
 
 Accepted risk (documented on purpose): tokens live in localStorage and are
 XSS-readable; the scope is `identify` only.
+
+## Pre-shell routes
+
+Two paths are handled by `app/renderer-web.tsx` before `App` (and therefore the
+boot auth check, telemetry and the analytics consent banner) ever mounts:
+`/auth/callback` (above) and the pick/ban **stream view**
+(`/events/:eventSlug/matches/:matchId/stream` — see `agents/navigation.md` →
+`shareable-match-links` for the path shape).
+
+`renderer-web.tsx` checks `parseStreamPath(window.location.pathname)`
+(`app/components/navigation/matchLinks.ts`) first. On a match it skips the
+normal branch entirely — no `handleOAuthCallbackIfPresent`, no `App`, no
+`ThemeProvider`-wrapped `Main` — and instead dynamically `import()`s
+`app/components/pages/events/pickban/stream/mountStreamRoot.tsx`, which mounts
+its own `ReactDOM.createRoot` tree (`ErrorBoundary` + `ThemeProvider` +
+`StreamView`, no `WindowContextProvider`, no consent banner). The dynamic
+`import()` is what keeps the stream view's own root — and everything it pulls
+in from the shared pick/ban visual core — out of the entry chunk; `npm run
+check:bundle` fails if that ever regresses to a static import.
+
+This is why the stream path has **no entry in `routes.ts` or
+`route-contract.json`**: `Main`'s in-memory nav stack and its URL sync never
+see it, so there is nothing to add to the route contract. `pathToNav` still
+resolves the same path to *some* view (currently `event-detail`, since it
+falls through the 4-segment `matches/:matchId` check) — that's harmless
+because `Main` is never given the chance to render it, but
+`routes.contract.test.ts` (`the stream sub-route`) pins the one guarantee that
+matters: `pathToNav` never resolves it to `match-pickban`, so nobody mistakes
+the fallback for real routing.
+
+`StreamView` never needs a login, always polls (`usePickBanSession` with
+`alwaysPoll: true` — see `agents/data-sources.md` → `event-pickban-sessions`),
+and renders a fixed 1920×1080 stage (`stream/StreamStage.tsx`,
+`stream/stageScale.ts`) scaled to fit the window with a solid background. The
+`sound=0` query param is parsed by `stream/streamSound.ts`
+(`isStreamSoundMuted`) and reserved for ticket 26.
 
 ## Anonymous browsing
 
