@@ -14,6 +14,7 @@ import {
     hoverOf,
     selectMap,
     withCaptainPlay,
+    type HoverBody,
 } from './captainPlay'
 import {
     BAN_DOWN_SPOTLIGHT_MS,
@@ -362,7 +363,7 @@ describe('sending the selection preview', () => {
     beforeEach(() => { vi.useFakeTimers() })
     afterEach(() => { vi.useRealTimers() })
 
-    function sender(target: () => { map: string } | null, send = vi.fn((_body: { map: string }) => Promise.resolve())) {
+    function sender(target: () => HoverBody | null, send = vi.fn((_body: HoverBody) => Promise.resolve())) {
         return { send, hover: createHoverSender(target, send) }
     }
 
@@ -392,7 +393,7 @@ describe('sending the selection preview', () => {
     })
 
     it('sends nothing when there is nothing to preview by the time the debounce ends', async () => {
-        let target: { map: string } | null = { map: BRAVO }
+        let target: HoverBody | null = { map: BRAVO }
         const { send, hover } = sender(() => target)
 
         hover.request()
@@ -404,7 +405,7 @@ describe('sending the selection preview', () => {
 
     it('does not send the map again while the hover for it is still in flight', async () => {
         let answer: () => void = () => undefined
-        const send = vi.fn((_body: { map: string }) => new Promise<void>((resolve) => { answer = resolve }))
+        const send = vi.fn((_body: HoverBody) => new Promise<void>((resolve) => { answer = resolve }))
         const { hover } = sender(() => ({ map: BRAVO }), send)
 
         hover.request()
@@ -420,16 +421,81 @@ describe('sending the selection preview', () => {
         expect(send).toHaveBeenCalledTimes(2)
     })
 
-    it('swallows a refused hover and keeps sending later ones', async () => {
-        const send = vi.fn((_body: { map: string }) => Promise.reject(new ApiError(429, undefined, 'Request failed')))
+    it('swallows a refused hover, sends it once more, and gives up if that fails too', async () => {
+        const send = vi.fn((_body: HoverBody) => Promise.reject(new ApiError(429, undefined, 'Request failed')))
         const { hover } = sender(() => ({ map: BRAVO }), send)
 
         hover.request()
+        hover.sync()
         await vi.advanceTimersByTimeAsync(HOVER_DEBOUNCE_MS)
-        hover.request()
-        await vi.advanceTimersByTimeAsync(HOVER_DEBOUNCE_MS)
+        expect(send).toHaveBeenCalledTimes(1)
 
+        await vi.advanceTimersByTimeAsync(HOVER_DEBOUNCE_MS)
         expect(send).toHaveBeenCalledTimes(2)
+
+        hover.sync()
+        await vi.advanceTimersByTimeAsync(HOVER_DEBOUNCE_MS * 10)
+        expect(send).toHaveBeenCalledTimes(2)
+
+        hover.request()
+        await vi.advanceTimersByTimeAsync(HOVER_DEBOUNCE_MS * 10)
+        expect(send).toHaveBeenCalledTimes(4)
+    })
+
+    it('stops at the one retry once the retried hover gets through', async () => {
+        const send = vi.fn()
+            .mockImplementationOnce((_body: HoverBody) => Promise.reject(new ApiError(409, undefined, 'Request failed', 'version_conflict')))
+            .mockImplementation((_body: HoverBody) => Promise.resolve())
+        const { hover } = sender(() => ({ map: BRAVO }), send)
+
+        hover.request()
+        await vi.advanceTimersByTimeAsync(HOVER_DEBOUNCE_MS * 10)
+
+        expect(send.mock.calls).toEqual([[{ map: BRAVO }], [{ map: BRAVO }]])
+    })
+
+    it('sends the kept selection again, once, when the turn reopens after a pause cleared the preview', async () => {
+        const awaiting = readAt(started(), AWAITING_A)
+        let view = viewAt(asCaptain(awaiting, 'team_a'), AWAITING_A)
+        const play = selectMap(IDLE_CAPTAIN_PLAY, view, BRAVO)
+        const { send, hover } = sender(() => hoverOf(play, view))
+        const showing = (state: PickBanState, serverTime: number) => {
+            view = viewAt(asCaptain(state, 'team_a'), serverTime)
+            hover.sync()
+        }
+
+        hover.request()
+        hover.sync()
+        await vi.advanceTimersByTimeAsync(HOVER_DEBOUNCE_MS)
+        expect(send.mock.calls).toEqual([[{ map: BRAVO }]])
+
+        const previewed = { ...awaiting, version: awaiting.version + 1, selection_preview: { side: 'team_a' as const, map: BRAVO, at: awaiting.server_now } }
+        showing(previewed, AWAITING_A + 400)
+        const pausedState = paused(previewed, AWAITING_A + 1_000)
+        showing(pausedState, AWAITING_A + 2_000)
+        showing(pausedState, AWAITING_A + 3_000)
+        await vi.advanceTimersByTimeAsync(HOVER_DEBOUNCE_MS * 10)
+        expect(send).toHaveBeenCalledTimes(1)
+
+        const resumedState = resumed(pausedState, AWAITING_A + 30_000)
+        showing(resumedState, AWAITING_A + 31_000)
+        showing(resumedState, AWAITING_A + 31_500)
+        await vi.advanceTimersByTimeAsync(HOVER_DEBOUNCE_MS)
+        expect(send.mock.calls).toEqual([[{ map: BRAVO }], [{ map: BRAVO }]])
+
+        showing(resumedState, AWAITING_A + 32_000)
+        await vi.advanceTimersByTimeAsync(HOVER_DEBOUNCE_MS * 10)
+        expect(send).toHaveBeenCalledTimes(2)
+    })
+
+    it('sends nothing on its own for a captain who has not selected anything', async () => {
+        const view = captainAView()
+        const { send, hover } = sender(() => hoverOf(IDLE_CAPTAIN_PLAY, view))
+
+        hover.sync()
+        await vi.advanceTimersByTimeAsync(HOVER_DEBOUNCE_MS * 10)
+
+        expect(send).not.toHaveBeenCalled()
     })
 })
 

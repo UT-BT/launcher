@@ -128,7 +128,7 @@ export function createPickBanSessionStore({
         },
     })
 
-    const sendNow = async (
+    const postCommand = async (
         scope: PickBanCommandScope,
         command: PickBanParticipantCommand | PickBanManagerCommand,
         input: readonly (object | undefined)[] | null,
@@ -149,15 +149,15 @@ export function createPickBanSessionStore({
         }
     }
 
-    let commandsInFlight: Promise<unknown> = Promise.resolve()
+    let commandQueue: Promise<unknown> = Promise.resolve()
 
     const runCommand = (
         scope: PickBanCommandScope,
         command: PickBanParticipantCommand | PickBanManagerCommand,
         input: readonly (object | undefined)[] | null,
     ): Promise<PickBanState> => {
-        const run = commandsInFlight.then(() => sendNow(scope, command, input))
-        commandsInFlight = run.catch(() => undefined)
+        const run = commandQueue.then(() => postCommand(scope, command, input))
+        commandQueue = run.catch(() => undefined)
         return run
     }
 
