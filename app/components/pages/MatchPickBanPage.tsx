@@ -6,11 +6,12 @@ import { useNavigation } from '@/app/components/navigation/NavigationContext'
 import { buildMatchLinks } from '@/app/components/navigation/matchLinks'
 import { useDocumentTitle } from '@/app/components/navigation/useDocumentMeta'
 import { SITE_NAME } from '@/app/components/navigation/titles'
-import { ApiError, type UserProfile } from '@/app/utils/api'
+import type { UserProfile } from '@/app/utils/api'
 import { useCopyFeedback } from '@/app/hooks/useCopyFeedback'
 import { usePickBanSession, usePickBanView } from '@/app/components/pages/events/pickban/usePickBanSession'
 import { useCaptainPlay, type UseCaptainPlayResult } from '@/app/components/pages/events/pickban/useCaptainPlay'
 import { usePickBanPreload } from '@/app/components/pages/events/pickban/usePickBanPreload'
+import { matchSubtitle } from '@/app/components/pages/events/pickban/pickBanCopy'
 import type { PickBanView } from '@/app/components/pages/events/pickban/pickBanView'
 import { statusOfPhase } from '@/app/components/pages/events/pickban/pickBanStatus'
 import { CaptainDock } from '@/app/components/pages/events/pickban/components/CaptainDock'
@@ -18,6 +19,7 @@ import { CentreStage } from '@/app/components/pages/events/pickban/components/Ce
 import { PickBanBannerNote } from '@/app/components/pages/events/pickban/components/PickBanBannerNote'
 import { PickBanMotion } from '@/app/components/pages/events/pickban/components/PickBanMotion'
 import { PickBanStatusChip } from '@/app/components/pages/events/pickban/components/PickBanStatusChip'
+import { PickBanUnavailable } from '@/app/components/pages/events/pickban/components/PickBanUnavailable'
 import { PoolGrid } from '@/app/components/pages/events/pickban/components/PoolGrid'
 import { StepTimeline } from '@/app/components/pages/events/pickban/components/StepTimeline'
 import { TeamPanel } from '@/app/components/pages/events/pickban/components/TeamPanel'
@@ -74,7 +76,7 @@ export function MatchPickBanPage({ eventSlug, matchId, userProfile, onBackToEven
                         </h1>
                         {view && <PickBanStatusChip status={statusOfPhase(view.phase)} />}
                     </div>
-                    <p className="min-h-4 text-xs text-muted-foreground">{view ? matchSubtitle(view) : ''}</p>
+                    <p className="min-h-4 text-xs text-muted-foreground">{view ? matchSubtitle(view.match) : ''}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                     <CopyLinkButton link={buildMatchLinks(eventSlug, matchId).playerLink} />
@@ -88,16 +90,16 @@ export function MatchPickBanPage({ eventSlug, matchId, userProfile, onBackToEven
             ) : session.loading ? (
                 <PickBanSkeleton />
             ) : (
-                <Unavailable error={session.error} />
+                <PickBanUnavailable
+                    error={session.error}
+                    icon={Swords}
+                    className="rounded-xl border border-hairline/10 bg-card/30 px-4 py-20"
+                />
             )}
 
             {session.reconnecting && !captain.dock && <ReconnectingToast />}
         </div>
     )
-}
-
-function matchSubtitle(view: PickBanView): string {
-    return [view.match.stageName, view.match.roundLabel, `Best of ${view.match.bestOf}`].filter(Boolean).join(' · ')
 }
 
 function PickBanBody({ view, summaryAction, captain, reconnecting }: {
@@ -185,23 +187,6 @@ function CopyLinkButton({ link }: { link: string }) {
             {copied ? <Check className="size-3.5" /> : <Link2 className="size-3.5" />}
             {copied ? 'Copied' : 'Copy link'}
         </button>
-    )
-}
-
-function Unavailable({ error }: { error: unknown }) {
-    const hidden = error instanceof ApiError && [401, 403, 404].includes(error.status)
-    return (
-        <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-hairline/10 bg-card/30 px-4 py-20 text-center">
-            <Swords className="size-8 text-muted-foreground" />
-            <h2 className="text-lg font-semibold text-foreground">
-                {hidden ? 'This pick/ban isn’t available' : 'Couldn’t load this pick/ban'}
-            </h2>
-            <p className="max-w-sm text-sm text-muted-foreground">
-                {hidden
-                    ? 'The match may not be published yet, or the link is wrong.'
-                    : 'Trying again in the background.'}
-            </p>
-        </div>
     )
 }
 

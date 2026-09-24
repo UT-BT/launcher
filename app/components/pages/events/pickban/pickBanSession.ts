@@ -21,6 +21,13 @@ export const RECONNECTING_AFTER_FAILURES = 3
 const ACTIVE_STATUSES: PickBanSessionStatus[] = ['lobby', 'running', 'paused']
 const UNREACHABLE_HTTP_STATUSES = [401, 403, 404]
 
+export function pickBanPollIntervalMs(status: PickBanSessionStatus | null, error: unknown, alwaysPoll: boolean): number {
+    if (status) return ACTIVE_STATUSES.includes(status) ? ACTIVE_POLL_MS : IDLE_POLL_MS
+    if (alwaysPoll) return ACTIVE_POLL_MS
+    const unreachable = error instanceof ApiError && UNREACHABLE_HTTP_STATUSES.includes(error.status)
+    return unreachable ? IDLE_POLL_MS : ACTIVE_POLL_MS
+}
+
 export interface PickBanSessionSnapshot {
     state: PickBanState | null
     clockOffsetMs: number
@@ -95,12 +102,7 @@ export function createPickBanSessionStore({
         return mergePickBanState(current, next)
     }
 
-    const intervalMs = (): number => {
-        const { state, error } = snapshot
-        if (state) return ACTIVE_STATUSES.includes(state.status) ? ACTIVE_POLL_MS : IDLE_POLL_MS
-        const unreachable = error instanceof ApiError && UNREACHABLE_HTTP_STATUSES.includes(error.status)
-        return unreachable ? IDLE_POLL_MS : ACTIVE_POLL_MS
-    }
+    const intervalMs = (): number => pickBanPollIntervalMs(snapshot.state?.status ?? null, snapshot.error, alwaysPoll)
 
     const poller = createPoller({
         intervalMs,

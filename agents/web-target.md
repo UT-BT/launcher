@@ -141,8 +141,13 @@ normal branch entirely — no `handleOAuthCallbackIfPresent`, no `App`, no
 its own `ReactDOM.createRoot` tree (`ErrorBoundary` + `ThemeProvider` +
 `StreamView`, no `WindowContextProvider`, no consent banner). The dynamic
 `import()` is what keeps the stream view's own root — and everything it pulls
-in from the shared pick/ban visual core — out of the entry chunk; `npm run
-check:bundle` fails if that ever regresses to a static import.
+in from the shared pick/ban visual core — out of the entry chunk. `npm run
+check:bundle` (`scripts/check-web-bundle.mjs`) checks this directly, not just
+by size: it reads `mountStreamRoot.tsx`'s manifest record and fails if it is
+missing, if `isDynamicEntry` is false, if its emitted chunk shows up in the
+entry's static import graph, or if `index.html` modulepreloads it — so a
+regression back to a static import fails even if nobody notices the bundle
+grew.
 
 This is why the stream path has **no entry in `routes.ts` or
 `route-contract.json`**: `Main`'s in-memory nav stack and its URL sync never
@@ -159,7 +164,9 @@ the fallback for real routing.
 and renders a fixed 1920×1080 stage (`stream/StreamStage.tsx`,
 `stream/stageScale.ts`) scaled to fit the window with a solid background. The
 `sound=0` query param is parsed by `stream/streamSound.ts`
-(`isStreamSoundMuted`) and reserved for ticket 26.
+(`isStreamSoundMuted`); the contract is that it mutes the stream, and nothing
+in `StreamView` plays sound yet, so a future change wiring up audio only has
+to read that one boolean rather than adding query-param parsing of its own.
 
 ## Anonymous browsing
 

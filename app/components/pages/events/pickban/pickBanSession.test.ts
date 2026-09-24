@@ -6,6 +6,7 @@ import {
     IDLE_POLL_MS,
     RECONNECTING_AFTER_FAILURES,
     createPickBanSessionStore,
+    pickBanPollIntervalMs,
 } from './pickBanSession'
 import { ELIGIBLE_MAPS, T0, asCaptain, iso, locked, readAt, started, unlockAt } from './pickBanFixtures'
 
@@ -80,6 +81,36 @@ beforeEach(() => {
 afterEach(() => {
     vi.useRealTimers()
     vi.unstubAllGlobals()
+})
+
+describe('pickBanPollIntervalMs', () => {
+    it('is active for lobby, running and paused sessions', () => {
+        expect(pickBanPollIntervalMs('lobby', null, false)).toBe(ACTIVE_POLL_MS)
+        expect(pickBanPollIntervalMs('running', null, false)).toBe(ACTIVE_POLL_MS)
+        expect(pickBanPollIntervalMs('paused', null, false)).toBe(ACTIVE_POLL_MS)
+    })
+
+    it('is idle for a terminal session regardless of alwaysPoll', () => {
+        expect(pickBanPollIntervalMs('complete', null, false)).toBe(IDLE_POLL_MS)
+        expect(pickBanPollIntervalMs('cancelled', null, false)).toBe(IDLE_POLL_MS)
+        expect(pickBanPollIntervalMs('voided', null, false)).toBe(IDLE_POLL_MS)
+        expect(pickBanPollIntervalMs('complete', null, true)).toBe(IDLE_POLL_MS)
+    })
+
+    it('is idle with no session and an unreachable error, when not always-polling', () => {
+        expect(pickBanPollIntervalMs(null, new ApiError(404, undefined, 'no_session'), false)).toBe(IDLE_POLL_MS)
+        expect(pickBanPollIntervalMs(null, new ApiError(403, undefined, 'not_authorized'), false)).toBe(IDLE_POLL_MS)
+    })
+
+    it('stays active with no session and an unreachable error, in always-poll mode', () => {
+        expect(pickBanPollIntervalMs(null, new ApiError(404, undefined, 'no_session'), true)).toBe(ACTIVE_POLL_MS)
+        expect(pickBanPollIntervalMs(null, new ApiError(401, undefined, 'not_authorized'), true)).toBe(ACTIVE_POLL_MS)
+    })
+
+    it('is active with no session and no error yet, in either mode', () => {
+        expect(pickBanPollIntervalMs(null, null, false)).toBe(ACTIVE_POLL_MS)
+        expect(pickBanPollIntervalMs(null, null, true)).toBe(ACTIVE_POLL_MS)
+    })
 })
 
 describe('polling the session state', () => {
@@ -198,6 +229,17 @@ describe('polling the session state', () => {
         expect(fetchMock).toHaveBeenCalledTimes(2)
         await vi.advanceTimersByTimeAsync(1)
         expect(fetchMock).toHaveBeenCalledTimes(3)
+        session.stop()
+    })
+
+    it('keeps a stream view polling every second before the lobby opens, not just once running', async () => {
+        const fetchMock = stubFetch(() => refused(404, 'no_session'))
+        const session = store({ alwaysPoll: true })
+
+        session.start()
+        await vi.advanceTimersByTimeAsync(ACTIVE_POLL_MS * 3)
+
+        expect(fetchMock).toHaveBeenCalledTimes(4)
         session.stop()
     })
 
