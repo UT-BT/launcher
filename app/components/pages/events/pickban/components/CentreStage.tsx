@@ -1,20 +1,26 @@
-import type { ReactNode } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import { Ban, CalendarClock, Check, CircleSlash, Pause, Trophy, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { displayMapName } from '@/app/utils/format'
-import type {
-    PickBanBanner,
-    PickBanCardView,
-    PickBanCountdown,
-    PickBanTeamPanel,
-    PickBanTimelineEntry,
-    PickBanTurn,
-    PickBanView,
+import {
+    playsEntrance,
+    sceneDirection,
+    type PickBanBanner,
+    type PickBanCardView,
+    type PickBanCountdown,
+    type PickBanScene,
+    type PickBanSceneDirection,
+    type PickBanTeamPanel,
+    type PickBanTimelineEntry,
+    type PickBanTurn,
+    type PickBanView,
 } from '../pickBanView'
 import { CountdownBar, CountdownText } from './Countdown'
 import { FinalSummary } from './FinalSummary'
 import { PICK_BAN_TONES, stepTone, teamTone } from './pickBanTone'
+import { FADE_MOTION, SCENE_VARIANTS, choreography } from './stageMotion'
 
 interface CentreStageProps {
     view: PickBanView
@@ -27,6 +33,18 @@ const TURN_SQUARE = 'w-32 @md/stage:w-44 @[80rem]/stage:w-72 max-w-[calc(100cqh-
 const REVEAL_WIDTH = 'w-36 @md/stage:w-48 @3xl/stage:w-60 @[80rem]/stage:w-96 max-w-[calc(100cqh-7.5rem)]'
 
 const DISCARDED = 'Its bans and picks don’t count.'
+
+const DEFAULT_REVEAL_ENTRANCE_MS = 1_200
+
+const DEFAULT_INTRO_ENTRANCE_MS = 900
+
+function useSceneDirection(scene: PickBanScene): PickBanSceneDirection {
+    const [shown, setShown] = useState<{ scene: PickBanScene; direction: PickBanSceneDirection }>({ scene, direction: 0 })
+    if (shown.scene.key === scene.key) return shown.direction
+    const next = { scene, direction: sceneDirection(shown.scene, scene) }
+    setShown(next)
+    return next.direction
+}
 
 function stageAnnouncement(view: PickBanView): string {
     switch (view.stagePhase) {
@@ -46,6 +64,7 @@ function stageAnnouncement(view: PickBanView): string {
 export function CentreStage({ view, summaryAction, className }: CentreStageProps) {
     const paused = view.banners.some(banner => banner.kind === 'paused')
     const onTheClock = view.stagePhase === 'awaiting' && view.turn ? PICK_BAN_TONES[stepTone(view.turn.ab)] : null
+    const direction = useSceneDirection(view.scene)
 
     return (
         <section
@@ -57,8 +76,22 @@ export function CentreStage({ view, summaryAction, className }: CentreStageProps
             )}
         >
             <p aria-live="polite" className="sr-only">{paused ? 'Paused.' : stageAnnouncement(view)}</p>
-            <StageContent view={view} summaryAction={summaryAction} />
-            {paused && <PausedOverlay />}
+            <AnimatePresence mode="popLayout" initial={false} custom={direction}>
+                <motion.div
+                    key={view.scene.key}
+                    custom={direction}
+                    variants={SCENE_VARIANTS}
+                    initial={playsEntrance(view.scene, direction) ? 'hidden' : false}
+                    animate="shown"
+                    exit="gone"
+                    className="flex w-full items-center justify-center"
+                >
+                    <StageContent view={view} summaryAction={summaryAction} />
+                </motion.div>
+            </AnimatePresence>
+            <AnimatePresence>
+                {paused && <PausedOverlay key="paused" />}
+            </AnimatePresence>
         </section>
     )
 }
@@ -76,9 +109,11 @@ function StageContent({ view, summaryAction }: { view: PickBanView; summaryActio
         case 'lobby':
             return <LobbyCard left={view.teams.left} right={view.teams.right} />
         case 'intro':
-            return <IntroCard left={view.teams.left} right={view.teams.right} countdown={view.countdown} />
+            return <IntroCard left={view.teams.left} right={view.teams.right} countdown={view.countdown} entranceMs={view.scene.entranceMs} />
         case 'spotlight':
-            if (view.spotlight) return <RevealCard entry={view.spotlight} countdown={view.countdown} upNext={view.turn} />
+            if (view.spotlight) {
+                return <RevealCard entry={view.spotlight} countdown={view.countdown} upNext={view.turn} entranceMs={view.scene.entranceMs} />
+            }
             return null
         case 'awaiting':
             if (!view.turn) return null
@@ -185,21 +220,24 @@ function IntroName({ panel }: { panel: PickBanTeamPanel | null }) {
     )
 }
 
-export function IntroCard({ left, right, countdown }: {
+export function IntroCard({ left, right, countdown, entranceMs = DEFAULT_INTRO_ENTRANCE_MS }: {
     left: PickBanTeamPanel | null
     right: PickBanTeamPanel | null
     countdown: PickBanCountdown | null
+    entranceMs?: number
 }) {
+    const motionOf = useMemo(() => choreography(entranceMs), [entranceMs])
+
     return (
         <div className="flex w-full flex-col items-center gap-3 @lg/stage:flex-row @lg/stage:justify-center @lg/stage:gap-8">
-            <div className="min-w-0 @lg/stage:flex-1 @lg/stage:text-right"><IntroName panel={left} /></div>
-            <div className="flex shrink-0 flex-col items-center gap-1.5">
+            <motion.div variants={motionOf.fromLeft} className="min-w-0 @lg/stage:flex-1 @lg/stage:text-right"><IntroName panel={left} /></motion.div>
+            <motion.div variants={motionOf.centre} className="flex shrink-0 flex-col items-center gap-1.5">
                 <span className="text-sm font-extrabold tracking-[0.2em] text-muted-foreground">VS</span>
                 <CountdownText countdown={countdown} className="text-4xl font-bold text-foreground @[80rem]/stage:text-6xl" />
                 <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Starting</span>
                 <CountdownBar countdown={countdown} tone="neutral" className="w-28" />
-            </div>
-            <div className="min-w-0 @lg/stage:flex-1"><IntroName panel={right} /></div>
+            </motion.div>
+            <motion.div variants={motionOf.fromRight} className="min-w-0 @lg/stage:flex-1"><IntroName panel={right} /></motion.div>
         </div>
     )
 }
@@ -254,72 +292,97 @@ export function TurnCard({ turn, previewCard, stepCount, mapCount }: {
 }
 
 function revealByline(entry: PickBanTimelineEntry): string {
-    return entry.action === 'pick' ? `${entry.actionLabel} map ${entry.mapNumber}` : entry.actionLabel
+    if (entry.action === 'pick') return `${entry.actionLabel} map ${entry.mapNumber}`
+    if (entry.segment === 'ban_down') return `Ban-down · ${entry.actionLabel}`
+    return entry.actionLabel
 }
 
-export function RevealCard({ entry, countdown, upNext }: {
+export function RevealCard({ entry, countdown, upNext, entranceMs = DEFAULT_REVEAL_ENTRANCE_MS }: {
     entry: PickBanTimelineEntry
     countdown: PickBanCountdown | null
     upNext: PickBanTurn | null
+    entranceMs?: number
 }) {
     const tone = PICK_BAN_TONES[stepTone(entry.actor)]
     const banned = entry.action === 'ban'
     const decider = entry.action === 'decider'
+    const motionOf = useMemo(() => choreography(entranceMs), [entranceMs])
 
     return (
         <div className="flex w-full flex-col items-center gap-2.5 text-center @md/stage:gap-3">
-            <div
-                className={cn(
-                    'relative flex aspect-square items-center justify-center overflow-hidden rounded-2xl border-[3px]',
-                    REVEAL_WIDTH,
-                    tone.border,
-                    decider && cn('ring-4', tone.ring),
-                )}
-            >
-                {entry.map && (
-                    <MapThumbnail
-                        mapName={entry.map}
-                        version={entry.screenshotVersion}
-                        size="card"
-                        alt=""
-                        priority
-                        className={cn('absolute inset-0 h-full w-full rounded-none border-0', banned && 'grayscale brightness-50')}
+            <motion.div variants={decider ? motionOf.goldFrame : motionOf.frame} className={cn('relative', REVEAL_WIDTH)}>
+                {decider && (
+                    <motion.div
+                        aria-hidden
+                        variants={motionOf.glow}
+                        className="pointer-events-none absolute inset-0 rounded-2xl shadow-[0_0_60px_var(--color-pickban-gold)]"
                     />
                 )}
-                {banned && (
-                    <span className={cn('relative -rotate-8 rounded-md border-[3px] bg-black/40 px-3 py-1 text-xl font-black tracking-[0.15em] @md/stage:text-2xl', tone.text, tone.border)}>
-                        BANNED
-                    </span>
-                )}
-                {decider && (
-                    <span className={cn('absolute top-2 rounded-full px-3 py-0.5 text-xs font-extrabold tracking-[0.15em]', tone.solid, tone.onSolid)}>
-                        DECIDER
-                    </span>
-                )}
-                {entry.action === 'pick' && (
-                    <span className={cn('absolute top-2 rounded-full px-3 py-0.5 text-xs font-extrabold uppercase tracking-wider', tone.solid, tone.onSolid)}>
-                        Map {entry.mapNumber}
-                    </span>
-                )}
-            </div>
-            <div className="min-w-0 max-w-full space-y-0.5">
+                <div
+                    className={cn(
+                        'relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-2xl border-[3px]',
+                        tone.border,
+                        decider && cn('ring-4', tone.ring),
+                    )}
+                >
+                    {entry.map && (
+                        <motion.div variants={banned ? motionOf.desaturate : undefined} className="absolute inset-0">
+                            <MapThumbnail
+                                mapName={entry.map}
+                                version={entry.screenshotVersion}
+                                size="card"
+                                alt=""
+                                priority
+                                className="absolute inset-0 h-full w-full rounded-none border-0"
+                            />
+                        </motion.div>
+                    )}
+                    {decider && (
+                        <motion.div
+                            aria-hidden
+                            variants={motionOf.sheen}
+                            className="absolute inset-0 bg-gradient-to-br from-pickban-gold/25 via-pickban-gold/5 to-transparent"
+                        />
+                    )}
+                    {banned && (
+                        <motion.span variants={motionOf.stamp} className="relative">
+                            <span className={cn('block -rotate-8 rounded-md border-[3px] bg-black/40 px-3 py-1 text-xl font-black tracking-[0.15em] @md/stage:text-2xl', tone.text, tone.border)}>
+                                BANNED
+                            </span>
+                        </motion.span>
+                    )}
+                    {decider && (
+                        <motion.span variants={motionOf.badge} className={cn('absolute top-2 rounded-full px-3 py-0.5 text-xs font-extrabold tracking-[0.15em]', tone.solid, tone.onSolid)}>
+                            DECIDER
+                        </motion.span>
+                    )}
+                    {entry.action === 'pick' && (
+                        <motion.span variants={motionOf.badge} className={cn('absolute top-2 rounded-full px-3 py-0.5 text-xs font-extrabold uppercase tracking-wider', tone.solid, tone.onSolid)}>
+                            Map {entry.mapNumber}
+                        </motion.span>
+                    )}
+                </div>
+            </motion.div>
+            <motion.div variants={motionOf.caption} className="min-w-0 max-w-full space-y-0.5">
                 <p className="truncate text-lg font-extrabold text-foreground @[80rem]/stage:text-3xl">{entry.map ? displayMapName(entry.map) : ''}</p>
                 <p className={cn('text-[11px] font-bold uppercase tracking-wider', tone.text)}>
                     {decider ? 'Decider · last map standing' : revealByline(entry)}
                     {entry.actedByAdmin && <span className="text-muted-foreground"> · set by an admin</span>}
                 </p>
-            </div>
-            <CountdownBar countdown={countdown} tone={decider ? 'gold' : stepTone(entry.actor)} className={REVEAL_WIDTH} />
-            <p className={cn('text-xs text-muted-foreground', !upNext && 'invisible')}>
+            </motion.div>
+            <motion.div variants={motionOf.caption} className={REVEAL_WIDTH}>
+                <CountdownBar countdown={countdown} tone={decider ? 'gold' : stepTone(entry.actor)} />
+            </motion.div>
+            <motion.p variants={motionOf.caption} className={cn('text-xs text-muted-foreground', !upNext && 'invisible')}>
                 Up next: {upNext?.actionLabel ?? ''}
-            </p>
+            </motion.p>
         </div>
     )
 }
 
 function PausedOverlay() {
     return (
-        <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80">
+        <motion.div {...FADE_MOTION} className="absolute inset-0 z-10 flex items-center justify-center bg-background/75 backdrop-blur-[6px]">
             <div className="flex items-center gap-3 rounded-2xl border border-hairline/10 bg-card px-5 py-3">
                 <span className="flex size-9 items-center justify-center rounded-full bg-accent-500/15 text-accent-200">
                     <Pause className="size-4" />
@@ -329,6 +392,6 @@ function PausedOverlay() {
                     <p className="text-xs text-muted-foreground">Waiting for an admin to resume</p>
                 </div>
             </div>
-        </div>
+        </motion.div>
     )
 }

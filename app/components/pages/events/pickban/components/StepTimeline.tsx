@@ -1,10 +1,12 @@
-import { Fragment } from 'react'
+import { Fragment, useId } from 'react'
+import { LayoutGroup, motion } from 'framer-motion'
 import { Ban, Check, Lock, Star, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { displayMapName } from '@/app/utils/format'
 import type { PickBanStepAction } from '@/app/utils/api'
 import type { PickBanSkippedBan, PickBanTimelineEntry } from '../pickBanView'
 import { PICK_BAN_TONES, stepTone } from './pickBanTone'
+import { INDICATOR_TRANSITION } from './stageMotion'
 
 interface StepTimelineProps {
     entries: PickBanTimelineEntry[]
@@ -38,27 +40,30 @@ function entryDescription(entry: PickBanTimelineEntry): string {
 
 export function StepTimeline({ entries, skippedBans, className }: StepTimelineProps) {
     const trailing = skippedBans.filter(skipped => !entries.some(entry => entry.index === skipped.beforeIndex))
+    const timelineId = useId()
 
     return (
-        <ol className={cn('flex flex-wrap items-start gap-x-1.5 gap-y-2', className)}>
-            {entries.map((entry, position) => {
-                const previous = entries[position - 1]
-                return (
-                    <Fragment key={entry.key}>
-                        {skippedBans.filter(skipped => skipped.beforeIndex === entry.index).map(skipped => (
-                            <SkippedChip key={skipped.key} skipped={skipped} />
-                        ))}
-                        {previous && previous.segment !== entry.segment && (
-                            <li aria-hidden className="w-px self-stretch bg-hairline/10" />
-                        )}
-                        <TimelineChip entry={entry} />
-                    </Fragment>
-                )
-            })}
-            {trailing.map(skipped => (
-                <SkippedChip key={skipped.key} skipped={skipped} />
-            ))}
-        </ol>
+        <LayoutGroup id={timelineId}>
+            <ol className={cn('flex flex-wrap items-start gap-x-1.5 gap-y-2', className)}>
+                {entries.map((entry, position) => {
+                    const previous = entries[position - 1]
+                    return (
+                        <Fragment key={entry.key}>
+                            {skippedBans.filter(skipped => skipped.beforeIndex === entry.index).map(skipped => (
+                                <SkippedChip key={skipped.key} skipped={skipped} />
+                            ))}
+                            {previous && previous.segment !== entry.segment && (
+                                <li aria-hidden className="w-px self-stretch bg-hairline/10" />
+                            )}
+                            <TimelineChip entry={entry} />
+                        </Fragment>
+                    )
+                })}
+                {trailing.map(skipped => (
+                    <SkippedChip key={skipped.key} skipped={skipped} />
+                ))}
+            </ol>
+        </LayoutGroup>
     )
 }
 
@@ -74,20 +79,27 @@ function TimelineChip({ entry }: { entry: PickBanTimelineEntry }) {
             <span
                 aria-hidden
                 className={cn(
-                    'flex size-8 items-center justify-center rounded-lg border-2 bg-card/60',
+                    'relative flex size-8 items-center justify-center rounded-lg border-2 bg-card/60 transition-[background-color,border-color,opacity] duration-300',
                     tone.text,
                     tone.line,
                     done && tone.soft,
-                    now && cn('ring-2 ring-offset-2 ring-offset-background', tone.border, tone.ring),
+                    now && tone.border,
                     entry.status === 'upcoming' && 'opacity-40',
                 )}
             >
+                {now && (
+                    <motion.span
+                        layoutId="now"
+                        transition={INDICATOR_TRANSITION}
+                        className={cn('absolute -inset-1 rounded-[10px] ring-2 transition-[box-shadow] duration-300', tone.ring)}
+                    />
+                )}
                 <Icon className="size-4" strokeWidth={2.5} />
             </span>
             <span
                 aria-hidden
                 className={cn(
-                    'font-mono text-[9px] font-bold uppercase leading-none',
+                    'font-mono text-[9px] font-bold uppercase leading-none transition-[color,opacity] duration-300',
                     now ? tone.text : 'text-muted-foreground',
                     entry.status === 'upcoming' && 'opacity-60',
                 )}

@@ -1,8 +1,10 @@
+import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { displayMapName } from '@/app/utils/format'
 import type { PickBanSummaryEntry } from '../pickBanView'
 import { PICK_BAN_TONES, stepTone } from './pickBanTone'
+import { staggeredCard } from './stageMotion'
 
 interface FinalSummaryProps {
     entries: PickBanSummaryEntry[]
@@ -19,11 +21,11 @@ export function FinalSummary({ entries, className }: FinalSummaryProps) {
             className={cn('grid w-full justify-center gap-2 [--summary-card:11rem] @md/stage:gap-3 @[80rem]/stage:[--summary-card:16rem]', className)}
             style={{ gridTemplateColumns: `repeat(${entries.length}, minmax(0, var(--summary-card)))` }}
         >
-            {entries.map(entry => {
+            {entries.map((entry, order) => {
                 const tone = PICK_BAN_TONES[stepTone(entry.decider ? null : entry.ab)]
                 const name = entry.map ? displayMapName(entry.map) : null
                 return (
-                    <li key={entry.key} className="flex min-w-0 flex-col items-center gap-1.5">
+                    <motion.li key={entry.key} variants={staggeredCard(order)} className="flex min-w-0 flex-col items-center gap-1.5">
                         <span className="sr-only">
                             {`Map ${entry.mapNumber}: ${name ?? 'to be decided'}, ${pickedByLabel(entry).toLowerCase()}`}
                         </span>
@@ -47,7 +49,7 @@ export function FinalSummary({ entries, className }: FinalSummaryProps) {
                         <span aria-hidden className={cn('line-clamp-2 w-full break-words text-center text-[10px] font-bold uppercase leading-tight tracking-wider', tone.text)}>
                             {pickedByLabel(entry)}
                         </span>
-                    </li>
+                    </motion.li>
                 )
             })}
         </ol>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { PickBanState } from '@/app/utils/api'
-import { buildPickBanView } from './pickBanView'
+import { buildPickBanView, playsEntrance, sceneDirection } from './pickBanView'
 import {
     BAN_DOWN_SPOTLIGHT_MS,
     DECIDER_SPOTLIGHT_MS,
@@ -25,6 +25,7 @@ import {
     readAt,
     resumed,
     started,
+    undone,
     unlockAt,
 } from './pickBanFixtures'
 
@@ -681,5 +682,100 @@ describe('match heading', () => {
         })
         expect(viewAt({ ...state, a_side: 'team_b' }, T0).match.title).toBe('Azure Owls vs Crimson Cats')
         expect(viewAt({ ...state, teams: { ...state.teams, team_b: null } }, T0).match.title).toBe('Crimson Cats vs TBD')
+    })
+})
+
+describe('stage scene', () => {
+    it('names one scene per stage moment, and keeps its key across polls within that moment', () => {
+        const state = asSpectator(firstBanLocked())
+        const reveal = FIRST_LOCK + LEAD_MS
+
+        expect(viewAt(asSpectator(pickBanState()), T0).scene).toMatchObject({ key: 'lobby', kind: 'lobby' })
+        expect(viewAt(state, INTRO_START + 1_000).scene).toMatchObject({ key: 'intro', kind: 'intro' })
+        expect(viewAt(state, FIRST_LOCK + 1_000).scene).toMatchObject({ key: 'turn-0', kind: 'turn' })
+        expect(viewAt(state, reveal).scene).toMatchObject({ key: 'reveal-0', kind: 'reveal' })
+        expect(viewAt(readAt(state, reveal + 1_000), reveal + 4_000).scene.key).toBe('reveal-0')
+        expect(viewAt(state, reveal + SPOTLIGHT_MS).scene).toMatchObject({ key: 'turn-1', kind: 'turn' })
+        expect(viewAt(asSpectator(completed()), T0 + 3_600_000).scene).toMatchObject({ key: 'complete', kind: 'complete' })
+        expect(viewAt(asSpectator(pickBanState({ status: 'voided', phase: 'voided' })), T0).scene.kind).toBe('voided')
+    })
+
+    it('moves forward through a run, and backwards on an undo or a restart', () => {
+        const firstBan = asSpectator(firstBanLocked())
+        const reveal = FIRST_LOCK + LEAD_MS
+        const secondBan = lockedInTurn(started(), [ALPHA, BRAVO])
+        const secondReveal = unlockAt(secondBan) - SPOTLIGHT_MS
+        const lobby = viewAt(asSpectator(pickBanState()), T0).scene
+        const intro = viewAt(firstBan, INTRO_START).scene
+        const firstTurn = viewAt(firstBan, INTRO_END).scene
+        const firstReveal = viewAt(firstBan, reveal).scene
+        const secondTurn = viewAt(firstBan, reveal + SPOTLIGHT_MS).scene
+        const secondSpotlight = viewAt(asSpectator(secondBan), secondReveal + 1_000).scene
+        const undoneMidSpotlight = viewAt(asSpectator(undone(secondBan, secondReveal + 2_000)), secondReveal + 2_000).scene
+
+        expect(sceneDirection(null, lobby)).toBe(0)
+        expect(sceneDirection(firstReveal, viewAt(firstBan, reveal + 3_000).scene)).toBe(0)
+        for (const [from, to] of [[lobby, intro], [intro, firstTurn], [firstTurn, firstReveal], [firstReveal, secondTurn], [secondTurn, secondSpotlight]]) {
+            expect(sceneDirection(from, to)).toBe(1)
+        }
+
+        expect(undoneMidSpotlight.key).toBe('turn-1')
+        expect(sceneDirection(secondSpotlight, undoneMidSpotlight)).toBe(-1)
+        expect(sceneDirection(firstReveal, lobby)).toBe(-1)
+        expect(sceneDirection(viewAt(asSpectator(completed()), T0 + 3_600_000).scene, secondTurn)).toBe(-1)
+    })
+
+    it('measures how long ago each scene began on the server timeline, frozen while paused', () => {
+        const state = asSpectator(firstBanLocked())
+        const reveal = FIRST_LOCK + LEAD_MS
+        const pausedAt = reveal + 3_500
+
+        expect(viewAt(state, INTRO_START + 400).scene.elapsedMs).toBe(400)
+        expect(viewAt(state, INTRO_END + 700).scene.elapsedMs).toBe(700)
+        expect(viewAt(state, reveal + 250).scene.elapsedMs).toBe(250)
+        expect(viewAt(state, reveal + 250, 30_000).scene.elapsedMs).toBe(250)
+        expect(viewAt(state, reveal + SPOTLIGHT_MS + 300).scene).toMatchObject({ key: 'turn-1', elapsedMs: 300 })
+        expect(viewAt(asSpectator(paused(firstBanLocked(), pausedAt)), pausedAt + 60_000).scene).toMatchObject({ key: 'reveal-0', elapsedMs: 3_500 })
+        expect(viewAt(asSpectator(pickBanState()), T0).scene.elapsedMs).toBeNull()
+    })
+
+    it('gives a ban-down reveal a shorter entrance than a lettered one and the decider the longest, each inside its spotlight', () => {
+        const before = beforeFinalBan()
+        const finalLock = unlockAt(before) + 2_000
+        const ending = asSpectator(locked(before, FOXTROT, finalLock))
+        const banDownReveal = finalLock + LEAD_MS
+
+        const lettered = viewAt(asSpectator(firstBanLocked()), FIRST_LOCK + LEAD_MS).scene.entranceMs
+        const banDown = viewAt(ending, banDownReveal).scene.entranceMs
+        const decider = viewAt(ending, banDownReveal + BAN_DOWN_SPOTLIGHT_MS).scene.entranceMs
+
+        expect(banDown).toBeLessThan(lettered)
+        expect(decider).toBeGreaterThan(lettered)
+        expect(lettered).toBeLessThanOrEqual(SPOTLIGHT_MS * 0.15)
+        expect(banDown).toBeLessThanOrEqual(BAN_DOWN_SPOTLIGHT_MS * 0.15)
+        expect(decider).toBeLessThanOrEqual(DECIDER_SPOTLIGHT_MS * 0.15)
+        expect(viewAt(ending, INTRO_START).scene.entranceMs).toBeLessThanOrEqual(INTRO_MS * 0.2)
+    })
+
+    it('shrinks a reveal entrance to fit a short spotlight', () => {
+        const quickPacing = { ...pickBanState().pacing, spotlight: 2 }
+        const quick = asSpectator(locked(started(pickBanState({ pacing: quickPacing })), ALPHA, FIRST_LOCK))
+
+        expect(viewAt(quick, FIRST_LOCK + LEAD_MS).scene.entranceMs).toBeLessThanOrEqual(300)
+    })
+
+    it('plays an entrance only while it can still run in step with every other screen, and always for an undo', () => {
+        const state = asSpectator(firstBanLocked())
+        const reveal = FIRST_LOCK + LEAD_MS
+        const onTime = viewAt(state, reveal + 16).scene
+        const late = viewAt(state, reveal + onTime.entranceMs + 1).scene
+        const secondBan = lockedInTurn(started(), [ALPHA, BRAVO])
+        const backToTurn = viewAt(asSpectator(undone(secondBan, unlockAt(secondBan) + 60_000)), unlockAt(secondBan) + 60_000).scene
+
+        expect(playsEntrance(onTime, 1)).toBe(true)
+        expect(playsEntrance(late, 1)).toBe(false)
+        expect(backToTurn.elapsedMs).toBeGreaterThan(backToTurn.entranceMs)
+        expect(playsEntrance(backToTurn, -1)).toBe(true)
+        expect(playsEntrance(viewAt(asSpectator(pickBanState()), T0).scene, 1)).toBe(true)
     })
 })

@@ -10,11 +10,13 @@ import { ApiError, type UserProfile } from '@/app/utils/api'
 import { useCopyFeedback } from '@/app/hooks/useCopyFeedback'
 import { usePickBanSession, usePickBanView } from '@/app/components/pages/events/pickban/usePickBanSession'
 import { useCaptainPlay, type UseCaptainPlayResult } from '@/app/components/pages/events/pickban/useCaptainPlay'
+import { usePickBanPreload } from '@/app/components/pages/events/pickban/usePickBanPreload'
 import type { PickBanView } from '@/app/components/pages/events/pickban/pickBanView'
 import { statusOfPhase } from '@/app/components/pages/events/pickban/pickBanStatus'
 import { CaptainDock } from '@/app/components/pages/events/pickban/components/CaptainDock'
 import { CentreStage } from '@/app/components/pages/events/pickban/components/CentreStage'
 import { PickBanBannerNote } from '@/app/components/pages/events/pickban/components/PickBanBannerNote'
+import { PickBanMotion } from '@/app/components/pages/events/pickban/components/PickBanMotion'
 import { PickBanStatusChip } from '@/app/components/pages/events/pickban/components/PickBanStatusChip'
 import { PoolGrid } from '@/app/components/pages/events/pickban/components/PoolGrid'
 import { StepTimeline } from '@/app/components/pages/events/pickban/components/StepTimeline'
@@ -36,6 +38,7 @@ export function MatchPickBanPage({ eventSlug, matchId, userProfile, onBackToEven
     const captain = useCaptainPlay(usePickBanView(session.state, session.clockOffsetMs), session.sendCommand)
     const view = captain.view
     const { navigate } = useNavigation()
+    usePickBanPreload(view?.cards)
 
     useDocumentTitle(view ? `${view.match.title} — Pick/Ban` : undefined, SITE_NAME)
 
@@ -79,7 +82,9 @@ export function MatchPickBanPage({ eventSlug, matchId, userProfile, onBackToEven
             </header>
 
             {view ? (
-                <PickBanBody view={view} summaryAction={bracketLink} captain={captain} reconnecting={session.reconnecting} />
+                <PickBanMotion>
+                    <PickBanBody view={view} summaryAction={bracketLink} captain={captain} reconnecting={session.reconnecting} />
+                </PickBanMotion>
             ) : session.loading ? (
                 <PickBanSkeleton />
             ) : (

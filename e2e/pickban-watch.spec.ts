@@ -12,7 +12,9 @@ import {
     paused,
     pickBanState,
     readAt,
+    resumed,
     started,
+    undone,
 } from '../app/components/pages/events/pickban/pickBanFixtures'
 
 const SLUG = 'watch-cup'
@@ -274,6 +276,87 @@ test('the countdown bar glides, and steps once a second with reduced motion on',
         const positions = await barPositions()
         if (reducedMotion === 'reduce') expect(positions).toBeLessThanOrEqual(4)
         else expect(positions).toBeGreaterThan(20)
+    }
+})
+
+function sampleStageOpacity(page: Page, selector: string, text: string, durationMs: number) {
+    return page.evaluate(([selector, text, durationMs]) => new Promise<number[]>(resolve => {
+        const seen: number[] = []
+        const startedAt = performance.now()
+        const sample = () => {
+            const element = Array.from(document.querySelectorAll<HTMLElement>(`section[aria-label="Pick/ban stage"] ${selector}`))
+                .find(candidate => candidate.textContent?.includes(text))
+            if (element) seen.push(Number(getComputedStyle(element).opacity))
+            if (performance.now() - startedAt < durationMs) setTimeout(sample, 4)
+            else resolve(seen)
+        }
+        sample()
+    }), [selector, text, durationMs] as const)
+}
+
+function midway(opacities: number[]): number[] {
+    return opacities.filter(opacity => opacity > 0.05 && opacity < 0.95)
+}
+
+test('an undo plays the reveal backwards, and is instant with reduced motion', async ({ page, isMobile }) => {
+    test.skip(isMobile)
+
+    const revealed = held(locked(started(), ALPHA, FIRST_LOCK))
+    const reveal = revealOf(revealed, 0)
+    const afterUndo = undone(revealed, reveal + 1_000)
+
+    for (const reducedMotion of ['no-preference', 'reduce'] as const) {
+        let undoServed = false
+        await page.emulateMedia({ reducedMotion })
+        await page.unrouteAll()
+        await serve(page, fakeServer(reveal + 1_000, () => (undoServed ? afterUndo : revealed)))
+        await page.goto(PAGE_PATH)
+        await expect(stage(page)).toContainText('BANNED')
+
+        const sampling = sampleStageOpacity(page, '.relative', 'BANNED', 4_000)
+        undoServed = true
+        const opacities = await sampling
+
+        await expect(stage(page)).toContainText(/Waiting for Crimson Cats to lock in/)
+        await expect(stage(page)).not.toContainText('BANNED')
+        if (reducedMotion === 'reduce') expect(midway(opacities), reducedMotion).toEqual([])
+        else expect(midway(opacities).length, reducedMotion).toBeGreaterThan(2)
+    }
+})
+
+test('the paused overlay fades in and out, and is instant with reduced motion', async ({ page, isMobile }) => {
+    test.skip(isMobile)
+
+    const revealed = held(locked(started(), ALPHA, FIRST_LOCK))
+    const reveal = revealOf(revealed, 0)
+    const pausedState = paused(revealed, reveal + 1_000)
+    const resumedState = resumed(pausedState, reveal + 1_000)
+
+    for (const reducedMotion of ['no-preference', 'reduce'] as const) {
+        let served: PickBanState = revealed
+        await page.emulateMedia({ reducedMotion })
+        await page.unrouteAll()
+        await serve(page, fakeServer(reveal + 1_000, () => served))
+        await page.goto(PAGE_PATH)
+        await expect(stage(page)).toContainText('BANNED')
+
+        const fadingIn = sampleStageOpacity(page, '.z-10', 'Session paused', 2_500)
+        served = pausedState
+        const fadeIn = await fadingIn
+        await expect(stage(page)).toContainText('Session paused')
+
+        const fadingOut = sampleStageOpacity(page, '.z-10', 'Session paused', 2_500)
+        served = resumedState
+        const fadeOut = await fadingOut
+        await expect(stage(page)).not.toContainText('Session paused')
+        await expect(stage(page)).toContainText('BANNED')
+
+        if (reducedMotion === 'reduce') {
+            expect([...midway(fadeIn), ...midway(fadeOut)], reducedMotion).toEqual([])
+        } else {
+            expect(midway(fadeIn).length, `${reducedMotion} fade in`).toBeGreaterThan(2)
+            expect(midway(fadeOut).length, `${reducedMotion} fade out`).toBeGreaterThan(2)
+        }
     }
 })
 

@@ -173,7 +173,20 @@ export interface PickBanView {
     affordances: PickBanAffordances
     edited: boolean
     nextBoundaryAt: number | null
+    scene: PickBanScene
 }
+
+export type PickBanSceneKind = 'none' | 'lobby' | 'intro' | 'turn' | 'reveal' | 'complete' | 'cancelled' | 'voided'
+
+export interface PickBanScene {
+    key: string
+    kind: PickBanSceneKind
+    position: number
+    elapsedMs: number | null
+    entranceMs: number
+}
+
+export type PickBanSceneDirection = -1 | 0 | 1
 
 export interface PickBanClock {
     clockOffsetMs: number
@@ -204,6 +217,18 @@ interface Moment {
 const LIVE_STATUSES: PickBanSessionStatus[] = ['running', 'paused', 'complete']
 
 const IDLE_TIMING: LiveTiming = { phase: 'lobby', startsAt: null, endsAt: null }
+
+const ENTRANCE_SHARE = 0.15
+
+const PLAIN_ENTRANCE_MS = 350
+
+const INTRO_ENTRANCE_MAX_MS = 900
+
+const REVEAL_ENTRANCE_MAX_MS: { [segment in PickBanSegment]: number } = {
+    lettered: 1_200,
+    ban_down: 600,
+    decider: 1_500,
+}
 
 const CARD_STATE_OF_ACTION: { [action in PickBanStepAction]: PickBanCardState } = {
     ban: 'banned',
@@ -314,11 +339,13 @@ function liveTiming(moment: Moment): LiveTiming {
     if (introStart !== null && clock < introStart) return IDLE_TIMING
     const introEnd = parseApiInstant(state.intro_ends_at)
     if (introEnd !== null && clock < introEnd) return { phase: 'intro', startsAt: introStart, endsAt: introEnd }
+    const settledPhase = currentStep ? 'awaiting' : 'complete'
     if (lastRevealed) {
         const spotlightEnd = spotlightEndOf(moment, lastRevealed)
         if (clock < spotlightEnd) return { phase: 'spotlight', startsAt: revealAtOf(lastRevealed), endsAt: spotlightEnd }
+        return { phase: settledPhase, startsAt: spotlightEnd, endsAt: null }
     }
-    return { phase: currentStep ? 'awaiting' : 'complete', startsAt: null, endsAt: null }
+    return { phase: settledPhase, startsAt: introEnd, endsAt: null }
 }
 
 function countdownOf(moment: Moment, timing: LiveTiming): PickBanCountdown | null {
@@ -566,5 +593,58 @@ export function buildPickBanView(state: PickBanState, clock: PickBanClock): Pick
         affordances,
         edited: state.edited,
         nextBoundaryAt: nextBoundaryOf(moment, timing),
+        scene: sceneOf(moment, stagePhase, timing),
     }
+}
+
+type SceneIdentity = Pick<PickBanScene, 'key' | 'kind' | 'position'>
+
+function sceneIdentityOf(moment: Moment, stagePhase: PickBanStagePhase): SceneIdentity {
+    const { currentStep, lastRevealed, steps } = moment
+    const end = 2 + 2 * steps.length
+    if (stagePhase === 'awaiting' && currentStep) {
+        return { key: `turn-${currentStep.index}`, kind: 'turn', position: 2 + 2 * currentStep.index }
+    }
+    if (stagePhase === 'spotlight' && lastRevealed) {
+        return { key: `reveal-${lastRevealed.index}`, kind: 'reveal', position: 3 + 2 * lastRevealed.index }
+    }
+    switch (stagePhase) {
+        case 'none':
+            return { key: 'none', kind: 'none', position: -1 }
+        case 'lobby':
+            return { key: 'lobby', kind: 'lobby', position: 0 }
+        case 'intro':
+            return { key: 'intro', kind: 'intro', position: 1 }
+        case 'cancelled':
+        case 'voided':
+            return { key: stagePhase, kind: stagePhase, position: end + 1 }
+        default:
+            return { key: 'complete', kind: 'complete', position: end }
+    }
+}
+
+function entranceMsOf(moment: Moment, kind: PickBanSceneKind): number {
+    const { pacing } = moment.state
+    if (kind === 'intro') return Math.min(INTRO_ENTRANCE_MAX_MS, pacing.intro * 1000 * ENTRANCE_SHARE)
+    if (kind !== 'reveal' || !moment.lastRevealed) return PLAIN_ENTRANCE_MS
+    const { segment } = moment.lastRevealed
+    return Math.min(REVEAL_ENTRANCE_MAX_MS[segment], spotlightLengthMs(pacing, segment) * ENTRANCE_SHARE)
+}
+
+function sceneOf(moment: Moment, stagePhase: PickBanStagePhase, timing: LiveTiming): PickBanScene {
+    const identity = sceneIdentityOf(moment, stagePhase)
+    return {
+        ...identity,
+        elapsedMs: timing.startsAt === null ? null : moment.clock - timing.startsAt,
+        entranceMs: entranceMsOf(moment, identity.kind),
+    }
+}
+
+export function sceneDirection(previous: PickBanScene | null, next: PickBanScene): PickBanSceneDirection {
+    if (previous === null || previous.key === next.key) return 0
+    return next.position < previous.position ? -1 : 1
+}
+
+export function playsEntrance(scene: PickBanScene, direction: PickBanSceneDirection): boolean {
+    return direction < 0 || scene.elapsedMs === null || scene.elapsedMs <= scene.entranceMs
 }

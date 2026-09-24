@@ -8,7 +8,7 @@ read_when:
   - "reading a match's pick/ban state, sending a pick/ban command, or rendering from the pick/ban view model"
   - "rendering the manager match queue, or changing which stable codes it shows as a blocking reason"
   - "finding a pick/ban session from the bracket, a match card, the event page or the Schedule tab without a direct link"
-keywords: [api.ts, fetch, endpoint, accessToken, avatar, MapThumbnail, favorites, patreon, downloadMapZip, world_records, caps, predictions, draw, odds, schedule, proposal, slot, whose_turn, resolved_window, countdown, nav badge, fetchMyTournaments, SlotPickerModal, SlotGrid, DateTimeField, slotGeneration, proposeMatchSlots, withdrawMatchProposal, acceptMatchProposal, fetchMatchSchedule, ApiError, expected_match_duration_minutes, fetchPickBanConfig, PickBanConfig, PickBanPoolMap, MapsTab, mapsShared, stagesWithPools, tagBadgeVariant, pick/ban, fetchPickBanState, ETag, If-None-Match, 304, X-Server-Now, server_now, clock offset, reveal_at, sendPickBanCommand, sendPickBanManagerCommand, pickBanErrorCode, captain controls, CaptainDock, useCaptainPlay, fetchPickBanQueue, PickBanQueueEntry, PickBanQueueRow, toQueueRow, canOpenLobby, blockingReasonLabel, PickBanQueuePanel, pickBanStatusBadge, statusOfPhase, buildPickBanView, setPickBanStageConfig, setPickBanStagePool, copyPickBanStagePool, pickBanEditor, stage pool, buildMatchLinks, matchStreamPath, createPoller, pick_ban_status, MatchPickBanStatus, pickBanCardAffordance, PickBanCardPill, pickBanMapLabel, MyPickBanSession, pick_ban_session, pickBanJoinBannerVisible, PickBanJoinBanner, PICK_BAN_ME_REFRESH_MS, pickBanEntryPoints, Join banner]
+keywords: [api.ts, fetch, endpoint, accessToken, avatar, MapThumbnail, favorites, patreon, downloadMapZip, world_records, caps, predictions, draw, odds, schedule, proposal, slot, whose_turn, resolved_window, countdown, nav badge, fetchMyTournaments, SlotPickerModal, SlotGrid, DateTimeField, slotGeneration, proposeMatchSlots, withdrawMatchProposal, acceptMatchProposal, fetchMatchSchedule, ApiError, expected_match_duration_minutes, fetchPickBanConfig, PickBanConfig, PickBanPoolMap, MapsTab, mapsShared, stagesWithPools, tagBadgeVariant, pick/ban, fetchPickBanState, ETag, If-None-Match, 304, X-Server-Now, server_now, clock offset, reveal_at, sendPickBanCommand, sendPickBanManagerCommand, pickBanErrorCode, captain controls, CaptainDock, useCaptainPlay, fetchPickBanQueue, PickBanQueueEntry, PickBanQueueRow, toQueueRow, canOpenLobby, blockingReasonLabel, PickBanQueuePanel, pickBanStatusBadge, statusOfPhase, buildPickBanView, setPickBanStageConfig, setPickBanStagePool, copyPickBanStagePool, pickBanEditor, stage pool, buildMatchLinks, matchStreamPath, createPoller, pick_ban_status, MatchPickBanStatus, pickBanCardAffordance, PickBanCardPill, pickBanMapLabel, MyPickBanSession, pick_ban_session, pickBanJoinBannerVisible, PickBanJoinBanner, PICK_BAN_ME_REFRESH_MS, pickBanEntryPoints, Join banner, scene, sceneDirection, playsEntrance, usePickBanPreload]
 provides: "the client-side API contract the launcher consumes + asset URLs + favorites/patreon sync models"
 not_here:
   - "IPC channels (window.conveyor.*) → lib/conveyor/README.md"
@@ -767,6 +767,21 @@ pure and tested without a DOM. It returns:
 - `affordances`: `canReady`, `isReady`, `canLock`, and `manager` (which dock controls apply
   to the current status, `startBlockedBy`, and `actForSide`)
 - `nextBoundaryAt`: when the view next changes on its own
+- `scene`: what the centre stage shows, for animating it. `key` (`lobby`, `intro`,
+  `turn-<index>`, `reveal-<index>`, `complete`, `none`, `cancelled` or `voided`) stays the
+  same across every poll within one stage moment. `position` orders scenes through a run.
+  `elapsedMs` is how long ago the scene began on the server timeline (a reveal at its
+  `reveal_at`, a turn when the intro or the previous spotlight ended), frozen while paused
+  and `null` in the lobby and the end states. `entranceMs` is how long its entrance runs.
+  It is a share of the pacing, capped per kind, so a ban-down reveal's entrance is shorter
+  than a lettered one's, the decider's is the longest, and each fits inside its spotlight.
+
+Two pure helpers go with `scene`. `sceneDirection(previous, next)` is `1` going forward,
+`-1` for an undo, a restart or a reopen, and `0` when the key didn't change.
+`playsEntrance(scene, direction)` is false only for a forward scene that arrives after its
+entrance would have finished (a late poll, or a page opened mid-reveal). That scene appears
+already settled, so it never replays out of step with other screens. An undo always
+animates.
 
 `actorLabel` is who acts at a step: the team's name, `Team A` or `Team B` while that side's
 team is undecided, or `Decider`. `actionLabel` adds the verb (`Crimson Cats bans`, or
@@ -792,6 +807,14 @@ only from the view model, through the pick/ban visual core (see
 - **Timing.** Reveals and phase changes land on `usePickBanView`'s boundary timer, so a step
   appears at its `reveal_at` even when no poll arrives then. Countdowns and progress bars
   paint on animation frames. With reduced motion on, the bars step once a second instead.
+- **Motion.** The stage animates from `view.scene`, never from a poll arriving, so every
+  screen plays a reveal at the same moment. An undo plays the same animations backwards,
+  and the paused overlay fades in and out. The page wraps the visual core in
+  `PickBanMotion`, so with reduced motion on every transition is instant and shows the same
+  information (see `agents/shared-components.md`).
+- **Preloading.** `usePickBanPreload(view?.cards)` fetches and decodes every eligible
+  pool screenshot at the size the visual core renders, and loads the fonts, from the first
+  view on (the lobby included). So no screenshot pops in mid-reveal.
 - **Stable keys.** The team panels sit in fixed left and right slots. Members are keyed by
   user id, cards by map name, timeline steps by plan index, skipped bans by their order in
   `skipped_bans` and summary slots by map number.
@@ -820,13 +843,19 @@ only from the view model, through the pick/ban visual core (see
     current by the time the alert shows.
 
 `e2e/pickban-watch.spec.ts` serves the pick/ban read from fixtures with a server clock
-that runs in real time. It checks five things: a phone width in the lobby, live and
-complete states; a lock-in that arrives early being revealed at its `reveal_at`, at the
-same moment on two pages; the centre stage keeping one height per width from 360px to
-3840px while every state (lobby, intro, turn, ban, pick and decider reveals, paused,
-summary, cancelled) fits inside it; the countdown bar gliding, and stepping once a second
-with reduced motion on; and polls, 304s included, that keep the same nodes and the same
-layout.
+that runs in real time. It checks seven things:
+
+- a phone width in the lobby, live and complete states
+- a lock-in that arrives early being revealed at its `reveal_at`, at the same moment on two
+  pages
+- the centre stage keeping one height per width from 360px to 3840px while every state
+  (lobby, intro, turn, ban, pick and decider reveals, paused, summary, cancelled) fits
+  inside it
+- the countdown bar gliding, and stepping once a second with reduced motion on
+- an undo fading the reveal out through in-between frames, and doing it instantly with
+  reduced motion on
+- the paused overlay fading in and out, and doing it instantly with reduced motion on
+- polls, 304s included, that keep the same nodes and the same layout
 
 ### Event pick/ban setup
 
