@@ -5,6 +5,7 @@ import {
     eventErrorMessage, fetchEventBracket, fetchPickBanConfig,
     type EventBracket, type EventFormatSpec, type PickBanBlock, type PickBanConfig, type PickBanStageConfig,
 } from '@/app/utils/api'
+import { PickBanQueuePanel } from './PickBanQueuePanel'
 import { PickBanStageCard } from './PickBanStageCard'
 import {
     pruneDrafts, rebaseDraft, settledDraft, withDraft, withStagePickBan,
@@ -108,6 +109,8 @@ export function PickBanPanel({
                     ))}
                 </section>
             )}
+
+            <PickBanQueuePanel accessToken={accessToken} slug={slug} />
         </div>
     )
 }
