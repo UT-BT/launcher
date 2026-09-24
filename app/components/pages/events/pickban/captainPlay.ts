@@ -176,3 +176,53 @@ export function commandRejected(play: CaptainPlay, error: unknown): CaptainPlay 
 export function dismissRejection(play: CaptainPlay): CaptainPlay {
     return play.rejection === null ? play : { ...play, rejection: null }
 }
+
+export const HOVER_DEBOUNCE_MS = 300
+
+export interface HoverBody {
+    map: string
+}
+
+export function hoverOf(play: CaptainPlay, view: PickBanView): HoverBody | null {
+    const controls = captainDockOf(view, play)?.controls
+    if (controls?.kind !== 'choose' || controls.selectedMap === null) return null
+    const map = controls.selectedMap
+    return view.cards.some((card) => card.map === map && card.previewed) ? null : { map }
+}
+
+export interface HoverSender {
+    request: () => void
+    cancel: () => void
+}
+
+export function createHoverSender(
+    target: () => HoverBody | null,
+    send: (body: HoverBody) => Promise<unknown>,
+    delayMs = HOVER_DEBOUNCE_MS,
+): HoverSender {
+    let timer: ReturnType<typeof setTimeout> | null = null
+    let inFlight: string | null = null
+
+    const cancel = () => {
+        if (timer !== null) clearTimeout(timer)
+        timer = null
+    }
+
+    const fire = () => {
+        timer = null
+        const body = target()
+        if (!body || body.map === inFlight) return
+        inFlight = body.map
+        send(body).catch(() => undefined).finally(() => {
+            if (inFlight === body.map) inFlight = null
+        })
+    }
+
+    return {
+        request() {
+            cancel()
+            timer = setTimeout(fire, delayMs)
+        },
+        cancel,
+    }
+}

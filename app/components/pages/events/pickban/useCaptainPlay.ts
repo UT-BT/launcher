@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { PickBanSessionStore } from './pickBanSession'
 import type { PickBanView } from './pickBanView'
 import {
@@ -8,7 +8,9 @@ import {
     captainDockOf,
     commandRejected,
     commandSucceeded,
+    createHoverSender,
     dismissRejection,
+    hoverOf,
     selectMap,
     withCaptainPlay,
     type CaptainDock,
@@ -52,12 +54,24 @@ export function useCaptainPlay(view: PickBanView | null, sendCommand: PickBanSes
         )
     }, [sendCommand, update])
 
+    const hover = useMemo(() => createHoverSender(
+        () => (viewRef.current ? hoverOf(playRef.current, viewRef.current) : null),
+        (body) => sendCommand('hover', body),
+    ), [sendCommand])
+
+    useEffect(() => hover.cancel, [hover])
+
     const select = useCallback((map: string) => {
         const current = viewRef.current
-        if (current) update((latest) => selectMap(latest, current, map))
-    }, [update])
+        if (!current) return
+        update((latest) => selectMap(latest, current, map))
+        hover.request()
+    }, [update, hover])
 
-    const lockIn = useCallback(() => submit(beginLock), [submit])
+    const lockIn = useCallback(() => {
+        hover.cancel()
+        submit(beginLock)
+    }, [submit, hover])
     const toggleReady = useCallback(() => submit(beginReadyToggle), [submit])
     const dismiss = useCallback(() => update(dismissRejection), [update])
 

@@ -335,6 +335,63 @@ describe('commands', () => {
         session.stop()
     })
 
+    it('holds a Lock-in sent while a hover is in flight, then sends it with the version the hover answered with', async () => {
+        const before = runningState()
+        const hovered = { ...before, version: before.version + 1, selection_preview: { side: 'team_a' as const, map: ELIGIBLE_MAPS[1], at: iso(Date.now()) } }
+        const lockedIn = asCaptain(locked(hovered, ELIGIBLE_MAPS[1], Date.now()), 'team_a')
+        let answerHover: (response: Response) => void = () => undefined
+        const fetchMock = stubFetch((url, init) => {
+            if (init.method !== 'POST') return fresh(before, '"v1"')
+            if (url.endsWith('/hover')) return new Promise<Response>((resolve) => { answerHover = resolve })
+            return fresh(lockedIn)
+        })
+        const session = store()
+        session.start()
+        await vi.advanceTimersByTimeAsync(0)
+        const posts = () => fetchMock.mock.calls.filter(([, init]) => init.method === 'POST')
+
+        const hover = session.sendCommand('hover', { map: ELIGIBLE_MAPS[1] })
+        const lock = session.sendCommand('lock', { map: ELIGIBLE_MAPS[1], plan_index: 0 })
+        await vi.advanceTimersByTimeAsync(0)
+        expect(posts()).toHaveLength(1)
+
+        answerHover(fresh(hovered))
+        await hover
+        await lock
+
+        expect(posts().map(([url]) => url.replace(/^.*\/pick-ban\//, ''))).toEqual(['hover', 'lock'])
+        expect(JSON.parse(posts()[0][1].body as string)).toEqual({ map: ELIGIBLE_MAPS[1], version: before.version })
+        expect(JSON.parse(posts()[1][1].body as string)).toEqual({ map: ELIGIBLE_MAPS[1], plan_index: 0, version: before.version + 1 })
+        expect(session.getSnapshot().state?.version).toBe(lockedIn.version)
+        session.stop()
+    })
+
+    it('still sends a held command, with the unchanged version, when the one before it is refused', async () => {
+        const state = runningState()
+        const lockedIn = asCaptain(locked(state, ELIGIBLE_MAPS[1], Date.now()), 'team_a')
+        let refuseHover: (response: Response) => void = () => undefined
+        const fetchMock = stubFetch((url, init) => {
+            if (init.method !== 'POST') return fresh(state, '"v1"')
+            if (url.endsWith('/hover')) return new Promise<Response>((resolve) => { refuseHover = resolve })
+            return fresh(lockedIn)
+        })
+        const session = store()
+        session.start()
+        await vi.advanceTimersByTimeAsync(0)
+
+        const hover = session.sendCommand('hover', { map: ELIGIBLE_MAPS[1] }).catch((error: unknown) => error)
+        const lock = session.sendCommand('lock', { map: ELIGIBLE_MAPS[1], plan_index: 0 })
+        await vi.advanceTimersByTimeAsync(0)
+        refuseHover(refused(429, 'rate_limited'))
+
+        expect(await hover).toBeInstanceOf(ApiError)
+        await lock
+        const posts = fetchMock.mock.calls.filter(([, init]) => init.method === 'POST')
+        expect(posts.map(([url]) => url.replace(/^.*\/pick-ban\//, ''))).toEqual(['hover', 'lock'])
+        expect(JSON.parse(posts[1][1].body as string)).toEqual({ map: ELIGIBLE_MAPS[1], plan_index: 0, version: state.version })
+        session.stop()
+    })
+
     it('refreshes and rethrows when a command is refused', async () => {
         const state = runningState()
         const fetchMock = stubFetch(

@@ -8,14 +8,14 @@ read_when:
   - "reading a match's pick/ban state, sending a pick/ban command, or rendering from the pick/ban view model"
   - "rendering the manager match queue, or changing which stable codes it shows as a blocking reason"
   - "finding a pick/ban session from the bracket, a match card, the event page or the Schedule tab without a direct link"
-keywords: [api.ts, fetch, endpoint, accessToken, avatar, MapThumbnail, favorites, patreon, downloadMapZip, world_records, caps, predictions, draw, odds, schedule, proposal, slot, whose_turn, resolved_window, countdown, nav badge, fetchMyTournaments, SlotPickerModal, SlotGrid, DateTimeField, slotGeneration, proposeMatchSlots, withdrawMatchProposal, acceptMatchProposal, fetchMatchSchedule, ApiError, expected_match_duration_minutes, fetchPickBanConfig, PickBanConfig, PickBanPoolMap, MapsTab, mapsShared, stagesWithPools, tagBadgeVariant, pick/ban, fetchPickBanState, ETag, If-None-Match, 304, X-Server-Now, server_now, clock offset, reveal_at, sendPickBanCommand, sendPickBanManagerCommand, pickBanErrorCode, captain controls, CaptainDock, useCaptainPlay, fetchPickBanQueue, PickBanQueueEntry, PickBanQueueRow, toQueueRow, canOpenLobby, blockingReasonLabel, PickBanQueuePanel, pickBanStatusBadge, statusOfPhase, buildPickBanView, setPickBanStageConfig, setPickBanStagePool, copyPickBanStagePool, pickBanEditor, stage pool, buildMatchLinks, matchStreamPath, createPoller, pick_ban_status, MatchPickBanStatus, pickBanCardAffordance, PickBanCardPill, pickBanMapLabel, MyPickBanSession, pick_ban_session, PickBanLink, PickBanJoinBanner, pickBanEntryPoints, Join banner, scene, sceneDirection, playsEntrance, usePickBanPreload]
+keywords: [api.ts, fetch, endpoint, accessToken, avatar, MapThumbnail, favorites, patreon, downloadMapZip, world_records, caps, predictions, draw, odds, schedule, proposal, slot, whose_turn, resolved_window, countdown, nav badge, fetchMyTournaments, SlotPickerModal, SlotGrid, DateTimeField, slotGeneration, proposeMatchSlots, withdrawMatchProposal, acceptMatchProposal, fetchMatchSchedule, ApiError, expected_match_duration_minutes, fetchPickBanConfig, PickBanConfig, PickBanPoolMap, MapsTab, mapsShared, stagesWithPools, tagBadgeVariant, pick/ban, fetchPickBanState, ETag, If-None-Match, 304, X-Server-Now, server_now, clock offset, reveal_at, sendPickBanCommand, sendPickBanManagerCommand, hover, selection_preview, pickBanErrorCode, captain controls, CaptainDock, useCaptainPlay, fetchPickBanQueue, PickBanQueueEntry, PickBanQueueRow, toQueueRow, canOpenLobby, blockingReasonLabel, PickBanQueuePanel, pickBanStatusBadge, statusOfPhase, buildPickBanView, setPickBanStageConfig, setPickBanStagePool, copyPickBanStagePool, pickBanEditor, stage pool, buildMatchLinks, matchStreamPath, createPoller, pick_ban_status, MatchPickBanStatus, pickBanCardAffordance, PickBanCardPill, pickBanMapLabel, MyPickBanSession, pick_ban_session, PickBanLink, PickBanJoinBanner, pickBanEntryPoints, Join banner, scene, sceneDirection, playsEntrance, usePickBanPreload]
 provides: "the client-side API contract the launcher consumes + asset URLs + favorites/patreon sync models"
 not_here:
   - "IPC channels (window.conveyor.*) → lib/conveyor/README.md"
   - "how UI state persists in localStorage → state-patterns.md"
   - "the procedure to wire a new endpoint into the UI → skill: consume-api-data"
 sections: [backend-api, errors, admin-api, event-brackets, event-scheduling, event-predictions, public-maps-tab-pick-ban-pools, event-pickban-sessions, event-pick-ban-setup, changing-a-map-screenshot, cap-detail-page-endpoints, world-records-page-endpoints, team-maps-and-team-runs, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites, account-state-and-badges]
-last_verified: 2026-09-24
+last_verified: 2026-09-25
 verify_against: [app/utils/api.ts, app/utils/chartBuckets.ts, app/components/pages/admin/components/controls.tsx, app/components/pages/admin/sections/HostsManagementSection.tsx, app/utils/patreon.ts, app/utils/server-utils.ts, app/hooks/useServerFavorites.ts, app/components/pages/events/manage/formatFields.tsx, app/components/pages/events/bracket/bracketShared.tsx, app/components/pages/events/bracket/BracketTab.tsx, app/components/pages/events/bracket/GroupStageView.tsx, app/components/pages/events/bracket/SwissStageView.tsx, app/components/pages/events/bracket/ElimStageView.tsx, app/components/pages/events/predictions/predictionsShared.tsx, app/components/pages/events/predictions/PredictionsTab.tsx, app/components/pages/events/schedule/scheduleShared.tsx, app/components/pages/events/schedule/ScheduleTab.tsx, app/components/pages/events/schedule/SlotPickerModal.tsx, app/components/pages/events/schedule/slotGeneration.ts, app/components/pages/events/schedule/SlotGrid.tsx, app/components/pages/events/manage/DateTimeField.tsx, app/components/pages/events/eventsShared.tsx, app/components/pages/EventDetailPage.tsx, app/utils/timezone.ts, app/components/pages/events/manage/ScheduleOversightPanel.tsx, app/components/pages/events/ManagePanel.tsx, app/components/main/Main.tsx, app/components/layout/AppLayout.tsx, app/components/pages/events/maps/MapsTab.tsx, app/components/pages/events/maps/mapsShared.ts, app/components/pages/events/pickban/pickBanView.ts, app/components/pages/events/pickban/pickBanStatus.ts, app/components/pages/events/pickban/pickBanSession.ts, app/components/pages/events/pickban/pickBanEntryPoints.ts, app/components/pages/events/pickban/components/PickBanLink.tsx, app/components/pages/events/pickban/components/PickBanJoinBanner.tsx, app/components/pages/events/pickban/clockOffset.ts, app/components/pages/events/manage/pickban/pickBanEditor.ts, app/components/pages/events/manage/pickban/PickBanPanel.tsx, app/components/pages/events/manage/pickban/PickBanStageCard.tsx, app/components/pages/events/manage/pickban/PickBanQueuePanel.tsx, app/components/pages/events/manage/pickban/pickBanQueue.ts, app/components/pages/events/pickBanTags.ts, app/components/navigation/matchLinks.ts, app/utils/poller.ts, app/components/pages/events/pickban/stream/StreamView.tsx, app/components/pages/events/pickban/pickBanCopy.ts, app/components/pages/events/pickban/components/PickBanUnavailable.tsx]
 ---
 
@@ -655,12 +655,22 @@ waits for a poll. Every body except Open's carries the expected `version`.
   `POST /tournaments/<slug>/admin/matches/<id>/pick-ban/<command>`. `open` takes no body.
   `lock` takes a `side`, and `override-sequence` takes a `preset_id` or a
   `from_stage_key`.
+- **Hover** sets the selection preview, the map the viewer's side has selected but not
+  locked in yet. Body `{ map, version }`, or `{ map: null, version }` to clear it. It is
+  only accepted from the side's captain or acting captain while their step is awaited,
+  with the same refusal codes as Lock minus the plan index. It bumps `version` like every
+  command, and each user may send only a few a second (a 429 past that). Lock, Pause,
+  Undo, Swap, Restart and Cancel clear the preview. Every viewer reads it as
+  `selection_preview` (`{ side, map, at }` or `null`), and the view model flags that card
+  `previewed`. The captain page sends it debounced and silently (see
+  `agents/state-patterns.md`).
 - The body shapes are typed in `PickBanParticipantCommandBodies` and
   `PickBanManagerCommandBodies`. `hand-over` and `edit-final` are typed loosely until
   their bodies are settled.
 - `postPickBanCommand` is the untyped transport under both. Screens call the session
   store's `sendCommand` / `sendManagerCommand` (see `agents/state-patterns.md`), which fill
-  in the version themselves.
+  in the version themselves. They send one command at a time and read the version only once
+  the command before has settled.
 - **Refusals.** A refusal is an `ApiError` whose `.reason` is a stable code (403
   authorization, 409 state conflict, 422 validation). `pickBanErrorCode(err)` narrows it to
   `PickBanErrorCode`, and `PICK_BAN_ERROR_CODES` lists every code. Show `err.message`, and
