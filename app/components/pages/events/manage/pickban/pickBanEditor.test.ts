@@ -3,7 +3,7 @@ import type { EventFormatSpec, PickBanBlock, PickBanPoolMap, PickBanStageConfig 
 import {
     DEFAULT_PICK_BAN_PACING, PICK_BAN_PRESET_SEQUENCES, addPoolMap, configChanged, configErrors, configInput,
     draftFromStage, draftWarnings, movePoolMap, poolChanged, poolError, poolInput, poolStatusFor, pruneDrafts,
-    rebaseDraft, removePoolMap, savedWarnings, sequenceCounts, settledDraft, stageWarnings, tagError,
+    presetDrifted, rebaseDraft, removePoolMap, savedWarnings, sequenceCounts, settledDraft, stageWarnings, tagError,
     validateConfigDraft, warningMessage, withDraft, withPoolTag, withPreset, withStagePickBan, withoutPoolTag,
     type PickBanStageDraft,
 } from './pickBanEditor'
@@ -360,6 +360,53 @@ describe('payloads', () => {
             exclusions: [{ tag: 'Hard', min_pre_cup_seed: 10 }],
             pacing: DEFAULT_PICK_BAN_PACING,
         })
+    })
+
+    const olderBo5 = {
+        steps: PICK_BAN_PRESET_SEQUENCES.bo5_ban_pick.steps.slice(0, 6),
+        ban_down: true,
+    }
+
+    it('re-sends an unchanged preset whose saved steps still match it', () => {
+        const draft = { ...draftFromStage(stage()), pacing: { ...DEFAULT_PICK_BAN_PACING, intro: 8 } }
+
+        expect(configInput(draft)).toEqual({
+            preset_id: 'bo5_ban_pick',
+            exclusions: [{ tag: 'Hard', min_pre_cup_seed: 10 }],
+            pacing: { ...DEFAULT_PICK_BAN_PACING, intro: 8 },
+        })
+    })
+
+    it('keeps saved steps verbatim when the shipped preset has changed since they were copied', () => {
+        const saved = stage({ pick_ban: block({ preset_id: 'bo5_ban_pick', sequence: olderBo5 }) })
+        const draft = { ...draftFromStage(saved), pacing: { ...DEFAULT_PICK_BAN_PACING, intro: 8 } }
+
+        expect(configInput(draft)).toEqual({
+            sequence: olderBo5,
+            exclusions: [{ tag: 'Hard', min_pre_cup_seed: 10 }],
+            pacing: { ...DEFAULT_PICK_BAN_PACING, intro: 8 },
+        })
+    })
+
+    it('sends the preset when the admin picks a different one over drifted steps', () => {
+        const saved = stage({ pick_ban: block({ preset_id: 'bo5_ban_pick', sequence: olderBo5 }) })
+
+        expect(configInput(withPreset(draftFromStage(saved), 'bo3_ban_pick'))).toMatchObject({ preset_id: 'bo3_ban_pick' })
+    })
+
+    it('sends the preset when the admin re-picks the same one to take its current steps', () => {
+        const saved = stage({ pick_ban: block({ preset_id: 'bo5_ban_pick', sequence: olderBo5 }) })
+
+        expect(configInput(withPreset(draftFromStage(saved), 'bo5_ban_pick'))).toMatchObject({ preset_id: 'bo5_ban_pick' })
+    })
+
+    it('flags a preset whose saved steps no longer match the shipped preset', () => {
+        const drifted = draftFromStage(stage({ pick_ban: block({ preset_id: 'bo5_ban_pick', sequence: olderBo5 }) }))
+
+        expect(presetDrifted(drifted)).toBe(true)
+        expect(presetDrifted(withPreset(drifted, 'bo5_ban_pick'))).toBe(false)
+        expect(presetDrifted(draftFromStage(stage()))).toBe(false)
+        expect(presetDrifted(draftFromStage(stage({ pick_ban: block({ preset_id: null, sequence: olderBo5 }) })))).toBe(false)
     })
 
     it('sends a custom sequence as its steps', () => {

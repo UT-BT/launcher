@@ -394,6 +394,7 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
                         onFormatDraftChange={setFormatDraft}
                         pickBanDrafts={pickBanDrafts}
                         onPickBanDraftsChange={setPickBanDrafts}
+                        onPickBanConfigChange={setPickBanConfig}
                     />
                 )}
                 </PredictionOddsProvider>

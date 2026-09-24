@@ -8,7 +8,7 @@ import { ErrorBanner } from '@/app/components/pages/teams/teamsShared'
 import {
     eventErrorMessage, fetchEventAdminTeams,
     type EventBracket, type EventDetail, type EventFormatSpec, type EventGroupsConfig,
-    type EventLfpEntry, type EventTeam,
+    type EventLfpEntry, type EventTeam, type PickBanConfig,
 } from '@/app/utils/api'
 import { EventRosterProvider } from './TeamRoster'
 import { SignupsPanel } from './manage/SignupsPanel'
@@ -36,6 +36,7 @@ interface ManagePanelProps {
     onFormatDraftChange: Dispatch<SetStateAction<EventFormatSpec | null>>
     pickBanDrafts: PickBanDrafts
     onPickBanDraftsChange: Dispatch<SetStateAction<PickBanDrafts>>
+    onPickBanConfigChange: (config: PickBanConfig) => void
 }
 
 type ManageTabContext = Omit<ManagePanelProps, 'canManageEvent'> & {
@@ -121,6 +122,7 @@ const MANAGE_TABS: ManageTab[] = [
                     onDraftsChange={context.onPickBanDraftsChange}
                     onFormatDraftChange={context.onFormatDraftChange}
                     onBracketChange={context.onBracketChange}
+                    onConfigChange={context.onPickBanConfigChange}
                     onMapSelect={context.onMapSelect}
                 />
             </Suspense>

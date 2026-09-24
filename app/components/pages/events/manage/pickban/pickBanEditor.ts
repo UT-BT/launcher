@@ -4,6 +4,7 @@ import type {
     PickBanStageConfigInput,
 } from '@/app/utils/api'
 import { parseSpecErrors } from '../formatFields'
+import { sameTag } from '../../pickBanTags'
 
 export type PickBanPacingKey = keyof PickBanPacing
 
@@ -82,13 +83,8 @@ function poolSizeStatus(size: number, counts: PickBanCounts): PickBanPoolSizeSta
     return 'too_small'
 }
 
-export function tagKey(tag: string): string {
-    return tag.trim().toLowerCase()
-}
-
 function carriesTag(tags: string[], tag: string): boolean {
-    const wanted = tagKey(tag)
-    return tags.some(candidate => tagKey(candidate) === wanted)
+    return tags.some(candidate => sameTag(candidate, tag))
 }
 
 export function poolStatusFor(pool: PickBanPoolMap[], exclusionTags: string[], counts: PickBanCounts): PickBanPoolStatus {
@@ -280,7 +276,7 @@ export function withPoolTag(pool: PickBanPoolMap[], index: number, raw: string):
 
 export function withoutPoolTag(pool: PickBanPoolMap[], index: number, tag: string): PickBanPoolMap[] {
     return pool.map((entry, at) => (
-        at === index ? { ...entry, tags: entry.tags.filter(candidate => tagKey(candidate) !== tagKey(tag)) } : entry
+        at === index ? { ...entry, tags: entry.tags.filter(candidate => !sameTag(candidate, tag)) } : entry
     ))
 }
 
@@ -310,15 +306,22 @@ export function validateConfigDraft(draft: PickBanStageDraft): Record<string, st
     return errors
 }
 
+export function presetDrifted(draft: PickBanStageDraft): boolean {
+    if (!draft.presetId || !draft.sequence) return false
+    return !sequencesEqual(draft.sequence, PICK_BAN_PRESET_SEQUENCES[draft.presetId] ?? null)
+}
+
 export function configInput(draft: PickBanStageDraft): PickBanStageConfigInput | null {
+    if (!draft.sequence) return null
+
     const rest = {
         exclusions: draft.exclusions.map(rule => ({ tag: rule.tag.trim(), min_pre_cup_seed: rule.min_pre_cup_seed ?? 0 })),
         pacing: { ...draft.pacing },
     }
 
-    if (draft.presetId) return { preset_id: draft.presetId, ...rest }
-    if (draft.sequence) return { sequence: copySequence(draft.sequence), ...rest }
-    return null
+    return draft.presetId && !presetDrifted(draft)
+        ? { preset_id: draft.presetId, ...rest }
+        : { sequence: copySequence(draft.sequence), ...rest }
 }
 
 export function poolInput(draft: PickBanStageDraft): PickBanPoolEntryInput[] {
