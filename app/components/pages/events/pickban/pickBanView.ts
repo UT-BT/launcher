@@ -72,6 +72,7 @@ export interface PickBanCardView {
     exclusionReason: string | null
     previewed: boolean
     lockedIn: boolean
+    selected: boolean
     selectable: boolean
 }
 
@@ -436,6 +437,7 @@ function cardsOf(moment: Moment, awaitedStep: PickBanPlanStep | null, canChoose:
                 && preview.map === poolCard.map
                 && preview.side === awaitedStep.side,
             lockedIn: pendingStep !== null && viewerActs(state, pendingStep) && pendingStep.map === poolCard.map,
+            selected: false,
             selectable: available && canChoose,
         }
     })

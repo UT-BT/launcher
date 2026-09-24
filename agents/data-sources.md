@@ -7,7 +7,7 @@ read_when:
   - "wiring map/server favorites or Patreon tier lookups"
   - "reading a match's pick/ban state, sending a pick/ban command, or rendering from the pick/ban view model"
   - "rendering the manager match queue, or changing which stable codes it shows as a blocking reason"
-keywords: [api.ts, fetch, endpoint, accessToken, avatar, MapThumbnail, favorites, patreon, downloadMapZip, world_records, caps, predictions, draw, odds, schedule, proposal, slot, whose_turn, resolved_window, countdown, nav badge, fetchMyTournaments, SlotPickerModal, SlotGrid, DateTimeField, slotGeneration, proposeMatchSlots, withdrawMatchProposal, acceptMatchProposal, fetchMatchSchedule, ApiError, expected_match_duration_minutes, fetchPickBanConfig, PickBanConfig, PickBanPoolMap, MapsTab, mapsShared, stagesWithPools, tagBadgeVariant, pick/ban, fetchPickBanState, ETag, If-None-Match, 304, X-Server-Now, server_now, clock offset, reveal_at, sendPickBanCommand, sendPickBanManagerCommand, pickBanErrorCode, fetchPickBanQueue, PickBanQueueEntry, PickBanQueueRow, toQueueRow, canOpenLobby, blockingReasonLabel, PickBanQueuePanel, pickBanStatusBadge, statusOfPhase, buildPickBanView, setPickBanStageConfig, setPickBanStagePool, copyPickBanStagePool, pickBanEditor, stage pool, buildMatchLinks, matchStreamPath, createPoller]
+keywords: [api.ts, fetch, endpoint, accessToken, avatar, MapThumbnail, favorites, patreon, downloadMapZip, world_records, caps, predictions, draw, odds, schedule, proposal, slot, whose_turn, resolved_window, countdown, nav badge, fetchMyTournaments, SlotPickerModal, SlotGrid, DateTimeField, slotGeneration, proposeMatchSlots, withdrawMatchProposal, acceptMatchProposal, fetchMatchSchedule, ApiError, expected_match_duration_minutes, fetchPickBanConfig, PickBanConfig, PickBanPoolMap, MapsTab, mapsShared, stagesWithPools, tagBadgeVariant, pick/ban, fetchPickBanState, ETag, If-None-Match, 304, X-Server-Now, server_now, clock offset, reveal_at, sendPickBanCommand, sendPickBanManagerCommand, pickBanErrorCode, captain controls, CaptainDock, useCaptainPlay, fetchPickBanQueue, PickBanQueueEntry, PickBanQueueRow, toQueueRow, canOpenLobby, blockingReasonLabel, PickBanQueuePanel, pickBanStatusBadge, statusOfPhase, buildPickBanView, setPickBanStageConfig, setPickBanStagePool, copyPickBanStagePool, pickBanEditor, stage pool, buildMatchLinks, matchStreamPath, createPoller]
 provides: "the client-side API contract the launcher consumes + asset URLs + favorites/patreon sync models"
 not_here:
   - "IPC channels (window.conveyor.*) → lib/conveyor/README.md"
@@ -623,7 +623,11 @@ waits for a poll. Every body except Open's carries the expected `version`.
 - **Refusals.** A refusal is an `ApiError` whose `.reason` is a stable code (403
   authorization, 409 state conflict, 422 validation). `pickBanErrorCode(err)` narrows it to
   `PickBanErrorCode`, and `PICK_BAN_ERROR_CODES` lists every code. Show `err.message`, and
-  branch on the code only where a screen reacts to a specific one.
+  branch on the code only where a screen reacts to a specific one. The captain controls do:
+  `captainPlay.ts` words each Ready/Unready and Lock refusal for the captain
+  (`version_conflict`, `not_your_turn`, `map_unavailable`, `spotlight_active`,
+  `intro_active`, `paused`, `wrong_status`, `not_authorized`, `no_session`), and falls back
+  to `err.message` for any other code.
 
 **Match queue (managers).** `fetchPickBanQueue(token, slug)` →
 `GET /tournaments/<slug>/admin/pick-ban/queue` → `{ matches: PickBanQueueEntry[] }` (the
@@ -704,8 +708,9 @@ pure and tested without a DOM. It returns:
   ban) and whether the viewer acts, and `spotlight`, the step being revealed
 - `cards`: `available`, `banned`, `picked`, `decider` or `excluded`, with the acting side,
   step number, map number, exclusion reason (the raw `exclusion` plus `exclusionReason`, a
-  sentence naming the team and seed that triggered it) and the `previewed`, `lockedIn` and
-  `selectable` flags
+  sentence naming the team and seed that triggered it) and the `previewed`, `lockedIn`,
+  `selected` and `selectable` flags. `selected` is always `false` here: the captain's own
+  selection is layered on by `withCaptainPlay` (see `agents/state-patterns.md`).
 - `timeline`: `upcoming`, `current`, `locked_in` or `revealed`, with each step's
   `actorLabel` and `actionLabel`, and its map and screenshot version once revealed
 - `skippedBans`: the payload's `skipped_bans`, one entry per dropped ban in the same order,
@@ -738,6 +743,8 @@ only from the view model, through the pick/ban visual core (see
   that it is retrying, and the store keeps polling behind it.
 - **After that, polls are silent.** New data changes the page in place, and a 304 changes
   nothing. A small fixed "Reconnecting…" toast shows only while `reconnecting` is set.
+  While the captain dock shows, the dock carries that line instead, so the toast never
+  covers Lock in.
 - **Timing.** Reveals and phase changes land on `usePickBanView`'s boundary timer, so a step
   appears at its `reveal_at` even when no poll arrives then. Countdowns and progress bars
   paint on animation frames. With reduced motion on, the bars step once a second instead.
@@ -754,6 +761,19 @@ only from the view model, through the pick/ban visual core (see
   the pause froze (`stagePhase`). Skipped bans and warnings are notes under the timeline,
   with a dashed chip where each dropped ban would have been (`skippedBans`). Each excluded map's reason is listed in words under the pool, so it can
   be read on a touch screen too.
+- **Captain controls.** The page layers `useCaptainPlay` over the view (see
+  `agents/state-patterns.md`) and renders a `CaptainDock` whenever `captainDockOf` returns
+  one, which is only for the viewer with `capabilities.acting_side` (a captain, or the
+  acting captain who replaced them).
+  - In the lobby, the dock toggles Ready and Unready.
+  - On the viewer's own turn in `awaiting`, the pool cards take `onSelect`: select a map,
+    then Lock in, which sends `lock` with the map and the awaited `plan_index`.
+  - The card, the turn and the timeline show "Locked in" at once. The command's returned
+    state then takes over, and the step still reveals at its `reveal_at`.
+  - During the intro, a spotlight or a pause, the dock shows Locked with the countdown to
+    the unlock and who acts next.
+  - A refusal shows as a worded alert. The store has already polled, so the board is
+    current by the time the alert shows.
 
 `e2e/pickban-watch.spec.ts` serves the pick/ban read from fixtures with a server clock
 that runs in real time. It checks five things: a phone width in the lobby, live and
