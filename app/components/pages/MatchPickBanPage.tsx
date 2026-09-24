@@ -10,12 +10,14 @@ import type { UserProfile } from '@/app/utils/api'
 import { useCopyFeedback } from '@/app/hooks/useCopyFeedback'
 import { usePickBanSession, usePickBanView } from '@/app/components/pages/events/pickban/usePickBanSession'
 import { useCaptainPlay, type UseCaptainPlayResult } from '@/app/components/pages/events/pickban/useCaptainPlay'
+import { useManagerDock } from '@/app/components/pages/events/pickban/useManagerDock'
 import { usePickBanPreload } from '@/app/components/pages/events/pickban/usePickBanPreload'
 import { matchSubtitle } from '@/app/components/pages/events/pickban/pickBanCopy'
 import type { PickBanView } from '@/app/components/pages/events/pickban/pickBanView'
 import { statusOfPhase } from '@/app/components/pages/events/pickban/pickBanStatus'
 import { CaptainDock } from '@/app/components/pages/events/pickban/components/CaptainDock'
 import { CentreStage } from '@/app/components/pages/events/pickban/components/CentreStage'
+import { ManagerDock } from '@/app/components/pages/events/pickban/components/ManagerDock'
 import { PickBanBannerNote } from '@/app/components/pages/events/pickban/components/PickBanBannerNote'
 import { PickBanMotion } from '@/app/components/pages/events/pickban/components/PickBanMotion'
 import { PickBanStatusChip } from '@/app/components/pages/events/pickban/components/PickBanStatusChip'
@@ -38,7 +40,9 @@ const STAGE_ROW = 'grid grid-cols-2 gap-3 @4xl/page:grid-cols-[13rem_minmax(0,1f
 export function MatchPickBanPage({ eventSlug, matchId, userProfile, onBackToEvent }: MatchPickBanPageProps) {
     const session = usePickBanSession({ accessToken: userProfile?.accessToken, slug: eventSlug, matchId })
     const captain = useCaptainPlay(usePickBanView(session.state, session.clockOffsetMs), session.sendCommand)
-    const view = captain.view
+    const manager = useManagerDock(captain.view, session.sendManagerCommand)
+    const view = manager.view
+    const links = buildMatchLinks(eventSlug, matchId)
     const { navigate } = useNavigation()
     usePickBanPreload(view?.cards)
 
@@ -85,7 +89,20 @@ export function MatchPickBanPage({ eventSlug, matchId, userProfile, onBackToEven
 
             {view ? (
                 <PickBanMotion>
-                    <PickBanBody view={view} summaryAction={bracketLink} captain={captain} reconnecting={session.reconnecting} />
+                    <PickBanBody
+                        view={view}
+                        summaryAction={bracketLink}
+                        captain={captain}
+                        onManagerSelect={manager.dock?.actFor?.dock.controls?.kind === 'choose' ? manager.select : undefined}
+                        reconnecting={session.reconnecting}
+                    >
+                        {manager.dock && (
+                            <ManagerDock dock={manager.dock} manager={manager} slug={eventSlug} accessToken={userProfile?.accessToken}>
+                                <CopyLinkButton link={links.playerLink} label="Copy player link" />
+                                <CopyLinkButton link={links.streamLink} label="Copy stream link" />
+                            </ManagerDock>
+                        )}
+                    </PickBanBody>
                 </PickBanMotion>
             ) : session.loading ? (
                 <PickBanSkeleton />
@@ -102,11 +119,13 @@ export function MatchPickBanPage({ eventSlug, matchId, userProfile, onBackToEven
     )
 }
 
-function PickBanBody({ view, summaryAction, captain, reconnecting }: {
+function PickBanBody({ view, summaryAction, captain, onManagerSelect, reconnecting, children }: {
     view: PickBanView
     summaryAction: ReactNode
     captain: UseCaptainPlayResult
+    onManagerSelect?: (map: string) => void
     reconnecting: boolean
+    children: ReactNode
 }) {
     const notes = view.banners.filter(banner => banner.kind === 'skipped_bans' || banner.kind === 'warning')
     const eligibleCount = view.cards.filter(card => card.state !== 'excluded').length
@@ -141,12 +160,14 @@ function PickBanBody({ view, summaryAction, captain, reconnecting }: {
                 <PoolGrid
                     cards={view.cards}
                     previewActor={view.turn?.ab ?? null}
-                    onSelect={captain.dock?.controls?.kind === 'choose' ? captain.select : undefined}
+                    onSelect={captain.dock?.controls?.kind === 'choose' ? captain.select : onManagerSelect}
                 />
                 {exclusionReasons.map(reason => (
                     <p key={reason} className="text-xs text-muted-foreground">{reason}</p>
                 ))}
             </section>
+
+            {children}
 
             {captain.dock && (
                 <CaptainDock
@@ -174,7 +195,7 @@ function ReconnectingToast() {
     )
 }
 
-function CopyLinkButton({ link }: { link: string }) {
+function CopyLinkButton({ link, label = 'Copy link' }: { link: string; label?: string }) {
     const { copiedKey, copy } = useCopyFeedback(err => console.error('Copy pick/ban link failed', err))
     const copied = copiedKey === link
 
@@ -185,7 +206,7 @@ function CopyLinkButton({ link }: { link: string }) {
             className="inline-flex h-8 cursor-pointer items-center gap-2 rounded-md border border-accent-500/40 bg-accent-500/15 px-3 text-xs font-medium text-accent-200 transition-colors hover:border-accent-500/60 hover:bg-accent-500/25"
         >
             {copied ? <Check className="size-3.5" /> : <Link2 className="size-3.5" />}
-            {copied ? 'Copied' : 'Copy link'}
+            {copied ? 'Copied' : label}
         </button>
     )
 }

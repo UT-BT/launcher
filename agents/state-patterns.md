@@ -8,14 +8,15 @@ read_when:
   - "wiring detail-page transient UI (tabs/search/scroll) that must survive Back/Forward"
   - "polling server state on an interval, or following a live pick/ban session"
   - "holding a pick/ban captain's selection, optimistic lock-in or refusal message"
-keywords: [usePageState, useNavState, localStorage, PREF_KEYS, caches, querySig, presets, tutorial, persistence, controlled-page, userState, synced, badges, seen, polling, createPoller, visibility, usePickBanSession, usePickBanView, mergePickBanState, structural sharing, clock offset, reconnecting, captainPlay, useCaptainPlay, withCaptainPlay, captainDockOf, optimistic lock-in]
+  - "holding a pick/ban manager's act-for selection, command in flight, confirmation or refusal"
+keywords: [usePageState, useNavState, localStorage, PREF_KEYS, caches, querySig, presets, tutorial, persistence, controlled-page, userState, synced, badges, seen, polling, createPoller, visibility, usePickBanSession, usePickBanView, mergePickBanState, structural sharing, clock offset, reconnecting, captainPlay, useCaptainPlay, withCaptainPlay, captainDockOf, optimistic lock-in, managerDock, useManagerDock, withManagerPlay, managerDockOf, confirmation]
 provides: "the state tiers (incl. the account-synced tier), the localStorage key convention, how pages are controlled + hoisted, and the polling live-data tier"
 not_here:
   - "the navigation stack / navigate() / renderView wiring → navigation.md"
   - "the shared components used (FilterPresetsMenu, ColumnsMenu, Tutorial) → shared-components.md"
 sections: [controlled-pages-with-hoisted-state, navigation-history-per-entry-ui-state, account-synced-state, localstorage-persistence, filter-presets, tutorial-state, favorites, polling-live-data, naming-conventions]
-last_verified: 2026-09-24
-verify_against: [app/components/main/Main.tsx, app/components/navigation/useNavState.ts, app/hooks/useAsync.ts, app/utils/userState.ts, app/utils/poller.ts, app/components/pages/events/pickban/pickBanSession.ts, app/components/pages/events/pickban/usePickBanSession.ts, app/components/pages/events/pickban/mergePickBanState.ts, app/components/pages/events/pickban/captainPlay.ts, app/components/pages/events/pickban/useCaptainPlay.ts]
+last_verified: 2026-09-25
+verify_against: [app/components/main/Main.tsx, app/components/navigation/useNavState.ts, app/hooks/useAsync.ts, app/utils/userState.ts, app/utils/poller.ts, app/components/pages/events/pickban/pickBanSession.ts, app/components/pages/events/pickban/usePickBanSession.ts, app/components/pages/events/pickban/mergePickBanState.ts, app/components/pages/events/pickban/captainPlay.ts, app/components/pages/events/pickban/useCaptainPlay.ts, app/components/pages/events/pickban/managerDock.ts, app/components/pages/events/pickban/useManagerDock.ts]
 ---
 
 # State patterns
@@ -451,6 +452,39 @@ Screens never read those fields. They go through the functions below.
 `useCaptainPlay(view, sendCommand)` (`events/pickban/useCaptainPlay.ts`) wires it to the
 store. It keeps the latest play in a ref as well as in state, so a second click in the same
 tick is refused before React re-renders.
+
+**Manager play** (`events/pickban/managerDock.ts`, pure, Vitest without a DOM) is the same
+idea for a viewer with `can_manage`, on its own path so a manager never goes through the
+captain's select. `ManagerPlay` holds the act-for selection (tied to its plan index), the
+command in flight, the act-for lock-in being sent, the Restart or Cancel awaiting
+confirmation, and the last refusal with the command it answered.
+
+- `withManagerPlay(view, play)` marks the act-for selection `selected`, and shows the
+  act-for lock-in as "Locked in" through the same `withOptimisticLock` the captain uses
+  (exported from `captainPlay.ts`). The lock-in stays until its step reveals, since the
+  returned state only marks a lock-in for the side's own captain. Any later manager
+  command drops it, so an undone step never comes back as the manager's.
+- `managerDockOf(view, play)` is the dock model, `null` without `affordances.manager`: the
+  buttons in order with labels and disabled flags (every one disabled while a command is in
+  flight), the worded Start blocking reason, the results warning, the voided banner, the
+  Choose A options, whether the sequence override applies, each side's roster for Hand
+  over with who is in control, the pending confirmation, the act-for controls, and the
+  refusal. The act-for controls are a `CaptainDock` model (`choose` or `locked_in`), so the
+  captain's dock renders them, and a refused lock-in shows there rather than in the
+  toolbar. They are `null` on the viewer's own turn as captain.
+- `beginManagerCommand(play, view, request)` returns the next play and the request to
+  send, or `null` when the control isn't open or a command is in flight. For `restart` and
+  `cancel` it first returns a play awaiting confirmation and no request;
+  `confirmManagerCommand` sends it and `dismissManagerConfirm` drops it. `selectActForMap`
+  and `beginActForLock` are the act-for select-then-Lock in, which sends `lock` with the
+  side, map and plan index.
+- `managerCommandSucceeded` and `managerCommandRejected(play, error)` settle a command, and
+  `dismissManagerRejection` clears the refusal. `sequenceChoices(stages)` lists the override
+  options: every preset, then each stage that has a block.
+
+`useManagerDock(view, sendManagerCommand)` (`events/pickban/useManagerDock.ts`) wires it to
+the store the same way `useCaptainPlay` does. The page passes it the captain-played view, so
+both layers show.
 
 **Hooks** (`events/pickban/usePickBanSession.ts`):
 

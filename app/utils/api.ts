@@ -5876,7 +5876,7 @@ export interface PickBanManagerCommandBodies {
     'choose-a': { side: PickBanSide; version: number }
     'override-sequence': PickBanOverrideSequenceBody
     lock: { side: PickBanSide; map: string; plan_index: number; version: number }
-    'hand-over': { version: number; [field: string]: unknown }
+    'hand-over': { side: PickBanSide; user_id: string | null; version: number }
     'edit-final': { version: number; [field: string]: unknown }
 }
 

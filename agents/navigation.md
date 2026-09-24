@@ -10,7 +10,7 @@ not_here:
   - "where page state / persistence lives → state-patterns.md"
   - "the PlayerInfo / CapTimeLink components that trigger nav → shared-components.md"
 sections: [the-model, navigate-is-the-only-entry-point, leave-guards, url-sync-web-build, link-semantics, page-views-vs-detail-pages, the-sidebar-registry, event-driven-navigation, sidebar-new-badges, page-refresh-registry, per-entry-state, shareable-match-links, match-pickban-page]
-last_verified: 2026-09-24
+last_verified: 2026-09-25
 verify_against:
   - app/components/main/Main.tsx
   - app/components/navigation/NavLink.tsx
@@ -460,7 +460,9 @@ web build opens it straight from a deep link.
   `useNavigation().navigate`, so it is a real `/events/<slug>?tab=bracket` anchor on web
   and one `navigate()` call on both targets.
 - **Copy link** copies `buildMatchLinks(eventSlug, matchId).playerLink` (above) through
-  `useCopyFeedback`, so the copied URL is the public site's on desktop too.
+  `useCopyFeedback`, so the copied URL is the public site's on desktop too. A manager's
+  dock adds **Copy player link** and **Copy stream link** through the same button, so a
+  stream link is copied from the page itself as well as from the Manage queue.
 - **Into the page.** The Manage → Pick/Ban queue's **Open page** is a `NavLink` to
   `match-pickban` (a `Button asChild` around it), so on web it is a real anchor that opens
   in a new tab like any other link.
