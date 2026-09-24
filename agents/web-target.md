@@ -10,7 +10,7 @@ not_here:
   - "IPC channel contract → lib/conveyor/README.md"
   - "build commands reference → agents/build.md"
 sections: [overview, platform-layer, capability-gates, web-auth, pre-shell-routes, anonymous-browsing, shareable-urls, responsive-layout, performance, build, seo-and-link-previews, hosting-note]
-last_verified: 2026-09-24
+last_verified: 2026-09-25
 verify_against:
   - app/public/route-contract.json
   - app/components/navigation/NavLink.tsx
@@ -164,9 +164,10 @@ the fallback for real routing.
 and renders a fixed 1920×1080 stage (`stream/StreamStage.tsx`,
 `stream/stageScale.ts`) scaled to fit the window with a solid background. The
 `sound=0` query param is parsed by `stream/streamSound.ts`
-(`isStreamSoundMuted`); the contract is that it mutes the stream, and nothing
-in `StreamView` plays sound yet, so a future change wiring up audio only has
-to read that one boolean rather than adding query-param parsing of its own.
+(`isStreamSoundMuted`) and passed straight into `usePickBanSound` as `muted`;
+sound plays by default, and that one boolean is the only thing that silences
+it (see `agents/data-sources.md` → `event-pickban-sessions` for the cue and
+player contract).
 
 ## Anonymous browsing
 

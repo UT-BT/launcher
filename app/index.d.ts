@@ -39,6 +39,11 @@ declare module '*.webp' {
   export default content
 }
 
+declare module '*.wav' {
+  const content: string
+  export default content
+}
+
 interface Window {
   conveyor: import('@/lib/conveyor/api').ConveyorApi
   utInstall: {

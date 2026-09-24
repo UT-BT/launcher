@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react'
-import { ArrowLeft, Check, Link2, Swords, WifiOff } from 'lucide-react'
+import { useState, type ReactNode } from 'react'
+import { ArrowLeft, Check, Link2, Swords, Volume2, VolumeX, WifiOff } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { NavLink } from '@/app/components/navigation/NavLink'
 import { useNavigation } from '@/app/components/navigation/NavigationContext'
@@ -11,6 +11,7 @@ import { useCopyFeedback } from '@/app/hooks/useCopyFeedback'
 import { usePickBanSession, usePickBanView } from '@/app/components/pages/events/pickban/usePickBanSession'
 import { useCaptainPlay, type UseCaptainPlayResult } from '@/app/components/pages/events/pickban/useCaptainPlay'
 import { usePickBanPreload } from '@/app/components/pages/events/pickban/usePickBanPreload'
+import { usePickBanSound } from '@/app/components/pages/events/pickban/usePickBanSound'
 import { matchSubtitle } from '@/app/components/pages/events/pickban/pickBanCopy'
 import type { PickBanView } from '@/app/components/pages/events/pickban/pickBanView'
 import { statusOfPhase } from '@/app/components/pages/events/pickban/pickBanStatus'
@@ -40,7 +41,9 @@ export function MatchPickBanPage({ eventSlug, matchId, userProfile, onBackToEven
     const captain = useCaptainPlay(usePickBanView(session.state, session.clockOffsetMs), session.sendCommand)
     const view = captain.view
     const { navigate } = useNavigation()
+    const [soundOn, setSoundOn] = useState(false)
     usePickBanPreload(view?.cards)
+    usePickBanSound({ state: session.state, clockOffsetMs: session.clockOffsetMs, muted: !soundOn })
 
     useDocumentTitle(view ? `${view.match.title} — Pick/Ban` : undefined, SITE_NAME)
 
@@ -79,6 +82,7 @@ export function MatchPickBanPage({ eventSlug, matchId, userProfile, onBackToEven
                     <p className="min-h-4 text-xs text-muted-foreground">{view ? matchSubtitle(view.match) : ''}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
+                    <SoundToggleButton on={soundOn} onToggle={() => setSoundOn((current) => !current)} />
                     <CopyLinkButton link={buildMatchLinks(eventSlug, matchId).playerLink} />
                 </div>
             </header>
@@ -171,6 +175,23 @@ function ReconnectingToast() {
             <WifiOff className="size-3.5" />
             Reconnecting…
         </div>
+    )
+}
+
+function SoundToggleButton({ on, onToggle }: { on: boolean; onToggle: () => void }) {
+    const Icon = on ? Volume2 : VolumeX
+
+    return (
+        <button
+            type="button"
+            onClick={onToggle}
+            aria-pressed={on}
+            aria-label={on ? 'Mute pick/ban sound' : 'Unmute pick/ban sound'}
+            className="inline-flex h-8 cursor-pointer items-center gap-2 rounded-md border border-accent-500/40 bg-accent-500/15 px-3 text-xs font-medium text-accent-200 transition-colors hover:border-accent-500/60 hover:bg-accent-500/25"
+        >
+            <Icon className="size-3.5" />
+            {on ? 'Sound on' : 'Sound off'}
+        </button>
     )
 }
 
