@@ -27,7 +27,9 @@ export type ManagerCommand = Exclude<PickBanManagerCommand, 'edit-final'>
 
 type ButtonCommand = 'open' | 'start' | 'swap' | 'pause' | 'resume' | 'undo' | 'restart' | 'cancel'
 
-type BodyOf<C extends ManagerCommand> = Omit<PickBanManagerCommandBodies[C], 'version'>
+type WithoutVersion<B> = B extends unknown ? Omit<B, 'version'> : never
+
+type BodyOf<C extends ManagerCommand> = WithoutVersion<PickBanManagerCommandBodies[C]>
 
 export type ManagerRequest =
     | { command: ButtonCommand }

@@ -520,7 +520,8 @@ confirmation, and the last refusal with the command it answered.
 
 `useManagerDock(view, sendManagerCommand)` (`events/pickban/useManagerDock.ts`) wires it to
 the store the same way `useCaptainPlay` does, and settles the play whenever the view
-changes. The page passes it the captain-played view, so both layers show.
+changes. It hands each request to `sendManagerCommand` through a per-command switch, so
+every body is checked against `PickBanManagerCommandBodies` without a cast. The page passes it the captain-played view, so both layers show.
 
 **Hooks** (`events/pickban/usePickBanSession.ts`):
 
