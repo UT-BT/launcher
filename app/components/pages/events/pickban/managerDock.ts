@@ -245,10 +245,15 @@ export function withManagerPlay(view: PickBanView, play: ManagerPlay): PickBanVi
 }
 
 function actForControlsOf(view: PickBanView, play: ManagerPlay): CaptainControls | null {
-    const { turn } = view
+    const { turn, countdown } = view
     const lockingIn = optimisticLockOf(view, play)
     if (lockingIn !== null) return { kind: 'locked_in', map: lockingIn }
-    if (!turn || !actForOpen(view)) return null
+    if (view.status !== 'running' && view.status !== 'paused') return null
+    if (view.phase === 'paused') return { kind: 'locked', reason: 'paused', countdown, next: turn }
+    if (view.stagePhase === 'lobby' || view.stagePhase === 'intro') return { kind: 'locked', reason: 'intro', countdown, next: turn }
+    if (view.stagePhase === 'spotlight') return { kind: 'locked', reason: 'spotlight', countdown, next: turn }
+    if (!turn) return null
+    if (!actForOpen(view)) return { kind: 'waiting', turn }
     const selectedMap = selectedMapOf(view, play)
     return {
         kind: 'choose',

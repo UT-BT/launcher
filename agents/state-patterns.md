@@ -493,9 +493,14 @@ confirmation, and the last refusal with the command it answered.
   flight), the worded Start blocking reason, the results warning, the voided banner, the
   Choose A options, whether the sequence override applies, each side's roster for Hand
   over with who is in control, the pending confirmation, the act-for controls, and the
-  refusal. The act-for controls are a `CaptainDock` model (`choose` or `locked_in`), so the
-  captain's dock renders them, and a refused lock-in shows there rather than in the
-  toolbar. They are `null` on the viewer's own turn as captain.
+  refusal. The act-for controls are a `CaptainDock` model, so the captain's dock renders
+  them, and a refused lock-in shows there rather than in the toolbar. They mirror the
+  captain's: `choose` while the awaited step is open to act for, `locked_in` for the
+  manager's own lock-in until it reveals, `locked` with the view's `countdown` and the
+  next `turn` through the start lead, the intro, a spotlight or a pause, and `waiting`
+  while someone else's lock-in is in its reveal lead or on the viewer's own turn as
+  captain. So the strip stays up from Start to the last lock-in, and is `null` in the
+  lobby and once the session is complete.
 - `beginManagerCommand(play, view, request)` returns the next play and the request to
   send, or `null` when the control isn't open or a command is in flight. For `restart` and
   `cancel` it first returns a play awaiting confirmation and no request;

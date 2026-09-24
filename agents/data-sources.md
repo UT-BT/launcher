@@ -910,7 +910,9 @@ only from the view model, through the pick/ban visual core (see
   - `lock` with `{ side, map, plan_index }` to act for the awaited side: select a card, then
     Lock in, with the same optimistic "Locked in" a captain gets, kept until the step
     reveals. A manager never sends `hover`. On the viewer's own turn as captain, the
-    captain controls handle it instead.
+    captain controls handle it instead. Between turns the act-for strip stays, locked with
+    the countdown and who is up next, so nothing below it moves from Start to the last
+    lock-in.
   - `restart` and `cancel`, each only after a confirmation that says what will be lost
   - Copy player link and Copy stream link (`buildMatchLinks`)
 

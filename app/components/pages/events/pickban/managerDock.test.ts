@@ -21,6 +21,7 @@ import {
     ELIGIBLE_MAPS,
     INTRO_MS,
     LEAD_MS,
+    SPOTLIGHT_MS,
     T0,
     asActingCaptain,
     asCaptain,
@@ -353,7 +354,7 @@ describe('acting for a team', () => {
 
         const revealed = viewAt(answered, AWAITING_A + 200 + LEAD_MS)
         expect(withManagerPlay(revealed, settled).cards.find((card) => card.map === BRAVO)).toMatchObject({ state: 'banned', lockedIn: false })
-        expect(managerDockOf(revealed, settled)?.actFor).toBeNull()
+        expect(managerDockOf(revealed, settled)?.actFor?.dock.controls).toMatchObject({ kind: 'locked', reason: 'spotlight' })
     })
 
     it('forgets its Locked in once the manager undoes that step, so a later lock-in by the team isn’t shown as theirs', () => {
@@ -367,7 +368,7 @@ describe('acting for a team', () => {
         const reLocked = asManager(locked(undone(answered, AWAITING_A + 600), CHARLIE, AWAITING_A + 800))
 
         const inLead = viewAt(reLocked, AWAITING_A + 1_000)
-        expect(managerDockOf(inLead, afterUndo)?.actFor).toBeNull()
+        expect(managerDockOf(inLead, afterUndo)?.actFor?.dock.controls).toMatchObject({ kind: 'waiting' })
         expect(withManagerPlay(inLead, afterUndo).cards.some((card) => card.lockedIn)).toBe(false)
     })
 
@@ -381,14 +382,69 @@ describe('acting for a team', () => {
         const undoneElsewhere = undone(answered, AWAITING_A + 600)
         const settled = settleManagerPlay(lockedIn, viewAt(undoneElsewhere, AWAITING_A + 700))
         const reLocked = viewAt(asManager(locked(undoneElsewhere, CHARLIE, AWAITING_A + 800)), AWAITING_A + 1_000)
-        expect(managerDockOf(reLocked, settled)?.actFor).toBeNull()
+        expect(managerDockOf(reLocked, settled)?.actFor?.dock.controls).toMatchObject({ kind: 'waiting' })
+    })
+
+    it('locks the strip with the countdown and who is up next through the intro, a reveal and a pause', () => {
+        const introAt = T0 + LEAD_MS + 1_000
+        const actFor = (state: PickBanState, serverTime: number) =>
+            managerDockOf(viewAt(asManager(readAt(state, serverTime)), serverTime), IDLE_MANAGER_PLAY)?.actFor?.dock.controls
+
+        expect(actFor(started(), T0 + 500)).toMatchObject({ kind: 'locked', reason: 'intro', next: null })
+        expect(actFor(started(), introAt)).toMatchObject({
+            kind: 'locked',
+            reason: 'intro',
+            countdown: { remainingMs: INTRO_MS - 1_000, frozen: false },
+            next: { stepIndex: 0, actorLabel: 'Crimson Cats' },
+        })
+
+        const firstBan = locked(readAt(started(), AWAITING_A), BRAVO, AWAITING_A + 100)
+        const revealAt = AWAITING_A + 100 + LEAD_MS
+        expect(actFor(firstBan, AWAITING_A + 500)).toMatchObject({ kind: 'waiting', turn: { stepIndex: 0 } })
+        expect(actFor(firstBan, revealAt + 2_000)).toMatchObject({
+            kind: 'locked',
+            reason: 'spotlight',
+            countdown: { remainingMs: SPOTLIGHT_MS - 2_000, frozen: false },
+            next: { stepIndex: 1, actorLabel: 'Azure Owls' },
+        })
+        expect(actFor(paused(firstBan, revealAt + 2_000), revealAt + 5_000)).toMatchObject({
+            kind: 'locked',
+            reason: 'paused',
+            countdown: { remainingMs: SPOTLIGHT_MS - 2_000, frozen: true },
+            next: { stepIndex: 1 },
+        })
+    })
+
+    it('keeps the strip up from Start to the last lock-in, so the controls below it never jump', () => {
+        let state = started()
+        const kinds: (string | undefined)[] = []
+        const sample = (serverTime: number) =>
+            kinds.push(managerDockOf(viewAt(asManager(readAt(state, serverTime)), serverTime), IDLE_MANAGER_PLAY)?.actFor?.dock.controls?.kind)
+
+        sample(T0 + 500)
+        sample(T0 + LEAD_MS + 1_000)
+        for (const map of ELIGIBLE_MAPS.slice(0, 5)) {
+            const at = unlockAt(state) + 1_000
+            sample(at)
+            state = locked(state, map, at + 100)
+            sample(at + 500)
+            sample(at + 100 + LEAD_MS + 1_000)
+        }
+
+        expect(kinds).not.toContain(undefined)
+        expect(new Set(kinds)).toEqual(new Set(['locked', 'choose', 'waiting']))
+        expect(managerDockOf(viewAt(asManager(pickBanState()), T0), IDLE_MANAGER_PLAY)?.actFor).toBeNull()
+        expect(managerDockOf(viewAt(asManager(completedRun()), T0 + 3_600_000), IDLE_MANAGER_PLAY)?.actFor).toBeNull()
     })
 
     it('leaves a manager’s own turn as captain to the captain controls', () => {
         const captain = asCaptain(readAt(started(), AWAITING_A), 'team_a')
         const managingCaptain = { ...captain, capabilities: { ...captain.capabilities, can_manage: true } }
 
-        expect(managerDockOf(viewAt(managingCaptain, AWAITING_A), IDLE_MANAGER_PLAY)?.actFor).toBeNull()
+        expect(managerDockOf(viewAt(managingCaptain, AWAITING_A), IDLE_MANAGER_PLAY)?.actFor?.dock.controls).toMatchObject({
+            kind: 'waiting',
+            turn: { stepIndex: 0, viewerActs: true },
+        })
     })
 })
 
