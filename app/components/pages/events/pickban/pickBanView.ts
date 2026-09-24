@@ -382,8 +382,7 @@ function managerControlsOf(moment: Moment, awaitedStep: PickBanPlanStep | null):
         open: status === 'none' || status === 'cancelled' || status === 'voided',
         start: status === 'lobby',
         startBlockedBy: status === 'lobby' ? state.blocking_reason : null,
-        resultsPresent: state.blocking_reasons.includes('results_present')
-            || state.warnings.some((warning) => typeof warning !== 'string' && warning.code === 'results_present'),
+        resultsPresent: state.results_present,
         chooseA: status === 'lobby',
         swap: state.a_side !== null && (status === 'lobby' || (status === 'running' && !steps.some(isExecuted))),
         overrideSequence: status === 'lobby',

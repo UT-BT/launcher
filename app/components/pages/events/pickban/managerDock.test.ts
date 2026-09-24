@@ -205,7 +205,11 @@ describe('warnings', () => {
     const RESULTS_WARNING = 'Results are already entered for this match, so the pick/ban can’t start or change the maps it wrote.'
 
     it('warns when results already exist, whatever else blocks Start', () => {
-        const withResults = pickBanState({ blocking_reason: 'a_undetermined', blocking_reasons: ['a_undetermined', 'results_present'] })
+        const withResults = pickBanState({
+            results_present: true,
+            blocking_reason: 'a_undetermined',
+            blocking_reasons: ['a_undetermined', 'results_present'],
+        })
 
         expect(managerDockOf(viewAt(asManager(withResults), T0), IDLE_MANAGER_PLAY)).toMatchObject({
             startBlockedBy: 'Team A undetermined',
@@ -214,11 +218,23 @@ describe('warnings', () => {
         expect(managerDockOf(viewAt(asManager(pickBanState()), T0), IDLE_MANAGER_PLAY)?.resultsWarning).toBeNull()
     })
 
+    it('warns on a complete session with results too, leaving Restart and Cancel to the server’s refusal', () => {
+        const done = (resultsPresent: boolean) =>
+            managerDockOf(viewAt(asManager({ ...completedRun(), results_present: resultsPresent }), T0 + 3_600_000), IDLE_MANAGER_PLAY)
+
+        expect(done(true)).toMatchObject({
+            resultsWarning: RESULTS_WARNING,
+            buttons: [{ command: 'restart', disabled: false }, { command: 'cancel', disabled: false }],
+        })
+        expect(done(false)?.resultsWarning).toBeNull()
+    })
+
     it('flags a voided session prominently, keeps its results warning and offers Open again', () => {
         const voided = pickBanState({
             status: 'voided',
             phase: 'voided',
             end_reason: 'The match’s teams changed after the pick/ban opened, so it no longer applies.',
+            results_present: true,
             warnings: [{ code: 'results_present', message: 'Results were already entered, so the map slots this pick/ban wrote were left in place.' }],
         })
 

@@ -5817,6 +5817,7 @@ export interface PickBanState {
     edited: boolean
     end_reason: string | null
     warnings: PickBanWarning[]
+    results_present: boolean
     blocking_reasons: PickBanBlockingReason[]
     blocking_reason: PickBanBlockingReason | null
     viewer: PickBanViewer
