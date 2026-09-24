@@ -462,8 +462,7 @@ confirmation, and the last refusal with the command it answered.
 - `withManagerPlay(view, play)` marks the act-for selection `selected`, and shows the
   act-for lock-in as "Locked in" through the same `withOptimisticLock` the captain uses
   (exported from `captainPlay.ts`). The lock-in stays until its step reveals, since the
-  returned state only marks a lock-in for the side's own captain. Any later manager
-  command drops it, so an undone step never comes back as the manager's.
+  returned state only marks a lock-in for the side's own captain.
 - `managerDockOf(view, play)` is the dock model, `null` without `affordances.manager`: the
   buttons in order with labels and disabled flags (every one disabled while a command is in
   flight), the worded Start blocking reason, the results warning, the voided banner, the
@@ -481,10 +480,14 @@ confirmation, and the last refusal with the command it answered.
 - `managerCommandSucceeded` and `managerCommandRejected(play, error)` settle a command, and
   `dismissManagerRejection` clears the refusal. `sequenceChoices(stages)` lists the override
   options: every preset, then each stage that has a block.
+- `settleManagerPlay(play, view)` drops a confirmation the session no longer allows, and an
+  act-for lock-in whose step is awaited again (an undo, by anyone). Any later manager
+  command drops the lock-in too. So neither comes back later, and a step the team locks
+  after an undo is never shown as the manager's.
 
 `useManagerDock(view, sendManagerCommand)` (`events/pickban/useManagerDock.ts`) wires it to
-the store the same way `useCaptainPlay` does. The page passes it the captain-played view, so
-both layers show.
+the store the same way `useCaptainPlay` does, and settles the play whenever the view
+changes. The page passes it the captain-played view, so both layers show.
 
 **Hooks** (`events/pickban/usePickBanSession.ts`):
 

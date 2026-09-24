@@ -310,6 +310,14 @@ export function dismissManagerConfirm(play: ManagerPlay): ManagerPlay {
     return { ...play, confirming: null }
 }
 
+export function settleManagerPlay(play: ManagerPlay, view: PickBanView): ManagerPlay {
+    const controls = view.affordances.manager
+    const staleConfirm = play.confirming !== null && !(controls && allowed(controls, play.confirming))
+    const staleLock = play.lockingIn !== null && play.submitting === null && optimisticLockOf(view, play) === null
+    if (!staleConfirm && !staleLock) return play
+    return { ...play, confirming: staleConfirm ? null : play.confirming, lockingIn: staleLock ? null : play.lockingIn }
+}
+
 export function selectActForMap(play: ManagerPlay, view: PickBanView, map: string): ManagerPlay {
     const { turn } = view
     if (!turn || !actForOpen(view) || optimisticLockOf(view, play) !== null) return play

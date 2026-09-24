@@ -13,6 +13,7 @@ import {
     managerDockOf,
     selectActForMap,
     sequenceChoices,
+    settleManagerPlay,
     withManagerPlay,
     type ManagerRequest,
 } from './managerDock'
@@ -36,7 +37,7 @@ import {
     unlockAt,
 } from './pickBanFixtures'
 
-const [, BRAVO, CHARLIE, DELTA, , , GOLF] = ELIGIBLE_MAPS
+const [ALPHA, BRAVO, CHARLIE, DELTA, ECHO, FOXTROT, GOLF] = ELIGIBLE_MAPS
 const INTRO_END = T0 + LEAD_MS + INTRO_MS
 const AWAITING_A = INTRO_END + 1_000
 
@@ -105,19 +106,27 @@ describe('running a whole session', () => {
 
         let state = started()
         const actors: string[] = []
+        const locks: ManagerRequest[] = []
         for (const map of ELIGIBLE_MAPS.slice(0, 6)) {
             const at = unlockAt(state) + 1_000
             const view = viewAt(asManager(readAt(state, at)), at)
-            const actFor = managerDockOf(view, play)?.actFor
-            actors.push(actFor!.teamName)
+            actors.push(managerDockOf(view, play)!.actFor!.teamName)
 
-            const submission = beginActForLock(selectActForMap(play, view, map), view)
-            expect(submission?.request).toEqual({ command: 'lock', body: { side: actFor!.side, map, plan_index: view.turn!.stepIndex } })
-            play = managerCommandSucceeded(submission!.play)
+            const submission = beginActForLock(selectActForMap(play, view, map), view)!
+            locks.push(submission.request!)
+            play = managerCommandSucceeded(submission.play)
             state = locked(state, map, at + 100, { byAdmin: true })
         }
 
         expect(actors).toEqual(['Crimson Cats', 'Azure Owls', 'Azure Owls', 'Crimson Cats', 'Azure Owls', 'Crimson Cats'])
+        expect(locks).toEqual([
+            { command: 'lock', body: { side: 'team_a', map: ALPHA, plan_index: 0 } },
+            { command: 'lock', body: { side: 'team_b', map: BRAVO, plan_index: 1 } },
+            { command: 'lock', body: { side: 'team_b', map: CHARLIE, plan_index: 2 } },
+            { command: 'lock', body: { side: 'team_a', map: DELTA, plan_index: 3 } },
+            { command: 'lock', body: { side: 'team_b', map: ECHO, plan_index: 4 } },
+            { command: 'lock', body: { side: 'team_a', map: FOXTROT, plan_index: 5 } },
+        ])
         expect(state.status).toBe('complete')
         const done = viewAt(asManager(state), T0 + 3_600_000)
         expect(done.summary.map((entry) => entry.map)).toEqual([CHARLIE, DELTA, GOLF])
@@ -346,6 +355,19 @@ describe('acting for a team', () => {
         expect(withManagerPlay(inLead, afterUndo).cards.some((card) => card.lockedIn)).toBe(false)
     })
 
+    it('forgets its Locked in once it sees the step awaited again, whoever undid it', () => {
+        const awaiting = awaitingA()
+        const view = viewAt(awaiting, AWAITING_A)
+        const lockedIn = managerCommandSucceeded(beginActForLock(selectActForMap(IDLE_MANAGER_PLAY, view, BRAVO), view)!.play)
+        const answered = asManager(locked(awaiting, BRAVO, AWAITING_A + 200, { byAdmin: true }))
+        expect(settleManagerPlay(lockedIn, viewAt(answered, AWAITING_A + 400))).toBe(lockedIn)
+
+        const undoneElsewhere = undone(answered, AWAITING_A + 600)
+        const settled = settleManagerPlay(lockedIn, viewAt(undoneElsewhere, AWAITING_A + 700))
+        const reLocked = viewAt(asManager(locked(undoneElsewhere, CHARLIE, AWAITING_A + 800)), AWAITING_A + 1_000)
+        expect(managerDockOf(reLocked, settled)?.actFor).toBeNull()
+    })
+
     it('leaves a manager’s own turn as captain to the captain controls', () => {
         const captain = asCaptain(readAt(started(), AWAITING_A), 'team_a')
         const managingCaptain = { ...captain, capabilities: { ...captain.capabilities, can_manage: true } }
@@ -437,11 +459,15 @@ describe('restarting and cancelling', () => {
         expect(confirmManagerCommand(dismissed, view)).toBeNull()
     })
 
-    it('drops a pending confirmation the session no longer allows', () => {
+    it('drops a pending confirmation the session no longer allows, so it never comes back later', () => {
         const asked = beginManagerCommand(IDLE_MANAGER_PLAY, running(), { command: 'restart' })!.play
         const lobby = viewAt(asManager(pickBanState()), T0)
 
         expect(managerDockOf(lobby, asked)?.confirm).toBeNull()
         expect(confirmManagerCommand(asked, lobby)).toBeNull()
+
+        const settled = settleManagerPlay(asked, lobby)
+        expect(managerDockOf(running(), settled)?.confirm).toBeNull()
+        expect(settleManagerPlay(asked, running())).toBe(asked)
     })
 })

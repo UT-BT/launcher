@@ -45,6 +45,7 @@ const TONE_OF: Partial<Record<ManagerButton['command'], keyof typeof TONES>> = {
 export function ManagerDock({ dock, manager, slug, accessToken, children }: ManagerDockProps) {
     const [picker, setPicker] = useState<Picker | null>(null)
     const { actFor, busy } = dock
+    if (picker !== null && !(picker === 'sequence' ? dock.overrideSequence : dock.handOver)) setPicker(null)
 
     return (
         <>
@@ -105,7 +106,7 @@ export function ManagerDock({ dock, manager, slug, accessToken, children }: Mana
                     <p className="text-sm text-muted-foreground">{dock.confirm.message}</p>
                 </DockModal>
             )}
-            {picker === 'sequence' && dock.overrideSequence && (
+            {picker === 'sequence' && (
                 <SequencePicker
                     slug={slug}
                     accessToken={accessToken}

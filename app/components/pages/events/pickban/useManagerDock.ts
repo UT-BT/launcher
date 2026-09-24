@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { PickBanState } from '@/app/utils/api'
 import type { PickBanSessionStore } from './pickBanSession'
 import type { PickBanView } from './pickBanView'
@@ -13,6 +13,7 @@ import {
     managerCommandSucceeded,
     managerDockOf,
     selectActForMap,
+    settleManagerPlay,
     withManagerPlay,
     type ManagerDock,
     type ManagerPlay,
@@ -45,6 +46,12 @@ export function useManagerDock(view: PickBanView | null, sendManagerCommand: Pic
         playRef.current = next(playRef.current)
         setPlay(playRef.current)
     }, [])
+
+    useEffect(() => {
+        if (!view) return
+        const settled = settleManagerPlay(playRef.current, view)
+        if (settled !== playRef.current) update(() => settled)
+    }, [view, update])
 
     const submit = useCallback((begin: Begin) => {
         const current = viewRef.current
