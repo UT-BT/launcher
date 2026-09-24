@@ -437,8 +437,9 @@ Screens never read those fields. They go through the functions below.
   (the intro, a spotlight or a pause, with the view's `countdown` and the next `turn`) or
   `waiting` (the other side's turn), plus the refusal message. It is `null` for anyone
   without `affordances.actingSide`: a spectator, a teammate, a replaced captain or a
-  manager. The one exception is a refusal still showing after the refresh took the viewer's
-  controls away.
+  manager. It is also `null` once the last step is in, apart from the actor's own "Locked
+  in" during its reveal lead. The one exception is a refusal still showing after the refresh
+  took the viewer's controls away.
 - `selectMap`, `beginLock` and `beginReadyToggle` return the next play, and the begin
   functions also return the command and body to send. They return `null` while a command is
   in flight or when the controls aren't open, which is the double-submit guard.

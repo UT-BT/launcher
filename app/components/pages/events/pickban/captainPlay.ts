@@ -117,6 +117,7 @@ function controlsOf(view: PickBanView, play: CaptainPlay): CaptainControls | nul
     if (affordances.actingSide === null) return null
     if (affordances.canReady) return { kind: 'ready', ready: affordances.isReady, busy: play.submitting !== null }
     if (turn?.lockedIn) return { kind: 'locked_in', map: view.cards.find((card) => card.lockedIn)?.map ?? null }
+    if (view.status === 'complete') return null
     if (view.phase === 'paused') return { kind: 'locked', reason: 'paused', countdown, next: turn }
     if (view.stagePhase === 'lobby' && view.status !== 'lobby') return { kind: 'locked', reason: 'intro', countdown, next: turn }
     if (view.stagePhase === 'intro') return { kind: 'locked', reason: 'intro', countdown, next: turn }

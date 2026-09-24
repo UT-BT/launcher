@@ -13,6 +13,7 @@ import {
     withCaptainPlay,
 } from './captainPlay'
 import {
+    BAN_DOWN_SPOTLIGHT_MS,
     ELIGIBLE_MAPS,
     INTRO_MS,
     LEAD_MS,
@@ -31,9 +32,10 @@ import {
     readAt,
     resumed,
     started,
+    unlockAt,
 } from './pickBanFixtures'
 
-const [ALPHA, BRAVO] = ELIGIBLE_MAPS
+const [ALPHA, BRAVO, , , , FOXTROT] = ELIGIBLE_MAPS
 const INTRO_END = T0 + LEAD_MS + INTRO_MS
 const AWAITING_A = INTRO_END + 1_000
 
@@ -222,6 +224,22 @@ describe('who gets controls', () => {
         const view = viewAt(asActingCaptain(readAt(started(), AWAITING_A), 'team_a'), AWAITING_A)
 
         expect(beginLock(selectMap(IDLE_CAPTAIN_PLAY, view, BRAVO), view)?.body).toEqual({ map: BRAVO, plan_index: 0 })
+    })
+
+    it('drops the controls once the last step is in, keeping only the actor’s Locked in until it reveals', () => {
+        const before = lockedInTurn(started(), ELIGIBLE_MAPS.slice(0, 5))
+        const finalLock = unlockAt(before) + 2_000
+        const state = locked(before, FOXTROT, finalLock)
+        const banReveal = finalLock + LEAD_MS
+
+        const dockAt = (side: 'team_a' | 'team_b', serverTime: number) => captainDockOf(viewAt(asCaptain(state, side), serverTime), IDLE_CAPTAIN_PLAY)
+
+        expect(dockAt('team_a', finalLock + 500)?.controls).toEqual({ kind: 'locked_in', map: FOXTROT })
+        expect(dockAt('team_b', finalLock + 500)).toBeNull()
+        for (const serverTime of [banReveal + 500, banReveal + BAN_DOWN_SPOTLIGHT_MS + 500]) {
+            expect(dockAt('team_a', serverTime)).toBeNull()
+            expect(dockAt('team_b', serverTime)).toBeNull()
+        }
     })
 
     it('shows no controls once the pick/ban is over', () => {
