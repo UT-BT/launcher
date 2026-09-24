@@ -547,20 +547,28 @@ would create. It returns a `PickBanStateRead`:
 - `clockOffset.ts` turns each sample into `serverNow − midpoint(sent, received)` and keeps
   the median of the last `CLOCK_SAMPLE_WINDOW` (7) samples, so one slow response can't
   move it.
-- The web build reads both headers cross-origin, so the API has to list them in
-  `Access-Control-Expose-Headers`. Without them the client still works: every poll is a
-  full 200, and a 304 simply skips its clock sample.
+- The web build reads both headers cross-origin, which works because the API lists them in
+  `Access-Control-Expose-Headers`. An API build without that still works with the client:
+  every poll is a full 200, and a 304 simply skips its clock sample.
 
 **Reading the payload.** `phase` is the server's phase at read time. The view model
 re-derives it between polls from the absolute timestamps: `intro_ends_at`,
 `spotlight_ends_at`, and each executed step's `at` / `reveal_at`.
 
 - **Reveal lead.** A lock-in is recorded at `at` and revealed at `reveal_at`, 1.5 s later.
-  The intro likewise starts 1.5 s after Start. The automatic decider is revealed when the
-  ban before it ends its spotlight. **A step is never shown before its `reveal_at`**, so
+  The intro likewise starts 1.5 s after Start, so it runs from `intro_ends_at −
+  pacing.intro` to `intro_ends_at`. **A step is never shown before its `reveal_at`**, so
   every screen animates at the same moment.
+- **The automatic decider** is recorded in the same command as the last human step. It is
+  revealed when that step's spotlight ends. A plan that is only the decider records it at
+  Start and reveals it as the intro ends.
 - **Spotlight lengths** come from `pacing`: `spotlight` for lettered steps,
   `ban_down_spotlight` for the ban-down and `decider_spotlight` for the decider.
+  `spotlight_ends_at` belongs to the last executed step, and stays set after it has passed.
+- **Phase windows** include their start and exclude their end.
+- **Status versus phase.** The status turns `complete` the moment the last step is
+  recorded, but the phase stays `spotlight` until the last spotlight ends. Show the final
+  summary when the view's `phase` is `complete`, never on `status`.
 - **Paused.** While `paused`, every timer and pending reveal freezes at `paused_at`. On
   resume, the server shifts the pending timestamps by the pause length.
 - **Gate controls on `capabilities`, never on `viewer.roster_captain`.**
