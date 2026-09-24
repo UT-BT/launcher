@@ -673,8 +673,10 @@ waits for a poll. Every body except Open's carries the expected `version`.
 - **Reopen** is `undo` sent while the session is `complete`. It removes the last human
   step, plus the automatic decider after it, and returns the session to `running`,
   awaiting that step. The map slots the session wrote are cleared back to what they held
-  before, and an edited final list is discarded (`edited` goes back to `false`). It is
-  refused with `results_present` while results exist.
+  before, and an edited final list is discarded (`edited` goes back to `false`, and
+  `final_maps` to `null`). It is refused with `results_present` while results exist, and
+  then with `nothing_to_undo` (409) when no human step was ever made (a plan that is only
+  the automatic decider).
 - **Edit final** (`edit-final`, `complete` only) takes `{ maps, version }`: the whole
   final list in play order, each entry a `PickBanEditFinalEntry` `{ map, picked_by,
   decider }`. It is refused with `invalid_request` (422) unless every rule holds:
@@ -683,8 +685,11 @@ waits for a poll. Every body except Open's carries the expected `version`.
   - at most one entry is the decider, and it is the last
   - the decider has `picked_by: null`, and every other entry has `team_a` or `team_b`
 
-  It is refused with `results_present` (409) while results exist. The returned state has
-  `edited: true`, and the step log in `plan` stays as it was played.
+  Map names match exactly (case-sensitive). The length isn't tied to the best-of, and a
+  decider isn't required. Each 422 carries a message naming the field and the broken rule,
+  in `err.message`. Outside `complete` it is refused with `wrong_status`, and while results
+  exist with `results_present` (409). The returned state has `edited: true`, and the step
+  log in `plan` stays as it was played.
 - `postPickBanCommand` is the untyped transport under both. Screens call the session
   store's `sendCommand` / `sendManagerCommand` (see `agents/state-patterns.md`), which fill
   in the version themselves. They send one command at a time and read the version only once
@@ -950,8 +955,10 @@ only from the view model, through the pick/ban visual core (see
   `version_conflict` asks the manager to check the session and try again, and nothing
   retries by itself. A `hand-over` refused with `invalid_request` says to pick an active
   roster member of that side's team, and an `edit-final` refused with it says the list
-  wasn't accepted; every other command keeps the general words for that code. A refused
-  edit shows inside the editor, which keeps the list. `resultsPresent` shows a warning in
+  wasn't accepted, followed by the server's own detail (which field broke which rule);
+  every other command keeps the general words for that code. A Reopen refused with
+  `nothing_to_undo` says there is no ban or pick to undo. A refused edit shows inside the
+  editor, which keeps the list. `resultsPresent` shows a warning in
   any status (Reopen, Restart, Cancel and Edit final stay enabled, and the server's refusal
   is worded if one comes), and a voided session shows its banner in the dock with Open
   offered again.

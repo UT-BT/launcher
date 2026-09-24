@@ -5678,6 +5678,7 @@ export const PICK_BAN_ERROR_CODES = [
     'no_session',
     'match_live',
     'wrong_status',
+    'nothing_to_undo',
 ] as const
 
 export type PickBanErrorCode = typeof PICK_BAN_ERROR_CODES[number]

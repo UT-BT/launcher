@@ -212,17 +212,18 @@ const REJECTIONS: Record<Exclude<PickBanErrorCode, PickBanBlockingReason>, strin
     no_session: 'This match has no pick/ban session any more.',
     match_live: 'The match is already live, so a lobby can’t open.',
     wrong_status: 'The session moved on just before your click, so that no longer applies.',
+    nothing_to_undo: 'There’s no ban or pick to undo.',
 }
 
-const INVALID_REQUEST_REJECTIONS: Partial<Record<ManagerCommand, string>> = {
-    'hand-over': 'That player can’t take control: pick an active roster member of that side’s team.',
-    'edit-final': 'The server didn’t accept that final list. Refresh the page, check the maps and try again.',
+const INVALID_REQUEST_REJECTIONS: Partial<Record<ManagerCommand, (detail: string) => string>> = {
+    'hand-over': () => 'That player can’t take control: pick an active roster member of that side’s team.',
+    'edit-final': (detail) => `The server didn’t accept that final list. ${detail}`,
 }
 
 function rejectionMessage(command: ManagerCommand | null, error: unknown): string {
     const code = pickBanErrorCode(error)
     const invalidRequest = command && code === 'invalid_request' ? INVALID_REQUEST_REJECTIONS[command] : undefined
-    if (invalidRequest) return invalidRequest
+    if (invalidRequest) return invalidRequest(error instanceof Error ? error.message : '')
     if (code) return code in REJECTIONS ? REJECTIONS[code as keyof typeof REJECTIONS] : `${blockingReasonLabel(code, 'lobby')}.`
     return unwordedRejection(error)
 }

@@ -692,11 +692,12 @@ describe('editing the final maps', () => {
         const body = managerDockOf(view, opened)!.finalEditor!.body!
         const saving = confirmManagerCommand(beginManagerCommand(opened, view, { command: 'edit-final', body })!.play, view)!.play
 
-        const refused = managerCommandRejected(saving, new ApiError(422, 'The server’s own words', 'Request failed', 'invalid_request'))
+        const detail = 'Field \'maps[1].picked_by\' must be null: the decider has no picking side.'
+        const refused = managerCommandRejected(saving, new ApiError(422, detail, 'Request failed', 'invalid_request'))
         expect(managerDockOf(view, refused)).toMatchObject({
             busy: false,
             rejection: null,
-            finalEditor: { saving: false, rejection: 'The server didn’t accept that final list. Refresh the page, check the maps and try again.' },
+            finalEditor: { saving: false, rejection: `The server didn’t accept that final list. ${detail}` },
         })
         expect(managerDockOf(view, refused)?.finalEditor?.rows.map((row) => row.map)).toEqual([DELTA, CHARLIE, GOLF])
 
@@ -723,7 +724,19 @@ describe('editing the final maps', () => {
         const withResults = viewAt(asManager({ ...completedRun(), results_present: true }), AFTER)
         const resultsPresent = new ApiError(409, 'The server’s own words', 'Request failed', 'results_present')
         const reopening = confirmManagerCommand(beginManagerCommand(IDLE_MANAGER_PLAY, withResults, { command: 'reopen' })!.play, withResults)!.play
+        const editing = openFinalEditor(IDLE_MANAGER_PLAY, withResults)
+        const body = managerDockOf(withResults, editing)!.finalEditor!.body!
+        const saving = confirmManagerCommand(beginManagerCommand(editing, withResults, { command: 'edit-final', body })!.play, withResults)!.play
 
         expect(managerDockOf(withResults, managerCommandRejected(reopening, resultsPresent))?.rejection).toBe('Results already entered.')
+        expect(managerDockOf(withResults, managerCommandRejected(saving, resultsPresent))?.finalEditor?.rejection).toBe('Results already entered.')
+    })
+
+    it('words a refused Reopen when no ban or pick was ever made', () => {
+        const view = complete()
+        const nothingToUndo = new ApiError(409, 'The server’s own words', 'Request failed', 'nothing_to_undo')
+        const reopening = confirmManagerCommand(beginManagerCommand(IDLE_MANAGER_PLAY, view, { command: 'reopen' })!.play, view)!.play
+
+        expect(managerDockOf(view, managerCommandRejected(reopening, nothingToUndo))?.rejection).toBe('There’s no ban or pick to undo.')
     })
 })
