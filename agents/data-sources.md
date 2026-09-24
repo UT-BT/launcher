@@ -5,15 +5,16 @@ read_when:
   - "adding or changing a helper in app/utils/api.ts"
   - "needing an avatar, map screenshot, region flag, or map-download URL"
   - "wiring map/server favorites or Patreon tier lookups"
-keywords: [api.ts, fetch, endpoint, accessToken, avatar, MapThumbnail, favorites, patreon, downloadMapZip, world_records, caps, predictions, draw, odds, schedule, proposal, slot, whose_turn, resolved_window, countdown, nav badge, fetchMyTournaments, SlotPickerModal, SlotGrid, DateTimeField, slotGeneration, proposeMatchSlots, withdrawMatchProposal, acceptMatchProposal, fetchMatchSchedule, ApiError, expected_match_duration_minutes]
+  - "reading a match's pick/ban state, sending a pick/ban command, or rendering from the pick/ban view model"
+keywords: [api.ts, fetch, endpoint, accessToken, avatar, MapThumbnail, favorites, patreon, downloadMapZip, world_records, caps, predictions, draw, odds, schedule, proposal, slot, whose_turn, resolved_window, countdown, nav badge, fetchMyTournaments, SlotPickerModal, SlotGrid, DateTimeField, slotGeneration, proposeMatchSlots, withdrawMatchProposal, acceptMatchProposal, fetchMatchSchedule, ApiError, expected_match_duration_minutes, pick/ban, fetchPickBanState, ETag, If-None-Match, 304, X-Server-Now, server_now, clock offset, reveal_at, sendPickBanCommand, sendPickBanManagerCommand, pickBanErrorCode, fetchPickBanQueue, buildPickBanView]
 provides: "the client-side API contract the launcher consumes + asset URLs + favorites/patreon sync models"
 not_here:
   - "IPC channels (window.conveyor.*) → lib/conveyor/README.md"
   - "how UI state persists in localStorage → state-patterns.md"
   - "the procedure to wire a new endpoint into the UI → skill: consume-api-data"
-sections: [backend-api, errors, admin-api, event-brackets, event-scheduling, event-predictions, changing-a-map-screenshot, cap-detail-page-endpoints, world-records-page-endpoints, team-maps-and-team-runs, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites, account-state-and-badges]
-last_verified: 2026-09-23
-verify_against: [app/utils/api.ts, app/utils/chartBuckets.ts, app/components/pages/admin/components/controls.tsx, app/components/pages/admin/sections/HostsManagementSection.tsx, app/utils/patreon.ts, app/utils/server-utils.ts, app/hooks/useServerFavorites.ts, app/components/pages/events/manage/formatFields.tsx, app/components/pages/events/bracket/bracketShared.tsx, app/components/pages/events/bracket/BracketTab.tsx, app/components/pages/events/predictions/predictionsShared.tsx, app/components/pages/events/predictions/PredictionsTab.tsx, app/components/pages/events/schedule/scheduleShared.tsx, app/components/pages/events/schedule/ScheduleTab.tsx, app/components/pages/events/schedule/SlotPickerModal.tsx, app/components/pages/events/schedule/slotGeneration.ts, app/components/pages/events/schedule/SlotGrid.tsx, app/components/pages/events/manage/DateTimeField.tsx, app/components/pages/events/eventsShared.tsx, app/components/pages/EventDetailPage.tsx, app/utils/timezone.ts, app/components/pages/events/manage/ScheduleOversightPanel.tsx, app/components/pages/events/ManagePanel.tsx, app/components/main/Main.tsx, app/components/layout/AppLayout.tsx]
+sections: [backend-api, errors, admin-api, event-brackets, event-scheduling, event-predictions, event-pickban-sessions, changing-a-map-screenshot, cap-detail-page-endpoints, world-records-page-endpoints, team-maps-and-team-runs, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites, account-state-and-badges]
+last_verified: 2026-09-24
+verify_against: [app/utils/api.ts, app/components/pages/events/pickban/pickBanView.ts, app/components/pages/events/pickban/pickBanSession.ts, app/components/pages/events/pickban/clockOffset.ts, app/utils/chartBuckets.ts, app/components/pages/admin/components/controls.tsx, app/components/pages/admin/sections/HostsManagementSection.tsx, app/utils/patreon.ts, app/utils/server-utils.ts, app/hooks/useServerFavorites.ts, app/components/pages/events/manage/formatFields.tsx, app/components/pages/events/bracket/bracketShared.tsx, app/components/pages/events/bracket/BracketTab.tsx, app/components/pages/events/predictions/predictionsShared.tsx, app/components/pages/events/predictions/PredictionsTab.tsx, app/components/pages/events/schedule/scheduleShared.tsx, app/components/pages/events/schedule/ScheduleTab.tsx, app/components/pages/events/schedule/SlotPickerModal.tsx, app/components/pages/events/schedule/slotGeneration.ts, app/components/pages/events/schedule/SlotGrid.tsx, app/components/pages/events/manage/DateTimeField.tsx, app/components/pages/events/eventsShared.tsx, app/components/pages/EventDetailPage.tsx, app/utils/timezone.ts, app/components/pages/events/manage/ScheduleOversightPanel.tsx, app/components/pages/events/ManagePanel.tsx, app/components/main/Main.tsx, app/components/layout/AppLayout.tsx]
 ---
 
 # Data sources
@@ -59,6 +60,7 @@ full loop).
 | Event scheduling | `fetchMySchedule`, manager-only: `fetchEventScheduleOversight`, `fetchEventAuditLog` (→ [Event scheduling](#event-scheduling)) |
 | Event brackets | `fetchEventBracket`, `fetchEventMatch` (→ [Event brackets](#event-brackets)); manager-only: `fetchEventFormats`, `setEventBracketPublished`, `setEventFormat`, `updateEventFormatSpec`, `setEventSeeds`, `updateEventStage`, `generateEventStage`, `generateEventRound`, `resetEventStage`, `updateEventGroup`, `createEventMatch`, `updateEventMatch`, `deleteEventMatch`, `setEventMatchResult`, `clearEventMatchResult`, `fetchEventCapCandidates`, `linkEventMatchMapCaps`; staff-only: `createEventFormat`, `updateEventFormat`, `deleteEventFormat`, `fetchEventFormat` |
 | Admin (staff-only) | the moderator/admin dashboard slice — see [Admin API](#admin-api). `fetchAuditLog`/`fetchAuditLogCount` take `actors` (`staff` default / `players` / `all`): the default keeps player-written rows, such as a mapper replacing their own screenshot, out of the staff feed |
+| Event pick/ban sessions | `fetchPickBanState` (ETag-aware), `sendPickBanCommand`, `sendPickBanManagerCommand`, `postPickBanCommand`, `pickBanErrorCode`; manager-only: `fetchPickBanQueue` (→ [Event pick/ban sessions](#event-pickban-sessions)) |
 
 Most fetchers take `accessToken` first (Discord OAuth bearer). On the web build,
 logged-out pages pass the `ANONYMOUS_TOKEN` sentinel (exported from `api.ts`)
@@ -517,6 +519,117 @@ settings and per-market controls in `manage/PredictionsManagePanel.tsx`, and
 match while its market is still open refunds every prediction on it, which is easy to do
 by accident and quiet when it happens — so the manager sees the state and a one-click
 close before they score.
+
+### Event pick/ban sessions
+
+A match's live map pick/ban. The fetchers sit in `app/utils/api.ts` after the pick/ban
+config helpers. Everything else is pure logic in `app/components/pages/events/pickban/`,
+and screens render only from its view model, never from the raw payload.
+
+**The state read.** `fetchPickBanState(token?, slug, matchId, { etag, signal })` →
+`GET /tournaments/<slug>/matches/<id>/pick-ban`. It is anonymous-friendly, and the payload
+is **per viewer** (`viewer`, `capabilities`). Every key is always present, and every
+timestamp is ISO with an explicit offset. The payload is the match's current session,
+else its latest cancelled or voided one, else `status: 'none'`: a preview of what Open
+would create. It returns a `PickBanStateRead`:
+
+- `{ kind: 'fresh', state, etag, serverNow }` on a 200
+- `{ kind: 'unchanged', serverNow }` on a 304
+
+**ETag and clock sampling.**
+
+- Send the last `ETag` back verbatim as `If-None-Match`. A 304 means nothing changed: keep
+  the previous state **object**, same identity, so nothing re-renders.
+- `server_now` is left out of the ETag, so an idle session answers 304.
+- Every response carries `X-Server-Now` (ISO UTC). Sample the clock from the body's
+  `server_now` on a 200 and from that header on a 304, and skip the sample when it is
+  missing.
+- `clockOffset.ts` turns each sample into `serverNow − midpoint(sent, received)` and keeps
+  the median of the last `CLOCK_SAMPLE_WINDOW` (7) samples, so one slow response can't
+  move it.
+- The web build reads both headers cross-origin, so the API has to list them in
+  `Access-Control-Expose-Headers`. Without them the client still works: every poll is a
+  full 200, and a 304 simply skips its clock sample.
+
+**Reading the payload.** `phase` is the server's phase at read time. The view model
+re-derives it between polls from the absolute timestamps: `intro_ends_at`,
+`spotlight_ends_at`, and each executed step's `at` / `reveal_at`.
+
+- **Reveal lead.** A lock-in is recorded at `at` and revealed at `reveal_at`, 1.5 s later.
+  The intro likewise starts 1.5 s after Start. The automatic decider is revealed when the
+  ban before it ends its spotlight. **A step is never shown before its `reveal_at`**, so
+  every screen animates at the same moment.
+- **Spotlight lengths** come from `pacing`: `spotlight` for lettered steps,
+  `ban_down_spotlight` for the ban-down and `decider_spotlight` for the decider.
+- **Paused.** While `paused`, every timer and pending reveal freezes at `paused_at`. On
+  resume, the server shifts the pending timestamps by the pause length.
+- **Gate controls on `capabilities`, never on `viewer.roster_captain`.**
+  `capabilities.acting_side` is the side the viewer acts for as captain or acting captain.
+  A captain replaced by an acting captain has `acting_side: null`.
+
+**Commands.** Every command returns the full new state for the caller, so the actor never
+waits for a poll. Every body except Open's carries the expected `version`.
+
+- **Participant commands:** `sendPickBanCommand(token, slug, matchId, command, body)` →
+  `POST .../matches/<id>/pick-ban/{ready,unready,hover,lock}`.
+- **Manager commands:** `sendPickBanManagerCommand(token, slug, matchId, command, body?)` →
+  `POST /tournaments/<slug>/admin/matches/<id>/pick-ban/<command>`. `open` takes no body.
+  `lock` takes a `side`, and `override-sequence` takes a `preset_id` or a
+  `from_stage_key`.
+- The body shapes are typed in `PickBanParticipantCommandBodies` and
+  `PickBanManagerCommandBodies`. `hand-over` and `edit-final` are typed loosely until
+  their bodies are settled.
+- `postPickBanCommand` is the untyped transport under both. Screens call the session
+  store's `sendCommand` / `sendManagerCommand` (see `agents/state-patterns.md`), which fill
+  in the version themselves.
+- **Refusals.** A refusal is an `ApiError` whose `.reason` is a stable code (403
+  authorization, 409 state conflict, 422 validation). `pickBanErrorCode(err)` narrows it to
+  `PickBanErrorCode`, and `PICK_BAN_ERROR_CODES` lists every code. Show `err.message`, and
+  branch on the code only where a screen reacts to a specific one.
+
+**Match queue (managers).** `fetchPickBanQueue(token, slug)` →
+`GET /tournaments/<slug>/admin/pick-ban/queue`. Each `PickBanQueueEntry` is one match: its
+stage, round, time and teams, its session status, its Ready and online counts, and whether
+it is `startable` (with the `blocking_reason` when not). The type is **provisional**: check
+it against the live route before building on it.
+
+**Polling cadence** (`pickBanSession.ts`):
+
+- Every second (`ACTIVE_POLL_MS`) while the status is `lobby`, `running` or `paused` and the
+  document is visible.
+- Every 10 seconds (`IDLE_POLL_MS`) for `none`, `complete`, `cancelled` and `voided`, and
+  after a first load refused with 401, 403 or 404.
+- Nothing while the document is hidden. It polls at once when the document shows again.
+- The stream view passes `alwaysPoll` and ignores visibility.
+- A failed poll keeps the last good state, and `reconnecting` turns on after
+  `RECONNECTING_AFTER_FAILURES` (3) failures in a row.
+- A poll that answers with an older `version` of the same session than a command response
+  already applied is ignored, so an optimistic lock-in never flickers back.
+
+**The view model.** `buildPickBanView(state, { clockOffsetMs, now })` in `pickBanView.ts` is
+pure and tested without a DOM. It returns:
+
+- the re-derived `phase` (`'none'` when there's no session), and a `countdown` whose
+  `endsAt` is a **local-clock** epoch ms. A frozen countdown has `endsAt: null` and a fixed
+  `remainingMs`.
+- `turn`, with `actionLabel` and whether the viewer acts, and `spotlight`, the step being
+  revealed
+- `cards`: `available`, `banned`, `picked`, `decider` or `excluded`, with the acting side,
+  step number, map number, exclusion reason and the `previewed`, `lockedIn` and
+  `selectable` flags
+- `timeline`: `upcoming`, `current`, `locked_in` or `revealed`
+- `summary`, in play order (`map_number`), with a slot reserved for every map from the start
+- `teams.left` (A) and `teams.right` (B), falling back to `team_a` on the left while A is
+  undetermined
+- `banners`: voided, cancelled, paused, skipped bans and warnings
+- `affordances`: `canReady`, `isReady`, `canLock`, and `manager` (which dock controls apply
+  to the current status, `startBlockedBy`, and `actForSide`)
+- `nextBoundaryAt`: when the view next changes on its own
+
+While a step is inside its reveal lead, the side that locked it sees it as `locked_in`, with
+its card flagged `lockedIn`. Everyone else still sees the step being awaited. `canLock` is
+re-derived when a spotlight or the intro ends, so a captain can act without waiting for the
+next poll. The server's `can_lock_now` only overrides it for a payload read while awaiting.
 
 ### Medal Hunt (`fetchMedalHunt`)
 

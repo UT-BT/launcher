@@ -6,14 +6,15 @@ read_when:
   - "adding a localStorage key, a filter preset, or tutorial state"
   - "making a preference follow the signed-in user across devices"
   - "wiring detail-page transient UI (tabs/search/scroll) that must survive Back/Forward"
-keywords: [usePageState, useNavState, localStorage, PREF_KEYS, caches, querySig, presets, tutorial, persistence, controlled-page, userState, synced, badges, seen]
-provides: "the state tiers (incl. the account-synced tier), the localStorage key convention, and how pages are controlled + hoisted"
+  - "polling server state on an interval, or following a live pick/ban session"
+keywords: [usePageState, useNavState, localStorage, PREF_KEYS, caches, querySig, presets, tutorial, persistence, controlled-page, userState, synced, badges, seen, polling, createPoller, visibility, usePickBanSession, usePickBanView, mergePickBanState, structural sharing, clock offset, reconnecting]
+provides: "the state tiers (incl. the account-synced tier), the localStorage key convention, how pages are controlled + hoisted, and the polling live-data tier"
 not_here:
   - "the navigation stack / navigate() / renderView wiring → navigation.md"
   - "the shared components used (FilterPresetsMenu, ColumnsMenu, Tutorial) → shared-components.md"
-sections: [controlled-pages-with-hoisted-state, navigation-history-per-entry-ui-state, account-synced-state, localstorage-persistence, filter-presets, tutorial-state, favorites, naming-conventions]
-last_verified: 2026-09-22
-verify_against: [app/components/main/Main.tsx, app/components/navigation/useNavState.ts, app/hooks/useAsync.ts, app/utils/userState.ts]
+sections: [controlled-pages-with-hoisted-state, navigation-history-per-entry-ui-state, account-synced-state, localstorage-persistence, filter-presets, tutorial-state, favorites, polling-live-data, naming-conventions]
+last_verified: 2026-09-24
+verify_against: [app/components/main/Main.tsx, app/components/navigation/useNavState.ts, app/hooks/useAsync.ts, app/utils/userState.ts, app/utils/poller.ts, app/components/pages/events/pickban/pickBanSession.ts, app/components/pages/events/pickban/usePickBanSession.ts, app/components/pages/events/pickban/mergePickBanState.ts]
 ---
 
 # State patterns
@@ -359,6 +360,67 @@ writing, so nothing is stored on the device.
 
 They were previously `utbt:serverFavorites:v2` in the synced store; that key is
 retired and no longer whitelisted.
+
+## Polling live data
+
+Some screens have to follow server state closely: the pick/ban page and its stream view.
+They poll on an interval instead of fetching once on mount. This is a data tier, not UI
+state. Nothing in it is persisted, and the data lives only while the page that polls it
+is mounted.
+
+**`createPoller` (`app/utils/poller.ts`) is the reusable scheduler.** It takes
+`poll(signal)`, `intervalMs()` (read again after every attempt, so the cadence can follow
+the data), `alwaysPoll`, and an optional visibility environment that defaults to
+`document`. How it behaves:
+
+- `start()` polls at once, even in a hidden document, so a page never opens empty. After
+  that it polls one interval after each attempt settles.
+- Attempts never overlap: `pollNow()` during an attempt returns the one in flight.
+- It rests while the document is hidden and polls the moment the document shows again.
+  `alwaysPoll` ignores visibility.
+- `stop()` aborts the attempt in flight, and nothing is reported after it. `start()` can
+  follow straight away, which React StrictMode's double mount relies on.
+- `onSettled` reports every outcome together with the count of consecutive failures.
+- `reschedule()` re-reads the interval after the data changed outside a poll.
+
+Reuse it for new interval polls instead of an ad hoc `setInterval`. `poller.test.ts` covers
+it with fake timers.
+
+**The pick/ban session store** (`events/pickban/pickBanSession.ts`) is `createPoller` plus
+the data. Like `useServerFavorites`, it is a `useSyncExternalStore` store. Its snapshot is
+`{ state, clockOffsetMs, loading, error, reconnecting }`.
+
+- **Loading.** `loading` is true only until the first answer. Show a skeleton only while
+  `loading && !state`. Later polls refresh silently in the background.
+- **Failures.** A failed poll keeps `state`. Show the reconnecting indicator only when
+  `reconnecting` is set. `error` holds the last failure, which is how a first load that
+  never succeeded is reported.
+- **Merge with identity.** Every fresh payload goes through `mergePickBanState`, which
+  shares structure with the previous state:
+  - pool cards are matched by map name, plan steps by plan index and members by user id
+  - so every unchanged card, step and member keeps its object identity
+  - a 304 keeps the whole state object
+
+  Use the same values as React keys, so nothing remounts or replays an animation on
+  refresh.
+- **Clock offset.** The store keeps the median of recent server-clock samples (see
+  `agents/data-sources.md`). Pass it to the view model with `Date.now()`, and never compare
+  server timestamps against the raw local clock.
+- **Commands.** `sendCommand(command, input)` and `sendManagerCommand(command, input)` fill
+  in the current `version`. They apply the returned state at once, which is what makes the
+  lock-in optimistic, and resample the clock. A refused command triggers an immediate poll,
+  then rethrows the `ApiError`.
+
+**Hooks** (`events/pickban/usePickBanSession.ts`):
+
+- `usePickBanSession({ accessToken, slug, matchId, alwaysPoll })` keeps one store per slug,
+  match and mode. It reads the token through a ref, so a token refresh triggers a poll
+  instead of resetting the state.
+- `usePickBanView(state, clockOffsetMs)` builds the view model on every render. It also
+  re-renders by itself at the view's `nextBoundaryAt`, so reveals and phase changes land on
+  their timestamps rather than whenever a poll arrives.
+- It deliberately doesn't re-render every frame. Drive continuous countdowns and progress
+  bars from `countdown.endsAt` (local epoch ms) on animation frames.
 
 ## Naming conventions
 
