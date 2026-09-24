@@ -21,6 +21,7 @@ import {
     lockedInTurn,
     paused,
     pickBanState,
+    planOf,
     readAt,
     resumed,
     started,
@@ -101,6 +102,17 @@ describe('phase between polls', () => {
         expect(next.turn).toMatchObject({ stepIndex: 1, side: 'team_b', action: 'ban', actionLabel: 'Azure Owls bans' })
     })
 
+    it('says which map the awaited pick decides, and none for a ban', () => {
+        const awaitingBan = asSpectator(readAt(started(), INTRO_END + 1_000))
+        const bothBansIn = lockedInTurn(started(), [ALPHA, BRAVO])
+        const awaitingPick = asSpectator(readAt(bothBansIn, unlockAt(bothBansIn) + 1_000))
+
+        expect(viewAt(awaitingBan, INTRO_END + 1_000).turn).toMatchObject({ action: 'ban', mapNumber: null })
+        expect(viewAt(awaitingPick, unlockAt(bothBansIn) + 1_000).turn).toMatchObject({
+            stepIndex: 2, side: 'team_b', action: 'pick', mapNumber: 1, actionLabel: 'Azure Owls picks',
+        })
+    })
+
     it('shows no session at all when the match has never had one', () => {
         const view = viewAt(asSpectator(pickBanState({ id: null, status: 'none', phase: null, version: 0 })), T0)
 
@@ -150,6 +162,18 @@ describe('pause', () => {
 
         expect(view.phase).toBe('spotlight')
         expect(view.countdown?.remainingMs).toBe(SPOTLIGHT_MS - 3_500 - 1_000)
+    })
+
+    it('keeps the stage on whatever the pause froze, so the paused overlay sits over it', () => {
+        const duringSpotlight = asSpectator(paused(firstBanLocked(), FIRST_LOCK + LEAD_MS + 3_500))
+        const duringIntro = asSpectator(paused(started(), INTRO_START + 2_000))
+        const whileAwaiting = asSpectator(paused(readAt(started(), INTRO_END + 1_000), INTRO_END + 1_000))
+
+        expect(viewAt(duringSpotlight, FIRST_LOCK + 60_000)).toMatchObject({ phase: 'paused', stagePhase: 'spotlight' })
+        expect(viewAt(duringIntro, INTRO_START + 60_000)).toMatchObject({ phase: 'paused', stagePhase: 'intro' })
+        expect(viewAt(whileAwaiting, INTRO_END + 60_000)).toMatchObject({ phase: 'paused', stagePhase: 'awaiting' })
+        expect(viewAt(asSpectator(firstBanLocked()), FIRST_LOCK + LEAD_MS + 1_000).stagePhase).toBe('spotlight')
+        expect(viewAt(asSpectator(pickBanState()), T0).stagePhase).toBe('lobby')
     })
 
     it('keeps a lock-in that was still inside its reveal lead hidden until the pause ends', () => {
@@ -306,6 +330,30 @@ describe('cards', () => {
         expect(cardOf(view, ALPHA).exclusion).toBeNull()
     })
 
+    it('explains in words which team triggered an exclusion', () => {
+        const state = asSpectator(pickBanState())
+        const hard = state.pool.find((c) => c.map === HARD_MAP)!
+        const bothTriggered = {
+            ...state,
+            pool: state.pool.map((c) => (c.map === HARD_MAP ? {
+                ...hard,
+                exclusion: {
+                    ...hard.exclusion!,
+                    triggered_by: [
+                        { side: 'team_a' as const, team_id: 'team-crimson', pre_cup_seed: 11 },
+                        ...hard.exclusion!.triggered_by,
+                    ],
+                },
+            } : c)),
+        }
+
+        expect(cardOf(viewAt(state, T0), HARD_MAP).exclusionReason)
+            .toBe('Hard maps are excluded because Azure Owls has pre-cup seed 12 (10 or higher).')
+        expect(cardOf(viewAt(bothTriggered, T0), HARD_MAP).exclusionReason)
+            .toBe('Hard maps are excluded because Crimson Cats has pre-cup seed 11 and Azure Owls has pre-cup seed 12 (10 or higher).')
+        expect(cardOf(viewAt(state, T0), ALPHA).exclusionReason).toBeNull()
+    })
+
     it("flags the acting side's selection preview for every viewer", () => {
         const awaiting = readAt(started(), INTRO_END + 1_000)
         const previewing = { ...awaiting, selection_preview: { side: 'team_a' as const, map: BRAVO, at: awaiting.server_now } }
@@ -323,6 +371,28 @@ describe('cards', () => {
 
         expect(viewAt(asSpectator(wrongSide), INTRO_END + 1_500).cards.some((c) => c.previewed)).toBe(false)
         expect(viewAt(asSpectator(stale), FIRST_LOCK + LEAD_MS + 1_000).cards.some((c) => c.previewed)).toBe(false)
+    })
+})
+
+describe('timeline', () => {
+    it("names each step's team and carries a revealed map's screenshot version", () => {
+        const versioned = (state: PickBanState) => ({
+            ...state,
+            pool: state.pool.map((c) => ({ ...c, screenshot_version: `v-${c.map}` })),
+        })
+        const state = asSpectator(versioned(firstBanLocked()))
+
+        const inLead = viewAt(state, FIRST_LOCK + 1_000)
+        expect(inLead.timeline[0]).toMatchObject({ teamName: 'Crimson Cats', map: null, screenshotVersion: null })
+        expect(inLead.timeline[6]).toMatchObject({ teamName: null, action: 'decider' })
+
+        const revealed = viewAt(state, FIRST_LOCK + LEAD_MS)
+        expect(revealed.timeline[0]).toMatchObject({ teamName: 'Crimson Cats', map: ALPHA, screenshotVersion: `v-${ALPHA}` })
+        expect(revealed.spotlight).toMatchObject({ map: ALPHA, screenshotVersion: `v-${ALPHA}` })
+
+        const done = viewAt(asSpectator(versioned(completed())), T0 + 3_600_000)
+        expect(done.summary.map((entry) => entry.screenshotVersion)).toEqual([`v-${CHARLIE}`, `v-${DELTA}`, `v-${GOLF}`])
+        expect(viewAt(asSpectator(versioned(pickBanState())), T0).summary.every((entry) => entry.screenshotVersion === null)).toBe(true)
     })
 })
 
@@ -381,6 +451,44 @@ describe('banners', () => {
         const view = viewAt(asSpectator(pickBanState({ dropped_bans: 2 })), T0)
 
         expect(view.banners).toEqual([{ kind: 'skipped_bans', key: 'skipped_bans', count: 2 }])
+    })
+
+    it('places each skipped ban where the sequence had it, dropped from the end', () => {
+        const bo5 = pickBanState({
+            match: { ...pickBanState().match, best_of: 5 },
+            sequence: {
+                preset_id: 'bo5_ban_pick',
+                from_stage_key: 'bracket',
+                ban_down: true,
+                steps: [
+                    { actor: 'A', action: 'ban' },
+                    { actor: 'B', action: 'ban' },
+                    { actor: 'B', action: 'pick' },
+                    { actor: 'A', action: 'pick' },
+                    { actor: 'B', action: 'pick' },
+                    { actor: 'A', action: 'pick' },
+                    { actor: 'B', action: 'ban' },
+                    { actor: 'A', action: 'ban' },
+                ],
+            },
+            plan: planOf([
+                ['A', 'ban', 'lettered', null],
+                ['B', 'pick', 'lettered', 1],
+                ['A', 'pick', 'lettered', 2],
+                ['B', 'pick', 'lettered', 3],
+                ['A', 'pick', 'lettered', 4],
+                [null, 'decider', 'decider', 5],
+            ]),
+            dropped_bans: 3,
+        })
+
+        expect(viewAt(asSpectator(bo5), T0).skippedBans).toEqual([
+            { key: 'skipped-1', actor: 'B', beforeIndex: 1 },
+            { key: 'skipped-6', actor: 'B', beforeIndex: 5 },
+            { key: 'skipped-7', actor: 'A', beforeIndex: 5 },
+        ])
+        expect(viewAt(asSpectator(pickBanState()), T0).skippedBans).toEqual([])
+        expect(viewAt(asSpectator(pickBanState({ sequence: null, dropped_bans: 1 })), T0).skippedBans).toEqual([])
     })
 
     it('reads a structured warning by its message, falling back to its code', () => {
@@ -488,5 +596,20 @@ describe('team panels', () => {
         expect(view.teams.left?.members).toBe(state.teams.team_a?.members)
 
         expect(viewAt(swapped, INTRO_END + 1_000).teams.left?.side).toBe('team_b')
+    })
+})
+
+describe('match heading', () => {
+    it('names the match A first, with its stage, round and best-of', () => {
+        const state = asSpectator(pickBanState())
+
+        expect(viewAt(state, T0).match).toEqual({
+            title: 'Crimson Cats vs Azure Owls',
+            stageName: 'Bracket',
+            roundLabel: 'Semi-Finals',
+            bestOf: 3,
+        })
+        expect(viewAt({ ...state, a_side: 'team_b' }, T0).match.title).toBe('Azure Owls vs Crimson Cats')
+        expect(viewAt({ ...state, teams: { ...state.teams, team_b: null } }, T0).match.title).toBe('Crimson Cats vs TBD')
     })
 })

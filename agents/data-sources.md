@@ -641,15 +641,24 @@ it against the live route before building on it.
 **The view model.** `buildPickBanView(state, { clockOffsetMs, now })` in `pickBanView.ts` is
 pure and tested without a DOM. It returns:
 
+- `match`: the heading, `title` (A's name first, `TBD` for a missing team), the stage name,
+  round label and best-of
 - the re-derived `phase` (`'none'` when there's no session), and a `countdown` whose
   `endsAt` is a **local-clock** epoch ms. A frozen countdown has `endsAt: null` and a fixed
   `remainingMs`.
-- `turn`, with `actionLabel` and whether the viewer acts, and `spotlight`, the step being
-  revealed
+- `stagePhase`: the same as `phase`, except that while paused it keeps the phase the pause
+  froze (`intro`, `awaiting` or `spotlight`), so a paused overlay can sit over it
+- `turn`, with `actionLabel`, the `mapNumber` a pick decides (`null` for a ban) and whether
+  the viewer acts, and `spotlight`, the step being revealed
 - `cards`: `available`, `banned`, `picked`, `decider` or `excluded`, with the acting side,
-  step number, map number, exclusion reason and the `previewed`, `lockedIn` and
+  step number, map number, exclusion reason (the raw `exclusion` plus `exclusionReason`, a
+  sentence naming the team and seed that triggered it) and the `previewed`, `lockedIn` and
   `selectable` flags
-- `timeline`: `upcoming`, `current`, `locked_in` or `revealed`
+- `timeline`: `upcoming`, `current`, `locked_in` or `revealed`, with each step's team name, and
+  its map and screenshot version once revealed
+- `skippedBans`: one entry per lettered ban the plan dropped. Bans are dropped from the end
+  of the sequence, and `beforeIndex` is the plan index the skipped ban would have preceded,
+  so a timeline can draw it in place.
 - `summary`, in play order (`map_number`), with a slot reserved for every map from the start
 - `teams.left` (A) and `teams.right` (B), falling back to `team_a` on the left while A is
   undetermined

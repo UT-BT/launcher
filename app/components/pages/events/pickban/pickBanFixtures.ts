@@ -83,7 +83,9 @@ const HARD_CARD: PickBanPoolCard = {
     },
 }
 
-const BO3_AGAINST_SEVEN: [PickBanActor | null, PickBanStepAction, PickBanSegment, number | null][] = [
+export type PlanRow = [PickBanActor | null, PickBanStepAction, PickBanSegment, number | null]
+
+const BO3_AGAINST_SEVEN: PlanRow[] = [
     ['A', 'ban', 'lettered', null],
     ['B', 'ban', 'lettered', null],
     ['B', 'pick', 'lettered', 1],
@@ -98,8 +100,8 @@ function sideOf(actor: PickBanActor | null): PickBanSide | null {
     return actor === 'A' ? 'team_a' : 'team_b'
 }
 
-function plannedSteps(): PickBanPlanStep[] {
-    return BO3_AGAINST_SEVEN.map(([actor, action, segment, mapNumber], index) => ({
+export function planOf(rows: PlanRow[]): PickBanPlanStep[] {
+    return rows.map(([actor, action, segment, mapNumber], index) => ({
         index,
         segment,
         actor,
@@ -145,7 +147,7 @@ export function pickBanState(overrides: Partial<PickBanState> = {}): PickBanStat
                 { actor: 'A', action: 'pick' },
             ],
         },
-        plan: plannedSteps(),
+        plan: planOf(BO3_AGAINST_SEVEN),
         current_plan_index: null,
         dropped_bans: 0,
         pool: [...ELIGIBLE_MAPS.map(card), HARD_CARD],
