@@ -596,6 +596,11 @@ re-derives it between polls from the absolute timestamps: `intro_ends_at`,
   summary when the view's `phase` is `complete`, never on `status`.
 - **Paused.** While `paused`, every timer and pending reveal freezes at `paused_at`. On
   resume, the server shifts the pending timestamps by the pause length.
+- **Skipped bans.** When the eligible pool is too small for the full sequence, the plan
+  drops lettered bans. `dropped_bans` counts them, and `skipped_bans` lists them in sequence
+  order as `{ actor, before_index }`, where `before_index` is the plan index the dropped ban
+  would have preceded (the same base as `plan[].index`). Read them from the payload; never
+  re-derive which bans were dropped from `sequence.steps`.
 - **Gate controls on `capabilities`, never on `viewer.roster_captain`.**
   `capabilities.acting_side` is the side the viewer acts for as captain or acting captain.
   A captain replaced by an acting captain has `acting_side: null`.
@@ -692,9 +697,8 @@ pure and tested without a DOM. It returns:
   `selectable` flags
 - `timeline`: `upcoming`, `current`, `locked_in` or `revealed`, with each step's team name, and
   its map and screenshot version once revealed
-- `skippedBans`: one entry per lettered ban the plan dropped. Bans are dropped from the end
-  of the sequence, and `beforeIndex` is the plan index the skipped ban would have preceded,
-  so a timeline can draw it in place.
+- `skippedBans`: the payload's `skipped_bans`, one entry per dropped ban in the same order,
+  with `beforeIndex` (its `before_index`) so a timeline can draw it in place
 - `summary`, in play order (`map_number`), with a slot reserved for every map from the start
 - `teams.left` (A) and `teams.right` (B), falling back to `team_a` on the left while A is
   undetermined
@@ -722,8 +726,8 @@ only from the view model, through the pick/ban visual core (see
   appears at its `reveal_at` even when no poll arrives then. Countdowns and progress bars
   paint on animation frames.
 - **Stable keys.** Team panels are keyed by side, members by user id, cards by map name,
-  timeline steps by plan index, skipped bans by sequence position and summary slots by map
-  number.
+  timeline steps by plan index, skipped bans by their order in `skipped_bans` and summary
+  slots by map number.
 - **Fixed layout.** The centre stage has a fixed height at each width. The timeline, every
   pool card and every summary slot exist from the lobby on. The "On the clock" row in each
   team panel is always there, and hidden when it's not that side's turn.

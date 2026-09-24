@@ -5772,6 +5772,11 @@ export interface PickBanCapabilities {
 
 export type PickBanWarning = string | { code?: string | null; message?: string | null }
 
+export interface PickBanSkippedBanRef {
+    actor: PickBanActor
+    before_index: number
+}
+
 export interface PickBanState {
     id: string | null
     status: PickBanSessionStatus
@@ -5786,6 +5791,7 @@ export interface PickBanState {
     plan: PickBanPlanStep[]
     current_plan_index: number | null
     dropped_bans: number
+    skipped_bans: PickBanSkippedBanRef[]
     pool: PickBanPoolCard[]
     teams: { team_a: PickBanTeam | null; team_b: PickBanTeam | null }
     a_side: PickBanSide | null

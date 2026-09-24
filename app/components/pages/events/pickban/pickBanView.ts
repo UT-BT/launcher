@@ -394,14 +394,11 @@ function timelineOf(moment: Moment, inProgress: boolean): PickBanTimelineEntry[]
 }
 
 function skippedBansOf(state: PickBanState): PickBanSkippedBan[] {
-    const steps = state.sequence?.steps ?? []
-    const banPositions = steps.flatMap((step, position) => (step.action === 'ban' ? [position] : []))
-    const dropped = new Set(banPositions.slice(Math.max(0, banPositions.length - state.dropped_bans)))
-    return steps.flatMap((step, position) => {
-        if (!dropped.has(position)) return []
-        const keptBefore = steps.slice(0, position).filter((_, earlier) => !dropped.has(earlier)).length
-        return [{ key: `skipped-${position}`, actor: step.actor, beforeIndex: keptBefore }]
-    })
+    return state.skipped_bans.map((skipped, order) => ({
+        key: `skipped-${order}`,
+        actor: skipped.actor,
+        beforeIndex: skipped.before_index,
+    }))
 }
 
 function cardsOf(moment: Moment, awaitedStep: PickBanPlanStep | null, canChoose: boolean): PickBanCardView[] {

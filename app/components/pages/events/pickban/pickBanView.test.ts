@@ -453,7 +453,7 @@ describe('banners', () => {
         expect(view.banners).toEqual([{ kind: 'skipped_bans', key: 'skipped_bans', count: 2 }])
     })
 
-    it('places each skipped ban where the sequence had it, dropped from the end', () => {
+    it('places each skipped ban the payload lists before the plan index it would have preceded', () => {
         const bo5 = pickBanState({
             match: { ...pickBanState().match, best_of: 5 },
             sequence: {
@@ -480,15 +480,25 @@ describe('banners', () => {
                 [null, 'decider', 'decider', 5],
             ]),
             dropped_bans: 3,
+            skipped_bans: [
+                { actor: 'B', before_index: 1 },
+                { actor: 'B', before_index: 5 },
+                { actor: 'A', before_index: 5 },
+            ],
         })
 
         expect(viewAt(asSpectator(bo5), T0).skippedBans).toEqual([
-            { key: 'skipped-1', actor: 'B', beforeIndex: 1 },
-            { key: 'skipped-6', actor: 'B', beforeIndex: 5 },
-            { key: 'skipped-7', actor: 'A', beforeIndex: 5 },
+            { key: 'skipped-0', actor: 'B', beforeIndex: 1 },
+            { key: 'skipped-1', actor: 'B', beforeIndex: 5 },
+            { key: 'skipped-2', actor: 'A', beforeIndex: 5 },
         ])
         expect(viewAt(asSpectator(pickBanState()), T0).skippedBans).toEqual([])
-        expect(viewAt(asSpectator(pickBanState({ sequence: null, dropped_bans: 1 })), T0).skippedBans).toEqual([])
+    })
+
+    it('takes skipped bans from the payload rather than re-deriving them from the sequence', () => {
+        const state = pickBanState({ sequence: null, dropped_bans: 1, skipped_bans: [{ actor: 'A', before_index: 0 }] })
+
+        expect(viewAt(asSpectator(state), T0).skippedBans).toEqual([{ key: 'skipped-0', actor: 'A', beforeIndex: 0 }])
     })
 
     it('reads a structured warning by its message, falling back to its code', () => {

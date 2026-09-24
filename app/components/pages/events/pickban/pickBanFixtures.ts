@@ -150,6 +150,7 @@ export function pickBanState(overrides: Partial<PickBanState> = {}): PickBanStat
         plan: planOf(BO3_AGAINST_SEVEN),
         current_plan_index: null,
         dropped_bans: 0,
+        skipped_bans: [],
         pool: [...ELIGIBLE_MAPS.map(card), HARD_CARD],
         teams: { team_a: TEAM_A, team_b: TEAM_B },
         a_side: 'team_a',
