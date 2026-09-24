@@ -84,6 +84,7 @@ const allowedPages = new Set([
   'home', 'servers', 'maps', 'maps-detail', 'players', 'player-detail', 'teams',
   'team-detail', 'events', 'event-detail', 'world-records', 'cap-it-all',
   'cap-detail', 'team-cap-detail', 'achievements', 'news', 'news-detail', 'admin',
+  'match-pickban',
 ])
 const pageKey = (view?: string) => view && allowedPages.has(view) ? view : 'other'
 const increment = (counter: Counter, key: string) => { counter[key] = (counter[key] || 0) + 1 }

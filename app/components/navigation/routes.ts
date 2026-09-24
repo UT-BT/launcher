@@ -62,7 +62,7 @@ export function pathToNav(pathname: string, search: string): RouteTarget {
             return { view: 'teams', params: {} }
         case 'events': {
             if (second) {
-                if (third === 'matches' && fourth) {
+                if (third === 'matches' && fourth && segments.length === 4) {
                     return { view: 'match-pickban', params: { eventSlug: second, matchId: fourth } }
                 }
                 const tab = query.get('tab')

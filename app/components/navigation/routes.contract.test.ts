@@ -96,3 +96,9 @@ describe('malformed urls', () => {
         expect(pathToNav('/maps/CTF-BT-CM24%20Winter', '').params.mapName).toBe('CTF-BT-CM24 Winter')
     })
 })
+
+describe('the stream sub-route', () => {
+    it('is never resolved as match-pickban by pathToNav, since it is handled before the app shell mounts', () => {
+        expect(pathToNav('/events/cup/matches/77/stream', '').view).not.toBe('match-pickban')
+    })
+})

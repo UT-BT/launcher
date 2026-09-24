@@ -9,7 +9,6 @@ interface MatchPickBanPageProps {
     onBackToEvent: () => void
 }
 
-// Placeholder route target — the pick/ban session UI lands in a later ticket.
 export function MatchPickBanPage({ eventSlug, matchId, onBackToEvent }: MatchPickBanPageProps) {
     return (
         <div className="h-full overflow-y-auto custom-scrollbar">
