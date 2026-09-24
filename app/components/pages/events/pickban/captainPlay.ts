@@ -179,9 +179,7 @@ export function dismissRejection(play: CaptainPlay): CaptainPlay {
 
 export const HOVER_DEBOUNCE_MS = 300
 
-export interface HoverBody {
-    map: string
-}
+export type HoverBody = Omit<PickBanParticipantCommandBodies['hover'], 'version'>
 
 export function hoverOf(play: CaptainPlay, view: PickBanView): HoverBody | null {
     const controls = captainDockOf(view, play)?.controls
@@ -192,6 +190,7 @@ export function hoverOf(play: CaptainPlay, view: PickBanView): HoverBody | null 
 
 export interface HoverSender {
     request: () => void
+    sync: () => void
     cancel: () => void
 }
 
@@ -202,10 +201,28 @@ export function createHoverSender(
 ): HoverSender {
     let timer: ReturnType<typeof setTimeout> | null = null
     let inFlight: string | null = null
+    let wanted = false
+    let mayRetry = true
 
     const cancel = () => {
         if (timer !== null) clearTimeout(timer)
         timer = null
+    }
+
+    const schedule = () => {
+        cancel()
+        timer = setTimeout(fire, delayMs)
+    }
+
+    const request = () => {
+        mayRetry = true
+        schedule()
+    }
+
+    const retryOnce = () => {
+        if (!mayRetry) return
+        mayRetry = false
+        schedule()
     }
 
     const fire = () => {
@@ -213,15 +230,17 @@ export function createHoverSender(
         const body = target()
         if (!body || body.map === inFlight) return
         inFlight = body.map
-        send(body).catch(() => undefined).finally(() => {
+        send(body).catch(retryOnce).finally(() => {
             if (inFlight === body.map) inFlight = null
         })
     }
 
     return {
-        request() {
-            cancel()
-            timer = setTimeout(fire, delayMs)
+        request,
+        sync() {
+            const wants = target() !== null
+            if (wants && !wanted) request()
+            wanted = wants
         },
         cancel,
     }

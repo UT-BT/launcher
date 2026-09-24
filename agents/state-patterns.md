@@ -471,12 +471,21 @@ and when:
   It never sends the map whose hover is still in flight. `cancel()` drops a pending hover.
   A failed hover is swallowed: no refusal message, no busy state, and it never blocks
   Lock in.
+- It also re-sends a preview that got lost, because the captain keeps the selection while the
+  preview goes away: a pause clears it on the server, and a refused or rate-limited hover never
+  set it. `sync()` is called whenever the view or the play changes. It requests a hover only
+  when `target()` goes from `null` to a body, for example when the turn reopens after a pause
+  with the kept selection no longer `previewed`, so each return to the turn sends at most
+  once. A failed hover is sent once more after the debounce; if that fails too it stops until
+  the captain selects again. Neither can loop: a re-send needs a new selection, a return to
+  the turn, or the first failure of a fresh request.
 
 `useCaptainPlay(view, sendCommand)` (`events/pickban/useCaptainPlay.ts`) wires it to the
 store. It keeps the latest play in a ref as well as in state, so a second click in the same
-tick is refused before React re-renders. `select` also requests a hover. `lockIn` cancels a
-pending hover before it submits, and the store's one-command-at-a-time rule covers a hover
-already in flight. The pending hover is cancelled on unmount too.
+tick is refused before React re-renders. `select` also requests a hover, and an effect calls
+`sync()` after every render that changes the view or the play. `lockIn` cancels a pending
+hover before it submits, and the store's one-command-at-a-time rule covers a hover already in
+flight. The pending hover is cancelled on unmount too.
 
 **Manager play** (`events/pickban/managerDock.ts`, pure, Vitest without a DOM) is the same
 idea for a viewer with `can_manage`, on its own path so a manager never goes through the

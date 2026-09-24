@@ -660,7 +660,7 @@ waits for a poll. Every body except Open's carries the expected `version`.
   only accepted from the side's captain or acting captain while their step is awaited,
   with the same refusal codes as Lock minus the plan index. It bumps `version` like every
   command, and each user may send only a few a second (a 429 past that). Lock, Pause,
-  Undo, Swap, Restart and Cancel clear the preview. Every viewer reads it as
+  Undo, Swap, handing that side over, Restart and Cancel clear the preview. Every viewer reads it as
   `selection_preview` (`{ side, map, at }` or `null`), and the view model flags that card
   `previewed`. The captain page sends it debounced and silently (see
   `agents/state-patterns.md`).

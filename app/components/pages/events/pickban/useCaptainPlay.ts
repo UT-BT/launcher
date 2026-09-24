@@ -61,6 +61,10 @@ export function useCaptainPlay(view: PickBanView | null, sendCommand: PickBanSes
 
     useEffect(() => hover.cancel, [hover])
 
+    useEffect(() => {
+        hover.sync()
+    }, [hover, view, play])
+
     const select = useCallback((map: string) => {
         const current = viewRef.current
         if (!current) return
