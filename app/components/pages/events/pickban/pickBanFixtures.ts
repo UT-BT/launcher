@@ -295,6 +295,27 @@ export function resumed(state: PickBanState, at: number): PickBanState {
     }
 }
 
+export function undone(state: PickBanState, at: number): PickBanState {
+    const lastActed = state.plan.filter((step) => step.map !== null && step.actor !== null).pop()
+    if (!lastActed) throw new Error('nothing to undo')
+    const cleared = (step: PickBanPlanStep): PickBanPlanStep => ({
+        ...step, map: null, acted_by: null, acted_by_admin: false, at: null, reveal_at: null,
+    })
+    return {
+        ...state,
+        plan: state.plan.map((step) => (step.index >= lastActed.index ? cleared(step) : step)),
+        status: 'running',
+        phase: 'awaiting',
+        current_plan_index: lastActed.index,
+        spotlight_ends_at: null,
+        phase_ends_at: null,
+        completed_at: null,
+        selection_preview: null,
+        version: state.version + 1,
+        server_now: iso(at),
+    }
+}
+
 export function readAt(state: PickBanState, at: number): PickBanState {
     let phase = state.phase
     if (state.status === 'running' || state.status === 'complete') {
