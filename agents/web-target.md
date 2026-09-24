@@ -254,6 +254,8 @@ payload is currently **~169 KiB JS + 27 KiB CSS gzip**, enforced by
 - `LoginPage` + `UpdateModal` are lazy in `app.tsx`; target-specific Settings
   modals + `ChangeTitleModal` are lazy in `AppLayout` and mount only while open.
   Settings panels are split per section, and web never fetches desktop game panels.
+- The pick/ban page's `ManagerDock` is lazy behind the manager dock model (`manager.dock`),
+  so captains, teammates and spectators never fetch the admin controls.
 - `MarkdownBody` and the privacy-policy text are lazy behind
   `AnalyticsConsentBanner`'s modal, keeping react-markdown and its
   micromark/mdast/hast tree out of the entry. The banner itself stays eager — it

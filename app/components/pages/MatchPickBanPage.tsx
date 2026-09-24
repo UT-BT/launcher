@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { Suspense, lazy, useState, type ReactNode } from 'react'
 import { ArrowLeft, Check, Link2, Swords, Volume2, VolumeX, WifiOff } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { NavLink } from '@/app/components/navigation/NavLink'
@@ -18,7 +18,6 @@ import type { PickBanView } from '@/app/components/pages/events/pickban/pickBanV
 import { statusOfPhase } from '@/app/components/pages/events/pickban/pickBanStatus'
 import { CaptainDock } from '@/app/components/pages/events/pickban/components/CaptainDock'
 import { CentreStage } from '@/app/components/pages/events/pickban/components/CentreStage'
-import { ManagerDock } from '@/app/components/pages/events/pickban/components/ManagerDock'
 import { PickBanBannerNote } from '@/app/components/pages/events/pickban/components/PickBanBannerNote'
 import { PickBanMotion } from '@/app/components/pages/events/pickban/components/PickBanMotion'
 import { PickBanStatusChip } from '@/app/components/pages/events/pickban/components/PickBanStatusChip'
@@ -33,6 +32,10 @@ interface MatchPickBanPageProps {
     userProfile?: UserProfile
     onBackToEvent: () => void
 }
+
+const ManagerDock = lazy(() => import('@/app/components/pages/events/pickban/components/ManagerDock').then(m => ({ default: m.ManagerDock })))
+
+const HEADER_BUTTON = 'inline-flex h-8 cursor-pointer items-center gap-2 rounded-md border border-accent-500/40 bg-accent-500/15 px-3 text-xs font-medium text-accent-200 transition-colors hover:border-accent-500/60 hover:bg-accent-500/25'
 
 const STAGE_HEIGHT = 'h-[22rem] @4xl/page:h-[26rem] @7xl/page:h-[30rem] @[140rem]/page:h-[40rem]'
 
@@ -56,7 +59,7 @@ export function MatchPickBanPage({ eventSlug, matchId, userProfile, onBackToEven
             view="event-detail"
             params={{ eventSlug, eventTab: 'bracket' }}
             onActivate={() => navigate('event-detail', { eventSlug, eventTab: 'bracket' })}
-            className="inline-flex h-8 items-center gap-2 rounded-md border border-accent-500/40 bg-accent-500/15 px-3 text-xs font-medium text-accent-200 transition-colors hover:border-accent-500/60 hover:bg-accent-500/25"
+            className={HEADER_BUTTON}
         >
             <Swords className="size-3.5" />
             Back to the bracket
@@ -101,10 +104,12 @@ export function MatchPickBanPage({ eventSlug, matchId, userProfile, onBackToEven
                         reconnecting={session.reconnecting}
                     >
                         {manager.dock && (
-                            <ManagerDock dock={manager.dock} manager={manager} slug={eventSlug} accessToken={userProfile?.accessToken}>
-                                <CopyLinkButton link={links.playerLink} label="Copy player link" />
-                                <CopyLinkButton link={links.streamLink} label="Copy stream link" />
-                            </ManagerDock>
+                            <Suspense fallback={null}>
+                                <ManagerDock manager={manager} slug={eventSlug} accessToken={userProfile?.accessToken}>
+                                    <CopyLinkButton link={links.playerLink} label="Copy player link" />
+                                    <CopyLinkButton link={links.streamLink} label="Copy stream link" />
+                                </ManagerDock>
+                            </Suspense>
                         )}
                     </PickBanBody>
                 </PickBanMotion>
@@ -208,7 +213,7 @@ function SoundToggleButton({ on, onToggle }: { on: boolean; onToggle: () => void
             onClick={onToggle}
             aria-pressed={on}
             aria-label={on ? 'Mute pick/ban sound' : 'Unmute pick/ban sound'}
-            className="inline-flex h-8 cursor-pointer items-center gap-2 rounded-md border border-accent-500/40 bg-accent-500/15 px-3 text-xs font-medium text-accent-200 transition-colors hover:border-accent-500/60 hover:bg-accent-500/25"
+            className={HEADER_BUTTON}
         >
             <Icon className="size-3.5" />
             {on ? 'Sound on' : 'Sound off'}
@@ -224,7 +229,7 @@ function CopyLinkButton({ link, label = 'Copy link' }: { link: string; label?: s
         <button
             type="button"
             onClick={() => copy(link, link)}
-            className="inline-flex h-8 cursor-pointer items-center gap-2 rounded-md border border-accent-500/40 bg-accent-500/15 px-3 text-xs font-medium text-accent-200 transition-colors hover:border-accent-500/60 hover:bg-accent-500/25"
+            className={HEADER_BUTTON}
         >
             {copied ? <Check className="size-3.5" /> : <Link2 className="size-3.5" />}
             {copied ? 'Copied' : label}

@@ -10,7 +10,15 @@ import {
     type PickBanSide,
     type PickBanStageConfig,
 } from '@/app/utils/api'
-import { withOptimisticLock, type CaptainControls, type CaptainDock } from './captainPlay'
+import {
+    selectedMapOf,
+    unwordedRejection,
+    withOptimisticLock,
+    withSelectedMap,
+    type CaptainControls,
+    type CaptainDock,
+    type StepChoice,
+} from './captainPlay'
 import { PICK_BAN_PRESET_LABELS } from './pickBanCopy'
 import { blockingReasonLabel } from './pickBanStatus'
 import type { PickBanBanner, PickBanManagerControls, PickBanTeamPanel, PickBanView } from './pickBanView'
@@ -19,7 +27,9 @@ export type ManagerCommand = Exclude<PickBanManagerCommand, 'edit-final'>
 
 type ButtonCommand = 'open' | 'start' | 'swap' | 'pause' | 'resume' | 'undo' | 'restart' | 'cancel'
 
-type BodyOf<C extends ManagerCommand> = Omit<PickBanManagerCommandBodies[C], 'version'>
+type WithoutVersion<B> = B extends unknown ? Omit<B, 'version'> : never
+
+type BodyOf<C extends ManagerCommand> = WithoutVersion<PickBanManagerCommandBodies[C]>
 
 export type ManagerRequest =
     | { command: ButtonCommand }
@@ -29,11 +39,6 @@ export type ManagerRequest =
     | { command: 'lock'; body: BodyOf<'lock'> }
 
 type ConfirmedCommand = 'restart' | 'cancel'
-
-interface StepChoice {
-    stepIndex: number
-    map: string
-}
 
 export interface ManagerPlay {
     selection: StepChoice | null
@@ -77,6 +82,7 @@ export interface ManagerHandOverTeam {
 }
 
 export interface ManagerSequenceChoice {
+    key: string
     label: string
     body: BodyOf<'override-sequence'>
 }
@@ -169,13 +175,13 @@ const REJECTIONS: Record<Exclude<PickBanErrorCode, PickBanBlockingReason>, strin
     wrong_status: 'The session moved on just before your click, so that no longer applies.',
 }
 
-function rejectionMessage(error: unknown): string {
+const HAND_OVER_REFUSED = 'That player can’t take control: pick an active roster member of that side’s team.'
+
+function rejectionMessage(command: ManagerCommand | null, error: unknown): string {
     const code = pickBanErrorCode(error)
+    if (command === 'hand-over' && code === 'invalid_request') return HAND_OVER_REFUSED
     if (code) return code in REJECTIONS ? REJECTIONS[code as keyof typeof REJECTIONS] : `${blockingReasonLabel(code, 'lobby')}.`
-    if (error instanceof TypeError || (error instanceof DOMException && error.name === 'TimeoutError')) {
-        return 'Couldn’t reach the server. Check your connection and try again.'
-    }
-    return error instanceof Error && error.message ? error.message : 'Something went wrong. Try again.'
+    return unwordedRejection(error)
 }
 
 function needsConfirmation(command: ManagerCommand): command is ConfirmedCommand {
@@ -208,10 +214,10 @@ function handOverTeamOf({ side, ab, name, members }: PickBanTeamPanel): ManagerH
 
 export function sequenceChoices(stages: PickBanStageConfig[]): ManagerSequenceChoice[] {
     return [
-        ...PICK_BAN_PRESET_IDS.map((id) => ({ label: PICK_BAN_PRESET_LABELS[id], body: { preset_id: id } })),
+        ...PICK_BAN_PRESET_IDS.map((id) => ({ key: `preset:${id}`, label: PICK_BAN_PRESET_LABELS[id], body: { preset_id: id } })),
         ...stages
             .filter((stage) => stage.pick_ban)
-            .map((stage) => ({ label: `${stage.name} (Bo${stage.best_of})`, body: { from_stage_key: stage.key } })),
+            .map((stage) => ({ key: `stage:${stage.key}`, label: `${stage.name} (Bo${stage.best_of})`, body: { from_stage_key: stage.key } })),
     ]
 }
 
@@ -219,11 +225,8 @@ function actForOpen(view: PickBanView): boolean {
     return Boolean(view.affordances.manager?.actForSide && view.turn && !view.turn.viewerActs)
 }
 
-function selectedMapOf(view: PickBanView, play: ManagerPlay): string | null {
-    const { turn } = view
-    if (!turn || !actForOpen(view) || play.selection?.stepIndex !== turn.stepIndex) return null
-    const map = play.selection.map
-    return view.cards.some((card) => card.map === map && card.selectable) ? map : null
+function actForSelectionOf(view: PickBanView, play: ManagerPlay): string | null {
+    return actForOpen(view) ? selectedMapOf(view, play) : null
 }
 
 function optimisticLockOf(view: PickBanView, play: ManagerPlay): string | null {
@@ -236,17 +239,20 @@ function optimisticLockOf(view: PickBanView, play: ManagerPlay): string | null {
 export function withManagerPlay(view: PickBanView, play: ManagerPlay): PickBanView {
     const lockingIn = optimisticLockOf(view, play)
     if (lockingIn !== null) return withOptimisticLock(view, lockingIn)
-    const selectedMap = selectedMapOf(view, play)
-    if (selectedMap === null) return view
-    return { ...view, cards: view.cards.map((card) => (card.map === selectedMap ? { ...card, selected: true } : card)) }
+    return withSelectedMap(view, actForSelectionOf(view, play))
 }
 
 function actForControlsOf(view: PickBanView, play: ManagerPlay): CaptainControls | null {
-    const { turn } = view
+    const { turn, countdown } = view
     const lockingIn = optimisticLockOf(view, play)
     if (lockingIn !== null) return { kind: 'locked_in', map: lockingIn }
-    if (!turn || !actForOpen(view)) return null
-    const selectedMap = selectedMapOf(view, play)
+    if (view.status !== 'running' && view.status !== 'paused') return null
+    if (view.phase === 'paused') return { kind: 'locked', reason: 'paused', countdown, next: turn }
+    if (view.stagePhase === 'lobby' || view.stagePhase === 'intro') return { kind: 'locked', reason: 'intro', countdown, next: turn }
+    if (view.stagePhase === 'spotlight') return { kind: 'locked', reason: 'spotlight', countdown, next: turn }
+    if (!turn) return null
+    if (!actForOpen(view)) return { kind: 'waiting', turn }
+    const selectedMap = actForSelectionOf(view, play)
     return {
         kind: 'choose',
         action: turn.action,
@@ -341,7 +347,7 @@ export function managerCommandSucceeded(play: ManagerPlay): ManagerPlay {
 }
 
 export function managerCommandRejected(play: ManagerPlay, error: unknown): ManagerPlay {
-    return { ...play, submitting: null, lockingIn: null, rejected: play.submitting, rejection: rejectionMessage(error) }
+    return { ...play, submitting: null, lockingIn: null, rejected: play.submitting, rejection: rejectionMessage(play.submitting, error) }
 }
 
 export function dismissManagerRejection(play: ManagerPlay): ManagerPlay {

@@ -467,6 +467,8 @@ web build opens it straight from a deep link.
   starts muted and flips `usePickBanSound`'s `muted` flag; the click doubles as the user
   gesture that unlocks the Web Audio context. See `agents/data-sources.md` →
   `event-pickban-sessions` for the cue and player contract.
+- The header buttons (sound, Copy link), the dock's copy buttons and the summary's **Back
+  to the bracket** share one class (`HEADER_BUTTON` in the page), so they stay alike.
 - **Into the page.** The Manage → Pick/Ban queue's **Open page** is a `NavLink` to
   `match-pickban` (a `Button asChild` around it), so on web it is a real anchor that opens
   in a new tab like any other link.

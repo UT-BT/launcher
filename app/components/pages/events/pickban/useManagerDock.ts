@@ -34,9 +34,24 @@ export interface UseManagerDockResult {
 
 type Begin = (play: ManagerPlay, view: PickBanView) => ManagerSubmission | null
 
-type SendRequest = (command: ManagerRequest['command'], input?: object) => Promise<PickBanState>
+type SendManagerCommand = PickBanSessionStore['sendManagerCommand']
 
-export function useManagerDock(view: PickBanView | null, sendManagerCommand: PickBanSessionStore['sendManagerCommand']): UseManagerDockResult {
+function sendManagerRequest(send: SendManagerCommand, request: ManagerRequest): Promise<PickBanState> {
+    switch (request.command) {
+        case 'choose-a':
+            return send(request.command, request.body)
+        case 'override-sequence':
+            return 'preset_id' in request.body ? send(request.command, request.body) : send(request.command, request.body)
+        case 'hand-over':
+            return send(request.command, request.body)
+        case 'lock':
+            return send(request.command, request.body)
+        default:
+            return send(request.command)
+    }
+}
+
+export function useManagerDock(view: PickBanView | null, sendManagerCommand: SendManagerCommand): UseManagerDockResult {
     const [play, setPlay] = useState<ManagerPlay>(IDLE_MANAGER_PLAY)
     const playRef = useRef(play)
     const viewRef = useRef(view)
@@ -60,8 +75,7 @@ export function useManagerDock(view: PickBanView | null, sendManagerCommand: Pic
         update(() => submission.play)
         const { request } = submission
         if (!request) return
-        const send = sendManagerCommand as SendRequest
-        send(request.command, 'body' in request ? request.body : undefined).then(
+        sendManagerRequest(sendManagerCommand, request).then(
             () => update(managerCommandSucceeded),
             (error: unknown) => update((latest) => managerCommandRejected(latest, error)),
         )

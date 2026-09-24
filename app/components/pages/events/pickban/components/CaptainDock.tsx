@@ -45,7 +45,7 @@ export function CaptainDock({ dock, ab, reconnecting, actingFor, onLockIn, onTog
 
     return (
         <section
-            aria-label={actingFor ? `Acting for ${actingFor}` : 'Your team’s controls'}
+            aria-label={actingFor === undefined ? 'Your team’s controls' : 'Act for a team'}
             className={cn('sticky bottom-3 z-20 flex flex-col gap-3 rounded-xl border bg-card p-3 shadow-lg shadow-black/30 sm:p-4', tone.line, className)}
         >
             {dock.rejection && <Rejection message={dock.rejection} onDismiss={onDismiss} />}
@@ -174,7 +174,7 @@ function Controls({ controls, tone, actingFor, onLockIn, onToggleReady }: {
                 <ControlRow
                     eyebrow={<Eyebrow className="text-muted-foreground">Waiting</Eyebrow>}
                     title={controls.turn.actionLabel}
-                    detail="Your controls unlock on your turn."
+                    detail={actingFor === undefined ? 'Your controls unlock on your turn.' : 'Nothing to act for right now.'}
                     action={<LockedButton icon={Lock} label="Locked" />}
                 />
             )

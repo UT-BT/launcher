@@ -173,6 +173,7 @@ export function pickBanState(overrides: Partial<PickBanState> = {}): PickBanStat
         edited: false,
         end_reason: null,
         warnings: [],
+        results_present: false,
         blocking_reasons: [],
         blocking_reason: null,
         viewer: { side: null, roster_captain: false },

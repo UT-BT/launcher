@@ -642,6 +642,9 @@ re-derives it between polls from the absolute timestamps: `intro_ends_at`,
   order as `{ actor, before_index }`, where `before_index` is the plan index the dropped ban
   would have preceded (the same base as `plan[].index`). Read them from the payload; never
   re-derive which bans were dropped from `sequence.steps`.
+- **Results.** `results_present` is `true` whenever the match has results entered, in
+  every status (a complete session included). Start, Restart, Reopen, Edit final and a
+  Cancel that would clear written map slots are refused while it holds.
 - **Gate controls on `capabilities`, never on `viewer.roster_captain`.**
   `capabilities.acting_side` is the side the viewer acts for as captain or acting captain.
   A captain replaced by an acting captain has `acting_side: null`.
@@ -792,9 +795,7 @@ pure and tested without a DOM. It returns:
 - `banners`: voided, cancelled, paused, skipped bans and warnings
 - `affordances`: `actingSide` and its letter `actingAb`, `canReady`, `isReady`, `canLock`, and
   `manager` (which dock controls apply to the current status, `startBlockedBy`,
-  `resultsPresent` and `actForSide`). `resultsPresent` is set when `blocking_reasons`
-  holds `results_present`, or a warning carries that code (a voided session whose written
-  map slots were kept).
+  `resultsPresent` and `actForSide`). `resultsPresent` is the payload's `results_present`.
 - `nextBoundaryAt`: when the view next changes on its own
 - `scene`: what the centre stage shows, for animating it. `key` (`lobby`, `intro`,
   `turn-<index>`, `reveal-<index>`, `complete`, `none`, `cancelled` or `voided`) stays the
@@ -900,7 +901,8 @@ only from the view model, through the pick/ban visual core (see
 - **Manager dock.** For a viewer with `capabilities.can_manage`, the page layers
   `useManagerDock` over the captain-played view (see `agents/state-patterns.md`) and renders
   a `ManagerDock` below the pool, so nothing it shows or hides moves the stage, the
-  timeline or the grid. It is absent for captains, teammates and spectators, and the
+  timeline or the grid. `ManagerDock.tsx` is `lazy()` behind `manager.dock` with a `null`
+  fallback, so only managers fetch it; the model and the hook stay static. It is absent for captains, teammates and spectators, and the
   stream view never renders it. Each control shows only while `affordances.manager`
   allows it, and calls `sendManagerCommand`, which adds the expected `version` and adopts
   the returned state:
@@ -917,15 +919,20 @@ only from the view model, through the pick/ban visual core (see
   - `lock` with `{ side, map, plan_index }` to act for the awaited side: select a card, then
     Lock in, with the same optimistic "Locked in" a captain gets, kept until the step
     reveals. A manager never sends `hover`. On the viewer's own turn as captain, the
-    captain controls handle it instead.
+    captain controls handle it instead. Between turns the act-for strip stays, locked with
+    the countdown and who is up next, so nothing below it moves from Start to the last
+    lock-in.
   - `restart` and `cancel`, each only after a confirmation that says what will be lost
   - Copy player link and Copy stream link (`buildMatchLinks`)
 
   The dock disables its buttons while a command is in flight, and shows nothing
   optimistic apart from the act-for lock-in. A refusal shows its specific reason; a
   `version_conflict` asks the manager to check the session and try again, and nothing
-  retries by itself. `resultsPresent` shows a warning, and a voided session shows its
-  banner in the dock with Open offered again.
+  retries by itself. A `hand-over` refused with `invalid_request` says to pick an active
+  roster member of that side's team; every other command keeps the general words for that
+  code. `resultsPresent` shows a warning in any status (Restart and Cancel stay enabled, and
+  the server's refusal is worded if one comes), and a voided session shows its banner in
+  the dock with Open offered again.
 
 `e2e/pickban-watch.spec.ts` serves the pick/ban read from fixtures with a server clock
 that runs in real time. It checks seven things:

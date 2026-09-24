@@ -494,17 +494,23 @@ command in flight, the act-for lock-in being sent, the Restart or Cancel awaitin
 confirmation, and the last refusal with the command it answered.
 
 - `withManagerPlay(view, play)` marks the act-for selection `selected`, and shows the
-  act-for lock-in as "Locked in" through the same `withOptimisticLock` the captain uses
-  (exported from `captainPlay.ts`). The lock-in stays until its step reveals, since the
-  returned state only marks a lock-in for the side's own captain.
+  act-for lock-in as "Locked in". It shares `captainPlay.ts`'s `StepChoice`,
+  `selectedMapOf`, `withSelectedMap` and `withOptimisticLock`, adding only the manager's own
+  gate (the awaited step is open to act for). The lock-in stays until its step reveals,
+  since the returned state only marks a lock-in for the side's own captain.
 - `managerDockOf(view, play)` is the dock model, `null` without `affordances.manager`: the
   buttons in order with labels and disabled flags (every one disabled while a command is in
   flight), the worded Start blocking reason, the results warning, the voided banner, the
   Choose A options, whether the sequence override applies, each side's roster for Hand
   over with who is in control, the pending confirmation, the act-for controls, and the
-  refusal. The act-for controls are a `CaptainDock` model (`choose` or `locked_in`), so the
-  captain's dock renders them, and a refused lock-in shows there rather than in the
-  toolbar. They are `null` on the viewer's own turn as captain.
+  refusal. The act-for controls are a `CaptainDock` model, so the captain's dock renders
+  them, and a refused lock-in shows there rather than in the toolbar. They mirror the
+  captain's: `choose` while the awaited step is open to act for, `locked_in` for the
+  manager's own lock-in until it reveals, `locked` with the view's `countdown` and the
+  next `turn` through the start lead, the intro, a spotlight or a pause, and `waiting`
+  while someone else's lock-in is in its reveal lead or on the viewer's own turn as
+  captain. So the strip stays up from Start to the last lock-in, and is `null` in the
+  lobby and once the session is complete.
 - `beginManagerCommand(play, view, request)` returns the next play and the request to
   send, or `null` when the control isn't open or a command is in flight. For `restart` and
   `cancel` it first returns a play awaiting confirmation and no request;
@@ -512,8 +518,11 @@ confirmation, and the last refusal with the command it answered.
   and `beginActForLock` are the act-for select-then-Lock in, which sends `lock` with the
   side, map and plan index.
 - `managerCommandSucceeded` and `managerCommandRejected(play, error)` settle a command, and
-  `dismissManagerRejection` clears the refusal. `sequenceChoices(stages)` lists the override
-  options: every preset, then each stage that has a block.
+  `dismissManagerRejection` clears the refusal. A refusal without a stable code falls back
+  to the captain's `unwordedRejection` (the unreachable-network words, else the error's own
+  message). `sequenceChoices(stages)` lists the override
+  options: every preset, then each stage that has a block, each keyed by its preset id or
+  stage key so two stages with the same name and best-of never collide.
 - `settleManagerPlay(play, view)` drops a confirmation the session no longer allows, and an
   act-for lock-in whose step is awaited again (an undo, by anyone). Any later manager
   command drops the lock-in too. So neither comes back later, and a step the team locks
@@ -521,7 +530,8 @@ confirmation, and the last refusal with the command it answered.
 
 `useManagerDock(view, sendManagerCommand)` (`events/pickban/useManagerDock.ts`) wires it to
 the store the same way `useCaptainPlay` does, and settles the play whenever the view
-changes. The page passes it the captain-played view, so both layers show.
+changes. It hands each request to `sendManagerCommand` through a per-command switch, so
+every body is checked against `PickBanManagerCommandBodies` without a cast. The page passes it the captain-played view, so both layers show.
 
 **Hooks** (`events/pickban/usePickBanSession.ts`):
 
