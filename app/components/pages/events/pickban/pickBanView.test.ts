@@ -554,8 +554,21 @@ describe('affordances', () => {
     it('gives a spectator nothing to do', () => {
         const view = viewAt(asSpectator(awaitingA), INTRO_END + 1_000)
 
-        expect(view.affordances).toEqual({ actingSide: null, canReady: false, isReady: false, canLock: false, manager: null })
+        expect(view.affordances).toEqual({ actingSide: null, actingAb: null, canReady: false, isReady: false, canLock: false, manager: null })
         expect(view.cards.some((c) => c.selectable)).toBe(false)
+    })
+
+    it('names the letter of the side the viewer acts for, following which team is A', () => {
+        const flipped = {
+            ...awaitingA,
+            a_side: 'team_b' as const,
+            teams: { team_a: { ...awaitingA.teams.team_a!, ab: 'B' as const }, team_b: { ...awaitingA.teams.team_b!, ab: 'A' as const } },
+        }
+
+        expect(viewAt(asCaptain(awaitingA, 'team_a'), INTRO_END + 1_000).affordances.actingAb).toBe('A')
+        expect(viewAt(asCaptain(awaitingA, 'team_b'), INTRO_END + 1_000).affordances.actingAb).toBe('B')
+        expect(viewAt(asCaptain(flipped, 'team_b'), INTRO_END + 1_000).affordances.actingAb).toBe('A')
+        expect(viewAt(asTeammate(awaitingA, 'team_a'), INTRO_END + 1_000).affordances.actingAb).toBeNull()
     })
 
     it('lets a captain ready up in the lobby and shows whether their side is ready', () => {

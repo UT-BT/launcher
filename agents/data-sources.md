@@ -764,8 +764,9 @@ pure and tested without a DOM. It returns:
 - `teams.left` (A) and `teams.right` (B), falling back to `team_a` on the left while A is
   undetermined
 - `banners`: voided, cancelled, paused, skipped bans and warnings
-- `affordances`: `canReady`, `isReady`, `canLock`, and `manager` (which dock controls apply
-  to the current status, `startBlockedBy`, and `actForSide`)
+- `affordances`: `actingSide` and its letter `actingAb`, `canReady`, `isReady`, `canLock`, and
+  `manager` (which dock controls apply to the current status, `startBlockedBy`, and
+  `actForSide`)
 - `nextBoundaryAt`: when the view next changes on its own
 - `scene`: what the centre stage shows, for animating it. `key` (`lobby`, `intro`,
   `turn-<index>`, `reveal-<index>`, `complete`, `none`, `cancelled` or `voided`) stays the

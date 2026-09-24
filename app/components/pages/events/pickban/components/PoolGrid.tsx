@@ -7,6 +7,8 @@ import type { PickBanCardView } from '../pickBanView'
 import { PICK_BAN_TONES, stepTone, teamTone } from './pickBanTone'
 import { CHIP_MOTION, STAMP_MOTION } from './stageMotion'
 
+const CORNER_CHIP = 'absolute right-1 top-1 rounded px-1.5 py-px text-[10px] font-bold uppercase'
+
 interface PoolGridProps {
     cards: PickBanCardView[]
     previewActor: PickBanActor | null
@@ -93,12 +95,12 @@ export function PoolCard({ card, previewActor, onSelect }: {
                     </motion.span>
                 )}
                 {card.state === 'picked' && (
-                    <motion.span key="picked" aria-hidden {...CHIP_MOTION} className={cn('absolute right-1 top-1 rounded px-1.5 py-px text-[10px] font-bold uppercase', tone.solid, tone.onSolid)}>
+                    <motion.span key="picked" aria-hidden {...CHIP_MOTION} className={cn(CORNER_CHIP, tone.solid, tone.onSolid)}>
                         Map {card.mapNumber}
                     </motion.span>
                 )}
                 {card.state === 'decider' && (
-                    <motion.span key="decider" aria-hidden {...CHIP_MOTION} className={cn('absolute right-1 top-1 rounded px-1.5 py-px text-[10px] font-bold uppercase', tone.solid, tone.onSolid)}>
+                    <motion.span key="decider" aria-hidden {...CHIP_MOTION} className={cn(CORNER_CHIP, tone.solid, tone.onSolid)}>
                         Decider
                     </motion.span>
                 )}
@@ -110,17 +112,17 @@ export function PoolCard({ card, previewActor, onSelect }: {
                     </motion.span>
                 )}
                 {card.previewed && !card.selected && (
-                    <motion.span key="previewed" aria-hidden {...CHIP_MOTION} className={cn('absolute right-1 top-1 rounded px-1.5 py-px text-[10px] font-bold uppercase', previewTone.solid, previewTone.onSolid)}>
+                    <motion.span key="previewed" aria-hidden {...CHIP_MOTION} className={cn(CORNER_CHIP, previewTone.solid, previewTone.onSolid)}>
                         Considering
                     </motion.span>
                 )}
                 {card.selected && (
-                    <motion.span key="selected" aria-hidden {...CHIP_MOTION} className={cn('absolute right-1 top-1 rounded px-1.5 py-px text-[10px] font-bold uppercase', previewTone.solid, previewTone.onSolid)}>
+                    <motion.span key="selected" aria-hidden {...CHIP_MOTION} className={cn(CORNER_CHIP, previewTone.solid, previewTone.onSolid)}>
                         Selected
                     </motion.span>
                 )}
                 {card.lockedIn && (
-                    <motion.span key="locked-in" aria-hidden {...CHIP_MOTION} className="absolute right-1 top-1 rounded bg-emerald-500 px-1.5 py-px text-[10px] font-bold uppercase text-white">
+                    <motion.span key="locked-in" aria-hidden {...CHIP_MOTION} className={cn(CORNER_CHIP, 'bg-emerald-500 text-white')}>
                         Locked in
                     </motion.span>
                 )}

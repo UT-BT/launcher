@@ -29,13 +29,13 @@ const LOCKED_EYEBROW: Record<Extract<CaptainControls, { kind: 'locked' }>['reaso
 }
 
 function stepLabel(action: PickBanStepAction, mapNumber: number | null): string {
-    if (action === 'ban') return 'ban a map'
-    return mapNumber === null ? 'pick a map' : `pick map ${mapNumber}`
+    if (action === 'ban') return 'Ban a map'
+    return mapNumber === null ? 'Pick a map' : `Pick map ${mapNumber}`
 }
 
 function upNext(next: PickBanTurn | null): string {
     if (!next) return 'The first step is coming up'
-    if (next.viewerActs) return `You’re up: ${stepLabel(next.action, next.mapNumber)}`
+    if (next.viewerActs) return `You’re up: ${stepLabel(next.action, next.mapNumber).toLowerCase()}`
     return `Up next: ${next.actionLabel}`
 }
 
@@ -113,7 +113,7 @@ function Controls({ controls, tone, onLockIn, onToggleReady }: {
             return (
                 <ControlRow
                     eyebrow={<Eyebrow className={tone.text}>Your turn</Eyebrow>}
-                    title={controls.action === 'ban' ? 'Ban a map' : `Pick ${controls.mapNumber === null ? 'a map' : `map ${controls.mapNumber}`}`}
+                    title={stepLabel(controls.action, controls.mapNumber)}
                     detail={controls.selectedMap
                         ? <>Selected: <span className="font-semibold text-foreground">{displayMapName(controls.selectedMap)}</span></>
                         : 'Select a map in the pool, then lock it in.'}
@@ -171,7 +171,7 @@ function Controls({ controls, tone, onLockIn, onToggleReady }: {
             return (
                 <ControlRow
                     eyebrow={<Eyebrow className="text-muted-foreground">Waiting</Eyebrow>}
-                    title={`${controls.turn.actorLabel} ${controls.turn.action === 'ban' ? 'bans' : 'picks'}`}
+                    title={controls.turn.actionLabel}
                     detail="Your controls unlock on your turn."
                     action={<LockedButton icon={Lock} label="Locked" />}
                 />

@@ -100,10 +100,6 @@ function matchSubtitle(view: PickBanView): string {
     return [view.match.stageName, view.match.roundLabel, `Best of ${view.match.bestOf}`].filter(Boolean).join(' · ')
 }
 
-function viewerAb(view: PickBanView) {
-    return [view.teams.left, view.teams.right].find(panel => panel && panel.side === view.affordances.actingSide)?.ab ?? null
-}
-
 function PickBanBody({ view, summaryAction, captain, reconnecting }: {
     view: PickBanView
     summaryAction: ReactNode
@@ -153,7 +149,7 @@ function PickBanBody({ view, summaryAction, captain, reconnecting }: {
             {captain.dock && (
                 <CaptainDock
                     dock={captain.dock}
-                    ab={viewerAb(view)}
+                    ab={view.affordances.actingAb}
                     reconnecting={reconnecting}
                     onLockIn={captain.lockIn}
                     onToggleReady={captain.toggleReady}
