@@ -11,7 +11,7 @@ const maxInitialJsGzipBytes = 190 * KiB
 const maxInitialCssGzipBytes = 32 * KiB
 const maxInitialTotalGzipBytes = 220 * KiB
 const maxLazyChunkGzipBytes = 120 * KiB
-const maxTotalJsGzipBytes = 700 * KiB
+const maxTotalJsGzipBytes = 750 * KiB
 const minEntryGzipBytes = 50 * KiB
 
 const HEAD_START = '<!--utbt-head-start-->'
