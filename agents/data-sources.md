@@ -16,7 +16,7 @@ not_here:
   - "the procedure to wire a new endpoint into the UI → skill: consume-api-data"
 sections: [backend-api, errors, admin-api, event-brackets, event-scheduling, event-predictions, public-maps-tab-pick-ban-pools, event-pickban-sessions, event-pick-ban-setup, changing-a-map-screenshot, cap-detail-page-endpoints, world-records-page-endpoints, team-maps-and-team-runs, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites, account-state-and-badges]
 last_verified: 2026-09-24
-verify_against: [app/utils/api.ts, app/utils/chartBuckets.ts, app/components/pages/admin/components/controls.tsx, app/components/pages/admin/sections/HostsManagementSection.tsx, app/utils/patreon.ts, app/utils/server-utils.ts, app/hooks/useServerFavorites.ts, app/components/pages/events/manage/formatFields.tsx, app/components/pages/events/bracket/bracketShared.tsx, app/components/pages/events/bracket/BracketTab.tsx, app/components/pages/events/bracket/GroupStageView.tsx, app/components/pages/events/bracket/SwissStageView.tsx, app/components/pages/events/bracket/ElimStageView.tsx, app/components/pages/events/predictions/predictionsShared.tsx, app/components/pages/events/predictions/PredictionsTab.tsx, app/components/pages/events/schedule/scheduleShared.tsx, app/components/pages/events/schedule/ScheduleTab.tsx, app/components/pages/events/schedule/SlotPickerModal.tsx, app/components/pages/events/schedule/slotGeneration.ts, app/components/pages/events/schedule/SlotGrid.tsx, app/components/pages/events/manage/DateTimeField.tsx, app/components/pages/events/eventsShared.tsx, app/components/pages/EventDetailPage.tsx, app/utils/timezone.ts, app/components/pages/events/manage/ScheduleOversightPanel.tsx, app/components/pages/events/ManagePanel.tsx, app/components/main/Main.tsx, app/components/layout/AppLayout.tsx, app/components/pages/events/maps/MapsTab.tsx, app/components/pages/events/maps/mapsShared.ts, app/components/pages/events/pickban/pickBanView.ts, app/components/pages/events/pickban/pickBanStatus.ts, app/components/pages/events/pickban/pickBanSession.ts, app/components/pages/events/pickban/pickBanEntryPoints.ts, app/components/pages/events/pickban/clockOffset.ts, app/components/pages/events/manage/pickban/pickBanEditor.ts, app/components/pages/events/manage/pickban/PickBanPanel.tsx, app/components/pages/events/manage/pickban/PickBanStageCard.tsx, app/components/pages/events/manage/pickban/PickBanQueuePanel.tsx, app/components/pages/events/manage/pickban/pickBanQueue.ts, app/components/pages/events/pickBanTags.ts, app/components/navigation/matchLinks.ts, app/utils/poller.ts, app/components/pages/events/pickban/stream/StreamView.tsx]
+verify_against: [app/utils/api.ts, app/utils/chartBuckets.ts, app/components/pages/admin/components/controls.tsx, app/components/pages/admin/sections/HostsManagementSection.tsx, app/utils/patreon.ts, app/utils/server-utils.ts, app/hooks/useServerFavorites.ts, app/components/pages/events/manage/formatFields.tsx, app/components/pages/events/bracket/bracketShared.tsx, app/components/pages/events/bracket/BracketTab.tsx, app/components/pages/events/bracket/GroupStageView.tsx, app/components/pages/events/bracket/SwissStageView.tsx, app/components/pages/events/bracket/ElimStageView.tsx, app/components/pages/events/predictions/predictionsShared.tsx, app/components/pages/events/predictions/PredictionsTab.tsx, app/components/pages/events/schedule/scheduleShared.tsx, app/components/pages/events/schedule/ScheduleTab.tsx, app/components/pages/events/schedule/SlotPickerModal.tsx, app/components/pages/events/schedule/slotGeneration.ts, app/components/pages/events/schedule/SlotGrid.tsx, app/components/pages/events/manage/DateTimeField.tsx, app/components/pages/events/eventsShared.tsx, app/components/pages/EventDetailPage.tsx, app/utils/timezone.ts, app/components/pages/events/manage/ScheduleOversightPanel.tsx, app/components/pages/events/ManagePanel.tsx, app/components/main/Main.tsx, app/components/layout/AppLayout.tsx, app/components/pages/events/maps/MapsTab.tsx, app/components/pages/events/maps/mapsShared.ts, app/components/pages/events/pickban/pickBanView.ts, app/components/pages/events/pickban/pickBanStatus.ts, app/components/pages/events/pickban/pickBanSession.ts, app/components/pages/events/pickban/pickBanEntryPoints.ts, app/components/pages/events/pickban/clockOffset.ts, app/components/pages/events/manage/pickban/pickBanEditor.ts, app/components/pages/events/manage/pickban/PickBanPanel.tsx, app/components/pages/events/manage/pickban/PickBanStageCard.tsx, app/components/pages/events/manage/pickban/PickBanQueuePanel.tsx, app/components/pages/events/manage/pickban/pickBanQueue.ts, app/components/pages/events/pickBanTags.ts, app/components/navigation/matchLinks.ts, app/utils/poller.ts, app/components/pages/events/pickban/stream/StreamView.tsx, app/components/pages/events/pickban/pickBanCopy.ts, app/components/pages/events/pickban/components/PickBanUnavailable.tsx]
 ---
 
 # Data sources
@@ -721,18 +721,29 @@ panel's error banner). A row's
 session's status — it is informational (why Start would refuse right now), not gating the
 row's own actions.
 
-**Polling cadence** (`pickBanSession.ts`):
+**Polling cadence.** `pickBanPollIntervalMs(status, error, alwaysPoll)` in
+`pickBanSession.ts` is the pure decision (Vitest, no DOM, no fetch/timer mocking
+needed) that the store's poller consults every cycle:
 
-- Every second (`ACTIVE_POLL_MS`) while the status is `lobby`, `running` or `paused` and the
-  document is visible.
-- Every 10 seconds (`IDLE_POLL_MS`) for `none`, `complete`, `cancelled` and `voided`, and
-  after a first load refused with 401, 403 or 404.
-- Nothing while the document is hidden. It polls at once when the document shows again.
-- The stream view (`events/pickban/stream/StreamView.tsx`) calls `usePickBanSession`
-  with `alwaysPoll: true`, so it ignores `document.visibilityState` altogether —
-  required because an OBS browser source is routinely reported hidden. It still
-  follows the same `lobby`/`running`/`paused` vs. terminal cadence above; nothing
-  about the interval changes, only the visibility gate.
+- Every second (`ACTIVE_POLL_MS`) while the status is `lobby`, `running` or `paused`.
+- Every 10 seconds (`IDLE_POLL_MS`) once a session exists but is terminal (`complete`,
+  `cancelled` or `voided`) — `alwaysPoll` never overrides this; a finished session stays
+  slow everywhere.
+- With no session yet (`status` is `null` — nothing has loaded, or the match hasn't had
+  one opened): every second normally too, **except** after a first load refused with 401,
+  403 or 404, which is treated as "nothing to poll for quickly" and slows to 10 seconds —
+  **unless `alwaysPoll` is set**, which keeps it at one second regardless of that error.
+  This is what lets a stream source added before a lobby opens (a routine 404) still pick
+  up the session within a second of Open, instead of lagging up to 10 seconds behind.
+- Nothing while the document is hidden, for the non-stream page — it polls at once when
+  the document shows again. The stream view (`events/pickban/stream/StreamView.tsx`) calls
+  `usePickBanSession` with `alwaysPoll: true`, so it ignores `document.visibilityState`
+  altogether (required because an OBS browser source is routinely reported hidden) **and**
+  gets the always-fast "no session yet" behavior above. It renders the same pool grid as the
+  watch page, read-only (no `onSelect`), in a footer strip below the timeline — sized with
+  its own fixed-width columns (`justify-center`, no `1fr` growth) rather than the grid's
+  usual responsive breakpoints, so a full pool (realistically up to ~18 maps) stays one row
+  across the fixed 1920px stage instead of wrapping.
 - A failed poll keeps the last good state, and `reconnecting` turns on after
   `RECONNECTING_AFTER_FAILURES` (3) failures in a row.
 - A poll that answers with an older `version` of the same session than a command response
@@ -799,7 +810,10 @@ only from the view model, through the pick/ban visual core (see
 
 - **First load.** A skeleton of the page's own layout shows only while `loading && !state`.
   If the first load fails, a card says the pick/ban isn't available (401, 403 or 404) or
-  that it is retrying, and the store keeps polling behind it.
+  that it is retrying, and the store keeps polling behind it. That card
+  (`components/PickBanUnavailable.tsx`) and the `stageName · roundLabel · Best of N`
+  heading line (`pickBanCopy.ts`'s `matchSubtitle`) are shared with the stream view below,
+  so the two pages never drift on this copy.
 - **After that, polls are silent.** New data changes the page in place, and a 304 changes
   nothing. A small fixed "Reconnecting…" toast shows only while `reconnecting` is set.
   While the captain dock shows, the dock carries that line instead, so the toast never
