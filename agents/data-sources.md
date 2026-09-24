@@ -917,8 +917,11 @@ only from the view model, through the pick/ban visual core (see
   The dock disables its buttons while a command is in flight, and shows nothing
   optimistic apart from the act-for lock-in. A refusal shows its specific reason; a
   `version_conflict` asks the manager to check the session and try again, and nothing
-  retries by itself. `resultsPresent` shows a warning, and a voided session shows its
-  banner in the dock with Open offered again.
+  retries by itself. A `hand-over` refused with `invalid_request` says to pick an active
+  roster member of that side's team; every other command keeps the general words for that
+  code. `resultsPresent` shows a warning in any status (Restart and Cancel stay enabled, and
+  the server's refusal is worded if one comes), and a voided session shows its banner in
+  the dock with Open offered again.
 
 `e2e/pickban-watch.spec.ts` serves the pick/ban read from fixtures with a server clock
 that runs in real time. It checks seven things:

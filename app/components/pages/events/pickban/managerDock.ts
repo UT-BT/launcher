@@ -169,8 +169,11 @@ const REJECTIONS: Record<Exclude<PickBanErrorCode, PickBanBlockingReason>, strin
     wrong_status: 'The session moved on just before your click, so that no longer applies.',
 }
 
-function rejectionMessage(error: unknown): string {
+const HAND_OVER_REFUSED = 'That player can’t take control: pick an active roster member of that side’s team.'
+
+function rejectionMessage(command: ManagerCommand | null, error: unknown): string {
     const code = pickBanErrorCode(error)
+    if (command === 'hand-over' && code === 'invalid_request') return HAND_OVER_REFUSED
     if (code) return code in REJECTIONS ? REJECTIONS[code as keyof typeof REJECTIONS] : `${blockingReasonLabel(code, 'lobby')}.`
     if (error instanceof TypeError || (error instanceof DOMException && error.name === 'TimeoutError')) {
         return 'Couldn’t reach the server. Check your connection and try again.'
@@ -341,7 +344,7 @@ export function managerCommandSucceeded(play: ManagerPlay): ManagerPlay {
 }
 
 export function managerCommandRejected(play: ManagerPlay, error: unknown): ManagerPlay {
-    return { ...play, submitting: null, lockingIn: null, rejected: play.submitting, rejection: rejectionMessage(error) }
+    return { ...play, submitting: null, lockingIn: null, rejected: play.submitting, rejection: rejectionMessage(play.submitting, error) }
 }
 
 export function dismissManagerRejection(play: ManagerPlay): ManagerPlay {

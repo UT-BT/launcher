@@ -415,6 +415,19 @@ describe('refusals', () => {
         expect(managerDockOf(view, dismissManagerRejection(refused))?.rejection).toBeNull()
     })
 
+    it('says a refused hand-over needs an active roster member, keeping the general words for other invalid requests', () => {
+        const view = lobby()
+        const handingOver = beginManagerCommand(IDLE_MANAGER_PLAY, view, { command: 'hand-over', body: { side: 'team_a', user_id: '1001' } })!.play
+        const starting = beginManagerCommand(IDLE_MANAGER_PLAY, view, { command: 'start' })!.play
+
+        expect(managerDockOf(view, managerCommandRejected(handingOver, refusal('invalid_request')))?.rejection).toBe(
+            'That player can’t take control: pick an active roster member of that side’s team.',
+        )
+        expect(managerDockOf(view, managerCommandRejected(starting, refusal('invalid_request')))?.rejection).toBe(
+            'The server didn’t accept that request. Refresh the page and try again.',
+        )
+    })
+
     it('has its own words for every stable code, never the server’s message', () => {
         const starting = beginManagerCommand(IDLE_MANAGER_PLAY, lobby(), { command: 'start' })!.play
         const worded = PICK_BAN_ERROR_CODES.map((code) => managerCommandRejected(starting, refusal(code)).rejection)
