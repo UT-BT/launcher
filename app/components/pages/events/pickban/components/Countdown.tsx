@@ -1,27 +1,12 @@
-import { useLayoutEffect, useRef, useSyncExternalStore } from 'react'
+import { useLayoutEffect, useRef } from 'react'
 import { cn } from '@/lib/utils'
+import { usePrefersReducedMotion } from '@/app/hooks/usePrefersReducedMotion'
 import type { PickBanCountdown } from '../pickBanView'
 import { PICK_BAN_TONES, type PickBanTone } from './pickBanTone'
 
 type CountdownPainter = (element: HTMLElement, remainingMs: number, fraction: number) => void
 
-const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)'
-
 const REDUCED_MOTION_STEP_MS = 1_000
-
-function subscribeToReducedMotion(onChange: () => void): () => void {
-    const query = window.matchMedia(REDUCED_MOTION_QUERY)
-    query.addEventListener('change', onChange)
-    return () => query.removeEventListener('change', onChange)
-}
-
-function prefersReducedMotion(): boolean {
-    return window.matchMedia(REDUCED_MOTION_QUERY).matches
-}
-
-function usePrefersReducedMotion(): boolean {
-    return useSyncExternalStore(subscribeToReducedMotion, prefersReducedMotion, () => false)
-}
 
 function formatRemaining(remainingMs: number): string {
     const seconds = Math.ceil(remainingMs / 1000)

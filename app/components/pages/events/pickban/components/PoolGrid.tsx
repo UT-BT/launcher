@@ -1,9 +1,11 @@
+import { AnimatePresence, motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { displayMapName } from '@/app/utils/format'
 import type { PickBanActor } from '@/app/utils/api'
 import type { PickBanCardView } from '../pickBanView'
 import { PICK_BAN_TONES, stepTone, teamTone } from './pickBanTone'
+import { CHIP_MOTION, STAMP_MOTION } from './stageMotion'
 
 interface PoolGridProps {
     cards: PickBanCardView[]
@@ -58,7 +60,7 @@ export function PoolCard({ card, previewActor }: { card: PickBanCardView; previe
         <div
             title={card.state === 'excluded' ? card.exclusionReason ?? undefined : card.map}
             className={cn(
-                'relative aspect-square overflow-hidden rounded-lg border-2 bg-card/30',
+                'relative aspect-square overflow-hidden rounded-lg border-2 bg-card/30 transition-[border-color,box-shadow] duration-300',
                 card.state === 'available' && !card.previewed && 'border-hairline/10',
                 card.state === 'excluded' && 'border-hairline/5',
                 acted && tone.border,
@@ -72,47 +74,49 @@ export function PoolCard({ card, previewActor }: { card: PickBanCardView; previe
                 size="card"
                 alt=""
                 className={cn(
-                    'absolute inset-0 h-full w-full rounded-none border-0',
+                    'absolute inset-0 h-full w-full rounded-none border-0 transition-[filter,opacity] duration-500',
                     card.state === 'banned' && 'grayscale brightness-50',
                     card.state === 'excluded' && 'grayscale opacity-30',
                 )}
             />
-            {card.stepNumber !== null && (
-                <span aria-hidden className="absolute left-1 top-1 rounded bg-black/60 px-1 py-px font-mono text-[10px] font-bold text-white">
-                    #{card.stepNumber}
-                </span>
-            )}
-            {card.state === 'picked' && (
-                <span aria-hidden className={cn('absolute right-1 top-1 rounded px-1.5 py-px text-[10px] font-bold uppercase', tone.solid, tone.onSolid)}>
-                    Map {card.mapNumber}
-                </span>
-            )}
-            {card.state === 'decider' && (
-                <span aria-hidden className={cn('absolute right-1 top-1 rounded px-1.5 py-px text-[10px] font-bold uppercase', tone.solid, tone.onSolid)}>
-                    Decider
-                </span>
-            )}
-            {card.state === 'banned' && (
-                <span aria-hidden className="absolute inset-0 flex items-center justify-center">
-                    <span className={cn('-rotate-12 rounded border-2 bg-black/40 px-1.5 py-0.5 text-[11px] font-black tracking-widest', tone.text, tone.border)}>
-                        BANNED
-                    </span>
-                </span>
-            )}
+            <AnimatePresence initial={false}>
+                {card.stepNumber !== null && (
+                    <motion.span key="step" aria-hidden {...CHIP_MOTION} className="absolute left-1 top-1 rounded bg-black/60 px-1 py-px font-mono text-[10px] font-bold text-white">
+                        #{card.stepNumber}
+                    </motion.span>
+                )}
+                {card.state === 'picked' && (
+                    <motion.span key="picked" aria-hidden {...CHIP_MOTION} className={cn('absolute right-1 top-1 rounded px-1.5 py-px text-[10px] font-bold uppercase', tone.solid, tone.onSolid)}>
+                        Map {card.mapNumber}
+                    </motion.span>
+                )}
+                {card.state === 'decider' && (
+                    <motion.span key="decider" aria-hidden {...CHIP_MOTION} className={cn('absolute right-1 top-1 rounded px-1.5 py-px text-[10px] font-bold uppercase', tone.solid, tone.onSolid)}>
+                        Decider
+                    </motion.span>
+                )}
+                {card.state === 'banned' && (
+                    <motion.span key="banned" aria-hidden {...STAMP_MOTION} className="absolute inset-0 flex items-center justify-center">
+                        <span className={cn('-rotate-12 rounded border-2 bg-black/40 px-1.5 py-0.5 text-[11px] font-black tracking-widest', tone.text, tone.border)}>
+                            BANNED
+                        </span>
+                    </motion.span>
+                )}
+                {card.previewed && (
+                    <motion.span key="previewed" aria-hidden {...CHIP_MOTION} className={cn('absolute right-1 top-1 rounded px-1.5 py-px text-[10px] font-bold uppercase', previewTone.solid, previewTone.onSolid)}>
+                        Considering
+                    </motion.span>
+                )}
+                {card.lockedIn && (
+                    <motion.span key="locked-in" aria-hidden {...CHIP_MOTION} className="absolute right-1 top-1 rounded bg-emerald-500 px-1.5 py-px text-[10px] font-bold uppercase text-white">
+                        Locked in
+                    </motion.span>
+                )}
+            </AnimatePresence>
             {card.state === 'excluded' && (
                 <span aria-hidden className="absolute inset-x-1 top-1/2 -translate-y-1/2 text-center text-[10px] font-bold uppercase tracking-wider text-foreground/80">
                     Excluded
                     {card.exclusion && <span className="block normal-case tracking-normal font-medium">{card.exclusion.tag} maps</span>}
-                </span>
-            )}
-            {card.previewed && (
-                <span aria-hidden className={cn('absolute right-1 top-1 rounded px-1.5 py-px text-[10px] font-bold uppercase', previewTone.solid, previewTone.onSolid)}>
-                    Considering
-                </span>
-            )}
-            {card.lockedIn && (
-                <span aria-hidden className="absolute right-1 top-1 rounded bg-emerald-500 px-1.5 py-px text-[10px] font-bold uppercase text-white">
-                    Locked in
                 </span>
             )}
             <span

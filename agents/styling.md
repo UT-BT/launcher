@@ -4,14 +4,14 @@ read_when:
   - "styling a new page, button, table, form, chip, card, or modal"
   - "choosing a color, radius, spacing, or animation"
   - "you see drift from a token and are tempted to add a variant"
-keywords: [tailwind, cn, DataTable, tokens, colors, button, card, white/5, bg-card, animation, table-fixed, align]
+keywords: [tailwind, cn, DataTable, tokens, colors, button, card, white/5, bg-card, animation, framer-motion, reduced motion, table-fixed, align]
 provides: "the locked design tokens + the canonical class strings"
 not_here:
   - "which component to use → shared-components.md"
   - "state / persistence → state-patterns.md"
 sections: [class-merging, tables-locked, responsive-columns, page-layout, filter-panel, buttons-toggle-states, form-inputs, card-backgrounds-borders, text, color-palette, animation, css-runtime-cost, donts]
 last_verified: 2026-09-24
-verify_against: [app/components/shared/DataTable.tsx, app/styles/globals.css, app/styles/desktop.css, app/styles/index.css, lib/utils.ts, app/hooks/useElementWidth.ts]
+verify_against: [app/components/shared/DataTable.tsx, app/styles/globals.css, app/styles/desktop.css, app/styles/index.css, lib/utils.ts, app/hooks/useElementWidth.ts, app/hooks/usePrefersReducedMotion.ts]
 ---
 
 # Styling reference
@@ -416,15 +416,27 @@ change (it reads `useTheme`), so they update live.
 
 ## Animation
 
-- Page enter: `animate-in fade-in slide-in-from-bottom-0 duration-500` (page-level)
-- Modal: `animate-in fade-in zoom-in-95 duration-200`
-- Tutorial card: `animate-in fade-in slide-in-from-bottom-4 duration-200`
+- **`animate-in` / `fade-in` / `slide-in-*` / `zoom-in-*` emit no CSS.** Their plugin
+  (`tw-animate-css`) is never imported, so the older page-enter, modal and tutorial classes
+  (`animate-in fade-in slide-in-from-bottom-4 duration-200` and the like) do nothing today.
+  Don't add new uses. Animate with framer-motion instead.
 - Skeleton: `animate-pulse` with `bg-white/5`
 - Legendary title/avatar: `legendaryAvatarPulse` / `legendaryTitlePulse` keyframes in `globals.css`
+- **framer-motion** is the motion library. It stays out of the web entry, so import it only
+  from lazily loaded modules. The pick/ban choreography
+  (`events/pickban/components/stageMotion.ts`) is the reference. Variants follow view-model
+  state, so a change reverses when the state does (an undo). `AnimatePresence` handles
+  enter and exit, and a shared `layoutId` makes an indicator glide. Animate `transform`
+  and `opacity` (a one-shot `filter` is fine). A plain colour or filter change on a card
+  can be a CSS `transition-[…]` instead, since it reverses by itself.
 - **Reduced motion.** `shared.css` cuts every CSS animation and transition to nothing under
-  `prefers-reduced-motion: reduce`. Motion driven from JS (an animation-frame loop writing
-  styles) never sees that rule, so it must read the same media query itself and step
-  coarsely instead of gliding, as `CountdownBar` does.
+  `prefers-reduced-motion: reduce`. Motion driven from JS never sees that rule, so it reads
+  the same switch through `usePrefersReducedMotion()` (`app/hooks/usePrefersReducedMotion.ts`):
+  - For framer-motion, wrap the tree in a `MotionConfig` whose `skipAnimations` follows
+    the hook, as `PickBanMotion` does. Every enter, exit and layout animation below it is
+    then instant and shows the same information.
+  - An animation-frame loop that writes styles steps coarsely instead of gliding, as
+    `CountdownBar` does.
 
 ### CSS runtime cost (RAM/CPU)
 
@@ -432,8 +444,9 @@ The renderer runs on phones and in the Electron shell alongside a game — style
 choices have a compositor cost, not just a look:
 
 - `backdrop-blur` is the most expensive effect in the app. The budget is the
-  existing chrome (sidebar, top bar, sticky theads, modals). Never apply it
-  per-row / per-card in a list — one blurred surface, not N.
+  existing chrome (sidebar, top bar, sticky theads, modals, and the pick/ban stage's
+  paused overlay, which exists only while paused). Never apply it per-row or per-card in a
+  list: one blurred surface, not N.
 - Infinite animations (`animate-pulse`, `animate-ping`, the legendary pulses)
   animate `opacity`/`transform`/`box-shadow` and each one keeps the compositor
   awake. Keep them for singletons (badges, one hero) — never one per row.

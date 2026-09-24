@@ -9,10 +9,12 @@ import { SITE_NAME } from '@/app/components/navigation/titles'
 import { ApiError, type UserProfile } from '@/app/utils/api'
 import { useCopyFeedback } from '@/app/hooks/useCopyFeedback'
 import { usePickBanSession, usePickBanView } from '@/app/components/pages/events/pickban/usePickBanSession'
+import { usePickBanPreload } from '@/app/components/pages/events/pickban/usePickBanPreload'
 import type { PickBanView } from '@/app/components/pages/events/pickban/pickBanView'
 import { statusOfPhase } from '@/app/components/pages/events/pickban/pickBanStatus'
 import { CentreStage } from '@/app/components/pages/events/pickban/components/CentreStage'
 import { PickBanBannerNote } from '@/app/components/pages/events/pickban/components/PickBanBannerNote'
+import { PickBanMotion } from '@/app/components/pages/events/pickban/components/PickBanMotion'
 import { PickBanStatusChip } from '@/app/components/pages/events/pickban/components/PickBanStatusChip'
 import { PoolGrid } from '@/app/components/pages/events/pickban/components/PoolGrid'
 import { StepTimeline } from '@/app/components/pages/events/pickban/components/StepTimeline'
@@ -33,6 +35,7 @@ export function MatchPickBanPage({ eventSlug, matchId, userProfile, onBackToEven
     const session = usePickBanSession({ accessToken: userProfile?.accessToken, slug: eventSlug, matchId })
     const view = usePickBanView(session.state, session.clockOffsetMs)
     const { navigate } = useNavigation()
+    usePickBanPreload(view?.cards)
 
     useDocumentTitle(view ? `${view.match.title} — Pick/Ban` : undefined, SITE_NAME)
 
@@ -76,7 +79,9 @@ export function MatchPickBanPage({ eventSlug, matchId, userProfile, onBackToEven
             </header>
 
             {view ? (
-                <PickBanBody view={view} summaryAction={bracketLink} />
+                <PickBanMotion>
+                    <PickBanBody view={view} summaryAction={bracketLink} />
+                </PickBanMotion>
             ) : session.loading ? (
                 <PickBanSkeleton />
             ) : (
