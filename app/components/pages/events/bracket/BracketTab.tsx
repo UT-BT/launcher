@@ -15,11 +15,13 @@ const STAGE_STATUS_STYLES: Record<EventBracketStage['status'], string> = {
     complete: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
 }
 
-export function BracketTab({ bracket, loading, onMapSelect, onScheduleMatch }: {
+export function BracketTab({ bracket, loading, onMapSelect, onScheduleMatch, eventSlug, myTeamId }: {
     bracket: EventBracket | null
     loading: boolean
     onMapSelect?: (mapName: string) => void
     onScheduleMatch?: (matchId: string) => void
+    eventSlug?: string
+    myTeamId?: string | null
 }) {
     const stages = useMemo(() => bracket?.stages ?? [], [bracket])
     const [stageKey, setStageKey] = useNavState<string>('event.bracketStage', '')
@@ -94,9 +96,18 @@ export function BracketTab({ bracket, loading, onMapSelect, onScheduleMatch }: {
                         <Chip className={STAGE_STATUS_STYLES[active.status]}>{STAGE_STATUS_LABELS[active.status]}</Chip>
                     </div>
 
-                    {active.kind === 'groups' && <GroupStageView stage={active} specStage={specStage} now={now} onMapSelect={onMapSelect} onScheduleMatch={onScheduleMatch} />}
-                    {active.kind === 'swiss' && <SwissStageView stage={active} now={now} onMapSelect={onMapSelect} onScheduleMatch={onScheduleMatch} />}
-                    {active.kind === 'single_elim' && <ElimStageView stage={active} now={now} onMapSelect={onMapSelect} onScheduleMatch={onScheduleMatch} />}
+                    {active.kind === 'groups' && (
+                        <GroupStageView stage={active} specStage={specStage} now={now} onMapSelect={onMapSelect}
+                            onScheduleMatch={onScheduleMatch} eventSlug={eventSlug} myTeamId={myTeamId} />
+                    )}
+                    {active.kind === 'swiss' && (
+                        <SwissStageView stage={active} now={now} onMapSelect={onMapSelect}
+                            onScheduleMatch={onScheduleMatch} eventSlug={eventSlug} myTeamId={myTeamId} />
+                    )}
+                    {active.kind === 'single_elim' && (
+                        <ElimStageView stage={active} now={now} onMapSelect={onMapSelect}
+                            onScheduleMatch={onScheduleMatch} eventSlug={eventSlug} myTeamId={myTeamId} />
+                    )}
                 </>
             )}
         </div>
