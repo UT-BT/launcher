@@ -485,9 +485,10 @@ command in flight, the act-for lock-in being sent, the Restart or Cancel awaitin
 confirmation, and the last refusal with the command it answered.
 
 - `withManagerPlay(view, play)` marks the act-for selection `selected`, and shows the
-  act-for lock-in as "Locked in" through the same `withOptimisticLock` the captain uses
-  (exported from `captainPlay.ts`). The lock-in stays until its step reveals, since the
-  returned state only marks a lock-in for the side's own captain.
+  act-for lock-in as "Locked in". It shares `captainPlay.ts`'s `StepChoice`,
+  `selectedMapOf`, `withSelectedMap` and `withOptimisticLock`, adding only the manager's own
+  gate (the awaited step is open to act for). The lock-in stays until its step reveals,
+  since the returned state only marks a lock-in for the side's own captain.
 - `managerDockOf(view, play)` is the dock model, `null` without `affordances.manager`: the
   buttons in order with labels and disabled flags (every one disabled while a command is in
   flight), the worded Start blocking reason, the results warning, the voided banner, the
@@ -508,7 +509,9 @@ confirmation, and the last refusal with the command it answered.
   and `beginActForLock` are the act-for select-then-Lock in, which sends `lock` with the
   side, map and plan index.
 - `managerCommandSucceeded` and `managerCommandRejected(play, error)` settle a command, and
-  `dismissManagerRejection` clears the refusal. `sequenceChoices(stages)` lists the override
+  `dismissManagerRejection` clears the refusal. A refusal without a stable code falls back
+  to the captain's `unwordedRejection` (the unreachable-network words, else the error's own
+  message). `sequenceChoices(stages)` lists the override
   options: every preset, then each stage that has a block.
 - `settleManagerPlay(play, view)` drops a confirmation the session no longer allows, and an
   act-for lock-in whose step is awaited again (an undo, by anyone). Any later manager

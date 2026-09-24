@@ -10,7 +10,15 @@ import {
     type PickBanSide,
     type PickBanStageConfig,
 } from '@/app/utils/api'
-import { withOptimisticLock, type CaptainControls, type CaptainDock } from './captainPlay'
+import {
+    selectedMapOf,
+    unwordedRejection,
+    withOptimisticLock,
+    withSelectedMap,
+    type CaptainControls,
+    type CaptainDock,
+    type StepChoice,
+} from './captainPlay'
 import { PICK_BAN_PRESET_LABELS } from './pickBanCopy'
 import { blockingReasonLabel } from './pickBanStatus'
 import type { PickBanBanner, PickBanManagerControls, PickBanTeamPanel, PickBanView } from './pickBanView'
@@ -29,11 +37,6 @@ export type ManagerRequest =
     | { command: 'lock'; body: BodyOf<'lock'> }
 
 type ConfirmedCommand = 'restart' | 'cancel'
-
-interface StepChoice {
-    stepIndex: number
-    map: string
-}
 
 export interface ManagerPlay {
     selection: StepChoice | null
@@ -175,10 +178,7 @@ function rejectionMessage(command: ManagerCommand | null, error: unknown): strin
     const code = pickBanErrorCode(error)
     if (command === 'hand-over' && code === 'invalid_request') return HAND_OVER_REFUSED
     if (code) return code in REJECTIONS ? REJECTIONS[code as keyof typeof REJECTIONS] : `${blockingReasonLabel(code, 'lobby')}.`
-    if (error instanceof TypeError || (error instanceof DOMException && error.name === 'TimeoutError')) {
-        return 'Couldn’t reach the server. Check your connection and try again.'
-    }
-    return error instanceof Error && error.message ? error.message : 'Something went wrong. Try again.'
+    return unwordedRejection(error)
 }
 
 function needsConfirmation(command: ManagerCommand): command is ConfirmedCommand {
@@ -222,11 +222,8 @@ function actForOpen(view: PickBanView): boolean {
     return Boolean(view.affordances.manager?.actForSide && view.turn && !view.turn.viewerActs)
 }
 
-function selectedMapOf(view: PickBanView, play: ManagerPlay): string | null {
-    const { turn } = view
-    if (!turn || !actForOpen(view) || play.selection?.stepIndex !== turn.stepIndex) return null
-    const map = play.selection.map
-    return view.cards.some((card) => card.map === map && card.selectable) ? map : null
+function actForSelectionOf(view: PickBanView, play: ManagerPlay): string | null {
+    return actForOpen(view) ? selectedMapOf(view, play) : null
 }
 
 function optimisticLockOf(view: PickBanView, play: ManagerPlay): string | null {
@@ -239,9 +236,7 @@ function optimisticLockOf(view: PickBanView, play: ManagerPlay): string | null {
 export function withManagerPlay(view: PickBanView, play: ManagerPlay): PickBanView {
     const lockingIn = optimisticLockOf(view, play)
     if (lockingIn !== null) return withOptimisticLock(view, lockingIn)
-    const selectedMap = selectedMapOf(view, play)
-    if (selectedMap === null) return view
-    return { ...view, cards: view.cards.map((card) => (card.map === selectedMap ? { ...card, selected: true } : card)) }
+    return withSelectedMap(view, actForSelectionOf(view, play))
 }
 
 function actForControlsOf(view: PickBanView, play: ManagerPlay): CaptainControls | null {
@@ -254,7 +249,7 @@ function actForControlsOf(view: PickBanView, play: ManagerPlay): CaptainControls
     if (view.stagePhase === 'spotlight') return { kind: 'locked', reason: 'spotlight', countdown, next: turn }
     if (!turn) return null
     if (!actForOpen(view)) return { kind: 'waiting', turn }
-    const selectedMap = selectedMapOf(view, play)
+    const selectedMap = actForSelectionOf(view, play)
     return {
         kind: 'choose',
         action: turn.action,

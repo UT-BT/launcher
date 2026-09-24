@@ -3,7 +3,7 @@ import type { PickBanCountdown, PickBanTurn, PickBanView } from './pickBanView'
 
 export type CaptainCommand = 'ready' | 'unready' | 'lock'
 
-interface StepChoice {
+export interface StepChoice {
     stepIndex: number
     map: string
 }
@@ -69,16 +69,19 @@ function unreachable(error: unknown): boolean {
     return error instanceof TypeError || (error instanceof DOMException && error.name === 'TimeoutError')
 }
 
-function rejectionMessage(command: CaptainCommand | null, error: unknown): string {
-    const code = pickBanErrorCode(error)
-    const messages = command === 'lock' ? LOCK_REJECTIONS : READY_REJECTIONS
-    const worded = code ? messages[code] : undefined
-    if (worded) return worded
+export function unwordedRejection(error: unknown): string {
     if (unreachable(error)) return UNREACHABLE
     return error instanceof Error && error.message ? error.message : 'Something went wrong. Try again.'
 }
 
-function selectedMapOf(view: PickBanView, play: CaptainPlay): string | null {
+function rejectionMessage(command: CaptainCommand | null, error: unknown): string {
+    const code = pickBanErrorCode(error)
+    const messages = command === 'lock' ? LOCK_REJECTIONS : READY_REJECTIONS
+    const worded = code ? messages[code] : undefined
+    return worded ?? unwordedRejection(error)
+}
+
+export function selectedMapOf(view: PickBanView, play: Pick<CaptainPlay, 'selection'>): string | null {
     const { turn } = view
     if (!turn || play.selection?.stepIndex !== turn.stepIndex) return null
     const map = play.selection.map
@@ -102,14 +105,17 @@ export function withOptimisticLock(view: PickBanView, map: string): PickBanView 
     }
 }
 
-export function withCaptainPlay(view: PickBanView, play: CaptainPlay): PickBanView {
-    const lockingIn = optimisticLockOf(view, play)
-    if (lockingIn !== null) return withOptimisticLock(view, lockingIn)
-    const selectedMap = selectedMapOf(view, play)
+export function withSelectedMap(view: PickBanView, selectedMap: string | null): PickBanView {
     return {
         ...view,
         cards: view.cards.map((card) => (card.map === selectedMap ? { ...card, selected: true } : card)),
     }
+}
+
+export function withCaptainPlay(view: PickBanView, play: CaptainPlay): PickBanView {
+    const lockingIn = optimisticLockOf(view, play)
+    if (lockingIn !== null) return withOptimisticLock(view, lockingIn)
+    return withSelectedMap(view, selectedMapOf(view, play))
 }
 
 function controlsOf(view: PickBanView, play: CaptainPlay): CaptainControls | null {
