@@ -4,15 +4,15 @@ read_when:
   - "writing JSX that shows a player, a table, a modal, a filter/columns menu, or a tutorial"
   - "about to hand-roll UI that might already be a shared component"
   - "deciding whether to extract a new shared component"
-keywords: [PlayerInfo, DataTable, Modal, ColumnsMenu, FilterPresetsMenu, Tutorial, CapTimeLink, MapNavLink, NavLink, MapThumbnail, PatreonBadge, shared]
+keywords: [PlayerInfo, DataTable, Modal, ColumnsMenu, FilterPresetsMenu, Tutorial, CapTimeLink, MapNavLink, NavLink, MapThumbnail, PatreonBadge, shared, pick/ban, TeamPanel, PoolGrid, StepTimeline, CentreStage, FinalSummary, CountdownBar]
 provides: "the inventory of reusable components + when to use each"
 not_here:
   - "the class strings / design tokens → styling.md"
   - "how detail pages open via events (open-player / open-cap) → navigation.md"
   - "page/query state + persistence → state-patterns.md"
-sections: [hard-rule-playerinfo, player-cap-links, map-links, tables-datatable-primitives, columns-columnsmenu, filter-presets, tutorial, visual-primitives, ui-primitives, utilities, when-to-extract]
-last_verified: 2026-08-22
-verify_against: [app/components/shared/PlayerInfo.tsx, app/components/shared/DataTable.tsx, app/components/shared/CapTimeLink.tsx, app/components/shared/MapNavLink.tsx, app/components/shared/MapNameCell.tsx, app/components/shared/ColumnsMenu.tsx, app/components/shared/FilterPresetsMenu.tsx]
+sections: [hard-rule-playerinfo, player-cap-links, map-links, tables-datatable-primitives, columns-columnsmenu, filter-presets, tutorial, visual-primitives, pick-ban-visual-core, ui-primitives, utilities, when-to-extract]
+last_verified: 2026-09-24
+verify_against: [app/components/shared/PlayerInfo.tsx, app/components/shared/DataTable.tsx, app/components/shared/CapTimeLink.tsx, app/components/shared/MapNavLink.tsx, app/components/shared/MapNameCell.tsx, app/components/shared/ColumnsMenu.tsx, app/components/shared/FilterPresetsMenu.tsx, app/components/pages/events/pickban/components/TeamPanel.tsx, app/components/pages/events/pickban/components/PoolGrid.tsx, app/components/pages/events/pickban/components/StepTimeline.tsx, app/components/pages/events/pickban/components/CentreStage.tsx, app/components/pages/events/pickban/components/FinalSummary.tsx, app/components/pages/events/pickban/components/Countdown.tsx, app/components/pages/events/pickban/components/PickBanBannerNote.tsx, app/components/pages/events/pickban/components/pickBanTone.ts]
 ---
 
 # Shared components reference
@@ -284,6 +284,31 @@ the whole thead during the step:
 | `app/components/ui/modal.tsx` | Primary modal shell (header/footer, focus trap, Escape, stacking). Pass `offsetSidebar` so it respects the navigation rail. (`app/components/shared/Modal.tsx` is a simpler framer-motion variant used by `ErrorModal`.) |
 | `app/components/shared/ConfirmModal.tsx` | Yes/no confirmation dialog. |
 | `app/components/shared/BackButton.tsx` | "← Back" button. |
+
+## Pick/ban visual core
+
+`app/components/pages/events/pickban/components/` holds the pieces a pick/ban screen is
+built from. The match page uses them today, and the chromeless stream view reuses them
+inside its fixed 1920×1080 stage. Each takes slices of the view model (`PickBanView`,
+see `agents/data-sources.md`) and nothing from the raw payload.
+
+| Component | Props | Renders |
+|---|---|---|
+| `TeamPanel` | `panel: PickBanTeamPanel \| null`, `className?` | The A/B chip, stage seed chip, team name, a reserved "On the clock" row, and every member through `PlayerInfo` with a presence dot and a captain or acting-captain badge. Tinted and ringed in the side's colour. |
+| `PoolGrid` / `PoolCard` | `cards`, `previewActor` (the side whose selection preview is shown), `className?` | Square `MapThumbnail` cards. Banned: grey with a "BANNED" stamp in the banning side's colour. Picked: the picker's colour and "Map N". Decider: gold. Excluded: faded, "Excluded · <tag> maps", and the full reason in the title and screen-reader text. |
+| `StepTimeline` | `entries`, `skippedBans`, `className?` | One chip per plan step (icon, actor and action, a ring on the current step), a divider between segments, and a dashed "Skipped" chip wherever a ban was dropped. |
+| `CentreStage` | `view`, `summaryAction?`, `className?` | Switches on `view.stagePhase`: a not-open or lobby card (Ready per side), the A-vs-B intro with a countdown, the turn indicator (team, Ban or Pick, and the previewed map), the reveal, the final summary, or a cancelled or voided notice. A paused overlay sits over whatever the pause froze. `summaryAction` renders under the summary. The size comes from `className`. |
+| `IntroCard`, `TurnCard`, `RevealCard` | exported from `CentreStage.tsx` | The stage's building blocks, for a layout that places them differently. |
+| `FinalSummary` | `entries`, `className?` | Maps in play order, who picked each, the decider in gold, and a placeholder for any slot not revealed yet. |
+| `CountdownText` / `CountdownBar` | `countdown`, `tone` (bar only), `className?` | A countdown and a shrinking bar, painted on animation frames from `countdown.endsAt` straight into the DOM, so nothing re-renders per frame. A frozen countdown holds still at `remainingMs`. |
+| `PickBanBannerNote` | `banner`, `className?` | One view-model banner (voided, cancelled, paused, skipped bans or a warning) with its icon and tint. |
+| `pickBanTone.ts` | `PICK_BAN_TONES`, `teamTone(ab)`, `stepTone(actor)` | Class sets for A, B, gold and neutral. A step with no actor is the decider, so it is gold. |
+
+They size themselves with container queries (`@container/stage`, `/team`, `/grid`), not
+viewport breakpoints, so they work the same in a phone column, beside the sidebar at 4K and
+in a fixed stage. Keys are the view model's (`side`, member id, map name, plan index,
+map number), so a poll never remounts them. There is no animation yet: a new reveal
+simply swaps in.
 
 ## UI primitives (`app/components/ui/`)
 
