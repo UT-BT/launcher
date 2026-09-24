@@ -10,8 +10,7 @@ interface FinalSummaryProps {
 }
 
 function pickedByLabel(entry: PickBanSummaryEntry): string {
-    if (entry.decider) return 'Decider'
-    return `${entry.teamName ?? `Team ${entry.ab}`} pick`
+    return entry.decider ? entry.actorLabel : `${entry.actorLabel} pick`
 }
 
 export function FinalSummary({ entries, className }: FinalSummaryProps) {

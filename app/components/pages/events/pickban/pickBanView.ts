@@ -40,7 +40,8 @@ export interface PickBanTimelineEntry {
     action: PickBanStepAction
     actor: PickBanActor | null
     side: PickBanSide | null
-    teamName: string | null
+    actorLabel: string
+    actionLabel: string
     mapNumber: number | null
     status: PickBanStepStatus
     map: string | null
@@ -79,7 +80,7 @@ export interface PickBanTurn {
     stepNumber: number
     side: PickBanSide | null
     ab: PickBanActor | null
-    teamName: string | null
+    actorLabel: string
     action: PickBanStepAction
     segment: PickBanSegment
     mapNumber: number | null
@@ -96,7 +97,7 @@ export interface PickBanSummaryEntry {
     screenshotVersion: string | null
     side: PickBanSide | null
     ab: PickBanActor | null
-    teamName: string | null
+    actorLabel: string
     decider: boolean
 }
 
@@ -262,10 +263,14 @@ function exclusionReasonOf(state: PickBanState, exclusion: PickBanExclusion | nu
     return `${exclusion.tag} maps are excluded because ${triggers} (${exclusion.min_pre_cup_seed} or higher).`
 }
 
-function actionLabel(step: PickBanPlanStep, teamName: string | null): string {
+function actorLabelOf(state: PickBanState, step: PickBanPlanStep): string {
+    if (step.actor === null) return 'Decider'
+    return teamNameOf(state, step.side) ?? `Team ${step.actor}`
+}
+
+function actionLabelOf(state: PickBanState, step: PickBanPlanStep): string {
     if (step.action === 'decider') return 'Decider'
-    const who = teamName ?? (step.actor ? `Team ${step.actor}` : 'Team')
-    return `${who} ${step.action === 'ban' ? 'bans' : 'picks'}`
+    return `${actorLabelOf(state, step)} ${step.action === 'ban' ? 'bans' : 'picks'}`
 }
 
 function stagePhaseOf(status: PickBanSessionStatus, livePhase: LivePhase): PickBanStagePhase {
@@ -381,7 +386,8 @@ function timelineOf(moment: Moment, inProgress: boolean): PickBanTimelineEntry[]
             action: step.action,
             actor: step.actor,
             side: step.side,
-            teamName: teamNameOf(state, step.side),
+            actorLabel: actorLabelOf(state, step),
+            actionLabel: actionLabelOf(state, step),
             mapNumber: step.map_number,
             status,
             map: revealed ? step.map : null,
@@ -450,7 +456,7 @@ function summaryOf(moment: Moment): PickBanSummaryEntry[] {
                 screenshotVersion: screenshotVersionOf(state, map),
                 side: step.side,
                 ab: step.actor,
-                teamName: teamNameOf(state, step.side),
+                actorLabel: actorLabelOf(state, step),
                 decider: step.action === 'decider',
             }
         })
@@ -459,18 +465,17 @@ function summaryOf(moment: Moment): PickBanSummaryEntry[] {
 function turnOf(moment: Moment, inProgress: boolean): PickBanTurn | null {
     const { state, currentStep, pendingStep } = moment
     if (!inProgress || !currentStep) return null
-    const teamName = teamNameOf(state, currentStep.side)
     const acts = viewerActs(state, currentStep)
     return {
         stepIndex: currentStep.index,
         stepNumber: currentStep.index + 1,
         side: currentStep.side,
         ab: currentStep.actor,
-        teamName,
+        actorLabel: actorLabelOf(state, currentStep),
         action: currentStep.action,
         segment: currentStep.segment,
         mapNumber: currentStep.map_number,
-        actionLabel: actionLabel(currentStep, teamName),
+        actionLabel: actionLabelOf(state, currentStep),
         viewerActs: acts,
         lockedIn: acts && currentStep === pendingStep,
     }

@@ -689,23 +689,28 @@ pure and tested without a DOM. It returns:
   `remainingMs`.
 - `stagePhase`: the same as `phase`, except that while paused it keeps the phase the pause
   froze (`intro`, `awaiting` or `spotlight`), so a paused overlay can sit over it
-- `turn`, with `actionLabel`, the `mapNumber` a pick decides (`null` for a ban) and whether
-  the viewer acts, and `spotlight`, the step being revealed
+- `turn`, with `actorLabel` and `actionLabel`, the `mapNumber` a pick decides (`null` for a
+  ban) and whether the viewer acts, and `spotlight`, the step being revealed
 - `cards`: `available`, `banned`, `picked`, `decider` or `excluded`, with the acting side,
   step number, map number, exclusion reason (the raw `exclusion` plus `exclusionReason`, a
   sentence naming the team and seed that triggered it) and the `previewed`, `lockedIn` and
   `selectable` flags
-- `timeline`: `upcoming`, `current`, `locked_in` or `revealed`, with each step's team name, and
-  its map and screenshot version once revealed
+- `timeline`: `upcoming`, `current`, `locked_in` or `revealed`, with each step's
+  `actorLabel` and `actionLabel`, and its map and screenshot version once revealed
 - `skippedBans`: the payload's `skipped_bans`, one entry per dropped ban in the same order,
   with `beforeIndex` (its `before_index`) so a timeline can draw it in place
-- `summary`, in play order (`map_number`), with a slot reserved for every map from the start
+- `summary`, in play order (`map_number`), with each map's `actorLabel` and a slot reserved
+  for every map from the start
 - `teams.left` (A) and `teams.right` (B), falling back to `team_a` on the left while A is
   undetermined
 - `banners`: voided, cancelled, paused, skipped bans and warnings
 - `affordances`: `canReady`, `isReady`, `canLock`, and `manager` (which dock controls apply
   to the current status, `startBlockedBy`, and `actForSide`)
 - `nextBoundaryAt`: when the view next changes on its own
+
+`actorLabel` is who acts at a step: the team's name, `Team A` or `Team B` while that side's
+team is undecided, or `Decider`. `actionLabel` adds the verb (`Crimson Cats bans`, or
+`Decider`). Components render these labels rather than rebuilding them.
 
 While a step is inside its reveal lead, the side that locked it sees it as `locked_in`, with
 its card flagged `lockedIn`. Everyone else still sees the step being awaited. `canLock` is

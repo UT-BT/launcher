@@ -68,7 +68,9 @@ describe('phase between polls', () => {
         const awaiting = viewAt(state, INTRO_END)
         expect(awaiting.phase).toBe('awaiting')
         expect(awaiting.countdown).toBeNull()
-        expect(awaiting.turn).toMatchObject({ stepIndex: 0, side: 'team_a', ab: 'A', action: 'ban', actionLabel: 'Crimson Cats bans' })
+        expect(awaiting.turn).toMatchObject({
+            stepIndex: 0, side: 'team_a', ab: 'A', action: 'ban', actorLabel: 'Crimson Cats', actionLabel: 'Crimson Cats bans',
+        })
     })
 
     it('reads every timestamp through the clock offset', () => {
@@ -383,16 +385,33 @@ describe('timeline', () => {
         const state = asSpectator(versioned(firstBanLocked()))
 
         const inLead = viewAt(state, FIRST_LOCK + 1_000)
-        expect(inLead.timeline[0]).toMatchObject({ teamName: 'Crimson Cats', map: null, screenshotVersion: null })
-        expect(inLead.timeline[6]).toMatchObject({ teamName: null, action: 'decider' })
+        expect(inLead.timeline[0]).toMatchObject({ actorLabel: 'Crimson Cats', map: null, screenshotVersion: null })
+        expect(inLead.timeline[6]).toMatchObject({ actorLabel: 'Decider', action: 'decider' })
 
         const revealed = viewAt(state, FIRST_LOCK + LEAD_MS)
-        expect(revealed.timeline[0]).toMatchObject({ teamName: 'Crimson Cats', map: ALPHA, screenshotVersion: `v-${ALPHA}` })
+        expect(revealed.timeline[0]).toMatchObject({ actorLabel: 'Crimson Cats', map: ALPHA, screenshotVersion: `v-${ALPHA}` })
         expect(revealed.spotlight).toMatchObject({ map: ALPHA, screenshotVersion: `v-${ALPHA}` })
 
         const done = viewAt(asSpectator(versioned(completed())), T0 + 3_600_000)
         expect(done.summary.map((entry) => entry.screenshotVersion)).toEqual([`v-${CHARLIE}`, `v-${DELTA}`, `v-${GOLF}`])
         expect(viewAt(asSpectator(versioned(pickBanState())), T0).summary.every((entry) => entry.screenshotVersion === null)).toBe(true)
+    })
+
+    it('labels who acts at every step: the team, its letter while the team is undecided, or the decider', () => {
+        const undecidedB = pickBanState({ teams: { ...pickBanState().teams, team_b: null } })
+
+        const view = viewAt(asSpectator(undecidedB), T0)
+
+        expect(view.timeline.map((entry) => [entry.actorLabel, entry.actionLabel])).toEqual([
+            ['Crimson Cats', 'Crimson Cats bans'],
+            ['Team B', 'Team B bans'],
+            ['Team B', 'Team B picks'],
+            ['Crimson Cats', 'Crimson Cats picks'],
+            ['Team B', 'Team B bans'],
+            ['Crimson Cats', 'Crimson Cats bans'],
+            ['Decider', 'Decider'],
+        ])
+        expect(view.summary.map((entry) => entry.actorLabel)).toEqual(['Team B', 'Crimson Cats', 'Decider'])
     })
 })
 
@@ -413,10 +432,10 @@ describe('final summary', () => {
 
         const view = viewAt(asSpectator(shuffled), T0 + 3_600_000)
 
-        expect(view.summary.map((entry) => [entry.mapNumber, entry.map, entry.teamName, entry.decider])).toEqual([
+        expect(view.summary.map((entry) => [entry.mapNumber, entry.map, entry.actorLabel, entry.decider])).toEqual([
             [1, CHARLIE, 'Azure Owls', false],
             [2, DELTA, 'Crimson Cats', false],
-            [3, GOLF, null, true],
+            [3, GOLF, 'Decider', true],
         ])
         expect(view.timeline.map((entry) => entry.index)).toEqual([0, 1, 2, 3, 4, 5, 6])
     })

@@ -185,7 +185,7 @@ export function TurnCard({ turn, previewCard, stepCount, mapCount }: {
 }) {
     const tone = PICK_BAN_TONES[stepTone(turn.ab)]
     const Icon = turn.action === 'ban' ? Ban : Check
-    const who = turn.teamName ?? `Team ${turn.ab}`
+    const who = turn.actorLabel
 
     return (
         <div className="flex w-full flex-col items-center gap-3 text-center @md/stage:gap-4">
@@ -227,9 +227,7 @@ export function TurnCard({ turn, previewCard, stepCount, mapCount }: {
 }
 
 function revealByline(entry: PickBanTimelineEntry): string {
-    if (entry.action === 'decider') return 'Decider'
-    const who = entry.teamName ?? `Team ${entry.actor}`
-    return entry.action === 'ban' ? `${who} bans` : `${who} picks map ${entry.mapNumber}`
+    return entry.action === 'pick' ? `${entry.actionLabel} map ${entry.mapNumber}` : entry.actionLabel
 }
 
 export function RevealCard({ entry, countdown, upNext }: {

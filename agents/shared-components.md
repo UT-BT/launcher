@@ -290,7 +290,9 @@ the whole thead during the step:
 `app/components/pages/events/pickban/components/` holds the pieces a pick/ban screen is
 built from. The match page uses them today, and the chromeless stream view reuses them
 inside its fixed 1920×1080 stage. Each takes slices of the view model (`PickBanView`,
-see `agents/data-sources.md`) and nothing from the raw payload.
+see `agents/data-sources.md`) and nothing from the raw payload. Who acts and what they do
+read from the view model's `actorLabel` and `actionLabel`; no component rebuilds a team
+label from a name and a letter.
 
 | Component | Props | Renders |
 |---|---|---|

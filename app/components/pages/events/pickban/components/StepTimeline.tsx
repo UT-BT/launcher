@@ -29,9 +29,7 @@ function entryLabel(entry: PickBanTimelineEntry): string {
 }
 
 function entryDescription(entry: PickBanTimelineEntry): string {
-    const who = entry.action === 'decider'
-        ? 'Decider, the last map standing'
-        : `${entry.teamName ?? `Team ${entry.actor}`} ${entry.action === 'ban' ? 'bans' : 'picks'}`
+    const who = entry.action === 'decider' ? 'Decider, the last map standing' : entry.actionLabel
     const mapNumber = entry.mapNumber !== null && entry.action !== 'decider' ? ` map ${entry.mapNumber}` : ''
     const map = entry.map ? `: ${displayMapName(entry.map)}` : ''
     const status = entry.status === 'current' ? ' (now)' : entry.status === 'locked_in' ? ' (locked in)' : ''
