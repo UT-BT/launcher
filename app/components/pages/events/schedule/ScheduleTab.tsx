@@ -2,12 +2,11 @@ import { useEffect } from 'react'
 import { CalendarClock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/app/components/ui/button'
-import { useNavigation } from '@/app/components/navigation/NavigationContext'
-import { NavLink } from '@/app/components/navigation/NavLink'
 import { useDisplayTimezone } from '@/app/utils/timezone'
 import type { MyPickBanSession, ScheduleEntry } from '@/app/utils/api'
 import { teamLabel } from '../bracket/bracketShared'
 import { TeamName } from '../TeamRoster'
+import { PickBanJoinBanner } from '../pickban/components/PickBanJoinBanner'
 import { formatSlotTime, proposerName, schedulabilityReason, whoseTurnLabel } from './scheduleShared'
 
 const REFRESH_MS = 30_000
@@ -70,7 +69,6 @@ function ScheduleMatchCard({ entry, myTeamId, onOpenPicker, eventSlug, pickBanOp
     pickBanOpen: boolean
 }) {
     const timezone = useDisplayTimezone()
-    const { navigate } = useNavigation()
     const { match } = entry
     const myTurn = !!entry.proposal && !!myTeamId && entry.whose_turn === myTeamId
 
@@ -94,20 +92,7 @@ function ScheduleMatchCard({ entry, myTeamId, onOpenPicker, eventSlug, pickBanOp
                 </span>
             </div>
 
-            {pickBanOpen && (
-                <NavLink
-                    view="match-pickban"
-                    params={{ eventSlug, matchId: match.id }}
-                    onActivate={() => navigate('match-pickban', { eventSlug, matchId: match.id })}
-                    className="flex items-center gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1.5 text-xs cursor-pointer hover:bg-emerald-500/15 transition-colors"
-                >
-                    <span className="relative flex size-1.5 shrink-0">
-                        <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 animate-ping" />
-                        <span className="relative inline-flex size-1.5 rounded-full bg-emerald-400" />
-                    </span>
-                    <span className="text-foreground font-medium">Pick/Ban open – Join</span>
-                </NavLink>
-            )}
+            {pickBanOpen && <PickBanJoinBanner eventSlug={eventSlug} matchId={match.id} />}
 
             {!entry.schedulable ? (
                 <p className="text-xs text-muted-foreground">{schedulabilityReason(entry.reason)}</p>

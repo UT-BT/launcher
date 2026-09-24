@@ -8,7 +8,7 @@ read_when:
   - "reading a match's pick/ban state, sending a pick/ban command, or rendering from the pick/ban view model"
   - "rendering the manager match queue, or changing which stable codes it shows as a blocking reason"
   - "finding a pick/ban session from the bracket, a match card, the event page or the Schedule tab without a direct link"
-keywords: [api.ts, fetch, endpoint, accessToken, avatar, MapThumbnail, favorites, patreon, downloadMapZip, world_records, caps, predictions, draw, odds, schedule, proposal, slot, whose_turn, resolved_window, countdown, nav badge, fetchMyTournaments, SlotPickerModal, SlotGrid, DateTimeField, slotGeneration, proposeMatchSlots, withdrawMatchProposal, acceptMatchProposal, fetchMatchSchedule, ApiError, expected_match_duration_minutes, fetchPickBanConfig, PickBanConfig, PickBanPoolMap, MapsTab, mapsShared, stagesWithPools, tagBadgeVariant, pick/ban, fetchPickBanState, ETag, If-None-Match, 304, X-Server-Now, server_now, clock offset, reveal_at, sendPickBanCommand, sendPickBanManagerCommand, pickBanErrorCode, captain controls, CaptainDock, useCaptainPlay, fetchPickBanQueue, PickBanQueueEntry, PickBanQueueRow, toQueueRow, canOpenLobby, blockingReasonLabel, PickBanQueuePanel, pickBanStatusBadge, statusOfPhase, buildPickBanView, setPickBanStageConfig, setPickBanStagePool, copyPickBanStagePool, pickBanEditor, stage pool, buildMatchLinks, matchStreamPath, createPoller, pick_ban_status, MatchPickBanStatus, pickBanCardAffordance, PickBanCardPill, pickBanMapLabel, MyPickBanSession, pick_ban_session, pickBanJoinBannerVisible, PickBanJoinBanner, PICK_BAN_ME_REFRESH_MS, pickBanEntryPoints, Join banner, scene, sceneDirection, playsEntrance, usePickBanPreload]
+keywords: [api.ts, fetch, endpoint, accessToken, avatar, MapThumbnail, favorites, patreon, downloadMapZip, world_records, caps, predictions, draw, odds, schedule, proposal, slot, whose_turn, resolved_window, countdown, nav badge, fetchMyTournaments, SlotPickerModal, SlotGrid, DateTimeField, slotGeneration, proposeMatchSlots, withdrawMatchProposal, acceptMatchProposal, fetchMatchSchedule, ApiError, expected_match_duration_minutes, fetchPickBanConfig, PickBanConfig, PickBanPoolMap, MapsTab, mapsShared, stagesWithPools, tagBadgeVariant, pick/ban, fetchPickBanState, ETag, If-None-Match, 304, X-Server-Now, server_now, clock offset, reveal_at, sendPickBanCommand, sendPickBanManagerCommand, pickBanErrorCode, captain controls, CaptainDock, useCaptainPlay, fetchPickBanQueue, PickBanQueueEntry, PickBanQueueRow, toQueueRow, canOpenLobby, blockingReasonLabel, PickBanQueuePanel, pickBanStatusBadge, statusOfPhase, buildPickBanView, setPickBanStageConfig, setPickBanStagePool, copyPickBanStagePool, pickBanEditor, stage pool, buildMatchLinks, matchStreamPath, createPoller, pick_ban_status, MatchPickBanStatus, pickBanCardAffordance, PickBanCardPill, pickBanMapLabel, MyPickBanSession, pick_ban_session, PickBanLink, PickBanJoinBanner, pickBanEntryPoints, Join banner, scene, sceneDirection, playsEntrance, usePickBanPreload]
 provides: "the client-side API contract the launcher consumes + asset URLs + favorites/patreon sync models"
 not_here:
   - "IPC channels (window.conveyor.*) → lib/conveyor/README.md"
@@ -16,7 +16,7 @@ not_here:
   - "the procedure to wire a new endpoint into the UI → skill: consume-api-data"
 sections: [backend-api, errors, admin-api, event-brackets, event-scheduling, event-predictions, public-maps-tab-pick-ban-pools, event-pickban-sessions, event-pick-ban-setup, changing-a-map-screenshot, cap-detail-page-endpoints, world-records-page-endpoints, team-maps-and-team-runs, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites, account-state-and-badges]
 last_verified: 2026-09-24
-verify_against: [app/utils/api.ts, app/utils/chartBuckets.ts, app/components/pages/admin/components/controls.tsx, app/components/pages/admin/sections/HostsManagementSection.tsx, app/utils/patreon.ts, app/utils/server-utils.ts, app/hooks/useServerFavorites.ts, app/components/pages/events/manage/formatFields.tsx, app/components/pages/events/bracket/bracketShared.tsx, app/components/pages/events/bracket/BracketTab.tsx, app/components/pages/events/bracket/GroupStageView.tsx, app/components/pages/events/bracket/SwissStageView.tsx, app/components/pages/events/bracket/ElimStageView.tsx, app/components/pages/events/predictions/predictionsShared.tsx, app/components/pages/events/predictions/PredictionsTab.tsx, app/components/pages/events/schedule/scheduleShared.tsx, app/components/pages/events/schedule/ScheduleTab.tsx, app/components/pages/events/schedule/SlotPickerModal.tsx, app/components/pages/events/schedule/slotGeneration.ts, app/components/pages/events/schedule/SlotGrid.tsx, app/components/pages/events/manage/DateTimeField.tsx, app/components/pages/events/eventsShared.tsx, app/components/pages/EventDetailPage.tsx, app/utils/timezone.ts, app/components/pages/events/manage/ScheduleOversightPanel.tsx, app/components/pages/events/ManagePanel.tsx, app/components/main/Main.tsx, app/components/layout/AppLayout.tsx, app/components/pages/events/maps/MapsTab.tsx, app/components/pages/events/maps/mapsShared.ts, app/components/pages/events/pickban/pickBanView.ts, app/components/pages/events/pickban/pickBanStatus.ts, app/components/pages/events/pickban/pickBanSession.ts, app/components/pages/events/pickban/pickBanEntryPoints.ts, app/components/pages/events/pickban/clockOffset.ts, app/components/pages/events/manage/pickban/pickBanEditor.ts, app/components/pages/events/manage/pickban/PickBanPanel.tsx, app/components/pages/events/manage/pickban/PickBanStageCard.tsx, app/components/pages/events/manage/pickban/PickBanQueuePanel.tsx, app/components/pages/events/manage/pickban/pickBanQueue.ts, app/components/pages/events/pickBanTags.ts, app/components/navigation/matchLinks.ts, app/utils/poller.ts, app/components/pages/events/pickban/stream/StreamView.tsx]
+verify_against: [app/utils/api.ts, app/utils/chartBuckets.ts, app/components/pages/admin/components/controls.tsx, app/components/pages/admin/sections/HostsManagementSection.tsx, app/utils/patreon.ts, app/utils/server-utils.ts, app/hooks/useServerFavorites.ts, app/components/pages/events/manage/formatFields.tsx, app/components/pages/events/bracket/bracketShared.tsx, app/components/pages/events/bracket/BracketTab.tsx, app/components/pages/events/bracket/GroupStageView.tsx, app/components/pages/events/bracket/SwissStageView.tsx, app/components/pages/events/bracket/ElimStageView.tsx, app/components/pages/events/predictions/predictionsShared.tsx, app/components/pages/events/predictions/PredictionsTab.tsx, app/components/pages/events/schedule/scheduleShared.tsx, app/components/pages/events/schedule/ScheduleTab.tsx, app/components/pages/events/schedule/SlotPickerModal.tsx, app/components/pages/events/schedule/slotGeneration.ts, app/components/pages/events/schedule/SlotGrid.tsx, app/components/pages/events/manage/DateTimeField.tsx, app/components/pages/events/eventsShared.tsx, app/components/pages/EventDetailPage.tsx, app/utils/timezone.ts, app/components/pages/events/manage/ScheduleOversightPanel.tsx, app/components/pages/events/ManagePanel.tsx, app/components/main/Main.tsx, app/components/layout/AppLayout.tsx, app/components/pages/events/maps/MapsTab.tsx, app/components/pages/events/maps/mapsShared.ts, app/components/pages/events/pickban/pickBanView.ts, app/components/pages/events/pickban/pickBanStatus.ts, app/components/pages/events/pickban/pickBanSession.ts, app/components/pages/events/pickban/pickBanEntryPoints.ts, app/components/pages/events/pickban/components/PickBanLink.tsx, app/components/pages/events/pickban/components/PickBanJoinBanner.tsx, app/components/pages/events/pickban/clockOffset.ts, app/components/pages/events/manage/pickban/pickBanEditor.ts, app/components/pages/events/manage/pickban/PickBanPanel.tsx, app/components/pages/events/manage/pickban/PickBanStageCard.tsx, app/components/pages/events/manage/pickban/PickBanQueuePanel.tsx, app/components/pages/events/manage/pickban/pickBanQueue.ts, app/components/pages/events/pickBanTags.ts, app/components/navigation/matchLinks.ts, app/utils/poller.ts, app/components/pages/events/pickban/stream/StreamView.tsx]
 ---
 
 # Data sources
@@ -158,37 +158,38 @@ what lets a match card offer a way into a session without a direct link.
 `pickBanCardAffordance(status, isRostered)`
 (`events/pickban/pickBanEntryPoints.ts`, pure, no DOM) turns that status plus
 whether the viewer is rostered on either side into `'live' | 'join' | null`;
-`MatchCard` renders it as a small pill next to the status chip through its own
-`NavLink` to `match-pickban` (`eventSlug` + `myTeamId` are optional props —
-every stage view and `BracketTab` thread them down the same way they already
-thread `onMapSelect`/`onScheduleMatch`, so the pill is absent wherever a
-caller has neither to give, e.g. the Manage → Bracket editor). The pill's own
-`NavLink` `stopPropagation`s by default, so it never also fires the card's
-own `onClick` (which opens the scheduler) — see the "traps" note in
-`agents/navigation.md` about never nesting a second navigation mechanism.
-Once a session completes, `bracketShared.tsx`'s `pickBanMapLabel(row, teamA,
-teamB)` (pure) reads the map row's own `picked_by`/`kind` (unwatched by
-`pick_ban_status`, which only reflects the *current* session) into `'Picked
-by <team>'` or `'Decider'` for `MapRow` to show next to the map name — this
-is the same `picked_by`/`kind` `agents/pick-ban.md`'s slot-write section
-documents, already on `EventMatchMap` since the map-slot-writes ticket.
+`MatchCard` renders it as a small pill next to the status chip (`eventSlug` +
+`myTeamId` are optional props — every stage view and `BracketTab` thread them
+down the same way they already thread `onMapSelect`/`onScheduleMatch`, so the
+pill is absent wherever a caller has neither to give, e.g. the Manage →
+Bracket editor). Once a session completes, `bracketShared.tsx`'s
+`pickBanMapLabel(row, teamA, teamB)` (pure) reads the map row's own
+`picked_by`/`kind` into `'Picked by <team>'` or `'Decider'` for `MapRow` to
+show next to the map name.
+
+**`events/pickban/components/PickBanLink.tsx`** wraps the one `NavLink` to
+`match-pickban` every pick/ban entry point uses, `stopPropagation`d by
+default so it never also fires an enclosing card's own click handler (the
+match card's own `onClick` opens the scheduler). `PickBanCardPill` and
+`PickBanJoinBanner` (`events/pickban/components/PickBanJoinBanner.tsx`) both
+build on it — the banner is the shared "Pick/Ban open – Join" pill (a small
+pulsing dot plus the label), used identically on the event page and, for the
+one Schedule entry whose match has an open session, on its card in
+`ScheduleTab`.
 
 **The event `me` payload carries `pick_ban_session: MyPickBanSession | null`**
 (`{match_id, status: 'lobby' | 'running' | 'paused'}`) — the caller's own
 active team's open or running session, `null` the moment it has none, is
-complete, or is cancelled/voided. `EventDetailPage` refreshes `fetchMyEventStatus`
-every 30 seconds (`PICK_BAN_ME_REFRESH_MS`, its own `setInterval`, independent
-of the page's manual refresh) so a captain who is not looking at the page
-still gets the Join banner within half a minute of a lobby opening.
-`pickBanJoinBannerVisible(session)` (same pure module) is just `session !==
-null`; the page renders a small pulsing-dot banner ("Pick/Ban open – Join",
-another `NavLink` to `match-pickban`) above the next-match banner whenever it
-is. `ScheduleTab` takes the same `pickBanSession` and highlights the one
-entry whose `match.id` matches it with an identical banner in place of (well,
-above) its usual propose/respond button — the Schedule tab's own call to
-action. Neither banner uses a per-row CSS animation: `MatchCard`'s pill never
-pulses, keeping the styling budget's "no per-row infinite animation" rule —
-only these two singleton banners carry the small `animate-ping` dot.
+complete, or is cancelled/voided. `EventDetailPage` keeps a `createPoller`
+instance (see "Polling live data" in `agents/state-patterns.md`) polling
+`fetchMyEventStatus` every 30 seconds, independent of the page's manual
+refresh, so a captain who is not looking at the page still gets the Join
+banner within half a minute of a lobby opening; being a `createPoller`
+instance, it already rests while the tab is hidden and refreshes the moment
+it becomes visible again, and a failed poll simply keeps the last good `my`.
+Neither banner nor `MatchCard`'s pill uses a per-row CSS animation — only
+the two banners carry the small `animate-ping` dot, keeping the styling
+budget's "no per-row infinite animation" rule.
 
 **`published` is the whole-surface gate.** Until an event manager turns it on, a
 player gets no stages, no standings and no format at all — so the Bracket tab
