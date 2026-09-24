@@ -1,8 +1,6 @@
 import { buildMatchLinks } from '@/app/components/navigation/matchLinks'
 import type { PickBanErrorCode, PickBanQueueEntry, PickBanSessionStatus } from '@/app/utils/api'
 
-export type PickBanQueueStatusTone = 'idle' | 'ready' | 'live' | 'paused' | 'done'
-
 export interface PickBanQueueRow {
     matchId: string
     stageName: string
@@ -10,40 +8,19 @@ export interface PickBanQueueRow {
     scheduledAt: string | null
     teamAName: string
     teamBName: string
-    statusLabel: string
-    statusTone: PickBanQueueStatusTone
+    status: PickBanSessionStatus
     readyCount: number
     onlineCount: number
-    startable: boolean
     blockingReasonLabel: string | null
     canOpenLobby: boolean
     playerLink: string
     streamLink: string
 }
 
-const STATUS_LABELS: Record<PickBanSessionStatus, string> = {
-    none: 'Not opened',
-    lobby: 'Lobby',
-    running: 'Live',
-    paused: 'Paused',
-    complete: 'Complete',
-    cancelled: 'Cancelled',
-    voided: 'Voided',
-}
-
-const STATUS_TONES: Record<PickBanSessionStatus, PickBanQueueStatusTone> = {
-    none: 'idle',
-    lobby: 'ready',
-    running: 'live',
-    paused: 'paused',
-    complete: 'done',
-    cancelled: 'idle',
-    voided: 'idle',
-}
+const UNKNOWN_BLOCKING_REASON = 'Not startable'
 
 const BLOCKING_REASON_LABELS: Partial<Record<PickBanErrorCode, string>> = {
     no_session: 'No lobby open',
-    wrong_status: 'A pick/ban is already in progress',
     teams_not_decided: 'Teams not decided',
     a_undetermined: 'Team A undetermined',
     pre_cup_seed_missing: 'A team is missing its pre-cup seed',
@@ -53,17 +30,16 @@ const BLOCKING_REASON_LABELS: Partial<Record<PickBanErrorCode, string>> = {
     match_finished: 'Match already finished',
 }
 
-export function statusLabel(status: PickBanSessionStatus): string {
-    return STATUS_LABELS[status]
+const WRONG_STATUS_LABELS: Partial<Record<PickBanSessionStatus, string>> = {
+    running: 'Pick/ban already in progress',
+    paused: 'Pick/ban is paused',
+    complete: 'Pick/ban already complete',
 }
 
-export function statusTone(status: PickBanSessionStatus): PickBanQueueStatusTone {
-    return STATUS_TONES[status]
-}
-
-export function blockingReasonLabel(code: PickBanErrorCode | null): string | null {
+export function blockingReasonLabel(code: PickBanErrorCode | null, status: PickBanSessionStatus): string | null {
     if (code === null) return null
-    return BLOCKING_REASON_LABELS[code] ?? 'Not startable'
+    const label = code === 'wrong_status' ? WRONG_STATUS_LABELS[status] : BLOCKING_REASON_LABELS[code]
+    return label ?? UNKNOWN_BLOCKING_REASON
 }
 
 export function canOpenLobby(status: PickBanSessionStatus): boolean {
@@ -80,12 +56,10 @@ export function toQueueRow(entry: PickBanQueueEntry, eventSlug: string): PickBan
         scheduledAt: entry.scheduled_at,
         teamAName: entry.teams.team_a?.name ?? 'TBD',
         teamBName: entry.teams.team_b?.name ?? 'TBD',
-        statusLabel: statusLabel(entry.session_status),
-        statusTone: statusTone(entry.session_status),
+        status: entry.session_status,
         readyCount: entry.ready_count,
         onlineCount: entry.online_count,
-        startable: entry.startable,
-        blockingReasonLabel: blockingReasonLabel(entry.blocking_reason),
+        blockingReasonLabel: blockingReasonLabel(entry.blocking_reason, entry.session_status),
         canOpenLobby: canOpenLobby(entry.session_status),
         playerLink: links.playerLink,
         streamLink: links.streamLink,

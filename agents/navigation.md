@@ -430,8 +430,7 @@ the desktop build has no usable site origin at runtime, so a link built from it
 would open nowhere for anyone else. This makes "Copy link" identical on both
 targets.
 
-**Path shapes** (decided here so later tickets have something to build against
-before the pages exist):
+**Path shapes:**
 
 - Player link — the in-app pick/ban page: `/events/:eventSlug/matches/:matchId`
   (`match-pickban` view, in `routes.ts` / the route contract like any other
@@ -456,8 +455,11 @@ web build opens it straight from a deep link.
   `NavLink` to `event-detail` with `eventTab: 'bracket'`. It navigates through
   `useNavigation().navigate`, so it is a real `/events/<slug>?tab=bracket` anchor on web
   and one `navigate()` call on both targets.
-- **Copy link** copies `buildMatchLinks(eventSlug, matchId).playerLink` (above), so the
-  copied URL is the public site's on desktop too.
+- **Copy link** copies `buildMatchLinks(eventSlug, matchId).playerLink` (above) through
+  `useCopyFeedback`, so the copied URL is the public site's on desktop too.
+- **Into the page.** The Manage → Pick/Ban queue's **Open page** is a `NavLink` to
+  `match-pickban` (a `Button asChild` around it), so on web it is a real anchor that opens
+  in a new tab like any other link.
 
 What the page renders, and how it keeps polling invisible, is in `agents/data-sources.md`
 (the watch page, under pick/ban sessions).

@@ -4,7 +4,7 @@ read_when:
   - "writing JSX that shows a player, a table, a modal, a filter/columns menu, or a tutorial"
   - "about to hand-roll UI that might already be a shared component"
   - "deciding whether to extract a new shared component"
-keywords: [PlayerInfo, DataTable, Modal, ColumnsMenu, FilterPresetsMenu, Tutorial, CapTimeLink, MapNavLink, NavLink, MapThumbnail, PatreonBadge, shared, pick/ban, TeamPanel, PoolGrid, StepTimeline, CentreStage, FinalSummary, CountdownBar]
+keywords: [PlayerInfo, DataTable, Modal, ColumnsMenu, FilterPresetsMenu, Tutorial, CapTimeLink, MapNavLink, NavLink, MapThumbnail, PatreonBadge, shared, pick/ban, TeamPanel, PoolGrid, StepTimeline, CentreStage, FinalSummary, CountdownBar, PickBanStatusChip, useCopyFeedback, copy link]
 provides: "the inventory of reusable components + when to use each"
 not_here:
   - "the class strings / design tokens → styling.md"
@@ -12,7 +12,7 @@ not_here:
   - "page/query state + persistence → state-patterns.md"
 sections: [hard-rule-playerinfo, player-cap-links, map-links, tables-datatable-primitives, columns-columnsmenu, filter-presets, tutorial, visual-primitives, pick-ban-visual-core, ui-primitives, utilities, when-to-extract]
 last_verified: 2026-09-24
-verify_against: [app/components/shared/PlayerInfo.tsx, app/components/shared/DataTable.tsx, app/components/shared/CapTimeLink.tsx, app/components/shared/MapNavLink.tsx, app/components/shared/MapNameCell.tsx, app/components/shared/ColumnsMenu.tsx, app/components/shared/FilterPresetsMenu.tsx, app/components/pages/events/pickban/components/TeamPanel.tsx, app/components/pages/events/pickban/components/PoolGrid.tsx, app/components/pages/events/pickban/components/StepTimeline.tsx, app/components/pages/events/pickban/components/CentreStage.tsx, app/components/pages/events/pickban/components/FinalSummary.tsx, app/components/pages/events/pickban/components/Countdown.tsx, app/components/pages/events/pickban/components/PickBanBannerNote.tsx, app/components/pages/events/pickban/components/pickBanTone.ts]
+verify_against: [app/components/shared/PlayerInfo.tsx, app/components/shared/DataTable.tsx, app/components/shared/CapTimeLink.tsx, app/components/shared/MapNavLink.tsx, app/components/shared/MapNameCell.tsx, app/components/shared/ColumnsMenu.tsx, app/components/shared/FilterPresetsMenu.tsx, app/components/pages/events/pickban/components/TeamPanel.tsx, app/components/pages/events/pickban/components/PoolGrid.tsx, app/components/pages/events/pickban/components/StepTimeline.tsx, app/components/pages/events/pickban/components/CentreStage.tsx, app/components/pages/events/pickban/components/FinalSummary.tsx, app/components/pages/events/pickban/components/Countdown.tsx, app/components/pages/events/pickban/components/PickBanBannerNote.tsx, app/components/pages/events/pickban/components/PickBanStatusChip.tsx, app/components/pages/events/pickban/components/pickBanTone.ts, app/hooks/useCopyFeedback.ts]
 ---
 
 # Shared components reference
@@ -304,6 +304,7 @@ label from a name and a letter.
 | `FinalSummary` | `entries`, `className?` | Maps in play order, who picked each, the decider in gold, and a placeholder for any slot not revealed yet. |
 | `CountdownText` / `CountdownBar` | `countdown`, `tone` (bar only), `className?` | A countdown and a shrinking bar, painted on animation frames from `countdown.endsAt` straight into the DOM, so nothing re-renders per frame. A frozen countdown holds still at `remainingMs`. |
 | `PickBanBannerNote` | `banner`, `className?` | One view-model banner (voided, cancelled, paused, skipped bans or a warning) with its icon and tint. |
+| `PickBanStatusChip` | `status: PickBanSessionStatus`, `className?` | A session status in the words and colours of `pickBanStatus.ts`: Not open, Cancelled and Voided muted, Lobby in the accent, Live emerald, Paused amber, Complete neutral. The Manage queue and the watch page both use it, so a status reads the same everywhere. |
 | `pickBanTone.ts` | `PICK_BAN_TONES`, `teamTone(ab)`, `stepTone(actor)` | Class sets for A, B, gold and neutral. A step with no actor is the decider, so it is gold. |
 
 They size themselves with container queries (`@container/stage`, `/team`, `/grid`), not
@@ -334,6 +335,7 @@ simply swaps in.
 | `app/utils/search.ts` | `fuzzyMatch(text, query)` — substring-first, ordered-subsequence fallback. |
 | `app/utils/server-utils.ts` | Server-specific: `trimServerName`, `getServerType`, `getServerRegion`, `getRegionFlag`, `getGameStatusText`, `sortServers`, `filterServers`. Types: `ServerType`, `FilterState`, `ServerSortField`, `SortDir`, `ServerPreset`, `ServerPresetFilters`. |
 | `app/utils/api.ts` | Data fetching + URL builders. See `data-sources.md`. |
+| `app/hooks/useCopyFeedback.ts` | `useCopyFeedback(onError)` → `{ copiedKey, copy(key, text) }`. Copies to the clipboard and sets `copiedKey` for 1.5 s, for a transient "Copied" label; the timer is cleared on unmount. A failed copy goes to `onError`. Use it for any copy-link button. |
 
 ## When to extract a NEW shared component
 

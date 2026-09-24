@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { ArrowLeft, Check, Link2, Swords, WifiOff } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { NavLink } from '@/app/components/navigation/NavLink'
@@ -7,10 +7,13 @@ import { buildMatchLinks } from '@/app/components/navigation/matchLinks'
 import { useDocumentTitle } from '@/app/components/navigation/useDocumentMeta'
 import { SITE_NAME } from '@/app/components/navigation/titles'
 import { ApiError, type UserProfile } from '@/app/utils/api'
+import { useCopyFeedback } from '@/app/hooks/useCopyFeedback'
 import { usePickBanSession, usePickBanView } from '@/app/components/pages/events/pickban/usePickBanSession'
-import type { PickBanView, PickBanViewPhase } from '@/app/components/pages/events/pickban/pickBanView'
+import type { PickBanView } from '@/app/components/pages/events/pickban/pickBanView'
+import { statusOfPhase } from '@/app/components/pages/events/pickban/pickBanStatus'
 import { CentreStage } from '@/app/components/pages/events/pickban/components/CentreStage'
 import { PickBanBannerNote } from '@/app/components/pages/events/pickban/components/PickBanBannerNote'
+import { PickBanStatusChip } from '@/app/components/pages/events/pickban/components/PickBanStatusChip'
 import { PoolGrid } from '@/app/components/pages/events/pickban/components/PoolGrid'
 import { StepTimeline } from '@/app/components/pages/events/pickban/components/StepTimeline'
 import { TeamPanel } from '@/app/components/pages/events/pickban/components/TeamPanel'
@@ -25,18 +28,6 @@ interface MatchPickBanPageProps {
 const STAGE_HEIGHT = 'h-[22rem] @4xl/page:h-[26rem] @7xl/page:h-[30rem] @[140rem]/page:h-[40rem]'
 
 const STAGE_ROW = 'grid grid-cols-2 gap-3 @4xl/page:grid-cols-[13rem_minmax(0,1fr)_13rem] @7xl/page:grid-cols-[16rem_minmax(0,1fr)_16rem] @[140rem]/page:grid-cols-[22rem_minmax(0,1fr)_22rem]'
-
-const STATUS_PILL: Record<PickBanViewPhase, { label: string; className: string }> = {
-    none: { label: 'Not open', className: 'border-hairline/10 bg-hairline/5 text-muted-foreground' },
-    lobby: { label: 'Lobby', className: 'border-accent-500/40 bg-accent-500/15 text-accent-200' },
-    intro: { label: 'Live', className: 'border-red-500/30 bg-red-500/10 text-red-300' },
-    awaiting: { label: 'Live', className: 'border-red-500/30 bg-red-500/10 text-red-300' },
-    spotlight: { label: 'Live', className: 'border-red-500/30 bg-red-500/10 text-red-300' },
-    paused: { label: 'Paused', className: 'border-amber-500/30 bg-amber-500/10 text-amber-300' },
-    complete: { label: 'Complete', className: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300' },
-    cancelled: { label: 'Cancelled', className: 'border-hairline/10 bg-hairline/5 text-muted-foreground' },
-    voided: { label: 'Voided', className: 'border-red-500/30 bg-red-500/10 text-red-300' },
-}
 
 export function MatchPickBanPage({ eventSlug, matchId, userProfile, onBackToEvent }: MatchPickBanPageProps) {
     const session = usePickBanSession({ accessToken: userProfile?.accessToken, slug: eventSlug, matchId })
@@ -75,7 +66,7 @@ export function MatchPickBanPage({ eventSlug, matchId, userProfile, onBackToEven
                         <h1 className="break-words text-2xl font-bold leading-tight text-foreground">
                             {view?.match.title ?? 'Pick/Ban'}
                         </h1>
-                        {view && <StatusPill phase={view.phase} />}
+                        {view && <PickBanStatusChip status={statusOfPhase(view.phase)} />}
                     </div>
                     <p className="min-h-4 text-xs text-muted-foreground">{view ? matchSubtitle(view) : ''}</p>
                 </div>
@@ -143,15 +134,6 @@ function PickBanBody({ view, summaryAction }: { view: PickBanView; summaryAction
     )
 }
 
-function StatusPill({ phase }: { phase: PickBanViewPhase }) {
-    const { label, className } = STATUS_PILL[phase]
-    return (
-        <span className={cn('rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest', className)}>
-            {label}
-        </span>
-    )
-}
-
 function ReconnectingToast() {
     return (
         <div
@@ -165,28 +147,13 @@ function ReconnectingToast() {
 }
 
 function CopyLinkButton({ link }: { link: string }) {
-    const [copied, setCopied] = useState(false)
-    const timer = useRef<number | null>(null)
-
-    useEffect(() => () => {
-        if (timer.current !== null) window.clearTimeout(timer.current)
-    }, [])
-
-    const copy = async () => {
-        try {
-            await navigator.clipboard.writeText(link)
-            setCopied(true)
-            if (timer.current !== null) window.clearTimeout(timer.current)
-            timer.current = window.setTimeout(() => setCopied(false), 1500)
-        } catch (err) {
-            console.error('Copy pick/ban link failed', err)
-        }
-    }
+    const { copiedKey, copy } = useCopyFeedback(err => console.error('Copy pick/ban link failed', err))
+    const copied = copiedKey === link
 
     return (
         <button
             type="button"
-            onClick={copy}
+            onClick={() => copy(link, link)}
             className="inline-flex h-8 cursor-pointer items-center gap-2 rounded-md border border-accent-500/40 bg-accent-500/15 px-3 text-xs font-medium text-accent-200 transition-colors hover:border-accent-500/60 hover:bg-accent-500/25"
         >
             {copied ? <Check className="size-3.5" /> : <Link2 className="size-3.5" />}

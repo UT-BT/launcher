@@ -88,6 +88,34 @@ describe('createPoller', () => {
         poller.stop()
     })
 
+    it('refreshes with an attempt that starts after the call, dropping the one already in flight', async () => {
+        const stale = deferred()
+        const signals: AbortSignal[] = []
+        const onSettled = vi.fn()
+        const poll = vi.fn((signal: AbortSignal) => {
+            signals.push(signal)
+            return signals.length === 1 ? stale.promise : Promise.resolve()
+        })
+        const poller = createPoller({ poll, intervalMs: () => 1_000, environment: fakeVisibility().environment, onSettled })
+
+        poller.start()
+        await vi.advanceTimersByTimeAsync(0)
+        await poller.refresh()
+
+        expect(poll).toHaveBeenCalledTimes(2)
+        expect(signals[0].aborted).toBe(true)
+        expect(signals[1].aborted).toBe(false)
+        expect(onSettled).toHaveBeenCalledTimes(1)
+
+        stale.reject(new DOMException('aborted', 'AbortError'))
+        await vi.advanceTimersByTimeAsync(999)
+        expect(onSettled).toHaveBeenCalledTimes(1)
+        expect(poll).toHaveBeenCalledTimes(2)
+        await vi.advanceTimersByTimeAsync(1)
+        expect(poll).toHaveBeenCalledTimes(3)
+        poller.stop()
+    })
+
     it('rests while the document is hidden and polls the moment it is visible again', async () => {
         const visibility = fakeVisibility()
         const poll = vi.fn().mockResolvedValue(undefined)

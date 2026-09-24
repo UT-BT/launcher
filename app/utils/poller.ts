@@ -21,6 +21,7 @@ export interface Poller {
     start: () => void
     stop: () => void
     pollNow: () => Promise<void>
+    refresh: () => Promise<void>
     reschedule: () => void
 }
 
@@ -97,6 +98,12 @@ export function createPoller({
         return attempt
     }
 
+    const dropInFlight = () => {
+        controller?.abort()
+        controller = null
+        inFlight = null
+    }
+
     const onVisibilityChange = () => {
         if (!running || alwaysPoll) return
         if (environment.isVisible()) void pollNow()
@@ -114,14 +121,17 @@ export function createPoller({
         stop() {
             running = false
             clearTimer()
-            controller?.abort()
-            controller = null
-            inFlight = null
+            dropInFlight()
             stopWatchingVisibility?.()
             stopWatchingVisibility = null
         },
 
         pollNow,
+
+        refresh() {
+            dropInFlight()
+            return pollNow()
+        },
 
         reschedule() {
             if (!inFlight) schedule()

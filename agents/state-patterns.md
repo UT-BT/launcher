@@ -376,6 +376,9 @@ the data), `alwaysPoll`, and an optional visibility environment that defaults to
 - `start()` polls at once, even in a hidden document, so a page never opens empty. After
   that it polls one interval after each attempt settles.
 - Attempts never overlap: `pollNow()` during an attempt returns the one in flight.
+- `refresh()` is for right after a write: it aborts the attempt in flight (which started
+  before the write, so its answer may be stale) and polls afresh. The aborted attempt
+  reports nothing.
 - It rests while the document is hidden and polls the moment the document shows again.
   `alwaysPoll` ignores visibility.
 - `stop()` aborts the attempt in flight, and nothing is reported after it. `start()` can

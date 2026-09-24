@@ -5,24 +5,18 @@ import {
     DataTableEmpty, DataTableSkeletonRow, type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
 import { Button } from '@/app/components/ui/button'
+import { NavLink } from '@/app/components/navigation/NavLink'
 import { useNavigation } from '@/app/components/navigation/NavigationContext'
 import { formatSlotTime, useDisplayTimezone } from '@/app/utils/timezone'
-import { cn } from '@/lib/utils'
 import { createPoller } from '@/app/utils/poller'
+import { useCopyFeedback } from '@/app/hooks/useCopyFeedback'
 import { eventErrorMessage, fetchPickBanQueue, sendPickBanManagerCommand, type PickBanQueueEntry } from '@/app/utils/api'
 import { ErrorBanner } from '@/app/components/pages/teams/teamsShared'
-import { toQueueRow, type PickBanQueueRow, type PickBanQueueStatusTone } from './pickBanQueue'
+import { PickBanStatusChip } from '@/app/components/pages/events/pickban/components/PickBanStatusChip'
+import { toQueueRow, type PickBanQueueRow } from './pickBanQueue'
 
 const QUEUE_POLL_MS = 20_000
 const SKELETON_ROWS = 4
-
-const STATUS_CHIP_CLASS: Record<PickBanQueueStatusTone, string> = {
-    idle: 'bg-white/5 text-muted-foreground border-white/10',
-    ready: 'bg-accent-500/15 text-accent-300 border-accent-500/30',
-    live: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
-    paused: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
-    done: 'bg-emerald-500/10 text-emerald-300/80 border-emerald-500/20',
-}
 
 const COLUMNS: ResponsiveColumn[] = [
     { id: 'match', width: '14rem', priority: 70, required: true },
@@ -38,14 +32,6 @@ interface PickBanQueuePanelProps {
     slug: string
 }
 
-function statusChip(row: PickBanQueueRow) {
-    return (
-        <span className={cn('inline-flex text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border', STATUS_CHIP_CLASS[row.statusTone])}>
-            {row.statusLabel}
-        </span>
-    )
-}
-
 export function PickBanQueuePanel({ accessToken, slug }: PickBanQueuePanelProps) {
     const { navigate } = useNavigation()
     const timezone = useDisplayTimezone()
@@ -53,7 +39,7 @@ export function PickBanQueuePanel({ accessToken, slug }: PickBanQueuePanelProps)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [openingId, setOpeningId] = useState<string | null>(null)
-    const [copiedKey, setCopiedKey] = useState<string | null>(null)
+    const { copiedKey, copy } = useCopyFeedback(e => setError(eventErrorMessage(e)))
     const [resolved, setResolved] = useState<Set<string> | null>(null)
     const handleResolve = useCallback((ids: Set<string>) => setResolved(ids), [])
     const isVisible = (id: string) => !resolved || resolved.has(id)
@@ -86,21 +72,11 @@ export function PickBanQueuePanel({ accessToken, slug }: PickBanQueuePanelProps)
         setOpeningId(matchId)
         try {
             await sendPickBanManagerCommand(accessToken, slug, matchId, 'open')
-            await poller.pollNow()
+            await poller.refresh()
         } catch (e) {
             setError(eventErrorMessage(e))
         } finally {
             setOpeningId(null)
-        }
-    }
-
-    const copyLink = async (key: string, text: string) => {
-        try {
-            await navigator.clipboard.writeText(text)
-            setCopiedKey(key)
-            window.setTimeout(() => setCopiedKey(current => (current === key ? null : current)), 1500)
-        } catch (e) {
-            setError(eventErrorMessage(e))
         }
     }
 
@@ -122,14 +98,14 @@ export function PickBanQueuePanel({ accessToken, slug }: PickBanQueuePanelProps)
         <div key={row.matchId} role="listitem" className="p-3 border-b border-hairline/5 last:border-0 flex flex-col gap-2">
             <div className="flex items-start justify-between gap-2">
                 <span className="text-sm font-semibold text-foreground truncate">{row.teamAName} vs {row.teamBName}</span>
-                {statusChip(row)}
+                <PickBanStatusChip status={row.status} />
             </div>
             <div className="text-xs text-muted-foreground">{row.stageName} · {row.roundLabel} · {scheduledLabel(row)}</div>
             <div className="text-xs text-muted-foreground">Ready {row.readyCount}/2 · {row.onlineCount} online</div>
             {row.blockingReasonLabel && <div className="text-xs text-amber-300">{row.blockingReasonLabel}</div>}
             <RowActions
-                row={row} openingId={openingId} copiedKey={copiedKey}
-                onOpenLobby={openLobby} onOpenPage={() => openPage(row.matchId)} onCopy={copyLink}
+                row={row} eventSlug={slug} openingId={openingId} copiedKey={copiedKey}
+                onOpenLobby={openLobby} onOpenPage={() => openPage(row.matchId)} onCopy={copy}
             />
         </div>
     ))
@@ -184,7 +160,7 @@ export function PickBanQueuePanel({ accessToken, slug }: PickBanQueuePanelProps)
                                     <span className="text-xs text-muted-foreground">{scheduledLabel(row)}</span>
                                 </DataTableCell>
                             )}
-                            <DataTableCell>{statusChip(row)}</DataTableCell>
+                            <DataTableCell><PickBanStatusChip status={row.status} /></DataTableCell>
                             {isVisible('presence') && (
                                 <DataTableCell align="right">
                                     <span className="text-xs text-muted-foreground tabular-nums">{row.readyCount}/2 · {row.onlineCount} online</span>
@@ -192,8 +168,8 @@ export function PickBanQueuePanel({ accessToken, slug }: PickBanQueuePanelProps)
                             )}
                             <DataTableCell align="right">
                                 <RowActions
-                                    row={row} openingId={openingId} copiedKey={copiedKey}
-                                    onOpenLobby={openLobby} onOpenPage={() => openPage(row.matchId)} onCopy={copyLink}
+                                    row={row} eventSlug={slug} openingId={openingId} copiedKey={copiedKey}
+                                    onOpenLobby={openLobby} onOpenPage={() => openPage(row.matchId)} onCopy={copy}
                                 />
                             </DataTableCell>
                         </DataTableRow>
@@ -204,8 +180,9 @@ export function PickBanQueuePanel({ accessToken, slug }: PickBanQueuePanelProps)
     )
 }
 
-function RowActions({ row, openingId, copiedKey, onOpenLobby, onOpenPage, onCopy }: {
+function RowActions({ row, eventSlug, openingId, copiedKey, onOpenLobby, onOpenPage, onCopy }: {
     row: PickBanQueueRow
+    eventSlug: string
     openingId: string | null
     copiedKey: string | null
     onOpenLobby: (matchId: string) => void
@@ -222,8 +199,10 @@ function RowActions({ row, openingId, copiedKey, onOpenLobby, onOpenPage, onCopy
                     <DoorOpen /> {openingId === row.matchId ? 'Opening…' : 'Open lobby'}
                 </Button>
             )}
-            <Button size="sm" variant="outline" onClick={onOpenPage}>
-                <ExternalLink /> Open page
+            <Button asChild size="sm" variant="outline">
+                <NavLink view="match-pickban" params={{ eventSlug, matchId: row.matchId }} onActivate={onOpenPage}>
+                    <ExternalLink /> Open page
+                </NavLink>
             </Button>
             <Button size="sm" variant="ghost" onClick={() => onCopy(playerKey, row.playerLink)}>
                 <LinkIcon /> {copiedKey === playerKey ? 'Copied' : 'Copy player link'}
