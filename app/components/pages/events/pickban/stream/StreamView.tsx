@@ -1,17 +1,26 @@
 import { cn } from '@/lib/utils'
-import { ApiError } from '@/app/utils/api'
 import { usePickBanSession, usePickBanView } from '../usePickBanSession'
 import { usePickBanPreload } from '../usePickBanPreload'
 import { statusOfPhase } from '../pickBanStatus'
+import { matchSubtitle } from '../pickBanCopy'
 import type { PickBanView } from '../pickBanView'
 import { CentreStage } from '../components/CentreStage'
 import { PickBanMotion } from '../components/PickBanMotion'
 import { PickBanStatusChip } from '../components/PickBanStatusChip'
+import { PickBanUnavailable } from '../components/PickBanUnavailable'
+import { PoolGrid } from '../components/PoolGrid'
 import { StepTimeline } from '../components/StepTimeline'
 import { TeamPanel } from '../components/TeamPanel'
 import { StreamStage } from './StreamStage'
 
 const PANEL_CLASS = 'w-[300px] shrink-0 rounded-none border-y-0'
+
+const POOL_GRID_CLASS = cn(
+    'grid-cols-[repeat(auto-fit,minmax(4.5rem,4.5rem))] justify-center gap-1.5',
+    '@3xl/grid:grid-cols-[repeat(auto-fit,minmax(4.5rem,4.5rem))] @3xl/grid:justify-center @3xl/grid:gap-1.5',
+    '@7xl/grid:grid-cols-[repeat(auto-fit,minmax(4.5rem,4.5rem))] @7xl/grid:justify-center',
+    '@[140rem]/grid:grid-cols-[repeat(auto-fit,minmax(4.5rem,4.5rem))] @[140rem]/grid:justify-center @[140rem]/grid:gap-1.5',
+)
 
 interface StreamViewProps {
     eventSlug: string
@@ -33,9 +42,9 @@ export function StreamView({ eventSlug, matchId, muted }: StreamViewProps) {
                     ) : session.loading ? (
                         <StreamSkeleton />
                     ) : (
-                        <StreamUnavailable error={session.error} />
+                        <PickBanUnavailable error={session.error} className="h-full w-full" />
                     )}
-                    {session.reconnecting && <ReconnectingDot />}
+                    {session.reconnecting && <ReconnectingBadge />}
                 </div>
             </StreamStage>
         </PickBanMotion>
@@ -61,9 +70,7 @@ function TopBar({ view }: { view: PickBanView }) {
         <header className="flex h-16 shrink-0 items-center justify-between gap-3 border-b border-hairline/10 px-10">
             <div className="min-w-0">
                 <h1 className="truncate text-base font-bold text-foreground">{view.match.title}</h1>
-                <p className="truncate text-xs text-muted-foreground">
-                    {[view.match.stageName, view.match.roundLabel, `Best of ${view.match.bestOf}`].filter(Boolean).join(' · ')}
-                </p>
+                <p className="truncate text-xs text-muted-foreground">{matchSubtitle(view.match)}</p>
             </div>
             <PickBanStatusChip status={statusOfPhase(view.phase)} className="shrink-0" />
         </header>
@@ -73,13 +80,14 @@ function TopBar({ view }: { view: PickBanView }) {
 function BottomBar({ view }: { view: PickBanView }) {
     if (view.timeline.length === 0) return null
     return (
-        <footer className="flex h-24 shrink-0 items-center justify-center border-t border-hairline/10 px-10">
-            <StepTimeline entries={view.timeline} skippedBans={view.skippedBans} />
+        <footer className="flex shrink-0 flex-col gap-3 border-t border-hairline/10 px-10 py-4">
+            <StepTimeline entries={view.timeline} skippedBans={view.skippedBans} className="justify-center" />
+            <PoolGrid cards={view.cards} previewActor={view.turn?.ab ?? null} className={POOL_GRID_CLASS} />
         </footer>
     )
 }
 
-function ReconnectingDot() {
+function ReconnectingBadge() {
     return (
         <div
             role="status"
@@ -94,22 +102,6 @@ function StreamSkeleton() {
     return (
         <div aria-busy className="flex h-full w-full items-center justify-center">
             <div className="h-64 w-64 animate-pulse rounded-xl bg-hairline/5" />
-        </div>
-    )
-}
-
-function StreamUnavailable({ error }: { error: unknown }) {
-    const hidden = error instanceof ApiError && [401, 403, 404].includes(error.status)
-    return (
-        <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-center">
-            <h2 className="text-lg font-semibold text-foreground">
-                {hidden ? 'This pick/ban isn’t available' : 'Couldn’t load this pick/ban'}
-            </h2>
-            <p className="max-w-sm text-sm text-muted-foreground">
-                {hidden
-                    ? 'The match may not be published yet, or the link is wrong.'
-                    : 'Trying again in the background.'}
-            </p>
         </div>
     )
 }
