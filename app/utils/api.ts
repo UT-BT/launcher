@@ -4486,7 +4486,6 @@ export type EventEntrantStatus = 'active' | 'qualified' | 'eliminated'
 export type EventMatchStatus = 'pending' | 'scheduled' | 'live' | 'complete' | 'bye' | 'forfeit' | 'cancelled'
 export type EventMapKind = 'normal' | 'decider'
 export type EventSide = 'a' | 'b'
-/** The match's *current* pick/ban session only — a cancelled or voided one, or none at all, both read `'none'`. */
 export type MatchPickBanStatus = 'none' | 'lobby' | 'running' | 'paused' | 'complete'
 export type EventMatchMode = 'first_to' | 'all_maps'
 export type EventTiebreaker =

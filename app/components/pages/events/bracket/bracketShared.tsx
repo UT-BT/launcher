@@ -4,11 +4,10 @@ import { formatSlotTime, parseApiInstant, useDisplayTimezone } from '@/app/utils
 import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { MapNavLink } from '@/app/components/shared/MapNavLink'
-import { NavLink } from '@/app/components/navigation/NavLink'
-import { useNavigation } from '@/app/components/navigation/NavigationContext'
 import { TeamName } from '../TeamRoster'
 import { MatchOddsChip } from '../predictions/predictionsShared'
 import { pickBanCardAffordance } from '../pickban/pickBanEntryPoints'
+import { PickBanLink } from '../pickban/components/PickBanLink'
 import type {
     EventBracketGroup, EventBracketStage, EventBracketTeamRef, EventEntrantStatus, EventFormatSpec,
     EventMatch, EventMatchMap,
@@ -145,11 +144,6 @@ export function mapWasContested(row: EventMatchMap): boolean {
     return row.winner_side !== null || row.caps_a !== null || row.caps_b !== null
 }
 
-/**
- * What a public map row shows about how a pick/ban session chose it: `null`
- * for a map nobody picked (typed in by hand, or picked before this ticket),
- * `'Decider'` for the map the ban-down left over, otherwise who picked it.
- */
 export function pickBanMapLabel(
     row: Pick<EventMatchMap, 'kind' | 'map' | 'picked_by'>,
     teamA: EventBracketTeamRef | null,
@@ -350,23 +344,19 @@ function CapList({ row }: { row: EventMatchMap }) {
     )
 }
 
-/** The "Pick/Ban live" / "Join" pill on a match card — reaches the pick/ban
- * page through its own `NavLink`, never the card's own click handler. */
 function PickBanCardPill({ match, eventSlug, myTeamId }: {
     match: EventMatch
     eventSlug: string
     myTeamId: string | null
 }) {
-    const { navigate } = useNavigation()
     const affordance = pickBanCardAffordance(match.pick_ban_status, sideOf(match, myTeamId) !== null)
 
     if (!affordance) return null
 
     return (
-        <NavLink
-            view="match-pickban"
-            params={{ eventSlug, matchId: match.id }}
-            onActivate={() => navigate('match-pickban', { eventSlug, matchId: match.id })}
+        <PickBanLink
+            eventSlug={eventSlug}
+            matchId={match.id}
             className={cn(
                 'inline-flex shrink-0 items-center whitespace-nowrap rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest transition-colors cursor-pointer',
                 affordance === 'join'
@@ -375,7 +365,7 @@ function PickBanCardPill({ match, eventSlug, myTeamId }: {
             )}
         >
             {affordance === 'join' ? 'Join' : 'Pick/Ban live'}
-        </NavLink>
+        </PickBanLink>
     )
 }
 
