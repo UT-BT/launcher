@@ -24,6 +24,7 @@ verify_against:
   - app/components/navigation/titles.ts
   - app/components/navigation/matchLinks.ts
   - app/public/route-contract.json
+  - app/components/pages/EventDetailPage.tsx
 ---
 
 # Navigation
@@ -55,6 +56,13 @@ const [cursor, setCursor] = useState(0)
   "new maps" tile; `MapsPage` reads it via its `initialNewOnly` prop on mount.
   (Seed page state through params like this — never by mutating another page's
   per-entry state before `navigate()`.)
+  `eventTab` seeds which tab `EventDetailPage` opens on; the tab identity (its
+  `EventTab` union, the `BASE_TABS` list, which tabs are visible/hidden) is owned
+  entirely by that page, not by this doc or by `routes.ts` — `viewToPath` /
+  `pathToNav` just round-trip whatever string is there through `?tab=`. Adding a
+  new tab (e.g. the public Maps pool tab, ticket 14) is therefore a change local
+  to `EventDetailPage.tsx` with no routing/`route-contract.json`/title change
+  needed, the same way Schedule and Predictions needed none.
 - The stack is **in-memory only** — it boots to a single `home` entry on every
   launch and is never persisted. (Preferences persist; history doesn't — see
   `state-patterns.md`.)

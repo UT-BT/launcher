@@ -9,9 +9,9 @@ import { ErrorBanner } from '@/app/components/pages/teams/teamsShared'
 import { formatSlotTime, useDisplayTimezone } from '@/app/utils/timezone'
 import {
     eventErrorMessage, fetchEvent, fetchEventBracket, fetchEventLfp, fetchEventPredictions,
-    fetchEventTeams, fetchMyEventStatus, fetchMySchedule,
+    fetchEventTeams, fetchMyEventStatus, fetchMySchedule, fetchPickBanConfig,
     type EventBracket, type EventDetail, type EventFormatSpec, type EventLfpEntry, type EventMatch, type EventTeam,
-    type MyEventStatus, type PredictionsOverview, type ScheduleEntry, type UserProfile,
+    type MyEventStatus, type PickBanConfig, type PredictionsOverview, type ScheduleEntry, type UserProfile,
 } from '@/app/utils/api'
 import { EventStatusBadge, formatEventDate, formatEventDateTime, formatTeamSize, scheduleTabVisible } from './events/eventsShared'
 import { EventTeamsList } from './events/EventTeamsList'
@@ -21,6 +21,8 @@ import { ManagePanel } from './events/ManagePanel'
 import { BracketTab } from './events/bracket/BracketTab'
 import { nextOwnMatch, sideOf, teamLabel } from './events/bracket/bracketShared'
 import { EventRosterProvider } from './events/TeamRoster'
+import { MapsTab } from './events/maps/MapsTab'
+import { stagesWithPools } from './events/maps/mapsShared'
 import { PredictionsTab } from './events/predictions/PredictionsTab'
 import { PredictionOddsProvider, formatCountdown, useNow } from './events/predictions/predictionsShared'
 import { ScheduleTab } from './events/schedule/ScheduleTab'
@@ -49,7 +51,7 @@ function NextMatchBanner({ match, myTeamId, now }: {
     )
 }
 
-export type EventTab = 'info' | 'teams' | 'bracket' | 'predictions' | 'schedule' | 'players' | 'signup' | 'manage'
+export type EventTab = 'info' | 'teams' | 'bracket' | 'maps' | 'predictions' | 'schedule' | 'players' | 'signup' | 'manage'
 
 interface EventDetailPageProps {
     eventSlug: string
@@ -63,6 +65,7 @@ const BASE_TABS: { id: EventTab; label: string }[] = [
     { id: 'info', label: 'Info' },
     { id: 'teams', label: 'Teams' },
     { id: 'bracket', label: 'Bracket' },
+    { id: 'maps', label: 'Maps' },
     { id: 'schedule', label: 'Schedule' },
     { id: 'predictions', label: 'Predictions' },
     { id: 'players', label: 'Looking for Partner' },
@@ -88,6 +91,7 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
     const [predictionsLoaded, setPredictionsLoaded] = useState(false)
     const [schedule, setSchedule] = useState<ScheduleEntry[] | null>(null)
     const [scheduleLoaded, setScheduleLoaded] = useState(false)
+    const [pickBanConfig, setPickBanConfig] = useState<PickBanConfig | null>(null)
     const [loading, setLoading] = useState(true)
     const [myLoading, setMyLoading] = useState(!!accessToken)
     const [error, setError] = useState<string | null>(null)
@@ -134,6 +138,14 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
         }
     }, [browseToken, eventSlug])
 
+    const loadPickBanConfig = useCallback(async () => {
+        try {
+            setPickBanConfig(await fetchPickBanConfig(browseToken, eventSlug))
+        } catch {
+            setPickBanConfig(null)
+        }
+    }, [browseToken, eventSlug])
+
     const loadMy = useCallback(async () => {
         if (!accessToken) {
             setMy(null)
@@ -173,6 +185,7 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
     useEffect(() => { void loadBracket() }, [loadBracket])
     useEffect(() => { void loadPredictions(!!event?.predictions_enabled) }, [loadPredictions, event?.predictions_enabled])
     useEffect(() => { void loadSchedule(canSeeSchedule) }, [loadSchedule, canSeeSchedule])
+    useEffect(() => { void loadPickBanConfig() }, [loadPickBanConfig])
 
     const refreshPredictions = useCallback(() => {
         void loadPredictions(!!event?.predictions_enabled)
@@ -188,10 +201,11 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
         void loadBracket()
         refreshPredictions()
         refreshSchedule()
-    }, [load, loadMy, loadBracket, refreshPredictions, refreshSchedule])
+        void loadPickBanConfig()
+    }, [load, loadMy, loadBracket, refreshPredictions, refreshSchedule, loadPickBanConfig])
 
     useRegisterPageRefresh({
-        onRefresh: () => { void load(); void loadMy(); void loadBracket(); refreshPredictions(); refreshSchedule() },
+        onRefresh: () => { void load(); void loadMy(); void loadBracket(); refreshPredictions(); refreshSchedule(); void loadPickBanConfig() },
         refreshing: loading,
         tooltip: 'Refresh',
     })
@@ -204,6 +218,8 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
     const now = useNow(1000)
     const myTeamId = my?.team?.id ?? null
     const nextMatch = useMemo(() => nextOwnMatch(bracket?.stages ?? [], myTeamId, now), [bracket, myTeamId, now])
+    const mapsStages = useMemo(() => stagesWithPools(pickBanConfig), [pickBanConfig])
+    const hasMapsPool = mapsStages.length > 0
 
     if (loading && !event) {
         return <div className="h-full flex items-center justify-center text-sm text-muted-foreground">Loading event…</div>
@@ -229,11 +245,13 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
     const predictionsOn = !!event.predictions_enabled
     const visibleTabs = (canManageBracket ? TABS : BASE_TABS)
         .filter(t => t.id !== 'bracket' || hasBracket)
+        .filter(t => t.id !== 'maps' || hasMapsPool)
         .filter(t => t.id !== 'predictions' || predictionsOn)
         .filter(t => t.id !== 'schedule' || canSeeSchedule)
     const scheduleAwaitingCount = (schedule ?? []).filter(e => !!myTeamId && !!e.proposal && e.whose_turn === myTeamId).length
     const activeTab = (tab === 'manage' && !canManageBracket)
         || (tab === 'bracket' && !hasBracket)
+        || (tab === 'maps' && !hasMapsPool)
         || (tab === 'predictions' && !predictionsOn)
         || (tab === 'schedule' && !canSeeSchedule) ? 'info' : tab
 
@@ -322,6 +340,9 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
                 {activeTab === 'teams' && <EventTeamsList teams={teams} teamSize={event.team_size} loading={loading} />}
                 {activeTab === 'bracket' && (
                     <BracketTab bracket={bracket} loading={loading} onMapSelect={onMapSelect} onScheduleMatch={setSchedulerMatchId} />
+                )}
+                {activeTab === 'maps' && hasMapsPool && (
+                    <MapsTab stages={mapsStages} onMapSelect={onMapSelect} />
                 )}
                 {activeTab === 'schedule' && canSeeSchedule && (
                     <ScheduleTab
