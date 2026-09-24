@@ -16,6 +16,7 @@ import {
     asReplacedCaptain,
     asSpectator,
     asTeammate,
+    finalMapOf,
     iso,
     locked,
     lockedInTurn,
@@ -457,6 +458,50 @@ describe('final summary', () => {
             [3, GOLF, 'Decider', true],
         ])
         expect(view.timeline.map((entry) => entry.index)).toEqual([0, 1, 2, 3, 4, 5, 6])
+    })
+
+    it('follows the edited final map list instead of the steps once a manager has edited it', () => {
+        const state = completed()
+        const edited = {
+            ...state,
+            edited: true,
+            final_maps: [
+                finalMapOf(3, GOLF, null, true),
+                finalMapOf(1, ECHO, 'team_a'),
+                finalMapOf(2, BRAVO, 'team_b'),
+            ],
+        }
+
+        const view = viewAt(asSpectator(edited), T0 + 3_600_000)
+
+        expect(view.summary.map((entry) => [entry.mapNumber, entry.map, entry.side, entry.ab, entry.actorLabel, entry.decider])).toEqual([
+            [1, ECHO, 'team_a', 'A', 'Crimson Cats', false],
+            [2, BRAVO, 'team_b', 'B', 'Azure Owls', false],
+            [3, GOLF, null, null, 'Decider', true],
+        ])
+        expect(view.summary.map((entry) => entry.key)).toEqual([1, 2, 3])
+        expect(view.summary.map((entry) => entry.stepIndex)).toEqual([2, 3, 6])
+        expect(view.timeline.map((entry) => [entry.index, entry.map])).toEqual([
+            [0, ALPHA], [1, BRAVO], [2, CHARLIE], [3, DELTA], [4, ECHO], [5, FOXTROT], [6, GOLF],
+        ])
+    })
+
+    it('keeps reading the steps for a complete session that carries final maps but was never edited', () => {
+        const state = completed()
+        const notEdited = { ...state, edited: false, final_maps: [finalMapOf(1, ECHO, 'team_a')] }
+
+        const view = viewAt(asSpectator(notEdited), T0 + 3_600_000)
+
+        expect(view.summary.map((entry) => [entry.mapNumber, entry.map, entry.actorLabel, entry.decider])).toEqual([
+            [1, CHARLIE, 'Azure Owls', false],
+            [2, DELTA, 'Crimson Cats', false],
+            [3, GOLF, 'Decider', true],
+        ])
+    })
+
+    it('passes the edited flag straight through onto the view', () => {
+        expect(viewAt(asSpectator(completed()), T0 + 3_600_000).edited).toBe(false)
+        expect(viewAt(asSpectator({ ...completed(), edited: true }), T0 + 3_600_000).edited).toBe(true)
     })
 })
 

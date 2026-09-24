@@ -5785,6 +5785,13 @@ export interface PickBanSkippedBanRef {
     before_index: number
 }
 
+export interface PickBanFinalMap {
+    map_number: number
+    map: string
+    side: PickBanSide | null
+    decider: boolean
+}
+
 export interface PickBanState {
     id: string | null
     status: PickBanSessionStatus
@@ -5815,6 +5822,7 @@ export interface PickBanState {
     completed_at: string | null
     ended_at: string | null
     edited: boolean
+    final_maps: PickBanFinalMap[] | null
     end_reason: string | null
     warnings: PickBanWarning[]
     results_present: boolean
