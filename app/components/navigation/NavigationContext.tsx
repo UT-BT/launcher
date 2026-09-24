@@ -49,6 +49,7 @@ export function paramsEqual(a: NavParams, b: NavParams): boolean {
         && a.newsId === b.newsId
         && a.teamId === b.teamId
         && a.eventSlug === b.eventSlug
+        && a.eventTab === b.eventTab
         && a.matchId === b.matchId
         && !!a.mapsNewOnly === !!b.mapsNewOnly
 }
