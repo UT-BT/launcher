@@ -8,7 +8,7 @@ read_when:
   - "reading a match's pick/ban state, sending a pick/ban command, or rendering from the pick/ban view model"
   - "rendering the manager match queue, or changing which stable codes it shows as a blocking reason"
   - "finding a pick/ban session from the bracket, a match card, the event page or the Schedule tab without a direct link"
-keywords: [api.ts, fetch, endpoint, accessToken, avatar, MapThumbnail, favorites, patreon, downloadMapZip, world_records, caps, predictions, draw, odds, schedule, proposal, slot, whose_turn, resolved_window, countdown, nav badge, fetchMyTournaments, SlotPickerModal, SlotGrid, DateTimeField, slotGeneration, proposeMatchSlots, withdrawMatchProposal, acceptMatchProposal, fetchMatchSchedule, ApiError, expected_match_duration_minutes, fetchPickBanConfig, PickBanConfig, PickBanPoolMap, MapsTab, mapsShared, stagesWithPools, tagBadgeVariant, pick/ban, fetchPickBanState, ETag, If-None-Match, 304, X-Server-Now, server_now, clock offset, reveal_at, sendPickBanCommand, sendPickBanManagerCommand, hover, selection_preview, pickBanErrorCode, captain controls, CaptainDock, useCaptainPlay, fetchPickBanQueue, PickBanQueueEntry, PickBanQueueRow, toQueueRow, canOpenLobby, blockingReasonLabel, PickBanQueuePanel, pickBanStatusBadge, statusOfPhase, buildPickBanView, setPickBanStageConfig, setPickBanStagePool, copyPickBanStagePool, pickBanEditor, stage pool, buildMatchLinks, matchStreamPath, createPoller, pick_ban_status, MatchPickBanStatus, pickBanCardAffordance, PickBanCardPill, pickBanMapLabel, MyPickBanSession, pick_ban_session, PickBanLink, PickBanJoinBanner, pickBanEntryPoints, Join banner, scene, sceneDirection, playsEntrance, usePickBanPreload, usePickBanSound, cuesToPlay, pickBanSoundCues, pickBanSoundPlayer, PickBanSoundCueKind, sound=0]
+keywords: [api.ts, fetch, endpoint, accessToken, avatar, MapThumbnail, favorites, patreon, downloadMapZip, world_records, caps, predictions, draw, odds, schedule, proposal, slot, whose_turn, resolved_window, countdown, nav badge, fetchMyTournaments, SlotPickerModal, SlotGrid, DateTimeField, slotGeneration, proposeMatchSlots, withdrawMatchProposal, acceptMatchProposal, fetchMatchSchedule, ApiError, expected_match_duration_minutes, fetchPickBanConfig, PickBanConfig, PickBanPoolMap, MapsTab, mapsShared, stagesWithPools, tagBadgeVariant, pick/ban, fetchPickBanState, ETag, If-None-Match, 304, X-Server-Now, server_now, clock offset, reveal_at, sendPickBanCommand, sendPickBanManagerCommand, hover, selection_preview, pickBanErrorCode, captain controls, CaptainDock, useCaptainPlay, fetchPickBanQueue, PickBanQueueEntry, PickBanQueueRow, toQueueRow, canOpenLobby, blockingReasonLabel, PickBanQueuePanel, pickBanStatusBadge, statusOfPhase, buildPickBanView, setPickBanStageConfig, setPickBanStagePool, copyPickBanStagePool, pickBanEditor, stage pool, buildMatchLinks, matchStreamPath, createPoller, pick_ban_status, MatchPickBanStatus, pickBanCardAffordance, PickBanCardPill, pickBanMapLabel, MyPickBanSession, pick_ban_session, PickBanLink, PickBanJoinBanner, pickBanEntryPoints, Join banner, scene, sceneDirection, playsEntrance, usePickBanPreload, usePickBanSound, cuesToPlay, pickBanSoundCues, pickBanSoundPlayer, PickBanSoundCueKind, sound=0, manager dock, ManagerDock, useManagerDock, managerDockOf, hand-over, act for team]
 provides: "the client-side API contract the launcher consumes + asset URLs + favorites/patreon sync models"
 not_here:
   - "IPC channels (window.conveyor.*) → lib/conveyor/README.md"
@@ -16,7 +16,7 @@ not_here:
   - "the procedure to wire a new endpoint into the UI → skill: consume-api-data"
 sections: [backend-api, errors, admin-api, event-brackets, event-scheduling, event-predictions, public-maps-tab-pick-ban-pools, event-pickban-sessions, event-pick-ban-setup, changing-a-map-screenshot, cap-detail-page-endpoints, world-records-page-endpoints, team-maps-and-team-runs, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites, account-state-and-badges]
 last_verified: 2026-09-25
-verify_against: [app/utils/api.ts, app/utils/chartBuckets.ts, app/components/pages/admin/components/controls.tsx, app/components/pages/admin/sections/HostsManagementSection.tsx, app/utils/patreon.ts, app/utils/server-utils.ts, app/hooks/useServerFavorites.ts, app/components/pages/events/manage/formatFields.tsx, app/components/pages/events/bracket/bracketShared.tsx, app/components/pages/events/bracket/BracketTab.tsx, app/components/pages/events/bracket/GroupStageView.tsx, app/components/pages/events/bracket/SwissStageView.tsx, app/components/pages/events/bracket/ElimStageView.tsx, app/components/pages/events/predictions/predictionsShared.tsx, app/components/pages/events/predictions/PredictionsTab.tsx, app/components/pages/events/schedule/scheduleShared.tsx, app/components/pages/events/schedule/ScheduleTab.tsx, app/components/pages/events/schedule/SlotPickerModal.tsx, app/components/pages/events/schedule/slotGeneration.ts, app/components/pages/events/schedule/SlotGrid.tsx, app/components/pages/events/manage/DateTimeField.tsx, app/components/pages/events/eventsShared.tsx, app/components/pages/EventDetailPage.tsx, app/utils/timezone.ts, app/components/pages/events/manage/ScheduleOversightPanel.tsx, app/components/pages/events/ManagePanel.tsx, app/components/main/Main.tsx, app/components/layout/AppLayout.tsx, app/components/pages/events/maps/MapsTab.tsx, app/components/pages/events/maps/mapsShared.ts, app/components/pages/events/pickban/pickBanView.ts, app/components/pages/events/pickban/pickBanStatus.ts, app/components/pages/events/pickban/pickBanSession.ts, app/components/pages/events/pickban/pickBanEntryPoints.ts, app/components/pages/events/pickban/components/PickBanLink.tsx, app/components/pages/events/pickban/components/PickBanJoinBanner.tsx, app/components/pages/events/pickban/clockOffset.ts, app/components/pages/events/manage/pickban/pickBanEditor.ts, app/components/pages/events/manage/pickban/PickBanPanel.tsx, app/components/pages/events/manage/pickban/PickBanStageCard.tsx, app/components/pages/events/manage/pickban/PickBanQueuePanel.tsx, app/components/pages/events/manage/pickban/pickBanQueue.ts, app/components/pages/events/pickBanTags.ts, app/components/navigation/matchLinks.ts, app/utils/poller.ts, app/components/pages/events/pickban/stream/StreamView.tsx, app/components/pages/events/pickban/pickBanCopy.ts, app/components/pages/events/pickban/components/PickBanUnavailable.tsx, app/components/pages/events/pickban/pickBanSoundCues.ts, app/components/pages/events/pickban/pickBanSoundPlayer.ts, app/components/pages/events/pickban/usePickBanSound.ts, app/components/pages/MatchPickBanPage.tsx]
+verify_against: [app/utils/api.ts, app/utils/chartBuckets.ts, app/components/pages/admin/components/controls.tsx, app/components/pages/admin/sections/HostsManagementSection.tsx, app/utils/patreon.ts, app/utils/server-utils.ts, app/hooks/useServerFavorites.ts, app/components/pages/events/manage/formatFields.tsx, app/components/pages/events/bracket/bracketShared.tsx, app/components/pages/events/bracket/BracketTab.tsx, app/components/pages/events/bracket/GroupStageView.tsx, app/components/pages/events/bracket/SwissStageView.tsx, app/components/pages/events/bracket/ElimStageView.tsx, app/components/pages/events/predictions/predictionsShared.tsx, app/components/pages/events/predictions/PredictionsTab.tsx, app/components/pages/events/schedule/scheduleShared.tsx, app/components/pages/events/schedule/ScheduleTab.tsx, app/components/pages/events/schedule/SlotPickerModal.tsx, app/components/pages/events/schedule/slotGeneration.ts, app/components/pages/events/schedule/SlotGrid.tsx, app/components/pages/events/manage/DateTimeField.tsx, app/components/pages/events/eventsShared.tsx, app/components/pages/EventDetailPage.tsx, app/utils/timezone.ts, app/components/pages/events/manage/ScheduleOversightPanel.tsx, app/components/pages/events/ManagePanel.tsx, app/components/main/Main.tsx, app/components/layout/AppLayout.tsx, app/components/pages/events/maps/MapsTab.tsx, app/components/pages/events/maps/mapsShared.ts, app/components/pages/events/pickban/pickBanView.ts, app/components/pages/events/pickban/pickBanStatus.ts, app/components/pages/events/pickban/pickBanSession.ts, app/components/pages/events/pickban/pickBanEntryPoints.ts, app/components/pages/events/pickban/components/PickBanLink.tsx, app/components/pages/events/pickban/components/PickBanJoinBanner.tsx, app/components/pages/events/pickban/clockOffset.ts, app/components/pages/events/manage/pickban/pickBanEditor.ts, app/components/pages/events/manage/pickban/PickBanPanel.tsx, app/components/pages/events/manage/pickban/PickBanStageCard.tsx, app/components/pages/events/manage/pickban/PickBanQueuePanel.tsx, app/components/pages/events/manage/pickban/pickBanQueue.ts, app/components/pages/events/pickBanTags.ts, app/components/navigation/matchLinks.ts, app/utils/poller.ts, app/components/pages/events/pickban/stream/StreamView.tsx, app/components/pages/events/pickban/pickBanCopy.ts, app/components/pages/events/pickban/components/PickBanUnavailable.tsx, app/components/pages/events/pickban/pickBanSoundCues.ts, app/components/pages/events/pickban/pickBanSoundPlayer.ts, app/components/pages/events/pickban/usePickBanSound.ts, app/components/pages/MatchPickBanPage.tsx, app/components/pages/events/pickban/managerDock.ts]
 ---
 
 # Data sources
@@ -665,8 +665,9 @@ waits for a poll. Every body except Open's carries the expected `version`.
   `previewed`. The captain page sends it debounced and silently (see
   `agents/state-patterns.md`).
 - The body shapes are typed in `PickBanParticipantCommandBodies` and
-  `PickBanManagerCommandBodies`. `hand-over` and `edit-final` are typed loosely until
-  their bodies are settled.
+  `PickBanManagerCommandBodies`. `hand-over` takes a `side` and a `user_id` (an active
+  roster member of that side's team, or `null` to give control back to the captain).
+  `edit-final` is typed loosely until its body is settled.
 - `postPickBanCommand` is the untyped transport under both. Screens call the session
   store's `sendCommand` / `sendManagerCommand` (see `agents/state-patterns.md`), which fill
   in the version themselves. They send one command at a time and read the version only once
@@ -678,7 +679,9 @@ waits for a poll. Every body except Open's carries the expected `version`.
   `captainPlay.ts` words each Ready/Unready and Lock refusal for the captain
   (`version_conflict`, `not_your_turn`, `map_unavailable`, `spotlight_active`,
   `intro_active`, `paused`, `wrong_status`, `not_authorized`, `no_session`), and falls back
-  to `err.message` for any other code.
+  to `err.message` for any other code. The manager dock words every code: its own sentence
+  for each code that isn't a Start blocking reason, and `blockingReasonLabel` for the seven
+  that are (see the watch page's manager dock below).
 
 **Match queue (managers).** `fetchPickBanQueue(token, slug)` →
 `GET /tournaments/<slug>/admin/pick-ban/queue` → `{ matches: PickBanQueueEntry[] }` (the
@@ -703,7 +706,8 @@ unscheduled matches last:
 `Round <n>` with no `round_label`, an undecided side reads `'TBD'`, the row keeps the raw
 `status`, and `playerLink`/`streamLink` come from `buildMatchLinks`
 (`navigation/matchLinks.ts`), always the public website origin on both desktop and web.
-`blockingReasonLabel(code, status)` is the one place a blocking reason becomes words:
+`blockingReasonLabel(code, status)` (in `events/pickban/pickBanStatus.ts`, shared with the
+match page's manager dock) is the one place a blocking reason becomes words:
 `wrong_status` reads by what the current session is doing (`Pick/ban already in
 progress`, `Pick/ban is paused`, `Pick/ban already complete`), and an unrecognized code
 falls back to `'Not startable'` rather than showing nothing. `canOpenLobby` mirrors
@@ -787,8 +791,10 @@ pure and tested without a DOM. It returns:
   undetermined
 - `banners`: voided, cancelled, paused, skipped bans and warnings
 - `affordances`: `actingSide` and its letter `actingAb`, `canReady`, `isReady`, `canLock`, and
-  `manager` (which dock controls apply to the current status, `startBlockedBy`, and
-  `actForSide`)
+  `manager` (which dock controls apply to the current status, `startBlockedBy`,
+  `resultsPresent` and `actForSide`). `resultsPresent` is set when `blocking_reasons`
+  holds `results_present`, or a warning carries that code (a voided session whose written
+  map slots were kept).
 - `nextBoundaryAt`: when the view next changes on its own
 - `scene`: what the centre stage shows, for animating it. `key` (`lobby`, `intro`,
   `turn-<index>`, `reveal-<index>`, `complete`, `none`, `cancelled` or `voided`) stays the
@@ -883,6 +889,35 @@ only from the view model, through the pick/ban visual core (see
     the unlock and who acts next.
   - A refusal shows as a worded alert. The store has already polled, so the board is
     current by the time the alert shows.
+- **Manager dock.** For a viewer with `capabilities.can_manage`, the page layers
+  `useManagerDock` over the captain-played view (see `agents/state-patterns.md`) and renders
+  a `ManagerDock` below the pool, so nothing it shows or hides moves the stage, the
+  timeline or the grid. It is absent for captains, teammates and spectators, and the
+  stream view never renders it. Each control shows only while `affordances.manager`
+  allows it, and calls `sendManagerCommand`, which adds the expected `version` and adopts
+  the returned state:
+  - `open` (no body) while there is no live session: none, cancelled or voided
+  - `start`, disabled with `blockingReasonLabel(startBlockedBy)` while Start would be
+    refused
+  - `choose-a` with `{ side }`, and `swap`, in the lobby (`swap` also runs before the first
+    step)
+  - `override-sequence` with `{ preset_id }` or `{ from_stage_key }`, in the lobby. The
+    picker loads the stages with `fetchPickBanConfig` only when it opens, and offers every
+    preset plus each stage that has a block.
+  - `pause` / `resume`, `undo`, and `hand-over` with `{ side, user_id }`, picked from that
+    side's roster in the payload (choosing the captain sends `user_id: null`)
+  - `lock` with `{ side, map, plan_index }` to act for the awaited side: select a card, then
+    Lock in, with the same optimistic "Locked in" a captain gets, kept until the step
+    reveals. A manager never sends `hover`. On the viewer's own turn as captain, the
+    captain controls handle it instead.
+  - `restart` and `cancel`, each only after a confirmation that says what will be lost
+  - Copy player link and Copy stream link (`buildMatchLinks`)
+
+  The dock disables its buttons while a command is in flight, and shows nothing
+  optimistic apart from the act-for lock-in. A refusal shows its specific reason; a
+  `version_conflict` asks the manager to check the session and try again, and nothing
+  retries by itself. `resultsPresent` shows a warning, and a voided session shows its
+  banner in the dock with Open offered again.
 
 `e2e/pickban-watch.spec.ts` serves the pick/ban read from fixtures with a server clock
 that runs in real time. It checks seven things:

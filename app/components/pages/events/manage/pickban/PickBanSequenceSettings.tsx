@@ -2,6 +2,7 @@ import { Plus, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { AdminSelect } from '@/app/components/pages/admin/components/controls'
 import { PICK_BAN_PRESET_IDS, type PickBanPresetId, type PickBanSequence, type PickBanStageConfig } from '@/app/utils/api'
+import { PICK_BAN_PRESET_LABELS } from '@/app/components/pages/events/pickban/pickBanCopy'
 import { Field, NumberField, SubCard, TextField } from '../formatFields'
 import {
     PICK_BAN_PACING_KEYS, PICK_BAN_PACING_MAX_SECONDS, presetDrifted, sequenceCounts, withPreset,
@@ -9,12 +10,6 @@ import {
 } from './pickBanEditor'
 
 const CUSTOM_SEQUENCE = 'custom'
-
-const PRESET_LABELS: Record<PickBanPresetId, string> = {
-    bo4_picks: 'Bo4 · four picks',
-    bo3_ban_pick: 'Bo3 · bans, picks, decider',
-    bo5_ban_pick: 'Bo5 · bans, picks, bans, decider',
-}
 
 const PACING_LABELS: Record<PickBanPacingKey, string> = {
     intro: 'Intro',
@@ -113,7 +108,7 @@ function ExclusionRow({ rule, index, errors, disabled, onChange, onRemove }: {
 export function PickBanSequenceSettings({ stage, draft, errors, disabled, onChange }: PickBanSequenceSettingsProps) {
     const storedCustom = stage.pick_ban && stage.pick_ban.preset_id === null ? stage.pick_ban.sequence : null
     const options = [
-        ...PICK_BAN_PRESET_IDS.map(id => ({ value: id, label: PRESET_LABELS[id] })),
+        ...PICK_BAN_PRESET_IDS.map(id => ({ value: id, label: PICK_BAN_PRESET_LABELS[id] })),
         ...(storedCustom ? [{ value: CUSTOM_SEQUENCE, label: 'Custom sequence' }] : []),
     ]
     const selected = draft.presetId ?? (draft.sequence ? CUSTOM_SEQUENCE : '')

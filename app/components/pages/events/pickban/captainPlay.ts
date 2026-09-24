@@ -91,7 +91,7 @@ function optimisticLockOf(view: PickBanView, play: CaptainPlay): string | null {
     return play.lockingIn.map
 }
 
-function withOptimisticLock(view: PickBanView, map: string): PickBanView {
+export function withOptimisticLock(view: PickBanView, map: string): PickBanView {
     const turn = view.turn!
     return {
         ...view,

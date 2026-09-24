@@ -12,8 +12,9 @@ interface CaptainDockProps {
     dock: CaptainDockModel
     ab: PickBanActor | null
     reconnecting: boolean
+    actingFor?: string
     onLockIn: () => void
-    onToggleReady: () => void
+    onToggleReady?: () => void
     onDismiss: () => void
     className?: string
 }
@@ -39,16 +40,16 @@ function upNext(next: PickBanTurn | null): string {
     return `Up next: ${next.actionLabel}`
 }
 
-export function CaptainDock({ dock, ab, reconnecting, onLockIn, onToggleReady, onDismiss, className }: CaptainDockProps) {
+export function CaptainDock({ dock, ab, reconnecting, actingFor, onLockIn, onToggleReady, onDismiss, className }: CaptainDockProps) {
     const tone = PICK_BAN_TONES[teamTone(ab)]
 
     return (
         <section
-            aria-label="Your team’s controls"
+            aria-label={actingFor ? `Acting for ${actingFor}` : 'Your team’s controls'}
             className={cn('sticky bottom-3 z-20 flex flex-col gap-3 rounded-xl border bg-card p-3 shadow-lg shadow-black/30 sm:p-4', tone.line, className)}
         >
             {dock.rejection && <Rejection message={dock.rejection} onDismiss={onDismiss} />}
-            {dock.controls && <Controls controls={dock.controls} tone={tone} onLockIn={onLockIn} onToggleReady={onToggleReady} />}
+            {dock.controls && <Controls controls={dock.controls} tone={tone} actingFor={actingFor} onLockIn={onLockIn} onToggleReady={onToggleReady} />}
             {reconnecting && (
                 <p role="status" className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-300">
                     <WifiOff className="size-3.5" />
@@ -59,7 +60,7 @@ export function CaptainDock({ dock, ab, reconnecting, onLockIn, onToggleReady, o
     )
 }
 
-function Rejection({ message, onDismiss }: { message: string; onDismiss: () => void }) {
+export function Rejection({ message, onDismiss }: { message: string; onDismiss: () => void }) {
     return (
         <div role="alert" className="flex items-start gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
             <AlertTriangle className="mt-0.5 size-4 shrink-0" />
@@ -76,11 +77,12 @@ function Rejection({ message, onDismiss }: { message: string; onDismiss: () => v
     )
 }
 
-function Controls({ controls, tone, onLockIn, onToggleReady }: {
+function Controls({ controls, tone, actingFor, onLockIn, onToggleReady }: {
     controls: CaptainControls
     tone: PickBanToneClasses
+    actingFor?: string
     onLockIn: () => void
-    onToggleReady: () => void
+    onToggleReady?: () => void
 }) {
     switch (controls.kind) {
         case 'ready':
@@ -112,7 +114,7 @@ function Controls({ controls, tone, onLockIn, onToggleReady }: {
         case 'choose':
             return (
                 <ControlRow
-                    eyebrow={<Eyebrow className={tone.text}>Your turn</Eyebrow>}
+                    eyebrow={<Eyebrow className={tone.text}>{actingFor ? `Acting for ${actingFor}` : 'Your turn'}</Eyebrow>}
                     title={stepLabel(controls.action, controls.mapNumber)}
                     detail={controls.selectedMap
                         ? <>Selected: <span className="font-semibold text-foreground">{displayMapName(controls.selectedMap)}</span></>

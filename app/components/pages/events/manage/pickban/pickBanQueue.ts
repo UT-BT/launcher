@@ -1,5 +1,6 @@
 import { buildMatchLinks } from '@/app/components/navigation/matchLinks'
-import type { PickBanErrorCode, PickBanQueueEntry, PickBanSessionStatus } from '@/app/utils/api'
+import { blockingReasonLabel } from '@/app/components/pages/events/pickban/pickBanStatus'
+import type { PickBanQueueEntry, PickBanSessionStatus } from '@/app/utils/api'
 
 export interface PickBanQueueRow {
     matchId: string
@@ -15,31 +16,6 @@ export interface PickBanQueueRow {
     canOpenLobby: boolean
     playerLink: string
     streamLink: string
-}
-
-const UNKNOWN_BLOCKING_REASON = 'Not startable'
-
-const BLOCKING_REASON_LABELS: Partial<Record<PickBanErrorCode, string>> = {
-    no_session: 'No lobby open',
-    teams_not_decided: 'Teams not decided',
-    a_undetermined: 'Team A undetermined',
-    pre_cup_seed_missing: 'A team is missing its pre-cup seed',
-    sequence_mismatch: 'Sequence does not match the best-of',
-    pool_too_small: 'Map pool is too small',
-    results_present: 'Results already entered',
-    match_finished: 'Match already finished',
-}
-
-const WRONG_STATUS_LABELS: Partial<Record<PickBanSessionStatus, string>> = {
-    running: 'Pick/ban already in progress',
-    paused: 'Pick/ban is paused',
-    complete: 'Pick/ban already complete',
-}
-
-export function blockingReasonLabel(code: PickBanErrorCode | null, status: PickBanSessionStatus): string | null {
-    if (code === null) return null
-    const label = code === 'wrong_status' ? WRONG_STATUS_LABELS[status] : BLOCKING_REASON_LABELS[code]
-    return label ?? UNKNOWN_BLOCKING_REASON
 }
 
 export function canOpenLobby(status: PickBanSessionStatus): boolean {

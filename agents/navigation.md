@@ -460,7 +460,9 @@ web build opens it straight from a deep link.
   `useNavigation().navigate`, so it is a real `/events/<slug>?tab=bracket` anchor on web
   and one `navigate()` call on both targets.
 - **Copy link** copies `buildMatchLinks(eventSlug, matchId).playerLink` (above) through
-  `useCopyFeedback`, so the copied URL is the public site's on desktop too.
+  `useCopyFeedback`, so the copied URL is the public site's on desktop too. A manager's
+  dock adds **Copy player link** and **Copy stream link** through the same button, so a
+  stream link is copied from the page itself as well as from the Manage queue.
 - **Sound toggle.** A header button next to Copy link (`Volume2`/`VolumeX`, `aria-pressed`)
   starts muted and flips `usePickBanSound`'s `muted` flag; the click doubles as the user
   gesture that unlocks the Web Audio context. See `agents/data-sources.md` →
