@@ -33,6 +33,25 @@ describe('cuesToPlay', () => {
         expect(result.cues).toEqual([])
     })
 
+    it('returns the same played set, with no new allocation, when nothing is newly revealed', () => {
+        const state = started()
+        const played = new Set<string>()
+
+        const result = cuesAt(state, unlockAt(state) - 1, played)
+
+        expect(result.played).toBe(played)
+    })
+
+    it('returns the same played set once every revealed step is already in it', () => {
+        const state = locked(started(), ALPHA, unlockAt(started()) + 2_000)
+        const revealAt = ms(state.plan[0].reveal_at)
+        const played = cuesAt(state, revealAt + 10).played
+
+        const result = cuesAt(state, revealAt + 20, played)
+
+        expect(result.played).toBe(played)
+    })
+
     it('fires a ban cue exactly at a lettered ban’s reveal_at, not before', () => {
         const state = locked(started(), ALPHA, unlockAt(started()) + 2_000)
         const revealAt = ms(state.plan[0].reveal_at)

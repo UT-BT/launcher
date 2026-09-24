@@ -16,7 +16,7 @@ not_here:
   - "the procedure to wire a new endpoint into the UI → skill: consume-api-data"
 sections: [backend-api, errors, admin-api, event-brackets, event-scheduling, event-predictions, public-maps-tab-pick-ban-pools, event-pickban-sessions, event-pick-ban-setup, changing-a-map-screenshot, cap-detail-page-endpoints, world-records-page-endpoints, team-maps-and-team-runs, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites, account-state-and-badges]
 last_verified: 2026-09-25
-verify_against: [app/utils/api.ts, app/utils/chartBuckets.ts, app/components/pages/admin/components/controls.tsx, app/components/pages/admin/sections/HostsManagementSection.tsx, app/utils/patreon.ts, app/utils/server-utils.ts, app/hooks/useServerFavorites.ts, app/components/pages/events/manage/formatFields.tsx, app/components/pages/events/bracket/bracketShared.tsx, app/components/pages/events/bracket/BracketTab.tsx, app/components/pages/events/bracket/GroupStageView.tsx, app/components/pages/events/bracket/SwissStageView.tsx, app/components/pages/events/bracket/ElimStageView.tsx, app/components/pages/events/predictions/predictionsShared.tsx, app/components/pages/events/predictions/PredictionsTab.tsx, app/components/pages/events/schedule/scheduleShared.tsx, app/components/pages/events/schedule/ScheduleTab.tsx, app/components/pages/events/schedule/SlotPickerModal.tsx, app/components/pages/events/schedule/slotGeneration.ts, app/components/pages/events/schedule/SlotGrid.tsx, app/components/pages/events/manage/DateTimeField.tsx, app/components/pages/events/eventsShared.tsx, app/components/pages/EventDetailPage.tsx, app/utils/timezone.ts, app/components/pages/events/manage/ScheduleOversightPanel.tsx, app/components/pages/events/ManagePanel.tsx, app/components/main/Main.tsx, app/components/layout/AppLayout.tsx, app/components/pages/events/maps/MapsTab.tsx, app/components/pages/events/maps/mapsShared.ts, app/components/pages/events/pickban/pickBanView.ts, app/components/pages/events/pickban/pickBanStatus.ts, app/components/pages/events/pickban/pickBanSession.ts, app/components/pages/events/pickban/pickBanEntryPoints.ts, app/components/pages/events/pickban/components/PickBanLink.tsx, app/components/pages/events/pickban/components/PickBanJoinBanner.tsx, app/components/pages/events/pickban/clockOffset.ts, app/components/pages/events/manage/pickban/pickBanEditor.ts, app/components/pages/events/manage/pickban/PickBanPanel.tsx, app/components/pages/events/manage/pickban/PickBanStageCard.tsx, app/components/pages/events/manage/pickban/PickBanQueuePanel.tsx, app/components/pages/events/manage/pickban/pickBanQueue.ts, app/components/pages/events/pickBanTags.ts, app/components/navigation/matchLinks.ts, app/utils/poller.ts, app/components/pages/events/pickban/stream/StreamView.tsx, app/components/pages/events/pickban/pickBanCopy.ts, app/components/pages/events/pickban/components/PickBanUnavailable.tsx, app/components/pages/events/pickban/pickBanSoundCues.ts, app/components/pages/events/pickban/pickBanSoundPlayer.ts, app/components/pages/events/pickban/usePickBanSound.ts, app/components/pages/MatchPickBanPage.tsx, app/components/pages/events/pickban/managerDock.ts]
+verify_against: [app/utils/api.ts, app/utils/chartBuckets.ts, app/components/pages/admin/components/controls.tsx, app/components/pages/admin/sections/HostsManagementSection.tsx, app/utils/patreon.ts, app/utils/server-utils.ts, app/hooks/useServerFavorites.ts, app/components/pages/events/manage/formatFields.tsx, app/components/pages/events/bracket/bracketShared.tsx, app/components/pages/events/bracket/BracketTab.tsx, app/components/pages/events/bracket/GroupStageView.tsx, app/components/pages/events/bracket/SwissStageView.tsx, app/components/pages/events/bracket/ElimStageView.tsx, app/components/pages/events/predictions/predictionsShared.tsx, app/components/pages/events/predictions/PredictionsTab.tsx, app/components/pages/events/schedule/scheduleShared.tsx, app/components/pages/events/schedule/ScheduleTab.tsx, app/components/pages/events/schedule/SlotPickerModal.tsx, app/components/pages/events/schedule/slotGeneration.ts, app/components/pages/events/schedule/SlotGrid.tsx, app/components/pages/events/manage/DateTimeField.tsx, app/components/pages/events/eventsShared.tsx, app/components/pages/EventDetailPage.tsx, app/utils/timezone.ts, app/components/pages/events/manage/ScheduleOversightPanel.tsx, app/components/pages/events/ManagePanel.tsx, app/components/main/Main.tsx, app/components/layout/AppLayout.tsx, app/components/pages/events/maps/MapsTab.tsx, app/components/pages/events/maps/mapsShared.ts, app/components/pages/events/pickban/pickBanView.ts, app/components/pages/events/pickban/pickBanStatus.ts, app/components/pages/events/pickban/pickBanSession.ts, app/components/pages/events/pickban/pickBanEntryPoints.ts, app/components/pages/events/pickban/components/PickBanLink.tsx, app/components/pages/events/pickban/components/PickBanJoinBanner.tsx, app/components/pages/events/pickban/clockOffset.ts, app/components/pages/events/manage/pickban/pickBanEditor.ts, app/components/pages/events/manage/pickban/PickBanPanel.tsx, app/components/pages/events/manage/pickban/PickBanStageCard.tsx, app/components/pages/events/manage/pickban/PickBanQueuePanel.tsx, app/components/pages/events/manage/pickban/pickBanQueue.ts, app/components/pages/events/pickBanTags.ts, app/components/navigation/matchLinks.ts, app/utils/poller.ts, app/components/pages/events/pickban/stream/StreamView.tsx, app/components/pages/events/pickban/pickBanCopy.ts, app/components/pages/events/pickban/components/PickBanUnavailable.tsx, app/components/pages/events/pickban/pickBanSoundCues.ts, app/components/pages/events/pickban/pickBanSoundPlayer.ts, app/components/pages/events/pickban/usePickBanSound.ts, app/components/pages/MatchPickBanPage.tsx, app/components/pages/events/pickban/managerDock.ts, scripts/make-pickban-sounds.mjs]
 ---
 
 # Data sources
@@ -821,21 +821,29 @@ its card flagged `lockedIn`. Everyone else still sees the step being awaited. `c
 re-derived when a spotlight or the intro ends, so a captain can act without waiting for the
 next poll. The server's `can_lock_now` only overrides it for a payload read while awaiting.
 
-**Sound.** Three bundled clips (lock-in, ban, decider) play on each step's reveal.
-`pickBanSoundCues.ts`'s `cuesToPlay(state, clock, played)` is the pure seam (Vitest, no
-DOM): it walks `state.plan` with the same reveal gate the view model uses, keys each cue
-by plan index plus that step's raw `reveal_at`, and returns the newly-due cues plus the
-next played set — so a refresh, remount or 304 that leaves a step's `reveal_at` unchanged
-never replays it, while an undo followed by a new lock at the same index gets a fresh key
-and does sound. `pick` maps to the lock-in clip, `ban` (lettered or ban-down) to the ban
-clip, `decider` to the decider clip. `usePickBanSound({ state, clockOffsetMs, muted })`
-drives it from a `requestAnimationFrame` loop, not poll arrival, discards its first tick's
-cues so steps already revealed at load never sound, and plays through
-`pickBanSoundPlayer.ts` (Web Audio, buffers decoded up front alongside the screenshots and
-fonts, autoplay rejections swallowed, the context resumed on the first pointer or key
-gesture). Both pages call it: the stream view passes `sound=0`'s parsed value straight
-through as `muted` (see `agents/web-target.md` → `pre-shell-routes`); the watch page starts
-muted and flips a header toggle, whose click doubles as the unlocking gesture.
+**Sound.** Three bundled clips (lock-in, ban, decider) play on each step's reveal. They
+live at `app/assets/sounds/{lock-in,ban,decider}.wav` — short, mono, deterministically
+synthesized (no third-party samples) by `node scripts/make-pickban-sounds.mjs`; rerun that
+script to regenerate them if the synthesis changes. `pickBanSoundCues.ts`'s
+`cuesToPlay(state, clock, played)` is the pure seam (Vitest, no DOM): it calls
+`pickBanView.ts`'s `revealedStepsAt(state, clock)` — the same reveal gate and pause-frozen
+clock the view model itself uses via `momentOf` — keys each cue by plan index plus that
+step's raw `reveal_at`, and returns the newly-due cues plus the next played set (the same
+object, with no new allocation, when nothing is newly revealed) — so a refresh, remount or
+304 that leaves a step's `reveal_at` unchanged never replays it, while an undo followed by
+a new lock at the same index gets a fresh key and does sound. A cue more than
+`STALE_CUE_MS` (1.5 s) behind the effective clock — a reconnect after the tab was
+backgrounded delivering several revealed steps at once — is marked played silently instead
+of sounding. `pick` maps to the lock-in clip, `ban` (lettered or ban-down) to the ban clip,
+`decider` to the decider clip. `usePickBanSound({ state, clockOffsetMs, muted })` drives it
+from a `requestAnimationFrame` loop that only runs while unmuted — muting stops it and
+clears its played set, so unmuting restarts primed and discards its first tick's cues, the
+same as a fresh load — and plays through `pickBanSoundPlayer.ts` (Web Audio, buffers
+decoded up front alongside the screenshots and fonts regardless of mute state, autoplay
+rejections swallowed, the context resumed on the first pointer or key gesture). Both pages
+call it: the stream view passes `sound=0`'s parsed value straight through as `muted` (see
+`agents/web-target.md` → `pre-shell-routes`); the watch page starts muted and flips a
+header toggle, whose click doubles as the unlocking gesture.
 
 **The watch page** (`MatchPickBanPage.tsx`). Anyone who can see the match can open it. It
 reads with the viewer's token when there is one and anonymously otherwise, and it renders

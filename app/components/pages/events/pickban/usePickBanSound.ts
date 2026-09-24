@@ -14,8 +14,7 @@ export function usePickBanSound({ state, clockOffsetMs, muted }: UsePickBanSound
     stateRef.current = state
     const offsetRef = useRef(clockOffsetMs)
     offsetRef.current = clockOffsetMs
-    const mutedRef = useRef(muted)
-    mutedRef.current = muted
+    const playedRef = useRef<ReadonlySet<string>>(new Set())
 
     const player = useMemo(() => createPickBanSoundPlayer(), [])
 
@@ -35,18 +34,21 @@ export function usePickBanSound({ state, clockOffsetMs, muted }: UsePickBanSound
     }, [player])
 
     useEffect(() => {
+        if (muted) {
+            playedRef.current = new Set()
+            return
+        }
         let primed = false
-        let played: ReadonlySet<string> = new Set()
         let frame = requestAnimationFrame(function tick() {
             const current = stateRef.current
             if (current) {
-                const result = cuesToPlay(current, { clockOffsetMs: offsetRef.current, now: Date.now() }, played)
-                played = result.played
-                if (primed && !mutedRef.current) for (const cue of result.cues) player.play(cue.kind)
+                const result = cuesToPlay(current, { clockOffsetMs: offsetRef.current, now: Date.now() }, playedRef.current)
+                playedRef.current = result.played
+                if (primed) for (const cue of result.cues) player.play(cue.kind)
                 primed = true
             }
             frame = requestAnimationFrame(tick)
         })
         return () => cancelAnimationFrame(frame)
-    }, [player])
+    }, [player, muted])
 }
