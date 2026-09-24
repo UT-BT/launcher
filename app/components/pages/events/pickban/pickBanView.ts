@@ -305,18 +305,30 @@ function stagePhaseOf(status: PickBanSessionStatus, livePhase: LivePhase): PickB
     return livePhase
 }
 
-function momentOf(state: PickBanState, { clockOffsetMs, now }: PickBanClock): Moment {
+export interface PickBanRevealedSteps {
+    clock: number
+    frozenAt: number | null
+    steps: PickBanPlanStep[]
+    revealed: PickBanPlanStep[]
+}
+
+export function revealedStepsAt(state: PickBanState, { clockOffsetMs, now }: PickBanClock): PickBanRevealedSteps {
     const frozenAt = state.status === 'paused' ? parseApiInstant(state.paused_at) : null
     const serverNow = now + clockOffsetMs
     const clock = frozenAt === null ? serverNow : Math.min(serverNow, frozenAt)
     const steps = [...state.plan].sort((a, b) => a.index - b.index)
-    const revealedSteps = steps.filter((step) => isRevealedAt(step, clock))
+    const revealed = steps.filter((step) => isRevealedAt(step, clock))
+    return { clock, frozenAt, steps, revealed }
+}
+
+function momentOf(state: PickBanState, clockInput: PickBanClock): Moment {
+    const { clock, frozenAt, steps, revealed: revealedSteps } = revealedStepsAt(state, clockInput)
     const currentStep = steps.find((step) => !isRevealedAt(step, clock)) ?? null
     return {
         state,
         clock,
         frozenAt,
-        toLocal: (serverInstant) => serverInstant - clockOffsetMs,
+        toLocal: (serverInstant) => serverInstant - clockInput.clockOffsetMs,
         steps,
         revealedSteps,
         lastRevealed: revealedSteps[revealedSteps.length - 1] ?? null,

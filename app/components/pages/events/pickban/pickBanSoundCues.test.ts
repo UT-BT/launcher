@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { PickBanState } from '@/app/utils/api'
-import { cuesToPlay } from './pickBanSoundCues'
+import { STALE_CUE_MS, cuesToPlay } from './pickBanSoundCues'
 import {
     ELIGIBLE_MAPS,
     locked,
@@ -46,11 +46,14 @@ describe('cuesToPlay', () => {
 
     it('fires a lock-in cue for a pick and a decider cue for the automatic decider', () => {
         const complete = lockedInTurn(started(), [ALPHA, BRAVO, CHARLIE, DELTA, ECHO, FOXTROT])
-        const result = cuesAt(complete, unlockAt(complete) + 1)
-        const kindOf = (index: number) => result.cues.find((cue) => cue.key.startsWith(`${index}:`))?.kind
+        const pickRevealAt = ms(complete.plan[2].reveal_at)
+        const deciderRevealAt = ms(complete.plan[6].reveal_at)
 
-        expect(kindOf(2)).toBe('lock_in')
-        expect(kindOf(6)).toBe('decider')
+        const atPick = cuesAt(complete, pickRevealAt + 10)
+        expect(atPick.cues.find((cue) => cue.key.startsWith('2:'))?.kind).toBe('lock_in')
+
+        const atDecider = cuesAt(complete, deciderRevealAt + 10, atPick.played)
+        expect(atDecider.cues.find((cue) => cue.key.startsWith('6:'))?.kind).toBe('decider')
     })
 
     it('never replays a cue on a refresh, remount or 304 that keeps the same reveal_at', () => {
@@ -122,6 +125,24 @@ describe('cuesToPlay', () => {
 
         const atDeciderReveal = cuesAt(beforeDecider, deciderRevealAt + 1, beforeDeciderReveal.played)
         expect(atDeciderReveal.cues).toEqual([{ key: `6:${deciderStep.reveal_at}`, kind: 'decider' }])
+    })
+
+    it('sounds a fresh reveal, right up to the edge of the staleness window', () => {
+        const state = locked(started(), ALPHA, unlockAt(started()) + 2_000)
+        const revealAt = ms(state.plan[0].reveal_at)
+
+        const result = cuesAt(state, revealAt + STALE_CUE_MS - 1)
+        expect(result.cues).toEqual([{ key: `0:${state.plan[0].reveal_at}`, kind: 'ban' }])
+    })
+
+    it('marks a reveal older than the staleness window as played, without sounding', () => {
+        const state = locked(started(), ALPHA, unlockAt(started()) + 2_000)
+        const revealAt = ms(state.plan[0].reveal_at)
+        const key = `0:${state.plan[0].reveal_at}`
+
+        const result = cuesAt(state, revealAt + STALE_CUE_MS + 1)
+        expect(result.cues).toEqual([])
+        expect(result.played.has(key)).toBe(true)
     })
 
     it('freezes the reveal gate while paused, and honours the shifted reveal_at after resume', () => {
