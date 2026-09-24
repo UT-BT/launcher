@@ -779,13 +779,19 @@ only from the view model, through the pick/ban visual core (see
   be read on a touch screen too.
 
 `e2e/pickban-watch.spec.ts` serves the pick/ban read from fixtures with a server clock
-that runs in real time. It checks five things: a phone width in the lobby, live and
-complete states; a lock-in that arrives early being revealed at its `reveal_at`, at the
-same moment on two pages; the centre stage keeping one height per width from 360px to
-3840px while every state (lobby, intro, turn, ban, pick and decider reveals, paused,
-summary, cancelled) fits inside it; the countdown bar gliding, and stepping once a second
-with reduced motion on; and polls, 304s included, that keep the same nodes and the same
-layout.
+that runs in real time. It checks seven things:
+
+- a phone width in the lobby, live and complete states
+- a lock-in that arrives early being revealed at its `reveal_at`, at the same moment on two
+  pages
+- the centre stage keeping one height per width from 360px to 3840px while every state
+  (lobby, intro, turn, ban, pick and decider reveals, paused, summary, cancelled) fits
+  inside it
+- the countdown bar gliding, and stepping once a second with reduced motion on
+- an undo fading the reveal out through in-between frames, and doing it instantly with
+  reduced motion on
+- the paused overlay fading in and out, and doing it instantly with reduced motion on
+- polls, 304s included, that keep the same nodes and the same layout
 
 ### Event pick/ban setup
 
