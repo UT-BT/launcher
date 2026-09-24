@@ -16,6 +16,7 @@ import {
     asReplacedCaptain,
     asSpectator,
     asTeammate,
+    iso,
     locked,
     lockedInTurn,
     paused,
@@ -212,6 +213,40 @@ describe('reveal gating', () => {
         expect(done.phase).toBe('complete')
         expect(done.countdown).toBeNull()
         expect(done.turn).toBeNull()
+    })
+
+    it('reveals a decider-only plan as the intro ends', () => {
+        const base = pickBanState()
+        const decider = base.plan[base.plan.length - 1]
+        const start = started(pickBanState({
+            plan: [{ ...decider, index: 0, map_number: 1 }],
+            pool: base.pool.filter((c) => c.map === GOLF || c.excluded),
+            sequence: { preset_id: null, from_stage_key: null, ban_down: true, steps: [] },
+        }))
+        const state = asSpectator({
+            ...start,
+            status: 'complete',
+            current_plan_index: null,
+            completed_at: start.started_at,
+            plan: [{ ...start.plan[0], map: GOLF, at: start.started_at, reveal_at: start.intro_ends_at }],
+            spotlight_ends_at: iso(INTRO_END + DECIDER_SPOTLIGHT_MS),
+        })
+
+        expect(viewAt(state, T0 + 1_000).phase).toBe('lobby')
+
+        const intro = viewAt(state, INTRO_END - 1)
+        expect(intro.phase).toBe('intro')
+        expect(intro.turn).toMatchObject({ action: 'decider', actionLabel: 'Decider', side: null })
+        expect(cardOf(intro, GOLF).state).toBe('available')
+        expect(intro.summary[0].map).toBeNull()
+
+        const reveal = viewAt(state, INTRO_END)
+        expect(reveal.phase).toBe('spotlight')
+        expect(reveal.spotlight).toMatchObject({ segment: 'decider', map: GOLF })
+        expect(cardOf(reveal, GOLF).state).toBe('decider')
+        expect(reveal.summary).toEqual([expect.objectContaining({ mapNumber: 1, map: GOLF, decider: true })])
+
+        expect(viewAt(state, INTRO_END + DECIDER_SPOTLIGHT_MS).phase).toBe('complete')
     })
 })
 

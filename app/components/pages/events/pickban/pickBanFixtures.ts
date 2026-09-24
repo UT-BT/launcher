@@ -241,10 +241,10 @@ export function locked(state: PickBanState, map: string, at: number, options: { 
         ...state,
         plan,
         status: complete ? 'complete' : 'running',
-        phase: complete ? 'complete' : 'spotlight',
+        phase: 'spotlight',
         current_plan_index: complete ? null : next,
         spotlight_ends_at: iso(spotlightEnd),
-        phase_ends_at: complete ? null : iso(spotlightEnd),
+        phase_ends_at: iso(spotlightEnd),
         completed_at: complete ? iso(at) : null,
         selection_preview: null,
         version: state.version + 1,
@@ -294,12 +294,12 @@ export function resumed(state: PickBanState, at: number): PickBanState {
 
 export function readAt(state: PickBanState, at: number): PickBanState {
     let phase = state.phase
-    if (state.status === 'running') {
+    if (state.status === 'running' || state.status === 'complete') {
         const introEnd = ms(state.intro_ends_at) ?? -Infinity
         const spotlightEnd = ms(state.spotlight_ends_at) ?? -Infinity
         if (at < introEnd) phase = 'intro'
         else if (at < spotlightEnd) phase = 'spotlight'
-        else phase = 'awaiting'
+        else phase = state.status === 'complete' ? 'complete' : 'awaiting'
     }
     return withCapabilities({ ...state, phase, server_now: iso(at) })
 }
