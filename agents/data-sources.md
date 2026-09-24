@@ -7,7 +7,8 @@ read_when:
   - "wiring map/server favorites or Patreon tier lookups"
   - "reading a match's pick/ban state, sending a pick/ban command, or rendering from the pick/ban view model"
   - "rendering the manager match queue, or changing which stable codes it shows as a blocking reason"
-keywords: [api.ts, fetch, endpoint, accessToken, avatar, MapThumbnail, favorites, patreon, downloadMapZip, world_records, caps, predictions, draw, odds, schedule, proposal, slot, whose_turn, resolved_window, countdown, nav badge, fetchMyTournaments, SlotPickerModal, SlotGrid, DateTimeField, slotGeneration, proposeMatchSlots, withdrawMatchProposal, acceptMatchProposal, fetchMatchSchedule, ApiError, expected_match_duration_minutes, fetchPickBanConfig, PickBanConfig, PickBanPoolMap, MapsTab, mapsShared, stagesWithPools, tagBadgeVariant, pick/ban, fetchPickBanState, ETag, If-None-Match, 304, X-Server-Now, server_now, clock offset, reveal_at, sendPickBanCommand, sendPickBanManagerCommand, pickBanErrorCode, fetchPickBanQueue, PickBanQueueEntry, PickBanQueueRow, toQueueRow, canOpenLobby, blockingReasonLabel, PickBanQueuePanel, pickBanStatusBadge, statusOfPhase, buildPickBanView, setPickBanStageConfig, setPickBanStagePool, copyPickBanStagePool, pickBanEditor, stage pool, buildMatchLinks, matchStreamPath, createPoller, scene, sceneDirection, playsEntrance, usePickBanPreload]
+  - "finding a pick/ban session from the bracket, a match card, the event page or the Schedule tab without a direct link"
+keywords: [api.ts, fetch, endpoint, accessToken, avatar, MapThumbnail, favorites, patreon, downloadMapZip, world_records, caps, predictions, draw, odds, schedule, proposal, slot, whose_turn, resolved_window, countdown, nav badge, fetchMyTournaments, SlotPickerModal, SlotGrid, DateTimeField, slotGeneration, proposeMatchSlots, withdrawMatchProposal, acceptMatchProposal, fetchMatchSchedule, ApiError, expected_match_duration_minutes, fetchPickBanConfig, PickBanConfig, PickBanPoolMap, MapsTab, mapsShared, stagesWithPools, tagBadgeVariant, pick/ban, fetchPickBanState, ETag, If-None-Match, 304, X-Server-Now, server_now, clock offset, reveal_at, sendPickBanCommand, sendPickBanManagerCommand, pickBanErrorCode, captain controls, CaptainDock, useCaptainPlay, fetchPickBanQueue, PickBanQueueEntry, PickBanQueueRow, toQueueRow, canOpenLobby, blockingReasonLabel, PickBanQueuePanel, pickBanStatusBadge, statusOfPhase, buildPickBanView, setPickBanStageConfig, setPickBanStagePool, copyPickBanStagePool, pickBanEditor, stage pool, buildMatchLinks, matchStreamPath, createPoller, pick_ban_status, MatchPickBanStatus, pickBanCardAffordance, PickBanCardPill, pickBanMapLabel, MyPickBanSession, pick_ban_session, pickBanJoinBannerVisible, PickBanJoinBanner, PICK_BAN_ME_REFRESH_MS, pickBanEntryPoints, Join banner, scene, sceneDirection, playsEntrance, usePickBanPreload]
 provides: "the client-side API contract the launcher consumes + asset URLs + favorites/patreon sync models"
 not_here:
   - "IPC channels (window.conveyor.*) → lib/conveyor/README.md"
@@ -15,7 +16,7 @@ not_here:
   - "the procedure to wire a new endpoint into the UI → skill: consume-api-data"
 sections: [backend-api, errors, admin-api, event-brackets, event-scheduling, event-predictions, public-maps-tab-pick-ban-pools, event-pickban-sessions, event-pick-ban-setup, changing-a-map-screenshot, cap-detail-page-endpoints, world-records-page-endpoints, team-maps-and-team-runs, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites, account-state-and-badges]
 last_verified: 2026-09-24
-verify_against: [app/utils/api.ts, app/utils/chartBuckets.ts, app/components/pages/admin/components/controls.tsx, app/components/pages/admin/sections/HostsManagementSection.tsx, app/utils/patreon.ts, app/utils/server-utils.ts, app/hooks/useServerFavorites.ts, app/components/pages/events/manage/formatFields.tsx, app/components/pages/events/bracket/bracketShared.tsx, app/components/pages/events/bracket/BracketTab.tsx, app/components/pages/events/predictions/predictionsShared.tsx, app/components/pages/events/predictions/PredictionsTab.tsx, app/components/pages/events/schedule/scheduleShared.tsx, app/components/pages/events/schedule/ScheduleTab.tsx, app/components/pages/events/schedule/SlotPickerModal.tsx, app/components/pages/events/schedule/slotGeneration.ts, app/components/pages/events/schedule/SlotGrid.tsx, app/components/pages/events/manage/DateTimeField.tsx, app/components/pages/events/eventsShared.tsx, app/components/pages/EventDetailPage.tsx, app/utils/timezone.ts, app/components/pages/events/manage/ScheduleOversightPanel.tsx, app/components/pages/events/ManagePanel.tsx, app/components/main/Main.tsx, app/components/layout/AppLayout.tsx, app/components/pages/events/maps/MapsTab.tsx, app/components/pages/events/maps/mapsShared.ts, app/components/pages/events/pickban/pickBanView.ts, app/components/pages/events/pickban/pickBanStatus.ts, app/components/pages/events/pickban/pickBanSession.ts, app/components/pages/events/pickban/clockOffset.ts, app/components/pages/events/manage/pickban/pickBanEditor.ts, app/components/pages/events/manage/pickban/PickBanPanel.tsx, app/components/pages/events/manage/pickban/PickBanStageCard.tsx, app/components/pages/events/manage/pickban/PickBanQueuePanel.tsx, app/components/pages/events/manage/pickban/pickBanQueue.ts, app/components/pages/events/pickBanTags.ts, app/components/navigation/matchLinks.ts, app/utils/poller.ts]
+verify_against: [app/utils/api.ts, app/utils/chartBuckets.ts, app/components/pages/admin/components/controls.tsx, app/components/pages/admin/sections/HostsManagementSection.tsx, app/utils/patreon.ts, app/utils/server-utils.ts, app/hooks/useServerFavorites.ts, app/components/pages/events/manage/formatFields.tsx, app/components/pages/events/bracket/bracketShared.tsx, app/components/pages/events/bracket/BracketTab.tsx, app/components/pages/events/bracket/GroupStageView.tsx, app/components/pages/events/bracket/SwissStageView.tsx, app/components/pages/events/bracket/ElimStageView.tsx, app/components/pages/events/predictions/predictionsShared.tsx, app/components/pages/events/predictions/PredictionsTab.tsx, app/components/pages/events/schedule/scheduleShared.tsx, app/components/pages/events/schedule/ScheduleTab.tsx, app/components/pages/events/schedule/SlotPickerModal.tsx, app/components/pages/events/schedule/slotGeneration.ts, app/components/pages/events/schedule/SlotGrid.tsx, app/components/pages/events/manage/DateTimeField.tsx, app/components/pages/events/eventsShared.tsx, app/components/pages/EventDetailPage.tsx, app/utils/timezone.ts, app/components/pages/events/manage/ScheduleOversightPanel.tsx, app/components/pages/events/ManagePanel.tsx, app/components/main/Main.tsx, app/components/layout/AppLayout.tsx, app/components/pages/events/maps/MapsTab.tsx, app/components/pages/events/maps/mapsShared.ts, app/components/pages/events/pickban/pickBanView.ts, app/components/pages/events/pickban/pickBanStatus.ts, app/components/pages/events/pickban/pickBanSession.ts, app/components/pages/events/pickban/pickBanEntryPoints.ts, app/components/pages/events/pickban/clockOffset.ts, app/components/pages/events/manage/pickban/pickBanEditor.ts, app/components/pages/events/manage/pickban/PickBanPanel.tsx, app/components/pages/events/manage/pickban/PickBanStageCard.tsx, app/components/pages/events/manage/pickban/PickBanQueuePanel.tsx, app/components/pages/events/manage/pickban/pickBanQueue.ts, app/components/pages/events/pickBanTags.ts, app/components/navigation/matchLinks.ts, app/utils/poller.ts, app/components/pages/events/pickban/stream/StreamView.tsx]
 ---
 
 # Data sources
@@ -149,6 +150,45 @@ already covered below). `EventDetailPage` separately scans every stage's
 matches for the viewer's own `scheduled` ones and shows a live countdown
 (`useNow`/`formatCountdown` from `predictions/predictionsShared.tsx`) to the
 soonest still-future one — `nextOwnMatch` in `bracketShared.tsx`.
+
+**Every `EventMatch` also carries `pick_ban_status`**: `'none' | 'lobby' |
+'running' | 'paused' | 'complete'` — the match's *current* pick/ban session
+only; a cancelled or voided one, or none at all, both read `'none'`. It is
+what lets a match card offer a way into a session without a direct link.
+`pickBanCardAffordance(status, isRostered)`
+(`events/pickban/pickBanEntryPoints.ts`, pure, no DOM) turns that status plus
+whether the viewer is rostered on either side into `'live' | 'join' | null`;
+`MatchCard` renders it as a small pill next to the status chip through its own
+`NavLink` to `match-pickban` (`eventSlug` + `myTeamId` are optional props —
+every stage view and `BracketTab` thread them down the same way they already
+thread `onMapSelect`/`onScheduleMatch`, so the pill is absent wherever a
+caller has neither to give, e.g. the Manage → Bracket editor). The pill's own
+`NavLink` `stopPropagation`s by default, so it never also fires the card's
+own `onClick` (which opens the scheduler) — see the "traps" note in
+`agents/navigation.md` about never nesting a second navigation mechanism.
+Once a session completes, `bracketShared.tsx`'s `pickBanMapLabel(row, teamA,
+teamB)` (pure) reads the map row's own `picked_by`/`kind` (unwatched by
+`pick_ban_status`, which only reflects the *current* session) into `'Picked
+by <team>'` or `'Decider'` for `MapRow` to show next to the map name — this
+is the same `picked_by`/`kind` `agents/pick-ban.md`'s slot-write section
+documents, already on `EventMatchMap` since the map-slot-writes ticket.
+
+**The event `me` payload carries `pick_ban_session: MyPickBanSession | null`**
+(`{match_id, status: 'lobby' | 'running' | 'paused'}`) — the caller's own
+active team's open or running session, `null` the moment it has none, is
+complete, or is cancelled/voided. `EventDetailPage` refreshes `fetchMyEventStatus`
+every 30 seconds (`PICK_BAN_ME_REFRESH_MS`, its own `setInterval`, independent
+of the page's manual refresh) so a captain who is not looking at the page
+still gets the Join banner within half a minute of a lobby opening.
+`pickBanJoinBannerVisible(session)` (same pure module) is just `session !==
+null`; the page renders a small pulsing-dot banner ("Pick/Ban open – Join",
+another `NavLink` to `match-pickban`) above the next-match banner whenever it
+is. `ScheduleTab` takes the same `pickBanSession` and highlights the one
+entry whose `match.id` matches it with an identical banner in place of (well,
+above) its usual propose/respond button — the Schedule tab's own call to
+action. Neither banner uses a per-row CSS animation: `MatchCard`'s pill never
+pulses, keeping the styling budget's "no per-row infinite animation" rule —
+only these two singleton banners carry the small `animate-ping` dot.
 
 **`published` is the whole-surface gate.** Until an event manager turns it on, a
 player gets no stages, no standings and no format at all — so the Bracket tab
@@ -623,7 +663,11 @@ waits for a poll. Every body except Open's carries the expected `version`.
 - **Refusals.** A refusal is an `ApiError` whose `.reason` is a stable code (403
   authorization, 409 state conflict, 422 validation). `pickBanErrorCode(err)` narrows it to
   `PickBanErrorCode`, and `PICK_BAN_ERROR_CODES` lists every code. Show `err.message`, and
-  branch on the code only where a screen reacts to a specific one.
+  branch on the code only where a screen reacts to a specific one. The captain controls do:
+  `captainPlay.ts` words each Ready/Unready and Lock refusal for the captain
+  (`version_conflict`, `not_your_turn`, `map_unavailable`, `spotlight_active`,
+  `intro_active`, `paused`, `wrong_status`, `not_authorized`, `no_session`), and falls back
+  to `err.message` for any other code.
 
 **Match queue (managers).** `fetchPickBanQueue(token, slug)` →
 `GET /tournaments/<slug>/admin/pick-ban/queue` → `{ matches: PickBanQueueEntry[] }` (the
@@ -684,7 +728,11 @@ row's own actions.
 - Every 10 seconds (`IDLE_POLL_MS`) for `none`, `complete`, `cancelled` and `voided`, and
   after a first load refused with 401, 403 or 404.
 - Nothing while the document is hidden. It polls at once when the document shows again.
-- The stream view passes `alwaysPoll` and ignores visibility.
+- The stream view (`events/pickban/stream/StreamView.tsx`) calls `usePickBanSession`
+  with `alwaysPoll: true`, so it ignores `document.visibilityState` altogether —
+  required because an OBS browser source is routinely reported hidden. It still
+  follows the same `lobby`/`running`/`paused` vs. terminal cadence above; nothing
+  about the interval changes, only the visibility gate.
 - A failed poll keeps the last good state, and `reconnecting` turns on after
   `RECONNECTING_AFTER_FAILURES` (3) failures in a row.
 - A poll that answers with an older `version` of the same session than a command response
@@ -704,8 +752,9 @@ pure and tested without a DOM. It returns:
   ban) and whether the viewer acts, and `spotlight`, the step being revealed
 - `cards`: `available`, `banned`, `picked`, `decider` or `excluded`, with the acting side,
   step number, map number, exclusion reason (the raw `exclusion` plus `exclusionReason`, a
-  sentence naming the team and seed that triggered it) and the `previewed`, `lockedIn` and
-  `selectable` flags
+  sentence naming the team and seed that triggered it) and the `previewed`, `lockedIn`,
+  `selected` and `selectable` flags. `selected` is always `false` here: the captain's own
+  selection is layered on by `withCaptainPlay` (see `agents/state-patterns.md`).
 - `timeline`: `upcoming`, `current`, `locked_in` or `revealed`, with each step's
   `actorLabel` and `actionLabel`, and its map and screenshot version once revealed
 - `skippedBans`: the payload's `skipped_bans`, one entry per dropped ban in the same order,
@@ -753,6 +802,8 @@ only from the view model, through the pick/ban visual core (see
   that it is retrying, and the store keeps polling behind it.
 - **After that, polls are silent.** New data changes the page in place, and a 304 changes
   nothing. A small fixed "Reconnecting…" toast shows only while `reconnecting` is set.
+  While the captain dock shows, the dock carries that line instead, so the toast never
+  covers Lock in.
 - **Timing.** Reveals and phase changes land on `usePickBanView`'s boundary timer, so a step
   appears at its `reveal_at` even when no poll arrives then. Countdowns and progress bars
   paint on animation frames. With reduced motion on, the bars step once a second instead.
@@ -777,6 +828,19 @@ only from the view model, through the pick/ban visual core (see
   the pause froze (`stagePhase`). Skipped bans and warnings are notes under the timeline,
   with a dashed chip where each dropped ban would have been (`skippedBans`). Each excluded map's reason is listed in words under the pool, so it can
   be read on a touch screen too.
+- **Captain controls.** The page layers `useCaptainPlay` over the view (see
+  `agents/state-patterns.md`) and renders a `CaptainDock` whenever `captainDockOf` returns
+  one, which is only for the viewer with `capabilities.acting_side` (a captain, or the
+  acting captain who replaced them).
+  - In the lobby, the dock toggles Ready and Unready.
+  - On the viewer's own turn in `awaiting`, the pool cards take `onSelect`: select a map,
+    then Lock in, which sends `lock` with the map and the awaited `plan_index`.
+  - The card, the turn and the timeline show "Locked in" at once. The command's returned
+    state then takes over, and the step still reveals at its `reveal_at`.
+  - During the intro, a spotlight or a pause, the dock shows Locked with the countdown to
+    the unlock and who acts next.
+  - A refusal shows as a worded alert. The store has already polled, so the board is
+    current by the time the alert shows.
 
 `e2e/pickban-watch.spec.ts` serves the pick/ban read from fixtures with a server clock
 that runs in real time. It checks seven things:

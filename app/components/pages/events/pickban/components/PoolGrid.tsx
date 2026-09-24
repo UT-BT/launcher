@@ -10,10 +10,11 @@ import { CHIP_MOTION, STAMP_MOTION } from './stageMotion'
 interface PoolGridProps {
     cards: PickBanCardView[]
     previewActor: PickBanActor | null
+    onSelect?: (map: string) => void
     className?: string
 }
 
-export function PoolGrid({ cards, previewActor, className }: PoolGridProps) {
+export function PoolGrid({ cards, previewActor, onSelect, className }: PoolGridProps) {
     return (
         <div className="@container/grid">
             <ul
@@ -27,7 +28,7 @@ export function PoolGrid({ cards, previewActor, className }: PoolGridProps) {
             >
                 {cards.map(card => (
                     <li key={card.key}>
-                        <PoolCard card={card} previewActor={previewActor} />
+                        <PoolCard card={card} previewActor={previewActor} onSelect={onSelect} />
                     </li>
                 ))}
             </ul>
@@ -50,11 +51,16 @@ function cardLabel(card: PickBanCardView, name: string): string {
     }
 }
 
-export function PoolCard({ card, previewActor }: { card: PickBanCardView; previewActor: PickBanActor | null }) {
+export function PoolCard({ card, previewActor, onSelect }: {
+    card: PickBanCardView
+    previewActor: PickBanActor | null
+    onSelect?: (map: string) => void
+}) {
     const name = displayMapName(card.map)
     const tone = PICK_BAN_TONES[stepTone(card.state === 'decider' ? null : card.ab)]
     const previewTone = PICK_BAN_TONES[teamTone(previewActor)]
     const acted = card.state === 'banned' || card.state === 'picked' || card.state === 'decider'
+    const choosable = onSelect !== undefined && card.selectable
 
     return (
         <div
@@ -65,6 +71,7 @@ export function PoolCard({ card, previewActor }: { card: PickBanCardView; previe
                 card.state === 'excluded' && 'border-hairline/5',
                 acted && tone.border,
                 card.previewed && cn('ring-2', previewTone.border, previewTone.ring),
+                card.selected && cn('ring-4', previewTone.border, previewTone.ring),
             )}
         >
             <span className="sr-only">{cardLabel(card, name)}</span>
@@ -102,9 +109,14 @@ export function PoolCard({ card, previewActor }: { card: PickBanCardView; previe
                         </span>
                     </motion.span>
                 )}
-                {card.previewed && (
+                {card.previewed && !card.selected && (
                     <motion.span key="previewed" aria-hidden {...CHIP_MOTION} className={cn('absolute right-1 top-1 rounded px-1.5 py-px text-[10px] font-bold uppercase', previewTone.solid, previewTone.onSolid)}>
                         Considering
+                    </motion.span>
+                )}
+                {card.selected && (
+                    <motion.span key="selected" aria-hidden {...CHIP_MOTION} className={cn('absolute right-1 top-1 rounded px-1.5 py-px text-[10px] font-bold uppercase', previewTone.solid, previewTone.onSolid)}>
+                        Selected
                     </motion.span>
                 )}
                 {card.lockedIn && (
@@ -128,6 +140,15 @@ export function PoolCard({ card, previewActor }: { card: PickBanCardView; previe
             >
                 {name}
             </span>
+            {choosable && (
+                <button
+                    type="button"
+                    aria-pressed={card.selected}
+                    aria-label={`Select ${name}`}
+                    onClick={() => onSelect(card.map)}
+                    className="absolute inset-0 cursor-pointer rounded-md transition-colors hover:bg-hairline/10 focus-visible:outline-2 focus-visible:-outline-offset-4 focus-visible:outline-accent-500"
+                />
+            )}
         </div>
     )
 }

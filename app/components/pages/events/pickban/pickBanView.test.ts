@@ -297,6 +297,24 @@ describe('Locked in', () => {
 
         expect(viewAt(asCaptain(state, 'team_a'), FIRST_LOCK + LEAD_MS).timeline[0].status).toBe('revealed')
     })
+
+    it('shows an acting captain their side’s step as Locked in, and the captain they replaced nothing', () => {
+        const state = firstBanLocked()
+
+        const acting = viewAt(asActingCaptain(state, 'team_a'), FIRST_LOCK + 500)
+        expect(acting.timeline[0].status).toBe('locked_in')
+        expect(cardOf(acting, ALPHA).lockedIn).toBe(true)
+
+        const replaced = viewAt(asReplacedCaptain(state, 'team_a'), FIRST_LOCK + 500)
+        expect(replaced.timeline[0].status).toBe('current')
+        expect(replaced.cards.some((c) => c.lockedIn)).toBe(false)
+    })
+
+    it('shows the side an admin acted for its step as Locked in too', () => {
+        const state = locked(started(), ALPHA, FIRST_LOCK, { byAdmin: true })
+
+        expect(cardOf(viewAt(asCaptain(state, 'team_a'), FIRST_LOCK + 500), ALPHA).lockedIn).toBe(true)
+    })
 })
 
 describe('cards', () => {
@@ -570,6 +588,29 @@ describe('affordances', () => {
         expect(view.affordances).toMatchObject({ actingSide: 'team_a', canLock: true })
         expect(view.turn?.viewerActs).toBe(true)
         expect(asReplacedCaptain(awaitingA, 'team_a').viewer.roster_captain).toBe(true)
+    })
+
+    it('lets an acting captain ready up in the lobby, but not the captain they replaced or a teammate', () => {
+        const lobby = pickBanState()
+
+        expect(viewAt(asActingCaptain(lobby, 'team_a'), T0).affordances).toMatchObject({ actingSide: 'team_a', canReady: true, isReady: false })
+        for (const viewer of [asReplacedCaptain(lobby, 'team_a'), asTeammate(lobby, 'team_a'), asSpectator(lobby), asManager(lobby)]) {
+            expect(viewAt(viewer, T0).affordances).toMatchObject({ actingSide: null, canReady: false, isReady: false })
+        }
+    })
+
+    it('offers Ready only in the lobby', () => {
+        const captain = viewAt(asCaptain(awaitingA, 'team_a'), INTRO_END + 1_000)
+
+        expect(captain.affordances.canReady).toBe(false)
+    })
+
+    it('closes the lock while paused, even on the captain’s own turn', () => {
+        const pausedOnTurn = asCaptain(paused(awaitingA, INTRO_END + 1_000), 'team_a')
+
+        const view = viewAt(pausedOnTurn, INTRO_END + 30_000)
+        expect(view.affordances.canLock).toBe(false)
+        expect(view.cards.some((c) => c.selectable)).toBe(false)
     })
 
     it('unlocks the next captain the moment a spotlight or the intro ends, between polls', () => {

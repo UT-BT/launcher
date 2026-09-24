@@ -283,7 +283,7 @@ export function TurnCard({ turn, previewCard, stepCount, mapCount }: {
                 <div className={cn('flex aspect-square flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed', TURN_SQUARE, tone.line)}>
                     <Icon className={cn('size-8 opacity-60', tone.text)} />
                     <p className="px-3 text-xs text-muted-foreground">
-                        {turn.lockedIn ? 'Locked in, revealing now' : `Waiting for ${who} to lock in`}
+                        {turn.lockedIn ? 'Locked in, revealing now' : turn.viewerActs ? 'Your turn: select a map, then lock in' : `Waiting for ${who} to lock in`}
                     </p>
                 </div>
             )}

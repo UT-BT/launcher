@@ -9,9 +9,11 @@ import { SITE_NAME } from '@/app/components/navigation/titles'
 import { ApiError, type UserProfile } from '@/app/utils/api'
 import { useCopyFeedback } from '@/app/hooks/useCopyFeedback'
 import { usePickBanSession, usePickBanView } from '@/app/components/pages/events/pickban/usePickBanSession'
+import { useCaptainPlay, type UseCaptainPlayResult } from '@/app/components/pages/events/pickban/useCaptainPlay'
 import { usePickBanPreload } from '@/app/components/pages/events/pickban/usePickBanPreload'
 import type { PickBanView } from '@/app/components/pages/events/pickban/pickBanView'
 import { statusOfPhase } from '@/app/components/pages/events/pickban/pickBanStatus'
+import { CaptainDock } from '@/app/components/pages/events/pickban/components/CaptainDock'
 import { CentreStage } from '@/app/components/pages/events/pickban/components/CentreStage'
 import { PickBanBannerNote } from '@/app/components/pages/events/pickban/components/PickBanBannerNote'
 import { PickBanMotion } from '@/app/components/pages/events/pickban/components/PickBanMotion'
@@ -33,7 +35,8 @@ const STAGE_ROW = 'grid grid-cols-2 gap-3 @4xl/page:grid-cols-[13rem_minmax(0,1f
 
 export function MatchPickBanPage({ eventSlug, matchId, userProfile, onBackToEvent }: MatchPickBanPageProps) {
     const session = usePickBanSession({ accessToken: userProfile?.accessToken, slug: eventSlug, matchId })
-    const view = usePickBanView(session.state, session.clockOffsetMs)
+    const captain = useCaptainPlay(usePickBanView(session.state, session.clockOffsetMs), session.sendCommand)
+    const view = captain.view
     const { navigate } = useNavigation()
     usePickBanPreload(view?.cards)
 
@@ -80,7 +83,7 @@ export function MatchPickBanPage({ eventSlug, matchId, userProfile, onBackToEven
 
             {view ? (
                 <PickBanMotion>
-                    <PickBanBody view={view} summaryAction={bracketLink} />
+                    <PickBanBody view={view} summaryAction={bracketLink} captain={captain} reconnecting={session.reconnecting} />
                 </PickBanMotion>
             ) : session.loading ? (
                 <PickBanSkeleton />
@@ -88,7 +91,7 @@ export function MatchPickBanPage({ eventSlug, matchId, userProfile, onBackToEven
                 <Unavailable error={session.error} />
             )}
 
-            {session.reconnecting && <ReconnectingToast />}
+            {session.reconnecting && !captain.dock && <ReconnectingToast />}
         </div>
     )
 }
@@ -97,7 +100,16 @@ function matchSubtitle(view: PickBanView): string {
     return [view.match.stageName, view.match.roundLabel, `Best of ${view.match.bestOf}`].filter(Boolean).join(' · ')
 }
 
-function PickBanBody({ view, summaryAction }: { view: PickBanView; summaryAction: ReactNode }) {
+function viewerAb(view: PickBanView) {
+    return [view.teams.left, view.teams.right].find(panel => panel && panel.side === view.affordances.actingSide)?.ab ?? null
+}
+
+function PickBanBody({ view, summaryAction, captain, reconnecting }: {
+    view: PickBanView
+    summaryAction: ReactNode
+    captain: UseCaptainPlayResult
+    reconnecting: boolean
+}) {
     const notes = view.banners.filter(banner => banner.kind === 'skipped_bans' || banner.kind === 'warning')
     const eligibleCount = view.cards.filter(card => card.state !== 'excluded').length
     const exclusionReasons = [...new Set(view.cards.flatMap(card => card.state === 'excluded' && card.exclusionReason ? [card.exclusionReason] : []))]
@@ -128,11 +140,26 @@ function PickBanBody({ view, summaryAction }: { view: PickBanView; summaryAction
                 <h2 className="text-[10px] uppercase tracking-wider text-muted-foreground">
                     Map pool · {eligibleCount} eligible
                 </h2>
-                <PoolGrid cards={view.cards} previewActor={view.turn?.ab ?? null} />
+                <PoolGrid
+                    cards={view.cards}
+                    previewActor={view.turn?.ab ?? null}
+                    onSelect={captain.dock?.controls?.kind === 'choose' ? captain.select : undefined}
+                />
                 {exclusionReasons.map(reason => (
                     <p key={reason} className="text-xs text-muted-foreground">{reason}</p>
                 ))}
             </section>
+
+            {captain.dock && (
+                <CaptainDock
+                    dock={captain.dock}
+                    ab={viewerAb(view)}
+                    reconnecting={reconnecting}
+                    onLockIn={captain.lockIn}
+                    onToggleReady={captain.toggleReady}
+                    onDismiss={captain.dismiss}
+                />
+            )}
         </div>
     )
 }

@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ArrowLeft, CalendarClock, CalendarDays, Users2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useNavState } from '@/app/components/navigation/useNavState'
+import { useNavigation } from '@/app/components/navigation/NavigationContext'
+import { NavLink } from '@/app/components/navigation/NavLink'
 import { useUnsavedChanges } from '@/app/components/navigation/useUnsavedChanges'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
 import { MarkdownBody } from '@/app/components/shared/MarkdownBody'
@@ -23,11 +25,33 @@ import { nextOwnMatch, sideOf, teamLabel } from './events/bracket/bracketShared'
 import { EventRosterProvider } from './events/TeamRoster'
 import { MapsTab } from './events/maps/MapsTab'
 import { stagesWithPools } from './events/maps/mapsShared'
+import { pickBanJoinBannerVisible } from './events/pickban/pickBanEntryPoints'
 import { PredictionsTab } from './events/predictions/PredictionsTab'
 import { PredictionOddsProvider, formatCountdown, useNow } from './events/predictions/predictionsShared'
 import { ScheduleTab } from './events/schedule/ScheduleTab'
 import type { PickBanDrafts } from './events/manage/pickban/pickBanEditor'
 import { SlotPickerModal } from './events/schedule/SlotPickerModal'
+
+const PICK_BAN_ME_REFRESH_MS = 30_000
+
+function PickBanJoinBanner({ eventSlug, matchId }: { eventSlug: string; matchId: string }) {
+    const { navigate } = useNavigation()
+
+    return (
+        <NavLink
+            view="match-pickban"
+            params={{ eventSlug, matchId }}
+            onActivate={() => navigate('match-pickban', { eventSlug, matchId })}
+            className="flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs shrink-0 cursor-pointer hover:bg-emerald-500/15 transition-colors"
+        >
+            <span className="relative flex size-2 shrink-0">
+                <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 animate-ping" />
+                <span className="relative inline-flex size-2 rounded-full bg-emerald-400" />
+            </span>
+            <span className="text-foreground font-medium">Pick/Ban open – Join</span>
+        </NavLink>
+    )
+}
 
 function NextMatchBanner({ match, myTeamId, now }: {
     match: EventMatch
@@ -163,6 +187,11 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
         }
     }, [accessToken, eventSlug])
 
+    const refreshMyQuietly = useCallback(() => {
+        if (!accessToken || document.visibilityState === 'hidden') return
+        fetchMyEventStatus(accessToken, eventSlug).then(setMy, () => undefined)
+    }, [accessToken, eventSlug])
+
     const canSeeSchedule = scheduleTabVisible(!!my?.team, !!my?.can_manage_bracket || !!my?.can_manage)
 
     const loadSchedule = useCallback(async (enabled: boolean) => {
@@ -183,6 +212,10 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
 
     useEffect(() => { void load() }, [load])
     useEffect(() => { void loadMy() }, [loadMy])
+    useEffect(() => {
+        const timer = setInterval(refreshMyQuietly, PICK_BAN_ME_REFRESH_MS)
+        return () => clearInterval(timer)
+    }, [refreshMyQuietly])
     useEffect(() => { void loadBracket() }, [loadBracket])
     useEffect(() => { void loadPredictions(!!event?.predictions_enabled) }, [loadPredictions, event?.predictions_enabled])
     useEffect(() => { void loadSchedule(canSeeSchedule) }, [loadSchedule, canSeeSchedule])
@@ -280,6 +313,9 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
                     {!event.signups_open && event.status === 'announced' && signupOpens && <span className="text-sky-300">Signups open {signupOpens}</span>}
                 </div>
                 {error && <ErrorBanner message={error} />}
+                {pickBanJoinBannerVisible(my?.pick_ban_session ?? null) && my?.pick_ban_session && (
+                    <PickBanJoinBanner eventSlug={eventSlug} matchId={my.pick_ban_session.match_id} />
+                )}
                 {nextMatch && myTeamId && <NextMatchBanner match={nextMatch} myTeamId={myTeamId} now={now} />}
 
                 <div className="flex items-center gap-1 border-b border-white/10 overflow-x-auto">
@@ -342,7 +378,8 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
                 )}
                 {activeTab === 'teams' && <EventTeamsList teams={teams} teamSize={event.team_size} loading={loading} />}
                 {activeTab === 'bracket' && (
-                    <BracketTab bracket={bracket} loading={loading} onMapSelect={onMapSelect} onScheduleMatch={setSchedulerMatchId} />
+                    <BracketTab bracket={bracket} loading={loading} onMapSelect={onMapSelect} onScheduleMatch={setSchedulerMatchId}
+                        eventSlug={eventSlug} myTeamId={myTeamId} />
                 )}
                 {activeTab === 'maps' && hasMapsPool && (
                     <MapsTab stages={mapsStages} onMapSelect={onMapSelect} />
@@ -354,6 +391,8 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
                         loaded={scheduleLoaded}
                         onRefresh={refreshSchedule}
                         onOpenPicker={setSchedulerMatchId}
+                        eventSlug={eventSlug}
+                        pickBanSession={my?.pick_ban_session}
                     />
                 )}
                 {activeTab === 'predictions' && predictionsOn && (
