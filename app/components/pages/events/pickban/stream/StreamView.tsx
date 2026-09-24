@@ -5,6 +5,7 @@ import { usePickBanPreload } from '../usePickBanPreload'
 import { statusOfPhase } from '../pickBanStatus'
 import type { PickBanView } from '../pickBanView'
 import { CentreStage } from '../components/CentreStage'
+import { PickBanMotion } from '../components/PickBanMotion'
 import { PickBanStatusChip } from '../components/PickBanStatusChip'
 import { StepTimeline } from '../components/StepTimeline'
 import { TeamPanel } from '../components/TeamPanel'
@@ -21,21 +22,23 @@ interface StreamViewProps {
 export function StreamView({ eventSlug, matchId, muted }: StreamViewProps) {
     const session = usePickBanSession({ accessToken: undefined, slug: eventSlug, matchId, alwaysPoll: true })
     const view = usePickBanView(session.state, session.clockOffsetMs)
-    usePickBanPreload(session.state?.pool)
+    usePickBanPreload(view?.cards)
 
     return (
-        <StreamStage>
-            <div data-sound-muted={muted} className="flex h-full w-full flex-col overflow-hidden text-foreground">
-                {view ? (
-                    <StreamBody view={view} />
-                ) : session.loading ? (
-                    <StreamSkeleton />
-                ) : (
-                    <StreamUnavailable error={session.error} />
-                )}
-                {session.reconnecting && <ReconnectingDot />}
-            </div>
-        </StreamStage>
+        <PickBanMotion>
+            <StreamStage>
+                <div data-sound-muted={muted} className="flex h-full w-full flex-col overflow-hidden text-foreground">
+                    {view ? (
+                        <StreamBody view={view} />
+                    ) : session.loading ? (
+                        <StreamSkeleton />
+                    ) : (
+                        <StreamUnavailable error={session.error} />
+                    )}
+                    {session.reconnecting && <ReconnectingDot />}
+                </div>
+            </StreamStage>
+        </PickBanMotion>
     )
 }
 
