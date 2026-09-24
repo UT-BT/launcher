@@ -28,15 +28,16 @@ function cueKeyOf(step: PickBanPlanStep): string {
 
 export function cuesToPlay(state: PickBanState, clock: PickBanClock, played: ReadonlySet<string>): PickBanSoundCuesResult {
     const { clock: effectiveClock, revealed } = revealedStepsAt(state, clock)
-    const next = new Set(played)
+    let next: Set<string> | null = null
     const cues: PickBanSoundCue[] = []
     for (const step of revealed) {
         const key = cueKeyOf(step)
-        if (next.has(key)) continue
+        if (played.has(key)) continue
+        if (next === null) next = new Set(played)
         next.add(key)
         const revealAt = parseApiInstant(step.reveal_at) ?? effectiveClock
         if (effectiveClock - revealAt > STALE_CUE_MS) continue
         cues.push({ key, kind: CUE_KIND_OF_ACTION[step.action] })
     }
-    return { cues, played: next }
+    return { cues, played: next ?? played }
 }
