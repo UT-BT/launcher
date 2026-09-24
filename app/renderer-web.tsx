@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import { handleOAuthCallbackIfPresent } from './platform/web/auth-web'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { ThemeProvider } from './theme/ThemeProvider'
+import { parseStreamPath } from './components/navigation/matchLinks'
 import { pathToNav } from './components/navigation/routes'
 import { prefetchPage } from './components/main/pageLoaders'
 import App from './app'
@@ -17,18 +18,26 @@ window.addEventListener('vite:preloadError', event => {
   window.location.reload()
 })
 
-document.documentElement.style.setProperty('--window-titlebar-height', '0px')
+const streamRoute = parseStreamPath(window.location.pathname)
 
-prefetchPage(pathToNav(window.location.pathname, window.location.search).view)
+if (streamRoute) {
+  void import('./components/pages/events/pickban/stream/mountStreamRoot').then(({ mountStreamRoot }) => {
+    mountStreamRoot(document.getElementById('app') as HTMLElement, streamRoute)
+  })
+} else {
+  document.documentElement.style.setProperty('--window-titlebar-height', '0px')
 
-void handleOAuthCallbackIfPresent().finally(() => {
-  ReactDOM.createRoot(document.getElementById('app') as HTMLElement).render(
-    <React.StrictMode>
-      <ErrorBoundary>
-        <ThemeProvider>
-          <App />
-        </ThemeProvider>
-      </ErrorBoundary>
-    </React.StrictMode>
-  )
-})
+  prefetchPage(pathToNav(window.location.pathname, window.location.search).view)
+
+  void handleOAuthCallbackIfPresent().finally(() => {
+    ReactDOM.createRoot(document.getElementById('app') as HTMLElement).render(
+      <React.StrictMode>
+        <ErrorBoundary>
+          <ThemeProvider>
+            <App />
+          </ThemeProvider>
+        </ErrorBoundary>
+      </React.StrictMode>
+    )
+  })
+}
