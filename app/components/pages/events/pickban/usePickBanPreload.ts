@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { nextScreenshotStage, screenshotUrlFor, type ScreenshotStage } from '@/app/utils/mapScreenshots'
 import type { PickBanCardView } from './pickBanView'
 
@@ -47,23 +47,15 @@ function targetsKeyOf(cards: readonly PickBanPreloadCard[] | null | undefined): 
     return JSON.stringify(targets)
 }
 
-export function usePickBanPreload(cards: readonly PickBanPreloadCard[] | null | undefined): boolean {
+export function usePickBanPreload(cards: readonly PickBanPreloadCard[] | null | undefined): void {
     const targetsKey = targetsKeyOf(cards)
-    const [readyKey, setReadyKey] = useState<string | null>(null)
 
     useEffect(() => {
-        let cancelled = false
         const kept: HTMLImageElement[] = []
-        const targets = JSON.parse(targetsKey) as PreloadTarget[]
-        void Promise.all([preloadFonts().catch(() => undefined), ...targets.map(target => preloadScreenshot(target, kept))])
-            .then(() => {
-                if (!cancelled) setReadyKey(targetsKey)
-            })
+        void preloadFonts().catch(() => undefined)
+        for (const target of JSON.parse(targetsKey) as PreloadTarget[]) void preloadScreenshot(target, kept)
         return () => {
-            cancelled = true
             kept.length = 0
         }
     }, [targetsKey])
-
-    return readyKey === targetsKey
 }

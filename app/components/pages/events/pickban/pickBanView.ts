@@ -150,6 +150,7 @@ export interface PickBanManagerControls {
 
 export interface PickBanAffordances {
     actingSide: PickBanSide | null
+    actingAb: PickBanActor | null
     canReady: boolean
     isReady: boolean
     canLock: boolean
@@ -222,9 +223,9 @@ const ENTRANCE_SHARE = 0.15
 
 const PLAIN_ENTRANCE_MS = 350
 
-const INTRO_ENTRANCE_MAX_MS = 900
+export const INTRO_ENTRANCE_MAX_MS = 900
 
-const REVEAL_ENTRANCE_MAX_MS: { [segment in PickBanSegment]: number } = {
+export const REVEAL_ENTRANCE_MAX_MS: { [segment in PickBanSegment]: number } = {
     lettered: 1_200,
     ban_down: 600,
     decider: 1_500,
@@ -388,6 +389,7 @@ function affordancesOf(moment: Moment, awaitedStep: PickBanPlanStep | null): Pic
     const actingSide = state.capabilities.acting_side
     return {
         actingSide,
+        actingAb: actingSide ? state.teams[actingSide]?.ab ?? null : null,
         canReady: state.status === 'lobby' && state.capabilities.can_ready,
         isReady: actingSide !== null && state.ready[actingSide] !== null,
         canLock: state.status === 'running'

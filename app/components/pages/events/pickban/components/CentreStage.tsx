@@ -5,6 +5,8 @@ import { cn } from '@/lib/utils'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { displayMapName } from '@/app/utils/format'
 import {
+    INTRO_ENTRANCE_MAX_MS,
+    REVEAL_ENTRANCE_MAX_MS,
     playsEntrance,
     sceneDirection,
     type PickBanBanner,
@@ -33,10 +35,6 @@ const TURN_SQUARE = 'w-32 @md/stage:w-44 @[80rem]/stage:w-72 max-w-[calc(100cqh-
 const REVEAL_WIDTH = 'w-36 @md/stage:w-48 @3xl/stage:w-60 @[80rem]/stage:w-96 max-w-[calc(100cqh-7.5rem)]'
 
 const DISCARDED = 'Its bans and picks don’t count.'
-
-const DEFAULT_REVEAL_ENTRANCE_MS = 1_200
-
-const DEFAULT_INTRO_ENTRANCE_MS = 900
 
 function useSceneDirection(scene: PickBanScene): PickBanSceneDirection {
     const [shown, setShown] = useState<{ scene: PickBanScene; direction: PickBanSceneDirection }>({ scene, direction: 0 })
@@ -220,7 +218,7 @@ function IntroName({ panel }: { panel: PickBanTeamPanel | null }) {
     )
 }
 
-export function IntroCard({ left, right, countdown, entranceMs = DEFAULT_INTRO_ENTRANCE_MS }: {
+export function IntroCard({ left, right, countdown, entranceMs = INTRO_ENTRANCE_MAX_MS }: {
     left: PickBanTeamPanel | null
     right: PickBanTeamPanel | null
     countdown: PickBanCountdown | null
@@ -297,7 +295,7 @@ function revealByline(entry: PickBanTimelineEntry): string {
     return entry.actionLabel
 }
 
-export function RevealCard({ entry, countdown, upNext, entranceMs = DEFAULT_REVEAL_ENTRANCE_MS }: {
+export function RevealCard({ entry, countdown, upNext, entranceMs = REVEAL_ENTRANCE_MAX_MS.lettered }: {
     entry: PickBanTimelineEntry
     countdown: PickBanCountdown | null
     upNext: PickBanTurn | null
@@ -310,7 +308,7 @@ export function RevealCard({ entry, countdown, upNext, entranceMs = DEFAULT_REVE
 
     return (
         <div className="flex w-full flex-col items-center gap-2.5 text-center @md/stage:gap-3">
-            <motion.div variants={decider ? motionOf.goldFrame : motionOf.frame} className={cn('relative', REVEAL_WIDTH)}>
+            <motion.div data-stage-part="reveal" variants={decider ? motionOf.goldFrame : motionOf.frame} className={cn('relative', REVEAL_WIDTH)}>
                 {decider && (
                     <motion.div
                         aria-hidden
@@ -382,7 +380,7 @@ export function RevealCard({ entry, countdown, upNext, entranceMs = DEFAULT_REVE
 
 function PausedOverlay() {
     return (
-        <motion.div {...FADE_MOTION} className="absolute inset-0 z-10 flex items-center justify-center bg-background/75 backdrop-blur-[6px]">
+        <motion.div data-stage-part="paused" {...FADE_MOTION} className="absolute inset-0 z-10 flex items-center justify-center bg-background/75 backdrop-blur-[6px]">
             <div className="flex items-center gap-3 rounded-2xl border border-hairline/10 bg-card px-5 py-3">
                 <span className="flex size-9 items-center justify-center rounded-full bg-accent-500/15 text-accent-200">
                     <Pause className="size-4" />

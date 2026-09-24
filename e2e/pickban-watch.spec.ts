@@ -279,19 +279,18 @@ test('the countdown bar glides, and steps once a second with reduced motion on',
     }
 })
 
-function sampleStageOpacity(page: Page, selector: string, text: string, durationMs: number) {
-    return page.evaluate(([selector, text, durationMs]) => new Promise<number[]>(resolve => {
+function sampleStageOpacity(page: Page, part: 'reveal' | 'paused', durationMs: number) {
+    return page.evaluate(([part, durationMs]) => new Promise<number[]>(resolve => {
         const seen: number[] = []
         const startedAt = performance.now()
         const sample = () => {
-            const element = Array.from(document.querySelectorAll<HTMLElement>(`section[aria-label="Pick/ban stage"] ${selector}`))
-                .find(candidate => candidate.textContent?.includes(text))
+            const element = document.querySelector<HTMLElement>(`section[aria-label="Pick/ban stage"] [data-stage-part="${part}"]`)
             if (element) seen.push(Number(getComputedStyle(element).opacity))
             if (performance.now() - startedAt < durationMs) setTimeout(sample, 4)
             else resolve(seen)
         }
         sample()
-    }), [selector, text, durationMs] as const)
+    }), [part, durationMs] as const)
 }
 
 function midway(opacities: number[]): number[] {
@@ -313,7 +312,7 @@ test('an undo plays the reveal backwards, and is instant with reduced motion', a
         await page.goto(PAGE_PATH)
         await expect(stage(page)).toContainText('BANNED')
 
-        const sampling = sampleStageOpacity(page, '.relative', 'BANNED', 4_000)
+        const sampling = sampleStageOpacity(page, 'reveal', 4_000)
         undoServed = true
         const opacities = await sampling
 
@@ -340,12 +339,12 @@ test('the paused overlay fades in and out, and is instant with reduced motion', 
         await page.goto(PAGE_PATH)
         await expect(stage(page)).toContainText('BANNED')
 
-        const fadingIn = sampleStageOpacity(page, '.z-10', 'Session paused', 2_500)
+        const fadingIn = sampleStageOpacity(page, 'paused', 2_500)
         served = pausedState
         const fadeIn = await fadingIn
         await expect(stage(page)).toContainText('Session paused')
 
-        const fadingOut = sampleStageOpacity(page, '.z-10', 'Session paused', 2_500)
+        const fadingOut = sampleStageOpacity(page, 'paused', 2_500)
         served = resumedState
         const fadeOut = await fadingOut
         await expect(stage(page)).not.toContainText('Session paused')
