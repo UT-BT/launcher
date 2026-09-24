@@ -60,7 +60,7 @@ const [cursor, setCursor] = useState(0)
   `EventTab` union, the `BASE_TABS` list, which tabs are visible/hidden) is owned
   entirely by that page, not by this doc or by `routes.ts` — `viewToPath` /
   `pathToNav` just round-trip whatever string is there through `?tab=`. Adding a
-  new tab (e.g. the public Maps pool tab, ticket 14) is therefore a change local
+  new tab (e.g. the public Maps tab listing each stage's pick/ban pool) is therefore a change local
   to `EventDetailPage.tsx` with no routing/`route-contract.json`/title change
   needed, the same way Schedule and Predictions needed none.
 - The stack is **in-memory only** — it boots to a single `home` entry on every
