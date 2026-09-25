@@ -278,7 +278,7 @@ function isRevealedAt(step: PickBanPlanStep, clock: number): boolean {
     return isExecuted(step) && (revealAtOf(step) ?? -Infinity) <= clock
 }
 
-function introStartsAt(state: PickBanState): number | null {
+export function introStartsAt(state: PickBanState): number | null {
     const introEnd = parseApiInstant(state.intro_ends_at)
     return introEnd === null ? null : introEnd - state.pacing.intro * 1000
 }
@@ -705,12 +705,16 @@ function sceneIdentityOf(moment: Moment, stagePhase: PickBanStagePhase): SceneId
     }
 }
 
+export function entranceMsFor(pacing: PickBanPacing, entrance: 'intro' | PickBanSegment): number {
+    if (entrance === 'intro') return Math.min(INTRO_ENTRANCE_MAX_MS, pacing.intro * 1000 * ENTRANCE_SHARE)
+    return Math.min(REVEAL_ENTRANCE_MAX_MS[entrance], spotlightLengthMs(pacing, entrance) * ENTRANCE_SHARE)
+}
+
 function entranceMsOf(moment: Moment, kind: PickBanSceneKind): number {
     const { pacing } = moment.state
-    if (kind === 'intro') return Math.min(INTRO_ENTRANCE_MAX_MS, pacing.intro * 1000 * ENTRANCE_SHARE)
+    if (kind === 'intro') return entranceMsFor(pacing, 'intro')
     if (kind !== 'reveal' || !moment.lastRevealed) return PLAIN_ENTRANCE_MS
-    const { segment } = moment.lastRevealed
-    return Math.min(REVEAL_ENTRANCE_MAX_MS[segment], spotlightLengthMs(pacing, segment) * ENTRANCE_SHARE)
+    return entranceMsFor(pacing, moment.lastRevealed.segment)
 }
 
 function sceneOf(moment: Moment, stagePhase: PickBanStagePhase, timing: LiveTiming): PickBanScene {
