@@ -411,6 +411,7 @@ function SidesBoard({ sides, busy, submitting, onChooseA, onSwap, onHandOver }: 
         <SideTile
             key={tile.side}
             tile={tile}
+            light={sides.chooseA !== null}
             disabled={busy}
             pending={submitting === 'hand-over' && handingOver === tile.side}
             onHandOver={(body) => {
@@ -462,8 +463,9 @@ function SwapButton({ button, aSide, pending, onSwap }: { button: ManagerButton<
     )
 }
 
-function SideTile({ tile, disabled, pending, onHandOver }: {
+function SideTile({ tile, light, disabled, pending, onHandOver }: {
     tile: ManagerSideTile
+    light: boolean
     disabled: boolean
     pending: boolean
     onHandOver: (body: HandOverBody) => void
@@ -477,14 +479,16 @@ function SideTile({ tile, disabled, pending, onHandOver }: {
             className={cn('flex min-w-0 flex-col gap-3 rounded-lg border bg-gradient-to-br to-transparent to-70% p-3 transition-colors duration-300', tone.wash, tone.line)}
         >
             <div className="flex items-center gap-2.5">
-                <SideBadge ab={tile.ab} className="size-7 rounded-md text-sm" />
+                {(!light || tile.ab) && <SideBadge ab={tile.ab} className={light ? 'size-6 rounded-md text-xs' : 'size-7 rounded-md text-sm'} />}
                 <div className="min-w-0 flex-1">
                     <p className="line-clamp-2 break-words text-sm font-bold leading-tight text-foreground">{tile.name}</p>
-                    <p className={SMALL_CAPS}>
-                        {tile.ab ? `Team ${tile.ab}` : 'Side to choose'}
-                        <span aria-hidden> · </span>
-                        {tile.stageSeed === null ? 'No stage seed' : `Stage seed ${tile.stageSeed}`}
-                    </p>
+                    {!light && (
+                        <p className={SMALL_CAPS}>
+                            {tile.ab ? `Team ${tile.ab}` : 'Side to choose'}
+                            <span aria-hidden> · </span>
+                            {tile.stageSeed === null ? 'No stage seed' : `Stage seed ${tile.stageSeed}`}
+                        </p>
+                    )}
                 </div>
             </div>
             {tile.handOver && <ControlPicker tile={tile} members={tile.handOver} disabled={disabled} pending={pending} onHandOver={onHandOver} />}
