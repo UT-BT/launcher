@@ -1,35 +1,38 @@
-import banUrl from '@/app/assets/sounds/ban.wav'
-import deciderUrl from '@/app/assets/sounds/decider.wav'
-import lockInUrl from '@/app/assets/sounds/lock-in.wav'
-import type { PickBanSoundCueKind } from './pickBanSoundCues'
+import type { PickBanSoundSchedule } from './pickBanSoundCues'
+import { SOUND_URLS, type PickBanSoundCueKind } from './pickBanSounds'
 
 export interface PickBanSoundPlayer {
     preload: () => Promise<void>
     unlock: () => void
-    play: (kind: PickBanSoundCueKind) => void
+    play: (kind: PickBanSoundCueKind, schedule: PickBanSoundSchedule) => void
     dispose: () => void
 }
 
-const SOUND_URLS: { [kind in PickBanSoundCueKind]: string } = {
-    lock_in: lockInUrl,
-    ban: banUrl,
-    decider: deciderUrl,
+interface AudioGraph {
+    context: AudioContext
+    master: GainNode
 }
+
+const MASTER_GAIN = 0.9
 
 function audioContextCtor(): typeof AudioContext | undefined {
     return window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
 }
 
 export function createPickBanSoundPlayer(): PickBanSoundPlayer {
-    let context: AudioContext | null = null
+    let graph: AudioGraph | null = null
     const buffers = new Map<PickBanSoundCueKind, AudioBuffer>()
 
-    function ensureContext(): AudioContext | null {
-        if (context) return context
+    function ensureGraph(): AudioGraph | null {
+        if (graph) return graph
         const Ctor = audioContextCtor()
         if (!Ctor) return null
-        context = new Ctor()
-        return context
+        const context = new Ctor()
+        const master = context.createGain()
+        master.gain.value = MASTER_GAIN
+        master.connect(context.destination)
+        graph = { context, master }
+        return graph
     }
 
     async function decode(ctx: AudioContext, kind: PickBanSoundCueKind): Promise<void> {
@@ -42,32 +45,32 @@ export function createPickBanSoundPlayer(): PickBanSoundPlayer {
 
     return {
         async preload() {
-            const ctx = ensureContext()
+            const ctx = ensureGraph()?.context
             if (!ctx) return
             await Promise.all((Object.keys(SOUND_URLS) as PickBanSoundCueKind[]).map((kind) => decode(ctx, kind).catch(() => undefined)))
         },
         unlock() {
-            const ctx = ensureContext()
+            const ctx = ensureGraph()?.context
             if (ctx?.state === 'suspended') ctx.resume().catch(() => undefined)
         },
-        play(kind) {
-            const ctx = ensureContext()
+        play(kind, schedule) {
+            const audio = ensureGraph()
             const buffer = buffers.get(kind)
-            if (!ctx || !buffer) return
+            if (!audio || !buffer || audio.context.state !== 'running') return
             try {
-                const source = ctx.createBufferSource()
+                const source = audio.context.createBufferSource()
                 source.buffer = buffer
-                source.connect(ctx.destination)
-                source.start()
+                source.connect(audio.master)
+                source.start(audio.context.currentTime + schedule.delayMs / 1000, schedule.offsetMs / 1000)
             } catch {
                 return
             }
         },
         dispose() {
-            const ctx = context
-            context = null
+            const audio = graph
+            graph = null
             buffers.clear()
-            if (ctx && ctx.state !== 'closed') ctx.close().catch(() => undefined)
+            if (audio && audio.context.state !== 'closed') audio.context.close().catch(() => undefined)
         },
     }
 }

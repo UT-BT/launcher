@@ -44,7 +44,7 @@ export function usePickBanSound({ state, clockOffsetMs, muted }: UsePickBanSound
             if (current) {
                 const result = cuesToPlay(current, { clockOffsetMs: offsetRef.current, now: Date.now() }, playedRef.current)
                 playedRef.current = result.played
-                if (primed) for (const cue of result.cues) player.play(cue.kind)
+                if (primed) for (const cue of result.cues) player.play(cue.kind, cue.schedule)
                 primed = true
             }
             frame = requestAnimationFrame(tick)

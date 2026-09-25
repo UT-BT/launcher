@@ -10,7 +10,7 @@ read_when:
   - "finding a pick/ban session from the bracket, a match card, the event page or the Schedule tab without a direct link"
   - "assigning a streamer to a match, or showing a streamer their assigned matches"
   - "deciding whether a prediction market still takes bets once its match's pick/ban has started"
-keywords: [api.ts, fetch, endpoint, accessToken, avatar, MapThumbnail, favorites, patreon, downloadMapZip, world_records, caps, predictions, draw, odds, schedule, proposal, slot, whose_turn, resolved_window, countdown, nav badge, fetchMyTournaments, SlotPickerModal, SlotGrid, DateTimeField, slotGeneration, proposeMatchSlots, withdrawMatchProposal, acceptMatchProposal, fetchMatchSchedule, ApiError, expected_match_duration_minutes, fetchPickBanConfig, PickBanConfig, PickBanPoolMap, MapsTab, mapsShared, stagesWithPools, tagBadgeVariant, pick/ban, fetchPickBanState, ETag, If-None-Match, 304, X-Server-Now, server_now, clock offset, reveal_at, sendPickBanCommand, sendPickBanManagerCommand, hover, selection_preview, pickBanErrorCode, captain controls, CaptainDock, useCaptainPlay, fetchPickBanQueue, PickBanQueueEntry, PickBanQueueRow, toQueueRow, canOpenLobby, blockingReasonLabel, PickBanQueuePanel, pickBanStatusBadge, statusOfPhase, buildPickBanView, setPickBanStageConfig, setPickBanStagePool, copyPickBanStagePool, pickBanEditor, stage pool, buildMatchLinks, matchStreamPath, createPoller, pick_ban_status, MatchPickBanStatus, pickBanCardAffordance, PickBanCardPill, pickBanMapLabel, MyPickBanSession, pick_ban_session, PickBanLink, PickBanJoinBanner, pickBanEntryPoints, Join banner, scene, sceneDirection, playsEntrance, usePickBanPreload, usePickBanSound, cuesToPlay, pickBanSoundCues, pickBanSoundPlayer, PickBanSoundCueKind, sound=0, manager dock, ManagerDock, useManagerDock, managerDockOf, hand-over, act for team, Reopen, edit-final, PickBanEditFinalEntry, Edit final, fetchMyEventMatches, MyMatchEntry, is_streamer, EventStreamer, fetchEventStreamers, setMatchStreamer, streamer, StreamerPicker, withQueueStreamer, streamerChoices, scheduleSections, pickBanCallToAction, matchTimeLabel, marketLock, marketTakesPredictions, lockStartedMarkets, matchLockSignals, newlyLockedMatchIds, streamerName]
+keywords: [api.ts, fetch, endpoint, accessToken, avatar, MapThumbnail, favorites, patreon, downloadMapZip, world_records, caps, predictions, draw, odds, schedule, proposal, slot, whose_turn, resolved_window, countdown, nav badge, fetchMyTournaments, SlotPickerModal, SlotGrid, DateTimeField, slotGeneration, proposeMatchSlots, withdrawMatchProposal, acceptMatchProposal, fetchMatchSchedule, ApiError, expected_match_duration_minutes, fetchPickBanConfig, PickBanConfig, PickBanPoolMap, MapsTab, mapsShared, stagesWithPools, tagBadgeVariant, pick/ban, fetchPickBanState, ETag, If-None-Match, 304, X-Server-Now, server_now, clock offset, reveal_at, sendPickBanCommand, sendPickBanManagerCommand, hover, selection_preview, pickBanErrorCode, captain controls, CaptainDock, useCaptainPlay, fetchPickBanQueue, PickBanQueueEntry, PickBanQueueRow, toQueueRow, canOpenLobby, blockingReasonLabel, PickBanQueuePanel, pickBanStatusBadge, statusOfPhase, buildPickBanView, setPickBanStageConfig, setPickBanStagePool, copyPickBanStagePool, pickBanEditor, stage pool, buildMatchLinks, matchStreamPath, createPoller, pick_ban_status, MatchPickBanStatus, pickBanCardAffordance, PickBanCardPill, pickBanMapLabel, MyPickBanSession, pick_ban_session, PickBanLink, PickBanJoinBanner, pickBanEntryPoints, Join banner, scene, sceneDirection, playsEntrance, entranceMsFor, introStartsAt, usePickBanPreload, usePickBanSound, cuesToPlay, pickBanSoundCues, pickBanSoundPlayer, PickBanSoundCueKind, pickBanSounds, SOUND_HIT_MS, soundScheduleAt, STALE_HIT_MS, pickBanBeats, intro cue, sound=0, manager dock, ManagerDock, useManagerDock, managerDockOf, hand-over, act for team, Reopen, edit-final, PickBanEditFinalEntry, Edit final, fetchMyEventMatches, MyMatchEntry, is_streamer, EventStreamer, fetchEventStreamers, setMatchStreamer, streamer, StreamerPicker, withQueueStreamer, streamerChoices, scheduleSections, pickBanCallToAction, matchTimeLabel, marketLock, marketTakesPredictions, lockStartedMarkets, matchLockSignals, newlyLockedMatchIds, streamerName]
 provides: "the client-side API contract the launcher consumes + asset URLs + favorites/patreon sync models"
 not_here:
   - "IPC channels (window.conveyor.*) → lib/conveyor/README.md"
@@ -18,7 +18,7 @@ not_here:
   - "the procedure to wire a new endpoint into the UI → skill: consume-api-data"
 sections: [backend-api, errors, admin-api, event-brackets, event-scheduling, event-predictions, public-maps-tab-pick-ban-pools, event-pickban-sessions, event-pick-ban-setup, changing-a-map-screenshot, cap-detail-page-endpoints, world-records-page-endpoints, team-maps-and-team-runs, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites, account-state-and-badges]
 last_verified: 2026-09-25
-verify_against: [app/utils/api.ts, app/utils/chartBuckets.ts, app/components/pages/admin/components/controls.tsx, app/components/pages/admin/sections/HostsManagementSection.tsx, app/utils/patreon.ts, app/utils/server-utils.ts, app/hooks/useServerFavorites.ts, app/components/pages/events/manage/formatFields.tsx, app/components/pages/events/bracket/bracketShared.tsx, app/components/pages/events/bracket/BracketTab.tsx, app/components/pages/events/bracket/GroupStageView.tsx, app/components/pages/events/bracket/SwissStageView.tsx, app/components/pages/events/bracket/ElimStageView.tsx, app/components/pages/events/predictions/predictionsShared.tsx, app/components/pages/events/predictions/PredictionsTab.tsx, app/components/pages/events/schedule/scheduleShared.tsx, app/components/pages/events/schedule/ScheduleTab.tsx, app/components/pages/events/schedule/scheduleSections.ts, app/components/pages/events/predictions/marketLock.ts, app/components/pages/events/predictions/MarketCard.tsx, app/components/pages/home/ClosingSoonBanner.tsx, app/components/pages/events/schedule/SlotPickerModal.tsx, app/components/pages/events/schedule/slotGeneration.ts, app/components/pages/events/schedule/SlotGrid.tsx, app/components/pages/events/manage/DateTimeField.tsx, app/components/pages/events/eventsShared.tsx, app/components/pages/EventDetailPage.tsx, app/utils/timezone.ts, app/components/pages/events/manage/ScheduleOversightPanel.tsx, app/components/pages/events/ManagePanel.tsx, app/components/main/Main.tsx, app/components/layout/AppLayout.tsx, app/components/pages/events/maps/MapsTab.tsx, app/components/pages/events/maps/mapsShared.ts, app/components/pages/events/pickban/pickBanView.ts, app/components/pages/events/pickban/pickBanStatus.ts, app/components/pages/events/pickban/pickBanSession.ts, app/components/pages/events/pickban/pickBanEntryPoints.ts, app/components/pages/events/pickban/components/PickBanLink.tsx, app/components/pages/events/pickban/components/PickBanJoinBanner.tsx, app/components/pages/events/pickban/clockOffset.ts, app/components/pages/events/manage/pickban/pickBanEditor.ts, app/components/pages/events/manage/pickban/PickBanPanel.tsx, app/components/pages/events/manage/pickban/PickBanStageCard.tsx, app/components/pages/events/manage/pickban/PickBanQueuePanel.tsx, app/components/pages/events/manage/pickban/pickBanQueue.ts, app/components/pages/events/pickBanTags.ts, app/components/navigation/matchLinks.ts, app/utils/poller.ts, app/components/pages/events/pickban/stream/StreamView.tsx, app/components/pages/events/pickban/pickBanCopy.ts, app/components/pages/events/pickban/components/PickBanUnavailable.tsx, app/components/pages/events/pickban/pickBanSoundCues.ts, app/components/pages/events/pickban/pickBanSoundPlayer.ts, app/components/pages/events/pickban/usePickBanSound.ts, app/components/pages/MatchPickBanPage.tsx, app/components/pages/events/pickban/managerDock.ts, scripts/make-pickban-sounds.mjs]
+verify_against: [app/utils/api.ts, app/utils/chartBuckets.ts, app/components/pages/admin/components/controls.tsx, app/components/pages/admin/sections/HostsManagementSection.tsx, app/utils/patreon.ts, app/utils/server-utils.ts, app/hooks/useServerFavorites.ts, app/components/pages/events/manage/formatFields.tsx, app/components/pages/events/bracket/bracketShared.tsx, app/components/pages/events/bracket/BracketTab.tsx, app/components/pages/events/bracket/GroupStageView.tsx, app/components/pages/events/bracket/SwissStageView.tsx, app/components/pages/events/bracket/ElimStageView.tsx, app/components/pages/events/predictions/predictionsShared.tsx, app/components/pages/events/predictions/PredictionsTab.tsx, app/components/pages/events/schedule/scheduleShared.tsx, app/components/pages/events/schedule/ScheduleTab.tsx, app/components/pages/events/schedule/scheduleSections.ts, app/components/pages/events/predictions/marketLock.ts, app/components/pages/events/predictions/MarketCard.tsx, app/components/pages/home/ClosingSoonBanner.tsx, app/components/pages/events/schedule/SlotPickerModal.tsx, app/components/pages/events/schedule/slotGeneration.ts, app/components/pages/events/schedule/SlotGrid.tsx, app/components/pages/events/manage/DateTimeField.tsx, app/components/pages/events/eventsShared.tsx, app/components/pages/EventDetailPage.tsx, app/utils/timezone.ts, app/components/pages/events/manage/ScheduleOversightPanel.tsx, app/components/pages/events/ManagePanel.tsx, app/components/main/Main.tsx, app/components/layout/AppLayout.tsx, app/components/pages/events/maps/MapsTab.tsx, app/components/pages/events/maps/mapsShared.ts, app/components/pages/events/pickban/pickBanView.ts, app/components/pages/events/pickban/pickBanStatus.ts, app/components/pages/events/pickban/pickBanSession.ts, app/components/pages/events/pickban/pickBanEntryPoints.ts, app/components/pages/events/pickban/components/PickBanLink.tsx, app/components/pages/events/pickban/components/PickBanJoinBanner.tsx, app/components/pages/events/pickban/clockOffset.ts, app/components/pages/events/manage/pickban/pickBanEditor.ts, app/components/pages/events/manage/pickban/PickBanPanel.tsx, app/components/pages/events/manage/pickban/PickBanStageCard.tsx, app/components/pages/events/manage/pickban/PickBanQueuePanel.tsx, app/components/pages/events/manage/pickban/pickBanQueue.ts, app/components/pages/events/pickBanTags.ts, app/components/navigation/matchLinks.ts, app/utils/poller.ts, app/components/pages/events/pickban/stream/StreamView.tsx, app/components/pages/events/pickban/pickBanCopy.ts, app/components/pages/events/pickban/components/PickBanUnavailable.tsx, app/components/pages/events/pickban/pickBanSoundCues.ts, app/components/pages/events/pickban/pickBanSoundPlayer.ts, app/components/pages/events/pickban/usePickBanSound.ts, app/components/pages/events/pickban/pickBanSounds.ts, app/components/pages/events/pickban/pickBanBeats.ts, app/components/pages/MatchPickBanPage.tsx, app/components/pages/events/pickban/managerDock.ts, scripts/make-pickban-sounds.mjs]
 ---
 
 # Data sources
@@ -959,6 +959,9 @@ pure and tested without a DOM. It returns:
   and `null` in the lobby and the end states. `entranceMs` is how long its entrance runs.
   It is a share of the pacing, capped per kind, so a ban-down reveal's entrance is shorter
   than a lettered one's, the decider's is the longest, and each fits inside its spotlight.
+  `entranceMsFor(pacing, 'intro' | segment)` is that figure on its own, and
+  `introStartsAt(state)` is when the intro scene begins (`intro_ends_at` less the intro
+  pacing); the sound cues time themselves from both, so they follow the same numbers.
 
 Two pure helpers go with `scene`. `sceneDirection(previous, next)` is `1` going forward,
 `-1` for an undo, a restart or a reopen, and `0` when the key didn't change.
@@ -978,29 +981,46 @@ step is never the viewer's own: it is never `locked_in` or `lockedIn`, and its t
 re-derived when a spotlight or the intro ends, so a captain can act without waiting for the
 next poll. The server's `can_lock_now` only overrides it for a payload read while awaiting.
 
-**Sound.** Three bundled clips (lock-in, ban, decider) play on each step's reveal. They
-live at `app/assets/sounds/{lock-in,ban,decider}.wav` — short, mono, deterministically
-synthesized (no third-party samples) by `node scripts/make-pickban-sounds.mjs`; rerun that
-script to regenerate them if the synthesis changes. `pickBanSoundCues.ts`'s
-`cuesToPlay(state, clock, played)` is the pure seam (Vitest, no DOM): it calls
-`pickBanView.ts`'s `revealedStepsAt(state, clock)` — the same reveal gate and pause-frozen
-clock the view model itself uses via `momentOf` — keys each cue by plan index plus that
-step's raw `reveal_at`, and returns the newly-due cues plus the next played set (the same
-object, with no new allocation, when nothing is newly revealed) — so a refresh, remount or
-304 that leaves a step's `reveal_at` unchanged never replays it, while an undo followed by
-a new lock at the same index gets a fresh key and does sound. A cue more than
-`STALE_CUE_MS` (1.5 s) behind the effective clock — a reconnect after the tab was
-backgrounded delivering several revealed steps at once — is marked played silently instead
-of sounding. `pick` maps to the lock-in clip, `ban` (lettered or ban-down) to the ban clip,
-`decider` to the decider clip. `usePickBanSound({ state, clockOffsetMs, muted })` drives it
-from a `requestAnimationFrame` loop that only runs while unmuted — muting stops it and
-clears its played set, so unmuting restarts primed and discards its first tick's cues, the
-same as a fresh load — and plays through `pickBanSoundPlayer.ts` (Web Audio, buffers
-decoded up front alongside the screenshots and fonts regardless of mute state, autoplay
-rejections swallowed, the context resumed on the first pointer or key gesture). Both pages
-call it: the stream view passes `sound=0`'s parsed value straight through as `muted` (see
-`agents/web-target.md` → `pre-shell-routes`); the watch page starts muted and flips a
-header toggle, whose click doubles as the unlocking gesture.
+**Sound.** Five bundled cues, one pre-mixed file each: `intro` as the intro scene begins,
+`pick` for a pick (lettered, or locked automatically as the last map standing), `ban` for a
+lettered ban, `ban_down` for a ban-down step and `decider` for the decider. `pickBanSounds.ts`
+is the one place that names the files, `app/assets/sounds/{intro,pick,ban,ban-down,decider}`,
+next to `PickBanSoundCueKind` and `SOUND_HIT_MS`: how far into each file its main hit sits
+(intro 620 ms, pick and ban 320, ban-down 160, decider 1040). Each offset is the animation's
+hit at the default pacing (`DEFAULT_PICK_BAN_PACING`), and a test pins that. The files there
+now are `.wav` placeholders, short mono tones synthesized with no third-party samples by
+`node scripts/make-pickban-sounds.mjs`; the final files are `.mp3` under the same names
+(`app/index.d.ts` types both), so swapping them is the file drop plus the extension in that
+one import block. `pickBanSoundCues.ts`'s `cuesToPlay(state, clock, played)` is the pure
+seam (Vitest, no DOM). It sounds nothing unless the status is `running` or `complete`, so a
+paused, cancelled or voided session stays silent. Reveal cues come from `pickBanView.ts`'s
+`revealedStepsAt(state, clock)` — the same reveal gate and pause-frozen clock the view model
+itself uses via `momentOf` — keyed by plan index plus that step's raw `reveal_at`. The intro
+cue is due from `introStartsAt(state)` and keyed `intro:<started_at>`, so a restart, with its
+new `started_at`, plays it again. It returns the newly-due cues plus the next played set (the
+same object, with no new allocation, when nothing is newly due) — so a refresh, remount or
+304 never replays a cue, while an undo followed by a new lock at the same index gets a fresh
+key and does sound. Each cue carries a `schedule` that lands its file's hit on the
+animation's. The animation hits at the reveal (or intro start) instant plus a share of the
+entrance: `IMPACT` for pick, ban and ban-down, `DECIDER_IMPACT` for the decider and `VS_HIT`
+for the intro, from `pickBanBeats.ts`, which `stageMotion.ts` animates by, times
+`entranceMsFor(pacing, 'intro' | segment)`. `soundScheduleAt(hitAt, fileHitMs, clock)` then
+starts the file `fileHitMs` before that hit: `delayMs` from now while that start is still
+ahead (a longer pacing), or at once and `offsetMs` into the file once it has passed (a
+shorter pacing, or a frame's lag), so the hit still lands on time. Just past the hit it
+starts right on the file's hit; more than `STALE_HIT_MS` (100 ms) past it, it returns `null`
+and the cue is marked played without sounding — a reconnect after the tab was backgrounded,
+or a poll that brought a reveal late. `usePickBanSound({ state, clockOffsetMs, muted })`
+drives it from a `requestAnimationFrame` loop that only runs while unmuted — muting stops it
+and clears its played set, so unmuting restarts primed and discards its first tick's cues,
+the same as a fresh load — and plays through `pickBanSoundPlayer.ts` (Web Audio, all five
+buffers decoded up front alongside the screenshots and fonts regardless of mute state, every
+source through one master gain of 0.9 and started `delayMs` after the context's current time
+at `offsetMs` into its buffer, a cue skipped while the context isn't running rather than
+played late, autoplay rejections swallowed, the context resumed on the first pointer or key
+gesture). Both pages call it: the stream view passes `sound=0`'s parsed value straight
+through as `muted` (see `agents/web-target.md` → `pre-shell-routes`); the watch page starts
+muted and flips a header toggle, whose click doubles as the unlocking gesture.
 
 **The watch page** (`MatchPickBanPage.tsx`). Anyone who can see the match can open it. It
 reads with the viewer's token when there is one and anonymously otherwise, and it renders

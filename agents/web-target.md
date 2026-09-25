@@ -165,12 +165,15 @@ and renders a fixed 1920×1080 stage (`stream/StreamStage.tsx`,
 `stream/stageScale.ts`) scaled to fit the window with a solid background. The
 `sound=0` query param is parsed by `stream/streamSound.ts`
 (`isStreamSoundMuted`) and passed straight into `usePickBanSound` as `muted`;
-sound plays by default, and that one boolean is the only thing that silences
-it (see `agents/data-sources.md` → `event-pickban-sessions` for the cue and
-player contract). The `motion=0` query param (`isStreamMotionOff` in
-`events/pickban/pickBanMotionPreference.ts`) turns the animations off; without
-it the stream view animates even when the OS reports reduced motion, since an
-OBS machine with Windows Animation effects off would otherwise show no reveals.
+sound plays by default, and that one boolean is the only switch for it (see
+`agents/data-sources.md` → `event-pickban-sessions` for the cue and player
+contract). There are five cues (intro, pick, ban, ban-down, decider), each
+started so its file's hit lands on the animation's impact at any pacing. The
+`motion=0` query param (`isStreamMotionOff` in
+`events/pickban/pickBanMotionPreference.ts`) turns the animations off, and the
+sounds keep the same timing without them; without it the stream view animates
+even when the OS reports reduced motion, since an OBS machine with Windows
+Animation effects off would otherwise show no reveals.
 
 ## Anonymous browsing
 

@@ -44,6 +44,11 @@ declare module '*.wav' {
   export default content
 }
 
+declare module '*.mp3' {
+  const content: string
+  export default content
+}
+
 interface Window {
   conveyor: import('@/lib/conveyor/api').ConveyorApi
   utInstall: {

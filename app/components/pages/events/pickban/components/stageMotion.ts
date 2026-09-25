@@ -1,4 +1,5 @@
 import type { TargetAndTransition, Transition, Variants } from 'framer-motion'
+import { DECIDER_IMPACT, IMPACT, STAMP_HIT, VS_HIT } from '../pickBanBeats'
 import type { PickBanSceneDirection } from '../pickBanView'
 
 type Bezier = [number, number, number, number]
@@ -20,14 +21,6 @@ const BACKWARD_HANDOFF_S = 0.45
 const CHIP_S = 0.25
 
 const REVEAL_FLASH_S = 0.75
-
-const IMPACT = 0.2
-
-const STAMP_HIT = 0.56
-
-const DECIDER_IMPACT = 0.52
-
-const VS_HIT = 0.62
 
 const SHAKE_X = [0, -10, 9, -6, 4, -2, 0]
 
