@@ -10,7 +10,7 @@ not_here:
   - "which component to use → shared-components.md"
   - "state / persistence → state-patterns.md"
 sections: [class-merging, tables-locked, responsive-columns, page-layout, filter-panel, buttons-toggle-states, form-inputs, card-backgrounds-borders, text, color-palette, animation, css-runtime-cost, donts]
-last_verified: 2026-09-24
+last_verified: 2026-09-25
 verify_against: [app/components/shared/DataTable.tsx, app/styles/globals.css, app/styles/desktop.css, app/styles/index.css, lib/utils.ts, app/hooks/useElementWidth.ts, app/hooks/usePrefersReducedMotion.ts]
 ---
 
@@ -328,7 +328,9 @@ Game identity, not chrome — keep these **literal**, never route through `accen
   the `@theme` block of `globals.css`, so every colour utility and opacity step works
   (`text-pickban-a`, `border-pickban-b/45`, `bg-pickban-gold/20`), and no theme overrides
   them, Light included. Pick/ban components read them through `PICK_BAN_TONES`
-  (`events/pickban/components/pickBanTone.ts`) rather than spelling the classes out.
+  (`events/pickban/components/pickBanTone.ts`) rather than spelling the classes out. A
+  gradient, glow or shadow that needs the raw colour takes it from `PICK_BAN_HUES` in the
+  same file (a `var(--color-pickban-*)` value, mixed with `color-mix()` for alpha).
 
 ## Themes
 
@@ -429,6 +431,13 @@ change (it reads `useTheme`), so they update live.
   enter and exit, and a shared `layoutId` makes an indicator glide. Animate `transform`
   and `opacity` (a one-shot `filter` is fine). A plain colour or filter change on a card
   can be a CSS `transition-[…]` instead, since it reverses by itself.
+- **One-shot effects** (the reveal's bursts, shockwave rings, sparks, confetti and flashes in
+  `events/pickban/components/RevealEffects.tsx`) are variant children whose `shown`
+  keyframes start invisible and end invisible or on a settled glow. A scene that mounts
+  settled (`initial={false}`) or runs under reduced motion lands on that last keyframe, so
+  no effect is left half-played. Keep them bounded: a fixed handful of absolutely positioned
+  elements animated once, never a particle per row, and at most one stage-level element
+  looping while its scene is up (the decider's rays).
 - **Reduced motion.** `shared.css` cuts every CSS animation and transition to nothing under
   `prefers-reduced-motion: reduce`. Motion driven from JS never sees that rule, so it reads
   the same switch through `usePrefersReducedMotion()` (`app/hooks/usePrefersReducedMotion.ts`):

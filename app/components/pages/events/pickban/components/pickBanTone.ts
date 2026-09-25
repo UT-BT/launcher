@@ -56,6 +56,13 @@ export const PICK_BAN_TONES: Record<PickBanTone, PickBanToneClasses> = {
     },
 }
 
+export const PICK_BAN_HUES: Record<PickBanTone, string> = {
+    a: 'var(--color-pickban-a)',
+    b: 'var(--color-pickban-b)',
+    gold: 'var(--color-pickban-gold)',
+    neutral: 'var(--color-hairline)',
+}
+
 export function teamTone(ab: PickBanActor | null): PickBanTone {
     if (ab === 'A') return 'a'
     if (ab === 'B') return 'b'

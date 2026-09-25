@@ -7,6 +7,12 @@ export const PICK_BAN_PRESET_LABELS: Record<PickBanPresetId, string> = {
     bo5_ban_pick: 'Bo5 · bans, picks, bans, decider',
 }
 
+export function introCountdownWords(remainingMs: number): string {
+    const seconds = Math.ceil(remainingMs / 1000)
+    if (seconds <= 0) return 'Picks and bans are starting…'
+    return `${seconds} ${seconds === 1 ? 'second' : 'seconds'} until picks and bans start…`
+}
+
 export function matchSubtitle(match: PickBanMatchHeading): string {
     return [match.stageName, match.roundLabel, `Best of ${match.bestOf}`].filter(Boolean).join(' · ')
 }

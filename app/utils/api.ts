@@ -5724,6 +5724,7 @@ export interface PickBanPlanStep {
     map: string | null
     acted_by: PickBanUserRef | null
     acted_by_admin: boolean
+    automatic: boolean
     at: string | null
     reveal_at: string | null
 }

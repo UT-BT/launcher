@@ -86,6 +86,13 @@ const HARD_CARD: PickBanPoolCard = {
 
 export type PlanRow = [PickBanActor | null, PickBanStepAction, PickBanSegment, number | null]
 
+const BO4_PICKS: PlanRow[] = [
+    ['A', 'pick', 'lettered', 1],
+    ['B', 'pick', 'lettered', 2],
+    ['A', 'pick', 'lettered', 3],
+    ['B', 'pick', 'lettered', 4],
+]
+
 const BO3_AGAINST_SEVEN: PlanRow[] = [
     ['A', 'ban', 'lettered', null],
     ['B', 'ban', 'lettered', null],
@@ -112,9 +119,29 @@ export function planOf(rows: PlanRow[]): PickBanPlanStep[] {
         map: null,
         acted_by: null,
         acted_by_admin: false,
+        automatic: false,
         at: null,
         reveal_at: null,
     }))
+}
+
+export function exactFitPicks(): PickBanState {
+    return pickBanState({
+        match: { ...pickBanState().match, best_of: 4 },
+        sequence: {
+            preset_id: 'bo4_picks',
+            from_stage_key: 'bracket',
+            ban_down: false,
+            steps: [
+                { actor: 'A', action: 'pick' },
+                { actor: 'B', action: 'pick' },
+                { actor: 'A', action: 'pick' },
+                { actor: 'B', action: 'pick' },
+            ],
+        },
+        plan: planOf(BO4_PICKS),
+        pool: [...ELIGIBLE_MAPS.slice(0, BO4_PICKS.length).map(card), HARD_CARD],
+    })
 }
 
 export function finalMapOf(mapNumber: number, map: string, side: PickBanSide | null, decider = false): PickBanFinalMap {
@@ -229,16 +256,18 @@ export function locked(state: PickBanState, map: string, at: number, options: { 
         map,
         acted_by: captainOf(state, step.side),
         acted_by_admin: options.byAdmin ?? false,
+        automatic: false,
         at: iso(at),
         reveal_at: iso(at + LEAD_MS),
     }
     let next = index + 1
     const used = new Set(plan.map((s) => s.map).filter((m): m is string => m !== null))
     const remaining = state.pool.filter((c) => !c.excluded && !used.has(c.map)).map((c) => c.map)
-    if (plan[next]?.action === 'decider' && remaining.length === 1) {
+    if (plan[next] && remaining.length === 1) {
         plan[next] = {
             ...plan[next],
             map: remaining[0],
+            automatic: true,
             at: iso(at),
             reveal_at: iso(at + LEAD_MS + spotlightMsOf(step.segment)),
         }
@@ -303,10 +332,10 @@ export function resumed(state: PickBanState, at: number): PickBanState {
 }
 
 export function undone(state: PickBanState, at: number): PickBanState {
-    const lastActed = state.plan.filter((step) => step.map !== null && step.actor !== null).pop()
+    const lastActed = state.plan.filter((step) => step.map !== null && !step.automatic).pop()
     if (!lastActed) throw new Error('nothing to undo')
     const cleared = (step: PickBanPlanStep): PickBanPlanStep => ({
-        ...step, map: null, acted_by: null, acted_by_admin: false, at: null, reveal_at: null,
+        ...step, map: null, acted_by: null, acted_by_admin: false, automatic: false, at: null, reveal_at: null,
     })
     return {
         ...state,

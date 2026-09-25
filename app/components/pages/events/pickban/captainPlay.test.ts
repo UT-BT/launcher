@@ -29,6 +29,7 @@ import {
     asReplacedCaptain,
     asSpectator,
     asTeammate,
+    exactFitPicks,
     locked,
     lockedInTurn,
     paused,
@@ -39,7 +40,7 @@ import {
     unlockAt,
 } from './pickBanFixtures'
 
-const [ALPHA, BRAVO, , , , FOXTROT] = ELIGIBLE_MAPS
+const [ALPHA, BRAVO, CHARLIE, DELTA, , FOXTROT] = ELIGIBLE_MAPS
 const INTRO_END = T0 + LEAD_MS + INTRO_MS
 const AWAITING_A = INTRO_END + 1_000
 
@@ -244,6 +245,27 @@ describe('who gets controls', () => {
             expect(dockAt('team_a', serverTime)).toBeNull()
             expect(dockAt('team_b', serverTime)).toBeNull()
         }
+    })
+
+    it('never offers the side of an automatic last step a choice or a Locked in, only the actor of the step before it', () => {
+        const before = lockedInTurn(started(exactFitPicks()), [ALPHA, BRAVO])
+        const thirdLock = unlockAt(before) + 2_000
+        const state = locked(before, CHARLIE, thirdLock)
+        const thirdReveal = thirdLock + LEAD_MS
+        const autoReveal = thirdReveal + SPOTLIGHT_MS
+        expect(state.plan[3]).toMatchObject({ side: 'team_b', map: DELTA, automatic: true })
+
+        const dockAt = (side: 'team_a' | 'team_b', serverTime: number) => captainDockOf(viewAt(asCaptain(state, side), serverTime), IDLE_CAPTAIN_PLAY)
+
+        expect(dockAt('team_a', thirdLock + 500)?.controls).toEqual({ kind: 'locked_in', map: CHARLIE })
+        for (const serverTime of [thirdLock + 500, thirdReveal + 500, autoReveal + 500]) {
+            const autoSide = viewAt(asCaptain(state, 'team_b'), serverTime)
+            expect(captainDockOf(autoSide, IDLE_CAPTAIN_PLAY)).toBeNull()
+            expect(selectMap(IDLE_CAPTAIN_PLAY, autoSide, DELTA)).toBe(IDLE_CAPTAIN_PLAY)
+            expect(beginLock(selectMap(IDLE_CAPTAIN_PLAY, autoSide, DELTA), autoSide)).toBeNull()
+            expect(withCaptainPlay(autoSide, { ...IDLE_CAPTAIN_PLAY, lockingIn: { stepIndex: 3, map: DELTA } }).cards.some((card) => card.lockedIn)).toBe(false)
+        }
+        expect(dockAt('team_a', thirdReveal + 500)).toBeNull()
     })
 
     it('shows no controls once the pick/ban is over', () => {

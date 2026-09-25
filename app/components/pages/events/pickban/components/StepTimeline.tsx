@@ -1,12 +1,12 @@
 import { Fragment, useId } from 'react'
-import { LayoutGroup, motion } from 'framer-motion'
+import { AnimatePresence, LayoutGroup, motion } from 'framer-motion'
 import { Ban, Check, Lock, Star, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { displayMapName } from '@/app/utils/format'
 import type { PickBanStepAction } from '@/app/utils/api'
 import type { PickBanSkippedBan, PickBanTimelineEntry } from '../pickBanView'
-import { PICK_BAN_TONES, stepTone } from './pickBanTone'
-import { INDICATOR_TRANSITION } from './stageMotion'
+import { PICK_BAN_HUES, PICK_BAN_TONES, stepTone } from './pickBanTone'
+import { INDICATOR_TRANSITION, REVEAL_POP, REVEAL_RING_MOTION } from './stageMotion'
 
 interface StepTimelineProps {
     entries: PickBanTimelineEntry[]
@@ -35,7 +35,8 @@ function entryDescription(entry: PickBanTimelineEntry): string {
     const mapNumber = entry.mapNumber !== null && entry.action !== 'decider' ? ` map ${entry.mapNumber}` : ''
     const map = entry.map ? `: ${displayMapName(entry.map)}` : ''
     const status = entry.status === 'current' ? ' (now)' : entry.status === 'locked_in' ? ' (locked in)' : ''
-    return `Step ${entry.number}, ${SEGMENT_LABEL[entry.segment].toLowerCase()}. ${who}${mapNumber}${map}${status}`
+    const automatic = entry.automatic && entry.action !== 'decider' ? ', locked automatically' : ''
+    return `Step ${entry.number}, ${SEGMENT_LABEL[entry.segment].toLowerCase()}. ${who}${mapNumber}${map}${automatic}${status}`
 }
 
 export function StepTimeline({ entries, skippedBans, className }: StepTimelineProps) {
@@ -68,7 +69,9 @@ export function StepTimeline({ entries, skippedBans, className }: StepTimelinePr
 }
 
 function TimelineChip({ entry }: { entry: PickBanTimelineEntry }) {
-    const tone = PICK_BAN_TONES[stepTone(entry.actor)]
+    const toneKey = stepTone(entry.actor)
+    const tone = PICK_BAN_TONES[toneKey]
+    const hue = PICK_BAN_HUES[toneKey]
     const Icon = entry.status === 'locked_in' ? Lock : ACTION_ICON[entry.action]
     const done = entry.status === 'revealed'
     const now = entry.status === 'current' || entry.status === 'locked_in'
@@ -76,8 +79,10 @@ function TimelineChip({ entry }: { entry: PickBanTimelineEntry }) {
     return (
         <li title={entryDescription(entry)} className="flex w-11 flex-col items-center gap-1">
             <span className="sr-only">{entryDescription(entry)}</span>
-            <span
+            <motion.span
                 aria-hidden
+                initial={false}
+                animate={entry.revealing ? REVEAL_POP : undefined}
                 className={cn(
                     'relative flex size-8 items-center justify-center rounded-lg border-2 bg-card/60 transition-[background-color,border-color,opacity] duration-300',
                     tone.text,
@@ -94,8 +99,18 @@ function TimelineChip({ entry }: { entry: PickBanTimelineEntry }) {
                         className={cn('absolute -inset-1 rounded-[10px] ring-2 transition-[box-shadow] duration-300', tone.ring)}
                     />
                 )}
+                <AnimatePresence initial={false}>
+                    {entry.revealing && done && (
+                        <motion.span
+                            key="reveal-ring"
+                            {...REVEAL_RING_MOTION}
+                            className="pointer-events-none absolute -inset-1 rounded-[10px] border-2"
+                            style={{ borderColor: hue, boxShadow: `0 0 14px ${hue}` }}
+                        />
+                    )}
+                </AnimatePresence>
                 <Icon className="size-4" strokeWidth={2.5} />
-            </span>
+            </motion.span>
             <span
                 aria-hidden
                 className={cn(

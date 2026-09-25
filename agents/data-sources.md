@@ -707,9 +707,14 @@ re-derives it between polls from the absolute timestamps: `intro_ends_at`,
   The intro likewise starts 1.5 s after Start, so it runs from `intro_ends_at −
   pacing.intro` to `intro_ends_at`. **A step is never shown before its `reveal_at`**, so
   every screen animates at the same moment.
-- **The automatic decider** is recorded in the same command as the last human step. It is
-  revealed when that step's spotlight ends. A plan that is only the decider records it at
-  Start and reveals it as the intro ends.
+- **Automatic steps.** The server locks a step by itself when it is the decider, or when
+  only one eligible map is left for it (an exact-fit plan's last lettered pick or ban). Such
+  a step is always the last plan step, so it completes the session. It is recorded in the
+  same command as the last human step and revealed when that step's spotlight ends. A plan
+  that is only an automatic step records it at Start and reveals it as the intro ends.
+  Every plan entry carries `automatic`, `true` only for an executed step with `acted_by:
+  null`. An automatic lettered step keeps its `actor` and `side`, with `acted_by_admin:
+  false`.
 - **Spotlight lengths** come from `pacing`: `spotlight` for lettered steps,
   `ban_down_spotlight` for the ban-down and `decider_spotlight` for the decider.
   `spotlight_ends_at` belongs to the last executed step, and stays set after it has passed.
@@ -758,12 +763,12 @@ waits for a poll. Every body except Open's carries the expected `version`.
   `PickBanManagerCommandBodies`. `hand-over` takes a `side` and a `user_id` (an active
   roster member of that side's team, or `null` to give control back to the captain).
 - **Reopen** is `undo` sent while the session is `complete`. It removes the last human
-  step, plus the automatic decider after it, and returns the session to `running`,
+  step, plus the automatic step after it, and returns the session to `running`,
   awaiting that step. The map slots the session wrote are cleared back to what they held
   before, and an edited final list is discarded (`edited` goes back to `false`, and
   `final_maps` to `null`). It is refused with `results_present` while results exist, and
   then with `nothing_to_undo` (409) when no human step was ever made (a plan that is only
-  the automatic decider).
+  an automatic step).
 - **Edit final** (`edit-final`, `complete` only) takes `{ maps, version }`: the whole
   final list in play order, each entry a `PickBanEditFinalEntry` `{ map, picked_by,
   decider }`. It is refused with `invalid_request` (422) unless every rule holds:
@@ -914,7 +919,13 @@ pure and tested without a DOM. It returns:
   `selected` and `selectable` flags. `selected` is always `false` here: the captain's own
   selection is layered on by `withCaptainPlay` (see `agents/state-patterns.md`).
 - `timeline`: `upcoming`, `current`, `locked_in` or `revealed`, with each step's
-  `actorLabel` and `actionLabel`, and its map and screenshot version once revealed
+  `actorLabel` and `actionLabel`, its `automatic` flag, and its map and screenshot version
+  once revealed
+- `revealing` on a card and on a timeline entry: `true` only for the step whose reveal
+  entrance is running right now (the reveal scene's `elapsedMs` is still within its
+  `entranceMs`). The pool grid and the timeline flash a card or chip once, on the render
+  where it turns `true`, so a late poll or a page opened mid-spotlight shows the new state
+  without the flash
 - `skippedBans`: the payload's `skipped_bans`, one entry per dropped ban in the same order,
   with `beforeIndex` (its `before_index`) so a timeline can draw it in place
 - `summary`, in play order (`map_number`), with each map's `actorLabel` and a slot reserved
@@ -929,8 +940,8 @@ pure and tested without a DOM. It returns:
 - `affordances`: `actingSide` and its letter `actingAb`, `canReady`, `isReady`, `canLock`, and
   `manager` (which dock controls apply to the current status, `startBlockedBy`,
   `resultsPresent` and `actForSide`). `resultsPresent` is the payload's `results_present`.
-  `undo` and `reopen` need a ban or pick in the plan (a decider-only plan has nothing to
-  undo). `reopen` applies from the moment the status is `complete`, and `editFinal` only
+  `undo` and `reopen` need a human step in the plan, one that isn't `automatic` (a plan
+  that is only an automatic step has nothing to undo). `reopen` applies from the moment the status is `complete`, and `editFinal` only
   once the view's `phase` is `complete` too, after the last spotlight, so the editor never
   opens on an unrevealed slot.
 - `version`: the payload's `version`, for a command that must be sent against the state
@@ -957,7 +968,9 @@ team is undecided, or `Decider`. `actionLabel` adds the verb (`Crimson Cats bans
 `Decider`). Components render these labels rather than rebuilding them.
 
 While a step is inside its reveal lead, the side that locked it sees it as `locked_in`, with
-its card flagged `lockedIn`. Everyone else still sees the step being awaited. `canLock` is
+its card flagged `lockedIn`. Everyone else still sees the step being awaited. An automatic
+step is never the viewer's own: it is never `locked_in` or `lockedIn`, and its turn has
+`viewerActs: false`, like the decider's. `canLock` is
 re-derived when a spotlight or the intro ends, so a captain can act without waiting for the
 next poll. The server's `can_lock_now` only overrides it for a payload read while awaiting.
 

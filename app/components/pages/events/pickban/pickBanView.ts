@@ -49,7 +49,9 @@ export interface PickBanTimelineEntry {
     screenshotVersion: string | null
     actedBy: PickBanUserRef | null
     actedByAdmin: boolean
+    automatic: boolean
     revealAt: number | null
+    revealing: boolean
 }
 
 export interface PickBanSkippedBan {
@@ -75,6 +77,7 @@ export interface PickBanCardView {
     lockedIn: boolean
     selected: boolean
     selectable: boolean
+    revealing: boolean
 }
 
 export interface PickBanTurn {
@@ -222,16 +225,16 @@ const LIVE_STATUSES: PickBanSessionStatus[] = ['running', 'paused', 'complete']
 
 const IDLE_TIMING: LiveTiming = { phase: 'lobby', startsAt: null, endsAt: null }
 
-const ENTRANCE_SHARE = 0.15
+const ENTRANCE_SHARE = 0.2
 
 const PLAIN_ENTRANCE_MS = 350
 
-export const INTRO_ENTRANCE_MAX_MS = 900
+export const INTRO_ENTRANCE_MAX_MS = 1_200
 
 export const REVEAL_ENTRANCE_MAX_MS: { [segment in PickBanSegment]: number } = {
-    lettered: 1_200,
-    ban_down: 600,
-    decider: 1_500,
+    lettered: 1_600,
+    ban_down: 900,
+    decider: 2_200,
 }
 
 const CARD_STATE_OF_ACTION: { [action in PickBanStepAction]: PickBanCardState } = {
@@ -276,7 +279,7 @@ function screenshotVersionOf(state: PickBanState, map: string | null): string | 
 }
 
 function viewerActs(state: PickBanState, step: PickBanPlanStep): boolean {
-    return step.side !== null && step.side === state.capabilities.acting_side
+    return !step.automatic && step.side !== null && step.side === state.capabilities.acting_side
 }
 
 function warningMessage(warning: PickBanWarning): string {
@@ -352,7 +355,7 @@ function spotlightEndOf(moment: Moment, step: PickBanPlanStep): number {
     const own = (revealAtOf(step) ?? -Infinity) + spotlightLengthMs(moment.state.pacing, step.segment)
     const following = moment.steps.find((candidate) => candidate.index > step.index && isExecuted(candidate))
     if (!following) return parseApiInstant(moment.state.spotlight_ends_at) ?? own
-    if (following.actor === null) return Math.max(own, revealAtOf(following) ?? own)
+    if (following.automatic) return Math.max(own, revealAtOf(following) ?? own)
     return own
 }
 
@@ -388,7 +391,7 @@ function managerControlsOf(moment: Moment, awaitedStep: PickBanPlanStep | null, 
     if (!state.capabilities.can_manage) return null
     const status = state.status
     const live = LIVE_STATUSES.includes(status)
-    const humanStepIn = steps.some((step) => isExecuted(step) && step.actor !== null)
+    const humanStepIn = steps.some((step) => isExecuted(step) && !step.automatic)
     return {
         open: status === 'none' || status === 'cancelled' || status === 'voided',
         start: status === 'lobby',
@@ -425,7 +428,7 @@ function affordancesOf(moment: Moment, awaitedStep: PickBanPlanStep | null, live
     }
 }
 
-function timelineOf(moment: Moment, inProgress: boolean): PickBanTimelineEntry[] {
+function timelineOf(moment: Moment, inProgress: boolean, revealingIndex: number | null): PickBanTimelineEntry[] {
     const { state, clock, currentStep, pendingStep } = moment
     return moment.steps.map((step) => {
         const revealed = isRevealedAt(step, clock)
@@ -449,7 +452,9 @@ function timelineOf(moment: Moment, inProgress: boolean): PickBanTimelineEntry[]
             screenshotVersion: revealed ? screenshotVersionOf(state, step.map) : null,
             actedBy: revealed ? step.acted_by : null,
             actedByAdmin: revealed && step.acted_by_admin,
+            automatic: step.automatic,
             revealAt: revealAt === null ? null : moment.toLocal(revealAt),
+            revealing: step.index === revealingIndex,
         }
     })
 }
@@ -462,7 +467,7 @@ function skippedBansOf(state: PickBanState): PickBanSkippedBan[] {
     }))
 }
 
-function cardsOf(moment: Moment, awaitedStep: PickBanPlanStep | null, canChoose: boolean): PickBanCardView[] {
+function cardsOf(moment: Moment, awaitedStep: PickBanPlanStep | null, canChoose: boolean, revealingIndex: number | null): PickBanCardView[] {
     const { state, pendingStep } = moment
     const revealedByMap = new Map(moment.revealedSteps.map((step) => [step.map, step]))
     const preview = state.selection_preview
@@ -493,6 +498,7 @@ function cardsOf(moment: Moment, awaitedStep: PickBanPlanStep | null, canChoose:
             lockedIn: pendingStep !== null && viewerActs(state, pendingStep) && pendingStep.map === poolCard.map,
             selected: false,
             selectable: available && canChoose,
+            revealing: step !== undefined && step.index === revealingIndex,
         }
     })
 }
@@ -618,10 +624,12 @@ export function buildPickBanView(state: PickBanState, clock: PickBanClock): Pick
     const awaitedStep = timing.phase === 'awaiting' && !moment.pendingStep ? moment.currentStep : null
     const affordances = affordancesOf(moment, awaitedStep, timing.phase)
     const canChoose = affordances.canLock || (affordances.manager?.actForSide ?? null) !== null
-    const timeline = timelineOf(moment, inProgress)
+    const stagePhase = stagePhaseOf(state.status, timing.phase)
+    const scene = sceneOf(moment, stagePhase, timing)
+    const revealingIndex = revealingIndexOf(moment, scene)
+    const timeline = timelineOf(moment, inProgress, revealingIndex)
     const spotlightIndex = timing.phase === 'spotlight' ? moment.lastRevealed?.index : undefined
     const leftSide = state.a_side ?? 'team_a'
-    const stagePhase = stagePhaseOf(state.status, timing.phase)
 
     return {
         version: state.version,
@@ -632,7 +640,7 @@ export function buildPickBanView(state: PickBanState, clock: PickBanClock): Pick
         countdown: countdownOf(moment, timing),
         turn: turnOf(moment, inProgress),
         spotlight: timeline.find((entry) => entry.index === spotlightIndex) ?? null,
-        cards: cardsOf(moment, awaitedStep, canChoose),
+        cards: cardsOf(moment, awaitedStep, canChoose, revealingIndex),
         timeline,
         skippedBans: skippedBansOf(state),
         summary: summaryOf(moment),
@@ -641,7 +649,7 @@ export function buildPickBanView(state: PickBanState, clock: PickBanClock): Pick
         affordances,
         edited: state.edited,
         nextBoundaryAt: nextBoundaryOf(moment, timing),
-        scene: sceneOf(moment, stagePhase, timing),
+        scene,
     }
 }
 
@@ -686,6 +694,11 @@ function sceneOf(moment: Moment, stagePhase: PickBanStagePhase, timing: LiveTimi
         elapsedMs: timing.startsAt === null ? null : moment.clock - timing.startsAt,
         entranceMs: entranceMsOf(moment, identity.kind),
     }
+}
+
+function revealingIndexOf(moment: Moment, scene: PickBanScene): number | null {
+    if (scene.kind !== 'reveal' || scene.elapsedMs === null || scene.elapsedMs > scene.entranceMs) return null
+    return moment.lastRevealed?.index ?? null
 }
 
 export function sceneDirection(previous: PickBanScene | null, next: PickBanScene): PickBanSceneDirection {
