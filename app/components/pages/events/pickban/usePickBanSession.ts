@@ -14,6 +14,7 @@ export interface UsePickBanSessionResult extends PickBanSessionSnapshot {
     refresh: PickBanSessionStore['refresh']
     sendCommand: PickBanSessionStore['sendCommand']
     sendManagerCommand: PickBanSessionStore['sendManagerCommand']
+    sendManagerCommandAt: PickBanSessionStore['sendManagerCommandAt']
 }
 
 export function usePickBanSession({
@@ -50,6 +51,7 @@ export function usePickBanSession({
             refresh: store.refresh,
             sendCommand: store.sendCommand,
             sendManagerCommand: store.sendManagerCommand,
+            sendManagerCommandAt: store.sendManagerCommandAt,
         }),
         [snapshot, store],
     )

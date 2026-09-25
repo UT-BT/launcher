@@ -335,6 +335,32 @@ describe('commands', () => {
         session.stop()
     })
 
+    it('sends a pinned manager command with the version it was given, even once a newer state has arrived', async () => {
+        const seen = runningState()
+        const newer = { ...seen, version: seen.version + 3 }
+        const fetchMock = stubFetch(
+            () => fresh(seen, '"v1"'),
+            (_url, init) => (init.method === 'POST' ? fresh(newer) : fresh(newer, '"v2"')),
+        )
+        const session = store()
+        session.start()
+        await vi.advanceTimersByTimeAsync(0)
+        await vi.advanceTimersByTimeAsync(ACTIVE_POLL_MS)
+        expect(session.getSnapshot().state?.version).toBe(newer.version)
+
+        await session.sendManagerCommandAt(seen.version, 'edit-final', { maps: [{ map: ELIGIBLE_MAPS[0], picked_by: null, decider: true }] })
+        await session.sendManagerCommandAt(seen.version, 'undo')
+        await session.sendManagerCommand('restart')
+
+        const posts = fetchMock.mock.calls.filter(([, init]) => init.method === 'POST')
+        expect(posts.map(([, init]) => JSON.parse(init.body as string))).toEqual([
+            { maps: [{ map: ELIGIBLE_MAPS[0], picked_by: null, decider: true }], version: seen.version },
+            { version: seen.version },
+            { version: newer.version },
+        ])
+        session.stop()
+    })
+
     it('holds a Lock-in sent while a hover is in flight, then sends it with the version the hover answered with', async () => {
         const before = runningState()
         const hovered = { ...before, version: before.version + 1, selection_preview: { side: 'team_a' as const, map: ELIGIBLE_MAPS[1], at: iso(Date.now()) } }

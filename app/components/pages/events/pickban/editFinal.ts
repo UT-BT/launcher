@@ -10,6 +10,7 @@ export interface FinalDraftEntry {
 }
 
 export interface FinalDraft {
+    version: number
     entries: FinalDraftEntry[]
     nextKey: number
 }
@@ -44,10 +45,12 @@ export interface FinalEditor {
     canAdd: boolean
     problems: string[]
     body: { maps: PickBanEditFinalEntry[] } | null
+    outdated: boolean
 }
 
 export function finalDraftOf(view: PickBanView): FinalDraft {
     return {
+        version: view.version,
         entries: view.summary.map((entry, key) => ({
             key,
             map: entry.map,
@@ -85,7 +88,7 @@ export function addFinalEntry(draft: FinalDraft): FinalDraft {
     const { entries, nextKey } = draft
     const at = entries[entries.length - 1]?.decider ? entries.length - 1 : entries.length
     const blank: FinalDraftEntry = { key: nextKey, map: null, side: null, decider: false }
-    return { entries: [...entries.slice(0, at), blank, ...entries.slice(at)], nextKey: nextKey + 1 }
+    return { ...draft, entries: [...entries.slice(0, at), blank, ...entries.slice(at)], nextKey: nextKey + 1 }
 }
 
 export function moveFinalEntry(draft: FinalDraft, key: number, offset: -1 | 1): FinalDraft {
@@ -175,5 +178,6 @@ export function finalEditorOf(draft: FinalDraft, view: PickBanView): FinalEditor
         canAdd: draft.entries.length < maps.length,
         problems: problems.map((problem) => problem.message),
         body: problems.length === 0 ? bodyOf(draft.entries) : null,
+        outdated: draft.version !== view.version,
     }
 }

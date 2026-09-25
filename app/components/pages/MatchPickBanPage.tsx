@@ -44,7 +44,7 @@ const STAGE_ROW = 'grid grid-cols-2 gap-3 @4xl/page:grid-cols-[13rem_minmax(0,1f
 export function MatchPickBanPage({ eventSlug, matchId, userProfile, onBackToEvent }: MatchPickBanPageProps) {
     const session = usePickBanSession({ accessToken: userProfile?.accessToken, slug: eventSlug, matchId })
     const captain = useCaptainPlay(usePickBanView(session.state, session.clockOffsetMs), session.sendCommand)
-    const manager = useManagerDock(captain.view, session.sendManagerCommand)
+    const manager = useManagerDock(captain.view, session)
     const view = manager.view
     const links = buildMatchLinks(eventSlug, matchId)
     const { navigate } = useNavigation()

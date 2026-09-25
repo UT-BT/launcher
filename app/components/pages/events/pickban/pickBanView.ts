@@ -160,6 +160,7 @@ export interface PickBanAffordances {
 }
 
 export interface PickBanView {
+    version: number
     match: PickBanMatchHeading
     status: PickBanSessionStatus
     phase: PickBanViewPhase
@@ -382,11 +383,12 @@ function countdownOf(moment: Moment, timing: LiveTiming): PickBanCountdown | nul
     }
 }
 
-function managerControlsOf(moment: Moment, awaitedStep: PickBanPlanStep | null): PickBanManagerControls | null {
+function managerControlsOf(moment: Moment, awaitedStep: PickBanPlanStep | null, livePhase: LivePhase): PickBanManagerControls | null {
     const { state, steps } = moment
     if (!state.capabilities.can_manage) return null
     const status = state.status
     const live = LIVE_STATUSES.includes(status)
+    const humanStepIn = steps.some((step) => isExecuted(step) && step.actor !== null)
     return {
         open: status === 'none' || status === 'cancelled' || status === 'voided',
         start: status === 'lobby',
@@ -397,17 +399,17 @@ function managerControlsOf(moment: Moment, awaitedStep: PickBanPlanStep | null):
         overrideSequence: status === 'lobby',
         pause: status === 'running',
         resume: status === 'paused',
-        undo: (status === 'running' || status === 'paused') && steps.some((step) => isExecuted(step) && step.actor !== null),
-        reopen: status === 'complete',
+        undo: (status === 'running' || status === 'paused') && humanStepIn,
+        reopen: status === 'complete' && humanStepIn,
         restart: live,
         cancel: status === 'lobby' || live,
         handOver: status === 'lobby' || status === 'running' || status === 'paused',
-        editFinal: status === 'complete',
+        editFinal: status === 'complete' && livePhase === 'complete',
         actForSide: status === 'running' && awaitedStep ? awaitedStep.side : null,
     }
 }
 
-function affordancesOf(moment: Moment, awaitedStep: PickBanPlanStep | null): PickBanAffordances {
+function affordancesOf(moment: Moment, awaitedStep: PickBanPlanStep | null, livePhase: LivePhase): PickBanAffordances {
     const { state } = moment
     const actingSide = state.capabilities.acting_side
     return {
@@ -419,7 +421,7 @@ function affordancesOf(moment: Moment, awaitedStep: PickBanPlanStep | null): Pic
             && awaitedStep !== null
             && viewerActs(state, awaitedStep)
             && (state.phase !== 'awaiting' || state.capabilities.can_lock_now),
-        manager: managerControlsOf(moment, awaitedStep),
+        manager: managerControlsOf(moment, awaitedStep, livePhase),
     }
 }
 
@@ -614,7 +616,7 @@ export function buildPickBanView(state: PickBanState, clock: PickBanClock): Pick
     const timing = liveTiming(moment)
     const inProgress = timing.phase === 'intro' || timing.phase === 'awaiting' || timing.phase === 'spotlight'
     const awaitedStep = timing.phase === 'awaiting' && !moment.pendingStep ? moment.currentStep : null
-    const affordances = affordancesOf(moment, awaitedStep)
+    const affordances = affordancesOf(moment, awaitedStep, timing.phase)
     const canChoose = affordances.canLock || (affordances.manager?.actForSide ?? null) !== null
     const timeline = timelineOf(moment, inProgress)
     const spotlightIndex = timing.phase === 'spotlight' ? moment.lastRevealed?.index : undefined
@@ -622,6 +624,7 @@ export function buildPickBanView(state: PickBanState, clock: PickBanClock): Pick
     const stagePhase = stagePhaseOf(state.status, timing.phase)
 
     return {
+        version: state.version,
         match: matchHeadingOf(state, leftSide),
         status: state.status,
         phase: state.status === 'paused' ? 'paused' : stagePhase,

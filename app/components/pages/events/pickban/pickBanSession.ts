@@ -65,6 +65,11 @@ export interface PickBanSessionStore {
         command: C,
         ...input: PickBanCommandInput<PickBanManagerCommandBodies[C]>
     ) => Promise<PickBanState>
+    sendManagerCommandAt: <C extends PickBanManagerCommand>(
+        version: number,
+        command: C,
+        ...input: PickBanCommandInput<PickBanManagerCommandBodies[C]>
+    ) => Promise<PickBanState>
 }
 
 function sameSnapshot(a: PickBanSessionSnapshot, b: PickBanSessionSnapshot): boolean {
@@ -132,11 +137,12 @@ export function createPickBanSessionStore({
         scope: PickBanCommandScope,
         command: PickBanParticipantCommand | PickBanManagerCommand,
         input: readonly (object | undefined)[] | null,
+        pinnedVersion: number | null,
     ): Promise<PickBanState> => {
         const token = accessToken()
         if (!token) throw new Error('Sign in to take part in this pick/ban.')
         const sentAt = now()
-        const body = input === null ? undefined : { ...input[0], version: snapshot.state?.version ?? 0 }
+        const body = input === null ? undefined : { ...input[0], version: pinnedVersion ?? snapshot.state?.version ?? 0 }
         try {
             const next = await postPickBanCommand(token, slug, matchId, scope, command, body)
             const state = adopt(next)
@@ -155,8 +161,9 @@ export function createPickBanSessionStore({
         scope: PickBanCommandScope,
         command: PickBanParticipantCommand | PickBanManagerCommand,
         input: readonly (object | undefined)[] | null,
+        pinnedVersion: number | null = null,
     ): Promise<PickBanState> => {
-        const run = commandQueue.then(() => postCommand(scope, command, input))
+        const run = commandQueue.then(() => postCommand(scope, command, input, pinnedVersion))
         commandQueue = run.catch(() => undefined)
         return run
     }
@@ -181,6 +188,10 @@ export function createPickBanSessionStore({
 
         sendManagerCommand(command, ...input) {
             return runCommand('manager', command, command === 'open' ? null : input)
+        },
+
+        sendManagerCommandAt(version, command, ...input) {
+            return runCommand('manager', command, command === 'open' ? null : input, version)
         },
     }
 }

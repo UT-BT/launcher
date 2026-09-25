@@ -698,7 +698,11 @@ waits for a poll. Every body except Open's carries the expected `version`.
 - `postPickBanCommand` is the untyped transport under both. Screens call the session
   store's `sendCommand` / `sendManagerCommand` (see `agents/state-patterns.md`), which fill
   in the version themselves. They send one command at a time and read the version only once
-  the command before has settled.
+  the command before has settled. `sendManagerCommandAt(version, command, body?)` sends a
+  manager command with the version it is given instead, so a change the manager hasn't
+  seen answers `version_conflict`. The dock pins Reopen and Edit final this way. Restart,
+  Cancel and the rest keep the latest version, because captain hovers bump it constantly
+  while a session runs.
 - **Refusals.** A refusal is an `ApiError` whose `.reason` is a stable code (403
   authorization, 409 state conflict, 422 validation). `pickBanErrorCode(err)` narrows it to
   `PickBanErrorCode`, and `PICK_BAN_ERROR_CODES` lists every code. Show `err.message`, and
@@ -824,6 +828,12 @@ pure and tested without a DOM. It returns:
 - `affordances`: `actingSide` and its letter `actingAb`, `canReady`, `isReady`, `canLock`, and
   `manager` (which dock controls apply to the current status, `startBlockedBy`,
   `resultsPresent` and `actForSide`). `resultsPresent` is the payload's `results_present`.
+  `undo` and `reopen` need a ban or pick in the plan (a decider-only plan has nothing to
+  undo). `reopen` applies from the moment the status is `complete`, and `editFinal` only
+  once the view's `phase` is `complete` too, after the last spotlight, so the editor never
+  opens on an unrevealed slot.
+- `version`: the payload's `version`, for a command that must be sent against the state
+  the viewer saw
 - `nextBoundaryAt`: when the view next changes on its own
 - `scene`: what the centre stage shows, for animating it. `key` (`lobby`, `intro`,
   `turn-<index>`, `reveal-<index>`, `complete`, `none`, `cancelled` or `voided`) stays the
@@ -933,7 +943,8 @@ only from the view model, through the pick/ban visual core (see
   fallback, so only managers fetch it; the model and the hook stay static. It is absent for captains, teammates and spectators, and the
   stream view never renders it. Each control shows only while `affordances.manager`
   allows it, and calls `sendManagerCommand`, which adds the expected `version` and adopts
-  the returned state:
+  the returned state (Reopen and Edit final call `sendManagerCommandAt` with their pinned
+  version):
   - `open` (no body) while there is no live session: none, cancelled or voided
   - `start`, disabled with `blockingReasonLabel(startBlockedBy)` while Start would be
     refused
@@ -945,10 +956,14 @@ only from the view model, through the pick/ban visual core (see
   - `pause` / `resume`, `undo` (Undo last step, while running or paused), and `hand-over`
     with `{ side, user_id }`, picked from that side's roster in the payload (choosing the
     captain sends `user_id: null`)
-  - Reopen, which sends `undo` on a complete session
-  - `edit-final` with `{ maps }`, from the Edit final maps… editor on a complete session.
-    The editor starts from the final summary, offers the non-excluded pool and both
-    teams, and checks the same rules the server does before Save is enabled.
+  - Reopen, which sends `undo` on a complete session with a ban or pick in it, pinned to
+    the version its confirmation opened on
+  - `edit-final` with `{ maps }`, from the Edit final maps… editor once the last spotlight
+    is over, pinned to the version the editor opened on. The editor starts from the final
+    summary, offers the non-excluded pool and both teams, and checks the same rules the
+    server does before Save is enabled. Once the session has moved past that version, it
+    says the final maps changed since it opened, holds Save, and offers Reload, which
+    starts it again from the current summary and version.
   - `lock` with `{ side, map, plan_index }` to act for the awaited side: select a card, then
     Lock in, with the same optimistic "Locked in" a captain gets, kept until the step
     reveals. A manager never sends `hover`. On the viewer's own turn as captain, the
@@ -966,8 +981,10 @@ only from the view model, through the pick/ban visual core (see
   roster member of that side's team, and an `edit-final` refused with it says the list
   wasn't accepted, followed by the server's own detail (which field broke which rule);
   every other command keeps the general words for that code. A Reopen refused with
-  `nothing_to_undo` says there is no ban or pick to undo. A refused edit shows inside the
-  editor, which keeps the list. `resultsPresent` shows a warning in
+  `nothing_to_undo` says there is no ban or pick to undo, and an edit refused with
+  `version_conflict` says the final maps changed since the editor opened (the poll that
+  follows then brings the Reload offer). A refused edit shows inside the editor, which
+  keeps the list. `resultsPresent` shows a warning in
   any status (Reopen, Restart, Cancel and Edit final stay enabled, and the server's refusal
   is worded if one comes), and a voided session shows its banner in the dock with Open
   offered again.

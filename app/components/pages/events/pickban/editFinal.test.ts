@@ -57,6 +57,15 @@ describe('seeding the editor', () => {
             ],
         })
     })
+
+    it('remembers the session version it was seeded from, and is outdated once the session has moved past it', () => {
+        const state = asManager(lockedInTurn(started(), ELIGIBLE_MAPS.slice(0, 6)))
+        const draft = finalDraftOf(viewOf(state))
+
+        expect(draft.version).toBe(state.version)
+        expect(finalEditorOf(draft, viewOf(state)).outdated).toBe(false)
+        expect(finalEditorOf(draft, viewOf({ ...state, version: state.version + 1 })).outdated).toBe(true)
+    })
 })
 
 describe('validating', () => {
