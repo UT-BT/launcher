@@ -40,6 +40,8 @@ const DISCARDED = 'Its picks and bans don’t count.'
 
 const DECIDER_LETTERS = [...'DECIDER']
 
+const DECIDER_BYLINE = 'Left by both teams'
+
 type RevealKind = 'pick' | 'ban' | 'ban_down' | 'decider'
 
 function useSceneDirection(scene: PickBanScene): PickBanSceneDirection {
@@ -66,7 +68,8 @@ function stageAnnouncement(view: PickBanView): string {
 }
 
 function revealAnnouncement(entry: PickBanTimelineEntry): string {
-    if (!entry.automatic || entry.action === 'decider') return revealByline(entry)
+    if (entry.action === 'decider') return `Decider, ${DECIDER_BYLINE.toLowerCase()}`
+    if (!entry.automatic) return revealByline(entry)
     const mapNumber = entry.action === 'pick' ? ` map ${entry.mapNumber}` : ''
     return `${entry.actionLabel}${mapNumber}, locked automatically as the last map standing`
 }
@@ -297,12 +300,13 @@ export function TurnCard({ turn, previewCard, stepCount, mapCount }: {
 
     return (
         <div className="flex w-full flex-col items-center gap-3 text-center @md/stage:gap-4">
-            <div className={cn('inline-flex max-w-full items-center gap-2 rounded-full border px-4 py-1.5', tone.soft, tone.line)}>
-                <Icon className={cn('size-5 shrink-0', tone.text)} strokeWidth={2.5} />
-                <span className="truncate text-base font-bold text-foreground @md/stage:text-xl @[80rem]/stage:text-3xl">{who}</span>
-                <span className={cn('shrink-0 rounded px-2 py-0.5 text-xs font-black uppercase tracking-widest @md/stage:text-sm @[80rem]/stage:text-xl', tone.solid, tone.onSolid)}>
-                    {turn.action === 'ban' ? 'Ban' : 'Pick'}
-                </span>
+            <div className="flex w-full max-w-full flex-col items-center gap-1 @[80rem]/stage:gap-2">
+                <p className={cn('flex items-center gap-2.5 text-xs font-black uppercase tracking-[0.3em] @md/stage:text-sm @[80rem]/stage:gap-4 @[80rem]/stage:text-lg', tone.text)}>
+                    <span aria-hidden className="h-px w-6 bg-gradient-to-r from-transparent to-current @[80rem]/stage:w-12" />
+                    <span className="-mr-[0.3em]">{turn.action === 'ban' ? 'Ban' : 'Pick'}</span>
+                    <span aria-hidden className="h-px w-6 bg-gradient-to-l from-transparent to-current @[80rem]/stage:w-12" />
+                </p>
+                <h2 className="max-w-full truncate text-xl font-extrabold leading-tight text-foreground @md/stage:text-2xl @[80rem]/stage:text-4xl">{who}</h2>
             </div>
             <p className="text-xs text-muted-foreground">
                 Step {turn.stepNumber} of {stepCount}
@@ -335,10 +339,9 @@ export function TurnCard({ turn, previewCard, stepCount, mapCount }: {
 }
 
 function revealByline(entry: PickBanTimelineEntry): string {
-    if (entry.automatic && entry.action !== 'decider') return 'Last map standing · locked automatically'
-    if (entry.action === 'pick') return `Picked by ${entry.actorLabel}`
-    if (entry.segment === 'ban_down') return `Ban · ${entry.actionLabel}`
-    return entry.actionLabel
+    if (entry.action === 'decider') return DECIDER_BYLINE
+    if (entry.automatic) return 'Last map standing · locked automatically'
+    return `${entry.action === 'pick' ? 'Picked' : 'Banned'} by ${entry.actorLabel}`
 }
 
 function revealKindOf(entry: PickBanTimelineEntry): RevealKind {
@@ -454,7 +457,7 @@ export function RevealCard({ entry, countdown, upNext, entranceMs = REVEAL_ENTRA
             <motion.div variants={caption} className="min-w-0 max-w-full space-y-0.5">
                 <p className="truncate text-lg font-extrabold text-foreground @[80rem]/stage:text-3xl">{entry.map ? displayMapName(entry.map) : ''}</p>
                 <p className={cn('text-[11px] font-bold uppercase tracking-wider @[80rem]/stage:text-sm', tone.text)}>
-                    {decider ? 'Decider · last map standing' : revealByline(entry)}
+                    {revealByline(entry)}
                     {entry.actedByAdmin && <span className="text-muted-foreground"> · set by an admin</span>}
                 </p>
             </motion.div>

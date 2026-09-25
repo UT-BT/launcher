@@ -521,8 +521,10 @@ paused one, so neither can run as the other.
   Every button carries its label, a one-line `hint` and a `disabled` flag (every one is
   disabled while a command is in flight, and `submitting` names that command). It holds:
   - `status` (the session's) and `phase`, a status line: `Waiting for Start`, `Starting`,
-    `Intro`, `Step 3 of 7 · Azure Owls picks`, `Step 3 of 7 · Revealing`, `Step 3 of 7`
-    while paused, `Final maps written` or `Final maps edited`
+    `Intro`, `Step 3 of 7 · Azure Owls (pick)`, `Step 3 of 7 · Revealing`, `Step 3 of 7`
+    while paused, `Final maps written` or `Final maps edited`. For a manager who plays in
+    the match (`lockForSide` false) the awaiting line is just `Step 3 of 7`, without whose
+    turn it is
   - `primary`, the one call to action for the status: Open Lobby (none, cancelled or
     voided), Start (lobby), Pause (running) or Resume (paused). Start also carries
     `blocked`, the worded blocking reason with a `fix` naming what clears it (or `null`),
@@ -551,7 +553,9 @@ paused one, so neither can run as the other.
   next `turn` through the start lead, the intro, a spotlight or a pause, and `waiting`
   while someone else's lock-in is in its reveal lead or on the viewer's own turn as
   captain. So the strip stays up from Start to the last lock-in, and is `null` in the
-  lobby and once the session is complete.
+  lobby and once the session is complete. For a manager who plays in the match they are
+  always `null`, and `playingNote` (set while the session is running or paused) says an
+  admin who isn't playing has to lock in on a team's behalf.
 - `beginManagerCommand(play, view, action)` returns the next play and the request to
   send, or `null` when the control isn't open, a command is in flight, or an Edit final
   save has no open, valid, current draft. For `reopen`, `restart`, `cancel` and

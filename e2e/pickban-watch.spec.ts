@@ -206,7 +206,7 @@ test('the centre stage keeps one height per width and fits every state inside it
         },
         { name: 'ban reveal', state: firstBan, at: revealOf(firstBan, 0) + 1_000, expectText: /BANNED/ },
         { name: 'pick reveal', state: firstPick, at: revealOf(firstPick, 2) + 1_000, expectText: /Picked by/ },
-        { name: 'decider reveal', state: decider, at: revealOf(decider, 6) + 1_000, expectText: /last map standing/ },
+        { name: 'decider reveal', state: decider, at: revealOf(decider, 6) + 1_000, expectText: /Left by both teams/ },
         { name: 'paused', state: paused(firstBan, revealOf(firstBan, 0) + 1_000), at: revealOf(firstBan, 0) + 5_000, expectText: /Session paused/ },
         {
             name: 'summary',

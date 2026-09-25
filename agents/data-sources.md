@@ -703,6 +703,10 @@ would create. It returns a `PickBanStateRead`:
 re-derives it between polls from the absolute timestamps: `intro_ends_at`,
 `spotlight_ends_at`, and each executed step's `at` / `reveal_at`.
 
+- **Members.** Each `teams.<side>.members[]` entry carries the member's selected `title`
+  (`RawActiveTitle`, or `null`); pass it through `toActiveTitle` to `PlayerInfo`, the same
+  as every other player list.
+
 - **Reveal lead.** A lock-in is recorded at `at` and revealed at `reveal_at`, 1.5 s later.
   The intro likewise starts 1.5 s after Start, so it runs from `intro_ends_at −
   pacing.intro` to `intro_ends_at`. **A step is never shown before its `reveal_at`**, so
@@ -939,7 +943,10 @@ pure and tested without a DOM. It returns:
 - `banners`: voided, cancelled, paused, skipped bans and warnings
 - `affordances`: `actingSide` and its letter `actingAb`, `canReady`, `isReady`, `canLock`, and
   `manager` (which dock controls apply to the current status, `startBlockedBy`,
-  `resultsPresent` and `actForSide`). `resultsPresent` is the payload's `results_present`.
+  `resultsPresent`, `lockForSide` and `actForSide`). `resultsPresent` is the payload's
+  `results_present`. `lockForSide` is false for a manager who plays in the match (the
+  payload's `viewer.side` is set): such a manager never acts for a team, so `actForSide`
+  stays `null`.
   `undo` and `reopen` need a human step in the plan, one that isn't `automatic` (a plan
   that is only an automatic step has nothing to undo). `reopen` applies from the moment the status is `complete`, and `editFinal` only
   once the view's `phase` is `complete` too, after the last spotlight, so the editor never
@@ -1132,7 +1139,9 @@ only from the view model, through the pick/ban visual core (see
     reveals. A manager never sends `hover`. On the viewer's own turn as captain, the
     captain controls handle it instead. Between turns the act-for strip stays, locked with
     the countdown and who is up next, so nothing below it moves from Start to the last
-    lock-in.
+    lock-in. A manager who plays in the match gets no act-for strip at all, only a note
+    that an admin who isn't playing has to lock in on a team's behalf; the server refuses
+    their `lock` with 403 `plays_in_match`.
   - `restart` and `cancel`; they, Reopen and an edit-final save each run only after a
     confirmation that says what will change
   - Copy Player Link and Copy Stream Link (`buildMatchLinks`)

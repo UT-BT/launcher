@@ -8,6 +8,7 @@ import {
     CircleDashed,
     CircleX,
     DoorOpen,
+    Info,
     Link2,
     ListOrdered,
     Loader2,
@@ -158,6 +159,12 @@ export function ManagerDock({ manager, slug, accessToken, links }: ManagerDockPr
                     {dock.voided && <PickBanBannerNote banner={dock.voided} className="border-2 text-base" />}
                     {dock.resultsWarning && <PickBanBannerNote banner={{ kind: 'warning', key: 'results', message: dock.resultsWarning }} />}
                     {dock.rejection && <Rejection message={dock.rejection} onDismiss={manager.dismiss} />}
+                    {dock.playingNote && (
+                        <p className="flex items-start gap-2 rounded-lg border border-hairline/10 bg-card/30 px-3 py-2 text-xs text-muted-foreground">
+                            <Info className="mt-px size-3.5 shrink-0" />
+                            {dock.playingNote}
+                        </p>
+                    )}
                     {actFor && (
                         <CaptainDock
                             dock={actFor.dock}

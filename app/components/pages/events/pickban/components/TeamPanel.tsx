@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
-import type { PickBanMember } from '@/app/utils/api'
+import { toActiveTitle, type PickBanMember } from '@/app/utils/api'
 import type { PickBanTeamPanel } from '../pickBanView'
 import { PICK_BAN_TONES, teamTone } from './pickBanTone'
 
@@ -73,7 +73,7 @@ function TeamMember({ member }: { member: PickBanMember }) {
             >
                 <span className="sr-only">{member.online ? 'Online' : 'Offline'}</span>
             </span>
-            <PlayerInfo userId={member.id} alias={member.display_name} size="sm" className="min-w-0" />
+            <PlayerInfo userId={member.id} alias={member.display_name} title={toActiveTitle(member.title)} size="sm" className="min-w-0" />
             {role && (
                 <span
                     title={role}

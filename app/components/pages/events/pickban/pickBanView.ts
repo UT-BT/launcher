@@ -151,6 +151,7 @@ export interface PickBanManagerControls {
     cancel: boolean
     handOver: boolean
     editFinal: boolean
+    lockForSide: boolean
     actForSide: PickBanSide | null
 }
 
@@ -410,6 +411,7 @@ function managerControlsOf(moment: Moment, awaitedStep: PickBanPlanStep | null, 
     const status = state.status
     const live = LIVE_STATUSES.includes(status)
     const humanStepIn = steps.some((step) => isExecuted(step) && !step.automatic)
+    const lockForSide = state.viewer.side === null
     return {
         open: status === 'none' || status === 'cancelled' || status === 'voided',
         start: status === 'lobby',
@@ -426,7 +428,8 @@ function managerControlsOf(moment: Moment, awaitedStep: PickBanPlanStep | null, 
         cancel: status === 'lobby' || live,
         handOver: status === 'lobby' || status === 'running' || status === 'paused',
         editFinal: status === 'complete' && livePhase === 'complete',
-        actForSide: status === 'running' && awaitedStep ? awaitedStep.side : null,
+        lockForSide,
+        actForSide: lockForSide && status === 'running' && awaitedStep ? awaitedStep.side : null,
     }
 }
 

@@ -42,6 +42,7 @@ function member(id: string, displayName: string, captain: boolean): PickBanMembe
         id,
         display_name: displayName,
         avatar: `https://example.test/users/${id}/avatar`,
+        title: null,
         captain,
         acting_captain: false,
         online: true,

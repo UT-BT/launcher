@@ -611,13 +611,34 @@ describe('acting for a team', () => {
         expect(managerDockOf(viewAt(asManager(completedRun()), T0 + 3_600_000), IDLE_MANAGER_PLAY)?.actFor).toBeNull()
     })
 
-    it('leaves a manager’s own turn as captain to the captain controls', () => {
-        const captain = asCaptain(readAt(started(), AWAITING_A), 'team_a')
-        const managingCaptain = { ...captain, capabilities: { ...captain.capabilities, can_manage: true } }
+    it('never lets a manager who plays in the match lock in for either team', () => {
+        const managing = (state: PickBanState) => ({ ...state, capabilities: { ...state.capabilities, can_manage: true } })
+        const awaiting = readAt(started(), AWAITING_A)
+        const players = [managing(asCaptain(awaiting, 'team_a')), managing(asTeammate(awaiting, 'team_a')), managing(asTeammate(awaiting, 'team_b'))]
 
-        expect(managerDockOf(viewAt(managingCaptain, AWAITING_A), IDLE_MANAGER_PLAY)?.actFor?.dock.controls).toMatchObject({
-            kind: 'waiting',
-            turn: { stepIndex: 0, viewerActs: true },
+        for (const player of players) {
+            const view = viewAt(player, AWAITING_A)
+            const dock = managerDockOf(view, IDLE_MANAGER_PLAY)
+            expect(view.affordances.manager).toMatchObject({ lockForSide: false, actForSide: null, pause: true, handOver: true })
+            expect(dock).toMatchObject({
+                actFor: null,
+                phase: 'Step 1 of 7',
+                playingNote: 'You play in this match, so you can’t lock in on a team’s behalf. An admin who isn’t playing has to do that.',
+                danger: [{ command: 'restart' }, { command: 'cancel' }],
+            })
+            expect(selectActForMap(IDLE_MANAGER_PLAY, view, BRAVO)).toBe(IDLE_MANAGER_PLAY)
+            expect(beginActForLock(IDLE_MANAGER_PLAY, view)).toBeNull()
+        }
+
+        const captainView = viewAt(players[0], AWAITING_A)
+        expect(captainView.affordances.canLock).toBe(true)
+        expect(captainView.cards.filter((card) => card.selectable)).toHaveLength(ELIGIBLE_MAPS.length)
+        expect(viewAt(players[2], AWAITING_A).cards.some((card) => card.selectable)).toBe(false)
+        expect(managerDockOf(viewAt(managing(asTeammate(pickBanState(), 'team_a')), T0), IDLE_MANAGER_PLAY)?.playingNote).toBeNull()
+        expect(managerDockOf(viewAt(asManager(awaiting), AWAITING_A), IDLE_MANAGER_PLAY)).toMatchObject({
+            playingNote: null,
+            phase: 'Step 1 of 7 · Crimson Cats (ban)',
+            actFor: { teamName: 'Crimson Cats' },
         })
     })
 })

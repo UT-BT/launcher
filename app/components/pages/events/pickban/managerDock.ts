@@ -176,6 +176,7 @@ export interface ManagerDock {
     finalEditor: ManagerFinalEditor | null
     confirm: ManagerConfirm | null
     actFor: ManagerActFor | null
+    playingNote: string | null
     rejection: string | null
 }
 
@@ -283,9 +284,12 @@ const CONFIRMATIONS: Record<ConfirmedCommand, Omit<ManagerConfirm, 'command'>> =
     },
 }
 
+const PLAYING_NOTE = 'You play in this match, so you can’t lock in on a team’s behalf. An admin who isn’t playing has to do that.'
+
 const REJECTIONS: Record<Exclude<PickBanErrorCode, PickBanBlockingReason>, string> = {
     not_authorized: 'You can’t manage this Picks & Bans process any more.',
     not_your_turn: 'That team isn’t on the clock any more.',
+    plays_in_match: PLAYING_NOTE,
     session_exists: 'This match already has a Picks & Bans process open.',
     intro_active: 'Wait for the intro to finish, then lock in.',
     spotlight_active: 'Wait for the reveal to finish, then lock in.',
@@ -377,7 +381,8 @@ function phaseOf(view: PickBanView): string | null {
         case 'intro':
             return 'Intro'
         case 'awaiting':
-            return view.turn && `${stepOf(view.turn.stepNumber)} · ${actionTagOf(view.turn)}`
+            if (!view.turn) return null
+            return view.affordances.manager?.lockForSide ? `${stepOf(view.turn.stepNumber)} · ${actionTagOf(view.turn)}` : stepOf(view.turn.stepNumber)
         case 'spotlight':
             return view.spotlight && `${stepOf(view.spotlight.number)} · Revealing`
         case 'paused':
@@ -496,6 +501,7 @@ function actForControlsOf(view: PickBanView, play: ManagerPlay): CaptainControls
 }
 
 function actForOf(view: PickBanView, play: ManagerPlay): ManagerActFor | null {
+    if (!view.affordances.manager?.lockForSide) return null
     const controls = actForControlsOf(view, play)
     const rejection = play.rejected === 'lock' ? play.rejection : null
     if (!controls && rejection === null) return null
@@ -522,6 +528,7 @@ export function managerDockOf(view: PickBanView, play: ManagerPlay): ManagerDock
     if (!controls) return null
     const busy = play.submitting !== null
     const finalEditor = managerFinalEditorOf(view, play, controls)
+    const actFor = actForOf(view, play)
     return {
         busy,
         submitting: play.submitting,
@@ -539,8 +546,9 @@ export function managerDockOf(view: PickBanView, play: ManagerPlay): ManagerDock
         confirm: play.confirming && allowed(controls, play.confirming.command)
             ? { command: play.confirming.command, ...CONFIRMATIONS[play.confirming.command] }
             : null,
-        actFor: actForOf(view, play),
-        rejection: play.rejected === 'lock' || (finalEditor && play.rejected === 'edit-final') ? null : play.rejection,
+        actFor,
+        playingNote: !controls.lockForSide && (view.status === 'running' || view.status === 'paused') ? PLAYING_NOTE : null,
+        rejection: (actFor && play.rejected === 'lock') || (finalEditor && play.rejected === 'edit-final') ? null : play.rejection,
     }
 }
 

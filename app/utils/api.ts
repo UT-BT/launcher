@@ -5682,6 +5682,7 @@ export type PickBanBlockingReason =
 export const PICK_BAN_ERROR_CODES = [
     'not_authorized',
     'not_your_turn',
+    'plays_in_match',
     'session_exists',
     'teams_not_decided',
     'a_undetermined',
@@ -5748,6 +5749,7 @@ export interface PickBanMember {
     id: string
     display_name: string
     avatar: string
+    title: RawActiveTitle | null
     captain: boolean
     acting_captain: boolean
     online: boolean
