@@ -12,6 +12,8 @@ export interface UsePickBanSoundOptions {
 
 export type PickBanSoundControls = Pick<PickBanSoundPlayer, 'unlock' | 'preview'>
 
+const UNLOCK_EVENTS = ['pointerdown', 'pointerup', 'touchend', 'keydown'] as const
+
 export function usePickBanSound({ state, clockOffsetMs, muted, volume }: UsePickBanSoundOptions): PickBanSoundControls {
     const stateRef = useRef(state)
     stateRef.current = state
@@ -32,11 +34,9 @@ export function usePickBanSound({ state, clockOffsetMs, muted, volume }: UsePick
 
     useEffect(() => {
         const unlock = () => player.unlock()
-        window.addEventListener('pointerdown', unlock, { once: true })
-        window.addEventListener('keydown', unlock, { once: true })
+        for (const type of UNLOCK_EVENTS) window.addEventListener(type, unlock)
         return () => {
-            window.removeEventListener('pointerdown', unlock)
-            window.removeEventListener('keydown', unlock)
+            for (const type of UNLOCK_EVENTS) window.removeEventListener(type, unlock)
         }
     }, [player])
 
