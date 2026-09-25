@@ -1,7 +1,8 @@
-import { DEFAULT_SOUND_PREFERENCE, type PickBanSoundPreference } from '../pickBanSoundPreference'
+import { DEFAULT_SOUND_VOLUME } from '../pickBanSoundPreference'
 
-export interface StreamSound extends PickBanSoundPreference {
+export interface StreamSound {
     muted: boolean
+    volume: number
 }
 
 export function isStreamSoundMuted(search: string): boolean {
@@ -11,7 +12,7 @@ export function isStreamSoundMuted(search: string): boolean {
 export function streamSoundVolume(search: string): number {
     const raw = new URLSearchParams(search).get('volume')?.trim()
     const percent = raw ? Number(raw) : Number.NaN
-    if (!Number.isFinite(percent)) return DEFAULT_SOUND_PREFERENCE.volume
+    if (!Number.isFinite(percent)) return DEFAULT_SOUND_VOLUME
     return Math.min(100, Math.max(0, percent)) / 100
 }
 

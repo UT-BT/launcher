@@ -1,40 +1,35 @@
+import { getSynced, setSynced, subscribeSynced } from '@/app/utils/userState'
+
 const STORAGE_KEY = 'utbt:pickBanSound:v1'
 
 export interface PickBanSoundPreference {
+    enabled: boolean
     volume: number
 }
 
-export const DEFAULT_SOUND_PREFERENCE: PickBanSoundPreference = { volume: 0.4 }
+export const DEFAULT_SOUND_VOLUME = 0.4
+
+export const DEFAULT_SOUND_PREFERENCE: PickBanSoundPreference = { enabled: false, volume: DEFAULT_SOUND_VOLUME }
 
 function soundVolumeOf(raw: unknown): number {
-    if (typeof raw !== 'number' || !Number.isFinite(raw)) return DEFAULT_SOUND_PREFERENCE.volume
+    if (typeof raw !== 'number' || !Number.isFinite(raw)) return DEFAULT_SOUND_VOLUME
     return Math.min(1, Math.max(0, raw))
 }
 
-export function parsePickBanSoundPreference(raw: string | null): PickBanSoundPreference {
-    if (raw === null) return DEFAULT_SOUND_PREFERENCE
-    try {
-        const stored: unknown = JSON.parse(raw)
-        if (typeof stored !== 'object' || stored === null) return DEFAULT_SOUND_PREFERENCE
-        const { volume } = stored as { volume?: unknown }
-        return { volume: soundVolumeOf(volume) }
-    } catch {
-        return DEFAULT_SOUND_PREFERENCE
-    }
+export function parsePickBanSoundPreference(stored: unknown): PickBanSoundPreference {
+    if (typeof stored !== 'object' || stored === null) return DEFAULT_SOUND_PREFERENCE
+    const { enabled, volume } = stored as { enabled?: unknown; volume?: unknown }
+    return { enabled: enabled === true, volume: soundVolumeOf(volume) }
 }
 
 export function loadPickBanSoundPreference(): PickBanSoundPreference {
-    try {
-        return parsePickBanSoundPreference(window.localStorage.getItem(STORAGE_KEY))
-    } catch {
-        return DEFAULT_SOUND_PREFERENCE
-    }
+    return parsePickBanSoundPreference(getSynced<unknown>(STORAGE_KEY, null))
 }
 
 export function savePickBanSoundPreference(preference: PickBanSoundPreference): void {
-    try {
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(preference))
-    } catch {
-        return
-    }
+    setSynced(STORAGE_KEY, preference)
+}
+
+export function subscribePickBanSoundPreference(callback: () => void): () => void {
+    return subscribeSynced(STORAGE_KEY, callback)
 }

@@ -1,4 +1,4 @@
-import { Suspense, lazy, useState, type ReactNode } from 'react'
+import { Suspense, lazy, useEffect, useState, type ReactNode } from 'react'
 import { ArrowLeft, Check, Link2, Sparkles, Swords, WifiOff, ZapOff } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { NavLink } from '@/app/components/navigation/NavLink'
@@ -21,8 +21,13 @@ import { CentreStage } from '@/app/components/pages/events/pickban/components/Ce
 import { PickBanBannerNote } from '@/app/components/pages/events/pickban/components/PickBanBannerNote'
 import { PickBanMotion } from '@/app/components/pages/events/pickban/components/PickBanMotion'
 import { PickBanSoundControl } from '@/app/components/pages/events/pickban/components/PickBanSoundControl'
-import { loadPickBanMotion, savePickBanMotion } from '@/app/components/pages/events/pickban/pickBanMotionPreference'
-import { loadPickBanSoundPreference, savePickBanSoundPreference } from '@/app/components/pages/events/pickban/pickBanSoundPreference'
+import { loadPickBanMotion, savePickBanMotion, subscribePickBanMotion } from '@/app/components/pages/events/pickban/pickBanMotionPreference'
+import {
+    loadPickBanSoundPreference,
+    savePickBanSoundPreference,
+    subscribePickBanSoundPreference,
+    type PickBanSoundPreference,
+} from '@/app/components/pages/events/pickban/pickBanSoundPreference'
 import { PickBanStatusChip } from '@/app/components/pages/events/pickban/components/PickBanStatusChip'
 import { PickBanUnavailable } from '@/app/components/pages/events/pickban/components/PickBanUnavailable'
 import { PoolGrid } from '@/app/components/pages/events/pickban/components/PoolGrid'
@@ -51,11 +56,23 @@ export function MatchPickBanPage({ eventSlug, matchId, userProfile, onBackToEven
     const view = manager.view
     const links = buildMatchLinks(eventSlug, matchId)
     const { navigate } = useNavigation()
-    const [soundOn, setSoundOn] = useState(false)
     const [soundPreference, setSoundPreference] = useState(loadPickBanSoundPreference)
     const [animate, setAnimate] = useState(loadPickBanMotion)
     usePickBanPreload(view?.cards)
-    const sound = usePickBanSound({ state: session.state, clockOffsetMs: session.clockOffsetMs, muted: !soundOn, ...soundPreference })
+    const sound = usePickBanSound({
+        state: session.state,
+        clockOffsetMs: session.clockOffsetMs,
+        muted: !soundPreference.enabled,
+        volume: soundPreference.volume,
+    })
+
+    useEffect(() => subscribePickBanSoundPreference(() => setSoundPreference(loadPickBanSoundPreference())), [])
+    useEffect(() => subscribePickBanMotion(() => setAnimate(loadPickBanMotion())), [])
+
+    const changeSoundPreference = (next: PickBanSoundPreference) => {
+        savePickBanSoundPreference(next)
+        setSoundPreference(next)
+    }
 
     useDocumentTitle(view ? `${view.match.title} — Pick/Ban` : undefined, SITE_NAME)
 
@@ -95,18 +112,14 @@ export function MatchPickBanPage({ eventSlug, matchId, userProfile, onBackToEven
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                     <PickBanSoundControl
-                        on={soundOn}
                         preference={soundPreference}
-                        onToggle={(on) => {
-                            if (on) sound.unlock()
-                            setSoundOn(on)
+                        onToggle={(enabled) => {
+                            if (enabled) sound.unlock()
+                            changeSoundPreference({ ...soundPreference, enabled })
                         }}
-                        onChange={(next) => {
-                            savePickBanSoundPreference(next)
-                            setSoundPreference(next)
-                        }}
+                        onChange={changeSoundPreference}
                         onPreview={() => {
-                            if (soundOn) sound.preview('pick')
+                            if (soundPreference.enabled) sound.preview('pick')
                         }}
                         className={HEADER_BUTTON}
                     />

@@ -6,9 +6,8 @@ import { Switch } from '@/app/components/ui/switch'
 import type { PickBanSoundPreference } from '../pickBanSoundPreference'
 
 interface PickBanSoundControlProps {
-    on: boolean
     preference: PickBanSoundPreference
-    onToggle: (on: boolean) => void
+    onToggle: (enabled: boolean) => void
     onChange: (preference: PickBanSoundPreference) => void
     onPreview: () => void
     className?: string
@@ -16,7 +15,8 @@ interface PickBanSoundControlProps {
 
 const SMALL_CAPS = 'text-[10px] font-bold uppercase tracking-wider text-muted-foreground'
 
-export function PickBanSoundControl({ on, preference, onToggle, onChange, onPreview, className }: PickBanSoundControlProps) {
+export function PickBanSoundControl({ preference, onToggle, onChange, onPreview, className }: PickBanSoundControlProps) {
+    const on = preference.enabled
     const [open, setOpen] = useState(false)
     const rootRef = useRef<HTMLDivElement>(null)
     const triggerRef = useRef<HTMLButtonElement>(null)
