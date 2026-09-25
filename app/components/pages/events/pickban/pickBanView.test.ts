@@ -928,9 +928,9 @@ describe('stage scene', () => {
 
         expect(banDown).toBeLessThan(lettered)
         expect(decider).toBeGreaterThan(lettered)
-        expect(lettered).toBeLessThanOrEqual(SPOTLIGHT_MS * 0.15)
-        expect(banDown).toBeLessThanOrEqual(BAN_DOWN_SPOTLIGHT_MS * 0.15)
-        expect(decider).toBeLessThanOrEqual(DECIDER_SPOTLIGHT_MS * 0.15)
+        expect(lettered).toBeLessThanOrEqual(SPOTLIGHT_MS * 0.2)
+        expect(banDown).toBeLessThanOrEqual(BAN_DOWN_SPOTLIGHT_MS * 0.2)
+        expect(decider).toBeLessThanOrEqual(DECIDER_SPOTLIGHT_MS * 0.2)
         expect(viewAt(ending, INTRO_START).scene.entranceMs).toBeLessThanOrEqual(INTRO_MS * 0.2)
     })
 
@@ -938,7 +938,7 @@ describe('stage scene', () => {
         const quickPacing = { ...pickBanState().pacing, spotlight: 2 }
         const quick = asSpectator(locked(started(pickBanState({ pacing: quickPacing })), ALPHA, FIRST_LOCK))
 
-        expect(viewAt(quick, FIRST_LOCK + LEAD_MS).scene.entranceMs).toBeLessThanOrEqual(300)
+        expect(viewAt(quick, FIRST_LOCK + LEAD_MS).scene.entranceMs).toBeLessThanOrEqual(400)
     })
 
     it('plays an entrance only while it can still run in step with every other screen, and always for an undo', () => {

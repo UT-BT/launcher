@@ -223,16 +223,16 @@ const LIVE_STATUSES: PickBanSessionStatus[] = ['running', 'paused', 'complete']
 
 const IDLE_TIMING: LiveTiming = { phase: 'lobby', startsAt: null, endsAt: null }
 
-const ENTRANCE_SHARE = 0.15
+const ENTRANCE_SHARE = 0.2
 
 const PLAIN_ENTRANCE_MS = 350
 
-export const INTRO_ENTRANCE_MAX_MS = 900
+export const INTRO_ENTRANCE_MAX_MS = 1_200
 
 export const REVEAL_ENTRANCE_MAX_MS: { [segment in PickBanSegment]: number } = {
-    lettered: 1_200,
-    ban_down: 600,
-    decider: 1_500,
+    lettered: 1_600,
+    ban_down: 900,
+    decider: 2_200,
 }
 
 const CARD_STATE_OF_ACTION: { [action in PickBanStepAction]: PickBanCardState } = {

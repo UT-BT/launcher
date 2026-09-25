@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, motion, type Variants } from 'framer-motion'
 import { Ban, CalendarClock, Check, CircleSlash, Pause, Trophy, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
@@ -19,10 +19,11 @@ import {
     type PickBanTurn,
     type PickBanView,
 } from '../pickBanView'
-import { CountdownBar, CountdownText } from './Countdown'
+import { CountdownBar, IntroCountdownWords } from './Countdown'
 import { FinalSummary } from './FinalSummary'
-import { PICK_BAN_TONES, stepTone, teamTone } from './pickBanTone'
-import { FADE_MOTION, SCENE_VARIANTS, choreography } from './stageMotion'
+import { Aura, ConfettiBurst, Flash, Rays, Ribbon, Shockwave, SparkBurst, Strike } from './RevealEffects'
+import { PICK_BAN_HUES, PICK_BAN_TONES, stepTone, teamTone } from './pickBanTone'
+import { FADE_MOTION, SCENE_VARIANTS, choreography, type Choreography } from './stageMotion'
 
 interface CentreStageProps {
     view: PickBanView
@@ -36,6 +37,10 @@ const REVEAL_WIDTH = 'w-36 @md/stage:w-48 @3xl/stage:w-60 @[80rem]/stage:w-96 ma
 
 const DISCARDED = 'Its bans and picks don’t count.'
 
+const DECIDER_LETTERS = [...'DECIDER']
+
+type RevealKind = 'pick' | 'ban' | 'ban_down' | 'decider'
+
 function useSceneDirection(scene: PickBanScene): PickBanSceneDirection {
     const [shown, setShown] = useState<{ scene: PickBanScene; direction: PickBanSceneDirection }>({ scene, direction: 0 })
     if (shown.scene.key === scene.key) return shown.direction
@@ -47,7 +52,7 @@ function useSceneDirection(scene: PickBanScene): PickBanSceneDirection {
 function stageAnnouncement(view: PickBanView): string {
     switch (view.stagePhase) {
         case 'intro':
-            return `${view.match.title}. Starting.`
+            return `${view.match.title}. Picks and bans are about to start.`
         case 'awaiting':
             return view.turn ? `${view.turn.actionLabel}.` : ''
         case 'spotlight':
@@ -215,12 +220,31 @@ function LobbyCard({ left, right }: { left: PickBanTeamPanel | null; right: Pick
     )
 }
 
-function IntroName({ panel }: { panel: PickBanTeamPanel | null }) {
-    const tone = PICK_BAN_TONES[teamTone(panel?.ab ?? null)]
+function IntroName({ panel, variants, streak, streakOrigin }: {
+    panel: PickBanTeamPanel | null
+    variants: Variants
+    streak: Variants
+    streakOrigin: 'origin-left' | 'origin-right'
+}) {
+    const tone = teamTone(panel?.ab ?? null)
+    const hue = PICK_BAN_HUES[tone]
     return (
-        <span className={cn('line-clamp-2 break-words text-center text-2xl font-extrabold leading-tight @2xl/stage:text-4xl @[80rem]/stage:text-6xl', tone.text)}>
-            {panel?.name ?? 'TBD'}
-        </span>
+        <motion.div variants={variants} className="relative flex w-full justify-center px-2">
+            <motion.span
+                aria-hidden
+                variants={streak}
+                className={cn('pointer-events-none absolute inset-y-[12%] inset-x-0 -skew-x-12', streakOrigin)}
+                style={{ background: `linear-gradient(90deg, transparent, color-mix(in srgb, ${hue} 30%, transparent) 50%, transparent)` }}
+            />
+            <span
+                className={cn(
+                    'relative line-clamp-2 break-words text-center text-3xl font-black italic leading-[1.05] tracking-tight @2xl/stage:text-5xl @[80rem]/stage:text-7xl',
+                    PICK_BAN_TONES[tone].text,
+                )}
+            >
+                {panel?.name ?? 'TBD'}
+            </span>
+        </motion.div>
     )
 }
 
@@ -233,16 +257,30 @@ export function IntroCard({ left, right, countdown, entranceMs = INTRO_ENTRANCE_
     const motionOf = useMemo(() => choreography(entranceMs), [entranceMs])
 
     return (
-        <div className="flex w-full flex-col items-center gap-3 @lg/stage:flex-row @lg/stage:justify-center @lg/stage:gap-8">
-            <motion.div variants={motionOf.fromLeft} className="min-w-0 @lg/stage:flex-1 @lg/stage:text-right"><IntroName panel={left} /></motion.div>
-            <motion.div variants={motionOf.centre} className="flex shrink-0 flex-col items-center gap-1.5">
-                <span className="text-sm font-extrabold tracking-[0.2em] text-muted-foreground">VS</span>
-                <CountdownText countdown={countdown} className="text-4xl font-bold text-foreground @[80rem]/stage:text-6xl" />
-                <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Starting</span>
-                <CountdownBar countdown={countdown} tone="neutral" className="w-28" />
+        <motion.div variants={motionOf.shakeOnVs} className="flex w-full flex-col items-center gap-1 text-center @md/stage:gap-2 @[80rem]/stage:gap-4">
+            <IntroName panel={left} variants={motionOf.fromLeft} streak={motionOf.streakLeft} streakOrigin="origin-left" />
+            <div className="relative flex items-center justify-center">
+                <motion.span
+                    aria-hidden
+                    variants={motionOf.vsShockwave}
+                    className="pointer-events-none absolute size-12 rounded-full border-2 border-foreground/70 @[80rem]/stage:size-24"
+                />
+                <motion.span
+                    variants={motionOf.vs}
+                    className="relative text-xl font-black italic tracking-wider text-foreground @2xl/stage:text-3xl @[80rem]/stage:text-5xl"
+                >
+                    vs
+                </motion.span>
+            </div>
+            <IntroName panel={right} variants={motionOf.fromRight} streak={motionOf.streakRight} streakOrigin="origin-right" />
+            <motion.div variants={motionOf.countdown} className="mt-2 flex flex-col items-center gap-2 @[80rem]/stage:mt-6 @[80rem]/stage:gap-3">
+                <IntroCountdownWords
+                    countdown={countdown}
+                    className="text-sm font-semibold text-muted-foreground @2xl/stage:text-base @[80rem]/stage:text-2xl"
+                />
+                <CountdownBar countdown={countdown} tone="neutral" className="w-40 @[80rem]/stage:h-1.5 @[80rem]/stage:w-96" />
             </motion.div>
-            <motion.div variants={motionOf.fromRight} className="min-w-0 @lg/stage:flex-1"><IntroName panel={right} /></motion.div>
-        </div>
+        </motion.div>
     )
 }
 
@@ -302,86 +340,135 @@ function revealByline(entry: PickBanTimelineEntry): string {
     return entry.actionLabel
 }
 
+function revealKindOf(entry: PickBanTimelineEntry): RevealKind {
+    if (entry.action === 'decider') return 'decider'
+    if (entry.action === 'pick') return 'pick'
+    return entry.segment === 'ban_down' ? 'ban_down' : 'ban'
+}
+
+function shakeOf(motionOf: Choreography, kind: RevealKind): Variants {
+    if (kind === 'decider') return motionOf.shakeOnDecider
+    if (kind === 'pick') return motionOf.shakeOnImpact
+    return motionOf.shakeOnStamp
+}
+
+function frameOf(motionOf: Choreography, kind: RevealKind): Variants {
+    if (kind === 'decider') return motionOf.goldFrame
+    if (kind === 'pick') return motionOf.pickFrame
+    return motionOf.banFrame
+}
+
 export function RevealCard({ entry, countdown, upNext, entranceMs = REVEAL_ENTRANCE_MAX_MS.lettered }: {
     entry: PickBanTimelineEntry
     countdown: PickBanCountdown | null
     upNext: PickBanTurn | null
     entranceMs?: number
 }) {
-    const tone = PICK_BAN_TONES[stepTone(entry.actor)]
-    const banned = entry.action === 'ban'
-    const decider = entry.action === 'decider'
+    const toneKey = stepTone(entry.actor)
+    const tone = PICK_BAN_TONES[toneKey]
+    const hue = PICK_BAN_HUES[toneKey]
+    const kind = revealKindOf(entry)
+    const banned = kind === 'ban' || kind === 'ban_down'
+    const decider = kind === 'decider'
     const motionOf = useMemo(() => choreography(entranceMs), [entranceMs])
+    const caption = decider ? motionOf.deciderCaption : motionOf.caption
 
     return (
-        <div className="flex w-full flex-col items-center gap-2.5 text-center @md/stage:gap-3">
-            <motion.div data-stage-part="reveal" variants={decider ? motionOf.goldFrame : motionOf.frame} className={cn('relative', REVEAL_WIDTH)}>
-                {decider && (
-                    <motion.div
-                        aria-hidden
-                        variants={motionOf.glow}
-                        className="pointer-events-none absolute inset-0 rounded-2xl shadow-[0_0_60px_var(--color-pickban-gold)]"
-                    />
-                )}
-                <div
-                    className={cn(
-                        'relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-2xl border-[3px]',
-                        tone.border,
-                        decider && cn('ring-4', tone.ring),
-                    )}
-                >
-                    {entry.map && (
-                        <motion.div variants={banned ? motionOf.desaturate : undefined} className="absolute inset-0">
-                            <MapThumbnail
-                                mapName={entry.map}
-                                version={entry.screenshotVersion}
-                                size="card"
-                                alt=""
-                                priority
-                                className="absolute inset-0 h-full w-full rounded-none border-0"
+        <motion.div variants={shakeOf(motionOf, kind)} className="flex w-full flex-col items-center gap-2.5 text-center @md/stage:gap-3">
+            <div className={cn('relative', REVEAL_WIDTH)}>
+                {decider && <Rays variants={motionOf.rays} turn={motionOf.raysTurn} />}
+                {kind !== 'ban_down' && <Aura variants={decider ? motionOf.glow : motionOf.aura} hue={hue} />}
+                {!banned && <Shockwave variants={decider ? motionOf.deciderShockwave : motionOf.shockwave} hue={hue} />}
+                <motion.div data-stage-part="reveal" variants={frameOf(motionOf, kind)} className="relative">
+                    <div
+                        className={cn(
+                            'relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-2xl border-[3px]',
+                            tone.border,
+                            decider && cn('ring-4', tone.ring),
+                        )}
+                    >
+                        {entry.map && (
+                            <motion.div variants={banned ? motionOf.desaturate : undefined} className="absolute inset-0">
+                                <MapThumbnail
+                                    mapName={entry.map}
+                                    version={entry.screenshotVersion}
+                                    size="card"
+                                    alt=""
+                                    priority
+                                    className="absolute inset-0 h-full w-full rounded-none border-0"
+                                />
+                            </motion.div>
+                        )}
+                        {decider && (
+                            <motion.div
+                                aria-hidden
+                                variants={motionOf.sheen}
+                                className="absolute inset-0 bg-gradient-to-br from-pickban-gold/30 via-pickban-gold/5 to-transparent"
                             />
-                        </motion.div>
-                    )}
-                    {decider && (
-                        <motion.div
-                            aria-hidden
-                            variants={motionOf.sheen}
-                            className="absolute inset-0 bg-gradient-to-br from-pickban-gold/25 via-pickban-gold/5 to-transparent"
-                        />
-                    )}
-                    {banned && (
-                        <motion.span variants={motionOf.stamp} className="relative">
-                            <span className={cn('block -rotate-8 rounded-md border-[3px] bg-black/40 px-3 py-1 text-xl font-black tracking-[0.15em] @md/stage:text-2xl', tone.text, tone.border)}>
-                                BANNED
-                            </span>
-                        </motion.span>
-                    )}
-                    {decider && (
-                        <motion.span variants={motionOf.badge} className={cn('absolute top-2 rounded-full px-3 py-0.5 text-xs font-extrabold tracking-[0.15em]', tone.solid, tone.onSolid)}>
-                            DECIDER
-                        </motion.span>
-                    )}
-                    {entry.action === 'pick' && (
-                        <motion.span variants={motionOf.badge} className={cn('absolute top-2 rounded-full px-3 py-0.5 text-xs font-extrabold uppercase tracking-wider', tone.solid, tone.onSolid)}>
-                            Map {entry.mapNumber}
-                        </motion.span>
-                    )}
-                </div>
-            </motion.div>
-            <motion.div variants={motionOf.caption} className="min-w-0 max-w-full space-y-0.5">
+                        )}
+                        {banned && <Flash variants={motionOf.teamFlash} color={hue} />}
+                        {banned && <Strike slash={motionOf.slash} crack={motionOf.crack} hue={hue} cracks={kind === 'ban'} />}
+                        {kind === 'pick' && <Flash variants={motionOf.teamFlash} className="bg-white/60" />}
+                        {decider && <Flash variants={motionOf.goldFlash} className="bg-gradient-to-b from-white via-pickban-gold/80 to-pickban-gold/40" />}
+                        {banned && (
+                            <motion.span variants={motionOf.stamp} className="relative">
+                                <span
+                                    className={cn(
+                                        'block -rotate-8 rounded-md border-[3px] bg-black/50 px-2.5 py-1 text-lg font-black tracking-[0.15em] @md/stage:px-3 @md/stage:text-2xl @[80rem]/stage:border-4 @[80rem]/stage:px-5 @[80rem]/stage:text-4xl',
+                                        tone.text,
+                                        tone.border,
+                                    )}
+                                >
+                                    BANNED
+                                </span>
+                            </motion.span>
+                        )}
+                        {!banned && entry.mapNumber !== null && (
+                            <motion.span
+                                variants={decider ? motionOf.deciderBadge : motionOf.badge}
+                                className={cn(
+                                    'absolute top-2 rounded-full px-3 py-0.5 text-xs font-extrabold uppercase tracking-wider @[80rem]/stage:top-4 @[80rem]/stage:px-4 @[80rem]/stage:text-base',
+                                    tone.solid,
+                                    tone.onSolid,
+                                )}
+                            >
+                                Map {entry.mapNumber}
+                            </motion.span>
+                        )}
+                    </div>
+                </motion.div>
+                {kind === 'pick' && (
+                    <Ribbon strip={motionOf.ribbon} text={motionOf.ribbonText} hue={hue}>
+                        {entry.actionLabel}
+                    </Ribbon>
+                )}
+                {decider && (
+                    <Ribbon strip={motionOf.deciderRibbon} hue={hue} dark>
+                        <span className="sr-only">Decider</span>
+                        {DECIDER_LETTERS.map((letter, index) => (
+                            <motion.span key={index} aria-hidden variants={motionOf.letter(index, DECIDER_LETTERS.length)} className="inline-block px-[0.12em]">
+                                {letter}
+                            </motion.span>
+                        ))}
+                    </Ribbon>
+                )}
+                {kind === 'pick' && <SparkBurst sparks={motionOf.sparks} hue={hue} />}
+                {decider && <ConfettiBurst confetti={motionOf.confetti} />}
+            </div>
+            <motion.div variants={caption} className="min-w-0 max-w-full space-y-0.5">
                 <p className="truncate text-lg font-extrabold text-foreground @[80rem]/stage:text-3xl">{entry.map ? displayMapName(entry.map) : ''}</p>
-                <p className={cn('text-[11px] font-bold uppercase tracking-wider', tone.text)}>
+                <p className={cn('text-[11px] font-bold uppercase tracking-wider @[80rem]/stage:text-sm', tone.text)}>
                     {decider ? 'Decider · last map standing' : revealByline(entry)}
                     {entry.actedByAdmin && <span className="text-muted-foreground"> · set by an admin</span>}
                 </p>
             </motion.div>
-            <motion.div variants={motionOf.caption} className={REVEAL_WIDTH}>
-                <CountdownBar countdown={countdown} tone={decider ? 'gold' : stepTone(entry.actor)} />
+            <motion.div variants={caption} className={REVEAL_WIDTH}>
+                <CountdownBar countdown={countdown} tone={toneKey} />
             </motion.div>
-            <motion.p variants={motionOf.caption} className={cn('text-xs text-muted-foreground', !upNext && 'invisible')}>
+            <motion.p variants={caption} className={cn('text-xs text-muted-foreground @[80rem]/stage:text-sm', !upNext && 'invisible')}>
                 Up next: {upNext?.actionLabel ?? ''}
             </motion.p>
-        </div>
+        </motion.div>
     )
 }
 
