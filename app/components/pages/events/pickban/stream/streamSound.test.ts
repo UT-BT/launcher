@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isStreamSoundMuted, streamSoundOf, streamSoundPack, streamSoundVolume } from './streamSound'
+import { isStreamSoundMuted, streamSoundOf, streamSoundVolume } from './streamSound'
 
 describe('isStreamSoundMuted', () => {
     it('is muted when sound=0 is present', () => {
@@ -17,28 +17,6 @@ describe('isStreamSoundMuted', () => {
 
     it('reads sound alongside other query params', () => {
         expect(isStreamSoundMuted('?foo=bar&sound=0&baz=1')).toBe(true)
-    })
-})
-
-describe('streamSoundPack', () => {
-    it('plays the cinematic pack when the sounds param is absent', () => {
-        expect(streamSoundPack('')).toBe('cinematic')
-    })
-
-    it('reads each known pack', () => {
-        expect(streamSoundPack('?sounds=cinematic')).toBe('cinematic')
-        expect(streamSoundPack('?sounds=clean')).toBe('clean')
-    })
-
-    it('falls back to cinematic for an unknown pack', () => {
-        expect(streamSoundPack('?sounds=retro')).toBe('cinematic')
-        expect(streamSoundPack('?sounds=Clean')).toBe('cinematic')
-        expect(streamSoundPack('?sounds=')).toBe('cinematic')
-        expect(streamSoundPack('?sounds=toString')).toBe('cinematic')
-    })
-
-    it('does not read the sound param as a pack', () => {
-        expect(streamSoundPack('?sound=clean')).toBe('cinematic')
     })
 })
 
@@ -69,15 +47,20 @@ describe('streamSoundVolume', () => {
 })
 
 describe('streamSoundOf', () => {
-    it('plays the cinematic pack at 60% by default', () => {
-        expect(streamSoundOf('')).toEqual({ muted: false, pack: 'cinematic', volume: 0.6 })
+    it('plays at 60% by default', () => {
+        expect(streamSoundOf('')).toEqual({ muted: false, volume: 0.6 })
     })
 
     it('reads every sound param together', () => {
-        expect(streamSoundOf('?motion=0&sounds=clean&volume=80')).toEqual({ muted: false, pack: 'clean', volume: 0.8 })
+        expect(streamSoundOf('?motion=0&volume=80')).toEqual({ muted: false, volume: 0.8 })
     })
 
-    it('keeps the pack and volume when sound=0 mutes it', () => {
-        expect(streamSoundOf('?sound=0&sounds=clean&volume=20')).toEqual({ muted: true, pack: 'clean', volume: 0.2 })
+    it('keeps the volume when sound=0 mutes it', () => {
+        expect(streamSoundOf('?sound=0&volume=20')).toEqual({ muted: true, volume: 0.2 })
+    })
+
+    it('ignores the retired sounds param', () => {
+        expect(streamSoundOf('?sounds=clean')).toEqual({ muted: false, volume: 0.6 })
+        expect(streamSoundOf('?sounds=cinematic&volume=30')).toEqual({ muted: false, volume: 0.3 })
     })
 })

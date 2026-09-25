@@ -1,5 +1,4 @@
-import type { PickBanSoundPack } from '../pickBanSounds'
-import { DEFAULT_SOUND_PREFERENCE, soundPackOf, type PickBanSoundPreference } from '../pickBanSoundPreference'
+import { DEFAULT_SOUND_PREFERENCE, type PickBanSoundPreference } from '../pickBanSoundPreference'
 
 export interface StreamSound extends PickBanSoundPreference {
     muted: boolean
@@ -7,10 +6,6 @@ export interface StreamSound extends PickBanSoundPreference {
 
 export function isStreamSoundMuted(search: string): boolean {
     return new URLSearchParams(search).get('sound') === '0'
-}
-
-export function streamSoundPack(search: string): PickBanSoundPack {
-    return soundPackOf(new URLSearchParams(search).get('sounds'))
 }
 
 export function streamSoundVolume(search: string): number {
@@ -21,5 +16,5 @@ export function streamSoundVolume(search: string): number {
 }
 
 export function streamSoundOf(search: string): StreamSound {
-    return { muted: isStreamSoundMuted(search), pack: streamSoundPack(search), volume: streamSoundVolume(search) }
+    return { muted: isStreamSoundMuted(search), volume: streamSoundVolume(search) }
 }

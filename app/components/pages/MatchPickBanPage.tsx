@@ -105,8 +105,8 @@ export function MatchPickBanPage({ eventSlug, matchId, userProfile, onBackToEven
                             savePickBanSoundPreference(next)
                             setSoundPreference(next)
                         }}
-                        onPreview={(pack) => {
-                            if (soundOn) sound.preview('pick', pack)
+                        onPreview={() => {
+                            if (soundOn) sound.preview('pick')
                         }}
                         className={HEADER_BUTTON}
                     />
