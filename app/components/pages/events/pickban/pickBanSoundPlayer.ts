@@ -1,19 +1,13 @@
 import type { PickBanSoundSchedule } from './pickBanSoundCues'
-import { SOUND_PACKS, type PickBanSoundCueKind, type PickBanSoundPack } from './pickBanSounds'
+import { SOUND_URLS, type PickBanSoundCueKind } from './pickBanSounds'
 
 export interface PickBanSoundPlayer {
     preload: () => Promise<void>
     unlock: () => void
-    setPack: (pack: PickBanSoundPack) => void
     setVolume: (volume: number) => void
     play: (kind: PickBanSoundCueKind, schedule: PickBanSoundSchedule) => void
-    preview: (kind: PickBanSoundCueKind, pack: PickBanSoundPack) => void
+    preview: (kind: PickBanSoundCueKind) => void
     dispose: () => void
-}
-
-export interface PickBanSoundPlayerSettings {
-    pack: PickBanSoundPack
-    volume: number
 }
 
 interface AudioGraph {
@@ -39,14 +33,13 @@ export function masterGainOf(volume: number): number {
     return level * level
 }
 
-export function createPickBanSoundPlayer(settings: PickBanSoundPlayerSettings): PickBanSoundPlayer {
+export function createPickBanSoundPlayer(initialVolume: number): PickBanSoundPlayer {
     let graph: AudioGraph | null = null
-    let pack = settings.pack
-    let gain = masterGainOf(settings.volume)
+    let gain = masterGainOf(initialVolume)
     let previewToken = 0
     let previewVoice: PreviewVoice | null = null
-    const buffers = new Map<string, AudioBuffer>()
-    const loads = new Map<string, Promise<AudioBuffer | null>>()
+    const buffers = new Map<PickBanSoundCueKind, AudioBuffer>()
+    const loads = new Map<PickBanSoundCueKind, Promise<AudioBuffer | null>>()
 
     function ensureGraph(): AudioGraph | null {
         if (graph) return graph
@@ -60,26 +53,22 @@ export function createPickBanSoundPlayer(settings: PickBanSoundPlayerSettings): 
         return graph
     }
 
-    function load(ctx: AudioContext, url: string): Promise<AudioBuffer | null> {
-        const pending = loads.get(url)
+    function load(ctx: AudioContext, kind: PickBanSoundCueKind): Promise<AudioBuffer | null> {
+        const pending = loads.get(kind)
         if (pending) return pending
-        const loading = fetch(url)
+        const loading = fetch(SOUND_URLS[kind])
             .then((response) => response.arrayBuffer())
             .then((data) => ctx.decodeAudioData(data))
             .then((buffer) => {
-                if (graph?.context === ctx) buffers.set(url, buffer)
+                if (graph?.context === ctx) buffers.set(kind, buffer)
                 return buffer
             })
             .catch(() => {
-                if (loads.get(url) === loading) loads.delete(url)
+                if (loads.get(kind) === loading) loads.delete(kind)
                 return null
             })
-        loads.set(url, loading)
+        loads.set(kind, loading)
         return loading
-    }
-
-    function loadPack(ctx: AudioContext, which: PickBanSoundPack): Promise<unknown> {
-        return Promise.all(Object.values(SOUND_PACKS[which]).map((url) => load(ctx, url)))
     }
 
     function sourceOf(audio: AudioGraph, buffer: AudioBuffer, destination: AudioNode): AudioBufferSourceNode {
@@ -119,17 +108,11 @@ export function createPickBanSoundPlayer(settings: PickBanSoundPlayerSettings): 
         async preload() {
             const ctx = ensureGraph()?.context
             if (!ctx) return
-            await loadPack(ctx, pack)
+            await Promise.all((Object.keys(SOUND_URLS) as PickBanSoundCueKind[]).map((kind) => load(ctx, kind)))
         },
         unlock() {
             const ctx = ensureGraph()?.context
             if (ctx?.state === 'suspended') ctx.resume().catch(() => undefined)
-        },
-        setPack(next) {
-            if (next === pack) return
-            pack = next
-            const ctx = graph?.context
-            if (ctx) void loadPack(ctx, next)
         },
         setVolume(volume) {
             gain = masterGainOf(volume)
@@ -143,7 +126,7 @@ export function createPickBanSoundPlayer(settings: PickBanSoundPlayerSettings): 
         },
         play(kind, schedule) {
             const audio = graph
-            const buffer = buffers.get(SOUND_PACKS[pack][kind])
+            const buffer = buffers.get(kind)
             if (!audio || !buffer || audio.context.state !== 'running') return
             try {
                 sourceOf(audio, buffer, audio.master).start(audio.context.currentTime + schedule.delayMs / 1000, schedule.offsetMs / 1000)
@@ -151,12 +134,12 @@ export function createPickBanSoundPlayer(settings: PickBanSoundPlayerSettings): 
                 return
             }
         },
-        preview(kind, which) {
+        preview(kind) {
             const audio = ensureGraph()
             if (!audio) return
             const token = ++previewToken
             const resumed = audio.context.state === 'suspended' ? audio.context.resume() : Promise.resolve()
-            Promise.all([load(audio.context, SOUND_PACKS[which][kind]), resumed])
+            Promise.all([load(audio.context, kind), resumed])
                 .then(([buffer]) => {
                     if (buffer && token === previewToken && graph === audio && audio.context.state === 'running') startPreview(audio, buffer)
                 })

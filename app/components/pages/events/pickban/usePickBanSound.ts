@@ -2,26 +2,26 @@ import { useEffect, useRef, useState } from 'react'
 import type { PickBanState } from '@/app/utils/api'
 import { cuesToPlay } from './pickBanSoundCues'
 import { createPickBanSoundPlayer, type PickBanSoundPlayer } from './pickBanSoundPlayer'
-import type { PickBanSoundPack } from './pickBanSounds'
 
 export interface UsePickBanSoundOptions {
     state: PickBanState | null
     clockOffsetMs: number
     muted: boolean
-    pack: PickBanSoundPack
     volume: number
 }
 
 export type PickBanSoundControls = Pick<PickBanSoundPlayer, 'unlock' | 'preview'>
 
-export function usePickBanSound({ state, clockOffsetMs, muted, pack, volume }: UsePickBanSoundOptions): PickBanSoundControls {
+const UNLOCK_EVENTS = ['pointerdown', 'pointerup', 'touchend', 'keydown'] as const
+
+export function usePickBanSound({ state, clockOffsetMs, muted, volume }: UsePickBanSoundOptions): PickBanSoundControls {
     const stateRef = useRef(state)
     stateRef.current = state
     const offsetRef = useRef(clockOffsetMs)
     offsetRef.current = clockOffsetMs
     const playedRef = useRef<ReadonlySet<string>>(new Set())
 
-    const [player] = useState(() => createPickBanSoundPlayer({ pack, volume }))
+    const [player] = useState(() => createPickBanSoundPlayer(volume))
 
     useEffect(() => {
         void player.preload()
@@ -29,20 +29,14 @@ export function usePickBanSound({ state, clockOffsetMs, muted, pack, volume }: U
     }, [player])
 
     useEffect(() => {
-        player.setPack(pack)
-    }, [player, pack])
-
-    useEffect(() => {
         player.setVolume(volume)
     }, [player, volume])
 
     useEffect(() => {
         const unlock = () => player.unlock()
-        window.addEventListener('pointerdown', unlock, { once: true })
-        window.addEventListener('keydown', unlock, { once: true })
+        for (const type of UNLOCK_EVENTS) window.addEventListener(type, unlock)
         return () => {
-            window.removeEventListener('pointerdown', unlock)
-            window.removeEventListener('keydown', unlock)
+            for (const type of UNLOCK_EVENTS) window.removeEventListener(type, unlock)
         }
     }, [player])
 

@@ -1,25 +1,23 @@
+import { getSynced, setSynced, subscribeSynced } from '@/app/utils/userState'
+
 const STORAGE_KEY = 'utbt:pickBanMotion:v1'
 
 export function isStreamMotionOff(search: string): boolean {
     return new URLSearchParams(search).get('motion') === '0'
 }
 
-export function parsePickBanMotion(raw: string | null): boolean {
-    return raw !== 'off'
+export function parsePickBanMotion(stored: unknown): boolean {
+    return stored !== 'off'
 }
 
 export function loadPickBanMotion(): boolean {
-    try {
-        return parsePickBanMotion(window.localStorage.getItem(STORAGE_KEY))
-    } catch {
-        return true
-    }
+    return parsePickBanMotion(getSynced<unknown>(STORAGE_KEY, null))
 }
 
 export function savePickBanMotion(animate: boolean): void {
-    try {
-        window.localStorage.setItem(STORAGE_KEY, animate ? 'on' : 'off')
-    } catch {
-        return
-    }
+    setSynced(STORAGE_KEY, animate ? 'on' : 'off')
+}
+
+export function subscribePickBanMotion(callback: () => void): () => void {
+    return subscribeSynced(STORAGE_KEY, callback)
 }
