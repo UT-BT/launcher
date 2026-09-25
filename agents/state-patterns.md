@@ -18,7 +18,7 @@ not_here:
   - "the shared components used (FilterPresetsMenu, ColumnsMenu, Tutorial) → shared-components.md"
 sections: [controlled-pages-with-hoisted-state, navigation-history-per-entry-ui-state, account-synced-state, localstorage-persistence, filter-presets, tutorial-state, favorites, polling-live-data, naming-conventions]
 last_verified: 2026-09-25
-verify_against: [app/components/main/Main.tsx, app/components/navigation/useNavState.ts, app/hooks/useAsync.ts, app/utils/userState.ts, app/utils/poller.ts, app/components/pages/events/pickban/pickBanSession.ts, app/components/pages/events/pickban/usePickBanSession.ts, app/components/pages/events/pickban/mergePickBanState.ts, app/components/pages/events/pickban/captainPlay.ts, app/components/pages/events/pickban/useCaptainPlay.ts, app/components/pages/events/pickban/managerDock.ts, app/components/pages/events/pickban/useManagerDock.ts, app/components/pages/events/pickban/editFinal.ts, app/components/pages/events/pickban/pickBanMotionPreference.ts, app/components/pages/events/pickban/pickBanSoundPreference.ts]
+verify_against: [app/components/main/Main.tsx, app/components/navigation/useNavState.ts, app/hooks/useAsync.ts, app/utils/userState.ts, app/utils/poller.ts, app/components/pages/events/pickban/pickBanSession.ts, app/components/pages/events/pickban/usePickBanSession.ts, app/components/pages/events/pickban/mergePickBanState.ts, app/components/pages/events/pickban/captainPlay.ts, app/components/pages/events/pickban/useCaptainPlay.ts, app/components/pages/events/pickban/managerDock.ts, app/components/pages/events/pickban/useManagerDock.ts, app/components/pages/events/pickban/editFinal.ts, app/components/pages/events/pickban/pickBanMotionPreference.ts, app/components/pages/events/pickban/pickBanSoundPreference.ts, app/components/pages/MatchPickBanPage.tsx]
 ---
 
 # State patterns
@@ -180,7 +180,8 @@ Rules:
 
 - **Which keys sync is a whitelist** (`isSyncedKey` in `userState.ts`): theme,
   tutorial seen-flags, server presets, Maps/World-Records filter presets, admin
-  `:filters:v1` presets, Medal Hunt dismissals, the display-timezone override.
+  `:filters:v1` presets, Medal Hunt dismissals, the display-timezone override,
+  the pick/ban page's sound (on/off and volume) and Animations preferences.
   Map and server favorites are NOT here — each is its own account resource on
   the API (see Favorites below).
   Everything else (column layout, page sizes, panel-open flags, ui-scale, replay
@@ -259,8 +260,8 @@ signed-in user across devices); everything else is device-local.
 | `utbt:theme:v1` | `ThemeProvider` (app-global) | **yes** | `{ id }` — selected theme (`classic`/`red`/`aurum`/`amethyst`/`emerald`/`rose`/`light`/`black`) |
 | `utbt:displayTimezone:v1` | `app/utils/timezone.ts` (app-global) | **yes** | IANA timezone string override, or `null` to fall back to the browser's resolved zone. Set from the `launcher-appearance` settings panel. |
 | `utbt:replayVideoVolume:v1` | `app/utils/replayVideoVolume.ts` | no | replay player volume `0..1` |
-| `utbt:pickBanMotion:v1` | `events/pickban/pickBanMotionPreference.ts` | no | `'on'` / `'off'`: the pick/ban page's Animations toggle (absent means on) |
-| `utbt:pickBanSound:v1` | `events/pickban/pickBanSoundPreference.ts` | no | `{ volume }`: the pick/ban page's sound Volume (`0..1`), 0.4 when absent or not a number; any other stored field (such as an older `pack`) is ignored. Sound on/off is not stored: the page starts muted every visit |
+| `utbt:pickBanMotion:v1` | `events/pickban/pickBanMotionPreference.ts` | **yes** | `'on'` / `'off'` (JSON strings): the pick/ban page's Animations toggle (absent means on) |
+| `utbt:pickBanSound:v1` | `events/pickban/pickBanSoundPreference.ts` | **yes** | `{ enabled, volume }`: the pick/ban page's sound switch and Volume (`0..1`), merged over `{ enabled: false, volume: 0.4 }`. `enabled` counts only when it is `true`; a volume that is missing or not a number reads as 0.4; any other stored field (such as an older `pack`) is ignored. The page subscribes to both keys, so an account value arriving after it opened updates it live |
 | `utbt:patreon:v1` | `app/utils/patreon.ts` | no | cached patron tier map, 1 h TTL (pure cache) |
 | `ui-scale` | `LauncherGeneralSettings` | no | renderer zoom percent (pre-dates the key convention) |
 | `utbt:webAuth:v1` | `app/platform/web/auth-web.ts` (**web build only**) | never | `AuthProfile` — Discord identity + access/refresh tokens + expiry; the web equivalent of the desktop main-process auth config. Secrets never sync. |

@@ -1022,18 +1022,26 @@ ramps it over 60 ms, so a change never clicks, to the square of the volume
 (`masterGainOf`), so the slider moves more evenly in loudness. A cue starts
 `delayMs` after the context's current time at `offsetMs` into its buffer; it is skipped
 while the context isn't running rather than played late, autoplay rejections are swallowed,
-and the context is resumed on the first pointer or key gesture. `preview(kind)` plays
+and every pointer, touch or key gesture on the page (`pointerdown`, `pointerup`, `touchend`,
+`keydown`) resumes it while it is suspended, so it starts on the first gesture the browser
+counts as activation (a touch's `pointerdown` isn't one). `preview(kind)` plays
 one file at once, to audition a volume: it decodes the file if needed, resumes the
 context (it is called from a click or a key), fades out the preview before it and plays only
 the latest one asked for. The hook returns `{ unlock, preview }`. Both pages call it. The
 stream view passes its URL's `sound=0` and `volume=` (`streamSoundOf`, see
-`agents/web-target.md` → `pre-shell-routes`). The watch page starts muted every visit; its
-header sound control (see `agents/navigation.md` → `match-pickban-page`) turns sound on,
-which unlocks the context from that click, and sets the volume. The volume is kept by
-`pickBanSoundPreference.ts` in `utbt:pickBanSound:v1` as `{ volume }`, defaulting to
-`DEFAULT_SOUND_PREFERENCE` (0.4). Its pure `parsePickBanSoundPreference(raw)` falls back to
-0.4 for a volume that is missing or isn't a number, clamps it to 0..1 and ignores any other
-stored field, such as the `pack` an earlier version saved.
+`agents/web-target.md` → `pre-shell-routes`). On the watch page the header sound control
+(see `agents/navigation.md` → `match-pickban-page`) turns sound on or off, which unlocks
+the context from that click, and sets the volume. Both are kept by
+`pickBanSoundPreference.ts` in `utbt:pickBanSound:v1` as `{ enabled, volume }`, defaulting
+to `DEFAULT_SOUND_PREFERENCE` (off at 0.4), through the account-synced store (see
+`agents/state-patterns.md`), so they follow a signed-in viewer across the app, the website
+and every event. A viewer who left sound on hears it from their first gesture on the page;
+cues due before that are skipped, as above. Its pure `parsePickBanSoundPreference(stored)`
+merges the stored value over the defaults: `enabled` only when it is `true`, 0.4 for a
+volume that is missing or isn't a number, the volume clamped to 0..1, and any other field,
+such as the `pack` an earlier version saved, ignored (so that older value reads as off at
+its volume). The page subscribes to the key, so a value that arrives from the account after
+the page opened updates the switch, the slider and the player at once.
 
 **The watch page** (`MatchPickBanPage.tsx`). Anyone who can see the match can open it. It
 reads with the viewer's token when there is one and anonymously otherwise, and it renders
@@ -1056,10 +1064,11 @@ only from the view model, through the pick/ban visual core (see
 - **Motion.** The stage animates from `view.scene`, never from a poll arriving, so every
   screen plays a reveal at the same moment. An undo plays the same animations backwards,
   and the paused overlay fades in and out. The page wraps the visual core in
-  `PickBanMotion`, which follows the header's Animations toggle (on by default, remembered
-  per browser) rather than the OS reduced-motion switch; the stream view animates unless its
-  URL carries `motion=0`. With animations off every transition is instant and shows the same
-  information (see `agents/shared-components.md`).
+  `PickBanMotion`, which follows the header's Animations toggle (on by default, synced with
+  the signed-in account like the sound preference) rather than the OS reduced-motion switch;
+  the stream view animates unless its URL carries `motion=0`. With animations off every
+  transition is instant and shows the same information (see
+  `agents/shared-components.md`).
 - **Preloading.** `usePickBanPreload(view?.cards)` fetches and decodes every eligible
   pool screenshot at the size the visual core renders, and loads the fonts, from the first
   view on (the lobby included). So no screenshot pops in mid-reveal.

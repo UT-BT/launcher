@@ -469,18 +469,25 @@ web build opens it straight from a deep link.
   header button shows the state (`Volume2`/`VolumeX`, "Sound on"/"Sound off", a chevron)
   and opens a small panel under it (`aria-expanded`/`aria-controls`, a labelled group, not
   a Radix menu, so its switch and slider keep their own keys and Tab order). In it: a
-  **Sound** switch (the page starts muted every visit; turning it on flips
+  **Sound** switch (off until the viewer turns it on; turning it on flips
   `usePickBanSound`'s `muted` flag and calls its `unlock`, so that click unlocks the Web
   Audio context) and a **Volume** range 0–100% (40% until changed) with the number beside
-  its label. Releasing the slider (pointer up, key up or blur; the page's volume only
-  changes then) saves `{ volume }` (`pickBanSoundPreference.ts`, see
-  `agents/state-patterns.md`) and, only while sound is on, previews the pick cue
-  (`preview('pick')`); while it is off a line says to turn sound on to hear a preview. The
-  panel closes on Escape (focus back on the button), an outside pointer or focus leaving
-  it. Every row is a 44px target below `sm`. See `agents/data-sources.md` →
-  `event-pickban-sessions` for the cue and player contract.
+  its label. Flipping the switch, or releasing the slider (pointer up, key up or blur; the
+  page's volume only changes then), saves `{ enabled, volume }`
+  (`pickBanSoundPreference.ts`, account-synced, see `agents/state-patterns.md`), so both
+  carry over to the next visit, every event, and the app or the website for a signed-in
+  viewer. Releasing the slider also previews the pick cue (`preview('pick')`), only while
+  sound is on; while it is off a line says to turn sound on to hear a preview. When sound
+  was left on, the page plays from the viewer's first gesture on it. The panel closes on
+  Escape (focus back on the button), an outside pointer or focus leaving it. Every row is a
+  44px target below `sm`. See `agents/data-sources.md` → `event-pickban-sessions` for the
+  cue and player contract.
 - **Animations toggle.** A header button that switches the page's animations
-  (`pickBanMotionPreference.ts`).
+  (`pickBanMotionPreference.ts`, on by default, account-synced like the sound
+  preference).
+- The page subscribes to both preference keys, so a value that arrives from the account
+  after it opened (the sign-in sync) updates the switch, the slider, the player and the
+  animations at once.
 - The header buttons (sound, Animations, Copy link) and the summary's **Back to the
   bracket** share one class (`HEADER_BUTTON` in the page, 44px tall below `sm` and 32px from
   it), so they stay alike.
