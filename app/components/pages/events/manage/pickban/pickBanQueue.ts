@@ -1,6 +1,6 @@
 import { buildMatchLinks } from '@/app/components/navigation/matchLinks'
 import { blockingReasonLabel } from '@/app/components/pages/events/pickban/pickBanStatus'
-import type { PickBanQueueEntry, PickBanSessionStatus } from '@/app/utils/api'
+import type { EventStreamer, PickBanQueueEntry, PickBanSessionStatus } from '@/app/utils/api'
 
 export interface PickBanQueueRow {
     matchId: string
@@ -16,6 +16,7 @@ export interface PickBanQueueRow {
     canOpenLobby: boolean
     playerLink: string
     streamLink: string
+    streamer: EventStreamer | null
 }
 
 export function canOpenLobby(status: PickBanSessionStatus): boolean {
@@ -39,5 +40,16 @@ export function toQueueRow(entry: PickBanQueueEntry, eventSlug: string): PickBan
         canOpenLobby: canOpenLobby(entry.session_status),
         playerLink: links.playerLink,
         streamLink: links.streamLink,
+        streamer: entry.streamer ?? null,
     }
+}
+
+export function withQueueStreamer(entries: PickBanQueueEntry[], matchId: string, streamer: EventStreamer | null): PickBanQueueEntry[] {
+    return entries.map(entry => (entry.match_id === matchId ? { ...entry, streamer } : entry))
+}
+
+export function streamerChoices(streamers: EventStreamer[], current: EventStreamer | null): EventStreamer[] {
+    if (!current || streamers.some(streamer => streamer.id === current.id)) return streamers
+
+    return [current, ...streamers]
 }

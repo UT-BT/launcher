@@ -443,7 +443,7 @@ export function MatchCard({
 
             {(match.status !== 'pending' || match.scheduled_at || windowState || footer || pickBanPill) && (
                 <div className="flex flex-wrap items-center gap-2 pt-1">
-                    <MatchOddsChip matchId={match.id} />
+                    <MatchOddsChip match={match} />
                     {match.status !== 'pending' && <MatchStatusChip match={match} />}
                     {match.scheduled_at && match.status !== 'complete' && (
                         <span className="text-[11px] text-muted-foreground">{formatSlotTime(match.scheduled_at, timezone)}</span>

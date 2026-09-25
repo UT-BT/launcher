@@ -4033,6 +4033,7 @@ export interface MyEventStatus {
     volunteer: EventVolunteer | null
     can_manage?: boolean
     can_manage_bracket?: boolean
+    is_streamer?: boolean
     pick_ban_session: MyPickBanSession | null
 }
 
@@ -4120,6 +4121,26 @@ export interface ScheduleEntry {
 export async function fetchMySchedule(accessToken: string, signal?: AbortSignal): Promise<ScheduleEntry[]> {
     const data = await apiGet<{ items: ScheduleEntry[] }>('/me/schedule', { token: accessToken, signal })
     return data.items ?? []
+}
+
+export interface EventStreamer {
+    id: string
+    display_name: string
+    twitch_url: string | null
+}
+
+export type MyMatchRole = 'player' | 'streamer'
+
+export interface MyMatchEntry {
+    match: EventMatch
+    stage: { key: string; name: string }
+    roles: MyMatchRole[]
+    streamer: EventStreamer | null
+}
+
+export async function fetchMyEventMatches(accessToken: string, slug: string, signal?: AbortSignal): Promise<MyMatchEntry[]> {
+    const data = await apiGetOr<{ items?: MyMatchEntry[] }>(`/tournaments/${encodeURIComponent(slug)}/me/matches`, { items: [] }, { token: accessToken, signal })
+    return asArray<MyMatchEntry>(data.items)
 }
 
 export interface ScheduleOversightEntry extends ScheduleEntry {
@@ -5956,9 +5977,23 @@ export interface PickBanQueueEntry {
     online_count: number
     startable: boolean
     blocking_reason: PickBanErrorCode | null
+    streamer?: EventStreamer | null
 }
 
 export async function fetchPickBanQueue(accessToken: string, slug: string, signal?: AbortSignal): Promise<PickBanQueueEntry[]> {
     const data = await apiGetOr<{ matches?: PickBanQueueEntry[] }>(eventPath(slug, '/admin/pick-ban/queue'), { matches: [] }, { token: accessToken, signal })
     return asArray<PickBanQueueEntry>(data.matches)
+}
+
+export async function fetchEventStreamers(accessToken: string, slug: string, signal?: AbortSignal): Promise<EventStreamer[]> {
+    const data = await apiGetOr<{ items?: EventStreamer[] }>(eventPath(slug, '/admin/streamers'), { items: [] }, { token: accessToken, signal })
+    return asArray<EventStreamer>(data.items)
+}
+
+export async function setMatchStreamer(accessToken: string, slug: string, matchId: string, userId: string | null): Promise<EventStreamer | null> {
+    const data = await apiGet<{ streamer: EventStreamer | null }>(
+        eventPath(slug, `/admin/matches/${encodeURIComponent(matchId)}/streamer`),
+        { token: accessToken, method: 'PUT', body: { user_id: userId } },
+    )
+    return data.streamer ?? null
 }

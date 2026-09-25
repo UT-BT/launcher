@@ -10,9 +10,9 @@ import { formatSlotTime, useDisplayTimezone } from '@/app/utils/timezone'
 import { createPoller } from '@/app/utils/poller'
 import {
     eventErrorMessage, fetchEvent, fetchEventBracket, fetchEventLfp, fetchEventPredictions,
-    fetchEventTeams, fetchMyEventStatus, fetchMySchedule, fetchPickBanConfig,
+    fetchEventTeams, fetchMyEventMatches, fetchMyEventStatus, fetchMySchedule, fetchPickBanConfig,
     type EventBracket, type EventDetail, type EventFormatSpec, type EventLfpEntry, type EventMatch, type EventTeam,
-    type MyEventStatus, type PickBanConfig, type PredictionsOverview, type ScheduleEntry, type UserProfile,
+    type MyEventStatus, type MyMatchEntry, type PickBanConfig, type PredictionsOverview, type ScheduleEntry, type UserProfile,
 } from '@/app/utils/api'
 import { EventStatusBadge, formatEventDate, formatEventDateTime, formatTeamSize, scheduleTabVisible } from './events/eventsShared'
 import { EventTeamsList } from './events/EventTeamsList'
@@ -27,6 +27,7 @@ import { stagesWithPools } from './events/maps/mapsShared'
 import { PickBanJoinBanner } from './events/pickban/components/PickBanJoinBanner'
 import { PredictionsTab } from './events/predictions/PredictionsTab'
 import { PredictionOddsProvider, formatCountdown, useNow } from './events/predictions/predictionsShared'
+import { lockStartedMarkets, matchLockSignals, newlyLockedMatchIds } from './events/predictions/marketLock'
 import { ScheduleTab } from './events/schedule/ScheduleTab'
 import type { PickBanDrafts } from './events/manage/pickban/pickBanEditor'
 import { SlotPickerModal } from './events/schedule/SlotPickerModal'
@@ -95,6 +96,7 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
     const [predictions, setPredictions] = useState<PredictionsOverview | null>(null)
     const [predictionsLoaded, setPredictionsLoaded] = useState(false)
     const [schedule, setSchedule] = useState<ScheduleEntry[] | null>(null)
+    const [myMatches, setMyMatches] = useState<MyMatchEntry[] | null>(null)
     const [scheduleLoaded, setScheduleLoaded] = useState(false)
     const [pickBanConfig, setPickBanConfig] = useState<PickBanConfig | null>(null)
     const [loading, setLoading] = useState(true)
@@ -179,22 +181,23 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
         },
     }), [eventSlug])
 
-    const canSeeSchedule = scheduleTabVisible(!!my?.team, !!my?.can_manage_bracket || !!my?.can_manage)
+    const isStreamer = !!my?.is_streamer
+    const canSeeSchedule = scheduleTabVisible(!!my?.team, !!my?.can_manage_bracket || !!my?.can_manage, isStreamer)
 
     const loadSchedule = useCallback(async (enabled: boolean) => {
         if (!enabled || !accessToken) {
             setSchedule(null)
-            setScheduleLoaded(true)
+            setMyMatches(null)
+            setScheduleLoaded(false)
             return
         }
-        try {
-            const items = await fetchMySchedule(accessToken)
-            setSchedule(items.filter(item => item.tournament.slug === eventSlug))
-        } catch {
-            setSchedule(null)
-        } finally {
-            setScheduleLoaded(true)
-        }
+        const [pending, mine] = await Promise.allSettled([
+            fetchMySchedule(accessToken),
+            fetchMyEventMatches(accessToken, eventSlug),
+        ])
+        if (pending.status === 'fulfilled') setSchedule(pending.value.filter(item => item.tournament.slug === eventSlug))
+        if (mine.status === 'fulfilled') setMyMatches(mine.value)
+        setScheduleLoaded(true)
     }, [accessToken, eventSlug])
 
     useEffect(() => { void load() }, [load])
@@ -244,6 +247,22 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
     const nextMatch = useMemo(() => nextOwnMatch(bracket?.stages ?? [], myTeamId, now), [bracket, myTeamId, now])
     const mapsStages = useMemo(() => stagesWithPools(pickBanConfig), [pickBanConfig])
     const hasMapsPool = mapsStages.length > 0
+
+    const lockSignals = useMemo(() => matchLockSignals([
+        ...(bracket?.stages ?? []).flatMap(stage => stage.matches),
+        ...(schedule ?? []).map(entry => entry.match),
+        ...(myMatches ?? []).map(entry => entry.match),
+    ], my?.pick_ban_session ?? null), [bracket, schedule, myMatches, my?.pick_ban_session])
+    const lockedPredictions = useMemo(() => (
+        predictions && { ...predictions, markets: lockStartedMarkets(predictions.markets, lockSignals) }
+    ), [predictions, lockSignals])
+    const seenLockSignals = useRef(lockSignals)
+
+    useEffect(() => {
+        const locked = newlyLockedMatchIds(seenLockSignals.current, lockSignals)
+        seenLockSignals.current = lockSignals
+        if (locked.length > 0) refreshPredictions()
+    }, [lockSignals, refreshPredictions])
 
     if (loading && !event) {
         return <div className="h-full flex items-center justify-center text-sm text-muted-foreground">Loading event…</div>
@@ -347,7 +366,7 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
 
             <div className="flex-1 min-h-0 overflow-auto px-0.5 pb-2">
                 <EventRosterProvider teams={teams}>
-                <PredictionOddsProvider markets={predictions?.markets ?? []}>
+                <PredictionOddsProvider markets={lockedPredictions?.markets ?? []}>
                 {activeTab === 'info' && (
                     <div className="space-y-6 max-w-3xl">
                         {event.summary && <p className="text-sm text-foreground">{event.summary}</p>}
@@ -376,7 +395,9 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
                     <ScheduleTab
                         myTeamId={my?.team?.id ?? null}
                         entries={schedule}
+                        myMatches={myMatches}
                         loaded={scheduleLoaded}
+                        viewer={{ hasTeam: !!my?.team, canManageBracket, isStreamer }}
                         onRefresh={refreshSchedule}
                         onOpenPicker={setSchedulerMatchId}
                         eventSlug={eventSlug}
@@ -387,7 +408,7 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
                     <PredictionsTab
                         slug={eventSlug}
                         userProfile={userProfile}
-                        data={predictions}
+                        data={lockedPredictions}
                         loaded={predictionsLoaded}
                         onRefresh={refreshPredictions}
                         onMapSelect={onMapSelect}

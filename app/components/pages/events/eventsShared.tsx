@@ -57,8 +57,8 @@ export function formatTeamSize(teamSize: number): string {
     return teamSize > 1 ? `${teamSize}v${teamSize}` : '1v1'
 }
 
-export function scheduleTabVisible(hasTeam: boolean, canManageBracket: boolean): boolean {
-    return hasTeam || canManageBracket
+export function scheduleTabVisible(hasTeam: boolean, canManageBracket: boolean, isStreamer: boolean): boolean {
+    return hasTeam || canManageBracket || isStreamer
 }
 
 export const BROWSER_TIMEZONE = (() => {

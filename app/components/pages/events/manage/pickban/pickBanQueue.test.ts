@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { canOpenLobby, toQueueRow } from './pickBanQueue'
-import type { PickBanQueueEntry } from '@/app/utils/api'
+import { canOpenLobby, streamerChoices, toQueueRow, withQueueStreamer } from './pickBanQueue'
+import type { EventStreamer, PickBanQueueEntry } from '@/app/utils/api'
+
+const ALICE: EventStreamer = { id: '111111111', display_name: 'Alice', twitch_url: 'https://twitch.tv/alice' }
+const BOB: EventStreamer = { id: '222222222', display_name: 'Bob', twitch_url: null }
 
 function entry(overrides: Partial<PickBanQueueEntry> = {}): PickBanQueueEntry {
     return {
@@ -78,5 +81,43 @@ describe('toQueueRow', () => {
         expect(row.onlineCount).toBe(1)
         expect(row.blockingReasonLabel).toBeNull()
         expect(row.scheduledAt).toBe('2026-09-26T20:00:00+00:00')
+    })
+
+    it('carries the assigned streamer through', () => {
+        expect(toQueueRow(entry({ streamer: ALICE }), 'cup').streamer).toEqual(ALICE)
+    })
+
+    it('reads no streamer both when none is assigned and when the entry has no streamer field', () => {
+        expect(toQueueRow(entry({ streamer: null }), 'cup').streamer).toBeNull()
+        expect(toQueueRow(entry(), 'cup').streamer).toBeNull()
+    })
+})
+
+describe('withQueueStreamer', () => {
+    it('sets the saved streamer on its own match only', () => {
+        const entries = [entry({ match_id: 'm1' }), entry({ match_id: 'm2', streamer: BOB })]
+
+        const next = withQueueStreamer(entries, 'm1', ALICE)
+
+        expect(next[0].streamer).toEqual(ALICE)
+        expect(next[1]).toBe(entries[1])
+        expect(entries[0].streamer).toBeUndefined()
+    })
+
+    it('clears the streamer when the save removed it', () => {
+        const next = withQueueStreamer([entry({ match_id: 'm1', streamer: ALICE })], 'm1', null)
+        expect(next[0].streamer).toBeNull()
+    })
+})
+
+describe('streamerChoices', () => {
+    it('lists the streaming volunteers as they are', () => {
+        const streamers = [ALICE, BOB]
+        expect(streamerChoices(streamers, ALICE)).toBe(streamers)
+        expect(streamerChoices(streamers, null)).toBe(streamers)
+    })
+
+    it('keeps a current streamer who is no longer on the volunteer list, first', () => {
+        expect(streamerChoices([BOB], ALICE)).toEqual([ALICE, BOB])
     })
 })

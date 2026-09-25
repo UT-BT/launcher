@@ -6,6 +6,7 @@ import type { PredictionMarket, PredictionSide } from '@/app/utils/api'
 import { TeamName } from '../TeamRoster'
 import { formatMatchTime } from '../bracket/bracketShared'
 import { MatchupInsights } from './MatchupInsights'
+import { marketTakesPredictions } from './marketLock'
 import {
     CoinAmount, MarketStatusChip, SIDE_BAR_STYLES, SIDE_TEXT_STYLES, formatCoins, formatCountdown,
     formatMultiplier, formatOdds, formatPercent, openingPriceOf, outcomeLabel, priceDrift, priceOf,
@@ -84,7 +85,7 @@ export function MarketCard({
                                 {market.position_count}
                             </Button>
                         )}
-                        {market.status === 'open' && canPredict && (
+                        {marketTakesPredictions(market) && canPredict && (
                             <Button size="sm" variant="secondary" onClick={() => onPredict(market)}>
                                 {held ? 'Add to prediction' : 'Predict'}
                             </Button>
