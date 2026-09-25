@@ -2,6 +2,7 @@ import { cn } from '@/lib/utils'
 import { usePickBanSession, usePickBanView } from '../usePickBanSession'
 import { usePickBanPreload } from '../usePickBanPreload'
 import { usePickBanSound } from '../usePickBanSound'
+import { DEFAULT_SOUND_PREFERENCE } from '../pickBanSoundPreference'
 import { statusOfPhase } from '../pickBanStatus'
 import { matchSubtitle } from '../pickBanCopy'
 import type { PickBanView } from '../pickBanView'
@@ -34,7 +35,7 @@ export function StreamView({ eventSlug, matchId, muted, animate }: StreamViewPro
     const session = usePickBanSession({ accessToken: undefined, slug: eventSlug, matchId, alwaysPoll: true })
     const view = usePickBanView(session.state, session.clockOffsetMs)
     usePickBanPreload(view?.cards)
-    usePickBanSound({ state: session.state, clockOffsetMs: session.clockOffsetMs, muted })
+    usePickBanSound({ state: session.state, clockOffsetMs: session.clockOffsetMs, muted, ...DEFAULT_SOUND_PREFERENCE })
 
     return (
         <PickBanMotion animate={animate}>

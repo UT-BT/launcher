@@ -21,6 +21,7 @@ import { CentreStage } from '@/app/components/pages/events/pickban/components/Ce
 import { PickBanBannerNote } from '@/app/components/pages/events/pickban/components/PickBanBannerNote'
 import { PickBanMotion } from '@/app/components/pages/events/pickban/components/PickBanMotion'
 import { loadPickBanMotion, savePickBanMotion } from '@/app/components/pages/events/pickban/pickBanMotionPreference'
+import { loadPickBanSoundPreference } from '@/app/components/pages/events/pickban/pickBanSoundPreference'
 import { PickBanStatusChip } from '@/app/components/pages/events/pickban/components/PickBanStatusChip'
 import { PickBanUnavailable } from '@/app/components/pages/events/pickban/components/PickBanUnavailable'
 import { PoolGrid } from '@/app/components/pages/events/pickban/components/PoolGrid'
@@ -50,9 +51,10 @@ export function MatchPickBanPage({ eventSlug, matchId, userProfile, onBackToEven
     const links = buildMatchLinks(eventSlug, matchId)
     const { navigate } = useNavigation()
     const [soundOn, setSoundOn] = useState(false)
+    const [soundPreference] = useState(loadPickBanSoundPreference)
     const [animate, setAnimate] = useState(loadPickBanMotion)
     usePickBanPreload(view?.cards)
-    usePickBanSound({ state: session.state, clockOffsetMs: session.clockOffsetMs, muted: !soundOn })
+    usePickBanSound({ state: session.state, clockOffsetMs: session.clockOffsetMs, muted: !soundOn, ...soundPreference })
 
     useDocumentTitle(view ? `${view.match.title} — Pick/Ban` : undefined, SITE_NAME)
 
