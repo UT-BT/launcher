@@ -19,6 +19,7 @@ import {
     sequenceChoices,
     settleManagerPlay,
     withManagerPlay,
+    type ManagerDock,
     type ManagerRequest,
 } from './managerDock'
 import {
@@ -33,6 +34,7 @@ import {
     asSpectator,
     asTeammate,
     finalMapOf,
+    iso,
     locked,
     lockedInTurn,
     paused,
@@ -67,6 +69,10 @@ function stageConfig(key: string, name: string, bestOf: number, configured: bool
         pool: [],
         pool_status: null,
     }
+}
+
+function commandsOf(dock: ManagerDock | null | undefined): string[] | undefined {
+    return dock ? [dock.primary, dock.sides?.swap, ...dock.history, ...dock.danger].flatMap((button) => (button ? [button.command] : [])) : undefined
 }
 
 function undeterminedLobby(): PickBanState {
@@ -105,7 +111,7 @@ describe('running a whole session', () => {
         send(pickBanState({ id: null, status: 'none', phase: null }), T0 - 600_000, { command: 'open' })
 
         const lobby = undeterminedLobby()
-        expect(managerDockOf(viewAt(asManager(lobby), T0 - 300_000), play)?.startBlockedBy).toBe('Team A undetermined')
+        expect(managerDockOf(viewAt(asManager(lobby), T0 - 300_000), play)?.primary?.blocked?.reason).toBe('Team A undetermined')
         send(lobby, T0 - 300_000, { command: 'choose-a', body: { side: 'team_a' } })
 
         send(pickBanState(), T0 - 1_000, { command: 'start' })
@@ -138,7 +144,9 @@ describe('running a whole session', () => {
         expect(done.summary.map((entry) => entry.map)).toEqual([CHARLIE, DELTA, GOLF])
         expect(managerDockOf(done, play)).toMatchObject({
             actFor: null,
-            buttons: [{ command: 'reopen' }, { command: 'restart' }, { command: 'cancel' }],
+            primary: null,
+            history: [{ command: 'reopen' }, { command: 'edit-final' }],
+            danger: [{ command: 'restart' }, { command: 'cancel' }],
         })
     })
 })
@@ -147,11 +155,27 @@ describe('opening a lobby', () => {
     it('offers only Open while the match has no session, sends it without a body and holds every button while it runs', () => {
         const view = viewAt(asManager(pickBanState({ id: null, status: 'none', phase: null })), T0)
 
-        expect(managerDockOf(view, IDLE_MANAGER_PLAY)?.buttons).toEqual([{ command: 'open', label: 'Open lobby', disabled: false }])
+        expect(managerDockOf(view, IDLE_MANAGER_PLAY)).toMatchObject({
+            status: 'none',
+            phase: null,
+            primary: {
+                command: 'open',
+                label: 'Open lobby',
+                hint: 'Opens the lobby, so both captains can gather and ready up.',
+                disabled: false,
+                blocked: null,
+                readiness: null,
+            },
+            done: null,
+            sides: null,
+            sequence: null,
+            history: [],
+            danger: [],
+        })
 
         const submission = beginManagerCommand(IDLE_MANAGER_PLAY, view, { command: 'open' })
         expect(submission?.request).toEqual({ command: 'open' })
-        expect(managerDockOf(view, submission!.play)).toMatchObject({ busy: true, buttons: [{ command: 'open', disabled: true }] })
+        expect(managerDockOf(view, submission!.play)).toMatchObject({ busy: true, submitting: 'open', primary: { command: 'open', disabled: true } })
         expect(beginManagerCommand(submission!.play, view, { command: 'open' })).toBeNull()
         expect(beginManagerCommand(IDLE_MANAGER_PLAY, view, { command: 'start' })).toBeNull()
 
@@ -166,35 +190,90 @@ describe('starting', () => {
 
         const tooSmall = blocked('pool_too_small')
         expect(managerDockOf(tooSmall, IDLE_MANAGER_PLAY)).toMatchObject({
-            startBlockedBy: 'Map pool is too small',
-            buttons: [
-                { command: 'start', label: 'Start', disabled: true },
-                { command: 'swap', disabled: false },
-                { command: 'cancel', disabled: false },
-            ],
+            primary: {
+                command: 'start',
+                label: 'Start',
+                disabled: true,
+                blocked: {
+                    reason: 'Map pool is too small',
+                    fix: 'Add maps to the stage’s pool in Manage, or choose a shorter sequence under Sequence.',
+                },
+            },
+            sides: { swap: { command: 'swap', disabled: false } },
+            history: [],
+            danger: [{ command: 'cancel', disabled: false }],
         })
         expect(beginManagerCommand(IDLE_MANAGER_PLAY, tooSmall, { command: 'start' })).toBeNull()
 
-        expect(managerDockOf(blocked('a_undetermined'), IDLE_MANAGER_PLAY)?.startBlockedBy).toBe('Team A undetermined')
-        expect(managerDockOf(blocked('pre_cup_seed_missing'), IDLE_MANAGER_PLAY)?.startBlockedBy).toBe('A team is missing its pre-cup seed')
-        expect(managerDockOf(blocked('match_finished'), IDLE_MANAGER_PLAY)?.startBlockedBy).toBe('Match already finished')
+        const blockedBy = (reason: PickBanState['blocking_reason']) => managerDockOf(blocked(reason), IDLE_MANAGER_PLAY)?.primary?.blocked
+        expect(blockedBy('a_undetermined')).toEqual({
+            reason: 'Team A undetermined',
+            fix: 'The stage seeds are missing or tied, so choose who is Team A under Sides.',
+        })
+        expect(blockedBy('pre_cup_seed_missing')).toMatchObject({ reason: 'A team is missing its pre-cup seed' })
+        expect(blockedBy('sequence_mismatch')).toEqual({
+            reason: 'Sequence does not match the best-of',
+            fix: 'Choose a sequence that fits the match’s best-of under Sequence.',
+        })
+        expect(blockedBy('match_finished')).toEqual({ reason: 'Match already finished', fix: null })
 
         const ready = blocked(null)
         expect(managerDockOf(ready, IDLE_MANAGER_PLAY)).toMatchObject({
-            startBlockedBy: null,
-            buttons: [{ command: 'start', disabled: false }, { command: 'swap' }, { command: 'cancel' }],
+            primary: { command: 'start', disabled: false, blocked: null },
+            sides: { swap: { command: 'swap' } },
+            danger: [{ command: 'cancel' }],
         })
         expect(beginManagerCommand(IDLE_MANAGER_PLAY, ready, { command: 'start' })?.request).toEqual({ command: 'start' })
+    })
+
+    it('shows each team’s Ready mark beside Start, A first', () => {
+        const readyAt = iso(T0 - 30_000)
+        const oneReady = pickBanState({ ready: { team_a: null, team_b: { id: '2000', display_name: 'Cleo', at: readyAt } } })
+
+        expect(managerDockOf(viewAt(asManager(oneReady), T0), IDLE_MANAGER_PLAY)?.primary?.readiness).toEqual([
+            { side: 'team_a', ab: 'A', name: 'Crimson Cats', ready: false },
+            { side: 'team_b', ab: 'B', name: 'Azure Owls', ready: true },
+        ])
+        expect(managerDockOf(viewAt(asManager(readAt(started(), AWAITING_A)), AWAITING_A), IDLE_MANAGER_PLAY)?.primary).toMatchObject({
+            command: 'pause',
+            blocked: null,
+            readiness: null,
+        })
+    })
+})
+
+describe('status line', () => {
+    const phase = (state: PickBanState, serverTime: number) => managerDockOf(viewAt(asManager(readAt(state, serverTime)), serverTime), IDLE_MANAGER_PLAY)
+
+    it('says where the session is, step by step', () => {
+        const firstBan = locked(readAt(started(), AWAITING_A), BRAVO, AWAITING_A + 100)
+        const revealAt = AWAITING_A + 100 + LEAD_MS
+
+        expect(phase(pickBanState(), T0)).toMatchObject({ status: 'lobby', phase: 'Waiting for Start' })
+        expect(phase(started(), T0 + 500)).toMatchObject({ status: 'running', phase: 'Starting' })
+        expect(phase(started(), T0 + LEAD_MS + 1_000)).toMatchObject({ status: 'running', phase: 'Intro' })
+        expect(phase(started(), AWAITING_A)).toMatchObject({ status: 'running', phase: 'Step 1 of 7 · Crimson Cats bans' })
+        expect(phase(firstBan, revealAt + 1_000)).toMatchObject({ status: 'running', phase: 'Step 1 of 7 · Revealing' })
+        expect(phase(paused(firstBan, unlockAt(firstBan) + 1_000), unlockAt(firstBan) + 5_000)).toMatchObject({ status: 'paused', phase: 'Step 2 of 7' })
+        expect(phase(pickBanState({ id: null, status: 'none', phase: null }), T0)).toMatchObject({ status: 'none', phase: null })
+    })
+
+    it('says the final maps are in once the session is complete, and when they were edited', () => {
+        const complete = (edited: boolean) => managerDockOf(viewAt(asManager({ ...completedRun(), edited }), T0 + 3_600_000), IDLE_MANAGER_PLAY)
+
+        expect(complete(false)).toMatchObject({ status: 'complete', phase: 'Final maps written', done: 'The final maps are in the match.' })
+        expect(complete(true)).toMatchObject({ phase: 'Final maps edited', done: 'The edited final maps are in the match.' })
+        expect(phase(pickBanState(), T0)?.done).toBeNull()
     })
 })
 
 describe('run controls', () => {
     it('shows Swap only before the first step, Pause or Resume by status, and Undo once a step is in', () => {
         const commands = (state: PickBanState, serverTime: number) =>
-            managerDockOf(viewAt(asManager(state), serverTime), IDLE_MANAGER_PLAY)?.buttons.map((button) => button.command)
+            commandsOf(managerDockOf(viewAt(asManager(state), serverTime), IDLE_MANAGER_PLAY))
 
         const awaiting = readAt(started(), AWAITING_A)
-        expect(commands(awaiting, AWAITING_A)).toEqual(['swap', 'pause', 'restart', 'cancel'])
+        expect(commands(awaiting, AWAITING_A)).toEqual(['pause', 'swap', 'restart', 'cancel'])
 
         const firstBan = locked(awaiting, BRAVO, AWAITING_A + 100)
         const awaitingB = unlockAt(firstBan) + 1_000
@@ -218,7 +297,7 @@ describe('warnings', () => {
         })
 
         expect(managerDockOf(viewAt(asManager(withResults), T0), IDLE_MANAGER_PLAY)).toMatchObject({
-            startBlockedBy: 'Team A undetermined',
+            primary: { blocked: { reason: 'Team A undetermined' } },
             resultsWarning: RESULTS_WARNING,
         })
         expect(managerDockOf(viewAt(asManager(pickBanState()), T0), IDLE_MANAGER_PLAY)?.resultsWarning).toBeNull()
@@ -230,7 +309,8 @@ describe('warnings', () => {
 
         expect(done(true)).toMatchObject({
             resultsWarning: RESULTS_WARNING,
-            buttons: [{ command: 'reopen', disabled: false }, { command: 'restart', disabled: false }, { command: 'cancel', disabled: false }],
+            history: [{ command: 'reopen', disabled: false }, { command: 'edit-final', disabled: false }],
+            danger: [{ command: 'restart', disabled: false }, { command: 'cancel', disabled: false }],
         })
         expect(done(false)?.resultsWarning).toBeNull()
     })
@@ -247,47 +327,127 @@ describe('warnings', () => {
         expect(managerDockOf(viewAt(asManager(voided), T0), IDLE_MANAGER_PLAY)).toMatchObject({
             voided: { kind: 'voided', reason: 'The match’s teams changed after the pick/ban opened, so it no longer applies.' },
             resultsWarning: RESULTS_WARNING,
-            buttons: [{ command: 'open', disabled: false }],
+            primary: { command: 'open', disabled: false },
+            history: [],
+            danger: [],
         })
         expect(managerDockOf(viewAt(asManager(pickBanState()), T0), IDLE_MANAGER_PLAY)?.voided).toBeNull()
     })
 })
 
 describe('lobby setup', () => {
-    it('offers either team as A while it is undetermined, and marks the chosen A once it is set', () => {
-        expect(managerDockOf(viewAt(asManager(undeterminedLobby()), T0), IDLE_MANAGER_PLAY)).toMatchObject({
-            chooseA: [
-                { side: 'team_a', name: 'Crimson Cats', chosen: false },
-                { side: 'team_b', name: 'Azure Owls', chosen: false },
-            ],
-            buttons: [{ command: 'start', disabled: true }, { command: 'cancel' }],
-        })
+    it('asks who is Team A while it is undetermined, with each team’s stage seed, and hides Swap', () => {
+        const dock = managerDockOf(viewAt(asManager(undeterminedLobby()), T0), IDLE_MANAGER_PLAY)
 
-        const { team_a, team_b } = pickBanState().teams
-        const azureA = pickBanState({ a_side: 'team_b', teams: { team_a: { ...team_a!, ab: 'B' }, team_b: { ...team_b!, ab: 'A' } } })
-        expect(managerDockOf(viewAt(asManager(azureA), T0), IDLE_MANAGER_PLAY)?.chooseA).toEqual([
-            { side: 'team_b', name: 'Azure Owls', chosen: true },
-            { side: 'team_a', name: 'Crimson Cats', chosen: false },
-        ])
-        expect(beginManagerCommand(IDLE_MANAGER_PLAY, viewAt(asManager(azureA), T0), { command: 'swap' })?.request).toEqual({ command: 'swap' })
+        expect(dock).toMatchObject({
+            sides: {
+                tiles: [
+                    { side: 'team_a', ab: null, name: 'Crimson Cats', stageSeed: 1 },
+                    { side: 'team_b', ab: null, name: 'Azure Owls', stageSeed: 4 },
+                ],
+                chooseA: [
+                    { side: 'team_a', name: 'Crimson Cats', stageSeed: 1, chosen: false },
+                    { side: 'team_b', name: 'Azure Owls', stageSeed: 4, chosen: false },
+                ],
+                swap: null,
+                basis: null,
+            },
+            primary: { command: 'start', disabled: true },
+            danger: [{ command: 'cancel' }],
+        })
+        expect(beginManagerCommand(IDLE_MANAGER_PLAY, viewAt(asManager(undeterminedLobby()), T0), { command: 'choose-a', body: { side: 'team_b' } })?.request)
+            .toEqual({ command: 'choose-a', body: { side: 'team_b' } })
     })
 
-    it('offers the sequence override in the lobby only, from a preset or another stage’s sequence', () => {
+    it('keeps the chooser up while the seeds are tied, marking the chosen A and keeping each team in its place', () => {
+        const { team_a, team_b } = pickBanState().teams
+        const tiedAzureA = pickBanState({
+            a_side: 'team_b',
+            a_confirmed: true,
+            teams: { team_a: { ...team_a!, ab: 'B', stage_seed: 2 }, team_b: { ...team_b!, ab: 'A', stage_seed: 2 } },
+        })
+
+        expect(managerDockOf(viewAt(asManager(tiedAzureA), T0), IDLE_MANAGER_PLAY)?.sides).toMatchObject({
+            tiles: [{ side: 'team_b', ab: 'A' }, { side: 'team_a', ab: 'B' }],
+            chooseA: [
+                { side: 'team_a', name: 'Crimson Cats', stageSeed: 2, chosen: false },
+                { side: 'team_b', name: 'Azure Owls', stageSeed: 2, chosen: true },
+            ],
+            swap: null,
+            basis: 'A was set by a manager.',
+        })
+    })
+
+    it('offers Swap once the seeds decide A, in the lobby and before the first step, saying why A is A', () => {
+        const lobby = viewAt(asManager(pickBanState()), T0)
+
+        expect(managerDockOf(lobby, IDLE_MANAGER_PLAY)?.sides).toMatchObject({
+            tiles: [{ side: 'team_a', ab: 'A', stageSeed: 1 }, { side: 'team_b', ab: 'B', stageSeed: 4 }],
+            chooseA: null,
+            swap: { command: 'swap', label: 'Swap A and B', disabled: false },
+            basis: 'A has the better stage seed.',
+        })
+        expect(beginManagerCommand(IDLE_MANAGER_PLAY, lobby, { command: 'swap' })?.request).toEqual({ command: 'swap' })
+
+        const swapped = viewAt(asManager({ ...readAt(started(), AWAITING_A), a_confirmed: true }), AWAITING_A)
+        expect(managerDockOf(swapped, IDLE_MANAGER_PLAY)?.sides).toMatchObject({ chooseA: null, swap: { command: 'swap' }, basis: 'A was set by a manager.' })
+
+        const firstBan = locked(readAt(started(), AWAITING_A), BRAVO, AWAITING_A + 100)
+        const afterFirstStep = viewAt(asManager(readAt(firstBan, unlockAt(firstBan) + 1_000)), unlockAt(firstBan) + 1_000)
+        expect(managerDockOf(afterFirstStep, IDLE_MANAGER_PLAY)?.sides).toMatchObject({ chooseA: null, swap: null })
+    })
+
+    it('shows the sequence with where it came from, and offers the override in the lobby only', () => {
         const lobby = viewAt(asManager(pickBanState()), T0)
         const running = viewAt(asManager(readAt(started(), AWAITING_A)), AWAITING_A)
         const override = { command: 'override-sequence', body: { from_stage_key: 'groups' } } as const
 
-        expect(managerDockOf(lobby, IDLE_MANAGER_PLAY)).toMatchObject({ overrideSequence: true, chooseA: expect.any(Array) })
+        expect(managerDockOf(lobby, IDLE_MANAGER_PLAY)?.sequence).toEqual({
+            label: 'Bo3 · bans, picks, decider',
+            detail: '7 steps · best of 3',
+            changed: false,
+            fromStageKey: null,
+            currentKeys: ['stage:bracket', 'preset:bo3_ban_pick'],
+            changeable: true,
+        })
         expect(beginManagerCommand(IDLE_MANAGER_PLAY, lobby, override)?.request).toEqual(override)
-        expect(managerDockOf(running, IDLE_MANAGER_PLAY)).toMatchObject({ overrideSequence: false, chooseA: null })
+        expect(managerDockOf(running, IDLE_MANAGER_PLAY)?.sequence).toMatchObject({ changeable: false })
         expect(beginManagerCommand(IDLE_MANAGER_PLAY, running, override)).toBeNull()
+        expect(managerDockOf(viewAt(asManager(completedRun()), T0 + 3_600_000), IDLE_MANAGER_PLAY)?.sequence).toBeNull()
 
-        expect(sequenceChoices([stageConfig('groups', 'Groups', 4, true), stageConfig('final', 'Final', 5, false)])).toEqual([
-            { key: 'preset:bo4_picks', label: 'Bo4 · four picks', body: { preset_id: 'bo4_picks' } },
-            { key: 'preset:bo3_ban_pick', label: 'Bo3 · bans, picks, decider', body: { preset_id: 'bo3_ban_pick' } },
-            { key: 'preset:bo5_ban_pick', label: 'Bo5 · bans, picks, bans, decider', body: { preset_id: 'bo5_ban_pick' } },
-            { key: 'stage:groups', label: 'Groups (Bo4)', body: { from_stage_key: 'groups' } },
+        const { sequence } = pickBanState()
+        const fromGroups = viewAt(asManager(pickBanState({ sequence: { ...sequence!, preset_id: null, from_stage_key: 'groups' } })), T0)
+        expect(managerDockOf(fromGroups, IDLE_MANAGER_PLAY)?.sequence).toMatchObject({
+            label: 'Custom sequence',
+            changed: true,
+            fromStageKey: 'groups',
+            currentKeys: ['stage:groups'],
+        })
+        const bo5Preset = viewAt(asManager(pickBanState({ sequence: { ...sequence!, preset_id: 'bo5_ban_pick', from_stage_key: null } })), T0)
+        expect(managerDockOf(bo5Preset, IDLE_MANAGER_PLAY)?.sequence).toMatchObject({
+            label: 'Bo5 · bans, picks, bans, decider',
+            changed: true,
+            fromStageKey: null,
+            currentKeys: ['preset:bo5_ban_pick'],
+        })
+    })
+
+    it('lists every preset, then each stage with a block, marking the one the session runs', () => {
+        const stages = [stageConfig('groups', 'Groups', 4, true), stageConfig('final', 'Final', 5, false)]
+
+        expect(sequenceChoices(stages)).toEqual([
+            { key: 'preset:bo4_picks', label: 'Bo4 · four picks', body: { preset_id: 'bo4_picks' }, current: false },
+            { key: 'preset:bo3_ban_pick', label: 'Bo3 · bans, picks, decider', body: { preset_id: 'bo3_ban_pick' }, current: false },
+            { key: 'preset:bo5_ban_pick', label: 'Bo5 · bans, picks, bans, decider', body: { preset_id: 'bo5_ban_pick' }, current: false },
+            { key: 'stage:groups', label: 'Groups (Bo4)', body: { from_stage_key: 'groups' }, current: false },
         ])
+
+        const current = (choiceStages: PickBanStageConfig[]) => {
+            const { sequence } = managerDockOf(viewAt(asManager(pickBanState()), T0), IDLE_MANAGER_PLAY)!
+            return sequenceChoices(choiceStages, sequence).filter((choice) => choice.current).map((choice) => choice.key)
+        }
+        expect(current([...stages, stageConfig('bracket', 'Bracket', 3, true)])).toEqual(['stage:bracket'])
+        expect(current(stages)).toEqual(['preset:bo3_ban_pick'])
     })
 
     it('keys each override option uniquely, even when two stages share a name and best-of', () => {
@@ -301,24 +461,27 @@ describe('handing over', () => {
     it('lists each side’s roster with who has control, and hands over or gives control back to the captain', () => {
         const lobby = viewAt(asManager(pickBanState()), T0)
 
-        const [crimson, azure] = managerDockOf(lobby, IDLE_MANAGER_PLAY)!.handOver!
+        const [crimson, azure] = managerDockOf(lobby, IDLE_MANAGER_PLAY)!.sides!.tiles
         expect(crimson).toMatchObject({ side: 'team_a', ab: 'A', name: 'Crimson Cats' })
-        expect(crimson.members.map(({ member, controls, userId }) => [member.display_name, controls, userId])).toEqual([
+        expect(crimson.handOver!.map(({ member, controls, userId }) => [member.display_name, controls, userId])).toEqual([
             ['Ada', true, null],
             ['Ben', false, '1001'],
         ])
-        expect(azure.members.map(({ member }) => member.display_name)).toEqual(['Cleo', 'Dex'])
+        expect(azure.handOver!.map(({ member }) => member.display_name)).toEqual(['Cleo', 'Dex'])
 
         const handover = { command: 'hand-over', body: { side: 'team_a', user_id: '1001' } } as const
         expect(beginManagerCommand(IDLE_MANAGER_PLAY, lobby, handover)?.request).toEqual(handover)
 
         const handedOver = viewAt(asManager(asActingCaptain(pickBanState(), 'team_a')), T0)
-        expect(managerDockOf(handedOver, IDLE_MANAGER_PLAY)!.handOver![0].members.map(({ controls, userId }) => [controls, userId])).toEqual([
+        expect(managerDockOf(handedOver, IDLE_MANAGER_PLAY)!.sides!.tiles[0].handOver!.map(({ controls, userId }) => [controls, userId])).toEqual([
             [false, null],
             [true, '1001'],
         ])
 
-        expect(managerDockOf(viewAt(asManager(completedRun()), T0 + 3_600_000), IDLE_MANAGER_PLAY)?.handOver).toBeNull()
+        const firstBan = locked(readAt(started(), AWAITING_A), BRAVO, AWAITING_A + 100)
+        const running = viewAt(asManager(readAt(firstBan, unlockAt(firstBan) + 1_000)), unlockAt(firstBan) + 1_000)
+        expect(managerDockOf(running, IDLE_MANAGER_PLAY)?.sides?.tiles.map((tile) => tile.handOver?.length)).toEqual([2, 2])
+        expect(managerDockOf(viewAt(asManager(completedRun()), T0 + 3_600_000), IDLE_MANAGER_PLAY)?.sides).toBeNull()
     })
 })
 
@@ -575,14 +738,19 @@ describe('reopening', () => {
 
     it('offers Reopen on a complete session and sends undo once confirmed, saying what happens first', () => {
         const view = complete()
-        expect(managerDockOf(view, IDLE_MANAGER_PLAY)?.buttons).toContainEqual({ command: 'reopen', label: 'Reopen', disabled: false })
+        expect(managerDockOf(view, IDLE_MANAGER_PLAY)?.history).toContainEqual({
+            command: 'reopen',
+            label: 'Reopen',
+            hint: 'Takes back the last ban or pick, with any automatic step after it, and runs the pick/ban again from there.',
+            disabled: false,
+        })
 
         const asked = beginManagerCommand(IDLE_MANAGER_PLAY, view, { command: 'reopen' })
         expect(asked?.request).toBeNull()
         expect(managerDockOf(view, asked!.play)?.confirm).toEqual({
             command: 'reopen',
             title: 'Reopen the pick/ban?',
-            message: 'The last ban or pick is undone, with the decider after it if there is one, and the pick/ban waits on that step again. The maps it wrote into the match are removed, and any edits to the final maps are discarded.',
+            message: 'The last ban or pick is undone, with any automatic step after it, and the pick/ban waits on that step again. The maps it wrote into the match are removed, and any edits to the final maps are discarded.',
             confirmLabel: 'Reopen',
             dismissLabel: 'Keep it',
         })
@@ -613,11 +781,11 @@ describe('reopening', () => {
         const onHold = viewAt(asManager(paused(firstBan, at)), at + 5_000)
 
         for (const view of [running, onHold]) {
-            expect(managerDockOf(view, IDLE_MANAGER_PLAY)?.buttons.map((button) => button.command)).not.toContain('reopen')
+            expect(commandsOf(managerDockOf(view, IDLE_MANAGER_PLAY))).not.toContain('reopen')
             expect(beginManagerCommand(IDLE_MANAGER_PLAY, view, { command: 'reopen' })).toBeNull()
             expect(beginManagerCommand(IDLE_MANAGER_PLAY, view, { command: 'undo' })?.request).toEqual({ command: 'undo' })
         }
-        expect(managerDockOf(complete(), IDLE_MANAGER_PLAY)?.buttons.map((button) => button.command)).not.toContain('undo')
+        expect(commandsOf(managerDockOf(complete(), IDLE_MANAGER_PLAY))).not.toContain('undo')
         expect(beginManagerCommand(IDLE_MANAGER_PLAY, complete(), { command: 'undo' })).toBeNull()
     })
 
@@ -656,9 +824,14 @@ describe('editing the final maps', () => {
     const swapFirstTwo = (view: PickBanView) => changeFinalEditor(openFinalEditor(IDLE_MANAGER_PLAY, view), (draft) => moveFinalEntry(draft, 0, 1))
 
     it('is offered on a complete session only, and saves only from an open editor', () => {
-        expect(managerDockOf(complete(), IDLE_MANAGER_PLAY)?.editFinal).toBe(true)
-        expect(managerDockOf(viewAt(asManager(pickBanState()), T0), IDLE_MANAGER_PLAY)?.editFinal).toBe(false)
-        expect(managerDockOf(viewAt(asManager(readAt(started(), AWAITING_A)), AWAITING_A), IDLE_MANAGER_PLAY)?.editFinal).toBe(false)
+        expect(managerDockOf(complete(), IDLE_MANAGER_PLAY)?.history).toContainEqual({
+            command: 'edit-final',
+            label: 'Edit final maps…',
+            hint: 'Rewrites the match’s maps: their order, who picked each and the decider.',
+            disabled: false,
+        })
+        expect(commandsOf(managerDockOf(viewAt(asManager(pickBanState()), T0), IDLE_MANAGER_PLAY))).not.toContain('edit-final')
+        expect(commandsOf(managerDockOf(viewAt(asManager(readAt(started(), AWAITING_A)), AWAITING_A), IDLE_MANAGER_PLAY))).not.toContain('edit-final')
         expect(beginManagerCommand(IDLE_MANAGER_PLAY, complete(), { command: 'edit-final' })).toBeNull()
         expect(beginManagerCommand(swapFirstTwo(complete()), viewAt(asManager(pickBanState()), T0), { command: 'edit-final' })).toBeNull()
     })

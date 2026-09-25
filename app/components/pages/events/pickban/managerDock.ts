@@ -7,6 +7,8 @@ import {
     type PickBanManagerCommand,
     type PickBanManagerCommandBodies,
     type PickBanMember,
+    type PickBanPresetId,
+    type PickBanSessionStatus,
     type PickBanSide,
     type PickBanStageConfig,
 } from '@/app/utils/api'
@@ -45,7 +47,13 @@ export type ManagerAction = { command: ButtonCommand } | { command: 'reopen' } |
 
 export type ManagerCommand = ManagerAction['command']
 
-type ButtonAction = ButtonCommand | 'reopen'
+type PrimaryCommand = 'open' | 'start' | 'pause' | 'resume'
+
+type HistoryCommand = 'undo' | 'reopen' | 'edit-final'
+
+type DangerCommand = 'restart' | 'cancel'
+
+type ButtonAction = PrimaryCommand | HistoryCommand | DangerCommand | 'swap'
 
 type ConfirmedCommand = 'reopen' | 'restart' | 'cancel' | 'edit-final'
 
@@ -64,10 +72,28 @@ export interface ManagerPlay {
     rejection: string | null
 }
 
-export interface ManagerButton {
-    command: ButtonAction
+export interface ManagerButton<C extends ButtonAction = ButtonAction> {
+    command: C
     label: string
+    hint: string
     disabled: boolean
+}
+
+export interface ManagerStartBlock {
+    reason: string
+    fix: string | null
+}
+
+export interface ManagerReadiness {
+    side: PickBanSide
+    ab: PickBanActor | null
+    name: string
+    ready: boolean
+}
+
+export interface ManagerPrimary extends ManagerButton<PrimaryCommand> {
+    blocked: ManagerStartBlock | null
+    readiness: ManagerReadiness[] | null
 }
 
 export interface ManagerConfirm {
@@ -81,6 +107,7 @@ export interface ManagerConfirm {
 export interface ManagerAChoice {
     side: PickBanSide
     name: string
+    stageSeed: number | null
     chosen: boolean
 }
 
@@ -90,17 +117,35 @@ export interface ManagerHandOverMember {
     userId: string | null
 }
 
-export interface ManagerHandOverTeam {
+export interface ManagerSideTile {
     side: PickBanSide
     ab: PickBanActor | null
     name: string
-    members: ManagerHandOverMember[]
+    stageSeed: number | null
+    handOver: ManagerHandOverMember[] | null
+}
+
+export interface ManagerSides {
+    tiles: ManagerSideTile[]
+    chooseA: ManagerAChoice[] | null
+    swap: ManagerButton<'swap'> | null
+    basis: string | null
+}
+
+export interface ManagerSequence {
+    label: string
+    detail: string
+    changed: boolean
+    fromStageKey: string | null
+    currentKeys: string[]
+    changeable: boolean
 }
 
 export interface ManagerSequenceChoice {
     key: string
     label: string
     body: BodyOf<'override-sequence'>
+    current: boolean
 }
 
 export interface ManagerFinalEditor extends FinalEditor {
@@ -117,14 +162,17 @@ export interface ManagerActFor {
 
 export interface ManagerDock {
     busy: boolean
-    buttons: ManagerButton[]
-    startBlockedBy: string | null
+    submitting: ManagerCommand | null
+    status: PickBanSessionStatus
+    phase: string | null
+    primary: ManagerPrimary | null
+    done: string | null
+    sides: ManagerSides | null
+    sequence: ManagerSequence | null
+    history: ManagerButton<HistoryCommand>[]
+    danger: ManagerButton<DangerCommand>[]
     resultsWarning: string | null
     voided: Extract<PickBanBanner, { kind: 'voided' }> | null
-    chooseA: ManagerAChoice[] | null
-    overrideSequence: boolean
-    handOver: ManagerHandOverTeam[] | null
-    editFinal: boolean
     finalEditor: ManagerFinalEditor | null
     confirm: ManagerConfirm | null
     actFor: ManagerActFor | null
@@ -162,16 +210,46 @@ const CONTROL_OF: Record<Exclude<ManagerCommand, 'lock'>, keyof PickBanManagerCo
     'edit-final': 'editFinal',
 }
 
+const PRIMARY_COMMANDS: PrimaryCommand[] = ['open', 'start', 'pause', 'resume']
+
+const HISTORY_COMMANDS: HistoryCommand[] = ['undo', 'reopen', 'edit-final']
+
+const DANGER_COMMANDS: DangerCommand[] = ['restart', 'cancel']
+
+const ACTIVE_STATUSES: PickBanSessionStatus[] = ['lobby', 'running', 'paused']
+
 const BUTTON_LABELS: Record<ButtonAction, string> = {
     open: 'Open lobby',
     start: 'Start',
-    swap: 'Swap A/B',
     pause: 'Pause',
     resume: 'Resume',
+    swap: 'Swap A and B',
     undo: 'Undo last step',
     reopen: 'Reopen',
+    'edit-final': 'Edit final maps…',
     restart: 'Restart',
     cancel: 'Cancel pick/ban',
+}
+
+const BUTTON_HINTS: Record<ButtonAction, string> = {
+    open: 'Opens the lobby, so both captains can gather and ready up.',
+    start: 'Plays the intro, then the first step goes on the clock. The match goes live and its predictions close.',
+    pause: 'Freezes every countdown until you resume.',
+    resume: 'Every countdown carries on from where it stopped.',
+    swap: 'Swaps which team is A. Both Ready marks clear.',
+    undo: 'Takes back the last ban or pick, with any automatic step after it.',
+    reopen: 'Takes back the last ban or pick, with any automatic step after it, and runs the pick/ban again from there.',
+    'edit-final': 'Rewrites the match’s maps: their order, who picked each and the decider.',
+    restart: 'Undoes every step and sends both teams back to the lobby.',
+    cancel: 'Ends the pick/ban for good. You can open a new lobby afterwards.',
+}
+
+const START_FIXES: Partial<Record<PickBanBlockingReason, string>> = {
+    teams_not_decided: 'Both teams need to be decided in the bracket first.',
+    a_undetermined: 'The stage seeds are missing or tied, so choose who is Team A under Sides.',
+    pre_cup_seed_missing: 'An exclusion rule needs both teams’ pre-cup seeds. Add the missing seed, then start.',
+    sequence_mismatch: 'Choose a sequence that fits the match’s best-of under Sequence.',
+    pool_too_small: 'Add maps to the stage’s pool in Manage, or choose a shorter sequence under Sequence.',
 }
 
 const RESULTS_WARNING = 'Results are already entered for this match, so the pick/ban can’t start or change the maps it wrote.'
@@ -181,7 +259,7 @@ const KEEP_IT = 'Keep it'
 const CONFIRMATIONS: Record<ConfirmedCommand, Omit<ManagerConfirm, 'command'>> = {
     reopen: {
         title: 'Reopen the pick/ban?',
-        message: 'The last ban or pick is undone, with the decider after it if there is one, and the pick/ban waits on that step again. The maps it wrote into the match are removed, and any edits to the final maps are discarded.',
+        message: 'The last ban or pick is undone, with any automatic step after it, and the pick/ban waits on that step again. The maps it wrote into the match are removed, and any edits to the final maps are discarded.',
         confirmLabel: BUTTON_LABELS.reopen,
         dismissLabel: KEEP_IT,
     },
@@ -253,27 +331,127 @@ function panelsOf(view: PickBanView): PickBanTeamPanel[] {
     return [view.teams.left, view.teams.right].filter((panel): panel is PickBanTeamPanel => panel !== null)
 }
 
-function handOverTeamOf({ side, ab, name, members }: PickBanTeamPanel): ManagerHandOverTeam {
+function handOverOf({ members }: PickBanTeamPanel): ManagerHandOverMember[] {
     const handedOver = members.some((member) => member.acting_captain)
+    return members.map((member) => ({
+        member,
+        controls: handedOver ? member.acting_captain : member.captain,
+        userId: member.captain ? null : member.id,
+    }))
+}
+
+function buttonOf<C extends ButtonAction>(controls: PickBanManagerControls, command: C, busy: boolean): ManagerButton<C> {
+    return { command, label: BUTTON_LABELS[command], hint: BUTTON_HINTS[command], disabled: busy || !allowed(controls, command) }
+}
+
+function buttonsOf<C extends ButtonAction>(controls: PickBanManagerControls, commands: C[], busy: boolean): ManagerButton<C>[] {
+    return commands.filter((command) => controls[CONTROL_OF[command]]).map((command) => buttonOf(controls, command, busy))
+}
+
+function startBlockOf(code: PickBanBlockingReason | null, status: PickBanSessionStatus): ManagerStartBlock | null {
+    const reason = blockingReasonLabel(code, status)
+    return code === null || reason === null ? null : { reason, fix: START_FIXES[code] ?? null }
+}
+
+function primaryOf(view: PickBanView, controls: PickBanManagerControls, busy: boolean): ManagerPrimary | null {
+    const command = PRIMARY_COMMANDS.find((candidate) => controls[CONTROL_OF[candidate]])
+    if (!command) return null
+    const starting = command === 'start'
     return {
-        side,
-        ab,
-        name,
-        members: members.map((member) => ({
-            member,
-            controls: handedOver ? member.acting_captain : member.captain,
-            userId: member.captain ? null : member.id,
-        })),
+        ...buttonOf(controls, command, busy),
+        blocked: starting ? startBlockOf(controls.startBlockedBy, view.status) : null,
+        readiness: starting ? panelsOf(view).map(({ side, ab, name, ready }) => ({ side, ab, name, ready: ready !== null })) : null,
     }
 }
 
-export function sequenceChoices(stages: PickBanStageConfig[]): ManagerSequenceChoice[] {
-    return [
-        ...PICK_BAN_PRESET_IDS.map((id) => ({ key: `preset:${id}`, label: PICK_BAN_PRESET_LABELS[id], body: { preset_id: id } })),
+function doneOf(view: PickBanView): string | null {
+    if (view.status !== 'complete') return null
+    return view.edited ? 'The edited final maps are in the match.' : 'The final maps are in the match.'
+}
+
+function phaseOf(view: PickBanView): string | null {
+    const stepOf = (number: number) => `Step ${number} of ${view.timeline.length}`
+    switch (view.phase) {
+        case 'lobby':
+            return view.status === 'lobby' ? 'Waiting for Start' : 'Starting'
+        case 'intro':
+            return 'Intro'
+        case 'awaiting':
+            return view.turn && `${stepOf(view.turn.stepNumber)} · ${view.turn.actionLabel}`
+        case 'spotlight':
+            return view.spotlight && `${stepOf(view.spotlight.number)} · Revealing`
+        case 'paused':
+            return view.turn && stepOf(view.turn.stepNumber)
+        case 'complete':
+            return view.edited ? 'Final maps edited' : 'Final maps written'
+        default:
+            return null
+    }
+}
+
+function seedsDecideA([first, second]: PickBanTeamPanel[]): boolean {
+    return first?.stageSeed != null && second?.stageSeed != null && first.stageSeed !== second.stageSeed
+}
+
+function aBasisOf(view: PickBanView, panels: PickBanTeamPanel[]): string | null {
+    if (panels.every((panel) => panel.ab === null)) return null
+    return view.setup.aConfirmed ? 'A was set by a manager.' : 'A has the better stage seed.'
+}
+
+function sidesOf(view: PickBanView, controls: PickBanManagerControls, busy: boolean): ManagerSides | null {
+    const panels = panelsOf(view)
+    const choosing = controls.chooseA && (panels.every((panel) => panel.ab === null) || !seedsDecideA(panels))
+    const swap = controls.swap && !choosing ? buttonOf(controls, 'swap', busy) : null
+    if (!controls.handOver && !choosing && !swap) return null
+    return {
+        tiles: panels.map((panel) => ({
+            side: panel.side,
+            ab: panel.ab,
+            name: panel.name,
+            stageSeed: panel.stageSeed,
+            handOver: controls.handOver ? handOverOf(panel) : null,
+        })),
+        chooseA: choosing ? [...panels].sort((a, b) => a.side.localeCompare(b.side)).map(({ side, name, stageSeed, ab }) => ({ side, name, stageSeed, chosen: ab === 'A' })) : null,
+        swap,
+        basis: aBasisOf(view, panels),
+    }
+}
+
+function presetChoiceKey(id: PickBanPresetId): string {
+    return `preset:${id}`
+}
+
+function stageChoiceKey(key: string): string {
+    return `stage:${key}`
+}
+
+function sequenceOf(view: PickBanView, controls: PickBanManagerControls): ManagerSequence | null {
+    const source = view.setup.sequence
+    if (!source || !ACTIVE_STATUSES.includes(view.status)) return null
+    const steps = view.timeline.length
+    const bestOf = `best of ${view.match.bestOf}`
+    return {
+        label: source.presetId ? PICK_BAN_PRESET_LABELS[source.presetId] : 'Custom sequence',
+        detail: steps > 0 ? `${steps} ${steps === 1 ? 'step' : 'steps'} · ${bestOf}` : bestOf,
+        changed: !source.ownStage,
+        fromStageKey: source.ownStage ? null : source.stageKey,
+        currentKeys: [
+            ...(source.stageKey === null ? [] : [stageChoiceKey(source.stageKey)]),
+            ...(source.presetId === null ? [] : [presetChoiceKey(source.presetId)]),
+        ],
+        changeable: controls.overrideSequence,
+    }
+}
+
+export function sequenceChoices(stages: PickBanStageConfig[], sequence: ManagerSequence | null = null): ManagerSequenceChoice[] {
+    const choices = [
+        ...PICK_BAN_PRESET_IDS.map((id) => ({ key: presetChoiceKey(id), label: PICK_BAN_PRESET_LABELS[id], body: { preset_id: id } })),
         ...stages
             .filter((stage) => stage.pick_ban)
-            .map((stage) => ({ key: `stage:${stage.key}`, label: `${stage.name} (Bo${stage.best_of})`, body: { from_stage_key: stage.key } })),
+            .map((stage) => ({ key: stageChoiceKey(stage.key), label: `${stage.name} (Bo${stage.best_of})`, body: { from_stage_key: stage.key } })),
     ]
+    const current = sequence?.currentKeys.find((key) => choices.some((choice) => choice.key === key)) ?? null
+    return choices.map((choice) => ({ ...choice, current: choice.key === current }))
 }
 
 function actForOpen(view: PickBanView): boolean {
@@ -346,18 +524,17 @@ export function managerDockOf(view: PickBanView, play: ManagerPlay): ManagerDock
     const finalEditor = managerFinalEditorOf(view, play, controls)
     return {
         busy,
-        buttons: (Object.keys(BUTTON_LABELS) as ButtonAction[])
-            .filter((command) => controls[CONTROL_OF[command]])
-            .map((command) => ({ command, label: BUTTON_LABELS[command], disabled: busy || !allowed(controls, command) })),
-        startBlockedBy: controls.startBlockedBy && blockingReasonLabel(controls.startBlockedBy, view.status),
+        submitting: play.submitting,
+        status: view.status,
+        phase: phaseOf(view),
+        primary: primaryOf(view, controls, busy),
+        done: doneOf(view),
+        sides: sidesOf(view, controls, busy),
+        sequence: sequenceOf(view, controls),
+        history: buttonsOf(controls, HISTORY_COMMANDS, busy),
+        danger: buttonsOf(controls, DANGER_COMMANDS, busy),
         resultsWarning: controls.resultsPresent ? RESULTS_WARNING : null,
         voided: view.banners.find((banner) => banner.kind === 'voided') ?? null,
-        chooseA: controls.chooseA
-            ? panelsOf(view).map(({ side, name, ab }) => ({ side, name, chosen: ab === 'A' }))
-            : null,
-        overrideSequence: controls.overrideSequence,
-        handOver: controls.handOver ? panelsOf(view).map(handOverTeamOf) : null,
-        editFinal: controls.editFinal,
         finalEditor,
         confirm: play.confirming && allowed(controls, play.confirming.command)
             ? { command: play.confirming.command, ...CONFIRMATIONS[play.confirming.command] }

@@ -105,10 +105,7 @@ export function MatchPickBanPage({ eventSlug, matchId, userProfile, onBackToEven
                     >
                         {manager.dock && (
                             <Suspense fallback={null}>
-                                <ManagerDock manager={manager} slug={eventSlug} accessToken={userProfile?.accessToken}>
-                                    <CopyLinkButton link={links.playerLink} label="Copy player link" />
-                                    <CopyLinkButton link={links.streamLink} label="Copy stream link" />
-                                </ManagerDock>
+                                <ManagerDock manager={manager} slug={eventSlug} accessToken={userProfile?.accessToken} links={links} />
                             </Suspense>
                         )}
                     </PickBanBody>
@@ -221,7 +218,7 @@ function SoundToggleButton({ on, onToggle }: { on: boolean; onToggle: () => void
     )
 }
 
-function CopyLinkButton({ link, label = 'Copy link' }: { link: string; label?: string }) {
+function CopyLinkButton({ link }: { link: string }) {
     const { copiedKey, copy } = useCopyFeedback(err => console.error('Copy pick/ban link failed', err))
     const copied = copiedKey === link
 
@@ -232,7 +229,7 @@ function CopyLinkButton({ link, label = 'Copy link' }: { link: string; label?: s
             className={HEADER_BUTTON}
         >
             {copied ? <Check className="size-3.5" /> : <Link2 className="size-3.5" />}
-            {copied ? 'Copied' : label}
+            {copied ? 'Copied' : 'Copy link'}
         </button>
     )
 }

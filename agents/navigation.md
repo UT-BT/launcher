@@ -460,15 +460,16 @@ web build opens it straight from a deep link.
   `useNavigation().navigate`, so it is a real `/events/<slug>?tab=bracket` anchor on web
   and one `navigate()` call on both targets.
 - **Copy link** copies `buildMatchLinks(eventSlug, matchId).playerLink` (above) through
-  `useCopyFeedback`, so the copied URL is the public site's on desktop too. A manager's
-  dock adds **Copy player link** and **Copy stream link** through the same button, so a
-  stream link is copied from the page itself as well as from the Manage queue.
+  `useCopyFeedback`, so the copied URL is the public site's on desktop too. The page
+  passes the same links to a manager's dock, whose header adds **Copy player link** and
+  **Copy stream link** icon buttons, so a stream link is copied from the page itself as
+  well as from the Manage queue.
 - **Sound toggle.** A header button next to Copy link (`Volume2`/`VolumeX`, `aria-pressed`)
   starts muted and flips `usePickBanSound`'s `muted` flag; the click doubles as the user
   gesture that unlocks the Web Audio context. See `agents/data-sources.md` →
   `event-pickban-sessions` for the cue and player contract.
-- The header buttons (sound, Copy link), the dock's copy buttons and the summary's **Back
-  to the bracket** share one class (`HEADER_BUTTON` in the page), so they stay alike.
+- The header buttons (sound, Copy link) and the summary's **Back to the bracket** share
+  one class (`HEADER_BUTTON` in the page), so they stay alike.
 - **Into the page.** The Manage → Pick/Ban queue's **Open page** is a `NavLink` to
   `match-pickban` (a `Button asChild` around it), so on web it is a real anchor that opens
   in a new tab like any other link.
