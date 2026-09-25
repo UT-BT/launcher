@@ -10,7 +10,7 @@ read_when:
   - "finding a pick/ban session from the bracket, a match card, the event page or the Schedule tab without a direct link"
   - "assigning a streamer to a match, or showing a streamer their assigned matches"
   - "deciding whether a prediction market still takes bets once its match's pick/ban has started"
-keywords: [api.ts, fetch, endpoint, accessToken, avatar, MapThumbnail, favorites, patreon, downloadMapZip, world_records, caps, predictions, draw, odds, schedule, proposal, slot, whose_turn, resolved_window, countdown, nav badge, fetchMyTournaments, SlotPickerModal, SlotGrid, DateTimeField, slotGeneration, proposeMatchSlots, withdrawMatchProposal, acceptMatchProposal, fetchMatchSchedule, ApiError, expected_match_duration_minutes, fetchPickBanConfig, PickBanConfig, PickBanPoolMap, MapsTab, mapsShared, stagesWithPools, tagBadgeVariant, pick/ban, fetchPickBanState, ETag, If-None-Match, 304, X-Server-Now, server_now, clock offset, reveal_at, sendPickBanCommand, sendPickBanManagerCommand, hover, selection_preview, pickBanErrorCode, captain controls, CaptainDock, useCaptainPlay, fetchPickBanQueue, PickBanQueueEntry, PickBanQueueRow, toQueueRow, canOpenLobby, blockingReasonLabel, PickBanQueuePanel, pickBanStatusBadge, statusOfPhase, buildPickBanView, setPickBanStageConfig, setPickBanStagePool, copyPickBanStagePool, pickBanEditor, stage pool, buildMatchLinks, matchStreamPath, createPoller, pick_ban_status, MatchPickBanStatus, pickBanCardAffordance, PickBanCardPill, pickBanMapLabel, MyPickBanSession, pick_ban_session, PickBanLink, PickBanJoinBanner, pickBanEntryPoints, Join banner, scene, sceneDirection, playsEntrance, usePickBanPreload, usePickBanSound, cuesToPlay, pickBanSoundCues, pickBanSoundPlayer, PickBanSoundCueKind, sound=0, manager dock, ManagerDock, useManagerDock, managerDockOf, hand-over, act for team, Reopen, edit-final, PickBanEditFinalEntry, Edit final, fetchMyEventMatches, MyMatchEntry, is_streamer, EventStreamer, fetchEventStreamers, setMatchStreamer, streamer, StreamerPicker, withQueueStreamer, streamerChoices, scheduleSections, pickBanCallToAction, matchTimeLabel, marketLock, marketTakesPredictions, lockStartedMarkets, matchLockSignals, newlyLockedMatchIds]
+keywords: [api.ts, fetch, endpoint, accessToken, avatar, MapThumbnail, favorites, patreon, downloadMapZip, world_records, caps, predictions, draw, odds, schedule, proposal, slot, whose_turn, resolved_window, countdown, nav badge, fetchMyTournaments, SlotPickerModal, SlotGrid, DateTimeField, slotGeneration, proposeMatchSlots, withdrawMatchProposal, acceptMatchProposal, fetchMatchSchedule, ApiError, expected_match_duration_minutes, fetchPickBanConfig, PickBanConfig, PickBanPoolMap, MapsTab, mapsShared, stagesWithPools, tagBadgeVariant, pick/ban, fetchPickBanState, ETag, If-None-Match, 304, X-Server-Now, server_now, clock offset, reveal_at, sendPickBanCommand, sendPickBanManagerCommand, hover, selection_preview, pickBanErrorCode, captain controls, CaptainDock, useCaptainPlay, fetchPickBanQueue, PickBanQueueEntry, PickBanQueueRow, toQueueRow, canOpenLobby, blockingReasonLabel, PickBanQueuePanel, pickBanStatusBadge, statusOfPhase, buildPickBanView, setPickBanStageConfig, setPickBanStagePool, copyPickBanStagePool, pickBanEditor, stage pool, buildMatchLinks, matchStreamPath, createPoller, pick_ban_status, MatchPickBanStatus, pickBanCardAffordance, PickBanCardPill, pickBanMapLabel, MyPickBanSession, pick_ban_session, PickBanLink, PickBanJoinBanner, pickBanEntryPoints, Join banner, scene, sceneDirection, playsEntrance, usePickBanPreload, usePickBanSound, cuesToPlay, pickBanSoundCues, pickBanSoundPlayer, PickBanSoundCueKind, sound=0, manager dock, ManagerDock, useManagerDock, managerDockOf, hand-over, act for team, Reopen, edit-final, PickBanEditFinalEntry, Edit final, fetchMyEventMatches, MyMatchEntry, is_streamer, EventStreamer, fetchEventStreamers, setMatchStreamer, streamer, StreamerPicker, withQueueStreamer, streamerChoices, scheduleSections, pickBanCallToAction, matchTimeLabel, marketLock, marketTakesPredictions, lockStartedMarkets, matchLockSignals, newlyLockedMatchIds, streamerName]
 provides: "the client-side API contract the launcher consumes + asset URLs + favorites/patreon sync models"
 not_here:
   - "IPC channels (window.conveyor.*) → lib/conveyor/README.md"
@@ -383,10 +383,13 @@ stops appearing. `Main.tsx` reads the same fetcher for the nav badge, so its
 shape stays exactly this; booked matches come from a second, per-event read.
 
 **`fetchMyEventMatches(token, slug)`** (→ `GET /tournaments/<slug>/me/matches`
-→ `{ items: MyMatchEntry[] }`, sorted by `scheduled_at` with unbooked last) is
-that read. Each `MyMatchEntry` is `{ match: EventMatch, stage: {key, name},
-roles: ('player' | 'streamer')[], streamer: EventStreamer | null }`, where
-`EventStreamer` is `{id, display_name, twitch_url}`. A `player` entry is one of
+→ `{ items: MyMatchEntry[] }`, sorted by `scheduled_at` with unbooked last,
+then by stage, round and match order) is that read. Each `MyMatchEntry` is
+`{ match: EventMatch, stage: {key, name}, roles: ('player' | 'streamer')[],
+streamer: EventStreamer | null }`, where `EventStreamer` is `{id,
+display_name, twitch_url}`. `display_name` is `null` for a user with no alias,
+like the other pick/ban display names; `streamerName` (`eventsShared.tsx`)
+reads that as "Unnamed streamer" wherever a streamer is shown. A `player` entry is one of
 the caller's team's `scheduled` or `live` matches; a `streamer` entry is a
 match assigned to the caller to stream, `pending`, `scheduled` or `live`. One
 match can carry both roles. `EventDetailPage` fetches it together with
@@ -400,7 +403,7 @@ empty and the rest of the tab unchanged.
 **`scheduleSections(pending, mine, viewer)`** (`schedule/scheduleSections.ts`,
 pure, Vitest) splits the two reads into the tab's sections: **Upcoming**
 (`player` entries that are `scheduled` or `live`, live first, then soonest,
-unbooked last), **Needs a time** (the `/me/schedule` list, minus any match
+unbooked last, ties kept in the server's order), **Needs a time** (the `/me/schedule` list, minus any match
 Upcoming already shows, since the two reads can catch a match mid-change) and
 **Streaming** (`streamer` entries, same order). The player sections show for
 a team member or bracket manager, or whenever either has a match in it; the
@@ -429,7 +432,9 @@ slug)` → `GET /tournaments/<slug>/admin/streamers` → `{ items:
 EventStreamer[] }`, the event's volunteers who ticked streaming.
 `setMatchStreamer(token, slug, matchId, userId | null)` → `PUT
 /tournaments/<slug>/admin/matches/<matchId>/streamer` with `{ user_id }`,
-answering `{ streamer: EventStreamer | null }`; `null` clears it. A user who
+answering `{ streamer: EventStreamer | null }`. The body must carry the
+`user_id` key; `null` clears it, and a PUT that changes nothing answers the
+current streamer (the picker does not send one). A user who
 is not a streaming volunteer is refused with 422 `invalid_request`, and the
 launcher shows the server's message. The control lives in the pick/ban match
 queue (below).

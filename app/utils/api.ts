@@ -4125,7 +4125,7 @@ export async function fetchMySchedule(accessToken: string, signal?: AbortSignal)
 
 export interface EventStreamer {
     id: string
-    display_name: string
+    display_name: string | null
     twitch_url: string | null
 }
 

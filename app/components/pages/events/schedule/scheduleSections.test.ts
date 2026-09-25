@@ -71,6 +71,17 @@ describe('scheduleSections', () => {
         expect(ids(sections.upcoming)).toEqual(['live', 'soon', 'late', 'none'])
     })
 
+    it('keeps the server order between matches booked for the same time', () => {
+        const at = '2026-09-26 18:00:00'
+        const sections = scheduleSections([], [
+            mine({ id: 'first', scheduled_at: at }),
+            mine({ id: 'second', scheduled_at: at }),
+            mine({ id: 'third', scheduled_at: at }),
+        ], PLAYER)
+
+        expect(ids(sections.upcoming)).toEqual(['first', 'second', 'third'])
+    })
+
     it('leaves a pending match to the needs-a-time list even if it shows up as a player match', () => {
         const sections = scheduleSections([pending({ id: 'm1' })], [mine({ id: 'm1', status: 'pending' })], PLAYER)
 

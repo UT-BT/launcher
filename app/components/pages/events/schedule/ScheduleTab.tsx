@@ -9,6 +9,7 @@ import { useCopyFeedback } from '@/app/hooks/useCopyFeedback'
 import { useDisplayTimezone } from '@/app/utils/timezone'
 import { eventErrorMessage, type EventMatch, type MyMatchEntry, type MyPickBanSession, type ScheduleEntry } from '@/app/utils/api'
 import { Chip, MATCH_STATUS_STYLES, teamLabel } from '../bracket/bracketShared'
+import { streamerName } from '../eventsShared'
 import { TeamName } from '../TeamRoster'
 import { PickBanJoinBanner } from '../pickban/components/PickBanJoinBanner'
 import { PickBanLink } from '../pickban/components/PickBanLink'
@@ -218,7 +219,7 @@ function BookedMatchCard({ entry, eventSlug, pickBanSession }: {
                 {streamer && (
                     <span className="flex items-center gap-1.5 min-w-0 text-xs text-muted-foreground">
                         Streamed by
-                        <PlayerInfo userId={streamer.id} alias={streamer.display_name} size="sm" />
+                        <PlayerInfo userId={streamer.id} alias={streamerName(streamer)} size="sm" />
                     </span>
                 )}
                 {action !== 'join' && (
