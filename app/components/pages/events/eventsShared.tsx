@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils'
-import type { EventStatus, EventSummary } from '@/app/utils/api'
+import type { EventStatus, EventStreamer, EventSummary } from '@/app/utils/api'
 
 const STATUS_STYLES: Record<EventStatus, string> = {
     draft: 'bg-white/5 text-muted-foreground border-white/10',
@@ -59,6 +59,10 @@ export function formatTeamSize(teamSize: number): string {
 
 export function scheduleTabVisible(hasTeam: boolean, canManageBracket: boolean, isStreamer: boolean): boolean {
     return hasTeam || canManageBracket || isStreamer
+}
+
+export function streamerName(streamer: Pick<EventStreamer, 'display_name'>): string {
+    return streamer.display_name?.trim() || 'Unnamed streamer'
 }
 
 export const BROWSER_TIMEZONE = (() => {

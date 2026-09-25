@@ -21,6 +21,7 @@ import {
 } from '@/app/utils/api'
 import { ErrorBanner } from '@/app/components/pages/teams/teamsShared'
 import { PickBanStatusChip } from '@/app/components/pages/events/pickban/components/PickBanStatusChip'
+import { streamerName } from '@/app/components/pages/events/eventsShared'
 import { streamerChoices, toQueueRow, withQueueStreamer, type PickBanQueueRow } from './pickBanQueue'
 
 const QUEUE_POLL_MS = 20_000
@@ -290,13 +291,13 @@ function StreamerPicker({ current, streamers, failed, saving, onOpen, onChange }
             <DropdownMenuTrigger asChild disabled={saving}>
                 <button
                     type="button"
-                    aria-label={current ? `Streamer: ${current.display_name}` : 'Streamer: none'}
+                    aria-label={current ? `Streamer: ${streamerName(current)}` : 'Streamer: none'}
                     className="inline-flex h-8 max-w-full min-w-0 items-center gap-1.5 rounded-lg border border-hairline/10 bg-card/50 px-2 text-xs text-foreground hover:border-hairline/20 transition-colors cursor-pointer disabled:cursor-default disabled:opacity-60"
                 >
                     {saving ? (
                         <span className="text-muted-foreground">Saving…</span>
                     ) : current ? (
-                        <PlayerInfo userId={current.id} alias={current.display_name} size="sm" interactive={false} />
+                        <PlayerInfo userId={current.id} alias={streamerName(current)} size="sm" interactive={false} />
                     ) : (
                         <span className="text-muted-foreground">No streamer</span>
                     )}
@@ -312,7 +313,7 @@ function StreamerPicker({ current, streamers, failed, saving, onOpen, onChange }
                     {choices.length > 0 && <DropdownMenuSeparator />}
                     {choices.map(streamer => (
                         <DropdownMenuRadioItem key={streamer.id} value={streamer.id}>
-                            <PlayerInfo userId={streamer.id} alias={streamer.display_name} size="sm" interactive={false} />
+                            <PlayerInfo userId={streamer.id} alias={streamerName(streamer)} size="sm" interactive={false} />
                         </DropdownMenuRadioItem>
                     ))}
                 </DropdownMenuRadioGroup>
