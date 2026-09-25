@@ -4,7 +4,7 @@ export interface PickBanSoundPreference {
     volume: number
 }
 
-export const DEFAULT_SOUND_PREFERENCE: PickBanSoundPreference = { volume: 0.6 }
+export const DEFAULT_SOUND_PREFERENCE: PickBanSoundPreference = { volume: 0.4 }
 
 function soundVolumeOf(raw: unknown): number {
     if (typeof raw !== 'number' || !Number.isFinite(raw)) return DEFAULT_SOUND_PREFERENCE.volume

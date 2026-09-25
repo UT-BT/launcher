@@ -21,8 +21,8 @@ describe('isStreamSoundMuted', () => {
 })
 
 describe('streamSoundVolume', () => {
-    it('plays at 60% when the volume param is absent', () => {
-        expect(streamSoundVolume('')).toBe(0.6)
+    it('plays at 40% when the volume param is absent', () => {
+        expect(streamSoundVolume('')).toBe(0.4)
     })
 
     it('reads a percentage as a fraction', () => {
@@ -37,18 +37,18 @@ describe('streamSoundVolume', () => {
         expect(streamSoundVolume('?volume=-20')).toBe(0)
     })
 
-    it('falls back to 60% for a value that is not a number', () => {
-        expect(streamSoundVolume('?volume=loud')).toBe(0.6)
-        expect(streamSoundVolume('?volume=60%25')).toBe(0.6)
-        expect(streamSoundVolume('?volume=')).toBe(0.6)
-        expect(streamSoundVolume('?volume=%20')).toBe(0.6)
-        expect(streamSoundVolume('?volume=Infinity')).toBe(0.6)
+    it('falls back to 40% for a value that is not a number', () => {
+        expect(streamSoundVolume('?volume=loud')).toBe(0.4)
+        expect(streamSoundVolume('?volume=60%25')).toBe(0.4)
+        expect(streamSoundVolume('?volume=')).toBe(0.4)
+        expect(streamSoundVolume('?volume=%20')).toBe(0.4)
+        expect(streamSoundVolume('?volume=Infinity')).toBe(0.4)
     })
 })
 
 describe('streamSoundOf', () => {
-    it('plays at 60% by default', () => {
-        expect(streamSoundOf('')).toEqual({ muted: false, volume: 0.6 })
+    it('plays at 40% by default', () => {
+        expect(streamSoundOf('')).toEqual({ muted: false, volume: 0.4 })
     })
 
     it('reads every sound param together', () => {
@@ -60,7 +60,7 @@ describe('streamSoundOf', () => {
     })
 
     it('ignores the retired sounds param', () => {
-        expect(streamSoundOf('?sounds=clean')).toEqual({ muted: false, volume: 0.6 })
+        expect(streamSoundOf('?sounds=clean')).toEqual({ muted: false, volume: 0.4 })
         expect(streamSoundOf('?sounds=cinematic&volume=30')).toEqual({ muted: false, volume: 0.3 })
     })
 })

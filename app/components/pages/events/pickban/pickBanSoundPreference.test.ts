@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest'
 import { DEFAULT_SOUND_PREFERENCE, parsePickBanSoundPreference } from './pickBanSoundPreference'
 
 describe('parsePickBanSoundPreference', () => {
-    it('plays at 60% when nothing is stored', () => {
-        expect(parsePickBanSoundPreference(null)).toEqual({ volume: 0.6 })
-        expect(DEFAULT_SOUND_PREFERENCE).toEqual({ volume: 0.6 })
+    it('plays at 40% when nothing is stored', () => {
+        expect(parsePickBanSoundPreference(null)).toEqual({ volume: 0.4 })
+        expect(DEFAULT_SOUND_PREFERENCE).toEqual({ volume: 0.4 })
     })
 
     it('reads a stored volume', () => {
