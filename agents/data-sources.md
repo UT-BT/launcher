@@ -1019,11 +1019,13 @@ only from the view model, through the pick/ban visual core (see
   covers Lock in.
 - **Timing.** Reveals and phase changes land on `usePickBanView`'s boundary timer, so a step
   appears at its `reveal_at` even when no poll arrives then. Countdowns and progress bars
-  paint on animation frames. With reduced motion on, the bars step once a second instead.
+  paint on animation frames. With animations off, the bars step once a second instead.
 - **Motion.** The stage animates from `view.scene`, never from a poll arriving, so every
   screen plays a reveal at the same moment. An undo plays the same animations backwards,
   and the paused overlay fades in and out. The page wraps the visual core in
-  `PickBanMotion`, so with reduced motion on every transition is instant and shows the same
+  `PickBanMotion`, which follows the header's Animations toggle (on by default, remembered
+  per browser) rather than the OS reduced-motion switch; the stream view animates unless its
+  URL carries `motion=0`. With animations off every transition is instant and shows the same
   information (see `agents/shared-components.md`).
 - **Preloading.** `usePickBanPreload(view?.cards)` fetches and decodes every eligible
   pool screenshot at the size the visual core renders, and loads the fonts, from the first
@@ -1117,10 +1119,12 @@ that runs in real time. It checks seven things:
 - the centre stage keeping one height per width from 360px to 3840px while every state
   (lobby, intro, turn, ban, pick and decider reveals, paused, summary, cancelled) fits
   inside it
-- the countdown bar gliding, and stepping once a second with reduced motion on
+- the countdown bar gliding, and stepping once a second with animations off
 - an undo fading the reveal out through in-between frames, and doing it instantly with
-  reduced motion on
-- the paused overlay fading in and out, and doing it instantly with reduced motion on
+  animations off
+- the paused overlay fading in and out, and doing it instantly with animations off
+- reveals still animating while the OS reports reduced motion (Windows Animation effects
+  off), because only the page's toggle or the stream's `motion=0` turns them off
 - polls, 304s included, that keep the same nodes and the same layout
 
 ### Event pick/ban setup

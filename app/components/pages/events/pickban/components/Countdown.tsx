@@ -1,9 +1,9 @@
 import { useLayoutEffect, useRef } from 'react'
 import { cn } from '@/lib/utils'
-import { usePrefersReducedMotion } from '@/app/hooks/usePrefersReducedMotion'
 import type { PickBanCountdown } from '../pickBanView'
 import { introCountdownWords } from '../pickBanCopy'
 import { PICK_BAN_TONES, type PickBanTone } from './pickBanTone'
+import { usePickBanAnimate } from './PickBanMotion'
 
 type CountdownPainter = (element: HTMLElement, remainingMs: number, fraction: number) => void
 
@@ -72,8 +72,8 @@ export function CountdownBar({ countdown, tone, className }: {
     tone: PickBanTone
     className?: string
 }) {
-    const reducedMotion = usePrefersReducedMotion()
-    const ref = useCountdownFrame<HTMLDivElement>(countdown, paintBar, reducedMotion ? REDUCED_MOTION_STEP_MS : 0)
+    const animate = usePickBanAnimate()
+    const ref = useCountdownFrame<HTMLDivElement>(countdown, paintBar, animate ? 0 : REDUCED_MOTION_STEP_MS)
     return (
         <div aria-hidden className={cn('h-1 w-full overflow-hidden rounded-full bg-hairline/10', className)}>
             <div ref={ref} className={cn('h-full w-full origin-left will-change-transform', PICK_BAN_TONES[tone].solid)} />
