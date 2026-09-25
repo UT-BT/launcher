@@ -7,6 +7,7 @@ import type {
     PickBanPacing,
     PickBanPhase,
     PickBanPlanStep,
+    PickBanPresetId,
     PickBanReady,
     PickBanSegment,
     PickBanSessionStatus,
@@ -150,6 +151,17 @@ export interface PickBanManagerControls {
     actForSide: PickBanSide | null
 }
 
+export interface PickBanSequenceSource {
+    presetId: PickBanPresetId | null
+    stageKey: string | null
+    ownStage: boolean
+}
+
+export interface PickBanSetup {
+    sequence: PickBanSequenceSource | null
+    aConfirmed: boolean
+}
+
 export interface PickBanAffordances {
     actingSide: PickBanSide | null
     actingAb: PickBanActor | null
@@ -176,6 +188,7 @@ export interface PickBanView {
     banners: PickBanBanner[]
     affordances: PickBanAffordances
     edited: boolean
+    setup: PickBanSetup
     nextBoundaryAt: number | null
     scene: PickBanScene
 }
@@ -599,6 +612,18 @@ function bannersOf(moment: Moment): PickBanBanner[] {
     return banners
 }
 
+function setupOf(state: PickBanState): PickBanSetup {
+    const { sequence } = state
+    return {
+        sequence: sequence && {
+            presetId: sequence.preset_id,
+            stageKey: sequence.from_stage_key,
+            ownStage: sequence.from_stage_key === state.match.stage_key,
+        },
+        aConfirmed: state.a_confirmed,
+    }
+}
+
 function nextBoundaryOf(moment: Moment, timing: LiveTiming): number | null {
     const { state, clock } = moment
     if (state.status !== 'running' && state.status !== 'complete') return null
@@ -640,6 +665,7 @@ export function buildPickBanView(state: PickBanState, clock: PickBanClock): Pick
         banners: bannersOf(moment),
         affordances,
         edited: state.edited,
+        setup: setupOf(state),
         nextBoundaryAt: nextBoundaryOf(moment, timing),
         scene: sceneOf(moment, stagePhase, timing),
     }

@@ -765,6 +765,28 @@ describe('match heading', () => {
     })
 })
 
+describe('setup', () => {
+    it('says where the sequence came from and whether a manager set A', () => {
+        const state = asManager(pickBanState())
+        const sequence = state.sequence!
+
+        expect(viewAt(state, T0).setup).toEqual({
+            sequence: { presetId: 'bo3_ban_pick', stageKey: 'bracket', ownStage: true },
+            aConfirmed: false,
+        })
+        expect(viewAt({ ...state, a_confirmed: true, sequence: { ...sequence, preset_id: null, from_stage_key: 'groups' } }, T0).setup).toEqual({
+            sequence: { presetId: null, stageKey: 'groups', ownStage: false },
+            aConfirmed: true,
+        })
+        expect(viewAt({ ...state, sequence: { ...sequence, preset_id: 'bo5_ban_pick', from_stage_key: null } }, T0).setup.sequence).toEqual({
+            presetId: 'bo5_ban_pick',
+            stageKey: null,
+            ownStage: false,
+        })
+        expect(viewAt({ ...state, sequence: null }, T0).setup.sequence).toBeNull()
+    })
+})
+
 describe('stage scene', () => {
     it('names one scene per stage moment, and keeps its key across polls within that moment', () => {
         const state = asSpectator(firstBanLocked())

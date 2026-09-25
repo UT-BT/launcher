@@ -834,6 +834,10 @@ pure and tested without a DOM. It returns:
   opens on an unrevealed slot.
 - `version`: the payload's `version`, for a command that must be sent against the state
   the viewer saw
+- `setup`: `sequence`, where the session's sequence came from (the `presetId` it was copied
+  from, the `stageKey` of the stage it was copied from and whether that is the match's own
+  stage, from the payload's `sequence`; `null` without one), and `aConfirmed`, the payload's
+  `a_confirmed` (a manager chose A or swapped, rather than A following the stage seeds)
 - `nextBoundaryAt`: when the view next changes on its own
 - `scene`: what the centre stage shows, for animating it. `key` (`lobby`, `intro`,
   `turn-<index>`, `reveal-<index>`, `complete`, `none`, `cancelled` or `voided`) stays the
