@@ -142,15 +142,15 @@ export function ManagerDock({ manager, slug, accessToken, links }: ManagerDockPr
                         <SlidersHorizontal className="size-4" />
                     </span>
                     <div className="min-w-0 flex-1 space-y-1">
-                        <h2 id={titleId} className="text-sm font-bold leading-none text-foreground">Match control</h2>
+                        <h2 id={titleId} className="text-sm font-bold leading-none text-foreground">Match Control</h2>
                         <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
                             <PickBanStatusChip status={dock.status} />
                             {dock.phase && <span className="min-w-0 break-words text-xs text-muted-foreground">{dock.phase}</span>}
                         </div>
                     </div>
                     <div className="flex shrink-0 items-center gap-1.5">
-                        <CopyLinkButton link={links.playerLink} label="Copy player link" copiedLabel="Player link copied" icon={Link2} />
-                        <CopyLinkButton link={links.streamLink} label="Copy stream link" copiedLabel="Stream link copied" icon={MonitorPlay} />
+                        <CopyLinkButton link={links.playerLink} label="Copy Player Link" copiedLabel="Player link copied!" icon={Link2} />
+                        <CopyLinkButton link={links.streamLink} label="Copy Stream Link" copiedLabel="Stream link copied!" icon={MonitorPlay} />
                     </div>
                 </header>
 
@@ -212,7 +212,7 @@ export function ManagerDock({ manager, slug, accessToken, links }: ManagerDockPr
                             </ZoneGroup>
                         )}
                         {dock.danger.length > 0 && (
-                            <ZoneGroup label="Danger zone" className="sm:ml-auto">
+                            <ZoneGroup label="Dangerous Actions" className="sm:ml-auto">
                                 {dock.danger.map((button) => (
                                     <ZoneButton key={button.command} button={button} tone="danger" pending={dock.submitting === button.command} onClick={() => runZone(button.command)} />
                                 ))}
@@ -363,7 +363,7 @@ function DoneCard({ message }: { message: string }) {
                 <CheckCircle2 className="size-5" />
             </span>
             <div className="min-w-0 space-y-0.5">
-                <p className="text-sm font-bold text-foreground">Pick/ban complete</p>
+                <p className="text-sm font-bold text-foreground">Picks & Bans complete</p>
                 <p className="text-xs text-muted-foreground">{message}</p>
             </div>
         </div>
@@ -486,7 +486,7 @@ function SideTile({ tile, light, disabled, pending, onHandOver }: {
                         <p className={SMALL_CAPS}>
                             {tile.ab ? `Team ${tile.ab}` : 'Side to choose'}
                             <span aria-hidden> · </span>
-                            {tile.stageSeed === null ? 'No stage seed' : `Stage seed ${tile.stageSeed}`}
+                            {tile.stageSeed === null ? 'No stage seed' : `Stage Seed ${tile.stageSeed}`}
                         </p>
                     )}
                 </div>
@@ -514,7 +514,7 @@ function ControlPicker({ tile, members, disabled, pending, onHandOver }: {
     return (
         <div className="space-y-1">
             <p id={labelId} className={SMALL_CAPS}>
-                In control<span className="sr-only"> of {tile.name}</span>
+                In Control<span className="sr-only"> of {tile.name}</span>
             </p>
             <DropdownMenu>
                 <DropdownMenuTrigger asChild disabled={disabled}>
@@ -622,7 +622,7 @@ function AChooser({ choices, busy, pending, onChoose }: {
                         )}
                         <span className="relative line-clamp-2 break-words text-sm font-bold leading-tight">{choice.name}</span>
                         <span className={cn('relative text-[10px] font-bold uppercase tracking-wider', choice.chosen ? 'text-white/80' : 'text-muted-foreground')}>
-                            {choice.stageSeed === null ? 'No stage seed' : `Stage seed ${choice.stageSeed}`}
+                            {choice.stageSeed === null ? 'No stage seed' : `Stage Seed ${choice.stageSeed}`}
                         </span>
                     </button>
                 ))}
@@ -693,7 +693,7 @@ function SequenceField({ sequence, slug, accessToken, disabled, pending, onChang
                             {stageChoices.map((choice) => (
                                 <DropdownMenuRadioItem key={choice.key} value={choice.key} className={MENU_ITEM}>{choice.label}</DropdownMenuRadioItem>
                             ))}
-                            {stages === null && <p className="px-2 py-1.5 text-xs text-muted-foreground">Loading the stages…</p>}
+                            {stages === null && <p className="px-2 py-1.5 text-xs text-muted-foreground">Loading stages…</p>}
                             {stages !== null && stageChoices.length === 0 && <p className="px-2 py-1.5 text-xs text-muted-foreground">No stage has a sequence set.</p>}
                         </DropdownMenuRadioGroup>
                         <DropdownMenuSeparator />
@@ -754,7 +754,7 @@ function DockModal({ title, onClose, action, dismissLabel, maxWidth = '34rem', c
             title={title}
             footer={
                 <div className="flex shrink-0 items-center justify-end gap-2 border-t border-border bg-muted/50 p-4">
-                    <Button variant="outline" onClick={onClose}>{dismissLabel ?? (action ? 'Keep it' : 'Close')}</Button>
+                    <Button variant="outline" onClick={onClose}>{dismissLabel ?? (action ? 'Keep It' : 'Close')}</Button>
                     {action}
                 </div>
             }

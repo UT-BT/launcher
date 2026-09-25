@@ -42,7 +42,7 @@ export function TeamPanel({ panel, className }: TeamPanelProps) {
                     </h2>
                     <p className={cn('flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider', tone.text, !onTurn && 'invisible')}>
                         <span className={cn('size-1.5 rounded-full', tone.solid)} />
-                        On the clock
+                        Contemplating…
                     </p>
                 </div>
                 {panel && (
@@ -63,7 +63,7 @@ export function TeamPanel({ panel, className }: TeamPanelProps) {
 }
 
 function TeamMember({ member }: { member: PickBanMember }) {
-    const role = member.acting_captain ? 'Acting captain' : member.captain ? 'Captain' : null
+    const role = member.acting_captain ? 'Acting Captain' : member.captain ? 'Captain' : null
 
     return (
         <li className="flex min-w-0 items-center gap-2">

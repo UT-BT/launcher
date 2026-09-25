@@ -453,20 +453,20 @@ targets.
 reading `eventSlug` and `matchId` from the entry's params. It needs no login, and the
 web build opens it straight from a deep link.
 
-- **Title.** Once the payload is in, `useDocumentTitle` sets `<A> vs <B> — Pick/Ban`.
-- **Back to event.** A `NavLink` to `event-detail` that calls the `onBackToEvent` prop
+- **Title.** Once the payload is in, `useDocumentTitle` sets `<A> vs <B> — Picks & Bans`.
+- **Back to Event.** A `NavLink` to `event-detail` that calls the `onBackToEvent` prop
   `Main.tsx` passes in.
-- **Back to the bracket.** Once the session is complete, the summary carries a
+- **Back to Bracket.** Once the session is complete, the summary carries a
   `NavLink` to `event-detail` with `eventTab: 'bracket'`. It navigates through
   `useNavigation().navigate`, so it is a real `/events/<slug>?tab=bracket` anchor on web
   and one `navigate()` call on both targets.
-- **Copy link** copies `buildMatchLinks(eventSlug, matchId).playerLink` (above) through
+- **Copy Link** copies `buildMatchLinks(eventSlug, matchId).playerLink` (above) through
   `useCopyFeedback`, so the copied URL is the public site's on desktop too. The page
-  passes the same links to a manager's dock, whose header adds **Copy player link** and
-  **Copy stream link** icon buttons, so a stream link is copied from the page itself as
+  passes the same links to a manager's dock, whose header adds **Copy Player Link** and
+  **Copy Stream Link** icon buttons, so a stream link is copied from the page itself as
   well as from the Manage queue.
 - **Sound control** (`events/pickban/components/PickBanSoundControl.tsx`). The first
-  header button shows the state (`Volume2`/`VolumeX`, "Sound on"/"Sound off", a chevron)
+  header button shows the state (`Volume2`/`VolumeX`, "Sound On"/"Sound Off", a chevron)
   and opens a small panel under it (`aria-expanded`/`aria-controls`, a labelled group, not
   a Radix menu, so its switch and slider keep their own keys and Tab order). In it: a
   **Sound** switch (off until the viewer turns it on; turning it on flips
@@ -488,10 +488,10 @@ web build opens it straight from a deep link.
 - The page subscribes to both preference keys, so a value that arrives from the account
   after it opened (the sign-in sync) updates the switch, the slider, the player and the
   animations at once.
-- The header buttons (sound, Animations, Copy link) and the summary's **Back to the
-  bracket** share one class (`HEADER_BUTTON` in the page, 44px tall below `sm` and 32px from
+- The header buttons (sound, Animations, Copy Link) and the summary's **Back to
+  Bracket** share one class (`HEADER_BUTTON` in the page, 44px tall below `sm` and 32px from
   it), so they stay alike.
-- **Into the page.** The Manage → Pick/Ban queue's **Open page** is a `NavLink` to
+- **Into the page.** The Manage → Pick/Ban queue's **Open Page** is a `NavLink` to
   `match-pickban` (a `Button asChild` around it), so on web it is a real anchor that opens
   in a new tab like any other link.
 

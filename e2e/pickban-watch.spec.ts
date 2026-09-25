@@ -78,7 +78,7 @@ async function horizontalOverflow(page: Page): Promise<number> {
     return page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
 }
 
-const stage = (page: Page) => page.getByLabel('Pick/ban stage')
+const stage = (page: Page) => page.getByLabel('Picks & Bans Stage')
 
 function revealOf(state: PickBanState, index: number): number {
     return Date.parse(state.plan[index].reveal_at!)
@@ -96,7 +96,7 @@ function held(state: PickBanState): PickBanState {
 
 async function stageFit(page: Page) {
     return page.evaluate(() => {
-        const section = document.querySelector('section[aria-label="Pick/ban stage"]') as HTMLElement
+        const section = document.querySelector('section[aria-label="Picks & Bans Stage"]') as HTMLElement
         const box = section.getBoundingClientRect()
         const style = getComputedStyle(section)
         const inner = {
@@ -143,7 +143,7 @@ test('an anonymous visitor watches the lobby, a live step and the summary at a p
         expect(server.authorized, scenario.name).toBe(false)
     }
 
-    await expect(page.getByRole('link', { name: /Back to the bracket/ })).toHaveAttribute('href', `/events/${SLUG}?tab=bracket`)
+    await expect(page.getByRole('link', { name: /Back to Bracket/ })).toHaveAttribute('href', `/events/${SLUG}?tab=bracket`)
 })
 
 test('a lock-in delivered early is revealed at its reveal_at, at the same moment on two screens', async ({ browser, isMobile }) => {
@@ -164,7 +164,7 @@ test('a lock-in delivered early is revealed at its reveal_at, at the same moment
 
     const revealedAt = await Promise.all(screens.map(async screen => {
         const handle = await screen.waitForFunction(
-            () => (document.querySelector('section[aria-label="Pick/ban stage"]')?.textContent?.includes('BANNED') ? Date.now() : 0),
+            () => (document.querySelector('section[aria-label="Picks & Bans Stage"]')?.textContent?.includes('BANNED') ? Date.now() : 0),
             null,
             { polling: 'raf', timeout: 30_000 },
         )
@@ -205,7 +205,7 @@ test('the centre stage keeps one height per width and fits every state inside it
             expectText: /considering this map/,
         },
         { name: 'ban reveal', state: firstBan, at: revealOf(firstBan, 0) + 1_000, expectText: /BANNED/ },
-        { name: 'pick reveal', state: firstPick, at: revealOf(firstPick, 2) + 1_000, expectText: /picks map 1/ },
+        { name: 'pick reveal', state: firstPick, at: revealOf(firstPick, 2) + 1_000, expectText: /Picked by/ },
         { name: 'decider reveal', state: decider, at: revealOf(decider, 6) + 1_000, expectText: /last map standing/ },
         { name: 'paused', state: paused(firstBan, revealOf(firstBan, 0) + 1_000), at: revealOf(firstBan, 0) + 5_000, expectText: /Session paused/ },
         {
@@ -255,7 +255,7 @@ test('the countdown bar glides, and steps once a second with reduced motion on',
 
     const intro = { ...held(started()), intro_ends_at: iso(INTRO_START + HOLD_MS) }
     const barPositions = () => page.evaluate(() => new Promise<number>(resolve => {
-        const bar = document.querySelector('section[aria-label="Pick/ban stage"] .origin-left') as HTMLElement
+        const bar = document.querySelector('section[aria-label="Picks & Bans Stage"] .origin-left') as HTMLElement
         const seen = new Set<string>()
         const startedAt = performance.now()
         const sample = () => {
@@ -284,7 +284,7 @@ function sampleStageOpacity(page: Page, part: 'reveal' | 'paused', durationMs: n
         const seen: number[] = []
         const startedAt = performance.now()
         const sample = () => {
-            const element = document.querySelector<HTMLElement>(`section[aria-label="Pick/ban stage"] [data-stage-part="${part}"]`)
+            const element = document.querySelector<HTMLElement>(`section[aria-label="Picks & Bans Stage"] [data-stage-part="${part}"]`)
             if (element) seen.push(Number(getComputedStyle(element).opacity))
             if (performance.now() - startedAt < durationMs) setTimeout(sample, 4)
             else resolve(seen)
@@ -387,7 +387,7 @@ test('polls, including 304s and a warning arriving mid-session, never remount, f
         return {
             cardProbe: card?.dataset.probe ?? null,
             memberProbe: member?.dataset.probe ?? null,
-            stage: box('section[aria-label="Pick/ban stage"]'),
+            stage: box('section[aria-label="Picks & Bans Stage"]'),
             busy: document.querySelectorAll('[aria-busy="true"]').length,
         }
     })

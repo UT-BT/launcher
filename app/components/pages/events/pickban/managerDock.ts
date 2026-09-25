@@ -24,7 +24,7 @@ import {
 import { finalDraftOf, finalEditorOf, type FinalDraft, type FinalEditor } from './editFinal'
 import { PICK_BAN_PRESET_LABELS } from './pickBanCopy'
 import { blockingReasonLabel } from './pickBanStatus'
-import type { PickBanBanner, PickBanManagerControls, PickBanTeamPanel, PickBanView } from './pickBanView'
+import { actionTagOf, type PickBanBanner, type PickBanManagerControls, type PickBanTeamPanel, type PickBanView } from './pickBanView'
 
 type ButtonCommand = 'open' | 'start' | 'swap' | 'pause' | 'resume' | 'undo' | 'restart' | 'cancel'
 
@@ -219,29 +219,29 @@ const DANGER_COMMANDS: DangerCommand[] = ['restart', 'cancel']
 const ACTIVE_STATUSES: PickBanSessionStatus[] = ['lobby', 'running', 'paused']
 
 const BUTTON_LABELS: Record<ButtonAction, string> = {
-    open: 'Open lobby',
+    open: 'Open Lobby',
     start: 'Start',
     pause: 'Pause',
     resume: 'Resume',
     swap: 'Swap A and B',
-    undo: 'Undo last step',
+    undo: 'Undo Last Step',
     reopen: 'Reopen',
-    'edit-final': 'Edit final maps…',
+    'edit-final': 'Edit Final Maps…',
     restart: 'Restart',
-    cancel: 'Cancel pick/ban',
+    cancel: 'Cancel Picks & Bans',
 }
 
 const BUTTON_HINTS: Record<ButtonAction, string> = {
     open: 'Opens the lobby, so both captains can gather and ready up.',
-    start: 'Plays the intro, then the first step goes on the clock. The match goes live and its predictions close.',
+    start: 'Starts the Picks & Bans process. The match goes live and its predictions close.',
     pause: 'Freezes every countdown until you resume.',
     resume: 'Every countdown carries on from where it stopped.',
     swap: 'Swaps which team is A. Both Ready marks clear.',
-    undo: 'Takes back the last ban or pick, with any automatic step after it.',
-    reopen: 'Takes back the last ban or pick, with any automatic step after it, and runs the pick/ban again from there.',
+    undo: 'Takes back the last pick or ban, with any automatic step after it.',
+    reopen: 'Takes back the last pick or ban, with any automatic step after it, and continues the Picks & Bans process from there.',
     'edit-final': 'Rewrites the match’s maps: their order, who picked each and the decider.',
     restart: 'Undoes every step and sends both teams back to the lobby.',
-    cancel: 'Ends the pick/ban for good. You can open a new lobby afterwards.',
+    cancel: 'Ends the Picks & Bans process for good. You can open a new lobby afterwards from Match Control.',
 }
 
 const START_FIXES: Partial<Record<PickBanBlockingReason, string>> = {
@@ -252,51 +252,51 @@ const START_FIXES: Partial<Record<PickBanBlockingReason, string>> = {
     pool_too_small: 'Add maps to the stage’s pool in Manage, or choose a shorter sequence under Sequence.',
 }
 
-const RESULTS_WARNING = 'Results are already entered for this match, so the pick/ban can’t start or change the maps it wrote.'
+const RESULTS_WARNING = 'Results are already entered for this match, so the Picks & Bans process can’t start or change the maps it wrote.'
 
-const KEEP_IT = 'Keep it'
+const KEEP_IT = 'Keep It'
 
 const CONFIRMATIONS: Record<ConfirmedCommand, Omit<ManagerConfirm, 'command'>> = {
     reopen: {
-        title: 'Reopen the pick/ban?',
-        message: 'The last ban or pick is undone, with any automatic step after it, and the pick/ban waits on that step again. The maps it wrote into the match are removed, and any edits to the final maps are discarded.',
+        title: 'Reopen the Picks & Bans process?',
+        message: 'The last pick or ban is undone, with any automatic step after it, and the Picks & Bans process waits on that step again. The maps it wrote into the match are removed, and any edits to the final maps are discarded.',
         confirmLabel: BUTTON_LABELS.reopen,
         dismissLabel: KEEP_IT,
     },
     restart: {
-        title: 'Restart the pick/ban?',
-        message: 'Every ban and pick so far is undone and both teams go back to the lobby. Both Ready marks clear, and any maps this pick/ban wrote into the match are removed.',
+        title: 'Restart the Picks & Bans process?',
+        message: 'Every pick and ban so far is undone and both teams go back to the lobby. Both Ready marks clear, and any maps this Picks & Bans process wrote into the match are removed.',
         confirmLabel: BUTTON_LABELS.restart,
         dismissLabel: KEEP_IT,
     },
     cancel: {
-        title: 'Cancel the pick/ban?',
-        message: 'This ends the pick/ban for good. Its bans and picks won’t count, and any maps it wrote into the match are removed. You can open a new lobby afterwards.',
+        title: 'Cancel the Picks & Bans process?',
+        message: 'This ends the Picks & Bans process for good. Its picks and bans won’t count, and any maps it wrote into the match are removed. You can open a new lobby afterwards.',
         confirmLabel: BUTTON_LABELS.cancel,
         dismissLabel: KEEP_IT,
     },
     'edit-final': {
         title: 'Save the edited final maps?',
-        message: 'The match’s maps are rewritten to your list, in its order, with the picks and decider you set. The final summary is marked Edited, and the timeline keeps the bans and picks as they were played.',
-        confirmLabel: 'Save final maps',
-        dismissLabel: 'Keep editing',
+        message: 'The match’s maps are rewritten to your list, in its order, with the picks and decider you set. The final summary is marked Edited, and the timeline keeps the picks and bans as they were played.',
+        confirmLabel: 'Save Final Maps',
+        dismissLabel: 'Keep Editing',
     },
 }
 
 const REJECTIONS: Record<Exclude<PickBanErrorCode, PickBanBlockingReason>, string> = {
-    not_authorized: 'You can’t manage this pick/ban any more.',
+    not_authorized: 'You can’t manage this Picks & Bans process any more.',
     not_your_turn: 'That team isn’t on the clock any more.',
-    session_exists: 'This match already has a pick/ban open.',
+    session_exists: 'This match already has a Picks & Bans process open.',
     intro_active: 'Wait for the intro to finish, then lock in.',
     spotlight_active: 'Wait for the reveal to finish, then lock in.',
-    paused: 'The pick/ban is paused. Resume it first.',
+    paused: 'The Picks & Bans process is paused. Resume it first.',
     map_unavailable: 'That map can’t be chosen any more. Select another.',
     version_conflict: 'The session changed just before your click. Check it and try again.',
     invalid_request: 'The server didn’t accept that request. Refresh the page and try again.',
-    no_session: 'This match has no pick/ban session any more.',
+    no_session: 'This match has no Picks & Bans session any more.',
     match_live: 'The match is already live, so a lobby can’t open.',
     wrong_status: 'The session moved on just before your click, so that no longer applies.',
-    nothing_to_undo: 'There’s no ban or pick to undo.',
+    nothing_to_undo: 'There’s no pick or ban to undo.',
 }
 
 const COMMAND_REJECTIONS: Partial<Record<ManagerCommand, Partial<Record<PickBanErrorCode, (detail: string) => string>>>> = {
@@ -377,7 +377,7 @@ function phaseOf(view: PickBanView): string | null {
         case 'intro':
             return 'Intro'
         case 'awaiting':
-            return view.turn && `${stepOf(view.turn.stepNumber)} · ${view.turn.actionLabel}`
+            return view.turn && `${stepOf(view.turn.stepNumber)} · ${actionTagOf(view.turn)}`
         case 'spotlight':
             return view.spotlight && `${stepOf(view.spotlight.number)} · Revealing`
         case 'paused':

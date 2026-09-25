@@ -111,10 +111,10 @@ const MANAGE_TABS: ManageTab[] = [
     },
     {
         id: 'pickban',
-        label: 'Pick/Ban',
+        label: 'Picks & Bans',
         hasUnsavedChanges: context => Object.keys(context.pickBanDrafts).length > 0,
         render: context => (
-            <Suspense fallback={<p className="text-xs text-muted-foreground">Loading the pick/ban setup…</p>}>
+            <Suspense fallback={<p className="text-xs text-muted-foreground">Loading the Picks & Bans setup…</p>}>
                 <PickBanPanel
                     accessToken={context.accessToken}
                     slug={context.slug}

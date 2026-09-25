@@ -114,7 +114,7 @@ describe('locking in', () => {
         expect(withCaptainPlay(view, refused).cards.some((card) => card.lockedIn)).toBe(false)
         expect(dock?.controls).toEqual({ kind: 'choose', action: 'ban', mapNumber: null, selectedMap: BRAVO, canLockIn: true })
         expect(dock?.rejection).toBe(
-            'Your lock-in didn’t count: the session changed just before it arrived. Check the board and lock in again if it’s still your turn.',
+            'Your lock-in didn’t count: the session state changed before your action arrived.',
         )
         expect(beginLock(refused, view)).not.toBeNull()
     })
@@ -312,7 +312,7 @@ describe('ready toggle', () => {
             controls: { kind: 'ready', ready: false, busy: false },
             rejection: 'The lobby changed at the same moment. Try again.',
         })
-        expect(captainDockOf(view, started)?.rejection).toBe('The pick/ban has already started, so Ready no longer applies.')
+        expect(captainDockOf(view, started)?.rejection).toBe('The Picks & Bans have already started, so ‘ready’ no longer applies.')
     })
 
     it('gives no toggle to anyone without control of a side', () => {
@@ -534,9 +534,9 @@ describe('refusals', () => {
         ['spotlight_active', 409, 'Wait for the reveal to finish, then lock in.'],
         ['intro_active', 409, 'Wait for the intro to finish, then lock in.'],
         ['paused', 409, 'The session is paused. Lock in once an admin resumes it.'],
-        ['wrong_status', 409, 'The pick/ban isn’t running any more.'],
-        ['not_authorized', 403, 'You no longer control your team’s choices in this pick/ban.'],
-        ['no_session', 409, 'This match has no pick/ban session any more.'],
+        ['wrong_status', 409, 'The Picks & Bans aren’t running any more.'],
+        ['not_authorized', 403, 'You no longer control your team’s choices in this Picks & Bans process.'],
+        ['no_session', 409, 'This match has no Picks & Bans session any more.'],
     ])('explains a lock-in refused with %s', (code, status, message) => {
         expect(lockRefusal(refusal(status, code))).toBe(message)
     })
@@ -566,7 +566,7 @@ describe('refusals', () => {
 
         expect(captainDockOf(replaced, refused)).toEqual({
             controls: null,
-            rejection: 'You no longer control your team’s choices in this pick/ban.',
+            rejection: 'You no longer control your team’s choices in this Picks & Bans process.',
         })
         expect(captainDockOf(replaced, dismissRejection(refused))).toBeNull()
     })

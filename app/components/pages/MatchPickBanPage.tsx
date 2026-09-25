@@ -74,7 +74,7 @@ export function MatchPickBanPage({ eventSlug, matchId, userProfile, onBackToEven
         setSoundPreference(next)
     }
 
-    useDocumentTitle(view ? `${view.match.title} — Pick/Ban` : undefined, SITE_NAME)
+    useDocumentTitle(view ? `${view.match.title} — Picks & Bans` : undefined, SITE_NAME)
 
     const bracketLink = (
         <NavLink
@@ -84,7 +84,7 @@ export function MatchPickBanPage({ eventSlug, matchId, userProfile, onBackToEven
             className={HEADER_BUTTON}
         >
             <Swords className="size-3.5" />
-            Back to the bracket
+            Back to Bracket
         </NavLink>
     )
 
@@ -97,14 +97,14 @@ export function MatchPickBanPage({ eventSlug, matchId, userProfile, onBackToEven
                 className="inline-flex w-fit items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
             >
                 <ArrowLeft className="size-3.5" />
-                Back to event
+                Back to Event
             </NavLink>
 
             <header className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0 space-y-1">
                     <div className="flex flex-wrap items-center gap-2">
                         <h1 className="break-words text-2xl font-bold leading-tight text-foreground">
-                            {view?.match.title ?? 'Pick/Ban'}
+                            {view?.match.title ?? 'Picks & Bans'}
                         </h1>
                         {view && <PickBanStatusChip status={statusOfPhase(view.phase)} />}
                     </div>
@@ -201,7 +201,7 @@ function PickBanBody({ view, summaryAction, captain, onManagerSelect, reconnecti
 
             <section className="space-y-2.5 rounded-xl border border-hairline/5 bg-card/30 p-3 sm:p-4">
                 <h2 className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                    Map pool · {eligibleCount} eligible
+                    Map Pool · {eligibleCount} eligible
                 </h2>
                 <PoolGrid
                     cards={view.cards}
@@ -249,11 +249,11 @@ function MotionToggleButton({ on, onToggle }: { on: boolean; onToggle: () => voi
             type="button"
             onClick={onToggle}
             aria-pressed={on}
-            aria-label={on ? 'Turn pick/ban animations off' : 'Turn pick/ban animations on'}
+            aria-label={on ? 'Turn Animations Off' : 'Turn Animations On'}
             className={HEADER_BUTTON}
         >
             <Icon className="size-3.5" />
-            {on ? 'Animations on' : 'Animations off'}
+            {on ? 'Animations On' : 'Animations Off'}
         </button>
     )
 }
@@ -269,7 +269,7 @@ function CopyLinkButton({ link }: { link: string }) {
             className={HEADER_BUTTON}
         >
             {copied ? <Check className="size-3.5" /> : <Link2 className="size-3.5" />}
-            {copied ? 'Copied' : 'Copy link'}
+            {copied ? 'Copied' : 'Copy Link'}
         </button>
     )
 }

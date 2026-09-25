@@ -43,7 +43,7 @@ function WarningList({ warnings, configured }: { warnings: PickBanWarning[]; con
     }
 
     return (
-        <ul className="flex flex-col gap-1 rounded-lg border border-amber-500/30 bg-amber-500/10 p-2.5" aria-label="Pick/ban warnings">
+        <ul className="flex flex-col gap-1 rounded-lg border border-amber-500/30 bg-amber-500/10 p-2.5" aria-label="Picks & Bans warnings">
             {warnings.map(warning => (
                 <li key={`${warning.kind}-${'scope' in warning ? warning.scope : 'sequence'}`} className="flex items-start gap-1.5 text-[11px] leading-snug text-amber-300">
                     <AlertTriangle className="size-3.5 shrink-0 mt-px" />
@@ -150,7 +150,7 @@ export function PickBanStageCard({
                         disabled={!draft || blocked}
                         title={blocked ? 'Fix the highlighted fields first' : undefined}
                     >
-                        Save stage
+                        Save Stage
                     </ActionButton>
                 </div>
             }

@@ -424,7 +424,7 @@ the data. Like `useServerFavorites`, it is a `useSyncExternalStore` store. Its s
   A refused command triggers an immediate poll, then rethrows the `ApiError`.
 - **One command at a time.** Every command, participant or manager, runs after the one
   before it has settled, and only then reads the `version` to send. Every command bumps the
-  version, a hover included, so this is what lets a Lock in pressed while a hover is in
+  version, a hover included, so this is what lets a Lock In pressed while a hover is in
   flight go out with the version that hover answered with instead of failing with
   `version_conflict`. A refused command doesn't hold up the next one.
 
@@ -444,7 +444,7 @@ Screens never read those fields. They go through the functions below.
 - `withCaptainPlay(view, play)` layers the play onto a built `PickBanView`. It marks the
   selected card `selected`. While a lock-in is in flight, it shows that card as `lockedIn`,
   the turn as `lockedIn` and the step as `locked_in`, and makes nothing selectable. That is
-  the optimistic "Locked in", shown before the command answers. A selection only shows while
+  the optimistic "Locked In", shown before the command answers. A selection only shows while
   its plan index is the awaited step and its card is still `selectable`, so a step that moved
   on, an undo or a map that became unavailable drops it without extra bookkeeping.
 - `captainDockOf(view, play)` is the dock model: `ready`, `choose`, `locked_in`, `locked`
@@ -458,7 +458,7 @@ Screens never read those fields. They go through the functions below.
   functions also return the command and body to send. They return `null` while a command is
   in flight or when the controls aren't open, which is the double-submit guard.
 - `commandSucceeded` and `commandRejected(play, error)` settle a command. On success, the
-  returned state takes over the "Locked in". On a refusal, the stable error code becomes a
+  returned state takes over the "Locked In". On a refusal, the stable error code becomes a
   worded message (the server's own message for any code without wording), and the selection
   is kept for another try.
 
@@ -469,14 +469,14 @@ and when:
 - `hoverOf(play, view)` is the hover body (`{ map }`) for the captain's current selection,
   or `null`. It is `null` unless the dock is `choose`, which only a captain or acting
   captain gets on their side's turn, never a manager acting for a team. It is also `null`
-  once Lock in is pressed, and for a map the board already shows as `previewed`, so
+  once Lock In is pressed, and for a map the board already shows as `previewed`, so
   selecting the same map again sends nothing.
 - `createHoverSender(target, send)` debounces it. `request()` restarts a
   `HOVER_DEBOUNCE_MS` (300 ms) timer. When the timer fires, it asks `target()` for the body
-  right then, so a Lock in, a pause or an already-previewed map in between sends nothing.
+  right then, so a Lock In, a pause or an already-previewed map in between sends nothing.
   It never sends the map whose hover is still in flight. `cancel()` drops a pending hover.
   A failed hover is swallowed: no refusal message, no busy state, and it never blocks
-  Lock in.
+  Lock In.
 - It also re-sends a preview that got lost, because the captain keeps the selection while the
   preview goes away: a pause clears it on the server, and a refused or rate-limited hover never
   set it. `sync()` is called whenever the view or the play changes. It requests a hover only
@@ -513,7 +513,7 @@ session runs. Reopen only applies to a complete session, and Undo only to a runn
 paused one, so neither can run as the other.
 
 - `withManagerPlay(view, play)` marks the act-for selection `selected`, and shows the
-  act-for lock-in as "Locked in". It shares `captainPlay.ts`'s `StepChoice`,
+  act-for lock-in as "Locked In". It shares `captainPlay.ts`'s `StepChoice`,
   `selectedMapOf`, `withSelectedMap` and `withOptimisticLock`, adding only the manager's own
   gate (the awaited step is open to act for). The lock-in stays until its step reveals,
   since the returned state only marks a lock-in for the side's own captain.
@@ -523,7 +523,7 @@ paused one, so neither can run as the other.
   - `status` (the session's) and `phase`, a status line: `Waiting for Start`, `Starting`,
     `Intro`, `Step 3 of 7 · Azure Owls picks`, `Step 3 of 7 · Revealing`, `Step 3 of 7`
     while paused, `Final maps written` or `Final maps edited`
-  - `primary`, the one call to action for the status: Open lobby (none, cancelled or
+  - `primary`, the one call to action for the status: Open Lobby (none, cancelled or
     voided), Start (lobby), Pause (running) or Resume (paused). Start also carries
     `blocked`, the worded blocking reason with a `fix` naming what clears it (or `null`),
     and `readiness`, each team's Ready mark, A first. Once complete it is `null`, and
@@ -539,8 +539,8 @@ paused one, so neither can run as the other.
     count and best-of, whether it was changed for this match and from which stage, the
     choice keys it matches (the stage it was copied from, then its preset), and whether it
     can change (lobby only)
-  - `history` (Undo last step, Reopen, Edit final maps…) and `danger` (Restart, Cancel
-    pick/ban), each listed only while it applies
+  - `history` (Undo Last Step, Reopen, Edit Final Maps…) and `danger` (Restart, Cancel
+    Picks & Bans), each listed only while it applies
   - the results warning, the voided banner, the open editor, the pending confirmation
     (title, message, confirm and dismiss labels), the act-for controls, and the refusal
 
@@ -559,7 +559,7 @@ paused one, so neither can run as the other.
   and no request; `confirmManagerCommand` sends exactly that request (an edit-final with
   the list and version as they were confirmed) and `dismissManagerConfirm` drops it.
   Asking again just asks again: only the confirmation sends. `selectActForMap` and
-  `beginActForLock` are the act-for select-then-Lock in, which sends `lock` with the side,
+  `beginActForLock` are the act-for select-then-Lock In, which sends `lock` with the side,
   map and plan index.
 - `openFinalEditor(play, view)` starts an Edit final draft from the view (only while Edit
   final applies and nothing is in flight). Calling it with a draft open reloads it from

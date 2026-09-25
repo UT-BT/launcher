@@ -34,7 +34,7 @@ export function titleForRoute(view: string, params: NavParams): string {
         case 'event-detail':
             return `Event — ${SITE_NAME}`
         case 'match-pickban':
-            return `Pick/Ban — ${SITE_NAME}`
+            return `Picks & Bans — ${SITE_NAME}`
         case 'world-records':
             return `World Records — ${SITE_NAME}`
         case 'cap-it-all':

@@ -42,25 +42,25 @@ export const IDLE_CAPTAIN_PLAY: CaptainPlay = { selection: null, submitting: nul
 type RejectionMessages = Partial<Record<PickBanErrorCode, string>>
 
 const SESSION_REJECTIONS: RejectionMessages = {
-    not_authorized: 'You no longer control your team’s choices in this pick/ban.',
-    no_session: 'This match has no pick/ban session any more.',
+    not_authorized: 'You no longer control your team’s choices in this Picks & Bans process.',
+    no_session: 'This match has no Picks & Bans session any more.',
 }
 
 const LOCK_REJECTIONS: RejectionMessages = {
     ...SESSION_REJECTIONS,
-    version_conflict: 'Your lock-in didn’t count: the session changed just before it arrived. Check the board and lock in again if it’s still your turn.',
+    version_conflict: 'Your lock-in didn’t count: the session state changed before your action arrived.',
     not_your_turn: 'Your lock-in didn’t count: it isn’t your team’s turn any more.',
     map_unavailable: 'That map can’t be chosen any more. Select another.',
     spotlight_active: 'Wait for the reveal to finish, then lock in.',
     intro_active: 'Wait for the intro to finish, then lock in.',
     paused: 'The session is paused. Lock in once an admin resumes it.',
-    wrong_status: 'The pick/ban isn’t running any more.',
+    wrong_status: 'The Picks & Bans aren’t running any more.',
 }
 
 const READY_REJECTIONS: RejectionMessages = {
     ...SESSION_REJECTIONS,
     version_conflict: 'The lobby changed at the same moment. Try again.',
-    wrong_status: 'The pick/ban has already started, so Ready no longer applies.',
+    wrong_status: 'The Picks & Bans have already started, so ‘ready’ no longer applies.',
 }
 
 const UNREACHABLE = 'Couldn’t reach the server. Check your connection and try again.'

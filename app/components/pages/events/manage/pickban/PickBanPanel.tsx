@@ -74,7 +74,7 @@ export function PickBanPanel({
     if (!config) {
         return error
             ? <ErrorBanner message={error} />
-            : <p className="text-xs text-muted-foreground">Loading the pick/ban setup…</p>
+            : <p className="text-xs text-muted-foreground">Loading the Picks & Bans setup…</p>
     }
 
     return (
@@ -83,10 +83,10 @@ export function PickBanPanel({
 
             {config.stages.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                    This event has no format yet. Set one up on the Format tab, then configure each stage&apos;s pick/ban here.
+                    This event has no format yet. Set one up on the Format tab, then configure each stage&apos;s Picks & Bans process here.
                 </p>
             ) : (
-                <section aria-label="Stage pick/ban setup" className="flex flex-col gap-4">
+                <section aria-label="Stage Picks & Bans setup" className="flex flex-col gap-4">
                     <p className="text-xs text-muted-foreground">
                         Every stage keeps its own map pool, sequence, pacing and exclusion rule. Stages that are not drawn yet can be set up ahead of time.
                     </p>

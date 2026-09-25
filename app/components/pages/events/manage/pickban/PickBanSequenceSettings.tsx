@@ -175,7 +175,7 @@ export function PickBanSequenceSettings({ stage, draft, errors, disabled, onChan
                         disabled={disabled}
                         className="inline-flex items-center gap-1 h-8 px-2 rounded-md text-[11px] font-medium text-accent-300 hover:text-accent-200 hover:bg-white/5 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                     >
-                        <Plus className="size-3.5" /> Add rule
+                        <Plus className="size-3.5" /> Add Rule
                     </button>
                 }
             >

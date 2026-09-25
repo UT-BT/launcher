@@ -327,6 +327,11 @@ function actionLabelOf(state: PickBanState, step: PickBanPlanStep): string {
     return `${actorLabelOf(state, step)} ${step.action === 'ban' ? 'bans' : 'picks'}`
 }
 
+export function actionTagOf(turn: Pick<PickBanTurn, 'action' | 'actorLabel'>): string {
+    if (turn.action === 'decider') return 'Decider'
+    return `${turn.actorLabel} (${turn.action})`
+}
+
 function stagePhaseOf(status: PickBanSessionStatus, livePhase: LivePhase): PickBanStagePhase {
     if (status === 'none' || status === 'cancelled' || status === 'voided') return status
     return livePhase

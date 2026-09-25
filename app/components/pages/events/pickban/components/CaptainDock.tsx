@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils'
 import { displayMapName } from '@/app/utils/format'
 import type { PickBanActor, PickBanStepAction } from '@/app/utils/api'
 import type { CaptainControls, CaptainDock as CaptainDockModel } from '../captainPlay'
-import type { PickBanTurn } from '../pickBanView'
+import { actionTagOf, type PickBanTurn } from '../pickBanView'
 import { CountdownBar, CountdownText } from './Countdown'
 import { PICK_BAN_TONES, stepTone, teamTone, type PickBanToneClasses } from './pickBanTone'
 
@@ -37,7 +37,7 @@ function stepLabel(action: PickBanStepAction, mapNumber: number | null): string 
 function upNext(next: PickBanTurn | null): string {
     if (!next) return 'The first step is coming up'
     if (next.viewerActs) return `You’re up: ${stepLabel(next.action, next.mapNumber).toLowerCase()}`
-    return `Up next: ${next.actionLabel}`
+    return `Next: ${actionTagOf(next)}`
 }
 
 export function CaptainDock({ dock, ab, reconnecting, actingFor, onLockIn, onToggleReady, onDismiss, className }: CaptainDockProps) {
@@ -90,7 +90,7 @@ function Controls({ controls, tone, actingFor, onLockIn, onToggleReady }: {
                 <ControlRow
                     eyebrow={<Eyebrow className="text-muted-foreground">Lobby</Eyebrow>}
                     title={controls.ready ? 'Your team is ready' : 'Ready up when your team is set'}
-                    detail="An admin starts the pick/ban once both teams are here."
+                    detail="An admin starts the Picks & Bans process once both teams are here."
                     action={
                         <button
                             type="button"
@@ -133,7 +133,7 @@ function Controls({ controls, tone, actingFor, onLockIn, onToggleReady }: {
                             )}
                         >
                             <Lock className="size-4" />
-                            Lock in
+                            Lock In
                         </button>
                     }
                 />
@@ -141,10 +141,10 @@ function Controls({ controls, tone, actingFor, onLockIn, onToggleReady }: {
         case 'locked_in':
             return (
                 <ControlRow
-                    eyebrow={<Eyebrow className="text-emerald-300">Locked in</Eyebrow>}
+                    eyebrow={<Eyebrow className="text-emerald-300">Locked In</Eyebrow>}
                     title={controls.map ? displayMapName(controls.map) : 'Your choice is in'}
-                    detail="Everyone sees it revealed in a moment."
-                    action={<LockedButton icon={Check} label="Locked in" />}
+                    detail="This will be revealed to everyone shortly…"
+                    action={<LockedButton icon={Check} label="Locked In" />}
                 />
             )
         case 'locked':

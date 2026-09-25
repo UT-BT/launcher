@@ -109,6 +109,12 @@ export function schedulingWindowLabel(
     return 'Not yet scheduled'
 }
 
+export function opponentNameOf(match: EventMatch | null | undefined, myTeamId: string | null | undefined): string | null {
+    const side = match ? sideOf(match, myTeamId) : null
+    if (!match || !side) return null
+    return (side === 'a' ? match.team_b : match.team_a)?.name || null
+}
+
 export function nextOwnMatch(stages: EventBracketStage[], myTeamId: string | null, now: number): EventMatch | null {
     if (!myTeamId) return null
 
@@ -364,7 +370,7 @@ function PickBanCardPill({ match, eventSlug, myTeamId }: {
                     : 'border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20',
             )}
         >
-            {affordance === 'join' ? 'Join' : 'Pick/Ban live'}
+            {affordance === 'join' ? 'Join' : 'Picks & Bans are live!'}
         </PickBanLink>
     )
 }

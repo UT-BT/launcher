@@ -1,9 +1,10 @@
 import { cn } from '@/lib/utils'
 import { PickBanLink } from './PickBanLink'
 
-export function PickBanJoinBanner({ eventSlug, matchId, className }: {
+export function PickBanJoinBanner({ eventSlug, matchId, opponent, className }: {
     eventSlug: string
     matchId: string
+    opponent: string | null
     className?: string
 }) {
     return (
@@ -19,7 +20,9 @@ export function PickBanJoinBanner({ eventSlug, matchId, className }: {
                 <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 animate-ping" />
                 <span className="relative inline-flex size-2 rounded-full bg-emerald-400" />
             </span>
-            <span className="text-foreground font-medium">Pick/Ban open – Join</span>
+            <span className="text-foreground font-medium">
+                {opponent ? `Picks & Bans against ${opponent} are live now.` : 'Picks & Bans are live now.'}
+            </span>
         </PickBanLink>
     )
 }

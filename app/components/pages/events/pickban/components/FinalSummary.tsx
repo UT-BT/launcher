@@ -12,7 +12,7 @@ interface FinalSummaryProps {
 }
 
 function pickedByLabel(entry: PickBanSummaryEntry): string {
-    return entry.decider ? entry.actorLabel : `${entry.actorLabel} pick`
+    return entry.decider ? entry.actorLabel : `Picked by ${entry.actorLabel}`
 }
 
 export function FinalSummary({ entries, className }: FinalSummaryProps) {
@@ -27,7 +27,7 @@ export function FinalSummary({ entries, className }: FinalSummaryProps) {
                 return (
                     <motion.li key={entry.key} variants={staggeredCard(order)} className="flex min-w-0 flex-col items-center gap-1.5">
                         <span className="sr-only">
-                            {`Map ${entry.mapNumber}: ${name ?? 'to be decided'}, ${pickedByLabel(entry).toLowerCase()}`}
+                            {`Map ${entry.mapNumber}: ${name ?? 'To be decided'}, ${entry.decider ? 'decider' : `picked by ${entry.actorLabel}`}`}
                         </span>
                         <div aria-hidden className={cn('relative aspect-square w-full overflow-hidden rounded-xl border-2 bg-hairline/5', tone.line, entry.decider && tone.border)}>
                             {entry.map && (

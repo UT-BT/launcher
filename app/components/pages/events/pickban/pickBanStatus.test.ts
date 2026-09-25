@@ -3,7 +3,7 @@ import { blockingReasonLabel, pickBanStatusBadge, statusOfPhase } from './pickBa
 
 describe('pickBanStatusBadge', () => {
     it('reads every session status in the same words wherever it is shown', () => {
-        expect(pickBanStatusBadge('none').label).toBe('Not open')
+        expect(pickBanStatusBadge('none').label).toBe('Not Open')
         expect(pickBanStatusBadge('lobby').label).toBe('Lobby')
         expect(pickBanStatusBadge('running').label).toBe('Live')
         expect(pickBanStatusBadge('paused').label).toBe('Paused')
@@ -56,9 +56,9 @@ describe('blockingReasonLabel', () => {
     })
 
     it('says what the session past its lobby is doing when that is what blocks Start', () => {
-        expect(blockingReasonLabel('wrong_status', 'running')).toBe('Pick/ban already in progress')
-        expect(blockingReasonLabel('wrong_status', 'paused')).toBe('Pick/ban is paused')
-        expect(blockingReasonLabel('wrong_status', 'complete')).toBe('Pick/ban already complete')
+        expect(blockingReasonLabel('wrong_status', 'running')).toBe('Picks & Bans are already in progress')
+        expect(blockingReasonLabel('wrong_status', 'paused')).toBe('Picks & Bans are paused')
+        expect(blockingReasonLabel('wrong_status', 'complete')).toBe('Picks & Bans are already complete')
     })
 
     it('is null when there is nothing blocking', () => {

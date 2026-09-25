@@ -8,18 +8,18 @@ function heading(overrides: Partial<PickBanMatchHeading> = {}): PickBanMatchHead
 
 describe('introCountdownWords', () => {
     it('counts the whole seconds left in words, rounding a part second up', () => {
-        expect(introCountdownWords(5_000)).toBe('5 seconds until picks and bans start…')
-        expect(introCountdownWords(4_001)).toBe('5 seconds until picks and bans start…')
-        expect(introCountdownWords(2_000)).toBe('2 seconds until picks and bans start…')
+        expect(introCountdownWords(5_000)).toBe('5 seconds until Picks & Bans start…')
+        expect(introCountdownWords(4_001)).toBe('5 seconds until Picks & Bans start…')
+        expect(introCountdownWords(2_000)).toBe('2 seconds until Picks & Bans start…')
     })
 
     it('says second, not seconds, for the last one', () => {
-        expect(introCountdownWords(1_000)).toBe('1 second until picks and bans start…')
-        expect(introCountdownWords(1)).toBe('1 second until picks and bans start…')
+        expect(introCountdownWords(1_000)).toBe('1 second until Picks & Bans start…')
+        expect(introCountdownWords(1)).toBe('1 second until Picks & Bans start…')
     })
 
     it('says picks and bans are starting once the countdown reaches zero', () => {
-        expect(introCountdownWords(0)).toBe('Picks and bans are starting…')
+        expect(introCountdownWords(0)).toBe('Picks & Bans are starting…')
     })
 })
 

@@ -174,15 +174,15 @@ show next to the map name.
 default so it never also fires an enclosing card's own click handler (the
 match card's own `onClick` opens the scheduler). `PickBanCardPill` and
 `PickBanJoinBanner` (`events/pickban/components/PickBanJoinBanner.tsx`) both
-build on it — the banner is the shared "Pick/Ban open – Join" pill (a small
-pulsing dot plus the label), used identically on the event page and on any
+build on it — the banner is the shared "Picks & Bans against <opponent> are live now." pill (a small
+pulsing dot plus the label, naming the opponent when the match is known), used identically on the event page and on any
 `ScheduleTab` card whose match has an open session. Every Schedule card
 carries a pick/ban entry point: `pickBanCallToAction(match, session)`
 (`schedule/scheduleSections.ts`, pure) reads the match's `pick_ban_status`,
 or the viewer's own `pick_ban_session` when it is for that match since that
 read is fresher, into `'join'` (lobby, running or paused: the Join banner),
-`'view'` (complete: a "View pick/ban" button) or `'page'` (none: a quiet
-"Pick/ban page" link, since the page previews the pool and steps before a
+`'view'` (complete: a "View Picks & Bans" button) or `'page'` (none: a quiet
+"Visit Picks & Bans Page" link, since the page previews the pool and steps before a
 lobby opens).
 
 **The event `me` payload carries `pick_ban_session: MyPickBanSession | null`**
@@ -408,12 +408,12 @@ Upcoming already shows, since the two reads can catch a match mid-change) and
 **Streaming** (`streamer` entries, same order). The player sections show for
 a team member or bracket manager, or whenever either has a match in it; the
 Streaming section shows for `is_streamer`, or whenever a match is assigned.
-`matchTimeLabel` reads a live match as "Live now", a booked one through
+`matchTimeLabel` reads a live match as "Live Now", a booked one through
 `formatSlotTime` in the display zone, and an unbooked one as "No time booked
 yet". An Upcoming card names its streamer through `PlayerInfo`. A Streaming
 card shows time, teams, stage and round and the pick/ban status chip, with
-**Copy stream link** (`buildMatchLinks(slug, matchId).streamLink`, the OBS
-browser source, with `useCopyFeedback`) and **Open pick/ban page**; the
+**Copy Stream Link** (`buildMatchLinks(slug, matchId).streamLink`, the OBS
+browser source, with `useCopyFeedback`) and **Open Picks & Bans**; the
 section's hint says the link is a 1920×1080 browser source for OBS, and it
 reads "No matches assigned to you yet." when empty.
 
@@ -831,8 +831,8 @@ pick/ban's match is still `scheduled`.
 (`navigation/matchLinks.ts`), always the public website origin on both desktop and web.
 `blockingReasonLabel(code, status)` (in `events/pickban/pickBanStatus.ts`, shared with the
 match page's manager dock) is the one place a blocking reason becomes words:
-`wrong_status` reads by what the current session is doing (`Pick/ban already in
-progress`, `Pick/ban is paused`, `Pick/ban already complete`), and an unrecognized code
+`wrong_status` reads by what the current session is doing (`Picks & Bans are already in
+progress`, `Picks & Bans are paused`, `Picks & Bans are already complete`), and an unrecognized code
 falls back to `'Not startable'` rather than showing nothing. `canOpenLobby` mirrors
 `pickBanView.ts`'s manager `open` rule (`status === 'none' || 'cancelled' || 'voided'`),
 kept as its own small check here since the queue is a different module from the match
@@ -844,7 +844,7 @@ them.
 
 **Status words and colours** live in one place, shared by the queue and the watch page:
 `events/pickban/pickBanStatus.ts` maps a `PickBanSessionStatus` to its badge
-(`pickBanStatusBadge`: `Not open`, `Lobby`, `Live`, `Paused`, `Complete`, `Cancelled`,
+(`pickBanStatusBadge`: `Not Open`, `Lobby`, `Live`, `Paused`, `Complete`, `Cancelled`,
 `Voided`, each with a tone), and `statusOfPhase` reads a view phase as the status to show
 (the intro, a turn and a reveal are `running`, so the page says Live until the last
 spotlight ends). `PickBanStatusChip` (see `agents/shared-components.md`) renders it.
@@ -853,11 +853,11 @@ spotlight ends). `PickBanStatusChip` (see `agents/shared-components.md`) renders
 a `DataTable` with `responsive`/`compactContent` (phone widths collapse to cards, no
 horizontal scroll), polling every 20 s via `utils/poller.ts::createPoller` (so it only
 polls while the tab is visible) and once more immediately after a successful Open. Row
-actions: **Open lobby** (only shown when `canOpenLobby`; posts the `open` manager command,
+actions: **Open Lobby** (only shown when `canOpenLobby`; posts the `open` manager command,
 then `poller.refresh()`, which drops any poll that was already in flight before Open and
-polls afresh, so the row picks up its new session at once), **Open page** (a `NavLink` to
-`match-pickban` with `{eventSlug, matchId}`), and **Copy player link** / **Copy stream
-link** (`useCopyFeedback`, with a transient "Copied" label and a copy failure shown in the
+polls afresh, so the row picks up its new session at once), **Open Page** (a `NavLink` to
+`match-pickban` with `{eventSlug, matchId}`), and **Copy Player Link** / **Copy Stream
+Link** (`useCopyFeedback`, with a transient "Copied" label and a copy failure shown in the
 panel's error banner). A row's
 `blockingReasonLabel` shows next to its status chip whenever it is not `null`, whatever the
 session's status — it is informational (why Start would refuse right now), not gating the
@@ -1057,7 +1057,7 @@ only from the view model, through the pick/ban visual core (see
 - **After that, polls are silent.** New data changes the page in place, and a 304 changes
   nothing. A small fixed "Reconnecting…" toast shows only while `reconnecting` is set.
   While the captain dock shows, the dock carries that line instead, so the toast never
-  covers Lock in.
+  covers Lock In.
 - **Timing.** Reveals and phase changes land on `usePickBanView`'s boundary timer, so a step
   appears at its `reveal_at` even when no poll arrives then. Countdowns and progress bars
   paint on animation frames. With animations off, the bars step once a second instead.
@@ -1077,7 +1077,7 @@ only from the view model, through the pick/ban visual core (see
   `skipped_bans` and summary slots by map number.
 - **Fixed layout.** The centre stage has a fixed height at each width, and every state's
   content scales to fit inside it. The timeline, every pool card and every summary slot
-  exist from the lobby on. The "On the clock" row in each
+  exist from the lobby on. The "Contemplating…" row in each
   team panel is always there, and hidden when it's not that side's turn.
 - **Banners.** Nothing is ever inserted above the stage, so no notice arriving mid-session
   can push it down. A voided or cancelled session's reason shows in the stage's own notice,
@@ -1091,8 +1091,8 @@ only from the view model, through the pick/ban visual core (see
   acting captain who replaced them).
   - In the lobby, the dock toggles Ready and Unready.
   - On the viewer's own turn in `awaiting`, the pool cards take `onSelect`: select a map,
-    then Lock in, which sends `lock` with the map and the awaited `plan_index`.
-  - The card, the turn and the timeline show "Locked in" at once. The command's returned
+    then Lock In, which sends `lock` with the map and the awaited `plan_index`.
+  - The card, the turn and the timeline show "Locked In" at once. The command's returned
     state then takes over, and the step still reveals at its `reveal_at`.
   - During the intro, a spotlight or a pause, the dock shows Locked with the countdown to
     the unlock and who acts next.
@@ -1116,26 +1116,26 @@ only from the view model, through the pick/ban visual core (see
   - `override-sequence` with `{ preset_id }` or `{ from_stage_key }`, in the lobby. The
     Sequence dropdown loads the stages with `fetchPickBanConfig` once the lobby dock
     mounts, and offers every preset plus each stage that has a block.
-  - `pause` / `resume`, `undo` (Undo last step, while running or paused), and `hand-over`
+  - `pause` / `resume`, `undo` (Undo Last Step, while running or paused), and `hand-over`
     with `{ side, user_id }`, picked from that side's roster in the payload (choosing the
     captain sends `user_id: null`)
   - Reopen, which sends `undo` on a complete session with a ban or pick in it, pinned to
     the version its confirmation opened on
-  - `edit-final` with `{ maps }`, from the Edit final maps… editor once the last spotlight
+  - `edit-final` with `{ maps }`, from the Edit Final Maps… editor once the last spotlight
     is over, pinned to the version the editor opened on. The editor starts from the final
     summary, offers the non-excluded pool and both teams, and checks the same rules the
     server does before Save is enabled. Once the session has moved past that version, it
     says the final maps changed since it opened, holds Save, and offers Reload, which
     starts it again from the current summary and version.
   - `lock` with `{ side, map, plan_index }` to act for the awaited side: select a card, then
-    Lock in, with the same optimistic "Locked in" a captain gets, kept until the step
+    Lock In, with the same optimistic "Locked In" a captain gets, kept until the step
     reveals. A manager never sends `hover`. On the viewer's own turn as captain, the
     captain controls handle it instead. Between turns the act-for strip stays, locked with
     the countdown and who is up next, so nothing below it moves from Start to the last
     lock-in.
   - `restart` and `cancel`; they, Reopen and an edit-final save each run only after a
     confirmation that says what will change
-  - Copy player link and Copy stream link (`buildMatchLinks`)
+  - Copy Player Link and Copy Stream Link (`buildMatchLinks`)
 
   The dock disables its buttons while a command is in flight, and shows nothing
   optimistic apart from the act-for lock-in. A refusal shows its specific reason; a

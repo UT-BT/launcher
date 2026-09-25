@@ -7,6 +7,7 @@ import { displayMapName } from '@/app/utils/format'
 import {
     INTRO_ENTRANCE_MAX_MS,
     REVEAL_ENTRANCE_MAX_MS,
+    actionTagOf,
     playsEntrance,
     sceneDirection,
     type PickBanBanner,
@@ -35,7 +36,7 @@ const TURN_SQUARE = 'w-32 @md/stage:w-44 @[80rem]/stage:w-72 max-w-[calc(100cqh-
 
 const REVEAL_WIDTH = 'w-36 @md/stage:w-48 @3xl/stage:w-60 @[80rem]/stage:w-96 max-w-[calc(100cqh-7.5rem)]'
 
-const DISCARDED = 'Its bans and picks don’t count.'
+const DISCARDED = 'Its picks and bans don’t count.'
 
 const DECIDER_LETTERS = [...'DECIDER']
 
@@ -52,13 +53,13 @@ function useSceneDirection(scene: PickBanScene): PickBanSceneDirection {
 function stageAnnouncement(view: PickBanView): string {
     switch (view.stagePhase) {
         case 'intro':
-            return `${view.match.title}. Picks and bans are about to start.`
+            return `${view.match.title}. Picks & Bans are about to start.`
         case 'awaiting':
-            return view.turn ? `${view.turn.actionLabel}.` : ''
+            return view.turn ? `${actionTagOf(view.turn)}.` : ''
         case 'spotlight':
             return view.spotlight?.map ? `${revealAnnouncement(view.spotlight)}: ${displayMapName(view.spotlight.map)}.` : ''
         case 'complete':
-            return 'Pick/ban complete.'
+            return 'Picks & Bans complete.'
         default:
             return ''
     }
@@ -77,7 +78,7 @@ export function CentreStage({ view, summaryAction, className }: CentreStageProps
 
     return (
         <section
-            aria-label="Pick/ban stage"
+            aria-label="Picks & Bans Stage"
             className={cn(
                 '@container-size/stage relative flex items-center justify-center overflow-hidden rounded-xl border border-hairline/10 bg-card/30 p-4',
                 onTheClock && cn('bg-gradient-to-b to-transparent', onTheClock.wash),
@@ -111,7 +112,7 @@ function StageContent({ view, summaryAction }: { view: PickBanView; summaryActio
             return (
                 <StageNotice
                     icon={CalendarClock}
-                    title="Not open yet"
+                    title="Not Open Yet"
                     detail="The lobby opens on match day. The teams, maps and steps here are a preview."
                 />
             )
@@ -149,12 +150,12 @@ function StageContent({ view, summaryAction }: { view: PickBanView; summaryActio
                 </div>
             )
         case 'cancelled':
-            return <StageNotice icon={Ban} title="Pick/ban cancelled" reason={endReasonOf(view.banners)} detail={DISCARDED} />
+            return <StageNotice icon={Ban} title="Picks & Bans have been cancelled" reason={endReasonOf(view.banners)} detail={DISCARDED} />
         case 'voided':
             return (
                 <StageNotice
                     icon={CircleSlash}
-                    title="Pick/ban voided"
+                    title="Picks & Bans have been voided"
                     reason={endReasonOf(view.banners) ?? 'The match changed after this session opened.'}
                     detail={DISCARDED}
                 />
@@ -319,13 +320,13 @@ export function TurnCard({ turn, previewCard, stepCount, mapCount }: {
                         />
                     </div>
                     <p className="text-sm font-semibold text-foreground">{displayMapName(previewCard.map)}</p>
-                    <p className={cn('text-[11px] font-bold uppercase tracking-wider', tone.text)}>{who} is considering this map</p>
+                    <p className={cn('text-[11px] font-bold uppercase tracking-wider', tone.text)}>{who} is considering this map…</p>
                 </div>
             ) : (
                 <div className={cn('flex aspect-square flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed', TURN_SQUARE, tone.line)}>
                     <Icon className={cn('size-8 opacity-60', tone.text)} />
                     <p className="px-3 text-xs text-muted-foreground">
-                        {turn.lockedIn ? 'Locked in, revealing now' : turn.viewerActs ? 'Your turn: select a map, then lock in' : `Waiting for ${who} to lock in`}
+                        {turn.lockedIn ? 'Locked in, revealing now!' : turn.viewerActs ? 'Your turn: select a map, then lock in' : `Waiting for ${who} to lock in`}
                     </p>
                 </div>
             )}
@@ -335,8 +336,8 @@ export function TurnCard({ turn, previewCard, stepCount, mapCount }: {
 
 function revealByline(entry: PickBanTimelineEntry): string {
     if (entry.automatic && entry.action !== 'decider') return 'Last map standing · locked automatically'
-    if (entry.action === 'pick') return `${entry.actionLabel} map ${entry.mapNumber}`
-    if (entry.segment === 'ban_down') return `Ban-down · ${entry.actionLabel}`
+    if (entry.action === 'pick') return `Picked by ${entry.actorLabel}`
+    if (entry.segment === 'ban_down') return `Ban · ${entry.actionLabel}`
     return entry.actionLabel
 }
 
@@ -461,7 +462,7 @@ export function RevealCard({ entry, countdown, upNext, entranceMs = REVEAL_ENTRA
                 <CountdownBar countdown={countdown} tone={toneKey} />
             </motion.div>
             <motion.p variants={caption} className={cn('text-xs text-muted-foreground @[80rem]/stage:text-sm', !upNext && 'invisible')}>
-                Up next: {upNext?.actionLabel ?? ''}
+                Next: {upNext ? actionTagOf(upNext) : ''}
             </motion.p>
         </motion.div>
     )

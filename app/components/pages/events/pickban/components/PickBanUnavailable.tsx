@@ -18,7 +18,7 @@ export function PickBanUnavailable({ error, icon: Icon, className }: PickBanUnav
         <div className={cn('flex flex-col items-center justify-center gap-2 text-center', className)}>
             {Icon && <Icon className="size-8 text-muted-foreground" />}
             <h2 className="text-lg font-semibold text-foreground">
-                {hidden ? 'This pick/ban isn’t available' : 'Couldn’t load this pick/ban'}
+                {hidden ? 'Picks & Bans page not available' : 'Failed to load Picks & Bans'}
             </h2>
             <p className="max-w-sm text-sm text-muted-foreground">
                 {hidden

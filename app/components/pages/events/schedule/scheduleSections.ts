@@ -72,7 +72,7 @@ export function pickBanCallToAction(
 }
 
 export function matchTimeLabel(match: Pick<EventMatch, 'status' | 'scheduled_at'>, timezone: string): string {
-    if (match.status === 'live') return 'Live now'
+    if (match.status === 'live') return 'Live Now'
     if (match.scheduled_at) return formatSlotTime(match.scheduled_at, timezone)
     return 'No time booked yet'
 }

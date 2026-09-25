@@ -257,19 +257,19 @@ function RowActions({ row, eventSlug, openingId, copiedKey, onOpenLobby, onOpenP
         <div className="flex flex-wrap items-center justify-end gap-1.5">
             {row.canOpenLobby && (
                 <Button size="sm" onClick={() => onOpenLobby(row.matchId)} disabled={openingId === row.matchId}>
-                    <DoorOpen /> {openingId === row.matchId ? 'Opening…' : 'Open lobby'}
+                    <DoorOpen /> {openingId === row.matchId ? 'Opening…' : 'Open Lobby'}
                 </Button>
             )}
             <Button asChild size="sm" variant="outline">
                 <NavLink view="match-pickban" params={{ eventSlug, matchId: row.matchId }} onActivate={onOpenPage}>
-                    <ExternalLink /> Open page
+                    <ExternalLink /> Open Page
                 </NavLink>
             </Button>
             <Button size="sm" variant="ghost" onClick={() => onCopy(playerKey, row.playerLink)}>
-                <LinkIcon /> {copiedKey === playerKey ? 'Copied' : 'Copy player link'}
+                <LinkIcon /> {copiedKey === playerKey ? 'Copied' : 'Copy Player Link'}
             </Button>
             <Button size="sm" variant="ghost" onClick={() => onCopy(streamKey, row.streamLink)}>
-                <Radio /> {copiedKey === streamKey ? 'Copied' : 'Copy stream link'}
+                <Radio /> {copiedKey === streamKey ? 'Copied' : 'Copy Stream Link'}
             </Button>
         </div>
     )

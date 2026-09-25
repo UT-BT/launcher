@@ -60,7 +60,7 @@ describe('toQueueRow', () => {
     it('labels a wrong_status block by what the current session is doing', () => {
         const row = toQueueRow(entry({ session_status: 'complete', blocking_reason: 'wrong_status' }), 'cup')
         expect(row.status).toBe('complete')
-        expect(row.blockingReasonLabel).toBe('Pick/ban already complete')
+        expect(row.blockingReasonLabel).toBe('Picks & Bans are already complete')
     })
 
     it('reads TBD for an undecided side', () => {

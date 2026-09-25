@@ -22,7 +22,7 @@ const ACTION_ICON: Record<PickBanStepAction, LucideIcon> = {
 
 const SEGMENT_LABEL: Record<PickBanTimelineEntry['segment'], string> = {
     lettered: 'Sequence',
-    ban_down: 'Ban-down',
+    ban_down: 'Bans',
     decider: 'Decider',
 }
 

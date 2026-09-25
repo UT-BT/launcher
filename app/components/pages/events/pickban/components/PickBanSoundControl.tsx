@@ -59,13 +59,13 @@ export function PickBanSoundControl({ preference, onToggle, onChange, onPreview,
                 className={cn(className, 'aria-expanded:border-accent-500/60 aria-expanded:bg-accent-500/25')}
             >
                 <Icon className="size-3.5" />
-                {on ? 'Sound on' : 'Sound off'}
+                {on ? 'Sound On' : 'Sound Off'}
                 <ChevronDown className={cn('size-3.5 opacity-70 transition-transform', open && 'rotate-180')} />
             </button>
             <div
                 id={panelId}
                 role="group"
-                aria-label="Sound settings"
+                aria-label="Sound Settings"
                 hidden={!open}
                 className="absolute left-0 top-full z-40 mt-2 w-72 max-w-[calc(100vw-2rem)] space-y-3 rounded-xl border border-hairline/10 bg-card/95 p-3 shadow-xl shadow-black/30 backdrop-blur-xl"
             >

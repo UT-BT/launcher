@@ -171,7 +171,7 @@ describe('pickBanCallToAction', () => {
 
 describe('matchTimeLabel', () => {
     it('says Live now for a live match whatever its booked time', () => {
-        expect(matchTimeLabel(match({ status: 'live' }), 'UTC')).toBe('Live now')
+        expect(matchTimeLabel(match({ status: 'live' }), 'UTC')).toBe('Live Now')
     })
 
     it('renders a booked time in the display zone', () => {

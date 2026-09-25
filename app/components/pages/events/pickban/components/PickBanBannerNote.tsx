@@ -14,14 +14,14 @@ function bannerCopy(banner: PickBanBanner): BannerCopy {
         case 'voided':
             return {
                 icon: CircleSlash,
-                title: 'This pick/ban was voided',
+                title: 'This Picks & Bans session was voided',
                 detail: banner.reason,
                 className: 'bg-red-500/10 border-red-500/30 text-red-300',
             }
         case 'cancelled':
             return {
                 icon: Ban,
-                title: 'This pick/ban was cancelled',
+                title: 'This Picks & Bans session was cancelled',
                 detail: banner.reason,
                 className: 'bg-rose-500/10 border-rose-500/30 text-rose-300',
             }

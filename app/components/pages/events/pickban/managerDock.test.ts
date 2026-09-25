@@ -160,7 +160,7 @@ describe('opening a lobby', () => {
             phase: null,
             primary: {
                 command: 'open',
-                label: 'Open lobby',
+                label: 'Open Lobby',
                 hint: 'Opens the lobby, so both captains can gather and ready up.',
                 disabled: false,
                 blocked: null,
@@ -252,7 +252,7 @@ describe('status line', () => {
         expect(phase(pickBanState(), T0)).toMatchObject({ status: 'lobby', phase: 'Waiting for Start' })
         expect(phase(started(), T0 + 500)).toMatchObject({ status: 'running', phase: 'Starting' })
         expect(phase(started(), T0 + LEAD_MS + 1_000)).toMatchObject({ status: 'running', phase: 'Intro' })
-        expect(phase(started(), AWAITING_A)).toMatchObject({ status: 'running', phase: 'Step 1 of 7 · Crimson Cats bans' })
+        expect(phase(started(), AWAITING_A)).toMatchObject({ status: 'running', phase: 'Step 1 of 7 · Crimson Cats (ban)' })
         expect(phase(firstBan, revealAt + 1_000)).toMatchObject({ status: 'running', phase: 'Step 1 of 7 · Revealing' })
         expect(phase(paused(firstBan, unlockAt(firstBan) + 1_000), unlockAt(firstBan) + 5_000)).toMatchObject({ status: 'paused', phase: 'Step 2 of 7' })
         expect(phase(pickBanState({ id: null, status: 'none', phase: null }), T0)).toMatchObject({ status: 'none', phase: null })
@@ -287,7 +287,7 @@ describe('run controls', () => {
 })
 
 describe('warnings', () => {
-    const RESULTS_WARNING = 'Results are already entered for this match, so the pick/ban can’t start or change the maps it wrote.'
+    const RESULTS_WARNING = 'Results are already entered for this match, so the Picks & Bans process can’t start or change the maps it wrote.'
 
     it('warns when results already exist, whatever else blocks Start', () => {
         const withResults = pickBanState({
@@ -691,10 +691,10 @@ describe('restarting and cancelling', () => {
         expect(asked?.request).toBeNull()
         expect(managerDockOf(view, asked!.play)?.confirm).toEqual({
             command: 'restart',
-            title: 'Restart the pick/ban?',
-            message: 'Every ban and pick so far is undone and both teams go back to the lobby. Both Ready marks clear, and any maps this pick/ban wrote into the match are removed.',
+            title: 'Restart the Picks & Bans process?',
+            message: 'Every pick and ban so far is undone and both teams go back to the lobby. Both Ready marks clear, and any maps this Picks & Bans process wrote into the match are removed.',
             confirmLabel: 'Restart',
-            dismissLabel: 'Keep it',
+            dismissLabel: 'Keep It',
         })
 
         const confirmed = confirmManagerCommand(asked!.play, view)
@@ -709,9 +709,9 @@ describe('restarting and cancelling', () => {
         const asked = beginManagerCommand(IDLE_MANAGER_PLAY, view, { command: 'cancel' })!
         expect(managerDockOf(view, asked.play)?.confirm).toMatchObject({
             command: 'cancel',
-            title: 'Cancel the pick/ban?',
-            message: 'This ends the pick/ban for good. Its bans and picks won’t count, and any maps it wrote into the match are removed. You can open a new lobby afterwards.',
-            confirmLabel: 'Cancel pick/ban',
+            title: 'Cancel the Picks & Bans process?',
+            message: 'This ends the Picks & Bans process for good. Its picks and bans won’t count, and any maps it wrote into the match are removed. You can open a new lobby afterwards.',
+            confirmLabel: 'Cancel Picks & Bans',
         })
 
         const dismissed = dismissManagerConfirm(asked.play)
@@ -741,7 +741,7 @@ describe('reopening', () => {
         expect(managerDockOf(view, IDLE_MANAGER_PLAY)?.history).toContainEqual({
             command: 'reopen',
             label: 'Reopen',
-            hint: 'Takes back the last ban or pick, with any automatic step after it, and runs the pick/ban again from there.',
+            hint: 'Takes back the last pick or ban, with any automatic step after it, and continues the Picks & Bans process from there.',
             disabled: false,
         })
 
@@ -749,10 +749,10 @@ describe('reopening', () => {
         expect(asked?.request).toBeNull()
         expect(managerDockOf(view, asked!.play)?.confirm).toEqual({
             command: 'reopen',
-            title: 'Reopen the pick/ban?',
-            message: 'The last ban or pick is undone, with any automatic step after it, and the pick/ban waits on that step again. The maps it wrote into the match are removed, and any edits to the final maps are discarded.',
+            title: 'Reopen the Picks & Bans process?',
+            message: 'The last pick or ban is undone, with any automatic step after it, and the Picks & Bans process waits on that step again. The maps it wrote into the match are removed, and any edits to the final maps are discarded.',
             confirmLabel: 'Reopen',
-            dismissLabel: 'Keep it',
+            dismissLabel: 'Keep It',
         })
 
         const confirmed = confirmManagerCommand(asked!.play, view)
@@ -826,7 +826,7 @@ describe('editing the final maps', () => {
     it('is offered on a complete session only, and saves only from an open editor', () => {
         expect(managerDockOf(complete(), IDLE_MANAGER_PLAY)?.history).toContainEqual({
             command: 'edit-final',
-            label: 'Edit final maps…',
+            label: 'Edit Final Maps…',
             hint: 'Rewrites the match’s maps: their order, who picked each and the decider.',
             disabled: false,
         })
@@ -849,9 +849,9 @@ describe('editing the final maps', () => {
         expect(managerDockOf(view, asked.play)?.confirm).toEqual({
             command: 'edit-final',
             title: 'Save the edited final maps?',
-            message: 'The match’s maps are rewritten to your list, in its order, with the picks and decider you set. The final summary is marked Edited, and the timeline keeps the bans and picks as they were played.',
-            confirmLabel: 'Save final maps',
-            dismissLabel: 'Keep editing',
+            message: 'The match’s maps are rewritten to your list, in its order, with the picks and decider you set. The final summary is marked Edited, and the timeline keeps the picks and bans as they were played.',
+            confirmLabel: 'Save Final Maps',
+            dismissLabel: 'Keep Editing',
         })
         expect(managerDockOf(view, dismissManagerConfirm(asked.play))?.finalEditor?.body).toEqual(EDITED.body)
 
@@ -950,6 +950,6 @@ describe('editing the final maps', () => {
         const nothingToUndo = new ApiError(409, 'The server’s own words', 'Request failed', 'nothing_to_undo')
         const reopening = confirmManagerCommand(beginManagerCommand(IDLE_MANAGER_PLAY, view, { command: 'reopen' })!.play, view)!.play
 
-        expect(managerDockOf(view, managerCommandRejected(reopening, nothingToUndo))?.rejection).toBe('There’s no ban or pick to undo.')
+        expect(managerDockOf(view, managerCommandRejected(reopening, nothingToUndo))?.rejection).toBe('There’s no pick or ban to undo.')
     })
 })

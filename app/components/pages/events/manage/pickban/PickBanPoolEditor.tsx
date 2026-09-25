@@ -270,7 +270,7 @@ export function PickBanPoolEditor({
                 detail={poolDirty
                     ? 'This saves straight away and replaces the unsaved pool edits on this stage.'
                     : 'This saves straight away. Unsaved edits on the source stage are not copied.'}
-                confirmText="Copy pool"
+                confirmText="Copy Pool"
             />
         </SubCard>
     )

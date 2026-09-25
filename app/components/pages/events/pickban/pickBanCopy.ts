@@ -9,8 +9,8 @@ export const PICK_BAN_PRESET_LABELS: Record<PickBanPresetId, string> = {
 
 export function introCountdownWords(remainingMs: number): string {
     const seconds = Math.ceil(remainingMs / 1000)
-    if (seconds <= 0) return 'Picks and bans are starting…'
-    return `${seconds} ${seconds === 1 ? 'second' : 'seconds'} until picks and bans start…`
+    if (seconds <= 0) return 'Picks & Bans are starting…'
+    return `${seconds} ${seconds === 1 ? 'second' : 'seconds'} until Picks & Bans start…`
 }
 
 export function matchSubtitle(match: PickBanMatchHeading): string {

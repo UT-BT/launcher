@@ -8,7 +8,7 @@ import { buildMatchLinks } from '@/app/components/navigation/matchLinks'
 import { useCopyFeedback } from '@/app/hooks/useCopyFeedback'
 import { useDisplayTimezone } from '@/app/utils/timezone'
 import { eventErrorMessage, type EventMatch, type MyMatchEntry, type MyPickBanSession, type ScheduleEntry } from '@/app/utils/api'
-import { Chip, MATCH_STATUS_STYLES, teamLabel } from '../bracket/bracketShared'
+import { Chip, MATCH_STATUS_STYLES, opponentNameOf, teamLabel } from '../bracket/bracketShared'
 import { streamerName } from '../eventsShared'
 import { TeamName } from '../TeamRoster'
 import { PickBanJoinBanner } from '../pickban/components/PickBanJoinBanner'
@@ -54,7 +54,7 @@ export function ScheduleTab({
         return (
             <div className="p-6 flex flex-col items-center gap-3">
                 <p className="text-sm text-muted-foreground">The schedule could not be loaded.</p>
-                <Button variant="secondary" onClick={onRefresh}>Try again</Button>
+                <Button variant="secondary" onClick={onRefresh}>Try Again</Button>
             </div>
         )
     }
@@ -77,7 +77,7 @@ export function ScheduleTab({
             {sections.upcoming.length > 0 && (
                 <ScheduleSection title="Upcoming" count={sections.upcoming.length}>
                     {sections.upcoming.map(entry => (
-                        <BookedMatchCard key={entry.match.id} entry={entry} eventSlug={eventSlug} pickBanSession={pickBanSession} />
+                        <BookedMatchCard key={entry.match.id} entry={entry} myTeamId={myTeamId} eventSlug={eventSlug} pickBanSession={pickBanSession} />
                     ))}
                 </ScheduleSection>
             )}
@@ -86,7 +86,7 @@ export function ScheduleTab({
                 <ScheduleSection title="Needs a time">
                     <p className="text-xs text-muted-foreground">The matches waiting on a time could not be loaded.</p>
                     <div>
-                        <Button size="sm" variant="secondary" onClick={onRefresh}>Try again</Button>
+                        <Button size="sm" variant="secondary" onClick={onRefresh}>Try Again</Button>
                     </div>
                 </ScheduleSection>
             )}
@@ -180,7 +180,7 @@ function PickBanPageLink({ eventSlug, matchId, action }: {
         return (
             <Button asChild size="sm" variant="outline">
                 <PickBanLink eventSlug={eventSlug} matchId={matchId}>
-                    <Swords /> View pick/ban
+                    <Swords /> View Picks & Bans
                 </PickBanLink>
             </Button>
         )
@@ -192,13 +192,14 @@ function PickBanPageLink({ eventSlug, matchId, action }: {
             matchId={matchId}
             className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
         >
-            <Swords className="size-3.5" /> Pick/ban page
+            <Swords className="size-3.5" /> Visit Picks & Bans Page
         </PickBanLink>
     )
 }
 
-function BookedMatchCard({ entry, eventSlug, pickBanSession }: {
+function BookedMatchCard({ entry, myTeamId, eventSlug, pickBanSession }: {
     entry: MyMatchEntry
+    myTeamId: string | null
     eventSlug: string
     pickBanSession: MyPickBanSession | null
 }) {
@@ -212,7 +213,7 @@ function BookedMatchCard({ entry, eventSlug, pickBanSession }: {
         )}>
             <MatchHeading match={match} stageName={entry.stage.name} />
 
-            {action === 'join' && <PickBanJoinBanner eventSlug={eventSlug} matchId={match.id} />}
+            {action === 'join' && <PickBanJoinBanner eventSlug={eventSlug} matchId={match.id} opponent={opponentNameOf(match, myTeamId)} />}
 
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                 <MatchTime match={match} />
@@ -248,18 +249,18 @@ function StreamingMatchCard({ entry, eventSlug, copied, onCopy }: {
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                 <MatchTime match={match} />
                 <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    Pick/ban
+                    State:
                     <PickBanStatusChip status={match.pick_ban_status} />
                 </span>
             </div>
 
             <div className="flex flex-wrap items-center gap-1.5">
                 <Button size="sm" variant="secondary" onClick={() => onCopy(match.id, streamLink)}>
-                    <Radio /> {copied ? 'Copied' : 'Copy stream link'}
+                    <Radio /> {copied ? 'Copied' : 'Copy Stream Link'}
                 </Button>
                 <Button asChild size="sm" variant="outline">
                     <PickBanLink eventSlug={eventSlug} matchId={match.id}>
-                        <ExternalLink /> Open pick/ban page
+                        <ExternalLink /> Open Picks & Bans
                     </PickBanLink>
                 </Button>
             </div>
@@ -286,7 +287,7 @@ function ScheduleMatchCard({ entry, myTeamId, onOpenPicker, eventSlug, pickBanSe
         )}>
             <MatchHeading match={match} />
 
-            {action === 'join' && <PickBanJoinBanner eventSlug={eventSlug} matchId={match.id} />}
+            {action === 'join' && <PickBanJoinBanner eventSlug={eventSlug} matchId={match.id} opponent={opponentNameOf(match, myTeamId)} />}
 
             {!entry.schedulable ? (
                 <p className="text-xs text-muted-foreground">{schedulabilityReason(entry.reason)}</p>

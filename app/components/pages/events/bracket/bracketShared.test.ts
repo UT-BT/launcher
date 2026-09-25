@@ -3,7 +3,7 @@ import type {
     EventBracketGroup, EventBracketStage, EventBracketTeamRef, EventFormatSpec, EventMatch, EventMatchMap,
 } from '@/app/utils/api'
 import {
-    mapWinnerOf, matchOrder, nextOwnMatch, pickBanMapLabel, schedulingWindowLabel, schedulingWindowState,
+    mapWinnerOf, matchOrder, nextOwnMatch, opponentNameOf, pickBanMapLabel, schedulingWindowLabel, schedulingWindowState,
     seriesProgress, unfinishedFeeders,
 } from './bracketShared'
 
@@ -340,5 +340,25 @@ describe('nextOwnMatch', () => {
     it('returns null without a team id', () => {
         const soon = match({ id: 'soon', team_a: myTeam, team_b: otherTeam, status: 'scheduled', scheduled_at: '2026-06-02T00:00:00+00:00' })
         expect(nextOwnMatch([stageWith([soon])], null, NOW)).toBeNull()
+    })
+})
+
+describe('opponentNameOf', () => {
+    const myTeam = { id: 'mine', name: 'My Team', seed: 1, status: 'registered' as const }
+    const otherTeam = { id: 'other', name: 'Other Team', seed: 2, status: 'registered' as const }
+
+    it('names the other side of my match from either side', () => {
+        expect(opponentNameOf(match({ team_a: myTeam, team_b: otherTeam }), myTeam.id)).toBe('Other Team')
+        expect(opponentNameOf(match({ team_a: otherTeam, team_b: myTeam }), myTeam.id)).toBe('Other Team')
+    })
+
+    it('has no name while the other side is not decided', () => {
+        expect(opponentNameOf(match({ team_a: myTeam, team_b: null }), myTeam.id)).toBeNull()
+    })
+
+    it('has no name for a match I am not in, a missing match or no team id', () => {
+        expect(opponentNameOf(match({ team_a: otherTeam, team_b: null }), myTeam.id)).toBeNull()
+        expect(opponentNameOf(undefined, myTeam.id)).toBeNull()
+        expect(opponentNameOf(match({ team_a: myTeam, team_b: otherTeam }), null)).toBeNull()
     })
 })

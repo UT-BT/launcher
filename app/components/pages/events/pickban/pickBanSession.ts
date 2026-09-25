@@ -140,7 +140,7 @@ export function createPickBanSessionStore({
         pinnedVersion: number | null,
     ): Promise<PickBanState> => {
         const token = accessToken()
-        if (!token) throw new Error('Sign in to take part in this pick/ban.')
+        if (!token) throw new Error('Sign in to take part in this Picks & Bans process.')
         const sentAt = now()
         const body = input === null ? undefined : { ...input[0], version: pinnedVersion ?? snapshot.state?.version ?? 0 }
         try {

@@ -20,7 +20,7 @@ import { EventLfpList } from './events/EventLfpList'
 import { SignupPanel } from './events/SignupPanel'
 import { ManagePanel } from './events/ManagePanel'
 import { BracketTab } from './events/bracket/BracketTab'
-import { nextOwnMatch, sideOf, teamLabel } from './events/bracket/bracketShared'
+import { nextOwnMatch, opponentNameOf, sideOf, teamLabel } from './events/bracket/bracketShared'
 import { EventRosterProvider } from './events/TeamRoster'
 import { MapsTab } from './events/maps/MapsTab'
 import { stagesWithPools } from './events/maps/mapsShared'
@@ -240,11 +240,16 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
     const [schedulerMatchId, setSchedulerMatchId] = useState<string | null>(null)
 
     useUnsavedChanges(formatDraft !== null, 'The tournament format has edits you have not saved yet.')
-    useUnsavedChanges(Object.keys(pickBanDrafts).length > 0, 'The pick/ban setup has edits you have not saved yet.')
+    useUnsavedChanges(Object.keys(pickBanDrafts).length > 0, 'The Picks & Bans setup has edits you have not saved yet.')
 
     const now = useNow(1000)
     const myTeamId = my?.team?.id ?? null
     const nextMatch = useMemo(() => nextOwnMatch(bracket?.stages ?? [], myTeamId, now), [bracket, myTeamId, now])
+    const pickBanMatchId = my?.pick_ban_session?.match_id ?? null
+    const pickBanOpponent = useMemo(() => {
+        const match = bracket?.stages.flatMap(stage => stage.matches).find(candidate => candidate.id === pickBanMatchId)
+        return opponentNameOf(match, myTeamId)
+    }, [bracket, pickBanMatchId, myTeamId])
     const mapsStages = useMemo(() => stagesWithPools(pickBanConfig), [pickBanConfig])
     const hasMapsPool = mapsStages.length > 0
 
@@ -321,7 +326,7 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
                 </div>
                 {error && <ErrorBanner message={error} />}
                 {my?.pick_ban_session && (
-                    <PickBanJoinBanner eventSlug={eventSlug} matchId={my.pick_ban_session.match_id} />
+                    <PickBanJoinBanner eventSlug={eventSlug} matchId={my.pick_ban_session.match_id} opponent={pickBanOpponent} />
                 )}
                 {nextMatch && myTeamId && <NextMatchBanner match={nextMatch} myTeamId={myTeamId} now={now} />}
 

@@ -47,9 +47,9 @@ function cardLabel(card: PickBanCardView, name: string): string {
         case 'decider':
             return `${name}, the decider, map ${card.mapNumber}`
         case 'excluded':
-            return `${name}, excluded. ${card.exclusionReason ?? ''}`.trim()
+            return card.exclusionReason ? `${name} has been excluded: ${card.exclusionReason}` : `${name} has been excluded`
         default:
-            return card.previewed ? `${name}, being considered` : name
+            return card.previewed ? `${name} is being considered` : name
     }
 }
 
@@ -137,7 +137,7 @@ export function PoolCard({ card, previewActor, onSelect }: {
                 )}
                 {card.lockedIn && (
                     <motion.span key="locked-in" aria-hidden {...CHIP_MOTION} className={cn(CORNER_CHIP, 'bg-emerald-500 text-white')}>
-                        Locked in
+                        Locked In
                     </motion.span>
                 )}
             </AnimatePresence>

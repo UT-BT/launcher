@@ -71,7 +71,7 @@ export function EditFinalEditor({ editor, resultsWarning, onChange, onReload, on
                 className="inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-hairline/20 px-3 text-sm font-medium text-muted-foreground transition-colors hover:border-hairline/30 hover:text-foreground disabled:pointer-events-none disabled:opacity-40 @2xl/final:h-9 @2xl/final:self-start @2xl/final:text-xs"
             >
                 <Plus className="size-4" />
-                Add a map
+                Add a Map
             </button>
             <ul aria-live="polite" className="space-y-1 text-xs text-red-300">
                 {editor.problems.map((problem) => <li key={problem}>{problem}</li>)}

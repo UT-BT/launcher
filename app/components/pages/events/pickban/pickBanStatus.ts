@@ -9,7 +9,7 @@ export interface PickBanStatusBadge {
 }
 
 const STATUS_BADGES: Record<PickBanSessionStatus, PickBanStatusBadge> = {
-    none: { label: 'Not open', tone: 'idle' },
+    none: { label: 'Not Open', tone: 'idle' },
     lobby: { label: 'Lobby', tone: 'ready' },
     running: { label: 'Live', tone: 'live' },
     paused: { label: 'Paused', tone: 'paused' },
@@ -32,9 +32,9 @@ const BLOCKING_REASON_LABELS: Partial<Record<PickBanErrorCode, string>> = {
 }
 
 const WRONG_STATUS_LABELS: Partial<Record<PickBanSessionStatus, string>> = {
-    running: 'Pick/ban already in progress',
-    paused: 'Pick/ban is paused',
-    complete: 'Pick/ban already complete',
+    running: 'Picks & Bans are already in progress',
+    paused: 'Picks & Bans are paused',
+    complete: 'Picks & Bans are already complete',
 }
 
 export function blockingReasonLabel(code: PickBanErrorCode | null, status: PickBanSessionStatus): string | null {
