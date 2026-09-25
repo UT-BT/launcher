@@ -437,11 +437,6 @@ export function RevealCard({ entry, countdown, upNext, entranceMs = REVEAL_ENTRA
                         )}
                     </div>
                 </motion.div>
-                {kind === 'pick' && (
-                    <Ribbon strip={motionOf.ribbon} text={motionOf.ribbonText} hue={hue}>
-                        {entry.actionLabel}
-                    </Ribbon>
-                )}
                 {decider && (
                     <Ribbon strip={motionOf.deciderRibbon} hue={hue} dark>
                         <span className="sr-only">Decider</span>

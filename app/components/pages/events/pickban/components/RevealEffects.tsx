@@ -132,9 +132,8 @@ export function Strike({ slash, crack, hue, cracks }: { slash: Variants; crack: 
     )
 }
 
-export function Ribbon({ strip, text, hue, dark = false, children }: {
+export function Ribbon({ strip, hue, dark = false, children }: {
     strip: Variants
-    text?: Variants
     hue: string
     dark?: boolean
     children: ReactNode
@@ -147,8 +146,7 @@ export function Ribbon({ strip, text, hue, dark = false, children }: {
                 className="absolute inset-0 origin-left -skew-x-12 rounded-sm"
                 style={{ backgroundColor: hue, boxShadow: `0 6px 24px ${tint(hue, 55)}` }}
             />
-            <motion.span
-                variants={text}
+            <span
                 className={cn(
                     'relative block max-w-full truncate px-3 py-1 font-black uppercase tracking-[0.12em] @[80rem]/stage:py-2',
                     RIBBON_TEXT,
@@ -156,7 +154,7 @@ export function Ribbon({ strip, text, hue, dark = false, children }: {
                 )}
             >
                 {children}
-            </motion.span>
+            </span>
         </div>
     )
 }

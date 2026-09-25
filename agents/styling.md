@@ -442,8 +442,13 @@ change (it reads `useTheme`), so they update live.
   `prefers-reduced-motion: reduce`. Motion driven from JS never sees that rule, so it reads
   the same switch through `usePrefersReducedMotion()` (`app/hooks/usePrefersReducedMotion.ts`):
   - For framer-motion, wrap the tree in a `MotionConfig` whose `skipAnimations` follows
-    the hook, as `PickBanMotion` does. Every enter, exit and layout animation below it is
-    then instant and shows the same information.
+    the hook. Every enter, exit and layout animation below it is then instant and shows
+    the same information.
+  - The pick/ban visual core is the one exception: its reveals are the broadcast, and
+    Windows reports `reduce` whenever its Animation effects are off. `PickBanMotion` takes
+    an explicit `animate` (the match page's Animations toggle, the stream view's `motion=0`)
+    and sets `reducedMotion="never"`. Its wrapper carries `data-motion="on"` while
+    animating, and `shared.css`'s rule skips everything inside `[data-motion='on']`.
   - An animation-frame loop that writes styles steps coarsely instead of gliding, as
     `CountdownBar` does.
 

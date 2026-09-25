@@ -27,16 +27,17 @@ interface StreamViewProps {
     eventSlug: string
     matchId: string
     muted: boolean
+    animate: boolean
 }
 
-export function StreamView({ eventSlug, matchId, muted }: StreamViewProps) {
+export function StreamView({ eventSlug, matchId, muted, animate }: StreamViewProps) {
     const session = usePickBanSession({ accessToken: undefined, slug: eventSlug, matchId, alwaysPoll: true })
     const view = usePickBanView(session.state, session.clockOffsetMs)
     usePickBanPreload(view?.cards)
     usePickBanSound({ state: session.state, clockOffsetMs: session.clockOffsetMs, muted })
 
     return (
-        <PickBanMotion>
+        <PickBanMotion animate={animate}>
             <StreamStage>
                 <div className="flex h-full w-full flex-col overflow-hidden text-foreground">
                     {view ? (

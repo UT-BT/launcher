@@ -167,7 +167,10 @@ and renders a fixed 1920×1080 stage (`stream/StreamStage.tsx`,
 (`isStreamSoundMuted`) and passed straight into `usePickBanSound` as `muted`;
 sound plays by default, and that one boolean is the only thing that silences
 it (see `agents/data-sources.md` → `event-pickban-sessions` for the cue and
-player contract).
+player contract). The `motion=0` query param (`isStreamMotionOff` in
+`events/pickban/pickBanMotionPreference.ts`) turns the animations off; without
+it the stream view animates even when the OS reports reduced motion, since an
+OBS machine with Windows Animation effects off would otherwise show no reveals.
 
 ## Anonymous browsing
 

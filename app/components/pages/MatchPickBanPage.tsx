@@ -1,5 +1,5 @@
 import { Suspense, lazy, useState, type ReactNode } from 'react'
-import { ArrowLeft, Check, Link2, Swords, Volume2, VolumeX, WifiOff } from 'lucide-react'
+import { ArrowLeft, Check, Link2, Sparkles, Swords, Volume2, VolumeX, WifiOff, ZapOff } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { NavLink } from '@/app/components/navigation/NavLink'
 import { useNavigation } from '@/app/components/navigation/NavigationContext'
@@ -20,6 +20,7 @@ import { CaptainDock } from '@/app/components/pages/events/pickban/components/Ca
 import { CentreStage } from '@/app/components/pages/events/pickban/components/CentreStage'
 import { PickBanBannerNote } from '@/app/components/pages/events/pickban/components/PickBanBannerNote'
 import { PickBanMotion } from '@/app/components/pages/events/pickban/components/PickBanMotion'
+import { loadPickBanMotion, savePickBanMotion } from '@/app/components/pages/events/pickban/pickBanMotionPreference'
 import { PickBanStatusChip } from '@/app/components/pages/events/pickban/components/PickBanStatusChip'
 import { PickBanUnavailable } from '@/app/components/pages/events/pickban/components/PickBanUnavailable'
 import { PoolGrid } from '@/app/components/pages/events/pickban/components/PoolGrid'
@@ -49,6 +50,7 @@ export function MatchPickBanPage({ eventSlug, matchId, userProfile, onBackToEven
     const links = buildMatchLinks(eventSlug, matchId)
     const { navigate } = useNavigation()
     const [soundOn, setSoundOn] = useState(false)
+    const [animate, setAnimate] = useState(loadPickBanMotion)
     usePickBanPreload(view?.cards)
     usePickBanSound({ state: session.state, clockOffsetMs: session.clockOffsetMs, muted: !soundOn })
 
@@ -90,12 +92,19 @@ export function MatchPickBanPage({ eventSlug, matchId, userProfile, onBackToEven
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                     <SoundToggleButton on={soundOn} onToggle={() => setSoundOn((current) => !current)} />
+                    <MotionToggleButton
+                        on={animate}
+                        onToggle={() => {
+                            savePickBanMotion(!animate)
+                            setAnimate(!animate)
+                        }}
+                    />
                     <CopyLinkButton link={links.playerLink} />
                 </div>
             </header>
 
             {view ? (
-                <PickBanMotion>
+                <PickBanMotion animate={animate}>
                     <PickBanBody
                         view={view}
                         summaryAction={bracketLink}
@@ -214,6 +223,23 @@ function SoundToggleButton({ on, onToggle }: { on: boolean; onToggle: () => void
         >
             <Icon className="size-3.5" />
             {on ? 'Sound on' : 'Sound off'}
+        </button>
+    )
+}
+
+function MotionToggleButton({ on, onToggle }: { on: boolean; onToggle: () => void }) {
+    const Icon = on ? Sparkles : ZapOff
+
+    return (
+        <button
+            type="button"
+            onClick={onToggle}
+            aria-pressed={on}
+            aria-label={on ? 'Turn pick/ban animations off' : 'Turn pick/ban animations on'}
+            className={HEADER_BUTTON}
+        >
+            <Icon className="size-3.5" />
+            {on ? 'Animations on' : 'Animations off'}
         </button>
     )
 }

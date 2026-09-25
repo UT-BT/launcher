@@ -158,8 +158,6 @@ export function choreography(entranceMs: number) {
         crack: step({ opacity: 0, pathLength: 0 }, { opacity: 0.7, pathLength: 1 }, forward(IMPACT + 0.1, 0.22)),
         desaturate: step({ filter: 'grayscale(0) brightness(1)' }, { filter: 'grayscale(1) brightness(0.45)' }, forward(IMPACT + 0.05, 0.3), reverse(0, 0.25)),
         stamp: step({ opacity: 0, scale: 2.6, rotate: -14 }, { opacity: 1, scale: 1, rotate: 0 }, forward(STAMP_HIT - 0.14, 0.14, SLAM), reverse(0, 0.2)),
-        ribbon: step({ opacity: 0, scaleX: 0 }, { opacity: 1, scaleX: 1 }, forward(IMPACT + 0.06, 0.2)),
-        ribbonText: step({ opacity: 0, x: -18 }, { opacity: 1, x: 0 }, forward(IMPACT + 0.14, 0.24)),
         badge: step({ opacity: 0, scale: 0.4, y: -8 }, { opacity: 1, scale: [0.4, 1.2, 1], y: 0 }, forward(IMPACT + 0.18, 0.26)),
         deciderBadge: step({ opacity: 0, scale: 0.4, y: -8 }, { opacity: 1, scale: [0.4, 1.2, 1], y: 0 }, forward(DECIDER_IMPACT + 0.24, 0.2)),
         sheen: step({ opacity: 0 }, { opacity: 1 }, forward(DECIDER_IMPACT, 0.4)),
