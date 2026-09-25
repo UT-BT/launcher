@@ -950,13 +950,14 @@ only from the view model, through the pick/ban visual core (see
   the returned state (Reopen and Edit final call `sendManagerCommandAt` with their pinned
   version):
   - `open` (no body) while there is no live session: none, cancelled or voided
-  - `start`, disabled with `blockingReasonLabel(startBlockedBy)` while Start would be
-    refused
-  - `choose-a` with `{ side }`, and `swap`, in the lobby (`swap` also runs before the first
-    step)
+  - `start`, disabled while Start would be refused, with `blockingReasonLabel(startBlockedBy)`
+    and what clears it in a callout beside it
+  - `choose-a` with `{ side }`, from the "Who is Team A?" chooser the lobby shows while A
+    is undetermined or the stage seeds are tied, and `swap` otherwise, in the lobby
+    (`swap` also runs before the first step)
   - `override-sequence` with `{ preset_id }` or `{ from_stage_key }`, in the lobby. The
-    picker loads the stages with `fetchPickBanConfig` only when it opens, and offers every
-    preset plus each stage that has a block.
+    Sequence dropdown loads the stages with `fetchPickBanConfig` once the lobby dock
+    mounts, and offers every preset plus each stage that has a block.
   - `pause` / `resume`, `undo` (Undo last step, while running or paused), and `hand-over`
     with `{ side, user_id }`, picked from that side's roster in the payload (choosing the
     captain sends `user_id: null`)

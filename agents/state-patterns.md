@@ -514,14 +514,35 @@ paused one, so neither can run as the other.
   `selectedMapOf`, `withSelectedMap` and `withOptimisticLock`, adding only the manager's own
   gate (the awaited step is open to act for). The lock-in stays until its step reveals,
   since the returned state only marks a lock-in for the side's own captain.
-- `managerDockOf(view, play)` is the dock model, `null` without `affordances.manager`: the
-  buttons in order with labels and disabled flags (every one disabled while a command is in
-  flight), the worded Start blocking reason, the results warning, the voided banner, the
-  Choose A options, whether the sequence override applies, each side's roster for Hand
-  over with who is in control, whether Edit final applies and the open editor, the pending
-  confirmation (title, message, confirm and dismiss labels), the act-for controls, and the
-  refusal. The act-for controls are a `CaptainDock` model, so the captain's dock renders
-  them, and a refused lock-in shows there rather than in the toolbar. They mirror the
+- `managerDockOf(view, play)` is the dock model, `null` without `affordances.manager`.
+  Every button carries its label, a one-line `hint` and a `disabled` flag (every one is
+  disabled while a command is in flight, and `submitting` names that command). It holds:
+  - `status` (the session's) and `phase`, a status line: `Waiting for Start`, `Starting`,
+    `Intro`, `Step 3 of 7 · Azure Owls picks`, `Step 3 of 7 · Revealing`, `Step 3 of 7`
+    while paused, `Final maps written` or `Final maps edited`
+  - `primary`, the one call to action for the status: Open lobby (none, cancelled or
+    voided), Start (lobby), Pause (running) or Resume (paused). Start also carries
+    `blocked`, the worded blocking reason with a `fix` naming what clears it (or `null`),
+    and `readiness`, each team's Ready mark, A first. Once complete it is `null`, and
+    `done` says the final maps are in the match.
+  - `sides`, while the session is in the lobby, running or paused: a tile per team, A
+    first (letter, name, stage seed, and while Hand over applies its roster with who is in
+    control; choosing the captain sends `user_id: null`), `swap` (lobby, or running before
+    the first step), and `chooseA` in the lobby while A is undetermined or the stage seeds
+    don't decide it (missing or tied). The choices stay in `team_a`, `team_b` order, so
+    choosing never reorders them, and they replace Swap. `basis` says why A is A: the
+    better stage seed, or set by a manager (`view.setup.aConfirmed`).
+  - `sequence`, in the same statuses: the preset's label (or Custom sequence), the step
+    count and best-of, whether it was changed for this match and from which stage, the
+    choice keys it matches (the stage it was copied from, then its preset), and whether it
+    can change (lobby only)
+  - `history` (Undo last step, Reopen, Edit final maps…) and `danger` (Restart, Cancel
+    pick/ban), each listed only while it applies
+  - the results warning, the voided banner, the open editor, the pending confirmation
+    (title, message, confirm and dismiss labels), the act-for controls, and the refusal
+
+  The act-for controls are a `CaptainDock` model, so the captain's dock renders
+  them, and a refused lock-in shows there rather than in the panel. They mirror the
   captain's: `choose` while the awaited step is open to act for, `locked_in` for the
   manager's own lock-in until it reveals, `locked` with the view's `countdown` and the
   next `turn` through the start lead, the intro, a spotlight or a pause, and `waiting`
@@ -543,7 +564,7 @@ paused one, so neither can run as the other.
   `changeFinalEditor(play, change)` applies one of `editFinal.ts`'s draft changes, and
   `closeFinalEditor` drops the draft with any refusal it was showing. The dock's
   `finalEditor` is `finalEditorOf` plus `saving` (its save is in flight) and its own
-  `rejection`: a refused save shows there, not in the toolbar, and the draft stays for
+  `rejection`: a refused save shows there, not in the panel, and the draft stays for
   another try. A save refused with `version_conflict` says the final maps changed since
   the editor opened. Once the view shows the newer version the editor is `outdated`,
   which replaces that refusal and holds Save until the draft is reloaded. A save that
@@ -551,9 +572,10 @@ paused one, so neither can run as the other.
 - `managerCommandSucceeded` and `managerCommandRejected(play, error)` settle a command, and
   `dismissManagerRejection` clears the refusal. A refusal without a stable code falls back
   to the captain's `unwordedRejection` (the unreachable-network words, else the error's own
-  message). `sequenceChoices(stages)` lists the override
+  message). `sequenceChoices(stages, sequence)` lists the override
   options: every preset, then each stage that has a block, each keyed by its preset id or
-  stage key so two stages with the same name and best-of never collide.
+  stage key so two stages with the same name and best-of never collide. The first of the
+  dock sequence's keys that is listed is marked `current`.
 - `settleManagerPlay(play, view)` drops a confirmation the session no longer allows, an
   open Edit final draft once Edit final no longer applies (the session left `complete`),
   and an act-for lock-in whose step is awaited again (an undo, by anyone). Any later manager
