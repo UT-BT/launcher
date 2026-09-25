@@ -13,6 +13,7 @@ import { PoolGrid } from '../components/PoolGrid'
 import { StepTimeline } from '../components/StepTimeline'
 import { TeamPanel } from '../components/TeamPanel'
 import { StreamStage } from './StreamStage'
+import type { StreamSound } from './streamSound'
 
 const PANEL_CLASS = 'w-[300px] shrink-0 rounded-none border-y-0'
 
@@ -26,15 +27,15 @@ const POOL_GRID_CLASS = cn(
 interface StreamViewProps {
     eventSlug: string
     matchId: string
-    muted: boolean
+    sound: StreamSound
     animate: boolean
 }
 
-export function StreamView({ eventSlug, matchId, muted, animate }: StreamViewProps) {
+export function StreamView({ eventSlug, matchId, sound, animate }: StreamViewProps) {
     const session = usePickBanSession({ accessToken: undefined, slug: eventSlug, matchId, alwaysPoll: true })
     const view = usePickBanView(session.state, session.clockOffsetMs)
     usePickBanPreload(view?.cards)
-    usePickBanSound({ state: session.state, clockOffsetMs: session.clockOffsetMs, muted })
+    usePickBanSound({ state: session.state, clockOffsetMs: session.clockOffsetMs, ...sound })
 
     return (
         <PickBanMotion animate={animate}>

@@ -1,17 +1,34 @@
-import introUrl from '@/app/assets/sounds/intro.wav'
-import pickUrl from '@/app/assets/sounds/pick.wav'
-import banUrl from '@/app/assets/sounds/ban.wav'
-import banDownUrl from '@/app/assets/sounds/ban-down.wav'
-import deciderUrl from '@/app/assets/sounds/decider.wav'
+import cinematicIntroUrl from '@/app/assets/sounds/cinematic/intro.mp3'
+import cinematicPickUrl from '@/app/assets/sounds/cinematic/pick.mp3'
+import cinematicBanUrl from '@/app/assets/sounds/cinematic/ban.mp3'
+import cinematicBanDownUrl from '@/app/assets/sounds/cinematic/ban-down.mp3'
+import cinematicDeciderUrl from '@/app/assets/sounds/cinematic/decider.mp3'
+import cleanIntroUrl from '@/app/assets/sounds/clean/intro.mp3'
+import cleanPickUrl from '@/app/assets/sounds/clean/pick.mp3'
+import cleanBanUrl from '@/app/assets/sounds/clean/ban.mp3'
+import cleanBanDownUrl from '@/app/assets/sounds/clean/ban-down.mp3'
 
 export type PickBanSoundCueKind = 'intro' | 'pick' | 'ban' | 'ban_down' | 'decider'
 
-export const SOUND_URLS: { [kind in PickBanSoundCueKind]: string } = {
-    intro: introUrl,
-    pick: pickUrl,
-    ban: banUrl,
-    ban_down: banDownUrl,
-    decider: deciderUrl,
+export type PickBanSoundPack = 'cinematic' | 'clean'
+
+export const SOUND_PACK_IDS: readonly PickBanSoundPack[] = ['cinematic', 'clean']
+
+export const SOUND_PACKS: { [pack in PickBanSoundPack]: { [kind in PickBanSoundCueKind]: string } } = {
+    cinematic: {
+        intro: cinematicIntroUrl,
+        pick: cinematicPickUrl,
+        ban: cinematicBanUrl,
+        ban_down: cinematicBanDownUrl,
+        decider: cinematicDeciderUrl,
+    },
+    clean: {
+        intro: cleanIntroUrl,
+        pick: cleanPickUrl,
+        ban: cleanBanUrl,
+        ban_down: cleanBanDownUrl,
+        decider: cinematicDeciderUrl,
+    },
 }
 
 export const SOUND_HIT_MS: { [kind in PickBanSoundCueKind]: number } = {

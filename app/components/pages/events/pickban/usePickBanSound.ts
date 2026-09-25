@@ -1,27 +1,40 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { PickBanState } from '@/app/utils/api'
 import { cuesToPlay } from './pickBanSoundCues'
-import { createPickBanSoundPlayer } from './pickBanSoundPlayer'
+import { createPickBanSoundPlayer, type PickBanSoundPlayer } from './pickBanSoundPlayer'
+import type { PickBanSoundPack } from './pickBanSounds'
 
 export interface UsePickBanSoundOptions {
     state: PickBanState | null
     clockOffsetMs: number
     muted: boolean
+    pack: PickBanSoundPack
+    volume: number
 }
 
-export function usePickBanSound({ state, clockOffsetMs, muted }: UsePickBanSoundOptions): void {
+export type PickBanSoundControls = Pick<PickBanSoundPlayer, 'unlock' | 'preview'>
+
+export function usePickBanSound({ state, clockOffsetMs, muted, pack, volume }: UsePickBanSoundOptions): PickBanSoundControls {
     const stateRef = useRef(state)
     stateRef.current = state
     const offsetRef = useRef(clockOffsetMs)
     offsetRef.current = clockOffsetMs
     const playedRef = useRef<ReadonlySet<string>>(new Set())
 
-    const player = useMemo(() => createPickBanSoundPlayer(), [])
+    const [player] = useState(() => createPickBanSoundPlayer({ pack, volume }))
 
     useEffect(() => {
         void player.preload()
         return () => player.dispose()
     }, [player])
+
+    useEffect(() => {
+        player.setPack(pack)
+    }, [player, pack])
+
+    useEffect(() => {
+        player.setVolume(volume)
+    }, [player, volume])
 
     useEffect(() => {
         const unlock = () => player.unlock()
@@ -51,4 +64,6 @@ export function usePickBanSound({ state, clockOffsetMs, muted }: UsePickBanSound
         })
         return () => cancelAnimationFrame(frame)
     }, [player, muted])
+
+    return player
 }

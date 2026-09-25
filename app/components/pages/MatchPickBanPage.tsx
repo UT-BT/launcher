@@ -1,5 +1,5 @@
 import { Suspense, lazy, useState, type ReactNode } from 'react'
-import { ArrowLeft, Check, Link2, Sparkles, Swords, Volume2, VolumeX, WifiOff, ZapOff } from 'lucide-react'
+import { ArrowLeft, Check, Link2, Sparkles, Swords, WifiOff, ZapOff } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { NavLink } from '@/app/components/navigation/NavLink'
 import { useNavigation } from '@/app/components/navigation/NavigationContext'
@@ -20,7 +20,9 @@ import { CaptainDock } from '@/app/components/pages/events/pickban/components/Ca
 import { CentreStage } from '@/app/components/pages/events/pickban/components/CentreStage'
 import { PickBanBannerNote } from '@/app/components/pages/events/pickban/components/PickBanBannerNote'
 import { PickBanMotion } from '@/app/components/pages/events/pickban/components/PickBanMotion'
+import { PickBanSoundControl } from '@/app/components/pages/events/pickban/components/PickBanSoundControl'
 import { loadPickBanMotion, savePickBanMotion } from '@/app/components/pages/events/pickban/pickBanMotionPreference'
+import { loadPickBanSoundPreference, savePickBanSoundPreference } from '@/app/components/pages/events/pickban/pickBanSoundPreference'
 import { PickBanStatusChip } from '@/app/components/pages/events/pickban/components/PickBanStatusChip'
 import { PickBanUnavailable } from '@/app/components/pages/events/pickban/components/PickBanUnavailable'
 import { PoolGrid } from '@/app/components/pages/events/pickban/components/PoolGrid'
@@ -36,7 +38,7 @@ interface MatchPickBanPageProps {
 
 const ManagerDock = lazy(() => import('@/app/components/pages/events/pickban/components/ManagerDock').then(m => ({ default: m.ManagerDock })))
 
-const HEADER_BUTTON = 'inline-flex h-8 cursor-pointer items-center gap-2 rounded-md border border-accent-500/40 bg-accent-500/15 px-3 text-xs font-medium text-accent-200 transition-colors hover:border-accent-500/60 hover:bg-accent-500/25'
+const HEADER_BUTTON = 'inline-flex h-11 cursor-pointer items-center gap-2 rounded-md border border-accent-500/40 bg-accent-500/15 px-3 text-xs font-medium text-accent-200 transition-colors hover:border-accent-500/60 hover:bg-accent-500/25 sm:h-8'
 
 const STAGE_HEIGHT = 'h-[22rem] @4xl/page:h-[26rem] @7xl/page:h-[30rem] @[140rem]/page:h-[40rem]'
 
@@ -50,9 +52,10 @@ export function MatchPickBanPage({ eventSlug, matchId, userProfile, onBackToEven
     const links = buildMatchLinks(eventSlug, matchId)
     const { navigate } = useNavigation()
     const [soundOn, setSoundOn] = useState(false)
+    const [soundPreference, setSoundPreference] = useState(loadPickBanSoundPreference)
     const [animate, setAnimate] = useState(loadPickBanMotion)
     usePickBanPreload(view?.cards)
-    usePickBanSound({ state: session.state, clockOffsetMs: session.clockOffsetMs, muted: !soundOn })
+    const sound = usePickBanSound({ state: session.state, clockOffsetMs: session.clockOffsetMs, muted: !soundOn, ...soundPreference })
 
     useDocumentTitle(view ? `${view.match.title} — Pick/Ban` : undefined, SITE_NAME)
 
@@ -91,7 +94,22 @@ export function MatchPickBanPage({ eventSlug, matchId, userProfile, onBackToEven
                     <p className="min-h-4 text-xs text-muted-foreground">{view ? matchSubtitle(view.match) : ''}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                    <SoundToggleButton on={soundOn} onToggle={() => setSoundOn((current) => !current)} />
+                    <PickBanSoundControl
+                        on={soundOn}
+                        preference={soundPreference}
+                        onToggle={(on) => {
+                            if (on) sound.unlock()
+                            setSoundOn(on)
+                        }}
+                        onChange={(next) => {
+                            savePickBanSoundPreference(next)
+                            setSoundPreference(next)
+                        }}
+                        onPreview={(pack) => {
+                            if (soundOn) sound.preview('pick', pack)
+                        }}
+                        className={HEADER_BUTTON}
+                    />
                     <MotionToggleButton
                         on={animate}
                         onToggle={() => {
@@ -207,23 +225,6 @@ function ReconnectingToast() {
             <WifiOff className="size-3.5" />
             Reconnecting…
         </div>
-    )
-}
-
-function SoundToggleButton({ on, onToggle }: { on: boolean; onToggle: () => void }) {
-    const Icon = on ? Volume2 : VolumeX
-
-    return (
-        <button
-            type="button"
-            onClick={onToggle}
-            aria-pressed={on}
-            aria-label={on ? 'Mute pick/ban sound' : 'Unmute pick/ban sound'}
-            className={HEADER_BUTTON}
-        >
-            <Icon className="size-3.5" />
-            {on ? 'Sound on' : 'Sound off'}
-        </button>
     )
 }
 
