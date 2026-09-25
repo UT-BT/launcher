@@ -4,7 +4,7 @@ read_when:
   - "making a feature work (or hide) on the web build"
   - "touching app/platform/, the web entry, or web build config"
   - "adding a desktop-only capability or a web fallback"
-keywords: [web, browser, platform, capabilities, IS_WEB, vite, dist-web, dual-target]
+keywords: [web, browser, platform, capabilities, IS_WEB, vite, dist-web, dual-target, stream view, sound=0, sounds=, volume=, motion=0]
 provides: "the web build target: platform layer, capability gates, per-bridge web behavior, build commands"
 not_here:
   - "IPC channel contract → lib/conveyor/README.md"
@@ -31,6 +31,7 @@ verify_against:
   - app/renderer-web.tsx
   - vite.config.web.ts
   - app/components/pages/events/pickban/stream/mountStreamRoot.tsx
+  - app/components/pages/events/pickban/stream/streamSound.ts
 ---
 
 # Web target
@@ -162,12 +163,22 @@ the fallback for real routing.
 `StreamView` never needs a login, always polls (`usePickBanSession` with
 `alwaysPoll: true` — see `agents/data-sources.md` → `event-pickban-sessions`),
 and renders a fixed 1920×1080 stage (`stream/StreamStage.tsx`,
-`stream/stageScale.ts`) scaled to fit the window with a solid background. The
-`sound=0` query param is parsed by `stream/streamSound.ts`
-(`isStreamSoundMuted`) and passed straight into `usePickBanSound` as `muted`;
-sound plays by default, and that one boolean is the only switch for it (see
-`agents/data-sources.md` → `event-pickban-sessions` for the cue and player
-contract). There are five cues (intro, pick, ban, ban-down, decider), each
+`stream/stageScale.ts`) scaled to fit the window with a solid background.
+Sound plays by default, and three query params set it, all parsed by
+`stream/streamSound.ts` (`streamSoundOf`, read once by `mountStreamRoot` and
+handed through `StreamView` to `usePickBanSound`; the stream view has no sound
+control of its own):
+
+- `sound=0` mutes it (`isStreamSoundMuted`); any other value, or none, plays.
+- `sounds=cinematic|clean` picks the pack (`streamSoundPack`). It defaults to
+  `cinematic`, and an unknown or empty value falls back to it.
+- `volume=0..100` sets the volume in percent (`streamSoundVolume`). It defaults
+  to 60, a value outside 0 to 100 is clamped, and one that isn't a number
+  (`loud`, `60%`, empty) falls back to 60.
+
+For example `…/stream?sounds=clean&volume=40`. See
+`agents/data-sources.md` → `event-pickban-sessions` for the cue, pack and player
+contract. There are five cues (intro, pick, ban, ban-down, decider), each
 started so its file's hit lands on the animation's impact at any pacing. The
 `motion=0` query param (`isStreamMotionOff` in
 `events/pickban/pickBanMotionPreference.ts`) turns the animations off, and the
