@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef } from 'react'
 import { cn } from '@/lib/utils'
 import { usePrefersReducedMotion } from '@/app/hooks/usePrefersReducedMotion'
 import type { PickBanCountdown } from '../pickBanView'
+import { introCountdownWords } from '../pickBanCopy'
 import { PICK_BAN_TONES, type PickBanTone } from './pickBanTone'
 
 type CountdownPainter = (element: HTMLElement, remainingMs: number, fraction: number) => void
@@ -15,6 +16,11 @@ function formatRemaining(remainingMs: number): string {
 
 const paintText: CountdownPainter = (element, remainingMs) => {
     element.textContent = formatRemaining(remainingMs)
+}
+
+const paintIntroWords: CountdownPainter = (element, remainingMs) => {
+    const words = introCountdownWords(remainingMs)
+    if (element.textContent !== words) element.textContent = words
 }
 
 const paintBar: CountdownPainter = (element, _remainingMs, fraction) => {
@@ -54,6 +60,11 @@ function useCountdownFrame<E extends HTMLElement>(countdown: PickBanCountdown | 
 export function CountdownText({ countdown, className }: { countdown: PickBanCountdown | null; className?: string }) {
     const ref = useCountdownFrame<HTMLSpanElement>(countdown, paintText)
     return <span ref={ref} role="timer" className={cn('font-mono tabular-nums', className)} />
+}
+
+export function IntroCountdownWords({ countdown, className }: { countdown: PickBanCountdown | null; className?: string }) {
+    const ref = useCountdownFrame<HTMLParagraphElement>(countdown, paintIntroWords)
+    return <p ref={ref} role="timer" className={className} />
 }
 
 export function CountdownBar({ countdown, tone, className }: {
