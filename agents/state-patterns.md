@@ -260,7 +260,7 @@ signed-in user across devices); everything else is device-local.
 | `utbt:displayTimezone:v1` | `app/utils/timezone.ts` (app-global) | **yes** | IANA timezone string override, or `null` to fall back to the browser's resolved zone. Set from the `launcher-appearance` settings panel. |
 | `utbt:replayVideoVolume:v1` | `app/utils/replayVideoVolume.ts` | no | replay player volume `0..1` |
 | `utbt:pickBanMotion:v1` | `events/pickban/pickBanMotionPreference.ts` | no | `'on'` / `'off'`: the pick/ban page's Animations toggle (absent means on) |
-| `utbt:pickBanSound:v1` | `events/pickban/pickBanSoundPreference.ts` | no | `{ pack, volume }`: the pick/ban page's sound Style (`'cinematic'` / `'clean'`) and Volume (`0..1`), Cinematic at 0.6 when absent; an unknown pack or a volume that isn't a number falls back per field. Sound on/off is not stored: the page starts muted every visit |
+| `utbt:pickBanSound:v1` | `events/pickban/pickBanSoundPreference.ts` | no | `{ volume }`: the pick/ban page's sound Volume (`0..1`), 0.4 when absent or not a number; any other stored field (such as an older `pack`) is ignored. Sound on/off is not stored: the page starts muted every visit |
 | `utbt:patreon:v1` | `app/utils/patreon.ts` | no | cached patron tier map, 1 h TTL (pure cache) |
 | `ui-scale` | `LauncherGeneralSettings` | no | renderer zoom percent (pre-dates the key convention) |
 | `utbt:webAuth:v1` | `app/platform/web/auth-web.ts` (**web build only**) | never | `AuthProfile` — Discord identity + access/refresh tokens + expiry; the web equivalent of the desktop main-process auth config. Secrets never sync. |

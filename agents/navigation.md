@@ -468,19 +468,17 @@ web build opens it straight from a deep link.
 - **Sound control** (`events/pickban/components/PickBanSoundControl.tsx`). The first
   header button shows the state (`Volume2`/`VolumeX`, "Sound on"/"Sound off", a chevron)
   and opens a small panel under it (`aria-expanded`/`aria-controls`, a labelled group, not
-  a Radix menu, so its switch, radios and slider keep their own keys and Tab order). In it:
-  a **Sound** switch (the page starts muted every visit; turning it on flips
+  a Radix menu, so its switch and slider keep their own keys and Tab order). In it: a
+  **Sound** switch (the page starts muted every visit; turning it on flips
   `usePickBanSound`'s `muted` flag and calls its `unlock`, so that click unlocks the Web
-  Audio context), a **Style** segmented `radiogroup` (Cinematic, "Big whooshes, deep
-  impacts, reverb"; Clean, "Tight, restrained, premium"; arrow keys move and choose) and a
-  **Volume** range 0–100% with the number beside its label. Choosing a style, or releasing
-  the slider (pointer up, key up or blur; the page's volume only changes then), saves
-  `{ pack, volume }` (`pickBanSoundPreference.ts`, see `agents/state-patterns.md`) and, only
-  while sound is on, previews the pick cue in that style (`preview('pick', pack)`); while
-  it is off a line says to turn sound on to hear a preview. The panel closes on Escape
-  (focus back on the button), an outside pointer or focus leaving it. Every row is a 44px
-  target below `sm`. See `agents/data-sources.md` → `event-pickban-sessions` for the cue,
-  pack and player contract.
+  Audio context) and a **Volume** range 0–100% (40% until changed) with the number beside
+  its label. Releasing the slider (pointer up, key up or blur; the page's volume only
+  changes then) saves `{ volume }` (`pickBanSoundPreference.ts`, see
+  `agents/state-patterns.md`) and, only while sound is on, previews the pick cue
+  (`preview('pick')`); while it is off a line says to turn sound on to hear a preview. The
+  panel closes on Escape (focus back on the button), an outside pointer or focus leaving
+  it. Every row is a 44px target below `sm`. See `agents/data-sources.md` →
+  `event-pickban-sessions` for the cue and player contract.
 - **Animations toggle.** A header button that switches the page's animations
   (`pickBanMotionPreference.ts`).
 - The header buttons (sound, Animations, Copy link) and the summary's **Back to the

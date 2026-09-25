@@ -10,7 +10,7 @@ read_when:
   - "finding a pick/ban session from the bracket, a match card, the event page or the Schedule tab without a direct link"
   - "assigning a streamer to a match, or showing a streamer their assigned matches"
   - "deciding whether a prediction market still takes bets once its match's pick/ban has started"
-keywords: [api.ts, fetch, endpoint, accessToken, avatar, MapThumbnail, favorites, patreon, downloadMapZip, world_records, caps, predictions, draw, odds, schedule, proposal, slot, whose_turn, resolved_window, countdown, nav badge, fetchMyTournaments, SlotPickerModal, SlotGrid, DateTimeField, slotGeneration, proposeMatchSlots, withdrawMatchProposal, acceptMatchProposal, fetchMatchSchedule, ApiError, expected_match_duration_minutes, fetchPickBanConfig, PickBanConfig, PickBanPoolMap, MapsTab, mapsShared, stagesWithPools, tagBadgeVariant, pick/ban, fetchPickBanState, ETag, If-None-Match, 304, X-Server-Now, server_now, clock offset, reveal_at, sendPickBanCommand, sendPickBanManagerCommand, hover, selection_preview, pickBanErrorCode, captain controls, CaptainDock, useCaptainPlay, fetchPickBanQueue, PickBanQueueEntry, PickBanQueueRow, toQueueRow, canOpenLobby, blockingReasonLabel, PickBanQueuePanel, pickBanStatusBadge, statusOfPhase, buildPickBanView, setPickBanStageConfig, setPickBanStagePool, copyPickBanStagePool, pickBanEditor, stage pool, buildMatchLinks, matchStreamPath, createPoller, pick_ban_status, MatchPickBanStatus, pickBanCardAffordance, PickBanCardPill, pickBanMapLabel, MyPickBanSession, pick_ban_session, PickBanLink, PickBanJoinBanner, pickBanEntryPoints, Join banner, scene, sceneDirection, playsEntrance, entranceMsFor, introStartsAt, usePickBanPreload, usePickBanSound, cuesToPlay, pickBanSoundCues, pickBanSoundPlayer, PickBanSoundCueKind, pickBanSounds, SOUND_HIT_MS, soundScheduleAt, STALE_HIT_MS, pickBanBeats, intro cue, sound=0, sound pack, PickBanSoundPack, SOUND_PACKS, SOUND_PACK_IDS, Cinematic, Clean, volume, setVolume, masterGainOf, preview, pickBanSoundPreference, streamSoundOf, CREDITS.md, manager dock, ManagerDock, useManagerDock, managerDockOf, hand-over, act for team, Reopen, edit-final, PickBanEditFinalEntry, Edit final, fetchMyEventMatches, MyMatchEntry, is_streamer, EventStreamer, fetchEventStreamers, setMatchStreamer, streamer, StreamerPicker, withQueueStreamer, streamerChoices, scheduleSections, pickBanCallToAction, matchTimeLabel, marketLock, marketTakesPredictions, lockStartedMarkets, matchLockSignals, newlyLockedMatchIds, streamerName]
+keywords: [api.ts, fetch, endpoint, accessToken, avatar, MapThumbnail, favorites, patreon, downloadMapZip, world_records, caps, predictions, draw, odds, schedule, proposal, slot, whose_turn, resolved_window, countdown, nav badge, fetchMyTournaments, SlotPickerModal, SlotGrid, DateTimeField, slotGeneration, proposeMatchSlots, withdrawMatchProposal, acceptMatchProposal, fetchMatchSchedule, ApiError, expected_match_duration_minutes, fetchPickBanConfig, PickBanConfig, PickBanPoolMap, MapsTab, mapsShared, stagesWithPools, tagBadgeVariant, pick/ban, fetchPickBanState, ETag, If-None-Match, 304, X-Server-Now, server_now, clock offset, reveal_at, sendPickBanCommand, sendPickBanManagerCommand, hover, selection_preview, pickBanErrorCode, captain controls, CaptainDock, useCaptainPlay, fetchPickBanQueue, PickBanQueueEntry, PickBanQueueRow, toQueueRow, canOpenLobby, blockingReasonLabel, PickBanQueuePanel, pickBanStatusBadge, statusOfPhase, buildPickBanView, setPickBanStageConfig, setPickBanStagePool, copyPickBanStagePool, pickBanEditor, stage pool, buildMatchLinks, matchStreamPath, createPoller, pick_ban_status, MatchPickBanStatus, pickBanCardAffordance, PickBanCardPill, pickBanMapLabel, MyPickBanSession, pick_ban_session, PickBanLink, PickBanJoinBanner, pickBanEntryPoints, Join banner, scene, sceneDirection, playsEntrance, entranceMsFor, introStartsAt, usePickBanPreload, usePickBanSound, cuesToPlay, pickBanSoundCues, pickBanSoundPlayer, PickBanSoundCueKind, pickBanSounds, SOUND_HIT_MS, soundScheduleAt, STALE_HIT_MS, pickBanBeats, intro cue, sound=0, SOUND_URLS, volume, setVolume, masterGainOf, preview, pickBanSoundPreference, streamSoundOf, CREDITS.md, manager dock, ManagerDock, useManagerDock, managerDockOf, hand-over, act for team, Reopen, edit-final, PickBanEditFinalEntry, Edit final, fetchMyEventMatches, MyMatchEntry, is_streamer, EventStreamer, fetchEventStreamers, setMatchStreamer, streamer, StreamerPicker, withQueueStreamer, streamerChoices, scheduleSections, pickBanCallToAction, matchTimeLabel, marketLock, marketTakesPredictions, lockStartedMarkets, matchLockSignals, newlyLockedMatchIds, streamerName]
 provides: "the client-side API contract the launcher consumes + asset URLs + favorites/patreon sync models"
 not_here:
   - "IPC channels (window.conveyor.*) → lib/conveyor/README.md"
@@ -983,17 +983,13 @@ next poll. The server's `can_lock_now` only overrides it for a payload read whil
 
 **Sound.** Five bundled cues, one pre-mixed file each: `intro` as the intro scene begins,
 `pick` for a pick (lettered, or locked automatically as the last map standing), `ban` for a
-lettered ban, `ban_down` for a ban-down step and `decider` for the decider. The cues come in
-two packs (`PickBanSoundPack`): `cinematic`, the default (big whooshes, deep impacts,
-reverb), and `clean` (tight and restrained). `pickBanSounds.ts` is the one place that names
-the files. `SOUND_PACKS` maps each pack to its five `.mp3`s, under
-`app/assets/sounds/cinematic/` and `app/assets/sounds/clean/` as
-`{intro,pick,ban,ban-down,decider}.mp3`; the Clean pack has no decider of its own and plays
-`cinematic/decider.mp3`. `SOUND_PACK_IDS` lists the packs in the order the page offers them.
-Next to them are `PickBanSoundCueKind` and `SOUND_HIT_MS`: how far into each file its main
-hit sits (intro 620 ms, pick and ban 320, ban-down 160, decider 1040). The offsets are shared
-by both packs, since every file is mixed with its hit at that point. Each offset is the
-animation's hit at the default pacing (`DEFAULT_PICK_BAN_PACING`), and a test pins that.
+lettered ban, `ban_down` for a ban-down step and `decider` for the decider. `pickBanSounds.ts`
+is the one place that names the files: `SOUND_URLS` maps each cue to its `.mp3`,
+`app/assets/sounds/{intro,pick,ban,ban-down,decider}.mp3`. Next to it are
+`PickBanSoundCueKind` and `SOUND_HIT_MS`: how far into each file its main hit sits (intro
+620 ms, pick and ban 320, ban-down 160, decider 1040), since every file is mixed with its hit
+at that point. Each offset is the animation's hit at the default pacing
+(`DEFAULT_PICK_BAN_PACING`), and a test pins that.
 `app/assets/sounds/CREDITS.md` credits the source sounds mixed into each file (one needs CC BY
 attribution, the rest are CC0), so whoever replaces a file updates it too.
 `pickBanSoundCues.ts`'s `cuesToPlay(state, clock, played)` is the pure
@@ -1015,30 +1011,29 @@ ahead (a longer pacing), or at once and `offsetMs` into the file once it has pas
 shorter pacing, or a frame's lag), so the hit still lands on time. Just past the hit it
 starts right on the file's hit; more than `STALE_HIT_MS` (100 ms) past it, it returns `null`
 and the cue is marked played without sounding — a reconnect after the tab was backgrounded,
-or a poll that brought a reveal late. `usePickBanSound({ state, clockOffsetMs, muted, pack,
+or a poll that brought a reveal late. `usePickBanSound({ state, clockOffsetMs, muted,
 volume })` drives it from a `requestAnimationFrame` loop that only runs while unmuted —
 muting stops it and clears its played set, so unmuting restarts primed and discards its
 first tick's cues, the same as a fresh load — and plays through `pickBanSoundPlayer.ts`
-(Web Audio). The player decodes only the active pack's five files up front, alongside the
-screenshots and fonts regardless of mute state. `setPack` switches the pack cues play from
-and decodes that pack's files then; a cue due before its file is decoded is skipped. Each
-file is fetched and decoded once, however many packs share it. Every source goes through one
-master gain: `setVolume(0..1)` ramps it over 60 ms, so a change never clicks, to the square
-of the volume (`masterGainOf`), so the slider moves more evenly in loudness. A cue starts
+(Web Audio). The player decodes all five files up front, alongside the screenshots and
+fonts regardless of mute state; a cue due before its file is decoded is skipped. Each file
+is fetched and decoded once. Every source goes through one master gain: `setVolume(0..1)`
+ramps it over 60 ms, so a change never clicks, to the square of the volume
+(`masterGainOf`), so the slider moves more evenly in loudness. A cue starts
 `delayMs` after the context's current time at `offsetMs` into its buffer; it is skipped
 while the context isn't running rather than played late, autoplay rejections are swallowed,
-and the context is resumed on the first pointer or key gesture. `preview(kind, pack)` plays
-one file at once, to audition a pack or a volume: it decodes the file if needed, resumes the
+and the context is resumed on the first pointer or key gesture. `preview(kind)` plays
+one file at once, to audition a volume: it decodes the file if needed, resumes the
 context (it is called from a click or a key), fades out the preview before it and plays only
 the latest one asked for. The hook returns `{ unlock, preview }`. Both pages call it. The
-stream view passes its URL's `sound=0`, `sounds=` and `volume=` (`streamSoundOf`, see
+stream view passes its URL's `sound=0` and `volume=` (`streamSoundOf`, see
 `agents/web-target.md` → `pre-shell-routes`). The watch page starts muted every visit; its
 header sound control (see `agents/navigation.md` → `match-pickban-page`) turns sound on,
-which unlocks the context from that click, and picks the pack and volume. Those two are kept
-by `pickBanSoundPreference.ts` in `utbt:pickBanSound:v1` as `{ pack, volume }`, defaulting to
-`DEFAULT_SOUND_PREFERENCE` (Cinematic at 0.6). Its pure `parsePickBanSoundPreference(raw)`
-falls back to Cinematic for an unknown pack and to 0.6 for a volume that isn't a number,
-and clamps the volume to 0..1.
+which unlocks the context from that click, and sets the volume. The volume is kept by
+`pickBanSoundPreference.ts` in `utbt:pickBanSound:v1` as `{ volume }`, defaulting to
+`DEFAULT_SOUND_PREFERENCE` (0.4). Its pure `parsePickBanSoundPreference(raw)` falls back to
+0.4 for a volume that is missing or isn't a number, clamps it to 0..1 and ignores any other
+stored field, such as the `pack` an earlier version saved.
 
 **The watch page** (`MatchPickBanPage.tsx`). Anyone who can see the match can open it. It
 reads with the viewer's token when there is one and anonymously otherwise, and it renders
