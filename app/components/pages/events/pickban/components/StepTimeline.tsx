@@ -35,7 +35,8 @@ function entryDescription(entry: PickBanTimelineEntry): string {
     const mapNumber = entry.mapNumber !== null && entry.action !== 'decider' ? ` map ${entry.mapNumber}` : ''
     const map = entry.map ? `: ${displayMapName(entry.map)}` : ''
     const status = entry.status === 'current' ? ' (now)' : entry.status === 'locked_in' ? ' (locked in)' : ''
-    return `Step ${entry.number}, ${SEGMENT_LABEL[entry.segment].toLowerCase()}. ${who}${mapNumber}${map}${status}`
+    const automatic = entry.automatic && entry.action !== 'decider' ? ', locked automatically' : ''
+    return `Step ${entry.number}, ${SEGMENT_LABEL[entry.segment].toLowerCase()}. ${who}${mapNumber}${map}${automatic}${status}`
 }
 
 export function StepTimeline({ entries, skippedBans, className }: StepTimelineProps) {

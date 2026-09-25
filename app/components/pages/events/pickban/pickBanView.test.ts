@@ -16,6 +16,7 @@ import {
     asReplacedCaptain,
     asSpectator,
     asTeammate,
+    exactFitPicks,
     finalMapOf,
     iso,
     locked,
@@ -256,7 +257,7 @@ describe('reveal gating', () => {
             status: 'complete',
             current_plan_index: null,
             completed_at: start.started_at,
-            plan: [{ ...start.plan[0], map: GOLF, at: start.started_at, reveal_at: start.intro_ends_at }],
+            plan: [{ ...start.plan[0], map: GOLF, automatic: true, at: start.started_at, reveal_at: start.intro_ends_at }],
             spotlight_ends_at: iso(INTRO_END + DECIDER_SPOTLIGHT_MS),
         })
 
@@ -275,6 +276,86 @@ describe('reveal gating', () => {
         expect(reveal.summary).toEqual([expect.objectContaining({ mapNumber: 1, map: GOLF, decider: true })])
 
         expect(viewAt(state, INTRO_END + DECIDER_SPOTLIGHT_MS).phase).toBe('complete')
+    })
+})
+
+describe('automatic steps', () => {
+    function exactFitEnding() {
+        const before = lockedInTurn(started(exactFitPicks()), [ALPHA, BRAVO])
+        const thirdLock = unlockAt(before) + 2_000
+        const thirdReveal = thirdLock + LEAD_MS
+        return { state: locked(before, CHARLIE, thirdLock), thirdLock, thirdReveal, autoReveal: thirdReveal + SPOTLIGHT_MS }
+    }
+
+    it('locks the last map of an exact-fit plan by itself, revealing it once the step before has had its spotlight', () => {
+        const { state, thirdLock, thirdReveal, autoReveal } = exactFitEnding()
+        const spectator = asSpectator(state)
+        expect(state.status).toBe('complete')
+        expect(state.plan[3]).toMatchObject({ side: 'team_b', map: DELTA, acted_by: null, acted_by_admin: false, automatic: true })
+
+        const inLead = viewAt(spectator, thirdLock + 500)
+        expect(inLead.phase).toBe('awaiting')
+        expect(cardOf(inLead, DELTA).state).toBe('available')
+
+        const thirdSpotlight = viewAt(spectator, thirdReveal + 500)
+        expect(thirdSpotlight.spotlight).toMatchObject({ index: 2, map: CHARLIE })
+        expect(thirdSpotlight.timeline[3]).toMatchObject({ status: 'current', map: null, automatic: true })
+        expect(cardOf(thirdSpotlight, DELTA).state).toBe('available')
+        expect(thirdSpotlight.nextBoundaryAt).toBe(autoReveal)
+
+        const autoSpotlight = viewAt(spectator, autoReveal)
+        expect(autoSpotlight.phase).toBe('spotlight')
+        expect(autoSpotlight.spotlight).toMatchObject({
+            index: 3, segment: 'lettered', action: 'pick', actor: 'B', side: 'team_b', map: DELTA, mapNumber: 4, actedBy: null, actedByAdmin: false, automatic: true,
+        })
+        expect(autoSpotlight.countdown).toMatchObject({ remainingMs: SPOTLIGHT_MS, totalMs: SPOTLIGHT_MS })
+        expect(cardOf(autoSpotlight, DELTA)).toMatchObject({ state: 'picked', ab: 'B', mapNumber: 4 })
+        expect(autoSpotlight.summary[3]).toMatchObject({ map: DELTA, actorLabel: 'Azure Owls', decider: false })
+
+        expect(viewAt(spectator, autoReveal + SPOTLIGHT_MS).phase).toBe('complete')
+    })
+
+    it('holds the spotlight on the step before until an automatic step reveals, even when a pause pushed its reveal later', () => {
+        const { state, thirdReveal, autoReveal } = exactFitEnding()
+        const shiftedReveal = autoReveal + 3_000
+        const shifted = asSpectator({
+            ...state,
+            plan: state.plan.map((step) => (step.automatic ? { ...step, reveal_at: iso(shiftedReveal) } : step)),
+            spotlight_ends_at: iso(shiftedReveal + SPOTLIGHT_MS),
+        })
+
+        const betweenSpotlights = viewAt(shifted, autoReveal + 1_000)
+        expect(betweenSpotlights.phase).toBe('spotlight')
+        expect(betweenSpotlights.spotlight?.index).toBe(2)
+        expect(betweenSpotlights.countdown).toMatchObject({ remainingMs: 2_000, totalMs: shiftedReveal - thirdReveal })
+        expect(viewAt(shifted, shiftedReveal).spotlight?.index).toBe(3)
+    })
+
+    it('never shows an automatic step as the viewer’s own turn or lock-in', () => {
+        const { state, thirdLock, thirdReveal, autoReveal } = exactFitEnding()
+
+        const lockerInLead = viewAt(asCaptain(state, 'team_a'), thirdLock + 500)
+        expect(lockerInLead.timeline.map((entry) => entry.status)).toEqual(['revealed', 'revealed', 'locked_in', 'upcoming'])
+        expect(lockerInLead.cards.filter((c) => c.lockedIn).map((c) => c.map)).toEqual([CHARLIE])
+
+        for (const serverTime of [thirdLock + 500, thirdReveal + 500, autoReveal - 1]) {
+            const autoSide = viewAt(asCaptain(state, 'team_b'), serverTime)
+            expect(autoSide.cards.some((c) => c.lockedIn || c.selectable)).toBe(false)
+            expect(autoSide.timeline[3].status).not.toBe('locked_in')
+            expect(autoSide.affordances.canLock).toBe(false)
+        }
+
+        const autoSideInSpotlight = viewAt(asCaptain(state, 'team_b'), thirdReveal + 500)
+        expect(autoSideInSpotlight.turn).toMatchObject({ stepIndex: 3, side: 'team_b', viewerActs: false, lockedIn: false })
+        expect(viewAt(asActingCaptain(state, 'team_b'), thirdReveal + 500).turn).toMatchObject({ viewerActs: false, lockedIn: false })
+    })
+
+    it('flags as automatic only the steps the server made itself', () => {
+        const { state } = exactFitEnding()
+
+        expect(viewAt(asSpectator(state), T0 + 3_600_000).timeline.map((entry) => entry.automatic)).toEqual([false, false, false, true])
+        expect(viewAt(asSpectator(completed()), T0 + 3_600_000).timeline.map((entry) => entry.automatic)).toEqual([false, false, false, false, false, false, true])
+        expect(viewAt(asSpectator(locked(started(), ALPHA, FIRST_LOCK, { byAdmin: true })), FIRST_LOCK + LEAD_MS).timeline[0].automatic).toBe(false)
     })
 })
 
@@ -726,13 +807,29 @@ describe('affordances', () => {
         const deciderOnly = pickBanState({
             status: 'complete',
             phase: 'complete',
-            plan: [{ ...decider, map: GOLF, at: iso(T0), reveal_at: iso(T0) }],
+            plan: [{ ...decider, map: GOLF, automatic: true, at: iso(T0), reveal_at: iso(T0) }],
             started_at: iso(T0),
             completed_at: iso(T0),
             spotlight_ends_at: iso(T0 + DECIDER_SPOTLIGHT_MS),
         })
 
         expect(viewAt(asManager(deciderOnly), T0 + 3_600_000).affordances.manager).toMatchObject({ reopen: false, editFinal: true, restart: true })
+    })
+
+    it('counts only human steps toward Undo and Reopen, never a lettered step the server locked by itself', () => {
+        const [pick] = planOf([['A', 'pick', 'lettered', 1]])
+        const autoLockedAtStart = pickBanState({
+            status: 'complete',
+            phase: 'complete',
+            plan: [{ ...pick, map: ALPHA, automatic: true, at: iso(T0), reveal_at: iso(T0) }],
+            started_at: iso(T0),
+            completed_at: iso(T0),
+            spotlight_ends_at: iso(T0 + SPOTLIGHT_MS),
+        })
+        const exactFit = lockedInTurn(started(exactFitPicks()), [ALPHA, BRAVO, CHARLIE])
+
+        expect(viewAt(asManager(autoLockedAtStart), T0 + 3_600_000).affordances.manager).toMatchObject({ reopen: false, undo: false })
+        expect(viewAt(asManager(exactFit), T0 + 3_600_000).affordances.manager).toMatchObject({ reopen: true })
     })
 })
 

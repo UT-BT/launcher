@@ -49,6 +49,7 @@ export interface PickBanTimelineEntry {
     screenshotVersion: string | null
     actedBy: PickBanUserRef | null
     actedByAdmin: boolean
+    automatic: boolean
     revealAt: number | null
 }
 
@@ -276,7 +277,7 @@ function screenshotVersionOf(state: PickBanState, map: string | null): string | 
 }
 
 function viewerActs(state: PickBanState, step: PickBanPlanStep): boolean {
-    return step.side !== null && step.side === state.capabilities.acting_side
+    return !step.automatic && step.side !== null && step.side === state.capabilities.acting_side
 }
 
 function warningMessage(warning: PickBanWarning): string {
@@ -352,7 +353,7 @@ function spotlightEndOf(moment: Moment, step: PickBanPlanStep): number {
     const own = (revealAtOf(step) ?? -Infinity) + spotlightLengthMs(moment.state.pacing, step.segment)
     const following = moment.steps.find((candidate) => candidate.index > step.index && isExecuted(candidate))
     if (!following) return parseApiInstant(moment.state.spotlight_ends_at) ?? own
-    if (following.actor === null) return Math.max(own, revealAtOf(following) ?? own)
+    if (following.automatic) return Math.max(own, revealAtOf(following) ?? own)
     return own
 }
 
@@ -388,7 +389,7 @@ function managerControlsOf(moment: Moment, awaitedStep: PickBanPlanStep | null, 
     if (!state.capabilities.can_manage) return null
     const status = state.status
     const live = LIVE_STATUSES.includes(status)
-    const humanStepIn = steps.some((step) => isExecuted(step) && step.actor !== null)
+    const humanStepIn = steps.some((step) => isExecuted(step) && !step.automatic)
     return {
         open: status === 'none' || status === 'cancelled' || status === 'voided',
         start: status === 'lobby',
@@ -449,6 +450,7 @@ function timelineOf(moment: Moment, inProgress: boolean): PickBanTimelineEntry[]
             screenshotVersion: revealed ? screenshotVersionOf(state, step.map) : null,
             actedBy: revealed ? step.acted_by : null,
             actedByAdmin: revealed && step.acted_by_admin,
+            automatic: step.automatic,
             revealAt: revealAt === null ? null : moment.toLocal(revealAt),
         }
     })

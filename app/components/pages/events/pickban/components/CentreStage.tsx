@@ -51,12 +51,18 @@ function stageAnnouncement(view: PickBanView): string {
         case 'awaiting':
             return view.turn ? `${view.turn.actionLabel}.` : ''
         case 'spotlight':
-            return view.spotlight?.map ? `${revealByline(view.spotlight)}: ${displayMapName(view.spotlight.map)}.` : ''
+            return view.spotlight?.map ? `${revealAnnouncement(view.spotlight)}: ${displayMapName(view.spotlight.map)}.` : ''
         case 'complete':
             return 'Pick/ban complete.'
         default:
             return ''
     }
+}
+
+function revealAnnouncement(entry: PickBanTimelineEntry): string {
+    if (!entry.automatic || entry.action === 'decider') return revealByline(entry)
+    const mapNumber = entry.action === 'pick' ? ` map ${entry.mapNumber}` : ''
+    return `${entry.actionLabel}${mapNumber}, locked automatically as the last map standing`
 }
 
 export function CentreStage({ view, summaryAction, className }: CentreStageProps) {
@@ -290,6 +296,7 @@ export function TurnCard({ turn, previewCard, stepCount, mapCount }: {
 }
 
 function revealByline(entry: PickBanTimelineEntry): string {
+    if (entry.automatic && entry.action !== 'decider') return 'Last map standing · locked automatically'
     if (entry.action === 'pick') return `${entry.actionLabel} map ${entry.mapNumber}`
     if (entry.segment === 'ban_down') return `Ban-down · ${entry.actionLabel}`
     return entry.actionLabel
