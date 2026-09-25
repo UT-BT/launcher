@@ -108,7 +108,7 @@ const decider = normalize(
 
 await mkdir(outDir, { recursive: true })
 
-const files = { 'lock-in.wav': lockIn, 'ban.wav': ban, 'decider.wav': decider }
+const files = { 'intro.wav': lockIn, 'pick.wav': lockIn, 'ban.wav': ban, 'ban-down.wav': ban, 'decider.wav': decider }
 for (const [name, samples] of Object.entries(files)) {
   const encoded = encodeWav(samples)
   await writeFile(join(outDir, name), encoded)
