@@ -42,9 +42,9 @@ export interface UseManagerDockResult {
 
 type Begin = (play: ManagerPlay, view: PickBanView) => ManagerSubmission | null
 
-type SendManagerCommand = PickBanSessionStore['sendManagerCommand']
+type ManagerSender = Pick<PickBanSessionStore, 'sendManagerCommand' | 'sendManagerCommandAt'>
 
-function sendManagerRequest(send: SendManagerCommand, request: ManagerRequest): Promise<PickBanState> {
+function sendManagerRequest({ sendManagerCommand: send, sendManagerCommandAt: sendAt }: ManagerSender, request: ManagerRequest): Promise<PickBanState> {
     switch (request.command) {
         case 'choose-a':
             return send(request.command, request.body)
@@ -55,13 +55,13 @@ function sendManagerRequest(send: SendManagerCommand, request: ManagerRequest): 
         case 'lock':
             return send(request.command, request.body)
         case 'edit-final':
-            return send(request.command, request.body)
+            return sendAt(request.version, request.command, request.body)
         default:
-            return send(request.command)
+            return request.version === undefined ? send(request.command) : sendAt(request.version, request.command)
     }
 }
 
-export function useManagerDock(view: PickBanView | null, sendManagerCommand: SendManagerCommand): UseManagerDockResult {
+export function useManagerDock(view: PickBanView | null, { sendManagerCommand, sendManagerCommandAt }: ManagerSender): UseManagerDockResult {
     const [play, setPlay] = useState<ManagerPlay>(IDLE_MANAGER_PLAY)
     const playRef = useRef(play)
     const viewRef = useRef(view)
@@ -85,11 +85,11 @@ export function useManagerDock(view: PickBanView | null, sendManagerCommand: Sen
         update(() => submission.play)
         const { request } = submission
         if (!request) return
-        sendManagerRequest(sendManagerCommand, request).then(
+        sendManagerRequest({ sendManagerCommand, sendManagerCommandAt }, request).then(
             () => update(managerCommandSucceeded),
             (error: unknown) => update((latest) => managerCommandRejected(latest, error)),
         )
-    }, [sendManagerCommand, update])
+    }, [sendManagerCommand, sendManagerCommandAt, update])
 
     const select = useCallback((map: string) => {
         const current = viewRef.current

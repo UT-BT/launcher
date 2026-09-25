@@ -46,7 +46,6 @@ export function ManagerDock({ manager, slug, accessToken, children }: ManagerDoc
     const { dock } = manager
     if (!dock) return null
     const { actFor, busy, confirm, finalEditor } = dock
-    const finalBody = finalEditor?.body ?? null
     if (picker !== null && !(picker === 'sequence' ? dock.overrideSequence : dock.handOver)) setPicker(null)
 
     return (
@@ -107,7 +106,7 @@ export function ManagerDock({ manager, slug, accessToken, children }: ManagerDoc
                     dismissLabel="Discard"
                     maxWidth="48rem"
                     action={(
-                        <Button disabled={busy || !finalBody} onClick={() => { if (finalBody) manager.run({ command: 'edit-final', body: finalBody }) }}>
+                        <Button disabled={busy || !finalEditor.body || finalEditor.outdated} onClick={() => manager.run({ command: 'edit-final' })}>
                             {finalEditor.saving ? 'Saving…' : 'Save…'}
                         </Button>
                     )}
@@ -116,6 +115,7 @@ export function ManagerDock({ manager, slug, accessToken, children }: ManagerDoc
                         editor={finalEditor}
                         resultsWarning={dock.resultsWarning}
                         onChange={manager.changeFinalEditor}
+                        onReload={manager.openFinalEditor}
                         onDismissRejection={manager.dismiss}
                     />
                 </DockModal>

@@ -414,9 +414,11 @@ the data. Like `useServerFavorites`, it is a `useSyncExternalStore` store. Its s
   `agents/data-sources.md`). Pass it to the view model with `Date.now()`, and never compare
   server timestamps against the raw local clock.
 - **Commands.** `sendCommand(command, input)` and `sendManagerCommand(command, input)` fill
-  in the current `version`. They apply the returned state at once, so the actor never waits
-  for a poll, and resample the clock. A refused command triggers an immediate poll, then
-  rethrows the `ApiError`.
+  in the current `version`. `sendManagerCommandAt(version, command, input)` sends the
+  version it is given instead, for a command that must fail with `version_conflict` if
+  anything changed since the manager looked (the dock's Reopen and Edit final). They apply
+  the returned state at once, so the actor never waits for a poll, and resample the clock.
+  A refused command triggers an immediate poll, then rethrows the `ApiError`.
 - **One command at a time.** Every command, participant or manager, runs after the one
   before it has settled, and only then reads the `version` to send. Every command bumps the
   version, a hover included, so this is what lets a Lock in pressed while a hover is in
@@ -491,15 +493,21 @@ flight. The pending hover is cancelled on unmount too.
 **Manager play** (`events/pickban/managerDock.ts`, pure, Vitest without a DOM) is the same
 idea for a viewer with `can_manage`, on its own path so a manager never goes through the
 captain's select. `ManagerPlay` holds the act-for selection (tied to its plan index), the
-command in flight, the act-for lock-in being sent, the action awaiting confirmation
+command in flight, the act-for lock-in being sent, the request awaiting confirmation
 (Reopen, Restart, Cancel, or an Edit final save with its list), the open Edit final
 draft, and the last refusal with the command it answered.
 
 The dock's commands (`ManagerCommand`) are the manager wire commands plus `reopen`.
 `ManagerAction` is what the dock asks for, and `ManagerRequest` is what goes over the
-wire: every action is its own request, except `{ command: 'reopen' }`, which is sent as
-`{ command: 'undo' }`. Reopen only applies to a complete session, and Undo only to a
-running or paused one, so neither can run as the other.
+wire. Most actions are their own request. `{ command: 'reopen' }` is sent as
+`{ command: 'undo', version }`, pinned to the view's `version` when its confirmation
+opens. `{ command: 'edit-final' }` is sent as the open draft's list with the version the
+draft was seeded from. A request with a `version` goes through the store's
+`sendManagerCommandAt`, so anything that changed in between (another manager's edit, or
+a reopen that completed again) answers `version_conflict` instead of being overwritten.
+Restart and Cancel keep the latest version: captain hovers bump it constantly while a
+session runs. Reopen only applies to a complete session, and Undo only to a running or
+paused one, so neither can run as the other.
 
 - `withManagerPlay(view, play)` marks the act-for selection `selected`, and shows the
   act-for lock-in as "Locked in". It shares `captainPlay.ts`'s `StepChoice`,
@@ -521,19 +529,25 @@ running or paused one, so neither can run as the other.
   captain. So the strip stays up from Start to the last lock-in, and is `null` in the
   lobby and once the session is complete.
 - `beginManagerCommand(play, view, action)` returns the next play and the request to
-  send, or `null` when the control isn't open or a command is in flight. For `reopen`,
-  `restart`, `cancel` and `edit-final` it first returns a play holding the action awaiting
-  confirmation and no request; `confirmManagerCommand` sends exactly that action (an
-  edit-final with the list as it was confirmed) and `dismissManagerConfirm` drops it.
+  send, or `null` when the control isn't open, a command is in flight, or an Edit final
+  save has no open, valid, current draft. For `reopen`, `restart`, `cancel` and
+  `edit-final` it first returns a play holding the resolved request awaiting confirmation
+  and no request; `confirmManagerCommand` sends exactly that request (an edit-final with
+  the list and version as they were confirmed) and `dismissManagerConfirm` drops it.
   Asking again just asks again: only the confirmation sends. `selectActForMap` and
   `beginActForLock` are the act-for select-then-Lock in, which sends `lock` with the side,
   map and plan index.
 - `openFinalEditor(play, view)` starts an Edit final draft from the view (only while Edit
-  final applies and nothing is in flight), `changeFinalEditor(play, change)` applies one of
-  `editFinal.ts`'s draft changes, and `closeFinalEditor` drops the draft with any refusal
-  it was showing. The dock's `finalEditor` is `finalEditorOf` plus `saving` (its save is in
-  flight) and its own `rejection`: a refused save shows there, not in the toolbar, and the
-  draft stays for another try. A save that succeeds closes the editor.
+  final applies and nothing is in flight). Calling it with a draft open reloads it from
+  the current summary and version, and drops any refusal the editor showed.
+  `changeFinalEditor(play, change)` applies one of `editFinal.ts`'s draft changes, and
+  `closeFinalEditor` drops the draft with any refusal it was showing. The dock's
+  `finalEditor` is `finalEditorOf` plus `saving` (its save is in flight) and its own
+  `rejection`: a refused save shows there, not in the toolbar, and the draft stays for
+  another try. A save refused with `version_conflict` says the final maps changed since
+  the editor opened. Once the view shows the newer version the editor is `outdated`,
+  which replaces that refusal and holds Save until the draft is reloaded. A save that
+  succeeds closes the editor.
 - `managerCommandSucceeded` and `managerCommandRejected(play, error)` settle a command, and
   `dismissManagerRejection` clears the refusal. A refusal without a stable code falls back
   to the captain's `unwordedRejection` (the unreachable-network words, else the error's own
@@ -550,9 +564,10 @@ running or paused one, so neither can run as the other.
 **Edit final draft** (`events/pickban/editFinal.ts`, pure, Vitest without a DOM) is the
 editor's model:
 
-- `finalDraftOf(view)` seeds a `FinalDraft` from `view.summary`, in play order: each entry
-  has a stable `key`, its map (`null` for a slot not revealed yet), its picked-by side and
-  its decider flag.
+- `finalDraftOf(view)` seeds a `FinalDraft` from `view.summary`, in play order, and
+  records `view.version` as the version to save against. Each entry has a stable `key`,
+  its map, its picked-by side and its decider flag. Edit final only applies once the last
+  spotlight is over, so every slot is revealed by then.
 - The changes each take the draft and an entry key and return a new draft:
   `setFinalMap`, `setFinalSide`, `setFinalDecider` (marking only works on the last entry,
   and unmarks any other; the entry keeps its side for when it is unmarked),
@@ -561,18 +576,22 @@ editor's model:
 - `finalEditorOf(draft, view)` is the render model: numbered rows with move and decider
   availability and an `invalid` flag, the map choices (the pool's non-excluded cards with
   their display names), both sides with their A/B letter and team name, whether Add still
-  applies (fewer rows than eligible maps), one worded problem per broken rule, and the
-  request `body` only when there are none. The rules are the server's: at least one map;
+  applies (fewer rows than eligible maps), one worded problem per broken rule, the
+  request `body` only when there are none, and `outdated` once the view's `version` has
+  moved past the draft's. The rules are the server's: at least one map;
   every map chosen and in the eligible pool; no map listed twice; at most one decider,
   and only the last; every other entry with a picked-by side. The decider always goes out
   with `picked_by: null`.
 
-`useManagerDock(view, sendManagerCommand)` (`events/pickban/useManagerDock.ts`) wires it to
-the store the same way `useCaptainPlay` does, and settles the play whenever the view
-changes. It hands each request to `sendManagerCommand` through a per-command switch, so
-every body is checked against `PickBanManagerCommandBodies` without a cast. `run(action)`
-begins an action, and `openFinalEditor`, `changeFinalEditor` and `closeFinalEditor` drive
-the draft. The page passes it the captain-played view, so both layers show.
+`useManagerDock(view, { sendManagerCommand, sendManagerCommandAt })`
+(`events/pickban/useManagerDock.ts`) wires it to the store the same way `useCaptainPlay`
+does, and settles the play whenever the view changes. It hands each request to the store
+through a per-command switch, so every body is checked against
+`PickBanManagerCommandBodies` without a cast, and a request with a pinned `version` goes to
+`sendManagerCommandAt`. `run(action)` begins an action, and `openFinalEditor` (which also
+reloads), `changeFinalEditor` and `closeFinalEditor` drive the draft. The page passes it
+the captain-played view, so both layers show, and the session itself, which carries both
+senders.
 
 **Hooks** (`events/pickban/usePickBanSession.ts`):
 

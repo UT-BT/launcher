@@ -1,5 +1,5 @@
 import type { ComponentProps } from 'react'
-import { ArrowDown, ArrowUp, Plus, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, Plus, RotateCcw, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { displayMapName } from '@/app/utils/format'
 import {
@@ -24,6 +24,7 @@ interface EditFinalEditorProps {
     editor: ManagerFinalEditor
     resultsWarning: string | null
     onChange: ChangeDraft
+    onReload: () => void
     onDismissRejection: () => void
 }
 
@@ -31,7 +32,7 @@ const SELECT = 'h-11 w-full min-w-0 cursor-pointer rounded-lg border border-hair
 
 const ICON_BUTTON = 'inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-hairline/10 bg-card/50 text-muted-foreground transition-colors hover:border-hairline/20 hover:text-foreground disabled:pointer-events-none disabled:opacity-30 @2xl/final:size-9'
 
-export function EditFinalEditor({ editor, resultsWarning, onChange, onDismissRejection }: EditFinalEditorProps) {
+export function EditFinalEditor({ editor, resultsWarning, onChange, onReload, onDismissRejection }: EditFinalEditorProps) {
     return (
         <div className="@container/final flex flex-col gap-3">
             <p className="text-xs text-muted-foreground">
@@ -41,6 +42,21 @@ export function EditFinalEditor({ editor, resultsWarning, onChange, onDismissRej
                 <p role="status" className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm font-medium text-amber-300">
                     {resultsWarning}
                 </p>
+            )}
+            {editor.outdated && (
+                <div role="status" className="flex flex-wrap items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2">
+                    <p className="min-w-0 flex-1 basis-56 text-sm font-medium text-amber-300">
+                        The final maps changed since you opened the editor. Reload them to edit the current list.
+                    </p>
+                    <button
+                        type="button"
+                        onClick={onReload}
+                        className="inline-flex h-11 shrink-0 cursor-pointer items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 text-sm font-medium text-amber-300 transition-colors hover:border-amber-500/50 hover:bg-amber-500/25 @2xl/final:h-8 @2xl/final:text-xs"
+                    >
+                        <RotateCcw className="size-4" />
+                        Reload
+                    </button>
+                </div>
             )}
             {editor.rejection && <Rejection message={editor.rejection} onDismiss={onDismissRejection} />}
             <ol aria-label="Final maps" className="flex flex-col gap-2">

@@ -712,6 +712,28 @@ describe('affordances', () => {
         expect(viewAt(asManager(awaitingA), INTRO_END + 1_000).affordances.canLock).toBe(false)
         expect(viewAt(asManager(awaitingA), INTRO_END + 1_000).cards.filter((c) => c.selectable)).toHaveLength(ELIGIBLE_MAPS.length)
     })
+
+    it('offers Edit final only once the last spotlight is over, and Reopen from the moment the session completes', () => {
+        const controls = (serverTime: number) => viewAt(asManager(completed()), serverTime).affordances.manager
+        const lastSpotlightEnds = unlockAt(completed())
+
+        expect(controls(lastSpotlightEnds - 1_000)).toMatchObject({ reopen: true, editFinal: false })
+        expect(controls(lastSpotlightEnds)).toMatchObject({ reopen: true, editFinal: true })
+    })
+
+    it('offers no Reopen on a complete session where only the automatic decider ran', () => {
+        const [decider] = planOf([[null, 'decider', 'decider', 1]])
+        const deciderOnly = pickBanState({
+            status: 'complete',
+            phase: 'complete',
+            plan: [{ ...decider, map: GOLF, at: iso(T0), reveal_at: iso(T0) }],
+            started_at: iso(T0),
+            completed_at: iso(T0),
+            spotlight_ends_at: iso(T0 + DECIDER_SPOTLIGHT_MS),
+        })
+
+        expect(viewAt(asManager(deciderOnly), T0 + 3_600_000).affordances.manager).toMatchObject({ reopen: false, editFinal: true, restart: true })
+    })
 })
 
 describe('team panels', () => {
