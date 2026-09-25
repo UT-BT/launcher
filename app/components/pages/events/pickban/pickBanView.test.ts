@@ -941,6 +941,28 @@ describe('stage scene', () => {
         expect(viewAt(quick, FIRST_LOCK + LEAD_MS).scene.entranceMs).toBeLessThanOrEqual(400)
     })
 
+    it('flags the card and step being revealed only while the reveal entrance runs, so a late viewer or a later poll never flashes it', () => {
+        const state = asSpectator(firstBanLocked())
+        const reveal = FIRST_LOCK + LEAD_MS
+        const onTime = viewAt(state, reveal)
+        const { entranceMs } = onTime.scene
+
+        expect(onTime.cards.filter((c) => c.revealing).map((c) => c.map)).toEqual([ALPHA])
+        expect(onTime.timeline.map((entry) => entry.revealing)).toEqual([true, false, false, false, false, false, false])
+        expect(cardOf(viewAt(state, reveal + entranceMs), ALPHA).revealing).toBe(true)
+        for (const serverTime of [FIRST_LOCK + 500, reveal + entranceMs + 1, reveal + SPOTLIGHT_MS + 1_000]) {
+            const view = viewAt(state, serverTime)
+            expect(view.cards.some((c) => c.revealing)).toBe(false)
+            expect(view.timeline.some((entry) => entry.revealing)).toBe(false)
+        }
+
+        const before = beforeFinalBan()
+        const finalLock = unlockAt(before) + 2_000
+        const deciderReveal = finalLock + LEAD_MS + BAN_DOWN_SPOTLIGHT_MS
+        const atDecider = viewAt(asSpectator(locked(before, FOXTROT, finalLock)), deciderReveal)
+        expect(atDecider.cards.filter((c) => c.revealing).map((c) => c.map)).toEqual([GOLF])
+    })
+
     it('plays an entrance only while it can still run in step with every other screen, and always for an undo', () => {
         const state = asSpectator(firstBanLocked())
         const reveal = FIRST_LOCK + LEAD_MS

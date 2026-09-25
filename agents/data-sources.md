@@ -820,6 +820,11 @@ pure and tested without a DOM. It returns:
 - `timeline`: `upcoming`, `current`, `locked_in` or `revealed`, with each step's
   `actorLabel` and `actionLabel`, its `automatic` flag, and its map and screenshot version
   once revealed
+- `revealing` on a card and on a timeline entry: `true` only for the step whose reveal
+  entrance is running right now (the reveal scene's `elapsedMs` is still within its
+  `entranceMs`). The pool grid and the timeline flash a card or chip once, on the render
+  where it turns `true`, so a late poll or a page opened mid-spotlight shows the new state
+  without the flash
 - `skippedBans`: the payload's `skipped_bans`, one entry per dropped ban in the same order,
   with `beforeIndex` (its `before_index`) so a timeline can draw it in place
 - `summary`, in play order (`map_number`), with each map's `actorLabel` and a slot reserved

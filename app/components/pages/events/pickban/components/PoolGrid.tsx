@@ -4,8 +4,8 @@ import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { displayMapName } from '@/app/utils/format'
 import type { PickBanActor } from '@/app/utils/api'
 import type { PickBanCardView } from '../pickBanView'
-import { PICK_BAN_TONES, stepTone, teamTone } from './pickBanTone'
-import { CHIP_MOTION, STAMP_MOTION } from './stageMotion'
+import { PICK_BAN_HUES, PICK_BAN_TONES, stepTone, teamTone } from './pickBanTone'
+import { CHIP_MOTION, REVEAL_FLASH_MOTION, REVEAL_POP, STAMP_MOTION } from './stageMotion'
 
 const CORNER_CHIP = 'absolute right-1 top-1 rounded px-1.5 py-px text-[10px] font-bold uppercase'
 
@@ -59,16 +59,21 @@ export function PoolCard({ card, previewActor, onSelect }: {
     onSelect?: (map: string) => void
 }) {
     const name = displayMapName(card.map)
-    const tone = PICK_BAN_TONES[stepTone(card.state === 'decider' ? null : card.ab)]
+    const toneKey = stepTone(card.state === 'decider' ? null : card.ab)
+    const tone = PICK_BAN_TONES[toneKey]
+    const hue = PICK_BAN_HUES[toneKey]
     const previewTone = PICK_BAN_TONES[teamTone(previewActor)]
     const acted = card.state === 'banned' || card.state === 'picked' || card.state === 'decider'
     const choosable = onSelect !== undefined && card.selectable
 
     return (
-        <div
+        <motion.div
+            initial={false}
+            animate={card.revealing ? REVEAL_POP : undefined}
             title={card.state === 'excluded' ? card.exclusionReason ?? undefined : card.map}
             className={cn(
                 'relative aspect-square overflow-hidden rounded-lg border-2 bg-card/30 transition-[border-color,box-shadow] duration-300',
+                card.revealing && 'z-10',
                 card.state === 'available' && !card.previewed && 'border-hairline/10',
                 card.state === 'excluded' && 'border-hairline/5',
                 acted && tone.border,
@@ -89,6 +94,15 @@ export function PoolCard({ card, previewActor, onSelect }: {
                 )}
             />
             <AnimatePresence initial={false}>
+                {card.revealing && acted && (
+                    <motion.span
+                        key="reveal-flash"
+                        aria-hidden
+                        {...REVEAL_FLASH_MOTION}
+                        className="pointer-events-none absolute inset-0"
+                        style={{ background: `radial-gradient(circle, color-mix(in srgb, ${hue} 70%, white) 0%, color-mix(in srgb, ${hue} 45%, transparent) 70%)`, boxShadow: `inset 0 0 0 3px ${hue}` }}
+                    />
+                )}
                 {card.stepNumber !== null && (
                     <motion.span key="step" aria-hidden {...CHIP_MOTION} className="absolute left-1 top-1 rounded bg-black/60 px-1 py-px font-mono text-[10px] font-bold text-white">
                         #{card.stepNumber}
@@ -151,6 +165,6 @@ export function PoolCard({ card, previewActor, onSelect }: {
                     className="absolute inset-0 cursor-pointer rounded-md transition-colors hover:bg-hairline/10 focus-visible:outline-2 focus-visible:-outline-offset-4 focus-visible:outline-accent-500"
                 />
             )}
-        </div>
+        </motion.div>
     )
 }
