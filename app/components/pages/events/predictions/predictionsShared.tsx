@@ -1,10 +1,11 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import type {
-    PredictionMarket, PredictionMarketStatus, PredictionOutcome, PredictionPositionStatus,
+    EventMatch, PredictionMarket, PredictionMarketStatus, PredictionOutcome, PredictionPositionStatus,
     PredictionSide,
 } from '@/app/utils/api'
 import { parseApiInstant } from '@/app/utils/timezone'
+import { marketTakesPredictions } from './marketLock'
 
 export { parseApiInstant }
 
@@ -234,10 +235,10 @@ export function useMatchOdds(matchId: string | null | undefined): PredictionMark
  * Three numbers on a bracket card is already tight, so the percent signs go and
  * the middle number is the draw when there is one.
  */
-export function MatchOddsChip({ matchId }: { matchId: string | null | undefined }) {
-    const market = useMatchOdds(matchId)
+export function MatchOddsChip({ match }: { match: Pick<EventMatch, 'id' | 'status' | 'pick_ban_status'> }) {
+    const market = useMatchOdds(match.id)
 
-    if (!market || market.status !== 'open') return null
+    if (!market || !marketTakesPredictions(market, match)) return null
 
     const parts = sidesOf(market).map(side => Math.round(priceOf(market, side) * 100))
 

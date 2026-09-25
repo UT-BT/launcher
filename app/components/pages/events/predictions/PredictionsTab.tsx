@@ -13,6 +13,7 @@ import { BackersModal } from './BackersModal'
 import { BetModal } from './BetModal'
 import { MarketCard } from './MarketCard'
 import { PredictionsLeaderboard } from './PredictionsLeaderboard'
+import { marketTakesPredictions } from './marketLock'
 import { CoinAmount, formatCoins, parseApiInstant, useNow } from './predictionsShared'
 
 type PredictionsView = 'markets' | 'mine' | 'leaderboard'
@@ -56,11 +57,11 @@ function sortKey(market: PredictionMarket): number {
 }
 
 function sectionFor(market: PredictionMarket, now: number): string {
-    if (market.status === 'open') {
+    if (marketTakesPredictions(market)) {
         const closes = parseApiInstant(market.closes_at)
         return closes !== null && closes - now < CLOSING_SOON_MS ? 'closing' : 'open'
     }
-    if (market.status === 'closed') return 'awaiting'
+    if (market.status === 'open' || market.status === 'closed') return 'awaiting'
     if (market.status === 'resolved') return 'paying'
     return 'done'
 }
