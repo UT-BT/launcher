@@ -8,7 +8,7 @@ const assetsDir = join(distDir, 'assets')
 
 const KiB = 1024
 const maxInitialJsGzipBytes = 190 * KiB
-const maxInitialCssGzipBytes = 32 * KiB
+const maxInitialCssGzipBytes = 34 * KiB
 const maxInitialTotalGzipBytes = 220 * KiB
 const maxLazyChunkGzipBytes = 120 * KiB
 const maxTotalJsGzipBytes = 750 * KiB

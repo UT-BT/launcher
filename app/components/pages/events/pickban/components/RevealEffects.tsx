@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { motion, type TargetAndTransition, type Variants } from 'framer-motion'
 import { cn } from '@/lib/utils'
+import { tint } from './pickBanTone'
 
 const CENTRED = 'pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2'
 
@@ -20,10 +21,6 @@ const CRACKS = [
     'M38 41 L41 30 L36 21',
     'M64 53 L70 63 L81 66',
 ]
-
-function tint(hue: string, percent: number): string {
-    return `color-mix(in srgb, ${hue} ${percent}%, transparent)`
-}
 
 export function Aura({ variants, hue, className }: { variants: Variants; hue: string; className?: string }) {
     return (

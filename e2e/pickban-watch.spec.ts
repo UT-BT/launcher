@@ -74,6 +74,10 @@ function fakeServer(anchor: number, stateAt: (serverTime: number) => PickBanStat
     return { stateAt, anchor, startedAt: Date.now(), servedFresh: 0, servedUnchanged: 0, firstServed: new Map(), authorized: false }
 }
 
+async function setAnimations(page: Page, animations: 'on' | 'off') {
+    await page.addInitScript(value => localStorage.setItem('utbt:pickBanMotion:v1', JSON.stringify(value)), animations)
+}
+
 async function horizontalOverflow(page: Page): Promise<number> {
     return page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
 }
@@ -106,7 +110,7 @@ async function stageFit(page: Page) {
             right: box.right - parseFloat(style.borderRightWidth) - parseFloat(style.paddingRight),
         }
         const escaped = Array.from(section.querySelectorAll<HTMLElement>('*'))
-            .filter(element => !element.closest('.sr-only') && !element.matches('.inset-0'))
+            .filter(element => !element.closest('.sr-only') && !element.matches('.inset-0') && !element.closest('[aria-hidden="true"]'))
             .filter(element => {
                 const rect = element.getBoundingClientRect()
                 if (rect.width === 0 || rect.height === 0) return false
@@ -183,7 +187,7 @@ test('a lock-in delivered early is revealed at its reveal_at, at the same moment
     await context.close()
 })
 
-test('the centre stage keeps one height per width and fits every state inside it', async ({ page, isMobile }) => {
+test('the stage keeps one height per width and fits every state inside it', async ({ page, isMobile }) => {
     test.skip(isMobile)
     test.setTimeout(180_000)
 
@@ -196,7 +200,7 @@ test('the centre stage keeps one height per width and fits every state inside it
             name: 'intro',
             state: { ...held(started()), intro_ends_at: iso(INTRO_START + HOLD_MS) },
             at: INTRO_START + 1_000,
-            expectText: /Starting/,
+            expectText: /until Picks & Bans start/,
         },
         {
             name: 'awaiting',
@@ -250,12 +254,12 @@ test('the centre stage keeps one height per width and fits every state inside it
     }
 })
 
-test('the countdown bar glides, and steps once a second with reduced motion on', async ({ page, isMobile }) => {
+test('the countdown bar glides, and steps once a second with animations off', async ({ page, isMobile }) => {
     test.skip(isMobile)
 
     const intro = { ...held(started()), intro_ends_at: iso(INTRO_START + HOLD_MS) }
     const barPositions = () => page.evaluate(() => new Promise<number>(resolve => {
-        const bar = document.querySelector('section[aria-label="Picks & Bans Stage"] .origin-left') as HTMLElement
+        const bar = document.querySelector('section[aria-label="Picks & Bans Stage"] .origin-left.will-change-transform') as HTMLElement
         const seen = new Set<string>()
         const startedAt = performance.now()
         const sample = () => {
@@ -266,15 +270,15 @@ test('the countdown bar glides, and steps once a second with reduced motion on',
         requestAnimationFrame(sample)
     }))
 
-    for (const reducedMotion of ['no-preference', 'reduce'] as const) {
-        await page.emulateMedia({ reducedMotion })
+    for (const animations of ['on', 'off'] as const) {
+        await setAnimations(page, animations)
         await page.unrouteAll()
         await serve(page, fakeServer(INTRO_START + 1_000, () => intro))
         await page.goto(PAGE_PATH)
-        await expect(stage(page)).toContainText(/Starting/)
+        await expect(stage(page)).toContainText(/until Picks & Bans start/)
 
         const positions = await barPositions()
-        if (reducedMotion === 'reduce') expect(positions).toBeLessThanOrEqual(4)
+        if (animations === 'off') expect(positions).toBeLessThanOrEqual(4)
         else expect(positions).toBeGreaterThan(20)
     }
 })
@@ -297,16 +301,16 @@ function midway(opacities: number[]): number[] {
     return opacities.filter(opacity => opacity > 0.05 && opacity < 0.95)
 }
 
-test('an undo plays the reveal backwards, and is instant with reduced motion', async ({ page, isMobile }) => {
+test('an undo plays the reveal backwards, and is instant with animations off', async ({ page, isMobile }) => {
     test.skip(isMobile)
 
     const revealed = held(locked(started(), ALPHA, FIRST_LOCK))
     const reveal = revealOf(revealed, 0)
     const afterUndo = undone(revealed, reveal + 1_000)
 
-    for (const reducedMotion of ['no-preference', 'reduce'] as const) {
+    for (const animations of ['on', 'off'] as const) {
         let undoServed = false
-        await page.emulateMedia({ reducedMotion })
+        await setAnimations(page, animations)
         await page.unrouteAll()
         await serve(page, fakeServer(reveal + 1_000, () => (undoServed ? afterUndo : revealed)))
         await page.goto(PAGE_PATH)
@@ -318,12 +322,12 @@ test('an undo plays the reveal backwards, and is instant with reduced motion', a
 
         await expect(stage(page)).toContainText(/Waiting for Crimson Cats to lock in/)
         await expect(stage(page)).not.toContainText('BANNED')
-        if (reducedMotion === 'reduce') expect(midway(opacities), reducedMotion).toEqual([])
-        else expect(midway(opacities).length, reducedMotion).toBeGreaterThan(2)
+        if (animations === 'off') expect(midway(opacities), animations).toEqual([])
+        else expect(midway(opacities).length, animations).toBeGreaterThan(2)
     }
 })
 
-test('the paused overlay fades in and out, and is instant with reduced motion', async ({ page, isMobile }) => {
+test('the paused overlay fades in and out, and is instant with animations off', async ({ page, isMobile }) => {
     test.skip(isMobile)
 
     const revealed = held(locked(started(), ALPHA, FIRST_LOCK))
@@ -331,9 +335,9 @@ test('the paused overlay fades in and out, and is instant with reduced motion', 
     const pausedState = paused(revealed, reveal + 1_000)
     const resumedState = resumed(pausedState, reveal + 1_000)
 
-    for (const reducedMotion of ['no-preference', 'reduce'] as const) {
+    for (const animations of ['on', 'off'] as const) {
         let served: PickBanState = revealed
-        await page.emulateMedia({ reducedMotion })
+        await setAnimations(page, animations)
         await page.unrouteAll()
         await serve(page, fakeServer(reveal + 1_000, () => served))
         await page.goto(PAGE_PATH)
@@ -350,11 +354,11 @@ test('the paused overlay fades in and out, and is instant with reduced motion', 
         await expect(stage(page)).not.toContainText('Session paused')
         await expect(stage(page)).toContainText('BANNED')
 
-        if (reducedMotion === 'reduce') {
-            expect([...midway(fadeIn), ...midway(fadeOut)], reducedMotion).toEqual([])
+        if (animations === 'off') {
+            expect([...midway(fadeIn), ...midway(fadeOut)], animations).toEqual([])
         } else {
-            expect(midway(fadeIn).length, `${reducedMotion} fade in`).toBeGreaterThan(2)
-            expect(midway(fadeOut).length, `${reducedMotion} fade out`).toBeGreaterThan(2)
+            expect(midway(fadeIn).length, `${animations} fade in`).toBeGreaterThan(2)
+            expect(midway(fadeOut).length, `${animations} fade out`).toBeGreaterThan(2)
         }
     }
 })

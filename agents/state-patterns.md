@@ -446,7 +446,10 @@ Screens never read those fields. They go through the functions below.
   the turn as `lockedIn` and the step as `locked_in`, and makes nothing selectable. That is
   the optimistic "Locked In", shown before the command answers. A selection only shows while
   its plan index is the awaited step and its card is still `selectable`, so a step that moved
-  on, an undo or a map that became unavailable drops it without extra bookkeeping.
+  on, an undo or a map that became unavailable drops it without extra bookkeeping. While the
+  captain has a selection on their own turn, or a lock-in is in flight, it clears every card's
+  `previewed`: the server's preview is only the echo of an earlier selection, so it would keep
+  the old map highlighted until the next poll.
 - `captainDockOf(view, play)` is the dock model: `ready`, `choose`, `locked_in`, `locked`
   (the intro, a spotlight or a pause, with the view's `countdown` and the next `turn`) or
   `waiting` (the other side's turn), plus the refusal message. It is `null` for anyone

@@ -19,7 +19,7 @@ interface CaptainDockProps {
     className?: string
 }
 
-const BUTTON = 'inline-flex h-11 w-full shrink-0 items-center justify-center gap-2 rounded-lg border px-4 text-sm font-bold transition-colors sm:w-44'
+const BUTTON = 'inline-flex h-11 w-full shrink-0 items-center justify-center gap-2 rounded-lg border px-4 font-pickban text-lg font-black italic uppercase tracking-wide transition-colors sm:w-48'
 
 const LOCKED_BUTTON = cn(BUTTON, 'cursor-not-allowed border-hairline/10 bg-hairline/5 text-muted-foreground')
 
@@ -46,8 +46,9 @@ export function CaptainDock({ dock, ab, reconnecting, actingFor, onLockIn, onTog
     return (
         <section
             aria-label={actingFor === undefined ? 'Your team’s controls' : 'Act for a team'}
-            className={cn('sticky bottom-3 z-20 flex flex-col gap-3 rounded-xl border bg-card p-3 shadow-lg shadow-black/30 sm:p-4', tone.line, className)}
+            className={cn('sticky bottom-3 z-20 isolate flex flex-col gap-3 overflow-hidden rounded-2xl border bg-card p-3 shadow-lg shadow-black/30 sm:p-4', tone.line, className)}
         >
+            <span aria-hidden className={cn('absolute inset-0 -z-10 bg-gradient-to-r to-transparent to-70%', tone.wash)} />
             {dock.rejection && <Rejection message={dock.rejection} onDismiss={onDismiss} />}
             {dock.controls && <Controls controls={dock.controls} tone={tone} actingFor={actingFor} onLockIn={onLockIn} onToggleReady={onToggleReady} />}
             {reconnecting && (
@@ -196,7 +197,7 @@ function ControlRow({ eyebrow, title, detail, bar, action }: {
         <div className="flex flex-wrap items-center gap-3">
             <div className="min-w-0 flex-1 basis-56 space-y-1">
                 {eyebrow}
-                <p aria-live="polite" className="break-words text-base font-bold leading-tight text-foreground">{title}</p>
+                <p aria-live="polite" className="break-words font-pickban text-2xl font-black italic uppercase leading-none tracking-tight text-foreground">{title}</p>
                 <p className="text-xs text-muted-foreground">{detail}</p>
                 {bar}
             </div>

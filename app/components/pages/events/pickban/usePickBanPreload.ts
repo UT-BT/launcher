@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { nextScreenshotStage, screenshotUrlFor, type ScreenshotStage } from '@/app/utils/mapScreenshots'
+import { nextScreenshotStage, screenshotUrlFor, type MapThumbnailSize, type ScreenshotStage } from '@/app/utils/mapScreenshots'
 import type { PickBanCardView } from './pickBanView'
 
 export type PickBanPreloadCard = Pick<PickBanCardView, 'map' | 'screenshotVersion' | 'state'>
@@ -21,9 +21,11 @@ function decodeInto(url: string, kept: HTMLImageElement[]): Promise<boolean> {
     )
 }
 
-async function preloadScreenshot([map, version]: PreloadTarget, kept: HTMLImageElement[]): Promise<void> {
+const CORE_SIZES: MapThumbnailSize[] = ['card']
+
+async function preloadScreenshot([map, version]: PreloadTarget, size: MapThumbnailSize, kept: HTMLImageElement[]): Promise<void> {
     let stage: ScreenshotStage = 'derived'
-    while (!(await decodeInto(screenshotUrlFor(stage, map, 'card', version), kept))) {
+    while (!(await decodeInto(screenshotUrlFor(stage, map, size, version), kept))) {
         if (stage === 'default') return
         stage = nextScreenshotStage(stage)
     }
@@ -47,15 +49,18 @@ function targetsKeyOf(cards: readonly PickBanPreloadCard[] | null | undefined): 
     return JSON.stringify(targets)
 }
 
-export function usePickBanPreload(cards: readonly PickBanPreloadCard[] | null | undefined): void {
+export function usePickBanPreload(cards: readonly PickBanPreloadCard[] | null | undefined, sizes: readonly MapThumbnailSize[] = CORE_SIZES): void {
     const targetsKey = targetsKeyOf(cards)
+    const sizesKey = sizes.join(',')
 
     useEffect(() => {
         const kept: HTMLImageElement[] = []
         void preloadFonts().catch(() => undefined)
-        for (const target of JSON.parse(targetsKey) as PreloadTarget[]) void preloadScreenshot(target, kept)
+        for (const target of JSON.parse(targetsKey) as PreloadTarget[]) {
+            for (const size of sizesKey.split(',') as MapThumbnailSize[]) void preloadScreenshot(target, size, kept)
+        }
         return () => {
             kept.length = 0
         }
-    }, [targetsKey])
+    }, [targetsKey, sizesKey])
 }

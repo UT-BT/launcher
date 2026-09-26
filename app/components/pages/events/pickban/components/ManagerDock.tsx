@@ -56,7 +56,7 @@ import {
     type ManagerStartBlock,
 } from '../managerDock'
 import type { UseManagerDockResult } from '../useManagerDock'
-import { CaptainDock, Rejection } from './CaptainDock'
+import { Rejection } from './CaptainDock'
 import { EditFinalEditor } from './EditFinalEditor'
 import { PickBanBannerNote } from './PickBanBannerNote'
 import { PickBanStatusChip } from './PickBanStatusChip'
@@ -128,7 +128,7 @@ export function ManagerDock({ manager, slug, accessToken, links }: ManagerDockPr
     const titleId = useId()
     const { dock } = manager
     if (!dock) return null
-    const { actFor, busy, confirm, finalEditor, primary, sides, sequence } = dock
+    const { busy, confirm, finalEditor, primary, sides, sequence } = dock
 
     const runZone = (command: ZoneCommand) => {
         if (command === 'edit-final') manager.openFinalEditor()
@@ -164,17 +164,6 @@ export function ManagerDock({ manager, slug, accessToken, links }: ManagerDockPr
                             <Info className="mt-px size-3.5 shrink-0" />
                             {dock.playingNote}
                         </p>
-                    )}
-                    {actFor && (
-                        <CaptainDock
-                            dock={actFor.dock}
-                            ab={actFor.ab}
-                            actingFor={actFor.teamName}
-                            reconnecting={false}
-                            onLockIn={manager.lockIn}
-                            onDismiss={manager.dismiss}
-                            className="static shadow-none"
-                        />
                     )}
                     <div className={cn('grid gap-3', sides && '@3xl/dock:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] @3xl/dock:items-start')}>
                         <div className="flex min-w-0 flex-col gap-3">

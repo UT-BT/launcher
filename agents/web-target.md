@@ -163,7 +163,9 @@ the fallback for real routing.
 `StreamView` never needs a login, always polls (`usePickBanSession` with
 `alwaysPoll: true` — see `agents/data-sources.md` → `event-pickban-sessions`),
 and renders a fixed 1920×1080 stage (`stream/StreamStage.tsx`,
-`stream/stageScale.ts`) scaled to fit the window with a solid background.
+`stream/stageScale.ts`) scaled to fit the window with a solid background. Inside
+it is the broadcast layout (`stream/StreamBroadcast.tsx`, see
+`agents/shared-components.md`), set in the self-hosted `font-pickban` face.
 Sound plays by default, and two query params set it, both parsed by
 `stream/streamSound.ts` (`streamSoundOf`, read once by `mountStreamRoot` and
 handed through `StreamView` to `usePickBanSound`; the stream view has no sound
@@ -260,7 +262,7 @@ relative to it needs the `lg:` variant. Screenshot-verify new surfaces at
 ## Performance
 
 The web entry chunk must stay lean — phones parse it on first visit. The initial
-payload is currently **~169 KiB JS + 27 KiB CSS gzip**, enforced by
+payload is currently **~181 KiB JS + 32 KiB CSS gzip**, enforced by
 `npm run check:bundle`.
 
 - **Every primary page except `Home` is `React.lazy`**, built from the shared

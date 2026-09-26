@@ -99,7 +99,7 @@ export function withOptimisticLock(view: PickBanView, map: string): PickBanView 
     return {
         ...view,
         turn: { ...turn, lockedIn: true },
-        cards: view.cards.map((card) => ({ ...card, lockedIn: card.map === map, selected: false, selectable: false })),
+        cards: view.cards.map((card) => ({ ...card, lockedIn: card.map === map, selected: false, selectable: false, previewed: false })),
         timeline: view.timeline.map((entry) => (entry.index === turn.stepIndex ? { ...entry, status: 'locked_in' } : entry)),
         affordances: { ...view.affordances, canLock: false },
     }
@@ -112,10 +112,16 @@ export function withSelectedMap(view: PickBanView, selectedMap: string | null): 
     }
 }
 
+function withoutEchoedPreview(view: PickBanView): PickBanView {
+    return { ...view, cards: view.cards.map((card) => (card.previewed ? { ...card, previewed: false } : card)) }
+}
+
 export function withCaptainPlay(view: PickBanView, play: CaptainPlay): PickBanView {
     const lockingIn = optimisticLockOf(view, play)
     if (lockingIn !== null) return withOptimisticLock(view, lockingIn)
-    return withSelectedMap(view, selectedMapOf(view, play))
+    const selectedMap = selectedMapOf(view, play)
+    const selected = withSelectedMap(view, selectedMap)
+    return selectedMap !== null && view.turn?.viewerActs ? withoutEchoedPreview(selected) : selected
 }
 
 function controlsOf(view: PickBanView, play: CaptainPlay): CaptainControls | null {

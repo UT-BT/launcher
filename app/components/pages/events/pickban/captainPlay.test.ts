@@ -354,6 +354,28 @@ describe('selection preview', () => {
         expect(hoverOf(selectMap(play, view, ALPHA), view)).toEqual({ map: ALPHA })
     })
 
+    it('lets the captain’s newer selection replace their own previewed map at once, before the preview catches up', () => {
+        const view = viewAt(asCaptain(previewing(readAt(started(), AWAITING_A), BRAVO), 'team_a'), AWAITING_A)
+
+        const played = withCaptainPlay(view, selectMap(IDLE_CAPTAIN_PLAY, view, ALPHA))
+
+        expect(played.cards.filter((card) => card.selected).map((card) => card.map)).toEqual([ALPHA])
+        expect(played.cards.some((card) => card.previewed)).toBe(false)
+    })
+
+    it('keeps showing the side’s preview while the captain has nothing selected here', () => {
+        const view = viewAt(asCaptain(previewing(readAt(started(), AWAITING_A), BRAVO), 'team_a'), AWAITING_A)
+
+        expect(withCaptainPlay(view, IDLE_CAPTAIN_PLAY).cards.filter((card) => card.previewed).map((card) => card.map)).toEqual([BRAVO])
+    })
+
+    it('drops the preview once Lock in is pressed', () => {
+        const view = viewAt(asCaptain(previewing(readAt(started(), AWAITING_A), BRAVO), 'team_a'), AWAITING_A)
+        const submission = beginLock(selectMap(IDLE_CAPTAIN_PLAY, view, ALPHA), view)!
+
+        expect(withCaptainPlay(view, submission.play).cards.some((card) => card.previewed)).toBe(false)
+    })
+
     it('sends nothing once Lock in is pressed', () => {
         const view = captainAView()
         const submission = beginLock(selectMap(IDLE_CAPTAIN_PLAY, view, BRAVO), view)!

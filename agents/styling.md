@@ -297,6 +297,16 @@ Standard radii: `rounded-xl` for big containers, `rounded-lg` for buttons / inpu
 | Monospace nums (times, ping) | `font-mono tabular-nums` |
 | Player / map name | `text-sm font-semibold text-white` |
 
+`font-pickban` (Barlow Condensed, bundled from `app/assets/fonts/barlow-condensed/` with
+its OFL licence) is the pick/ban display face: team names, the turn caption, map tiles,
+the step track and the reveal scenes on the match page and the stream view. The token
+lives in `globals.css`; its `@font-face` rules live in
+`events/pickban/components/pickBanFonts.css`, imported by `PickBanStage` and the stream
+root, both lazily loaded, so the entry CSS doesn't carry them. The files are imported
+assets rather than `app/public/` files so the desktop build, which has no public dir and
+loads over `file://`, gets them too. It ships four faces: 600 and 700 upright, 800 and 900
+italic. Body text and everything outside pick/ban stays on the system font.
+
 ## Color palette
 
 - **accent-500 / accent-400 / accent-300** — the one **themeable** scale (chrome:

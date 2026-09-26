@@ -72,3 +72,7 @@ export function teamTone(ab: PickBanActor | null): PickBanTone {
 export function stepTone(actor: PickBanActor | null): PickBanTone {
     return actor === null ? 'gold' : teamTone(actor)
 }
+
+export function tint(hue: string, percent: number): string {
+    return `color-mix(in srgb, ${hue} ${percent}%, transparent)`
+}

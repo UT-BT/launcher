@@ -895,11 +895,13 @@ needed) that the store's poller consults every cycle:
   the document shows again. The stream view (`events/pickban/stream/StreamView.tsx`) calls
   `usePickBanSession` with `alwaysPoll: true`, so it ignores `document.visibilityState`
   altogether (required because an OBS browser source is routinely reported hidden) **and**
-  gets the always-fast "no session yet" behavior above. It renders the same pool grid as the
-  watch page, read-only (no `onSelect`), in a footer strip below the timeline — sized with
-  its own fixed-width columns (`justify-center`, no `1fr` growth) rather than the grid's
-  usual responsive breakpoints, so a full pool (realistically up to ~18 maps) stays one row
-  across the fixed 1920px stage instead of wrapping.
+  gets the always-fast "no session yet" behavior above. It renders its own broadcast layout
+  (`stream/StreamBroadcast.tsx`, see `agents/shared-components.md` → the stream broadcast
+  layout), fixed in pixels rather than responsive: the eligible maps fill the middle of the
+  1920px stage as large tiles, laid out by `stream/boardLayout.ts` in however many rows keep
+  them biggest, and excluded maps are listed in one line under them.
+  It also reads the event's name once with `fetchEvent('', slug)` for its header and
+  shows nothing there if that fails.
 - A failed poll keeps the last good state, and `reconnecting` turns on after
   `RECONNECTING_AFTER_FAILURES` (3) failures in a row.
 - A poll that answers with an older `version` of the same session than a command response
@@ -1137,9 +1139,10 @@ only from the view model, through the pick/ban visual core (see
   - `lock` with `{ side, map, plan_index }` to act for the awaited side: select a card, then
     Lock In, with the same optimistic "Locked In" a captain gets, kept until the step
     reveals. A manager never sends `hover`. On the viewer's own turn as captain, the
-    captain controls handle it instead. Between turns the act-for strip stays, locked with
-    the countdown and who is up next, so nothing below it moves from Start to the last
-    lock-in. A manager who plays in the match gets no act-for strip at all, only a note
+    captain controls handle it instead. The act-for controls sit where a captain's do, right
+    under the stage, and between turns they stay, locked with the countdown and who is up
+    next, so nothing moves from Start to the last lock-in. A manager who plays in the match
+    gets no act-for controls at all, only a note
     that an admin who isn't playing has to lock in on a team's behalf; the server refuses
     their `lock` with 403 `plays_in_match`.
   - `restart` and `cancel`; they, Reopen and an edit-final save each run only after a

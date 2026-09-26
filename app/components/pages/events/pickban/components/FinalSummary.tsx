@@ -1,9 +1,10 @@
 import { motion } from 'framer-motion'
+import { Star } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { displayMapName } from '@/app/utils/format'
 import type { PickBanSummaryEntry } from '../pickBanView'
-import { PICK_BAN_TONES, stepTone } from './pickBanTone'
+import { PICK_BAN_HUES, PICK_BAN_TONES, stepTone, tint } from './pickBanTone'
 import { staggeredCard } from './stageMotion'
 
 interface FinalSummaryProps {
@@ -18,37 +19,51 @@ function pickedByLabel(entry: PickBanSummaryEntry): string {
 export function FinalSummary({ entries, className }: FinalSummaryProps) {
     return (
         <ol
-            className={cn('grid w-full justify-center gap-2 [--summary-card:11rem] @md/stage:gap-3 @[80rem]/stage:[--summary-card:16rem]', className)}
+            className={cn('grid w-full justify-center gap-2 [--summary-card:11rem] @md/stage:gap-4 @[80rem]/stage:[--summary-card:15rem]', className)}
             style={{ gridTemplateColumns: `repeat(${entries.length}, minmax(0, var(--summary-card)))` }}
         >
             {entries.map((entry, order) => {
-                const tone = PICK_BAN_TONES[stepTone(entry.decider ? null : entry.ab)]
+                const toneKey = stepTone(entry.decider ? null : entry.ab)
+                const tone = PICK_BAN_TONES[toneKey]
+                const hue = PICK_BAN_HUES[toneKey]
                 const name = entry.map ? displayMapName(entry.map) : null
                 return (
-                    <motion.li key={entry.key} variants={staggeredCard(order)} className="flex min-w-0 flex-col items-center gap-1.5">
+                    <motion.li key={entry.key} variants={staggeredCard(order)} className="@container/summary min-w-0">
                         <span className="sr-only">
                             {`Map ${entry.mapNumber}: ${name ?? 'To be decided'}, ${entry.decider ? 'decider' : `picked by ${entry.actorLabel}`}`}
                         </span>
-                        <div aria-hidden className={cn('relative aspect-square w-full overflow-hidden rounded-xl border-2 bg-hairline/5', tone.line, entry.decider && tone.border)}>
-                            {entry.map && (
-                                <MapThumbnail
-                                    mapName={entry.map}
-                                    version={entry.screenshotVersion}
-                                    size="card"
-                                    alt=""
-                                    className="absolute inset-0 h-full w-full rounded-none border-0"
-                                />
-                            )}
-                            <span className="absolute left-1 top-1 rounded-full bg-black/60 px-1.5 py-0.5 text-[10px] font-bold uppercase text-white">
-                                Map {entry.mapNumber}
+                        <div aria-hidden className="flex flex-col items-center gap-[5cqw]">
+                            <div
+                                className={cn('relative aspect-square w-full overflow-hidden rounded-[7cqw] border-[3px] bg-hairline/5', entry.map ? tone.border : tone.line)}
+                                style={entry.map ? { boxShadow: `0 0 24px ${tint(hue, 35)}` } : undefined}
+                            >
+                                {entry.map && (
+                                    <MapThumbnail
+                                        mapName={entry.map}
+                                        version={entry.screenshotVersion}
+                                        size="card"
+                                        alt=""
+                                        className="absolute inset-0 h-full w-full rounded-none border-0"
+                                    />
+                                )}
+                                <span
+                                    className={cn(
+                                        'absolute left-[5cqw] top-[5cqw] flex items-center gap-[2cqw] rounded-[3cqw] px-[4cqw] py-[1.5cqw] font-pickban text-[clamp(10px,10cqw,26px)] font-black italic uppercase leading-none shadow-lg',
+                                        tone.solid,
+                                        tone.onSolid,
+                                    )}
+                                >
+                                    {entry.decider && <Star className="size-[1em] fill-current" />}
+                                    Map {entry.mapNumber}
+                                </span>
+                            </div>
+                            <span title={entry.map ?? undefined} className="w-full truncate text-center font-pickban text-[clamp(11px,11cqw,28px)] font-bold uppercase leading-none text-foreground">
+                                {name ?? 'To be decided'}
+                            </span>
+                            <span className={cn('line-clamp-2 w-full break-words text-center font-pickban text-[clamp(9px,7.5cqw,18px)] font-bold uppercase leading-tight tracking-wider', tone.text)}>
+                                {pickedByLabel(entry)}
                             </span>
                         </div>
-                        <span aria-hidden title={entry.map ?? undefined} className="w-full truncate text-center text-xs font-semibold text-foreground">
-                            {name ?? 'To be decided'}
-                        </span>
-                        <span aria-hidden className={cn('line-clamp-2 w-full break-words text-center text-[10px] font-bold uppercase leading-tight tracking-wider', tone.text)}>
-                            {pickedByLabel(entry)}
-                        </span>
                     </motion.li>
                 )
             })}
