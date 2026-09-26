@@ -5,15 +5,20 @@ read_when:
   - "adding or changing a helper in app/utils/api.ts"
   - "needing an avatar, map screenshot, region flag, or map-download URL"
   - "wiring map/server favorites or Patreon tier lookups"
-keywords: [api.ts, fetch, endpoint, accessToken, avatar, MapThumbnail, favorites, patreon, downloadMapZip, world_records, caps, predictions, draw, odds, schedule, proposal, slot, whose_turn, resolved_window, countdown, nav badge, fetchMyTournaments, SlotPickerModal, SlotGrid, DateTimeField, slotGeneration, proposeMatchSlots, withdrawMatchProposal, acceptMatchProposal, fetchMatchSchedule, ApiError, expected_match_duration_minutes]
+  - "reading a match's pick/ban state, sending a pick/ban command, or rendering from the pick/ban view model"
+  - "rendering the manager match queue, or changing which stable codes it shows as a blocking reason"
+  - "finding a pick/ban session from the bracket, a match card, the event page or the Schedule tab without a direct link"
+  - "assigning a streamer to a match, or showing a streamer their assigned matches"
+  - "deciding whether a prediction market still takes bets once its match's pick/ban has started"
+keywords: [api.ts, fetch, endpoint, accessToken, avatar, MapThumbnail, favorites, patreon, downloadMapZip, world_records, caps, predictions, draw, odds, schedule, proposal, slot, whose_turn, resolved_window, countdown, nav badge, fetchMyTournaments, SlotPickerModal, SlotGrid, DateTimeField, slotGeneration, proposeMatchSlots, withdrawMatchProposal, acceptMatchProposal, fetchMatchSchedule, ApiError, expected_match_duration_minutes, fetchPickBanConfig, PickBanConfig, PickBanPoolMap, MapsTab, mapsShared, stagesWithPools, tagBadgeVariant, pick/ban, fetchPickBanState, ETag, If-None-Match, 304, X-Server-Now, server_now, clock offset, reveal_at, sendPickBanCommand, sendPickBanManagerCommand, hover, selection_preview, pickBanErrorCode, captain controls, CaptainDock, useCaptainPlay, fetchPickBanQueue, PickBanQueueEntry, PickBanQueueRow, toQueueRow, canOpenLobby, blockingReasonLabel, PickBanQueuePanel, pickBanStatusBadge, statusOfPhase, buildPickBanView, setPickBanStageConfig, setPickBanStagePool, copyPickBanStagePool, pickBanEditor, stage pool, buildMatchLinks, matchStreamPath, createPoller, pick_ban_status, MatchPickBanStatus, pickBanCardAffordance, PickBanCardPill, pickBanMapLabel, MyPickBanSession, pick_ban_session, PickBanLink, PickBanJoinBanner, pickBanEntryPoints, Join banner, scene, sceneDirection, playsEntrance, entranceMsFor, introStartsAt, usePickBanPreload, usePickBanSound, cuesToPlay, pickBanSoundCues, pickBanSoundPlayer, PickBanSoundCueKind, pickBanSounds, SOUND_HIT_MS, soundScheduleAt, STALE_HIT_MS, pickBanBeats, intro cue, sound=0, SOUND_URLS, volume, setVolume, masterGainOf, preview, pickBanSoundPreference, streamSoundOf, CREDITS.md, manager dock, ManagerDock, useManagerDock, managerDockOf, hand-over, act for team, Reopen, edit-final, PickBanEditFinalEntry, Edit final, fetchMyEventMatches, MyMatchEntry, is_streamer, EventStreamer, fetchEventStreamers, setMatchStreamer, streamer, StreamerPicker, withQueueStreamer, streamerChoices, scheduleSections, pickBanCallToAction, matchTimeLabel, marketLock, marketTakesPredictions, lockStartedMarkets, matchLockSignals, newlyLockedMatchIds, streamerName]
 provides: "the client-side API contract the launcher consumes + asset URLs + favorites/patreon sync models"
 not_here:
   - "IPC channels (window.conveyor.*) → lib/conveyor/README.md"
   - "how UI state persists in localStorage → state-patterns.md"
   - "the procedure to wire a new endpoint into the UI → skill: consume-api-data"
-sections: [backend-api, errors, admin-api, event-brackets, event-scheduling, event-predictions, changing-a-map-screenshot, cap-detail-page-endpoints, world-records-page-endpoints, team-maps-and-team-runs, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites, account-state-and-badges]
-last_verified: 2026-09-23
-verify_against: [app/utils/api.ts, app/utils/chartBuckets.ts, app/components/pages/admin/components/controls.tsx, app/components/pages/admin/sections/HostsManagementSection.tsx, app/utils/patreon.ts, app/utils/server-utils.ts, app/hooks/useServerFavorites.ts, app/components/pages/events/manage/formatFields.tsx, app/components/pages/events/bracket/bracketShared.tsx, app/components/pages/events/bracket/BracketTab.tsx, app/components/pages/events/predictions/predictionsShared.tsx, app/components/pages/events/predictions/PredictionsTab.tsx, app/components/pages/events/schedule/scheduleShared.tsx, app/components/pages/events/schedule/ScheduleTab.tsx, app/components/pages/events/schedule/SlotPickerModal.tsx, app/components/pages/events/schedule/slotGeneration.ts, app/components/pages/events/schedule/SlotGrid.tsx, app/components/pages/events/manage/DateTimeField.tsx, app/components/pages/events/eventsShared.tsx, app/components/pages/EventDetailPage.tsx, app/utils/timezone.ts, app/components/pages/events/manage/ScheduleOversightPanel.tsx, app/components/pages/events/ManagePanel.tsx, app/components/main/Main.tsx, app/components/layout/AppLayout.tsx]
+sections: [backend-api, errors, admin-api, event-brackets, event-scheduling, event-predictions, public-maps-tab-pick-ban-pools, event-pickban-sessions, event-pick-ban-setup, changing-a-map-screenshot, cap-detail-page-endpoints, world-records-page-endpoints, team-maps-and-team-runs, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites, account-state-and-badges]
+last_verified: 2026-09-25
+verify_against: [app/utils/api.ts, app/utils/chartBuckets.ts, app/components/pages/admin/components/controls.tsx, app/components/pages/admin/sections/HostsManagementSection.tsx, app/utils/patreon.ts, app/utils/server-utils.ts, app/hooks/useServerFavorites.ts, app/components/pages/events/manage/formatFields.tsx, app/components/pages/events/bracket/bracketShared.tsx, app/components/pages/events/bracket/BracketTab.tsx, app/components/pages/events/bracket/GroupStageView.tsx, app/components/pages/events/bracket/SwissStageView.tsx, app/components/pages/events/bracket/ElimStageView.tsx, app/components/pages/events/predictions/predictionsShared.tsx, app/components/pages/events/predictions/PredictionsTab.tsx, app/components/pages/events/schedule/scheduleShared.tsx, app/components/pages/events/schedule/ScheduleTab.tsx, app/components/pages/events/schedule/scheduleSections.ts, app/components/pages/events/predictions/marketLock.ts, app/components/pages/events/predictions/MarketCard.tsx, app/components/pages/home/ClosingSoonBanner.tsx, app/components/pages/events/schedule/SlotPickerModal.tsx, app/components/pages/events/schedule/slotGeneration.ts, app/components/pages/events/schedule/SlotGrid.tsx, app/components/pages/events/manage/DateTimeField.tsx, app/components/pages/events/eventsShared.tsx, app/components/pages/EventDetailPage.tsx, app/utils/timezone.ts, app/components/pages/events/manage/ScheduleOversightPanel.tsx, app/components/pages/events/ManagePanel.tsx, app/components/main/Main.tsx, app/components/layout/AppLayout.tsx, app/components/pages/events/maps/MapsTab.tsx, app/components/pages/events/maps/mapsShared.ts, app/components/pages/events/pickban/pickBanView.ts, app/components/pages/events/pickban/pickBanStatus.ts, app/components/pages/events/pickban/pickBanSession.ts, app/components/pages/events/pickban/pickBanEntryPoints.ts, app/components/pages/events/pickban/components/PickBanLink.tsx, app/components/pages/events/pickban/components/PickBanJoinBanner.tsx, app/components/pages/events/pickban/clockOffset.ts, app/components/pages/events/manage/pickban/pickBanEditor.ts, app/components/pages/events/manage/pickban/PickBanPanel.tsx, app/components/pages/events/manage/pickban/PickBanStageCard.tsx, app/components/pages/events/manage/pickban/PickBanQueuePanel.tsx, app/components/pages/events/manage/pickban/pickBanQueue.ts, app/components/pages/events/pickBanTags.ts, app/components/navigation/matchLinks.ts, app/utils/poller.ts, app/components/pages/events/pickban/stream/StreamView.tsx, app/components/pages/events/pickban/pickBanCopy.ts, app/components/pages/events/pickban/components/PickBanUnavailable.tsx, app/components/pages/events/pickban/pickBanSoundCues.ts, app/components/pages/events/pickban/pickBanSoundPlayer.ts, app/components/pages/events/pickban/usePickBanSound.ts, app/components/pages/events/pickban/pickBanSounds.ts, app/components/pages/events/pickban/pickBanBeats.ts, app/components/pages/MatchPickBanPage.tsx, app/components/pages/events/pickban/managerDock.ts, app/components/pages/events/pickban/pickBanSoundPreference.ts, app/components/pages/events/pickban/stream/streamSound.ts]
 ---
 
 # Data sources
@@ -56,9 +61,11 @@ full loop).
 | Profile | `UserProfile` type (incl. `team` clan-tag summary), `getAvatarUrl(userId)`, `toActiveTitle` |
 | Teams | `createTeam`, `fetchTeams`, `fetchTeam`, `updateTeam`, `disbandTeam`, `transferTeamOwnership`, `fetchTeamMembers`, `inviteToTeam`, `joinTeam`, `acceptTeamInvite`, `declineTeamInvite`, `leaveTeam`, `denyTeamMember`, `unblockTeamMember`, `kickTeamMember` (optional `block`), `setTeamMemberRole`, `setTeamMemberNumber`, `fetchTeamActivity`, `fetchTeamAudit`, `fetchLineups`, `createLineup`, `updateLineup`, `deleteLineup`, `fetchMyTeam`, `setMyTagHidden`, `fetchMyInvitations`, `uploadTeamAvatar`, `deleteTeamAvatar`, `teamAvatarUrl` (clans + lineups; mutations return the fresh `TeamDetail`; validation failures surface the server's message — see [Errors](#errors)). `fetchTeams` rows carry a `stats` block (`caps`, `world_records`, `playtime_seconds`, `spectator_seconds`, plus `ranks` per metric) totalled over the team's active members, and `sort` accepts those three metrics on top of `added`/`name`/`members`; pass `limit: 0` for the whole directory (the gallery is unpaginated). Ranks are **directory-wide** — searching or filtering never renumbers them — and `ranked_teams` is the "of N". Ties share a rank. A team on zero for a metric still comes back ranked; the UI drops the chip rather than showing a meaningless placing. Rows also carry `owner_alias` + `owner_title`, so render the owner straight from the directory row — never fan out a profile request per card. `fetchTeamActivity` returns the same totals and ranks for one team alongside its feed. |
 | Events | `fetchEvents`, `fetchEvent`, `fetchEventTeams`, `fetchEventLfp`, `fetchMyEventStatus`, `fetchMyTournaments` (→ `/me/tournaments`, every tournament the caller has a team membership in, each row `{tournament, team, membership_status}` — the cross-event "which team is mine, per event" lookup `fetchMySchedule` entries don't carry themselves), `createEventTeam`, `inviteEventPartner`, `acceptEventInvite`, `declineEventInvite`, `updateEventTeam`, `deleteEventTeam`, `joinEventLfp`, `leaveEventLfp`, `setEventVolunteer`, `deleteEventVolunteer` (cup signups; an event is addressed by its `slug`) |
-| Event scheduling | `fetchMySchedule`, manager-only: `fetchEventScheduleOversight`, `fetchEventAuditLog` (→ [Event scheduling](#event-scheduling)) |
+| Event scheduling | `fetchMySchedule`, `fetchMyEventMatches`, manager-only: `fetchEventScheduleOversight`, `fetchEventAuditLog`, `fetchEventStreamers`, `setMatchStreamer` (→ [Event scheduling](#event-scheduling)) |
+| Event pick/ban setup | `fetchPickBanConfig`; manager-only: `setPickBanStageConfig`, `setPickBanStagePool`, `copyPickBanStagePool` (→ [Event pick/ban setup](#event-pickban-setup)) |
 | Event brackets | `fetchEventBracket`, `fetchEventMatch` (→ [Event brackets](#event-brackets)); manager-only: `fetchEventFormats`, `setEventBracketPublished`, `setEventFormat`, `updateEventFormatSpec`, `setEventSeeds`, `updateEventStage`, `generateEventStage`, `generateEventRound`, `resetEventStage`, `updateEventGroup`, `createEventMatch`, `updateEventMatch`, `deleteEventMatch`, `setEventMatchResult`, `clearEventMatchResult`, `fetchEventCapCandidates`, `linkEventMatchMapCaps`; staff-only: `createEventFormat`, `updateEventFormat`, `deleteEventFormat`, `fetchEventFormat` |
 | Admin (staff-only) | the moderator/admin dashboard slice — see [Admin API](#admin-api). `fetchAuditLog`/`fetchAuditLogCount` take `actors` (`staff` default / `players` / `all`): the default keeps player-written rows, such as a mapper replacing their own screenshot, out of the staff feed |
+| Event pick/ban sessions | `fetchPickBanState` (ETag-aware), `sendPickBanCommand`, `sendPickBanManagerCommand`, `postPickBanCommand`, `pickBanErrorCode`; manager-only: `fetchPickBanQueue` (→ [Event pick/ban sessions](#event-pickban-sessions)) |
 
 Most fetchers take `accessToken` first (Discord OAuth bearer). On the web build,
 logged-out pages pass the `ANONYMOUS_TOKEN` sentinel (exported from `api.ts`)
@@ -145,6 +152,55 @@ already covered below). `EventDetailPage` separately scans every stage's
 matches for the viewer's own `scheduled` ones and shows a live countdown
 (`useNow`/`formatCountdown` from `predictions/predictionsShared.tsx`) to the
 soonest still-future one — `nextOwnMatch` in `bracketShared.tsx`.
+
+**Every `EventMatch` also carries `pick_ban_status`**: `'none' | 'lobby' |
+'running' | 'paused' | 'complete'` — the match's *current* pick/ban session
+only; a cancelled or voided one, or none at all, both read `'none'`. It is
+what lets a match card offer a way into a session without a direct link.
+`pickBanCardAffordance(status, isRostered)`
+(`events/pickban/pickBanEntryPoints.ts`, pure, no DOM) turns that status plus
+whether the viewer is rostered on either side into `'live' | 'join' | null`;
+`MatchCard` renders it as a small pill next to the status chip (`eventSlug` +
+`myTeamId` are optional props — every stage view and `BracketTab` thread them
+down the same way they already thread `onMapSelect`/`onScheduleMatch`, so the
+pill is absent wherever a caller has neither to give, e.g. the Manage →
+Bracket editor). Once a session completes, `bracketShared.tsx`'s
+`pickBanMapLabel(row, teamA, teamB)` (pure) reads the map row's own
+`picked_by`/`kind` into `'Picked by <team>'` or `'Decider'` for `MapRow` to
+show next to the map name.
+
+**`events/pickban/components/PickBanLink.tsx`** wraps the one `NavLink` to
+`match-pickban` every pick/ban entry point uses, `stopPropagation`d by
+default so it never also fires an enclosing card's own click handler (the
+match card's own `onClick` opens the scheduler). `PickBanCardPill` and
+`PickBanJoinBanner` (`events/pickban/components/PickBanJoinBanner.tsx`) both
+build on it — the banner is the shared "Picks & Bans against <opponent> are live now." pill (a small
+pulsing dot plus the label, naming the opponent when the match is known), used identically on the event page and on any
+`ScheduleTab` card whose match has an open session. Every Schedule card
+carries a pick/ban entry point: `pickBanCallToAction(match, session)`
+(`schedule/scheduleSections.ts`, pure) reads the match's `pick_ban_status`,
+or the viewer's own `pick_ban_session` when it is for that match since that
+read is fresher, into `'join'` (lobby, running or paused: the Join banner),
+`'view'` (complete: a "View Picks & Bans" button) or `'page'` (none: a quiet
+"Visit Picks & Bans Page" link, since the page previews the pool and steps before a
+lobby opens).
+
+**The event `me` payload carries `pick_ban_session: MyPickBanSession | null`**
+(`{match_id, status: 'lobby' | 'running' | 'paused'}`) — the caller's own
+active team's open or running session, `null` the moment it has none, is
+complete, or is cancelled/voided. `EventDetailPage` keeps a `createPoller`
+instance (see "Polling live data" in `agents/state-patterns.md`) polling
+`fetchMyEventStatus` every 30 seconds, independent of the page's manual
+refresh, so a captain who is not looking at the page still gets the Join
+banner within half a minute of a lobby opening; being a `createPoller`
+instance, it already rests while the tab is hidden and refreshes the moment
+it becomes visible again, and a failed poll simply keeps the last good `my`.
+The same payload carries `is_streamer: boolean`, marking the caller as one
+of the event's streamers, which the Schedule tab uses (below); an older API
+omits it, and the launcher reads a missing value as `false`.
+Neither banner nor `MatchCard`'s pill uses a per-row CSS animation — only
+the two banners carry the small `animate-ping` dot, keeping the styling
+budget's "no per-row infinite animation" rule.
 
 **`published` is the whole-surface gate.** Until an event manager turns it on, a
 player gets no stages, no standings and no format at all — so the Bracket tab
@@ -323,15 +379,65 @@ per-event scheduling route; `EventDetailPage` fetches the caller's whole
 `/me/schedule` and filters to `item.tournament.slug === eventSlug` itself,
 the same trade-off `/me/predictions` already made. It only ever returns
 `pending` matches — once a match is booked (or otherwise decided) it simply
-stops appearing, so this tab never has to render a "scheduled" state.
+stops appearing. `Main.tsx` reads the same fetcher for the nav badge, so its
+shape stays exactly this; booked matches come from a second, per-event read.
 
-**The Schedule tab is visible to a rostered team member or a bracket
-manager** — `scheduleTabVisible` in `eventsShared.tsx`. A manager with no
-roster spot in the event still sees the tab (the same "rehearse the event"
-allowance the bracket and predictions surfaces give), but `fetchMySchedule`
-is keyed to the caller's OWN team memberships, so a non-playing manager sees
-an empty list here, not the whole event's negotiations — that full-event view
-is a separate manager-oversight surface, not this tab.
+**`fetchMyEventMatches(token, slug)`** (→ `GET /tournaments/<slug>/me/matches`
+→ `{ items: MyMatchEntry[] }`, sorted by `scheduled_at` with unbooked last,
+then by stage, round and match order) is that read. Each `MyMatchEntry` is
+`{ match: EventMatch, stage: {key, name}, roles: ('player' | 'streamer')[],
+streamer: EventStreamer | null }`, where `EventStreamer` is `{id,
+display_name, twitch_url}`. `display_name` is `null` for a user with no alias,
+like the other pick/ban display names; `streamerName` (`eventsShared.tsx`)
+reads that as "Unnamed streamer" wherever a streamer is shown. A `player` entry is one of
+the caller's team's `scheduled` or `live` matches; a `streamer` entry is a
+match assigned to the caller to stream, `pending`, `scheduled` or `live`. One
+match can carry both roles. `EventDetailPage` fetches it together with
+`/me/schedule` (`Promise.allSettled`) whenever the tab is visible, on the same
+30-second refresh while the tab is open. Both reads refresh silently: a
+failed refresh keeps the last good list rather than flashing an error, and
+only a first load where both reads fail shows "could not be loaded". An API
+without the route answers 404, which leaves the booked and streaming lists
+empty and the rest of the tab unchanged.
+
+**`scheduleSections(pending, mine, viewer)`** (`schedule/scheduleSections.ts`,
+pure, Vitest) splits the two reads into the tab's sections: **Upcoming**
+(`player` entries that are `scheduled` or `live`, live first, then soonest,
+unbooked last, ties kept in the server's order), **Needs a time** (the `/me/schedule` list, minus any match
+Upcoming already shows, since the two reads can catch a match mid-change) and
+**Streaming** (`streamer` entries, same order). The player sections show for
+a team member or bracket manager, or whenever either has a match in it; the
+Streaming section shows for `is_streamer`, or whenever a match is assigned.
+`matchTimeLabel` reads a live match as "Live Now", a booked one through
+`formatSlotTime` in the display zone, and an unbooked one as "No time booked
+yet". An Upcoming card names its streamer through `PlayerInfo`. A Streaming
+card shows time, teams, stage and round and the pick/ban status chip, with
+**Copy Stream Link** (`buildMatchLinks(slug, matchId).streamLink`, the OBS
+browser source, with `useCopyFeedback`) and **Open Picks & Bans**; the
+section's hint says the link is a 1920×1080 browser source for OBS, and it
+reads "No matches assigned to you yet." when empty.
+
+**The Schedule tab is visible to a rostered team member, a bracket manager
+or a streamer** — `scheduleTabVisible(hasTeam, canManageBracket,
+isStreamer)` in `eventsShared.tsx`. A manager with no roster spot in the
+event still sees the tab (the same "rehearse the event" allowance the
+bracket and predictions surfaces give), but `fetchMySchedule` is keyed to
+the caller's OWN team memberships, so a non-playing manager sees an empty
+list here, not the whole event's negotiations — that full-event view is a
+separate manager-oversight surface, not this tab. A streamer with no team
+sees only the Streaming section; one who also plays sees both.
+
+**Assigning streamers (bracket managers).** `fetchEventStreamers(token,
+slug)` → `GET /tournaments/<slug>/admin/streamers` → `{ items:
+EventStreamer[] }`, the event's volunteers who ticked streaming.
+`setMatchStreamer(token, slug, matchId, userId | null)` → `PUT
+/tournaments/<slug>/admin/matches/<matchId>/streamer` with `{ user_id }`,
+answering `{ streamer: EventStreamer | null }`. The body must carry the
+`user_id` key; `null` clears it, and a PUT that changes nothing answers the
+current streamer (the picker does not send one). A user who
+is not a streaming volunteer is refused with 422 `invalid_request`, and the
+launcher shows the server's message. The control lives in the pick/ban match
+queue (below).
 
 **Slot timestamps carry an explicit UTC offset** (`+00:00`), unlike the
 zone-less bracket payloads (`match.scheduled_at` included) — the same split
@@ -416,6 +522,26 @@ the result both to `PredictionsTab` and to `PredictionOddsProvider`, which is wh
 markets down to it. That mirrors `EventRosterProvider`. If you add a third consumer,
 read the context — do not add a second fetch.
 
+**A started pick/ban locks bets, even on stale market data.** The server moves a match
+to `live` and closes its market when its pick/ban starts, and moves it back to
+`scheduled`/`pending` on Restart or Cancel. A market payload's `match.status` carries
+that, but a market read can lag the match. `predictions/marketLock.ts` (pure, Vitest)
+is the one rule: `matchLocksBets(match)` is true once a match is anything but
+`pending`/`scheduled`, or its `pick_ban_status` is `running`, `paused` or `complete`
+(an open lobby does not lock). `marketTakesPredictions(market, match?)` is an `open`
+market whose own `match` and the optional other read both leave bets open.
+`EventDetailPage` builds one signal per match with `matchLockSignals` from every read
+it holds, later reads replacing earlier ones (bracket, then `/me/schedule`, then
+`/me/matches`, then the viewer's own `pick_ban_session`), and passes both consumers
+`lockStartedMarkets(markets, signals)`: every open market that no longer takes
+predictions is shown as `closed`, so its card reads Closed, sits under "Underway",
+loses its countdown and Predict button, and the bracket's odds chip hides.
+`MatchOddsChip` also checks the bracket match it sits on, `MarketCard` gates Predict on
+`marketTakesPredictions` itself, and `ClosingSoonBanner` drops locked markets. When
+`newlyLockedMatchIds(previous, next)` finds a match that has just locked (seen
+unlocked before, locked now; a first sighting never counts), the page refetches the
+predictions once.
+
 **A market has two outcomes or three, and the server decides which.**
 `market.draws_allowed` is the flag: a group match races to three maps of four and
 can finish level, so the draw is a third thing to back and `price_draw` is a
@@ -493,7 +619,8 @@ the market list, because most cards are never opened.
 `home/ClosingSoonBanner`, one line at the top of the homepage that returns `null`
 when nothing is closing. The API only returns markets with a real close time inside
 the window, and the banner re-filters against its own clock so a market that expires
-while the page is open drops off rather than counting down to nothing.
+while the page is open drops off rather than counting down to nothing. It also drops
+any market `marketTakesPredictions` refuses, such as one whose match is already live.
 
 **Markets sort by `closes_at`, not by bracket position.** The only question on this
 page is what can still be predicted on and how long is left. A market with no close
@@ -517,6 +644,632 @@ settings and per-market controls in `manage/PredictionsManagePanel.tsx`, and
 match while its market is still open refunds every prediction on it, which is easy to do
 by accident and quiet when it happens — so the manager sees the state and a one-click
 close before they score.
+
+### Public Maps tab (pick/ban pools)
+
+`fetchPickBanConfig(accessToken, slug, signal)` (→ `GET
+/tournaments/<slug>/pick-ban/config`) is a public read — it works anonymously and
+is visible exactly when the event itself is, same as `fetchEvent`. `PickBanConfig`
+is `{ stages: PickBanStageConfig[] }`; each stage carries a `pool:
+PickBanPoolMap[]` (`{ map, tags, screenshot_version }`) already in stage order and
+pool order, plus the pick/ban block/counts a manager-only surface consumes
+elsewhere. `screenshot_version` is the pooled map's `screenshot_updated`, passed
+straight to `MapThumbnail`'s `version` prop for cache-busting.
+
+`EventDetailPage` fetches this once in the background alongside the bracket/
+predictions/schedule fetches — it never blocks the page's initial `loading` state
+— and a failed fetch leaves `pickBanConfig` null rather than surfacing an error,
+which keeps the Maps tab hidden instead of showing a broken one.
+`stagesWithPools` (`events/maps/mapsShared.ts`) is the pure filter behind both the
+tab's visibility and its content: any stage whose `pool` is empty is dropped, and
+the survivors keep the API's stage/pool order untouched. `MapsTab`
+(`events/maps/MapsTab.tsx`) renders each surviving stage as its own section of map
+cards (`MapThumbnail` + `MapNavLink` + one badge per tag); `tagBadgeVariant` flags
+a tag spelled `Hard` (case-insensitive) as the single warning-tinted variant,
+every other tag renders as the default chip.
+
+### Event pick/ban sessions
+
+A match's live map pick/ban. The fetchers sit in `app/utils/api.ts` after the pick/ban
+config helpers. Everything else is pure logic in `app/components/pages/events/pickban/`,
+and screens render only from its view model, never from the raw payload.
+
+**The state read.** `fetchPickBanState(token?, slug, matchId, { etag, signal })` →
+`GET /tournaments/<slug>/matches/<id>/pick-ban`. It is anonymous-friendly, and the payload
+is **per viewer** (`viewer`, `capabilities`). Every key is always present, and every
+timestamp is ISO with an explicit offset. The payload is the match's current session,
+else its latest cancelled or voided one, else `status: 'none'`: a preview of what Open
+would create. It returns a `PickBanStateRead`:
+
+- `{ kind: 'fresh', state, etag, serverNow }` on a 200
+- `{ kind: 'unchanged', serverNow }` on a 304
+
+**ETag and clock sampling.**
+
+- Send the last `ETag` back verbatim as `If-None-Match`. A 304 means nothing changed: keep
+  the previous state **object**, same identity, so nothing re-renders.
+- `server_now` is left out of the ETag, so an idle session answers 304.
+- Every response carries `X-Server-Now` (ISO UTC). Sample the clock from the body's
+  `server_now` on a 200 and from that header on a 304, and skip the sample when it is
+  missing.
+- `clockOffset.ts` turns each sample into `serverNow − midpoint(sent, received)` and keeps
+  the median of the last `CLOCK_SAMPLE_WINDOW` (7) samples, so one slow response can't
+  move it.
+- The web build reads both headers cross-origin, which works because the API lists them in
+  `Access-Control-Expose-Headers`. An API build without that still works with the client:
+  every poll is a full 200, and a 304 simply skips its clock sample.
+
+**Reading the payload.** `phase` is the server's phase at read time. The view model
+re-derives it between polls from the absolute timestamps: `intro_ends_at`,
+`spotlight_ends_at`, and each executed step's `at` / `reveal_at`.
+
+- **Members.** Each `teams.<side>.members[]` entry carries the member's selected `title`
+  (`RawActiveTitle`, or `null`); pass it through `toActiveTitle` to `PlayerInfo`, the same
+  as every other player list.
+
+- **Reveal lead.** A lock-in is recorded at `at` and revealed at `reveal_at`, 1.5 s later.
+  The intro likewise starts 1.5 s after Start, so it runs from `intro_ends_at −
+  pacing.intro` to `intro_ends_at`. **A step is never shown before its `reveal_at`**, so
+  every screen animates at the same moment.
+- **Automatic steps.** The server locks a step by itself when it is the decider, or when
+  only one eligible map is left for it (an exact-fit plan's last lettered pick or ban). Such
+  a step is always the last plan step, so it completes the session. It is recorded in the
+  same command as the last human step and revealed when that step's spotlight ends. A plan
+  that is only an automatic step records it at Start and reveals it as the intro ends.
+  Every plan entry carries `automatic`, `true` only for an executed step with `acted_by:
+  null`. An automatic lettered step keeps its `actor` and `side`, with `acted_by_admin:
+  false`.
+- **Spotlight lengths** come from `pacing`: `spotlight` for lettered steps,
+  `ban_down_spotlight` for the ban-down and `decider_spotlight` for the decider.
+  `spotlight_ends_at` belongs to the last executed step, and stays set after it has passed.
+- **Phase windows** include their start and exclude their end.
+- **Status versus phase.** The status turns `complete` the moment the last step is
+  recorded, but the phase stays `spotlight` until the last spotlight ends. Show the final
+  summary when the view's `phase` is `complete`, never on `status`.
+- **Paused.** While `paused`, every timer and pending reveal freezes at `paused_at`. On
+  resume, the server shifts the pending timestamps by the pause length.
+- **Skipped bans.** When the eligible pool is too small for the full sequence, the plan
+  drops lettered bans. `dropped_bans` counts them, and `skipped_bans` lists them in sequence
+  order as `{ actor, before_index }`, where `before_index` is the plan index the dropped ban
+  would have preceded (the same base as `plan[].index`). Read them from the payload; never
+  re-derive which bans were dropped from `sequence.steps`.
+- **Results.** `results_present` is `true` whenever the match has results entered, in
+  every status (a complete session included). Start, Restart, Reopen, Edit final and a
+  Cancel that would clear written map slots are refused while it holds.
+- **The final map list.** `final_maps` is `null` unless the session is `complete`; then it is
+  the ordered (play order) list of `{ map_number, map, side, decider }` that actually played
+  — the manager-edited list when `edited` is `true`, otherwise the maps as the steps decided
+  them. `side` is `null` for the decider. After an Edit final, `plan` still shows what was
+  originally locked in; only `final_maps` carries the corrected list.
+- **Gate controls on `capabilities`, never on `viewer.roster_captain`.**
+  `capabilities.acting_side` is the side the viewer acts for as captain or acting captain.
+  A captain replaced by an acting captain has `acting_side: null`.
+
+**Commands.** Every command returns the full new state for the caller, so the actor never
+waits for a poll. Every body except Open's carries the expected `version`.
+
+- **Participant commands:** `sendPickBanCommand(token, slug, matchId, command, body)` →
+  `POST .../matches/<id>/pick-ban/{ready,unready,hover,lock}`.
+- **Manager commands:** `sendPickBanManagerCommand(token, slug, matchId, command, body?)` →
+  `POST /tournaments/<slug>/admin/matches/<id>/pick-ban/<command>`. `open` takes no body.
+  `lock` takes a `side`, and `override-sequence` takes a `preset_id` or a
+  `from_stage_key`.
+- **Hover** sets the selection preview, the map the viewer's side has selected but not
+  locked in yet. Body `{ map, version }`, or `{ map: null, version }` to clear it. It is
+  only accepted from the side's captain or acting captain while their step is awaited,
+  with the same refusal codes as Lock minus the plan index. It bumps `version` like every
+  command, and each user may send only a few a second (a 429 past that). Lock, Pause,
+  Undo, Swap, handing that side over, Restart and Cancel clear the preview. Every viewer reads it as
+  `selection_preview` (`{ side, map, at }` or `null`), and the view model flags that card
+  `previewed`. The captain page sends it debounced and silently (see
+  `agents/state-patterns.md`).
+- The body shapes are typed in `PickBanParticipantCommandBodies` and
+  `PickBanManagerCommandBodies`. `hand-over` takes a `side` and a `user_id` (an active
+  roster member of that side's team, or `null` to give control back to the captain).
+- **Reopen** is `undo` sent while the session is `complete`. It removes the last human
+  step, plus the automatic step after it, and returns the session to `running`,
+  awaiting that step. The map slots the session wrote are cleared back to what they held
+  before, and an edited final list is discarded (`edited` goes back to `false`, and
+  `final_maps` to `null`). It is refused with `results_present` while results exist, and
+  then with `nothing_to_undo` (409) when no human step was ever made (a plan that is only
+  an automatic step).
+- **Edit final** (`edit-final`, `complete` only) takes `{ maps, version }`: the whole
+  final list in play order, each entry a `PickBanEditFinalEntry` `{ map, picked_by,
+  decider }`. It is refused with `invalid_request` (422) unless every rule holds:
+  - the list isn't empty
+  - every map is a non-excluded card of `pool`, and none repeats
+  - at most one entry is the decider, and it is the last
+  - the decider has `picked_by: null`, and every other entry has `team_a` or `team_b`
+
+  Map names match exactly (case-sensitive). The length isn't tied to the best-of, and a
+  decider isn't required. Each 422 carries a message naming the field and the broken rule,
+  in `err.message`. Outside `complete` it is refused with `wrong_status`, and while results
+  exist with `results_present` (409). The returned state has `edited: true`, and the step
+  log in `plan` stays as it was played.
+- `postPickBanCommand` is the untyped transport under both. Screens call the session
+  store's `sendCommand` / `sendManagerCommand` (see `agents/state-patterns.md`), which fill
+  in the version themselves. They send one command at a time and read the version only once
+  the command before has settled. `sendManagerCommandAt(version, command, body?)` sends a
+  manager command with the version it is given instead, so a change the manager hasn't
+  seen answers `version_conflict`. The dock pins Reopen and Edit final this way. Restart,
+  Cancel and the rest keep the latest version, because captain hovers bump it constantly
+  while a session runs.
+- **Refusals.** A refusal is an `ApiError` whose `.reason` is a stable code (403
+  authorization, 409 state conflict, 422 validation). `pickBanErrorCode(err)` narrows it to
+  `PickBanErrorCode`, and `PICK_BAN_ERROR_CODES` lists every code. Show `err.message`, and
+  branch on the code only where a screen reacts to a specific one. The captain controls do:
+  `captainPlay.ts` words each Ready/Unready and Lock refusal for the captain
+  (`version_conflict`, `not_your_turn`, `map_unavailable`, `spotlight_active`,
+  `intro_active`, `paused`, `wrong_status`, `not_authorized`, `no_session`), and falls back
+  to `err.message` for any other code. The manager dock words every code: its own sentence
+  for each code that isn't a Start blocking reason, and `blockingReasonLabel` for the seven
+  that are (see the watch page's manager dock below).
+
+**Match queue (managers).** `fetchPickBanQueue(token, slug)` →
+`GET /tournaments/<slug>/admin/pick-ban/queue` → `{ matches: PickBanQueueEntry[] }` (the
+fetcher already unwraps it, and tolerates a response with no `matches` key by returning
+`[]`). Each entry is one match of the event, already sorted by `scheduled_at` with
+unscheduled matches last:
+
+- `match_id`, `stage_key`/`stage_name`, `round_no`/`round_label`, `scheduled_at`
+  (`null` when unscheduled), `teams: { team_a, team_b }` (each `{id, name}` or `null` for
+  an undecided side)
+- `session_status` (`PickBanSessionStatus`) — the match's current session, or its latest
+  cancelled/voided one, or `"none"`; the same rule the state read's `status` uses, so this
+  and a match's own pick/ban page never disagree about which session is showing
+- `ready_count` / `online_count` — how many of the two sides are marked Ready, and how many
+  roster members are online, both read off that same session
+- `startable` and `blocking_reason` (`PickBanErrorCode | null`) — whether Open→Start would
+  succeed right now, reusing Start's own checks including `no_session` (no current session
+  to start) and `wrong_status` (a current session that isn't in the lobby)
+- `streamer` (`EventStreamer | null`) — who is assigned to stream the match; an older API
+  omits it, which reads as no streamer
+
+The queue carries no match `status`, only the session's, so nothing in it assumes a started
+pick/ban's match is still `scheduled`.
+
+`manage/pickban/pickBanQueue.ts` is the pure row-model module (Vitest, no DOM):
+`toQueueRow(entry, eventSlug)` builds a `PickBanQueueRow` — the round label falls back to
+`Round <n>` with no `round_label`, an undecided side reads `'TBD'`, the row keeps the raw
+`status`, and `playerLink`/`streamLink` come from `buildMatchLinks`
+(`navigation/matchLinks.ts`), always the public website origin on both desktop and web.
+`blockingReasonLabel(code, status)` (in `events/pickban/pickBanStatus.ts`, shared with the
+match page's manager dock) is the one place a blocking reason becomes words:
+`wrong_status` reads by what the current session is doing (`Picks & Bans are already in
+progress`, `Picks & Bans are paused`, `Picks & Bans are already complete`), and an unrecognized code
+falls back to `'Not startable'` rather than showing nothing. `canOpenLobby` mirrors
+`pickBanView.ts`'s manager `open` rule (`status === 'none' || 'cancelled' || 'voided'`),
+kept as its own small check here since the queue is a different module from the match
+page's view model. The row keeps `streamer` (`null` when absent). `withQueueStreamer(entries,
+matchId, streamer)` writes a saved assignment into the loaded entries, and
+`streamerChoices(streamers, current)` lists the streaming volunteers, with the current
+streamer added first when they are no longer on that list, so the picker can still show
+them.
+
+**Status words and colours** live in one place, shared by the queue and the watch page:
+`events/pickban/pickBanStatus.ts` maps a `PickBanSessionStatus` to its badge
+(`pickBanStatusBadge`: `Not Open`, `Lobby`, `Live`, `Paused`, `Complete`, `Cancelled`,
+`Voided`, each with a tone), and `statusOfPhase` reads a view phase as the status to show
+(the intro, a turn and a reveal are `running`, so the page says Live until the last
+spotlight ends). `PickBanStatusChip` (see `agents/shared-components.md`) renders it.
+
+`manage/pickban/PickBanQueuePanel.tsx` renders it below the stage cards in `PickBanPanel`:
+a `DataTable` with `responsive`/`compactContent` (phone widths collapse to cards, no
+horizontal scroll), polling every 20 s via `utils/poller.ts::createPoller` (so it only
+polls while the tab is visible) and once more immediately after a successful Open. Row
+actions: **Open Lobby** (only shown when `canOpenLobby`; posts the `open` manager command,
+then `poller.refresh()`, which drops any poll that was already in flight before Open and
+polls afresh, so the row picks up its new session at once), **Open Page** (a `NavLink` to
+`match-pickban` with `{eventSlug, matchId}`), and **Copy Player Link** / **Copy Stream
+Link** (`useCopyFeedback`, with a transient "Copied" label and a copy failure shown in the
+panel's error banner). A row's
+`blockingReasonLabel` shows next to its status chip whenever it is not `null`, whatever the
+session's status — it is informational (why Start would refuse right now), not gating the
+row's own actions.
+
+**Streamer column.** Each row, and each compact card, has a streamer picker: a
+`DropdownMenu` whose trigger shows the current streamer through `PlayerInfo` (or "No
+streamer") and whose radio items are "No streamer" plus every `streamerChoices` entry. The
+panel fetches `fetchEventStreamers` on mount and again each time a picker opens, so a
+volunteer who ticks streaming shows up without a reload. Choosing an item calls
+`setMatchStreamer` and applies the answer with `withQueueStreamer`, with no refetch and no
+skeleton; the trigger reads "Saving…" meanwhile. A refusal (422 `invalid_request` for a
+user who is not a streaming volunteer) shows the server's message in its own error banner,
+so the queue's next successful poll does not clear it.
+
+**Polling cadence.** `pickBanPollIntervalMs(status, error, alwaysPoll)` in
+`pickBanSession.ts` is the pure decision (Vitest, no DOM, no fetch/timer mocking
+needed) that the store's poller consults every cycle:
+
+- Every second (`ACTIVE_POLL_MS`) while the status is `lobby`, `running` or `paused`.
+- Every 10 seconds (`IDLE_POLL_MS`) once a session exists but is terminal (`complete`,
+  `cancelled` or `voided`) — `alwaysPoll` never overrides this; a finished session stays
+  slow everywhere.
+- With no session yet (`status` is `null` — nothing has loaded, or the match hasn't had
+  one opened): every second normally too, **except** after a first load refused with 401,
+  403 or 404, which is treated as "nothing to poll for quickly" and slows to 10 seconds —
+  **unless `alwaysPoll` is set**, which keeps it at one second regardless of that error.
+  This is what lets a stream source added before a lobby opens (a routine 404) still pick
+  up the session within a second of Open, instead of lagging up to 10 seconds behind.
+- Nothing while the document is hidden, for the non-stream page — it polls at once when
+  the document shows again. The stream view (`events/pickban/stream/StreamView.tsx`) calls
+  `usePickBanSession` with `alwaysPoll: true`, so it ignores `document.visibilityState`
+  altogether (required because an OBS browser source is routinely reported hidden) **and**
+  gets the always-fast "no session yet" behavior above. It renders its own broadcast layout
+  (`stream/StreamBroadcast.tsx`, see `agents/shared-components.md` → the stream broadcast
+  layout), fixed in pixels rather than responsive: the eligible maps fill the middle of the
+  1920px stage as large tiles, laid out by `stream/boardLayout.ts` in however many rows keep
+  them biggest, and excluded maps are listed in one line under them.
+  It also reads the event's name once with `fetchEvent('', slug)` for its header and
+  shows nothing there if that fails.
+- A failed poll keeps the last good state, and `reconnecting` turns on after
+  `RECONNECTING_AFTER_FAILURES` (3) failures in a row.
+- A poll that answers with an older `version` of the same session than a command response
+  already applied is ignored, so an optimistic lock-in never flickers back.
+
+**The view model.** `buildPickBanView(state, { clockOffsetMs, now })` in `pickBanView.ts` is
+pure and tested without a DOM. It returns:
+
+- `match`: the heading, `title` (A's name first, `TBD` for a missing team), the stage name,
+  round label and best-of
+- the re-derived `phase` (`'none'` when there's no session), and a `countdown` whose
+  `endsAt` is a **local-clock** epoch ms. A frozen countdown has `endsAt: null` and a fixed
+  `remainingMs`.
+- `stagePhase`: the same as `phase`, except that while paused it keeps the phase the pause
+  froze (`intro`, `awaiting` or `spotlight`), so a paused overlay can sit over it
+- `turn`, with `actorLabel` and `actionLabel`, the `mapNumber` a pick decides (`null` for a
+  ban) and whether the viewer acts, and `spotlight`, the step being revealed
+- `cards`: `available`, `banned`, `picked`, `decider` or `excluded`, with the acting side,
+  step number, map number, exclusion reason (the raw `exclusion` plus `exclusionReason`, a
+  sentence naming the team and seed that triggered it) and the `previewed`, `lockedIn`,
+  `selected` and `selectable` flags. `selected` is always `false` here: the captain's own
+  selection is layered on by `withCaptainPlay` (see `agents/state-patterns.md`).
+- `timeline`: `upcoming`, `current`, `locked_in` or `revealed`, with each step's
+  `actorLabel` and `actionLabel`, its `automatic` flag, and its map and screenshot version
+  once revealed
+- `revealing` on a card and on a timeline entry: `true` only for the step whose reveal
+  entrance is running right now (the reveal scene's `elapsedMs` is still within its
+  `entranceMs`). The pool grid and the timeline flash a card or chip once, on the render
+  where it turns `true`, so a late poll or a page opened mid-spotlight shows the new state
+  without the flash
+- `skippedBans`: the payload's `skipped_bans`, one entry per dropped ban in the same order,
+  with `beforeIndex` (its `before_index`) so a timeline can draw it in place
+- `summary`, in play order (`map_number`), with each map's `actorLabel` and a slot reserved
+  for every map from the start. Once a manager has edited the final list (`edited` is `true`
+  and `final_maps` isn't `null`), the summary is built from `final_maps` instead of the plan
+  steps, shown all at once with no reveal gating — `side`/`ab` come from comparing each
+  entry's side to `a_side`, and `actorLabel`/`decider` read the same as ever. Otherwise it is
+  exactly the plan-derived summary described above.
+- `teams.left` (A) and `teams.right` (B), falling back to `team_a` on the left while A is
+  undetermined
+- `banners`: voided, cancelled, paused, skipped bans and warnings
+- `affordances`: `actingSide` and its letter `actingAb`, `canReady`, `isReady`, `canLock`, and
+  `manager` (which dock controls apply to the current status, `startBlockedBy`,
+  `resultsPresent`, `lockForSide` and `actForSide`). `resultsPresent` is the payload's
+  `results_present`. `lockForSide` is false for a manager who plays in the match (the
+  payload's `viewer.side` is set): such a manager never acts for a team, so `actForSide`
+  stays `null`.
+  `undo` and `reopen` need a human step in the plan, one that isn't `automatic` (a plan
+  that is only an automatic step has nothing to undo). `reopen` applies from the moment the status is `complete`, and `editFinal` only
+  once the view's `phase` is `complete` too, after the last spotlight, so the editor never
+  opens on an unrevealed slot.
+- `version`: the payload's `version`, for a command that must be sent against the state
+  the viewer saw
+- `setup`: `sequence`, where the session's sequence came from (the `presetId` it was copied
+  from, the `stageKey` of the stage it was copied from and whether that is the match's own
+  stage, from the payload's `sequence`; `null` without one), and `aConfirmed`, the payload's
+  `a_confirmed` (a manager chose A or swapped, rather than A following the stage seeds)
+- `nextBoundaryAt`: when the view next changes on its own
+- `scene`: what the centre stage shows, for animating it. `key` (`lobby`, `intro`,
+  `turn-<index>`, `reveal-<index>`, `complete`, `none`, `cancelled` or `voided`) stays the
+  same across every poll within one stage moment. `position` orders scenes through a run.
+  `elapsedMs` is how long ago the scene began on the server timeline (a reveal at its
+  `reveal_at`, a turn when the intro or the previous spotlight ended), frozen while paused
+  and `null` in the lobby and the end states. `entranceMs` is how long its entrance runs.
+  It is a share of the pacing, capped per kind, so a ban-down reveal's entrance is shorter
+  than a lettered one's, the decider's is the longest, and each fits inside its spotlight.
+  `entranceMsFor(pacing, 'intro' | segment)` is that figure on its own, and
+  `introStartsAt(state)` is when the intro scene begins (`intro_ends_at` less the intro
+  pacing); the sound cues time themselves from both, so they follow the same numbers.
+
+Two pure helpers go with `scene`. `sceneDirection(previous, next)` is `1` going forward,
+`-1` for an undo, a restart or a reopen, and `0` when the key didn't change.
+`playsEntrance(scene, direction)` is false only for a forward scene that arrives after its
+entrance would have finished (a late poll, or a page opened mid-reveal). That scene appears
+already settled, so it never replays out of step with other screens. An undo always
+animates.
+
+`actorLabel` is who acts at a step: the team's name, `Team A` or `Team B` while that side's
+team is undecided, or `Decider`. `actionLabel` adds the verb (`Crimson Cats bans`, or
+`Decider`). Components render these labels rather than rebuilding them.
+
+While a step is inside its reveal lead, the side that locked it sees it as `locked_in`, with
+its card flagged `lockedIn`. Everyone else still sees the step being awaited. An automatic
+step is never the viewer's own: it is never `locked_in` or `lockedIn`, and its turn has
+`viewerActs: false`, like the decider's. `canLock` is
+re-derived when a spotlight or the intro ends, so a captain can act without waiting for the
+next poll. The server's `can_lock_now` only overrides it for a payload read while awaiting.
+
+**Sound.** Five bundled cues, one pre-mixed file each: `intro` as the intro scene begins,
+`pick` for a pick (lettered, or locked automatically as the last map standing), `ban` for a
+lettered ban, `ban_down` for a ban-down step and `decider` for the decider. `pickBanSounds.ts`
+is the one place that names the files: `SOUND_URLS` maps each cue to its `.mp3`,
+`app/assets/sounds/{intro,pick,ban,ban-down,decider}.mp3`. Next to it are
+`PickBanSoundCueKind` and `SOUND_HIT_MS`: how far into each file its main hit sits (intro
+620 ms, pick and ban 320, ban-down 160, decider 1040), since every file is mixed with its hit
+at that point. Each offset is the animation's hit at the default pacing
+(`DEFAULT_PICK_BAN_PACING`), and a test pins that.
+`app/assets/sounds/CREDITS.md` credits the source sounds mixed into each file (one needs CC BY
+attribution, the rest are CC0), so whoever replaces a file updates it too.
+`pickBanSoundCues.ts`'s `cuesToPlay(state, clock, played)` is the pure
+seam (Vitest, no DOM). It sounds nothing unless the status is `running` or `complete`, so a
+paused, cancelled or voided session stays silent. Reveal cues come from `pickBanView.ts`'s
+`revealedStepsAt(state, clock)` — the same reveal gate and pause-frozen clock the view model
+itself uses via `momentOf` — keyed by plan index plus that step's raw `reveal_at`. The intro
+cue is due from `introStartsAt(state)` and keyed `intro:<started_at>`, so a restart, with its
+new `started_at`, plays it again. It returns the newly-due cues plus the next played set (the
+same object, with no new allocation, when nothing is newly due) — so a refresh, remount or
+304 never replays a cue, while an undo followed by a new lock at the same index gets a fresh
+key and does sound. Each cue carries a `schedule` that lands its file's hit on the
+animation's. The animation hits at the reveal (or intro start) instant plus a share of the
+entrance: `IMPACT` for pick, ban and ban-down, `DECIDER_IMPACT` for the decider and `VS_HIT`
+for the intro, from `pickBanBeats.ts`, which `stageMotion.ts` animates by, times
+`entranceMsFor(pacing, 'intro' | segment)`. `soundScheduleAt(hitAt, fileHitMs, clock)` then
+starts the file `fileHitMs` before that hit: `delayMs` from now while that start is still
+ahead (a longer pacing), or at once and `offsetMs` into the file once it has passed (a
+shorter pacing, or a frame's lag), so the hit still lands on time. Just past the hit it
+starts right on the file's hit; more than `STALE_HIT_MS` (100 ms) past it, it returns `null`
+and the cue is marked played without sounding — a reconnect after the tab was backgrounded,
+or a poll that brought a reveal late. `usePickBanSound({ state, clockOffsetMs, muted,
+volume })` drives it from a `requestAnimationFrame` loop that only runs while unmuted —
+muting stops it and clears its played set, so unmuting restarts primed and discards its
+first tick's cues, the same as a fresh load — and plays through `pickBanSoundPlayer.ts`
+(Web Audio). The player decodes all five files up front, alongside the screenshots and
+fonts regardless of mute state; a cue due before its file is decoded is skipped. Each file
+is fetched and decoded once. Every source goes through one master gain: `setVolume(0..1)`
+ramps it over 60 ms, so a change never clicks, to the square of the volume
+(`masterGainOf`), so the slider moves more evenly in loudness. A cue starts
+`delayMs` after the context's current time at `offsetMs` into its buffer; it is skipped
+while the context isn't running rather than played late, autoplay rejections are swallowed,
+and every pointer, touch or key gesture on the page (`pointerdown`, `pointerup`, `touchend`,
+`keydown`) resumes it while it is suspended, so it starts on the first gesture the browser
+counts as activation (a touch's `pointerdown` isn't one). `preview(kind)` plays
+one file at once, to audition a volume: it decodes the file if needed, resumes the
+context (it is called from a click or a key), fades out the preview before it and plays only
+the latest one asked for. The hook returns `{ unlock, preview }`. Both pages call it. The
+stream view passes its URL's `sound=0` and `volume=` (`streamSoundOf`, see
+`agents/web-target.md` → `pre-shell-routes`). On the watch page the header sound control
+(see `agents/navigation.md` → `match-pickban-page`) turns sound on or off, which unlocks
+the context from that click, and sets the volume. Both are kept by
+`pickBanSoundPreference.ts` in `utbt:pickBanSound:v1` as `{ enabled, volume }`, defaulting
+to `DEFAULT_SOUND_PREFERENCE` (off at 0.4), through the account-synced store (see
+`agents/state-patterns.md`), so they follow a signed-in viewer across the app, the website
+and every event. A viewer who left sound on hears it from their first gesture on the page;
+cues due before that are skipped, as above. Its pure `parsePickBanSoundPreference(stored)`
+merges the stored value over the defaults: `enabled` only when it is `true`, 0.4 for a
+volume that is missing or isn't a number, the volume clamped to 0..1, and any other field,
+such as the `pack` an earlier version saved, ignored (so that older value reads as off at
+its volume). The page subscribes to the key, so a value that arrives from the account after
+the page opened updates the switch, the slider and the player at once.
+
+**The watch page** (`MatchPickBanPage.tsx`). Anyone who can see the match can open it. It
+reads with the viewer's token when there is one and anonymously otherwise, and it renders
+only from the view model, through the pick/ban visual core (see
+`agents/shared-components.md`).
+
+- **First load.** A skeleton of the page's own layout shows only while `loading && !state`.
+  If the first load fails, a card says the pick/ban isn't available (401, 403 or 404) or
+  that it is retrying, and the store keeps polling behind it. That card
+  (`components/PickBanUnavailable.tsx`) and the `stageName · roundLabel · Best of N`
+  heading line (`pickBanCopy.ts`'s `matchSubtitle`) are shared with the stream view below,
+  so the two pages never drift on this copy.
+- **After that, polls are silent.** New data changes the page in place, and a 304 changes
+  nothing. A small fixed "Reconnecting…" toast shows only while `reconnecting` is set.
+  While the captain dock shows, the dock carries that line instead, so the toast never
+  covers Lock In.
+- **Timing.** Reveals and phase changes land on `usePickBanView`'s boundary timer, so a step
+  appears at its `reveal_at` even when no poll arrives then. Countdowns and progress bars
+  paint on animation frames. With animations off, the bars step once a second instead.
+- **Motion.** The stage animates from `view.scene`, never from a poll arriving, so every
+  screen plays a reveal at the same moment. An undo plays the same animations backwards,
+  and the paused overlay fades in and out. The page wraps the visual core in
+  `PickBanMotion`, which follows the header's Animations toggle (on by default, synced with
+  the signed-in account like the sound preference) rather than the OS reduced-motion switch;
+  the stream view animates unless its URL carries `motion=0`. With animations off every
+  transition is instant and shows the same information (see
+  `agents/shared-components.md`).
+- **Preloading.** `usePickBanPreload(view?.cards)` fetches and decodes every eligible
+  pool screenshot at the size the visual core renders, and loads the fonts, from the first
+  view on (the lobby included). So no screenshot pops in mid-reveal.
+- **Stable keys.** The team panels sit in fixed left and right slots. Members are keyed by
+  user id, cards by map name, timeline steps by plan index, skipped bans by their order in
+  `skipped_bans` and summary slots by map number.
+- **Fixed layout.** The centre stage has a fixed height at each width, and every state's
+  content scales to fit inside it. The timeline, every pool card and every summary slot
+  exist from the lobby on. The "Contemplating…" row in each
+  team panel is always there, and hidden when it's not that side's turn.
+- **Banners.** Nothing is ever inserted above the stage, so no notice arriving mid-session
+  can push it down. A voided or cancelled session's reason shows in the stage's own notice,
+  which the stage switches to in place. Paused is an overlay on the stage, over whatever
+  the pause froze (`stagePhase`). Skipped bans and warnings are notes under the timeline,
+  with a dashed chip where each dropped ban would have been (`skippedBans`). Each excluded map's reason is listed in words under the pool, so it can
+  be read on a touch screen too.
+- **Captain controls.** The page layers `useCaptainPlay` over the view (see
+  `agents/state-patterns.md`) and renders a `CaptainDock` whenever `captainDockOf` returns
+  one, which is only for the viewer with `capabilities.acting_side` (a captain, or the
+  acting captain who replaced them).
+  - In the lobby, the dock toggles Ready and Unready.
+  - On the viewer's own turn in `awaiting`, the pool cards take `onSelect`: select a map,
+    then Lock In, which sends `lock` with the map and the awaited `plan_index`.
+  - The card, the turn and the timeline show "Locked In" at once. The command's returned
+    state then takes over, and the step still reveals at its `reveal_at`.
+  - During the intro, a spotlight or a pause, the dock shows Locked with the countdown to
+    the unlock and who acts next.
+  - A refusal shows as a worded alert. The store has already polled, so the board is
+    current by the time the alert shows.
+- **Manager dock.** For a viewer with `capabilities.can_manage`, the page layers
+  `useManagerDock` over the captain-played view (see `agents/state-patterns.md`) and renders
+  a `ManagerDock` below the pool, so nothing it shows or hides moves the stage, the
+  timeline or the grid. `ManagerDock.tsx` is `lazy()` behind `manager.dock` with a `null`
+  fallback, so only managers fetch it; the model and the hook stay static. It is absent for captains, teammates and spectators, and the
+  stream view never renders it. Each control shows only while `affordances.manager`
+  allows it, and calls `sendManagerCommand`, which adds the expected `version` and adopts
+  the returned state (Reopen and Edit final call `sendManagerCommandAt` with their pinned
+  version):
+  - `open` (no body) while there is no live session: none, cancelled or voided
+  - `start`, disabled while Start would be refused, with `blockingReasonLabel(startBlockedBy)`
+    and what clears it in a callout beside it
+  - `choose-a` with `{ side }`, from the "Who is Team A?" chooser the lobby shows while A
+    is undetermined or the stage seeds are tied, and `swap` otherwise, in the lobby
+    (`swap` also runs before the first step)
+  - `override-sequence` with `{ preset_id }` or `{ from_stage_key }`, in the lobby. The
+    Sequence dropdown loads the stages with `fetchPickBanConfig` once the lobby dock
+    mounts, and offers every preset plus each stage that has a block.
+  - `pause` / `resume`, `undo` (Undo Last Step, while running or paused), and `hand-over`
+    with `{ side, user_id }`, picked from that side's roster in the payload (choosing the
+    captain sends `user_id: null`)
+  - Reopen, which sends `undo` on a complete session with a ban or pick in it, pinned to
+    the version its confirmation opened on
+  - `edit-final` with `{ maps }`, from the Edit Final Maps… editor once the last spotlight
+    is over, pinned to the version the editor opened on. The editor starts from the final
+    summary, offers the non-excluded pool and both teams, and checks the same rules the
+    server does before Save is enabled. Once the session has moved past that version, it
+    says the final maps changed since it opened, holds Save, and offers Reload, which
+    starts it again from the current summary and version.
+  - `lock` with `{ side, map, plan_index }` to act for the awaited side: select a card, then
+    Lock In, with the same optimistic "Locked In" a captain gets, kept until the step
+    reveals. A manager never sends `hover`. On the viewer's own turn as captain, the
+    captain controls handle it instead. The act-for controls sit where a captain's do, right
+    under the stage, and between turns they stay, locked with the countdown and who is up
+    next, so nothing moves from Start to the last lock-in. A manager who plays in the match
+    gets no act-for controls at all, only a note
+    that an admin who isn't playing has to lock in on a team's behalf; the server refuses
+    their `lock` with 403 `plays_in_match`.
+  - `restart` and `cancel`; they, Reopen and an edit-final save each run only after a
+    confirmation that says what will change
+  - Copy Player Link and Copy Stream Link (`buildMatchLinks`)
+
+  The dock disables its buttons while a command is in flight, and shows nothing
+  optimistic apart from the act-for lock-in. A refusal shows its specific reason; a
+  `version_conflict` asks the manager to check the session and try again, and nothing
+  retries by itself. A `hand-over` refused with `invalid_request` says to pick an active
+  roster member of that side's team, and an `edit-final` refused with it says the list
+  wasn't accepted, followed by the server's own detail (which field broke which rule);
+  every other command keeps the general words for that code. A Reopen refused with
+  `nothing_to_undo` says there is no ban or pick to undo, and an edit refused with
+  `version_conflict` says the final maps changed since the editor opened (the poll that
+  follows then brings the Reload offer). A refused edit shows inside the editor, which
+  keeps the list. `resultsPresent` shows a warning in
+  any status (Reopen, Restart, Cancel and Edit final stay enabled, and the server's refusal
+  is worded if one comes), and a voided session shows its banner in the dock with Open
+  offered again.
+
+`e2e/pickban-watch.spec.ts` serves the pick/ban read from fixtures with a server clock
+that runs in real time. It checks seven things:
+
+- a phone width in the lobby, live and complete states
+- a lock-in that arrives early being revealed at its `reveal_at`, at the same moment on two
+  pages
+- the centre stage keeping one height per width from 360px to 3840px while every state
+  (lobby, intro, turn, ban, pick and decider reveals, paused, summary, cancelled) fits
+  inside it
+- the countdown bar gliding, and stepping once a second with animations off
+- an undo fading the reveal out through in-between frames, and doing it instantly with
+  animations off
+- the paused overlay fading in and out, and doing it instantly with animations off
+- reveals still animating while the OS reports reduced motion (Windows Animation effects
+  off), because only the page's toggle or the stream's `motion=0` turns them off
+- polls, 304s included, that keep the same nodes and the same layout
+
+### Event pick/ban setup
+
+Each stage of an event's format carries an optional pick/ban **block** and a tagged
+**map pool**. Manage → Pick/Ban (`manage/pickban/`) edits both, one card per stage.
+
+`fetchPickBanConfig(token, slug)` → `{ stages[] }` lists **every stage in the format,
+in format order**, including playoff and final stages that are not drawn yet, so they
+can be set up ahead of time. It is a public read, visible whenever the event is, and
+answers `{ stages: [] }` when no format is attached. Each stage carries:
+
+- `key`, `name` and `best_of` (the stage's effective match default)
+- `pick_ban` — the block, or `null` when the stage has none yet:
+  `preset_id` (`bo4_picks` / `bo3_ban_pick` / `bo5_ban_pick`, or `null` for a custom
+  sequence), `sequence` (`steps: [{actor: 'A' | 'B', action: 'ban' | 'pick'}]` plus
+  `ban_down`), `exclusions` (`[{tag, min_pre_cup_seed}]`) and `pacing` in seconds
+  (`intro`, `spotlight`, `ban_down_spotlight`, `decider_spotlight`)
+- `counts` (`lettered_picks`, `lettered_bans`, `maps_yielded`, `full_sequence_minimum`,
+  `absolute_minimum`) and `sequence_mismatch` (`maps_yielded !== best_of`); `null` and
+  `false` without a block
+- `pool` — `[{map, tags, screenshot_version}]` in saved order
+- `pool_status` — `{normal, exempt}`, each `{size, status}` with status
+  `full_sequence` / `bans_dropped` / `too_small`. `exempt` is the pool minus every map
+  carrying an exclusion tag, and is `null` when the block has no exclusion rules.
+
+Writes (bracket managers only):
+
+| Helper | Does |
+|---|---|
+| `setPickBanStageConfig(token, slug, stageKey, input)` | Replaces one stage's block. `input` is `{preset_id, exclusions?, pacing?}` **or** `{sequence, exclusions?, pacing?}`, never both. Choosing a preset copies its steps into the block, so a later change to the shipped presets never reshapes a configured stage. |
+| `setPickBanStagePool(token, slug, stageKey, pool)` | Replaces the stage's whole pool (`[{map, tags}]`, order = array order). Idempotent. |
+| `copyPickBanStagePool(token, slug, stageKey, fromStageKey)` | Copies another stage's **saved** pool, tags included. It writes straight away, so the editor confirms first. |
+
+**Rules the editor mirrors** (`manage/pickban/pickBanEditor.ts`, so problems show while
+typing instead of after a round trip):
+
+- The preset steps (`PICK_BAN_PRESET_SEQUENCES`) and the counts: maps yielded = lettered
+  picks + 1 with a ban-down; full-sequence minimum adds the lettered bans; the absolute
+  minimum drops every ban. Pool status is `full_sequence` at or above the full minimum,
+  `bans_dropped` down to the absolute minimum, `too_small` below it. A unit test pins the
+  counts of all three presets to the API's numbers — keep both in sync if a preset
+  changes.
+- Tags are trimmed, non-empty, at most 32 characters and matched case-insensitively
+  ("Hard" is just a tag). The match itself is `tagKey` / `sameTag` in
+  `events/pickBanTags.ts`, shared with the Maps tab's badges so that tab never loads the
+  lazy editor module. Pacing is a whole number from 0 to 60 (defaults 5 / 10 / 4 / 10).
+  An exclusion threshold is a whole number of at least 1.
+
+**A preset is re-sent only when re-copying it changes nothing.** `configInput` sends
+`preset_id` only when the draft's steps equal the shipped preset's: the admin just chose
+it, or the saved copy still matches it. Otherwise it sends the saved steps as `sequence`,
+so saving pacing or exclusions never swaps in a preset that changed after the stage
+copied it (the stage then reads as a custom sequence). `presetDrifted` flags that case
+under the preset dropdown, and choosing the preset again takes its current steps.
+
+**Warnings** (pool too small or dropping bans, for normal and for exempt matches, and a
+sequence whose map count differs from the stage's best-of) come from the draft while a
+stage has unsaved edits, and from `pool_status` / `sequence_mismatch` once it doesn't.
+Both paths produce the same `PickBanWarning` list, and a test asserts they agree for
+the same stage, so saving never changes what the card says.
+
+**Errors.** A rejected block answers 422 with `field.path: reason` entries joined by
+`; ` — the path is relative to the block (`preset_id`, `sequence`, `pacing.intro`,
+`exclusions[0].tag`), or prefixed `stages[<index>].pick_ban.` when the whole-format
+validation rejected it. `configErrors` strips this stage's prefix and places each entry
+next to its field; anything it cannot place becomes the card's error. A rejected pool is
+one sentence: `Map '<name>' …` is pinned to that map's row, and a bare tag reason reads
+"A tag …".
+
+**Keeping the Format tab honest.** A full-format save sends every stage's block back, so
+a stale spec would silently revert the pick/ban setup. After a block is saved the tab
+re-fetches the config, refreshes the bracket (whose `format.spec` the Format tab edits)
+and writes the new block into an open format draft (`withStagePickBan`).
+
+**Keeping the Maps tab current.** `EventDetailPage` loads the config once for the public
+Maps tab, which only shows once some stage has a pool. Every successful save or copy here
+re-fetches the config and hands it up (`onPickBanConfigChange`), so saving the first pool
+shows the Maps tab without a reload.
+
+**Unsaved edits** live in `EventDetailPage` as `pickBanDrafts` (keyed by stage key), with
+the same leave guard as the format draft (see `navigation.md` → leave guards). A stage
+has a draft only while it differs from its saved state (`settledDraft`), so undoing an
+edit clears it, and drafts for stages the format no longer has are dropped on load.
+Saving sends the block and the pool separately, only for the part that changed; if one
+half fails, the other half is kept and only the failed half stays unsaved.
+
+The Manage panel's sub-tabs are one registry, `MANAGE_TABS` in `ManagePanel.tsx`: an
+entry is `{id, label, eventManagersOnly?, hasUnsavedChanges?, render(context)}`, so a new
+tab is a single entry. The Pick/Ban tab's panel is lazy, since only managers ever open
+it. The match queue goes below the stage cards in `PickBanPanel`.
 
 ### Medal Hunt (`fetchMedalHunt`)
 

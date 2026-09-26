@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import type {
-    EventBracketGroup, EventBracketStage, EventFormatSpec, EventMatch, EventMatchMap,
+    EventBracketGroup, EventBracketStage, EventBracketTeamRef, EventFormatSpec, EventMatch, EventMatchMap,
 } from '@/app/utils/api'
 import {
-    mapWinnerOf, matchOrder, nextOwnMatch, schedulingWindowLabel, schedulingWindowState, seriesProgress,
-    unfinishedFeeders,
+    mapWinnerOf, matchOrder, nextOwnMatch, opponentNameOf, pickBanMapLabel, schedulingWindowLabel, schedulingWindowState,
+    seriesProgress, unfinishedFeeders,
 } from './bracketShared'
 
 function mapRow(patch: Partial<EventMatchMap> = {}): EventMatchMap {
@@ -36,6 +36,33 @@ describe('mapWinnerOf', () => {
 
     it('has no winner for an untouched map', () => {
         expect(mapWinnerOf(mapRow(), 4)).toBeNull()
+    })
+})
+
+const TEAM_A_REF: EventBracketTeamRef = { id: 'ta', name: 'Crimson Cats', seed: 1, status: 'registered' }
+const TEAM_B_REF: EventBracketTeamRef = { id: 'tb', name: 'Azure Auks', seed: 2, status: 'registered' }
+
+describe('pickBanMapLabel', () => {
+    it('has no label for a map nobody picked', () => {
+        expect(pickBanMapLabel(mapRow(), TEAM_A_REF, TEAM_B_REF)).toBeNull()
+    })
+
+    it('names the picking team', () => {
+        expect(pickBanMapLabel(mapRow({ picked_by: 'a' }), TEAM_A_REF, TEAM_B_REF)).toBe('Picked by Crimson Cats')
+        expect(pickBanMapLabel(mapRow({ picked_by: 'b' }), TEAM_A_REF, TEAM_B_REF)).toBe('Picked by Azure Auks')
+    })
+
+    it('falls back to TBD for an undecided team', () => {
+        expect(pickBanMapLabel(mapRow({ picked_by: 'a' }), null, TEAM_B_REF)).toBe('Picked by TBD')
+    })
+
+    it('reads a decider map as Decider, not picked-by', () => {
+        expect(pickBanMapLabel(mapRow({ kind: 'decider', map: 'CTF-Decider', picked_by: null }), TEAM_A_REF, TEAM_B_REF))
+            .toBe('Decider')
+    })
+
+    it('does not call an empty decider slot a Decider yet', () => {
+        expect(pickBanMapLabel(mapRow({ kind: 'decider', map: null }), TEAM_A_REF, TEAM_B_REF)).toBeNull()
     })
 })
 
@@ -126,6 +153,7 @@ function match(patch: Partial<EventMatch> = {}): EventMatch {
         notes: null, published: true, maps: [],
         winner_to_match_id: null, winner_to_slot: null,
         loser_to_match_id: null, loser_to_slot: null,
+        pick_ban_status: 'none',
         ...patch,
     } as EventMatch
 }
@@ -312,5 +340,25 @@ describe('nextOwnMatch', () => {
     it('returns null without a team id', () => {
         const soon = match({ id: 'soon', team_a: myTeam, team_b: otherTeam, status: 'scheduled', scheduled_at: '2026-06-02T00:00:00+00:00' })
         expect(nextOwnMatch([stageWith([soon])], null, NOW)).toBeNull()
+    })
+})
+
+describe('opponentNameOf', () => {
+    const myTeam = { id: 'mine', name: 'My Team', seed: 1, status: 'registered' as const }
+    const otherTeam = { id: 'other', name: 'Other Team', seed: 2, status: 'registered' as const }
+
+    it('names the other side of my match from either side', () => {
+        expect(opponentNameOf(match({ team_a: myTeam, team_b: otherTeam }), myTeam.id)).toBe('Other Team')
+        expect(opponentNameOf(match({ team_a: otherTeam, team_b: myTeam }), myTeam.id)).toBe('Other Team')
+    })
+
+    it('has no name while the other side is not decided', () => {
+        expect(opponentNameOf(match({ team_a: myTeam, team_b: null }), myTeam.id)).toBeNull()
+    })
+
+    it('has no name for a match I am not in, a missing match or no team id', () => {
+        expect(opponentNameOf(match({ team_a: otherTeam, team_b: null }), myTeam.id)).toBeNull()
+        expect(opponentNameOf(undefined, myTeam.id)).toBeNull()
+        expect(opponentNameOf(match({ team_a: myTeam, team_b: otherTeam }), null)).toBeNull()
     })
 })

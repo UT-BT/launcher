@@ -4,18 +4,19 @@ read_when:
   - "making a feature work (or hide) on the web build"
   - "touching app/platform/, the web entry, or web build config"
   - "adding a desktop-only capability or a web fallback"
-keywords: [web, browser, platform, capabilities, IS_WEB, vite, dist-web, dual-target]
+keywords: [web, browser, platform, capabilities, IS_WEB, vite, dist-web, dual-target, stream view, sound=0, volume=, motion=0]
 provides: "the web build target: platform layer, capability gates, per-bridge web behavior, build commands"
 not_here:
   - "IPC channel contract → lib/conveyor/README.md"
   - "build commands reference → agents/build.md"
-sections: [overview, platform-layer, capability-gates, web-auth, anonymous-browsing, shareable-urls, responsive-layout, performance, build, seo-and-link-previews, hosting-note]
-last_verified: 2026-08-26
+sections: [overview, platform-layer, capability-gates, web-auth, pre-shell-routes, anonymous-browsing, shareable-urls, responsive-layout, performance, build, seo-and-link-previews, hosting-note]
+last_verified: 2026-09-25
 verify_against:
   - app/public/route-contract.json
   - app/components/navigation/NavLink.tsx
   - app/components/navigation/useDocumentMeta.ts
   - app/components/navigation/titles.ts
+  - app/components/navigation/matchLinks.ts
   - app/platform/index.ts
   - app/platform/capabilities.ts
   - app/platform/auth.ts
@@ -29,6 +30,8 @@ verify_against:
   - scripts/check-web-bundle.mjs
   - app/renderer-web.tsx
   - vite.config.web.ts
+  - app/components/pages/events/pickban/stream/mountStreamRoot.tsx
+  - app/components/pages/events/pickban/stream/streamSound.ts
 ---
 
 # Web target
@@ -123,6 +126,67 @@ The Discord app must list `<origin>/auth/callback` as a redirect URI
 Accepted risk (documented on purpose): tokens live in localStorage and are
 XSS-readable; the scope is `identify` only.
 
+## Pre-shell routes
+
+Two paths are handled by `app/renderer-web.tsx` before `App` (and therefore the
+boot auth check, telemetry and the analytics consent banner) ever mounts:
+`/auth/callback` (above) and the pick/ban **stream view**
+(`/events/:eventSlug/matches/:matchId/stream` — see `agents/navigation.md` →
+`shareable-match-links` for the path shape).
+
+`renderer-web.tsx` checks `parseStreamPath(window.location.pathname)`
+(`app/components/navigation/matchLinks.ts`) first. On a match it skips the
+normal branch entirely — no `handleOAuthCallbackIfPresent`, no `App`, no
+`ThemeProvider`-wrapped `Main` — and instead dynamically `import()`s
+`app/components/pages/events/pickban/stream/mountStreamRoot.tsx`, which mounts
+its own `ReactDOM.createRoot` tree (`ErrorBoundary` + `ThemeProvider` +
+`StreamView`, no `WindowContextProvider`, no consent banner). The dynamic
+`import()` is what keeps the stream view's own root — and everything it pulls
+in from the shared pick/ban visual core — out of the entry chunk. `npm run
+check:bundle` (`scripts/check-web-bundle.mjs`) checks this directly, not just
+by size: it reads `mountStreamRoot.tsx`'s manifest record and fails if it is
+missing, if `isDynamicEntry` is false, if its emitted chunk shows up in the
+entry's static import graph, or if `index.html` modulepreloads it — so a
+regression back to a static import fails even if nobody notices the bundle
+grew.
+
+This is why the stream path has **no entry in `routes.ts` or
+`route-contract.json`**: `Main`'s in-memory nav stack and its URL sync never
+see it, so there is nothing to add to the route contract. `pathToNav` still
+resolves the same path to *some* view (currently `event-detail`, since it
+falls through the 4-segment `matches/:matchId` check) — that's harmless
+because `Main` is never given the chance to render it, but
+`routes.contract.test.ts` (`the stream sub-route`) pins the one guarantee that
+matters: `pathToNav` never resolves it to `match-pickban`, so nobody mistakes
+the fallback for real routing.
+
+`StreamView` never needs a login, always polls (`usePickBanSession` with
+`alwaysPoll: true` — see `agents/data-sources.md` → `event-pickban-sessions`),
+and renders a fixed 1920×1080 stage (`stream/StreamStage.tsx`,
+`stream/stageScale.ts`) scaled to fit the window with a solid background. Inside
+it is the broadcast layout (`stream/StreamBroadcast.tsx`, see
+`agents/shared-components.md`), set in the self-hosted `font-pickban` face.
+Sound plays by default, and two query params set it, both parsed by
+`stream/streamSound.ts` (`streamSoundOf`, read once by `mountStreamRoot` and
+handed through `StreamView` to `usePickBanSound`; the stream view has no sound
+control of its own):
+
+- `sound=0` mutes it (`isStreamSoundMuted`); any other value, or none, plays.
+- `volume=0..100` sets the volume in percent (`streamSoundVolume`). It defaults
+  to 40, a value outside 0 to 100 is clamped, and one that isn't a number
+  (`loud`, `60%`, empty) falls back to 40.
+
+For example `…/stream?volume=70`. A `sounds=` left in an older link is
+ignored. See `agents/data-sources.md` → `event-pickban-sessions` for the cue
+and player contract. There are five cues (intro, pick, ban, ban-down,
+decider), each started so its file's hit lands on the animation's impact at
+any pacing. The
+`motion=0` query param (`isStreamMotionOff` in
+`events/pickban/pickBanMotionPreference.ts`) turns the animations off, and the
+sounds keep the same timing without them; without it the stream view animates
+even when the OS reports reduced motion, since an OBS machine with Windows
+Animation effects off would otherwise show no reveals.
+
 ## Anonymous browsing
 
 The web build never shows a login wall. `app.tsx` sends a logged-out web visitor
@@ -144,6 +208,12 @@ copy-link) and a plain button on desktop — see `agents/navigation.md`
 (`link-semantics`). Deep links cold-load into the right view; a deep link
 followed while logged out survives the OAuth redirect via the flow stash's
 `returnTo`.
+
+`app/components/navigation/matchLinks.ts` builds the "Copy link" targets for a
+match (player link + stream link) — see `agents/navigation.md` →
+`shareable-match-links` for the path shapes and why they always use
+`VITE_SITE_ORIGIN` instead of `window.location.origin` (desktop has no usable
+site origin at runtime).
 
 ## Responsive layout
 
@@ -192,7 +262,7 @@ relative to it needs the `lg:` variant. Screenshot-verify new surfaces at
 ## Performance
 
 The web entry chunk must stay lean — phones parse it on first visit. The initial
-payload is currently **~169 KiB JS + 27 KiB CSS gzip**, enforced by
+payload is currently **~181 KiB JS + 32 KiB CSS gzip**, enforced by
 `npm run check:bundle`.
 
 - **Every primary page except `Home` is `React.lazy`**, built from the shared
@@ -202,6 +272,8 @@ payload is currently **~169 KiB JS + 27 KiB CSS gzip**, enforced by
 - `LoginPage` + `UpdateModal` are lazy in `app.tsx`; target-specific Settings
   modals + `ChangeTitleModal` are lazy in `AppLayout` and mount only while open.
   Settings panels are split per section, and web never fetches desktop game panels.
+- The pick/ban page's `ManagerDock` is lazy behind the manager dock model (`manager.dock`),
+  so captains, teammates and spectators never fetch the admin controls.
 - `MarkdownBody` and the privacy-policy text are lazy behind
   `AnalyticsConsentBanner`'s modal, keeping react-markdown and its
   micromark/mdast/hast tree out of the entry. The banner itself stays eager — it
@@ -296,7 +368,9 @@ deliberately **not** updated client-side: crawlers never see it, so it would be
 bytes for nothing.
 
 `VITE_SITE_ORIGIN` (default `https://utbt.net`) sets the origin baked into the
-default canonical and image URLs.
+default canonical and image URLs at build time (`vite.config.web.ts`) — and, via
+`import.meta.env.VITE_SITE_ORIGIN` at runtime, the origin `matchLinks.ts` uses
+for shareable match links on both targets (`shareable-urls` above).
 
 ## Hosting note
 

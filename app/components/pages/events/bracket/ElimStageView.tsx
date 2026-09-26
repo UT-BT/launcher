@@ -37,11 +37,13 @@ function ByeCard({ match }: { match: EventMatch }) {
     )
 }
 
-export function ElimStageView({ stage, now, onMapSelect, onScheduleMatch }: {
+export function ElimStageView({ stage, now, onMapSelect, onScheduleMatch, eventSlug, myTeamId }: {
     stage: EventBracketStage
     now: number
     onMapSelect?: (mapName: string) => void
     onScheduleMatch?: (matchId: string) => void
+    eventSlug?: string
+    myTeamId?: string | null
 }) {
     const rounds = useMemo(() => buildRounds(stage), [stage])
 
@@ -64,7 +66,7 @@ export function ElimStageView({ stage, now, onMapSelect, onScheduleMatch }: {
                             {round.matches.map(match => (
                                 match.status === 'bye'
                                     ? <ByeCard key={match.id} match={match} />
-                                    : <MatchCard key={match.id} match={match} now={now} onMapSelect={onMapSelect}
+                                    : <MatchCard key={match.id} match={match} now={now} onMapSelect={onMapSelect} eventSlug={eventSlug} myTeamId={myTeamId}
                                         onClick={onScheduleMatch && schedulerEligible(match) ? () => onScheduleMatch(match.id) : undefined} />
                             ))}
                         </div>

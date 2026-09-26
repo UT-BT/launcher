@@ -17,6 +17,7 @@ function match(patch: Partial<EventMatch> = {}): EventMatch {
         scheduled_at: null, resolved_window: { opens_at: null, closes_at: null },
         stream_url: null, notes: null, published: true,
         winner_to_match_id: null, winner_to_slot: null, loser_to_match_id: null, loser_to_slot: null,
+        pick_ban_status: 'none',
         ...patch,
     }
 }

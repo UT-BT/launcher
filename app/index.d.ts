@@ -6,6 +6,7 @@ declare const __APP_VERSION__: string
 interface ImportMetaEnv {
   readonly VITE_API_BASE_URL?: string
   readonly VITE_GATEWAY_BASE_URL?: string
+  readonly VITE_SITE_ORIGIN?: string
 }
 
 declare module '*.css' {
@@ -34,6 +35,11 @@ declare module '*.svg' {
 }
 
 declare module '*.webp' {
+  const content: string
+  export default content
+}
+
+declare module '*.mp3' {
   const content: string
   export default content
 }

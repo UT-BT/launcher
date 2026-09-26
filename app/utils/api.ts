@@ -4021,6 +4021,11 @@ export interface EventVolunteer {
     note: string | null
 }
 
+export interface MyPickBanSession {
+    match_id: string
+    status: 'lobby' | 'running' | 'paused'
+}
+
 export interface MyEventStatus {
     team: EventTeam | null
     invitations: EventTeam[]
@@ -4028,6 +4033,8 @@ export interface MyEventStatus {
     volunteer: EventVolunteer | null
     can_manage?: boolean
     can_manage_bracket?: boolean
+    is_streamer?: boolean
+    pick_ban_session: MyPickBanSession | null
 }
 
 export interface EventSignupFields {
@@ -4114,6 +4121,26 @@ export interface ScheduleEntry {
 export async function fetchMySchedule(accessToken: string, signal?: AbortSignal): Promise<ScheduleEntry[]> {
     const data = await apiGet<{ items: ScheduleEntry[] }>('/me/schedule', { token: accessToken, signal })
     return data.items ?? []
+}
+
+export interface EventStreamer {
+    id: string
+    display_name: string | null
+    twitch_url: string | null
+}
+
+export type MyMatchRole = 'player' | 'streamer'
+
+export interface MyMatchEntry {
+    match: EventMatch
+    stage: { key: string; name: string }
+    roles: MyMatchRole[]
+    streamer: EventStreamer | null
+}
+
+export async function fetchMyEventMatches(accessToken: string, slug: string, signal?: AbortSignal): Promise<MyMatchEntry[]> {
+    const data = await apiGetOr<{ items?: MyMatchEntry[] }>(`/tournaments/${encodeURIComponent(slug)}/me/matches`, { items: [] }, { token: accessToken, signal })
+    return asArray<MyMatchEntry>(data.items)
 }
 
 export interface ScheduleOversightEntry extends ScheduleEntry {
@@ -4480,6 +4507,7 @@ export type EventEntrantStatus = 'active' | 'qualified' | 'eliminated'
 export type EventMatchStatus = 'pending' | 'scheduled' | 'live' | 'complete' | 'bye' | 'forfeit' | 'cancelled'
 export type EventMapKind = 'normal' | 'decider'
 export type EventSide = 'a' | 'b'
+export type MatchPickBanStatus = 'none' | 'lobby' | 'running' | 'paused' | 'complete'
 export type EventMatchMode = 'first_to' | 'all_maps'
 export type EventTiebreaker =
     | 'points' | 'map_diff' | 'map_win_pct' | 'head_to_head' | 'wins' | 'losses' | 'caps_for' | 'caps_diff'
@@ -4581,6 +4609,7 @@ export interface EventStageSpec {
     config: EventStageConfig
     advancement: EventAdvancementRule[]
     match_defaults: EventMatchDefaults | null
+    pick_ban?: PickBanBlock | null
 }
 
 export interface EventFormatSpec {
@@ -4672,6 +4701,7 @@ export interface EventMatch {
     winner_to_slot: EventSide | null
     loser_to_match_id: string | null
     loser_to_slot: EventSide | null
+    pick_ban_status: MatchPickBanStatus
     maps?: EventMatchMap[]
 }
 
@@ -5520,4 +5550,453 @@ export async function fetchEventPredictionLedger(
         { total: 0, items: [] },
         { token: accessToken, signal },
     )
+}
+
+export type PickBanActor = 'A' | 'B'
+
+export type PickBanSequenceAction = 'ban' | 'pick'
+
+export type PickBanPresetId = 'bo4_picks' | 'bo3_ban_pick' | 'bo5_ban_pick'
+
+export const PICK_BAN_PRESET_IDS: PickBanPresetId[] = ['bo4_picks', 'bo3_ban_pick', 'bo5_ban_pick']
+
+export interface PickBanSequenceStep {
+    actor: PickBanActor
+    action: PickBanSequenceAction
+}
+
+export interface PickBanSequence {
+    steps: PickBanSequenceStep[]
+    ban_down: boolean
+}
+
+export interface PickBanExclusionRule {
+    tag: string
+    min_pre_cup_seed: number
+}
+
+export interface PickBanPacing {
+    intro: number
+    spotlight: number
+    ban_down_spotlight: number
+    decider_spotlight: number
+}
+
+export interface PickBanBlock {
+    preset_id: PickBanPresetId | null
+    sequence: PickBanSequence
+    exclusions: PickBanExclusionRule[]
+    pacing: PickBanPacing
+}
+
+export interface PickBanCounts {
+    lettered_picks: number
+    lettered_bans: number
+    maps_yielded: number
+    full_sequence_minimum: number
+    absolute_minimum: number
+}
+
+export type PickBanPoolSizeStatus = 'full_sequence' | 'bans_dropped' | 'too_small'
+
+export interface PickBanPoolSize {
+    size: number
+    status: PickBanPoolSizeStatus
+}
+
+export interface PickBanPoolStatus {
+    normal: PickBanPoolSize
+    exempt: PickBanPoolSize | null
+}
+
+export interface PickBanPoolMap {
+    map: string
+    tags: string[]
+    screenshot_version: string | null
+}
+
+export interface PickBanStageConfig {
+    key: string
+    name: string
+    best_of: number
+    pick_ban: PickBanBlock | null
+    counts: PickBanCounts | null
+    sequence_mismatch: boolean
+    pool: PickBanPoolMap[]
+    pool_status: PickBanPoolStatus | null
+}
+
+export interface PickBanConfig {
+    stages: PickBanStageConfig[]
+}
+
+export interface PickBanPoolEntryInput {
+    map: string
+    tags: string[]
+}
+
+export interface PickBanStagePoolEntry extends PickBanPoolEntryInput {
+    ordinal: number
+}
+
+export type PickBanStageConfigInput =
+    | { preset_id: PickBanPresetId; exclusions?: PickBanExclusionRule[]; pacing?: Partial<PickBanPacing> }
+    | { sequence: PickBanSequence; exclusions?: PickBanExclusionRule[]; pacing?: Partial<PickBanPacing> }
+
+export async function fetchPickBanConfig(accessToken: string | undefined, slug: string, signal?: AbortSignal): Promise<PickBanConfig> {
+    const data = await apiGetOr<PickBanConfig>(eventPath(slug, '/pick-ban/config'), { stages: [] }, { token: accessToken, signal })
+    return { stages: data.stages ?? [] }
+}
+
+export async function setPickBanStageConfig(accessToken: string, slug: string, stageKey: string, input: PickBanStageConfigInput): Promise<{ stage_key: string; pick_ban: PickBanBlock | null }> {
+    return apiGet(eventPath(slug, `/admin/pick-ban/stages/${encodeURIComponent(stageKey)}/config`), { token: accessToken, method: 'PUT', body: input })
+}
+
+export async function setPickBanStagePool(accessToken: string, slug: string, stageKey: string, pool: PickBanPoolEntryInput[]): Promise<{ stage_key: string; pool: PickBanStagePoolEntry[] }> {
+    return apiGet(eventPath(slug, `/admin/pick-ban/stages/${encodeURIComponent(stageKey)}/pool`), { token: accessToken, method: 'PUT', body: { pool } })
+}
+
+export async function copyPickBanStagePool(accessToken: string, slug: string, stageKey: string, fromStageKey: string): Promise<{ stage_key: string; pool: PickBanStagePoolEntry[] }> {
+    return apiGet(eventPath(slug, `/admin/pick-ban/stages/${encodeURIComponent(stageKey)}/pool/copy`), { token: accessToken, method: 'POST', body: { from_stage_key: fromStageKey } })
+}
+
+export type PickBanSide = 'team_a' | 'team_b'
+
+export type PickBanSessionStatus = 'none' | 'lobby' | 'running' | 'paused' | 'complete' | 'cancelled' | 'voided'
+
+export type PickBanPhase = 'lobby' | 'intro' | 'awaiting' | 'spotlight' | 'paused' | 'complete' | 'cancelled' | 'voided'
+
+export type PickBanSegment = 'lettered' | 'ban_down' | 'decider'
+
+export type PickBanStepAction = PickBanSequenceAction | 'decider'
+
+export type PickBanBlockingReason =
+    | 'teams_not_decided'
+    | 'a_undetermined'
+    | 'pre_cup_seed_missing'
+    | 'sequence_mismatch'
+    | 'pool_too_small'
+    | 'results_present'
+    | 'match_finished'
+
+export const PICK_BAN_ERROR_CODES = [
+    'not_authorized',
+    'not_your_turn',
+    'plays_in_match',
+    'session_exists',
+    'teams_not_decided',
+    'a_undetermined',
+    'pre_cup_seed_missing',
+    'sequence_mismatch',
+    'pool_too_small',
+    'results_present',
+    'match_finished',
+    'intro_active',
+    'spotlight_active',
+    'paused',
+    'map_unavailable',
+    'version_conflict',
+    'invalid_request',
+    'no_session',
+    'match_live',
+    'wrong_status',
+    'nothing_to_undo',
+] as const
+
+export type PickBanErrorCode = typeof PICK_BAN_ERROR_CODES[number]
+
+export function pickBanErrorCode(error: unknown): PickBanErrorCode | null {
+    if (!(error instanceof ApiError) || !error.reason) return null
+    return (PICK_BAN_ERROR_CODES as readonly string[]).includes(error.reason) ? error.reason as PickBanErrorCode : null
+}
+
+export interface PickBanUserRef {
+    id: string
+    display_name: string
+}
+
+export interface PickBanPlanStep {
+    index: number
+    segment: PickBanSegment
+    actor: PickBanActor | null
+    action: PickBanStepAction
+    map_number: number | null
+    side: PickBanSide | null
+    map: string | null
+    acted_by: PickBanUserRef | null
+    acted_by_admin: boolean
+    automatic: boolean
+    at: string | null
+    reveal_at: string | null
+}
+
+export interface PickBanExclusionTrigger {
+    side: PickBanSide
+    team_id: string
+    pre_cup_seed: number
+}
+
+export interface PickBanExclusion extends PickBanExclusionRule {
+    triggered_by: PickBanExclusionTrigger[]
+}
+
+export interface PickBanPoolCard extends PickBanPoolMap {
+    excluded: boolean
+    exclusion: PickBanExclusion | null
+}
+
+export interface PickBanMember {
+    id: string
+    display_name: string
+    avatar: string
+    title: RawActiveTitle | null
+    captain: boolean
+    acting_captain: boolean
+    online: boolean
+}
+
+export interface PickBanTeam {
+    id: string
+    side: PickBanSide
+    name: string
+    stage_seed: number | null
+    pre_cup_seed: number | null
+    ab: PickBanActor | null
+    members: PickBanMember[]
+}
+
+export interface PickBanReady extends PickBanUserRef {
+    at: string
+}
+
+export interface PickBanSelectionPreview {
+    side: PickBanSide
+    map: string
+    at: string
+}
+
+export interface PickBanMatchRef {
+    id: string
+    stage_key: string
+    stage_name: string
+    round_no: number | null
+    round_label: string | null
+    best_of: number
+    status: string
+    scheduled_at: string | null
+}
+
+export interface PickBanSessionSequence extends PickBanSequence {
+    preset_id: PickBanPresetId | null
+    from_stage_key: string | null
+}
+
+export interface PickBanViewer {
+    side: PickBanSide | null
+    roster_captain: boolean
+}
+
+export interface PickBanCapabilities {
+    can_manage: boolean
+    acting_side: PickBanSide | null
+    can_ready: boolean
+    can_lock_now: boolean
+}
+
+export type PickBanWarning = string | { code?: string | null; message?: string | null }
+
+export interface PickBanSkippedBanRef {
+    actor: PickBanActor
+    before_index: number
+}
+
+export interface PickBanFinalMap {
+    map_number: number
+    map: string
+    side: PickBanSide | null
+    decider: boolean
+}
+
+export interface PickBanState {
+    id: string | null
+    status: PickBanSessionStatus
+    phase: PickBanPhase | null
+    phase_ends_at: string | null
+    intro_ends_at: string | null
+    spotlight_ends_at: string | null
+    version: number
+    server_now: string
+    match: PickBanMatchRef
+    sequence: PickBanSessionSequence | null
+    plan: PickBanPlanStep[]
+    current_plan_index: number | null
+    dropped_bans: number
+    skipped_bans: PickBanSkippedBanRef[]
+    pool: PickBanPoolCard[]
+    teams: { team_a: PickBanTeam | null; team_b: PickBanTeam | null }
+    a_side: PickBanSide | null
+    a_confirmed: boolean
+    ready: { team_a: PickBanReady | null; team_b: PickBanReady | null }
+    selection_preview: PickBanSelectionPreview | null
+    pacing: PickBanPacing
+    paused: boolean
+    paused_at: string | null
+    paused_seconds: number
+    opened_at: string | null
+    started_at: string | null
+    completed_at: string | null
+    ended_at: string | null
+    edited: boolean
+    final_maps: PickBanFinalMap[] | null
+    end_reason: string | null
+    warnings: PickBanWarning[]
+    results_present: boolean
+    blocking_reasons: PickBanBlockingReason[]
+    blocking_reason: PickBanBlockingReason | null
+    viewer: PickBanViewer
+    capabilities: PickBanCapabilities
+}
+
+export type PickBanStateRead =
+    | { kind: 'unchanged'; serverNow: string | null }
+    | { kind: 'fresh'; state: PickBanState; etag: string | null; serverNow: string | null }
+
+function pickBanMatchPath(slug: string, matchId: string, suffix = ''): string {
+    return eventPath(slug, `/matches/${encodeURIComponent(matchId)}/pick-ban${suffix}`)
+}
+
+function pickBanAdminMatchPath(slug: string, matchId: string, suffix: string): string {
+    return eventPath(slug, `/admin/matches/${encodeURIComponent(matchId)}/pick-ban${suffix}`)
+}
+
+export async function fetchPickBanState(
+    accessToken: string | undefined,
+    slug: string,
+    matchId: string,
+    opts: { etag?: string | null; signal?: AbortSignal } = {},
+): Promise<PickBanStateRead> {
+    const res = await apiRequest(pickBanMatchPath(slug, matchId), {
+        token: accessToken,
+        signal: opts.signal,
+        headers: opts.etag ? { 'If-None-Match': opts.etag } : {},
+    })
+    const headerServerNow = res.headers.get('X-Server-Now')
+    if (res.status === 304) return { kind: 'unchanged', serverNow: headerServerNow }
+    if (!res.ok) throw await apiErrorFor(res)
+    const json = await res.json()
+    if (!json?.success || !json.data) throw new Error('Invalid response format from server')
+    const state = json.data as PickBanState
+    return { kind: 'fresh', state, etag: res.headers.get('ETag'), serverNow: state.server_now || headerServerNow }
+}
+
+export interface PickBanParticipantCommandBodies {
+    ready: { version: number }
+    unready: { version: number }
+    hover: { map: string | null; version: number }
+    lock: { map: string; plan_index: number; version: number }
+}
+
+export type PickBanOverrideSequenceBody = ({ preset_id: PickBanPresetId } | { from_stage_key: string }) & { version: number }
+
+export interface PickBanEditFinalEntry {
+    map: string
+    picked_by: PickBanSide | null
+    decider: boolean
+}
+
+export interface PickBanManagerCommandBodies {
+    open: undefined
+    start: { version: number }
+    pause: { version: number }
+    resume: { version: number }
+    undo: { version: number }
+    restart: { version: number }
+    cancel: { version: number }
+    swap: { version: number }
+    'choose-a': { side: PickBanSide; version: number }
+    'override-sequence': PickBanOverrideSequenceBody
+    lock: { side: PickBanSide; map: string; plan_index: number; version: number }
+    'hand-over': { side: PickBanSide; user_id: string | null; version: number }
+    'edit-final': { maps: PickBanEditFinalEntry[]; version: number }
+}
+
+export type PickBanParticipantCommand = keyof PickBanParticipantCommandBodies
+
+export type PickBanManagerCommand = keyof PickBanManagerCommandBodies
+
+export type PickBanCommandScope = 'participant' | 'manager'
+
+type PickBanCommandBodyArgs<B> = B extends undefined ? [] : [body: B]
+
+export async function postPickBanCommand(
+    accessToken: string,
+    slug: string,
+    matchId: string,
+    scope: PickBanCommandScope,
+    command: PickBanParticipantCommand | PickBanManagerCommand,
+    body?: object,
+): Promise<PickBanState> {
+    const path = scope === 'manager'
+        ? pickBanAdminMatchPath(slug, matchId, `/${command}`)
+        : pickBanMatchPath(slug, matchId, `/${command}`)
+    return apiGet<PickBanState>(path, { token: accessToken, method: 'POST', body })
+}
+
+export async function sendPickBanCommand<C extends PickBanParticipantCommand>(
+    accessToken: string,
+    slug: string,
+    matchId: string,
+    command: C,
+    body: PickBanParticipantCommandBodies[C],
+): Promise<PickBanState> {
+    return postPickBanCommand(accessToken, slug, matchId, 'participant', command, body)
+}
+
+export async function sendPickBanManagerCommand<C extends PickBanManagerCommand>(
+    accessToken: string,
+    slug: string,
+    matchId: string,
+    command: C,
+    ...body: PickBanCommandBodyArgs<PickBanManagerCommandBodies[C]>
+): Promise<PickBanState> {
+    return postPickBanCommand(accessToken, slug, matchId, 'manager', command, body[0])
+}
+
+export interface PickBanQueueTeam {
+    id: string
+    name: string
+}
+
+export interface PickBanQueueEntry {
+    match_id: string
+    stage_key: string
+    stage_name: string
+    round_no: number | null
+    round_label: string | null
+    scheduled_at: string | null
+    teams: { team_a: PickBanQueueTeam | null; team_b: PickBanQueueTeam | null }
+    session_status: PickBanSessionStatus
+    ready_count: number
+    online_count: number
+    startable: boolean
+    blocking_reason: PickBanErrorCode | null
+    streamer?: EventStreamer | null
+}
+
+export async function fetchPickBanQueue(accessToken: string, slug: string, signal?: AbortSignal): Promise<PickBanQueueEntry[]> {
+    const data = await apiGetOr<{ matches?: PickBanQueueEntry[] }>(eventPath(slug, '/admin/pick-ban/queue'), { matches: [] }, { token: accessToken, signal })
+    return asArray<PickBanQueueEntry>(data.matches)
+}
+
+export async function fetchEventStreamers(accessToken: string, slug: string, signal?: AbortSignal): Promise<EventStreamer[]> {
+    const data = await apiGetOr<{ items?: EventStreamer[] }>(eventPath(slug, '/admin/streamers'), { items: [] }, { token: accessToken, signal })
+    return asArray<EventStreamer>(data.items)
+}
+
+export async function setMatchStreamer(accessToken: string, slug: string, matchId: string, userId: string | null): Promise<EventStreamer | null> {
+    const data = await apiGet<{ streamer: EventStreamer | null }>(
+        eventPath(slug, `/admin/matches/${encodeURIComponent(matchId)}/streamer`),
+        { token: accessToken, method: 'PUT', body: { user_id: userId } },
+    )
+    return data.streamer ?? null
 }

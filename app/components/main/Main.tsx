@@ -73,6 +73,7 @@ const NewsPage = lazy(PAGE_LOADERS.news)
 
 const TeamDetailsPage = lazy(() => import('@/app/components/pages/teams/TeamDetailsPage').then(m => ({ default: m.TeamDetailsPage })))
 const EventDetailPage = lazy(() => import('@/app/components/pages/EventDetailPage').then(m => ({ default: m.EventDetailPage })))
+const MatchPickBanPage = lazy(() => import('@/app/components/pages/MatchPickBanPage').then(m => ({ default: m.MatchPickBanPage })))
 const MapDetailPage = lazy(() => import('@/app/components/pages/MapDetailPage').then(m => ({ default: m.MapDetailPage })))
 const PlayerDetailPage = lazy(() => import('@/app/components/pages/PlayerDetailPage').then(m => ({ default: m.PlayerDetailPage })))
 const CapDetailPage = lazy(() => import('@/app/components/pages/CapDetailPage').then(m => ({ default: m.CapDetailPage })))
@@ -831,6 +832,14 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
           initialTab={entry.params.eventTab}
           onMapSelect={openMap}
           onBack={() => navigate('events')}
+        />
+      case 'match-pickban':
+        return <MatchPickBanPage
+          key={entry.id}
+          eventSlug={entry.params.eventSlug!}
+          matchId={entry.params.matchId!}
+          userProfile={userProfile}
+          onBackToEvent={() => navigate('event-detail', { eventSlug: entry.params.eventSlug! })}
         />
       case 'admin':
         return <AdminPage

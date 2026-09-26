@@ -44,6 +44,12 @@
 
   --color-hairline: rgb(var(--hairline-rgb));
 
+  --color-pickban-a: #e6394f;
+  --color-pickban-b: #1fa6e6;
+  --color-pickban-gold: #f0b429;
+
+  --font-pickban: 'Barlow Condensed', system-ui, sans-serif;
+
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);

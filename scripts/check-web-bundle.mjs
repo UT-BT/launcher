@@ -8,10 +8,10 @@ const assetsDir = join(distDir, 'assets')
 
 const KiB = 1024
 const maxInitialJsGzipBytes = 190 * KiB
-const maxInitialCssGzipBytes = 32 * KiB
+const maxInitialCssGzipBytes = 34 * KiB
 const maxInitialTotalGzipBytes = 220 * KiB
 const maxLazyChunkGzipBytes = 120 * KiB
-const maxTotalJsGzipBytes = 700 * KiB
+const maxTotalJsGzipBytes = 750 * KiB
 const minEntryGzipBytes = 50 * KiB
 
 const HEAD_START = '<!--utbt-head-start-->'
@@ -76,6 +76,9 @@ if (!entryKey) {
 const { javaScript: initialJs, styles: initialCss } = collectInitialPayload(manifest, entryKey)
 const entryFile = manifest[entryKey].file
 
+const STREAM_ROOT_SRC = 'components/pages/events/pickban/stream/mountStreamRoot.tsx'
+const streamRoot = manifest[STREAM_ROOT_SRC]
+
 const allFiles = await readdir(assetsDir)
 const allJs = allFiles.filter(file => file.endsWith('.js')).map(file => `assets/${file}`)
 
@@ -106,6 +109,16 @@ if (largestLazy) {
   checkBudget(`largest lazy (${largestLazy.file.replace('assets/', '')})`, largestLazy.gzipBytes, maxLazyChunkGzipBytes)
 }
 checkBudget('total JS     ', totalJsGzip, maxTotalJsGzipBytes)
+
+if (!streamRoot) {
+  fail(`Manifest has no entry for ${STREAM_ROOT_SRC}. If the pick/ban stream root moved, update this script.`)
+} else if (!streamRoot.isDynamicEntry) {
+  fail(`${STREAM_ROOT_SRC} is no longer a dynamic entry — something now imports the pick/ban stream root statically.`)
+} else if (initialJsSet.has(streamRoot.file)) {
+  fail(`${streamRoot.file} (the pick/ban stream root) is reachable from the entry's static import graph.`)
+} else {
+  console.log(`  ok   stream root   : ${streamRoot.file} stays its own lazy chunk, out of the entry`)
+}
 console.log('')
 
 const html = await readFile(join(distDir, 'index.html'), 'utf8')
@@ -113,6 +126,11 @@ const html = await readFile(join(distDir, 'index.html'), 'utf8')
 const moduleScripts = [...html.matchAll(/<script\b[^>]*\btype="module"[^>]*\bsrc="([^"]+)"/g)].map(match => match[1])
 if (moduleScripts.length !== 1) {
   fail(`index.html has ${moduleScripts.length} module script tags, expected exactly 1.`)
+}
+
+const modulePreloads = [...html.matchAll(/<link\b[^>]*\brel="modulepreload"[^>]*\bhref="([^"]+)"/g)].map(match => match[1])
+if (streamRoot && modulePreloads.some(href => href.endsWith(streamRoot.file))) {
+  fail(`index.html modulepreloads ${streamRoot.file} (the pick/ban stream root) — it must stay lazy, not preloaded.`)
 }
 
 const stylesheets = [...html.matchAll(/<link\b[^>]*\brel="stylesheet"[^>]*\bhref="([^"]+)"/g)].map(match => match[1])

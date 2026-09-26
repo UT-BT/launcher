@@ -9,8 +9,8 @@ provides: "the whole navigation model: stack, navigate() funnel, renderView, sid
 not_here:
   - "where page state / persistence lives → state-patterns.md"
   - "the PlayerInfo / CapTimeLink components that trigger nav → shared-components.md"
-sections: [the-model, navigate-is-the-only-entry-point, leave-guards, url-sync-web-build, link-semantics, page-views-vs-detail-pages, the-sidebar-registry, event-driven-navigation, sidebar-new-badges, page-refresh-registry, per-entry-state]
-last_verified: 2026-09-22
+sections: [the-model, navigate-is-the-only-entry-point, leave-guards, url-sync-web-build, link-semantics, page-views-vs-detail-pages, the-sidebar-registry, event-driven-navigation, sidebar-new-badges, page-refresh-registry, per-entry-state, shareable-match-links, match-pickban-page]
+last_verified: 2026-09-25
 verify_against:
   - app/components/main/Main.tsx
   - app/components/navigation/NavLink.tsx
@@ -22,7 +22,11 @@ verify_against:
   - app/components/navigation/useUrlSync.ts
   - app/components/navigation/useDocumentMeta.ts
   - app/components/navigation/titles.ts
+  - app/components/navigation/matchLinks.ts
   - app/public/route-contract.json
+  - app/components/pages/EventDetailPage.tsx
+  - app/components/pages/MatchPickBanPage.tsx
+  - app/components/pages/events/pickban/components/PickBanSoundControl.tsx
 ---
 
 # Navigation
@@ -44,12 +48,23 @@ const [cursor, setCursor] = useState(0)
 - **`NavEntry`** (`app/components/navigation/NavigationContext.tsx`) =
   `{ id, view, params: NavParams, state: Record<string, unknown> }`. `id` is a
   monotonic counter; `state` is the per-entry bag (see below).
-- **`NavParams`** = `{ mapName?, playerId?, capId?, teamCapId?, newsId?, teamId?, mapsNewOnly? }` — the params a
-  view can carry. Add a field here if a new detail page needs a different
-  identifier, or if a page must open in a specific state. `mapsNewOnly` seeds the
-  Maps page's new-only filter when opened from the Home "new maps" tile; `MapsPage`
-  reads it via its `initialNewOnly` prop on mount. (Seed page state through params
-  like this — never by mutating another page's per-entry state before `navigate()`.)
+- **`NavParams`** = `{ mapName?, playerId?, capId?, teamCapId?, newsId?, teamId?, eventSlug?,
+  eventTab?, matchId?, mapsNewOnly? }` — the params a view can carry. Add a field
+  here if a new detail page needs a different identifier, or if a page must open
+  in a specific state. A view is not limited to one param — `match-pickban` reads
+  both `eventSlug` and `matchId` — but `paramsEqual` (below) must compare every
+  field the view uses, or a param-only change silently no-ops as "already here".
+  `mapsNewOnly` seeds the Maps page's new-only filter when opened from the Home
+  "new maps" tile; `MapsPage` reads it via its `initialNewOnly` prop on mount.
+  (Seed page state through params like this — never by mutating another page's
+  per-entry state before `navigate()`.)
+  `eventTab` seeds which tab `EventDetailPage` opens on; the tab identity (its
+  `EventTab` union, the `BASE_TABS` list, which tabs are visible/hidden) is owned
+  entirely by that page, not by this doc or by `routes.ts` — `viewToPath` /
+  `pathToNav` just round-trip whatever string is there through `?tab=`. Adding a
+  new tab (e.g. the public Maps tab listing each stage's pick/ban pool) is therefore a change local
+  to `EventDetailPage.tsx` with no routing/`route-contract.json`/title change
+  needed, the same way Schedule and Predictions needed none.
 - The stack is **in-memory only** — it boots to a single `home` entry on every
   launch and is never persisted. (Preferences persist; history doesn't — see
   `state-patterns.md`.)
@@ -119,7 +134,8 @@ unmounts on a tab change, its reset races the parent's own update, and the flag
 sticks. `EventDetailPage` instead owns the format builder's draft outright and
 `FormatPanel` is controlled by it. The draft IS the unsaved state, so `dirty` is
 just `draft !== null` — there is no second value to keep in step, and switching
-tabs preserves the edit rather than destroying it.
+tabs preserves the edit rather than destroying it. Manage → Pick/Ban follows the same
+pattern with `pickBanDrafts`, one draft per stage key, dirty whenever any key exists.
 
 ## URL sync (web build)
 
@@ -142,17 +158,27 @@ Model: **the in-memory stack stays master; browser history mirrors it.**
   and never becomes a view.
 
 Path scheme: `/` home, `/servers`, `/maps` (+`?new=1`), `/maps/:mapName`,
-`/players`, `/players/:playerId`, `/teams`, `/teams/:teamId`, `/world-records`,
-`/cap-it-all`, `/caps/:capId`, `/team-caps/:teamCapId`, `/achievements`,
-`/news`, `/news/:newsId`, `/admin`; unknown → `/`. Adding a view = add both
-directions in `routes.ts`, same commit.
+`/players`, `/players/:playerId`, `/teams`, `/teams/:teamId`, `/events`,
+`/events/:eventSlug` (+`?tab=`), `/events/:eventSlug/matches/:matchId`,
+`/world-records`, `/cap-it-all`, `/caps/:capId`, `/team-caps/:teamCapId`,
+`/achievements`, `/news`, `/news/:newsId`, `/admin`; unknown → `/`. Adding a view
+= add both directions in `routes.ts`, same commit.
+
+A route can carry more than one path param — `pathToNav` reads as many
+segments as it needs (`const [head, second, third, fourth] = segments`), not
+just the first two. `/events/:eventSlug/matches/:matchId` is the current
+example: the `events` case checks for a `matches/:matchId` tail under a given
+slug before falling back to the single-param `event-detail` case.
 
 **Adding a route is now a three-file change.** `app/public/route-contract.json`
 ships the same table for per-URL link previews (see `agents/web-target.md` → SEO
-and link previews), and `titles.ts` supplies the tab title.
+and link previews), and `titles.ts` supplies the tab title. Each contract entry
+takes a `params` array (in path order) instead of a single `param` — omit it for
+a route with no path params, list every param for one with several.
 `routes.contract.test.ts` fails if any of the three drift — it asserts the
 contract's view list equals the `case` labels in `viewToPath`, round-trips every
-path, and requires a non-default title per view.
+path (substituting a sample value per param), and requires a non-default title
+per view.
 
 **Document metadata.** `Main.tsx` calls `useDocumentMeta(currentView,
 entry.params)` right after resolving the active entry; it sets `document.title`
@@ -226,7 +252,7 @@ Two kinds of case:
 | Kind | Views | Keyed? | Why |
 |---|---|---|---|
 | **Page-views** | `home`, `servers`, `maps`, `players`, `teams`, `cap-it-all`, `world-records`, `achievements`, `news`, `admin` | **No** — one reused instance per view | Not-keyed means no remount between *entries of the same view*. It does **not** mean the component survives a view change: `renderView()` returns exactly one element, so `home` -> `maps` unmounts `Home`. State and data survive because they are hoisted to `Main` — per-entry via `usePageState`, data via a `caches` singleton — and read back on remount, **not** because the component stays mounted. A page-view that keeps data in its own `useState` refetches it on every visit. |
-| **Detail-pages** | `maps-detail`, `player-detail`, `cap-detail`, `news-detail`, `team-detail` | **Yes — `key={entry.id}`** | A new visit must remount so it refetches for the new param and `useNavState` re-reads the right entry's bag. |
+| **Detail-pages** | `maps-detail`, `player-detail`, `cap-detail`, `news-detail`, `team-detail`, `event-detail`, `match-pickban` | **Yes — `key={entry.id}`** | A new visit must remount so it refetches for the new param and `useNavState` re-reads the right entry's bag. |
 
 Detail cases pull their identifier from `entry.params` (`mapName!` / `playerId!` /
 `capId!` / `newsId!` / `teamId!`). Forgetting `key={entry.id}` on a detail case is a bug: the page keeps
@@ -393,3 +419,81 @@ so Back/Forward restore them):
 The tier rules, persistence, and `usePageState` wiring live in
 `state-patterns.md` — this doc owns the stack + routing; that one owns what's
 stored.
+
+## Shareable match links
+
+`app/components/navigation/matchLinks.ts` (`buildMatchLinks(eventSlug, matchId)`)
+returns absolute, public-origin URLs for a match — a **player link** (this
+page, `match-pickban`) and a **stream link** (the chromeless stream view). Both
+always use `VITE_SITE_ORIGIN` (default `https://utbt.net`, same env var as the
+static-HTML head — see `agents/web-target.md`), never `window.location.origin`:
+the desktop build has no usable site origin at runtime, so a link built from it
+would open nowhere for anyone else. This makes "Copy link" identical on both
+targets.
+
+**Path shapes:**
+
+- Player link — the in-app pick/ban page: `/events/:eventSlug/matches/:matchId`
+  (`match-pickban` view, in `routes.ts` / the route contract like any other
+  route).
+- Stream link — the chromeless OBS view: `/events/:eventSlug/matches/:matchId/stream`.
+  It is **not** a nav view — like `/auth/callback`, it must be handled before the
+  app shell, the boot auth check and the analytics consent banner mount, so it
+  never requires a login. It has no entry in `routes.ts` or the route contract.
+  `matchStreamPath(eventSlug, matchId)` builds just this path if a caller needs
+  it without an origin; `parseStreamPath(pathname)` (same file) reads it back to
+  `{ eventSlug, matchId }` and is the check `app/renderer-web.tsx` runs before
+  deciding whether to mount the app shell at all — see `agents/web-target.md` →
+  `pre-shell-routes` for the mount itself and why the path stays out of the
+  route contract on purpose.
+
+## Match pick/ban page
+
+`MatchPickBanPage` (`match-pickban`) is a detail page: lazy, keyed by `entry.id`, and
+reading `eventSlug` and `matchId` from the entry's params. It needs no login, and the
+web build opens it straight from a deep link.
+
+- **Title.** Once the payload is in, `useDocumentTitle` sets `<A> vs <B> — Picks & Bans`.
+- **Back to Event.** A `NavLink` to `event-detail` that calls the `onBackToEvent` prop
+  `Main.tsx` passes in.
+- **Back to Bracket.** Once the session is complete, the summary carries a
+  `NavLink` to `event-detail` with `eventTab: 'bracket'`. It navigates through
+  `useNavigation().navigate`, so it is a real `/events/<slug>?tab=bracket` anchor on web
+  and one `navigate()` call on both targets.
+- **Copy Link** copies `buildMatchLinks(eventSlug, matchId).playerLink` (above) through
+  `useCopyFeedback`, so the copied URL is the public site's on desktop too. The page
+  passes the same links to a manager's dock, whose header adds **Copy Player Link** and
+  **Copy Stream Link** icon buttons, so a stream link is copied from the page itself as
+  well as from the Manage queue.
+- **Sound control** (`events/pickban/components/PickBanSoundControl.tsx`). The first
+  header button shows the state (`Volume2`/`VolumeX`, "Sound On"/"Sound Off", a chevron)
+  and opens a small panel under it (`aria-expanded`/`aria-controls`, a labelled group, not
+  a Radix menu, so its switch and slider keep their own keys and Tab order). In it: a
+  **Sound** switch (off until the viewer turns it on; turning it on flips
+  `usePickBanSound`'s `muted` flag and calls its `unlock`, so that click unlocks the Web
+  Audio context) and a **Volume** range 0–100% (40% until changed) with the number beside
+  its label. Flipping the switch, or releasing the slider (pointer up, key up or blur; the
+  page's volume only changes then), saves `{ enabled, volume }`
+  (`pickBanSoundPreference.ts`, account-synced, see `agents/state-patterns.md`), so both
+  carry over to the next visit, every event, and the app or the website for a signed-in
+  viewer. Releasing the slider also previews the pick cue (`preview('pick')`), only while
+  sound is on; while it is off a line says to turn sound on to hear a preview. When sound
+  was left on, the page plays from the viewer's first gesture on it. The panel closes on
+  Escape (focus back on the button), an outside pointer or focus leaving it. Every row is a
+  44px target below `sm`. See `agents/data-sources.md` → `event-pickban-sessions` for the
+  cue and player contract.
+- **Animations toggle.** A header button that switches the page's animations
+  (`pickBanMotionPreference.ts`, on by default, account-synced like the sound
+  preference).
+- The page subscribes to both preference keys, so a value that arrives from the account
+  after it opened (the sign-in sync) updates the switch, the slider, the player and the
+  animations at once.
+- The header buttons (sound, Animations, Copy Link) and the summary's **Back to
+  Bracket** share one class (`HEADER_BUTTON` in the page, 44px tall below `sm` and 32px from
+  it), so they stay alike.
+- **Into the page.** The Manage → Pick/Ban queue's **Open Page** is a `NavLink` to
+  `match-pickban` (a `Button asChild` around it), so on web it is a real anchor that opens
+  in a new tab like any other link.
+
+What the page renders, and how it keeps polling invisible, is in `agents/data-sources.md`
+(the watch page, under pick/ban sessions).

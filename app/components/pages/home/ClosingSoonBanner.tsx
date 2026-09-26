@@ -7,6 +7,7 @@ import { fetchUpcomingPredictions, type UpcomingPredictionMarket } from '@/app/u
 import {
     formatCountdown, formatPercent, priceOf, sidesOf, useNow,
 } from '@/app/components/pages/events/predictions/predictionsShared'
+import { marketTakesPredictions } from '@/app/components/pages/events/predictions/marketLock'
 
 const WITHIN_HOURS = 3
 const URGENT_MS = 30 * 60 * 1000
@@ -35,7 +36,7 @@ export function ClosingSoonBanner({ accessToken }: { accessToken: string }) {
 
     const live = items.filter(market => {
         const closes = market.closes_at ? new Date(market.closes_at).getTime() : 0
-        return closes > now
+        return closes > now && marketTakesPredictions(market)
     })
 
     if (live.length === 0) return null

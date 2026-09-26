@@ -6,14 +6,19 @@ read_when:
   - "adding a localStorage key, a filter preset, or tutorial state"
   - "making a preference follow the signed-in user across devices"
   - "wiring detail-page transient UI (tabs/search/scroll) that must survive Back/Forward"
-keywords: [usePageState, useNavState, localStorage, PREF_KEYS, caches, querySig, presets, tutorial, persistence, controlled-page, userState, synced, badges, seen]
-provides: "the state tiers (incl. the account-synced tier), the localStorage key convention, and how pages are controlled + hoisted"
+  - "polling server state on an interval, or following a live pick/ban session"
+  - "holding a pick/ban captain's selection, optimistic lock-in or refusal message"
+  - "sending the pick/ban selection preview (hover), or ordering pick/ban commands so each carries a fresh version"
+  - "holding a pick/ban manager's act-for selection, command in flight, confirmation or refusal"
+  - "editing a complete pick/ban's final maps (the Edit final draft and its checks)"
+keywords: [usePageState, useNavState, localStorage, PREF_KEYS, caches, querySig, presets, tutorial, persistence, controlled-page, userState, synced, badges, seen, polling, createPoller, visibility, usePickBanSession, usePickBanView, mergePickBanState, structural sharing, clock offset, reconnecting, captainPlay, useCaptainPlay, withCaptainPlay, captainDockOf, optimistic lock-in, hover, hoverOf, createHoverSender, HOVER_DEBOUNCE_MS, selection preview, command queue, managerDock, useManagerDock, withManagerPlay, managerDockOf, confirmation, Reopen, editFinal, finalDraftOf, finalEditorOf, openFinalEditor, Edit final]
+provides: "the state tiers (incl. the account-synced tier), the localStorage key convention, how pages are controlled + hoisted, and the polling live-data tier"
 not_here:
   - "the navigation stack / navigate() / renderView wiring → navigation.md"
   - "the shared components used (FilterPresetsMenu, ColumnsMenu, Tutorial) → shared-components.md"
-sections: [controlled-pages-with-hoisted-state, navigation-history-per-entry-ui-state, account-synced-state, localstorage-persistence, filter-presets, tutorial-state, favorites, naming-conventions]
-last_verified: 2026-09-22
-verify_against: [app/components/main/Main.tsx, app/components/navigation/useNavState.ts, app/hooks/useAsync.ts, app/utils/userState.ts]
+sections: [controlled-pages-with-hoisted-state, navigation-history-per-entry-ui-state, account-synced-state, localstorage-persistence, filter-presets, tutorial-state, favorites, polling-live-data, naming-conventions]
+last_verified: 2026-09-25
+verify_against: [app/components/main/Main.tsx, app/components/navigation/useNavState.ts, app/hooks/useAsync.ts, app/utils/userState.ts, app/utils/poller.ts, app/components/pages/events/pickban/pickBanSession.ts, app/components/pages/events/pickban/usePickBanSession.ts, app/components/pages/events/pickban/mergePickBanState.ts, app/components/pages/events/pickban/captainPlay.ts, app/components/pages/events/pickban/useCaptainPlay.ts, app/components/pages/events/pickban/managerDock.ts, app/components/pages/events/pickban/useManagerDock.ts, app/components/pages/events/pickban/editFinal.ts, app/components/pages/events/pickban/pickBanMotionPreference.ts, app/components/pages/events/pickban/pickBanSoundPreference.ts, app/components/pages/MatchPickBanPage.tsx]
 ---
 
 # State patterns
@@ -175,7 +180,8 @@ Rules:
 
 - **Which keys sync is a whitelist** (`isSyncedKey` in `userState.ts`): theme,
   tutorial seen-flags, server presets, Maps/World-Records filter presets, admin
-  `:filters:v1` presets, Medal Hunt dismissals, the display-timezone override.
+  `:filters:v1` presets, Medal Hunt dismissals, the display-timezone override,
+  the pick/ban page's sound (on/off and volume) and Animations preferences.
   Map and server favorites are NOT here — each is its own account resource on
   the API (see Favorites below).
   Everything else (column layout, page sizes, panel-open flags, ui-scale, replay
@@ -254,6 +260,8 @@ signed-in user across devices); everything else is device-local.
 | `utbt:theme:v1` | `ThemeProvider` (app-global) | **yes** | `{ id }` — selected theme (`classic`/`red`/`aurum`/`amethyst`/`emerald`/`rose`/`light`/`black`) |
 | `utbt:displayTimezone:v1` | `app/utils/timezone.ts` (app-global) | **yes** | IANA timezone string override, or `null` to fall back to the browser's resolved zone. Set from the `launcher-appearance` settings panel. |
 | `utbt:replayVideoVolume:v1` | `app/utils/replayVideoVolume.ts` | no | replay player volume `0..1` |
+| `utbt:pickBanMotion:v1` | `events/pickban/pickBanMotionPreference.ts` | **yes** | `'on'` / `'off'` (JSON strings): the pick/ban page's Animations toggle (absent means on) |
+| `utbt:pickBanSound:v1` | `events/pickban/pickBanSoundPreference.ts` | **yes** | `{ enabled, volume }`: the pick/ban page's sound switch and Volume (`0..1`), merged over `{ enabled: false, volume: 0.4 }`. `enabled` counts only when it is `true`; a volume that is missing or not a number reads as 0.4; any other stored field (such as an older `pack`) is ignored. The page subscribes to both keys, so an account value arriving after it opened updates it live |
 | `utbt:patreon:v1` | `app/utils/patreon.ts` | no | cached patron tier map, 1 h TTL (pure cache) |
 | `ui-scale` | `LauncherGeneralSettings` | no | renderer zoom percent (pre-dates the key convention) |
 | `utbt:webAuth:v1` | `app/platform/web/auth-web.ts` (**web build only**) | never | `AuthProfile` — Discord identity + access/refresh tokens + expiry; the web equivalent of the desktop main-process auth config. Secrets never sync. |
@@ -359,6 +367,275 @@ writing, so nothing is stored on the device.
 
 They were previously `utbt:serverFavorites:v2` in the synced store; that key is
 retired and no longer whitelisted.
+
+## Polling live data
+
+Some screens have to follow server state closely: the pick/ban page and its stream view.
+They poll on an interval instead of fetching once on mount. This is a data tier, not UI
+state. Nothing in it is persisted, and the data lives only while the page that polls it
+is mounted.
+
+**`createPoller` (`app/utils/poller.ts`) is the reusable scheduler.** It takes
+`poll(signal)`, `intervalMs()` (read again after every attempt, so the cadence can follow
+the data), `alwaysPoll`, and an optional visibility environment that defaults to
+`document`. How it behaves:
+
+- `start()` polls at once, even in a hidden document, so a page never opens empty. After
+  that it polls one interval after each attempt settles.
+- Attempts never overlap: `pollNow()` during an attempt returns the one in flight.
+- `refresh()` is for right after a write: it aborts the attempt in flight (which started
+  before the write, so its answer may be stale) and polls afresh. The aborted attempt
+  reports nothing.
+- It rests while the document is hidden and polls the moment the document shows again.
+  `alwaysPoll` ignores visibility.
+- `stop()` aborts the attempt in flight, and nothing is reported after it. `start()` can
+  follow straight away, which React StrictMode's double mount relies on.
+- `onSettled` reports every outcome together with the count of consecutive failures.
+- `reschedule()` re-reads the interval after the data changed outside a poll.
+
+Reuse it for new interval polls instead of an ad hoc `setInterval`. `poller.test.ts` covers
+it with fake timers.
+
+**The pick/ban session store** (`events/pickban/pickBanSession.ts`) is `createPoller` plus
+the data. Like `useServerFavorites`, it is a `useSyncExternalStore` store. Its snapshot is
+`{ state, clockOffsetMs, loading, error, reconnecting }`.
+
+- **Loading.** `loading` is true only until the first answer. Show a skeleton only while
+  `loading && !state`. Later polls refresh silently in the background.
+- **Failures.** A failed poll keeps `state`. Show the reconnecting indicator only when
+  `reconnecting` is set. `error` holds the last failure, which is how a first load that
+  never succeeded is reported.
+- **Merge with identity.** Every fresh payload goes through `mergePickBanState`, which
+  shares structure with the previous state:
+  - pool cards are matched by map name, plan steps by plan index and members by user id
+  - so every unchanged card, step and member keeps its object identity
+  - a 304 keeps the whole state object
+
+  Use the same values as React keys, so nothing remounts or replays an animation on
+  refresh.
+- **Clock offset.** The store keeps the median of recent server-clock samples (see
+  `agents/data-sources.md`). Pass it to the view model with `Date.now()`, and never compare
+  server timestamps against the raw local clock.
+- **Commands.** `sendCommand(command, input)` and `sendManagerCommand(command, input)` fill
+  in the current `version`. `sendManagerCommandAt(version, command, input)` sends the
+  version it is given instead, for a command that must fail with `version_conflict` if
+  anything changed since the manager looked (the dock's Reopen and Edit final). They apply
+  the returned state at once, so the actor never waits for a poll, and resample the clock.
+  A refused command triggers an immediate poll, then rethrows the `ApiError`.
+- **One command at a time.** Every command, participant or manager, runs after the one
+  before it has settled, and only then reads the `version` to send. Every command bumps the
+  version, a hover included, so this is what lets a Lock In pressed while a hover is in
+  flight go out with the version that hover answered with instead of failing with
+  `version_conflict`. A refused command doesn't hold up the next one.
+
+**Captain play** (`events/pickban/captainPlay.ts`, pure apart from the hover sender below,
+Vitest without a DOM) is the
+captain's own transient state on top of the polled data. It lives in `useState` on the match
+page for as long as the page is mounted, and is never persisted or put in nav state. Its
+`CaptainPlay` holds four things:
+
+- the selected map, tied to the plan index it was chosen for
+- the command in flight
+- the lock-in being sent
+- the last refusal's message
+
+Screens never read those fields. They go through the functions below.
+
+- `withCaptainPlay(view, play)` layers the play onto a built `PickBanView`. It marks the
+  selected card `selected`. While a lock-in is in flight, it shows that card as `lockedIn`,
+  the turn as `lockedIn` and the step as `locked_in`, and makes nothing selectable. That is
+  the optimistic "Locked In", shown before the command answers. A selection only shows while
+  its plan index is the awaited step and its card is still `selectable`, so a step that moved
+  on, an undo or a map that became unavailable drops it without extra bookkeeping. While the
+  captain has a selection on their own turn, or a lock-in is in flight, it clears every card's
+  `previewed`: the server's preview is only the echo of an earlier selection, so it would keep
+  the old map highlighted until the next poll.
+- `captainDockOf(view, play)` is the dock model: `ready`, `choose`, `locked_in`, `locked`
+  (the intro, a spotlight or a pause, with the view's `countdown` and the next `turn`) or
+  `waiting` (the other side's turn), plus the refusal message. It is `null` for anyone
+  without `affordances.actingSide`: a spectator, a teammate, a replaced captain or a
+  manager. It is also `null` once the last step is in, apart from the actor's own "Locked
+  in" during its reveal lead. The one exception is a refusal still showing after the refresh
+  took the viewer's controls away.
+- `selectMap`, `beginLock` and `beginReadyToggle` return the next play, and the begin
+  functions also return the command and body to send. They return `null` while a command is
+  in flight or when the controls aren't open, which is the double-submit guard.
+- `commandSucceeded` and `commandRejected(play, error)` settle a command. On success, the
+  returned state takes over the "Locked In". On a refusal, the stable error code becomes a
+  worded message (the server's own message for any code without wording), and the selection
+  is kept for another try.
+
+**Selection preview.** While the viewer's own side is choosing, every other viewer and the
+stream view see which map it has selected. Two pieces in `captainPlay.ts` decide what to send
+and when:
+
+- `hoverOf(play, view)` is the hover body (`{ map }`) for the captain's current selection,
+  or `null`. It is `null` unless the dock is `choose`, which only a captain or acting
+  captain gets on their side's turn, never a manager acting for a team. It is also `null`
+  once Lock In is pressed, and for a map the board already shows as `previewed`, so
+  selecting the same map again sends nothing.
+- `createHoverSender(target, send)` debounces it. `request()` restarts a
+  `HOVER_DEBOUNCE_MS` (300 ms) timer. When the timer fires, it asks `target()` for the body
+  right then, so a Lock In, a pause or an already-previewed map in between sends nothing.
+  It never sends the map whose hover is still in flight. `cancel()` drops a pending hover.
+  A failed hover is swallowed: no refusal message, no busy state, and it never blocks
+  Lock In.
+- It also re-sends a preview that got lost, because the captain keeps the selection while the
+  preview goes away: a pause clears it on the server, and a refused or rate-limited hover never
+  set it. `sync()` is called whenever the view or the play changes. It requests a hover only
+  when `target()` goes from `null` to a body, for example when the turn reopens after a pause
+  with the kept selection no longer `previewed`, so each return to the turn sends at most
+  once. A failed hover is sent once more after the debounce; if that fails too it stops until
+  the captain selects again. Neither can loop: a re-send needs a new selection, a return to
+  the turn, or the first failure of a fresh request.
+
+`useCaptainPlay(view, sendCommand)` (`events/pickban/useCaptainPlay.ts`) wires it to the
+store. It keeps the latest play in a ref as well as in state, so a second click in the same
+tick is refused before React re-renders. `select` also requests a hover, and an effect calls
+`sync()` after every render that changes the view or the play. `lockIn` cancels a pending
+hover before it submits, and the store's one-command-at-a-time rule covers a hover already in
+flight. The pending hover is cancelled on unmount too.
+
+**Manager play** (`events/pickban/managerDock.ts`, pure, Vitest without a DOM) is the same
+idea for a viewer with `can_manage`, on its own path so a manager never goes through the
+captain's select. `ManagerPlay` holds the act-for selection (tied to its plan index), the
+command in flight, the act-for lock-in being sent, the request awaiting confirmation
+(Reopen, Restart, Cancel, or an Edit final save with its list), the open Edit final
+draft, and the last refusal with the command it answered.
+
+The dock's commands (`ManagerCommand`) are the manager wire commands plus `reopen`.
+`ManagerAction` is what the dock asks for, and `ManagerRequest` is what goes over the
+wire. Most actions are their own request. `{ command: 'reopen' }` is sent as
+`{ command: 'undo', version }`, pinned to the view's `version` when its confirmation
+opens. `{ command: 'edit-final' }` is sent as the open draft's list with the version the
+draft was seeded from. A request with a `version` goes through the store's
+`sendManagerCommandAt`, so anything that changed in between (another manager's edit, or
+a reopen that completed again) answers `version_conflict` instead of being overwritten.
+Restart and Cancel keep the latest version: captain hovers bump it constantly while a
+session runs. Reopen only applies to a complete session, and Undo only to a running or
+paused one, so neither can run as the other.
+
+- `withManagerPlay(view, play)` marks the act-for selection `selected`, and shows the
+  act-for lock-in as "Locked In". It shares `captainPlay.ts`'s `StepChoice`,
+  `selectedMapOf`, `withSelectedMap` and `withOptimisticLock`, adding only the manager's own
+  gate (the awaited step is open to act for). The lock-in stays until its step reveals,
+  since the returned state only marks a lock-in for the side's own captain.
+- `managerDockOf(view, play)` is the dock model, `null` without `affordances.manager`.
+  Every button carries its label, a one-line `hint` and a `disabled` flag (every one is
+  disabled while a command is in flight, and `submitting` names that command). It holds:
+  - `status` (the session's) and `phase`, a status line: `Waiting for Start`, `Starting`,
+    `Intro`, `Step 3 of 7 · Azure Owls (pick)`, `Step 3 of 7 · Revealing`, `Step 3 of 7`
+    while paused, `Final maps written` or `Final maps edited`. For a manager who plays in
+    the match (`lockForSide` false) the awaiting line is just `Step 3 of 7`, without whose
+    turn it is
+  - `primary`, the one call to action for the status: Open Lobby (none, cancelled or
+    voided), Start (lobby), Pause (running) or Resume (paused). Start also carries
+    `blocked`, the worded blocking reason with a `fix` naming what clears it (or `null`),
+    and `readiness`, each team's Ready mark, A first. Once complete it is `null`, and
+    `done` says the final maps are in the match.
+  - `sides`, while the session is in the lobby, running or paused: a tile per team, A
+    first (letter, name, stage seed, and while Hand over applies its roster with who is in
+    control; choosing the captain sends `user_id: null`), `swap` (lobby, or running before
+    the first step), and `chooseA` in the lobby while A is undetermined or the stage seeds
+    don't decide it (missing or tied). The choices stay in `team_a`, `team_b` order, so
+    choosing never reorders them, and they replace Swap. `basis` says why A is A: the
+    better stage seed, or set by a manager (`view.setup.aConfirmed`).
+  - `sequence`, in the same statuses: the preset's label (or Custom sequence), the step
+    count and best-of, whether it was changed for this match and from which stage, the
+    choice keys it matches (the stage it was copied from, then its preset), and whether it
+    can change (lobby only)
+  - `history` (Undo Last Step, Reopen, Edit Final Maps…) and `danger` (Restart, Cancel
+    Picks & Bans), each listed only while it applies
+  - the results warning, the voided banner, the open editor, the pending confirmation
+    (title, message, confirm and dismiss labels), the act-for controls, and the refusal
+
+  The act-for controls are a `CaptainDock` model, so the captain's dock renders
+  them, and a refused lock-in shows there rather than in the panel. They mirror the
+  captain's: `choose` while the awaited step is open to act for, `locked_in` for the
+  manager's own lock-in until it reveals, `locked` with the view's `countdown` and the
+  next `turn` through the start lead, the intro, a spotlight or a pause, and `waiting`
+  while someone else's lock-in is in its reveal lead or on the viewer's own turn as
+  captain. So the strip stays up from Start to the last lock-in, and is `null` in the
+  lobby and once the session is complete. For a manager who plays in the match they are
+  always `null`, and `playingNote` (set while the session is running or paused) says an
+  admin who isn't playing has to lock in on a team's behalf.
+- `beginManagerCommand(play, view, action)` returns the next play and the request to
+  send, or `null` when the control isn't open, a command is in flight, or an Edit final
+  save has no open, valid, current draft. For `reopen`, `restart`, `cancel` and
+  `edit-final` it first returns a play holding the resolved request awaiting confirmation
+  and no request; `confirmManagerCommand` sends exactly that request (an edit-final with
+  the list and version as they were confirmed) and `dismissManagerConfirm` drops it.
+  Asking again just asks again: only the confirmation sends. `selectActForMap` and
+  `beginActForLock` are the act-for select-then-Lock In, which sends `lock` with the side,
+  map and plan index.
+- `openFinalEditor(play, view)` starts an Edit final draft from the view (only while Edit
+  final applies and nothing is in flight). Calling it with a draft open reloads it from
+  the current summary and version, and drops any refusal the editor showed.
+  `changeFinalEditor(play, change)` applies one of `editFinal.ts`'s draft changes, and
+  `closeFinalEditor` drops the draft with any refusal it was showing. The dock's
+  `finalEditor` is `finalEditorOf` plus `saving` (its save is in flight) and its own
+  `rejection`: a refused save shows there, not in the panel, and the draft stays for
+  another try. A save refused with `version_conflict` says the final maps changed since
+  the editor opened. Once the view shows the newer version the editor is `outdated`,
+  which replaces that refusal and holds Save until the draft is reloaded. A save that
+  succeeds closes the editor.
+- `managerCommandSucceeded` and `managerCommandRejected(play, error)` settle a command, and
+  `dismissManagerRejection` clears the refusal. A refusal without a stable code falls back
+  to the captain's `unwordedRejection` (the unreachable-network words, else the error's own
+  message). `sequenceChoices(stages, sequence)` lists the override
+  options: every preset, then each stage that has a block, each keyed by its preset id or
+  stage key so two stages with the same name and best-of never collide. The first of the
+  dock sequence's keys that is listed is marked `current`.
+- `settleManagerPlay(play, view)` drops a confirmation the session no longer allows, an
+  open Edit final draft once Edit final no longer applies (the session left `complete`),
+  and an act-for lock-in whose step is awaited again (an undo, by anyone). Any later manager
+  command drops the lock-in too. So none of them comes back later, a Reopen confirmed
+  after someone else reopened never undoes another step, and a step the team locks after an
+  undo is never shown as the manager's.
+
+**Edit final draft** (`events/pickban/editFinal.ts`, pure, Vitest without a DOM) is the
+editor's model:
+
+- `finalDraftOf(view)` seeds a `FinalDraft` from `view.summary`, in play order, and
+  records `view.version` as the version to save against. Each entry has a stable `key`,
+  its map, its picked-by side and its decider flag. Edit final only applies once the last
+  spotlight is over, so every slot is revealed by then.
+- The changes each take the draft and an entry key and return a new draft:
+  `setFinalMap`, `setFinalSide`, `setFinalDecider` (marking only works on the last entry,
+  and unmarks any other; the entry keeps its side for when it is unmarked),
+  `moveFinalEntry(draft, key, -1 | 1)` (never past either end), `addFinalEntry` (a blank
+  entry, placed before a trailing decider) and `removeFinalEntry`.
+- `finalEditorOf(draft, view)` is the render model: numbered rows with move and decider
+  availability and an `invalid` flag, the map choices (the pool's non-excluded cards with
+  their display names), both sides with their A/B letter and team name, whether Add still
+  applies (fewer rows than eligible maps), one worded problem per broken rule, the
+  request `body` only when there are none, and `outdated` once the view's `version` has
+  moved past the draft's. The rules are the server's: at least one map;
+  every map chosen and in the eligible pool; no map listed twice; at most one decider,
+  and only the last; every other entry with a picked-by side. The decider always goes out
+  with `picked_by: null`.
+
+`useManagerDock(view, { sendManagerCommand, sendManagerCommandAt })`
+(`events/pickban/useManagerDock.ts`) wires it to the store the same way `useCaptainPlay`
+does, and settles the play whenever the view changes. It hands each request to the store
+through a per-command switch, so every body is checked against
+`PickBanManagerCommandBodies` without a cast, and a request with a pinned `version` goes to
+`sendManagerCommandAt`. `run(action)` begins an action, and `openFinalEditor` (which also
+reloads), `changeFinalEditor` and `closeFinalEditor` drive the draft. The page passes it
+the captain-played view, so both layers show, and the session itself, which carries both
+senders.
+
+**Hooks** (`events/pickban/usePickBanSession.ts`):
+
+- `usePickBanSession({ accessToken, slug, matchId, alwaysPoll })` keeps one store per slug,
+  match and mode. It reads the token through a ref, so a token refresh triggers a poll
+  instead of resetting the state.
+- `usePickBanView(state, clockOffsetMs)` builds the view model on every render. It also
+  re-renders by itself at the view's `nextBoundaryAt`, so reveals and phase changes land on
+  their timestamps rather than whenever a poll arrives.
+- It deliberately doesn't re-render every frame. Drive continuous countdowns and progress
+  bars from `countdown.endsAt` (local epoch ms) on animation frames. `CountdownText` and
+  `CountdownBar` (`events/pickban/components/Countdown.tsx`) already do this.
 
 ## Naming conventions
 

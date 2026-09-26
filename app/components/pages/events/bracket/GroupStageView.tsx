@@ -43,11 +43,13 @@ function matchesFor(matches: EventMatch[], teamId: string): EventMatch[] {
     return matches.filter(match => match.team_a?.id === teamId || match.team_b?.id === teamId)
 }
 
-function TeamMatches({ matches, now, onMapSelect, onScheduleMatch }: {
+function TeamMatches({ matches, now, onMapSelect, onScheduleMatch, eventSlug, myTeamId }: {
     matches: EventMatch[]
     now: number
     onMapSelect?: (mapName: string) => void
     onScheduleMatch?: (matchId: string) => void
+    eventSlug?: string
+    myTeamId?: string | null
 }) {
     if (matches.length === 0) {
         return <p className="text-[11px] text-muted-foreground">No matches drawn for this team yet.</p>
@@ -56,14 +58,14 @@ function TeamMatches({ matches, now, onMapSelect, onScheduleMatch }: {
     return (
         <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
             {matches.map(match => (
-                <MatchCard key={match.id} match={match} now={now} onMapSelect={onMapSelect}
+                <MatchCard key={match.id} match={match} now={now} onMapSelect={onMapSelect} eventSlug={eventSlug} myTeamId={myTeamId}
                     onClick={onScheduleMatch && schedulerEligible(match) ? () => onScheduleMatch(match.id) : undefined} />
             ))}
         </div>
     )
 }
 
-function StandingsTable({ rows, matches, bands, drawsPossible, now, onMapSelect, onScheduleMatch }: {
+function StandingsTable({ rows, matches, bands, drawsPossible, now, onMapSelect, onScheduleMatch, eventSlug, myTeamId }: {
     rows: EventStandingRow[]
     matches: EventMatch[]
     bands: Map<number, string>
@@ -71,6 +73,8 @@ function StandingsTable({ rows, matches, bands, drawsPossible, now, onMapSelect,
     now: number
     onMapSelect?: (mapName: string) => void
     onScheduleMatch?: (matchId: string) => void
+    eventSlug?: string
+    myTeamId?: string | null
 }) {
     const [visible, setVisible] = useState<Set<string>>(() => new Set(COLUMNS.map(column => column.id)))
     const [expanded, setExpanded] = useState<Set<string>>(() => new Set())
@@ -119,7 +123,7 @@ function StandingsTable({ rows, matches, bands, drawsPossible, now, onMapSelect,
                         </div>
                         {open && (
                             <div className="pt-2">
-                                <TeamMatches matches={matchesFor(matches, row.team_id)} now={now} onMapSelect={onMapSelect} onScheduleMatch={onScheduleMatch} />
+                                <TeamMatches matches={matchesFor(matches, row.team_id)} now={now} onMapSelect={onMapSelect} onScheduleMatch={onScheduleMatch} eventSlug={eventSlug} myTeamId={myTeamId} />
                             </div>
                         )}
                     </div>
@@ -190,7 +194,7 @@ function StandingsTable({ rows, matches, bands, drawsPossible, now, onMapSelect,
                             {open && (
                                 <tr className="border-b border-hairline/5">
                                     <td colSpan={columnCount} className="px-4 py-3 bg-hairline/[0.02]">
-                                        <TeamMatches matches={matchesFor(matches, row.team_id)} now={now} onMapSelect={onMapSelect} onScheduleMatch={onScheduleMatch} />
+                                        <TeamMatches matches={matchesFor(matches, row.team_id)} now={now} onMapSelect={onMapSelect} onScheduleMatch={onScheduleMatch} eventSlug={eventSlug} myTeamId={myTeamId} />
                                     </td>
                                 </tr>
                             )}
@@ -202,12 +206,14 @@ function StandingsTable({ rows, matches, bands, drawsPossible, now, onMapSelect,
     )
 }
 
-export function GroupStageView({ stage, specStage, now, onMapSelect, onScheduleMatch }: {
+export function GroupStageView({ stage, specStage, now, onMapSelect, onScheduleMatch, eventSlug, myTeamId }: {
     stage: EventBracketStage
     specStage: EventStageSpec | null
     now: number
     onMapSelect?: (mapName: string) => void
     onScheduleMatch?: (matchId: string) => void
+    eventSlug?: string
+    myTeamId?: string | null
 }) {
     const bands = useMemo(() => advancementBands(specStage), [specStage])
     const ordered = useMemo(
@@ -233,13 +239,14 @@ export function GroupStageView({ stage, specStage, now, onMapSelect, onScheduleM
 
             {stage.groups.map(group => (
                 <GroupPanel key={group.id} matches={ordered} group={group} bands={bands}
-                    drawsPossible={drawsPossible} now={now} onMapSelect={onMapSelect} onScheduleMatch={onScheduleMatch} />
+                    drawsPossible={drawsPossible} now={now} onMapSelect={onMapSelect} onScheduleMatch={onScheduleMatch}
+                    eventSlug={eventSlug} myTeamId={myTeamId} />
             ))}
         </div>
     )
 }
 
-function GroupPanel({ matches, group, bands, drawsPossible, now, onMapSelect, onScheduleMatch }: {
+function GroupPanel({ matches, group, bands, drawsPossible, now, onMapSelect, onScheduleMatch, eventSlug, myTeamId }: {
     matches: EventMatch[]
     group: EventBracketGroup
     bands: Map<number, string>
@@ -247,6 +254,8 @@ function GroupPanel({ matches, group, bands, drawsPossible, now, onMapSelect, on
     now: number
     onMapSelect?: (mapName: string) => void
     onScheduleMatch?: (matchId: string) => void
+    eventSlug?: string
+    myTeamId?: string | null
 }) {
     const inGroup = useMemo(
         () => matches.filter(match => match.group_id === group.id),
@@ -261,7 +270,8 @@ function GroupPanel({ matches, group, bands, drawsPossible, now, onMapSelect, on
             </div>
 
             <StandingsTable rows={group.standings} matches={inGroup} bands={bands}
-                drawsPossible={drawsPossible} now={now} onMapSelect={onMapSelect} onScheduleMatch={onScheduleMatch} />
+                drawsPossible={drawsPossible} now={now} onMapSelect={onMapSelect} onScheduleMatch={onScheduleMatch}
+                eventSlug={eventSlug} myTeamId={myTeamId} />
         </section>
     )
 }

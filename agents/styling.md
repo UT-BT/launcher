@@ -4,14 +4,14 @@ read_when:
   - "styling a new page, button, table, form, chip, card, or modal"
   - "choosing a color, radius, spacing, or animation"
   - "you see drift from a token and are tempted to add a variant"
-keywords: [tailwind, cn, DataTable, tokens, colors, button, card, white/5, bg-card, animation, table-fixed, align]
+keywords: [tailwind, cn, DataTable, tokens, colors, button, card, white/5, bg-card, animation, framer-motion, reduced motion, table-fixed, align]
 provides: "the locked design tokens + the canonical class strings"
 not_here:
   - "which component to use → shared-components.md"
   - "state / persistence → state-patterns.md"
 sections: [class-merging, tables-locked, responsive-columns, page-layout, filter-panel, buttons-toggle-states, form-inputs, card-backgrounds-borders, text, color-palette, animation, css-runtime-cost, donts]
-last_verified: 2026-07-28
-verify_against: [app/components/shared/DataTable.tsx, app/styles/globals.css, app/styles/desktop.css, app/styles/index.css, lib/utils.ts, app/hooks/useElementWidth.ts]
+last_verified: 2026-09-25
+verify_against: [app/components/shared/DataTable.tsx, app/styles/globals.css, app/styles/desktop.css, app/styles/index.css, lib/utils.ts, app/hooks/useElementWidth.ts, app/hooks/usePrefersReducedMotion.ts]
 ---
 
 # Styling reference
@@ -297,6 +297,16 @@ Standard radii: `rounded-xl` for big containers, `rounded-lg` for buttons / inpu
 | Monospace nums (times, ping) | `font-mono tabular-nums` |
 | Player / map name | `text-sm font-semibold text-white` |
 
+`font-pickban` (Barlow Condensed, bundled from `app/assets/fonts/barlow-condensed/` with
+its OFL licence) is the pick/ban display face: team names, the turn caption, map tiles,
+the step track and the reveal scenes on the match page and the stream view. The token
+lives in `globals.css`; its `@font-face` rules live in
+`events/pickban/components/pickBanFonts.css`, imported by `PickBanStage` and the stream
+root, both lazily loaded, so the entry CSS doesn't carry them. The files are imported
+assets rather than `app/public/` files so the desktop build, which has no public dir and
+loads over `file://`, gets them too. It ships four faces: 600 and 700 upright, 800 and 900
+italic. Body text and everything outside pick/ban stays on the system font.
+
 ## Color palette
 
 - **accent-500 / accent-400 / accent-300** — the one **themeable** scale (chrome:
@@ -323,6 +333,14 @@ Game identity, not chrome — keep these **literal**, never route through `accen
 - **Functional** — destructive `red`, success `emerald`, warning `amber`/`rose` are
   usability constants and also overlap brand, so they stay fixed too.
 - Splash / login / marketing gradients (`shared.css`, `--utbt-*`) — a brand moment.
+- **Pick/ban sides** — team A crimson `pickban-a` (`#e6394f`), team B azure `pickban-b`
+  (`#1fa6e6`) and the decider's gold `pickban-gold` (`#f0b429`). They are defined once, in
+  the `@theme` block of `globals.css`, so every colour utility and opacity step works
+  (`text-pickban-a`, `border-pickban-b/45`, `bg-pickban-gold/20`), and no theme overrides
+  them, Light included. Pick/ban components read them through `PICK_BAN_TONES`
+  (`events/pickban/components/pickBanTone.ts`) rather than spelling the classes out. A
+  gradient, glow or shadow that needs the raw colour takes it from `PICK_BAN_HUES` in the
+  same file (a `var(--color-pickban-*)` value, mixed with `color-mix()` for alpha).
 
 ## Themes
 
@@ -410,11 +428,39 @@ change (it reads `useTheme`), so they update live.
 
 ## Animation
 
-- Page enter: `animate-in fade-in slide-in-from-bottom-0 duration-500` (page-level)
-- Modal: `animate-in fade-in zoom-in-95 duration-200`
-- Tutorial card: `animate-in fade-in slide-in-from-bottom-4 duration-200`
+- **`animate-in` / `fade-in` / `slide-in-*` / `zoom-in-*` emit no CSS.** Their plugin
+  (`tw-animate-css`) is never imported, so the older page-enter, modal and tutorial classes
+  (`animate-in fade-in slide-in-from-bottom-4 duration-200` and the like) do nothing today.
+  Don't add new uses. Animate with framer-motion instead.
 - Skeleton: `animate-pulse` with `bg-white/5`
 - Legendary title/avatar: `legendaryAvatarPulse` / `legendaryTitlePulse` keyframes in `globals.css`
+- **framer-motion** is the motion library. It stays out of the web entry, so import it only
+  from lazily loaded modules. The pick/ban choreography
+  (`events/pickban/components/stageMotion.ts`) is the reference. Variants follow view-model
+  state, so a change reverses when the state does (an undo). `AnimatePresence` handles
+  enter and exit, and a shared `layoutId` makes an indicator glide. Animate `transform`
+  and `opacity` (a one-shot `filter` is fine). A plain colour or filter change on a card
+  can be a CSS `transition-[…]` instead, since it reverses by itself.
+- **One-shot effects** (the reveal's bursts, shockwave rings, sparks, confetti and flashes in
+  `events/pickban/components/RevealEffects.tsx`) are variant children whose `shown`
+  keyframes start invisible and end invisible or on a settled glow. A scene that mounts
+  settled (`initial={false}`) or runs under reduced motion lands on that last keyframe, so
+  no effect is left half-played. Keep them bounded: a fixed handful of absolutely positioned
+  elements animated once, never a particle per row, and at most one stage-level element
+  looping while its scene is up (the decider's rays).
+- **Reduced motion.** `shared.css` cuts every CSS animation and transition to nothing under
+  `prefers-reduced-motion: reduce`. Motion driven from JS never sees that rule, so it reads
+  the same switch through `usePrefersReducedMotion()` (`app/hooks/usePrefersReducedMotion.ts`):
+  - For framer-motion, wrap the tree in a `MotionConfig` whose `skipAnimations` follows
+    the hook. Every enter, exit and layout animation below it is then instant and shows
+    the same information.
+  - The pick/ban visual core is the one exception: its reveals are the broadcast, and
+    Windows reports `reduce` whenever its Animation effects are off. `PickBanMotion` takes
+    an explicit `animate` (the match page's Animations toggle, the stream view's `motion=0`)
+    and sets `reducedMotion="never"`. Its wrapper carries `data-motion="on"` while
+    animating, and `shared.css`'s rule skips everything inside `[data-motion='on']`.
+  - An animation-frame loop that writes styles steps coarsely instead of gliding, as
+    `CountdownBar` does.
 
 ### CSS runtime cost (RAM/CPU)
 
@@ -422,8 +468,9 @@ The renderer runs on phones and in the Electron shell alongside a game — style
 choices have a compositor cost, not just a look:
 
 - `backdrop-blur` is the most expensive effect in the app. The budget is the
-  existing chrome (sidebar, top bar, sticky theads, modals). Never apply it
-  per-row / per-card in a list — one blurred surface, not N.
+  existing chrome (sidebar, top bar, sticky theads, modals, and the pick/ban stage's
+  paused overlay, which exists only while paused). Never apply it per-row or per-card in a
+  list: one blurred surface, not N.
 - Infinite animations (`animate-pulse`, `animate-ping`, the legendary pulses)
   animate `opacity`/`transform`/`box-shadow` and each one keeps the compositor
   awake. Keep them for singletons (badges, one hero) — never one per row.

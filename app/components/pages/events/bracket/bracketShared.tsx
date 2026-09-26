@@ -6,6 +6,8 @@ import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { MapNavLink } from '@/app/components/shared/MapNavLink'
 import { TeamName } from '../TeamRoster'
 import { MatchOddsChip } from '../predictions/predictionsShared'
+import { pickBanCardAffordance } from '../pickban/pickBanEntryPoints'
+import { PickBanLink } from '../pickban/components/PickBanLink'
 import type {
     EventBracketGroup, EventBracketStage, EventBracketTeamRef, EventEntrantStatus, EventFormatSpec,
     EventMatch, EventMatchMap,
@@ -107,6 +109,12 @@ export function schedulingWindowLabel(
     return 'Not yet scheduled'
 }
 
+export function opponentNameOf(match: EventMatch | null | undefined, myTeamId: string | null | undefined): string | null {
+    const side = match ? sideOf(match, myTeamId) : null
+    if (!match || !side) return null
+    return (side === 'a' ? match.team_b : match.team_a)?.name || null
+}
+
 export function nextOwnMatch(stages: EventBracketStage[], myTeamId: string | null, now: number): EventMatch | null {
     if (!myTeamId) return null
 
@@ -140,6 +148,18 @@ export function mapWinnerOf(row: EventMatchMap, capsToWin: number): EventSide | 
 
 export function mapWasContested(row: EventMatchMap): boolean {
     return row.winner_side !== null || row.caps_a !== null || row.caps_b !== null
+}
+
+export function pickBanMapLabel(
+    row: Pick<EventMatchMap, 'kind' | 'map' | 'picked_by'>,
+    teamA: EventBracketTeamRef | null,
+    teamB: EventBracketTeamRef | null,
+): string | null {
+    if (row.kind === 'decider' && row.map) return 'Decider'
+    if (row.picked_by === 'a') return `Picked by ${teamLabel(teamA)}`
+    if (row.picked_by === 'b') return `Picked by ${teamLabel(teamB)}`
+
+    return null
 }
 
 /**
@@ -268,12 +288,15 @@ function TeamRow({ team, fallback, score, won, decided }: {
     )
 }
 
-function MapRow({ row, capsToWin, onMapSelect }: {
+function MapRow({ row, capsToWin, teamA, teamB, onMapSelect }: {
     row: EventMatchMap
     capsToWin: number
+    teamA: EventBracketTeamRef | null
+    teamB: EventBracketTeamRef | null
     onMapSelect?: (mapName: string) => void
 }) {
     const winner = mapWinnerOf(row, capsToWin)
+    const pickBanLabel = pickBanMapLabel(row, teamA, teamB)
 
     return (
         <div className="flex items-center gap-2 text-[11px] min-w-0">
@@ -287,8 +310,10 @@ function MapRow({ row, capsToWin, onMapSelect }: {
                     <span className="text-muted-foreground/60 italic">{row.kind === 'decider' ? 'Decider' : 'Map not recorded'}</span>
                 )}
             </span>
-            {row.kind === 'decider' && row.map && (
-                <span className="shrink-0 text-[10px] text-accent-300/80">decider</span>
+            {pickBanLabel && (
+                <span className={cn('shrink-0 text-[10px]', row.kind === 'decider' ? 'text-pickban-gold' : 'text-accent-300/80')}>
+                    {pickBanLabel}
+                </span>
             )}
             <span className="ml-auto shrink-0 tabular-nums text-muted-foreground">
                 <span className={cn(winner === 'a' && 'text-white font-medium')}>{row.caps_a ?? '–'}</span>
@@ -325,6 +350,31 @@ function CapList({ row }: { row: EventMatchMap }) {
     )
 }
 
+function PickBanCardPill({ match, eventSlug, myTeamId }: {
+    match: EventMatch
+    eventSlug: string
+    myTeamId: string | null
+}) {
+    const affordance = pickBanCardAffordance(match.pick_ban_status, sideOf(match, myTeamId) !== null)
+
+    if (!affordance) return null
+
+    return (
+        <PickBanLink
+            eventSlug={eventSlug}
+            matchId={match.id}
+            className={cn(
+                'inline-flex shrink-0 items-center whitespace-nowrap rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest transition-colors cursor-pointer',
+                affordance === 'join'
+                    ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                    : 'border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20',
+            )}
+        >
+            {affordance === 'join' ? 'Join' : 'Picks & Bans are live!'}
+        </PickBanLink>
+    )
+}
+
 export interface MatchCardProps {
     match: EventMatch
     now: number
@@ -334,9 +384,13 @@ export interface MatchCardProps {
     onMapSelect?: (mapName: string) => void
     className?: string
     footer?: React.ReactNode
+    eventSlug?: string
+    myTeamId?: string | null
 }
 
-export function MatchCard({ match, now, showMaps = true, showCaps = false, onClick, onMapSelect, className, footer }: MatchCardProps) {
+export function MatchCard({
+    match, now, showMaps = true, showCaps = false, onClick, onMapSelect, className, footer, eventSlug, myTeamId = null,
+}: MatchCardProps) {
     const decided = isDecided(match)
     const winnerSide = sideOf(match, match.winner_team_id)
     const maps = showMaps ? playedMaps(match.maps) : []
@@ -344,6 +398,7 @@ export function MatchCard({ match, now, showMaps = true, showCaps = false, onCli
     const windowState = match.status === 'pending' && match.team_a && match.team_b
         ? schedulingWindowState(match.resolved_window, now)
         : null
+    const pickBanPill = eventSlug ? <PickBanCardPill match={match} eventSlug={eventSlug} myTeamId={myTeamId} /> : null
 
     return (
         <div
@@ -385,16 +440,16 @@ export function MatchCard({ match, now, showMaps = true, showCaps = false, onCli
                 <div className="pt-1.5 border-t border-white/5 space-y-1">
                     {maps.map(row => (
                         <div key={row.id} className="space-y-0.5">
-                            <MapRow row={row} capsToWin={match.caps_to_win} onMapSelect={onMapSelect} />
+                            <MapRow row={row} capsToWin={match.caps_to_win} teamA={match.team_a} teamB={match.team_b} onMapSelect={onMapSelect} />
                             {showCaps && <CapList row={row} />}
                         </div>
                     ))}
                 </div>
             )}
 
-            {(match.status !== 'pending' || match.scheduled_at || windowState || footer) && (
+            {(match.status !== 'pending' || match.scheduled_at || windowState || footer || pickBanPill) && (
                 <div className="flex flex-wrap items-center gap-2 pt-1">
-                    <MatchOddsChip matchId={match.id} />
+                    <MatchOddsChip match={match} />
                     {match.status !== 'pending' && <MatchStatusChip match={match} />}
                     {match.scheduled_at && match.status !== 'complete' && (
                         <span className="text-[11px] text-muted-foreground">{formatSlotTime(match.scheduled_at, timezone)}</span>
@@ -404,6 +459,7 @@ export function MatchCard({ match, now, showMaps = true, showCaps = false, onCli
                             {schedulingWindowLabel(windowState, match.resolved_window, timezone)}
                         </Chip>
                     )}
+                    {pickBanPill}
                     {footer}
                 </div>
             )}
