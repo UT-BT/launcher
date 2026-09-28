@@ -14,7 +14,7 @@ import {
 import { Button } from '@/app/components/ui/button'
 import { NavHistoryBar } from '@/app/components/navigation/NavHistoryBar'
 import { NavLink } from '@/app/components/navigation/NavLink'
-import { buildNavSections, isNavItemActive, navItemDestination, type NavBadge } from '@/app/components/navigation/nav-items'
+import { buildNavSections, isEventLinkLive, isNavItemActive, navItemDestination, type NavBadge } from '@/app/components/navigation/nav-items'
 import type { NavParams } from '@/app/components/navigation/NavigationContext'
 import { useNavigation } from '@/app/components/navigation/NavigationContext'
 
@@ -125,6 +125,7 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
     const { containerStyle, titleStyle, containerClass, titleClass } = getRarityStyles(userProfile?.active_title)
     const patreonTier = usePatreonTier(userProfile?.id ?? undefined)
     const navSections = useMemo(() => buildNavSections(userProfile), [userProfile])
+    const today = new Date()
 
     useEffect(() => {
         const saved = localStorage.getItem('ui-scale')
@@ -333,10 +334,11 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
 
                                     <NavItemIcon icon={item.icon} active={active} badge={badge} />
                                     <span className="relative z-10 min-w-0 truncate font-medium">{item.label}</span>
+                                    {item.eventLink && <span className="sr-only">{item.eventLink.fullName}</span>}
                                     {badge && <span className="sr-only">{badge.details.join('. ')}</span>}
-                                    {item.tag && (
+                                    {item.eventLink && isEventLinkLive(item.eventLink, today) && (
                                         <span className={cn('relative z-10 ml-auto shrink-0', CHIP_SHAPE, LIVE_CHIP_STYLE)}>
-                                            {item.tag}
+                                            Live
                                         </span>
                                     )}
                                 </NavLink>

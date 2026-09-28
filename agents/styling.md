@@ -208,10 +208,13 @@ Secondary action (muted):
 
 ### Sidebar status tag
 
-A limited-time sidebar item (a `NavItem` `tag`, e.g. the cup's `Live`) gets the
-events `Live` chip, alone in the row's right-aligned trailing slot, never inside the
-label text, and never a row background, left bar or accent colour, so it can't be
-mistaken for the active item. It stays static so it never competes with the live dot.
+A sidebar event link (a `NavItem` `eventLink`, e.g. the cup) gets the events `Live`
+chip while it is live: through its `liveUntil` day in the viewer's local time, gone
+from the next local midnight (`isEventLinkLive`, see `agents/navigation.md`, the
+sidebar registry). The chip sits alone in the row's right-aligned trailing slot,
+never inside the label text, and never a row background, left bar or accent colour,
+so it can't be mistaken for the active item. It stays static so it never competes
+with the live dot.
 The chip comes from `app/components/shared/chipStyles.ts`: `CHIP_SHAPE` is the shape
 `EventStatusBadge` and the bracket `Chip` use, and `LIVE_CHIP_STYLE` is the live-match
 colouring (`MATCH_STATUS_STYLES.live`). Compose them, never re-type the classes:

@@ -1,7 +1,13 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Locator } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
 
 const mockApi = process.env.UTBT_LIVE_API !== '1'
+
+async function expectCupLink(navigation: Locator) {
+  const cupLink = navigation.getByRole('link', { name: '2v2 World Cup 2026' })
+  await expect(cupLink).toHaveAccessibleName(/^2v2 Cup\b/)
+  await expect(cupLink).toHaveAttribute('href', '/events/2v2-cup-2026')
+}
 
 test.beforeEach(async ({ page }) => {
   page.on('pageerror', error => console.error('BROWSER PAGE ERROR:', error.message))
@@ -84,7 +90,7 @@ test('navigation targets are real links that support new-tab clicks', async ({ p
   const navigation = page.locator('aside#app-navigation')
   await expect(navigation.getByRole('link', { name: 'Maps' })).toHaveAttribute('href', '/maps')
   await expect(navigation.getByRole('link', { name: 'World Records' })).toHaveAttribute('href', '/world-records')
-  await expect(navigation.getByRole('link', { name: '2v2 Cup Live' })).toHaveAttribute('href', '/events/2v2-cup-2026')
+  await expectCupLink(navigation)
 
   await navigation.getByRole('link', { name: 'Maps' }).click({ modifiers: ['ControlOrMeta'] })
   await expect(page).toHaveURL(/\/$/)
@@ -97,7 +103,7 @@ test('the cup link is reachable from the phone navigation drawer', async ({ page
   test.skip(!isMobile)
   await page.getByRole('button', { name: 'Open navigation' }).click()
   const navigation = page.getByRole('complementary', { name: 'Primary navigation' })
-  await expect(navigation.getByRole('link', { name: '2v2 Cup Live' })).toHaveAttribute('href', '/events/2v2-cup-2026')
+  await expectCupLink(navigation)
 })
 
 test('settings drills down to a full-width panel on a phone', async ({ page }) => {

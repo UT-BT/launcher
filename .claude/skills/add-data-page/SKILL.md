@@ -6,7 +6,7 @@ description: >-
   "add a page", "add a new sidebar tab", "add a <thing> leaderboard/browser
   page", or otherwise create a new top-level navigable screen. Covers the
   controlled-page contract, Main.tsx state wiring, the renderView case, and the
-  AppLayout sidebar entry.
+  sidebar registry entry in the nav-items module.
 ---
 
 # Add a primary page
@@ -51,9 +51,9 @@ page-views vs detail-pages) first.
 
 Add `{ id: '<name>', label: '<Label>', icon: <LucideIcon> }` to the right
 `BASE_NAV_SECTIONS` group. The `id` **must** equal the `renderView` case. The
-sidebar button calls `navigate` for you. (A sidebar item may instead target an
-existing detail view through an optional `view`/`params` on the item, skipping
-the `renderView` case — see `agents/navigation.md` → the sidebar registry.)
+sidebar button calls `navigate` for you. (A sidebar item may instead link an
+event through an optional `eventLink` on the item, skipping the `renderView`
+case — see `agents/navigation.md` → the sidebar registry.)
 
 ## Gated / multi-section pages
 
@@ -62,10 +62,10 @@ Two variations the standard recipe above doesn't cover — the `admin` page
 
 - **Role-gated nav + view.** The sidebar entry is conditional, not static: the
   `navSections` array is computed from `userProfile` via `buildNavSections` in
-  `AppLayout.tsx`, which appends the group only for staff (`isStaff`, helpers in
-  `app/utils/roles.ts`). Defence-in-depth: also gate the `renderView` case (pass a
-  `forceDenied` prop) and render a denied state in-page. Don't rely on the hidden
-  nav item alone.
+  `nav-items.ts` (called from `AppLayout.tsx`), which appends the group only for
+  staff (`isStaff`, helpers in `app/utils/roles.ts`). Defence-in-depth: also
+  gate the `renderView` case (pass a `forceDenied` prop) and render a denied
+  state in-page. Don't rely on the hidden nav item alone.
 - **Section-hub page.** When a page holds *many* sub-tools, don't hand-roll a
   `switch` — copy the **section registry** pattern from
   `app/components/pages/admin/registry.tsx`: one `ADMIN_SECTIONS` array of

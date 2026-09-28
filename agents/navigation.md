@@ -4,7 +4,7 @@ read_when:
   - "adding a new view/page to the nav stack or sidebar"
   - "opening a detail page or wiring a click that navigates"
   - "anything touching Back/Forward, history, or per-entry state keying"
-keywords: [navigate, Main.tsx, AppLayout, NavEntry, useNavigation, open-player, open-cap, renderView, HISTORY_CAP, back, forward, NavLink, href, new tab]
+keywords: [navigate, Main.tsx, AppLayout, NavEntry, useNavigation, open-player, open-cap, renderView, HISTORY_CAP, back, forward, NavLink, href, new tab, eventLink, eventSlugOfView, isEventLinkLive]
 provides: "the whole navigation model: stack, navigate() funnel, renderView, sidebar registry, event-driven detail pages"
 not_here:
   - "where page state / persistence lives → state-patterns.md"
@@ -264,9 +264,10 @@ join/accept/decline route back to the `teams` gallery and force it to refresh.
 
 ## The sidebar registry
 
-The left rail is data, not markup. The section registry, its item types, and the
-active-state rule live in `app/components/navigation/nav-items.ts` — a small pure
-module with no React, so it's tested without mounting anything. `AppLayout.tsx`
+The left rail is data, not markup. The section registry, its item types, the
+destination, event-of-view, active-state and Live-tag rules live in
+`app/components/navigation/nav-items.ts` — a small pure module with no React, so
+it's tested without mounting anything. `AppLayout.tsx`
 imports from it and only renders:
 
 ```ts
@@ -283,32 +284,59 @@ export function buildNavSections(userProfile?: UserProfile): NavSection[] {
 // in AppLayout: const navSections = useMemo(() => buildNavSections(userProfile), [userProfile])
 ```
 
-A `NavItem` may carry an optional **destination view and params**, separate from
-its unique `id`:
+A `NavItem` is either a **plain item** (`id`, `label`, `icon`, nothing else) or
+carries one optional **event link**:
 
 ```ts
+interface EventLink {
+  slug: string
+  fullName: string
+  liveUntil: CalendarDay
+}
+
 interface NavItem {
   id: string
   label: string
   icon: ElementType
-  view?: string       // defaults to id
-  params?: NavParams  // defaults to {}
-  tag?: string        // small status chip in the row's trailing slot, e.g. 'Live'
+  eventLink?: EventLink
 }
 ```
 
-`navItemDestination(item)` resolves `{ view, params }` — an item without a `view`
-behaves exactly as before (the id is the view, with no params). This lets a
-sidebar item target a detail view instead of a page-view of its own — the
-`cup-2v2-2026` item (`Main`, right after `achievements`) targets `event-detail`
-with `{ eventSlug: '2v2-cup-2026' }` instead of having its own `renderView` case.
+`slug` is the event's slug, `fullName` its real name (read to screen readers), and
+`liveUntil` the last day the Live tag shows, written `'YYYY-MM-DD'`
+(`CalendarDay`). There are no free-form `view` / `params` / `tag` fields: a
+sidebar item either opens its own page-view or links an event.
+`navItemDestination(item)` resolves
+`{ view, params }` (`NavDestination`): a plain item goes to its `id` with empty
+params; an event link goes to `event-detail` with `{ eventSlug: slug }`. The
+`cup-2v2-2026` item (`Main`, right after `achievements`, icon `Globe`) is the only
+event link today:
 
-`tag` marks a limited-time item without borrowing the active styling: `AppLayout`
-renders it as the red `Live` status chip, the only thing in the row's right-aligned
-trailing slot (badges sit on the icon, see below), so the label area stays text only
-(see `agents/styling.md`, sidebar status tag and sidebar badges). The cup item is
-labelled `2v2 Cup` with `tag: 'Live'`. Labels never wrap: the label truncates, so
-keep it short enough to fit beside a tag in the 16rem rail (about 110px of label).
+```ts
+{ id: 'cup-2v2-2026', label: '2v2 Cup', icon: Globe,
+  eventLink: { slug: '2v2-cup-2026', fullName: '2v2 World Cup 2026', liveUntil: '2026-11-22' } }
+```
+
+Removing the link after the cup is deleting that one entry.
+
+**Live tag.** An event link shows the red `Live` status chip, the only thing in the
+row's right-aligned trailing slot (badges sit on the icon, see below), so the label
+area stays text only (see `agents/styling.md`, sidebar status tag and sidebar
+badges). `isEventLinkLive(eventLink, today)` decides whether it shows: through the
+whole `liveUntil` day **in the viewer's local time zone**, and hidden from local
+midnight at the start of the next day (it compares `today` against the local start
+of the day after `liveUntil`, so it never parses the day as a UTC instant).
+`AppLayout` passes `new Date()` on each render, so the tag drops on the next render
+after that midnight. Only the tag expires; the link itself stays until it is removed
+by hand. Labels never wrap: the label truncates, so keep it short enough to fit
+beside the tag in the 16rem rail (about 110px of label).
+
+**Accessible name.** An event link's name starts with the visible label and then
+adds the full name, so voice control can use the visible text and screen readers
+hear which event it opens (WCAG 2.5.3, label in name). `AppLayout` renders, in
+order: the visible `label`, a `sr-only` span with `fullName`, the `sr-only` badge
+details (see sidebar badges below), then the `Live` chip. The cup link reads
+"2v2 Cup 2v2 World Cup 2026 … Live".
 
 Every sidebar entry renders through `NavLink` with its resolved destination
 `view`/`params` (an anchor with the right href on web, a button on desktop; see
@@ -319,17 +347,22 @@ Link semantics below). Activation calls `onViewChange(view, params)`, which
 `renderView` itself and intentionally has no `PAGE_LOADERS` entry (the pinned
 loader-key list in `pageLoaders.test.ts` stays as the page-view set).
 
+**Which event a view belongs to** is one pure function, `eventSlugOfView(view,
+params): string | null`: `event-detail` and `match-pickban` belong to
+`params.eventSlug`; any other view, or an event view without a slug, belongs to
+none (`null`). Use it wherever a rule asks "is this view part of event X?" rather
+than re-listing the event views.
+
 **Active state** is one pure function, `isNavItemActive(item, currentView,
 currentParams)`:
-- an item with no `params` is active when `currentView` equals its `view` (its
-  `id`, unchanged);
-- an item with `params` is active when `currentView` is `event-detail` **or**
-  `match-pickban` **and** the current entry's `eventSlug` matches the item's —
+- a plain item is active when `currentView` equals its `id`;
+- an event link is active when `eventSlugOfView(currentView, currentParams)` is
+  its `slug` — so on the event page and on that event's match picks & bans pages.
   `eventTab` is ignored, so switching tabs never flickers the highlight.
 
 `AppLayout` reads the current entry's params from `useNavigation()` (it already
 renders inside `NavigationContext.Provider`) and passes them to
-`isNavItemActive` for every item. `events` has no `params`, so it keeps today's
+`isNavItemActive` for every item. `events` is a plain item, so it keeps today's
 behaviour: never highlighted on `event-detail`, consistent with Maps/Players/etc.
 
 Each `item.id` must be unique and, for a page-view item, match a `renderView`
@@ -337,9 +370,9 @@ case; clicking calls `changeView(view, params)` — a thin wrapper that closes t
 mobile drawer and then calls `onViewChange`. Below the `lg` breakpoint the same
 sidebar `<aside>` renders as an off-canvas drawer behind a hamburger top bar (see
 `agents/web-target.md`, responsive-layout). To add a sidebar page with its own
-view: add the `renderView` case **and** a `nav-items.ts` item (no `view`/`params`
-needed). To link a sidebar item at an existing detail view instead, give it
-`view`/`params` and skip the `renderView` case. (Settings is **not** a view —
+view: add the `renderView` case **and** a plain `nav-items.ts` item. To link an
+event instead, give the item an `eventLink` and skip the `renderView` case; the
+event page is the existing `event-detail` view. (Settings is **not** a view —
 it's a modal opened from the user dropdown / the `open-settings` window event.)
 
 The closed mobile drawer is marked `inert` so its hidden controls cannot receive

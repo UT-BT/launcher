@@ -4,13 +4,24 @@ import type { NavParams } from './NavigationContext'
 import { isStaff } from '@/app/utils/roles'
 import type { UserProfile } from '@/app/utils/api'
 
+export type CalendarDay = `${number}-${number}-${number}`
+
+export interface EventLink {
+    slug: string
+    fullName: string
+    liveUntil: CalendarDay
+}
+
 export interface NavItem {
     id: string
     label: string
     icon: ElementType
-    view?: string
-    params?: NavParams
-    tag?: string
+    eventLink?: EventLink
+}
+
+export interface NavDestination {
+    view: string
+    params: NavParams
 }
 
 export interface NavBadge {
@@ -31,7 +42,12 @@ export const BASE_NAV_SECTIONS: NavSection[] = [
             { id: 'home', label: 'Home', icon: Home },
             { id: 'news', label: 'News', icon: Newspaper },
             { id: 'achievements', label: 'Achievements', icon: Award },
-            { id: 'cup-2v2-2026', label: '2v2 Cup', icon: Globe, view: 'event-detail', params: { eventSlug: '2v2-cup-2026' }, tag: 'Live' },
+            {
+                id: 'cup-2v2-2026',
+                label: '2v2 Cup',
+                icon: Globe,
+                eventLink: { slug: '2v2-cup-2026', fullName: '2v2 World Cup 2026', liveUntil: '2026-11-22' },
+            },
         ],
     },
     {
@@ -61,16 +77,25 @@ export function buildNavSections(userProfile?: UserProfile): NavSection[] {
     ]
 }
 
-export function navItemDestination(item: NavItem): { view: string, params: NavParams } {
-    return { view: item.view ?? item.id, params: item.params ?? {} }
+export function navItemDestination(item: NavItem): NavDestination {
+    if (item.eventLink) return { view: 'event-detail', params: { eventSlug: item.eventLink.slug } }
+    return { view: item.id, params: {} }
+}
+
+export function eventSlugOfView(view: string, params: NavParams): string | null {
+    if (view !== 'event-detail' && view !== 'match-pickban') return null
+    return params.eventSlug || null
 }
 
 export function isNavItemActive(item: NavItem, currentView: string, currentParams: NavParams): boolean {
-    if (!item.params) {
-        return currentView === (item.view ?? item.id)
-    }
-    if (currentView !== 'event-detail' && currentView !== 'match-pickban') return false
-    return currentParams.eventSlug === item.params.eventSlug
+    if (!item.eventLink) return currentView === item.id
+    return eventSlugOfView(currentView, currentParams) === item.eventLink.slug
+}
+
+export function isEventLinkLive(eventLink: EventLink, today: Date): boolean {
+    const [year, month, day] = eventLink.liveUntil.split('-').map(Number)
+    const startOfDayAfter = new Date(year, month - 1, day + 1)
+    return today.getTime() < startOfDayAfter.getTime()
 }
 
 export function newSinceVisitBadge(count: number | null | undefined): NavBadge | null {
