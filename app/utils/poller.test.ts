@@ -203,6 +203,63 @@ describe('createPoller', () => {
         expect(onSettled).not.toHaveBeenCalled()
     })
 
+    it('waits one interval before the first read when told not to poll on start', async () => {
+        const poll = vi.fn().mockResolvedValue(undefined)
+        const poller = createPoller({ poll, intervalMs: () => 1_000, pollOnStart: false, environment: fakeVisibility().environment })
+
+        poller.start()
+        await vi.advanceTimersByTimeAsync(999)
+        expect(poll).not.toHaveBeenCalled()
+        await vi.advanceTimersByTimeAsync(1)
+        expect(poll).toHaveBeenCalledTimes(1)
+        await vi.advanceTimersByTimeAsync(1_000)
+        expect(poll).toHaveBeenCalledTimes(2)
+        poller.stop()
+    })
+
+    it('does not read straight away when started again after a stop, when told not to poll on start', async () => {
+        const poll = vi.fn().mockResolvedValue(undefined)
+        const poller = createPoller({ poll, intervalMs: () => 1_000, pollOnStart: false, environment: fakeVisibility().environment })
+
+        poller.start()
+        await vi.advanceTimersByTimeAsync(500)
+        poller.stop()
+        poller.start()
+        await vi.advanceTimersByTimeAsync(999)
+        expect(poll).not.toHaveBeenCalled()
+        await vi.advanceTimersByTimeAsync(1)
+        expect(poll).toHaveBeenCalledTimes(1)
+        poller.stop()
+    })
+
+    it('still reads the moment a hidden document shows again, when told not to poll on start', async () => {
+        const visibility = fakeVisibility()
+        const poll = vi.fn().mockResolvedValue(undefined)
+        const poller = createPoller({ poll, intervalMs: () => 1_000, pollOnStart: false, environment: visibility.environment })
+
+        poller.start()
+        visibility.set(false)
+        await vi.advanceTimersByTimeAsync(60_000)
+        expect(poll).not.toHaveBeenCalled()
+
+        visibility.set(true)
+        await vi.advanceTimersByTimeAsync(0)
+        expect(poll).toHaveBeenCalledTimes(1)
+        await vi.advanceTimersByTimeAsync(1_000)
+        expect(poll).toHaveBeenCalledTimes(2)
+        poller.stop()
+    })
+
+    it('polls on start when the option is left out', async () => {
+        const poll = vi.fn().mockResolvedValue(undefined)
+        const poller = createPoller({ poll, intervalMs: () => 60_000, environment: fakeVisibility().environment })
+
+        poller.start()
+        await vi.advanceTimersByTimeAsync(0)
+        expect(poll).toHaveBeenCalledTimes(1)
+        poller.stop()
+    })
+
     it('starts cleanly again right after a stop, while the aborted attempt is still settling', async () => {
         const hanging = deferred()
         const poll = vi.fn().mockReturnValueOnce(hanging.promise).mockResolvedValue(undefined)

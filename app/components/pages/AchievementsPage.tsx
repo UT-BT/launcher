@@ -7,10 +7,10 @@ import {
 } from '@/app/utils/api'
 import {
     AchievementsShowcase,
-    Segmented,
     STATUS_FILTERS,
     type AchievementStatusFilter,
 } from './achievements/AchievementsShowcase'
+import { Segmented } from '@/app/components/shared/Segmented'
 
 import type { AchievementsPageCaches, AchievementsPageState } from './AchievementsPage.types'
 

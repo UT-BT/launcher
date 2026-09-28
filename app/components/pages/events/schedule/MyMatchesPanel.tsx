@@ -1,5 +1,5 @@
-import { useEffect, useState, type ReactNode } from 'react'
-import { CalendarClock, ExternalLink, Radio, Swords } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { CalendarClock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/app/components/ui/button'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
@@ -8,13 +8,14 @@ import { buildMatchLinks } from '@/app/components/navigation/matchLinks'
 import { useCopyFeedback } from '@/app/hooks/useCopyFeedback'
 import { useDisplayTimezone } from '@/app/utils/timezone'
 import { eventErrorMessage, type EventMatch, type MyMatchEntry, type MyPickBanSession, type ScheduleEntry } from '@/app/utils/api'
-import { Chip, MATCH_STATUS_STYLES, opponentNameOf, teamLabel } from '../bracket/bracketShared'
+import { Chip, MATCH_STATUS_STYLES, opponentNameOf } from '../bracket/bracketShared'
 import { streamerName } from '../eventsShared'
-import { TeamName } from '../TeamRoster'
 import { PickBanJoinBanner } from '../pickban/components/PickBanJoinBanner'
 import { PickBanLink } from '../pickban/components/PickBanLink'
 import { PickBanStatusChip } from '../pickban/components/PickBanStatusChip'
-import { formatSlotTime, proposerName, schedulabilityReason, whoseTurnLabel } from './scheduleShared'
+import {
+    formatSlotTime, proposerName, schedulabilityReason, ScheduleLoading, ScheduleSection, TeamPair, whoseTurnLabel,
+} from './scheduleShared'
 import {
     matchRoundLabel, matchTimeLabel, pickBanCallToAction, scheduleSections,
     type PickBanCallToAction, type ScheduleViewer,
@@ -22,7 +23,7 @@ import {
 
 const REFRESH_MS = 30_000
 
-interface ScheduleTabProps {
+interface MyMatchesPanelProps {
     myTeamId: string | null
     entries: ScheduleEntry[] | null
     myMatches: MyMatchEntry[] | null
@@ -34,9 +35,9 @@ interface ScheduleTabProps {
     pickBanSession?: MyPickBanSession | null
 }
 
-export function ScheduleTab({
+export function MyMatchesPanel({
     myTeamId, entries, myMatches, loaded, viewer, onRefresh, onOpenPicker, eventSlug, pickBanSession = null,
-}: ScheduleTabProps) {
+}: MyMatchesPanelProps) {
     const [copyError, setCopyError] = useState<string | null>(null)
     const { copiedKey, copy } = useCopyFeedback(e => setCopyError(eventErrorMessage(e)))
 
@@ -46,9 +47,7 @@ export function ScheduleTab({
         return () => clearInterval(timer)
     }, [onRefresh])
 
-    if (!loaded) {
-        return <div className="p-6 text-center text-sm text-muted-foreground">Loading schedule…</div>
-    }
+    if (!loaded) return <ScheduleLoading />
 
     if (entries === null && myMatches === null) {
         return (
@@ -120,36 +119,10 @@ export function ScheduleTab({
     )
 }
 
-function ScheduleSection({ title, count, blurb, children }: {
-    title: string
-    count?: number
-    blurb?: string
-    children: ReactNode
-}) {
-    return (
-        <section aria-label={title} className="flex flex-col gap-2">
-            <div className="flex items-baseline gap-2 flex-wrap">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{title}</h3>
-                {count !== undefined && <span className="text-[11px] text-muted-foreground tabular-nums">{count}</span>}
-                {blurb && <span className="text-[11px] text-muted-foreground">{blurb}</span>}
-            </div>
-            {children}
-        </section>
-    )
-}
-
 function MatchHeading({ match, stageName }: { match: EventMatch; stageName?: string }) {
     return (
         <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5 min-w-0 text-sm font-medium text-white">
-                <TeamName teamId={match.team_a?.id} className="truncate">
-                    {teamLabel(match.team_a, match.slot_a_label)}
-                </TeamName>
-                <span className="text-muted-foreground shrink-0">vs</span>
-                <TeamName teamId={match.team_b?.id} className="truncate">
-                    {teamLabel(match.team_b, match.slot_b_label)}
-                </TeamName>
-            </div>
+            <TeamPair match={match} />
             <span className="text-[11px] text-muted-foreground shrink-0">
                 {stageName ? `${stageName} · ${matchRoundLabel(match)}` : matchRoundLabel(match)}
             </span>
@@ -180,7 +153,7 @@ function PickBanPageLink({ eventSlug, matchId, action }: {
         return (
             <Button asChild size="sm" variant="outline">
                 <PickBanLink eventSlug={eventSlug} matchId={matchId}>
-                    <Swords /> View Picks & Bans
+                    View Picks & Bans
                 </PickBanLink>
             </Button>
         )
@@ -190,9 +163,9 @@ function PickBanPageLink({ eventSlug, matchId, action }: {
         <PickBanLink
             eventSlug={eventSlug}
             matchId={matchId}
-            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
         >
-            <Swords className="size-3.5" /> Visit Picks & Bans Page
+            Visit Picks & Bans Page
         </PickBanLink>
     )
 }
@@ -256,11 +229,11 @@ function StreamingMatchCard({ entry, eventSlug, copied, onCopy }: {
 
             <div className="flex flex-wrap items-center gap-1.5">
                 <Button size="sm" variant="secondary" onClick={() => onCopy(match.id, streamLink)}>
-                    <Radio /> {copied ? 'Copied' : 'Copy Stream Link'}
+                    {copied ? 'Copied' : 'Copy Stream Link'}
                 </Button>
                 <Button asChild size="sm" variant="outline">
                     <PickBanLink eventSlug={eventSlug} matchId={match.id}>
-                        <ExternalLink /> Open Picks & Bans
+                        Open Picks & Bans
                     </PickBanLink>
                 </Button>
             </div>

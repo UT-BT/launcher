@@ -131,9 +131,10 @@ export function startOfNextZonedDay(instant: number, timezone: string): number {
 
 const pad = (value: number) => String(value).padStart(2, '0')
 
-export function zonedDayKey(instant: number, timezone: string): string {
+export function zonedDayKey(instant: number, timezone: string, dayOffset = 0): string {
     const parts = zonedParts(instant, timezone)
-    return `${parts.year}-${pad(parts.month)}-${pad(parts.day)}`
+    const day = new Date(Date.UTC(parts.year, parts.month - 1, parts.day + dayOffset))
+    return `${day.getUTCFullYear()}-${pad(day.getUTCMonth() + 1)}-${pad(day.getUTCDate())}`
 }
 
 export function toZonedInput(iso: string | null | undefined, timezone: string): string {
