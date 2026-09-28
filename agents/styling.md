@@ -315,7 +315,7 @@ ALWAYS set `style={{ colorScheme: 'dark' }}` so Chromium renders dark form chrom
 | Layer | Background | Border |
 |---|---|---|
 | Page surface | `bg-background` (root) | — |
-| Card (filter panel, scroll container) | `bg-card/30` | `border border-white/5` (or `/10` for stronger) |
+| Card (filter panel, scroll container, event to-do panel) | `bg-card/30` | `border border-white/5` (or `/10` for stronger) |
 | Card hover state | `bg-card/80` | `border-white/20` |
 | Inline chip / badge | `bg-white/5` | `border border-white/5` |
 | Sticky thead | `bg-card/95 backdrop-blur` | — |
@@ -328,7 +328,7 @@ Standard radii: `rounded-xl` for big containers, `rounded-lg` for buttons / inpu
 | Use | Class |
 |---|---|
 | Page title | `text-2xl font-bold text-white leading-tight` |
-| Section label (small caps) | `text-[10px] uppercase tracking-wider text-muted-foreground` |
+| Section label (small caps, e.g. the event to-do panel heading) | `text-[10px] uppercase tracking-wider text-muted-foreground` |
 | Table header | `text-xs uppercase tracking-wider font-medium text-muted-foreground` |
 | Body | `text-sm` |
 | Subtitle / hint | `text-xs text-muted-foreground` |

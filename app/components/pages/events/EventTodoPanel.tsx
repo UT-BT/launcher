@@ -26,7 +26,7 @@ function TodoRow({ marker, title, detail, action }: {
             <span className="flex size-4 shrink-0 items-center justify-center">{marker}</span>
             <div className="min-w-40 flex-1">
                 <p className="text-sm text-foreground">{title}</p>
-                {detail && <p className="text-[11px] text-muted-foreground">{detail}</p>}
+                {detail && <p className="text-xs text-muted-foreground">{detail}</p>}
             </div>
             <div className="ml-auto shrink-0">{action}</div>
         </li>
@@ -53,9 +53,9 @@ export function EventTodoPanel({ eventSlug, todos, pickBanSession, pickBanOppone
     if (todos.length === 0 && !pickBanSession) return null
 
     return (
-        <section aria-label="Needs your attention" className="shrink-0 rounded-lg border border-accent-500/25 bg-accent-500/5 p-3 flex flex-col gap-2">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-accent-300">Needs your attention</h2>
-            <ul className="flex flex-col divide-y divide-white/5">
+        <section aria-label="Needs your attention" className="shrink-0 rounded-xl border border-hairline/5 bg-card/30 p-3 flex flex-col gap-2">
+            <h2 className="text-[10px] uppercase tracking-wider text-muted-foreground">Needs your attention</h2>
+            <ul className="flex flex-col divide-y divide-hairline/5">
                 {pickBanSession && (
                     <TodoRow
                         marker={<LiveDot />}
