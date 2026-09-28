@@ -103,6 +103,7 @@ import { isStaff } from '@/app/utils/roles'
 import { capabilities, IS_WEB } from '@/app/platform'
 import { pushUrlForEntry, seedEntriesFromUrl, useUrlSync } from '@/app/components/navigation/useUrlSync'
 import { useDocumentMeta } from '@/app/components/navigation/useDocumentMeta'
+import { createPoller } from '@/app/utils/poller'
 
 
 const MAPS_STATE_STORAGE_KEY = 'utbt:mapsPageState:v1'
@@ -428,46 +429,51 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
 
   const [eventAttention, setEventAttention] = useState<EventAttentionMap>({})
 
-  const refreshEventAttention = useCallback(async () => {
-    const token = accessTokenRef.current
-    if (!token) {
-      setEventAttention({})
-      return
-    }
-    try {
-      const [schedule, memberships] = await Promise.all([fetchMySchedule(token), fetchMyTournaments(token)])
+  const eventAttentionPoller = useMemo(() => createPoller({
+    intervalMs: () => EVENT_ATTENTION_REFRESH_MS,
+    poll: async (signal) => {
+      const token = accessTokenRef.current
+      if (!token) return
+      const [schedule, memberships] = await Promise.all([
+        fetchMySchedule(token, signal),
+        fetchMyTournaments(token, signal),
+      ])
       if (accessTokenRef.current !== token) return
       const liveActiveSlugs = Array.from(new Set(
         memberships
           .filter(m => m.membership_status === 'active' && !EVENT_ATTENTION_EXCLUDED_STATUSES.has(m.tournament.status))
           .map(m => m.tournament.slug),
       ))
-      const statuses = await Promise.allSettled(liveActiveSlugs.map(slug => fetchMyEventStatus(token, slug)))
-      if (accessTokenRef.current !== token) return
+      const statuses = await Promise.allSettled(liveActiveSlugs.map(slug => fetchMyEventStatus(token, slug, signal)))
+      if (signal.aborted || accessTokenRef.current !== token) return
       const openPickBanSlugs = new Set<string>()
       statuses.forEach((result, index) => {
         if (result.status === 'fulfilled' && result.value.pick_ban_session) openPickBanSlugs.add(liveActiveSlugs[index])
       })
       setEventAttention(computeEventAttention(schedule, memberships, openPickBanSlugs))
-    } catch {
-      setEventAttention({})
-    }
-  }, [])
+    },
+    onSettled: (outcome) => {
+      if (!outcome.ok) setEventAttention({})
+    },
+  }), [])
 
   useEffect(() => {
-    void refreshEventAttention()
-    if (!accessToken) return
-    const timer = setInterval(refreshEventAttention, EVENT_ATTENTION_REFRESH_MS)
-    return () => clearInterval(timer)
-  }, [refreshEventAttention, accessToken])
+    if (!accessToken) {
+      eventAttentionPoller.stop()
+      setEventAttention({})
+      return
+    }
+    eventAttentionPoller.start()
+    return () => eventAttentionPoller.stop()
+  }, [accessToken, eventAttentionPoller])
 
   useEffect(() => {
     const onFocus = () => {
-      if (accessTokenRef.current) void refreshEventAttention()
+      if (accessTokenRef.current) void eventAttentionPoller.pollNow()
     }
     window.addEventListener('focus', onFocus)
     return () => window.removeEventListener('focus', onFocus)
-  }, [refreshEventAttention])
+  }, [eventAttentionPoller])
 
   const allEventsAttention = useMemo(() => combinedEventAttention(eventAttention), [eventAttention])
 

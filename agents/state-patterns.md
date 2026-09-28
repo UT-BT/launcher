@@ -213,8 +213,8 @@ Rules:
   pure function in `app/components/navigation/nav-items.ts`, not state kept
   here. Visiting the cup page never clears the Events "new events" count. None
   of this is in this store either — `Main.tsx` holds the underlying attention
-  data as in-memory state, refreshed on the same triggers (sign-in, window
-  focus, 60s). See `agents/data-sources.md` for the derivation.
+  data as in-memory state, refreshed by the shell's attention poll (see
+  polling-live-data). See `agents/data-sources.md` for the derivation.
 
 ## localStorage persistence
 
@@ -385,9 +385,10 @@ retired and no longer whitelisted.
 ## Polling live data
 
 Some screens have to follow server state closely: the pick/ban page and its stream view.
-They poll on an interval instead of fetching once on mount. This is a data tier, not UI
-state. Nothing in it is persisted, and the data lives only while the page that polls it
-is mounted.
+The shell polls the signed-in player's event attention the same way, to drive the cup
+link and Events badges. They poll on an interval instead of fetching once on mount. This
+is a data tier, not UI state. Nothing in it is persisted, and the data lives only while
+the page (or the shell) that polls it is mounted.
 
 **`createPoller` (`app/utils/poller.ts`) is the reusable scheduler.** It takes
 `poll(signal)`, `intervalMs()` (read again after every attempt, so the cadence can follow

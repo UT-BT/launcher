@@ -516,9 +516,13 @@ plus the slug's `pickBanOpen` lobby flag), keyed by slug in an
 `todoCountsByKind` takes no lobby parameter, so the sidebar and the Schedule
 tab's `scheduleTodoSummary` (above) count to-dos the same way.
 
-`Main.tsx` builds the open-lobby set itself: after fetching schedule and
-memberships together (on sign-in, on window focus, and every 60s while signed
-in), it calls `fetchMyEventStatus` (→ `/tournaments/<slug>/me`) once per
+`Main.tsx` builds the open-lobby set itself, on a `createPoller` (see
+`agents/state-patterns.md`) started only while signed in: a 60s interval, an
+immediate poll on start, resting while the window is hidden and catching up
+the moment it shows again; the existing focus listener still calls its
+`pollNow`. Signing out or switching account stops it, aborting anything in
+flight. After fetching schedule and memberships together, it calls
+`fetchMyEventStatus` (→ `/tournaments/<slug>/me`) once per
 distinct slug where the caller holds an active membership and the
 tournament's `status` isn't `completed`, `archived` or `draft` — one small
 extra read per live event the caller actually rosters a team in, not an N+1
