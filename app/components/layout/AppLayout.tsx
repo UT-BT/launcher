@@ -125,7 +125,7 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
     const { containerStyle, titleStyle, containerClass, titleClass } = getRarityStyles(userProfile?.active_title)
     const patreonTier = usePatreonTier(userProfile?.id ?? undefined)
     const navSections = useMemo(() => buildNavSections(userProfile), [userProfile])
-    const today = new Date()
+    const now = new Date()
 
     useEffect(() => {
         const saved = localStorage.getItem('ui-scale')
@@ -336,7 +336,7 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                                     <span className="relative z-10 min-w-0 truncate font-medium">{item.label}</span>
                                     {item.eventLink && <span className="sr-only">{item.eventLink.fullName}</span>}
                                     {badge && <span className="sr-only">{badge.details.join('. ')}</span>}
-                                    {item.eventLink && isEventLinkLive(item.eventLink, today) && (
+                                    {item.eventLink && isEventLinkLive(item.eventLink, now) && (
                                         <span className={cn('relative z-10 ml-auto shrink-0', CHIP_SHAPE, LIVE_CHIP_STYLE)}>
                                             Live
                                         </span>

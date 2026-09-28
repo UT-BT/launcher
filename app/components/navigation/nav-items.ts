@@ -92,10 +92,10 @@ export function isNavItemActive(item: NavItem, currentView: string, currentParam
     return eventSlugOfView(currentView, currentParams) === item.eventLink.slug
 }
 
-export function isEventLinkLive(eventLink: EventLink, today: Date): boolean {
+export function isEventLinkLive(eventLink: EventLink, now: Date): boolean {
     const [year, month, day] = eventLink.liveUntil.split('-').map(Number)
     const startOfDayAfter = new Date(year, month - 1, day + 1)
-    return today.getTime() < startOfDayAfter.getTime()
+    return now.getTime() < startOfDayAfter.getTime()
 }
 
 export function newSinceVisitBadge(count: number | null | undefined): NavBadge | null {

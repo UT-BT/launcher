@@ -322,9 +322,9 @@ Removing the link after the cup is deleting that one entry.
 **Live tag.** An event link shows the red `Live` status chip, the only thing in the
 row's right-aligned trailing slot (badges sit on the icon, see below), so the label
 area stays text only (see `agents/styling.md`, sidebar status tag and sidebar
-badges). `isEventLinkLive(eventLink, today)` decides whether it shows: through the
+badges). `isEventLinkLive(eventLink, now)` decides whether it shows: through the
 whole `liveUntil` day **in the viewer's local time zone**, and hidden from local
-midnight at the start of the next day (it compares `today` against the local start
+midnight at the start of the next day (it compares `now` against the local start
 of the day after `liveUntil`, so it never parses the day as a UTC instant).
 `AppLayout` passes `new Date()` on each render, so the tag drops on the next render
 after that midnight. Only the tag expires; the link itself stays until it is removed
