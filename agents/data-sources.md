@@ -10,7 +10,7 @@ read_when:
   - "finding a pick/ban session from the bracket, a match card, the event page or the Schedule tab without a direct link"
   - "assigning a streamer to a match, or showing a streamer their assigned matches"
   - "deciding whether a prediction market still takes bets once its match's pick/ban has started"
-keywords: [api.ts, fetch, endpoint, accessToken, avatar, MapThumbnail, favorites, patreon, downloadMapZip, world_records, caps, predictions, draw, odds, schedule, proposal, slot, whose_turn, resolved_window, countdown, nav badge, fetchMyTournaments, SlotPickerModal, SlotGrid, DateTimeField, slotGeneration, proposeMatchSlots, withdrawMatchProposal, acceptMatchProposal, fetchMatchSchedule, ApiError, expected_match_duration_minutes, fetchPickBanConfig, PickBanConfig, PickBanPoolMap, MapsTab, mapsShared, stagesWithPools, tagBadgeVariant, pick/ban, fetchPickBanState, ETag, If-None-Match, 304, X-Server-Now, server_now, clock offset, reveal_at, sendPickBanCommand, sendPickBanManagerCommand, hover, selection_preview, pickBanErrorCode, captain controls, CaptainDock, useCaptainPlay, fetchPickBanQueue, PickBanQueueEntry, PickBanQueueRow, toQueueRow, canOpenLobby, blockingReasonLabel, PickBanQueuePanel, pickBanStatusBadge, statusOfPhase, buildPickBanView, setPickBanStageConfig, setPickBanStagePool, copyPickBanStagePool, pickBanEditor, stage pool, buildMatchLinks, matchStreamPath, createPoller, pick_ban_status, MatchPickBanStatus, pickBanCardAffordance, PickBanCardPill, pickBanMapLabel, MyPickBanSession, pick_ban_session, PickBanLink, PickBanJoinBanner, pickBanEntryPoints, Join banner, scene, sceneDirection, playsEntrance, entranceMsFor, introStartsAt, usePickBanPreload, usePickBanSound, cuesToPlay, pickBanSoundCues, pickBanSoundPlayer, PickBanSoundCueKind, pickBanSounds, SOUND_HIT_MS, soundScheduleAt, STALE_HIT_MS, pickBanBeats, intro cue, sound=0, SOUND_URLS, volume, setVolume, masterGainOf, preview, pickBanSoundPreference, streamSoundOf, CREDITS.md, manager dock, ManagerDock, useManagerDock, managerDockOf, hand-over, act for team, Reopen, edit-final, PickBanEditFinalEntry, Edit final, fetchMyEventMatches, MyMatchEntry, is_streamer, EventStreamer, fetchEventStreamers, setMatchStreamer, streamer, StreamerPicker, withQueueStreamer, streamerChoices, scheduleSections, pickBanCallToAction, matchTimeLabel, marketLock, marketTakesPredictions, lockStartedMarkets, matchLockSignals, newlyLockedMatchIds, streamerName, eventAttention, eventTodos, EventTodo, eventAttentionOf, computeEventAttention, EventAttentionMap, eventAttentionCount, combinedEventAttention, eventAttentionLines, attentionNavBadge, NavBadge, newSinceVisitBadge, EventTodoPanel, Needs your attention, fetchMyEventStatus, pick_ban_session, offersToAnswer, matchesToSchedule, todoCountsByKind, scheduleTodoSummary, myTeamIdsByTournament]
+keywords: [api.ts, fetch, endpoint, accessToken, avatar, MapThumbnail, favorites, patreon, downloadMapZip, world_records, caps, predictions, draw, odds, schedule, proposal, slot, whose_turn, resolved_window, countdown, nav badge, fetchMyTournaments, SlotPickerModal, SlotGrid, DateTimeField, slotGeneration, proposeMatchSlots, withdrawMatchProposal, acceptMatchProposal, fetchMatchSchedule, ApiError, expected_match_duration_minutes, fetchPickBanConfig, PickBanConfig, PickBanPoolMap, MapsTab, mapsShared, stagesWithPools, tagBadgeVariant, pick/ban, fetchPickBanState, ETag, If-None-Match, 304, X-Server-Now, server_now, clock offset, reveal_at, sendPickBanCommand, sendPickBanManagerCommand, hover, selection_preview, pickBanErrorCode, captain controls, CaptainDock, useCaptainPlay, fetchPickBanQueue, PickBanQueueEntry, PickBanQueueRow, toQueueRow, canOpenLobby, blockingReasonLabel, PickBanQueuePanel, pickBanStatusBadge, statusOfPhase, buildPickBanView, setPickBanStageConfig, setPickBanStagePool, copyPickBanStagePool, pickBanEditor, stage pool, buildMatchLinks, matchStreamPath, createPoller, pick_ban_status, MatchPickBanStatus, pickBanCardAffordance, PickBanCardPill, pickBanMapLabel, MyPickBanSession, pick_ban_session, PickBanLink, PickBanJoinBanner, pickBanEntryPoints, Join banner, scene, sceneDirection, playsEntrance, entranceMsFor, introStartsAt, usePickBanPreload, usePickBanSound, cuesToPlay, pickBanSoundCues, pickBanSoundPlayer, PickBanSoundCueKind, pickBanSounds, SOUND_HIT_MS, soundScheduleAt, STALE_HIT_MS, pickBanBeats, intro cue, sound=0, SOUND_URLS, volume, setVolume, masterGainOf, preview, pickBanSoundPreference, streamSoundOf, CREDITS.md, manager dock, ManagerDock, useManagerDock, managerDockOf, hand-over, act for team, Reopen, edit-final, PickBanEditFinalEntry, Edit final, fetchMyEventMatches, MyMatchEntry, is_streamer, EventStreamer, fetchEventStreamers, setMatchStreamer, streamer, StreamerPicker, withQueueStreamer, streamerChoices, scheduleSections, pickBanCallToAction, matchTimeLabel, marketLock, marketTakesPredictions, lockStartedMarkets, matchLockSignals, newlyLockedMatchIds, streamerName, eventAttention, eventTodos, EventTodo, TodoCounts, ScheduleTodoSummary, computeEventAttention, EventAttentionMap, eventAttentionCount, combinedEventAttention, eventAttentionLines, attentionNavBadge, NavBadge, newSinceVisitBadge, EventTodoPanel, Needs your attention, fetchMyEventStatus, pick_ban_session, offersToAnswer, matchesToSchedule, todoCountsByKind, scheduleTodoSummary, myTeamIdsByTournament]
 provides: "the client-side API contract the launcher consumes + asset URLs + favorites/patreon sync models"
 not_here:
   - "IPC channels (window.conveyor.*) → lib/conveyor/README.md"
@@ -498,22 +498,22 @@ open, live or paused against the opponent, with a Join lobby or Open Picks &
 Bans link), in place of the standalone Join banner the page used to show. The
 panel renders nothing when there is nothing to do. The Schedule and Signup
 tab bubbles count the same to-dos (the schedule kinds and the invitations),
-so the page and the sidebar can't disagree: the Schedule tab reads its count
-and tooltip lines straight from `scheduleTodoSummary(todos)` (answer and
-propose to-dos only, ignoring invitations), and the Signup tab reads its
-count from `todoCountsByKind(todos).invitations`.
+so the page and the sidebar can't disagree: the page counts its to-dos once
+with `todoCountsByKind(todos)` (a `TodoCounts`), the Schedule tab reads its
+count and tooltip lines from `scheduleTodoSummary(counts)` (answer and
+propose to-dos only, ignoring invitations), and the Signup tab reads
+`counts.invitations`.
 
 `computeEventAttention(schedule, memberships, openPickBanSlugs)` runs the same
 `eventTodos` per slug for the sidebar. Schedule entries are grouped by
 `tournament.slug`; my team id per slug comes from the *active*
 `fetchMyTournaments` (`/me/tournaments`) rows (`myTeamIdsByTournament`,
 `eventAttention.ts`); invitations are the `invited` rows. Each slug folds
-into an `EventAttention` (`{ offersToAnswer, matchesToSchedule, invitations,
-pickBanOpen }`, via `eventAttentionOf(todos, pickBanOpen)`), keyed by slug in
-an `EventAttentionMap`. A slug with no to-do and no open lobby is left out.
-`eventAttentionOf` and the Schedule tab's `scheduleTodoSummary` (above) both
-build on the same `todoCountsByKind(todos)`, which counts a to-do list by
-kind with no lobby parameter.
+into an `EventAttention` (its `TodoCounts` from `todoCountsByKind(todos)`
+plus the slug's `pickBanOpen` lobby flag), keyed by slug in an
+`EventAttentionMap`. A slug with no to-do and no open lobby is left out.
+`todoCountsByKind` takes no lobby parameter, so the sidebar and the Schedule
+tab's `scheduleTodoSummary` (above) count to-dos the same way.
 
 `Main.tsx` builds the open-lobby set itself: after fetching schedule and
 memberships together (on sign-in, on window focus, and every 60s while signed

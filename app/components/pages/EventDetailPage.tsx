@@ -299,7 +299,7 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
         .filter(t => t.id !== 'predictions' || predictionsOn)
         .filter(t => t.id !== 'schedule' || canSeeSchedule)
     const todoCounts = todoCountsByKind(todos)
-    const scheduleTodo = scheduleTodoSummary(todos)
+    const scheduleTodo = scheduleTodoSummary(todoCounts)
     const scheduleTodoTitle = scheduleTodo.lines.join(' · ')
     const activeTab = (tab === 'manage' && !canManageBracket)
         || (tab === 'bracket' && !hasBracket)

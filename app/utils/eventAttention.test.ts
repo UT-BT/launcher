@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { EventMatch, EventSummary, EventTeam, MyTournamentMembership, ScheduleEntry, ScheduleProposal } from './api'
 import {
     attentionNavBadge, combinedEventAttention, computeEventAttention, eventAttentionCount, eventAttentionLines, eventTodos,
-    myTeamIdsByTournament, scheduleTodoSummary,
+    myTeamIdsByTournament, scheduleTodoSummary, todoCountsByKind,
     type EventAttention, type EventTodo,
 } from './eventAttention'
 
@@ -242,29 +242,39 @@ describe('attentionNavBadge', () => {
     })
 })
 
-describe('scheduleTodoSummary', () => {
-    it('counts answer and propose to-dos and ignores invitations', () => {
+describe('todoCountsByKind', () => {
+    it('counts each to-do kind', () => {
         const todos: EventTodo[] = [
             { kind: 'answer-times', entry: entry() },
             { kind: 'answer-times', entry: entry({ match: match({ id: 'match-2' }) }) },
             { kind: 'propose-time', entry: entry({ match: match({ id: 'match-3' }) }) },
             { kind: 'invitation', team: myTeam({ id: 'team-x', name: 'Xray' }) },
         ]
-        expect(scheduleTodoSummary(todos)).toEqual({
+        expect(todoCountsByKind(todos)).toEqual({ offersToAnswer: 2, matchesToSchedule: 1, invitations: 1 })
+    })
+
+    it('is all zeros for no to-dos', () => {
+        expect(todoCountsByKind([])).toEqual({ offersToAnswer: 0, matchesToSchedule: 0, invitations: 0 })
+    })
+})
+
+describe('scheduleTodoSummary', () => {
+    it('counts answer and propose to-dos and ignores invitations', () => {
+        expect(scheduleTodoSummary({ offersToAnswer: 2, matchesToSchedule: 1, invitations: 4 })).toEqual({
             count: 3,
             lines: ['Respond to time offers for 2 matches', 'Propose a time for 1 match'],
         })
     })
 
-    it('matches today\'s Schedule-tab tooltip text', () => {
-        expect(scheduleTodoSummary([{ kind: 'answer-times', entry: entry() }]).lines)
+    it('spells out the Schedule-tab tooltip lines in the singular', () => {
+        expect(scheduleTodoSummary({ offersToAnswer: 1, matchesToSchedule: 0, invitations: 0 }).lines)
             .toEqual(['Respond to a time offer for 1 match'])
-        expect(scheduleTodoSummary([{ kind: 'propose-time', entry: entry() }]).lines)
+        expect(scheduleTodoSummary({ offersToAnswer: 0, matchesToSchedule: 1, invitations: 0 }).lines)
             .toEqual(['Propose a time for 1 match'])
     })
 
     it('returns an empty result for no to-dos', () => {
-        expect(scheduleTodoSummary([])).toEqual({ count: 0, lines: [] })
+        expect(scheduleTodoSummary({ offersToAnswer: 0, matchesToSchedule: 0, invitations: 0 })).toEqual({ count: 0, lines: [] })
     })
 })
 

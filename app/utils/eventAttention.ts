@@ -6,11 +6,19 @@ export type EventTodo =
     | { kind: 'propose-time'; entry: ScheduleEntry }
     | { kind: 'invitation'; team: EventTeam }
 
-export interface EventAttention {
+export interface TodoCounts {
     offersToAnswer: number
     matchesToSchedule: number
     invitations: number
+}
+
+export interface EventAttention extends TodoCounts {
     pickBanOpen: boolean
+}
+
+export interface ScheduleTodoSummary {
+    count: number
+    lines: string[]
 }
 
 export type EventAttentionMap = Record<string, EventAttention>
@@ -42,16 +50,12 @@ export function myTeamIdsByTournament(memberships: MyTournamentMembership[]): Ma
     return byTournament
 }
 
-export function todoCountsByKind(todos: EventTodo[]): { offersToAnswer: number; matchesToSchedule: number; invitations: number } {
+export function todoCountsByKind(todos: EventTodo[]): TodoCounts {
     return {
         offersToAnswer: todos.filter(todo => todo.kind === 'answer-times').length,
         matchesToSchedule: todos.filter(todo => todo.kind === 'propose-time').length,
         invitations: todos.filter(todo => todo.kind === 'invitation').length,
     }
-}
-
-export function eventAttentionOf(todos: EventTodo[], pickBanOpen: boolean): EventAttention {
-    return { ...todoCountsByKind(todos), pickBanOpen }
 }
 
 export function computeEventAttention(
@@ -74,7 +78,7 @@ export function computeEventAttention(
             myTeamIds.get(slug) ?? null,
             invited.filter(membership => membership.tournament.slug === slug).map(membership => membership.team),
         )
-        const attention = eventAttentionOf(todos, openPickBanSlugs.has(slug))
+        const attention: EventAttention = { ...todoCountsByKind(todos), pickBanOpen: openPickBanSlugs.has(slug) }
         if (eventAttentionCount(attention) > 0 || attention.pickBanOpen) map[slug] = attention
     }
 
@@ -114,21 +118,23 @@ function pickBanOpenLine(pickBanOpen: boolean): string | null {
     return pickBanOpen ? 'Join your open Picks & Bans lobby' : null
 }
 
+function presentLines(lines: (string | null)[]): string[] {
+    return lines.filter((line): line is string => line !== null)
+}
+
 export function eventAttentionLines(attention: EventAttention): string[] {
-    return [
+    return presentLines([
         offersToAnswerLine(attention.offersToAnswer),
         matchesToScheduleLine(attention.matchesToSchedule),
         invitationsLine(attention.invitations),
         pickBanOpenLine(attention.pickBanOpen),
-    ].filter((line): line is string => line !== null)
+    ])
 }
 
-export function scheduleTodoSummary(todos: EventTodo[]): { count: number; lines: string[] } {
-    const { offersToAnswer, matchesToSchedule } = todoCountsByKind(todos)
+export function scheduleTodoSummary({ offersToAnswer, matchesToSchedule }: TodoCounts): ScheduleTodoSummary {
     return {
         count: offersToAnswer + matchesToSchedule,
-        lines: [offersToAnswerLine(offersToAnswer), matchesToScheduleLine(matchesToSchedule)]
-            .filter((line): line is string => line !== null),
+        lines: presentLines([offersToAnswerLine(offersToAnswer), matchesToScheduleLine(matchesToSchedule)]),
     }
 }
 
