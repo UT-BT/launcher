@@ -10,7 +10,7 @@ not_here:
   - "which component to use → shared-components.md"
   - "state / persistence → state-patterns.md"
 sections: [class-merging, tables-locked, responsive-columns, page-layout, filter-panel, buttons-toggle-states, form-inputs, card-backgrounds-borders, text, color-palette, animation, css-runtime-cost, donts]
-last_verified: 2026-09-25
+last_verified: 2026-09-28
 verify_against: [app/components/shared/DataTable.tsx, app/styles/globals.css, app/styles/desktop.css, app/styles/index.css, lib/utils.ts, app/hooks/useElementWidth.ts, app/hooks/usePrefersReducedMotion.ts]
 ---
 
@@ -204,6 +204,17 @@ Primary CTA (driving users to a key action):
 Secondary action (muted):
 ```
 "w-full h-9 bg-card/50 border border-white/10 text-muted-foreground hover:text-white hover:bg-card/80 hover:border-white/20 transition-colors rounded-lg font-medium"
+```
+
+### Sidebar status tag
+
+A limited-time sidebar item (a `NavItem` `tag`, e.g. the cup's `Live`) gets the
+events `Live` chip in the row's right-aligned trailing slot, left of any count
+badge and never inside the label text, and never a row background, left bar or
+accent colour, so it can't be mistaken for the active item. It stays static: the count
+badge's ping is the "act now" signal and the tag must not compete with it.
+```
+"shrink-0 whitespace-nowrap rounded border border-red-500/30 bg-red-500/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-red-300"
 ```
 
 ### Action chips inside table rows (Join, Spec, etc.)

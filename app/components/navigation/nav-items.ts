@@ -10,6 +10,7 @@ export interface NavItem {
     icon: ElementType
     view?: string
     params?: NavParams
+    tag?: string
 }
 
 export interface NavSection {
@@ -24,7 +25,7 @@ export const BASE_NAV_SECTIONS: NavSection[] = [
             { id: 'home', label: 'Home', icon: Home },
             { id: 'news', label: 'News', icon: Newspaper },
             { id: 'achievements', label: 'Achievements', icon: Award },
-            { id: 'cup-2v2-2026', label: '2v2 World Cup 2026', icon: Globe, view: 'event-detail', params: { eventSlug: '2v2-cup-2026' } },
+            { id: 'cup-2v2-2026', label: '2v2 Cup', icon: Globe, view: 'event-detail', params: { eventSlug: '2v2-cup-2026' }, tag: 'Live' },
         ],
     },
     {

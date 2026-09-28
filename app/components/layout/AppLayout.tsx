@@ -303,16 +303,25 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, ge
                                         "size-5 transition-colors duration-200 relative z-10",
                                         active ? "text-accent-400" : "group-hover:text-accent-400/80"
                                     )} />
-                                    <span className="relative z-10 font-medium">{item.label}</span>
-                                    {badgeCount != null && (
-                                        <span
-                                            className="relative z-10 ml-auto flex items-center"
-                                            title={getNavBadgeTooltip?.(destinationView, destinationParams, badgeCount) ?? `${badgeCount} new since your last visit`}
-                                        >
-                                            <span className="absolute inline-flex h-full w-full rounded-full bg-accent-400 opacity-60 animate-ping" />
-                                            <span className="relative inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-accent-500 text-white text-[10px] font-black tabular-nums shadow-[0_0_10px_rgb(var(--accent-glow-rgb)/0.5)]">
-                                                {badgeCount}
-                                            </span>
+                                    <span className="relative z-10 min-w-0 truncate font-medium">{item.label}</span>
+                                    {(item.tag || badgeCount != null) && (
+                                        <span className="relative z-10 ml-auto flex shrink-0 items-center gap-2">
+                                            {item.tag && (
+                                                <span className="whitespace-nowrap rounded border border-red-500/30 bg-red-500/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-red-300">
+                                                    {item.tag}
+                                                </span>
+                                            )}
+                                            {badgeCount != null && (
+                                                <span
+                                                    className="relative flex items-center"
+                                                    title={getNavBadgeTooltip?.(destinationView, destinationParams, badgeCount) ?? `${badgeCount} new since your last visit`}
+                                                >
+                                                    <span className="absolute inline-flex h-full w-full rounded-full bg-accent-400 opacity-60 animate-ping" />
+                                                    <span className="relative inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-accent-500 text-white text-[10px] font-black tabular-nums shadow-[0_0_10px_rgb(var(--accent-glow-rgb)/0.5)]">
+                                                        {badgeCount}
+                                                    </span>
+                                                </span>
+                                            )}
                                         </span>
                                     )}
                                 </NavLink>

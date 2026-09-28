@@ -293,6 +293,7 @@ interface NavItem {
   icon: ElementType
   view?: string       // defaults to id
   params?: NavParams  // defaults to {}
+  tag?: string        // small status chip in the row's trailing slot, e.g. 'Live'
 }
 ```
 
@@ -301,6 +302,14 @@ behaves exactly as before (the id is the view, with no params). This lets a
 sidebar item target a detail view instead of a page-view of its own — the
 `cup-2v2-2026` item (`Main`, right after `achievements`) targets `event-detail`
 with `{ eventSlug: '2v2-cup-2026' }` instead of having its own `renderView` case.
+
+`tag` marks a limited-time item without borrowing the active styling: `AppLayout`
+renders it as the red `Live` status chip in the row's right-aligned trailing slot,
+just left of the count badge, so the label area stays text only (see
+`agents/styling.md`, sidebar status tag). The cup item is labelled `2v2 Cup` with
+`tag: 'Live'`. Labels never wrap: the label truncates, so keep it short enough to
+fit beside a tag and a count badge in the 16rem rail (about 80px of label with
+both present).
 
 Every sidebar entry renders through `NavLink` with its resolved destination
 `view`/`params` (an anchor with the right href on web, a button on desktop; see
