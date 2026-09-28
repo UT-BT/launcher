@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils'
 import { CHIP_SHAPE } from '@/app/components/shared/chipStyles'
-import type { EventStatus, EventStreamer, EventSummary } from '@/app/utils/api'
+import type { EventBracket, EventBracketStage, EventStatus, EventStreamer, EventSummary } from '@/app/utils/api'
 
 const STATUS_STYLES: Record<EventStatus, string> = {
     draft: 'bg-white/5 text-muted-foreground border-white/10',
@@ -58,8 +58,24 @@ export function formatTeamSize(teamSize: number): string {
     return teamSize > 1 ? `${teamSize}v${teamSize}` : '1v1'
 }
 
-export function scheduleTabVisible(hasTeam: boolean, canManageBracket: boolean, isStreamer: boolean): boolean {
+export type ScheduleView = 'all' | 'mine'
+
+type BracketVisibility = Pick<EventBracket, 'published'> & { stages: Pick<EventBracketStage, 'published'>[] }
+
+export function isScheduleParticipant(hasTeam: boolean, canManageBracket: boolean, isStreamer: boolean): boolean {
     return hasTeam || canManageBracket || isStreamer
+}
+
+export function hasPublishedStages(bracket: BracketVisibility | null): boolean {
+    return !!bracket?.published && bracket.stages.some(stage => stage.published)
+}
+
+export function scheduleTabVisible(participant: boolean, bracket: BracketVisibility | null): boolean {
+    return participant || hasPublishedStages(bracket)
+}
+
+export function autoScheduleView(awaitingCount: number, hasPickBanSession: boolean): ScheduleView {
+    return awaitingCount > 0 || hasPickBanSession ? 'mine' : 'all'
 }
 
 export function streamerName(streamer: Pick<EventStreamer, 'display_name'>): string {

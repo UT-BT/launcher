@@ -7,10 +7,10 @@ import {
 } from '@/app/utils/api'
 import {
     AchievementsShowcase,
-    Segmented,
     STATUS_FILTERS,
     type AchievementStatusFilter,
 } from '@/app/components/pages/achievements/AchievementsShowcase'
+import { Segmented } from '@/app/components/shared/Segmented'
 import { useNavState } from '@/app/components/navigation/useNavState'
 
 interface PlayerAchievementsCardProps {

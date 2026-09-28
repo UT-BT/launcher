@@ -1,5 +1,6 @@
 import { test, expect, type Locator } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
+import { horizontalOverflow } from './layout'
 
 const mockApi = process.env.UTBT_LIVE_API !== '1'
 
@@ -36,8 +37,7 @@ test.beforeEach(async ({ page }) => {
 test('layout never overflows the viewport', async ({ page, isMobile }) => {
   const logos = page.getByAltText('UTBT Logo')
   await expect(isMobile ? logos.first() : logos.last()).toBeVisible()
-  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
-  expect(overflow).toBeLessThanOrEqual(1)
+  expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1)
 })
 
 test('mobile drawer is keyboard accessible', async ({ page, isMobile }) => {

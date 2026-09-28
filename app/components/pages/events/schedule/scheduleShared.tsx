@@ -1,6 +1,9 @@
-import type { ScheduleEntry } from '@/app/utils/api'
+import type { ReactNode } from 'react'
+import { cn } from '@/lib/utils'
+import type { EventMatch, ScheduleEntry } from '@/app/utils/api'
 import { formatSlotTime, parseApiInstant } from '@/app/utils/timezone'
 import { teamLabel } from '../bracket/bracketShared'
+import { TeamName } from '../TeamRoster'
 
 export { formatSlotTime, parseApiInstant }
 
@@ -38,4 +41,43 @@ export function whoseTurnLabel(entry: ScheduleEntry, myTeamId: string | null): s
     const turnTeam = entry.whose_turn === team_a?.id ? team_a : entry.whose_turn === team_b?.id ? team_b : null
 
     return `Waiting on ${turnTeam ? teamLabel(turnTeam) : 'a response'}`
+}
+
+export function ScheduleSection({ title, count, blurb, children }: {
+    title: string
+    count?: number
+    blurb?: string
+    children: ReactNode
+}) {
+    return (
+        <section aria-label={title} className="flex flex-col gap-2">
+            <header className="flex items-baseline gap-2 flex-wrap">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{title}</h3>
+                {count !== undefined && <span className="text-[11px] text-muted-foreground tabular-nums">{count}</span>}
+                {blurb && <span className="text-[11px] text-muted-foreground">{blurb}</span>}
+            </header>
+            {children}
+        </section>
+    )
+}
+
+export function ScheduleLoading() {
+    return <div className="p-6 text-center text-sm text-muted-foreground">Loading schedule…</div>
+}
+
+export function TeamPair({ match, className }: {
+    match: Pick<EventMatch, 'team_a' | 'team_b' | 'slot_a_label' | 'slot_b_label'>
+    className?: string
+}) {
+    return (
+        <div className={cn('flex items-center gap-1.5 min-w-0 text-sm font-medium text-foreground', className)}>
+            <TeamName teamId={match.team_a?.id} className="truncate">
+                {teamLabel(match.team_a, match.slot_a_label)}
+            </TeamName>
+            <span className="text-muted-foreground shrink-0">vs</span>
+            <TeamName teamId={match.team_b?.id} className="truncate">
+                {teamLabel(match.team_b, match.slot_b_label)}
+            </TeamName>
+        </div>
+    )
 }

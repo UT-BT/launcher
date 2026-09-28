@@ -4,11 +4,12 @@ read_when:
   - "adding a new view/page to the nav stack or sidebar"
   - "opening a detail page or wiring a click that navigates"
   - "anything touching Back/Forward, history, or per-entry state keying"
-keywords: [navigate, Main.tsx, AppLayout, NavEntry, useNavigation, open-player, open-cap, renderView, HISTORY_CAP, back, forward, NavLink, href, new tab, eventLink, eventSlugOfView, isEventLinkLive, resolveNavBadge, attentionNavBadge]
+keywords: [navigate, Main.tsx, AppLayout, NavEntry, useNavigation, open-player, open-cap, renderView, HISTORY_CAP, back, forward, NavLink, href, new tab, EventTab, scheduleView, ScheduleView, tab=schedule, schedulePlayedOpen, eventLink, eventSlugOfView, isEventLinkLive, resolveNavBadge, attentionNavBadge]
 provides: "the whole navigation model: stack, navigate() funnel, renderView, sidebar registry, event-driven detail pages"
 not_here:
   - "where page state / persistence lives → state-patterns.md"
   - "the PlayerInfo / CapTimeLink components that trigger nav → shared-components.md"
+  - "the Schedule tab's own visibility rule and its audiences → data-sources.md"
 sections: [the-model, navigate-is-the-only-entry-point, leave-guards, url-sync-web-build, link-semantics, page-views-vs-detail-pages, the-sidebar-registry, event-driven-navigation, sidebar-new-badges, page-refresh-registry, per-entry-state, shareable-match-links, match-pickban-page]
 last_verified: 2026-09-28
 verify_against:
@@ -28,6 +29,8 @@ verify_against:
   - app/components/pages/EventDetailPage.tsx
   - app/components/pages/MatchPickBanPage.tsx
   - app/components/pages/events/pickban/components/PickBanSoundControl.tsx
+  - app/components/pages/events/schedule/ScheduleTabContainer.tsx
+  - app/components/pages/events/schedule/PublicSchedulePanel.tsx
 ---
 
 # Navigation
@@ -66,6 +69,21 @@ const [cursor, setCursor] = useState(0)
   new tab (e.g. the public Maps tab listing each stage's pick/ban pool) is therefore a change local
   to `EventDetailPage.tsx` with no routing/`route-contract.json`/title change
   needed, the same way Schedule and Predictions needed none.
+  `EventTab` is `'info' | 'teams' | 'bracket' | 'maps' | 'predictions' | 'schedule'
+  | 'players' | 'signup' | 'manage'`; a tab not in the currently visible set (its
+  gate — bracket presence, a Maps pool, `predictions_enabled`, the Schedule tab's
+  own visibility rule in `agents/data-sources.md` — failing, or `manage` without
+  `canManageBracket`) silently falls back to `info` rather than erroring.
+  **`?tab=schedule` now serves both audiences from the one link.** Before the
+  bracket read lands, `EventDetailPage` doesn't yet know whether Schedule is
+  visible, so the tab reads as `info`; once `fetchEventBracket` resolves,
+  `scheduleTabVisible` re-evaluates and the view switches to Schedule if it
+  applies — a captain lands on their actions (My Matches, defaulted by
+  `autoScheduleView`) and an anonymous viewer or spectator lands on the public
+  timeline (All Matches), from the exact same `/events/<slug>?tab=schedule` URL.
+  This fallback is derived on every render, the same as the other tab gates
+  above, and never rewrites the URL — a Discord booking link built before this
+  feature still opens the right view with no change on either end.
 - The stack is **in-memory only** — it boots to a single `home` entry on every
   launch and is never persisted. (Preferences persist; history doesn't — see
   `state-patterns.md`.)
@@ -539,6 +557,17 @@ so Back/Forward restore them):
 - **`useNavState(key, default)`** (`app/components/navigation/useNavState.ts`) —
   detail-page transient UI (tab/search/sort/pagination/scroll). **Value setter
   only** — no functional updater. Scroll restoration: `useNavScrollRestore`.
+  `event.scheduleView` (`ScheduleTabContainer.tsx`, default `null`) is a
+  concrete example: it holds a participant's explicit All Matches / My Matches
+  choice as a `ScheduleView` (`'all' | 'mine'`), so Back/Forward restore which
+  one they were looking at. While it's `null` the container falls back to the
+  automatic default (`autoScheduleView`, see `agents/data-sources.md`) rather
+  than defaulting the stored value itself, so an explicit choice and "no choice
+  made yet" stay distinguishable. `event.schedulePlayedOpen`
+  (`PublicSchedulePanel.tsx`, default `false`) is another: whether All
+  Matches' "Show played matches" section is open, so a viewer who opens it,
+  follows a link away and comes back with Back finds it as they left it,
+  while a fresh visit to the event page starts with it closed.
 
 The tier rules, persistence, and `usePageState` wiring live in
 `state-patterns.md` — this doc owns the stack + routing; that one owns what's
