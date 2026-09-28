@@ -49,6 +49,14 @@ export function myTeamIdsByTournament(memberships: MyTournamentMembership[]): Ma
     return byTournament
 }
 
+export function openLobbySlugs(memberships: MyTournamentMembership[]): Set<string> {
+    return new Set(
+        memberships
+            .filter(membership => membership.membership_status === 'active' && Boolean(membership.pick_ban_session))
+            .map(membership => membership.tournament.slug),
+    )
+}
+
 export function todoCountsByKind(todos: EventTodo[]): TodoCounts {
     return {
         offersToAnswer: todos.filter(todo => todo.kind === 'answer-times').length,
@@ -57,13 +65,10 @@ export function todoCountsByKind(todos: EventTodo[]): TodoCounts {
     }
 }
 
-export function computeEventAttention(
-    schedule: ScheduleEntry[],
-    memberships: MyTournamentMembership[],
-    openPickBanSlugs: ReadonlySet<string>,
-): EventAttentionMap {
+export function computeEventAttention(schedule: ScheduleEntry[], memberships: MyTournamentMembership[]): EventAttentionMap {
     const myTeamIds = myTeamIdsByTournament(memberships)
     const invited = memberships.filter(membership => membership.membership_status === 'invited')
+    const openPickBanSlugs = openLobbySlugs(memberships)
     const slugs = new Set([
         ...schedule.map(entry => entry.tournament.slug),
         ...invited.map(membership => membership.tournament.slug),

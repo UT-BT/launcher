@@ -92,7 +92,7 @@ import { useFavorites } from '@/app/hooks/useFavorites'
 import { useServerFavorites } from '@/app/hooks/useServerFavorites'
 import { loadPatreonMembers } from '@/app/utils/patreon'
 import {
-  fetchAchievementDefinitions, fetchMyAchievements, fetchMyEventStatus, fetchMySchedule, fetchMyTournaments,
+  fetchAchievementDefinitions, fetchMyAchievements, fetchMySchedule, fetchMyTournaments,
   fetchNavBadges, markSectionSeen, type BadgeSection,
 } from '@/app/utils/api'
 import { combinedEventAttention, computeEventAttention, type EventAttentionMap } from '@/app/utils/eventAttention'
@@ -119,7 +119,6 @@ const SERVER_PRESETS_STORAGE_KEY = 'utbt:serverPresets:v1'
 
 const HISTORY_CAP = 50
 const EVENT_ATTENTION_REFRESH_MS = 60_000
-const EVENT_ATTENTION_EXCLUDED_STATUSES = new Set(['completed', 'archived', 'draft'])
 
 const BADGE_SECTIONS = {
   'maps': 'maps',
@@ -438,19 +437,8 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
         fetchMySchedule(token, signal),
         fetchMyTournaments(token, signal),
       ])
-      if (accessTokenRef.current !== token) return
-      const liveActiveSlugs = Array.from(new Set(
-        memberships
-          .filter(m => m.membership_status === 'active' && !EVENT_ATTENTION_EXCLUDED_STATUSES.has(m.tournament.status))
-          .map(m => m.tournament.slug),
-      ))
-      const statuses = await Promise.allSettled(liveActiveSlugs.map(slug => fetchMyEventStatus(token, slug, signal)))
       if (signal.aborted || accessTokenRef.current !== token) return
-      const openPickBanSlugs = new Set<string>()
-      statuses.forEach((result, index) => {
-        if (result.status === 'fulfilled' && result.value.pick_ban_session) openPickBanSlugs.add(liveActiveSlugs[index])
-      })
-      setEventAttention(computeEventAttention(schedule, memberships, openPickBanSlugs))
+      setEventAttention(computeEventAttention(schedule, memberships))
     },
     onSettled: (outcome) => {
       if (!outcome.ok) setEventAttention({})

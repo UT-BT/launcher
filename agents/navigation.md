@@ -495,7 +495,7 @@ spell out each part ("Propose a time for 1 match", "Join your open Picks &
 Bans lobby"), and the event page repeats the same to-dos as the "Needs your
 attention" panel above its tabs, each with its own button, so touch users (no
 hover) see what the number means too. Full derivation (`fetchMySchedule` +
-`fetchMyTournaments` + the per-event status read, `eventTodos`,
+`fetchMyTournaments`, `eventTodos`, `openLobbySlugs`,
 `computeEventAttention`) is in `agents/data-sources.md` ("Event scheduling").
 This doc only owns the pill/dot/tooltip rendering contract and where
 `resolveNavBadge` lives.

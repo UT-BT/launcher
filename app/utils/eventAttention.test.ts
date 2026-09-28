@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import type { EventMatch, EventSummary, EventTeam, MyTournamentMembership, ScheduleEntry, ScheduleProposal } from './api'
+import type { EventMatch, EventSummary, EventTeam, MyPickBanSession, MyTournamentMembership, ScheduleEntry, ScheduleProposal } from './api'
 import {
     combinedEventAttention, computeEventAttention, eventAttentionCount, eventAttentionLines, eventTodos,
-    myTeamIdsByTournament, scheduleTodoSummary, todoCountsByKind,
+    myTeamIdsByTournament, openLobbySlugs, scheduleTodoSummary, todoCountsByKind,
     type EventAttention, type EventTodo,
 } from './eventAttention'
 
@@ -10,6 +10,7 @@ const TEAM_A = { id: 'team-a', name: 'Alpha', seed: 1, status: 'registered' as c
 const TEAM_B = { id: 'team-b', name: 'Bravo', seed: 2, status: 'registered' as const }
 const TEAM_C = { id: 'team-c', name: 'Charlie', seed: 3, status: 'registered' as const }
 const OTHER_CUP = { id: 't2', slug: 'other-cup', name: 'Other Cup' }
+const OPEN_LOBBY: MyPickBanSession = { match_id: 'match-1', status: 'lobby' }
 
 function match(patch: Partial<EventMatch> = {}): EventMatch {
     return {
@@ -71,6 +72,7 @@ function membership(patch: Partial<MyTournamentMembership> = {}): MyTournamentMe
         tournament: tournamentSummary(),
         team: myTeam(),
         membership_status: 'active',
+        pick_ban_session: null,
         ...patch,
     }
 }
@@ -125,7 +127,6 @@ describe('computeEventAttention', () => {
                 membership(),
                 membership({ tournament: tournamentSummary(OTHER_CUP) }),
             ],
-            new Set(),
         )
         expect(map['2v2-cup']).toEqual(attention({ offersToAnswer: 1 }))
         expect(map['other-cup']).toEqual(attention({ matchesToSchedule: 1 }))
@@ -135,7 +136,6 @@ describe('computeEventAttention', () => {
         const map = computeEventAttention(
             [entry({ whose_turn: TEAM_A.id }), entry({ proposal: null, whose_turn: null })],
             [membership({ membership_status: 'invited' })],
-            new Set(),
         )
         expect(map['2v2-cup']).toEqual(attention({ invitations: 1 }))
     })
@@ -148,7 +148,6 @@ describe('computeEventAttention', () => {
                 membership({ membership_status: 'invited', tournament: tournamentSummary(OTHER_CUP) }),
                 membership({ membership_status: 'active', tournament: tournamentSummary({ id: 't3', slug: 'third-cup', name: 'Third Cup' }) }),
             ],
-            new Set(),
         )
         expect(map['2v2-cup'].invitations).toBe(1)
         expect(map['other-cup'].invitations).toBe(1)
@@ -156,13 +155,35 @@ describe('computeEventAttention', () => {
     })
 
     it('marks an open lobby without counting it', () => {
-        const map = computeEventAttention([], [membership()], new Set(['2v2-cup']))
+        const map = computeEventAttention([], [membership({ pick_ban_session: OPEN_LOBBY })])
         expect(map['2v2-cup']).toEqual(attention({ pickBanOpen: true }))
         expect(eventAttentionCount(map['2v2-cup'])).toBe(0)
     })
 
     it('leaves events with nothing to do out of the map', () => {
-        expect(computeEventAttention([entry({ whose_turn: TEAM_B.id })], [membership()], new Set())).toEqual({})
+        expect(computeEventAttention([entry({ whose_turn: TEAM_B.id })], [membership()])).toEqual({})
+    })
+})
+
+describe('openLobbySlugs', () => {
+    it('includes an active membership with an open session', () => {
+        expect([...openLobbySlugs([membership({ pick_ban_session: OPEN_LOBBY })])]).toEqual(['2v2-cup'])
+    })
+
+    it('excludes an active membership without a session', () => {
+        expect([...openLobbySlugs([membership()])]).toEqual([])
+    })
+
+    it('excludes invited rows', () => {
+        expect([...openLobbySlugs([membership({ membership_status: 'invited', pick_ban_session: OPEN_LOBBY })])]).toEqual([])
+    })
+
+    it('collapses duplicate slugs', () => {
+        const slugs = openLobbySlugs([
+            membership({ pick_ban_session: OPEN_LOBBY }),
+            membership({ team: myTeam({ id: 'team-x' }), pick_ban_session: { match_id: 'match-2', status: 'running' } }),
+        ])
+        expect([...slugs]).toEqual(['2v2-cup'])
     })
 })
 
@@ -173,8 +194,8 @@ describe('combinedEventAttention', () => {
             [
                 membership(),
                 membership({ membership_status: 'invited', tournament: tournamentSummary(OTHER_CUP) }),
+                membership({ tournament: tournamentSummary({ id: 't3', slug: 'third-cup', name: 'Third Cup' }), pick_ban_session: OPEN_LOBBY }),
             ],
-            new Set(['other-cup']),
         )
         const combined = combinedEventAttention(map)
         expect(combined).toEqual(attention({ offersToAnswer: 1, invitations: 1, pickBanOpen: true }))
