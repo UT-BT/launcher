@@ -1,12 +1,15 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Globe } from 'lucide-react'
 import { useNavState } from '@/app/components/navigation/useNavState'
 import { useDisplayTimezone } from '@/app/utils/timezone'
 import type { EventBracket } from '@/app/utils/api'
 import { Segmented } from '@/app/components/shared/Segmented'
+import { createPoller } from '@/app/utils/poller'
 import { autoScheduleView, type ScheduleView } from '../eventsShared'
 import { MyMatchesPanel, type MyMatchesPanelProps } from './MyMatchesPanel'
 import { PublicSchedulePanel } from './PublicSchedulePanel'
+
+const BRACKET_REFRESH_MS = 60_000
 
 export interface ScheduleTabContainerProps extends MyMatchesPanelProps {
     bracket: EventBracket | null
@@ -18,7 +21,7 @@ export interface ScheduleTabContainerProps extends MyMatchesPanelProps {
 
 export function ScheduleTabContainer({
     bracket, bracketLoading, eventSlug, myTeamId, participant, pickBanSession = null, awaitingCount,
-    entries, myMatches, loaded, viewer, onRefresh, onOpenPicker,
+    entries, myMatches, loaded, viewer, onRefresh, onOpenPicker, onBracketRefresh,
 }: ScheduleTabContainerProps) {
     const timezone = useDisplayTimezone()
     const [chosenView, setChosenView] = useNavState<ScheduleView | null>('event.scheduleView', null)
@@ -28,6 +31,20 @@ export function ScheduleTabContainer({
     if (participant && loaded && settledView === null) setSettledView(autoView)
 
     const view: ScheduleView | null = participant ? chosenView ?? settledView ?? (loaded ? autoView : null) : 'all'
+
+    const onBracketRefreshRef = useRef(onBracketRefresh)
+    onBracketRefreshRef.current = onBracketRefresh
+
+    const bracketPoller = useMemo(() => createPoller({
+        intervalMs: () => BRACKET_REFRESH_MS,
+        poll: async () => { onBracketRefreshRef.current() },
+    }), [])
+
+    useEffect(() => {
+        if (view !== 'all') return
+        bracketPoller.start()
+        return () => bracketPoller.stop()
+    }, [view, bracketPoller])
 
     return (
         <div className="flex flex-col gap-4">

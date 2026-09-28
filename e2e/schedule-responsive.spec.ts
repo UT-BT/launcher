@@ -125,6 +125,58 @@ function match(seed: MatchSeed) {
     }
 }
 
+function market(id: string, matchId: string) {
+    return {
+        id,
+        match_id: matchId,
+        stage_id: 'stage-groups',
+        status: 'open',
+        outcome: null,
+        draws_allowed: true,
+        price_a: 0.58,
+        price_b: 0.42,
+        price_draw: null,
+        opening_price_a: 0.55,
+        opening_price_b: 0.45,
+        opening_price_draw: null,
+        pool_stake: 4200,
+        position_count: 3,
+        liquidity_b: 9110,
+        manual_override: null,
+        closes_at: new Date(NOW + 2 * HOUR).toISOString(),
+        closed_at: null,
+        resolved_at: null,
+        settles_at: null,
+        settled_at: null,
+        outcome_reason: null,
+        result_key: 'open',
+        your_position: null,
+        team_a: teamRef('team-2'),
+        team_b: teamRef('team-4'),
+    }
+}
+
+const PREDICTIONS = {
+    enabled: true,
+    bracket_published: true,
+    config: {
+        enabled: true,
+        initial_grant: 10000,
+        min_stake: 10,
+        max_stake_pct: 25,
+        liquidity_b: 9110,
+        close_buffer_seconds: 0,
+        settlement_hold_minutes: 30,
+        roster_bets_allowed: true,
+        void_on_result_while_open: true,
+        staff_only: false,
+        updated_at: null,
+    },
+    stages: [{ id: 'stage-groups', stage_key: 'groups', name: 'Group Stage', kind: 'groups', ordinal: 0 }],
+    markets: [market('market-today-a', 'today-a')],
+    wallet: null,
+}
+
 function standing(teamId: string, rank: number, wins: number, losses: number) {
     return {
         team_id: teamId,
@@ -355,7 +407,7 @@ const EVENT = {
     registered_team_count: TEAMS.length,
     created_at: null,
     published_at: null,
-    predictions_enabled: false,
+    predictions_enabled: true,
 }
 
 const PERSONAL_PATHS = ['/me/schedule', `/tournaments/${SLUG}/me`, `/tournaments/${SLUG}/me/matches`]
@@ -394,6 +446,11 @@ test.beforeEach(async ({ page }) => {
 
         if (path === `/tournaments/${SLUG}/bracket`) {
             await route.fulfill({ json: { success: true, data: bracketResponse } })
+            return
+        }
+
+        if (path === `/tournaments/${SLUG}/predictions`) {
+            await route.fulfill({ json: { success: true, data: PREDICTIONS } })
             return
         }
 
@@ -441,11 +498,44 @@ test('a signed-out visitor lands on All Matches from a schedule link', async ({ 
     await expect(page.getByRole('button', { name: 'Schedule', exact: true })).toBeVisible()
     const allMatches = page.getByRole('region', { name: 'All Matches' })
     await expect(allMatches).toBeVisible()
-    await expect(allMatches).toContainText('No matches scheduled yet')
     await expect(page.getByText('Times in UTC')).toBeVisible()
 
     await expect(page.getByRole('group', { name: 'Schedule view' })).toHaveCount(0)
     await expect(page.getByRole('button', { name: /My Matches/ })).toHaveCount(0)
+
+    const liveNow = allMatches.getByRole('region', { name: 'Live Now' })
+    await expect(liveNow).toBeVisible()
+    await expect(liveNow).toContainText('Respawn Repeat Regret')
+    await expect(liveNow).toContainText('Flag Runners United')
+
+    const rowTimes = allMatches.locator('text=/^\\d{2}:\\d{2}$/')
+    await expect(rowTimes).toHaveText(['11:35', '14:00', '16:00', '18:00', '19:00', '21:00'])
+
+    const todaySection = allMatches.getByRole('region', { name: 'Today' })
+    await expect(todaySection).toContainText('Sandbagging Sorcerers')
+    await expect(todaySection).toContainText('Dodge Dynasty')
+    await expect(todaySection.getByText('in 2h 0m')).toBeVisible()
+
+    const tomorrowSection = allMatches.getByRole('region', { name: 'Tomorrow' })
+    await expect(tomorrowSection).toContainText('Wall Jump Wizards')
+
+    await expect(allMatches.getByText('2 matches still need a time.')).toBeVisible()
+
+    const playedSection = allMatches.getByRole('region', { name: 'Played matches' })
+    const playedToggle = playedSection.getByRole('button', { name: /Show played matches/ })
+    const playedRows = playedSection.locator('> div')
+    await expect(playedToggle).toHaveText('Show played matches (4)')
+    await expect(playedRows).toHaveCount(0)
+
+    await playedToggle.click()
+    await expect(playedRows).toHaveCount(4)
+    await expect(playedRows.nth(0)).toContainText('Boost Brigade')
+    await expect(playedRows.nth(1)).toContainText('Flag Runners United')
+    await expect(playedRows.nth(2)).toContainText('Dodge Dynasty')
+    await expect(playedRows.nth(2)).toContainText('Forfeit')
+    await expect(playedRows.nth(3)).toContainText('Respawn Repeat Regret')
+
+    await expect(allMatches.getByText('vs', { exact: true })).toHaveCount(10)
 
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1)
     expect(personalRequests).toEqual([])

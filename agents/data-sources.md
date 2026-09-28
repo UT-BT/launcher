@@ -10,15 +10,15 @@ read_when:
   - "finding a pick/ban session from the bracket, a match card, the event page or the Schedule tab without a direct link"
   - "assigning a streamer to a match, or showing a streamer their assigned matches"
   - "deciding whether a prediction market still takes bets once its match's pick/ban has started"
-keywords: [api.ts, fetch, endpoint, accessToken, avatar, MapThumbnail, favorites, patreon, downloadMapZip, world_records, caps, predictions, draw, odds, schedule, proposal, slot, whose_turn, resolved_window, countdown, nav badge, fetchMyTournaments, SlotPickerModal, SlotGrid, DateTimeField, slotGeneration, proposeMatchSlots, withdrawMatchProposal, acceptMatchProposal, fetchMatchSchedule, ApiError, expected_match_duration_minutes, fetchPickBanConfig, PickBanConfig, PickBanPoolMap, MapsTab, mapsShared, stagesWithPools, tagBadgeVariant, pick/ban, fetchPickBanState, ETag, If-None-Match, 304, X-Server-Now, server_now, clock offset, reveal_at, sendPickBanCommand, sendPickBanManagerCommand, hover, selection_preview, pickBanErrorCode, captain controls, CaptainDock, useCaptainPlay, fetchPickBanQueue, PickBanQueueEntry, PickBanQueueRow, toQueueRow, canOpenLobby, blockingReasonLabel, PickBanQueuePanel, pickBanStatusBadge, statusOfPhase, buildPickBanView, setPickBanStageConfig, setPickBanStagePool, copyPickBanStagePool, pickBanEditor, stage pool, buildMatchLinks, matchStreamPath, createPoller, pick_ban_status, MatchPickBanStatus, pickBanCardAffordance, PickBanCardPill, pickBanMapLabel, MyPickBanSession, pick_ban_session, PickBanLink, PickBanJoinBanner, pickBanEntryPoints, Join banner, scene, sceneDirection, playsEntrance, entranceMsFor, introStartsAt, usePickBanPreload, usePickBanSound, cuesToPlay, pickBanSoundCues, pickBanSoundPlayer, PickBanSoundCueKind, pickBanSounds, SOUND_HIT_MS, soundScheduleAt, STALE_HIT_MS, pickBanBeats, intro cue, sound=0, SOUND_URLS, volume, setVolume, masterGainOf, preview, pickBanSoundPreference, streamSoundOf, CREDITS.md, manager dock, ManagerDock, useManagerDock, managerDockOf, hand-over, act for team, Reopen, edit-final, PickBanEditFinalEntry, Edit final, fetchMyEventMatches, MyMatchEntry, is_streamer, EventStreamer, fetchEventStreamers, setMatchStreamer, streamer, StreamerPicker, withQueueStreamer, streamerChoices, scheduleSections, pickBanCallToAction, matchTimeLabel, marketLock, marketTakesPredictions, lockStartedMarkets, matchLockSignals, newlyLockedMatchIds, streamerName]
+keywords: [api.ts, fetch, endpoint, accessToken, avatar, MapThumbnail, favorites, patreon, downloadMapZip, world_records, caps, predictions, draw, odds, schedule, proposal, slot, whose_turn, resolved_window, countdown, nav badge, fetchMyTournaments, SlotPickerModal, SlotGrid, DateTimeField, slotGeneration, proposeMatchSlots, withdrawMatchProposal, acceptMatchProposal, fetchMatchSchedule, ApiError, expected_match_duration_minutes, fetchPickBanConfig, PickBanConfig, PickBanPoolMap, MapsTab, mapsShared, stagesWithPools, tagBadgeVariant, pick/ban, fetchPickBanState, ETag, If-None-Match, 304, X-Server-Now, server_now, clock offset, reveal_at, sendPickBanCommand, sendPickBanManagerCommand, hover, selection_preview, pickBanErrorCode, captain controls, CaptainDock, useCaptainPlay, fetchPickBanQueue, PickBanQueueEntry, PickBanQueueRow, toQueueRow, canOpenLobby, blockingReasonLabel, PickBanQueuePanel, pickBanStatusBadge, statusOfPhase, buildPickBanView, setPickBanStageConfig, setPickBanStagePool, copyPickBanStagePool, pickBanEditor, stage pool, buildMatchLinks, matchStreamPath, createPoller, pick_ban_status, MatchPickBanStatus, pickBanCardAffordance, PickBanCardPill, pickBanMapLabel, MyPickBanSession, pick_ban_session, PickBanLink, PickBanJoinBanner, pickBanEntryPoints, Join banner, scene, sceneDirection, playsEntrance, entranceMsFor, introStartsAt, usePickBanPreload, usePickBanSound, cuesToPlay, pickBanSoundCues, pickBanSoundPlayer, PickBanSoundCueKind, pickBanSounds, SOUND_HIT_MS, soundScheduleAt, STALE_HIT_MS, pickBanBeats, intro cue, sound=0, SOUND_URLS, volume, setVolume, masterGainOf, preview, pickBanSoundPreference, streamSoundOf, CREDITS.md, manager dock, ManagerDock, useManagerDock, managerDockOf, hand-over, act for team, Reopen, edit-final, PickBanEditFinalEntry, Edit final, fetchMyEventMatches, MyMatchEntry, is_streamer, EventStreamer, fetchEventStreamers, setMatchStreamer, streamer, StreamerPicker, withQueueStreamer, streamerChoices, scheduleSections, pickBanCallToAction, matchTimeLabel, marketLock, marketTakesPredictions, lockStartedMarkets, matchLockSignals, newlyLockedMatchIds, streamerName, public schedule, All Matches, My Matches, scheduleView, MyMatchesPanel, ScheduleTabContainer, PublicSchedulePanel, publicSchedule, isScheduleParticipant, hasPublishedStages, scheduleTabVisible, autoScheduleView, ScheduleView]
 provides: "the client-side API contract the launcher consumes + asset URLs + favorites/patreon sync models"
 not_here:
   - "IPC channels (window.conveyor.*) → lib/conveyor/README.md"
   - "how UI state persists in localStorage → state-patterns.md"
   - "the procedure to wire a new endpoint into the UI → skill: consume-api-data"
 sections: [backend-api, errors, admin-api, event-brackets, event-scheduling, event-predictions, public-maps-tab-pick-ban-pools, event-pickban-sessions, event-pick-ban-setup, changing-a-map-screenshot, cap-detail-page-endpoints, world-records-page-endpoints, team-maps-and-team-runs, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites, account-state-and-badges]
-last_verified: 2026-09-25
-verify_against: [app/utils/api.ts, app/utils/chartBuckets.ts, app/components/pages/admin/components/controls.tsx, app/components/pages/admin/sections/HostsManagementSection.tsx, app/utils/patreon.ts, app/utils/server-utils.ts, app/hooks/useServerFavorites.ts, app/components/pages/events/manage/formatFields.tsx, app/components/pages/events/bracket/bracketShared.tsx, app/components/pages/events/bracket/BracketTab.tsx, app/components/pages/events/bracket/GroupStageView.tsx, app/components/pages/events/bracket/SwissStageView.tsx, app/components/pages/events/bracket/ElimStageView.tsx, app/components/pages/events/predictions/predictionsShared.tsx, app/components/pages/events/predictions/PredictionsTab.tsx, app/components/pages/events/schedule/scheduleShared.tsx, app/components/pages/events/schedule/ScheduleTab.tsx, app/components/pages/events/schedule/scheduleSections.ts, app/components/pages/events/predictions/marketLock.ts, app/components/pages/events/predictions/MarketCard.tsx, app/components/pages/home/ClosingSoonBanner.tsx, app/components/pages/events/schedule/SlotPickerModal.tsx, app/components/pages/events/schedule/slotGeneration.ts, app/components/pages/events/schedule/SlotGrid.tsx, app/components/pages/events/manage/DateTimeField.tsx, app/components/pages/events/eventsShared.tsx, app/components/pages/EventDetailPage.tsx, app/utils/timezone.ts, app/components/pages/events/manage/ScheduleOversightPanel.tsx, app/components/pages/events/ManagePanel.tsx, app/components/main/Main.tsx, app/components/layout/AppLayout.tsx, app/components/pages/events/maps/MapsTab.tsx, app/components/pages/events/maps/mapsShared.ts, app/components/pages/events/pickban/pickBanView.ts, app/components/pages/events/pickban/pickBanStatus.ts, app/components/pages/events/pickban/pickBanSession.ts, app/components/pages/events/pickban/pickBanEntryPoints.ts, app/components/pages/events/pickban/components/PickBanLink.tsx, app/components/pages/events/pickban/components/PickBanJoinBanner.tsx, app/components/pages/events/pickban/clockOffset.ts, app/components/pages/events/manage/pickban/pickBanEditor.ts, app/components/pages/events/manage/pickban/PickBanPanel.tsx, app/components/pages/events/manage/pickban/PickBanStageCard.tsx, app/components/pages/events/manage/pickban/PickBanQueuePanel.tsx, app/components/pages/events/manage/pickban/pickBanQueue.ts, app/components/pages/events/pickBanTags.ts, app/components/navigation/matchLinks.ts, app/utils/poller.ts, app/components/pages/events/pickban/stream/StreamView.tsx, app/components/pages/events/pickban/pickBanCopy.ts, app/components/pages/events/pickban/components/PickBanUnavailable.tsx, app/components/pages/events/pickban/pickBanSoundCues.ts, app/components/pages/events/pickban/pickBanSoundPlayer.ts, app/components/pages/events/pickban/usePickBanSound.ts, app/components/pages/events/pickban/pickBanSounds.ts, app/components/pages/events/pickban/pickBanBeats.ts, app/components/pages/MatchPickBanPage.tsx, app/components/pages/events/pickban/managerDock.ts, app/components/pages/events/pickban/pickBanSoundPreference.ts, app/components/pages/events/pickban/stream/streamSound.ts]
+last_verified: 2026-09-28
+verify_against: [app/utils/api.ts, app/utils/chartBuckets.ts, app/components/pages/admin/components/controls.tsx, app/components/pages/admin/sections/HostsManagementSection.tsx, app/utils/patreon.ts, app/utils/server-utils.ts, app/hooks/useServerFavorites.ts, app/components/pages/events/manage/formatFields.tsx, app/components/pages/events/bracket/bracketShared.tsx, app/components/pages/events/bracket/BracketTab.tsx, app/components/pages/events/bracket/GroupStageView.tsx, app/components/pages/events/bracket/SwissStageView.tsx, app/components/pages/events/bracket/ElimStageView.tsx, app/components/pages/events/predictions/predictionsShared.tsx, app/components/pages/events/predictions/PredictionsTab.tsx, app/components/pages/events/schedule/scheduleShared.tsx, app/components/pages/events/schedule/scheduleSections.ts, app/components/pages/events/schedule/MyMatchesPanel.tsx, app/components/pages/events/schedule/ScheduleTabContainer.tsx, app/components/pages/events/schedule/PublicSchedulePanel.tsx, app/components/pages/events/schedule/publicSchedule.ts, app/components/pages/events/predictions/marketLock.ts, app/components/pages/events/predictions/MarketCard.tsx, app/components/pages/home/ClosingSoonBanner.tsx, app/components/pages/events/schedule/SlotPickerModal.tsx, app/components/pages/events/schedule/slotGeneration.ts, app/components/pages/events/schedule/SlotGrid.tsx, app/components/pages/events/manage/DateTimeField.tsx, app/components/pages/events/eventsShared.tsx, app/components/pages/EventDetailPage.tsx, app/utils/timezone.ts, app/components/pages/events/manage/ScheduleOversightPanel.tsx, app/components/pages/events/ManagePanel.tsx, app/components/main/Main.tsx, app/components/layout/AppLayout.tsx, app/components/pages/events/maps/MapsTab.tsx, app/components/pages/events/maps/mapsShared.ts, app/components/pages/events/pickban/pickBanView.ts, app/components/pages/events/pickban/pickBanStatus.ts, app/components/pages/events/pickban/pickBanSession.ts, app/components/pages/events/pickban/pickBanEntryPoints.ts, app/components/pages/events/pickban/components/PickBanLink.tsx, app/components/pages/events/pickban/components/PickBanJoinBanner.tsx, app/components/pages/events/pickban/clockOffset.ts, app/components/pages/events/manage/pickban/pickBanEditor.ts, app/components/pages/events/manage/pickban/PickBanPanel.tsx, app/components/pages/events/manage/pickban/PickBanStageCard.tsx, app/components/pages/events/manage/pickban/PickBanQueuePanel.tsx, app/components/pages/events/manage/pickban/pickBanQueue.ts, app/components/pages/events/pickBanTags.ts, app/components/navigation/matchLinks.ts, app/utils/poller.ts, app/components/pages/events/pickban/stream/StreamView.tsx, app/components/pages/events/pickban/pickBanCopy.ts, app/components/pages/events/pickban/components/PickBanUnavailable.tsx, app/components/pages/events/pickban/pickBanSoundCues.ts, app/components/pages/events/pickban/pickBanSoundPlayer.ts, app/components/pages/events/pickban/usePickBanSound.ts, app/components/pages/events/pickban/pickBanSounds.ts, app/components/pages/events/pickban/pickBanBeats.ts, app/components/pages/MatchPickBanPage.tsx, app/components/pages/events/pickban/managerDock.ts, app/components/pages/events/pickban/pickBanSoundPreference.ts, app/components/pages/events/pickban/stream/streamSound.ts]
 ---
 
 # Data sources
@@ -176,7 +176,7 @@ match card's own `onClick` opens the scheduler). `PickBanCardPill` and
 `PickBanJoinBanner` (`events/pickban/components/PickBanJoinBanner.tsx`) both
 build on it — the banner is the shared "Picks & Bans against <opponent> are live now." pill (a small
 pulsing dot plus the label, naming the opponent when the match is known), used identically on the event page and on any
-`ScheduleTab` card whose match has an open session. Every Schedule card
+`MyMatchesPanel` card whose match has an open session. Every My Matches card
 carries a pick/ban entry point: `pickBanCallToAction(match, session)`
 (`schedule/scheduleSections.ts`, pure) reads the match's `pick_ban_status`,
 or the viewer's own `pick_ban_session` when it is for that match since that
@@ -401,7 +401,7 @@ without the route answers 404, which leaves the booked and streaming lists
 empty and the rest of the tab unchanged.
 
 **`scheduleSections(pending, mine, viewer)`** (`schedule/scheduleSections.ts`,
-pure, Vitest) splits the two reads into the tab's sections: **Upcoming**
+pure, Vitest) splits the two reads into `MyMatchesPanel`'s sections: **Upcoming**
 (`player` entries that are `scheduled` or `live`, live first, then soonest,
 unbooked last, ties kept in the server's order), **Needs a time** (the `/me/schedule` list, minus any match
 Upcoming already shows, since the two reads can catch a match mid-change) and
@@ -417,15 +417,71 @@ browser source, with `useCopyFeedback`) and **Open Picks & Bans**; the
 section's hint says the link is a 1920×1080 browser source for OBS, and it
 reads "No matches assigned to you yet." when empty.
 
-**The Schedule tab is visible to a rostered team member, a bracket manager
-or a streamer** — `scheduleTabVisible(hasTeam, canManageBracket,
-isStreamer)` in `eventsShared.tsx`. A manager with no roster spot in the
-event still sees the tab (the same "rehearse the event" allowance the
-bracket and predictions surfaces give), but `fetchMySchedule` is keyed to
-the caller's OWN team memberships, so a non-playing manager sees an empty
-list here, not the whole event's negotiations — that full-event view is a
-separate manager-oversight surface, not this tab. A streamer with no team
-sees only the Streaming section; one who also plays sees both.
+**The Schedule tab is visible to everyone once the bracket has published
+stages, plus to participants even before that.** `eventsShared.tsx` splits
+what used to be one rule into three: `isScheduleParticipant(hasTeam,
+canManageBracket, isStreamer)` is the old `scheduleTabVisible` rule under
+its new name — a rostered team member, a bracket manager (including one with
+no roster spot, the same "rehearse the event" allowance the bracket and
+predictions surfaces give) or an assigned streamer; `hasPublishedStages(bracket)`
+is `bracket.published` and at least one of its stages also `published`; and
+`scheduleTabVisible(participant, bracket)` is `participant || hasPublishedStages(bracket)`
+— so a signed-out visitor or a spectator with no role in the event still sees
+the tab, and the public schedule inside it, the moment the bracket goes live,
+while a manager or captain can open it earlier to rehearse or arrange times.
+**The "my schedule" and "my matches" reads stay gated on `isScheduleParticipant`
+and a real access token** — `fetchMySchedule` and `fetchMyEventMatches` are
+never called for an anonymous viewer or a non-participant, whatever
+`hasPublishedStages` says, since neither read means anything for them.
+
+`ScheduleTabContainer` (`schedule/ScheduleTabContainer.tsx`) is what the tab
+renders: a `Segmented` (see `agents/shared-components.md`) toggle between
+**All Matches** (`PublicSchedulePanel`, the public schedule below) and **My
+Matches** (`MyMatchesPanel`, the participant-only panel above), shown only to
+a participant — a non-participant who only qualifies through
+`hasPublishedStages` gets All Matches with no toggle, since they have no "my"
+data to switch to. `autoScheduleView(awaitingCount, hasPickBanSession)`
+(`eventsShared.tsx`) picks the participant's default view — `'mine'` when a
+match is awaiting their team's response or their team has an open pick/ban
+session, `'all'` otherwise — worked out **once per mount**, the moment the
+participant's own schedule has finished loading, and then held even if
+`awaitingCount` later drops to zero; until then the container shows "Loading
+schedule…" rather than guessing. An explicit click on either segment is
+stored in the `event.scheduleView` nav-state key (`ScheduleView`, `'all' |
+'mine'`) and wins over the automatic default from then on — see
+`agents/navigation.md`. A streamer with no team sees only the Streaming
+section of My Matches; one who also plays sees both.
+
+**The public schedule** (`schedule/publicSchedule.ts`) is derived entirely
+from the already-loaded `fetchEventBracket` read — it needs no fetch of its
+own. `rows(bracket)` returns nothing at all while `bracket.published` is
+false, not only while a stage or a match is unpublished individually — an
+unpublished bracket has no public schedule, matching the bracket tab's own
+whole-surface gate above. From there it keeps each published stage's
+non-cancelled, non-bye matches that carry a `scheduled_at`, reading that
+timestamp with `parseApiInstant` the same way the bracket's other
+zone-less timestamps are read elsewhere in this doc — a bare
+`YYYY-MM-DD HH:MM:SS` with no offset is treated as UTC. `partition(rows)`
+buckets them into `live` (status `live`, soonest first), `upcoming` (not
+live or played, soonest first) and `played` (`complete`/`forfeit`, most
+recent first); `byDay(scheduled, timezone, now)` groups the upcoming bucket
+into per-day sections in the viewer's display zone, labelling today and
+tomorrow by name. `unscheduledCount(bracket)` counts published, decided,
+still-`pending` matches with no `scheduled_at`, and `nextUp` picks the
+soonest upcoming row for the countdown chip. `PublicSchedulePanel` renders
+Live Now, the day sections, an unscheduled-count line and a collapsed Played
+section.
+
+**While All Matches is open, `ScheduleTabContainer` refreshes the bracket
+itself every 60 seconds** through its own `createPoller` instance, calling
+the `onBracketRefresh` callback `EventDetailPage` passes down — independent
+of that page's own manual refresh and of the 30-second `/me/schedule` +
+`/me/matches` poll `MyMatchesPanel` runs while My Matches is open. Since
+`fetchEventBracket` is a public, anonymous-friendly read, this is one
+anonymous bracket read per minute per open All Matches view, with no
+per-viewer state on the server. If that load ever grows heavy, the fix is a
+slimmer bracket read on the API side for this view, not client-side caching
+of the existing one.
 
 **Assigning streamers (bracket managers).** `fetchEventStreamers(token,
 slug)` → `GET /tournaments/<slug>/admin/streamers` → `{ items:
