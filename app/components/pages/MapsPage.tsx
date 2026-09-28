@@ -1800,12 +1800,12 @@ export function MapsPage({
                                     )}>
                                         {ratings.overall}
                                     </span>
-                                    <div className="w-16 h-1.5 bg-hairline/10 rounded-full overflow-hidden">
-                                        <div
-                                            className={cn("h-full rounded-full", scoreBgColor(ratings.overall))}
+                                    <span className="w-16 h-1.5 bg-hairline/10 rounded-full overflow-hidden">
+                                        <span
+                                            className={cn("block h-full rounded-full", scoreBgColor(ratings.overall))}
                                             style={{ width: `${(ratings.overall / 10) * 100}%` }}
                                         />
-                                    </div>
+                                    </span>
                                 </>
                             ) : (
                                 <span className="opacity-50 text-muted-foreground text-xs underline-offset-2 group-hover/rating:underline group-hover/rating:text-foreground">
@@ -1834,12 +1834,12 @@ export function MapsPage({
                                     )}>
                                         {myReview.overall}
                                     </span>
-                                    <div className="w-16 h-1.5 bg-hairline/10 rounded-full overflow-hidden">
-                                        <div
-                                            className={cn("h-full rounded-full", scoreBgColor(myReview.overall))}
+                                    <span className="w-16 h-1.5 bg-hairline/10 rounded-full overflow-hidden">
+                                        <span
+                                            className={cn("block h-full rounded-full", scoreBgColor(myReview.overall))}
                                             style={{ width: `${(myReview.overall / 10) * 100}%` }}
                                         />
-                                    </div>
+                                    </span>
                                 </>
                             ) : (
                                 <span className="opacity-50 text-muted-foreground text-xs underline-offset-2 group-hover/myrating:underline group-hover/myrating:text-foreground">

@@ -4,7 +4,7 @@ read_when:
   - "adding a new view/page to the nav stack or sidebar"
   - "opening a detail page or wiring a click that navigates"
   - "anything touching Back/Forward, history, or per-entry state keying"
-keywords: [navigate, Main.tsx, AppLayout, NavEntry, useNavigation, open-player, open-cap, renderView, HISTORY_CAP, back, forward, NavLink, href, new tab, EventTab, scheduleView, ScheduleView, tab=schedule, schedulePlayedOpen]
+keywords: [navigate, Main.tsx, AppLayout, NavEntry, useNavigation, open-player, open-cap, renderView, HISTORY_CAP, back, forward, NavLink, href, new tab, EventTab, scheduleView, ScheduleView, tab=schedule, schedulePlayedOpen, eventLink, eventSlugOfView, isEventLinkLive, resolveNavBadge, attentionNavBadge]
 provides: "the whole navigation model: stack, navigate() funnel, renderView, sidebar registry, event-driven detail pages"
 not_here:
   - "where page state / persistence lives → state-patterns.md"
@@ -16,6 +16,7 @@ verify_against:
   - app/components/main/Main.tsx
   - app/components/navigation/NavLink.tsx
   - app/components/layout/AppLayout.tsx
+  - app/components/navigation/nav-items.ts
   - app/components/navigation/NavigationContext.tsx
   - app/components/navigation/useNavState.ts
   - app/components/navigation/useUnsavedChanges.ts
@@ -281,31 +282,116 @@ join/accept/decline route back to the `teams` gallery and force it to refresh.
 
 ## The sidebar registry
 
-The left rail is data, not markup. The base groups are a const, but the rendered
-list is **computed from `userProfile`** via `buildNavSections` in
-`app/components/layout/AppLayout.tsx` (so role-gated groups can be appended):
+The left rail is data, not markup. The section registry, its item types, the
+destination, event-of-view, active-state and Live-tag rules live in
+`app/components/navigation/nav-items.ts` — a small pure module with no React, so
+it's tested without mounting anything. `AppLayout.tsx`
+imports from it and only renders:
 
 ```ts
-const BASE_NAV_SECTIONS: NavSection[] = [
+export const BASE_NAV_SECTIONS: NavSection[] = [
   { title: 'Main', items: [{ id: 'home', label: 'Home', icon: Home }, /* … */] },
   { title: 'UTBT.net', items: [{ id: 'maps', /* … */ }] },
   // …
 ]
 
-function buildNavSections(userProfile?: UserProfile): NavSection[] {
+export function buildNavSections(userProfile?: UserProfile): NavSection[] {
   if (!isStaff(userProfile)) return BASE_NAV_SECTIONS
   return [...BASE_NAV_SECTIONS, { title: 'Staff', items: [{ id: 'admin', label: 'Admin', icon: ShieldAlert }] }]
 }
-// in the component: const navSections = useMemo(() => buildNavSections(userProfile), [userProfile])
+// in AppLayout: const navSections = useMemo(() => buildNavSections(userProfile), [userProfile])
 ```
 
-Each `item.id` must match a `renderView` case; clicking calls
-`changeView(item.id)` — a thin wrapper that closes the mobile drawer and then
-calls `onViewChange` (`navigate`). Below the `lg` breakpoint the same sidebar
-`<aside>` renders as an off-canvas drawer behind a hamburger top bar (see
-`agents/web-target.md`, responsive-layout). To add a sidebar page: add the
-`renderView` case **and** a `navSections` item. (Settings is **not** a view — it's
-a modal opened from the user dropdown / the `open-settings` window event.)
+A `NavItem` is either a **plain item** (`id`, `label`, `icon`, nothing else) or
+carries one optional **event link**:
+
+```ts
+interface EventLink {
+  slug: string
+  fullName: string
+  liveUntil: CalendarDay
+}
+
+interface NavItem {
+  id: string
+  label: string
+  icon: ElementType
+  eventLink?: EventLink
+}
+```
+
+`slug` is the event's slug, `fullName` its real name (read to screen readers), and
+`liveUntil` the last day the Live tag shows, written `'YYYY-MM-DD'`
+(`CalendarDay`). There are no free-form `view` / `params` / `tag` fields: a
+sidebar item either opens its own page-view or links an event.
+`navItemDestination(item)` resolves
+`{ view, params }` (`NavDestination`): a plain item goes to its `id` with empty
+params; an event link goes to `event-detail` with `{ eventSlug: slug }`. The
+`cup-2v2-2026` item (`Main`, right after `achievements`, icon `Globe`) is the only
+event link today:
+
+```ts
+{ id: 'cup-2v2-2026', label: '2v2 Cup', icon: Globe,
+  eventLink: { slug: '2v2-cup-2026', fullName: '2v2 World Cup 2026', liveUntil: '2026-11-22' } }
+```
+
+Removing the link after the cup is deleting that one entry.
+
+**Live tag.** An event link shows the red `Live` status chip, the only thing in the
+row's right-aligned trailing slot (badges sit on the icon, see below), so the label
+area stays text only (see `agents/styling.md`, sidebar status tag and sidebar
+badges). `isEventLinkLive(eventLink, now)` decides whether it shows: through the
+whole `liveUntil` day **in the viewer's local time zone**, and hidden from local
+midnight at the start of the next day (it compares `now` against the local start
+of the day after `liveUntil`, so it never parses the day as a UTC instant).
+`AppLayout` passes `new Date()` on each render, so the tag drops on the next render
+after that midnight. Only the tag expires; the link itself stays until it is removed
+by hand. Labels never wrap: the label truncates, so keep it short enough to fit
+beside the tag in the 16rem rail (about 110px of label).
+
+**Accessible name.** An event link's name starts with the visible label and then
+adds the full name, so voice control can use the visible text and screen readers
+hear which event it opens (WCAG 2.5.3, label in name). `AppLayout` renders, in
+order: the visible `label`, a `sr-only` span with `fullName`, the `sr-only` badge
+details (see sidebar badges below), then the `Live` chip. The cup link reads
+"2v2 Cup 2v2 World Cup 2026 … Live".
+
+Every sidebar entry renders through `NavLink` with its resolved destination
+`view`/`params` (an anchor with the right href on web, a button on desktop; see
+Link semantics below). Activation calls `onViewChange(view, params)`, which
+`Main.tsx` wires straight to `navigate` — `AppLayout`'s `onViewChange` prop is
+`(view: string, params?: NavParams) => void`. Hover/focus prefetch
+(`prefetchPage`) also uses the destination view; `event-detail` is lazy-loaded by
+`renderView` itself and intentionally has no `PAGE_LOADERS` entry (the pinned
+loader-key list in `pageLoaders.test.ts` stays as the page-view set).
+
+**Which event a view belongs to** is one pure function, `eventSlugOfView(view,
+params): string | null`: `event-detail` and `match-pickban` belong to
+`params.eventSlug`; any other view, or an event view without a slug, belongs to
+none (`null`). Use it wherever a rule asks "is this view part of event X?" rather
+than re-listing the event views.
+
+**Active state** is one pure function, `isNavItemActive(item, currentView,
+currentParams)`:
+- a plain item is active when `currentView` equals its `id`;
+- an event link is active when `eventSlugOfView(currentView, currentParams)` is
+  its `slug` — so on the event page and on that event's match picks & bans pages.
+  `eventTab` is ignored, so switching tabs never flickers the highlight.
+
+`AppLayout` reads the current entry's params from `useNavigation()` (it already
+renders inside `NavigationContext.Provider`) and passes them to
+`isNavItemActive` for every item. `events` is a plain item, so it keeps today's
+behaviour: never highlighted on `event-detail`, consistent with Maps/Players/etc.
+
+Each `item.id` must be unique and, for a page-view item, match a `renderView`
+case; clicking calls `changeView(view, params)` — a thin wrapper that closes the
+mobile drawer and then calls `onViewChange`. Below the `lg` breakpoint the same
+sidebar `<aside>` renders as an off-canvas drawer behind a hamburger top bar (see
+`agents/web-target.md`, responsive-layout). To add a sidebar page with its own
+view: add the `renderView` case **and** a plain `nav-items.ts` item. To link an
+event instead, give the item an `eventLink` and skip the `renderView` case; the
+event page is the existing `event-detail` view. (Settings is **not** a view —
+it's a modal opened from the user dropdown / the `open-settings` window event.)
 
 The closed mobile drawer is marked `inert` so its hidden controls cannot receive
 focus or clicks. `AppLayout` listens to the same `1023px` media-query boundary as
@@ -346,9 +432,24 @@ navigation but are **not** navigation events:
   from the API at boot, on sign-in, and on window focus (so a visit on another
   device clears the pill here too). Counts are **server-computed against the
   account's seen markers**; a `null` count means "never visited" and renders no
-  pill. Signed-out users get no badges at all. `Main.tsx` renders the pills via
-  the `getNavBadge` prop it threads into `AppLayout` (AppLayout is
-  display-only here).
+  pill. Signed-out users get no badges at all. Badge resolution is one pure
+  function in `nav-items.ts`, `resolveNavBadge(destination, eventAttention,
+  allEventsAttention, newSinceVisitCounts)`; `Main.tsx`'s `getNavBadge` prop
+  threaded into `AppLayout` (AppLayout is display-only here) is a single call
+  to it. The contract stays keyed by **destination**, not item id:
+  `getNavBadge(view, params) => NavBadge | null`, where `NavBadge`
+  (`nav-items.ts`) is `{ count: number | null, live: boolean, details:
+  string[] }`. `AppLayout` calls it with each item's resolved `{ view, params }`
+  from `navItemDestination`, so two items that share a destination (an
+  event-detail link and the Events item) can still be told apart by
+  `params.eventSlug`. Badges sit on the item's icon rather than in the row:
+  `count` is a static accent bubble at the icon's top-right, and `live` is a
+  pulsing emerald dot at its bottom-right. The icon is wrapped in the shared
+  `Tooltip`, which lists `details` one per line (no native `title`). The same
+  lines go into a `sr-only` span after the label for screen readers (see
+  `agents/styling.md`, sidebar badges). A plain "new" pill comes from
+  `newSinceVisitBadge(count)`: `null` for no count, otherwise the count with
+  the single line "N new since your last visit".
 - **`markViewed(view, { highlight })`** — fired at the top of `navigate()`
   (before its same-view early-return, so re-clicking the active sidebar item
   still clears the pill) and from `pushExternal()` (web back/forward + deep
@@ -384,15 +485,38 @@ navigation but are **not** navigation events:
   time.
 
 **Not every `getNavBadge` count is a "new since last visit" pill.** The
-`events` item can also show a live "a proposal is waiting on your team"
-count that has no seen marker and is never cleared by `markViewed` — it
-disappears on its own once it stops being true. `Main.tsx` computes it
-separately from `badgeCounts` and, when it is nonzero, it wins over the
-ordinary new-events count on that one nav item; `AppLayout`'s
-`getNavBadgeTooltip: (view, count) => string` prop lets the tooltip say which
-one is actually showing. Full derivation (`fetchMySchedule` +
-`fetchMyTournaments`, `awaitingMyResponseCount`) is in `agents/data-sources.md`
-("Event scheduling") — this doc only owns the pill/tooltip rendering contract.
+`events` item can also show a "the cup needs you to act" to-do count across
+all events: times the opponent offered that your team must answer, matches
+your team can schedule that have no offer yet, and pending team invitations.
+Your own team's open picks & bans lobby is not counted. It shows as the green
+live dot instead, since it means "your match is starting" rather than a chore.
+Neither has a seen marker or is cleared by `markViewed`; each disappears on
+its own once it stops being true. `resolveNavBadge` builds this badge
+through `attentionNavBadge` (moved into `nav-items.ts` from the
+event-attention module, see `agents/data-sources.md`).
+Any to-dos win over the ordinary new-events count on the `events`
+destination. With none, the new-events count stays and the live dot can sit
+beside it.
+
+Any view that belongs to an event, through the same `eventSlugOfView` the
+active rule uses (`event-detail` and `match-pickban`), gets the same kind of
+badge, scoped to that one event: `resolveNavBadge` looks up the slug in the
+per-event attention map and returns that event's own count and dot (or
+`null` when it has neither), never the cross-event total. The `cup-2v2-2026`
+item is the only sidebar entry with an event link today, so it's the only
+badge of this kind a player sees; the `match-pickban` case matters only in
+that `resolveNavBadge` treats it the same as the active-highlight rule does.
+While the cup is the only live event, its badge and the Events pill show the
+same thing, but each is counted independently: a second live event would
+only add to the Events total, not to the cup's own badge. The tooltip lines
+spell out each part ("Propose a time for 1 match", "Join your open Picks &
+Bans lobby"), and the event page repeats the same to-dos as the "Needs your
+attention" panel above its tabs, each with its own button, so touch users (no
+hover) see what the number means too. Full derivation (`fetchMySchedule` +
+`fetchMyTournaments`, `eventTodos`, `openLobbySlugs`,
+`computeEventAttention`) is in `agents/data-sources.md` ("Event scheduling").
+This doc only owns the pill/dot/tooltip rendering contract and where
+`resolveNavBadge` lives.
 
 Because `markViewed()` lives inside `navigate()`, opening a badged page from
 **either** the sidebar **or** the Home tiles clears the "new" badge and fires the

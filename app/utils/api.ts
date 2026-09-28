@@ -4083,6 +4083,7 @@ export interface MyTournamentMembership {
     tournament: EventSummary
     team: EventTeam
     membership_status: EventMembershipStatus
+    pick_ban_session: MyPickBanSession | null
 }
 
 export async function fetchMyTournaments(accessToken: string, signal?: AbortSignal): Promise<MyTournamentMembership[]> {

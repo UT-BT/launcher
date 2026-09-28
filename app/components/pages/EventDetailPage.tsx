@@ -26,7 +26,6 @@ import { nextOwnMatch, opponentNameOf, sideOf, teamLabel } from './events/bracke
 import { EventRosterProvider } from './events/TeamRoster'
 import { MapsTab } from './events/maps/MapsTab'
 import { stagesWithPools } from './events/maps/mapsShared'
-import { PickBanJoinBanner } from './events/pickban/components/PickBanJoinBanner'
 import { PredictionsTab } from './events/predictions/PredictionsTab'
 import { PredictionOddsProvider, formatCountdown, useNow } from './events/predictions/predictionsShared'
 import { lockStartedMarkets, matchLockSignals, newlyLockedMatchIds } from './events/predictions/marketLock'
@@ -34,6 +33,8 @@ import { ScheduleTabContainer } from './events/schedule/ScheduleTabContainer'
 import { MyMatchesPanel } from './events/schedule/MyMatchesPanel'
 import type { PickBanDrafts } from './events/manage/pickban/pickBanEditor'
 import { SlotPickerModal } from './events/schedule/SlotPickerModal'
+import { EventTodoPanel } from './events/EventTodoPanel'
+import { eventTodos, scheduleTodoSummary, todoCountsByKind } from '@/app/utils/eventAttention'
 
 const PICK_BAN_ME_REFRESH_MS = 30_000
 
@@ -262,6 +263,7 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
         const match = bracket?.stages.flatMap(stage => stage.matches).find(candidate => candidate.id === pickBanMatchId)
         return opponentNameOf(match, myTeamId)
     }, [bracket, pickBanMatchId, myTeamId])
+    const todos = useMemo(() => eventTodos(schedule ?? [], myTeamId, my?.invitations ?? []), [schedule, myTeamId, my?.invitations])
     const mapsStages = useMemo(() => stagesWithPools(pickBanConfig), [pickBanConfig])
     const hasMapsPool = mapsStages.length > 0
 
@@ -307,7 +309,9 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
         .filter(t => t.id !== 'maps' || hasMapsPool)
         .filter(t => t.id !== 'predictions' || predictionsOn)
         .filter(t => t.id !== 'schedule' || scheduleVisible)
-    const scheduleAwaitingCount = (schedule ?? []).filter(e => !!myTeamId && !!e.proposal && e.whose_turn === myTeamId).length
+    const todoCounts = todoCountsByKind(todos)
+    const scheduleTodo = scheduleTodoSummary(todoCounts)
+    const scheduleTodoTitle = scheduleTodo.lines.join(' · ')
     const activeTab = (tab === 'manage' && !canManageBracket)
         || (tab === 'bracket' && !hasBracket)
         || (tab === 'maps' && !hasMapsPool)
@@ -336,15 +340,21 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
                     {!event.signups_open && event.status === 'announced' && signupOpens && <span className="text-sky-300">Signups open {signupOpens}</span>}
                 </div>
                 {error && <ErrorBanner message={error} />}
-                {my?.pick_ban_session && (
-                    <PickBanJoinBanner eventSlug={eventSlug} matchId={my.pick_ban_session.match_id} opponent={pickBanOpponent} />
-                )}
+                <EventTodoPanel
+                    eventSlug={eventSlug}
+                    todos={todos}
+                    pickBanSession={my?.pick_ban_session ?? null}
+                    pickBanOpponent={pickBanOpponent}
+                    myTeamId={myTeamId}
+                    onOpenScheduler={setSchedulerMatchId}
+                    onOpenInvitations={() => setTab('signup')}
+                />
                 {nextMatch && myTeamId && <NextMatchBanner match={nextMatch} myTeamId={myTeamId} now={now} />}
 
                 <div className="flex items-center gap-1 border-b border-white/10 overflow-x-auto">
                     {visibleTabs.map(t => {
-                        const inviteCount = t.id === 'signup' ? (my?.invitations?.length ?? 0) : 0
-                        const scheduleCount = t.id === 'schedule' ? scheduleAwaitingCount : 0
+                        const inviteCount = t.id === 'signup' ? todoCounts.invitations : 0
+                        const scheduleCount = t.id === 'schedule' ? scheduleTodo.count : 0
                         const badgeCount = inviteCount || scheduleCount
                         const signupCallout = t.id === 'signup' && event.signups_open && !my?.team
                         return (
@@ -363,7 +373,7 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
                                 {t.label}
                                 {badgeCount > 0 ? (
                                     <span
-                                        title={scheduleCount > 0 ? `${scheduleCount} match${scheduleCount === 1 ? '' : 'es'} waiting on your team to pick a time` : undefined}
+                                        title={scheduleCount > 0 ? scheduleTodoTitle : undefined}
                                         className="min-w-4 h-4 px-1 inline-flex items-center justify-center rounded-full bg-accent-500 text-[10px] font-bold text-white leading-none"
                                     >
                                         {badgeCount}
@@ -412,7 +422,7 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
                         participant={scheduleParticipant}
                         myScheduleLoaded={scheduleLoaded}
                         pickBanSessionOpen={!!my?.pick_ban_session}
-                        awaitingCount={scheduleAwaitingCount}
+                        awaitingCount={scheduleTodo.count}
                         bracket={bracket}
                         bracketLoading={!bracketLoaded}
                         eventSlug={eventSlug}

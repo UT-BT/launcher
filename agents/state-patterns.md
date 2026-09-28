@@ -18,7 +18,7 @@ not_here:
   - "the shared components used (FilterPresetsMenu, ColumnsMenu, Tutorial) → shared-components.md"
 sections: [controlled-pages-with-hoisted-state, navigation-history-per-entry-ui-state, account-synced-state, localstorage-persistence, filter-presets, tutorial-state, favorites, polling-live-data, naming-conventions]
 last_verified: 2026-09-28
-verify_against: [app/components/main/Main.tsx, app/components/navigation/useNavState.ts, app/hooks/useAsync.ts, app/utils/userState.ts, app/utils/poller.ts, app/components/pages/events/pickban/pickBanSession.ts, app/components/pages/events/pickban/usePickBanSession.ts, app/components/pages/events/pickban/mergePickBanState.ts, app/components/pages/events/pickban/captainPlay.ts, app/components/pages/events/pickban/useCaptainPlay.ts, app/components/pages/events/pickban/managerDock.ts, app/components/pages/events/pickban/useManagerDock.ts, app/components/pages/events/pickban/editFinal.ts, app/components/pages/events/pickban/pickBanMotionPreference.ts, app/components/pages/events/pickban/pickBanSoundPreference.ts, app/components/pages/MatchPickBanPage.tsx]
+verify_against: [app/components/main/Main.tsx, app/components/navigation/useNavState.ts, app/hooks/useAsync.ts, app/utils/userState.ts, app/utils/poller.ts, app/components/pages/events/pickban/pickBanSession.ts, app/components/pages/events/pickban/usePickBanSession.ts, app/components/pages/events/pickban/mergePickBanState.ts, app/components/pages/events/pickban/captainPlay.ts, app/components/pages/events/pickban/useCaptainPlay.ts, app/components/pages/events/pickban/managerDock.ts, app/components/pages/events/pickban/useManagerDock.ts, app/components/pages/events/pickban/editFinal.ts, app/components/pages/events/pickban/pickBanMotionPreference.ts, app/components/pages/events/pickban/pickBanSoundPreference.ts, app/components/pages/MatchPickBanPage.tsx, app/components/navigation/nav-items.ts, app/utils/eventAttention.ts]
 ---
 
 # State patterns
@@ -201,6 +201,20 @@ Rules:
   a badge and advances the marker. Signed-out users get no badges. See
   `agents/navigation.md` (sidebar-new-badges) and `agents/data-sources.md` for
   the endpoints.
+  The Events badge is an exception. When the per-event to-do total (time
+  offers my team must answer, schedulable matches with no offer yet, pending
+  team invitations) is above zero, it overrides the seen-marker count. It has
+  no "mark as seen" step and clears on its own once the underlying condition
+  is gone. My team's open picks & bans lobby is not counted. It shows as a
+  separate green live dot with the same no-seen-marker rule. The cup link,
+  whose destination is its event's detail page, gets the same kind of badge,
+  scoped to just that event's own slug and also with no seen marker; badge
+  resolution — including this rule — is one
+  pure function in `app/components/navigation/nav-items.ts`, not state kept
+  here. Visiting the cup page never clears the Events "new events" count. None
+  of this is in this store either — `Main.tsx` holds the underlying attention
+  data as in-memory state, refreshed by the shell's attention poll (see
+  polling-live-data). See `agents/data-sources.md` for the derivation.
 
 ## localStorage persistence
 
@@ -371,9 +385,10 @@ retired and no longer whitelisted.
 ## Polling live data
 
 Some screens have to follow server state closely: the pick/ban page and its stream view.
-They poll on an interval instead of fetching once on mount. This is a data tier, not UI
-state. Nothing in it is persisted, and the data lives only while the page that polls it
-is mounted.
+The shell polls the signed-in player's event attention the same way, to drive the cup
+link and Events badges. They poll on an interval instead of fetching once on mount. This
+is a data tier, not UI state. Nothing in it is persisted, and the data lives only while
+the page (or the shell) that polls it is mounted.
 
 **`createPoller` (`app/utils/poller.ts`) is the reusable scheduler.** It takes
 `poll(signal)`, `intervalMs()` (read again after every attempt, so the cadence can follow

@@ -146,7 +146,7 @@ export function FavoriteServersCard({
                             {mapName}
                         </div>
                         <Tooltip content={region} side="top" className="shrink-0 justify-center">
-                            <div className="flex w-9 flex-col items-center justify-center gap-1">
+                            <span className="flex w-9 flex-col items-center justify-center gap-1">
                                 {capabilities.ping && (
                                     <span className={cn('text-[10px] font-bold leading-none tabular-nums', pingColor)}>
                                         {ping ? `${ping}ms` : '...'}
@@ -161,7 +161,7 @@ export function FavoriteServersCard({
                                     decoding="async"
                                     className="h-4 w-6 object-cover rounded-[2px] border border-hairline/10"
                                 />
-                            </div>
+                            </span>
                         </Tooltip>
                         <div className={cn('w-10 shrink-0 text-center text-xs font-bold tabular-nums', playerTone)}>
                             {server.player_count}/{server.max_players}

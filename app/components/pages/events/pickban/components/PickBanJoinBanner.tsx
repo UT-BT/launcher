@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils'
+import { LiveDot } from '@/app/components/shared/LiveDot'
 import { PickBanLink } from './PickBanLink'
 
 export function PickBanJoinBanner({ eventSlug, matchId, opponent, className }: {
@@ -16,10 +17,7 @@ export function PickBanJoinBanner({ eventSlug, matchId, opponent, className }: {
                 className,
             )}
         >
-            <span className="relative flex size-2 shrink-0">
-                <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 animate-ping" />
-                <span className="relative inline-flex size-2 rounded-full bg-emerald-400" />
-            </span>
+            <LiveDot />
             <span className="text-foreground font-medium">
                 {opponent ? `Picks & Bans against ${opponent} are live now.` : 'Picks & Bans are live now.'}
             </span>

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import type { EventMatch, EventSummary, EventTeam, MyTournamentMembership, ScheduleEntry, ScheduleProposal } from '@/app/utils/api'
+import type { EventMatch, ScheduleEntry, ScheduleProposal } from '@/app/utils/api'
 import {
-    awaitingMyResponseCount, formatSlotTime, myTeamIdsByTournament, proposerName, schedulabilityReason, whoseTurnLabel,
+    formatSlotTime, proposerName, schedulabilityReason, whoseTurnLabel,
 } from './scheduleShared'
 
 const TEAM_A = { id: 'team-a', name: 'Alpha', seed: 1, status: 'registered' as const }
@@ -96,66 +96,5 @@ describe('whoseTurnLabel', () => {
 
     it('names the team by side for a manager with no team in the event', () => {
         expect(whoseTurnLabel(entry({ whose_turn: TEAM_B.id }), null)).toBe('Waiting on Bravo')
-    })
-})
-
-function tournamentSummary(patch: Partial<EventSummary> = {}): EventSummary {
-    return {
-        id: 't1', slug: '2v2-cup', name: '2v2 Cup', summary: null, team_size: 2, bracket_type: null,
-        status: 'active', signups_open: false, signup_opens_at: null, signup_closes_at: null,
-        starts_at: null, ends_at: null, max_teams: null, team_count: 0, registered_team_count: 0,
-        created_at: null,
-        ...patch,
-    }
-}
-
-function myTeam(patch: Partial<EventTeam> = {}): EventTeam {
-    return {
-        id: TEAM_A.id, tournament_id: 't1', name: TEAM_A.name, captain: '1', status: 'registered',
-        division: null, seed: 1, member_count: 2, members: [], created_at: null,
-        ...patch,
-    }
-}
-
-function membership(patch: Partial<MyTournamentMembership> = {}): MyTournamentMembership {
-    return {
-        tournament: tournamentSummary(),
-        team: myTeam(),
-        membership_status: 'active',
-        ...patch,
-    }
-}
-
-describe('myTeamIdsByTournament', () => {
-    it('maps a tournament slug to the active team id', () => {
-        const map = myTeamIdsByTournament([membership()])
-        expect(map.get('2v2-cup')).toBe(TEAM_A.id)
-    })
-
-    it('ignores a membership that is only invited, not active', () => {
-        const map = myTeamIdsByTournament([membership({ membership_status: 'invited' })])
-        expect(map.has('2v2-cup')).toBe(false)
-    })
-})
-
-describe('awaitingMyResponseCount', () => {
-    it('counts a match where my own team is the one the proposal is waiting on', () => {
-        const count = awaitingMyResponseCount([entry({ whose_turn: TEAM_A.id })], [membership()])
-        expect(count).toBe(1)
-    })
-
-    it('does not count a match waiting on the opponent', () => {
-        const count = awaitingMyResponseCount([entry({ whose_turn: TEAM_B.id })], [membership()])
-        expect(count).toBe(0)
-    })
-
-    it('does not count a match with no open proposal', () => {
-        const count = awaitingMyResponseCount([entry({ whose_turn: TEAM_A.id, proposal: null })], [membership()])
-        expect(count).toBe(0)
-    })
-
-    it('does not count an event I have no active membership in', () => {
-        const count = awaitingMyResponseCount([entry({ whose_turn: TEAM_A.id })], [])
-        expect(count).toBe(0)
     })
 })

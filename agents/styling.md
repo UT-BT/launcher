@@ -10,8 +10,8 @@ not_here:
   - "which component to use → shared-components.md"
   - "state / persistence → state-patterns.md"
 sections: [class-merging, tables-locked, responsive-columns, page-layout, filter-panel, buttons-toggle-states, form-inputs, card-backgrounds-borders, text, color-palette, animation, css-runtime-cost, donts]
-last_verified: 2026-09-25
-verify_against: [app/components/shared/DataTable.tsx, app/styles/globals.css, app/styles/desktop.css, app/styles/index.css, lib/utils.ts, app/hooks/useElementWidth.ts, app/hooks/usePrefersReducedMotion.ts]
+last_verified: 2026-09-28
+verify_against: [app/components/shared/DataTable.tsx, app/components/shared/LiveDot.tsx, app/components/shared/chipStyles.ts, app/styles/globals.css, app/styles/desktop.css, app/styles/index.css, lib/utils.ts, app/hooks/useElementWidth.ts, app/hooks/usePrefersReducedMotion.ts]
 ---
 
 # Styling reference
@@ -206,6 +206,47 @@ Secondary action (muted):
 "w-full h-9 bg-card/50 border border-white/10 text-muted-foreground hover:text-white hover:bg-card/80 hover:border-white/20 transition-colors rounded-lg font-medium"
 ```
 
+### Sidebar status tag
+
+A sidebar event link (a `NavItem` `eventLink`, e.g. the cup) gets the events `Live`
+chip while it is live: through its `liveUntil` day in the viewer's local time, gone
+from the next local midnight (`isEventLinkLive`, see `agents/navigation.md`, the
+sidebar registry). The chip sits alone in the row's right-aligned trailing slot,
+never inside the label text, and never a row background, left bar or accent colour,
+so it can't be mistaken for the active item. It stays static so it never competes
+with the live dot.
+The chip comes from `app/components/shared/chipStyles.ts`: `CHIP_SHAPE` is the shape
+`EventStatusBadge` and the bracket `Chip` use, and `LIVE_CHIP_STYLE` is the live-match
+colouring (`MATCH_STATUS_STYLES.live`). Compose them, never re-type the classes:
+```
+cn('relative z-10 ml-auto shrink-0', CHIP_SHAPE, LIVE_CHIP_STYLE)
+```
+
+### Sidebar badges
+
+Sidebar badges sit on the item's icon, never in the row, so they can't squeeze the
+label or the status tag in the 16rem rail. The icon-to-label gap is `gap-4` to leave
+room for them.
+- **Count bubble**: top-right of the icon, static, accent, with a `ring-card` cutout.
+  It shows at most `99+` and grows leftwards over the icon, never into the label.
+  ```
+  "absolute -top-1.5 -right-1.5 inline-flex items-center justify-center min-w-4 h-4 px-1 rounded-full bg-accent-500 text-white text-[10px] font-black leading-none tabular-nums ring-2 ring-card shadow-[0_0_8px_rgb(var(--accent-glow-rgb)/0.5)]"
+  ```
+- **Live dot**: `<LiveDot>` (`app/components/shared/LiveDot.tsx`), the pulsing emerald
+  `size-2.5` dot, at the icon's bottom-right. The sidebar adds its position and
+  `ring-card` cutout through `className`:
+  ```
+  "absolute -bottom-1 -right-1 ring-2 ring-card"
+  ```
+  It is the rail's only *kind* of pinging mark, for something happening right now (an
+  open picks & bans lobby), and it can show on more than one item at once: while a
+  lobby is open, the event link and Events both carry it. The event page's "Needs your
+  attention" lobby row and the Schedule tab's picks & bans Join banner render the same
+  component, so all three read as one signal.
+
+Both marks are `aria-hidden`. Their meaning goes into a `sr-only` span after the
+label, and into the shared `Tooltip` on the icon, one line per detail.
+
 ### Action chips inside table rows (Join, Spec, etc.)
 
 ```tsx
@@ -277,7 +318,7 @@ ALWAYS set `style={{ colorScheme: 'dark' }}` so Chromium renders dark form chrom
 | Layer | Background | Border |
 |---|---|---|
 | Page surface | `bg-background` (root) | — |
-| Card (filter panel, scroll container) | `bg-card/30` | `border border-white/5` (or `/10` for stronger) |
+| Card (filter panel, scroll container, event to-do panel) | `bg-card/30` | `border border-white/5` (or `/10` for stronger) |
 | Card hover state | `bg-card/80` | `border-white/20` |
 | Inline chip / badge | `bg-white/5` | `border border-white/5` |
 | Sticky thead | `bg-card/95 backdrop-blur` | — |
@@ -290,7 +331,7 @@ Standard radii: `rounded-xl` for big containers, `rounded-lg` for buttons / inpu
 | Use | Class |
 |---|---|
 | Page title | `text-2xl font-bold text-white leading-tight` |
-| Section label (small caps) | `text-[10px] uppercase tracking-wider text-muted-foreground` |
+| Section label (small caps, e.g. the event to-do panel heading) | `text-[10px] uppercase tracking-wider text-muted-foreground` |
 | Table header | `text-xs uppercase tracking-wider font-medium text-muted-foreground` |
 | Body | `text-sm` |
 | Subtitle / hint | `text-xs text-muted-foreground` |

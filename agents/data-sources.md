@@ -10,7 +10,7 @@ read_when:
   - "finding a pick/ban session from the bracket, a match card, the event page or the Schedule tab without a direct link"
   - "assigning a streamer to a match, or showing a streamer their assigned matches"
   - "deciding whether a prediction market still takes bets once its match's pick/ban has started"
-keywords: [api.ts, fetch, endpoint, accessToken, avatar, MapThumbnail, favorites, patreon, downloadMapZip, world_records, caps, predictions, draw, odds, schedule, proposal, slot, whose_turn, resolved_window, countdown, nav badge, fetchMyTournaments, SlotPickerModal, SlotGrid, DateTimeField, slotGeneration, proposeMatchSlots, withdrawMatchProposal, acceptMatchProposal, fetchMatchSchedule, ApiError, expected_match_duration_minutes, fetchPickBanConfig, PickBanConfig, PickBanPoolMap, MapsTab, mapsShared, stagesWithPools, tagBadgeVariant, pick/ban, fetchPickBanState, ETag, If-None-Match, 304, X-Server-Now, server_now, clock offset, reveal_at, sendPickBanCommand, sendPickBanManagerCommand, hover, selection_preview, pickBanErrorCode, captain controls, CaptainDock, useCaptainPlay, fetchPickBanQueue, PickBanQueueEntry, PickBanQueueRow, toQueueRow, canOpenLobby, blockingReasonLabel, PickBanQueuePanel, pickBanStatusBadge, statusOfPhase, buildPickBanView, setPickBanStageConfig, setPickBanStagePool, copyPickBanStagePool, pickBanEditor, stage pool, buildMatchLinks, matchStreamPath, createPoller, pick_ban_status, MatchPickBanStatus, pickBanCardAffordance, PickBanCardPill, pickBanMapLabel, MyPickBanSession, pick_ban_session, PickBanLink, PickBanJoinBanner, pickBanEntryPoints, Join banner, scene, sceneDirection, playsEntrance, entranceMsFor, introStartsAt, usePickBanPreload, usePickBanSound, cuesToPlay, pickBanSoundCues, pickBanSoundPlayer, PickBanSoundCueKind, pickBanSounds, SOUND_HIT_MS, soundScheduleAt, STALE_HIT_MS, pickBanBeats, intro cue, sound=0, SOUND_URLS, volume, setVolume, masterGainOf, preview, pickBanSoundPreference, streamSoundOf, CREDITS.md, manager dock, ManagerDock, useManagerDock, managerDockOf, hand-over, act for team, Reopen, edit-final, PickBanEditFinalEntry, Edit final, fetchMyEventMatches, MyMatchEntry, is_streamer, EventStreamer, fetchEventStreamers, setMatchStreamer, streamer, StreamerPicker, withQueueStreamer, streamerChoices, scheduleSections, pickBanCallToAction, matchTimeLabel, marketLock, marketTakesPredictions, lockStartedMarkets, matchLockSignals, newlyLockedMatchIds, streamerName, public schedule, All Matches, My Matches, scheduleView, MyMatchesPanel, ScheduleTabContainer, PublicSchedulePanel, publicSchedule, isScheduleParticipant, hasPublishedStages, scheduleTabVisible, autoScheduleView, ScheduleView, pickBanAction, scheduledRows, bucketByStatus, groupByDay, rowTimeLabel, nextUp, unscheduledCount, Yesterday, zonedDayKey, ScheduleSection, TeamPair, ScheduleLoading, schedulePlayedOpen, pollOnStart]
+keywords: [api.ts, fetch, endpoint, accessToken, avatar, MapThumbnail, favorites, patreon, downloadMapZip, world_records, caps, predictions, draw, odds, schedule, proposal, slot, whose_turn, resolved_window, countdown, nav badge, fetchMyTournaments, SlotPickerModal, SlotGrid, DateTimeField, slotGeneration, proposeMatchSlots, withdrawMatchProposal, acceptMatchProposal, fetchMatchSchedule, ApiError, expected_match_duration_minutes, fetchPickBanConfig, PickBanConfig, PickBanPoolMap, MapsTab, mapsShared, stagesWithPools, tagBadgeVariant, pick/ban, fetchPickBanState, ETag, If-None-Match, 304, X-Server-Now, server_now, clock offset, reveal_at, sendPickBanCommand, sendPickBanManagerCommand, hover, selection_preview, pickBanErrorCode, captain controls, CaptainDock, useCaptainPlay, fetchPickBanQueue, PickBanQueueEntry, PickBanQueueRow, toQueueRow, canOpenLobby, blockingReasonLabel, PickBanQueuePanel, pickBanStatusBadge, statusOfPhase, buildPickBanView, setPickBanStageConfig, setPickBanStagePool, copyPickBanStagePool, pickBanEditor, stage pool, buildMatchLinks, matchStreamPath, createPoller, pick_ban_status, MatchPickBanStatus, pickBanCardAffordance, PickBanCardPill, pickBanMapLabel, MyPickBanSession, pick_ban_session, PickBanLink, PickBanJoinBanner, pickBanEntryPoints, Join banner, scene, sceneDirection, playsEntrance, entranceMsFor, introStartsAt, usePickBanPreload, usePickBanSound, cuesToPlay, pickBanSoundCues, pickBanSoundPlayer, PickBanSoundCueKind, pickBanSounds, SOUND_HIT_MS, soundScheduleAt, STALE_HIT_MS, pickBanBeats, intro cue, sound=0, SOUND_URLS, volume, setVolume, masterGainOf, preview, pickBanSoundPreference, streamSoundOf, CREDITS.md, manager dock, ManagerDock, useManagerDock, managerDockOf, hand-over, act for team, Reopen, edit-final, PickBanEditFinalEntry, Edit final, fetchMyEventMatches, MyMatchEntry, is_streamer, EventStreamer, fetchEventStreamers, setMatchStreamer, streamer, StreamerPicker, withQueueStreamer, streamerChoices, scheduleSections, pickBanCallToAction, matchTimeLabel, marketLock, marketTakesPredictions, lockStartedMarkets, matchLockSignals, newlyLockedMatchIds, streamerName, public schedule, All Matches, My Matches, scheduleView, MyMatchesPanel, ScheduleTabContainer, PublicSchedulePanel, publicSchedule, isScheduleParticipant, hasPublishedStages, scheduleTabVisible, autoScheduleView, ScheduleView, pickBanAction, scheduledRows, bucketByStatus, groupByDay, rowTimeLabel, nextUp, unscheduledCount, Yesterday, zonedDayKey, ScheduleSection, TeamPair, ScheduleLoading, schedulePlayedOpen, pollOnStart, eventAttention, eventTodos, EventTodo, TodoCounts, ScheduleTodoSummary, computeEventAttention, EventAttentionMap, eventAttentionCount, combinedEventAttention, eventAttentionLines, attentionNavBadge, resolveNavBadge, NavBadge, newSinceVisitBadge, EventTodoPanel, Needs your attention, fetchMyEventStatus, offersToAnswer, matchesToSchedule, todoCountsByKind, scheduleTodoSummary, myTeamIdsByTournament, openLobbySlugs]
 provides: "the client-side API contract the launcher consumes + asset URLs + favorites/patreon sync models"
 not_here:
   - "IPC channels (window.conveyor.*) → lib/conveyor/README.md"
@@ -18,7 +18,7 @@ not_here:
   - "the procedure to wire a new endpoint into the UI → skill: consume-api-data"
 sections: [backend-api, errors, admin-api, event-brackets, event-scheduling, event-predictions, public-maps-tab-pick-ban-pools, event-pickban-sessions, event-pick-ban-setup, changing-a-map-screenshot, cap-detail-page-endpoints, world-records-page-endpoints, team-maps-and-team-runs, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites, account-state-and-badges]
 last_verified: 2026-09-28
-verify_against: [app/utils/api.ts, app/utils/chartBuckets.ts, app/components/pages/admin/components/controls.tsx, app/components/pages/admin/sections/HostsManagementSection.tsx, app/utils/patreon.ts, app/utils/server-utils.ts, app/hooks/useServerFavorites.ts, app/components/pages/events/manage/formatFields.tsx, app/components/pages/events/bracket/bracketShared.tsx, app/components/pages/events/bracket/BracketTab.tsx, app/components/pages/events/bracket/GroupStageView.tsx, app/components/pages/events/bracket/SwissStageView.tsx, app/components/pages/events/bracket/ElimStageView.tsx, app/components/pages/events/predictions/predictionsShared.tsx, app/components/pages/events/predictions/PredictionsTab.tsx, app/components/pages/events/schedule/scheduleShared.tsx, app/components/pages/events/schedule/scheduleSections.ts, app/components/pages/events/schedule/MyMatchesPanel.tsx, app/components/pages/events/schedule/ScheduleTabContainer.tsx, app/components/pages/events/schedule/PublicSchedulePanel.tsx, app/components/pages/events/schedule/publicSchedule.ts, app/components/pages/events/predictions/marketLock.ts, app/components/pages/events/predictions/MarketCard.tsx, app/components/pages/home/ClosingSoonBanner.tsx, app/components/pages/events/schedule/SlotPickerModal.tsx, app/components/pages/events/schedule/slotGeneration.ts, app/components/pages/events/schedule/SlotGrid.tsx, app/components/pages/events/manage/DateTimeField.tsx, app/components/pages/events/eventsShared.tsx, app/components/pages/EventDetailPage.tsx, app/utils/timezone.ts, app/components/pages/events/manage/ScheduleOversightPanel.tsx, app/components/pages/events/ManagePanel.tsx, app/components/main/Main.tsx, app/components/layout/AppLayout.tsx, app/components/pages/events/maps/MapsTab.tsx, app/components/pages/events/maps/mapsShared.ts, app/components/pages/events/pickban/pickBanView.ts, app/components/pages/events/pickban/pickBanStatus.ts, app/components/pages/events/pickban/pickBanSession.ts, app/components/pages/events/pickban/pickBanEntryPoints.ts, app/components/pages/events/pickban/components/PickBanLink.tsx, app/components/pages/events/pickban/components/PickBanJoinBanner.tsx, app/components/pages/events/pickban/clockOffset.ts, app/components/pages/events/manage/pickban/pickBanEditor.ts, app/components/pages/events/manage/pickban/PickBanPanel.tsx, app/components/pages/events/manage/pickban/PickBanStageCard.tsx, app/components/pages/events/manage/pickban/PickBanQueuePanel.tsx, app/components/pages/events/manage/pickban/pickBanQueue.ts, app/components/pages/events/pickBanTags.ts, app/components/navigation/matchLinks.ts, app/utils/poller.ts, app/components/pages/events/pickban/stream/StreamView.tsx, app/components/pages/events/pickban/pickBanCopy.ts, app/components/pages/events/pickban/components/PickBanUnavailable.tsx, app/components/pages/events/pickban/pickBanSoundCues.ts, app/components/pages/events/pickban/pickBanSoundPlayer.ts, app/components/pages/events/pickban/usePickBanSound.ts, app/components/pages/events/pickban/pickBanSounds.ts, app/components/pages/events/pickban/pickBanBeats.ts, app/components/pages/MatchPickBanPage.tsx, app/components/pages/events/pickban/managerDock.ts, app/components/pages/events/pickban/pickBanSoundPreference.ts, app/components/pages/events/pickban/stream/streamSound.ts]
+verify_against: [app/utils/api.ts, app/utils/chartBuckets.ts, app/components/pages/admin/components/controls.tsx, app/components/pages/admin/sections/HostsManagementSection.tsx, app/utils/patreon.ts, app/utils/server-utils.ts, app/hooks/useServerFavorites.ts, app/components/pages/events/manage/formatFields.tsx, app/components/pages/events/bracket/bracketShared.tsx, app/components/pages/events/bracket/BracketTab.tsx, app/components/pages/events/bracket/GroupStageView.tsx, app/components/pages/events/bracket/SwissStageView.tsx, app/components/pages/events/bracket/ElimStageView.tsx, app/components/pages/events/predictions/predictionsShared.tsx, app/components/pages/events/predictions/PredictionsTab.tsx, app/components/pages/events/schedule/scheduleShared.tsx, app/components/pages/events/schedule/scheduleSections.ts, app/components/pages/events/schedule/MyMatchesPanel.tsx, app/components/pages/events/schedule/ScheduleTabContainer.tsx, app/components/pages/events/schedule/PublicSchedulePanel.tsx, app/components/pages/events/schedule/publicSchedule.ts, app/components/pages/events/predictions/marketLock.ts, app/components/pages/events/predictions/MarketCard.tsx, app/components/pages/home/ClosingSoonBanner.tsx, app/components/pages/events/schedule/SlotPickerModal.tsx, app/components/pages/events/schedule/slotGeneration.ts, app/components/pages/events/schedule/SlotGrid.tsx, app/components/pages/events/manage/DateTimeField.tsx, app/components/pages/events/eventsShared.tsx, app/components/pages/EventDetailPage.tsx, app/utils/timezone.ts, app/components/pages/events/manage/ScheduleOversightPanel.tsx, app/components/pages/events/ManagePanel.tsx, app/components/main/Main.tsx, app/components/layout/AppLayout.tsx, app/components/pages/events/maps/MapsTab.tsx, app/components/pages/events/maps/mapsShared.ts, app/components/pages/events/pickban/pickBanView.ts, app/components/pages/events/pickban/pickBanStatus.ts, app/components/pages/events/pickban/pickBanSession.ts, app/components/pages/events/pickban/pickBanEntryPoints.ts, app/components/pages/events/pickban/components/PickBanLink.tsx, app/components/pages/events/pickban/components/PickBanJoinBanner.tsx, app/components/pages/events/pickban/clockOffset.ts, app/components/pages/events/manage/pickban/pickBanEditor.ts, app/components/pages/events/manage/pickban/PickBanPanel.tsx, app/components/pages/events/manage/pickban/PickBanStageCard.tsx, app/components/pages/events/manage/pickban/PickBanQueuePanel.tsx, app/components/pages/events/manage/pickban/pickBanQueue.ts, app/components/pages/events/pickBanTags.ts, app/components/navigation/matchLinks.ts, app/utils/poller.ts, app/components/pages/events/pickban/stream/StreamView.tsx, app/components/pages/events/pickban/pickBanCopy.ts, app/components/pages/events/pickban/components/PickBanUnavailable.tsx, app/components/pages/events/pickban/pickBanSoundCues.ts, app/components/pages/events/pickban/pickBanSoundPlayer.ts, app/components/pages/events/pickban/usePickBanSound.ts, app/components/pages/events/pickban/pickBanSounds.ts, app/components/pages/events/pickban/pickBanBeats.ts, app/components/pages/MatchPickBanPage.tsx, app/components/pages/events/pickban/managerDock.ts, app/components/pages/events/pickban/pickBanSoundPreference.ts, app/components/pages/events/pickban/stream/streamSound.ts, app/utils/eventAttention.ts, app/components/navigation/nav-items.ts, app/components/pages/events/EventTodoPanel.tsx]
 ---
 
 # Data sources
@@ -60,7 +60,7 @@ full loop).
 | Account state / badges | `fetchUserState` / `mergeUserState` (per-account preference blob keyed by the `utbt:*` storage names, shallow-merged per key; consumed only by `app/utils/userState.ts` — see `agents/state-patterns.md`), `fetchNavBadges` (per-section "new since my last visit" counts + seen markers; `count: null` = never visited = no badge), `markSectionSeen(token, section, seenAtIso?)` (advances one marker; omitted stamp = server now). All require a real bearer — signed-out users have no account state and no badges. |
 | Profile | `UserProfile` type (incl. `team` clan-tag summary), `getAvatarUrl(userId)`, `toActiveTitle` |
 | Teams | `createTeam`, `fetchTeams`, `fetchTeam`, `updateTeam`, `disbandTeam`, `transferTeamOwnership`, `fetchTeamMembers`, `inviteToTeam`, `joinTeam`, `acceptTeamInvite`, `declineTeamInvite`, `leaveTeam`, `denyTeamMember`, `unblockTeamMember`, `kickTeamMember` (optional `block`), `setTeamMemberRole`, `setTeamMemberNumber`, `fetchTeamActivity`, `fetchTeamAudit`, `fetchLineups`, `createLineup`, `updateLineup`, `deleteLineup`, `fetchMyTeam`, `setMyTagHidden`, `fetchMyInvitations`, `uploadTeamAvatar`, `deleteTeamAvatar`, `teamAvatarUrl` (clans + lineups; mutations return the fresh `TeamDetail`; validation failures surface the server's message — see [Errors](#errors)). `fetchTeams` rows carry a `stats` block (`caps`, `world_records`, `playtime_seconds`, `spectator_seconds`, plus `ranks` per metric) totalled over the team's active members, and `sort` accepts those three metrics on top of `added`/`name`/`members`; pass `limit: 0` for the whole directory (the gallery is unpaginated). Ranks are **directory-wide** — searching or filtering never renumbers them — and `ranked_teams` is the "of N". Ties share a rank. A team on zero for a metric still comes back ranked; the UI drops the chip rather than showing a meaningless placing. Rows also carry `owner_alias` + `owner_title`, so render the owner straight from the directory row — never fan out a profile request per card. `fetchTeamActivity` returns the same totals and ranks for one team alongside its feed. |
-| Events | `fetchEvents`, `fetchEvent`, `fetchEventTeams`, `fetchEventLfp`, `fetchMyEventStatus`, `fetchMyTournaments` (→ `/me/tournaments`, every tournament the caller has a team membership in, each row `{tournament, team, membership_status}` — the cross-event "which team is mine, per event" lookup `fetchMySchedule` entries don't carry themselves), `createEventTeam`, `inviteEventPartner`, `acceptEventInvite`, `declineEventInvite`, `updateEventTeam`, `deleteEventTeam`, `joinEventLfp`, `leaveEventLfp`, `setEventVolunteer`, `deleteEventVolunteer` (cup signups; an event is addressed by its `slug`) |
+| Events | `fetchEvents`, `fetchEvent`, `fetchEventTeams`, `fetchEventLfp`, `fetchMyEventStatus`, `fetchMyTournaments` (→ `/me/tournaments`, every tournament the caller has a team membership in, each row `{tournament, team, membership_status, pick_ban_session}`, where `pick_ban_session` is the same `MyPickBanSession | null` as on the event `me` payload — the cross-event "which team is mine, per event" lookup `fetchMySchedule` entries don't carry themselves), `createEventTeam`, `inviteEventPartner`, `acceptEventInvite`, `declineEventInvite`, `updateEventTeam`, `deleteEventTeam`, `joinEventLfp`, `leaveEventLfp`, `setEventVolunteer`, `deleteEventVolunteer` (cup signups; an event is addressed by its `slug`) |
 | Event scheduling | `fetchMySchedule`, `fetchMyEventMatches`, manager-only: `fetchEventScheduleOversight`, `fetchEventAuditLog`, `fetchEventStreamers`, `setMatchStreamer` (→ [Event scheduling](#event-scheduling)) |
 | Event pick/ban setup | `fetchPickBanConfig`; manager-only: `setPickBanStageConfig`, `setPickBanStagePool`, `copyPickBanStagePool` (→ [Event pick/ban setup](#event-pickban-setup)) |
 | Event brackets | `fetchEventBracket`, `fetchEventMatch` (→ [Event brackets](#event-brackets)); manager-only: `fetchEventFormats`, `setEventBracketPublished`, `setEventFormat`, `updateEventFormatSpec`, `setEventSeeds`, `updateEventStage`, `generateEventStage`, `generateEventRound`, `resetEventStage`, `updateEventGroup`, `createEventMatch`, `updateEventMatch`, `deleteEventMatch`, `setEventMatchResult`, `clearEventMatchResult`, `fetchEventCapCandidates`, `linkEventMatchMapCaps`; staff-only: `createEventFormat`, `updateEventFormat`, `deleteEventFormat`, `fetchEventFormat` |
@@ -181,9 +181,11 @@ show next to the map name.
 default so it never also fires an enclosing card's own click handler (the
 match card's own `onClick` opens the scheduler). `PickBanCardPill` and
 `PickBanJoinBanner` (`events/pickban/components/PickBanJoinBanner.tsx`) both
-build on it — the banner is the shared "Picks & Bans against <opponent> are live now." pill (a small
-pulsing dot plus the label, naming the opponent when the match is known), used identically on the event page and on any
-`MyMatchesPanel` card whose match has an open session. Every My Matches card
+build on it — the banner is the shared "Picks & Bans against <opponent> are live now." pill (the
+shared `LiveDot` plus the label, naming the opponent when the match is known), used on any
+`MyMatchesPanel` card whose match has an open session. At the top of the event page the viewer's own
+session is a row of the "Needs your attention" panel instead (`EventTodoPanel`, see "Event
+scheduling"), whose Join lobby / Open Picks & Bans button is a `PickBanLink` too. Every My Matches card
 carries a pick/ban entry point: `pickBanCallToAction(match, session)`
 (`schedule/scheduleSections.ts`, pure) reads the match's `pick_ban_status`,
 or the viewer's own `pick_ban_session` when it is for that match since that
@@ -198,16 +200,17 @@ active team's open or running session, `null` the moment it has none, is
 complete, or is cancelled/voided. `EventDetailPage` keeps a `createPoller`
 instance (see "Polling live data" in `agents/state-patterns.md`) polling
 `fetchMyEventStatus` every 30 seconds, independent of the page's manual
-refresh, so a captain who is not looking at the page still gets the Join
-banner within half a minute of a lobby opening; being a `createPoller`
+refresh, so a captain who is not looking at the page still gets the lobby
+row within half a minute of a lobby opening; being a `createPoller`
 instance, it already rests while the tab is hidden and refreshes the moment
 it becomes visible again, and a failed poll simply keeps the last good `my`.
 The same payload carries `is_streamer: boolean`, marking the caller as one
 of the event's streamers, which the Schedule tab uses (below); an older API
 omits it, and the launcher reads a missing value as `false`.
-Neither banner nor `MatchCard`'s pill uses a per-row CSS animation — only
-the two banners carry the small `animate-ping` dot, keeping the styling
-budget's "no per-row infinite animation" rule.
+`MatchCard`'s pill has no CSS animation. Only the Join banner and the to-do
+panel's lobby row carry the pinging `LiveDot` (`shared/LiveDot.tsx`), and each
+shows only for a match whose session is open, keeping the styling budget's
+"no per-row infinite animation" rule.
 
 **`published` is the whole-surface gate.** Until an event manager turns it on, a
 player gets no stages, no standings and no format at all — so the Bracket tab
@@ -455,9 +458,12 @@ content of the "mine" view, and the container takes just `participant`,
 its loading flag, the event slug, `myTeamId` and `onBracketRefresh`. The
 toggle is shown only to a participant — a non-participant who only qualifies through
 `hasPublishedStages` gets All Matches with no toggle, since they have no "my"
-data to switch to. `autoScheduleView(awaitingCount, hasPickBanSession)`
-(`eventsShared.tsx`) picks the participant's default view — `'mine'` when a
-match is awaiting their team's response or their team has an open pick/ban
+data to switch to. `awaitingCount` is the Schedule tab bubble's own count,
+`scheduleTodoSummary(counts).count` (answer and propose to-dos, see "Event
+scheduling"), so the My Matches segment and the tab bubble never disagree.
+`autoScheduleView(awaitingCount, hasPickBanSession)`
+(`eventsShared.tsx`) picks the participant's default view — `'mine'` when
+their team has a time to answer or propose, or an open pick/ban
 session, `'all'` otherwise — worked out **once per mount**, the moment the
 participant's own schedule has finished loading, and then held even if
 `awaitingCount` later drops to zero; until then the container shows the
@@ -574,24 +580,103 @@ file (which still backs the predictions market card and the manage panel's
 market-close timestamp — untouched, out of scope for the bracket's own
 booked-time display).
 
-**Outside the schedule tab, "a proposal is waiting on my team" reuses only the
-sidebar badge's RENDERING, not its "new since last visit" persistence.**
-`AppLayout`'s `getNavBadge: (view) => number | null` pill (see
-`agents/navigation.md`) is fed, for the `events` item, by a second and
-unrelated count: `Main.tsx` polls `fetchMySchedule` + `fetchMyTournaments`
-together (on sign-in, on window focus, and every 60s while signed in) and
-reduces them with `awaitingMyResponseCount`/`myTeamIdsByTournament`
-(`scheduleShared.tsx`) — cross-referencing each pending entry's
-`tournament.slug` + `whose_turn` against the caller's own *active* team id in
-that tournament (`fetchMyTournaments`, → `/me/tournaments`, is what makes this
-cheap: one extra request for every tournament the caller rosters a team in,
-not an N+1 loop over every event on the platform). This count has no seen
-marker — it is not persisted, not cleared by visiting Events, and disappears
-on its own the moment the proposal is no longer waiting on the viewer. When
-it is nonzero it replaces (rather than adds to) the ordinary "new events"
-badge on that nav item, since the two counts mean different things and a
-sum would misstate both; `getNavBadgeTooltip` on `AppLayout` lets `Main.tsx`
-swap in wording that matches whichever count is actually showing.
+**Outside the schedule tab, "the cup needs you" reuses only the sidebar
+badge's RENDERING, not its "new since last visit" persistence.** `AppLayout`'s
+`getNavBadge: (view, params) => NavBadge | null` (see `agents/navigation.md`,
+resolved by `resolveNavBadge` in `nav-items.ts`) is fed, for the `events`
+item and for any view belonging to an event through `eventSlugOfView` (the
+`cup-2v2-2026` sidebar link's event-detail destination, whose
+`navItemDestination` carries its `eventLink.slug` as `eventSlug`),
+by a second and unrelated signal: per-event *attention*, computed by
+`app/utils/eventAttention.ts`.
+
+Its core is `eventTodos(schedule, myTeamId, invitations)` (pure): one event's
+player to-dos, each tagged with a `kind`:
+- **`answer-times`** — a `/me/schedule` entry with an open `proposal` whose
+  `whose_turn` is my team id: the opponent offered times and we owe the reply.
+- **`propose-time`** — a `schedulable` entry for a match my team plays in with
+  no `proposal` yet: nobody has offered times, and either side may. Once one
+  side proposes, it becomes `answer-times` for the other side and nothing for
+  the proposer, who is now waiting.
+- **`invitation`** — a team invitation, listed only while I hold no team in
+  that event. A rostered player can't accept one, and the Signup panel only
+  lists invitations to a player without a team.
+
+An entry that is waiting on the opponent, or not schedulable yet, is not a
+to-do.
+
+`EventDetailPage` calls it with its own filtered `/me/schedule`, `my.team.id`
+and `my.invitations`, and renders the result as **`EventTodoPanel`**
+(`events/EventTodoPanel.tsx`): a "Needs your attention" card above the tabs,
+one row per to-do with its action. Respond to offer and Propose a time open
+the `SlotPickerModal` for that match; View invitation switches to the Signup
+tab. The viewer's own `pick_ban_session` comes first as its own row (lobby
+open, live or paused against the opponent, with a Join lobby or Open Picks &
+Bans link), in place of the standalone Join banner the page used to show. The
+panel renders nothing when there is nothing to do. The Schedule and Signup
+tab bubbles count the same to-dos (the schedule kinds and the invitations),
+so the page and the sidebar can't disagree: the page counts its to-dos once
+with `todoCountsByKind(todos)` (a `TodoCounts`), the Schedule tab reads its
+count and tooltip lines from `scheduleTodoSummary(counts)` (answer and
+propose to-dos only, ignoring invitations), and the Signup tab reads
+`counts.invitations`.
+
+`computeEventAttention(schedule, memberships)` runs the same
+`eventTodos` per slug for the sidebar. Schedule entries are grouped by
+`tournament.slug`; my team id per slug comes from the *active*
+`fetchMyTournaments` (`/me/tournaments`) rows (`myTeamIdsByTournament`,
+`eventAttention.ts`); invitations are the `invited` rows. The open-lobby slugs
+come from `openLobbySlugs(memberships)` (pure, same module): the *active* rows
+whose `pick_ban_session` is non-null, each slug once. Only a live event can
+have a session, so there is no client-side status filter. Each slug folds
+into an `EventAttention` (its `TodoCounts` from `todoCountsByKind(todos)`
+plus the slug's `pickBanOpen` lobby flag), keyed by slug in an
+`EventAttentionMap`. A slug with no to-do and no open lobby is left out.
+`todoCountsByKind` takes no lobby parameter, so the sidebar and the Schedule
+tab's `scheduleTodoSummary` (above) count to-dos the same way.
+
+`Main.tsx` refreshes the map on a `createPoller` (see
+`agents/state-patterns.md`) started only while signed in: a 60s interval, an
+immediate poll on start, resting while the window is hidden and catching up
+the moment it shows again; the existing focus listener still calls its
+`pollNow`. Signing out or switching account stops it, aborting anything in
+flight; a switch then starts it again on the new account. Each refresh is
+exactly two reads, `fetchMySchedule` and `fetchMyTournaments`, fetched together
+with the poll's abort signal, however many events the caller plays in. The
+lobby flag rides on the `/me/tournaments` rows, so the refresh makes no
+per-event `fetchMyEventStatus` read. When the lobby closes, the row's
+`pick_ban_session` is `null` and the live dot goes away on the next refresh.
+
+**The number counts to-dos; the open lobby is a separate live dot.**
+`eventAttentionCount` sums `offersToAnswer + matchesToSchedule + invitations`. The
+lobby is not in the sum: it means "your match is starting", not a chore.
+The attention-to-badge conversion itself lives in `nav-items.ts`, not here —
+`eventAttention.ts` stops at the API-shaped data (`EventAttention`,
+`EventAttentionMap`, the `eventAttentionLines` tooltip strings) and imports
+only the API types. `attentionNavBadge(attention, fallback?)` (in
+`nav-items.ts`) turns one record into the `NavBadge` the sidebar renders:
+- `count` is the to-do count, or `null` when there is none;
+- `live` is `pickBanOpen`, shown as a pulsing green dot on the item's icon, opposite
+  the count bubble;
+- `details` are the `eventAttentionLines` ("Respond to a time offer for 1
+  match", "Propose a time for 2 matches", "Answer 1 team invitation", "Join
+  your open Picks & Bans lobby"), shown one per line in the badge tooltip.
+
+`resolveNavBadge` (`nav-items.ts`) is what calls it: the cup item's
+event-detail destination gets `attentionNavBadge(map[slug])`, so it counts
+only its own event, and a match picks & bans page resolves the same way.
+Events gets `attentionNavBadge(combinedEventAttention(map),
+newSinceVisitBadge(count))`: `combinedEventAttention` adds the counts across
+events and sets `pickBanOpen` when any event has an open lobby. Any to-dos
+replace the ordinary "new events" count, since a sum would misstate both.
+With no to-dos the "new events" count stays as the number, a live dot can
+sit beside it, and the tooltip lists both lines. None of this has a seen
+marker. Nothing is persisted, and visiting Events or the cup page clears
+nothing. Each part
+disappears on its own once the caller acts: they respond, propose, accept or
+decline, or the lobby closes. A total failure fetching schedule or
+memberships resets the whole map to empty rather than leaving stale numbers
+up.
 
 **`whose_turn` is a team id, not a role.** `null` means no proposal is open
 yet (either side may propose); otherwise it names the team expected to

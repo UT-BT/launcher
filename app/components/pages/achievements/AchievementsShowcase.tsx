@@ -234,16 +234,16 @@ function TierBar({ def, progress }: { def: AchievementDefinition; progress: Achi
                             </div>
                         }
                     >
-                        <div className="relative h-2.5 w-full rounded-full bg-hairline/[0.06] overflow-hidden ring-1 ring-inset ring-hairline/5 cursor-help">
-                            <div
-                                className="absolute inset-y-0 left-0 rounded-full transition-all duration-500"
+                        <span className="block relative h-2.5 w-full rounded-full bg-hairline/[0.06] overflow-hidden ring-1 ring-inset ring-hairline/5 cursor-help">
+                            <span
+                                className="block absolute inset-y-0 left-0 rounded-full transition-all duration-500"
                                 style={{
                                     width: `${fillPct}%`,
                                     background: `linear-gradient(180deg, rgba(255,255,255,0.28), rgba(255,255,255,0) 55%), ${r.base}`,
                                     boxShadow: reached ? `0 0 6px -1px ${r.glow}` : undefined,
                                 }}
                             />
-                        </div>
+                        </span>
                     </Tooltip>
                 )
             })}
@@ -369,7 +369,7 @@ function AchievementRow({ def, progress, anonymous }: { def: AchievementDefiniti
                                         </div>
                                     }
                                 >
-                                    <div
+                                    <span
                                         className={cn(
                                             'w-full rounded-lg border px-2.5 py-2 flex flex-col gap-1 min-w-0 cursor-help transition-all',
                                             earned && 'border-transparent',
@@ -384,7 +384,7 @@ function AchievementRow({ def, progress, anonymous }: { def: AchievementDefiniti
                                                     : undefined
                                         }
                                     >
-                                        <div className="flex items-center gap-1.5 min-w-0">
+                                        <span className="flex items-center gap-1.5 min-w-0">
                                             <span
                                                 className={cn(
                                                     'size-4 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0',
@@ -409,8 +409,8 @@ function AchievementRow({ def, progress, anonymous }: { def: AchievementDefiniti
                                                     : isNext ? null
                                                         : <Lock className="size-3 text-muted-foreground/50" />}
                                             </span>
-                                        </div>
-                                        <div className="flex items-center justify-between gap-1 text-[10px] pl-[22px]">
+                                        </span>
+                                        <span className="flex items-center justify-between gap-1 text-[10px] pl-[22px]">
                                             {earned ? (
                                                 <span className="text-emerald-400/80 font-medium">Unlocked</span>
                                             ) : isNext ? (
@@ -426,8 +426,8 @@ function AchievementRow({ def, progress, anonymous }: { def: AchievementDefiniti
                                                     Next
                                                 </span>
                                             )}
-                                        </div>
-                                    </div>
+                                        </span>
+                                    </span>
                                 </Tooltip>
                             )
                         })}

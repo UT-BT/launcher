@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils'
+import { CHIP_SHAPE } from '@/app/components/shared/chipStyles'
 import type { EventBracket, EventBracketStage, EventStatus, EventStreamer, EventSummary } from '@/app/utils/api'
 
 const STATUS_STYLES: Record<EventStatus, string> = {
@@ -30,7 +31,7 @@ export function EventStatusBadge({ event, className }: { event: Pick<EventSummar
     const styleKey: EventStatus = event.signups_open ? 'signups_open' : event.status
     return (
         <span className={cn(
-            'text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border whitespace-nowrap',
+            CHIP_SHAPE,
             STATUS_STYLES[styleKey] ?? STATUS_STYLES.draft,
             className,
         )}>

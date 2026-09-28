@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
-import type { EventMatch, MyTournamentMembership, ScheduleEntry } from '@/app/utils/api'
+import type { EventMatch, ScheduleEntry } from '@/app/utils/api'
 import { formatSlotTime, parseApiInstant } from '@/app/utils/timezone'
 import { teamLabel } from '../bracket/bracketShared'
 import { TeamName } from '../TeamRoster'
@@ -17,25 +17,6 @@ const SCHEDULABILITY_REASONS: Record<string, string> = {
 export function schedulabilityReason(reason: string | null): string {
     if (!reason) return ''
     return SCHEDULABILITY_REASONS[reason] ?? 'This match cannot be scheduled right now.'
-}
-
-export function myTeamIdsByTournament(memberships: MyTournamentMembership[]): Map<string, string> {
-    const byTournament = new Map<string, string>()
-
-    for (const membership of memberships) {
-        if (membership.membership_status === 'active') byTournament.set(membership.tournament.slug, membership.team.id)
-    }
-
-    return byTournament
-}
-
-export function awaitingMyResponseCount(schedule: ScheduleEntry[], memberships: MyTournamentMembership[]): number {
-    const myTeamIds = myTeamIdsByTournament(memberships)
-
-    return schedule.filter(entry => {
-        const myTeamId = myTeamIds.get(entry.tournament.slug)
-        return !!myTeamId && !!entry.proposal && entry.whose_turn === myTeamId
-    }).length
 }
 
 export function proposerName(entry: ScheduleEntry): string {
