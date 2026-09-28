@@ -1,13 +1,14 @@
 import { useMemo, useState } from 'react'
-import { ChevronDown, ChevronRight, Radio } from 'lucide-react'
+import { ChevronDown, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { openExternal } from '@/app/platform'
+import { Button } from '@/app/components/ui/button'
 import { useDisplayTimezone, formatZoned } from '@/app/utils/timezone'
 import type { EventBracket, EventMatch } from '@/app/utils/api'
 import { Chip, MATCH_STATUS_STYLES, MatchStatusChip, teamLabel } from '../bracket/bracketShared'
-import { formatCountdown, MatchOddsChip, useNow } from '../predictions/predictionsShared'
+import { formatCountdown, useNow } from '../predictions/predictionsShared'
+import { pickBanCardAffordance } from '../pickban/pickBanEntryPoints'
 import { PickBanLink } from '../pickban/components/PickBanLink'
-import { PickBanStatusChip } from '../pickban/components/PickBanStatusChip'
 import { TeamName } from '../TeamRoster'
 import { matchRoundLabel } from './scheduleSections'
 import { byDay, nextUp, partition, rows, unscheduledCount, type PublicScheduleRow } from './publicSchedule'
@@ -29,6 +30,14 @@ export interface PublicSchedulePanelProps {
 
 const SKELETON_ROWS = 4
 
+type RowPickBanAction = 'join' | 'live' | 'view'
+
+const PICK_BAN_BUTTON_LABELS: Record<RowPickBanAction, string> = {
+    join: 'Join Picks & Bans',
+    live: 'Watch Picks & Bans',
+    view: 'View Picks & Bans',
+}
+
 const ROW_TIME_FORMAT: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }
 
 function rowTime(startsAt: number, timezone: string): string {
@@ -46,25 +55,35 @@ function RowScore({ match }: { match: EventMatch }) {
     return <span className="text-xs font-semibold text-foreground tabular-nums">{match.score_a}–{match.score_b}</span>
 }
 
-function RowPickBan({ eventSlug, match }: { eventSlug: string; match: EventMatch }) {
-    if (match.pick_ban_status === 'none') return null
+function RowStatus({ row, now, isNext }: { row: PublicScheduleRow; now: number; isNext: boolean }) {
+    const { match } = row
+
+    if (match.status === 'live') return <Chip className={MATCH_STATUS_STYLES.live}>Live Now</Chip>
+    if (match.status === 'complete' || match.status === 'forfeit') return <MatchStatusChip match={match} />
+
+    const countdown = isNext ? formatCountdown(new Date(row.startsAt).toISOString(), now) : null
+
+    return <Chip className={MATCH_STATUS_STYLES.scheduled}>{countdown ? `Starts in ${countdown}` : 'Scheduled'}</Chip>
+}
+
+function RowPickBan({ eventSlug, match, isMine }: { eventSlug: string; match: EventMatch; isMine: boolean }) {
+    const action: RowPickBanAction | null = pickBanCardAffordance(match.pick_ban_status, isMine)
+        ?? (match.pick_ban_status === 'complete' ? 'view' : null)
+
+    if (!action) return null
 
     return (
-        <PickBanLink eventSlug={eventSlug} matchId={match.id} className="shrink-0">
-            <PickBanStatusChip status={match.pick_ban_status} />
-        </PickBanLink>
+        <Button asChild size="sm" variant={action === 'join' ? 'default' : 'outline'}>
+            <PickBanLink eventSlug={eventSlug} matchId={match.id}>{PICK_BAN_BUTTON_LABELS[action]}</PickBanLink>
+        </Button>
     )
 }
 
-function RowStreamLink({ url }: { url: string }) {
+function RowStreamButton({ url }: { url: string }) {
     return (
-        <button
-            type="button"
-            onClick={() => openExternal(url)}
-            className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors cursor-pointer shrink-0"
-        >
-            <Radio className="size-3.5" /> Stream
-        </button>
+        <Button size="sm" variant="outline" onClick={() => openExternal(url)}>
+            Watch Stream
+        </Button>
     )
 }
 
@@ -72,7 +91,6 @@ function ScheduleRowCard({ row, myTeamId, now, isNext, eventSlug }: ScheduleRowC
     const timezone = useDisplayTimezone()
     const { match } = row
     const isMine = !!myTeamId && (match.team_a?.id === myTeamId || match.team_b?.id === myTeamId)
-    const countdown = isNext ? formatCountdown(new Date(row.startsAt).toISOString(), now) : null
 
     return (
         <div className={cn(
@@ -93,13 +111,11 @@ function ScheduleRowCard({ row, myTeamId, now, isNext, eventSlug }: ScheduleRowC
 
             <span className="text-[11px] text-muted-foreground shrink-0">{matchContextLabel(row)}</span>
 
-            <div className="flex flex-wrap items-center gap-1.5 shrink-0 ml-auto">
+            <div className="flex flex-wrap items-center gap-1.5 ml-auto">
                 <RowScore match={match} />
-                <MatchOddsChip match={match} />
-                <RowPickBan eventSlug={eventSlug} match={match} />
-                {match.stream_url && <RowStreamLink url={match.stream_url} />}
-                <MatchStatusChip match={match} />
-                {isNext && countdown && <Chip className={MATCH_STATUS_STYLES.scheduled}>in {countdown}</Chip>}
+                <RowStatus row={row} now={now} isNext={isNext} />
+                <RowPickBan eventSlug={eventSlug} match={match} isMine={isMine} />
+                {match.stream_url && <RowStreamButton url={match.stream_url} />}
             </div>
         </div>
     )

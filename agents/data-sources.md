@@ -468,9 +468,17 @@ recent first); `byDay(scheduled, timezone, now)` groups the upcoming bucket
 into per-day sections in the viewer's display zone, labelling today and
 tomorrow by name. `unscheduledCount(bracket)` counts published, decided,
 still-`pending` matches with no `scheduled_at`, and `nextUp` picks the
-soonest upcoming row for the countdown chip. `PublicSchedulePanel` renders
+soonest upcoming row for the countdown. `PublicSchedulePanel` renders
 Live Now, the day sections, an unscheduled-count line and a collapsed Played
-section.
+section. Each row carries a single status chip: "Live Now", "Starts in
+<countdown>" on the `nextUp` row, "Scheduled" on the other upcoming rows, and
+the result chip (`MatchStatusChip`) once played. Actions are `Button`s, never
+clickable chips: a Picks & Bans button (`pickBanCardAffordance` — "Join Picks
+& Bans" for the viewer's own team while the session is open, "Watch Picks &
+Bans" for everyone else, "View Picks & Bans" once complete, none before a
+lobby opens) and a Watch Stream button when `stream_url` is set. Rows show no
+prediction odds; those stay on the bracket's `MatchCard` and the Predictions
+tab.
 
 **While All Matches is open, `ScheduleTabContainer` refreshes the bracket
 itself every 60 seconds** through its own `createPoller` instance, calling

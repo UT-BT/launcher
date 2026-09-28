@@ -508,13 +508,23 @@ test('a signed-out visitor lands on All Matches from a schedule link', async ({ 
     await expect(liveNow).toContainText('Respawn Repeat Regret')
     await expect(liveNow).toContainText('Flag Runners United')
 
+    const liveRow = liveNow.locator('> div')
+    await expect(liveRow).toContainText('Live Now')
+    await expect(liveRow.getByRole('link', { name: 'View Picks & Bans' })).toBeVisible()
+    await expect(liveRow.getByRole('button', { name: 'Watch Stream' })).toBeVisible()
+
     const rowTimes = allMatches.locator('text=/^\\d{2}:\\d{2}$/')
     await expect(rowTimes).toHaveText(['11:35', '14:00', '16:00', '18:00', '19:00', '21:00'])
 
     const todaySection = allMatches.getByRole('region', { name: 'Today' })
     await expect(todaySection).toContainText('Sandbagging Sorcerers')
     await expect(todaySection).toContainText('Dodge Dynasty')
-    await expect(todaySection.getByText('in 2h 0m')).toBeVisible()
+    const todayRows = todaySection.locator('> div')
+    await expect(todayRows.nth(0)).toContainText('Starts in 2h 0m')
+    await expect(todayRows.nth(0)).not.toContainText('Scheduled')
+    await expect(todayRows.nth(0).getByRole('link', { name: 'Watch Picks & Bans' })).toBeVisible()
+    await expect(todayRows.nth(1)).toContainText('Scheduled')
+    await expect(allMatches.getByText(/58 ·/)).toHaveCount(0)
 
     const tomorrowSection = allMatches.getByRole('region', { name: 'Tomorrow' })
     await expect(tomorrowSection).toContainText('Wall Jump Wizards')

@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { CalendarClock, ExternalLink, Radio, Swords } from 'lucide-react'
+import { CalendarClock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/app/components/ui/button'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
@@ -180,7 +180,7 @@ function PickBanPageLink({ eventSlug, matchId, action }: {
         return (
             <Button asChild size="sm" variant="outline">
                 <PickBanLink eventSlug={eventSlug} matchId={matchId}>
-                    <Swords /> View Picks & Bans
+                    View Picks & Bans
                 </PickBanLink>
             </Button>
         )
@@ -190,9 +190,9 @@ function PickBanPageLink({ eventSlug, matchId, action }: {
         <PickBanLink
             eventSlug={eventSlug}
             matchId={matchId}
-            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
         >
-            <Swords className="size-3.5" /> Visit Picks & Bans Page
+            Visit Picks & Bans Page
         </PickBanLink>
     )
 }
@@ -256,11 +256,11 @@ function StreamingMatchCard({ entry, eventSlug, copied, onCopy }: {
 
             <div className="flex flex-wrap items-center gap-1.5">
                 <Button size="sm" variant="secondary" onClick={() => onCopy(match.id, streamLink)}>
-                    <Radio /> {copied ? 'Copied' : 'Copy Stream Link'}
+                    {copied ? 'Copied' : 'Copy Stream Link'}
                 </Button>
                 <Button asChild size="sm" variant="outline">
                     <PickBanLink eventSlug={eventSlug} matchId={match.id}>
-                        <ExternalLink /> Open Picks & Bans
+                        Open Picks & Bans
                     </PickBanLink>
                 </Button>
             </div>
