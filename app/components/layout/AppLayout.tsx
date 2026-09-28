@@ -29,6 +29,8 @@ import { UserProfile, avatarSizeFor, getAvatarUrl } from '@/app/utils/api'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import { usePatreonTier } from '@/app/utils/patreon'
 import { PatreonBadge } from '@/app/components/shared/PatreonBadge'
+import { LiveDot } from '@/app/components/shared/LiveDot'
+import { CHIP_SHAPE, LIVE_CHIP_STYLE } from '@/app/components/shared/chipStyles'
 import { IS_WEB, usePlatform } from '@/app/platform'
 import { prefetchPage } from '@/app/components/main/pageLoaders'
 
@@ -67,12 +69,7 @@ function NavItemIcon({ icon: Icon, active, badge }: { icon: ElementType; active:
                     {badge.count > 99 ? '99+' : badge.count}
                 </span>
             )}
-            {badge.live && (
-                <span aria-hidden className="absolute -bottom-1 -right-1 flex size-2.5">
-                    <span className="absolute inset-0 rounded-full bg-emerald-400 opacity-75 animate-ping" />
-                    <span className="relative size-2.5 rounded-full bg-emerald-400 ring-2 ring-card" />
-                </span>
-            )}
+            {badge.live && <LiveDot className="absolute -bottom-1 -right-1 ring-2 ring-card" />}
         </Tooltip>
     )
 }
@@ -338,7 +335,7 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                                     <span className="relative z-10 min-w-0 truncate font-medium">{item.label}</span>
                                     {badge && <span className="sr-only">{badge.details.join('. ')}</span>}
                                     {item.tag && (
-                                        <span className="relative z-10 ml-auto shrink-0 whitespace-nowrap rounded border border-red-500/30 bg-red-500/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-red-300">
+                                        <span className={cn('relative z-10 ml-auto shrink-0', CHIP_SHAPE, LIVE_CHIP_STYLE)}>
                                             {item.tag}
                                         </span>
                                     )}

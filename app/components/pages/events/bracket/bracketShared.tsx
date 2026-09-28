@@ -4,6 +4,7 @@ import { formatSlotTime, parseApiInstant, useDisplayTimezone } from '@/app/utils
 import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { MapNavLink } from '@/app/components/shared/MapNavLink'
+import { CHIP_SHAPE, LIVE_CHIP_STYLE } from '@/app/components/shared/chipStyles'
 import { TeamName } from '../TeamRoster'
 import { MatchOddsChip } from '../predictions/predictionsShared'
 import { pickBanCardAffordance } from '../pickban/pickBanEntryPoints'
@@ -29,7 +30,7 @@ export const DRAW_STYLE = 'bg-amber-500/15 text-amber-300 border-amber-500/30'
 export const MATCH_STATUS_STYLES: Record<EventMatchStatus, string> = {
     pending: 'bg-white/5 text-muted-foreground border-white/10',
     scheduled: 'bg-sky-500/15 text-sky-300 border-sky-500/30',
-    live: 'bg-red-500/15 text-red-300 border-red-500/30',
+    live: LIVE_CHIP_STYLE,
     complete: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
     bye: 'bg-white/5 text-muted-foreground border-white/10',
     forfeit: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
@@ -242,10 +243,7 @@ export function sortedMatches(stage: EventBracketStage): EventMatch[] {
 
 export function Chip({ className, children }: { className?: string; children: React.ReactNode }) {
     return (
-        <span className={cn(
-            'shrink-0 whitespace-nowrap text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border',
-            className,
-        )}>
+        <span className={cn('shrink-0', CHIP_SHAPE, className)}>
             {children}
         </span>
     )

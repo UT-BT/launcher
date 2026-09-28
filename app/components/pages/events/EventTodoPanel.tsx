@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { CalendarClock, UserPlus } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
+import { LiveDot } from '@/app/components/shared/LiveDot'
 import { formatSlotTime, useDisplayTimezone } from '@/app/utils/timezone'
 import type { MyPickBanSession, ScheduleEntry } from '@/app/utils/api'
 import type { EventTodo } from '@/app/utils/eventAttention'
@@ -57,12 +58,7 @@ export function EventTodoPanel({ eventSlug, todos, pickBanSession, pickBanOppone
             <ul className="flex flex-col divide-y divide-white/5">
                 {pickBanSession && (
                     <TodoRow
-                        marker={
-                            <span className="relative flex size-2.5">
-                                <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 animate-ping" />
-                                <span className="relative inline-flex size-2.5 rounded-full bg-emerald-400" />
-                            </span>
-                        }
+                        marker={<LiveDot />}
                         title={LOBBY_TITLES[pickBanSession.status](pickBanOpponent ?? 'your opponent')}
                         action={
                             <Button asChild size="sm" variant="secondary">

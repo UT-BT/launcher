@@ -174,8 +174,8 @@ show next to the map name.
 default so it never also fires an enclosing card's own click handler (the
 match card's own `onClick` opens the scheduler). `PickBanCardPill` and
 `PickBanJoinBanner` (`events/pickban/components/PickBanJoinBanner.tsx`) both
-build on it — the banner is the shared "Picks & Bans against <opponent> are live now." pill (a small
-pulsing dot plus the label, naming the opponent when the match is known), used on any
+build on it — the banner is the shared "Picks & Bans against <opponent> are live now." pill (the
+shared `LiveDot` plus the label, naming the opponent when the match is known), used on any
 `ScheduleTab` card whose match has an open session. At the top of the event page the viewer's own
 session is a row of the "Needs your attention" panel instead (`EventTodoPanel`, see "Event
 scheduling"), whose Join lobby / Open Picks & Bans button is a `PickBanLink` too. Every Schedule card
@@ -200,9 +200,10 @@ it becomes visible again, and a failed poll simply keeps the last good `my`.
 The same payload carries `is_streamer: boolean`, marking the caller as one
 of the event's streamers, which the Schedule tab uses (below); an older API
 omits it, and the launcher reads a missing value as `false`.
-Neither banner nor `MatchCard`'s pill uses a per-row CSS animation — only
-the two banners carry the small `animate-ping` dot, keeping the styling
-budget's "no per-row infinite animation" rule.
+`MatchCard`'s pill has no CSS animation. Only the Join banner and the to-do
+panel's lobby row carry the pinging `LiveDot` (`shared/LiveDot.tsx`), and each
+shows only for a match whose session is open, keeping the styling budget's
+"no per-row infinite animation" rule.
 
 **`published` is the whole-surface gate.** Until an event manager turns it on, a
 player gets no stages, no standings and no format at all — so the Bracket tab

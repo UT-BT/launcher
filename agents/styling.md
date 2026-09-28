@@ -11,7 +11,7 @@ not_here:
   - "state / persistence → state-patterns.md"
 sections: [class-merging, tables-locked, responsive-columns, page-layout, filter-panel, buttons-toggle-states, form-inputs, card-backgrounds-borders, text, color-palette, animation, css-runtime-cost, donts]
 last_verified: 2026-09-28
-verify_against: [app/components/shared/DataTable.tsx, app/styles/globals.css, app/styles/desktop.css, app/styles/index.css, lib/utils.ts, app/hooks/useElementWidth.ts, app/hooks/usePrefersReducedMotion.ts]
+verify_against: [app/components/shared/DataTable.tsx, app/components/shared/LiveDot.tsx, app/components/shared/chipStyles.ts, app/styles/globals.css, app/styles/desktop.css, app/styles/index.css, lib/utils.ts, app/hooks/useElementWidth.ts, app/hooks/usePrefersReducedMotion.ts]
 ---
 
 # Styling reference
@@ -212,8 +212,11 @@ A limited-time sidebar item (a `NavItem` `tag`, e.g. the cup's `Live`) gets the
 events `Live` chip, alone in the row's right-aligned trailing slot, never inside the
 label text, and never a row background, left bar or accent colour, so it can't be
 mistaken for the active item. It stays static so it never competes with the live dot.
+The chip comes from `app/components/shared/chipStyles.ts`: `CHIP_SHAPE` is the shape
+`EventStatusBadge` and the bracket `Chip` use, and `LIVE_CHIP_STYLE` is the live-match
+colouring (`MATCH_STATUS_STYLES.live`). Compose them, never re-type the classes:
 ```
-"shrink-0 whitespace-nowrap rounded border border-red-500/30 bg-red-500/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-red-300"
+cn('relative z-10 ml-auto shrink-0', CHIP_SHAPE, LIVE_CHIP_STYLE)
 ```
 
 ### Sidebar badges
@@ -226,10 +229,17 @@ room for them.
   ```
   "absolute -top-1.5 -right-1.5 inline-flex items-center justify-center min-w-4 h-4 px-1 rounded-full bg-accent-500 text-white text-[10px] font-black leading-none tabular-nums ring-2 ring-card shadow-[0_0_8px_rgb(var(--accent-glow-rgb)/0.5)]"
   ```
-- **Live dot**: bottom-right of the icon, emerald, `size-2.5` with a `ring-card`
-  cutout. It is the only pinging mark in the rail, for something happening right now
-  (an open picks & bans lobby). It is the same dot the event page's "Needs your
-  attention" lobby row uses, so the two read as one signal.
+- **Live dot**: `<LiveDot>` (`app/components/shared/LiveDot.tsx`), the pulsing emerald
+  `size-2.5` dot, at the icon's bottom-right. The sidebar adds its position and
+  `ring-card` cutout through `className`:
+  ```
+  "absolute -bottom-1 -right-1 ring-2 ring-card"
+  ```
+  It is the rail's only *kind* of pinging mark, for something happening right now (an
+  open picks & bans lobby), and it can show on more than one item at once: while a
+  lobby is open, the event link and Events both carry it. The event page's "Needs your
+  attention" lobby row and the Schedule tab's picks & bans Join banner render the same
+  component, so all three read as one signal.
 
 Both marks are `aria-hidden`. Their meaning goes into a `sr-only` span after the
 label, and into the shared `Tooltip` on the icon, one line per detail.
