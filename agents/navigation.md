@@ -10,11 +10,12 @@ not_here:
   - "where page state / persistence lives → state-patterns.md"
   - "the PlayerInfo / CapTimeLink components that trigger nav → shared-components.md"
 sections: [the-model, navigate-is-the-only-entry-point, leave-guards, url-sync-web-build, link-semantics, page-views-vs-detail-pages, the-sidebar-registry, event-driven-navigation, sidebar-new-badges, page-refresh-registry, per-entry-state, shareable-match-links, match-pickban-page]
-last_verified: 2026-09-25
+last_verified: 2026-09-28
 verify_against:
   - app/components/main/Main.tsx
   - app/components/navigation/NavLink.tsx
   - app/components/layout/AppLayout.tsx
+  - app/components/navigation/nav-items.ts
   - app/components/navigation/NavigationContext.tsx
   - app/components/navigation/useNavState.ts
   - app/components/navigation/useUnsavedChanges.ts
@@ -263,31 +264,75 @@ join/accept/decline route back to the `teams` gallery and force it to refresh.
 
 ## The sidebar registry
 
-The left rail is data, not markup. The base groups are a const, but the rendered
-list is **computed from `userProfile`** via `buildNavSections` in
-`app/components/layout/AppLayout.tsx` (so role-gated groups can be appended):
+The left rail is data, not markup. The section registry, its item types, and the
+active-state rule live in `app/components/navigation/nav-items.ts` — a small pure
+module with no React, so it's tested without mounting anything. `AppLayout.tsx`
+imports from it and only renders:
 
 ```ts
-const BASE_NAV_SECTIONS: NavSection[] = [
+export const BASE_NAV_SECTIONS: NavSection[] = [
   { title: 'Main', items: [{ id: 'home', label: 'Home', icon: Home }, /* … */] },
   { title: 'UTBT.net', items: [{ id: 'maps', /* … */ }] },
   // …
 ]
 
-function buildNavSections(userProfile?: UserProfile): NavSection[] {
+export function buildNavSections(userProfile?: UserProfile): NavSection[] {
   if (!isStaff(userProfile)) return BASE_NAV_SECTIONS
   return [...BASE_NAV_SECTIONS, { title: 'Staff', items: [{ id: 'admin', label: 'Admin', icon: ShieldAlert }] }]
 }
-// in the component: const navSections = useMemo(() => buildNavSections(userProfile), [userProfile])
+// in AppLayout: const navSections = useMemo(() => buildNavSections(userProfile), [userProfile])
 ```
 
-Each `item.id` must match a `renderView` case; clicking calls
-`changeView(item.id)` — a thin wrapper that closes the mobile drawer and then
-calls `onViewChange` (`navigate`). Below the `lg` breakpoint the same sidebar
-`<aside>` renders as an off-canvas drawer behind a hamburger top bar (see
-`agents/web-target.md`, responsive-layout). To add a sidebar page: add the
-`renderView` case **and** a `navSections` item. (Settings is **not** a view — it's
-a modal opened from the user dropdown / the `open-settings` window event.)
+A `NavItem` may carry an optional **destination view and params**, separate from
+its unique `id`:
+
+```ts
+interface NavItem {
+  id: string
+  label: string
+  icon: ElementType
+  view?: string       // defaults to id
+  params?: NavParams  // defaults to {}
+}
+```
+
+`navItemDestination(item)` resolves `{ view, params }` — an item without a `view`
+behaves exactly as before (the id is the view, with no params). This lets a
+sidebar item target a detail view instead of a page-view of its own — the
+`cup-2v2-2026` item (`Main`, right after `achievements`) targets `event-detail`
+with `{ eventSlug: '2v2-cup-2026' }` instead of having its own `renderView` case.
+
+Every sidebar entry renders through `NavLink` with its resolved destination
+`view`/`params` (an anchor with the right href on web, a button on desktop; see
+Link semantics below). Activation calls `onViewChange(view, params)`, which
+`Main.tsx` wires straight to `navigate` — `AppLayout`'s `onViewChange` prop is
+`(view: string, params?: NavParams) => void`. Hover/focus prefetch
+(`prefetchPage`) also uses the destination view; `event-detail` is lazy-loaded by
+`renderView` itself and intentionally has no `PAGE_LOADERS` entry (the pinned
+loader-key list in `pageLoaders.test.ts` stays as the page-view set).
+
+**Active state** is one pure function, `isNavItemActive(item, currentView,
+currentParams)`:
+- an item with no `params` is active when `currentView` equals its `view` (its
+  `id`, unchanged);
+- an item with `params` is active when `currentView` is `event-detail` **or**
+  `match-pickban` **and** the current entry's `eventSlug` matches the item's —
+  `eventTab` is ignored, so switching tabs never flickers the highlight.
+
+`AppLayout` reads the current entry's params from `useNavigation()` (it already
+renders inside `NavigationContext.Provider`) and passes them to
+`isNavItemActive` for every item. `events` has no `params`, so it keeps today's
+behaviour: never highlighted on `event-detail`, consistent with Maps/Players/etc.
+
+Each `item.id` must be unique and, for a page-view item, match a `renderView`
+case; clicking calls `changeView(view, params)` — a thin wrapper that closes the
+mobile drawer and then calls `onViewChange`. Below the `lg` breakpoint the same
+sidebar `<aside>` renders as an off-canvas drawer behind a hamburger top bar (see
+`agents/web-target.md`, responsive-layout). To add a sidebar page with its own
+view: add the `renderView` case **and** a `nav-items.ts` item (no `view`/`params`
+needed). To link a sidebar item at an existing detail view instead, give it
+`view`/`params` and skip the `renderView` case. (Settings is **not** a view —
+it's a modal opened from the user dropdown / the `open-settings` window event.)
 
 The closed mobile drawer is marked `inert` so its hidden controls cannot receive
 focus or clicks. `AppLayout` listens to the same `1023px` media-query boundary as
@@ -373,7 +418,7 @@ separately from `badgeCounts` and, when it is nonzero, it wins over the
 ordinary new-events count on that one nav item; `AppLayout`'s
 `getNavBadgeTooltip: (view, count) => string` prop lets the tooltip say which
 one is actually showing. Full derivation (`fetchMySchedule` +
-`fetchMyTournaments`, `awaitingMyResponseCount`) is in `agents/data-sources.md`
+`fetchMyTournaments`, `computeEventAttention`) is in `agents/data-sources.md`
 ("Event scheduling") — this doc only owns the pill/tooltip rendering contract.
 
 Because `markViewed()` lives inside `navigate()`, opening a badged page from

@@ -47,11 +47,13 @@ page-views vs detail-pages) first.
     return <<Name>Page state={<name>State} onStateChange={set<Name>State} caches={<name>Caches} onCachesChange={set<Name>Caches} />
   ```
 
-## 3. Add the sidebar entry — `app/components/layout/AppLayout.tsx`
+## 3. Add the sidebar entry — `app/components/navigation/nav-items.ts`
 
 Add `{ id: '<name>', label: '<Label>', icon: <LucideIcon> }` to the right
-`navSections` group. The `id` **must** equal the `renderView` case. The sidebar
-button calls `navigate` for you.
+`BASE_NAV_SECTIONS` group. The `id` **must** equal the `renderView` case. The
+sidebar button calls `navigate` for you. (A sidebar item may instead target an
+existing detail view through an optional `view`/`params` on the item, skipping
+the `renderView` case — see `agents/navigation.md` → the sidebar registry.)
 
 ## Gated / multi-section pages
 

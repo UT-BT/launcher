@@ -26,15 +26,6 @@ export function myTeamIdsByTournament(memberships: MyTournamentMembership[]): Ma
     return byTournament
 }
 
-export function awaitingMyResponseCount(schedule: ScheduleEntry[], memberships: MyTournamentMembership[]): number {
-    const myTeamIds = myTeamIdsByTournament(memberships)
-
-    return schedule.filter(entry => {
-        const myTeamId = myTeamIds.get(entry.tournament.slug)
-        return !!myTeamId && !!entry.proposal && entry.whose_turn === myTeamId
-    }).length
-}
-
 export function proposerName(entry: ScheduleEntry): string {
     const { team_a, team_b } = entry.match
     const proposerId = entry.proposal?.team_id

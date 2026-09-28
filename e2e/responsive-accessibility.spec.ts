@@ -84,12 +84,20 @@ test('navigation targets are real links that support new-tab clicks', async ({ p
   const navigation = page.locator('aside#app-navigation')
   await expect(navigation.getByRole('link', { name: 'Maps' })).toHaveAttribute('href', '/maps')
   await expect(navigation.getByRole('link', { name: 'World Records' })).toHaveAttribute('href', '/world-records')
+  await expect(navigation.getByRole('link', { name: '2v2 World Cup 2026' })).toHaveAttribute('href', '/events/2v2-cup-2026')
 
   await navigation.getByRole('link', { name: 'Maps' }).click({ modifiers: ['ControlOrMeta'] })
   await expect(page).toHaveURL(/\/$/)
 
   await navigation.getByRole('link', { name: 'Maps' }).click()
   await expect(page).toHaveURL(/\/maps$/)
+})
+
+test('the cup link is reachable from the phone navigation drawer', async ({ page, isMobile }) => {
+  test.skip(!isMobile)
+  await page.getByRole('button', { name: 'Open navigation' }).click()
+  const navigation = page.getByRole('complementary', { name: 'Primary navigation' })
+  await expect(navigation.getByRole('link', { name: '2v2 World Cup 2026' })).toHaveAttribute('href', '/events/2v2-cup-2026')
 })
 
 test('settings drills down to a full-width panel on a phone', async ({ page }) => {

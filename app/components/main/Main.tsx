@@ -92,10 +92,12 @@ import { useFavorites } from '@/app/hooks/useFavorites'
 import { useServerFavorites } from '@/app/hooks/useServerFavorites'
 import { loadPatreonMembers } from '@/app/utils/patreon'
 import {
-  fetchAchievementDefinitions, fetchMyAchievements, fetchMySchedule, fetchMyTournaments, fetchNavBadges,
-  markSectionSeen, type BadgeSection,
+  fetchAchievementDefinitions, fetchMyAchievements, fetchMyEventStatus, fetchMySchedule, fetchMyTournaments,
+  fetchNavBadges, markSectionSeen, type BadgeSection,
 } from '@/app/utils/api'
-import { awaitingMyResponseCount } from '@/app/components/pages/events/schedule/scheduleShared'
+import {
+  combinedEventAttention, computeEventAttention, eventAttentionTooltip, totalEventAttentionCount, type EventAttentionMap,
+} from '@/app/utils/eventAttention'
 import { getSynced, setSynced, subscribeSynced } from '@/app/utils/userState'
 import { writePendingHighlight, type HighlightView } from '@/app/hooks/useNewItemHighlight'
 import { isStaff } from '@/app/utils/roles'
@@ -116,7 +118,8 @@ const ADMIN_STATE_STORAGE_KEY = 'utbt:adminState:v1'
 const SERVER_PRESETS_STORAGE_KEY = 'utbt:serverPresets:v1'
 
 const HISTORY_CAP = 50
-const SCHEDULE_AWARENESS_REFRESH_MS = 60_000
+const EVENT_ATTENTION_REFRESH_MS = 60_000
+const EVENT_ATTENTION_EXCLUDED_STATUSES = new Set(['completed', 'archived', 'draft'])
 
 const BADGE_SECTIONS = {
   'maps': 'maps',
@@ -429,37 +432,51 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
     return count != null && count > 0
   }, [badgeCounts])
 
-  const [awaitingScheduleCount, setAwaitingScheduleCount] = useState(0)
+  const [eventAttention, setEventAttention] = useState<EventAttentionMap>({})
 
-  const refreshScheduleAwareness = useCallback(async () => {
+  const refreshEventAttention = useCallback(async () => {
     const token = accessTokenRef.current
     if (!token) {
-      setAwaitingScheduleCount(0)
+      setEventAttention({})
       return
     }
     try {
       const [schedule, memberships] = await Promise.all([fetchMySchedule(token), fetchMyTournaments(token)])
       if (accessTokenRef.current !== token) return
-      setAwaitingScheduleCount(awaitingMyResponseCount(schedule, memberships))
+      const liveActiveSlugs = Array.from(new Set(
+        memberships
+          .filter(m => m.membership_status === 'active' && !EVENT_ATTENTION_EXCLUDED_STATUSES.has(m.tournament.status))
+          .map(m => m.tournament.slug),
+      ))
+      const statuses = await Promise.allSettled(liveActiveSlugs.map(slug => fetchMyEventStatus(token, slug)))
+      if (accessTokenRef.current !== token) return
+      const openPickBanSlugs = new Set<string>()
+      statuses.forEach((result, index) => {
+        if (result.status === 'fulfilled' && result.value.pick_ban_session) openPickBanSlugs.add(liveActiveSlugs[index])
+      })
+      setEventAttention(computeEventAttention(schedule, memberships, openPickBanSlugs))
     } catch {
-      setAwaitingScheduleCount(0)
+      setEventAttention({})
     }
   }, [])
 
   useEffect(() => {
-    void refreshScheduleAwareness()
+    void refreshEventAttention()
     if (!accessToken) return
-    const timer = setInterval(refreshScheduleAwareness, SCHEDULE_AWARENESS_REFRESH_MS)
+    const timer = setInterval(refreshEventAttention, EVENT_ATTENTION_REFRESH_MS)
     return () => clearInterval(timer)
-  }, [refreshScheduleAwareness, accessToken])
+  }, [refreshEventAttention, accessToken])
 
   useEffect(() => {
     const onFocus = () => {
-      if (accessTokenRef.current) void refreshScheduleAwareness()
+      if (accessTokenRef.current) void refreshEventAttention()
     }
     window.addEventListener('focus', onFocus)
     return () => window.removeEventListener('focus', onFocus)
-  }, [refreshScheduleAwareness])
+  }, [refreshEventAttention])
+
+  const totalAttentionCount = useMemo(() => totalEventAttentionCount(eventAttention), [eventAttention])
+  const attentionTooltip = useMemo(() => eventAttentionTooltip(combinedEventAttention(eventAttention)), [eventAttention])
 
   const leaveGuardsRef = useRef(new Map<string, () => string | null>())
   const [pendingLeave, setPendingLeave] = useState<
@@ -928,11 +945,11 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
           <AppLayout
             currentView={currentView}
             onViewChange={navigate}
-            getNavBadge={(view) => view === 'events' && awaitingScheduleCount > 0
-              ? awaitingScheduleCount
+            getNavBadge={(view) => view === 'events' && totalAttentionCount > 0
+              ? totalAttentionCount
               : badgeVisible(view) ? badgeCounts[view] : null}
-            getNavBadgeTooltip={(view, count) => view === 'events' && awaitingScheduleCount > 0
-              ? `${count} match${count === 1 ? '' : 'es'} waiting on your team to pick a time`
+            getNavBadgeTooltip={(view, count) => view === 'events' && totalAttentionCount > 0
+              ? attentionTooltip
               : `${count} new since your last visit`}
             userProfile={userProfile}
             installationStatus={installationStatus}

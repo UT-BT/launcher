@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { EventMatch, EventSummary, EventTeam, MyTournamentMembership, ScheduleEntry, ScheduleProposal } from '@/app/utils/api'
 import {
-    awaitingMyResponseCount, formatSlotTime, myTeamIdsByTournament, proposerName, schedulabilityReason, whoseTurnLabel,
+    formatSlotTime, myTeamIdsByTournament, proposerName, schedulabilityReason, whoseTurnLabel,
 } from './scheduleShared'
 
 const TEAM_A = { id: 'team-a', name: 'Alpha', seed: 1, status: 'registered' as const }
@@ -135,27 +135,5 @@ describe('myTeamIdsByTournament', () => {
     it('ignores a membership that is only invited, not active', () => {
         const map = myTeamIdsByTournament([membership({ membership_status: 'invited' })])
         expect(map.has('2v2-cup')).toBe(false)
-    })
-})
-
-describe('awaitingMyResponseCount', () => {
-    it('counts a match where my own team is the one the proposal is waiting on', () => {
-        const count = awaitingMyResponseCount([entry({ whose_turn: TEAM_A.id })], [membership()])
-        expect(count).toBe(1)
-    })
-
-    it('does not count a match waiting on the opponent', () => {
-        const count = awaitingMyResponseCount([entry({ whose_turn: TEAM_B.id })], [membership()])
-        expect(count).toBe(0)
-    })
-
-    it('does not count a match with no open proposal', () => {
-        const count = awaitingMyResponseCount([entry({ whose_turn: TEAM_A.id, proposal: null })], [membership()])
-        expect(count).toBe(0)
-    })
-
-    it('does not count an event I have no active membership in', () => {
-        const count = awaitingMyResponseCount([entry({ whose_turn: TEAM_A.id })], [])
-        expect(count).toBe(0)
     })
 })

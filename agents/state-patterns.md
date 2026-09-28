@@ -17,8 +17,8 @@ not_here:
   - "the navigation stack / navigate() / renderView wiring → navigation.md"
   - "the shared components used (FilterPresetsMenu, ColumnsMenu, Tutorial) → shared-components.md"
 sections: [controlled-pages-with-hoisted-state, navigation-history-per-entry-ui-state, account-synced-state, localstorage-persistence, filter-presets, tutorial-state, favorites, polling-live-data, naming-conventions]
-last_verified: 2026-09-25
-verify_against: [app/components/main/Main.tsx, app/components/navigation/useNavState.ts, app/hooks/useAsync.ts, app/utils/userState.ts, app/utils/poller.ts, app/components/pages/events/pickban/pickBanSession.ts, app/components/pages/events/pickban/usePickBanSession.ts, app/components/pages/events/pickban/mergePickBanState.ts, app/components/pages/events/pickban/captainPlay.ts, app/components/pages/events/pickban/useCaptainPlay.ts, app/components/pages/events/pickban/managerDock.ts, app/components/pages/events/pickban/useManagerDock.ts, app/components/pages/events/pickban/editFinal.ts, app/components/pages/events/pickban/pickBanMotionPreference.ts, app/components/pages/events/pickban/pickBanSoundPreference.ts, app/components/pages/MatchPickBanPage.tsx]
+last_verified: 2026-09-28
+verify_against: [app/components/main/Main.tsx, app/components/navigation/useNavState.ts, app/hooks/useAsync.ts, app/utils/userState.ts, app/utils/poller.ts, app/utils/eventAttention.ts, app/components/pages/events/pickban/pickBanSession.ts, app/components/pages/events/pickban/usePickBanSession.ts, app/components/pages/events/pickban/mergePickBanState.ts, app/components/pages/events/pickban/captainPlay.ts, app/components/pages/events/pickban/useCaptainPlay.ts, app/components/pages/events/pickban/managerDock.ts, app/components/pages/events/pickban/useManagerDock.ts, app/components/pages/events/pickban/editFinal.ts, app/components/pages/events/pickban/pickBanMotionPreference.ts, app/components/pages/events/pickban/pickBanSoundPreference.ts, app/components/pages/MatchPickBanPage.tsx]
 ---
 
 # State patterns
@@ -201,6 +201,13 @@ Rules:
   a badge and advances the marker. Signed-out users get no badges. See
   `agents/navigation.md` (sidebar-new-badges) and `agents/data-sources.md` for
   the endpoints.
+  The Events badge is an exception: when the per-event attention total (schedule
+  proposals awaiting my team, pending team invitations, open picks & bans
+  lobbies) is above zero it overrides the seen-marker count, has no "mark as
+  seen" step, and clears on its own once the underlying condition is gone. It
+  is not in this store either — `Main.tsx` holds it as in-memory state, refreshed
+  on the same triggers (sign-in, window focus, 60s). See `agents/data-sources.md`
+  for the derivation.
 
 ## localStorage persistence
 
