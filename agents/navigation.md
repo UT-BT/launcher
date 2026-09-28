@@ -4,7 +4,7 @@ read_when:
   - "adding a new view/page to the nav stack or sidebar"
   - "opening a detail page or wiring a click that navigates"
   - "anything touching Back/Forward, history, or per-entry state keying"
-keywords: [navigate, Main.tsx, AppLayout, NavEntry, useNavigation, open-player, open-cap, renderView, HISTORY_CAP, back, forward, NavLink, href, new tab, EventTab, scheduleView, ScheduleView, tab=schedule]
+keywords: [navigate, Main.tsx, AppLayout, NavEntry, useNavigation, open-player, open-cap, renderView, HISTORY_CAP, back, forward, NavLink, href, new tab, EventTab, scheduleView, ScheduleView, tab=schedule, schedulePlayedOpen]
 provides: "the whole navigation model: stack, navigate() funnel, renderView, sidebar registry, event-driven detail pages"
 not_here:
   - "where page state / persistence lives → state-patterns.md"
@@ -29,6 +29,7 @@ verify_against:
   - app/components/pages/MatchPickBanPage.tsx
   - app/components/pages/events/pickban/components/PickBanSoundControl.tsx
   - app/components/pages/events/schedule/ScheduleTabContainer.tsx
+  - app/components/pages/events/schedule/PublicSchedulePanel.tsx
 ---
 
 # Navigation
@@ -438,7 +439,11 @@ so Back/Forward restore them):
   one they were looking at. While it's `null` the container falls back to the
   automatic default (`autoScheduleView`, see `agents/data-sources.md`) rather
   than defaulting the stored value itself, so an explicit choice and "no choice
-  made yet" stay distinguishable.
+  made yet" stay distinguishable. `event.schedulePlayedOpen`
+  (`PublicSchedulePanel.tsx`, default `false`) is another: whether All
+  Matches' "Show played matches" section is open, so a viewer who opens it,
+  follows a link away and comes back with Back finds it as they left it,
+  while a fresh visit to the event page starts with it closed.
 
 The tier rules, persistence, and `usePageState` wiring live in
 `state-patterns.md` — this doc owns the stack + routing; that one owns what's

@@ -16,6 +16,7 @@ import {
     started,
     undone,
 } from '../app/components/pages/events/pickban/pickBanFixtures'
+import { horizontalOverflow } from './layout'
 
 const SLUG = 'watch-cup'
 const MATCH = 'match-1'
@@ -76,10 +77,6 @@ function fakeServer(anchor: number, stateAt: (serverTime: number) => PickBanStat
 
 async function setAnimations(page: Page, animations: 'on' | 'off') {
     await page.addInitScript(value => localStorage.setItem('utbt:pickBanMotion:v1', JSON.stringify(value)), animations)
-}
-
-async function horizontalOverflow(page: Page): Promise<number> {
-    return page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
 }
 
 const stage = (page: Page) => page.getByLabel('Picks & Bans Stage')

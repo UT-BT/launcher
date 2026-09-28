@@ -31,6 +31,7 @@ import { PredictionsTab } from './events/predictions/PredictionsTab'
 import { PredictionOddsProvider, formatCountdown, useNow } from './events/predictions/predictionsShared'
 import { lockStartedMarkets, matchLockSignals, newlyLockedMatchIds } from './events/predictions/marketLock'
 import { ScheduleTabContainer } from './events/schedule/ScheduleTabContainer'
+import { MyMatchesPanel } from './events/schedule/MyMatchesPanel'
 import type { PickBanDrafts } from './events/manage/pickban/pickBanEditor'
 import { SlotPickerModal } from './events/schedule/SlotPickerModal'
 
@@ -186,8 +187,10 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
         },
     }), [eventSlug])
 
+    const canManage = !!my?.can_manage
+    const canManageBracket = !!my?.can_manage_bracket || canManage
     const isStreamer = !!my?.is_streamer
-    const scheduleParticipant = isScheduleParticipant(!!my?.team, !!my?.can_manage_bracket || !!my?.can_manage, isStreamer)
+    const scheduleParticipant = isScheduleParticipant(!!my?.team, canManageBracket, isStreamer)
 
     const loadSchedule = useCallback(async (enabled: boolean) => {
         if (!enabled || !accessToken) {
@@ -296,8 +299,6 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
     const dates = [formatEventDate(event.starts_at), formatEventDate(event.ends_at)].filter(Boolean)
     const signupCloses = formatEventDateTime(event.signup_closes_at)
     const signupOpens = formatEventDateTime(event.signup_opens_at)
-    const canManage = !!my?.can_manage
-    const canManageBracket = !!my?.can_manage_bracket || canManage
     const hasBracket = (bracket?.stages?.length ?? 0) > 0
     const predictionsOn = !!event.predictions_enabled
     const scheduleVisible = scheduleTabVisible(scheduleParticipant, bracket)
@@ -408,20 +409,28 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
                 )}
                 {activeTab === 'schedule' && scheduleVisible && (
                     <ScheduleTabContainer
+                        participant={scheduleParticipant}
+                        myScheduleLoaded={scheduleLoaded}
+                        pickBanSessionOpen={!!my?.pick_ban_session}
+                        awaitingCount={scheduleAwaitingCount}
                         bracket={bracket}
                         bracketLoading={!bracketLoaded}
-                        participant={scheduleParticipant}
-                        awaitingCount={scheduleAwaitingCount}
-                        onBracketRefresh={refreshBracket}
-                        myTeamId={myTeamId}
-                        entries={schedule}
-                        myMatches={myMatches}
-                        loaded={scheduleLoaded}
-                        viewer={{ hasTeam: !!my?.team, canManageBracket, isStreamer }}
-                        onRefresh={refreshSchedule}
-                        onOpenPicker={setSchedulerMatchId}
                         eventSlug={eventSlug}
-                        pickBanSession={my?.pick_ban_session}
+                        myTeamId={myTeamId}
+                        onBracketRefresh={refreshBracket}
+                        myMatchesPanel={
+                            <MyMatchesPanel
+                                myTeamId={myTeamId}
+                                entries={schedule}
+                                myMatches={myMatches}
+                                loaded={scheduleLoaded}
+                                viewer={{ hasTeam: !!my?.team, canManageBracket, isStreamer }}
+                                onRefresh={refreshSchedule}
+                                onOpenPicker={setSchedulerMatchId}
+                                eventSlug={eventSlug}
+                                pickBanSession={my?.pick_ban_session}
+                            />
+                        }
                     />
                 )}
                 {activeTab === 'predictions' && predictionsOn && (

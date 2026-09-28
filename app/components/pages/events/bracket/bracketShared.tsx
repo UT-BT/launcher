@@ -213,7 +213,7 @@ export function stageRounds(stage: EventBracketStage): number[] {
     return [...new Set(stage.matches.map(match => match.round_no))].sort((a, b) => a - b)
 }
 
-export function matchOrder(groups: EventBracketGroup[] = []) {
+export function matchOrder(groups: Pick<EventBracketGroup, 'id' | 'ordinal'>[] = []) {
     const rank = new Map(groups.map(group => [group.id, group.ordinal]))
 
     return (a: EventMatch, b: EventMatch): number =>

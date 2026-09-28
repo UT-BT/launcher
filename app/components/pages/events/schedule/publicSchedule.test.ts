@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest'
 import type { EventBracket, EventBracketStage, EventMatch } from '@/app/utils/api'
 import { formatZoned } from '@/app/utils/timezone'
 import {
-    byDay, nextUp, partition, rows, unscheduledCount, type PublicScheduleDay, type PublicScheduleRow,
+    bucketByStatus, groupByDay, nextUp, rowTimeLabel, scheduledRows, unscheduledCount,
+    type PublicScheduleDay, type PublicScheduleRow,
 } from './publicSchedule'
 
 const TEAM_A = { id: 'team-a', name: 'Alpha', seed: 1, status: 'registered' as const }
@@ -41,7 +42,11 @@ function ids(entries: Array<{ match: { id: string } }>): string[] {
 }
 
 function upcoming(...matches: EventMatch[]): PublicScheduleRow[] {
-    return partition(rows(bracket(stage({ matches })))).upcoming
+    return bucketByStatus(scheduledRows(bracket(stage({ matches })))).upcoming
+}
+
+function played(...matches: EventMatch[]): PublicScheduleRow[] {
+    return bucketByStatus(scheduledRows(bracket(stage({ matches })))).played
 }
 
 function days(groups: PublicScheduleDay[]): Array<{ key: string; label: string; ids: string[] }> {
@@ -50,19 +55,19 @@ function days(groups: PublicScheduleDay[]): Array<{ key: string; label: string; 
 
 const NOW = Date.parse('2026-10-03T12:00:00Z')
 
-describe('rows', () => {
+describe('scheduledRows', () => {
     it('turns a published, booked match into a row with its stage, group and start time', () => {
         const booked = match({ id: 'm1', group_id: 'ga' })
         const groups = stage({
-            name: 'Group Stage', ordinal: 0, kind: 'groups',
+            name: 'Group Stage', ordinal: 0,
             groups: [{ id: 'ga', name: 'Group A', ordinal: 0, standings: [] }],
             matches: [booked],
         })
 
-        expect(rows(bracket(groups))).toEqual([{
+        expect(scheduledRows(bracket(groups))).toEqual([{
             match: booked,
-            stage: { name: 'Group Stage', ordinal: 0, kind: 'groups' },
-            group: { name: 'Group A', ordinal: 0 },
+            stage: { name: 'Group Stage', ordinal: 0 },
+            group: { id: 'ga', name: 'Group A', ordinal: 0 },
             startsAt: Date.parse('2026-10-03T18:00:00Z'),
         }])
     })
@@ -74,29 +79,29 @@ describe('rows', () => {
         ['that was cancelled', stage({ matches: [match({ status: 'cancelled' })] })],
         ['that is a bye', stage({ matches: [match({ status: 'bye' })] })],
     ])('leaves out a match %s', (_, hidden) => {
-        expect(rows(bracket(hidden))).toEqual([])
+        expect(scheduledRows(bracket(hidden))).toEqual([])
     })
 
     it('shows a manager nothing while the whole bracket is unpublished, as the public sees it', () => {
-        expect(rows({ ...bracket(stage({ matches: [match()] })), published: false })).toEqual([])
+        expect(scheduledRows({ ...bracket(stage({ matches: [match()] })), published: false })).toEqual([])
     })
 
     it('treats a bracket that has not loaded as empty', () => {
-        expect(rows(null)).toEqual([])
+        expect(scheduledRows(null)).toEqual([])
     })
 
     it('flattens every stage, keeping each match with its own stage', () => {
-        const schedule = rows(bracket(
-            stage({ name: 'Group Stage', ordinal: 0, kind: 'groups', matches: [match({ id: 'g1' }), match({ id: 'g2' })] }),
-            stage({ name: 'Playoffs', ordinal: 1, kind: 'single_elim', matches: [match({ id: 'p1' })] }),
+        const schedule = scheduledRows(bracket(
+            stage({ name: 'Group Stage', ordinal: 0, matches: [match({ id: 'g1' }), match({ id: 'g2' })] }),
+            stage({ name: 'Playoffs', ordinal: 1, matches: [match({ id: 'p1' })] }),
         ))
 
-        expect(schedule.map(row => [row.match.id, row.stage.name, row.stage.kind]))
-            .toEqual([['g1', 'Group Stage', 'groups'], ['g2', 'Group Stage', 'groups'], ['p1', 'Playoffs', 'single_elim']])
+        expect(schedule.map(row => [row.match.id, row.stage.name]))
+            .toEqual([['g1', 'Group Stage'], ['g2', 'Group Stage'], ['p1', 'Playoffs']])
     })
 
     it('has no group for a match outside any group, or in a group the stage does not list', () => {
-        const schedule = rows(bracket(stage({
+        const schedule = scheduledRows(bracket(stage({
             groups: [{ id: 'ga', name: 'Group A', ordinal: 0, standings: [] }],
             matches: [match({ id: 'loose', group_id: null }), match({ id: 'stray', group_id: 'gz' })],
         })))
@@ -105,7 +110,7 @@ describe('rows', () => {
     })
 
     it('reads a zone-less timestamp as UTC, the same instant as an offset one', () => {
-        const schedule = rows(bracket(stage({
+        const schedule = scheduledRows(bracket(stage({
             matches: [
                 match({ id: 'bare', scheduled_at: '2026-10-03 23:30:00' }),
                 match({ id: 'offset', scheduled_at: '2026-10-04T01:30:00+02:00' }),
@@ -117,13 +122,13 @@ describe('rows', () => {
     })
 
     it('leaves out a match whose time cannot be read', () => {
-        expect(rows(bracket(stage({ matches: [match({ scheduled_at: 'not a date' })] })))).toEqual([])
+        expect(scheduledRows(bracket(stage({ matches: [match({ scheduled_at: 'not a date' })] })))).toEqual([])
     })
 })
 
-describe('partition', () => {
+describe('bucketByStatus', () => {
     it('splits live, upcoming and played matches by status', () => {
-        const buckets = partition(rows(bracket(stage({
+        const buckets = bucketByStatus(scheduledRows(bracket(stage({
             matches: [
                 match({ id: 'live', status: 'live', scheduled_at: '2026-10-03 11:00:00' }),
                 match({ id: 'booked', status: 'scheduled', scheduled_at: '2026-10-03 18:00:00' }),
@@ -139,7 +144,7 @@ describe('partition', () => {
     })
 
     it('lists live matches in start order', () => {
-        const buckets = partition(rows(bracket(stage({
+        const buckets = bucketByStatus(scheduledRows(bracket(stage({
             matches: [
                 match({ id: 'second', status: 'live', scheduled_at: '2026-10-03 11:30:00' }),
                 match({ id: 'first', status: 'live', scheduled_at: '2026-10-03 11:00:00' }),
@@ -150,7 +155,7 @@ describe('partition', () => {
     })
 
     it('keeps a booked match whose start has passed in upcoming, ahead of the later ones', () => {
-        const buckets = partition(rows(bracket(stage({
+        const buckets = bucketByStatus(scheduledRows(bracket(stage({
             matches: [
                 match({ id: 'later', scheduled_at: '2026-10-04 18:00:00' }),
                 match({ id: 'overdue', scheduled_at: '2026-10-02 18:00:00' }),
@@ -164,7 +169,7 @@ describe('partition', () => {
     })
 
     it('lists played matches most recent first', () => {
-        const buckets = partition(rows(bracket(stage({
+        const buckets = bucketByStatus(scheduledRows(bracket(stage({
             matches: [
                 match({ id: 'oldest', status: 'complete', scheduled_at: '2026-09-30 18:00:00' }),
                 match({ id: 'newest', status: 'complete', scheduled_at: '2026-10-02 18:00:00' }),
@@ -177,7 +182,7 @@ describe('partition', () => {
 
     it('breaks a tie in start time by stage ordinal, then round, then match ordinal', () => {
         const at = '2026-10-03 18:00:00'
-        const buckets = partition(rows(bracket(
+        const buckets = bucketByStatus(scheduledRows(bracket(
             stage({ ordinal: 1, matches: [match({ id: 'playoffs', round_no: 1, ordinal: 0, scheduled_at: at })] }),
             stage({
                 ordinal: 0,
@@ -194,7 +199,7 @@ describe('partition', () => {
 
     it('keeps a group together between same-time matches of one round, as the bracket does', () => {
         const at = '2026-10-03 18:00:00'
-        const buckets = partition(rows(bracket(stage({
+        const buckets = bucketByStatus(scheduledRows(bracket(stage({
             groups: [
                 { id: 'ga', name: 'Group A', ordinal: 0, standings: [] },
                 { id: 'gb', name: 'Group B', ordinal: 1, standings: [] },
@@ -212,7 +217,7 @@ describe('partition', () => {
 
     it('keeps bracket order among played matches that started at the same time', () => {
         const at = '2026-10-02 18:00:00'
-        const buckets = partition(rows(bracket(stage({
+        const buckets = bucketByStatus(scheduledRows(bracket(stage({
             matches: [
                 match({ id: 'round-2', status: 'complete', round_no: 2, scheduled_at: at }),
                 match({ id: 'earlier', status: 'complete', round_no: 1, scheduled_at: '2026-10-01 18:00:00' }),
@@ -227,15 +232,15 @@ describe('partition', () => {
         const at = '2026-10-03 18:00:00'
         const twins = [match({ id: 'zz', scheduled_at: at }), match({ id: 'aa', scheduled_at: at })]
 
-        const forwards = ids(partition(rows(bracket(stage({ matches: twins })))).upcoming)
-        const backwards = ids(partition(rows(bracket(stage({ matches: [...twins].reverse() })))).upcoming)
+        const forwards = ids(bucketByStatus(scheduledRows(bracket(stage({ matches: twins })))).upcoming)
+        const backwards = ids(bucketByStatus(scheduledRows(bracket(stage({ matches: [...twins].reverse() })))).upcoming)
 
         expect(forwards).toEqual(['aa', 'zz'])
         expect(backwards).toEqual(forwards)
     })
 })
 
-describe('byDay', () => {
+describe('groupByDay', () => {
     it('labels today and tomorrow relative to now in the zone, and dates the days after', () => {
         const schedule = upcoming(
             match({ id: 'afternoon', scheduled_at: '2026-10-03 20:00:00' }),
@@ -244,7 +249,7 @@ describe('byDay', () => {
             match({ id: 'tuesday-night', scheduled_at: '2026-10-07 02:00:00' }),
         )
 
-        expect(days(byDay(schedule, 'America/New_York', NOW))).toEqual([
+        expect(days(groupByDay(schedule, 'America/New_York', NOW))).toEqual([
             { key: '2026-10-03', label: 'Today', ids: ['afternoon', 'late'] },
             { key: '2026-10-04', label: 'Tomorrow', ids: ['sunday'] },
             {
@@ -262,8 +267,8 @@ describe('byDay', () => {
             match({ id: 'tomorrow', scheduled_at: '2026-10-04 18:00:00' }),
         )
 
-        expect(days(byDay(schedule, 'America/New_York', eveningInNewYork)).map(day => day.label)).toEqual(['Today', 'Tomorrow'])
-        expect(days(byDay(schedule, 'UTC', eveningInNewYork))).toEqual([
+        expect(days(groupByDay(schedule, 'America/New_York', eveningInNewYork)).map(day => day.label)).toEqual(['Today', 'Tomorrow'])
+        expect(days(groupByDay(schedule, 'UTC', eveningInNewYork))).toEqual([
             { key: '2026-10-04', label: 'Today', ids: ['tonight', 'tomorrow'] },
         ])
     })
@@ -274,9 +279,9 @@ describe('byDay', () => {
             match({ id: 'night', scheduled_at: '2026-10-05 11:30:00' }),
         )
 
-        expect(days(byDay(schedule, 'Pacific/Auckland', NOW)).map(day => [day.key, day.ids]))
+        expect(days(groupByDay(schedule, 'Pacific/Auckland', NOW)).map(day => [day.key, day.ids]))
             .toEqual([['2026-10-05', ['morning']], ['2026-10-06', ['night']]])
-        expect(days(byDay(schedule, 'America/Los_Angeles', NOW)).map(day => [day.key, day.ids]))
+        expect(days(groupByDay(schedule, 'America/Los_Angeles', NOW)).map(day => [day.key, day.ids]))
             .toEqual([['2026-10-05', ['morning', 'night']]])
     })
 
@@ -287,7 +292,7 @@ describe('byDay', () => {
             match({ id: 'next-midnight', scheduled_at: '2026-11-02 05:00:00' }),
         )
 
-        expect(days(byDay(schedule, 'America/New_York', NOW)).map(day => [day.key, day.ids])).toEqual([
+        expect(days(groupByDay(schedule, 'America/New_York', NOW)).map(day => [day.key, day.ids])).toEqual([
             ['2026-11-01', ['just-after-midnight', 'last-of-the-day']],
             ['2026-11-02', ['next-midnight']],
         ])
@@ -300,7 +305,7 @@ describe('byDay', () => {
             match({ id: 'monday', scheduled_at: '2026-11-02 05:00:00' }),
         )
 
-        expect(days(byDay(schedule, 'America/New_York', justAfterMidnight))).toEqual([
+        expect(days(groupByDay(schedule, 'America/New_York', justAfterMidnight))).toEqual([
             { key: '2026-11-01', label: 'Today', ids: ['tonight'] },
             { key: '2026-11-02', label: 'Tomorrow', ids: ['monday'] },
         ])
@@ -309,27 +314,69 @@ describe('byDay', () => {
     it('places a zone-less timestamp on its UTC instant', () => {
         const schedule = upcoming(match({ id: 'bare', scheduled_at: '2026-10-03 23:30:00' }))
 
-        expect(days(byDay(schedule, 'UTC', NOW))[0].key).toBe('2026-10-03')
-        expect(days(byDay(schedule, 'Asia/Tokyo', NOW))[0].key).toBe('2026-10-04')
+        expect(days(groupByDay(schedule, 'UTC', NOW))[0].key).toBe('2026-10-03')
+        expect(days(groupByDay(schedule, 'Asia/Tokyo', NOW))[0].key).toBe('2026-10-04')
     })
 
-    it('keeps the order it is given, so played matches read newest day first', () => {
-        const played = partition(rows(bracket(stage({
-            matches: [
-                match({ id: 'first', status: 'complete', scheduled_at: '2026-10-01 18:00:00' }),
-                match({ id: 'early', status: 'complete', scheduled_at: '2026-10-02 18:00:00' }),
-                match({ id: 'late', status: 'forfeit', scheduled_at: '2026-10-02 20:00:00' }),
-            ],
-        })))).played
+    it('groups played matches newest day first, calling the day before today Yesterday', () => {
+        const schedule = played(
+            match({ id: 'first', status: 'complete', scheduled_at: '2026-10-01 18:00:00' }),
+            match({ id: 'early', status: 'complete', scheduled_at: '2026-10-02 18:00:00' }),
+            match({ id: 'this-morning', status: 'complete', scheduled_at: '2026-10-03 09:00:00' }),
+            match({ id: 'late', status: 'forfeit', scheduled_at: '2026-10-02 20:00:00' }),
+        )
 
-        expect(days(byDay(played, 'UTC', NOW)).map(day => [day.key, day.ids])).toEqual([
-            ['2026-10-02', ['late', 'early']],
-            ['2026-10-01', ['first']],
+        expect(days(groupByDay(schedule, 'UTC', NOW))).toEqual([
+            { key: '2026-10-03', label: 'Today', ids: ['this-morning'] },
+            { key: '2026-10-02', label: 'Yesterday', ids: ['late', 'early'] },
+            { key: '2026-10-01', label: expect.stringMatching(/^Thu,? (Oct 1|1 Oct)$/), ids: ['first'] },
+        ])
+    })
+
+    it('works out yesterday from now in the zone, not in UTC', () => {
+        const eveningInNewYork = Date.parse('2026-10-04T02:00:00Z')
+        const schedule = played(
+            match({ id: 'friday-afternoon', status: 'complete', scheduled_at: '2026-10-02 20:00:00' }),
+            match({ id: 'saturday-morning', status: 'complete', scheduled_at: '2026-10-03 14:00:00' }),
+        )
+
+        expect(days(groupByDay(schedule, 'America/New_York', eveningInNewYork)).map(day => [day.label, day.ids])).toEqual([
+            ['Today', ['saturday-morning']],
+            ['Yesterday', ['friday-afternoon']],
+        ])
+        expect(days(groupByDay(schedule, 'UTC', eveningInNewYork)).map(day => [day.key, day.label])).toEqual([
+            ['2026-10-03', 'Yesterday'],
+            ['2026-10-02', expect.stringMatching(/^Fri,? (Oct 2|2 Oct)$/)],
+        ])
+    })
+
+    it('calls the previous calendar day Yesterday late on a 25-hour day, not 24 hours back', () => {
+        const lateOnTheLongDay = Date.parse('2026-11-02T04:30:00Z')
+        const schedule = played(
+            match({ id: 'saturday-evening', status: 'complete', scheduled_at: '2026-11-01 00:00:00' }),
+            match({ id: 'sunday-small-hours', status: 'complete', scheduled_at: '2026-11-01 05:30:00' }),
+        )
+
+        expect(days(groupByDay(schedule, 'America/New_York', lateOnTheLongDay))).toEqual([
+            { key: '2026-11-01', label: 'Today', ids: ['sunday-small-hours'] },
+            { key: '2026-10-31', label: 'Yesterday', ids: ['saturday-evening'] },
+        ])
+    })
+
+    it('puts a booked match whose start passed yesterday under Yesterday, ahead of today', () => {
+        const schedule = upcoming(
+            match({ id: 'soon', scheduled_at: '2026-10-03 18:00:00' }),
+            match({ id: 'overdue', scheduled_at: '2026-10-02 18:00:00' }),
+        )
+
+        expect(days(groupByDay(schedule, 'UTC', NOW))).toEqual([
+            { key: '2026-10-02', label: 'Yesterday', ids: ['overdue'] },
+            { key: '2026-10-03', label: 'Today', ids: ['soon'] },
         ])
     })
 
     it('has no days when nothing is scheduled', () => {
-        expect(byDay([], 'UTC', NOW)).toEqual([])
+        expect(groupByDay([], 'UTC', NOW)).toEqual([])
     })
 })
 
@@ -377,7 +424,7 @@ describe('unscheduledCount', () => {
 
 describe('nextUp', () => {
     it('picks the soonest upcoming match that has not started yet', () => {
-        const schedule = rows(bracket(stage({
+        const schedule = scheduledRows(bracket(stage({
             matches: [
                 match({ id: 'later', scheduled_at: '2026-10-04 18:00:00' }),
                 match({ id: 'soon', scheduled_at: '2026-10-03 18:00:00' }),
@@ -389,7 +436,7 @@ describe('nextUp', () => {
     })
 
     it('never gives the countdown to a match whose start has passed or is right now', () => {
-        const schedule = rows(bracket(stage({
+        const schedule = scheduledRows(bracket(stage({
             matches: [
                 match({ id: 'overdue', scheduled_at: '2026-10-03 10:00:00' }),
                 match({ id: 'starting-now', scheduled_at: '2026-10-03 12:00:00' }),
@@ -401,7 +448,7 @@ describe('nextUp', () => {
     })
 
     it('skips live and played matches even when their booked time is still ahead', () => {
-        const schedule = rows(bracket(stage({
+        const schedule = scheduledRows(bracket(stage({
             matches: [
                 match({ id: 'started-early', status: 'live', scheduled_at: '2026-10-03 13:00:00' }),
                 match({ id: 'forfeited-early', status: 'forfeit', scheduled_at: '2026-10-03 14:00:00' }),
@@ -414,7 +461,7 @@ describe('nextUp', () => {
 
     it('breaks a tie at the same start the way upcoming does', () => {
         const at = '2026-10-03 18:00:00'
-        const schedule = rows(bracket(stage({
+        const schedule = scheduledRows(bracket(stage({
             matches: [match({ id: 'second', ordinal: 1, scheduled_at: at }), match({ id: 'first', ordinal: 0, scheduled_at: at })],
         })))
 
@@ -422,7 +469,7 @@ describe('nextUp', () => {
     })
 
     it('has no next match when everything left is overdue, live or played', () => {
-        const schedule = rows(bracket(stage({
+        const schedule = scheduledRows(bracket(stage({
             matches: [
                 match({ id: 'overdue', scheduled_at: '2026-10-03 10:00:00' }),
                 match({ id: 'live', status: 'live', scheduled_at: '2026-10-03 18:00:00' }),
@@ -432,5 +479,22 @@ describe('nextUp', () => {
 
         expect(nextUp(schedule, NOW)).toBeNull()
         expect(nextUp([], NOW)).toBeNull()
+    })
+})
+
+describe('rowTimeLabel', () => {
+    it('gives only the time for a start earlier today', () => {
+        expect(rowTimeLabel(Date.parse('2026-10-03T11:35:00Z'), 'UTC', NOW)).toBe('11:35')
+    })
+
+    it('gives the date and the time for a start on an earlier day', () => {
+        expect(rowTimeLabel(Date.parse('2026-10-02T23:10:00Z'), 'UTC', NOW)).toMatch(/^Fri,? (Oct 2|2 Oct),? 23:10$/)
+    })
+
+    it('judges which day the start fell on in the display zone', () => {
+        const lateFridayInUtc = Date.parse('2026-10-02T23:10:00Z')
+
+        expect(rowTimeLabel(lateFridayInUtc, 'Europe/Berlin', NOW)).toBe('01:10')
+        expect(rowTimeLabel(lateFridayInUtc, 'America/New_York', NOW)).toMatch(/^Fri,? (Oct 2|2 Oct),? 19:10$/)
     })
 })

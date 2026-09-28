@@ -1,5 +1,6 @@
-import type { EventMatch, EventMatchStatus, MatchPickBanStatus, MyMatchEntry, MyPickBanSession, ScheduleEntry } from '@/app/utils/api'
+import type { EventMatch, EventMatchStatus, MyMatchEntry, MyPickBanSession, ScheduleEntry } from '@/app/utils/api'
 import { formatSlotTime, parseApiInstant } from '@/app/utils/timezone'
+import { pickBanAction } from '../pickban/pickBanEntryPoints'
 
 export interface ScheduleViewer {
     hasTeam: boolean
@@ -18,8 +19,6 @@ export interface ScheduleSections {
 export type PickBanCallToAction = 'join' | 'view' | 'page'
 
 const BOOKED_STATUSES: readonly EventMatchStatus[] = ['scheduled', 'live']
-
-const OPEN_PICK_BAN_STATUSES: readonly MatchPickBanStatus[] = ['lobby', 'running', 'paused']
 
 function startsAt(entry: MyMatchEntry): number {
     return parseApiInstant(entry.match.scheduled_at) ?? Number.POSITIVE_INFINITY
@@ -65,10 +64,9 @@ export function pickBanCallToAction(
     session: MyPickBanSession | null,
 ): PickBanCallToAction {
     const status = session?.match_id === match.id ? session.status : match.pick_ban_status
+    const action = pickBanAction(status, true)
 
-    if (OPEN_PICK_BAN_STATUSES.includes(status)) return 'join'
-    if (status === 'complete') return 'view'
-    return 'page'
+    return action === 'join' || action === 'view' ? action : 'page'
 }
 
 export function matchTimeLabel(match: Pick<EventMatch, 'status' | 'scheduled_at'>, timezone: string): string {

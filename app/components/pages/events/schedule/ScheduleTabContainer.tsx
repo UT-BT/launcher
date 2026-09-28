@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Globe } from 'lucide-react'
 import { useNavState } from '@/app/components/navigation/useNavState'
 import { useDisplayTimezone } from '@/app/utils/timezone'
@@ -6,37 +6,43 @@ import type { EventBracket } from '@/app/utils/api'
 import { Segmented } from '@/app/components/shared/Segmented'
 import { createPoller } from '@/app/utils/poller'
 import { autoScheduleView, type ScheduleView } from '../eventsShared'
-import { MyMatchesPanel, type MyMatchesPanelProps } from './MyMatchesPanel'
 import { PublicSchedulePanel } from './PublicSchedulePanel'
+import { ScheduleLoading } from './scheduleShared'
 
 const BRACKET_REFRESH_MS = 60_000
 
-export interface ScheduleTabContainerProps extends MyMatchesPanelProps {
+export interface ScheduleTabContainerProps {
+    participant: boolean
+    myScheduleLoaded: boolean
+    pickBanSessionOpen: boolean
+    awaitingCount: number
     bracket: EventBracket | null
     bracketLoading: boolean
-    participant: boolean
-    awaitingCount: number
+    eventSlug: string
+    myTeamId: string | null
     onBracketRefresh: () => void
+    myMatchesPanel: ReactNode
 }
 
 export function ScheduleTabContainer({
-    bracket, bracketLoading, eventSlug, myTeamId, participant, pickBanSession = null, awaitingCount,
-    entries, myMatches, loaded, viewer, onRefresh, onOpenPicker, onBracketRefresh,
+    participant, myScheduleLoaded, pickBanSessionOpen, awaitingCount, bracket, bracketLoading, eventSlug, myTeamId,
+    onBracketRefresh, myMatchesPanel,
 }: ScheduleTabContainerProps) {
     const timezone = useDisplayTimezone()
     const [chosenView, setChosenView] = useNavState<ScheduleView | null>('event.scheduleView', null)
     const [settledView, setSettledView] = useState<ScheduleView | null>(null)
-    const autoView = autoScheduleView(awaitingCount, !!pickBanSession)
+    const autoView = autoScheduleView(awaitingCount, pickBanSessionOpen)
 
-    if (participant && loaded && settledView === null) setSettledView(autoView)
+    if (participant && myScheduleLoaded && settledView === null) setSettledView(autoView)
 
-    const view: ScheduleView | null = participant ? chosenView ?? settledView ?? (loaded ? autoView : null) : 'all'
+    const view: ScheduleView | null = participant ? chosenView ?? settledView ?? (myScheduleLoaded ? autoView : null) : 'all'
 
     const onBracketRefreshRef = useRef(onBracketRefresh)
     onBracketRefreshRef.current = onBracketRefresh
 
     const bracketPoller = useMemo(() => createPoller({
         intervalMs: () => BRACKET_REFRESH_MS,
+        pollOnStart: false,
         poll: async () => { onBracketRefreshRef.current() },
     }), [])
 
@@ -66,19 +72,9 @@ export function ScheduleTabContainer({
             </div>
 
             {view === null ? (
-                <div className="p-6 text-center text-sm text-muted-foreground">Loading schedule…</div>
+                <ScheduleLoading />
             ) : view === 'mine' ? (
-                <MyMatchesPanel
-                    myTeamId={myTeamId}
-                    entries={entries}
-                    myMatches={myMatches}
-                    loaded={loaded}
-                    viewer={viewer}
-                    onRefresh={onRefresh}
-                    onOpenPicker={onOpenPicker}
-                    eventSlug={eventSlug}
-                    pickBanSession={pickBanSession}
-                />
+                myMatchesPanel
             ) : (
                 <PublicSchedulePanel bracket={bracket} loading={bracketLoading} eventSlug={eventSlug} myTeamId={myTeamId} />
             )}

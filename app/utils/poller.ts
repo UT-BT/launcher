@@ -13,6 +13,7 @@ export interface PollerOptions {
     poll: (signal: AbortSignal) => Promise<void>
     intervalMs: () => number
     alwaysPoll?: boolean
+    pollOnStart?: boolean
     environment?: PollerEnvironment
     onSettled?: (outcome: PollOutcome) => void
 }
@@ -38,6 +39,7 @@ export function createPoller({
     poll,
     intervalMs,
     alwaysPoll = false,
+    pollOnStart = true,
     environment = documentVisibility,
     onSettled,
 }: PollerOptions): Poller {
@@ -115,7 +117,8 @@ export function createPoller({
             if (running) return
             running = true
             stopWatchingVisibility = environment.onVisibilityChange(onVisibilityChange)
-            void pollNow()
+            if (pollOnStart) void pollNow()
+            else schedule()
         },
 
         stop() {

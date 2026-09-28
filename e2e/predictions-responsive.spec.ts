@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { horizontalOverflow } from './layout'
 
 /**
  * The prediction surfaces at a phone width.
@@ -162,12 +163,6 @@ test.beforeEach(async ({ page }) => {
         await route.fulfill({ json: { success: true, data: [] } })
     })
 })
-
-async function horizontalOverflow(page: import('@playwright/test').Page): Promise<number> {
-    return page.evaluate(
-        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-    )
-}
 
 test('the predictions tab fits a phone', async ({ page, isMobile }) => {
     test.skip(!isMobile)

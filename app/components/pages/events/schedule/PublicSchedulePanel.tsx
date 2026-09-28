@@ -1,24 +1,28 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { openExternal } from '@/app/platform'
 import { Button } from '@/app/components/ui/button'
-import { useDisplayTimezone, formatZoned } from '@/app/utils/timezone'
+import { useNavState } from '@/app/components/navigation/useNavState'
+import { useDisplayTimezone } from '@/app/utils/timezone'
 import type { EventBracket, EventMatch } from '@/app/utils/api'
-import { Chip, MATCH_STATUS_STYLES, MatchStatusChip, teamLabel } from '../bracket/bracketShared'
+import { Chip, MATCH_STATUS_STYLES, MatchStatusChip, sideOf } from '../bracket/bracketShared'
 import { formatCountdown, useNow } from '../predictions/predictionsShared'
-import { pickBanCardAffordance } from '../pickban/pickBanEntryPoints'
+import { pickBanAction, type PickBanAction } from '../pickban/pickBanEntryPoints'
 import { PickBanLink } from '../pickban/components/PickBanLink'
-import { TeamName } from '../TeamRoster'
 import { matchRoundLabel } from './scheduleSections'
-import { byDay, nextUp, partition, rows, unscheduledCount, type PublicScheduleRow } from './publicSchedule'
+import { ScheduleSection, TeamPair } from './scheduleShared'
+import {
+    bucketByStatus, groupByDay, nextUp, rowTime, rowTimeLabel, scheduledRows, unscheduledCount,
+    type PublicScheduleDay, type PublicScheduleRow,
+} from './publicSchedule'
 
-interface ScheduleRowCardProps {
-    row: PublicScheduleRow
+interface ScheduleRowContext {
     myTeamId: string | null
-    now: number
-    isNext: boolean
     eventSlug: string
+    now: number
+    timezone: string
+    nextMatchId: string | null
 }
 
 export interface PublicSchedulePanelProps {
@@ -30,18 +34,10 @@ export interface PublicSchedulePanelProps {
 
 const SKELETON_ROWS = 4
 
-type RowPickBanAction = 'join' | 'live' | 'view'
-
-const PICK_BAN_BUTTON_LABELS: Record<RowPickBanAction, string> = {
+const PICK_BAN_BUTTON_LABELS: Record<NonNullable<PickBanAction>, string> = {
     join: 'Join Picks & Bans',
     live: 'Watch Picks & Bans',
     view: 'View Picks & Bans',
-}
-
-const ROW_TIME_FORMAT: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }
-
-function rowTime(startsAt: number, timezone: string): string {
-    return formatZoned(startsAt, timezone, ROW_TIME_FORMAT)
 }
 
 function matchContextLabel(row: PublicScheduleRow): string {
@@ -67,8 +63,7 @@ function RowStatus({ row, now, isNext }: { row: PublicScheduleRow; now: number; 
 }
 
 function RowPickBan({ eventSlug, match, isMine }: { eventSlug: string; match: EventMatch; isMine: boolean }) {
-    const action: RowPickBanAction | null = pickBanCardAffordance(match.pick_ban_status, isMine)
-        ?? (match.pick_ban_status === 'complete' ? 'view' : null)
+    const action = pickBanAction(match.pick_ban_status, isMine)
 
     if (!action) return null
 
@@ -87,69 +82,54 @@ function RowStreamButton({ url }: { url: string }) {
     )
 }
 
-function ScheduleRowCard({ row, myTeamId, now, isNext, eventSlug }: ScheduleRowCardProps) {
-    const timezone = useDisplayTimezone()
+function ScheduleRowCard({ row, context, time }: { row: PublicScheduleRow; context: ScheduleRowContext; time: string }) {
     const { match } = row
-    const isMine = !!myTeamId && (match.team_a?.id === myTeamId || match.team_b?.id === myTeamId)
+    const isMine = sideOf(match, context.myTeamId) !== null
 
     return (
         <div className={cn(
             'rounded-lg border bg-card/40 p-3 flex flex-wrap items-center gap-x-3 gap-y-2',
             isMine ? 'border-accent-500/40' : 'border-hairline/10',
         )}>
-            <span className="text-xs text-foreground tabular-nums w-14 shrink-0">{rowTime(row.startsAt, timezone)}</span>
+            <span className="text-xs text-foreground tabular-nums whitespace-nowrap min-w-14 shrink-0">{time}</span>
 
-            <div className="flex items-center gap-1.5 min-w-0 flex-1 basis-40 text-sm font-medium text-white">
-                <TeamName teamId={match.team_a?.id} className="truncate">
-                    {teamLabel(match.team_a, match.slot_a_label)}
-                </TeamName>
-                <span className="text-muted-foreground shrink-0">vs</span>
-                <TeamName teamId={match.team_b?.id} className="truncate">
-                    {teamLabel(match.team_b, match.slot_b_label)}
-                </TeamName>
-            </div>
+            <TeamPair match={match} className="flex-1 basis-40" />
 
             <span className="text-[11px] text-muted-foreground shrink-0">{matchContextLabel(row)}</span>
 
             <div className="flex flex-wrap items-center gap-1.5 ml-auto">
                 <RowScore match={match} />
-                <RowStatus row={row} now={now} isNext={isNext} />
-                <RowPickBan eventSlug={eventSlug} match={match} isMine={isMine} />
+                <RowStatus row={row} now={context.now} isNext={match.id === context.nextMatchId} />
+                <RowPickBan eventSlug={context.eventSlug} match={match} isMine={isMine} />
                 {match.stream_url && <RowStreamButton url={match.stream_url} />}
             </div>
         </div>
     )
 }
 
-function DaySection({ label, rows: dayRows, myTeamId, now, nextMatchId, eventSlug }: {
-    label: string
-    rows: PublicScheduleRow[]
-    myTeamId: string | null
-    now: number
-    nextMatchId: string | null
-    eventSlug: string
-}) {
+function DaySection({ day, context }: { day: PublicScheduleDay; context: ScheduleRowContext }) {
     return (
-        <section aria-label={label} className="flex flex-col gap-2">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{label}</h3>
-            {dayRows.map(row => (
-                <ScheduleRowCard key={row.match.id} row={row} myTeamId={myTeamId} now={now} isNext={row.match.id === nextMatchId} eventSlug={eventSlug} />
+        <ScheduleSection title={day.label}>
+            {day.rows.map(row => (
+                <ScheduleRowCard key={row.match.id} row={row} context={context} time={rowTime(row.startsAt, context.timezone)} />
             ))}
-        </section>
+        </ScheduleSection>
     )
 }
 
 export function PublicSchedulePanel({ bracket, loading, myTeamId, eventSlug }: PublicSchedulePanelProps) {
     const timezone = useDisplayTimezone()
     const now = useNow()
-    const [showPlayed, setShowPlayed] = useState(false)
+    const [showPlayed, setShowPlayed] = useNavState('event.schedulePlayedOpen', false)
 
-    const scheduled = useMemo(() => rows(bracket), [bracket])
-    const buckets = useMemo(() => partition(scheduled), [scheduled])
-    const days = useMemo(() => byDay(buckets.upcoming, timezone, now), [buckets.upcoming, timezone, now])
+    const scheduled = useMemo(() => scheduledRows(bracket), [bracket])
+    const buckets = useMemo(() => bucketByStatus(scheduled), [scheduled])
+    const upcomingDays = useMemo(() => groupByDay(buckets.upcoming, timezone, now), [buckets.upcoming, timezone, now])
+    const playedDays = useMemo(() => groupByDay(buckets.played, timezone, now), [buckets.played, timezone, now])
     const next = useMemo(() => nextUp(scheduled, now), [scheduled, now])
     const unscheduled = useMemo(() => unscheduledCount(bracket), [bracket])
 
+    const context: ScheduleRowContext = { myTeamId, eventSlug, now, timezone, nextMatchId: next?.match.id ?? null }
     const isEmpty = buckets.live.length === 0 && buckets.upcoming.length === 0 && buckets.played.length === 0
 
     return (
@@ -162,32 +142,26 @@ export function PublicSchedulePanel({ bracket, loading, myTeamId, eventSlug }: P
                         <div key={index} aria-hidden className="h-16 rounded-lg border border-hairline/5 bg-card/30" />
                     ))}
                 </>
-            ) : isEmpty ? (
-                <>
-                    <p className="p-6 text-center text-sm text-muted-foreground">No matches scheduled yet.</p>
-                    {unscheduled > 0 && (
-                        <p className="text-xs text-muted-foreground">
-                            {unscheduled} {unscheduled === 1 ? 'match' : 'matches'} still need a time.
-                        </p>
-                    )}
-                </>
             ) : (
                 <>
-                    {buckets.live.length > 0 && (
-                        <section aria-label="Live Now" className="flex flex-col gap-2">
-                            <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Live Now</h3>
-                            {buckets.live.map(row => (
-                                <ScheduleRowCard key={row.match.id} row={row} myTeamId={myTeamId} now={now} isNext={false} eventSlug={eventSlug} />
-                            ))}
-                        </section>
-                    )}
+                    {isEmpty ? (
+                        <p className="p-6 text-center text-sm text-muted-foreground">No matches scheduled yet.</p>
+                    ) : (
+                        <>
+                            {buckets.live.length > 0 && (
+                                <ScheduleSection title="Live Now">
+                                    {buckets.live.map(row => (
+                                        <ScheduleRowCard
+                                            key={row.match.id} row={row} context={context}
+                                            time={rowTimeLabel(row.startsAt, context.timezone, context.now)}
+                                        />
+                                    ))}
+                                </ScheduleSection>
+                            )}
 
-                    {days.map(day => (
-                        <DaySection
-                            key={day.key} label={day.label} rows={day.rows} myTeamId={myTeamId} now={now}
-                            nextMatchId={next?.match.id ?? null} eventSlug={eventSlug}
-                        />
-                    ))}
+                            {upcomingDays.map(day => <DaySection key={day.key} day={day} context={context} />)}
+                        </>
+                    )}
 
                     {unscheduled > 0 && (
                         <p className="text-xs text-muted-foreground">
@@ -196,18 +170,17 @@ export function PublicSchedulePanel({ bracket, loading, myTeamId, eventSlug }: P
                     )}
 
                     {buckets.played.length > 0 && (
-                        <section aria-label="Played matches" className="flex flex-col gap-2">
+                        <section aria-label="Played matches" className="flex flex-col gap-4">
                             <button
                                 type="button"
-                                onClick={() => setShowPlayed(current => !current)}
+                                aria-expanded={showPlayed}
+                                onClick={() => setShowPlayed(!showPlayed)}
                                 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                             >
                                 {showPlayed ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
                                 Show played matches ({buckets.played.length})
                             </button>
-                            {showPlayed && buckets.played.map(row => (
-                                <ScheduleRowCard key={row.match.id} row={row} myTeamId={myTeamId} now={now} isNext={false} eventSlug={eventSlug} />
-                            ))}
+                            {showPlayed && playedDays.map(day => <DaySection key={day.key} day={day} context={context} />)}
                         </section>
                     )}
                 </>

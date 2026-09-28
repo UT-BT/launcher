@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test } from '@playwright/test'
+import { horizontalOverflow } from './layout'
 
 const SLUG = 'schedule-cup'
 
@@ -381,6 +382,20 @@ const BRACKET = {
     stages: [GROUP_STAGE, PLAYOFF_STAGE, HIDDEN_STAGE],
 }
 
+const STUCK_LIVE_BRACKET = {
+    ...BRACKET,
+    stages: [
+        {
+            ...GROUP_STAGE,
+            matches: GROUP_STAGE.matches.map(entry => (
+                entry.id === 'live-a' ? { ...entry, scheduled_at: bracketTime(START_OF_TODAY - 50 * MINUTE) } : entry
+            )),
+        },
+        PLAYOFF_STAGE,
+        HIDDEN_STAGE,
+    ],
+}
+
 const UNPUBLISHED_BRACKET = {
     published: false,
     format: { template: null, spec: null },
@@ -416,10 +431,12 @@ test.use({ timezoneId: 'UTC' })
 
 let bracketResponse: typeof BRACKET | typeof UNPUBLISHED_BRACKET = BRACKET
 let personalRequests: string[] = []
+let bracketReads = 0
 
 test.beforeEach(async ({ page }) => {
     bracketResponse = BRACKET
     personalRequests = []
+    bracketReads = 0
     await page.clock.setFixedTime(NOW)
     page.on('pageerror', error => console.error('BROWSER PAGE ERROR:', error.message))
 
@@ -445,7 +462,13 @@ test.beforeEach(async ({ page }) => {
         }
 
         if (path === `/tournaments/${SLUG}/bracket`) {
+            if (route.request().method() === 'GET') bracketReads += 1
             await route.fulfill({ json: { success: true, data: bracketResponse } })
+            return
+        }
+
+        if (path.startsWith(`/tournaments/${SLUG}/matches/`)) {
+            await route.fulfill({ status: 404, json: { success: false, error: 'Not found' } })
             return
         }
 
@@ -485,12 +508,6 @@ test.beforeEach(async ({ page }) => {
         await route.fulfill({ json: { success: true, data: [] } })
     })
 })
-
-async function horizontalOverflow(page: Page): Promise<number> {
-    return page.evaluate(
-        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-    )
-}
 
 test('a signed-out visitor lands on All Matches from a schedule link', async ({ page }) => {
     await page.goto(`/events/${SLUG}?tab=schedule`)
@@ -533,7 +550,7 @@ test('a signed-out visitor lands on All Matches from a schedule link', async ({ 
 
     const playedSection = allMatches.getByRole('region', { name: 'Played matches' })
     const playedToggle = playedSection.getByRole('button', { name: /Show played matches/ })
-    const playedRows = playedSection.locator('> div')
+    const playedRows = playedSection.locator('section > div')
     await expect(playedToggle).toHaveText('Show played matches (4)')
     await expect(playedRows).toHaveCount(0)
 
@@ -563,4 +580,107 @@ test('without a published stage a signed-out visitor falls back to Info', async 
     await expect(page.getByRole('button', { name: 'Schedule', exact: true })).toHaveCount(0)
     await expect(page.getByRole('region', { name: 'All Matches' })).toHaveCount(0)
     expect(personalRequests).toEqual([])
+})
+
+test('landing on a schedule link reads the bracket only as the page load does, and reopening All Matches adds no read', async ({ page }) => {
+    await page.goto(`/events/${SLUG}`)
+    await expect(page.getByRole('button', { name: 'Schedule', exact: true })).toBeVisible()
+    await page.waitForTimeout(3_000)
+    const pageLoadReads = bracketReads
+    expect(pageLoadReads).toBeGreaterThan(0)
+
+    bracketReads = 0
+    await page.goto(`/events/${SLUG}?tab=schedule`)
+    await expect(page.getByRole('region', { name: 'Live Now' })).toBeVisible()
+    await page.waitForTimeout(3_000)
+    expect(bracketReads).toBe(pageLoadReads)
+
+    await page.getByRole('button', { name: 'Teams', exact: true }).click()
+    await expect(page.getByRole('region', { name: 'All Matches' })).toHaveCount(0)
+    await page.getByRole('button', { name: 'Schedule', exact: true }).click()
+    await expect(page.getByRole('region', { name: 'Live Now' })).toBeVisible()
+    await page.waitForTimeout(3_000)
+    expect(bracketReads).toBe(pageLoadReads)
+})
+
+test('played matches sit under day headings, newest day first', async ({ page }) => {
+    await page.goto(`/events/${SLUG}?tab=schedule`)
+
+    const playedSection = page.getByRole('region', { name: 'Played matches' })
+    await playedSection.getByRole('button', { name: /Show played matches/ }).click()
+
+    const days = playedSection.getByRole('region')
+    await expect(days).toHaveCount(2)
+    await expect(days.nth(0).getByRole('heading')).toHaveText('Yesterday')
+    await expect(days.nth(1).getByRole('heading')).toHaveText(/^Thu,? (Oct 1|1 Oct)$/)
+
+    const yesterdayRows = days.nth(0).locator('> div')
+    await expect(yesterdayRows).toHaveCount(1)
+    await expect(yesterdayRows).toContainText('Lift Lords')
+    await expect(yesterdayRows).toContainText('19:00')
+
+    const thursdayRows = days.nth(1).locator('> div')
+    await expect(thursdayRows).toHaveCount(3)
+    await expect(thursdayRows.nth(0)).toContainText('Flag Runners United')
+    await expect(thursdayRows.nth(0)).toContainText('20:00')
+    await expect(thursdayRows.nth(1)).toContainText('Dodge Dynasty')
+    await expect(thursdayRows.nth(1)).toContainText('19:00')
+    await expect(thursdayRows.nth(2)).toContainText('Respawn Repeat Regret')
+    await expect(thursdayRows.nth(2)).toContainText('18:00')
+})
+
+test('the played section comes back as the viewer left it after Back', async ({ page }) => {
+    await page.goto(`/events/${SLUG}?tab=schedule`)
+
+    const playedSection = page.getByRole('region', { name: 'Played matches' })
+    const playedToggle = playedSection.getByRole('button', { name: /Show played matches/ })
+    await expect(playedToggle).toHaveAttribute('aria-expanded', 'false')
+    await playedToggle.click()
+    await expect(playedToggle).toHaveAttribute('aria-expanded', 'true')
+
+    await playedSection.getByRole('link', { name: 'View Picks & Bans' }).click()
+    await expect(page).toHaveURL(new RegExp(`/events/${SLUG}/matches/played-a-1$`))
+    await expect(playedSection).toHaveCount(0)
+
+    await page.goBack()
+    await expect(playedToggle).toHaveAttribute('aria-expanded', 'true')
+    await expect(playedSection.locator('section > div')).toHaveCount(4)
+
+    await page.goForward()
+    await expect(playedSection).toHaveCount(0)
+    await page.goBack()
+    await expect(playedToggle).toHaveAttribute('aria-expanded', 'true')
+
+    await playedToggle.click()
+    await expect(playedToggle).toHaveAttribute('aria-expanded', 'false')
+    await page.getByRole('region', { name: 'Live Now' }).getByRole('link', { name: 'View Picks & Bans' }).click()
+    await expect(page).toHaveURL(new RegExp(`/events/${SLUG}/matches/live-a$`))
+
+    await page.goBack()
+    await expect(page.getByRole('region', { name: 'Live Now' })).toBeVisible()
+    await expect(playedToggle).toHaveAttribute('aria-expanded', 'false')
+    await expect(playedSection.locator('section > div')).toHaveCount(0)
+})
+
+test('the schedule fits a 360 px phone with played matches open', async ({ page }) => {
+    await page.setViewportSize({ width: 360, height: 780 })
+    await page.goto(`/events/${SLUG}?tab=schedule`)
+
+    const playedSection = page.getByRole('region', { name: 'Played matches' })
+    await playedSection.getByRole('button', { name: /Show played matches/ }).click()
+    await expect(playedSection.getByRole('region')).toHaveCount(2)
+
+    expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1)
+})
+
+test('a match still live from yesterday shows its date as well as its time', async ({ page }) => {
+    bracketResponse = STUCK_LIVE_BRACKET
+    await page.setViewportSize({ width: 360, height: 780 })
+    await page.goto(`/events/${SLUG}?tab=schedule`)
+
+    const liveRow = page.getByRole('region', { name: 'Live Now' }).locator('> div')
+    await expect(liveRow).toContainText(/Fri,? (Oct 2|2 Oct) 23:10/)
+    await expect(page.getByRole('region', { name: 'Today' }).locator('> div').nth(0)).toContainText('14:00')
+
+    expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1)
 })

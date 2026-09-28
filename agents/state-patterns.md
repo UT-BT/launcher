@@ -11,13 +11,13 @@ read_when:
   - "sending the pick/ban selection preview (hover), or ordering pick/ban commands so each carries a fresh version"
   - "holding a pick/ban manager's act-for selection, command in flight, confirmation or refusal"
   - "editing a complete pick/ban's final maps (the Edit final draft and its checks)"
-keywords: [usePageState, useNavState, localStorage, PREF_KEYS, caches, querySig, presets, tutorial, persistence, controlled-page, userState, synced, badges, seen, polling, createPoller, visibility, usePickBanSession, usePickBanView, mergePickBanState, structural sharing, clock offset, reconnecting, captainPlay, useCaptainPlay, withCaptainPlay, captainDockOf, optimistic lock-in, hover, hoverOf, createHoverSender, HOVER_DEBOUNCE_MS, selection preview, command queue, managerDock, useManagerDock, withManagerPlay, managerDockOf, confirmation, Reopen, editFinal, finalDraftOf, finalEditorOf, openFinalEditor, Edit final]
+keywords: [usePageState, useNavState, localStorage, PREF_KEYS, caches, querySig, presets, tutorial, persistence, controlled-page, userState, synced, badges, seen, polling, createPoller, pollOnStart, visibility, usePickBanSession, usePickBanView, mergePickBanState, structural sharing, clock offset, reconnecting, captainPlay, useCaptainPlay, withCaptainPlay, captainDockOf, optimistic lock-in, hover, hoverOf, createHoverSender, HOVER_DEBOUNCE_MS, selection preview, command queue, managerDock, useManagerDock, withManagerPlay, managerDockOf, confirmation, Reopen, editFinal, finalDraftOf, finalEditorOf, openFinalEditor, Edit final]
 provides: "the state tiers (incl. the account-synced tier), the localStorage key convention, how pages are controlled + hoisted, and the polling live-data tier"
 not_here:
   - "the navigation stack / navigate() / renderView wiring → navigation.md"
   - "the shared components used (FilterPresetsMenu, ColumnsMenu, Tutorial) → shared-components.md"
 sections: [controlled-pages-with-hoisted-state, navigation-history-per-entry-ui-state, account-synced-state, localstorage-persistence, filter-presets, tutorial-state, favorites, polling-live-data, naming-conventions]
-last_verified: 2026-09-25
+last_verified: 2026-09-28
 verify_against: [app/components/main/Main.tsx, app/components/navigation/useNavState.ts, app/hooks/useAsync.ts, app/utils/userState.ts, app/utils/poller.ts, app/components/pages/events/pickban/pickBanSession.ts, app/components/pages/events/pickban/usePickBanSession.ts, app/components/pages/events/pickban/mergePickBanState.ts, app/components/pages/events/pickban/captainPlay.ts, app/components/pages/events/pickban/useCaptainPlay.ts, app/components/pages/events/pickban/managerDock.ts, app/components/pages/events/pickban/useManagerDock.ts, app/components/pages/events/pickban/editFinal.ts, app/components/pages/events/pickban/pickBanMotionPreference.ts, app/components/pages/events/pickban/pickBanSoundPreference.ts, app/components/pages/MatchPickBanPage.tsx]
 ---
 
@@ -377,11 +377,16 @@ is mounted.
 
 **`createPoller` (`app/utils/poller.ts`) is the reusable scheduler.** It takes
 `poll(signal)`, `intervalMs()` (read again after every attempt, so the cadence can follow
-the data), `alwaysPoll`, and an optional visibility environment that defaults to
-`document`. How it behaves:
+the data), `alwaysPoll`, `pollOnStart`, and an optional visibility environment that
+defaults to `document`. How it behaves:
 
 - `start()` polls at once, even in a hidden document, so a page never opens empty. After
   that it polls one interval after each attempt settles.
+- `pollOnStart: false` makes `start()` wait one interval before the first poll instead,
+  for a caller that already holds fresh data when it starts, like the Schedule tab's
+  All Matches bracket refresh (see `agents/data-sources.md`). A later `stop()` and
+  `start()` waits a full interval again, and the document showing again still polls at
+  once. Left out, it defaults to `true`, so every other caller polls on start.
 - Attempts never overlap: `pollNow()` during an attempt returns the one in flight.
 - `refresh()` is for right after a write: it aborts the attempt in flight (which started
   before the write, so its answer may be stale) and polls afresh. The aborted attempt
