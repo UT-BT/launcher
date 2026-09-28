@@ -329,7 +329,7 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                                     )}
                                 >
                                     {active && (
-                                        <div className="absolute inset-0 bg-gradient-to-r from-accent-600/20 to-red-600/20 border-l-2 border-accent-500" />
+                                        <span className="absolute inset-0 bg-gradient-to-r from-accent-600/20 to-red-600/20 border-l-2 border-accent-500" />
                                     )}
 
                                     <NavItemIcon icon={item.icon} active={active} badge={badge} />
