@@ -18,7 +18,7 @@ export function Tooltip({ content, children, className, side = 'top' }: TooltipP
     const [placed, setPlaced] = useState(false)
     const [coords, setCoords] = useState({ top: 0, left: 0, arrowLeft: 0 })
     const [resolvedSide, setResolvedSide] = useState<'top' | 'bottom'>(side)
-    const triggerRef = useRef<HTMLDivElement>(null)
+    const triggerRef = useRef<HTMLSpanElement>(null)
     const tooltipRef = useRef<HTMLDivElement>(null)
 
     const hide = () => {
@@ -63,7 +63,7 @@ export function Tooltip({ content, children, className, side = 'top' }: TooltipP
 
     return (
         <>
-            <div
+            <span
                 ref={triggerRef}
                 className={cn("relative inline-flex items-center", className)}
                 onMouseEnter={() => setIsVisible(true)}
@@ -72,7 +72,7 @@ export function Tooltip({ content, children, className, side = 'top' }: TooltipP
                 onBlur={hide}
             >
                 {children || <Info className="size-4 text-muted-foreground hover:text-foreground transition-colors cursor-help" />}
-            </div>
+            </span>
 
             {isVisible && createPortal(
                 <div

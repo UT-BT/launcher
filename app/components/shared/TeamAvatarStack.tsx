@@ -30,7 +30,7 @@ export function TeamAvatarStack({ members, currentUserId, className }: TeamAvata
                 </div>
             )}
         >
-            <div
+            <span
                 className={cn('flex items-center -space-x-3.5 cursor-help', className)}
                 tabIndex={0}
                 aria-label={`Team roster: ${roster.map(member => member.alias).join(', ')}`}
@@ -50,7 +50,7 @@ export function TeamAvatarStack({ members, currentUserId, className }: TeamAvata
                         className="relative rounded-full ring-2 ring-card hover:z-10"
                     />
                 ))}
-            </div>
+            </span>
         </Tooltip>
     )
 }

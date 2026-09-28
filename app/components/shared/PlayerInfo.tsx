@@ -153,7 +153,7 @@ export function PlayerInfo({
         ? cn(wrapperClass, highlight && 'rounded-full ring-1 ring-emerald-400/70')
         : wrapperClass
 
-    const Wrapper = presentation === 'name' ? 'span' : 'div'
+    const Wrapper = presentation === 'name' || presentation === 'avatar' ? 'span' : 'div'
 
     if (!isClickable) {
         return (

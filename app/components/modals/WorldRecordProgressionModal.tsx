@@ -200,12 +200,12 @@ export function WorldRecordProgressionModal({
                             {formatCapTime(current.cap_time_seconds)}
                         </div>
                         <Tooltip content={exactTimestamp(current.added)} side="top">
-                            <div className="text-[10px] text-muted-foreground tabular-nums mt-1.5">
+                            <span className="block text-[10px] text-muted-foreground tabular-nums mt-1.5">
                                 Set {formatAddedDate(current.added ?? '')}
                                 {heldForDays != null && heldForDays > 0 && (
                                     <> · held {heldForDays}d</>
                                 )}
-                            </div>
+                            </span>
                         </Tooltip>
                     </div>
                 </div>
