@@ -206,10 +206,10 @@ Rules:
   team invitations) is above zero, it overrides the seen-marker count. It has
   no "mark as seen" step and clears on its own once the underlying condition
   is gone. My team's open picks & bans lobby is not counted. It shows as a
-  separate green live dot with the same no-seen-marker rule. A view belonging
-  to an event (the cup link's event-detail page, and a match picks & bans
-  page) gets the same kind of badge, scoped to just that event's own slug and
-  also with no seen marker; badge resolution — including this rule — is one
+  separate green live dot with the same no-seen-marker rule. The cup link,
+  whose destination is its event's detail page, gets the same kind of badge,
+  scoped to just that event's own slug and also with no seen marker; badge
+  resolution — including this rule — is one
   pure function in `app/components/navigation/nav-items.ts`, not state kept
   here. Visiting the cup page never clears the Events "new events" count. None
   of this is in this store either — `Main.tsx` holds the underlying attention

@@ -473,9 +473,9 @@ your team can schedule that have no offer yet, and pending team invitations.
 Your own team's open picks & bans lobby is not counted. It shows as the green
 live dot instead, since it means "your match is starting" rather than a chore.
 Neither has a seen marker or is cleared by `markViewed`; each disappears on
-its own once it stops being true. `resolveNavBadge` folds them in ahead of
-the ordinary badge counts, through `attentionNavBadge` (moved into
-`nav-items.ts` from the event-attention module, see `agents/data-sources.md`).
+its own once it stops being true. `resolveNavBadge` builds this badge
+through `attentionNavBadge` (moved into `nav-items.ts` from the
+event-attention module, see `agents/data-sources.md`).
 Any to-dos win over the ordinary new-events count on the `events`
 destination. With none, the new-events count stays and the live dot can sit
 beside it.

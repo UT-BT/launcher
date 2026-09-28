@@ -192,7 +192,8 @@ describe('resolveNavBadge', () => {
     })
 
     it('shows no badge for an event view with nothing pending', () => {
-        expect(resolveNavBadge({ view: 'event-detail', params: { eventSlug: cupSlug } }, {}, attention(), {})).toBeNull()
+        const map: EventAttentionMap = { 'other-cup': attention({ offersToAnswer: 2, pickBanOpen: true }) }
+        expect(resolveNavBadge({ view: 'event-detail', params: { eventSlug: cupSlug } }, map, attention(), {})).toBeNull()
     })
 
     it('shows Events\' combined count and lines when there is attention', () => {
