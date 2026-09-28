@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { EventMatch, EventSummary, EventTeam, MyTournamentMembership, ScheduleEntry, ScheduleProposal } from './api'
 import {
-    attentionNavBadge, combinedEventAttention, computeEventAttention, eventAttentionCount, eventAttentionLines, eventTodos,
+    combinedEventAttention, computeEventAttention, eventAttentionCount, eventAttentionLines, eventTodos,
     myTeamIdsByTournament, scheduleTodoSummary, todoCountsByKind,
     type EventAttention, type EventTodo,
 } from './eventAttention'
@@ -203,42 +203,6 @@ describe('eventAttentionLines', () => {
             'Propose a time for 3 matches',
             'Answer 2 team invitations',
         ])
-    })
-})
-
-describe('attentionNavBadge', () => {
-    const newEvents = { count: 3, live: false, details: ['3 new since your last visit'] }
-
-    it('shows nothing when nothing is pending', () => {
-        expect(attentionNavBadge()).toBeNull()
-        expect(attentionNavBadge(attention())).toBeNull()
-    })
-
-    it('shows only the live dot for an open lobby', () => {
-        expect(attentionNavBadge(attention({ pickBanOpen: true })))
-            .toEqual({ count: null, live: true, details: ['Join your open Picks & Bans lobby'] })
-    })
-
-    it('counts to-dos next to the live dot', () => {
-        expect(attentionNavBadge(attention({ offersToAnswer: 1, invitations: 1, pickBanOpen: true }))).toEqual({
-            count: 2,
-            live: true,
-            details: ['Respond to a time offer for 1 match', 'Answer 1 team invitation', 'Join your open Picks & Bans lobby'],
-        })
-    })
-
-    it('lets to-dos replace the fallback count', () => {
-        expect(attentionNavBadge(attention({ matchesToSchedule: 1 }), newEvents))
-            .toEqual({ count: 1, live: false, details: ['Propose a time for 1 match'] })
-    })
-
-    it('keeps the fallback count when there are no to-dos', () => {
-        expect(attentionNavBadge(attention(), newEvents)).toEqual(newEvents)
-        expect(attentionNavBadge(attention({ pickBanOpen: true }), newEvents)).toEqual({
-            count: 3,
-            live: true,
-            details: ['Join your open Picks & Bans lobby', '3 new since your last visit'],
-        })
     })
 })
 

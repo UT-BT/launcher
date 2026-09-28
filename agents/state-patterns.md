@@ -18,7 +18,7 @@ not_here:
   - "the shared components used (FilterPresetsMenu, ColumnsMenu, Tutorial) → shared-components.md"
 sections: [controlled-pages-with-hoisted-state, navigation-history-per-entry-ui-state, account-synced-state, localstorage-persistence, filter-presets, tutorial-state, favorites, polling-live-data, naming-conventions]
 last_verified: 2026-09-28
-verify_against: [app/components/main/Main.tsx, app/components/navigation/useNavState.ts, app/hooks/useAsync.ts, app/utils/userState.ts, app/utils/poller.ts, app/utils/eventAttention.ts, app/components/pages/events/pickban/pickBanSession.ts, app/components/pages/events/pickban/usePickBanSession.ts, app/components/pages/events/pickban/mergePickBanState.ts, app/components/pages/events/pickban/captainPlay.ts, app/components/pages/events/pickban/useCaptainPlay.ts, app/components/pages/events/pickban/managerDock.ts, app/components/pages/events/pickban/useManagerDock.ts, app/components/pages/events/pickban/editFinal.ts, app/components/pages/events/pickban/pickBanMotionPreference.ts, app/components/pages/events/pickban/pickBanSoundPreference.ts, app/components/pages/MatchPickBanPage.tsx]
+verify_against: [app/components/main/Main.tsx, app/components/navigation/useNavState.ts, app/components/navigation/nav-items.ts, app/hooks/useAsync.ts, app/utils/userState.ts, app/utils/poller.ts, app/utils/eventAttention.ts, app/components/pages/events/pickban/pickBanSession.ts, app/components/pages/events/pickban/usePickBanSession.ts, app/components/pages/events/pickban/mergePickBanState.ts, app/components/pages/events/pickban/captainPlay.ts, app/components/pages/events/pickban/useCaptainPlay.ts, app/components/pages/events/pickban/managerDock.ts, app/components/pages/events/pickban/useManagerDock.ts, app/components/pages/events/pickban/editFinal.ts, app/components/pages/events/pickban/pickBanMotionPreference.ts, app/components/pages/events/pickban/pickBanSoundPreference.ts, app/components/pages/MatchPickBanPage.tsx]
 ---
 
 # State patterns
@@ -206,12 +206,15 @@ Rules:
   team invitations) is above zero, it overrides the seen-marker count. It has
   no "mark as seen" step and clears on its own once the underlying condition
   is gone. My team's open picks & bans lobby is not counted. It shows as a
-  separate green live dot with the same no-seen-marker rule. A sidebar item
-  that targets an event-detail destination (the cup link) gets the same kind
-  of badge, scoped to just that event's own slug and also with no seen marker.
-  Visiting the cup page never clears the Events "new events" count. None of this is in this store either — `Main.tsx` holds it as
-  in-memory state, refreshed on the same triggers (sign-in, window focus,
-  60s). See `agents/data-sources.md` for the derivation.
+  separate green live dot with the same no-seen-marker rule. A view belonging
+  to an event (the cup link's event-detail page, and a match picks & bans
+  page) gets the same kind of badge, scoped to just that event's own slug and
+  also with no seen marker; badge resolution — including this rule — is one
+  pure function in `app/components/navigation/nav-items.ts`, not state kept
+  here. Visiting the cup page never clears the Events "new events" count. None
+  of this is in this store either — `Main.tsx` holds the underlying attention
+  data as in-memory state, refreshed on the same triggers (sign-in, window
+  focus, 60s). See `agents/data-sources.md` for the derivation.
 
 ## localStorage persistence
 

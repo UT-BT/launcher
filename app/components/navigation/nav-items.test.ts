@@ -1,9 +1,18 @@
 import { describe, expect, it } from 'vitest'
-import { BASE_NAV_SECTIONS, eventSlugOfView, isEventLinkLive, isNavItemActive, navItemDestination, newSinceVisitBadge, type NavItem } from './nav-items'
+import type { EventAttention, EventAttentionMap } from '@/app/utils/eventAttention'
+import {
+    attentionNavBadge, BASE_NAV_SECTIONS, eventSlugOfView, isEventLinkLive, isNavItemActive, navItemDestination,
+    newSinceVisitBadge, resolveNavBadge, type NavItem,
+} from './nav-items'
 
 const mapsItem: NavItem = { id: 'maps', label: 'Maps', icon: () => null }
 const eventsItem = BASE_NAV_SECTIONS.flatMap(section => section.items).find(item => item.id === 'events')!
 const cupItem = BASE_NAV_SECTIONS.flatMap(section => section.items).find(item => item.id === 'cup-2v2-2026')!
+const cupSlug = cupItem.eventLink!.slug
+
+function attention(patch: Partial<EventAttention> = {}): EventAttention {
+    return { offersToAnswer: 0, matchesToSchedule: 0, invitations: 0, pickBanOpen: false, ...patch }
+}
 
 describe('isNavItemActive', () => {
     describe('a plain item', () => {
@@ -124,5 +133,97 @@ describe('newSinceVisitBadge', () => {
         expect(newSinceVisitBadge(0)).toBeNull()
         expect(newSinceVisitBadge(null)).toBeNull()
         expect(newSinceVisitBadge(undefined)).toBeNull()
+    })
+})
+
+describe('attentionNavBadge', () => {
+    const newEvents = { count: 3, live: false, details: ['3 new since your last visit'] }
+
+    it('shows nothing when nothing is pending', () => {
+        expect(attentionNavBadge()).toBeNull()
+        expect(attentionNavBadge(attention())).toBeNull()
+    })
+
+    it('shows only the live dot for an open lobby', () => {
+        expect(attentionNavBadge(attention({ pickBanOpen: true })))
+            .toEqual({ count: null, live: true, details: ['Join your open Picks & Bans lobby'] })
+    })
+
+    it('counts to-dos next to the live dot', () => {
+        expect(attentionNavBadge(attention({ offersToAnswer: 1, invitations: 1, pickBanOpen: true }))).toEqual({
+            count: 2,
+            live: true,
+            details: ['Respond to a time offer for 1 match', 'Answer 1 team invitation', 'Join your open Picks & Bans lobby'],
+        })
+    })
+
+    it('lets to-dos replace the fallback count', () => {
+        expect(attentionNavBadge(attention({ matchesToSchedule: 1 }), newEvents))
+            .toEqual({ count: 1, live: false, details: ['Propose a time for 1 match'] })
+    })
+
+    it('keeps the fallback count when there are no to-dos', () => {
+        expect(attentionNavBadge(attention(), newEvents)).toEqual(newEvents)
+        expect(attentionNavBadge(attention({ pickBanOpen: true }), newEvents)).toEqual({
+            count: 3,
+            live: true,
+            details: ['Join your open Picks & Bans lobby', '3 new since your last visit'],
+        })
+    })
+})
+
+describe('resolveNavBadge', () => {
+    it('shows an event view\'s count and detail lines for a pending to-do', () => {
+        const map: EventAttentionMap = { [cupSlug]: attention({ matchesToSchedule: 1 }) }
+        expect(resolveNavBadge({ view: 'event-detail', params: { eventSlug: cupSlug } }, map, attention(), {}))
+            .toEqual({ count: 1, live: false, details: ['Propose a time for 1 match'] })
+    })
+
+    it('shows the live dot with no count for a lobby-only event', () => {
+        const map: EventAttentionMap = { [cupSlug]: attention({ pickBanOpen: true }) }
+        expect(resolveNavBadge({ view: 'event-detail', params: { eventSlug: cupSlug } }, map, attention(), {}))
+            .toEqual({ count: null, live: true, details: ['Join your open Picks & Bans lobby'] })
+    })
+
+    it('also routes a match picks & bans page to its event\'s badge', () => {
+        const map: EventAttentionMap = { [cupSlug]: attention({ pickBanOpen: true }) }
+        expect(resolveNavBadge({ view: 'match-pickban', params: { eventSlug: cupSlug, matchId: '42' } }, map, attention(), {}))
+            .toEqual({ count: null, live: true, details: ['Join your open Picks & Bans lobby'] })
+    })
+
+    it('shows no badge for an event view with nothing pending', () => {
+        expect(resolveNavBadge({ view: 'event-detail', params: { eventSlug: cupSlug } }, {}, attention(), {})).toBeNull()
+    })
+
+    it('shows Events\' combined count and lines when there is attention', () => {
+        const combined = attention({ offersToAnswer: 1, invitations: 1, pickBanOpen: true })
+        expect(resolveNavBadge({ view: 'events', params: {} }, {}, combined, {})).toEqual({
+            count: 2,
+            live: true,
+            details: ['Respond to a time offer for 1 match', 'Answer 1 team invitation', 'Join your open Picks & Bans lobby'],
+        })
+    })
+
+    it('shows Events\' new-since-visit count when there is no attention', () => {
+        expect(resolveNavBadge({ view: 'events', params: {} }, {}, attention(), { events: 3 }))
+            .toEqual({ count: 3, live: false, details: ['3 new since your last visit'] })
+    })
+
+    it('keeps the new-since-visit count and adds the live dot when Events has a lobby but no to-dos', () => {
+        expect(resolveNavBadge({ view: 'events', params: {} }, {}, attention({ pickBanOpen: true }), { events: 3 })).toEqual({
+            count: 3,
+            live: true,
+            details: ['Join your open Picks & Bans lobby', '3 new since your last visit'],
+        })
+    })
+
+    it('shows a plain badged view\'s new-since-visit badge', () => {
+        expect(resolveNavBadge({ view: 'maps', params: {} }, {}, attention(), { maps: 2 }))
+            .toEqual({ count: 2, live: false, details: ['2 new since your last visit'] })
+    })
+
+    it('produces no attention badges for an empty attention map', () => {
+        expect(resolveNavBadge({ view: 'event-detail', params: { eventSlug: cupSlug } }, {}, attention(), {})).toBeNull()
+        expect(resolveNavBadge({ view: 'events', params: {} }, {}, attention(), {})).toBeNull()
     })
 })

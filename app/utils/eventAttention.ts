@@ -1,4 +1,3 @@
-import type { NavBadge } from '@/app/components/navigation/nav-items'
 import type { EventTeam, MyTournamentMembership, ScheduleEntry } from './api'
 
 export type EventTodo =
@@ -136,13 +135,4 @@ export function scheduleTodoSummary({ offersToAnswer, matchesToSchedule }: TodoC
         count: offersToAnswer + matchesToSchedule,
         lines: presentLines([offersToAnswerLine(offersToAnswer), matchesToScheduleLine(matchesToSchedule)]),
     }
-}
-
-export function attentionNavBadge(attention: EventAttention = NO_ATTENTION, fallback: NavBadge | null = null): NavBadge | null {
-    const count = eventAttentionCount(attention)
-    const details = eventAttentionLines(attention)
-
-    if (count > 0) return { count, live: attention.pickBanOpen, details }
-    if (fallback) return { count: fallback.count, live: attention.pickBanOpen || fallback.live, details: [...details, ...fallback.details] }
-    return attention.pickBanOpen ? { count: null, live: true, details } : null
 }

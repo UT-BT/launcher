@@ -95,8 +95,8 @@ import {
   fetchAchievementDefinitions, fetchMyAchievements, fetchMyEventStatus, fetchMySchedule, fetchMyTournaments,
   fetchNavBadges, markSectionSeen, type BadgeSection,
 } from '@/app/utils/api'
-import { attentionNavBadge, combinedEventAttention, computeEventAttention, type EventAttentionMap } from '@/app/utils/eventAttention'
-import { newSinceVisitBadge } from '@/app/components/navigation/nav-items'
+import { combinedEventAttention, computeEventAttention, type EventAttentionMap } from '@/app/utils/eventAttention'
+import { resolveNavBadge } from '@/app/components/navigation/nav-items'
 import { getSynced, setSynced, subscribeSynced } from '@/app/utils/userState'
 import { writePendingHighlight, type HighlightView } from '@/app/hooks/useNewItemHighlight'
 import { isStaff } from '@/app/utils/roles'
@@ -938,11 +938,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
           <AppLayout
             currentView={currentView}
             onViewChange={navigate}
-            getNavBadge={(view, params) => {
-              if (view === 'event-detail' && params.eventSlug) return attentionNavBadge(eventAttention[params.eventSlug])
-              const newBadge = newSinceVisitBadge(badgeCounts[view])
-              return view === 'events' ? attentionNavBadge(allEventsAttention, newBadge) : newBadge
-            }}
+            getNavBadge={(view, params) => resolveNavBadge({ view, params }, eventAttention, allEventsAttention, badgeCounts)}
             userProfile={userProfile}
             installationStatus={installationStatus}
           >
