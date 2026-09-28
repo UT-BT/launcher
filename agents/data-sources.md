@@ -463,10 +463,12 @@ booked-time display).
 
 **Outside the schedule tab, "the cup needs you" reuses only the sidebar
 badge's RENDERING, not its "new since last visit" persistence.** `AppLayout`'s
-`getNavBadge: (view) => number | null` pill (see `agents/navigation.md`) is
-fed, for the `events` item, by a second and unrelated signal: per-event
-*attention*, computed by `computeEventAttention` (`app/utils/eventAttention.ts`)
-from three inputs and grouped by event slug into an `EventAttentionMap`
+`getNavBadge: (view, params) => number | null` pill (see `agents/navigation.md`)
+is fed, for the `events` item and for any item whose destination is
+`event-detail` (the `cup-2v2-2026` sidebar link, via its `params.eventSlug`),
+by a second and unrelated signal: per-event *attention*, computed by
+`computeEventAttention` (`app/utils/eventAttention.ts`) from three inputs and
+grouped by event slug into an `EventAttentionMap`
 (`{ [slug]: { awaitingSchedule, invitations, pickBanOpen } }`):
 - **awaitingSchedule** — `fetchMySchedule` (`/me/schedule`) entries in a
   tournament where the caller holds an *active* membership
@@ -492,19 +494,25 @@ just leaves that slug out — it never blanks `awaitingSchedule`/`invitations`
 for that or any other event. `computeEventAttention` then folds all three
 inputs into the map in one pass.
 
-`eventAttentionCount` sums one event's three parts; `totalEventAttentionCount`
-sums that across the whole map for the Events pill's number;
-`combinedEventAttention` adds the parts themselves across events so
-`eventAttentionTooltip` can render one combined sentence (e.g. "1 match
-waiting on your team to pick a time · 1 team invitation · Picks & Bans lobby
-open") for the Events tooltip. None of this has a seen marker — nothing is
-persisted, nothing is cleared by visiting Events, and each part disappears on
-its own the moment the caller acts (responds, accepts/declines, or the lobby
-closes). When the total is nonzero it replaces (rather than adds to) the
-ordinary "new events" badge on that nav item, since the two counts mean
-different things and a sum would misstate both; `getNavBadgeTooltip` on
-`AppLayout` lets `Main.tsx` swap in whichever wording matches the count
-actually showing. A total failure fetching schedule or memberships resets the
+`eventAttentionCount` sums one event's three parts — this is what an
+event-detail destination's badge shows for its own `eventSlug`, or no badge
+when it's 0. `totalEventAttentionCount` sums that across the whole map for the
+Events pill's number; `combinedEventAttention` adds the parts themselves
+across events so `eventAttentionTooltip` can render one combined sentence
+(e.g. "1 match waiting on your team to pick a time · 1 team invitation ·
+Picks & Bans lobby open") for either the Events tooltip or a single event's
+own tooltip (built from `eventAttentionTooltip(attention)` on just that
+event's entry). None of this has a seen marker — nothing is persisted,
+nothing is cleared by visiting Events or the cup page, and each part
+disappears on its own the moment the caller acts (responds, accepts/declines,
+or the lobby closes). When the total is nonzero it replaces (rather than adds
+to) the ordinary "new events" badge on the `events` nav item, since the two
+counts mean different things and a sum would misstate both; on an
+event-detail destination there is no "new since last visit" fallback to
+replace, since only Events tracks that. `getNavBadgeTooltip(view, params,
+count)` on `AppLayout` lets `Main.tsx` swap in whichever wording matches the
+count actually showing, keyed by the same `(view, params)` pair as
+`getNavBadge`. A total failure fetching schedule or memberships resets the
 whole map to empty rather than leaving stale numbers up.
 
 **`whose_turn` is a team id, not a role.** `null` means no proposal is open

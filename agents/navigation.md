@@ -375,7 +375,11 @@ navigation but are **not** navigation events:
   account's seen markers**; a `null` count means "never visited" and renders no
   pill. Signed-out users get no badges at all. `Main.tsx` renders the pills via
   the `getNavBadge` prop it threads into `AppLayout` (AppLayout is
-  display-only here).
+  display-only here). The callbacks are keyed by **destination**, not item id:
+  `getNavBadge(view, params)` and `getNavBadgeTooltip(view, params, count)`.
+  `AppLayout` calls them with each item's resolved `{ view, params }` from
+  `navItemDestination`, so two items that share a destination (an event-detail
+  link and the Events item) can still be told apart by `params.eventSlug`.
 - **`markViewed(view, { highlight })`** — fired at the top of `navigate()`
   (before its same-view early-return, so re-clicking the active sidebar item
   still clears the pill) and from `pushExternal()` (web back/forward + deep
@@ -411,15 +415,27 @@ navigation but are **not** navigation events:
   time.
 
 **Not every `getNavBadge` count is a "new since last visit" pill.** The
-`events` item can also show a live "a proposal is waiting on your team"
-count that has no seen marker and is never cleared by `markViewed` — it
-disappears on its own once it stops being true. `Main.tsx` computes it
-separately from `badgeCounts` and, when it is nonzero, it wins over the
-ordinary new-events count on that one nav item; `AppLayout`'s
-`getNavBadgeTooltip: (view, count) => string` prop lets the tooltip say which
-one is actually showing. Full derivation (`fetchMySchedule` +
-`fetchMyTournaments`, `computeEventAttention`) is in `agents/data-sources.md`
-("Event scheduling") — this doc only owns the pill/tooltip rendering contract.
+`events` item can also show a live "the cup needs you to act" total across
+all events — a proposal waiting on your team, a pending team invitation, or
+your team's picks & bans lobby being open. It has no seen marker and is never
+cleared by `markViewed`; it disappears on its own once it stops being true.
+`Main.tsx` computes it separately from `badgeCounts` and, when it is nonzero,
+it wins over the ordinary new-events count on the `events` destination.
+
+Any sidebar item whose destination is `event-detail` gets the same kind of
+badge, but scoped to that one event: `getNavBadge('event-detail', params)`
+looks up `params.eventSlug` in the per-event attention map and returns that
+event's own count (or `null` when it's 0), never the cross-event total. The
+`cup-2v2-2026` item is the only such item today; while the cup is the only
+live event its badge and the Events pill show the same number, but each is
+counted independently — a second live event would only add to the Events
+total, not to the cup's own badge. `getNavBadgeTooltip(view, params, count)`
+follows the same split: the combined attention tooltip on `events` or on an
+event-detail destination, the ordinary "N new since your last visit" wording
+everywhere else. Full derivation (`fetchMySchedule` + `fetchMyTournaments` +
+the per-event status read, `computeEventAttention`) is in
+`agents/data-sources.md` ("Event scheduling") — this doc only owns the
+pill/tooltip rendering contract.
 
 Because `markViewed()` lives inside `navigate()`, opening a badged page from
 **either** the sidebar **or** the Home tiles clears the "new" badge and fires the

@@ -96,7 +96,7 @@ import {
   fetchNavBadges, markSectionSeen, type BadgeSection,
 } from '@/app/utils/api'
 import {
-  combinedEventAttention, computeEventAttention, eventAttentionTooltip, totalEventAttentionCount, type EventAttentionMap,
+  combinedEventAttention, computeEventAttention, eventAttentionCount, eventAttentionTooltip, totalEventAttentionCount, type EventAttentionMap,
 } from '@/app/utils/eventAttention'
 import { getSynced, setSynced, subscribeSynced } from '@/app/utils/userState'
 import { writePendingHighlight, type HighlightView } from '@/app/hooks/useNewItemHighlight'
@@ -945,12 +945,23 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
           <AppLayout
             currentView={currentView}
             onViewChange={navigate}
-            getNavBadge={(view) => view === 'events' && totalAttentionCount > 0
-              ? totalAttentionCount
-              : badgeVisible(view) ? badgeCounts[view] : null}
-            getNavBadgeTooltip={(view, count) => view === 'events' && totalAttentionCount > 0
-              ? attentionTooltip
-              : `${count} new since your last visit`}
+            getNavBadge={(view, params) => {
+              if (view === 'event-detail' && params.eventSlug) {
+                const attention = eventAttention[params.eventSlug]
+                const count = attention ? eventAttentionCount(attention) : 0
+                return count > 0 ? count : null
+              }
+              if (view === 'events' && totalAttentionCount > 0) return totalAttentionCount
+              return badgeVisible(view) ? badgeCounts[view] : null
+            }}
+            getNavBadgeTooltip={(view, params, count) => {
+              if (view === 'event-detail' && params.eventSlug) {
+                const attention = eventAttention[params.eventSlug]
+                return attention ? eventAttentionTooltip(attention) : ''
+              }
+              if (view === 'events' && totalAttentionCount > 0) return attentionTooltip
+              return `${count} new since your last visit`
+            }}
             userProfile={userProfile}
             installationStatus={installationStatus}
           >

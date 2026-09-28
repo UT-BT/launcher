@@ -36,8 +36,8 @@ interface AppLayoutProps {
     children: ReactNode
     currentView: string
     onViewChange: (view: string, params?: NavParams) => void
-    getNavBadge?: (view: string) => number | null
-    getNavBadgeTooltip?: (view: string, count: number) => string
+    getNavBadge?: (view: string, params: NavParams) => number | null
+    getNavBadgeTooltip?: (view: string, params: NavParams, count: number) => string
     userProfile?: UserProfile
     installationStatus?: 'valid' | 'no-install' | 'unsupported' | null
 }
@@ -278,7 +278,7 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, ge
                             </h3>
                             {section.items.map((item) => {
                                 const { view: destinationView, params: destinationParams } = navItemDestination(item)
-                                const badgeCount = getNavBadge?.(destinationView) ?? null
+                                const badgeCount = getNavBadge?.(destinationView, destinationParams) ?? null
                                 const active = isNavItemActive(item, currentView, currentParams)
                                 return (
                                 <NavLink
@@ -307,7 +307,7 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, ge
                                     {badgeCount != null && (
                                         <span
                                             className="relative z-10 ml-auto flex items-center"
-                                            title={getNavBadgeTooltip?.(destinationView, badgeCount) ?? `${badgeCount} new since your last visit`}
+                                            title={getNavBadgeTooltip?.(destinationView, destinationParams, badgeCount) ?? `${badgeCount} new since your last visit`}
                                         >
                                             <span className="absolute inline-flex h-full w-full rounded-full bg-accent-400 opacity-60 animate-ping" />
                                             <span className="relative inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-accent-500 text-white text-[10px] font-black tabular-nums shadow-[0_0_10px_rgb(var(--accent-glow-rgb)/0.5)]">
