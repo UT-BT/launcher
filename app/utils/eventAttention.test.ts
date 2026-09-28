@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest'
 import type { EventMatch, EventSummary, EventTeam, MyTournamentMembership, ScheduleEntry, ScheduleProposal } from './api'
 import {
     attentionNavBadge, combinedEventAttention, computeEventAttention, eventAttentionCount, eventAttentionLines, eventTodos,
-    type EventAttention,
+    myTeamIdsByTournament, scheduleTodoSummary,
+    type EventAttention, type EventTodo,
 } from './eventAttention'
 
 const TEAM_A = { id: 'team-a', name: 'Alpha', seed: 1, status: 'registered' as const }
@@ -75,7 +76,7 @@ function membership(patch: Partial<MyTournamentMembership> = {}): MyTournamentMe
 }
 
 function attention(patch: Partial<EventAttention> = {}): EventAttention {
-    return { answerTimes: 0, proposeTime: 0, invitations: 0, pickBanOpen: false, ...patch }
+    return { offersToAnswer: 0, matchesToSchedule: 0, invitations: 0, pickBanOpen: false, ...patch }
 }
 
 describe('eventTodos', () => {
@@ -126,8 +127,8 @@ describe('computeEventAttention', () => {
             ],
             new Set(),
         )
-        expect(map['2v2-cup']).toEqual(attention({ answerTimes: 1 }))
-        expect(map['other-cup']).toEqual(attention({ proposeTime: 1 }))
+        expect(map['2v2-cup']).toEqual(attention({ offersToAnswer: 1 }))
+        expect(map['other-cup']).toEqual(attention({ matchesToSchedule: 1 }))
     })
 
     it('needs an active membership for schedule to-dos', () => {
@@ -176,7 +177,7 @@ describe('combinedEventAttention', () => {
             new Set(['other-cup']),
         )
         const combined = combinedEventAttention(map)
-        expect(combined).toEqual(attention({ answerTimes: 1, invitations: 1, pickBanOpen: true }))
+        expect(combined).toEqual(attention({ offersToAnswer: 1, invitations: 1, pickBanOpen: true }))
         expect(eventAttentionCount(combined)).toBe(2)
     })
 
@@ -191,13 +192,13 @@ describe('eventAttentionLines', () => {
     })
 
     it('spells out each part with pluralisation', () => {
-        expect(eventAttentionLines(attention({ answerTimes: 1, proposeTime: 1, invitations: 1, pickBanOpen: true }))).toEqual([
+        expect(eventAttentionLines(attention({ offersToAnswer: 1, matchesToSchedule: 1, invitations: 1, pickBanOpen: true }))).toEqual([
             'Respond to a time offer for 1 match',
             'Propose a time for 1 match',
             'Answer 1 team invitation',
             'Join your open Picks & Bans lobby',
         ])
-        expect(eventAttentionLines(attention({ answerTimes: 2, proposeTime: 3, invitations: 2 }))).toEqual([
+        expect(eventAttentionLines(attention({ offersToAnswer: 2, matchesToSchedule: 3, invitations: 2 }))).toEqual([
             'Respond to time offers for 2 matches',
             'Propose a time for 3 matches',
             'Answer 2 team invitations',
@@ -219,7 +220,7 @@ describe('attentionNavBadge', () => {
     })
 
     it('counts to-dos next to the live dot', () => {
-        expect(attentionNavBadge(attention({ answerTimes: 1, invitations: 1, pickBanOpen: true }))).toEqual({
+        expect(attentionNavBadge(attention({ offersToAnswer: 1, invitations: 1, pickBanOpen: true }))).toEqual({
             count: 2,
             live: true,
             details: ['Respond to a time offer for 1 match', 'Answer 1 team invitation', 'Join your open Picks & Bans lobby'],
@@ -227,7 +228,7 @@ describe('attentionNavBadge', () => {
     })
 
     it('lets to-dos replace the fallback count', () => {
-        expect(attentionNavBadge(attention({ proposeTime: 1 }), newEvents))
+        expect(attentionNavBadge(attention({ matchesToSchedule: 1 }), newEvents))
             .toEqual({ count: 1, live: false, details: ['Propose a time for 1 match'] })
     })
 
@@ -238,5 +239,43 @@ describe('attentionNavBadge', () => {
             live: true,
             details: ['Join your open Picks & Bans lobby', '3 new since your last visit'],
         })
+    })
+})
+
+describe('scheduleTodoSummary', () => {
+    it('counts answer and propose to-dos and ignores invitations', () => {
+        const todos: EventTodo[] = [
+            { kind: 'answer-times', entry: entry() },
+            { kind: 'answer-times', entry: entry({ match: match({ id: 'match-2' }) }) },
+            { kind: 'propose-time', entry: entry({ match: match({ id: 'match-3' }) }) },
+            { kind: 'invitation', team: myTeam({ id: 'team-x', name: 'Xray' }) },
+        ]
+        expect(scheduleTodoSummary(todos)).toEqual({
+            count: 3,
+            lines: ['Respond to time offers for 2 matches', 'Propose a time for 1 match'],
+        })
+    })
+
+    it('matches today\'s Schedule-tab tooltip text', () => {
+        expect(scheduleTodoSummary([{ kind: 'answer-times', entry: entry() }]).lines)
+            .toEqual(['Respond to a time offer for 1 match'])
+        expect(scheduleTodoSummary([{ kind: 'propose-time', entry: entry() }]).lines)
+            .toEqual(['Propose a time for 1 match'])
+    })
+
+    it('returns an empty result for no to-dos', () => {
+        expect(scheduleTodoSummary([])).toEqual({ count: 0, lines: [] })
+    })
+})
+
+describe('myTeamIdsByTournament', () => {
+    it('maps a tournament slug to the active team id', () => {
+        const map = myTeamIdsByTournament([membership()])
+        expect(map.get('2v2-cup')).toBe(TEAM_A.id)
+    })
+
+    it('ignores a membership that is only invited, not active', () => {
+        const map = myTeamIdsByTournament([membership({ membership_status: 'invited' })])
+        expect(map.has('2v2-cup')).toBe(false)
     })
 })

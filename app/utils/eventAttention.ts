@@ -1,4 +1,3 @@
-import { myTeamIdsByTournament } from '@/app/components/pages/events/schedule/scheduleShared'
 import type { NavBadge } from '@/app/components/navigation/nav-items'
 import type { EventTeam, MyTournamentMembership, ScheduleEntry } from './api'
 
@@ -8,15 +7,15 @@ export type EventTodo =
     | { kind: 'invitation'; team: EventTeam }
 
 export interface EventAttention {
-    answerTimes: number
-    proposeTime: number
+    offersToAnswer: number
+    matchesToSchedule: number
     invitations: number
     pickBanOpen: boolean
 }
 
 export type EventAttentionMap = Record<string, EventAttention>
 
-const NO_ATTENTION: EventAttention = { answerTimes: 0, proposeTime: 0, invitations: 0, pickBanOpen: false }
+const NO_ATTENTION: EventAttention = { offersToAnswer: 0, matchesToSchedule: 0, invitations: 0, pickBanOpen: false }
 
 function playsIn(entry: ScheduleEntry, teamId: string): boolean {
     return entry.match.team_a?.id === teamId || entry.match.team_b?.id === teamId
@@ -33,13 +32,26 @@ export function eventTodos(schedule: ScheduleEntry[], myTeamId: string | null, i
     return todos
 }
 
-export function eventAttentionOf(todos: EventTodo[], pickBanOpen: boolean): EventAttention {
-    return {
-        answerTimes: todos.filter(todo => todo.kind === 'answer-times').length,
-        proposeTime: todos.filter(todo => todo.kind === 'propose-time').length,
-        invitations: todos.filter(todo => todo.kind === 'invitation').length,
-        pickBanOpen,
+export function myTeamIdsByTournament(memberships: MyTournamentMembership[]): Map<string, string> {
+    const byTournament = new Map<string, string>()
+
+    for (const membership of memberships) {
+        if (membership.membership_status === 'active') byTournament.set(membership.tournament.slug, membership.team.id)
     }
+
+    return byTournament
+}
+
+export function todoCountsByKind(todos: EventTodo[]): { offersToAnswer: number; matchesToSchedule: number; invitations: number } {
+    return {
+        offersToAnswer: todos.filter(todo => todo.kind === 'answer-times').length,
+        matchesToSchedule: todos.filter(todo => todo.kind === 'propose-time').length,
+        invitations: todos.filter(todo => todo.kind === 'invitation').length,
+    }
+}
+
+export function eventAttentionOf(todos: EventTodo[], pickBanOpen: boolean): EventAttention {
+    return { ...todoCountsByKind(todos), pickBanOpen }
 }
 
 export function computeEventAttention(
@@ -70,35 +82,54 @@ export function computeEventAttention(
 }
 
 export function eventAttentionCount(attention: EventAttention): number {
-    return attention.answerTimes + attention.proposeTime + attention.invitations
+    return attention.offersToAnswer + attention.matchesToSchedule + attention.invitations
 }
 
 export function combinedEventAttention(map: EventAttentionMap): EventAttention {
     return Object.values(map).reduce((combined, attention) => ({
-        answerTimes: combined.answerTimes + attention.answerTimes,
-        proposeTime: combined.proposeTime + attention.proposeTime,
+        offersToAnswer: combined.offersToAnswer + attention.offersToAnswer,
+        matchesToSchedule: combined.matchesToSchedule + attention.matchesToSchedule,
         invitations: combined.invitations + attention.invitations,
         pickBanOpen: combined.pickBanOpen || attention.pickBanOpen,
     }), NO_ATTENTION)
 }
 
-function matches(count: number): string {
+function matchCountLabel(count: number): string {
     return `${count} match${count === 1 ? '' : 'es'}`
 }
 
+function offersToAnswerLine(count: number): string | null {
+    return count > 0 ? `Respond to ${count === 1 ? 'a time offer' : 'time offers'} for ${matchCountLabel(count)}` : null
+}
+
+function matchesToScheduleLine(count: number): string | null {
+    return count > 0 ? `Propose a time for ${matchCountLabel(count)}` : null
+}
+
+function invitationsLine(count: number): string | null {
+    return count > 0 ? `Answer ${count} team invitation${count === 1 ? '' : 's'}` : null
+}
+
+function pickBanOpenLine(pickBanOpen: boolean): string | null {
+    return pickBanOpen ? 'Join your open Picks & Bans lobby' : null
+}
+
 export function eventAttentionLines(attention: EventAttention): string[] {
-    const lines: string[] = []
+    return [
+        offersToAnswerLine(attention.offersToAnswer),
+        matchesToScheduleLine(attention.matchesToSchedule),
+        invitationsLine(attention.invitations),
+        pickBanOpenLine(attention.pickBanOpen),
+    ].filter((line): line is string => line !== null)
+}
 
-    if (attention.answerTimes > 0) {
-        lines.push(`Respond to ${attention.answerTimes === 1 ? 'a time offer' : 'time offers'} for ${matches(attention.answerTimes)}`)
+export function scheduleTodoSummary(todos: EventTodo[]): { count: number; lines: string[] } {
+    const { offersToAnswer, matchesToSchedule } = todoCountsByKind(todos)
+    return {
+        count: offersToAnswer + matchesToSchedule,
+        lines: [offersToAnswerLine(offersToAnswer), matchesToScheduleLine(matchesToSchedule)]
+            .filter((line): line is string => line !== null),
     }
-    if (attention.proposeTime > 0) lines.push(`Propose a time for ${matches(attention.proposeTime)}`)
-    if (attention.invitations > 0) {
-        lines.push(`Answer ${attention.invitations} team invitation${attention.invitations === 1 ? '' : 's'}`)
-    }
-    if (attention.pickBanOpen) lines.push('Join your open Picks & Bans lobby')
-
-    return lines
 }
 
 export function attentionNavBadge(attention: EventAttention = NO_ATTENTION, fallback: NavBadge | null = null): NavBadge | null {

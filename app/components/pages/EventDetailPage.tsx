@@ -31,7 +31,7 @@ import { ScheduleTab } from './events/schedule/ScheduleTab'
 import type { PickBanDrafts } from './events/manage/pickban/pickBanEditor'
 import { SlotPickerModal } from './events/schedule/SlotPickerModal'
 import { EventTodoPanel } from './events/EventTodoPanel'
-import { eventAttentionLines, eventAttentionOf, eventTodos } from '@/app/utils/eventAttention'
+import { eventTodos, scheduleTodoSummary, todoCountsByKind } from '@/app/utils/eventAttention'
 
 const PICK_BAN_ME_REFRESH_MS = 30_000
 
@@ -298,9 +298,9 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
         .filter(t => t.id !== 'maps' || hasMapsPool)
         .filter(t => t.id !== 'predictions' || predictionsOn)
         .filter(t => t.id !== 'schedule' || canSeeSchedule)
-    const todoAttention = eventAttentionOf(todos, false)
-    const scheduleTodoCount = todoAttention.answerTimes + todoAttention.proposeTime
-    const scheduleTodoTitle = eventAttentionLines({ ...todoAttention, invitations: 0 }).join(' · ')
+    const todoCounts = todoCountsByKind(todos)
+    const scheduleTodo = scheduleTodoSummary(todos)
+    const scheduleTodoTitle = scheduleTodo.lines.join(' · ')
     const activeTab = (tab === 'manage' && !canManageBracket)
         || (tab === 'bracket' && !hasBracket)
         || (tab === 'maps' && !hasMapsPool)
@@ -342,8 +342,8 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
 
                 <div className="flex items-center gap-1 border-b border-white/10 overflow-x-auto">
                     {visibleTabs.map(t => {
-                        const inviteCount = t.id === 'signup' ? todoAttention.invitations : 0
-                        const scheduleCount = t.id === 'schedule' ? scheduleTodoCount : 0
+                        const inviteCount = t.id === 'signup' ? todoCounts.invitations : 0
+                        const scheduleCount = t.id === 'schedule' ? scheduleTodo.count : 0
                         const badgeCount = inviteCount || scheduleCount
                         const signupCallout = t.id === 'signup' && event.signups_open && !my?.team
                         return (

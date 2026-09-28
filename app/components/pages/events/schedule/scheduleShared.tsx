@@ -1,4 +1,4 @@
-import type { MyTournamentMembership, ScheduleEntry } from '@/app/utils/api'
+import type { ScheduleEntry } from '@/app/utils/api'
 import { formatSlotTime, parseApiInstant } from '@/app/utils/timezone'
 import { teamLabel } from '../bracket/bracketShared'
 
@@ -14,16 +14,6 @@ const SCHEDULABILITY_REASONS: Record<string, string> = {
 export function schedulabilityReason(reason: string | null): string {
     if (!reason) return ''
     return SCHEDULABILITY_REASONS[reason] ?? 'This match cannot be scheduled right now.'
-}
-
-export function myTeamIdsByTournament(memberships: MyTournamentMembership[]): Map<string, string> {
-    const byTournament = new Map<string, string>()
-
-    for (const membership of memberships) {
-        if (membership.membership_status === 'active') byTournament.set(membership.tournament.slug, membership.team.id)
-    }
-
-    return byTournament
 }
 
 export function proposerName(entry: ScheduleEntry): string {
