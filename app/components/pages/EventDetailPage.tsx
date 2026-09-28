@@ -14,7 +14,9 @@ import {
     type EventBracket, type EventDetail, type EventFormatSpec, type EventLfpEntry, type EventMatch, type EventTeam,
     type MyEventStatus, type MyMatchEntry, type PickBanConfig, type PredictionsOverview, type ScheduleEntry, type UserProfile,
 } from '@/app/utils/api'
-import { EventStatusBadge, formatEventDate, formatEventDateTime, formatTeamSize, scheduleTabVisible } from './events/eventsShared'
+import {
+    EventStatusBadge, formatEventDate, formatEventDateTime, formatTeamSize, isScheduleParticipant, scheduleTabVisible,
+} from './events/eventsShared'
 import { EventTeamsList } from './events/EventTeamsList'
 import { EventLfpList } from './events/EventLfpList'
 import { SignupPanel } from './events/SignupPanel'
@@ -28,7 +30,7 @@ import { PickBanJoinBanner } from './events/pickban/components/PickBanJoinBanner
 import { PredictionsTab } from './events/predictions/PredictionsTab'
 import { PredictionOddsProvider, formatCountdown, useNow } from './events/predictions/predictionsShared'
 import { lockStartedMarkets, matchLockSignals, newlyLockedMatchIds } from './events/predictions/marketLock'
-import { ScheduleTab } from './events/schedule/ScheduleTab'
+import { ScheduleTabContainer } from './events/schedule/ScheduleTabContainer'
 import type { PickBanDrafts } from './events/manage/pickban/pickBanEditor'
 import { SlotPickerModal } from './events/schedule/SlotPickerModal'
 
@@ -92,6 +94,7 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
     const [teams, setTeams] = useState<EventTeam[]>([])
     const [lfp, setLfp] = useState<EventLfpEntry[]>([])
     const [bracket, setBracket] = useState<EventBracket | null>(null)
+    const [bracketLoaded, setBracketLoaded] = useState(false)
     const [my, setMy] = useState<MyEventStatus | null>(null)
     const [predictions, setPredictions] = useState<PredictionsOverview | null>(null)
     const [predictionsLoaded, setPredictionsLoaded] = useState(false)
@@ -127,6 +130,8 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
             setBracket(await fetchEventBracket(browseToken, eventSlug))
         } catch {
             setBracket(null)
+        } finally {
+            setBracketLoaded(true)
         }
     }, [browseToken, eventSlug])
 
@@ -182,7 +187,7 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
     }), [eventSlug])
 
     const isStreamer = !!my?.is_streamer
-    const canSeeSchedule = scheduleTabVisible(!!my?.team, !!my?.can_manage_bracket || !!my?.can_manage, isStreamer)
+    const scheduleParticipant = isScheduleParticipant(!!my?.team, !!my?.can_manage_bracket || !!my?.can_manage, isStreamer)
 
     const loadSchedule = useCallback(async (enabled: boolean) => {
         if (!enabled || !accessToken) {
@@ -209,7 +214,7 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
     }, [accessToken, myPoller])
     useEffect(() => { void loadBracket() }, [loadBracket])
     useEffect(() => { void loadPredictions(!!event?.predictions_enabled) }, [loadPredictions, event?.predictions_enabled])
-    useEffect(() => { void loadSchedule(canSeeSchedule) }, [loadSchedule, canSeeSchedule])
+    useEffect(() => { void loadSchedule(scheduleParticipant) }, [loadSchedule, scheduleParticipant])
     useEffect(() => { void loadPickBanConfig() }, [loadPickBanConfig])
 
     const refreshPredictions = useCallback(() => {
@@ -217,8 +222,12 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
     }, [loadPredictions, event?.predictions_enabled])
 
     const refreshSchedule = useCallback(() => {
-        void loadSchedule(canSeeSchedule)
-    }, [loadSchedule, canSeeSchedule])
+        void loadSchedule(scheduleParticipant)
+    }, [loadSchedule, scheduleParticipant])
+
+    const refreshBracket = useCallback(() => {
+        void loadBracket()
+    }, [loadBracket])
 
     const refresh = useCallback(() => {
         void load(true)
@@ -291,17 +300,18 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
     const canManageBracket = !!my?.can_manage_bracket || canManage
     const hasBracket = (bracket?.stages?.length ?? 0) > 0
     const predictionsOn = !!event.predictions_enabled
+    const scheduleVisible = scheduleTabVisible(scheduleParticipant, bracket)
     const visibleTabs = (canManageBracket ? TABS : BASE_TABS)
         .filter(t => t.id !== 'bracket' || hasBracket)
         .filter(t => t.id !== 'maps' || hasMapsPool)
         .filter(t => t.id !== 'predictions' || predictionsOn)
-        .filter(t => t.id !== 'schedule' || canSeeSchedule)
+        .filter(t => t.id !== 'schedule' || scheduleVisible)
     const scheduleAwaitingCount = (schedule ?? []).filter(e => !!myTeamId && !!e.proposal && e.whose_turn === myTeamId).length
     const activeTab = (tab === 'manage' && !canManageBracket)
         || (tab === 'bracket' && !hasBracket)
         || (tab === 'maps' && !hasMapsPool)
         || (tab === 'predictions' && !predictionsOn)
-        || (tab === 'schedule' && !canSeeSchedule) ? 'info' : tab
+        || (tab === 'schedule' && !scheduleVisible) ? 'info' : tab
 
     return (
         <div className="h-full flex flex-col overflow-hidden space-y-4 animate-in fade-in slide-in-from-bottom-0 duration-500">
@@ -396,9 +406,14 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
                 {activeTab === 'maps' && hasMapsPool && (
                     <MapsTab stages={mapsStages} onMapSelect={onMapSelect} />
                 )}
-                {activeTab === 'schedule' && canSeeSchedule && (
-                    <ScheduleTab
-                        myTeamId={my?.team?.id ?? null}
+                {activeTab === 'schedule' && scheduleVisible && (
+                    <ScheduleTabContainer
+                        bracket={bracket}
+                        bracketLoading={!bracketLoaded}
+                        participant={scheduleParticipant}
+                        awaitingCount={scheduleAwaitingCount}
+                        onBracketRefresh={refreshBracket}
+                        myTeamId={myTeamId}
                         entries={schedule}
                         myMatches={myMatches}
                         loaded={scheduleLoaded}

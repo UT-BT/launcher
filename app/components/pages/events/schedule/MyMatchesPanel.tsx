@@ -22,7 +22,7 @@ import {
 
 const REFRESH_MS = 30_000
 
-interface ScheduleTabProps {
+export interface MyMatchesPanelProps {
     myTeamId: string | null
     entries: ScheduleEntry[] | null
     myMatches: MyMatchEntry[] | null
@@ -34,9 +34,9 @@ interface ScheduleTabProps {
     pickBanSession?: MyPickBanSession | null
 }
 
-export function ScheduleTab({
+export function MyMatchesPanel({
     myTeamId, entries, myMatches, loaded, viewer, onRefresh, onOpenPicker, eventSlug, pickBanSession = null,
-}: ScheduleTabProps) {
+}: MyMatchesPanelProps) {
     const [copyError, setCopyError] = useState<string | null>(null)
     const { copiedKey, copy } = useCopyFeedback(e => setCopyError(eventErrorMessage(e)))
 
