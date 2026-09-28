@@ -468,7 +468,8 @@ booked-time display).
 badge's RENDERING, not its "new since last visit" persistence.** `AppLayout`'s
 `getNavBadge: (view, params) => NavBadge | null` (see `agents/navigation.md`)
 is fed, for the `events` item and for any item whose destination is
-`event-detail` (the `cup-2v2-2026` sidebar link, via its `params.eventSlug`),
+`event-detail` (the `cup-2v2-2026` sidebar link, whose `navItemDestination`
+carries its `eventLink.slug` as `eventSlug`),
 by a second and unrelated signal: per-event *attention*, built by
 `app/utils/eventAttention.ts`.
 
