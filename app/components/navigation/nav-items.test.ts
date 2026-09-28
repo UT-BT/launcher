@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { BASE_NAV_SECTIONS, isNavItemActive, type NavItem } from './nav-items'
+import { BASE_NAV_SECTIONS, isNavItemActive, newSinceVisitBadge, type NavItem } from './nav-items'
 
 const mapsItem: NavItem = { id: 'maps', label: 'Maps', icon: () => null }
 const eventsItem = BASE_NAV_SECTIONS.flatMap(section => section.items).find(item => item.id === 'events')!
@@ -51,5 +51,17 @@ describe('BASE_NAV_SECTIONS registry order', () => {
     it('gives the cup item the event-detail destination with the cup slug', () => {
         expect(cupItem.view).toBe('event-detail')
         expect(cupItem.params).toEqual({ eventSlug: '2v2-cup-2026' })
+    })
+})
+
+describe('newSinceVisitBadge', () => {
+    it('shows the count with its meaning', () => {
+        expect(newSinceVisitBadge(2)).toEqual({ count: 2, live: false, details: ['2 new since your last visit'] })
+    })
+
+    it('shows nothing without new items', () => {
+        expect(newSinceVisitBadge(0)).toBeNull()
+        expect(newSinceVisitBadge(null)).toBeNull()
+        expect(newSinceVisitBadge(undefined)).toBeNull()
     })
 })

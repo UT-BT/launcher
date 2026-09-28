@@ -209,13 +209,30 @@ Secondary action (muted):
 ### Sidebar status tag
 
 A limited-time sidebar item (a `NavItem` `tag`, e.g. the cup's `Live`) gets the
-events `Live` chip in the row's right-aligned trailing slot, left of any count
-badge and never inside the label text, and never a row background, left bar or
-accent colour, so it can't be mistaken for the active item. It stays static: the count
-badge's ping is the "act now" signal and the tag must not compete with it.
+events `Live` chip, alone in the row's right-aligned trailing slot, never inside the
+label text, and never a row background, left bar or accent colour, so it can't be
+mistaken for the active item. It stays static so it never competes with the live dot.
 ```
 "shrink-0 whitespace-nowrap rounded border border-red-500/30 bg-red-500/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-red-300"
 ```
+
+### Sidebar badges
+
+Sidebar badges sit on the item's icon, never in the row, so they can't squeeze the
+label or the status tag in the 16rem rail. The icon-to-label gap is `gap-4` to leave
+room for them.
+- **Count bubble**: top-right of the icon, static, accent, with a `ring-card` cutout.
+  It shows at most `99+` and grows leftwards over the icon, never into the label.
+  ```
+  "absolute -top-1.5 -right-1.5 inline-flex items-center justify-center min-w-4 h-4 px-1 rounded-full bg-accent-500 text-white text-[10px] font-black leading-none tabular-nums ring-2 ring-card shadow-[0_0_8px_rgb(var(--accent-glow-rgb)/0.5)]"
+  ```
+- **Live dot**: bottom-right of the icon, emerald, `size-2.5` with a `ring-card`
+  cutout. It is the only pinging mark in the rail, for something happening right now
+  (an open picks & bans lobby). It is the same dot the event page's "Needs your
+  attention" lobby row uses, so the two read as one signal.
+
+Both marks are `aria-hidden`. Their meaning goes into a `sr-only` span after the
+label, and into the shared `Tooltip` on the icon, one line per detail.
 
 ### Action chips inside table rows (Join, Spec, etc.)
 

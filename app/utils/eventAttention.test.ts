@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import type { EventMatch, EventSummary, EventTeam, MyTournamentMembership, ScheduleEntry, ScheduleProposal } from './api'
 import {
-    combinedEventAttention, computeEventAttention, eventAttentionCount, eventAttentionTooltip, totalEventAttentionCount,
+    attentionNavBadge, combinedEventAttention, computeEventAttention, eventAttentionCount, eventAttentionLines, eventTodos,
+    type EventAttention,
 } from './eventAttention'
 
 const TEAM_A = { id: 'team-a', name: 'Alpha', seed: 1, status: 'registered' as const }
 const TEAM_B = { id: 'team-b', name: 'Bravo', seed: 2, status: 'registered' as const }
+const TEAM_C = { id: 'team-c', name: 'Charlie', seed: 3, status: 'registered' as const }
+const OTHER_CUP = { id: 't2', slug: 'other-cup', name: 'Other Cup' }
 
 function match(patch: Partial<EventMatch> = {}): EventMatch {
     return {
@@ -71,32 +74,69 @@ function membership(patch: Partial<MyTournamentMembership> = {}): MyTournamentMe
     }
 }
 
+function attention(patch: Partial<EventAttention> = {}): EventAttention {
+    return { answerTimes: 0, proposeTime: 0, invitations: 0, pickBanOpen: false, ...patch }
+}
+
+describe('eventTodos', () => {
+    it('asks my team to respond when the open offer is waiting on us', () => {
+        const todos = eventTodos([entry({ whose_turn: TEAM_A.id })], TEAM_A.id, [])
+        expect(todos.map(todo => todo.kind)).toEqual(['answer-times'])
+    })
+
+    it('asks my team to propose when a schedulable match of ours has no offer yet', () => {
+        const todos = eventTodos([entry({ proposal: null, whose_turn: null })], TEAM_A.id, [])
+        expect(todos.map(todo => todo.kind)).toEqual(['propose-time'])
+    })
+
+    it('stays quiet while the opponent owes a response', () => {
+        expect(eventTodos([entry({ whose_turn: TEAM_B.id })], TEAM_A.id, [])).toEqual([])
+    })
+
+    it('stays quiet for a match that cannot be scheduled yet', () => {
+        expect(eventTodos([entry({ proposal: null, whose_turn: null, schedulable: false })], TEAM_A.id, [])).toEqual([])
+    })
+
+    it('stays quiet for a match my team does not play in', () => {
+        const theirs = entry({ proposal: null, whose_turn: null, match: match({ team_a: TEAM_B, team_b: TEAM_C }) })
+        expect(eventTodos([theirs], TEAM_A.id, [])).toEqual([])
+    })
+
+    it('lists invitations only while I have no team in the event', () => {
+        const invitation = myTeam({ id: 'team-x', name: 'Xray' })
+        expect(eventTodos([], null, [invitation]).map(todo => todo.kind)).toEqual(['invitation'])
+        expect(eventTodos([], TEAM_A.id, [invitation])).toEqual([])
+    })
+
+    it('ignores schedule entries while I have no team in the event', () => {
+        expect(eventTodos([entry({ whose_turn: TEAM_A.id })], null, [])).toEqual([])
+    })
+})
+
 describe('computeEventAttention', () => {
-    it('groups awaiting-schedule counts by the entry event slug', () => {
+    it('groups schedule to-dos by the entry event slug', () => {
         const map = computeEventAttention(
             [
                 entry({ whose_turn: TEAM_A.id }),
-                entry({ tournament: { id: 't2', slug: 'other-cup', name: 'Other Cup' }, whose_turn: TEAM_A.id }),
+                entry({ tournament: OTHER_CUP, proposal: null, whose_turn: null }),
             ],
             [
                 membership(),
-                membership({ tournament: tournamentSummary({ id: 't2', slug: 'other-cup', name: 'Other Cup' }) }),
+                membership({ tournament: tournamentSummary(OTHER_CUP) }),
             ],
             new Set(),
         )
-        expect(map['2v2-cup'].awaitingSchedule).toBe(1)
-        expect(map['other-cup'].awaitingSchedule).toBe(1)
+        expect(map['2v2-cup']).toEqual(attention({ answerTimes: 1 }))
+        expect(map['other-cup']).toEqual(attention({ proposeTime: 1 }))
     })
 
-    it('counts awaiting only for an active membership with a proposal where it is my team turn', () => {
-        const count = (schedule: ScheduleEntry[], memberships: MyTournamentMembership[]) =>
-            computeEventAttention(schedule, memberships, new Set())['2v2-cup']?.awaitingSchedule ?? 0
-
-        expect(count([entry({ whose_turn: TEAM_A.id })], [membership()])).toBe(1)
-        expect(count([entry({ whose_turn: TEAM_B.id })], [membership()])).toBe(0)
-        expect(count([entry({ whose_turn: TEAM_A.id, proposal: null })], [membership()])).toBe(0)
-        expect(count([entry({ whose_turn: TEAM_A.id })], [])).toBe(0)
-        expect(count([entry({ whose_turn: TEAM_A.id })], [membership({ membership_status: 'invited' })])).toBe(0)
+    it('needs an active membership for schedule to-dos', () => {
+        const map = computeEventAttention(
+            [entry({ whose_turn: TEAM_A.id }), entry({ proposal: null, whose_turn: null })],
+            [membership({ membership_status: 'invited' })],
+            new Set(),
+        )
+        expect(map['2v2-cup']).toEqual(attention({ invitations: 1 }))
     })
 
     it('counts invited membership rows per slug and does not count active rows as invitations', () => {
@@ -104,69 +144,99 @@ describe('computeEventAttention', () => {
             [],
             [
                 membership({ membership_status: 'invited' }),
-                membership({ membership_status: 'invited', tournament: tournamentSummary({ id: 't2', slug: 'other-cup', name: 'Other Cup' }) }),
+                membership({ membership_status: 'invited', tournament: tournamentSummary(OTHER_CUP) }),
                 membership({ membership_status: 'active', tournament: tournamentSummary({ id: 't3', slug: 'third-cup', name: 'Third Cup' }) }),
             ],
             new Set(),
         )
         expect(map['2v2-cup'].invitations).toBe(1)
         expect(map['other-cup'].invitations).toBe(1)
-        expect(map['third-cup']?.invitations ?? 0).toBe(0)
+        expect(map['third-cup']).toBeUndefined()
     })
 
-    it('marks pickBanOpen for slugs in the open-session set only', () => {
-        const map = computeEventAttention([], [], new Set(['2v2-cup']))
-        expect(map['2v2-cup'].pickBanOpen).toBe(1)
-    })
-})
-
-describe('eventAttentionCount', () => {
-    it('sums an event attention record', () => {
-        expect(eventAttentionCount({ awaitingSchedule: 2, invitations: 1, pickBanOpen: 1 })).toBe(4)
-    })
-})
-
-describe('totalEventAttentionCount', () => {
-    it('sums across events', () => {
-        const map = computeEventAttention(
-            [entry({ whose_turn: TEAM_A.id })],
-            [
-                membership(),
-                membership({ membership_status: 'invited', tournament: tournamentSummary({ id: 't2', slug: 'other-cup', name: 'Other Cup' }) }),
-            ],
-            new Set(['other-cup']),
-        )
-        expect(totalEventAttentionCount(map)).toBe(3)
+    it('marks an open lobby without counting it', () => {
+        const map = computeEventAttention([], [membership()], new Set(['2v2-cup']))
+        expect(map['2v2-cup']).toEqual(attention({ pickBanOpen: true }))
+        expect(eventAttentionCount(map['2v2-cup'])).toBe(0)
     })
 
-    it('is zero for an empty map', () => {
-        expect(totalEventAttentionCount({})).toBe(0)
+    it('leaves events with nothing to do out of the map', () => {
+        expect(computeEventAttention([entry({ whose_turn: TEAM_B.id })], [membership()], new Set())).toEqual({})
     })
 })
 
 describe('combinedEventAttention', () => {
-    it('adds parts across events into a single record', () => {
+    it('adds counts across events and keeps any open lobby', () => {
         const map = computeEventAttention(
             [entry({ whose_turn: TEAM_A.id })],
             [
                 membership(),
-                membership({ membership_status: 'invited', tournament: tournamentSummary({ id: 't2', slug: 'other-cup', name: 'Other Cup' }) }),
+                membership({ membership_status: 'invited', tournament: tournamentSummary(OTHER_CUP) }),
             ],
             new Set(['other-cup']),
         )
-        expect(combinedEventAttention(map)).toEqual({ awaitingSchedule: 1, invitations: 1, pickBanOpen: 1 })
+        const combined = combinedEventAttention(map)
+        expect(combined).toEqual(attention({ answerTimes: 1, invitations: 1, pickBanOpen: true }))
+        expect(eventAttentionCount(combined)).toBe(2)
+    })
+
+    it('is empty for an empty map', () => {
+        expect(combinedEventAttention({})).toEqual(attention())
     })
 })
 
-describe('eventAttentionTooltip', () => {
+describe('eventAttentionLines', () => {
     it('is empty when nothing is pending', () => {
-        expect(eventAttentionTooltip({ awaitingSchedule: 0, invitations: 0, pickBanOpen: 0 })).toBe('')
+        expect(eventAttentionLines(attention())).toEqual([])
     })
 
-    it('joins non-zero parts with pluralisation', () => {
-        expect(eventAttentionTooltip({ awaitingSchedule: 1, invitations: 1, pickBanOpen: 1 }))
-            .toBe('1 match waiting on your team to pick a time · 1 team invitation · Picks & Bans lobby open')
-        expect(eventAttentionTooltip({ awaitingSchedule: 2, invitations: 3, pickBanOpen: 0 }))
-            .toBe('2 matches waiting on your team to pick a time · 3 team invitations')
+    it('spells out each part with pluralisation', () => {
+        expect(eventAttentionLines(attention({ answerTimes: 1, proposeTime: 1, invitations: 1, pickBanOpen: true }))).toEqual([
+            'Respond to a time offer for 1 match',
+            'Propose a time for 1 match',
+            'Answer 1 team invitation',
+            'Join your open Picks & Bans lobby',
+        ])
+        expect(eventAttentionLines(attention({ answerTimes: 2, proposeTime: 3, invitations: 2 }))).toEqual([
+            'Respond to time offers for 2 matches',
+            'Propose a time for 3 matches',
+            'Answer 2 team invitations',
+        ])
+    })
+})
+
+describe('attentionNavBadge', () => {
+    const newEvents = { count: 3, live: false, details: ['3 new since your last visit'] }
+
+    it('shows nothing when nothing is pending', () => {
+        expect(attentionNavBadge()).toBeNull()
+        expect(attentionNavBadge(attention())).toBeNull()
+    })
+
+    it('shows only the live dot for an open lobby', () => {
+        expect(attentionNavBadge(attention({ pickBanOpen: true })))
+            .toEqual({ count: null, live: true, details: ['Join your open Picks & Bans lobby'] })
+    })
+
+    it('counts to-dos next to the live dot', () => {
+        expect(attentionNavBadge(attention({ answerTimes: 1, invitations: 1, pickBanOpen: true }))).toEqual({
+            count: 2,
+            live: true,
+            details: ['Respond to a time offer for 1 match', 'Answer 1 team invitation', 'Join your open Picks & Bans lobby'],
+        })
+    })
+
+    it('lets to-dos replace the fallback count', () => {
+        expect(attentionNavBadge(attention({ proposeTime: 1 }), newEvents))
+            .toEqual({ count: 1, live: false, details: ['Propose a time for 1 match'] })
+    })
+
+    it('keeps the fallback count when there are no to-dos', () => {
+        expect(attentionNavBadge(attention(), newEvents)).toEqual(newEvents)
+        expect(attentionNavBadge(attention({ pickBanOpen: true }), newEvents)).toEqual({
+            count: 3,
+            live: true,
+            details: ['Join your open Picks & Bans lobby', '3 new since your last visit'],
+        })
     })
 })

@@ -201,14 +201,15 @@ Rules:
   a badge and advances the marker. Signed-out users get no badges. See
   `agents/navigation.md` (sidebar-new-badges) and `agents/data-sources.md` for
   the endpoints.
-  The Events badge is an exception: when the per-event attention total (schedule
-  proposals awaiting my team, pending team invitations, open picks & bans
-  lobbies) is above zero it overrides the seen-marker count, has no "mark as
-  seen" step, and clears on its own once the underlying condition is gone. A
-  sidebar item that targets an event-detail destination (the cup link) gets
-  the same kind of badge scoped to just that event's own slug, also with no
-  seen marker — visiting the cup page never clears the Events "new events"
-  count. None of this is in this store either — `Main.tsx` holds it as
+  The Events badge is an exception. When the per-event to-do total (time
+  offers my team must answer, schedulable matches with no offer yet, pending
+  team invitations) is above zero, it overrides the seen-marker count. It has
+  no "mark as seen" step and clears on its own once the underlying condition
+  is gone. My team's open picks & bans lobby is not counted. It shows as a
+  separate green live dot with the same no-seen-marker rule. A sidebar item
+  that targets an event-detail destination (the cup link) gets the same kind
+  of badge, scoped to just that event's own slug and also with no seen marker.
+  Visiting the cup page never clears the Events "new events" count. None of this is in this store either — `Main.tsx` holds it as
   in-memory state, refreshed on the same triggers (sign-in, window focus,
   60s). See `agents/data-sources.md` for the derivation.
 

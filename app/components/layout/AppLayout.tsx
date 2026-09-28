@@ -1,4 +1,4 @@
-import { ReactNode, lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { ElementType, ReactNode, lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { FaDiscord } from 'react-icons/fa'
 import { Server, Trophy, Settings, LogOut, Play, User, Menu } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -14,7 +14,7 @@ import {
 import { Button } from '@/app/components/ui/button'
 import { NavHistoryBar } from '@/app/components/navigation/NavHistoryBar'
 import { NavLink } from '@/app/components/navigation/NavLink'
-import { buildNavSections, isNavItemActive, navItemDestination } from '@/app/components/navigation/nav-items'
+import { buildNavSections, isNavItemActive, navItemDestination, type NavBadge } from '@/app/components/navigation/nav-items'
 import type { NavParams } from '@/app/components/navigation/NavigationContext'
 import { useNavigation } from '@/app/components/navigation/NavigationContext'
 
@@ -36,10 +36,45 @@ interface AppLayoutProps {
     children: ReactNode
     currentView: string
     onViewChange: (view: string, params?: NavParams) => void
-    getNavBadge?: (view: string, params: NavParams) => number | null
-    getNavBadgeTooltip?: (view: string, params: NavParams, count: number) => string
+    getNavBadge?: (view: string, params: NavParams) => NavBadge | null
     userProfile?: UserProfile
     installationStatus?: 'valid' | 'no-install' | 'unsupported' | null
+}
+
+function NavItemIcon({ icon: Icon, active, badge }: { icon: ElementType; active: boolean; badge: NavBadge | null }) {
+    const glyph = (
+        <Icon className={cn(
+            "size-5 transition-colors duration-200",
+            active ? "text-accent-400" : "group-hover:text-accent-400/80"
+        )} />
+    )
+
+    if (!badge) return <span className="relative z-10 flex shrink-0">{glyph}</span>
+
+    return (
+        <Tooltip
+            side="top"
+            className="z-10 shrink-0"
+            content={
+                <span className="flex flex-col gap-0.5">
+                    {badge.details.map(line => <span key={line}>{line}</span>)}
+                </span>
+            }
+        >
+            {glyph}
+            {badge.count != null && (
+                <span aria-hidden className="absolute -top-1.5 -right-1.5 inline-flex items-center justify-center min-w-4 h-4 px-1 rounded-full bg-accent-500 text-white text-[10px] font-black leading-none tabular-nums ring-2 ring-card shadow-[0_0_8px_rgb(var(--accent-glow-rgb)/0.5)]">
+                    {badge.count > 99 ? '99+' : badge.count}
+                </span>
+            )}
+            {badge.live && (
+                <span aria-hidden className="absolute -bottom-1 -right-1 flex size-2.5">
+                    <span className="absolute inset-0 rounded-full bg-emerald-400 opacity-75 animate-ping" />
+                    <span className="relative size-2.5 rounded-full bg-emerald-400 ring-2 ring-card" />
+                </span>
+            )}
+        </Tooltip>
+    )
 }
 
 function getRarityStyles(title: { rarity: number, color_r: number, color_g: number, color_b: number } | undefined | null) {
@@ -70,7 +105,7 @@ function getRarityStyles(title: { rarity: number, color_r: number, color_g: numb
     return { containerStyle, titleStyle, containerClass, titleClass }
 }
 
-export function AppLayout({ children, currentView, onViewChange, getNavBadge, getNavBadgeTooltip, userProfile, installationStatus }: AppLayoutProps) {
+export function AppLayout({ children, currentView, onViewChange, getNavBadge, userProfile, installationStatus }: AppLayoutProps) {
     const { capabilities, auth } = usePlatform()
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
     const [loginError, setLoginError] = useState<string | null>(() => auth.consumeLoginError())
@@ -278,7 +313,7 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, ge
                             </h3>
                             {section.items.map((item) => {
                                 const { view: destinationView, params: destinationParams } = navItemDestination(item)
-                                const badgeCount = getNavBadge?.(destinationView, destinationParams) ?? null
+                                const badge = getNavBadge?.(destinationView, destinationParams) ?? null
                                 const active = isNavItemActive(item, currentView, currentParams)
                                 return (
                                 <NavLink
@@ -289,7 +324,7 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, ge
                                     onFocus={() => prefetchPage(destinationView)}
                                     onActivate={() => changeView(destinationView, destinationParams)}
                                     className={cn(
-                                        "w-full flex items-center gap-3 px-4 py-3 [@media(max-height:800px)]:py-2 rounded-lg transition-all duration-200 cursor-pointer group relative overflow-hidden",
+                                        "w-full flex items-center gap-4 px-4 py-3 [@media(max-height:800px)]:py-2 rounded-lg transition-all duration-200 cursor-pointer group relative overflow-hidden",
                                         active
                                             ? "text-foreground shadow-[0_0_20px_rgba(29,78,216,0.3)]"
                                             : "text-muted-foreground hover:text-foreground hover:bg-hairline/5"
@@ -299,29 +334,12 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, ge
                                         <div className="absolute inset-0 bg-gradient-to-r from-accent-600/20 to-red-600/20 border-l-2 border-accent-500" />
                                     )}
 
-                                    <item.icon className={cn(
-                                        "size-5 transition-colors duration-200 relative z-10",
-                                        active ? "text-accent-400" : "group-hover:text-accent-400/80"
-                                    )} />
+                                    <NavItemIcon icon={item.icon} active={active} badge={badge} />
                                     <span className="relative z-10 min-w-0 truncate font-medium">{item.label}</span>
-                                    {(item.tag || badgeCount != null) && (
-                                        <span className="relative z-10 ml-auto flex shrink-0 items-center gap-2">
-                                            {item.tag && (
-                                                <span className="whitespace-nowrap rounded border border-red-500/30 bg-red-500/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-red-300">
-                                                    {item.tag}
-                                                </span>
-                                            )}
-                                            {badgeCount != null && (
-                                                <span
-                                                    className="relative flex items-center"
-                                                    title={getNavBadgeTooltip?.(destinationView, destinationParams, badgeCount) ?? `${badgeCount} new since your last visit`}
-                                                >
-                                                    <span className="absolute inline-flex h-full w-full rounded-full bg-accent-400 opacity-60 animate-ping" />
-                                                    <span className="relative inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-accent-500 text-white text-[10px] font-black tabular-nums shadow-[0_0_10px_rgb(var(--accent-glow-rgb)/0.5)]">
-                                                        {badgeCount}
-                                                    </span>
-                                                </span>
-                                            )}
+                                    {badge && <span className="sr-only">{badge.details.join('. ')}</span>}
+                                    {item.tag && (
+                                        <span className="relative z-10 ml-auto shrink-0 whitespace-nowrap rounded border border-red-500/30 bg-red-500/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-red-300">
+                                            {item.tag}
                                         </span>
                                     )}
                                 </NavLink>

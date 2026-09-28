@@ -95,9 +95,8 @@ import {
   fetchAchievementDefinitions, fetchMyAchievements, fetchMyEventStatus, fetchMySchedule, fetchMyTournaments,
   fetchNavBadges, markSectionSeen, type BadgeSection,
 } from '@/app/utils/api'
-import {
-  combinedEventAttention, computeEventAttention, eventAttentionCount, eventAttentionTooltip, totalEventAttentionCount, type EventAttentionMap,
-} from '@/app/utils/eventAttention'
+import { attentionNavBadge, combinedEventAttention, computeEventAttention, type EventAttentionMap } from '@/app/utils/eventAttention'
+import { newSinceVisitBadge } from '@/app/components/navigation/nav-items'
 import { getSynced, setSynced, subscribeSynced } from '@/app/utils/userState'
 import { writePendingHighlight, type HighlightView } from '@/app/hooks/useNewItemHighlight'
 import { isStaff } from '@/app/utils/roles'
@@ -427,11 +426,6 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
     return () => window.removeEventListener('focus', onFocus)
   }, [refreshBadges])
 
-  const badgeVisible = useCallback((view: string): boolean => {
-    const count = badgeCounts[view]
-    return count != null && count > 0
-  }, [badgeCounts])
-
   const [eventAttention, setEventAttention] = useState<EventAttentionMap>({})
 
   const refreshEventAttention = useCallback(async () => {
@@ -475,8 +469,7 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
     return () => window.removeEventListener('focus', onFocus)
   }, [refreshEventAttention])
 
-  const totalAttentionCount = useMemo(() => totalEventAttentionCount(eventAttention), [eventAttention])
-  const attentionTooltip = useMemo(() => eventAttentionTooltip(combinedEventAttention(eventAttention)), [eventAttention])
+  const allEventsAttention = useMemo(() => combinedEventAttention(eventAttention), [eventAttention])
 
   const leaveGuardsRef = useRef(new Map<string, () => string | null>())
   const [pendingLeave, setPendingLeave] = useState<
@@ -946,21 +939,9 @@ export function Main({ userProfile }: { userProfile?: import('@/app/utils/api').
             currentView={currentView}
             onViewChange={navigate}
             getNavBadge={(view, params) => {
-              if (view === 'event-detail' && params.eventSlug) {
-                const attention = eventAttention[params.eventSlug]
-                const count = attention ? eventAttentionCount(attention) : 0
-                return count > 0 ? count : null
-              }
-              if (view === 'events' && totalAttentionCount > 0) return totalAttentionCount
-              return badgeVisible(view) ? badgeCounts[view] : null
-            }}
-            getNavBadgeTooltip={(view, params, count) => {
-              if (view === 'event-detail' && params.eventSlug) {
-                const attention = eventAttention[params.eventSlug]
-                return attention ? eventAttentionTooltip(attention) : ''
-              }
-              if (view === 'events' && totalAttentionCount > 0) return attentionTooltip
-              return `${count} new since your last visit`
+              if (view === 'event-detail' && params.eventSlug) return attentionNavBadge(eventAttention[params.eventSlug])
+              const newBadge = newSinceVisitBadge(badgeCounts[view])
+              return view === 'events' ? attentionNavBadge(allEventsAttention, newBadge) : newBadge
             }}
             userProfile={userProfile}
             installationStatus={installationStatus}

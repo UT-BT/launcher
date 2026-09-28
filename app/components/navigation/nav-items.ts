@@ -13,6 +13,12 @@ export interface NavItem {
     tag?: string
 }
 
+export interface NavBadge {
+    count: number | null
+    live: boolean
+    details: string[]
+}
+
 export interface NavSection {
     title: string
     items: NavItem[]
@@ -65,4 +71,9 @@ export function isNavItemActive(item: NavItem, currentView: string, currentParam
     }
     if (currentView !== 'event-detail' && currentView !== 'match-pickban') return false
     return currentParams.eventSlug === item.params.eventSlug
+}
+
+export function newSinceVisitBadge(count: number | null | undefined): NavBadge | null {
+    if (!count || count <= 0) return null
+    return { count, live: false, details: [`${count} new since your last visit`] }
 }
