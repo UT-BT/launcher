@@ -79,6 +79,10 @@ async function setAnimations(page: Page, animations: 'on' | 'off') {
     await page.addInitScript(value => localStorage.setItem('utbt:pickBanMotion:v1', JSON.stringify(value)), animations)
 }
 
+async function setSolidTheme(page: Page) {
+    await page.addInitScript(() => localStorage.setItem('utbt:theme:v1', JSON.stringify({ id: 'black' })))
+}
+
 const stage = (page: Page) => page.getByLabel('Picks & Bans Stage')
 
 function revealOf(state: PickBanState, index: number): number {
@@ -300,6 +304,7 @@ function midway(opacities: number[]): number[] {
 
 test('an undo plays the reveal backwards, and is instant with animations off', async ({ page, isMobile }) => {
     test.skip(isMobile)
+    await setSolidTheme(page)
 
     const revealed = held(locked(started(), ALPHA, FIRST_LOCK))
     const reveal = revealOf(revealed, 0)
@@ -326,6 +331,7 @@ test('an undo plays the reveal backwards, and is instant with animations off', a
 
 test('the paused overlay fades in and out, and is instant with animations off', async ({ page, isMobile }) => {
     test.skip(isMobile)
+    await setSolidTheme(page)
 
     const revealed = held(locked(started(), ALPHA, FIRST_LOCK))
     const reveal = revealOf(revealed, 0)
