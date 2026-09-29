@@ -6,6 +6,7 @@ import { SceneFrame } from '../app/components/stream/frame/SceneFrame'
 import { streamSceneOptionsOf } from '../app/components/stream/streamSceneOptions'
 import { STREAM_EVENT, STREAM_STREAMER_ID } from '../app/components/stream/data/streamFixtures'
 import '../app/styles/index.css'
+import '../app/components/stream/streamScenes.css'
 
 const search = new URLSearchParams(window.location.search)
 

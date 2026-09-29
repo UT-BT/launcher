@@ -7,6 +7,7 @@ import { isStreamSceneId, isTransparentStreamScene, type StreamSceneId, type Str
 import { streamSceneOptionsOf, type StreamSceneOptions, type StreamSceneProps } from './streamSceneOptions'
 import { UnknownScene } from './StreamSceneNotice'
 import { StreamDataProvider } from './data/StreamDataProvider'
+import './streamScenes.css'
 
 const SCENES: Record<StreamSceneId, LazyExoticComponent<ComponentType<StreamSceneProps>>> = {
     'starting-soon': lazy(() => import('./scenes/StartingSoonScene')),

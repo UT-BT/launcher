@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import '@/app/styles/index.css'
+import '../streamScenes.css'
 import { BroadcastStage } from '@/app/components/broadcast/BroadcastStage'
 import { BROADCAST_FONTS, useBroadcastFonts } from '@/app/components/broadcast/broadcastFonts'
 import { Stinger } from './Stinger'
