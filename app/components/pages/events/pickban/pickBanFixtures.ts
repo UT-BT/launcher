@@ -211,7 +211,8 @@ export function pickBanState(overrides: Partial<PickBanState> = {}): PickBanStat
         blocking_reasons: [],
         blocking_reason: null,
         viewer: { side: null, roster_captain: false },
-        capabilities: { can_manage: false, acting_side: null, can_ready: false, can_lock_now: false },
+        chooser_side: null,
+        capabilities: { can_manage: false, acting_side: null, can_ready: false, can_choose_a: false, can_lock_now: false },
         ...overrides,
     }
 }
@@ -373,6 +374,7 @@ function withCapabilities(state: PickBanState): PickBanState {
         capabilities: {
             ...state.capabilities,
             can_ready: acting !== null && state.status === 'lobby',
+            can_choose_a: acting !== null && state.status === 'lobby' && state.chooser_side === acting && !state.a_confirmed,
             can_lock_now: acting !== null && state.status === 'running' && state.phase === 'awaiting' && current?.side === acting,
         },
     }
@@ -382,7 +384,7 @@ export function asSpectator(state: PickBanState): PickBanState {
     return withCapabilities({
         ...state,
         viewer: { side: null, roster_captain: false },
-        capabilities: { can_manage: false, acting_side: null, can_ready: false, can_lock_now: false },
+        capabilities: { can_manage: false, acting_side: null, can_ready: false, can_choose_a: false, can_lock_now: false },
     })
 }
 
@@ -390,7 +392,7 @@ export function asManager(state: PickBanState): PickBanState {
     return withCapabilities({
         ...state,
         viewer: { side: null, roster_captain: false },
-        capabilities: { can_manage: true, acting_side: null, can_ready: false, can_lock_now: false },
+        capabilities: { can_manage: true, acting_side: null, can_ready: false, can_choose_a: false, can_lock_now: false },
     })
 }
 
@@ -398,7 +400,7 @@ export function asCaptain(state: PickBanState, side: PickBanSide): PickBanState 
     return withCapabilities({
         ...state,
         viewer: { side, roster_captain: true },
-        capabilities: { can_manage: false, acting_side: side, can_ready: false, can_lock_now: false },
+        capabilities: { can_manage: false, acting_side: side, can_ready: false, can_choose_a: false, can_lock_now: false },
     })
 }
 
@@ -406,7 +408,7 @@ export function asTeammate(state: PickBanState, side: PickBanSide): PickBanState
     return withCapabilities({
         ...state,
         viewer: { side, roster_captain: false },
-        capabilities: { can_manage: false, acting_side: null, can_ready: false, can_lock_now: false },
+        capabilities: { can_manage: false, acting_side: null, can_ready: false, can_choose_a: false, can_lock_now: false },
     })
 }
 
@@ -420,7 +422,7 @@ export function asActingCaptain(state: PickBanState, side: PickBanSide): PickBan
         ...state,
         teams: { ...state.teams, [side]: handedOver },
         viewer: { side, roster_captain: false },
-        capabilities: { can_manage: false, acting_side: side, can_ready: false, can_lock_now: false },
+        capabilities: { can_manage: false, acting_side: side, can_ready: false, can_choose_a: false, can_lock_now: false },
     })
 }
 
@@ -428,6 +430,6 @@ export function asReplacedCaptain(state: PickBanState, side: PickBanSide): PickB
     return withCapabilities({
         ...asActingCaptain(state, side),
         viewer: { side, roster_captain: true },
-        capabilities: { can_manage: false, acting_side: null, can_ready: false, can_lock_now: false },
+        capabilities: { can_manage: false, acting_side: null, can_ready: false, can_choose_a: false, can_lock_now: false },
     })
 }

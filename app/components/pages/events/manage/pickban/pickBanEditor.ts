@@ -24,6 +24,15 @@ export const PICK_BAN_PRESET_SEQUENCES: Record<PickBanPresetId, PickBanSequence>
         ],
         ban_down: false,
     },
+    bo4_ban_pick: {
+        steps: [
+            { actor: 'A', action: 'ban' }, { actor: 'B', action: 'ban' },
+            { actor: 'B', action: 'pick' }, { actor: 'A', action: 'pick' },
+            { actor: 'B', action: 'ban' }, { actor: 'A', action: 'ban' },
+            { actor: 'B', action: 'pick' }, { actor: 'A', action: 'pick' },
+        ],
+        ban_down: false,
+    },
     bo3_ban_pick: {
         steps: [
             { actor: 'A', action: 'ban' }, { actor: 'B', action: 'ban' },

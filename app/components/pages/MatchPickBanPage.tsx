@@ -50,6 +50,7 @@ export function MatchPickBanPage({ eventSlug, matchId, userProfile, onBackToEven
     const { navigate } = useNavigation()
     const [soundPreference, setSoundPreference] = useState(loadPickBanSoundPreference)
     const [animate, setAnimate] = useState(loadPickBanMotion)
+    const [chooseAError, setChooseAError] = useState<string | null>(null)
     usePickBanPreload(view?.cards)
     const sound = usePickBanSound({
         state: session.state,
@@ -69,14 +70,24 @@ export function MatchPickBanPage({ eventSlug, matchId, userProfile, onBackToEven
     useDocumentTitle(view ? `${view.match.title} — Picks & Bans` : undefined, SITE_NAME)
 
     const actFor = manager.dock?.actFor ?? null
+    const captainDock = captain.dock && chooseAError
+        ? { ...captain.dock, rejection: chooseAError }
+        : captain.dock
     const controls = captain.dock ? (
         <CaptainDock
-            dock={captain.dock}
+            dock={captainDock!}
             ab={view?.affordances.actingAb ?? null}
             reconnecting={session.reconnecting}
             onLockIn={captain.lockIn}
             onToggleReady={captain.toggleReady}
-            onDismiss={captain.dismiss}
+            canChooseA={view?.affordances.canChooseA ?? false}
+            onChooseA={(side) => {
+                setChooseAError(null)
+                void session.sendCommand('choose-a', { side }).catch((error: unknown) => {
+                    setChooseAError(error instanceof Error ? error.message : 'Could not choose side A. Please try again.')
+                })
+            }}
+            onDismiss={() => { setChooseAError(null); captain.dismiss() }}
         />
     ) : actFor ? (
         <CaptainDock

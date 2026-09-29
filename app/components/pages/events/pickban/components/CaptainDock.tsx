@@ -3,6 +3,7 @@ import { AlertTriangle, Check, Loader2, Lock, WifiOff, X, type LucideIcon } from
 import { cn } from '@/lib/utils'
 import { displayMapName } from '@/app/utils/format'
 import type { PickBanActor, PickBanStepAction } from '@/app/utils/api'
+import type { PickBanSide } from '@/app/utils/api'
 import type { CaptainControls, CaptainDock as CaptainDockModel } from '../captainPlay'
 import { actionTagOf, type PickBanTurn } from '../pickBanView'
 import { CountdownBar, CountdownText } from './Countdown'
@@ -15,6 +16,8 @@ interface CaptainDockProps {
     actingFor?: string
     onLockIn: () => void
     onToggleReady?: () => void
+    canChooseA?: boolean
+    onChooseA?: (side: PickBanSide) => void
     onDismiss: () => void
     className?: string
 }
@@ -40,7 +43,7 @@ function upNext(next: PickBanTurn | null): string {
     return `Next: ${actionTagOf(next)}`
 }
 
-export function CaptainDock({ dock, ab, reconnecting, actingFor, onLockIn, onToggleReady, onDismiss, className }: CaptainDockProps) {
+export function CaptainDock({ dock, ab, reconnecting, actingFor, onLockIn, onToggleReady, canChooseA, onChooseA, onDismiss, className }: CaptainDockProps) {
     const tone = PICK_BAN_TONES[teamTone(ab)]
 
     return (
@@ -51,6 +54,13 @@ export function CaptainDock({ dock, ab, reconnecting, actingFor, onLockIn, onTog
             <span aria-hidden className={cn('absolute inset-0 -z-10 bg-gradient-to-r to-transparent to-70%', tone.wash)} />
             {dock.rejection && <Rejection message={dock.rejection} onDismiss={onDismiss} />}
             {dock.controls && <Controls controls={dock.controls} tone={tone} actingFor={actingFor} onLockIn={onLockIn} onToggleReady={onToggleReady} />}
+            {canChooseA && onChooseA && (
+                <div className="flex flex-wrap items-center gap-2 border-t border-hairline/10 pt-3">
+                    <span className="mr-1 text-xs text-muted-foreground">Choose side A</span>
+                    <button type="button" onClick={() => onChooseA('team_a')} className={BUTTON}>Team A</button>
+                    <button type="button" onClick={() => onChooseA('team_b')} className={BUTTON}>Team B</button>
+                </div>
+            )}
             {reconnecting && (
                 <p role="status" className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-300">
                     <WifiOff className="size-3.5" />
