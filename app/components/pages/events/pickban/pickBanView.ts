@@ -170,6 +170,8 @@ export interface PickBanAffordances {
     actingSide: PickBanSide | null
     actingAb: PickBanActor | null
     canReady: boolean
+    canChooseA: boolean
+    chooserSide: PickBanSide | null
     isReady: boolean
     canLock: boolean
     manager: PickBanManagerControls | null
@@ -440,6 +442,8 @@ function affordancesOf(moment: Moment, awaitedStep: PickBanPlanStep | null, live
         actingSide,
         actingAb: actingSide ? state.teams[actingSide]?.ab ?? null : null,
         canReady: state.status === 'lobby' && state.capabilities.can_ready,
+        canChooseA: state.status === 'lobby' && state.capabilities.can_choose_a,
+        chooserSide: state.chooser_side,
         isReady: actingSide !== null && state.ready[actingSide] !== null,
         canLock: state.status === 'running'
             && awaitedStep !== null

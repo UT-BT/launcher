@@ -5557,9 +5557,9 @@ export type PickBanActor = 'A' | 'B'
 
 export type PickBanSequenceAction = 'ban' | 'pick'
 
-export type PickBanPresetId = 'bo4_picks' | 'bo3_ban_pick' | 'bo5_ban_pick'
+export type PickBanPresetId = 'bo4_picks' | 'bo4_ban_pick' | 'bo3_ban_pick' | 'bo5_ban_pick'
 
-export const PICK_BAN_PRESET_IDS: PickBanPresetId[] = ['bo4_picks', 'bo3_ban_pick', 'bo5_ban_pick']
+export const PICK_BAN_PRESET_IDS: PickBanPresetId[] = ['bo4_picks', 'bo4_ban_pick', 'bo3_ban_pick', 'bo5_ban_pick']
 
 export interface PickBanSequenceStep {
     actor: PickBanActor
@@ -5801,6 +5801,7 @@ export interface PickBanCapabilities {
     can_manage: boolean
     acting_side: PickBanSide | null
     can_ready: boolean
+    can_choose_a: boolean
     can_lock_now: boolean
 }
 
@@ -5836,6 +5837,7 @@ export interface PickBanState {
     pool: PickBanPoolCard[]
     teams: { team_a: PickBanTeam | null; team_b: PickBanTeam | null }
     a_side: PickBanSide | null
+    chooser_side: PickBanSide | null
     a_confirmed: boolean
     ready: { team_a: PickBanReady | null; team_b: PickBanReady | null }
     selection_preview: PickBanSelectionPreview | null
@@ -5891,6 +5893,7 @@ export async function fetchPickBanState(
 }
 
 export interface PickBanParticipantCommandBodies {
+    'choose-a': { side: PickBanSide; version: number }
     ready: { version: number }
     unready: { version: number }
     hover: { map: string | null; version: number }
