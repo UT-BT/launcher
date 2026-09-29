@@ -1,5 +1,8 @@
 import { defineConfig, devices } from '@playwright/test'
 
+const port = process.env.E2E_PORT ?? '5175'
+const origin = `http://127.0.0.1:${port}`
+
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: false,
@@ -8,13 +11,13 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI ? 'github' : 'list',
   use: {
-    baseURL: 'http://127.0.0.1:5175',
+    baseURL: origin,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
   },
   webServer: {
-    command: 'cross-env VITE_API_BASE_URL=https://api.utbt.net npm run dev:web -- --host 127.0.0.1 --port 5175',
-    url: 'http://127.0.0.1:5175',
+    command: `cross-env VITE_API_BASE_URL=https://api.utbt.net npm run dev:web -- --host 127.0.0.1 --port ${port}`,
+    url: origin,
     reuseExistingServer: false,
     timeout: 120_000,
   },
