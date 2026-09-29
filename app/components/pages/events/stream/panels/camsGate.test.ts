@@ -10,4 +10,9 @@ describe('camsPanelView', () => {
     it('shows the desktop launcher notice on the website', () => {
         expect(camsPanelView(WEB_CAPABILITIES)).toBe('web-notice')
     })
+
+    it('gates on the cam tool capability, not on the game', () => {
+        expect(camsPanelView({ ...DESKTOP_CAPABILITIES, camTool: false })).toBe('web-notice')
+        expect(camsPanelView({ ...WEB_CAPABILITIES, camTool: true })).toBe('cam-tool')
+    })
 })
