@@ -2,7 +2,7 @@ import { useContext, useEffect, useMemo, useState, useSyncExternalStore } from '
 import { StreamDataContext, type StreamData } from './streamDataContext'
 import type { SceneCadence } from './sceneCadence'
 import { sceneMatchOf, type SceneMatch } from './sceneMatch'
-import { createSceneReadStore, type SceneReadSnapshot } from './sceneReadStore'
+import type { SceneReadSnapshot } from './sceneReadStore'
 import type { StreamHotStateSnapshot } from './streamHotStateStore'
 
 const IDLE_READ: SceneReadSnapshot<never> = { data: null, loading: false, error: null, reconnecting: false }
@@ -36,20 +36,10 @@ export function useSceneCadence(): SceneCadence {
 }
 
 export function useSceneRead<T extends object>(path: string | null): SceneReadSnapshot<T> {
-    const { cadence } = useStreamData()
-    const store = useMemo(
-        () => (path === null ? NO_READ : createSceneReadStore<T>({ path, intervalMs: () => cadence.getCadence().compositeMs })),
-        [path, cadence],
-    )
+    const { reads } = useStreamData()
+    const store = useMemo(() => (path === null ? NO_READ : reads.storeFor<T>(path)), [path, reads])
 
-    useEffect(() => {
-        store.start()
-        const stopRefetching = cadence.onActivate(() => void store.pollNow())
-        return () => {
-            stopRefetching()
-            store.stop()
-        }
-    }, [store, cadence])
+    useEffect(() => (path === null ? undefined : reads.retain(path, store)), [path, store, reads])
 
     return useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot)
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import type { StreamSceneOptions } from '../streamSceneOptions'
 import { createSceneCadenceStore } from './sceneCadence'
+import { createSceneReadRegistry } from './sceneReadRegistry'
 import { createStreamHotStateStore } from './streamHotStateStore'
 import { StreamDataContext, type StreamData } from './streamDataContext'
 
@@ -14,7 +15,7 @@ interface StreamDataProviderProps {
 function createStreamData(eventSlug: string, streamerId: string, options: StreamSceneOptions): StreamData {
     const cadence = createSceneCadenceStore({ host: window, preview: options.preview })
     const hotState = createStreamHotStateStore({ eventSlug, streamerId, intervalMs: () => cadence.getCadence().hotStateMs })
-    return { eventSlug, streamerId, options, cadence, hotState }
+    return { eventSlug, streamerId, options, cadence, hotState, reads: createSceneReadRegistry(cadence) }
 }
 
 export function StreamDataProvider({ eventSlug, streamerId, options, children }: StreamDataProviderProps) {
