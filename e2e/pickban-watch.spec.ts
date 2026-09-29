@@ -239,6 +239,7 @@ test('the stage keeps one height per width and fits every state inside it', asyn
         await page.setViewportSize({ width: STAGE_WIDTHS[0], height: 1_100 })
         await page.goto(PAGE_PATH)
         await expect(stage(page)).toContainText(scenario.expectText)
+        await page.evaluate(() => document.fonts.ready.then(() => undefined))
 
         for (const width of STAGE_WIDTHS) {
             await page.setViewportSize({ width, height: 1_100 })
