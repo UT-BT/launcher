@@ -2,9 +2,11 @@ import { StrictMode, Suspense, lazy, type ComponentType, type LazyExoticComponen
 import ReactDOM from 'react-dom/client'
 import { ErrorBoundary } from '@/app/components/ErrorBoundary'
 import { ThemeProvider } from '@/app/theme/ThemeProvider'
+import { PickBanMotion } from '@/app/components/pages/events/pickban/components/PickBanMotion'
 import { isStreamSceneId, isTransparentStreamScene, type StreamSceneId, type StreamSceneRoute } from './streamScenes'
 import { streamSceneOptionsOf, type StreamSceneOptions, type StreamSceneProps } from './streamSceneOptions'
 import { UnknownScene } from './StreamSceneNotice'
+import { StreamDataProvider } from './data/StreamDataProvider'
 
 const SCENES: Record<StreamSceneId, LazyExoticComponent<ComponentType<StreamSceneProps>>> = {
     'starting-soon': lazy(() => import('./scenes/StartingSoonScene')),
@@ -30,9 +32,13 @@ function StreamScene({ route, options }: { route: StreamSceneRoute; options: Str
     if (!isStreamSceneId(route.scene)) return <UnknownScene scene={route.scene} />
     const Scene = SCENES[route.scene]
     return (
-        <Suspense fallback={null}>
-            <Scene eventSlug={route.eventSlug} streamerId={route.streamerId} options={options} />
-        </Suspense>
+        <StreamDataProvider eventSlug={route.eventSlug} streamerId={route.streamerId} options={options}>
+            <PickBanMotion animate={options.animate}>
+                <Suspense fallback={null}>
+                    <Scene eventSlug={route.eventSlug} streamerId={route.streamerId} options={options} />
+                </Suspense>
+            </PickBanMotion>
+        </StreamDataProvider>
     )
 }
 

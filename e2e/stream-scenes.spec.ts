@@ -112,13 +112,11 @@ test.beforeEach(async ({ page }) => {
     await serveApi(page)
 })
 
-test('every scene URL renders its own placeholder with no app shell and noindex', async ({ page, isMobile }) => {
+test('every scene URL renders its own scene with no app shell and noindex', async ({ page, isMobile }) => {
     test.skip(isMobile)
     for (const scene of SCENES) {
         await page.goto(scenePage(scene.id))
-        const placeholder = page.locator(`[data-stream-scene="${scene.id}"]`)
-        await expect(placeholder, scene.id).toBeVisible()
-        await expect(placeholder.getByRole('heading', { level: 1 }), scene.id).toHaveText(scene.label)
+        await expect(page.locator(`[data-stream-scene="${scene.id}"]`).first(), scene.id).toBeVisible()
         await expectNoAppShell(page)
         expect(await robotsDirectives(page), scene.id).toEqual(['noindex'])
     }
