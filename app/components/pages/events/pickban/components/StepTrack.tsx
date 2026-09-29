@@ -6,8 +6,8 @@ import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { displayMapName } from '@/app/utils/format'
 import type { PickBanStepAction } from '@/app/utils/api'
 import type { PickBanSkippedBan, PickBanTimelineEntry } from '../pickBanView'
-import { PICK_BAN_HUES, PICK_BAN_TONES, stepTone, tint } from './pickBanTone'
-import { INDICATOR_TRANSITION, REVEAL_POP, REVEAL_RING_MOTION } from './stageMotion'
+import { PICK_BAN_HUES, PICK_BAN_TONES, stepTone, tint } from '@/app/components/broadcast/broadcastTone'
+import { INDICATOR_TRANSITION, REVEAL_POP, REVEAL_RING_MOTION } from '@/app/components/broadcast/broadcastMotion'
 
 export type StepTrackSize = 'page' | 'broadcast'
 

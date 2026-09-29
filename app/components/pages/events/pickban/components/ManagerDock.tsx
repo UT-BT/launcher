@@ -60,8 +60,8 @@ import { Rejection } from './CaptainDock'
 import { EditFinalEditor } from './EditFinalEditor'
 import { PickBanBannerNote } from './PickBanBannerNote'
 import { PickBanStatusChip } from './PickBanStatusChip'
-import { PICK_BAN_TONES, teamTone } from './pickBanTone'
-import { INDICATOR_TRANSITION } from './stageMotion'
+import { PICK_BAN_TONES, teamTone } from '@/app/components/broadcast/broadcastTone'
+import { INDICATOR_TRANSITION } from '@/app/components/broadcast/broadcastMotion'
 
 interface ManagerDockProps {
     manager: UseManagerDockResult

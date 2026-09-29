@@ -7,8 +7,8 @@ import { matchSubtitle } from '../pickBanCopy'
 import { statusOfPhase } from '../pickBanStatus'
 import type { PickBanTeamPanel, PickBanView } from '../pickBanView'
 import { PickBanStatusChip } from './PickBanStatusChip'
-import { PICK_BAN_HUES, PICK_BAN_TONES, teamTone, tint } from './pickBanTone'
-import { CHIP_MOTION } from './stageMotion'
+import { PICK_BAN_HUES, PICK_BAN_TONES, teamTone, tint } from '@/app/components/broadcast/broadcastTone'
+import { CHIP_MOTION } from '@/app/components/broadcast/broadcastMotion'
 
 type PlateAlign = 'left' | 'right'
 

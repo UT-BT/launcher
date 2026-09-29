@@ -63,6 +63,8 @@ export const PICK_BAN_HUES: Record<PickBanTone, string> = {
     neutral: 'var(--color-hairline)',
 }
 
+export const BROADCAST_SURFACE = 'bg-[#05070c] font-pickban text-white'
+
 export function teamTone(ab: PickBanActor | null): PickBanTone {
     if (ab === 'A') return 'a'
     if (ab === 'B') return 'b'

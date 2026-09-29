@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import { CalendarClock, ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { PickBanCardView, PickBanTurn, PickBanView } from '../pickBanView'
-import { PICK_BAN_HUES, PICK_BAN_TONES, stepTone, tint } from './pickBanTone'
+import { PICK_BAN_HUES, PICK_BAN_TONES, stepTone, tint } from '@/app/components/broadcast/broadcastTone'
 
 const CHEVRONS = [0, 1, 2]
 
