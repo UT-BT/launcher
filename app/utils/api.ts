@@ -4779,15 +4779,23 @@ export interface EventStageDraw {
     dry_run: boolean
 }
 
-export interface EventCapCandidate {
+export interface EventCapCandidateMember {
     cap_id: string
     user: string
     alias: string | null
     side: EventSide | null
-    map: string | null
     cap_time_seconds: number | null
     added: string | null
     verified: boolean
+}
+
+export interface EventCapCandidate {
+    team_run_id: string | null
+    side: EventSide | null
+    map: string | null
+    complete: boolean
+    completed_at: string | null
+    members: EventCapCandidateMember[]
 }
 
 export interface EventMatchMapInput {
