@@ -11,6 +11,7 @@ import { registerFavoritesHandlers, startBackgroundGamePoller } from '@/lib/conv
 import { registerDemosHandlers } from '@/lib/conveyor/handlers/demos-handler'
 import { registerMapsHandlers } from '@/lib/conveyor/handlers/maps-handler'
 import { registerUpdaterHandlers } from '@/lib/conveyor/handlers/updater-handler'
+import { registerStreamKitHandlers } from '@/lib/conveyor/handlers/stream-kit-handler'
 import { demoWatcherService } from '@/lib/main/demo-watcher-service'
 import { updaterService } from '@/lib/main/updater-service'
 import { trayService } from '@/lib/main/tray-service'
@@ -88,6 +89,7 @@ export function createAppWindow(): void {
   registerDemosHandlers(mainWindow)
   registerMapsHandlers(mainWindow)
   registerUpdaterHandlers(mainWindow)
+  registerStreamKitHandlers(mainWindow)
   startBackgroundGamePoller(mainWindow)
 
   demoWatcherService.startWatching()
