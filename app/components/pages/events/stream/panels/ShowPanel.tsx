@@ -1,9 +1,13 @@
-import { StreamCard, StreamPlaceholder } from '../StreamCard'
+import { BrbSection } from './show/BrbSection'
+import { CastersSection } from './show/CastersSection'
+import { WebcamSection } from './show/WebcamSection'
 
 export function ShowPanel() {
     return (
-        <StreamCard title="Show" description="The BRB message, the casters and the Caster Cam webcam frame.">
-            <StreamPlaceholder>Coming soon.</StreamPlaceholder>
-        </StreamCard>
+        <div className="space-y-4">
+            <BrbSection />
+            <CastersSection />
+            <WebcamSection />
+        </div>
     )
 }
