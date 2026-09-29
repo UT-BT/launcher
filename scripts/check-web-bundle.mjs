@@ -1,10 +1,11 @@
 import { gzipSync } from 'node:zlib'
 import { readFile, readdir } from 'node:fs/promises'
-import { join } from 'node:path'
+import { basename, extname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const distDir = fileURLToPath(new URL('../dist-web/', import.meta.url))
 const assetsDir = join(distDir, 'assets')
+const sceneDir = fileURLToPath(new URL('../app/components/stream/scenes/', import.meta.url))
 
 const KiB = 1024
 const maxInitialJsGzipBytes = 190 * KiB
@@ -76,8 +77,15 @@ if (!entryKey) {
 const { javaScript: initialJs, styles: initialCss } = collectInitialPayload(manifest, entryKey)
 const entryFile = manifest[entryKey].file
 
-const STREAM_ROOT_SRC = 'components/pages/events/pickban/stream/mountStreamRoot.tsx'
-const streamRoot = manifest[STREAM_ROOT_SRC]
+const STREAM_ROOTS = [
+  { src: 'components/pages/events/pickban/stream/mountStreamRoot.tsx', label: 'pick/ban stream root' },
+  { src: 'components/stream/mountStreamSceneRoot.tsx', label: 'stream scene root' },
+]
+const sceneFiles = (await readdir(sceneDir, { withFileTypes: true }))
+  .filter(entry => entry.isFile() && entry.name.endsWith('Scene.tsx'))
+  .map(entry => entry.name)
+  .sort()
+const STREAM_SCENES = sceneFiles.map(name => ({ src: `components/stream/scenes/${name}`, label: `${name.replace(/\.tsx$/, '')} scene` }))
 
 const allFiles = await readdir(assetsDir)
 const allJs = allFiles.filter(file => file.endsWith('.js')).map(file => `assets/${file}`)
@@ -110,14 +118,40 @@ if (largestLazy) {
 }
 checkBudget('total JS     ', totalJsGzip, maxTotalJsGzipBytes)
 
-if (!streamRoot) {
-  fail(`Manifest has no entry for ${STREAM_ROOT_SRC}. If the pick/ban stream root moved, update this script.`)
-} else if (!streamRoot.isDynamicEntry) {
-  fail(`${STREAM_ROOT_SRC} is no longer a dynamic entry — something now imports the pick/ban stream root statically.`)
-} else if (initialJsSet.has(streamRoot.file)) {
-  fail(`${streamRoot.file} (the pick/ban stream root) is reachable from the entry's static import graph.`)
-} else {
-  console.log(`  ok   stream root   : ${streamRoot.file} stays its own lazy chunk, out of the entry`)
+function manifestRecordOf(src) {
+  if (manifest[src]) return manifest[src]
+  const name = basename(src, extname(src))
+  const sharedChunks = Object.entries(manifest).filter(([key, record]) => key.startsWith('_') && record.name === name)
+  return sharedChunks.length === 1 ? sharedChunks[0][1] : undefined
+}
+
+function checkLazyEntry({ src, label }) {
+  const record = manifestRecordOf(src)
+  if (!record) {
+    fail(`Manifest has no chunk for ${src}. Either the ${label} moved (update this script) or a static import folded it into another chunk.`)
+    return null
+  }
+  if (!record.isDynamicEntry) {
+    fail(`${src} is no longer a dynamic entry — something now imports the ${label} statically.`)
+    return null
+  }
+  if (initialJsSet.has(record.file)) {
+    fail(`${record.file} (the ${label}) is reachable from the entry's static import graph.`)
+    return null
+  }
+  console.log(`  ok   ${label}: ${record.file} stays its own lazy chunk, out of the entry`)
+  return { label, file: record.file }
+}
+
+if (STREAM_SCENES.length === 0) {
+  fail(`No scene files found in ${sceneDir}. If the stream scenes moved, update this script.`)
+}
+
+const streamRootRecords = STREAM_ROOTS.map(checkLazyEntry)
+const sceneRecords = STREAM_SCENES.map(checkLazyEntry)
+const lazyEntries = [...streamRootRecords, ...sceneRecords].filter(Boolean)
+for (const scene of sceneRecords.filter(Boolean)) {
+  checkBudget(`${scene.label} chunk`, await gzipBytesOf(scene.file), maxLazyChunkGzipBytes)
 }
 console.log('')
 
@@ -129,8 +163,10 @@ if (moduleScripts.length !== 1) {
 }
 
 const modulePreloads = [...html.matchAll(/<link\b[^>]*\brel="modulepreload"[^>]*\bhref="([^"]+)"/g)].map(match => match[1])
-if (streamRoot && modulePreloads.some(href => href.endsWith(streamRoot.file))) {
-  fail(`index.html modulepreloads ${streamRoot.file} (the pick/ban stream root) — it must stay lazy, not preloaded.`)
+for (const { label, file } of lazyEntries) {
+  if (modulePreloads.some(href => href.endsWith(file))) {
+    fail(`index.html modulepreloads ${file} (the ${label}) — it must stay lazy, not preloaded.`)
+  }
 }
 
 const stylesheets = [...html.matchAll(/<link\b[^>]*\brel="stylesheet"[^>]*\bhref="([^"]+)"/g)].map(match => match[1])
