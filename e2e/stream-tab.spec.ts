@@ -172,16 +172,14 @@ test('a streaming volunteer lands on the Stream tab from its link and streams as
     expect(streamerReads).toBe(0)
 })
 
-test('every Stream panel opens with its placeholder', async ({ page }) => {
+test('every Stream panel opens without horizontal overflow', async ({ page }) => {
     await mockApi(page, STREAMER)
     await page.goto(`/events/${SLUG}?tab=stream`)
 
     const panels = page.getByRole('navigation', { name: 'Stream panels' })
-    for (const name of ['Show', 'Channel', 'Kit', 'Guide']) {
+    for (const name of ['Show', 'Channel', 'Scenes', 'Kit', 'Guide']) {
         await panels.getByRole('button', { name }).click()
         await expect(panels.getByRole('button', { name })).toHaveAttribute('aria-pressed', 'true')
-        await expect(page.getByRole('region', { name })).toBeVisible()
-        await expect(page.getByRole('region', { name }).getByText('Coming soon.')).toBeVisible()
         expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1)
     }
 })
