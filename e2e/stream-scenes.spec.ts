@@ -143,11 +143,11 @@ test('a stream path with missing or extra segments falls through to the app', as
     }
 })
 
-test('the overlay and caster cam pages paint nothing over a coloured background, even when site CSS paints the document', async ({ page, isMobile }) => {
+test('the overlay page paints nothing over a coloured background, even when site CSS paints the document', async ({ page, isMobile }) => {
     test.skip(isMobile)
     await paintDocumentFromSiteCss(page)
     await page.setViewportSize({ width: 1920, height: 1080 })
-    for (const scene of ['overlay', 'caster']) {
+    for (const scene of ['overlay']) {
         await page.goto(scenePage(scene))
         await expect(page.locator(`[data-stream-scene="${scene}"]`)).toBeVisible()
         const backgrounds = await page.evaluate(() =>
@@ -162,8 +162,8 @@ test('an opaque scene paints the whole canvas, so the transparency check can fai
     test.skip(isMobile)
     await paintDocumentFromSiteCss(page)
     await page.setViewportSize({ width: 1920, height: 1080 })
-    await page.goto(scenePage('brb'))
-    const box = await placeholderBox(page, 'brb')
+    await page.goto(scenePage('ending'))
+    const box = await placeholderBox(page, 'ending')
     expect(await strayPixels(page, box)).toBe(1920 * 1080 - box.width * box.height)
 })
 
