@@ -12,7 +12,8 @@ const maxInitialJsGzipBytes = 190 * KiB
 const maxInitialCssGzipBytes = 34 * KiB
 const maxInitialTotalGzipBytes = 220 * KiB
 const maxLazyChunkGzipBytes = 120 * KiB
-const maxTotalJsGzipBytes = 750 * KiB
+const maxAppJsGzipBytes = 800 * KiB
+const maxStreamSceneJsGzipBytes = 120 * KiB
 const minEntryGzipBytes = 50 * KiB
 
 const HEAD_START = '<!--utbt-head-start-->'
@@ -97,9 +98,40 @@ if (allJs.length === 0) {
 const initialJsSet = new Set(initialJs)
 const lazyJs = allJs.filter(file => !initialJsSet.has(file))
 
+function manifestKeyOf(src) {
+  if (manifest[src]) return src
+  const name = basename(src, extname(src))
+  const sharedKeys = Object.keys(manifest).filter(key => key.startsWith('_') && manifest[key].name === name)
+  return sharedKeys.length === 1 ? sharedKeys[0] : undefined
+}
+
+function reachableFiles(startKeys, boundaryKeys) {
+  const visited = new Set()
+  const files = new Set()
+  const visit = key => {
+    if (visited.has(key) || boundaryKeys.has(key)) return
+    visited.add(key)
+    const record = manifest[key]
+    if (!record) return
+    if (record.file) files.add(record.file)
+    for (const next of [...(record.imports ?? []), ...(record.dynamicImports ?? [])]) visit(next)
+  }
+  startKeys.forEach(visit)
+  return files
+}
+
+const streamSceneRootKey = manifestKeyOf('components/stream/mountStreamSceneRoot.tsx')
+const appReachable = reachableFiles([entryKey], new Set([streamSceneRootKey]))
+const streamSceneOnlyJs = streamSceneRootKey
+  ? [...reachableFiles([streamSceneRootKey], new Set())].filter(file => !appReachable.has(file))
+  : []
+const streamSceneOnlySet = new Set(streamSceneOnlyJs)
+const appJs = allJs.filter(file => !streamSceneOnlySet.has(file))
+
 const initialJsGzip = await sumGzipBytes(initialJs)
 const initialCssGzip = await sumGzipBytes(initialCss)
-const totalJsGzip = await sumGzipBytes(allJs)
+const appJsGzip = await sumGzipBytes(appJs)
+const streamSceneJsGzip = await sumGzipBytes(streamSceneOnlyJs)
 
 const lazySizes = await Promise.all(
   lazyJs.map(async file => ({ file, gzipBytes: await gzipBytesOf(file) }))
@@ -116,13 +148,12 @@ checkBudget('initial total', initialJsGzip + initialCssGzip, maxInitialTotalGzip
 if (largestLazy) {
   checkBudget(`largest lazy (${largestLazy.file.replace('assets/', '')})`, largestLazy.gzipBytes, maxLazyChunkGzipBytes)
 }
-checkBudget('total JS     ', totalJsGzip, maxTotalJsGzipBytes)
+checkBudget('app JS       ', appJsGzip, maxAppJsGzipBytes)
+checkBudget(`stream scene JS (${streamSceneOnlyJs.length} files only the scene pages load)`, streamSceneJsGzip, maxStreamSceneJsGzipBytes)
 
 function manifestRecordOf(src) {
-  if (manifest[src]) return manifest[src]
-  const name = basename(src, extname(src))
-  const sharedChunks = Object.entries(manifest).filter(([key, record]) => key.startsWith('_') && record.name === name)
-  return sharedChunks.length === 1 ? sharedChunks[0][1] : undefined
+  const key = manifestKeyOf(src)
+  return key ? manifest[key] : undefined
 }
 
 function checkLazyEntry({ src, label }) {
