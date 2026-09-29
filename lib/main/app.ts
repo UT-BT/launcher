@@ -17,6 +17,8 @@ import { updaterService } from '@/lib/main/updater-service'
 import { trayService } from '@/lib/main/tray-service'
 import windowStateKeeper from 'electron-window-state'
 
+const SITE_ORIGIN = 'https://utbt.net'
+
 export function createAppWindow(): void {
   // Register custom protocol for resources
   registerResourcesProtocol()
@@ -33,11 +35,16 @@ export function createAppWindow(): void {
     `script-src ${scriptSrc}`,
     "style-src 'self' 'unsafe-inline'",
     `img-src ${imgSrc}`,
+    `frame-src 'self' ${SITE_ORIGIN}`,
     "media-src 'self' https://democonverter-com-ut99.s3.nl-ams.scw.cloud",
     `connect-src ${connectSrc}`,
   ].join('; ')
 
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    if (details.resourceType === 'subFrame' && new URL(details.url).origin === SITE_ORIGIN) {
+      callback({ responseHeaders: details.responseHeaders })
+      return
+    }
     callback({
       responseHeaders: {
         ...details.responseHeaders,
