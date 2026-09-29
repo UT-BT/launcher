@@ -9,7 +9,7 @@ import {
 import { fetchEventStreamers, type EventStreamer } from '@/app/utils/api'
 import { streamerName } from '@/app/components/pages/events/eventsShared'
 import { StreamLoading } from './StreamCard'
-import { StreamTabProvider, type StreamTabContextValue } from './StreamTabContext'
+import { StreamTabProvider, type StreamTabIdentity } from './StreamTabContext'
 import { STREAM_PANELS, type StreamPanelId } from './streamPanels'
 import { operatingAsChoices, operatingAsId, type OperatingViewer } from './streamTabAccess'
 
@@ -48,7 +48,7 @@ export function StreamTab({ eventSlug, accessToken, viewer }: StreamTabProps) {
     const activePanel = PANELS.find(panel => panel.id === panelId) ?? PANELS[0]
     const ActivePanel = activePanel.Component
 
-    const context = useMemo<StreamTabContextValue | null>(() => (
+    const context = useMemo<StreamTabIdentity | null>(() => (
         streamerId ? { eventSlug, streamerId, isManager: viewer.isManager, accessToken } : null
     ), [eventSlug, streamerId, viewer.isManager, accessToken])
 
@@ -84,7 +84,7 @@ export function StreamTab({ eventSlug, accessToken, viewer }: StreamTabProps) {
                         ))}
                     </nav>
 
-                    <StreamTabProvider value={context}>
+                    <StreamTabProvider key={context.streamerId} identity={context}>
                         <Suspense key={`${context.streamerId}:${activePanel.id}`} fallback={<StreamLoading label={activePanel.label} />}>
                             <ActivePanel />
                         </Suspense>
