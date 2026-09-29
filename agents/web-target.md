@@ -4,13 +4,13 @@ read_when:
   - "making a feature work (or hide) on the web build"
   - "touching app/platform/, the web entry, or web build config"
   - "adding a desktop-only capability or a web fallback"
-keywords: [web, browser, platform, capabilities, IS_WEB, vite, dist-web, dual-target, stream view, sound=0, volume=, motion=0]
+keywords: [web, browser, platform, capabilities, IS_WEB, vite, dist-web, dual-target, stream view, stream scenes, noindex, camTool, sound=0, volume=, motion=0]
 provides: "the web build target: platform layer, capability gates, per-bridge web behavior, build commands"
 not_here:
   - "IPC channel contract → lib/conveyor/README.md"
   - "build commands reference → agents/build.md"
 sections: [overview, platform-layer, capability-gates, web-auth, pre-shell-routes, anonymous-browsing, shareable-urls, responsive-layout, performance, build, seo-and-link-previews, hosting-note]
-last_verified: 2026-09-25
+last_verified: 2026-09-29
 verify_against:
   - app/public/route-contract.json
   - app/components/navigation/NavLink.tsx
@@ -32,6 +32,14 @@ verify_against:
   - vite.config.web.ts
   - app/components/pages/events/pickban/stream/mountStreamRoot.tsx
   - app/components/pages/events/pickban/stream/streamSound.ts
+  - app/components/broadcast/BroadcastStage.tsx
+  - app/components/broadcast/stageScale.ts
+  - app/components/stream/mountStreamSceneRoot.tsx
+  - app/components/stream/streamScenes.ts
+  - app/components/stream/noIndex.ts
+  - app/components/stream/streamScenes.css
+  - app/components/pages/events/stream/panels/camsGate.ts
+  - app/public/robots.txt
 ---
 
 # Web target
@@ -48,8 +56,8 @@ desktop-only UI and swaps a handful of bridge calls for browser equivalents.
   Build-time, not runtime sniffing: each artifact is deterministic and the dead
   branch is tree-shaken. Never check `window.conveyor` presence to detect web.
 - `capabilities.ts` — boolean flags (`game, ping, ini, install, updater,
-  desktopFiles, windowChrome, settingsModal, anonymousBrowse`). All desktop-only
-  ones are `true` on desktop / `false` on web; `anonymousBrowse` is the inverse
+  desktopFiles, windowChrome, settingsModal, anonymousBrowse, camTool`). All
+  desktop-only ones (`camTool` included) are `true` on desktop / `false` on web, except `settingsModal`, which is `true` on both; `anonymousBrowse` is the inverse
   (web only). Gate UI with these, not with `IS_WEB` directly, so a future
   capability split stays one-line.
 - `index.ts` — `usePlatform()` hook returning `{ isWeb, capabilities, auth,
@@ -84,6 +92,7 @@ desktop-only UI and swaps a handful of bridge calls for browser equivalents.
 | Launcher telemetry (`logLauncherStartup`) | skipped | `IS_WEB` in `app/utils/api.ts` |
 | Nav bar (`NavHistoryBar` — Back/Forward + Refresh) | never rendered — browser chrome owns history and reload; pages revalidate on mount instead (see navigation.md, page-refresh-registry) | `IS_WEB` in `app/components/navigation/NavHistoryBar.tsx` |
 | Navigation triggers | render as real `<a href>` (new-tab / copy-link work); desktop keeps buttons | `NavLink` (`agents/navigation.md` → link semantics) |
+| Stream tab Cams panel | web shows a notice instead of the cam tool (cams need the desktop app) | `capabilities.camTool` via `camsPanelView` in `events/stream/panels/camsGate.ts` |
 | Splash screen | replaced by `WebBootScreen` (logo + spinner, error+retry variant); `SplashScreen` is lazy and never fetched on web | `IS_WEB` in `app/app.tsx` |
 
 **Bundle split reality check:** desktop-only surfaces (`SplashScreen`,
@@ -128,14 +137,16 @@ XSS-readable; the scope is `identify` only.
 
 ## Pre-shell routes
 
-Two paths are handled by `app/renderer-web.tsx` before `App` (and therefore the
-boot auth check, telemetry and the analytics consent banner) ever mounts:
-`/auth/callback` (above) and the pick/ban **stream view**
+Three path families are handled by `app/renderer-web.tsx` before `App` (and
+therefore the boot auth check, telemetry and the analytics consent banner) ever
+mounts: `/auth/callback` (above), the pick/ban **stream view**
 (`/events/:eventSlug/matches/:matchId/stream` — see `agents/navigation.md` →
-`shareable-match-links` for the path shape).
+`shareable-match-links` for the path shape) and the **stream scene pages**
+(`/stream/:eventSlug/:streamerId/:scene`, the OBS browser sources; see
+*Stream scene pages* below).
 
 `renderer-web.tsx` checks `parseStreamPath(window.location.pathname)`
-(`app/components/navigation/matchLinks.ts`) first. On a match it skips the
+(`app/components/navigation/matchLinks.ts`) and `parseStreamScenePath` first. On a match it skips the
 normal branch entirely — no `handleOAuthCallbackIfPresent`, no `App`, no
 `ThemeProvider`-wrapped `Main` — and instead dynamically `import()`s
 `app/components/pages/events/pickban/stream/mountStreamRoot.tsx`, which mounts
@@ -162,8 +173,8 @@ the fallback for real routing.
 
 `StreamView` never needs a login, always polls (`usePickBanSession` with
 `alwaysPoll: true` — see `agents/data-sources.md` → `event-pickban-sessions`),
-and renders a fixed 1920×1080 stage (`stream/StreamStage.tsx`,
-`stream/stageScale.ts`) scaled to fit the window with a solid background. Inside
+and renders a fixed 1920×1080 stage (`app/components/broadcast/BroadcastStage.tsx`,
+`stageScale.ts`) scaled to fit the window with a solid background. Inside
 it is the broadcast layout (`stream/StreamBroadcast.tsx`, see
 `agents/shared-components.md`), set in the self-hosted `font-pickban` face.
 Sound plays by default, and two query params set it, both parsed by
@@ -186,6 +197,35 @@ any pacing. The
 sounds keep the same timing without them; without it the stream view animates
 even when the OS reports reduced motion, since an OBS machine with Windows
 Animation effects off would otherwise show no reveals.
+
+### Stream scene pages
+
+`/stream/:eventSlug/:streamerId/:scene` is the OBS browser-source family.
+`parseStreamScenePath` (`app/components/stream/streamScenes.ts`) matches exactly
+five segments starting `/stream/`; `renderer-web.tsx` then dynamically imports
+`app/components/stream/mountStreamSceneRoot.tsx`, the same pre-shell pattern as
+the pick/ban stream root (own `createRoot`, no `App`, no login, no consent
+banner). Scene ids are the `STREAM_SCENES` list in `streamScenes.ts`; an
+unknown id (`/stream/cup/42/scoreboard`) is still claimed by the stream root,
+never by the app. Each `stream/scenes/*Scene.tsx` is its own lazy chunk.
+`?preview=1` is described in `agents/data-sources.md` (stream kit).
+
+- **noindex, both ways.** `app/public/robots.txt` has `Disallow: /stream/` and
+  `Disallow: /events/*/matches/*/stream`, and `renderer-web.tsx` calls
+  `markPageNoIndex()` (`stream/noIndex.ts`) for either stream route, setting
+  `<meta name="robots" content="noindex">` (reusing any existing robots tag).
+  `routes.contract.test.ts` checks that `robots.txt` blocks the stream paths.
+- **Stylesheet.** Scene pages use their own `stream/streamScenes.css` (theme and
+  utilities, no preflight) instead of the app stylesheet, so scene classes stay
+  out of the app's startup CSS. See `agents/styling.md`.
+- **Bundle check.** `check-web-bundle.mjs` lists both roots and every
+  `stream/scenes/*Scene.tsx` and, for each, requires a manifest record that is a
+  dynamic entry, is not in the entry's static import graph and is not
+  modulepreloaded; each scene chunk also gets the lazy-chunk budget. Lookup goes
+  through `manifestKeyOf`: a module also imported by another chunk is emitted
+  under an `_`-prefixed shared manifest key instead of its source path, so the
+  script falls back to a unique name match. If a scene moves or is renamed,
+  update the script rather than loosening it.
 
 ## Anonymous browsing
 
@@ -298,7 +338,12 @@ payload is currently **~181 KiB JS + 32 KiB CSS gzip**, enforced by
   with `preview:web`, never `dev:web` — dev cannot reproduce a TDZ split failure.
 - `npm run check:bundle` reads `dist-web/.vite/manifest.json` and measures the
   real **initial payload** (the entry plus its transitive static imports plus
-  their CSS), not the largest chunk. It also asserts the structure of
+  their CSS), not the largest chunk. Budgets (gzip): initial JS 190 KiB, initial
+  CSS 34 KiB, initial total 220 KiB, largest lazy chunk 120 KiB, **app JS 800
+  KiB** (every JS file except those only the stream scene pages load) and
+  **stream scene JS 120 KiB** (files reachable only from the stream scene root,
+  which never load in the app). The last two replace the old single 750 KiB
+  total. It also asserts the structure of
   `dist-web/index.html`: exactly one module script, at least one
   `<link rel="stylesheet">`, an entry chunk over 50 KiB gzip, and every asset tag
   after the `<!--utbt-head-end-->` marker. Run it after touching imports or

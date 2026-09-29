@@ -4,15 +4,15 @@ read_when:
   - "writing JSX that shows a player, a table, a modal, a filter/columns menu, or a tutorial"
   - "about to hand-roll UI that might already be a shared component"
   - "deciding whether to extract a new shared component"
-keywords: [PlayerInfo, DataTable, Modal, ColumnsMenu, FilterPresetsMenu, Tutorial, CapTimeLink, MapNavLink, NavLink, MapThumbnail, PatreonBadge, shared, pick/ban, TeamPanel, PoolGrid, StepTimeline, CentreStage, FinalSummary, CountdownBar, PickBanStatusChip, CaptainDock, ManagerDock, EditFinalEditor, PickBanMotion, usePickBanPreload, stageMotion, reduced motion, framer-motion, useCopyFeedback, copy link, PickBanSoundControl, sound control, Segmented, LiveDot, live dot, Tooltip, phrasing content]
+keywords: [broadcast module, BroadcastStage, BroadcastBackdrop, TeamPlate, ReconnectingBadge, broadcastTone, broadcastMotion, broadcastFonts, stageScale, SceneFrame, OverlayFrame, IdleFrame, BlankFrame, sceneHelpers, SceneTicker, stinger, OBS scene, StreamCard, StreamPlaceholder, StreamLoading, useStreamTab, PlayerInfo, DataTable, Modal, ColumnsMenu, FilterPresetsMenu, Tutorial, CapTimeLink, MapNavLink, NavLink, MapThumbnail, PatreonBadge, shared, pick/ban, StepTrack, MapBoard, StageScenes, Countdown, FinalSummary, CountdownBar, PickBanStatusChip, CaptainDock, ManagerDock, EditFinalEditor, PickBanMotion, usePickBanPreload, stageMotion, reduced motion, framer-motion, useCopyFeedback, copy link, PickBanSoundControl, sound control, Segmented, LiveDot, live dot, Tooltip, phrasing content]
 provides: "the inventory of reusable components + when to use each"
 not_here:
   - "the class strings / design tokens → styling.md"
   - "how detail pages open via events (open-player / open-cap) → navigation.md"
   - "page/query state + persistence → state-patterns.md"
-sections: [hard-rule-playerinfo, player-cap-links, map-links, tables-datatable-primitives, columns-columnsmenu, filter-presets, tutorial, visual-primitives, pick-ban-visual-core, ui-primitives, utilities, when-to-extract]
-last_verified: 2026-09-28
-verify_against: [app/components/shared/PlayerInfo.tsx, app/components/shared/DataTable.tsx, app/components/shared/CapTimeLink.tsx, app/components/shared/MapNavLink.tsx, app/components/shared/MapNameCell.tsx, app/components/shared/ColumnsMenu.tsx, app/components/shared/FilterPresetsMenu.tsx, app/components/shared/Segmented.tsx, app/components/pages/events/pickban/components/TeamPanel.tsx, app/components/pages/events/pickban/components/PoolGrid.tsx, app/components/pages/events/pickban/components/StepTimeline.tsx, app/components/pages/events/pickban/components/CentreStage.tsx, app/components/pages/events/pickban/components/FinalSummary.tsx, app/components/pages/events/pickban/components/Countdown.tsx, app/components/pages/events/pickban/components/PickBanBannerNote.tsx, app/components/pages/events/pickban/components/PickBanStatusChip.tsx, app/components/pages/events/pickban/components/pickBanTone.ts, app/components/pages/events/pickban/components/CaptainDock.tsx, app/components/pages/events/pickban/components/ManagerDock.tsx, app/components/pages/events/pickban/components/EditFinalEditor.tsx, app/components/pages/events/pickban/components/PickBanMotion.tsx, app/components/pages/events/pickban/components/stageMotion.ts, app/components/pages/events/pickban/pickBanBeats.ts, app/components/pages/events/pickban/usePickBanPreload.ts, app/hooks/usePrefersReducedMotion.ts, app/hooks/useCopyFeedback.ts, app/components/pages/events/pickban/components/PickBanSoundControl.tsx, app/components/shared/LiveDot.tsx, app/components/ui/tooltip.tsx]
+sections: [hard-rule-playerinfo, player-cap-links, map-links, tables-datatable-primitives, columns-columnsmenu, filter-presets, tutorial, visual-primitives, pick-ban-visual-core, broadcast-module, stream-scene-kit, stream-tab-pieces, ui-primitives, utilities, when-to-extract]
+last_verified: 2026-09-29
+verify_against: [app/components/shared/PlayerInfo.tsx, app/components/shared/DataTable.tsx, app/components/shared/CapTimeLink.tsx, app/components/shared/MapNavLink.tsx, app/components/shared/MapNameCell.tsx, app/components/shared/ColumnsMenu.tsx, app/components/shared/FilterPresetsMenu.tsx, app/components/shared/Segmented.tsx, app/components/pages/events/pickban/components/MatchBanner.tsx, app/components/pages/events/pickban/components/MapBoard.tsx, app/components/pages/events/pickban/components/StepTrack.tsx, app/components/pages/events/pickban/components/PickBanStage.tsx, app/components/pages/events/pickban/components/FinalSummary.tsx, app/components/pages/events/pickban/components/Countdown.tsx, app/components/pages/events/pickban/components/PickBanBannerNote.tsx, app/components/pages/events/pickban/components/PickBanStatusChip.tsx, app/components/broadcast/BroadcastBackdrop.tsx, app/components/broadcast/BroadcastStage.tsx, app/components/broadcast/ReconnectingBadge.tsx, app/components/broadcast/TeamPlate.tsx, app/components/broadcast/broadcastFonts.ts, app/components/broadcast/broadcastMotion.ts, app/components/broadcast/broadcastTone.ts, app/components/broadcast/stageScale.ts, app/components/stream/sceneHelpers.ts, app/components/stream/SceneTicker.tsx, app/components/stream/useSceneCues.ts, app/components/stream/frame/SceneFrame.tsx, app/components/stream/frame/IdleFrame.tsx, app/components/stream/frame/SceneBranding.tsx, app/components/stream/data/useStreamData.ts, app/components/stream/scenes/intermission/SceneMapTile.tsx, app/components/stream/scenes/brb/SeriesScoreCard.tsx, app/components/stream/stinger/Stinger.tsx, app/components/pages/events/stream/StreamCard.tsx, app/components/pages/events/stream/StreamTabContext.tsx, app/components/pages/events/pickban/components/CaptainDock.tsx, app/components/pages/events/pickban/components/ManagerDock.tsx, app/components/pages/events/pickban/components/EditFinalEditor.tsx, app/components/pages/events/pickban/components/PickBanMotion.tsx, app/components/pages/events/pickban/components/stageMotion.ts, app/components/pages/events/pickban/pickBanBeats.ts, app/components/pages/events/pickban/usePickBanPreload.ts, app/hooks/usePrefersReducedMotion.ts, app/hooks/useCopyFeedback.ts, app/components/pages/events/pickban/components/PickBanSoundControl.tsx, app/components/shared/LiveDot.tsx, app/components/ui/tooltip.tsx]
 ---
 
 # Shared components reference
@@ -313,11 +313,11 @@ label from a name and a letter.
 | `PickBanMotion` | `animate`, `children` | Wraps any tree of the visual core (the match page, the stream view). A framer-motion `MotionConfig` driven by `animate`, not by the OS reduced-motion switch: pick/ban reveals are the show, and Windows reports "reduce" whenever its Animation effects are off. The match page takes `animate` from its Animations toggle (`pickBanMotionPreference.ts`, key `utbt:pickBanMotion:v1`, on by default, account-synced); the stream view animates unless its URL carries `motion=0`. With `animate` off, every enter, exit and layout animation below it is instant and the information shown is the same. Its wrapper carries `data-motion="on"` while animating, which exempts the subtree from `shared.css`'s reduced-motion rule. `usePickBanAnimate()` reads the value below it. |
 | `PickBanSoundControl` | `preference` (`{ enabled, volume }`), `onToggle(enabled)`, `onChange` (the whole next preference), `onPreview()`, `className?` (the trigger's classes) | The match page's header sound control: a button showing `preference.enabled` ("Sound On"/"Sound Off") that opens a small panel with a Sound switch (`ui/switch`, labelled by its row) and a Volume `ui/slider` 0–100% with the number shown. The slider keeps a local draft while it moves and calls `onChange` then `onPreview` only on release (pointer up, key up or blur); while sound is off a line says to turn it on to hear a preview. It is a disclosure (`aria-expanded`, a labelled group under the button), not a Radix menu, so Tab and the arrow keys reach the switch and slider; Escape, an outside pointer or focus leaving closes it. 44px rows below `sm`. It holds no sound state itself: the page wires it to `usePickBanSound` and `pickBanSoundPreference.ts` (see `agents/navigation.md` → `match-pickban-page`). |
 | `usePickBanPreload(cards, sizes?)` | `view?.cards`, and the `MapThumbnailSize`s to fetch (default `['card']`, the size the core renders; the stream view passes `['card', 'hero']`); returns nothing | Fetches and decodes every non-excluded pool screenshot at each size (following `MapThumbnail`'s derived → canonical → default fallback), and loads the fonts. It holds the decoded images while mounted and keys on the list of URLs, so rebuilding the view doesn't refetch anything. Call it from the lobby on and when the stream view loads. |
-| `stageMotion.ts` | `SCENE_VARIANTS`, `choreography(entranceMs)`, `staggeredCard`, `CHIP_MOTION`, `STAMP_MOTION`, `FADE_MOTION`, `INDICATOR_TRANSITION` | The shared motion values. Everything animates `transform`, `opacity` or a one-shot `filter`: nothing loops and nothing blurs per card. The hits inside an entrance (`IMPACT`, `STAMP_HIT`, `DECIDER_IMPACT`, `VS_HIT`, each a share of `entranceMs`) live in `events/pickban/pickBanBeats.ts`, which the sound cues read too, so a sound's hit and the picture's can't drift apart. |
+| `stageMotion.ts` | `choreography(entranceMs)` | The pick/ban choreography only; the curves and presets it builds on (`SCENE_VARIANTS`, `staggeredCard`, `CHIP_MOTION`, `STAMP_MOTION`, `FADE_MOTION`, `INDICATOR_TRANSITION`) live in the broadcast module (below). Everything animates `transform`, `opacity` or a one-shot `filter`: nothing loops and nothing blurs per card. The hits inside an entrance (`IMPACT`, `STAMP_HIT`, `DECIDER_IMPACT`, `VS_HIT`, each a share of `entranceMs`) live in `events/pickban/pickBanBeats.ts`, which the sound cues read too, so a sound's hit and the picture's can't drift apart. |
 | `CountdownText` / `CountdownBar` | `countdown`, `tone` (bar only), `className?` | A countdown and a shrinking bar, painted on animation frames from `countdown.endsAt` straight into the DOM, so nothing re-renders per frame. A frozen countdown holds still at `remainingMs`. With animations off (`usePickBanAnimate()` from the surrounding `PickBanMotion`), the bar steps once a second with the text instead of gliding. |
 | `PickBanBannerNote` | `banner`, `className?` | One view-model banner (voided, cancelled, paused, skipped bans or a warning) with its icon and tint. |
 | `PickBanStatusChip` | `status: PickBanSessionStatus`, `className?` | A session status in the words and colours of `pickBanStatus.ts`: Not Open, Cancelled and Voided muted, Lobby in the accent, Live emerald, Paused amber, Complete neutral. The Manage queue and the watch page both use it, so a status reads the same everywhere. |
-| `pickBanTone.ts` | `PICK_BAN_TONES`, `PICK_BAN_HUES`, `teamTone(ab)`, `stepTone(actor)`, `tint(hue, percent)` | Class sets for A, B, gold and neutral, and each tone's CSS colour. A step with no actor is the decider, so it is gold. `tint` mixes a hue with transparency for inline gradients, glows and shadows. |
+| `broadcastTone.ts` | `PICK_BAN_TONES`, `PICK_BAN_HUES`, `teamTone(ab)`, `stepTone(actor)`, `tint(hue, percent)` | Moved to the broadcast module (below): every pick/ban component reads its tones from there. |
 
 They size themselves with container queries (`/banner`, `/arena`, `/board`, `/tile`,
 `/slot`, the `stage` size container), not viewport breakpoints, so they work the same in a
@@ -334,7 +334,7 @@ layout, fixed in pixels, sharing `MapTile`, `StepTrack` and `Chevrons` with the 
 
 | Piece | Renders |
 |---|---|
-| `BroadcastHeader` | Two angled team plates in the side colours (letter, stage seed, name sized down for long names, every member through `PlayerInfo` with `interactive={false}`), with the event name, "Picks & Bans" and `matchSubtitle` between them. The side on turn brightens and shows "On the clock"; in the lobby each plate shows Ready or Not ready. |
+| `BroadcastHeader` | Two angled `TeamPlate`s in the side colours (letter, stage seed, name sized down for long names, every member through `PlayerInfo` with `interactive={false}`), with the event name, "Picks & Bans" and `matchSubtitle` between them. The side on turn brightens and shows "On the clock"; in the lobby each plate shows Ready or Not ready. |
 | `BroadcastCaption` | A line over the board: "<team> to ban" or "to pick" with the step (and map) count and chevrons pointing at the acting team, or the lobby and not-open notices. |
 | `BroadcastBoard` | The eligible maps as big square `hero`-size `MapTile`s, laid out by `boardLayout(count, width, height, gap, maxTile)` (the column count that keeps tiles largest, capped at 320px), and one muted line under them per exclusion tag ("Hard maps are out: …"). While a map is previewed the other open maps dim. |
 | `StepTrack` | `size="broadcast"`: fixed 128px slots in one row. |
@@ -352,6 +352,63 @@ states and timeline statuses), never by a poll arriving. So two screens play a r
 same moment. Don't use the `animate-in` / `fade-in` / `slide-in` utility classes: their
 plugin isn't imported, so they emit no CSS. Wrap each root that renders the core in
 `PickBanMotion`, and import it, like framer-motion, only from lazily loaded modules.
+
+## Broadcast module
+
+`app/components/broadcast/` is what the pick/ban stream view and every OBS scene share, so
+none of them re-derive tones, curves, the stage or the fonts. Import from here, never from a
+scene or from `pickban/`.
+
+| File | Exports | Use for |
+|---|---|---|
+| `broadcastTone.ts` | `PICK_BAN_TONES` (class sets per `'a'`, `'b'`, `'gold'`, `'neutral'`: `text`, `border`, `line`, `soft`, `solid`, `onSolid`, `ring`, `wash`), `PICK_BAN_HUES`, `BROADCAST_SURFACE`, `teamTone(ab)`, `stepTone(actor)`, `tint(hue, percent)`, types `PickBanTone`, `PickBanToneClasses` | Side colours (never spell `pickban-a` classes out), the root surface class of an opaque scene, and a `color-mix` alpha for gradients and glows. |
+| `broadcastMotion.ts` | `EASE_OUT`, `EASE_IN`, `EASE_OVERSHOOT`, `SLAM`, `SCENE_VARIANTS`, `staggeredCard(order)`, `CHIP_MOTION`, `STAMP_MOTION`, `FADE_MOTION`, `REVEAL_FLASH_MOTION`, `REVEAL_POP`, `REVEAL_RING_MOTION`, `INDICATOR_TRANSITION` | Every enter, exit and reveal in a scene: use these curves and durations instead of new numbers. |
+| `BroadcastStage` | `transparent?`, `children` | The 1920×1080 fixed-pixel stage, scaled to the window with `computeStageScale` (`stageScale.ts`: `STAGE_WIDTH`, `STAGE_HEIGHT`). Opaque by default (black letterbox, `bg-background`); `transparent` leaves both clear so OBS composites the page. |
+| `BroadcastBackdrop` | `left`, `right`, `lit?` (`PickBanTone`s and the lit side) | The two-side tinted grid backdrop behind an opaque scene. |
+| `TeamPlate` | `team: PlateTeam \| null`, `align`, `lit?`, `chips?` | The angled team plate (A/B chip, seed, name sized to length, members through `PlayerInfo`). |
+| `ReconnectingBadge` | none | The corner badge shown while the feed keeps failing. Frames render it for you. |
+| `broadcastFonts.ts` | `useBroadcastFonts()`, `BROADCAST_FONTS` | Loads the Barlow Condensed faces (`broadcastFonts.css`) and preloads them. Call it in every root (the frames already do); `BROADCAST_FONTS` is what a screenshot waits on. |
+
+`BROADCAST_SURFACE` is `bg-[#05070c] font-pickban text-white`. Colours, fonts and the stage
+are described in `agents/styling.md`.
+
+## Stream scene kit
+
+The OBS scene pages (`app/components/stream/`, mounted by `mountStreamSceneRoot.tsx` from
+`streamScenes.ts`'s registry) are built from a few reusable layers. Reuse them before adding
+a scene.
+
+| Piece | Use it when |
+|---|---|
+| `useSceneMatch()`, `useStreamHotState()`, `useSceneRead<T>(path)`, `useSceneNow(stepMs)`, `useSceneCadence()`, `useStreamData()` (`stream/data/useStreamData.ts`) | Any scene reads through these, never `fetch`. `useSceneMatch` returns the resolved phase (`loading`, `idle` or a match); `useSceneRead` is a conditional-request poll of one composite read whose cadence follows the OBS source state; `useSceneNow` ticks the server-corrected clock (every second by default, coarser to save renders). See `agents/data-sources.md` for the cadences. |
+| `SceneFrame` (`stream/frame/SceneFrame.tsx`) | An opaque scene: branding, stage line, title and optional kicker in a 152px header, the body in `<main>`, the ticker strip and the reconnecting badge. Props: `scene`, `title`, `kicker?`, `subtitle?`, `ticker?`, `backdrop?`. `backdrop={false}` gives a transparent scene with the same header. |
+| `OverlayFrame` | A fully transparent scene with no header: the stage, fonts and reconnecting badge only. |
+| `BlankFrame` / `IdleFrame` (`stream/frame/IdleFrame.tsx`) | The two states before a scene has a match: `BlankFrame` while the first read is `loading` (empty, `aria-busy`, no flash), `IdleFrame` when there is nothing to show (logo, event name, utbt.net). |
+| `SceneBranding`, `SceneLogo` | The logo and event/stage lockup, inside frames. |
+| `SceneTicker` (`stream/SceneTicker.tsx`, model in `stream/ticker/`) | The bottom strip; `SceneFrame` mounts it (`data-scene-ticker`, 64px). Screenshots mask it. |
+| `sceneHelpers.ts` | Pure text and series helpers, so scenes agree: `stageLine`, `formatLabel`, `seriesTarget`, `seriesFlags`, `sceneTimeText`, `utcTimeText`, `relativeTimeText`, `sideTone`, `sideToneClasses`. |
+| `useSceneCues(sound)` (`stream/useSceneCues.ts`) | Sound cues (`map-win`, `match-winner`, `countdown-zero`); scenes wrap it in a small hook (`useMapReveal`, `useWinnerCue`, `useCountdownCue`) and gate on `options.sound`. |
+| `SceneMapTile`, `SeriesScoreCard`, `SeriesTable` | Map art with tone framing (intermission), the series score with won/open flags (BRB, caster) and the per-map series table (intermission and post-match each have their own). Reuse before drawing a map or a score. |
+| `ending/`, `stinger/` | The ending scene's credits and next-matches views, and the stinger page (`stinger/stingerPage.tsx`, timed by `stingerTimeline.ts`). |
+
+A scene is a default-exported component in `stream/scenes/` taking `StreamSceneProps`
+(`eventSlug`, `streamerId`, `options`: `sound`, `animate`, `preview`), lazily imported by
+`mountStreamSceneRoot.tsx`. Keep the pure shaping in a `<scene>View.ts` and the read path
+and type in `<scene>Read.ts` so both test under vitest. Each frame stamps
+`data-stream-scene` on its root, which the screenshot specs wait on. Scene text uses
+`font-pickban`. Pick/ban is the one scene that renders the pick/ban stream view instead of a frame.
+
+## Stream tab pieces
+
+`app/components/pages/events/stream/` holds the event page's Stream tab (`StreamTab`, its
+panels loaded lazily from `streamPanels.ts`). Panels share:
+
+| Piece | Use for |
+|---|---|
+| `StreamCard` (`title`, `description?`, `className?`) | The one card every panel section sits in: a labelled `section` with a heading and optional description. |
+| `StreamPlaceholder`, `StreamLoading` | The dashed empty or not-available note and the "Loading …" line, so panels look the same in those states. |
+| `useStreamTab()` (`StreamTabContext.tsx`) | The operating identity and the polled desk. See `agents/state-patterns.md`. |
+| `panels/match/scoreControlStyles.ts` | `ACTION_SHAPE`, `ACCENT_ACTION`, `MUTED_ACTION`: the class strings for panel action buttons. |
 
 ## UI primitives (`app/components/ui/`)
 

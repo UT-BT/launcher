@@ -31,6 +31,8 @@ every doc.
 | persist UI state / add a localStorage key | agents/state-patterns.md | the 3 state tiers + key convention |
 | navigation / Back-Forward / detail pages | agents/navigation.md | navigate(), renderView, sidebar, events |
 | call the API / asset URLs / favorites | agents/data-sources.md | endpoints + favorites/patreon sync |
+| stream kit: Stream tab, OBS scene pages, cam tool, OBS kit | agents/data-sources.md (stream kit section) | desk/scene reads + writes, polling cadences, `preview=1`, where the fetchers live |
+| build or style an OBS scene / use the broadcast module | agents/shared-components.md + agents/styling.md | broadcast module, scene frame + helpers, transparent stage, scene stylesheet, screenshot conventions |
 | make a feature work or hide on the web build / platform gating | agents/web-target.md | platform layer + capability gates + web build |
 | IPC channels / window.conveyor / events | lib/conveyor/README.md | channel inventory + add pattern |
 | main-process / services / file access | lib/main/README.md | services + path/url safety + config |

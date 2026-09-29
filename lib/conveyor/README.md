@@ -11,12 +11,15 @@ not_here:
   - "the step-by-step add-a-channel procedure → .claude/skills/add-ipc-channel/SKILL.md"
   - "the main-process services behind the handlers → lib/main/README.md"
 sections: [overview, the-channel-inventory, calling-from-the-renderer, adding-a-channel, event-bridges, conventions]
-last_verified: 2026-07-27
+last_verified: 2026-09-29
 verify_against:
   - lib/conveyor/api/index.ts
   - lib/conveyor/schemas/index.ts
   - lib/main/app.ts
   - lib/preload/preload.ts
+  - lib/conveyor/schemas/stream-kit-schema.ts
+  - lib/conveyor/api/stream-kit-api.ts
+  - lib/conveyor/handlers/stream-kit-handler.ts
 ---
 
 # Conveyor — type-safe IPC
@@ -57,13 +60,35 @@ channel is one triple kept in three folders:
 | `maps` | `extractToInstall(mapName, bytes)` → extract a map zip into the install dir without overwriting |
 | `demos` | `saveToSystem(filename, bytes)` → write a demo into `{install}/System` |
 | `updater` | `check(manual?)`, `download()`, `quitAndInstall()`, `getState()` |
+| `streamKit` | Cam tool (Windows desktop only): `planCams(req)`, `launchCams(req)`, `retitleCams()`, `getCamStatus()`, `restartCam(slot, req?)`, `stopCams()`; kit: `extractKit({url,token,folder})` → channel `extractStreamKit` |
 | `logging` | `log/info/warn/error/debug(message, context?, data?)`, `getLogFilePath()`, `getRecentLogs(lines?)` |
 
 Renderer method names and channel names sometimes differ (e.g.
 `favorites.writeIni` → channel `writeFavoritesIni`, `maps.extractToInstall` →
-`extractMapToInstall`). The channel name is what appears in the api class's
+`extractMapToInstall`, `streamKit.extractKit` → `extractStreamKit`). The channel name is what appears in the api class's
 `this.invoke(...)`, the schema key, and the handler's `handle(...)` — all three
 must match exactly.
+
+### Stream kit channels
+
+Schemas, types and error codes live in `schemas/stream-kit-schema.ts`
+(`CamRequest`, `CamToolStatus`, `KitExtractRequest`, `KitProgress`).
+
+- **Cam calls** take `CamRequest` = `{ lineup: { A1, A2, B1, B2 }, servers: { A, B } }`
+  (strings or null). The renderer never sends paths, command lines or ini text;
+  main reads the install itself. `plan`/`launch`/`restart` return `{ ok: true, … }`
+  or `{ ok: false, errors }` (coded, e.g. `missing-slot`, `missing-server`,
+  `no-install`, `unsupported-platform`); `retitle`/`getCamStatus`/`stopCams`
+  return `CamToolStatus` = `{ supported, retitle: { available, error }, cams }`
+  (always four slots A1, A2, B1, B2).
+- **`restartCam(slot, null)`** relaunches from the plan the cam started with;
+  with a request it rebuilds that slot from the current lineup and servers.
+- **`extractKit`** downloads the kit ZIP with the caller's bearer token and
+  extracts it into `folder`. Returns `{ ok: true, folder, files }` or
+  `{ ok: false, reason, status? }`; reasons cover folder, URL/token, HTTP and
+  archive failures. Progress arrives on `window.utStreamKit.onKitProgress`.
+- Both are Windows-only in main (`unsupported-platform` elsewhere); the renderer
+  gates on `capabilities.camTool`.
 
 Don't sprinkle `window.conveyor.*` through the renderer — wrap a channel in a
 hook or thin utility if it's used in more than one place (e.g. `useDemoDownload`,
@@ -117,6 +142,7 @@ returns an unsubscribe function — call it on cleanup.
 | `window.utProfile` | `onChanged` — profile refreshed |
 | `window.utFavorites` | `onGameClosed` — game exited; re-read ini favorites |
 | `window.utbtUpdater` | `onStateChanged` — updater state push |
+| `window.utStreamKit` | `onKitProgress` — kit download/extract progress `{ phase: 'downloading' \| 'extracting', done, total }` (`total` null without a content length) |
 | `window.uiScale` | `set(factor)` / `get()` — zoom |
 
 ```ts
