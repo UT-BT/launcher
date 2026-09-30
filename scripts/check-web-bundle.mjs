@@ -1,19 +1,17 @@
 import { gzipSync } from 'node:zlib'
 import { readFile, readdir } from 'node:fs/promises'
-import { basename, extname, join } from 'node:path'
+import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const distDir = fileURLToPath(new URL('../dist-web/', import.meta.url))
 const assetsDir = join(distDir, 'assets')
-const sceneDir = fileURLToPath(new URL('../app/components/stream/scenes/', import.meta.url))
 
 const KiB = 1024
 const maxInitialJsGzipBytes = 190 * KiB
 const maxInitialCssGzipBytes = 34 * KiB
 const maxInitialTotalGzipBytes = 220 * KiB
 const maxLazyChunkGzipBytes = 120 * KiB
-const maxAppJsGzipBytes = 800 * KiB
-const maxStreamSceneJsGzipBytes = 120 * KiB
+const maxTotalJsGzipBytes = 750 * KiB
 const minEntryGzipBytes = 50 * KiB
 
 const HEAD_START = '<!--utbt-head-start-->'
@@ -78,15 +76,8 @@ if (!entryKey) {
 const { javaScript: initialJs, styles: initialCss } = collectInitialPayload(manifest, entryKey)
 const entryFile = manifest[entryKey].file
 
-const STREAM_ROOTS = [
-  { src: 'components/pages/events/pickban/stream/mountStreamRoot.tsx', label: 'pick/ban stream root' },
-  { src: 'components/stream/mountStreamSceneRoot.tsx', label: 'stream scene root' },
-]
-const sceneFiles = (await readdir(sceneDir, { withFileTypes: true }))
-  .filter(entry => entry.isFile() && entry.name.endsWith('Scene.tsx'))
-  .map(entry => entry.name)
-  .sort()
-const STREAM_SCENES = sceneFiles.map(name => ({ src: `components/stream/scenes/${name}`, label: `${name.replace(/\.tsx$/, '')} scene` }))
+const STREAM_ROOT_SRC = 'components/pages/events/pickban/stream/mountStreamRoot.tsx'
+const streamRoot = manifest[STREAM_ROOT_SRC]
 
 const allFiles = await readdir(assetsDir)
 const allJs = allFiles.filter(file => file.endsWith('.js')).map(file => `assets/${file}`)
@@ -98,40 +89,9 @@ if (allJs.length === 0) {
 const initialJsSet = new Set(initialJs)
 const lazyJs = allJs.filter(file => !initialJsSet.has(file))
 
-function manifestKeyOf(src) {
-  if (manifest[src]) return src
-  const name = basename(src, extname(src))
-  const sharedKeys = Object.keys(manifest).filter(key => key.startsWith('_') && manifest[key].name === name)
-  return sharedKeys.length === 1 ? sharedKeys[0] : undefined
-}
-
-function reachableFiles(startKeys, boundaryKeys) {
-  const visited = new Set()
-  const files = new Set()
-  const visit = key => {
-    if (visited.has(key) || boundaryKeys.has(key)) return
-    visited.add(key)
-    const record = manifest[key]
-    if (!record) return
-    if (record.file) files.add(record.file)
-    for (const next of [...(record.imports ?? []), ...(record.dynamicImports ?? [])]) visit(next)
-  }
-  startKeys.forEach(visit)
-  return files
-}
-
-const streamSceneRootKey = manifestKeyOf('components/stream/mountStreamSceneRoot.tsx')
-const appReachable = reachableFiles([entryKey], new Set([streamSceneRootKey]))
-const streamSceneOnlyJs = streamSceneRootKey
-  ? [...reachableFiles([streamSceneRootKey], new Set())].filter(file => !appReachable.has(file))
-  : []
-const streamSceneOnlySet = new Set(streamSceneOnlyJs)
-const appJs = allJs.filter(file => !streamSceneOnlySet.has(file))
-
 const initialJsGzip = await sumGzipBytes(initialJs)
 const initialCssGzip = await sumGzipBytes(initialCss)
-const appJsGzip = await sumGzipBytes(appJs)
-const streamSceneJsGzip = await sumGzipBytes(streamSceneOnlyJs)
+const totalJsGzip = await sumGzipBytes(allJs)
 
 const lazySizes = await Promise.all(
   lazyJs.map(async file => ({ file, gzipBytes: await gzipBytesOf(file) }))
@@ -148,41 +108,16 @@ checkBudget('initial total', initialJsGzip + initialCssGzip, maxInitialTotalGzip
 if (largestLazy) {
   checkBudget(`largest lazy (${largestLazy.file.replace('assets/', '')})`, largestLazy.gzipBytes, maxLazyChunkGzipBytes)
 }
-checkBudget('app JS       ', appJsGzip, maxAppJsGzipBytes)
-checkBudget(`stream scene JS (${streamSceneOnlyJs.length} files only the scene pages load)`, streamSceneJsGzip, maxStreamSceneJsGzipBytes)
+checkBudget('total JS     ', totalJsGzip, maxTotalJsGzipBytes)
 
-function manifestRecordOf(src) {
-  const key = manifestKeyOf(src)
-  return key ? manifest[key] : undefined
-}
-
-function checkLazyEntry({ src, label }) {
-  const record = manifestRecordOf(src)
-  if (!record) {
-    fail(`Manifest has no chunk for ${src}. Either the ${label} moved (update this script) or a static import folded it into another chunk.`)
-    return null
-  }
-  if (!record.isDynamicEntry) {
-    fail(`${src} is no longer a dynamic entry — something now imports the ${label} statically.`)
-    return null
-  }
-  if (initialJsSet.has(record.file)) {
-    fail(`${record.file} (the ${label}) is reachable from the entry's static import graph.`)
-    return null
-  }
-  console.log(`  ok   ${label}: ${record.file} stays its own lazy chunk, out of the entry`)
-  return { label, file: record.file }
-}
-
-if (STREAM_SCENES.length === 0) {
-  fail(`No scene files found in ${sceneDir}. If the stream scenes moved, update this script.`)
-}
-
-const streamRootRecords = STREAM_ROOTS.map(checkLazyEntry)
-const sceneRecords = STREAM_SCENES.map(checkLazyEntry)
-const lazyEntries = [...streamRootRecords, ...sceneRecords].filter(Boolean)
-for (const scene of sceneRecords.filter(Boolean)) {
-  checkBudget(`${scene.label} chunk`, await gzipBytesOf(scene.file), maxLazyChunkGzipBytes)
+if (!streamRoot) {
+  fail(`Manifest has no entry for ${STREAM_ROOT_SRC}. If the pick/ban stream root moved, update this script.`)
+} else if (!streamRoot.isDynamicEntry) {
+  fail(`${STREAM_ROOT_SRC} is no longer a dynamic entry — something now imports the pick/ban stream root statically.`)
+} else if (initialJsSet.has(streamRoot.file)) {
+  fail(`${streamRoot.file} (the pick/ban stream root) is reachable from the entry's static import graph.`)
+} else {
+  console.log(`  ok   stream root   : ${streamRoot.file} stays its own lazy chunk, out of the entry`)
 }
 console.log('')
 
@@ -194,10 +129,8 @@ if (moduleScripts.length !== 1) {
 }
 
 const modulePreloads = [...html.matchAll(/<link\b[^>]*\brel="modulepreload"[^>]*\bhref="([^"]+)"/g)].map(match => match[1])
-for (const { label, file } of lazyEntries) {
-  if (modulePreloads.some(href => href.endsWith(file))) {
-    fail(`index.html modulepreloads ${file} (the ${label}) — it must stay lazy, not preloaded.`)
-  }
+if (streamRoot && modulePreloads.some(href => href.endsWith(streamRoot.file))) {
+  fail(`index.html modulepreloads ${streamRoot.file} (the pick/ban stream root) — it must stay lazy, not preloaded.`)
 }
 
 const stylesheets = [...html.matchAll(/<link\b[^>]*\brel="stylesheet"[^>]*\bhref="([^"]+)"/g)].map(match => match[1])

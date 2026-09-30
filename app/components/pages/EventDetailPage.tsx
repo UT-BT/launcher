@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowLeft, CalendarClock, CalendarDays, Users2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useNavState } from '@/app/components/navigation/useNavState'
@@ -35,9 +35,6 @@ import type { PickBanDrafts } from './events/manage/pickban/pickBanEditor'
 import { SlotPickerModal } from './events/schedule/SlotPickerModal'
 import { EventTodoPanel } from './events/EventTodoPanel'
 import { eventTodos, scheduleTodoSummary, todoCountsByKind } from '@/app/utils/eventAttention'
-import { streamTabVisible, type OperatingViewer } from './events/stream/streamTabAccess'
-
-const StreamTab = lazy(() => import('./events/stream/StreamTab').then(m => ({ default: m.StreamTab })))
 
 const PICK_BAN_ME_REFRESH_MS = 30_000
 
@@ -64,7 +61,7 @@ function NextMatchBanner({ match, myTeamId, now }: {
     )
 }
 
-export type EventTab = 'info' | 'teams' | 'bracket' | 'maps' | 'predictions' | 'schedule' | 'players' | 'signup' | 'stream' | 'manage'
+export type EventTab = 'info' | 'teams' | 'bracket' | 'maps' | 'predictions' | 'schedule' | 'players' | 'signup' | 'manage'
 
 interface EventDetailPageProps {
     eventSlug: string
@@ -83,7 +80,6 @@ const BASE_TABS: { id: EventTab; label: string }[] = [
     { id: 'predictions', label: 'Predictions' },
     { id: 'players', label: 'Looking for Partner' },
     { id: 'signup', label: 'Signup' },
-    { id: 'stream', label: 'Stream' },
 ]
 
 const MANAGE_TAB: { id: EventTab; label: string } = { id: 'manage', label: 'Manage' }
@@ -196,12 +192,6 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
     const canManageBracket = !!my?.can_manage_bracket || canManage
     const isStreamer = !!my?.is_streamer
     const scheduleParticipant = isScheduleParticipant(!!my?.team, canManageBracket, isStreamer)
-    const streamVisible = streamTabVisible({ signedIn: !!accessToken, isStreamer, canManageBracket })
-    const viewerId = String(userProfile?.id ?? '')
-    const viewerName = userProfile?.alias ?? userProfile?.username ?? null
-    const streamViewer = useMemo<OperatingViewer>(() => ({
-        id: viewerId, name: viewerName, isStreamer, isManager: canManageBracket,
-    }), [viewerId, viewerName, isStreamer, canManageBracket])
 
     const loadSchedule = useCallback(async (enabled: boolean) => {
         if (!enabled || !accessToken) {
@@ -319,7 +309,6 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
         .filter(t => t.id !== 'maps' || hasMapsPool)
         .filter(t => t.id !== 'predictions' || predictionsOn)
         .filter(t => t.id !== 'schedule' || scheduleVisible)
-        .filter(t => t.id !== 'stream' || streamVisible)
     const todoCounts = todoCountsByKind(todos)
     const scheduleTodo = scheduleTodoSummary(todoCounts)
     const scheduleTodoTitle = scheduleTodo.lines.join(' · ')
@@ -327,8 +316,7 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
         || (tab === 'bracket' && !hasBracket)
         || (tab === 'maps' && !hasMapsPool)
         || (tab === 'predictions' && !predictionsOn)
-        || (tab === 'schedule' && !scheduleVisible)
-        || (tab === 'stream' && !streamVisible) ? 'info' : tab
+        || (tab === 'schedule' && !scheduleVisible) ? 'info' : tab
 
     return (
         <div className="h-full flex flex-col overflow-hidden space-y-4 animate-in fade-in slide-in-from-bottom-0 duration-500">
@@ -477,11 +465,6 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
                             onRefresh={refresh}
                         />
                     </div>
-                )}
-                {activeTab === 'stream' && streamVisible && accessToken && (
-                    <Suspense fallback={<p className="text-xs text-muted-foreground">Loading the Stream tab…</p>}>
-                        <StreamTab eventSlug={eventSlug} accessToken={accessToken} viewer={streamViewer} />
-                    </Suspense>
                 )}
                 {activeTab === 'manage' && canManageBracket && accessToken && (
                     <ManagePanel

@@ -5,8 +5,8 @@ import { MapThumbnail, type MapThumbnailSize } from '@/app/components/shared/Map
 import { displayMapName } from '@/app/utils/format'
 import type { PickBanActor } from '@/app/utils/api'
 import type { PickBanCardView } from '../pickBanView'
-import { PICK_BAN_HUES, PICK_BAN_TONES, stepTone, teamTone, tint } from '@/app/components/broadcast/broadcastTone'
-import { CHIP_MOTION, REVEAL_FLASH_MOTION, REVEAL_POP, STAMP_MOTION } from '@/app/components/broadcast/broadcastMotion'
+import { PICK_BAN_HUES, PICK_BAN_TONES, stepTone, teamTone, tint } from './pickBanTone'
+import { CHIP_MOTION, REVEAL_FLASH_MOTION, REVEAL_POP, STAMP_MOTION } from './stageMotion'
 
 export type ActorLabels = Record<PickBanActor, string>
 

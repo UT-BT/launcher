@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { motion, type TargetAndTransition, type Variants } from 'framer-motion'
 import { cn } from '@/lib/utils'
-import { tint } from '@/app/components/broadcast/broadcastTone'
+import { tint } from './pickBanTone'
 
 const CENTRED = 'pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2'
 

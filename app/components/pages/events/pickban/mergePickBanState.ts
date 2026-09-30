@@ -39,10 +39,6 @@ function share(previous: unknown, next: unknown, identityField?: string): unknow
     return next
 }
 
-export function mergeStructurally<T extends object>(previous: T | null, next: T): T {
-    return previous === null ? next : (share(previous, next) as T)
-}
-
 export function mergePickBanState(previous: PickBanState | null, next: PickBanState): PickBanState {
-    return mergeStructurally(previous, next)
+    return previous === null ? next : (share(previous, next) as PickBanState)
 }

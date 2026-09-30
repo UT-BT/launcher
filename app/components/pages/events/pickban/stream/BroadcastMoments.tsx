@@ -9,7 +9,7 @@ import { type PickBanCountdown, type PickBanTeamPanel, type PickBanTimelineEntry
 import { CountdownBar, IntroCountdownWords } from '../components/Countdown'
 import { DECIDER_LETTERS, frameOf, nextStepLabel, revealByline, revealKindOf, shakeOf } from '../components/StageScenes'
 import { Aura, ConfettiBurst, Flash, Rays, Ribbon, Shockwave, SparkBurst, Strike } from '../components/RevealEffects'
-import { PICK_BAN_HUES, PICK_BAN_TONES, stepTone, teamTone, tint } from '@/app/components/broadcast/broadcastTone'
+import { PICK_BAN_HUES, PICK_BAN_TONES, stepTone, teamTone, tint } from '../components/pickBanTone'
 import { choreography } from '../components/stageMotion'
 
 export function BroadcastIntro({ left, right, countdown, entranceMs }: {
