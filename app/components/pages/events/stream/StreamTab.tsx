@@ -8,6 +8,7 @@ import {
 } from '@/app/components/ui/dropdown-menu'
 import { fetchEventStreamers, type EventStreamer } from '@/app/utils/api'
 import { streamerName } from '@/app/components/pages/events/eventsShared'
+import { ROSTER_EMPTY_TEXT, ROSTER_FAILED_TEXT, streamerListNote } from '@/app/components/pages/events/streamerRoster'
 import { StreamLoading } from './StreamCard'
 import { StreamTabProvider, type StreamTabIdentity } from './StreamTabContext'
 import { STREAM_PANELS, initialStreamPanel, isStreamPanelId } from './streamPanels'
@@ -110,9 +111,9 @@ export function StreamTab({ eventSlug, accessToken, viewer }: StreamTabProps) {
 }
 
 function nobodyMessage(loading: boolean, noChoices: boolean, failed: boolean): string {
-    if (loading) return 'Loading the streaming volunteers…'
-    if (failed) return 'The streaming volunteers could not be loaded. Refresh to try again.'
-    if (noChoices) return 'No volunteers have offered to stream this event yet.'
+    if (loading) return 'Loading the streamer roster…'
+    if (failed) return `${ROSTER_FAILED_TEXT} Refresh to try again.`
+    if (noChoices) return ROSTER_EMPTY_TEXT
     return 'Choose a streamer to open their controls.'
 }
 
@@ -156,11 +157,7 @@ function OperatingAs({ viewer, choices, streamerId, loading, failed, onChoose }:
                             ))}
                         </DropdownMenuRadioGroup>
                         {choices.length === 0 && (
-                            <p className="px-2 py-1.5 text-xs text-muted-foreground">
-                                {failed
-                                    ? 'The streaming volunteers could not be loaded.'
-                                    : loading ? 'Loading streamers…' : 'No volunteers have offered to stream yet.'}
-                            </p>
+                            <p className="px-2 py-1.5 text-xs text-muted-foreground">{streamerListNote(failed, loading)}</p>
                         )}
                     </DropdownMenuContent>
                 </DropdownMenu>

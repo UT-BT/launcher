@@ -56,6 +56,18 @@ function MatchChips({ row }: { row: CurrentMatchRow }) {
     )
 }
 
+function NotScheduled() {
+    return (
+        <div role="status" className="space-y-1 rounded-lg border border-hairline/10 bg-card/40 p-3">
+            <p className="text-sm font-semibold text-foreground">You're set up, just not scheduled yet</p>
+            <p className="text-xs text-muted-foreground">
+                No matches in this event are assigned to you yet. A manager assigns streamers from the match queue, and your matches show up here as soon as they do. Until then your scenes show the event branding.
+            </p>
+            <p className="text-xs text-muted-foreground">Meanwhile, download the OBS kit on the Setup tab and read the Guide.</p>
+        </div>
+    )
+}
+
 export function CurrentMatchSection() {
     const { eventSlug, streamerId, accessToken, desk, deskLoading, deskError, clockOffsetMs, refresh } = useStreamTab()
     const now = useServerNow(clockOffsetMs)
@@ -93,6 +105,18 @@ export function CurrentMatchSection() {
     }
 
     const view = buildCurrentMatchView(desk, now)
+    const retryNote = deskError !== null && (
+        <p className="text-xs text-amber-300">Could not refresh your matches, retrying. {errorText(deskError)}</p>
+    )
+
+    if (view.rows.length === 0) {
+        return (
+            <StreamCard title={SECTION_TITLE} description={SECTION_DESCRIPTION}>
+                <NotScheduled />
+                {retryNote}
+            </StreamCard>
+        )
+    }
 
     return (
         <StreamCard title={SECTION_TITLE} description={SECTION_DESCRIPTION}>
@@ -135,41 +159,35 @@ export function CurrentMatchSection() {
             </div>
 
             {writeError && <p role="alert" className="text-xs text-red-300">{writeError}</p>}
-            {deskError !== null && !writeError && (
-                <p className="text-xs text-amber-300">Could not refresh your matches, retrying. {errorText(deskError)}</p>
-            )}
+            {!writeError && retryNote}
 
             <div className="space-y-2">
                 <h3 className="text-[10px] uppercase tracking-wider text-muted-foreground">Your assigned matches</h3>
-                {view.rows.length === 0 ? (
-                    <p className="text-xs text-muted-foreground">No matches are assigned to you yet.</p>
-                ) : (
-                    <ul aria-label="Assigned matches" className="space-y-2">
-                        {view.rows.map(row => (
-                            <li
-                                key={row.id}
-                                className={cn(
-                                    'flex flex-wrap items-start justify-between gap-2 rounded-lg border p-3',
-                                    row.onScreen ? 'border-accent-500/40 bg-accent-500/5' : 'border-hairline/10 bg-card/30',
-                                )}
+                <ul aria-label="Assigned matches" className="space-y-2">
+                    {view.rows.map(row => (
+                        <li
+                            key={row.id}
+                            className={cn(
+                                'flex flex-wrap items-start justify-between gap-2 rounded-lg border p-3',
+                                row.onScreen ? 'border-accent-500/40 bg-accent-500/5' : 'border-hairline/10 bg-card/30',
+                            )}
+                        >
+                            <div className="min-w-0 space-y-1.5">
+                                <MatchSummary row={row} />
+                                <MatchChips row={row} />
+                            </div>
+                            <button
+                                type="button"
+                                disabled={pending || row.chosen}
+                                onClick={() => choose(row.id)}
+                                aria-label={row.chosen ? `${row.title} is the current match` : `Set ${row.title} as the current match`}
+                                className={cn(ACTION_SHAPE, row.chosen ? ACCENT_ACTION : MUTED_ACTION, 'shrink-0')}
                             >
-                                <div className="min-w-0 space-y-1.5">
-                                    <MatchSummary row={row} />
-                                    <MatchChips row={row} />
-                                </div>
-                                <button
-                                    type="button"
-                                    disabled={pending || row.chosen}
-                                    onClick={() => choose(row.id)}
-                                    aria-label={row.chosen ? `${row.title} is the current match` : `Set ${row.title} as the current match`}
-                                    className={cn(ACTION_SHAPE, row.chosen ? ACCENT_ACTION : MUTED_ACTION, 'shrink-0')}
-                                >
-                                    {row.chosen ? 'Current' : 'Set current'}
-                                </button>
-                            </li>
-                        ))}
-                    </ul>
-                )}
+                                {row.chosen ? 'Current' : 'Set current'}
+                            </button>
+                        </li>
+                    ))}
+                </ul>
             </div>
         </StreamCard>
     )
