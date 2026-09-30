@@ -1,5 +1,5 @@
 import type { CamRequest, CamToolStatus } from '@/lib/conveyor/schemas/stream-kit-schema'
-import { CAM_SLOTS, CAM_WINDOW_TITLES, parseServerAddress, type CamSlot, type CamTeam } from '@/lib/stream-kit/cam-plan'
+import { CAM_SLOTS, CAM_WINDOW_TITLES, parseServerAddress, type CamFps, type CamSlot, type CamTeam } from '@/lib/stream-kit/cam-plan'
 import { isDiscordId } from '@/lib/stream-kit/discord-id'
 import { detectTeamServers } from '@/lib/stream-kit/team-server-detection'
 import type { Server } from '@/app/utils/server-utils'
@@ -29,6 +29,7 @@ export interface CamToolViewInput {
     choices: CamServerChoices
     installPath: string | null | undefined
     status: CamToolStatus | null
+    fps: CamFps | undefined
 }
 
 export type CamServerProblem = 'loading' | 'not-detected' | 'invalid-address'
@@ -191,6 +192,7 @@ function buildLaunch(
     lineup: CamLineupSlotView[],
     teams: Record<CamTeam, CamTeamServerView>,
     installPath: string | null | undefined,
+    fps: CamFps | undefined,
 ): CamLaunchView {
     const blockers: CamLaunchBlocker[] = []
     const installMissing = installPath !== undefined && !(installPath ?? '').trim()
@@ -209,13 +211,14 @@ function buildLaunch(
         blockers.push({ code: 'install-path', message: `The cams start from your own UT install, and the launcher doesn't know where it is. ${SETTINGS_HINT}` })
     }
 
-    const ready = blockers.length === 0 && match !== null && installPath !== undefined
+    const ready = blockers.length === 0 && match !== null && installPath !== undefined && fps !== undefined
         && CAM_TEAMS.every(team => teams[team].address !== null)
     const idOf = (slot: CamSlot) => lineup.find(entry => entry.slot === slot)?.discordId ?? null
     const request: CamRequest | null = ready
         ? {
             lineup: { A1: idOf('A1'), A2: idOf('A2'), B1: idOf('B1'), B2: idOf('B2') },
             servers: { A: teams.A.address, B: teams.B.address },
+            fps,
         }
         : null
 
@@ -278,11 +281,11 @@ function buildCams(
     })
 }
 
-export function buildCamToolView({ desk, servers, choices, installPath, status }: CamToolViewInput): CamToolView {
+export function buildCamToolView({ desk, servers, choices, installPath, status, fps }: CamToolViewInput): CamToolView {
     const match = desk?.match ?? null
     const lineup = buildLineup(match)
     const teams = buildTeams(match, servers, choices)
-    const launch = buildLaunch(match, lineup, teams, installPath)
+    const launch = buildLaunch(match, lineup, teams, installPath, fps)
     const cams = buildCams(status, lineup, knownNames(match), servers, launch.request !== null)
     const addresses = CAM_TEAMS.map(team => teams[team].address)
 

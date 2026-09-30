@@ -18,6 +18,7 @@ const USER_INI = Buffer.from('[DefaultPlayer]\r\nName=Streämer\r\nOverrideClass
 const REQUEST: CamRequest = {
     lineup: { A1, A2, B1, B2 },
     servers: { A: '203.0.113.10:7777', B: '198.51.100.20:7778' },
+    fps: 120,
 }
 
 class FakeProcess implements CamProcess {
@@ -157,6 +158,16 @@ describe('CamLauncher.launch', () => {
         const camUserIni = readFileSync(join(systemDirectory, 'UTBTCamB2User.ini'), 'latin1')
         expect(camUserIni).toContain('Name=Streämer\r\n')
         expect(camUserIni).toContain('OverrideClass=Botpack.CHSpectator')
+    })
+
+    it('writes the requested frame rate into every cam ini', async () => {
+        for (const fps of [60, 120] as const) {
+            const result = await launcher().launch({ ...REQUEST, fps })
+            expect(result.ok).toBe(true)
+            for (const slot of ['A1', 'A2', 'B1', 'B2']) {
+                expect(readFileSync(join(systemDirectory, `UTBTCam${slot}.ini`), 'latin1')).toContain(`FrameRateLimit=${fps}\r\n`)
+            }
+        }
     })
 
     it('spawns four clients from the install with the plan command lines', async () => {
@@ -378,6 +389,14 @@ describe('CamLauncher.restart and stopAll', () => {
         expect(processFor('B2').command.args[0]).toContain(`UTBTFollow=${B2_NEW}`)
         expect(result.status.cams.map(cam => cam.target)).toEqual([A1, A2, B1, B2_NEW])
         expect(processes.slice(0, 3).some(process => process.killed)).toBe(false)
+    })
+
+    it('restarts with the frame rate of the request it is given', async () => {
+        const cams = launcher()
+        await cams.launch(REQUEST)
+        await cams.restart('A2', { ...REQUEST, fps: 60 })
+        expect(readFileSync(join(systemDirectory, 'UTBTCamA2.ini'), 'latin1')).toContain('FrameRateLimit=60\r\n')
+        expect(readFileSync(join(systemDirectory, 'UTBTCamA1.ini'), 'latin1')).toContain('FrameRateLimit=120\r\n')
     })
 
     it('restarts a cam that had exited', async () => {

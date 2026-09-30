@@ -130,6 +130,7 @@ test('four cams launch for the live lineup on one shared server and each window 
     const expected = {
         lineup: { A1: ALICE.id, A2: ANNA.id, B1: BOB.id, B2: BEA.id },
         servers: { A: '203.0.113.10:7777', B: '203.0.113.10:7777' },
+        fps: 120,
     }
     await expect.poll(() => calls(page, 'launchCams')).toEqual([[expected]])
     expect(await calls(page, 'planCams')).toEqual([[expected]])
@@ -145,6 +146,40 @@ test('four cams launch for the live lineup on one shared server and each window 
     await expect(launchButton(page)).toHaveText('Relaunch cams')
 })
 
+test('the cams run at 120 fps unless the streamer picks 60, and the choice reaches the launch request', async ({ page }) => {
+    await openHarness(page, { lineup: FULL_LINEUP, servers: [SHARED] })
+
+    const fps = page.getByRole('group', { name: 'Cam FPS' })
+    await expect(fps.getByRole('button', { name: '120' })).toHaveAttribute('aria-pressed', 'true')
+    await expect(fps.getByRole('button', { name: '60' })).toHaveAttribute('aria-pressed', 'false')
+
+    await fps.getByRole('button', { name: '60' }).click()
+
+    await expect(fps.getByRole('button', { name: '60' })).toHaveAttribute('aria-pressed', 'true')
+    await expect.poll(() => calls(page, 'setCamFps')).toEqual([[60]])
+
+    await launchButton(page).click()
+
+    await expect.poll(() => calls(page, 'launchCams')).toEqual([[{
+        lineup: { A1: ALICE.id, A2: ANNA.id, B1: BOB.id, B2: BEA.id },
+        servers: { A: '203.0.113.10:7777', B: '203.0.113.10:7777' },
+        fps: 60,
+    }]])
+    await cam(page, 'B1').getByRole('button', { name: 'Restart B1' }).click()
+    await expect.poll(async () => (await calls(page, 'restartCam')).map(([slot, request]) => [slot, (request as { fps: number }).fps])).toEqual([['B1', 60]])
+})
+
+test('the cam tool opens on the saved frame rate', async ({ page }) => {
+    await openHarness(page, { lineup: FULL_LINEUP, servers: [SHARED] }, '?fps=60')
+
+    const fps = page.getByRole('group', { name: 'Cam FPS' })
+    await expect(fps.getByRole('button', { name: '60' })).toHaveAttribute('aria-pressed', 'true')
+    await launchButton(page).click()
+
+    await expect.poll(async () => (await calls(page, 'launchCams')).map(([request]) => (request as { fps: number }).fps)).toEqual([60])
+    expect(await calls(page, 'setCamFps')).toEqual([])
+})
+
 test('each team goes to its own server when they play on two', async ({ page }) => {
     await openHarness(page, { lineup: FULL_LINEUP, servers: [SPLIT_A, SPLIT_B] })
 
@@ -154,6 +189,7 @@ test('each team goes to its own server when they play on two', async ({ page }) 
     await expect.poll(() => calls(page, 'launchCams')).toEqual([[{
         lineup: { A1: ALICE.id, A2: ANNA.id, B1: BOB.id, B2: BEA.id },
         servers: { A: '203.0.113.10:7777', B: '203.0.113.20:7788' },
+        fps: 120,
     }]])
     await expect(page.getByTestId('cam-B1-server')).toContainText('203.0.113.20:7788')
 })
@@ -178,6 +214,7 @@ test('a picked or typed server overrides detection', async ({ page }) => {
     await expect.poll(() => calls(page, 'launchCams')).toEqual([[{
         lineup: { A1: ALICE.id, A2: ANNA.id, B1: BOB.id, B2: BEA.id },
         servers: { A: 'bt.example.net:7790', B: '203.0.113.10:7777' },
+        fps: 120,
     }]])
 })
 
@@ -198,6 +235,7 @@ test('a lineup change flags the right cam and restarting it clears the flag', as
     await expect.poll(() => calls(page, 'restartCam')).toEqual([['A2', {
         lineup: { A1: ALICE.id, A2: AXEL.id, B1: BOB.id, B2: BEA.id },
         servers: { A: '203.0.113.10:7777', B: '203.0.113.10:7777' },
+        fps: 120,
     }]])
     await expect(page.getByTestId('cam-A2-target')).toContainText('Axel')
     await expect(page.getByTestId('cam-stale-summary')).toHaveCount(0)
@@ -263,7 +301,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 1920, height: 1080
         await expect(page.getByTestId('cam-stale-summary')).toBeVisible({ timeout: 5_000 })
 
         expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1)
-        for (const name of ['Relaunch cams', 'Stop all', 'Restart A2']) {
+        for (const name of ['Relaunch cams', 'Stop all', 'Restart A2', '60', '120']) {
             const box = await page.getByRole('button', { name }).boundingBox()
             expect(box?.height ?? 0).toBeGreaterThanOrEqual(28)
         }

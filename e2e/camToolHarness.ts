@@ -2,7 +2,7 @@ import '@vitejs/plugin-react/preamble'
 import { createElement, useState, type ReactNode } from 'react'
 import { createRoot } from 'react-dom/client'
 import type { CamRequest, CamToolStatus } from '../lib/conveyor/schemas/stream-kit-schema'
-import { CAM_SLOTS, CAM_WINDOW_TITLES, type CamSlot } from '../lib/stream-kit/cam-plan'
+import { CAM_SLOTS, CAM_WINDOW_TITLES, camFpsOf, type CamFps, type CamSlot } from '../lib/stream-kit/cam-plan'
 import { NavigationContext, type NavigationContextValue } from '../app/components/navigation/NavigationContext'
 import { ThemeProvider } from '../app/theme/ThemeProvider'
 import { StreamTabProvider } from '../app/components/pages/events/stream/StreamTabContext'
@@ -31,6 +31,7 @@ function idleCam(slot: CamSlot): CamStatus {
 
 const harness = {
     installPath: search.get('install') === '0' ? undefined : 'C:\\UnrealTournament',
+    camFps: camFpsOf(Number(search.get('fps'))),
     cams: CAM_SLOTS.map(idleCam),
     calls: [] as { channel: string; args: unknown[] }[],
     nextPid: 4000,
@@ -90,6 +91,11 @@ const streamKit = {
         if (!plan) return record('restartCam', [slot, request], { ok: false as const, errors: [{ code: 'not-launched' as const, slot }] })
         harness.start(slot, plan)
         return record('restartCam', [slot, request], { ok: true as const, status: harness.snapshot() })
+    },
+    getCamFps: () => record('getCamFps', [], harness.camFps),
+    setCamFps: (fps: CamFps) => {
+        harness.camFps = fps
+        return record('setCamFps', [fps], fps)
     },
     stopCams: () => {
         harness.cams = harness.cams.map(cam => ({ ...cam, running: false, pid: null, titled: false }))

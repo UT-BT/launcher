@@ -5,10 +5,12 @@ const camTeam = z.enum(['A', 'B'])
 const iniFile = z.enum(['main', 'user'])
 const lineupValue = z.string().max(64).nullable().optional()
 const serverValue = z.string().max(260).nullable().optional()
+export const camFpsSchema = z.union([z.literal(60), z.literal(120)])
 
 export const camRequestSchema = z.object({
     lineup: z.object({ A1: lineupValue, A2: lineupValue, B1: lineupValue, B2: lineupValue }),
     servers: z.object({ A: serverValue, B: serverValue }),
+    fps: camFpsSchema,
 })
 
 const camToolError = z.discriminatedUnion('code', [
@@ -127,6 +129,14 @@ export const streamKitIpcSchema = {
     stopCams: {
         args: z.tuple([]),
         return: camToolStatusSchema,
+    },
+    getCamFps: {
+        args: z.tuple([]),
+        return: camFpsSchema,
+    },
+    setCamFps: {
+        args: z.tuple([camFpsSchema]),
+        return: camFpsSchema,
     },
     extractStreamKit: {
         args: z.tuple([kitExtractRequestSchema]),

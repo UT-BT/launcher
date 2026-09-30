@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { CamToolStatus } from '@/lib/conveyor/schemas/stream-kit-schema'
+import { DEFAULT_CAM_FPS, type CamFps } from '@/lib/stream-kit/cam-plan'
 import { usePlatform } from '@/app/platform'
 import { createPoller } from '@/app/utils/poller'
 import type { Server } from '@/app/utils/server-utils'
@@ -91,4 +92,33 @@ export function useCamStatus() {
     }, [anyRunning, read])
 
     return { status, setStatus, read }
+}
+
+export function useCamFps() {
+    const [fps, setFps] = useState<CamFps | undefined>(undefined)
+    const [saveFailed, setSaveFailed] = useState(false)
+    const chosen = useRef(false)
+    const saves = useRef(0)
+
+    useEffect(() => {
+        let active = true
+        window.conveyor.streamKit.getCamFps()
+            .catch(() => DEFAULT_CAM_FPS)
+            .then(stored => {
+                if (active && !chosen.current) setFps(stored)
+            })
+        return () => {
+            active = false
+        }
+    }, [])
+
+    const choose = useCallback(async (next: CamFps) => {
+        chosen.current = true
+        const save = ++saves.current
+        setFps(next)
+        const saved = await window.conveyor.streamKit.setCamFps(next).then(() => true, () => false)
+        if (save === saves.current) setSaveFailed(!saved)
+    }, [])
+
+    return { fps, choose, saveFailed }
 }

@@ -1,7 +1,7 @@
 import { useId, useRef, useState } from 'react'
 import { AlertTriangle, Play, RotateCw, Settings, Square } from 'lucide-react'
 import type { CamRequest } from '@/lib/conveyor/schemas/stream-kit-schema'
-import type { CamSlot, CamTeam } from '@/lib/stream-kit/cam-plan'
+import { CAM_FPS_OPTIONS, type CamFps, type CamSlot, type CamTeam } from '@/lib/stream-kit/cam-plan'
 import { useNavState } from '@/app/components/navigation/useNavState'
 import { PICK_BAN_TONES } from '@/app/components/broadcast/broadcastTone'
 import { CHIP_SHAPE } from '@/app/components/shared/chipStyles'
@@ -10,7 +10,7 @@ import type { Server } from '@/app/utils/server-utils'
 import { cn } from '@/lib/utils'
 import { StreamCard, StreamLoading } from '../StreamCard'
 import { useStreamTab } from '../StreamTabContext'
-import { useCamStatus, useInstallPath, useServerList } from './cams/camToolHooks'
+import { useCamFps, useCamStatus, useInstallPath, useServerList } from './cams/camToolHooks'
 import {
     CAM_TEAMS,
     DETECTED_CHOICES,
@@ -152,6 +152,44 @@ function TeamServerPicker({
     )
 }
 
+function FpsPicker({
+    fps,
+    onChoose,
+    saveFailed,
+    disabled,
+}: {
+    fps: CamFps | undefined
+    onChoose: (fps: CamFps) => void
+    saveFailed: boolean
+    disabled: boolean
+}) {
+    const labelId = useId()
+
+    return (
+        <div className="space-y-2">
+            <h3 id={labelId} className="text-[10px] uppercase tracking-wider text-muted-foreground">Cam FPS</h3>
+            <div role="group" aria-labelledby={labelId} className="flex flex-wrap items-center gap-2">
+                {CAM_FPS_OPTIONS.map(option => (
+                    <button
+                        key={option}
+                        type="button"
+                        disabled={disabled || fps === undefined}
+                        aria-pressed={fps === option}
+                        onClick={() => onChoose(option)}
+                        className={cn(ACTION_SHAPE, fps === option ? ACCENT_ACTION : MUTED_ACTION)}
+                    >
+                        {option}
+                    </button>
+                ))}
+            </div>
+            <p className="text-xs text-muted-foreground break-words">
+                120 keeps the cams smooth on a 60 fps stream. Pick 60 if your PC struggles to run four cams. It applies the next time the cams launch or restart.
+            </p>
+            {saveFailed && <p role="alert" className="text-xs text-amber-300 break-words">Could not save the frame rate, so it resets when the launcher restarts.</p>}
+        </div>
+    )
+}
+
 function statusChips(cam: CamStatusView) {
     if (!cam.running) return <Chip className={IDLE_CHIP}>Stopped</Chip>
     return (
@@ -244,6 +282,7 @@ export function CamTool() {
     const installPath = useInstallPath()
     const { servers, failed: serversFailed } = useServerList()
     const { status, setStatus, read } = useCamStatus()
+    const { fps, choose: chooseFps, saveFailed: fpsSaveFailed } = useCamFps()
     const [stored, setStored] = useNavState<StoredChoices>('event.camServers', NO_STORED_CHOICES)
     const busy = useRef(false)
     const [pending, setPending] = useState(false)
@@ -251,7 +290,7 @@ export function CamTool() {
 
     const matchId = desk?.match?.id ?? null
     const choices = stored.matchId === matchId ? stored.choices : DETECTED_CHOICES
-    const view = buildCamToolView({ desk, servers, choices, installPath, status })
+    const view = buildCamToolView({ desk, servers, choices, installPath, status, fps })
 
     function changeChoice(team: CamTeam, choice: CamServerChoice) {
         setStored({ matchId, choices: { ...choices, [team]: choice } })
@@ -332,6 +371,8 @@ export function CamTool() {
                     )}
                     {serversFailed && <p className="text-xs text-amber-300">Could not refresh the server list, retrying.</p>}
                 </div>
+
+                <FpsPicker fps={fps} onChoose={next => void chooseFps(next)} saveFailed={fpsSaveFailed} disabled={pending} />
 
                 {launchBlockers.length > 0 && (
                     <ul aria-label="Why the cams can't launch" className="space-y-1.5">

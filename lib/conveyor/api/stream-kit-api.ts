@@ -1,6 +1,6 @@
 import { ConveyorApi } from '@/lib/preload/shared'
 import type { CamRequest, KitExtractRequest } from '@/lib/conveyor/schemas/stream-kit-schema'
-import type { CamSlot } from '@/lib/stream-kit/cam-plan'
+import type { CamFps, CamSlot } from '@/lib/stream-kit/cam-plan'
 
 export class StreamKitApi extends ConveyorApi {
     planCams = (request: CamRequest) => this.invoke('planCams', request)
@@ -9,5 +9,7 @@ export class StreamKitApi extends ConveyorApi {
     getCamStatus = () => this.invoke('getCamStatus')
     restartCam = (slot: CamSlot, request: CamRequest | null = null) => this.invoke('restartCam', slot, request)
     stopCams = () => this.invoke('stopCams')
+    getCamFps = () => this.invoke('getCamFps')
+    setCamFps = (fps: CamFps) => this.invoke('setCamFps', fps)
     extractKit = (request: KitExtractRequest) => this.invoke('extractStreamKit', request)
 }

@@ -17,7 +17,7 @@ import { resolveWithin } from './path-safety'
 import { EMPTY_CAM_LOG_STATE, readCamLogChunk, type CamLogState } from './cam-log'
 import type { CamWindows } from './cam-windows'
 
-export type CamRequest = Pick<CamPlanInput, 'lineup' | 'servers'>
+export type CamRequest = Pick<CamPlanInput, 'lineup' | 'servers' | 'fps'>
 
 export type CamToolError =
     | CamPlanError
@@ -304,6 +304,7 @@ export class CamLauncher {
             servers: request.servers,
             mainIni: main.text,
             userIni: user.text,
+            fps: request.fps,
         })
         if (!result.ok) return { ok: false, errors: result.errors }
         return {

@@ -31,8 +31,25 @@ export const CAM_INI_OVERRIDES: readonly IniOverride[] = [
     { section: 'WinDrv.WindowsClient', key: 'WindowedViewportY', value: '540' },
     { section: 'WinDrv.WindowsClient', key: 'StartupFullscreen', value: 'False' },
     { section: 'WinDrv.WindowsClient', key: 'StartupBorderless', value: 'False' },
-    { section: 'WinDrv.WindowsClient', key: 'FrameRateLimit', value: '60' },
 ]
+
+export type CamFps = 60 | 120
+
+export const CAM_FPS_OPTIONS: readonly CamFps[] = [60, 120]
+
+export const DEFAULT_CAM_FPS: CamFps = 120
+
+export const CAM_MUSIC_VOLUME = 0
+
+export const CAM_SOUND_VOLUME = 200
+
+const ENGINE_SECTION = 'Engine.Engine'
+const GLOBAL_FRAME_RATE_SECTION = 'WinDrv.WindowsClient'
+const FRAME_RATE_KEY = 'FrameRateLimit'
+
+export function camFpsOf(value: unknown): CamFps {
+    return CAM_FPS_OPTIONS.find(fps => fps === value) ?? DEFAULT_CAM_FPS
+}
 
 export const CAM_USER_INI_OVERRIDES: readonly IniOverride[] = [
     { section: 'DefaultPlayer', key: CAM_JOIN_OPTIONS.spectatorClass.name, value: CAM_JOIN_OPTIONS.spectatorClass.value },
@@ -44,6 +61,7 @@ export interface CamPlanInput {
     servers: Partial<Record<CamTeam, string | null>>
     mainIni: string
     userIni: string
+    fps: CamFps
 }
 
 export interface CamCommand {
@@ -173,6 +191,40 @@ function applyIniOverrides(content: string, overrides: readonly IniOverride[]): 
     return lines.join(eol)
 }
 
+function iniValue(content: string, section: string, key: string): string | null {
+    let inSection = false
+    for (const line of content.split(/\r?\n/)) {
+        const header = SECTION_HEADER.exec(line)?.[1]
+        if (header !== undefined) {
+            inSection = sameName(header, section)
+            continue
+        }
+        const name = inSection ? KEY_LINE.exec(line)?.[1] : undefined
+        if (name !== undefined && sameName(name, key)) {
+            const value = line.slice(line.indexOf('=') + 1).trim()
+            return value === '' ? null : value
+        }
+    }
+    return null
+}
+
+function camIniOverrides(mainIni: string, fps: CamFps): IniOverride[] {
+    const renderDevice = iniValue(mainIni, ENGINE_SECTION, 'GameRenderDevice')
+    const audioDevice = iniValue(mainIni, ENGINE_SECTION, 'AudioDevice')
+    const frameRate = String(fps)
+    return [
+        ...CAM_INI_OVERRIDES,
+        { section: GLOBAL_FRAME_RATE_SECTION, key: FRAME_RATE_KEY, value: frameRate },
+        ...(renderDevice ? [{ section: renderDevice, key: FRAME_RATE_KEY, value: frameRate }] : []),
+        ...(audioDevice
+            ? [
+                { section: audioDevice, key: 'MusicVolume', value: String(CAM_MUSIC_VOLUME) },
+                { section: audioDevice, key: 'SoundVolume', value: String(CAM_SOUND_VOLUME) },
+            ]
+            : []),
+    ]
+}
+
 function camFilesFor(slot: CamSlot): CamFiles {
     return {
         ini: `UTBTCam${slot}.ini`,
@@ -226,7 +278,7 @@ export function buildCamPlan(input: CamPlanInput): CamPlanResult {
     if (errors.length > 0) return { ok: false, errors }
 
     const systemDirectory = systemDirectoryOf(input.installPath)
-    const iniContent = applyIniOverrides(input.mainIni, CAM_INI_OVERRIDES)
+    const iniContent = applyIniOverrides(input.mainIni, camIniOverrides(input.mainIni, input.fps))
     const userIniContent = applyIniOverrides(input.userIni, CAM_USER_INI_OVERRIDES)
     const cams = CAM_SLOTS.map((slot): CamPlanCam => {
         const team = teamOf(slot)

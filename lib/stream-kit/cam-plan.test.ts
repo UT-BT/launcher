@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { buildCamPlan, type CamPlan, type CamPlanInput } from './cam-plan'
+import { AUDIO_DEVICE_SETTINGS, RENDER_DEVICE_SETTINGS } from '@/app/components/pages/settings/constants'
+import { buildCamPlan, CAM_FPS_OPTIONS, camFpsOf, type CamPlan, type CamPlanInput } from './cam-plan'
 
 const A1 = '111111111111111111'
 const A2 = '222222222222222222'
@@ -12,6 +13,7 @@ const MAIN_INI = [
     '',
     '[Engine.Engine]',
     'GameRenderDevice=D3D9Drv.D3D9RenderDevice',
+    'AudioDevice=ALAudio.ALAudioSubsystem',
     '',
     '[WinDrv.WindowsClient]',
     'WindowedViewportX=2576',
@@ -22,6 +24,13 @@ const MAIN_INI = [
     '',
     '[D3D9Drv.D3D9RenderDevice]',
     'FrameRateLimit=0',
+    'UseVSync=True',
+    '',
+    '[ALAudio.ALAudioSubsystem]',
+    'UseDigitalMusic=True',
+    'MusicVolume=160',
+    'SoundVolume=255',
+    'SpeechVolume=255',
     '',
 ].join('\r\n')
 
@@ -44,6 +53,7 @@ function input(overrides: Partial<CamPlanInput> = {}): CamPlanInput {
         servers: { A: '203.0.113.10:7777', B: '203.0.113.10:7777' },
         mainIni: MAIN_INI,
         userIni: USER_INI,
+        fps: 120,
         ...overrides,
     }
 }
@@ -104,7 +114,7 @@ describe('buildCamPlan command lines', () => {
 })
 
 describe('buildCamPlan per-instance ini', () => {
-    it('replaces the windowing and frame cap keys, adds the missing ones, and leaves everything else as it was', () => {
+    it('replaces the windowing, frame cap and volume keys, adds the missing ones, and leaves everything else as it was', () => {
         const cam = planOf(input()).cams[0]
 
         expect(cam.iniContent).toBe([
@@ -113,17 +123,60 @@ describe('buildCamPlan per-instance ini', () => {
             '',
             '[Engine.Engine]',
             'GameRenderDevice=D3D9Drv.D3D9RenderDevice',
+            'AudioDevice=ALAudio.ALAudioSubsystem',
             '',
             '[WinDrv.WindowsClient]',
             'WindowedViewportX=960',
             'WindowedViewportY=540',
             'StartupFullscreen=False',
             'Brightness=0.900000',
-            'FrameRateLimit=60',
+            'FrameRateLimit=120',
             'StartupBorderless=False',
             '',
             '[D3D9Drv.D3D9RenderDevice]',
+            'FrameRateLimit=120',
+            'UseVSync=True',
+            '',
+            '[ALAudio.ALAudioSubsystem]',
+            'UseDigitalMusic=True',
+            'MusicVolume=0',
+            'SoundVolume=200',
+            'SpeechVolume=255',
+            '',
+        ].join('\r\n'))
+    })
+
+    it('leaves the render and audio sections alone when the engine section names no devices', () => {
+        const mainIni = [
+            '[Engine.Engine]',
+            'GameViewportDevice=WinDrv.WindowsClient',
+            '',
+            '[D3D9Drv.D3D9RenderDevice]',
             'FrameRateLimit=0',
+            '',
+            '[ALAudio.ALAudioSubsystem]',
+            'MusicVolume=160',
+            '',
+        ].join('\r\n')
+
+        const cam = planOf(input({ mainIni, fps: 60 })).cams[0]
+
+        expect(cam.iniContent).toBe([
+            '[Engine.Engine]',
+            'GameViewportDevice=WinDrv.WindowsClient',
+            '',
+            '[D3D9Drv.D3D9RenderDevice]',
+            'FrameRateLimit=0',
+            '',
+            '[ALAudio.ALAudioSubsystem]',
+            'MusicVolume=160',
+            '',
+            '[WinDrv.WindowsClient]',
+            'WindowedViewportX=960',
+            'WindowedViewportY=540',
+            'StartupFullscreen=False',
+            'StartupBorderless=False',
+            'FrameRateLimit=60',
             '',
         ].join('\r\n'))
     })
@@ -142,7 +195,7 @@ describe('buildCamPlan per-instance ini', () => {
             'WindowedViewportY=540',
             'StartupFullscreen=False',
             'StartupBorderless=False',
-            'FrameRateLimit=60',
+            'FrameRateLimit=120',
             '',
         ].join('\n'))
     })
@@ -165,7 +218,7 @@ describe('buildCamPlan per-instance ini', () => {
             'WindowedViewportX=960',
             'WindowedViewportY=540',
             'StartupBorderless=False',
-            'FrameRateLimit=60',
+            'FrameRateLimit=120',
         ].join('\r\n'))
     })
 
@@ -173,6 +226,136 @@ describe('buildCamPlan per-instance ini', () => {
         const cams = planOf(input()).cams
 
         expect(new Set(cams.map(cam => cam.iniContent)).size).toBe(1)
+    })
+})
+
+function sectionOf(content: string, section: string): string[] | null {
+    const lines = content.split(/\r?\n/)
+    const start = lines.findIndex(line => line.trim().toLowerCase() === `[${section.toLowerCase()}]`)
+    if (start === -1) return null
+    const end = lines.findIndex((line, index) => index > start && line.trim().startsWith('['))
+    return lines.slice(start + 1, end === -1 ? undefined : end).filter(line => line.trim() !== '')
+}
+
+function mainIniWith(engine: string[], sections: Record<string, string[]>): string {
+    return [
+        '[Engine.Engine]',
+        ...engine,
+        '',
+        '[WinDrv.WindowsClient]',
+        'FrameRateLimit=0',
+        '',
+        ...Object.entries(sections).flatMap(([section, lines]) => [`[${section}]`, ...lines, '']),
+    ].join('\r\n')
+}
+
+const RENDER_DEVICES = Object.keys(RENDER_DEVICE_SETTINGS)
+const AUDIO_DEVICES = Object.keys(AUDIO_DEVICE_SETTINGS)
+
+describe('buildCamPlan frame rate', () => {
+    it('offers 60 and 120 fps', () => {
+        expect(CAM_FPS_OPTIONS).toEqual([60, 120])
+    })
+
+    for (const device of RENDER_DEVICES) {
+        for (const fps of CAM_FPS_OPTIONS) {
+            it(`writes ${fps} fps to the global limit and to ${device}'s own limit`, () => {
+                const otherDevice = RENDER_DEVICES.find(candidate => candidate !== device) as string
+                const mainIni = mainIniWith([`GameRenderDevice=${device}`], {
+                    [device]: ['FrameRateLimit=0', 'Coronas=True'],
+                    [otherDevice]: ['FrameRateLimit=0'],
+                })
+
+                const cam = planOf(input({ mainIni, fps })).cams[0]
+
+                expect(sectionOf(cam.iniContent, 'WinDrv.WindowsClient')).toContain(`FrameRateLimit=${fps}`)
+                expect(sectionOf(cam.iniContent, device)).toEqual([`FrameRateLimit=${fps}`, 'Coronas=True'])
+                expect(sectionOf(cam.iniContent, otherDevice)).toEqual(['FrameRateLimit=0'])
+            })
+        }
+
+        it(`adds a ${device} section with the limit when the main ini has none`, () => {
+            const mainIni = mainIniWith([`GameRenderDevice=${device}`], {})
+
+            const cam = planOf(input({ mainIni, fps: 60 })).cams[0]
+
+            expect(sectionOf(cam.iniContent, device)).toEqual(['FrameRateLimit=60'])
+        })
+    }
+
+    it('finds the render device without regard to case or spaces around its name', () => {
+        const mainIni = mainIniWith(['gamerenderdevice = OpenGLDrv.OpenGLRenderDevice '], {
+            'openglDrv.openglRenderDevice': ['FrameRateLimit=200'],
+        })
+
+        const cam = planOf(input({ mainIni, fps: 60 })).cams[0]
+
+        expect(sectionOf(cam.iniContent, 'OpenGLDrv.OpenGLRenderDevice')).toEqual(['FrameRateLimit=60'])
+    })
+
+    it('reads the render device from the engine section only', () => {
+        const mainIni = [
+            '[Engine.GameEngine]',
+            'GameRenderDevice=SoftDrv.SoftwareRenderDevice',
+            '',
+            '[Engine.Engine]',
+            'GameRenderDevice=VulkanDrv.VulkanRenderDevice',
+            '',
+        ].join('\r\n')
+
+        const cam = planOf(input({ mainIni })).cams[0]
+
+        expect(sectionOf(cam.iniContent, 'VulkanDrv.VulkanRenderDevice')).toEqual(['FrameRateLimit=120'])
+        expect(sectionOf(cam.iniContent, 'SoftDrv.SoftwareRenderDevice')).toBeNull()
+    })
+})
+
+describe('camFpsOf', () => {
+    it('keeps 60 and 120', () => {
+        expect(camFpsOf(60)).toBe(60)
+        expect(camFpsOf(120)).toBe(120)
+    })
+
+    it('falls back to 120 for anything else', () => {
+        for (const value of [undefined, null, 0, 30, 144, '60', '120', 60.5, Number.NaN, {}, []]) {
+            expect(camFpsOf(value)).toBe(120)
+        }
+    })
+})
+
+describe('buildCamPlan audio', () => {
+    for (const device of AUDIO_DEVICES) {
+        it(`turns the music off and sets the fixed sound volume in ${device} only`, () => {
+            const untouched = ['UseDigitalMusic=True', 'MusicVolume=160', 'SoundVolume=255']
+            const sections = Object.fromEntries(AUDIO_DEVICES.map(name => [name, untouched]))
+            const mainIni = mainIniWith([`AudioDevice=${device}`], sections)
+
+            const cam = planOf(input({ mainIni })).cams[0]
+
+            expect(sectionOf(cam.iniContent, device)).toEqual(['UseDigitalMusic=True', 'MusicVolume=0', 'SoundVolume=200'])
+            for (const other of AUDIO_DEVICES.filter(name => name !== device)) {
+                expect(sectionOf(cam.iniContent, other)).toEqual(untouched)
+            }
+            expect(sectionOf(cam.iniContent, 'Engine.Engine')).toEqual([`AudioDevice=${device}`])
+            expect(sectionOf(cam.iniContent, 'WinDrv.WindowsClient')?.some(line => /Volume=/.test(line))).toBe(false)
+        })
+
+        it(`adds a ${device} section with the volumes when the main ini has none`, () => {
+            const mainIni = mainIniWith([`AudioDevice=${device}`], {})
+
+            const cam = planOf(input({ mainIni })).cams[0]
+
+            expect(sectionOf(cam.iniContent, device)).toEqual(['MusicVolume=0', 'SoundVolume=200'])
+        })
+    }
+
+    it('gives every cam the same volumes whatever the streamer\'s own levels are', () => {
+        const levels = [['MusicVolume=255', 'SoundVolume=12'], ['MusicVolume=0', 'SoundVolume=255']].map(own => {
+            const mainIni = mainIniWith(['AudioDevice=Galaxy.GalaxyAudioSubsystem'], { 'Galaxy.GalaxyAudioSubsystem': own })
+            return planOf(input({ mainIni })).cams.map(cam => sectionOf(cam.iniContent, 'Galaxy.GalaxyAudioSubsystem'))
+        })
+
+        expect(levels.flat()).toEqual(Array(8).fill(['MusicVolume=0', 'SoundVolume=200']))
     })
 })
 

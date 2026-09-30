@@ -114,6 +114,7 @@ function input(overrides: Partial<CamToolViewInput> = {}): CamToolViewInput {
         choices: DETECTED_CHOICES,
         installPath: INSTALL,
         status: null,
+        fps: 120,
         ...overrides,
     }
 }
@@ -231,6 +232,7 @@ describe('one server and two servers', () => {
         expect(view.launch.request).toEqual({
             lineup: { A1: ALICE, A2: ANNA, B1: BOB, B2: BEA },
             servers: { A: '10.0.0.1:7777', B: '10.0.0.1:7777' },
+            fps: 120,
         })
     })
 
@@ -295,6 +297,20 @@ describe('lineup', () => {
         const view = buildCamToolView(input({ desk: null }))
         expect(view.launch.request).toBeNull()
         expect(view.launch.blockers[0]).toMatchObject({ code: 'no-match' })
+    })
+})
+
+describe('cam fps', () => {
+    it('carries the chosen frame rate on the launch request', () => {
+        for (const fps of [60, 120] as const) {
+            expect(buildCamToolView(input({ fps })).launch.request?.fps).toBe(fps)
+        }
+    })
+
+    it('holds launch while the frame rate preference is still being read', () => {
+        const view = buildCamToolView(input({ fps: undefined }))
+        expect(view.launch.request).toBeNull()
+        expect(view.launch.blockers).toEqual([])
     })
 })
 
