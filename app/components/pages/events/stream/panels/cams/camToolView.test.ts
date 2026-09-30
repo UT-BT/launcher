@@ -225,6 +225,59 @@ describe('detection versus override', () => {
     })
 })
 
+describe('uncertified servers', () => {
+    const uncertified = (id: string, ip: string, port: number, ids: string[]) => server(id, ip, port, ids, { certified_records: false })
+
+    it('flags a detected server whose caps will not count', () => {
+        const view = buildCamToolView(input({ servers: [uncertified('s1', '10.0.0.1', 7777, [ALICE, ANNA, BOB, BEA])] }))
+
+        expect(view.teams.A.uncertified).toBe(true)
+        expect(view.teams.B.uncertified).toBe(true)
+    })
+
+    it('does not flag a certified server', () => {
+        const view = buildCamToolView(input())
+
+        expect(view.teams.A.uncertified).toBe(false)
+        expect(view.teams.B.uncertified).toBe(false)
+    })
+
+    it('flags only the team on the uncertified server', () => {
+        const view = buildCamToolView(input({ servers: [server('s1', '10.0.0.1', 7777, [ALICE, ANNA]), uncertified('s2', '10.0.0.2', 7788, [BOB, BEA])] }))
+
+        expect(view.teams.A.uncertified).toBe(false)
+        expect(view.teams.B.uncertified).toBe(true)
+    })
+
+    it('follows a server picked from the list', () => {
+        const servers = [server('s1', '10.0.0.1', 7777, [ALICE, ANNA, BOB, BEA]), uncertified('s2', '10.0.0.2', 7788, [])]
+        const view = buildCamToolView(input({ servers, choices: { ...DETECTED_CHOICES, B: { mode: 'list', address: '10.0.0.2:7788' } } }))
+
+        expect(view.teams.A.uncertified).toBe(false)
+        expect(view.teams.B.uncertified).toBe(true)
+    })
+
+    it('follows a typed address that names a listed server', () => {
+        const servers = [server('s1', '10.0.0.1', 7777, [ALICE, ANNA, BOB, BEA]), uncertified('s2', '10.0.0.2', 7788, [])]
+        const view = buildCamToolView(input({ servers, choices: { ...DETECTED_CHOICES, A: { mode: 'typed', address: '10.0.0.2:7788' } } }))
+
+        expect(view.teams.A.uncertified).toBe(true)
+        expect(view.teams.B.uncertified).toBe(false)
+    })
+
+    it('does not flag an address that is not on the server list', () => {
+        const view = buildCamToolView(input({ choices: { ...DETECTED_CHOICES, A: { mode: 'typed', address: 'bt.example.net:7790' } } }))
+
+        expect(view.teams.A.uncertified).toBe(false)
+    })
+
+    it('does not flag anything while the server list loads', () => {
+        const view = buildCamToolView(input({ servers: null }))
+
+        expect(view.teams.A.uncertified).toBe(false)
+    })
+})
+
 describe('one server and two servers', () => {
     it('sends all four cams to one server when both teams share it', () => {
         const view = buildCamToolView(input({ servers: ONE_SERVER }))

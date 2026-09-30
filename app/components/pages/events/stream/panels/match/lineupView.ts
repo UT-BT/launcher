@@ -118,10 +118,23 @@ export function shouldAutoApply(stored: LineupSlots | null, suggestion: LineupSu
     return stored !== null && isLineupEmpty(stored) && suggestion.complete && suggestion.changes
 }
 
-export function detectLineup<S extends DetectionServer>(servers: readonly S[], match: Pick<StreamMatch, 'teams'>): FoundMembers<S> {
+function detectRosterServers<S extends DetectionServer>(servers: readonly S[], match: Pick<StreamMatch, 'teams'>) {
     const rosterOf = (side: StreamSide) => match.teams[side]?.members.map(member => member.id) ?? []
-    const detection = detectTeamServers(servers, { A: rosterOf('a'), B: rosterOf('b') })
+    return detectTeamServers(servers, { A: rosterOf('a'), B: rosterOf('b') })
+}
+
+export function detectLineup<S extends DetectionServer>(servers: readonly S[], match: Pick<StreamMatch, 'teams'>): FoundMembers<S> {
+    const detection = detectRosterServers(servers, match)
     return { a: detection.A.members, b: detection.B.members }
+}
+
+export function uncertifiedTeamServers<S extends DetectionServer & { certified_records: boolean }>(
+    servers: readonly S[],
+    match: Pick<StreamMatch, 'teams'>,
+): Record<StreamSide, S | null> {
+    const detection = detectRosterServers(servers, match)
+    const uncertifiedOf = (best: S | null) => (best !== null && !best.certified_records ? best : null)
+    return { a: uncertifiedOf(detection.A.best), b: uncertifiedOf(detection.B.best) }
 }
 
 export function foundIds<S>(found: FoundMembers<S>): Record<StreamSide, string[]> {

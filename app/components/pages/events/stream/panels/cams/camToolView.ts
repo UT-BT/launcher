@@ -42,6 +42,7 @@ export interface CamTeamServerView {
     source: CamServerChoice['mode'] | null
     address: string | null
     serverName: string | null
+    uncertified: boolean
     problem: CamServerProblem | null
 }
 
@@ -140,10 +141,13 @@ function rosterIds(match: StreamMatch | null, team: CamTeam): string[] {
     return [...new Set([...members, ...lineup].filter(isDiscordId))]
 }
 
-function serverNameOf(servers: readonly Server[] | null, address: string | null): string | null {
+function listedServer(servers: readonly Server[] | null, address: string | null): Server | null {
     if (!servers || !address) return null
-    const listed = servers.find(server => serverAddressOf(server) === address)
-    return listed?.hostname || null
+    return servers.find(server => serverAddressOf(server) === address) ?? null
+}
+
+function serverNameOf(servers: readonly Server[] | null, address: string | null): string | null {
+    return listedServer(servers, address)?.hostname || null
 }
 
 function buildTeams(match: StreamMatch | null, servers: readonly Server[] | null, choices: CamServerChoices): Record<CamTeam, CamTeamServerView> {
@@ -158,17 +162,19 @@ function buildTeams(match: StreamMatch | null, servers: readonly Server[] | null
             : null
         const choice = choices[team]
         const base = { team, teamName: teamName(match, team), choice, detected }
-
-        if (choice.mode === 'list') {
-            return { ...base, source: 'list', address: choice.address, serverName: serverNameOf(servers, choice.address), problem: null }
+        const withAddress = (source: CamServerChoice['mode'], address: string | null, problem: CamServerProblem | null): CamTeamServerView => {
+            const listed = listedServer(servers, address)
+            return { ...base, source, address, serverName: listed?.hostname || null, uncertified: listed !== null && !listed.certified_records, problem }
         }
+
+        if (choice.mode === 'list') return withAddress('list', choice.address, null)
         if (choice.mode === 'typed') {
             const address = normaliseTypedAddress(choice.address)
-            return { ...base, source: 'typed', address, serverName: serverNameOf(servers, address), problem: address ? null : 'invalid-address' }
+            return withAddress('typed', address, address ? null : 'invalid-address')
         }
-        if (!servers) return { ...base, source: null, address: null, serverName: null, problem: 'loading' }
-        if (!detected) return { ...base, source: null, address: null, serverName: null, problem: 'not-detected' }
-        return { ...base, source: 'detected', address: detected.address, serverName: detected.serverName, problem: null }
+        if (!servers) return { ...base, source: null, address: null, serverName: null, uncertified: false, problem: 'loading' }
+        if (!detected) return { ...base, source: null, address: null, serverName: null, uncertified: false, problem: 'not-detected' }
+        return withAddress('detected', detected.address, null)
     }
 
     return { A: build('A'), B: build('B') }

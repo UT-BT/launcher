@@ -10,6 +10,7 @@ import {
     shouldAutoApply,
     suggestLineup,
     swapSide,
+    uncertifiedTeamServers,
     type LineupSlots,
 } from './lineupView'
 
@@ -43,11 +44,16 @@ const DEFAULTS: LineupSlots = { a1: A_CAPTAIN, a2: A_MATE, b1: B_CAPTAIN, b2: B_
 
 interface FakeServer {
     name: string
+    certified_records: boolean
     players: { id: string; is_spectator?: boolean }[]
 }
 
 function server(name: string, ...ids: string[]): FakeServer {
-    return { name, players: ids.map(id => ({ id })) }
+    return { name, certified_records: true, players: ids.map(id => ({ id })) }
+}
+
+function uncertified(name: string, ...ids: string[]): FakeServer {
+    return { ...server(name, ...ids), certified_records: false }
 }
 
 describe('suggestLineup', () => {
@@ -141,6 +147,33 @@ describe('detectLineup', () => {
         const lineupMatch = { ...match([A_CAPTAIN, A_MATE], [B_CAPTAIN, B_MATE], DEFAULTS), teams: { a: null, b: null } }
 
         expect(detectLineup([server('EU #1', A_CAPTAIN)], lineupMatch)).toEqual({ a: [], b: [] })
+    })
+})
+
+describe('uncertifiedTeamServers', () => {
+    const lineupMatch = match([A_CAPTAIN, A_MATE, A_BENCH], [B_CAPTAIN, B_MATE, B_BENCH], DEFAULTS)
+
+    it('names the uncertified server a team is playing on', () => {
+        const eu = uncertified('EU #1', A_CAPTAIN, A_MATE)
+
+        expect(uncertifiedTeamServers([eu, server('US #1', B_CAPTAIN)], lineupMatch)).toEqual({ a: eu, b: null })
+    })
+
+    it('names nothing for a certified server', () => {
+        const eu = server('EU #1', A_CAPTAIN, A_MATE, B_CAPTAIN, B_MATE)
+
+        expect(uncertifiedTeamServers([eu], lineupMatch)).toEqual({ a: null, b: null })
+    })
+
+    it('judges a team by the server most of its players are on', () => {
+        const certifiedHome = server('EU #1', A_CAPTAIN, A_MATE)
+        const stray = uncertified('US #1', A_BENCH)
+
+        expect(uncertifiedTeamServers([certifiedHome, stray], lineupMatch).a).toBeNull()
+    })
+
+    it('names nothing for a team nobody found in game', () => {
+        expect(uncertifiedTeamServers([uncertified('EU #1', '12345')], lineupMatch)).toEqual({ a: null, b: null })
     })
 })
 

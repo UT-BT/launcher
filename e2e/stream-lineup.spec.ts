@@ -120,7 +120,7 @@ function deskPayload(streamerId: string, stored: Slots) {
     }
 }
 
-function gameServer(id: string, hostname: string, players: string[]) {
+function gameServer(id: string, hostname: string, players: string[], certified = true) {
     return {
         id,
         ip: `10.0.0.${id}`,
@@ -130,6 +130,7 @@ function gameServer(id: string, hostname: string, players: string[]) {
         player_count: players.length,
         max_players: 12,
         spectators: 0,
+        certified_records: certified,
         players: players.map(playerId => ({ id: playerId, name: 'Someone', ping: 40, time: 1, team: 0, deaths: 0, is_spectator: false })),
     }
 }
@@ -318,6 +319,32 @@ test('a lineup already set is never auto-applied, and the suggestion applies on 
     await expect(section(page).getByRole('button', { name: 'Apply suggestion' })).toHaveCount(0)
 })
 
+test('warns under the team that plays on an uncertified server, and only there', async ({ page }) => {
+    await mockApi(page, {
+        gameServers: [
+            gameServer('1', 'BunnyTrack Europe Server #1', [A_CAPTAIN.id, A_MATE.id], false),
+            gameServer('2', 'BunnyTrack America Server #2', [B_CAPTAIN.id, B_MATE.id], true),
+        ],
+    })
+    await page.goto(`/events/${SLUG}?tab=stream`)
+    await openStreamPanel(page, 'Match')
+
+    const warning = section(page).getByTestId('lineup-a-uncertified')
+    await expect(warning).toHaveText("Uncertified server: caps here won't count for the live score or records.")
+    await expect(section(page).getByTestId('lineup-b-uncertified')).toHaveCount(0)
+})
+
+test('shows no uncertified warning when the team plays on a certified server', async ({ page }) => {
+    await mockApi(page, {
+        gameServers: [gameServer('1', 'BunnyTrack Europe Server #1', [A_CAPTAIN.id, A_MATE.id, B_CAPTAIN.id, B_MATE.id])],
+    })
+    await page.goto(`/events/${SLUG}?tab=stream`)
+    await openStreamPanel(page, 'Match')
+
+    await expect(section(page).getByTestId('lineup-detection')).toContainText('Crimson Tide: 2 found in game on Europe #1.')
+    await expect(section(page).getByText('Uncertified server', { exact: false })).toHaveCount(0)
+})
+
 test('three members found on a side gives no suggestion for that side and no auto-apply', async ({ page }) => {
     const server = await mockApi(page, {
         gameServers: [gameServer('1', 'BunnyTrack Europe Server #1', [A_CAPTAIN.id, A_MATE.id, A_BENCH.id, B_CAPTAIN.id, B_MATE.id])],
@@ -375,12 +402,14 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 1920, height: 1080
         await page.setViewportSize(viewport)
         await mockApi(page, {
             stored: { ...EMPTY, a1: A_MATE.id },
-            gameServers: [gameServer('1', 'BunnyTrack Europe Server #1', [A_CAPTAIN.id, A_BENCH.id, B_CAPTAIN.id])],
+            gameServers: [gameServer('1', 'BunnyTrack Europe Server #1', [A_CAPTAIN.id, A_BENCH.id, B_CAPTAIN.id], false)],
         })
         await page.goto(`/events/${SLUG}?tab=stream`)
         await openStreamPanel(page, 'Match')
 
         await expect(section(page).getByRole('button', { name: 'Apply suggestion' })).toBeVisible()
+        await expect(section(page).getByTestId('lineup-a-uncertified')).toBeVisible()
+        await expect(section(page).getByTestId('lineup-b-uncertified')).toBeVisible()
         await expect(teamCard(page, 'Crimson Tide').getByRole('listitem')).toHaveCount(3)
         expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1)
 

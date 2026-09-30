@@ -9,6 +9,7 @@ import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import type { Server } from '@/app/utils/server-utils'
 import { cn } from '@/lib/utils'
 import { StreamCard, StreamLoading } from '../StreamCard'
+import { UncertifiedServerWarning } from '../UncertifiedServerWarning'
 import { useStreamTab } from '../StreamTabContext'
 import { useCamFps, useCamStatus, useInstallPath, useServerList } from './cams/camToolHooks'
 import {
@@ -143,6 +144,7 @@ function TeamServerPicker({
                 </div>
             )}
             <p className="text-xs text-muted-foreground break-words">{detectionText(view)}</p>
+            {view.uncertified && <UncertifiedServerWarning testId={`cam-team-${view.team}-uncertified`} />}
             <p className="text-xs text-foreground break-all">
                 <span className="text-muted-foreground">Cams join </span>
                 <span data-testid={`cam-team-${view.team}-address`} className="font-mono">{view.address ?? '—'}</span>

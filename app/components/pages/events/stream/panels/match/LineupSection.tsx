@@ -9,6 +9,7 @@ import { createPoller } from '@/app/utils/poller'
 import { trimServerName, type Server } from '@/app/utils/server-utils'
 import { StreamCard, StreamLoading } from '../../StreamCard'
 import { useStreamTab } from '../../StreamTabContext'
+import { UncertifiedServerWarning } from '../../UncertifiedServerWarning'
 import { deskPollEnvironment, type StreamMatch, type StreamSide } from '../../streamDesk'
 import { fetchStreamLineup, saveStreamLineup, type StreamLineup } from './lineupActions'
 import {
@@ -27,6 +28,7 @@ import {
     shouldAutoApply,
     suggestLineup,
     swapSide,
+    uncertifiedTeamServers,
     type FoundMembers,
     type LineupPlayer,
     type LineupSeat,
@@ -242,13 +244,14 @@ interface DetectionProps {
     servers: Server[] | null
     serverError: unknown
     found: FoundMembers<Server>
+    uncertifiedServers: Record<StreamSide, Server | null>
     suggestion: LineupSuggestion | null
     disabled: boolean
     notice: string | null
     onApply: () => void
 }
 
-function Detection({ teams, servers, serverError, found, suggestion, disabled, notice, onApply }: DetectionProps) {
+function Detection({ teams, servers, serverError, found, uncertifiedServers, suggestion, disabled, notice, onApply }: DetectionProps) {
     const playerOf = (side: StreamSide, id: string) => teams[side].roster.find(player => player.id === id)
         ?? { id, displayName: null, title: null, captain: false, foundOn: [] }
     const changedSides = STREAM_SIDES.flatMap(side => {
@@ -264,9 +267,12 @@ function Detection({ teams, servers, serverError, found, suggestion, disabled, n
                     {serverError ? `Could not read the game servers, retrying. ${errorText(serverError)}` : 'Checking the game servers…'}
                 </p>
             ) : (
-                <ul className="space-y-0.5">
+                <ul className="space-y-1.5">
                     {STREAM_SIDES.map(side => (
-                        <li key={side} className="text-xs text-muted-foreground break-words">{sideSummary(teams[side], found[side])}</li>
+                        <li key={side} className="space-y-1 text-xs text-muted-foreground break-words">
+                            <p>{sideSummary(teams[side], found[side])}</p>
+                            {uncertifiedServers[side] && <UncertifiedServerWarning testId={`lineup-${side}-uncertified`} />}
+                        </li>
                     ))}
                 </ul>
             )}
@@ -317,6 +323,7 @@ function LineupEditor({ match, servers, serverError }: LineupEditorProps) {
     const [notice, setNotice] = useState<string | null>(null)
 
     const found = useMemo(() => detectLineup(servers ?? [], match), [servers, match])
+    const uncertifiedServers = useMemo(() => uncertifiedTeamServers(servers ?? [], match), [servers, match])
     const effective = effectiveLineupOf(match)
     const teams = buildLineupTeams(match, stored ?? EMPTY_LINEUP, found)
     const suggestion = useMemo(
@@ -362,6 +369,7 @@ function LineupEditor({ match, servers, serverError }: LineupEditorProps) {
                 servers={servers}
                 serverError={serverError}
                 found={found}
+                uncertifiedServers={uncertifiedServers}
                 suggestion={suggestion}
                 disabled={disabled}
                 notice={notice}

@@ -60,7 +60,7 @@ function deskPayload(lineup: Lineup) {
     }
 }
 
-function gameServer(id: string, ip: string, hostport: number, hostname: string, players: Person[]) {
+function gameServer(id: string, ip: string, hostport: number, hostname: string, players: Person[], certified = true) {
     return {
         id,
         ip,
@@ -70,6 +70,7 @@ function gameServer(id: string, ip: string, hostport: number, hostname: string, 
         player_count: players.length,
         max_players: 16,
         spectators: 0,
+        certified_records: certified,
         players: players.map(player => ({ id: player.id, name: player.display_name, ping: 40, time: 60, team: 0, deaths: 0, is_spectator: false })),
     }
 }
@@ -78,6 +79,10 @@ const SHARED = gameServer('s1', '203.0.113.10', 7777, 'UTBT Cup #1', [ALICE, ANN
 const EMPTY = gameServer('s2', '203.0.113.20', 7788, 'UTBT Cup #2', [])
 const SPLIT_A = gameServer('s1', '203.0.113.10', 7777, 'UTBT Cup #1', [ALICE, ANNA])
 const SPLIT_B = gameServer('s2', '203.0.113.20', 7788, 'UTBT Cup #2', [BOB, BEA])
+const UNCERTIFIED_A = gameServer('s1', '203.0.113.10', 7777, 'Private Cup #1', [ALICE, ANNA], false)
+const UNCERTIFIED_B = gameServer('s2', '203.0.113.20', 7788, 'Private Cup #2', [BOB, BEA], false)
+const UNCERTIFIED_EMPTY = gameServer('s3', '203.0.113.30', 7799, 'Private Cup #3', [], false)
+const UNCERTIFIED_WARNING = "Uncertified server: caps here won't count for the live score or records."
 
 interface MockState {
     lineup: Lineup
@@ -218,6 +223,24 @@ test('a picked or typed server overrides detection', async ({ page }) => {
     }]])
 })
 
+test('a team on an uncertified server is warned, and a certified team is not', async ({ page }) => {
+    await openHarness(page, { lineup: FULL_LINEUP, servers: [SPLIT_A, UNCERTIFIED_B] })
+
+    await expect(page.getByTestId('cam-team-B-uncertified')).toHaveText(UNCERTIFIED_WARNING)
+    await expect(page.getByTestId('cam-team-A-uncertified')).toHaveCount(0)
+})
+
+test('picking an uncertified server from the list warns for that team only', async ({ page }) => {
+    await openHarness(page, { lineup: FULL_LINEUP, servers: [SHARED, UNCERTIFIED_EMPTY] })
+    await expect(page.getByTestId('cam-team-A-uncertified')).toHaveCount(0)
+    await expect(page.getByTestId('cam-team-B-uncertified')).toHaveCount(0)
+
+    await page.getByTestId('cam-team-A').getByLabel('Server').selectOption({ label: 'Private Cup #3 · 0 playing' })
+
+    await expect(page.getByTestId('cam-team-A-uncertified')).toHaveText(UNCERTIFIED_WARNING)
+    await expect(page.getByTestId('cam-team-B-uncertified')).toHaveCount(0)
+})
+
 test('a lineup change flags the right cam and restarting it clears the flag', async ({ page }) => {
     const state: MockState = { lineup: FULL_LINEUP, servers: [SHARED] }
     await openHarness(page, state)
@@ -293,8 +316,10 @@ test('without the install path the panel points to the settings', async ({ page 
 for (const viewport of [{ width: 390, height: 844 }, { width: 1920, height: 1080 }]) {
     test(`the cam tool fits at ${viewport.width}px`, async ({ page }) => {
         await page.setViewportSize(viewport)
-        const state: MockState = { lineup: FULL_LINEUP, servers: [SPLIT_A, SPLIT_B] }
+        const state: MockState = { lineup: FULL_LINEUP, servers: [UNCERTIFIED_A, UNCERTIFIED_B] }
         await openHarness(page, state)
+        await expect(page.getByTestId('cam-team-A-uncertified')).toBeVisible()
+        await expect(page.getByTestId('cam-team-B-uncertified')).toBeVisible()
         await launchButton(page).click()
         await expect(cam(page, 'B2').getByText('Titled', { exact: true })).toBeVisible({ timeout: 5_000 })
         state.lineup = { ...FULL_LINEUP, a2: AXEL }
@@ -304,6 +329,8 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 1920, height: 1080
         for (const name of ['Relaunch cams', 'Stop all', 'Restart A2', '60', '120']) {
             const box = await page.getByRole('button', { name }).boundingBox()
             expect(box?.height ?? 0).toBeGreaterThanOrEqual(28)
+            expect(box?.x ?? -1).toBeGreaterThanOrEqual(0)
+            expect((box?.x ?? 0) + (box?.width ?? Infinity)).toBeLessThanOrEqual(viewport.width)
         }
     })
 }
