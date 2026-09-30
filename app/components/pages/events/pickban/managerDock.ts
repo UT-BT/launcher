@@ -288,7 +288,7 @@ const PLAYING_NOTE = 'You play in this match, so you can’t lock in on a team�
 
 const REJECTIONS: Record<Exclude<PickBanErrorCode, PickBanBlockingReason>, string> = {
     not_authorized: 'You can’t manage this Picks & Bans process any more.',
-    not_your_turn: 'That team isn’t on the clock any more.',
+    not_your_turn: 'That team isn’t choosing any more.',
     plays_in_match: PLAYING_NOTE,
     session_exists: 'This match already has a Picks & Bans process open.',
     intro_active: 'Wait for the intro to finish, then lock in.',

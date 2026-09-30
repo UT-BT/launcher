@@ -31,6 +31,7 @@ import {
   DataTableSkeletonRow, type SortDirection, type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
 import { MapScreenshotModal } from '@/app/components/modals/MapScreenshotModal'
+import { MapVideoControl, type MapVideoState } from './MapVideoControl'
 
 const MAPVOTE_STALE_KEY = 'utbt:admin:maps:mapvoteStale:v1'
 const DIFFICULTY_OPTIONS = Array.from({ length: 10 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) }))
@@ -256,12 +257,13 @@ function SupersedePicker({ token, value, onChange, excludeName }: {
 
 const MAP_NAME_PREFIXES = ['CTF-BT-', 'CTF-BT+']
 
-function MapFormModal({ open, onClose, token, editing, onSaved, allTags }: {
+function MapFormModal({ open, onClose, token, editing, onSaved, onReload, allTags }: {
   open: boolean
   onClose: () => void
   token: string
   editing: AdminMapRow | null
   onSaved: () => void
+  onReload: () => void
   allTags: string[]
 }) {
   const isEdit = !!editing
@@ -283,12 +285,14 @@ function MapFormModal({ open, onClose, token, editing, onSaved, allTags }: {
   const [shot, setShot] = useState<{ has: boolean; version: string | null }>({ has: false, version: null })
   const [shotBusy, setShotBusy] = useState(false)
   const [shotModalOpen, setShotModalOpen] = useState(false)
+  const [video, setVideo] = useState<MapVideoState>({ has: false, version: null })
 
   useEffect(() => {
     if (!open) return
     setError(null); setBusy(false); setUrl(''); setChangelog(''); setPrecededBy(null); setTransferRecords(false); setSupersedeAck(false)
     setShotBusy(false); setShotModalOpen(false)
     setShot({ has: editing?.has_screenshot ?? false, version: editing?.screenshot_updated ?? null })
+    setVideo({ has: editing?.has_video ?? false, version: editing?.video_updated_at ?? null })
     if (editing) {
       setName(editing.name)
       setDifficulty(String(editing.difficulty ?? 5))
@@ -478,6 +482,15 @@ function MapFormModal({ open, onClose, token, editing, onSaved, allTags }: {
               )}
             </div>
           </div>
+        )}
+
+        {isEdit && editing && (
+          <MapVideoControl
+            token={token}
+            mapName={editing.name}
+            video={video}
+            onChange={(row) => { setVideo({ has: row.has_video, version: row.video_updated_at }); onReload() }}
+          />
         )}
       </div>
 
@@ -1177,8 +1190,8 @@ export function MapsManagementSection({ userProfile, onMapSelect }: AdminSection
         onPrev={() => setOffset(Math.max(0, offset - PAGE))}
         onNext={() => setOffset(offset + PAGE)} />
 
-      {token && <MapFormModal open={adding} onClose={() => setAdding(false)} token={token} editing={null} allTags={allTags} onSaved={() => { reload(); setMapvoteStale(true) }} />}
-      {token && <MapFormModal open={!!editing} onClose={() => setEditing(null)} token={token} editing={editing} allTags={allTags} onSaved={() => { reload(); setMapvoteStale(true) }} />}
+      {token && <MapFormModal open={adding} onClose={() => setAdding(false)} token={token} editing={null} allTags={allTags} onSaved={() => { reload(); setMapvoteStale(true) }} onReload={reload} />}
+      {token && <MapFormModal open={!!editing} onClose={() => setEditing(null)} token={token} editing={editing} allTags={allTags} onSaved={() => { reload(); setMapvoteStale(true) }} onReload={reload} />}
       {token && <MapvoteModal open={mapvoteOpen} onClose={() => setMapvoteOpen(false)} token={token} onRegenerated={() => setMapvoteStale(false)} />}
       {token && <DifficultySyncModal open={diffSyncOpen} onClose={() => setDiffSyncOpen(false)} token={token} onApplied={() => { reload(); setMapvoteStale(true) }} />}
       {token && <MapAuthorsModal open={authorsOpen} onClose={() => setAuthorsOpen(false)} token={token} onApplied={() => { reload(); setMapvoteStale(true) }} />}

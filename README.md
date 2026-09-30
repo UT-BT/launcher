@@ -18,10 +18,10 @@ Our launcher is intended for use by the [UTBT](https://utbt.net) community, but 
 - User management, map reviews all through a nice UI
 - Automated demo uploads for certified runs to the UTBT backend. 
 - Set graphics and key binds through the launcher, and the ability to share your configs with the community.
+- Tools for streamers: a Stream tab on each event with match, lineup and score controls, browser-source scene URLs for OBS (pick and ban, match overlay, intermission, standings and more), a personalised OBS kit download, and a cam tool that starts four spectator game windows following your lineup (desktop only).
 
 ## Coming Soon
 - Ability to start your own local UTBT server for testing
-- Tools for streamers: start multiple clients, OBS overlays, etc. 
 
 ## Getting Started
 1. Download and install the latest version of the UTBT Launcher from the releases page. 

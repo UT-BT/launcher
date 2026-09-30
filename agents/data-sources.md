@@ -10,15 +10,18 @@ read_when:
   - "finding a pick/ban session from the bracket, a match card, the event page or the Schedule tab without a direct link"
   - "assigning a streamer to a match, or showing a streamer their assigned matches"
   - "deciding whether a prediction market still takes bets once its match's pick/ban has started"
-keywords: [api.ts, fetch, endpoint, accessToken, avatar, MapThumbnail, favorites, patreon, downloadMapZip, world_records, caps, predictions, draw, odds, schedule, proposal, slot, whose_turn, resolved_window, countdown, nav badge, fetchMyTournaments, SlotPickerModal, SlotGrid, DateTimeField, slotGeneration, proposeMatchSlots, withdrawMatchProposal, acceptMatchProposal, fetchMatchSchedule, ApiError, expected_match_duration_minutes, fetchPickBanConfig, PickBanConfig, PickBanPoolMap, MapsTab, mapsShared, stagesWithPools, tagBadgeVariant, pick/ban, fetchPickBanState, ETag, If-None-Match, 304, X-Server-Now, server_now, clock offset, reveal_at, sendPickBanCommand, sendPickBanManagerCommand, hover, selection_preview, pickBanErrorCode, captain controls, CaptainDock, useCaptainPlay, fetchPickBanQueue, PickBanQueueEntry, PickBanQueueRow, toQueueRow, canOpenLobby, blockingReasonLabel, PickBanQueuePanel, pickBanStatusBadge, statusOfPhase, buildPickBanView, setPickBanStageConfig, setPickBanStagePool, copyPickBanStagePool, pickBanEditor, stage pool, buildMatchLinks, matchStreamPath, createPoller, pick_ban_status, MatchPickBanStatus, pickBanCardAffordance, PickBanCardPill, pickBanMapLabel, MyPickBanSession, pick_ban_session, PickBanLink, PickBanJoinBanner, pickBanEntryPoints, Join banner, scene, sceneDirection, playsEntrance, entranceMsFor, introStartsAt, usePickBanPreload, usePickBanSound, cuesToPlay, pickBanSoundCues, pickBanSoundPlayer, PickBanSoundCueKind, pickBanSounds, SOUND_HIT_MS, soundScheduleAt, STALE_HIT_MS, pickBanBeats, intro cue, sound=0, SOUND_URLS, volume, setVolume, masterGainOf, preview, pickBanSoundPreference, streamSoundOf, CREDITS.md, manager dock, ManagerDock, useManagerDock, managerDockOf, hand-over, act for team, Reopen, edit-final, PickBanEditFinalEntry, Edit final, fetchMyEventMatches, MyMatchEntry, is_streamer, EventStreamer, fetchEventStreamers, setMatchStreamer, streamer, StreamerPicker, withQueueStreamer, streamerChoices, scheduleSections, pickBanCallToAction, matchTimeLabel, marketLock, marketTakesPredictions, lockStartedMarkets, matchLockSignals, newlyLockedMatchIds, streamerName, public schedule, All Matches, My Matches, scheduleView, MyMatchesPanel, ScheduleTabContainer, PublicSchedulePanel, publicSchedule, isScheduleParticipant, hasPublishedStages, scheduleTabVisible, autoScheduleView, ScheduleView, pickBanAction, scheduledRows, bucketByStatus, groupByDay, rowTimeLabel, nextUp, unscheduledCount, Yesterday, zonedDayKey, ScheduleSection, TeamPair, ScheduleLoading, schedulePlayedOpen, pollOnStart, eventAttention, eventTodos, EventTodo, TodoCounts, ScheduleTodoSummary, computeEventAttention, EventAttentionMap, eventAttentionCount, combinedEventAttention, eventAttentionLines, attentionNavBadge, resolveNavBadge, NavBadge, newSinceVisitBadge, EventTodoPanel, Needs your attention, fetchMyEventStatus, offersToAnswer, matchesToSchedule, todoCountsByKind, scheduleTodoSummary, myTeamIdsByTournament, openLobbySlugs]
+  - "reading or writing stream-kit data: the Stream tab desk, the OBS scene pages, the cam tool or the OBS kit download"
+  - "managing the streamer roster (Admin → Streamers), uploading a map fly-through video, or building a map video URL"
+  - "linking a match map to the caps behind it (the grouped team-run candidates)"
+keywords: [api.ts, fetch, endpoint, accessToken, avatar, MapThumbnail, favorites, patreon, downloadMapZip, world_records, caps, predictions, draw, odds, schedule, proposal, slot, whose_turn, resolved_window, countdown, nav badge, fetchMyTournaments, SlotPickerModal, SlotGrid, DateTimeField, slotGeneration, proposeMatchSlots, withdrawMatchProposal, acceptMatchProposal, fetchMatchSchedule, ApiError, expected_match_duration_minutes, fetchPickBanConfig, PickBanConfig, PickBanPoolMap, MapsTab, mapsShared, stagesWithPools, tagBadgeVariant, pick/ban, fetchPickBanState, ETag, If-None-Match, 304, X-Server-Now, server_now, clock offset, reveal_at, sendPickBanCommand, sendPickBanManagerCommand, hover, selection_preview, pickBanErrorCode, captain controls, CaptainDock, useCaptainPlay, fetchPickBanQueue, PickBanQueueEntry, PickBanQueueRow, toQueueRow, canOpenLobby, blockingReasonLabel, PickBanQueuePanel, pickBanStatusBadge, statusOfPhase, buildPickBanView, setPickBanStageConfig, setPickBanStagePool, copyPickBanStagePool, pickBanEditor, stage pool, buildMatchLinks, matchStreamPath, createPoller, pick_ban_status, MatchPickBanStatus, pickBanCardAffordance, PickBanCardPill, pickBanMapLabel, MyPickBanSession, pick_ban_session, PickBanLink, PickBanJoinBanner, pickBanEntryPoints, Join banner, scene, sceneDirection, playsEntrance, entranceMsFor, introStartsAt, usePickBanPreload, usePickBanSound, cuesToPlay, pickBanSoundCues, pickBanSoundPlayer, PickBanSoundCueKind, pickBanSounds, SOUND_HIT_MS, soundScheduleAt, STALE_HIT_MS, pickBanBeats, intro cue, sound=0, SOUND_URLS, volume, setVolume, masterGainOf, preview, pickBanSoundPreference, streamSoundOf, CREDITS.md, manager dock, ManagerDock, useManagerDock, managerDockOf, hand-over, act for team, Reopen, edit-final, PickBanEditFinalEntry, Edit final, fetchMyEventMatches, MyMatchEntry, is_streamer, EventStreamer, fetchEventStreamers, setMatchStreamer, streamer, StreamerPicker, withQueueStreamer, streamerChoices, scheduleSections, pickBanCallToAction, matchTimeLabel, marketLock, marketTakesPredictions, lockStartedMarkets, matchLockSignals, newlyLockedMatchIds, streamerName, public schedule, All Matches, My Matches, scheduleView, MyMatchesPanel, ScheduleTabContainer, PublicSchedulePanel, publicSchedule, isScheduleParticipant, hasPublishedStages, scheduleTabVisible, autoScheduleView, ScheduleView, pickBanAction, scheduledRows, bucketByStatus, groupByDay, rowTimeLabel, nextUp, unscheduledCount, Yesterday, zonedDayKey, ScheduleSection, TeamPair, ScheduleLoading, schedulePlayedOpen, pollOnStart, eventAttention, eventTodos, EventTodo, TodoCounts, ScheduleTodoSummary, computeEventAttention, EventAttentionMap, eventAttentionCount, combinedEventAttention, eventAttentionLines, attentionNavBadge, resolveNavBadge, NavBadge, newSinceVisitBadge, EventTodoPanel, Needs your attention, fetchMyEventStatus, offersToAnswer, matchesToSchedule, todoCountsByKind, scheduleTodoSummary, myTeamIdsByTournament, openLobbySlugs, stream kit, streamApiPath, streamDeskPath, fetchStreamDesk, createStreamDeskStore, DESK_POLL_MS, fetchStreamHotState, createStreamHotStateStore, readConditional, useSceneRead, sceneCadence, HOT_STATE_ACTIVE_MS, COMPOSITE_ACTIVE_MS, obsSourceActiveChanged, obsSourceVisibleChanged, isStreamPreview, preview=1, streamFeedPath, kitPath, fetchKitInfo, fetchKitZip, setMatchChannel, setOwnTwitchChannel, saveStreamLineup, markMatchLive, setMapScore, setLiveCounting, mapVideoUrl, fetchStreamerRoster, putRosterStreamer, uploadMapVideo, camFps, moveCountdown, setBrbMessage, setWebcamFrame, setMatchCasters, deskPollEnvironment, insideObs, cap candidates, team_run_id, capLinkRuns]
 provides: "the client-side API contract the launcher consumes + asset URLs + favorites/patreon sync models"
 not_here:
   - "IPC channels (window.conveyor.*) → lib/conveyor/README.md"
   - "how UI state persists in localStorage → state-patterns.md"
   - "the procedure to wire a new endpoint into the UI → skill: consume-api-data"
-sections: [backend-api, errors, admin-api, event-brackets, event-scheduling, event-predictions, public-maps-tab-pick-ban-pools, event-pickban-sessions, event-pick-ban-setup, changing-a-map-screenshot, cap-detail-page-endpoints, world-records-page-endpoints, team-maps-and-team-runs, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites, account-state-and-badges]
-last_verified: 2026-09-29
-verify_against: [app/utils/api.ts, app/utils/chartBuckets.ts, app/components/pages/admin/components/controls.tsx, app/components/pages/admin/sections/HostsManagementSection.tsx, app/utils/patreon.ts, app/utils/server-utils.ts, app/hooks/useServerFavorites.ts, app/components/pages/events/manage/formatFields.tsx, app/components/pages/events/bracket/bracketShared.tsx, app/components/pages/events/bracket/BracketTab.tsx, app/components/pages/events/bracket/GroupStageView.tsx, app/components/pages/events/bracket/SwissStageView.tsx, app/components/pages/events/bracket/ElimStageView.tsx, app/components/pages/events/predictions/predictionsShared.tsx, app/components/pages/events/predictions/PredictionsTab.tsx, app/components/pages/events/schedule/scheduleShared.tsx, app/components/pages/events/schedule/scheduleSections.ts, app/components/pages/events/schedule/MyMatchesPanel.tsx, app/components/pages/events/schedule/ScheduleTabContainer.tsx, app/components/pages/events/schedule/PublicSchedulePanel.tsx, app/components/pages/events/schedule/publicSchedule.ts, app/components/pages/events/predictions/marketLock.ts, app/components/pages/events/predictions/MarketCard.tsx, app/components/pages/home/ClosingSoonBanner.tsx, app/components/pages/events/schedule/SlotPickerModal.tsx, app/components/pages/events/schedule/slotGeneration.ts, app/components/pages/events/schedule/SlotGrid.tsx, app/components/pages/events/manage/DateTimeField.tsx, app/components/pages/events/eventsShared.tsx, app/components/pages/EventDetailPage.tsx, app/utils/timezone.ts, app/components/pages/events/manage/ScheduleOversightPanel.tsx, app/components/pages/events/ManagePanel.tsx, app/components/main/Main.tsx, app/components/layout/AppLayout.tsx, app/components/pages/events/maps/MapsTab.tsx, app/components/pages/events/maps/mapsShared.ts, app/components/pages/events/pickban/pickBanView.ts, app/components/pages/events/pickban/pickBanStatus.ts, app/components/pages/events/pickban/pickBanSession.ts, app/components/pages/events/pickban/pickBanEntryPoints.ts, app/components/pages/events/pickban/components/PickBanLink.tsx, app/components/pages/events/pickban/components/PickBanJoinBanner.tsx, app/components/pages/events/pickban/clockOffset.ts, app/components/pages/events/manage/pickban/pickBanEditor.ts, app/components/pages/events/manage/pickban/PickBanPanel.tsx, app/components/pages/events/manage/pickban/PickBanStageCard.tsx, app/components/pages/events/manage/pickban/PickBanQueuePanel.tsx, app/components/pages/events/manage/pickban/pickBanQueue.ts, app/components/pages/events/pickBanTags.ts, app/components/navigation/matchLinks.ts, app/utils/poller.ts, app/components/pages/events/pickban/stream/StreamView.tsx, app/components/pages/events/pickban/pickBanCopy.ts, app/components/pages/events/pickban/components/PickBanUnavailable.tsx, app/components/pages/events/pickban/pickBanSoundCues.ts, app/components/pages/events/pickban/pickBanSoundPlayer.ts, app/components/pages/events/pickban/usePickBanSound.ts, app/components/pages/events/pickban/pickBanSounds.ts, app/components/pages/events/pickban/pickBanBeats.ts, app/components/pages/MatchPickBanPage.tsx, app/components/pages/events/pickban/managerDock.ts, app/components/pages/events/pickban/pickBanSoundPreference.ts, app/components/pages/events/pickban/stream/streamSound.ts, app/utils/eventAttention.ts, app/components/navigation/nav-items.ts, app/components/pages/events/EventTodoPanel.tsx]
+sections: [backend-api, errors, admin-api, event-brackets, event-scheduling, event-predictions, public-maps-tab-pick-ban-pools, event-pickban-sessions, event-pick-ban-setup, stream-kit, changing-a-map-screenshot, cap-detail-page-endpoints, world-records-page-endpoints, team-maps-and-team-runs, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites, account-state-and-badges]
+last_verified: 2026-09-30
+verify_against: [app/utils/api.ts, app/utils/chartBuckets.ts, app/components/pages/admin/components/controls.tsx, app/components/pages/admin/sections/HostsManagementSection.tsx, app/utils/patreon.ts, app/utils/server-utils.ts, app/hooks/useServerFavorites.ts, app/components/pages/events/manage/formatFields.tsx, app/components/pages/events/bracket/bracketShared.tsx, app/components/pages/events/bracket/BracketTab.tsx, app/components/pages/events/bracket/GroupStageView.tsx, app/components/pages/events/bracket/SwissStageView.tsx, app/components/pages/events/bracket/ElimStageView.tsx, app/components/pages/events/predictions/predictionsShared.tsx, app/components/pages/events/predictions/PredictionsTab.tsx, app/components/pages/events/schedule/scheduleShared.tsx, app/components/pages/events/schedule/scheduleSections.ts, app/components/pages/events/schedule/MyMatchesPanel.tsx, app/components/pages/events/schedule/ScheduleTabContainer.tsx, app/components/pages/events/schedule/PublicSchedulePanel.tsx, app/components/pages/events/schedule/publicSchedule.ts, app/components/pages/events/predictions/marketLock.ts, app/components/pages/events/predictions/MarketCard.tsx, app/components/pages/home/ClosingSoonBanner.tsx, app/components/pages/events/schedule/SlotPickerModal.tsx, app/components/pages/events/schedule/slotGeneration.ts, app/components/pages/events/schedule/SlotGrid.tsx, app/components/pages/events/manage/DateTimeField.tsx, app/components/pages/events/eventsShared.tsx, app/components/pages/EventDetailPage.tsx, app/utils/timezone.ts, app/components/pages/events/manage/ScheduleOversightPanel.tsx, app/components/pages/events/ManagePanel.tsx, app/components/main/Main.tsx, app/components/layout/AppLayout.tsx, app/components/pages/events/maps/MapsTab.tsx, app/components/pages/events/maps/mapsShared.ts, app/components/pages/events/pickban/pickBanView.ts, app/components/pages/events/pickban/pickBanStatus.ts, app/components/pages/events/pickban/pickBanSession.ts, app/components/pages/events/pickban/pickBanEntryPoints.ts, app/components/pages/events/pickban/components/PickBanLink.tsx, app/components/pages/events/pickban/components/PickBanJoinBanner.tsx, app/components/pages/events/pickban/clockOffset.ts, app/components/pages/events/manage/pickban/pickBanEditor.ts, app/components/pages/events/manage/pickban/PickBanPanel.tsx, app/components/pages/events/manage/pickban/PickBanStageCard.tsx, app/components/pages/events/manage/pickban/PickBanQueuePanel.tsx, app/components/pages/events/manage/pickban/pickBanQueue.ts, app/components/pages/events/pickBanTags.ts, app/components/navigation/matchLinks.ts, app/utils/poller.ts, app/components/pages/events/pickban/stream/StreamView.tsx, app/components/pages/events/pickban/pickBanCopy.ts, app/components/pages/events/pickban/components/PickBanUnavailable.tsx, app/components/pages/events/pickban/pickBanSoundCues.ts, app/components/pages/events/pickban/pickBanSoundPlayer.ts, app/components/pages/events/pickban/usePickBanSound.ts, app/components/pages/events/pickban/pickBanSounds.ts, app/components/pages/events/pickban/pickBanBeats.ts, app/components/pages/MatchPickBanPage.tsx, app/components/pages/events/pickban/managerDock.ts, app/components/pages/events/pickban/pickBanSoundPreference.ts, app/components/pages/events/pickban/stream/streamSound.ts, app/utils/eventAttention.ts, app/components/navigation/nav-items.ts, app/components/pages/events/EventTodoPanel.tsx, app/components/pages/events/manage/CapLinkPicker.tsx, app/components/pages/events/manage/capLinkRuns.ts, app/components/pages/events/pickban/stream/StreamBroadcast.tsx, app/components/pages/events/pickban/stream/boardLayout.ts, app/components/pages/events/pickban/components/stageMotion.ts, app/components/broadcast/BroadcastStage.tsx, app/components/broadcast/stageScale.ts, app/components/stream/streamScenes.ts, app/components/stream/streamSceneOptions.ts, app/components/stream/data/streamHotState.ts, app/components/stream/data/streamHotStateStore.ts, app/components/stream/data/conditionalRead.ts, app/components/stream/data/sceneCadence.ts, app/components/stream/data/sceneReadStore.ts, app/components/stream/data/sceneReadRegistry.ts, app/components/stream/data/StreamDataProvider.tsx, app/components/stream/data/useStreamData.ts, app/components/stream/ticker/streamFeed.ts, app/components/stream/scenes/betting/bettingRead.ts, app/components/stream/scenes/nextMap/nextMapRead.ts, app/components/stream/scenes/postMatch/postMatchRead.ts, app/components/stream/scenes/preview/previewRead.ts, app/components/stream/scenes/standings/standingsRead.ts, app/components/stream/scenes/startingSoon/startingSoonReads.ts, app/components/pages/events/stream/streamDesk.ts, app/components/pages/events/stream/StreamTabContext.tsx, app/components/pages/events/stream/panels/match/currentMatchActions.ts, app/components/pages/events/stream/panels/match/lineupActions.ts, app/components/pages/events/stream/panels/match/scoreActions.ts, app/components/pages/events/stream/panels/match/scoreView.ts, app/components/pages/events/stream/panels/match/localTime.ts, app/components/pages/events/stream/panels/match/countdownView.ts, app/components/pages/events/stream/panels/match/lineupView.ts, app/components/pages/events/stream/panels/studio/casterList.ts, app/components/pages/events/stream/panels/cams/camToolView.ts, app/components/pages/events/streamerRoster.ts, app/components/pages/admin/sections/StreamersSection.tsx, app/components/pages/admin/sections/streamerRoster.ts, app/components/pages/admin/sections/MapVideoControl.tsx, app/components/pages/admin/sections/mapVideoFile.ts, app/utils/mapScreenshots.ts, app/components/stream/ticker/tickerModel.ts, lib/main/config.ts, lib/stream-kit/cam-plan.ts, app/components/pages/events/stream/panels/studio/showActions.ts, app/components/pages/events/stream/panels/channel/channelActions.ts, app/components/pages/events/stream/panels/kit/kitFetch.ts, app/components/pages/events/stream/panels/cams/camToolHooks.ts]
 ---
 
 # Data sources
@@ -65,6 +68,7 @@ full loop).
 | Event pick/ban setup | `fetchPickBanConfig`; manager-only: `setPickBanStageConfig`, `setPickBanStagePool`, `copyPickBanStagePool` (→ [Event pick/ban setup](#event-pickban-setup)) |
 | Event brackets | `fetchEventBracket`, `fetchEventMatch` (→ [Event brackets](#event-brackets)); manager-only: `fetchEventFormats`, `setEventBracketPublished`, `setEventFormat`, `updateEventFormatSpec`, `setEventSeeds`, `updateEventStage`, `generateEventStage`, `generateEventRound`, `resetEventStage`, `updateEventGroup`, `createEventMatch`, `updateEventMatch`, `deleteEventMatch`, `setEventMatchResult`, `clearEventMatchResult`, `fetchEventCapCandidates`, `linkEventMatchMapCaps`; staff-only: `createEventFormat`, `updateEventFormat`, `deleteEventFormat`, `fetchEventFormat` |
 | Admin (staff-only) | the moderator/admin dashboard slice — see [Admin API](#admin-api). `fetchAuditLog`/`fetchAuditLogCount` take `actors` (`staff` default / `players` / `all`): the default keeps player-written rows, such as a mapper replacing their own screenshot, out of the staff feed |
+| Stream kit | none in `api.ts`: the stream reads and writes live beside their UI, on the shared `apiRequest` (→ [Stream kit](#stream-kit)) |
 | Event pick/ban sessions | `fetchPickBanState` (ETag-aware), `sendPickBanCommand`, `sendPickBanManagerCommand`, `postPickBanCommand`, `pickBanErrorCode`; manager-only: `fetchPickBanQueue` (→ [Event pick/ban sessions](#event-pickban-sessions)) |
 
 Most fetchers take `accessToken` first (Discord OAuth bearer). On the web build,
@@ -273,7 +277,18 @@ exactly the scorelines a series can produce; `withSyncedPoints` keeps a table in
 step after the series length or mode changes.
 `fetchEventCapCandidates` + `linkEventMatchMapCaps` attach the real caps behind a
 played map, which fills the counts in and gives the public view per-cap times —
-a convenience, never a requirement.
+a convenience, never a requirement. `fetchEventCapCandidates(token, slug, matchId,
+{ map?, from?, to? })` (→ `GET /tournaments/<slug>/admin/matches/<matchId>/cap-candidates`
+→ `{ items }`) returns **grouped team runs**, oldest first, not one row per cap: each
+`EventCapCandidate` is `{ team_run_id | null, side | null, map | null, complete,
+completed_at | null, members[] }`, and each `EventCapCandidateMember` carries the per-cap
+fields (`cap_id`, `user`, `alias`, `side`, `cap_time_seconds`, `added`, `verified`) — those
+no longer sit on the entry itself. A cap with no team run is its own one-member entry. A
+run with `complete: false` has no `completed_at` and does not count toward the map
+score; `manage/capLinkRuns.ts` (pure, Vitest) keys entries by `team_run_id` (falling back to
+the first member's `cap_id`) and offers only complete entries that have a `side`, and
+`CapLinkPicker` sends every member of a picked run to `linkEventMatchMapCaps` as its own
+`{ cap_id, side }`.
 
 Format validation returns one 400 whose message lists every problem as
 `field.path: reason`, joined with `; `. `parseSpecErrors`
@@ -548,14 +563,16 @@ manual refresh and of the 30-second `/me/schedule` + `/me/matches` poll
 
 **Assigning streamers (bracket managers).** `fetchEventStreamers(token,
 slug)` → `GET /tournaments/<slug>/admin/streamers` → `{ items:
-EventStreamer[] }`, the event's volunteers who ticked streaming.
+EventStreamer[] }`, every streamer on the roster (see "Streamer roster" under Admin API), plus
+anyone still assigned to one of this event's matches who has since been removed from the roster.
+Sign-up ticks no longer make anyone a streamer.
 `setMatchStreamer(token, slug, matchId, userId | null)` → `PUT
 /tournaments/<slug>/admin/matches/<matchId>/streamer` with `{ user_id }`,
 answering `{ streamer: EventStreamer | null }`. The body must carry the
 `user_id` key; `null` clears it, and a PUT that changes nothing answers the
 current streamer (the picker does not send one). A user who
-is not a streaming volunteer is refused with 422 `invalid_request`, and the
-launcher shows the server's message. The control lives in the pick/ban match
+is not on the streamer roster is refused with 422 `invalid_request` (even a removed streamer who
+still holds the match), and the launcher shows the server's message. The control lives in the pick/ban match
 queue (below).
 
 **Slot timestamps carry an explicit UTC offset** (`+00:00`), unlike the
@@ -1040,7 +1057,7 @@ falls back to `'Not startable'` rather than showing nothing. `canOpenLobby` mirr
 kept as its own small check here since the queue is a different module from the match
 page's view model. The row keeps `streamer` (`null` when absent). `withQueueStreamer(entries,
 matchId, streamer)` writes a saved assignment into the loaded entries, and
-`streamerChoices(streamers, current)` lists the streaming volunteers, with the current
+`streamerChoices(streamers, current)` lists the roster streamers, with the current
 streamer added first when they are no longer on that list, so the picker can still show
 them.
 
@@ -1069,11 +1086,14 @@ row's own actions.
 `DropdownMenu` whose trigger shows the current streamer through `PlayerInfo` (or "No
 streamer") and whose radio items are "No streamer" plus every `streamerChoices` entry. The
 panel fetches `fetchEventStreamers` on mount and again each time a picker opens, so a
-volunteer who ticks streaming shows up without a reload. Choosing an item calls
+streamer staff just added to the roster shows up without a reload. Choosing an item calls
 `setMatchStreamer` and applies the answer with `withQueueStreamer`, with no refetch and no
 skeleton; the trigger reads "Saving…" meanwhile. A refusal (422 `invalid_request` for a
-user who is not a streaming volunteer) shows the server's message in its own error banner,
-so the queue's next successful poll does not clear it.
+user who is not on the roster) shows the server's message in its own error banner,
+so the queue's next successful poll does not clear it. With an empty list the picker's note comes
+from `streamerListNote(failed, loading)` in `events/streamerRoster.ts` ("Loading streamers…", the
+failed text, or `ROSTER_EMPTY_TEXT`: staff add streamers in Admin → Streamers). The Stream tab's
+"Operating as" dropdown and its no-streamer message use the same module.
 
 **Polling cadence.** `pickBanPollIntervalMs(status, error, alwaysPoll)` in
 `pickBanSession.ts` is the pure decision (Vitest, no DOM, no fetch/timer mocking
@@ -1198,7 +1218,12 @@ is the one place that names the files: `SOUND_URLS` maps each cue to its `.mp3`,
 at that point. Each offset is the animation's hit at the default pacing
 (`DEFAULT_PICK_BAN_PACING`), and a test pins that.
 `app/assets/sounds/CREDITS.md` credits the source sounds mixed into each file (one needs CC BY
-attribution, the rest are CC0), so whoever replaces a file updates it too.
+attribution, the rest are CC0), so whoever replaces a file updates it too. All six cue files (the five
+above and `stinger-whoosh.mp3`, which the stinger video's audio is rendered from) are centred (both
+channels identical) and loudness-matched at about -15.7 LUFS integrated, with the sample peak at or
+below -1 dBFS, and none of the hit times above moved. `e2e/audio-balance.broadcast.spec.ts` guards
+it: whole-file left/right level within 1 dB, channel correlation above 0.99, and every audible 100 ms window
+(within 30 dB of the loudest) within 1 dB left/right. If you replace a source, re-measure all six and keep them on one target.
 `pickBanSoundCues.ts`'s `cuesToPlay(state, clock, played)` is the pure
 seam (Vitest, no DOM). It sounds nothing unless the status is `running` or `complete`, so a
 paused, cancelled or voided session stays silent. Reveal cues come from `pickBanView.ts`'s
@@ -1211,7 +1236,7 @@ same object, with no new allocation, when nothing is newly due) — so a refresh
 key and does sound. Each cue carries a `schedule` that lands its file's hit on the
 animation's. The animation hits at the reveal (or intro start) instant plus a share of the
 entrance: `IMPACT` for pick, ban and ban-down, `DECIDER_IMPACT` for the decider and `VS_HIT`
-for the intro, from `pickBanBeats.ts`, which `stageMotion.ts` animates by, times
+for the intro, from `pickBanBeats.ts`, which `pickban/components/stageMotion.ts` animates by, times
 `entranceMsFor(pacing, 'intro' | segment)`. `soundScheduleAt(hitAt, fileHitMs, clock)` then
 starts the file `fileHitMs` before that hit: `delayMs` from now while that start is still
 ahead (a longer pacing), or at once and `offsetMs` into the file once it has passed (a
@@ -1469,6 +1494,143 @@ entry is `{id, label, eventManagersOnly?, hasUnsavedChanges?, render(context)}`,
 tab is a single entry. The Pick/Ban tab's panel is lazy, since only managers ever open
 it. The match queue goes below the stage cards in `PickBanPanel`.
 
+### Stream kit
+
+The broadcast tools for an event's streamer: the Stream tab on the event page (desk
+reads and writes, below), the OBS scene pages at `/stream/<slug>/<streamerId>/<scene>`
+(`streamScenePath` in `app/components/stream/streamScenes.ts`, one id per `STREAM_SCENES`
+entry) and the OBS kit download. Unlike the rest of this doc the stream fetchers are **not
+in `app/utils/api.ts`**: each sits next to the UI that owns it and calls `apiRequest`.
+All paths hang off `/tournaments/<slug>/stream`; the desk and write calls take a bearer,
+the scene reads are anonymous (a browser source has no login). The envelope and
+`ApiError` rules above apply: the desk and write helpers surface the server's
+`error`/`code` through `streamDeskError` (`pages/events/stream/streamDesk.ts`).
+
+**Desk read (Stream tab).** `fetchStreamDesk(token, slug, streamerId, { etag, signal })`
+(→ `GET .../stream/<streamerId>/desk`) answers `{ server_now, event, streamer, desk: {
+brb_message, webcam_enabled, current_match_id }, reason, match, assigned_matches[],
+next_match }` and is ETag-aware (`If-None-Match`, 304 = `unchanged`; `X-Server-Now` feeds
+the same median clock offset as pick/ban, `pickban/clockOffset.ts`).
+`createStreamDeskStore` (`streamDesk.ts`) polls it every `DESK_POLL_MS` (2 s) through
+`createPoller`, and `StreamTabContext` shares that one store with every panel. `reason` is
+`'current' | 'live' | 'holding-finished' | 'next' | 'none'`; `match` is the full
+`StreamMatch` (teams, lineup, maps, `score`, `countdown_at`, `live_at`, `live_since`, `live_source`, `casters`) or `null`. `live_since` is when the match went live: `live_source` `'manual'` (Match live, the stored `live_at`) or `'pick_ban'` (the end of a completed pick & ban), both null before either; the Score tab shows it without anyone pressing Match live. Map
+ordinals are 0-based; scenes show `mapNumber(ordinal)` (1-based, `sceneHelpers.ts`). The `score`
+block has `live_counting` and a per-map entry with `source` (`'official' | 'live' | 'manual'`),
+`closed_by`, `pins` and `winner_override`, and a `series` line derived from the map winners. The launcher renders `reason`
+and `match` as given and never picks the current match itself.
+
+**Stream tab polling ignores Page Visibility inside OBS.** An OBS dock is routinely reported
+`hidden`, so `deskPollEnvironment()` reports visible whenever `window.obsstudio` exists
+(`insideObs`, `deskPollActive`) and otherwise follows `document.visibilityState` like any
+`createPoller` (see "Polling live data" in `agents/state-patterns.md`). A panel that polls on
+its own (the lineup section) passes the same environment.
+
+**Desk writes.** Each returns the updated slice, so a panel replaces its state without a refetch.
+
+| Purpose | Call |
+|---|---|
+| Current match | `setCurrentMatch` → `PUT .../<streamerId>/desk/current` `{ match_id \| null }`; `moveToNextMatch` → `POST .../desk/next` (`match/currentMatchActions.ts`) |
+| BRB text, webcam frame | `setBrbMessage` → `PUT .../desk/brb` `{ message }`; `setWebcamFrame` → `PUT .../desk/webcam` `{ enabled }` (`studio/showActions.ts`) |
+| Casters | `setMatchCasters` → `PUT .../stream/matches/<matchId>/casters` `{ casters }`, up to 4 entries in order, each `{ user }` (any UTBT player) or `{ name }` (free text, 40 characters) (`studio/showActions.ts`). There is no casting-volunteer read any more: the Studio panel looks players up through the players list search |
+| Channel | `setMatchChannel` → `PUT .../stream/matches/<matchId>/channel` `{ choice, url? }`, reads `channel.stream_url`; `fetchOwnTwitchChannel` (`GET /users/me`, reads `twitch_url`) and `setOwnTwitchChannel` (`PUT /users/me/twitch` `{ twitch }`) (`channel/channelActions.ts`) |
+| Lineup | `fetchStreamLineup` / `saveStreamLineup` → `GET` / `PUT .../stream/matches/<matchId>/lineup` `{ a1, a2, b1, b2, only_if_empty? }`, answers `{ match_id, lineup, effective }` (`match/lineupActions.ts`) |
+| Live, score, countdown | `markMatchLive` / `clearMatchLive` → `POST` / `DELETE .../stream/matches/<matchId>/live`; `setMapScore` / `resetMapScore` → `PUT` / `DELETE .../score/maps/<ordinal>` (`{ a, b, winner }`: a pin per side or null, and the winner override), `resetAllMapScores` → `DELETE .../score/maps`, `setLiveCounting` → `PUT .../score/live-counting` `{ enabled }`; `moveCountdown` / `clearCountdown` → `PUT` / `DELETE .../countdown` `{ at }` (a UTC ISO instant) or `{ add_minutes }`. Each answers the match's `broadcast` block (`live_at`, `countdown_override_at`, `countdown_at`, `score_state`, `live_counting`) (`match/scoreActions.ts`) |
+| OBS kit | `fetchKitInfo` → `GET .../stream/<streamerId>/kit/info` (`current_version`, `downloaded_version`, `default_folder`); `fetchKitZip` / `kitDownloadUrl` → `GET .../<streamerId>/kit?folder=<folder>`, a zip with a 120 s timeout (`kit/kitFetch.ts`) |
+
+**Score editor writes.** The Score panel (`match/ScoreSection.tsx`, model `scoreView.ts`) edits
+one map at a time and always sends the whole map state: stepping or typing a side sends that side's
+new pin plus the other side's stored pin and the stored winner override; the Winner select keeps
+the stored pins. A typed value goes out on blur or Enter (Escape restores), only whole numbers 0-20
+are accepted, and a value typed on a live side is a pin even if it equals the live count. Rows are
+locked (inputs, steppers and Winner disabled, Reset hidden) for an official map, every map of a
+finished match, and the settled tail. Rejects are worded per write by `scoreWriteMessage`
+(`no_effect`, `official_map`, `invalid_request`, `unknown_map`); any other error shows the server's
+message. The desk refreshes after every write and the inputs remount from it.
+
+**Countdown in local time.** The Countdown section labels its input "New time in <zone> (<abbr>)"
+with the browser's own zone (not the display-time-zone override) and shows the UTC result under it.
+`localTime.ts` (pure, every function takes an explicit IANA zone) converts: `utcFromLocalInput`
+returns `ok` (with `ambiguous`), `gap` or `invalid`. A time that does not exist (the clocks go
+forward) is refused and disables Set countdown; a time that happens twice uses the first, with a
+notice. The request body is still `{ at: <UTC ISO> }`; `+5/+10/+15` and "Use scheduled time" are
+unchanged.
+
+**Streamer roster on the Stream tab.** Only roster members (and managers) see the tab
+(`streamTabVisible`). With no streamers, the tab and the "Operating as" dropdown say so through
+`events/streamerRoster.ts` (`ROSTER_EMPTY_TEXT`, `ROSTER_FAILED_TEXT`, `streamerListNote`). A roster
+streamer with no assigned match in the event sees one "You're set up, just not scheduled yet" box
+instead of the current-match controls. Managers need no roster row and can operate as anyone,
+including a removed streamer.
+
+**Uncertified servers.** Lineup detection and the Cams server picker read `certified_records` from
+the server list. `UncertifiedServerWarning` (`events/stream/`) shows "Uncertified server: caps here
+won't count for the live score or records." under a team whose server is uncertified (lineup: the
+server most of the team's found players are on; cams: the effective server, whether detected,
+picked, or typed and listed). An unknown or still-loading server shows nothing, and the warning
+never blocks launching cams.
+
+**Cam FPS.** The Cams tool has a Cam FPS group (`60` / `120`, `aria-pressed`, default 120). Choosing
+saves at once through `streamKit.setCamFps` and the choice goes on every launch and restart request;
+Launch waits for the preference to load. If saving fails, an amber line says it will reset when the
+launcher restarts, but the choice still applies to this session. What the plan writes into each cam's
+ini (frame-rate limits, music off, sound 200) is in `lib/main/README.md`.
+
+The cam tool reads no stream route of its own: its team-server list is `gateway.fetchServers()`
+polled every 30 s (`cams/camToolHooks.ts`), and the rest goes through
+`window.conveyor.streamKit` (see `lib/conveyor/README.md`).
+
+**Scene reads.** `StreamDataProvider` (`stream/data/`) builds one cadence store, one
+**hot-state** store and one shared read registry per scene page:
+- **Hot state.** `fetchStreamHotState` (→ `GET .../stream/<streamerId>/state`) has the desk's
+  `reason` + `match` shape plus `desk.brb_message` and `webcam_enabled`, and is ETag-aware
+  through `readConditional` (`data/conditionalRead.ts`). Scenes read it through
+  `useStreamHotState` / `useSceneMatch`.
+- **Composite reads.** Slower per-scene payloads through `useSceneRead<T>(path | null)`, one
+  shared, deduplicated store per path (`sceneReadRegistry.ts`), each path built next to its
+  scene: `GET .../stream/matches/<matchId>/{betting, preview, standings, post-match,
+  next-map/<ordinal>}` (`scenes/*/…Read.ts`, via `streamMatchReadPath`), and the ticker /
+  event feed `GET .../stream/feed?streamer=<streamerId>` (`ticker/streamFeed.ts`: `results`,
+  `upcoming`, `top_predictors`, `next_match`). The Intermission scene reads the hot state only and
+  fetches no composite read: it shows the series recap (`SeriesTable`, full width mid-series, beside
+  the result once the series is decided) and an `UpNextLine`. The Starting Soon prices come from the
+  betting read, where `odds` can be null: a side reads "1.72× (58%)" (b: "(42%) 2.38×"), the draw
+  "Draw 4.10× (20%)", and a null price shows "–". The feed's `top_predictors` lists bettors only, and `next_match` can
+  have a null `scheduled_at`: the ticker then shows "time TBD" for it, while "Coming up" still skips
+  unscheduled matches. A `null` path reads nothing. The pick/ban scene
+  reuses the pick/ban state route and `fetchEvent` (see "Event pick/ban sessions"), not a
+  composite read.
+- Both kinds poll with `alwaysPoll`, merge structurally, keep the last good value on failure
+  and set `reconnecting` after 3 failures in a row (`RECONNECTING_AFTER_FAILURES`).
+
+**Next Map scene read.** `nextMapReadPath(slug, matchId, ordinal)` (`scenes/nextMap/nextMapRead.ts`)
+→ `GET .../stream/matches/<matchId>/next-map/<ordinal>`, with `map` (name, mapper, `video`
+`{ available, version, url }`, `screenshot_version`), `team_wr` (time and holders), `lineup` (per-slot
+PB with `verified`), and `cup_history` (`times_played`, `fastest_run`); `map` is null when the slot has
+no map. The scene asks for the map at the score block's `current_map` (the first undecided map, null
+once the series is decided) and fetches only once the hot state has a map row for that ordinal, so
+nothing is read before pick/ban places it. The name, pick and tone come from the hot state; the read
+supplies the details and is ignored when its match, ordinal or map name disagrees. The video URL is
+built with `mapVideoUrl(name, video.version)`, never the read's `url`; when the read has no video, or
+the `<video>` errors, the scene shows the screenshot instead (a new version retries).
+
+**Cadences** (`data/sceneCadence.ts`). A scene is *active* outside OBS (a plain browser), or
+when OBS says the source is active or visible; otherwise it is hidden.
+
+| Read | Active | Hidden |
+|---|---|---|
+| Hot state | `HOT_STATE_ACTIVE_MS` = 2 s | `HOT_STATE_HIDDEN_MS` = 30 s |
+| Composite reads | `COMPOSITE_ACTIVE_MS` = 30 s | `COMPOSITE_HIDDEN_MS` = 120 s |
+
+The OBS source events are the browser source's `obsSourceActiveChanged` and
+`obsSourceVisibleChanged` window events (`detail.active` / `detail.visible`). Going from
+hidden to active refetches the hot state and every mounted composite read at once, so a scene
+switched to in OBS is fresh on its first frames.
+
+**`preview=1`.** `isStreamPreview` (`stream/streamSceneOptions.ts`) reads `?preview=1`. A
+preview is never active: it stays on the hidden cadence and ignores the OBS events, so a page
+of previews stays cheap. `streamSceneOptionsOf` reads it together with `?sound=0` and `?motion=0`.
+
 ### Medal Hunt (`fetchMedalHunt`)
 
 `GET /v2/summary/medal_hunt` takes no params — the caller is identified by the bearer
@@ -1512,12 +1674,52 @@ only — never the security boundary. Fetchers grouped by dashboard section:
 | Users | `fetchAdminUsers`, `fetchAdminUsersCount`, `fetchAdminUser`, `warnUser`, `banUser`, `unbanUser`, `assignTitleToUser` |
 | Titles | `fetchAdminTitles`, `fetchTitleHolders`, `createTitle`, `updateTitle`, `deleteTitle`, `unassignTitleFromUser` |
 | Caps | `fetchAdminCaps`, `fetchAdminCapsCount`, `disallowCap`, `reallowCap`, `verifyCapFlag`, `unverifyCap`, `verifyCapWithDemo` |
-| Maps | `fetchAdminMaps`, `fetchAdminMapsCount`, `fetchAdminMapTags`, `createMap`, `updateMap`, `fetchDifficultySyncPreview`, `applyDifficultySync`, `fetchMapvoteStatus`, `setMapvoteAnnouncement`, `regenerateMapvote` |
+| Streamers | `fetchStreamerRoster`, `putRosterStreamer(token, userId, note)`, `removeRosterStreamer`, `fetchRosterSuggestions` (types `RosterStreamer`, `RosterAssignment`, `RosterSuggestion`, `RosterEventRef`). See "Streamer roster" below |
+| Maps | `fetchAdminMaps`, `fetchAdminMapsCount`, `fetchAdminMapTags`, `createMap`, `updateMap`, `uploadMapVideo`, `deleteMapVideo`, `fetchDifficultySyncPreview`, `applyDifficultySync`, `fetchMapvoteStatus`, `setMapvoteAnnouncement`, `regenerateMapvote` |
 | Map authors | `fetchMapAuthorStrings(+Count)`, `fetchLinkedMapAuthors`, `fetchMapAuthorCandidates`, `fetchMapAuthorPreview`, `linkMapAuthor`, `unlinkMapAuthor` |
 | Patches | `fetchAdminPatches`, `createPatch`, `updatePatch`, `setPatchActive`, `deletePatch`, `derivePatch` |
 | Game hosts (admin only) | `fetchAdminHosts`, `createAdminHost`, `updateAdminHost`, `setAdminHostServers`, `issueAdminHostToken`, `removeAdminHostToken`, `updateAdminServer`. A host holds exactly one token; issuing when one exists replaces it, and the server revokes the old one in the same transaction. The plaintext comes back once and is never retrievable again - show it, let the admin copy it, and do not persist it anywhere in the renderer. Both replace and remove are destructive and are behind a ConfirmDialog that states the consequence. Server chips in that section are buttons - clicking one opens its registry entry (name, address, port, region, state, listed, certified, host) for editing |
 | Anti-cheat | `fetchAcShared(+Count)`, `fetchAcCapDelta(+Count)`, `fetchAcLowFpsWr(+Count)`, `fetchAcIdentifier`, `fetchAcCapStats`, `fetchAcCapMapComparison`, `allowCap`, `unallowCap` |
 | Audit | `fetchAuditLog`, `fetchAuditLogCount`, `rollbackAudit` |
+
+**Streamer roster (Admin → Streamers).** The roster is the one list of people who may stream:
+being on it is what gives a user the Stream tab and lets a manager assign them to matches, and
+it is global (every event). All four calls sit on the staff-gated slice (Moderators and Admins;
+a Cup Admin gets no section) and every answer is `{ items: [...] }`.
+- `fetchStreamerRoster(token)` → `GET /admin/streamers`. Each item is `RosterStreamer`:
+  `user_id`, `display_name`, `twitch_url` (null when the profile has none), `added_by`, `added_at`,
+  `note`, and `upcoming_assignments` (`RosterAssignment[]`: `match_id`, `event`
+  (`RosterEventRef` `{ slug, name }`), `label` such as "A vs B", `scheduled_at` or null),
+  unfinished matches across all events, scheduled first and unscheduled last.
+- `putRosterStreamer(token, userId, note)` → `PUT /admin/streamers/<userId>` with `{ note }`: adds
+  the user, or sets their note if already on the roster. The note is trimmed, and empty becomes
+  null; over 200 characters is refused (the input stops at 200). Answers the roster.
+- `removeRosterStreamer(token, userId)` → `DELETE /admin/streamers/<userId>`. Assignments are
+  left as they are, so a removed streamer keeps their matches until a manager reassigns them; they
+  lose the Stream tab, but a manager can still operate as them to rescue the broadcast.
+- `fetchRosterSuggestions(token)` → `GET /admin/streamers/suggestions`: people who ticked
+  "streaming" when signing up for an event and are not on the roster (`RosterSuggestion`:
+  `user_id`, `display_name`, `twitch_url`, `event`, `signed_up_at`).
+
+`StreamersSection` (`admin/sections/`, section id `streamers`, "Streamers", Events group,
+Moderator and Admin roles) adds through a `PlayerSearchInput` that leaves roster members out of
+its results, and lists each member with `PlayerInfo`, the Twitch link or an amber "No Twitch
+channel" flag, "added by X", the date, "N upcoming matches", a note input with "Save note" and a
+Remove button. Remove opens a `ConfirmDialog` that lists each upcoming assignment as "Event ·
+Label · local time" ("Unscheduled" when it has none). A Suggestions list adds with one click. Every
+row, suggestion and the search share one busy state, so two writes never race, and the roster
+reloads after each. The pure helpers and their tests are in `sections/streamerRoster.ts`.
+
+**Map fly-through videos.** `uploadMapVideo(token, mapName, file, filename)` (`POST
+/admin/maps/<name>/video`, multipart field `file`) and `deleteMapVideo(token, mapName)` (`DELETE`
+the same path) both answer the updated `AdminMapRow`, which now carries `has_video` and
+`video_updated_at`. The upload has no 20 s `apiRequest` timeout, because files are large.
+`MapVideoControl` (`admin/sections/`, in the Edit map form under Screenshot) shows "Upload video" or
+"Replace video", "Remove video" (behind a `ConfirmDialog`), the hint "WebM only, up to 150 MB." and
+a muted looping preview. `checkMapVideoFile` (`mapVideoFile.ts`) refuses anything that is not
+`.webm` / `video/webm`, is empty, or is over 150 MiB before any request is sent. A video does not
+affect the mapvote, so saving one reloads the row without the "regenerate mapvote" banner
+(`onReload`, not `onSaved`).
 
 `toActiveTitle(row)` normalizes an admin/title-shaped row (plain-number `rarity`)
 into the `ActiveTitle` that `PlayerInfo` and the title-style helpers expect.
@@ -1709,6 +1911,18 @@ centre-crop them a second time: pass `fit="blend"` to `MapThumbnail` (contains t
 square and fills the rest with a blurred copy of it) or make the box `aspect-square`.
 The heroes use `blend`; the homepage poster grid is square, because a blur per tile
 would blow the CSS runtime budget.
+
+Map fly-through videos are served by the API too, as WebM:
+
+```
+{API_BASE_URL}/videos/{encodeURIComponent(mapName)}.webm?v={version}
+```
+
+Build it with `mapVideoUrl(mapName, version?)` in `app/utils/mapScreenshots.ts`, beside the
+screenshot URL helper. `version` is the map's `video_updated_at` (or the version the next-map read
+reports) and is only a cache buster (no `?v=` when it is null). The video supports range requests.
+Never copy a `url` field from a payload: go through the helper so the video stays on
+`API_BASE_URL`, like screenshots.
 
 Region flags (server list):
 

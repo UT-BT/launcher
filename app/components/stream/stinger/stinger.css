@@ -1,0 +1,91 @@
+@keyframes stinger-slab-a-in {
+  from {
+    transform: translateX(-1300px);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@keyframes stinger-slab-b-in {
+  from {
+    transform: translateX(1300px);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@keyframes stinger-slab-a-out {
+  from {
+    transform: none;
+  }
+  to {
+    transform: translateX(2200px);
+  }
+}
+
+@keyframes stinger-slab-b-out {
+  from {
+    transform: none;
+  }
+  to {
+    transform: translateX(1300px);
+  }
+}
+
+@keyframes stinger-flash {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.25);
+  }
+}
+
+@keyframes stinger-plate-in {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@keyframes stinger-logo-in {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes stinger-title-in {
+  from {
+    opacity: 0;
+    transform: translateX(-32px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes stinger-brand-out {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.05);
+  }
+}

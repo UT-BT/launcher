@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { CalendarClock } from 'lucide-react'
 import type { PickBanTurn, PickBanView } from '../pickBanView'
-import { PICK_BAN_HUES, PICK_BAN_TONES, stepTone } from '../components/pickBanTone'
+import { PICK_BAN_HUES, PICK_BAN_TONES, stepTone } from '@/app/components/broadcast/broadcastTone'
 import { Chevrons } from '../components/StageCaption'
 
 const BROADCAST_CHEVRONS = 'flex -space-x-5'

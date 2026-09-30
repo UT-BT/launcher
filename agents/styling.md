@@ -4,14 +4,14 @@ read_when:
   - "styling a new page, button, table, form, chip, card, or modal"
   - "choosing a color, radius, spacing, or animation"
   - "you see drift from a token and are tempted to add a variant"
-keywords: [tailwind, cn, DataTable, tokens, colors, button, card, white/5, bg-card, animation, framer-motion, reduced motion, table-fixed, align]
+keywords: [broadcast, BROADCAST_SURFACE, broadcastTone, broadcastMotion, broadcastFonts, transparent stage, streamScenes.css, theme.css, @source not, screenshot, toHaveScreenshot, broadcast project, tailwind, cn, DataTable, tokens, colors, button, card, white/5, bg-card, animation, framer-motion, reduced motion, table-fixed, align]
 provides: "the locked design tokens + the canonical class strings"
 not_here:
   - "which component to use → shared-components.md"
   - "state / persistence → state-patterns.md"
-sections: [class-merging, tables-locked, responsive-columns, page-layout, filter-panel, buttons-toggle-states, form-inputs, card-backgrounds-borders, text, color-palette, animation, css-runtime-cost, donts]
-last_verified: 2026-09-28
-verify_against: [app/components/shared/DataTable.tsx, app/components/shared/LiveDot.tsx, app/components/shared/chipStyles.ts, app/styles/globals.css, app/styles/desktop.css, app/styles/index.css, lib/utils.ts, app/hooks/useElementWidth.ts, app/hooks/usePrefersReducedMotion.ts]
+sections: [class-merging, tables-locked, responsive-columns, page-layout, filter-panel, buttons-toggle-states, form-inputs, card-backgrounds-borders, text, color-palette, animation, css-runtime-cost, broadcast-styling, scene-stylesheet, screenshot-conventions, donts]
+last_verified: 2026-09-30
+verify_against: [app/components/shared/DataTable.tsx, app/components/shared/LiveDot.tsx, app/components/shared/chipStyles.ts, app/styles/globals.css, app/styles/theme.css, app/styles/desktop.css, app/styles/index.css, lib/utils.ts, app/hooks/useElementWidth.ts, app/hooks/usePrefersReducedMotion.ts, app/components/broadcast/broadcastTone.ts, app/components/broadcast/broadcastMotion.ts, app/components/broadcast/broadcastFonts.ts, app/components/broadcast/broadcastFonts.css, app/components/broadcast/BroadcastStage.tsx, app/components/stream/streamScenes.css, app/components/stream/frame/SceneFrame.tsx, e2e/streamHarness.ts, playwright.config.ts, app/components/stream/scenes/overlay/overlayLayout.ts, app/components/stream/scenes/nextMap/NextMapHero.tsx, e2e/audio-balance.broadcast.spec.ts]
 ---
 
 # Styling reference
@@ -339,11 +339,11 @@ Standard radii: `rounded-xl` for big containers, `rounded-lg` for buttons / inpu
 | Player / map name | `text-sm font-semibold text-white` |
 
 `font-pickban` (Barlow Condensed, bundled from `app/assets/fonts/barlow-condensed/` with
-its OFL licence) is the pick/ban display face: team names, the turn caption, map tiles,
-the step track and the reveal scenes on the match page and the stream view. The token
-lives in `globals.css`; its `@font-face` rules live in
-`events/pickban/components/pickBanFonts.css`, imported by `PickBanStage` and the stream
-root, both lazily loaded, so the entry CSS doesn't carry them. The files are imported
+its OFL licence) is the pick/ban and broadcast display face: team names, the turn caption,
+map tiles, the step track, the reveal scenes and every OBS scene. The token lives in
+`theme.css`; its `@font-face` rules live in `app/components/broadcast/broadcastFonts.css`,
+imported by `broadcastFonts.ts` (`useBroadcastFonts`), which the scene frames, the stinger page
+and the pick/ban stream broadcast call (`PickBanStage` imports the CSS directly), all lazily loaded, so the entry CSS doesn't carry them. The files are imported
 assets rather than `app/public/` files so the desktop build, which has no public dir and
 loads over `file://`, gets them too. It ships four faces: 600 and 700 upright, 800 and 900
 italic. Body text and everything outside pick/ban stays on the system font.
@@ -376,10 +376,10 @@ Game identity, not chrome — keep these **literal**, never route through `accen
 - Splash / login / marketing gradients (`shared.css`, `--utbt-*`) — a brand moment.
 - **Pick/ban sides** — team A crimson `pickban-a` (`#e6394f`), team B azure `pickban-b`
   (`#1fa6e6`) and the decider's gold `pickban-gold` (`#f0b429`). They are defined once, in
-  the `@theme` block of `globals.css`, so every colour utility and opacity step works
+  the `@theme` block of `theme.css`, so every colour utility and opacity step works
   (`text-pickban-a`, `border-pickban-b/45`, `bg-pickban-gold/20`), and no theme overrides
   them, Light included. Pick/ban components read them through `PICK_BAN_TONES`
-  (`events/pickban/components/pickBanTone.ts`) rather than spelling the classes out. A
+  (`app/components/broadcast/broadcastTone.ts`) rather than spelling the classes out. A
   gradient, glow or shadow that needs the raw colour takes it from `PICK_BAN_HUES` in the
   same file (a `var(--color-pickban-*)` value, mixed with `color-mix()` for alpha).
 
@@ -442,7 +442,7 @@ flat surface colour).
 
 `light` is a single theme (crisp white), not a per-accent mode. It's the one theme
 that also toggles the `dark` class **off** (`ThemeProvider` + the `index.html`
-pre-paint script); every dark theme keeps `.dark` on. `globals.css` defines
+pre-paint script); every dark theme keeps `.dark` on. `theme.css` (imported by `globals.css`) defines
 `@custom-variant dark (&:where(.dark, .dark *))` so Tailwind `dark:` is class-based.
 
 `:root[data-theme="light"]` does three things and needs **no per-component colour
@@ -476,8 +476,9 @@ change (it reads `useTheme`), so they update live.
 - Skeleton: `animate-pulse` with `bg-white/5`
 - Legendary title/avatar: `legendaryAvatarPulse` / `legendaryTitlePulse` keyframes in `globals.css`
 - **framer-motion** is the motion library. It stays out of the web entry, so import it only
-  from lazily loaded modules. The pick/ban choreography
-  (`events/pickban/components/stageMotion.ts`) is the reference. Variants follow view-model
+  from lazily loaded modules. The curves and presets
+  live in `app/components/broadcast/broadcastMotion.ts` and the pick/ban choreography built on
+  them in `events/pickban/components/stageMotion.ts`; use those as the reference. Variants follow view-model
   state, so a change reverses when the state does (an undo). `AnimatePresence` handles
   enter and exit, and a shared `layoutId` makes an indicator glide. Animate `transform`
   and `opacity` (a one-shot `filter` is fine). A plain colour or filter change on a card
@@ -522,6 +523,117 @@ choices have a compositor cost, not just a look:
   elements are not.
 - A page must stay smooth with its largest realistic dataset at its largest
   page size (200 rows) — if a per-row effect can't survive that, it doesn't ship.
+
+## Broadcast styling
+
+The pick/ban stream view and the OBS scenes share `app/components/broadcast/` (inventory in
+`agents/shared-components.md`). The tokens:
+
+- **Surface.** `BROADCAST_SURFACE` (`broadcastTone.ts`: `bg-[#05070c] font-pickban text-white`)
+  is the root class of an opaque scene. It is a fixed dark surface, deliberately not a theme
+  token: a broadcast looks the same under every theme, Light included.
+- **Tones.** Team A crimson, team B azure, decider gold and a neutral, always through
+  `PICK_BAN_TONES` (classes) and `PICK_BAN_HUES` plus `tint(hue, percent)` (raw colour for
+  gradients, glows and shadows). Map a stream side with `sideTone` / `teamTone`; never
+  hand-write `pickban-*` classes or hex values.
+- **Motion.** The curves (`EASE_OUT`, `EASE_IN`, `EASE_OVERSHOOT`, `SLAM`) and presets
+  (`SCENE_VARIANTS`, `staggeredCard`, `CHIP_MOTION`, `STAMP_MOTION`, `FADE_MOTION`,
+  `REVEAL_*`) live in `broadcastMotion.ts`. `stageMotion.ts` keeps only the pick/ban
+  choreography. Scenes take `animate` from the `motion=0` URL option through `PickBanMotion`.
+- **Fonts.** `useBroadcastFonts()` loads the four Barlow Condensed faces (600, 700, italic
+  800 and 900) and calls `document.fonts.load` on them, so the first frame doesn't paint a
+  fallback. Every frame calls it.
+- **The stage.** `BroadcastStage` is a fixed 1920×1080 box scaled to the window. Opaque by
+  default (black letterbox, `bg-background`). `transparent` (the overlay and caster scenes,
+  `transparent: true` in `streamScenes.ts`) leaves the stage and the letterbox clear, and
+  `mountStreamSceneRoot` also clears the document, body and root backgrounds, so OBS
+  composites the page over the game. A transparent scene must not paint a full-frame fill.
+
+### Scene stylesheet
+
+The scene pages don't load the app's stylesheet, so scene classes stay out of the app's
+startup CSS:
+
+- `app/styles/theme.css` holds the `@custom-variant dark` and the `@theme` block (theme
+  colour tokens, `pickban-*`, `font-pickban`), shared by both stylesheets.
+- `app/styles/globals.css` imports it and excludes the stream folder from class scanning with
+  `@source not '../components/stream'`.
+- `app/components/stream/streamScenes.css` builds only the theme and the utilities layers (no
+  preflight) and scans the stream folder. It is imported by `mountStreamSceneRoot.tsx`, by
+  `stinger/stingerPage.tsx` and by the scene-frame test harness (`e2e/sceneFrameHarness.ts`).
+  Import it from any new scene entry point, or its classes won't exist there.
+
+A class used only in a scene lives in the scene CSS bundle, and a class shared with the app
+must be in a file the app scans. The bundle check budgets the two separately
+(`agents/web-target.md`).
+
+### Scene layouts
+
+- **No A/B letters.** No scene draws an A/B chip or a "Team A" slot label: a side is its colour bar,
+  wash and tone, and the team's name. `TeamPlate`'s `ab` only picks the colour.
+- **Match overlay (layout 06)** (`scenes/overlay/`, transparent). Everything sits on the frame's
+  edges or its centre and stays clear of the four cam timer zones (360×96, checked by the spec).
+  - *Name tags* (`OverlayNameTag`, 360×60): round avatar and alias only, a 50px slant and a side
+    wash. A1 and A2 at top 466 on the left and right edges, B1 and B2 at bottom 28 in the lower
+    corners.
+  - *Score rows* (`OverlayHub`, 376×46, centred at 50%/50%): `#05070c` at 86% with a 1px white/12
+    ring and 10px radius, a 6px team bar and a 30%→8% team wash, the team name in 900 italic (29px, 25px
+    over 15 characters), 7×18 skewed win pips (the majority for a first-to series, the best-of for
+    all-maps), and a 46×38 score box at 38px holding the current map's caps. The rows sit at y 479–525
+    and 555–601.
+  - *Map strip* (`OverlayMapStrip`): a band up to 560px wide and 30px tall, centred on the seam at y
+    540, on `#05070c` at 92% with an 8px radius and 16px text. Played cells are dimmed with their
+    result, the current cell has a white underline and lighter wash, upcoming cells are outlined in the
+    picker's colour (gold for the decider). Played names cap at 110px, upcoming at 140px, the current
+    one is uncapped. A width estimate in the view model collapses played cells to number and score
+    when the band would pass 560px; if it still overflows, the upcoming-name cap steps down 8px at a
+    time to 40px, then upcoming cells show the number badge only. The **FT2 chip** (`FT{caps_to_win}`) sits outside the clipped cell
+    box at the band's right end so it is never cut off; with no chip and no maps the band is not drawn.
+  - The layout numbers live in `overlayLayout.ts`.
+- **Next Map scene** (`scenes/nextMap/`, opaque, 1792×824 body): a 1280×720 hero (video or
+  screenshot, with the "Map N" chip in the picker's tone, the name, mapper and pick line under it) and
+  a 472px column of panels (series card, Team WR, Lineup PBs, Cup history). The screenshot's slow pan is
+  one stage-level framer-motion loop (scale 1.12, x ±3%, 26s, mirrored), within the animation budget,
+  and it stops under `motion=0`, where the video also stays paused on its first frame.
+
+### Screenshot conventions
+
+Scenes are checked visually at 1920×1080 with Playwright (`playwright.config.ts`):
+
+- **Project and file names.** Specs named `*.broadcast.spec.ts` run only in the `broadcast`
+  project (Desktop Chrome, 1920×1080, `deviceScaleFactor: 1`); the `desktop-chromium` and
+  `mobile-chromium` projects ignore them.
+- **Baselines** are committed under `e2e/__screenshots__/`, from the template
+  `{testDir}/__screenshots__/{testFilePath}/{arg}{-projectName}{-platform}{ext}`, for example
+  `e2e/__screenshots__/betting-scene.broadcast.spec.ts/betting-open-broadcast-win32.png`. They
+  are per platform (`win32`, `linux`, `darwin`), because font and gradient rasterisation
+  differ. A platform with no baseline fails its first run and writes one; commit the
+  new files.
+- **Defaults** (`expect.toHaveScreenshot`): `threshold: 0.2`, `maxDiffPixelRatio: 0.001`,
+  `animations: 'disabled'`, `caret: 'hide'`, `scale: 'css'`.
+- **Update** the baselines with `npx playwright test --project=broadcast --update-snapshots`
+  (add a spec path to update one file), then review the changed images.
+- **Determinism** (`e2e/streamHarness.ts`, used by every scene spec):
+  - freeze the clock with `page.clock.setFixedTime(STREAM_T0)` (`openScene` does this);
+  - serve the API from fixtures with `serveStreamApi` (no live network; the hot state, reads,
+    pick/ban state, screenshots and avatars are all fulfilled, avatars and map art as
+    generated SVGs);
+  - open the scene with `sound=0&motion=0` (`SCENE_OPTIONS`);
+  - deny analytics consent so no banner shows;
+  - assert through `expectSceneScreenshot`, which first runs `settleScene` (waits for all
+    four Barlow faces and every image to load) and masks the ticker strip, whose rotation
+    is time-driven, with magenta.
+- **Transparency** is asserted, not eyeballed: the overlay spec screenshots the page with
+  `omitBackground`, composites it over the four-quadrant sample image (`e2e/overlay-quadrants.jpg`) and checks that every part sits on an edge
+  or the centre, that no pixel differs from the image more than a 40px shadow margin outside a part's box, and that
+  the four timer zones have no alpha at all.
+- **Video scenes** (Next Map): the spec serves a small WebM fixture (`e2e/next-map-flythrough.webm`)
+  with range support through `page.route`, added after `serveStreamApi`, and waits for the video's
+  `readyState` before the baseline. A video baseline runs with `motion=0` so it is the first frame.
+- **Sound** has its own guard: `e2e/audio-balance.broadcast.spec.ts` decodes the shipped cue files
+  (see `agents/data-sources.md`, pick/ban sound).
+- **Fixtures** live beside the scene code (`stream/data/streamFixtures.ts`,
+  `stream/scenes/<scene>/<scene>Fixtures.ts`): synthetic teams, players and maps only.
 
 ## Don'ts
 

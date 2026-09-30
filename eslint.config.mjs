@@ -46,6 +46,7 @@ export default [
         ecmaFeatures: { jsx: true },
         projectService: {
           allowDefaultProject: ['playwright.config.ts', 'vitest.config.ts', 'e2e/*.ts'],
+          maximumDefaultProjectFileMatchCount_THIS_WILL_SLOW_DOWN_LINTING: 60,
         },
       },
       globals: {

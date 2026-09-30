@@ -20,8 +20,9 @@ import {
 } from '../pickBanView'
 import { CountdownBar, IntroCountdownWords } from './Countdown'
 import { Aura, ConfettiBurst, Flash, Rays, Ribbon, Shockwave, SparkBurst, Strike } from './RevealEffects'
-import { PICK_BAN_HUES, PICK_BAN_TONES, stepTone, teamTone } from './pickBanTone'
-import { FADE_MOTION, choreography, type Choreography } from './stageMotion'
+import { PICK_BAN_HUES, PICK_BAN_TONES, stepTone, teamTone } from '@/app/components/broadcast/broadcastTone'
+import { FADE_MOTION } from '@/app/components/broadcast/broadcastMotion'
+import { choreography, type Choreography } from './stageMotion'
 
 const REVEAL_WIDTH = 'w-36 @md/stage:w-48 @3xl/stage:w-60 @[80rem]/stage:w-96 max-w-[calc(100cqh-10.5rem)]'
 

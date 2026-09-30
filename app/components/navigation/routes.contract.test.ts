@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { pathToNav, viewToPath } from './routes'
 import { titleForRoute } from './titles'
 import type { NavParams } from './NavigationContext'
+import { STREAM_SCENES, parseStreamScenePath } from '../stream/streamScenes'
 
 interface ContractRoute {
     path: string
@@ -100,5 +101,57 @@ describe('malformed urls', () => {
 describe('the stream sub-route', () => {
     it('is never resolved as match-pickban by pathToNav, since it is handled before the app shell mounts', () => {
         expect(pathToNav('/events/cup/matches/77/stream', '').view).not.toBe('match-pickban')
+    })
+})
+
+describe('the stream scene routes', () => {
+    const scenePaths = [...STREAM_SCENES.map(scene => scene.id), 'scoreboard'].map(
+        scene => `/stream/${SAMPLES.eventSlug}/${SAMPLES.playerId}/${scene}`
+    )
+    const fallbackView = pathToNav('/no-such-page', '').view
+
+    it('have no entry in the route contract', () => {
+        for (const route of contract.routes) {
+            expect(route.path.split('/')[1]).not.toBe('stream')
+        }
+    })
+
+    it.each(scenePaths)('%s is claimed by the stream root before the app shell mounts', path => {
+        expect(parseStreamScenePath(path)).not.toBeNull()
+    })
+
+    it.each(scenePaths)('%s never resolves to an app view', path => {
+        expect(pathToNav(path, '').view).toBe(fallbackView)
+        expect(pathToNav(path, '?preview=1&sound=0').view).toBe(fallbackView)
+    })
+
+    it.each(contract.routes)('the stream root never claims the $kind route', route => {
+        expect(parseStreamScenePath(concretePath(route))).toBeNull()
+    })
+})
+
+describe('robots.txt', () => {
+    const disallowed = readFileSync(resolve(__dirname, '../../public/robots.txt'), 'utf8')
+        .split(/\r?\n/)
+        .filter(line => line.startsWith('Disallow:'))
+        .map(line => line.slice('Disallow:'.length).trim())
+        .map(pattern => new RegExp(`^${pattern.split('*').map(part => part.replace(/[.?+^$()[\]{}|\\]/g, '\\$&')).join('.*')}`))
+
+    function crawlable(path: string): boolean {
+        return !disallowed.some(pattern => pattern.test(path))
+    }
+
+    it.each([
+        '/stream/2v2-cup-2026/228152236587483136/overlay',
+        '/stream/2v2-cup-2026/228152236587483136/starting-soon?preview=1',
+        '/stream/cup/42/scoreboard',
+        '/events/2v2-cup-2026/matches/77/stream',
+        '/events/2v2-cup-2026/matches/77/stream?sound=0&volume=70',
+    ])('keeps crawlers off %s', path => {
+        expect(crawlable(path)).toBe(false)
+    })
+
+    it.each(contract.routes.filter(route => route.view !== 'admin'))('leaves the $kind route crawlable', route => {
+        expect(crawlable(concretePath(route))).toBe(true)
     })
 })

@@ -1,14 +1,16 @@
 import type { PickBanSoundSchedule } from './pickBanSoundCues'
 import { SOUND_URLS, type PickBanSoundCueKind } from './pickBanSounds'
 
-export interface PickBanSoundPlayer {
+export interface SoundPlayer<K extends string> {
     preload: () => Promise<void>
     unlock: () => void
     setVolume: (volume: number) => void
-    play: (kind: PickBanSoundCueKind, schedule: PickBanSoundSchedule) => void
-    preview: (kind: PickBanSoundCueKind) => void
+    play: (kind: K, schedule: PickBanSoundSchedule) => void
+    preview: (kind: K) => void
     dispose: () => void
 }
+
+export type PickBanSoundPlayer = SoundPlayer<PickBanSoundCueKind>
 
 interface AudioGraph {
     context: AudioContext
@@ -34,12 +36,16 @@ export function masterGainOf(volume: number): number {
 }
 
 export function createPickBanSoundPlayer(initialVolume: number): PickBanSoundPlayer {
+    return createSoundPlayer(SOUND_URLS, initialVolume)
+}
+
+export function createSoundPlayer<K extends string>(urls: { [kind in K]: string }, initialVolume: number): SoundPlayer<K> {
     let graph: AudioGraph | null = null
     let gain = masterGainOf(initialVolume)
     let previewToken = 0
     let previewVoice: PreviewVoice | null = null
-    const buffers = new Map<PickBanSoundCueKind, AudioBuffer>()
-    const loads = new Map<PickBanSoundCueKind, Promise<AudioBuffer | null>>()
+    const buffers = new Map<K, AudioBuffer>()
+    const loads = new Map<K, Promise<AudioBuffer | null>>()
 
     function ensureGraph(): AudioGraph | null {
         if (graph) return graph
@@ -53,10 +59,10 @@ export function createPickBanSoundPlayer(initialVolume: number): PickBanSoundPla
         return graph
     }
 
-    function load(ctx: AudioContext, kind: PickBanSoundCueKind): Promise<AudioBuffer | null> {
+    function load(ctx: AudioContext, kind: K): Promise<AudioBuffer | null> {
         const pending = loads.get(kind)
         if (pending) return pending
-        const loading = fetch(SOUND_URLS[kind])
+        const loading = fetch(urls[kind])
             .then((response) => response.arrayBuffer())
             .then((data) => ctx.decodeAudioData(data))
             .then((buffer) => {
@@ -108,7 +114,7 @@ export function createPickBanSoundPlayer(initialVolume: number): PickBanSoundPla
         async preload() {
             const ctx = ensureGraph()?.context
             if (!ctx) return
-            await Promise.all((Object.keys(SOUND_URLS) as PickBanSoundCueKind[]).map((kind) => load(ctx, kind)))
+            await Promise.all((Object.keys(urls) as K[]).map((kind) => load(ctx, kind)))
         },
         unlock() {
             const ctx = ensureGraph()?.context
