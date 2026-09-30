@@ -1,12 +1,13 @@
 import { displayMapName } from '@/app/utils/format'
 import type { StreamLineupSlot, StreamMatch, StreamScore, StreamScoreSource, StreamSide } from '../../data/streamHotState'
-import { formatLabel, mapNumber, seriesFlags, stageLine, type SeriesFlag } from '../../sceneHelpers'
+import { mapNumber, seriesFlags, type SeriesFlag } from '../../sceneHelpers'
+import { BAND, LONG_TEAM_NAME_CHARS, MAP_NAME_MAX_PX, STRIP_ESTIMATE, UPCOMING_NAME_MIN_PX, type OverlayMapState } from './overlayLayout'
 
 export type OverlayCorner = 'mid-left' | 'mid-right' | 'bottom-left' | 'bottom-right'
+export type OverlayPickTone = StreamSide | 'gold'
 
 export interface OverlayTag {
     slot: StreamLineupSlot
-    label: string
     side: StreamSide
     corner: OverlayCorner
     userId: string | null
@@ -16,22 +17,39 @@ export interface OverlayTag {
 export interface OverlayTeamRow {
     side: StreamSide
     name: string
-    flags: SeriesFlag[]
+    longName: boolean
+    pips: SeriesFlag[]
     caps: number | null
 }
 
-export interface OverlayMap {
+export interface OverlayMapResult {
+    a: number
+    b: number
+    winner: StreamSide | null
+}
+
+export interface OverlayStripMap {
+    ordinal: number
+    number: number
     name: string
-    pickedBy: { side: StreamSide; team: string } | null
+    state: OverlayMapState
+    tone: OverlayPickTone
+    result: OverlayMapResult | null
+    showName: boolean
+    nameMaxPx: number | null
+}
+
+export interface OverlayStrip {
+    maps: OverlayStripMap[]
+    target: string | null
+    compact: boolean
 }
 
 export interface OverlayView {
     tags: OverlayTag[]
     teams: [OverlayTeamRow, OverlayTeamRow]
     capsSource: StreamScoreSource | null
-    mapLine: string
-    map: OverlayMap | null
-    footer: string
+    strip: OverlayStrip
 }
 
 const QUADRANTS: { slot: StreamLineupSlot; side: StreamSide; corner: OverlayCorner }[] = [
@@ -55,35 +73,85 @@ function nameTags(match: StreamMatch): OverlayTag[] {
     return QUADRANTS.flatMap(({ slot, side, corner }) => {
         const player = match.lineup[slot]
         if (!player || (player.id === null && player.display_name === null)) return []
-        return [{ slot, label: slot.toUpperCase(), side, corner, userId: player.id, name: player.display_name }]
+        return [{ slot, side, corner, userId: player.id, name: player.display_name }]
     })
 }
 
-function overlayMap(match: StreamMatch, ordinal: number | null): OverlayMap | null {
-    const map = match.maps.find(entry => entry.ordinal === ordinal)
-    if (!map) return null
-    const side = map.picked_by
-    return { name: displayMapName(map.map), pickedBy: side ? { side, team: teamName(match, side) } : null }
+function resultText(result: OverlayMapResult): string {
+    return `${result.a}–${result.b}`
 }
 
-function mapLine(match: StreamMatch, ordinal: number | null): string {
-    const parts = [ordinal === null ? null : `Map ${mapNumber(ordinal)} of ${match.best_of}`, match.caps_to_win === null ? null : `first to ${match.caps_to_win}`]
-    return parts.filter(Boolean).join(' · ')
+function textPx(text: string, maxPx: number | null = null): number {
+    const px = text.length * STRIP_ESTIMATE.charPx
+    return maxPx === null ? px : Math.min(px, maxPx)
+}
+
+function cellPx(map: OverlayStripMap): number {
+    const name = map.showName ? STRIP_ESTIMATE.gapPx + textPx(map.name, map.nameMaxPx) : 0
+    const result = map.result ? STRIP_ESTIMATE.gapPx + textPx(resultText(map.result)) + STRIP_ESTIMATE.resultPaddingPx : 0
+    return STRIP_ESTIMATE.cellPaddingPx + STRIP_ESTIMATE.badgePx + name + result
+}
+
+function bandPx(maps: OverlayStripMap[], target: string | null): number {
+    const chip = target === null ? 0 : STRIP_ESTIMATE.chipGapPx + STRIP_ESTIMATE.chipPaddingPx + textPx(target)
+    return 2 * BAND.paddingX + maps.reduce((sum, map) => sum + cellPx(map), 0) + chip
+}
+
+function stripMaps(match: StreamMatch): OverlayStripMap[] {
+    return [...match.maps]
+        .sort((left, right) => left.ordinal - right.ordinal)
+        .map(map => {
+            const score = match.score.maps.find(entry => entry.ordinal === map.ordinal)
+            const state: OverlayMapState = score?.decided ? 'played' : map.ordinal === match.score.current_map ? 'current' : 'upcoming'
+            const caps = score?.caps
+            const result = state === 'played' && caps && caps.a !== null && caps.b !== null ? { a: caps.a, b: caps.b, winner: score?.winner ?? null } : null
+            return {
+                ordinal: map.ordinal,
+                number: mapNumber(map.ordinal),
+                name: displayMapName(map.map),
+                state,
+                tone: map.picked_by ?? 'gold',
+                result,
+                showName: true,
+                nameMaxPx: MAP_NAME_MAX_PX[state],
+            }
+        })
+}
+
+function capUpcomingNames(maps: OverlayStripMap[], maxPx: number): OverlayStripMap[] {
+    return maps.map(map => (map.state === 'upcoming' ? { ...map, nameMaxPx: maxPx } : map))
+}
+
+function fitUpcomingNames(maps: OverlayStripMap[], target: string | null): OverlayStripMap[] {
+    for (let maxPx = MAP_NAME_MAX_PX.upcoming; maxPx >= UPCOMING_NAME_MIN_PX; maxPx -= STRIP_ESTIMATE.charPx) {
+        const capped = capUpcomingNames(maps, maxPx)
+        if (bandPx(capped, target) <= BAND.maxWidth) return capped
+    }
+    return maps.map(map => (map.state === 'upcoming' ? { ...map, showName: false } : map))
+}
+
+function mapStrip(match: StreamMatch): OverlayStrip {
+    const target = match.caps_to_win === null ? null : `FT${match.caps_to_win}`
+    const full = stripMaps(match)
+    if (bandPx(full, target) <= BAND.maxWidth) return { maps: full, target, compact: false }
+    const collapsed = full.map(map => (map.state === 'played' ? { ...map, showName: false } : map))
+    return { maps: fitUpcomingNames(collapsed, target), target, compact: true }
 }
 
 export function overlayView(match: StreamMatch | null): OverlayView | null {
     if (!match) return null
     const ordinal = shownMapOrdinal(match.score)
     const shown = match.score.maps.find(map => map.ordinal === ordinal)
-    const flags = seriesFlags(match)
-    const row = (side: StreamSide): OverlayTeamRow => ({ side, name: teamName(match, side), flags: flags[side], caps: shown?.caps[side] ?? null })
+    const pips = seriesFlags(match)
+    const row = (side: StreamSide): OverlayTeamRow => {
+        const name = teamName(match, side)
+        return { side, name, longName: name.length > LONG_TEAM_NAME_CHARS, pips: pips[side], caps: shown?.caps[side] ?? null }
+    }
 
     return {
         tags: nameTags(match),
         teams: [row('a'), row('b')],
         capsSource: shown?.source ?? null,
-        mapLine: mapLine(match, ordinal),
-        map: overlayMap(match, ordinal),
-        footer: `${stageLine(match)} · ${formatLabel(match)}`,
+        strip: mapStrip(match),
     }
 }

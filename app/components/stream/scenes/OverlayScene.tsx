@@ -2,7 +2,6 @@ import { useSceneMatch } from '../data/useStreamData'
 import { BlankFrame } from '../frame/IdleFrame'
 import { OverlayFrame } from '../frame/SceneFrame'
 import { OverlayHub } from './overlay/OverlayHub'
-import { OverlayMapPlate } from './overlay/OverlayMapPlate'
 import { OverlayNameTag } from './overlay/OverlayNameTag'
 import { overlayView } from './overlay/overlayView'
 
@@ -19,7 +18,6 @@ export default function OverlayScene() {
                         <OverlayNameTag key={tag.slot} tag={tag} />
                     ))}
                     <OverlayHub view={view} />
-                    <OverlayMapPlate view={view} />
                 </div>
             )}
         </OverlayFrame>

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
-import type { StreamHotState } from '../app/components/stream/data/streamHotState'
+import type { StreamHotState, StreamMapScore, StreamMatchMap, StreamTeam } from '../app/components/stream/data/streamHotState'
 import {
     idleHotState,
     streamHotState,
@@ -13,6 +13,7 @@ import {
     streamTeam,
     streamUserRef,
 } from '../app/components/stream/data/streamFixtures'
+import { BAND, SCORE_ROW } from '../app/components/stream/scenes/overlay/overlayLayout'
 import { openScene, settleScene } from './streamHarness'
 
 interface Box {
@@ -38,42 +39,45 @@ const TIMER_ZONES: Box[] = [
     [1260, 540],
 ].map(([x, y]) => ({ x, y, width: 360, height: 96 }))
 const SHADOW_PX = 40
-const PARTS = ['tag-a1', 'tag-a2', 'tag-b1', 'tag-b2', 'hub', 'map']
+const PARTS = ['tag-a1', 'tag-a2', 'tag-b1', 'tag-b2', 'hub']
 
-const HOP = streamTeam('a', {
-    name: 'Hop Theory',
+const HAWKS = streamTeam('a', {
+    name: 'Crimson Hawks',
     members: [streamMember('228152236587400001', 'Vexa', { captain: true }), streamMember('228152236587400002', 'Kodiak')],
 })
-const JUMP = streamTeam('b', {
-    name: 'Jumpstart Syndicate',
+const FROST = streamTeam('b', {
+    name: 'Frostbite',
     members: [streamMember('228152236587400003', 'Mirelle', { captain: true }), streamMember('228152236587400004', 'xX_Skyhopper_Xx')],
 })
-const MAPS = streamMaps(['CTF-BT-II-Diplopia-V4', 'CTF-BT-II-InventionCE2', 'CTF-BT-II-Fabricatorium', 'CTF-BT-II-FaithCB'], ['a', 'b', 'b', 'a'])
+const JUMP = streamTeam('b', { name: 'Jumpstart Syndicate', members: FROST.members })
+const MAPS = streamMaps(['CTF-BT-Maverick', 'CTF-BT-(Ultimate)Mandarin', 'CTF-BT-Letss-Go', 'CTF-BT-Skyfall'], ['a', 'b', 'b', null])
+const LONG_MAPS = streamMaps(['CTF-BT-II-Synchronize-vF2', 'CTF-BT-(Ultimate)Mandarin', 'CTF-BT-II-FuriumMineCE2', 'CTF-BT-Skyfall'], ['a', 'b', 'b', null])
 
-function liveState(fourth: [number, number], winner: 'a' | 'b' | null = null): StreamHotState {
-    const played = [streamMapScore(0, [2, 0], 'a'), streamMapScore(1, [1, 2], 'b'), streamMapScore(2, [2, 1], 'a')]
-    const current = winner ? streamMapScore(3, fourth, winner, { source: 'live' }) : streamMapScore(3, fourth)
-    const score = streamScore([...played, current], winner ? { current_map: null, winner, live_decided: true } : {})
+function liveState(maps: StreamMapScore[], options: { teamB?: StreamTeam; mapList?: StreamMatchMap[] } = {}): StreamHotState {
+    const teamB = options.teamB ?? FROST
+    const decided = maps.every(map => map.decided) || maps.filter(map => map.winner === 'a').length >= 3
+    const score = streamScore(maps, decided ? { current_map: null, winner: 'a', live_decided: true } : {})
     return streamHotState({
         reason: 'current',
         match: streamMatch({
             reason: 'current',
             status: 'in_progress',
             pick_ban_status: 'complete',
-            teams: { a: HOP, b: JUMP },
+            teams: { a: HAWKS, b: teamB },
             lineup: {
-                a1: streamUserRef(HOP.members[0]),
-                a2: streamUserRef(HOP.members[1]),
-                b1: streamUserRef(JUMP.members[0]),
-                b2: streamUserRef(JUMP.members[1]),
+                a1: streamUserRef(HAWKS.members[0]),
+                a2: streamUserRef(HAWKS.members[1]),
+                b1: streamUserRef(teamB.members[0]),
+                b2: streamUserRef(teamB.members[1]),
             },
-            maps: MAPS,
+            maps: options.mapList ?? MAPS,
             score,
         }),
     })
 }
 
-const LIVE = liveState([1, 1])
+const LIVE = liveState([streamMapScore(0, [2, 1], 'a'), streamMapScore(1, [1, 0]), streamMapScore(2), streamMapScore(3)])
+const LONG = liveState([streamMapScore(0, [2, 0], 'a'), streamMapScore(1, [1, 2], 'b'), streamMapScore(2, [0, 1]), streamMapScore(3)], { teamB: JUMP, mapList: LONG_MAPS })
 
 function grow(box: Box, by: number): Box {
     return { x: box.x - by, y: box.y - by, width: box.width + 2 * by, height: box.height + 2 * by }
@@ -144,8 +148,7 @@ function pngOf(dataUrl: string): Buffer {
     return Buffer.from(dataUrl.replace(/^data:image\/png;base64,/, ''), 'base64')
 }
 
-test('over the four cams the overlay shows the cams everywhere except its own elements, and keeps every timer zone clear', async ({ page }) => {
-    await openScene(page, 'overlay', { hotState: LIVE })
+async function expectClearOfTimers(page: Page): Promise<Painted> {
     await expect(page.locator('[data-overlay-part="hub"]')).toBeVisible()
 
     const parts = await overlayParts(page)
@@ -158,46 +161,101 @@ test('over the four cams the overlay shows the cams everywhere except its own el
     const painted = await paintOverCams(page, parts.map(entry => grow(entry.box, SHADOW_PX)))
     expect(painted.changedOutside).toBe(0)
     expect(painted.paintedInZones).toBe(0)
+    return painted
+}
+
+async function boxOf(page: Page, selector: string): Promise<Box> {
+    const box = await page.locator(selector).boundingBox()
+    if (!box) throw new Error(`${selector} has no box`)
+    return box
+}
+
+test('over the four cams the overlay shows the cams everywhere except its own elements, and keeps every timer zone clear', async ({ page }) => {
+    await openScene(page, 'overlay', { hotState: LIVE })
+
+    const painted = await expectClearOfTimers(page)
     expect(pngOf(painted.composite)).toMatchSnapshot('overlay-over-cams.png', { threshold: 0.2, maxDiffPixelRatio: 0.001 })
 })
 
-test('the overlay shows the lineup, the series flags, the current map caps, the map and the format', async ({ page }) => {
+test('with long team and map names the band stays within its width and the timer zones stay clear', async ({ page }) => {
+    await openScene(page, 'overlay', { hotState: LONG })
+
+    await expectClearOfTimers(page)
+    const strip = page.locator('[data-overlay-strip]')
+    await expect(strip).toHaveAttribute('data-compact', 'true')
+    expect((await boxOf(page, '[data-overlay-strip]')).width).toBeLessThanOrEqual(BAND.maxWidth)
+    await expect(strip.locator('[data-overlay-map="1"]')).toHaveText('12–0')
+    await expect(strip.locator('[data-overlay-map="2"]')).toHaveText('21–2')
+    await expect(strip.locator('[data-overlay-map="3"]')).toContainText('II-FuriumMineCE2')
+    await expect(strip.locator('[data-overlay-target]')).toBeVisible()
+})
+
+test('the score rows sit on either side of the seam, with the map strip centred on it', async ({ page }) => {
+    await openScene(page, 'overlay', { hotState: LIVE })
+    await settleScene(page)
+
+    const top = await boxOf(page, '[data-overlay-team="a"]')
+    const band = await boxOf(page, '[data-overlay-strip]')
+    const bottom = await boxOf(page, '[data-overlay-team="b"]')
+
+    expect([top.width, top.height, bottom.width, bottom.height]).toEqual([SCORE_ROW.width, SCORE_ROW.height, SCORE_ROW.width, SCORE_ROW.height])
+    for (const box of [top, band, bottom]) expect(Math.abs(box.x + box.width / 2 - CENTRE.x)).toBeLessThanOrEqual(1)
+    expect(Math.abs(band.y + band.height / 2 - CENTRE.y)).toBeLessThanOrEqual(1)
+    expect(top.y + top.height).toBeLessThanOrEqual(CENTRE.y)
+    expect(bottom.y).toBeGreaterThanOrEqual(CENTRE.y)
+})
+
+test('the overlay shows the lineup, the pips, the current map caps, the map strip and the caps target', async ({ page }) => {
     await openScene(page, 'overlay', { hotState: LIVE })
 
-    await expect(page.locator('[data-overlay-part="tag-a1"]')).toContainText('A1')
-    await expect(page.locator('[data-overlay-part="tag-a1"]')).toContainText('Vexa')
-    await expect(page.locator('[data-overlay-part="tag-a2"]')).toContainText('Kodiak')
-    await expect(page.locator('[data-overlay-part="tag-b1"]')).toContainText('Mirelle')
-    await expect(page.locator('[data-overlay-part="tag-b2"]')).toContainText('xX_Skyhopper_Xx')
+    await expect(page.locator('[data-overlay-part="tag-a1"]')).toHaveText('Vexa')
+    await expect(page.locator('[data-overlay-part="tag-a2"]')).toHaveText('Kodiak')
+    await expect(page.locator('[data-overlay-part="tag-b1"]')).toHaveText('Mirelle')
+    await expect(page.locator('[data-overlay-part="tag-b2"]')).toHaveText('xX_Skyhopper_Xx')
     await expect(page.locator('[data-overlay-part="tag-a1"] img')).toHaveAttribute('src', /\/users\/228152236587400001\/avatar/)
+    await expect(page.locator('[data-overlay-part="tag-a1"] img')).toHaveClass(/rounded-full/)
 
     const [top, bottom] = await page.locator('[data-overlay-team]').all()
     await expect(top).toHaveAttribute('data-overlay-team', 'a')
-    await expect(top).toContainText('Hop Theory')
-    await expect(bottom).toContainText('Jumpstart Syndicate')
-    await expect(top.getByRole('img', { name: '2 of 3 map wins' })).toBeVisible()
-    await expect(bottom.getByRole('img', { name: '1 of 3 map wins' })).toBeVisible()
+    await expect(top).toContainText('Crimson Hawks')
+    await expect(bottom).toContainText('Frostbite')
+    await expect(top.getByRole('img', { name: '1 of 3 maps won' })).toBeVisible()
+    await expect(bottom.getByRole('img', { name: '0 of 3 maps won' })).toBeVisible()
     await expect(page.locator('[data-overlay-caps="a"]')).toHaveText('1')
-    await expect(page.locator('[data-overlay-caps="b"]')).toHaveText('1')
+    await expect(page.locator('[data-overlay-caps="b"]')).toHaveText('0')
 
-    const hub = page.locator('[data-overlay-part="hub"]')
-    await expect(hub).toContainText('Map 4 of 4 · first to 2')
-    const map = page.locator('[data-overlay-part="map"]')
-    await expect(map).toContainText('II-FaithCB')
-    await expect(map).toContainText('Picked by Hop Theory')
-    await expect(map.getByText('Group Stage · Group B · Round 4 · Bo4 · first to 2', { exact: true })).toBeVisible()
+    const cells = page.locator('[data-overlay-map]')
+    await expect(cells).toHaveCount(4)
+    expect(await cells.evaluateAll(elements => elements.map(element => [element.getAttribute('data-map-state'), element.getAttribute('data-map-tone')]))).toEqual([
+        ['played', 'a'],
+        ['current', 'b'],
+        ['upcoming', 'b'],
+        ['upcoming', 'gold'],
+    ])
+    await expect(cells.nth(0).locator('[data-map-result]')).toHaveText('2–1')
+    await expect(cells.nth(1)).toHaveText('2(Ultimate)Mandarin')
+    await expect(cells.nth(3)).toHaveText('4Skyfall')
+    await expect(page.locator('[data-overlay-target]')).toHaveText('FT2')
+
+    const text = await page.locator('[data-stream-match]').innerText()
+    expect(text).not.toMatch(/\b[AB][12]?\b/)
+    expect(text).not.toContain('Group Stage')
+    expect(text).not.toContain('Picked by')
 })
 
 test('a completed team run shows on the next hot-state read, within seconds', async ({ page }) => {
     const api = await openScene(page, 'overlay', { hotState: LIVE })
     await expect(page.locator('[data-overlay-caps="a"]')).toHaveText('1')
 
-    api.setHotState(liveState([1, 2]))
-    await expect(page.locator('[data-overlay-caps="b"]')).toHaveText('2', { timeout: 4_000 })
-    await expect(page.locator('[data-overlay-team="b"]').getByRole('img', { name: '1 of 3 map wins' })).toBeVisible()
+    api.setHotState(liveState([streamMapScore(0, [2, 1], 'a'), streamMapScore(1, [1, 1]), streamMapScore(2), streamMapScore(3)]))
+    await expect(page.locator('[data-overlay-caps="b"]')).toHaveText('1', { timeout: 4_000 })
 
-    api.setHotState(liveState([2, 2]))
-    await expect(page.locator('[data-overlay-caps="a"]')).toHaveText('2', { timeout: 4_000 })
+    api.setHotState(liveState([streamMapScore(0, [2, 1], 'a'), streamMapScore(1, [2, 1], 'a', { source: 'live' }), streamMapScore(2), streamMapScore(3)]))
+    await expect(page.locator('[data-overlay-team="a"]').getByRole('img', { name: '2 of 3 maps won' })).toBeVisible({ timeout: 4_000 })
+    await expect(page.locator('[data-overlay-map="2"]')).toHaveAttribute('data-map-state', 'played')
+    await expect(page.locator('[data-overlay-map="2"] [data-map-result]')).toHaveText('2–1')
+    await expect(page.locator('[data-overlay-map="3"]')).toHaveAttribute('data-map-state', 'current')
+    await expect(page.locator('[data-overlay-caps="a"]')).toHaveText('0')
     await expect(page.locator('[data-overlay-part="hub"]')).toHaveAttribute('data-caps-source', 'live')
 })
 
@@ -257,8 +315,8 @@ test('the overlay never plays a sound, whatever the URL options say', async ({ p
     await page.mouse.click(960, 300)
     await page.keyboard.press('Space')
 
-    api.setHotState(liveState([2, 1], 'a'))
-    await expect(page.locator('[data-overlay-team="a"]').getByRole('img', { name: '3 of 3 map wins' })).toBeVisible({ timeout: 4_000 })
+    api.setHotState(liveState([streamMapScore(0, [2, 1], 'a'), streamMapScore(1, [2, 0], 'a'), streamMapScore(2, [2, 1], 'a', { source: 'live' }), streamMapScore(3)]))
+    await expect(page.locator('[data-overlay-team="a"]').getByRole('img', { name: '3 of 3 maps won' })).toBeVisible({ timeout: 4_000 })
     await page.waitForTimeout(500)
 
     const attempts = () => page.evaluate(() => (window as unknown as { soundAttempts: string[] }).soundAttempts)
