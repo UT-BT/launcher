@@ -1,7 +1,9 @@
-import { useEffect, useId, useState } from 'react'
+import { useId, useState } from 'react'
 import { ArrowDown, ArrowUp, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
+import { PlayerSearchInput } from '@/app/components/pages/teams/PlayerSearchInput'
+import type { PlayerListRow } from '@/app/utils/api'
 import { StreamCard, StreamLoading } from '../../StreamCard'
 import { useStreamTab } from '../../StreamTabContext'
 import {
@@ -11,43 +13,22 @@ import {
     addUserCaster,
     canAddCaster,
     casterPayload,
+    casterUserIds,
     castersFromDesk,
     moveCaster,
-    pickableVolunteers,
     removeCaster,
     type CasterEntry,
 } from './casterList'
-import { fetchCastingVolunteers, setMatchCasters, type CastingVolunteer } from './showActions'
-import { showErrorText, useShowWrite } from './useShowWrite'
+import { setMatchCasters } from './showActions'
+import { useShowWrite } from './useShowWrite'
 
 const TITLE = 'Casters'
-const DESCRIPTION = 'Named on the Caster Cam scene and in the credits. Pick a casting volunteer or type a name.'
+const DESCRIPTION = 'Named on the Caster Cam scene and in the credits. Look up a UTBT player, or type the name of a Non-UTBT Player.'
 
 const ACTION_SHAPE = 'h-9 px-3 rounded-md text-xs font-medium border transition-colors cursor-pointer disabled:cursor-default disabled:opacity-50 sm:h-8'
 const ACCENT_ACTION = 'bg-accent-500/15 border-accent-500/40 text-accent-200 hover:bg-accent-500/25 hover:border-accent-500/60'
 const ICON_ACTION = 'inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-md border border-hairline/10 bg-card/50 text-muted-foreground transition-colors hover:border-hairline/20 hover:text-foreground disabled:cursor-default disabled:opacity-40 sm:size-8'
 const FIELD_SHAPE = 'h-9 min-w-0 flex-1 rounded-md border border-hairline/10 bg-card/40 px-3 text-sm text-foreground outline-none transition-colors focus-visible:border-accent-500/60 disabled:opacity-60'
-
-interface VolunteerState {
-    volunteers: CastingVolunteer[]
-    error: string | null
-}
-
-function useCastingVolunteers(accessToken: string, slug: string): VolunteerState {
-    const [state, setState] = useState<VolunteerState>({ volunteers: [], error: null })
-
-    useEffect(() => {
-        const controller = new AbortController()
-        fetchCastingVolunteers(accessToken, slug, controller.signal)
-            .then(volunteers => setState({ volunteers, error: null }))
-            .catch(error => {
-                if (!controller.signal.aborted) setState({ volunteers: [], error: showErrorText(error) })
-            })
-        return () => controller.abort()
-    }, [accessToken, slug])
-
-    return state
-}
 
 function CasterRow({ entry, index, count, disabled, onMove, onRemove }: {
     entry: CasterEntry
@@ -82,10 +63,8 @@ function CasterRow({ entry, index, count, disabled, onMove, onRemove }: {
 export function CastersSection() {
     const { eventSlug, accessToken, desk } = useStreamTab()
     const { run, pending, error } = useShowWrite()
-    const { volunteers, error: volunteersError } = useCastingVolunteers(accessToken, eventSlug)
-    const selectId = useId()
+    const lookupId = useId()
     const nameId = useId()
-    const [chosen, setChosen] = useState('')
     const [typed, setTyped] = useState('')
 
     if (!desk) {
@@ -107,13 +86,11 @@ export function CastersSection() {
     }
 
     const entries = castersFromDesk(match.casters)
-    const pickable = pickableVolunteers(volunteers, entries)
     const full = !canAddCaster(entries)
     const save = (next: CasterEntry[]) => run(() => setMatchCasters(accessToken, eventSlug, match.id, casterPayload(next)))
 
-    const addVolunteer = async () => {
-        const volunteer = pickable.find(candidate => candidate.id === chosen)
-        if (volunteer && await save(addUserCaster(entries, volunteer.id, volunteer.display_name ?? ''))) setChosen('')
+    const addPlayer = (player: PlayerListRow) => {
+        void save(addUserCaster(entries, player.id, player.alias ?? ''))
     }
 
     const addTyped = async () => {
@@ -144,27 +121,15 @@ export function CastersSection() {
                 <p className="text-xs text-muted-foreground">Up to {CASTERS_MAX} casters. Remove one to add another.</p>
             ) : (
                 <div className="space-y-3">
-                    <div className="space-y-1.5">
-                        <label htmlFor={selectId} className="text-xs font-medium text-foreground">Casting volunteer</label>
-                        <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
-                            <select
-                                id={selectId}
-                                value={chosen}
-                                onChange={event => setChosen(event.target.value)}
-                                disabled={pending || pickable.length === 0}
-                                style={{ colorScheme: 'dark' }}
-                                className={FIELD_SHAPE}
-                            >
-                                <option value="">{pickable.length === 0 ? 'No casting volunteers to add' : 'Choose a volunteer'}</option>
-                                {pickable.map(volunteer => (
-                                    <option key={volunteer.id} value={volunteer.id}>{volunteer.display_name ?? volunteer.id}</option>
-                                ))}
-                            </select>
-                            <button type="button" disabled={pending || !chosen} onClick={() => void addVolunteer()} className={cn(ACTION_SHAPE, ACCENT_ACTION)}>
-                                Add volunteer
-                            </button>
-                        </div>
-                        {volunteersError && <p className="text-xs text-amber-300">Could not load the casting volunteers. {volunteersError}</p>}
+                    <div role="group" aria-labelledby={lookupId} className="space-y-1.5">
+                        <p id={lookupId} className="text-xs font-medium text-foreground">UTBT Player Lookup</p>
+                        <PlayerSearchInput
+                            accessToken={accessToken}
+                            onPick={addPlayer}
+                            excludeIds={casterUserIds(entries)}
+                            disabled={pending}
+                            placeholder="Search UTBT players by alias…"
+                        />
                     </div>
 
                     <form
@@ -174,7 +139,7 @@ export function CastersSection() {
                             if (typed.trim() && !pending) void addTyped()
                         }}
                     >
-                        <label htmlFor={nameId} className="text-xs font-medium text-foreground">Or type a name</label>
+                        <label htmlFor={nameId} className="text-xs font-medium text-foreground">Non-UTBT Player</label>
                         <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
                             <input
                                 id={nameId}

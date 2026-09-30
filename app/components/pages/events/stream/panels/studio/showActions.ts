@@ -1,8 +1,6 @@
 import { apiRequest } from '@/app/utils/api'
-import { streamDeskError, streamDeskPath, type StreamPerson } from '../../streamDesk'
+import { streamDeskError, streamDeskPath } from '../../streamDesk'
 import type { CasterPayloadEntry } from './casterList'
-
-export type CastingVolunteer = StreamPerson
 
 async function readData(res: Response): Promise<Record<string, unknown>> {
     if (!res.ok) throw await streamDeskError(res)
@@ -39,13 +37,4 @@ export async function setMatchCasters(accessToken: string, slug: string, matchId
         method: 'PUT',
         body: { casters },
     }))
-}
-
-export async function fetchCastingVolunteers(accessToken: string, slug: string, signal?: AbortSignal): Promise<CastingVolunteer[]> {
-    const data = await readData(await apiRequest(`/tournaments/${encodeURIComponent(slug)}/stream/casting-volunteers`, {
-        token: accessToken,
-        signal,
-    }))
-    if (!Array.isArray(data.volunteers)) throw new Error('Invalid response format from server')
-    return data.volunteers as CastingVolunteer[]
 }

@@ -6,9 +6,9 @@ import {
     addUserCaster,
     canAddCaster,
     casterPayload,
+    casterUserIds,
     castersFromDesk,
     moveCaster,
-    pickableVolunteers,
     removeCaster,
     type CasterEntry,
 } from './casterList'
@@ -32,11 +32,11 @@ describe('castersFromDesk', () => {
 })
 
 describe('addUserCaster', () => {
-    it('appends a volunteer', () => {
+    it('appends a player picked in the lookup', () => {
         expect(addUserCaster([GUEST], ANNA.userId!, 'Anna')).toEqual([GUEST, ANNA])
     })
 
-    it('ignores a volunteer who is already listed', () => {
+    it('ignores a player who is already listed', () => {
         const entries = [ANNA]
         expect(addUserCaster(entries, ANNA.userId!, 'Anna')).toBe(entries)
     })
@@ -93,14 +93,23 @@ describe('removeCaster and moveCaster', () => {
 })
 
 describe('casterPayload', () => {
-    it('sends a user id for volunteers and a name for free text', () => {
-        expect(casterPayload([ANNA, GUEST])).toEqual([{ user: '111111111111' }, { name: 'Guest' }])
+    it('sends a user id for UTBT players and a name for Non-UTBT players, in order', () => {
+        expect(casterPayload([ANNA, GUEST, BEN])).toEqual([{ user: '111111111111' }, { name: 'Guest' }, { user: '222222222222' }])
+    })
+
+    it('carries both kinds through a lookup add, a typed add and a reorder', () => {
+        const afterLookup = addUserCaster([], BEN.userId!, 'Ben')
+        const afterTyping = addNamedCaster(afterLookup, ' Guest ')
+        expect(casterPayload(moveCaster(afterTyping, 1, -1))).toEqual([{ name: 'Guest' }, { user: '222222222222' }])
     })
 })
 
-describe('pickableVolunteers', () => {
-    it('hides volunteers who are already casters', () => {
-        const volunteers = [{ id: ANNA.userId! }, { id: BEN.userId! }]
-        expect(pickableVolunteers(volunteers, [ANNA, GUEST])).toEqual([{ id: BEN.userId! }])
+describe('casterUserIds', () => {
+    it('lists the UTBT players already added, so the lookup can leave them out', () => {
+        expect(casterUserIds([ANNA, GUEST, BEN])).toEqual(new Set([ANNA.userId, BEN.userId]))
+    })
+
+    it('is empty with only Non-UTBT players', () => {
+        expect(casterUserIds([GUEST]).size).toBe(0)
     })
 })

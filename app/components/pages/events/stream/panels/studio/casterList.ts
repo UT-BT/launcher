@@ -49,7 +49,6 @@ export function casterPayload(entries: CasterEntry[]): CasterPayloadEntry[] {
     return entries.map(entry => (entry.userId !== null ? { user: entry.userId } : { name: entry.name }))
 }
 
-export function pickableVolunteers<T extends { id: string }>(volunteers: T[], entries: CasterEntry[]): T[] {
-    const taken = new Set(entries.map(entry => entry.userId))
-    return volunteers.filter(volunteer => !taken.has(volunteer.id))
+export function casterUserIds(entries: CasterEntry[]): Set<string> {
+    return new Set(entries.flatMap(entry => (entry.userId !== null ? [entry.userId] : [])))
 }

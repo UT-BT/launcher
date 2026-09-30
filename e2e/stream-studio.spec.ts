@@ -6,6 +6,7 @@ const SLUG = 'show-cup'
 const VIEWER = { id: '555555555555', alias: 'Rin' }
 const ANNA = { id: '333333333333', display_name: 'Anna Announces', avatar: '' }
 const BEN = { id: '444444444444', display_name: 'Ben Booms', avatar: '' }
+const MEMBERS = [ANNA, BEN]
 
 const EVENT = {
     id: 'event-1',
@@ -42,12 +43,14 @@ interface Server {
     hasMatch: boolean
     failNextWrite: boolean
     writes: { method: string; path: string; body: unknown }[]
+    playerSearches: string[]
+    volunteerReads: number
 }
 
 function casterView(caster: Caster) {
     if (caster.user) {
-        const volunteer = [ANNA, BEN].find(person => person.id === caster.user)
-        return { id: caster.user, display_name: volunteer?.display_name ?? null, avatar: '' }
+        const member = MEMBERS.find(person => person.id === caster.user)
+        return { id: caster.user, display_name: member?.display_name ?? null, avatar: '' }
     }
     return { id: null, display_name: caster.name, avatar: null }
 }
@@ -66,7 +69,9 @@ function deskPayload(streamerId: string, server: Server) {
 }
 
 async function mockApi(page: Page): Promise<Server> {
-    const server: Server = { brb: null, webcam: false, casters: [], hasMatch: true, failNextWrite: false, writes: [] }
+    const server: Server = {
+        brb: null, webcam: false, casters: [], hasMatch: true, failNextWrite: false, writes: [], playerSearches: [], volunteerReads: 0,
+    }
 
     await page.addInitScript(() => {
         localStorage.setItem('utbt:analyticsConsent:v1', 'denied')
@@ -119,7 +124,17 @@ async function mockApi(page: Page): Promise<Server> {
         }
 
         if (path === `/tournaments/${SLUG}/stream/casting-volunteers`) {
-            await route.fulfill({ json: { success: true, data: { volunteers: [ANNA, BEN] } } })
+            server.volunteerReads += 1
+            await route.fulfill({ status: 404, json: { success: false, error: 'Not found' } })
+            return
+        }
+        if (path === '/v2/players') {
+            const search = (url.searchParams.get('search') ?? '').toLowerCase()
+            server.playerSearches.push(search)
+            const rows = MEMBERS
+                .filter(member => member.display_name.toLowerCase().includes(search))
+                .map(member => ({ id: member.id, alias: member.display_name, active_title: null }))
+            await route.fulfill({ json: { success: true, data: rows } })
             return
         }
         if (path === '/users/me') {
@@ -183,6 +198,11 @@ async function openStudio(page: Page) {
 const brb = (page: Page) => page.getByRole('region', { name: 'BRB message' })
 const casters = (page: Page) => page.getByRole('region', { name: 'Casters' })
 const webcam = (page: Page) => page.getByRole('region', { name: 'Webcam frame' })
+const lookupGroup = (page: Page) => casters(page).getByRole('group', { name: 'UTBT Player Lookup' })
+
+async function searchLookup(page: Page, search: string) {
+    await lookupGroup(page).getByRole('textbox').fill(search)
+}
 
 test('the BRB message shows its current value, saves trimmed, and clears', async ({ page }) => {
     const server = await mockApi(page)
@@ -233,32 +253,42 @@ test('the webcam toggle writes and reflects the server value', async ({ page }) 
     expect(server.writes[1].body).toEqual({ enabled: false })
 })
 
-test('casters can be picked from the volunteers or typed, then reordered and removed', async ({ page }) => {
+test('casters come from the UTBT Player Lookup or a Non-UTBT Player name, then reorder and remove', async ({ page }) => {
     const server = await mockApi(page)
     await openStudio(page)
     const section = casters(page)
+    const rows = section.getByRole('list', { name: 'Casters' }).getByRole('listitem')
 
     await expect(section.getByText('No casters named for this match.')).toBeVisible()
-    await section.getByLabel('Casting volunteer').selectOption(ANNA.id)
-    await section.getByRole('button', { name: 'Add volunteer' }).click()
-    await expect(section.getByRole('list', { name: 'Casters' }).getByText(ANNA.display_name)).toBeVisible()
+    await searchLookup(page, 'anna')
+    await lookupGroup(page).getByRole('button', { name: ANNA.display_name }).click()
+    await expect(rows).toHaveCount(1)
+    await expect(rows.nth(0)).toContainText(ANNA.display_name)
     expect(server.writes[0]).toEqual({ method: 'PUT', path: `/tournaments/${SLUG}/stream/matches/m1/casters`, body: { casters: [{ user: ANNA.id }] } })
-    await expect(section.getByLabel('Casting volunteer').locator('option', { hasText: ANNA.display_name })).toHaveCount(0)
+    expect(server.playerSearches).toContain('anna')
 
-    await section.getByLabel('Or type a name').fill('  Guest Caster ')
+    await section.getByLabel('Non-UTBT Player').fill('  Guest Caster ')
     await section.getByRole('button', { name: 'Add name' }).click()
-    const rows = section.getByRole('list', { name: 'Casters' }).getByRole('listitem')
     await expect(rows).toHaveCount(2)
     await expect(rows.nth(1)).toContainText('Guest Caster')
+    await expect(section.getByLabel('Non-UTBT Player')).toHaveValue('')
     expect(server.writes[1].body).toEqual({ casters: [{ user: ANNA.id }, { name: 'Guest Caster' }] })
+
+    await searchLookup(page, 'an')
+    await expect(lookupGroup(page).getByText('No players found.')).toBeVisible()
+    await searchLookup(page, 'ben')
+    await lookupGroup(page).getByRole('button', { name: BEN.display_name }).click()
+    await expect(rows).toHaveCount(3)
+    expect(server.writes[2].body).toEqual({ casters: [{ user: ANNA.id }, { name: 'Guest Caster' }, { user: BEN.id }] })
 
     await section.getByRole('button', { name: 'Move Guest Caster up' }).click()
     await expect(rows.nth(0)).toContainText('Guest Caster')
-    expect(server.writes[2].body).toEqual({ casters: [{ name: 'Guest Caster' }, { user: ANNA.id }] })
+    expect(server.writes[3].body).toEqual({ casters: [{ name: 'Guest Caster' }, { user: ANNA.id }, { user: BEN.id }] })
 
     await section.getByRole('button', { name: `Remove ${ANNA.display_name}` }).click()
-    await expect(rows).toHaveCount(1)
-    expect(server.writes[3].body).toEqual({ casters: [{ name: 'Guest Caster' }] })
+    await expect(rows).toHaveCount(2)
+    expect(server.writes[4].body).toEqual({ casters: [{ name: 'Guest Caster' }, { user: BEN.id }] })
+    expect(server.volunteerReads).toBe(0)
 })
 
 test('the caster list stops at the cap', async ({ page }) => {
@@ -267,7 +297,8 @@ test('the caster list stops at the cap', async ({ page }) => {
     await openStudio(page)
 
     await expect(casters(page).getByText(/Up to 4 casters/)).toBeVisible()
-    await expect(casters(page).getByLabel('Or type a name')).toHaveCount(0)
+    await expect(casters(page).getByLabel('Non-UTBT Player')).toHaveCount(0)
+    await expect(lookupGroup(page)).toHaveCount(0)
 })
 
 test('casters wait for a match on the scenes', async ({ page }) => {
@@ -300,6 +331,11 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 1920, height: 1080
 
         await expect(casters(page).getByRole('list', { name: 'Casters' }).getByRole('listitem')).toHaveCount(2)
         expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1)
+
+        await searchLookup(page, 'ben')
+        await expect(lookupGroup(page).getByRole('button', { name: BEN.display_name })).toBeVisible()
+        expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1)
+        await expect(casters(page).getByLabel('Non-UTBT Player')).toBeVisible()
 
         for (const button of [
             casters(page).getByRole('button', { name: `Remove ${ANNA.display_name}` }),
