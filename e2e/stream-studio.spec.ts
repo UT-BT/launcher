@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { horizontalOverflow } from './layout'
+import { openStreamPanel } from './streamPanels'
 
 const SLUG = 'show-cup'
 const VIEWER = { id: '555555555555', alias: 'Rin' }
@@ -173,9 +174,9 @@ async function mockApi(page: Page): Promise<Server> {
     return server
 }
 
-async function openShow(page: Page) {
+async function openStudio(page: Page) {
     await page.goto(`/events/${SLUG}?tab=stream`)
-    await page.getByRole('navigation', { name: 'Stream panels' }).getByRole('button', { name: 'Show' }).click()
+    await openStreamPanel(page, 'Studio')
     await expect(page.getByRole('region', { name: 'BRB message' })).toBeVisible()
 }
 
@@ -186,7 +187,7 @@ const webcam = (page: Page) => page.getByRole('region', { name: 'Webcam frame' }
 test('the BRB message shows its current value, saves trimmed, and clears', async ({ page }) => {
     const server = await mockApi(page)
     server.brb = 'Back soon'
-    await openShow(page)
+    await openStudio(page)
 
     const field = brb(page).getByLabel('Message')
     await expect(field).toHaveValue('Back soon')
@@ -206,7 +207,7 @@ test('the BRB message shows its current value, saves trimmed, and clears', async
 
 test('a rejected BRB message shows the error and keeps what was typed', async ({ page }) => {
     const server = await mockApi(page)
-    await openShow(page)
+    await openStudio(page)
     server.failNextWrite = true
 
     await brb(page).getByLabel('Message').fill('Too long')
@@ -219,7 +220,7 @@ test('a rejected BRB message shows the error and keeps what was typed', async ({
 
 test('the webcam toggle writes and reflects the server value', async ({ page }) => {
     const server = await mockApi(page)
-    await openShow(page)
+    await openStudio(page)
 
     const toggle = webcam(page).getByRole('switch', { name: 'Show a webcam frame' })
     await expect(toggle).toHaveAttribute('aria-checked', 'false')
@@ -234,7 +235,7 @@ test('the webcam toggle writes and reflects the server value', async ({ page }) 
 
 test('casters can be picked from the volunteers or typed, then reordered and removed', async ({ page }) => {
     const server = await mockApi(page)
-    await openShow(page)
+    await openStudio(page)
     const section = casters(page)
 
     await expect(section.getByText('No casters named for this match.')).toBeVisible()
@@ -263,7 +264,7 @@ test('casters can be picked from the volunteers or typed, then reordered and rem
 test('the caster list stops at the cap', async ({ page }) => {
     const server = await mockApi(page)
     server.casters = [1, 2, 3, 4].map(index => ({ user: null, name: `Guest ${index}` }))
-    await openShow(page)
+    await openStudio(page)
 
     await expect(casters(page).getByText(/Up to 4 casters/)).toBeVisible()
     await expect(casters(page).getByLabel('Or type a name')).toHaveCount(0)
@@ -272,7 +273,7 @@ test('the caster list stops at the cap', async ({ page }) => {
 test('casters wait for a match on the scenes', async ({ page }) => {
     const server = await mockApi(page)
     server.hasMatch = false
-    await openShow(page)
+    await openStudio(page)
 
     await expect(casters(page).getByText(/Casters are set per match/)).toBeVisible()
     await expect(casters(page).getByRole('button', { name: 'Add name' })).toHaveCount(0)
@@ -280,7 +281,7 @@ test('casters wait for a match on the scenes', async ({ page }) => {
 
 test('a change made elsewhere shows within about 2 s', async ({ page }) => {
     const server = await mockApi(page)
-    await openShow(page)
+    await openStudio(page)
 
     server.brb = 'Set from another browser'
     server.webcam = true
@@ -295,7 +296,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 1920, height: 1080
         const server = await mockApi(page)
         server.brb = 'A long pause message that keeps going so the field has to cope with plenty of text in it'
         server.casters = [{ user: ANNA.id, name: null }, { user: null, name: 'A guest caster with a rather long name' }]
-        await openShow(page)
+        await openStudio(page)
 
         await expect(casters(page).getByRole('list', { name: 'Casters' }).getByRole('listitem')).toHaveCount(2)
         expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1)

@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { STREAM_PANELS } from './streamPanels'
+import { STREAM_PANELS, initialStreamPanel } from './streamPanels'
 import { MATCH_SECTIONS } from './panels/match/matchSections'
 
 const APP_ROOT = resolve(__dirname, '../../../..')
@@ -23,9 +23,9 @@ function staticImportTargets(file: string): string[] {
 }
 
 const LAZY_MODULES = [
-    'panels/MatchPanel', 'panels/ShowPanel', 'panels/ChannelPanel', 'panels/ScenesPanel',
-    'panels/KitPanel', 'panels/GuidePanel', 'panels/CamsPanel', 'panels/CamTool',
-    'panels/match/CurrentMatchSection', 'panels/match/LineupSection', 'panels/match/ScoreSection',
+    'panels/MatchPanel', 'panels/CamsPanel', 'panels/ScorePanel', 'panels/StudioPanel',
+    'panels/SetupPanel', 'panels/GuidePanel', 'panels/CamTool',
+    'panels/match/CurrentMatchSection', 'panels/match/LineupSection', 'panels/channel/StreamingOnSection',
     'panels/match/CountdownSection', 'StreamTab',
 ]
 
@@ -33,12 +33,22 @@ describe('Stream tab panels', () => {
     it('lists every panel in the order the tab shows them', () => {
         expect(STREAM_PANELS.map(panel => [panel.id, panel.label])).toEqual([
             ['match', 'Match'],
-            ['show', 'Show'],
-            ['channel', 'Channel'],
-            ['scenes', 'Scenes'],
-            ['kit', 'Kit'],
-            ['guide', 'Guide'],
             ['cams', 'Cams'],
+            ['score', 'Score'],
+            ['studio', 'Studio'],
+            ['setup', 'Setup'],
+            ['guide', 'Guide'],
+        ])
+    })
+
+    it('puts the match-night panels first and the one-time setup after them', () => {
+        expect(STREAM_PANELS.map(panel => [panel.id, panel.group])).toEqual([
+            ['match', 'live'],
+            ['cams', 'live'],
+            ['score', 'live'],
+            ['studio', 'live'],
+            ['setup', 'setup'],
+            ['guide', 'setup'],
         ])
     })
 
@@ -46,7 +56,7 @@ describe('Stream tab panels', () => {
         expect(MATCH_SECTIONS.map(section => [section.id, section.label])).toEqual([
             ['current', 'Current match'],
             ['lineup', 'Lineup'],
-            ['score', 'Score'],
+            ['streaming-on', 'Streaming on'],
             ['countdown', 'Countdown'],
         ])
     })
@@ -66,5 +76,37 @@ describe('Stream tab panels', () => {
             .map(target => `${file} -> ${target}`))
 
         expect(offenders).toEqual([])
+    })
+})
+
+describe('the panel the Stream tab opens on', () => {
+    it('opens Setup while the streamer has never downloaded a kit', () => {
+        expect(initialStreamPanel(null, 'none')).toBe('setup')
+    })
+
+    it('opens Match once the streamer has a kit', () => {
+        expect(initialStreamPanel(null, 'downloaded')).toBe('match')
+    })
+
+    it('opens Match when the kit state could not be read', () => {
+        expect(initialStreamPanel(null, 'unknown')).toBe('match')
+    })
+
+    it('waits for the kit state instead of guessing', () => {
+        expect(initialStreamPanel(null, 'loading')).toBeNull()
+    })
+
+    it('keeps a remembered choice over the kit rule, even while the kit state loads', () => {
+        expect(initialStreamPanel('guide', 'none')).toBe('guide')
+        expect(initialStreamPanel('score', 'downloaded')).toBe('score')
+        expect(initialStreamPanel('cams', 'loading')).toBe('cams')
+    })
+
+    it('falls back to the kit rule for panels that no longer exist', () => {
+        for (const old of ['show', 'channel', 'kit', 'scenes']) {
+            expect(initialStreamPanel(old, 'none')).toBe('setup')
+            expect(initialStreamPanel(old, 'downloaded')).toBe('match')
+            expect(initialStreamPanel(old, 'loading')).toBeNull()
+        }
     })
 })

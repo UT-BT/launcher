@@ -7,7 +7,7 @@ const TWITCH_HOSTS = new Set(['twitch.tv', 'www.twitch.tv', 'm.twitch.tv'])
 
 export const TWITCH_PROBLEM = 'Use a Twitch login (4 to 25 letters, digits or underscores), twitch.tv/<login> or a full twitch.tv link.'
 export const OTHER_URL_PROBLEM = `Enter a link starting with http:// or https:// (at most ${OTHER_URL_MAX_LENGTH} characters).`
-export const NO_CHANNEL_HINT = 'Set your Twitch channel below to use this.'
+export const NO_CHANNEL_HINT = 'Set your Twitch channel on the Setup tab to use this.'
 
 function twitchLoginOf(text: string): string | null {
     if (TWITCH_LOGIN.test(text)) return text

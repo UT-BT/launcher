@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { horizontalOverflow } from './layout'
+import { openStreamPanel } from './streamPanels'
 
 const SLUG = 'desk-cup'
 const VIEWER = { id: '555555555555', alias: 'Rin' }
@@ -201,6 +202,7 @@ function assignedRow(page: Page, title: string) {
 test('a streamer sees their assigned matches, what is on screen and why', async ({ page }) => {
     await mockApi(page, { is_streamer: true })
     await page.goto(`/events/${SLUG}?tab=stream`)
+    await openStreamPanel(page, 'Match')
 
     const current = section(page)
     await expect(current.getByText('On your scenes now')).toBeVisible()
@@ -223,6 +225,7 @@ test('a streamer sees their assigned matches, what is on screen and why', async 
 test('Set current and Next match write, then show the change straight away', async ({ page }) => {
     const server = await mockApi(page, { is_streamer: true })
     await page.goto(`/events/${SLUG}?tab=stream`)
+    await openStreamPanel(page, 'Match')
     const current = section(page)
     await expect(current.getByTestId('current-match-reason')).toHaveText(/until you move on/)
 
@@ -246,6 +249,7 @@ test('Next match stays disabled until the read after the write lands, so a quick
     const server = await mockApi(page, { is_streamer: true })
     server.afterNext = { currentId: 'm2', reason: 'current', onScreenId: 'm2', nextId: 'm3' }
     await page.goto(`/events/${SLUG}?tab=stream`)
+    await openStreamPanel(page, 'Match')
     const current = section(page)
     const next = current.getByRole('button', { name: 'Next match' })
     await expect(current.getByTestId('current-match-reason')).toHaveText(/until you move on/)
@@ -269,6 +273,7 @@ test('Next match stays disabled until the read after the write lands, so a quick
 test('a change made from another browser shows within about 2 s', async ({ page }) => {
     const server = await mockApi(page, { is_streamer: true })
     await page.goto(`/events/${SLUG}?tab=stream`)
+    await openStreamPanel(page, 'Match')
     const current = section(page)
     await expect(current.getByTestId('current-match-reason')).toHaveText(/until you move on/)
 
@@ -284,6 +289,7 @@ test('a manager operating as a streamer reads and writes that streamer\'s desk',
 
     await page.getByRole('button', { name: 'Choose a streamer' }).click()
     await page.getByRole('menuitemradio').filter({ hasText: 'Bob Broadcasts' }).click()
+    await openStreamPanel(page, 'Match')
 
     await expect(section(page).getByRole('listitem')).toHaveCount(3)
     expect(new Set(server.reads)).toEqual(new Set([BOB.id]))
@@ -298,6 +304,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 1920, height: 1080
         await page.setViewportSize(viewport)
         await mockApi(page, { is_streamer: true })
         await page.goto(`/events/${SLUG}?tab=stream`)
+        await openStreamPanel(page, 'Match')
 
         await expect(section(page).getByRole('listitem')).toHaveCount(3)
         await expect(section(page).getByRole('button', { name: 'Next match' })).toBeVisible()

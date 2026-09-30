@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { horizontalOverflow } from './layout'
+import { openStreamPanel } from './streamPanels'
 
 const SLUG = 'lineup-cup'
 const VIEWER = { id: '555555555555555555', alias: 'Rin' }
@@ -260,6 +261,7 @@ async function seatName(page: Page, teamName: string, seat: 'left' | 'right') {
 test('shows the default lineup, the bigger roster to choose from and nothing to choose for a two-player roster', async ({ page }) => {
     await mockApi(page)
     await page.goto(`/events/${SLUG}?tab=stream`)
+    await openStreamPanel(page, 'Match')
 
     const tide = teamCard(page, 'Crimson Tide')
     await expect(await seatName(page, 'Crimson Tide', 'left')).toContainText(A_CAPTAIN.display_name)
@@ -283,6 +285,7 @@ test('an empty lineup takes the players found in game when exactly two per side 
         ],
     })
     await page.goto(`/events/${SLUG}?tab=stream`)
+    await openStreamPanel(page, 'Match')
 
     await expect.poll(() => server.writes.length).toBe(1)
     expect(server.writes[0]).toEqual({ a1: A_CAPTAIN.id, a2: A_BENCH.id, b1: B_CAPTAIN.id, b2: B_MATE.id, only_if_empty: true })
@@ -300,6 +303,7 @@ test('a lineup already set is never auto-applied, and the suggestion applies on 
         gameServers: [gameServer('1', 'BunnyTrack Europe Server #1', [A_MATE.id, A_BENCH.id, B_CAPTAIN.id, B_MATE.id])],
     })
     await page.goto(`/events/${SLUG}?tab=stream`)
+    await openStreamPanel(page, 'Match')
 
     const suggestion = section(page).getByRole('list', { name: 'Suggested lineup' })
     await expect(suggestion.getByRole('listitem')).toHaveCount(1)
@@ -319,6 +323,7 @@ test('three members found on a side gives no suggestion for that side and no aut
         gameServers: [gameServer('1', 'BunnyTrack Europe Server #1', [A_CAPTAIN.id, A_MATE.id, A_BENCH.id, B_CAPTAIN.id, B_MATE.id])],
     })
     await page.goto(`/events/${SLUG}?tab=stream`)
+    await openStreamPanel(page, 'Match')
 
     await expect(section(page).getByTestId('lineup-detection')).toContainText('Crimson Tide: 3 found in game, so choose the two players by hand.')
     await page.waitForTimeout(500)
@@ -328,6 +333,7 @@ test('three members found on a side gives no suggestion for that side and no aut
 test('swap works for each team and a roster pick pins both slots', async ({ page }) => {
     const server = await mockApi(page)
     await page.goto(`/events/${SLUG}?tab=stream`)
+    await openStreamPanel(page, 'Match')
 
     await teamCard(page, 'Crimson Tide').getByRole('button', { name: 'Swap Crimson Tide left and right' }).click()
     await expect(await seatName(page, 'Crimson Tide', 'left')).toContainText(A_MATE.display_name)
@@ -352,6 +358,7 @@ test('going back to the default lineup is not overridden by the players found in
         gameServers: [gameServer('1', 'BunnyTrack Europe Server #1', [A_CAPTAIN.id, A_BENCH.id, B_CAPTAIN.id, B_MATE.id])],
     })
     await page.goto(`/events/${SLUG}?tab=stream`)
+    await openStreamPanel(page, 'Match')
 
     await expect(section(page).getByRole('button', { name: 'Apply suggestion' })).toBeVisible()
     await section(page).getByRole('button', { name: 'Use the default lineup' }).click()
@@ -371,6 +378,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 1920, height: 1080
             gameServers: [gameServer('1', 'BunnyTrack Europe Server #1', [A_CAPTAIN.id, A_BENCH.id, B_CAPTAIN.id])],
         })
         await page.goto(`/events/${SLUG}?tab=stream`)
+        await openStreamPanel(page, 'Match')
 
         await expect(section(page).getByRole('button', { name: 'Apply suggestion' })).toBeVisible()
         await expect(teamCard(page, 'Crimson Tide').getByRole('listitem')).toHaveCount(3)

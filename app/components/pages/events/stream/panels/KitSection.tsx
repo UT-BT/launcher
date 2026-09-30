@@ -19,7 +19,7 @@ type DownloadState =
 
 const REIMPORT_STEPS = 'In OBS, choose Scene Collection > Import for UTBT-StreamKit-Scenes.json, and Profile > Import for the UTBT-StreamKit-Profile folder.'
 
-export function KitPanel() {
+export function KitSection() {
     const { eventSlug, streamerId, accessToken } = useStreamTab()
     const { capabilities } = usePlatform()
     const folderInputId = useId()

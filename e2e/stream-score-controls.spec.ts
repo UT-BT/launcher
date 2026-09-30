@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { horizontalOverflow } from './layout'
+import { openStreamPanel } from './streamPanels'
 
 const SLUG = 'score-cup'
 const VIEWER = { id: '555555555555', alias: 'Rin' }
@@ -265,9 +266,10 @@ function caps(page: Page, team: string, map: number) {
     return scoreSection(page).getByRole('status', { name: `${team} caps on map ${map}` })
 }
 
-async function openStreamTab(page: Page) {
+async function openStreamTab(page: Page, panel: 'Score' | 'Match' = 'Score') {
     await page.goto(`/events/${SLUG}?tab=stream`)
-    await expect(caps(page, 'Crimson Tide', 1)).toHaveText('1')
+    await openStreamPanel(page, panel)
+    if (panel === 'Score') await expect(caps(page, 'Crimson Tide', 1)).toHaveText('1')
 }
 
 test('the score section lists each map with both teams, their caps and the source', async ({ page }) => {
@@ -338,7 +340,7 @@ test('Match live records the time and can be cleared', async ({ page }) => {
 
 test('the countdown moves by +N minutes on the current target, to a picked time, and back', async ({ page }) => {
     const server = await mockApi(page)
-    await openStreamTab(page)
+    await openStreamTab(page, 'Match')
     const countdown = countdownSection(page)
     const target = countdown.getByTestId('countdown-target')
     await expect(target).toHaveText(/20:00 UTC/)
@@ -367,14 +369,16 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 1920, height: 1080
         await mockApi(page)
         await openStreamTab(page)
 
-        await expect(countdownSection(page).getByRole('button', { name: 'Set countdown' })).toBeVisible()
         expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1)
-
         for (const name of ['Add a cap to Azure Wave on map 1', 'Remove a cap from Crimson Tide on map 1']) {
             const box = await scoreSection(page).getByRole('button', { name }).boundingBox()
             expect(box?.height ?? 0).toBeGreaterThanOrEqual(32)
             expect(box?.width ?? 0).toBeGreaterThanOrEqual(32)
         }
+
+        await openStreamPanel(page, 'Match')
+        await expect(countdownSection(page).getByRole('button', { name: 'Set countdown' })).toBeVisible()
+        expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1)
         const plus = await countdownSection(page).getByRole('button', { name: 'Move the countdown 5 minutes later' }).boundingBox()
         expect(plus?.height ?? 0).toBeGreaterThanOrEqual(32)
     })

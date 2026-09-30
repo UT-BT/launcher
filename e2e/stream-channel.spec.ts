@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { horizontalOverflow } from './layout'
+import { openStreamPanel } from './streamPanels'
 
 const SLUG = 'channel-cup'
 const VIEWER = { id: '555555555555', alias: 'Rin' }
@@ -158,9 +159,9 @@ async function mockApi(page: Page, overrides: Partial<Server> = {}): Promise<Ser
     return server
 }
 
-async function openChannel(page: Page) {
+async function openChannel(page: Page, panel: 'Match' | 'Setup' = 'Match') {
     await page.goto(`/events/${SLUG}?tab=stream`)
-    await page.getByRole('button', { name: 'Channel', exact: true }).click()
+    await openStreamPanel(page, panel)
     return {
         streaming: page.getByRole('region', { name: 'Streaming on' }),
         own: page.getByRole('region', { name: 'Own Twitch channel' }),
@@ -202,7 +203,7 @@ test('My channel is disabled with a hint until a Twitch channel is set, and a se
     const { streaming } = await openChannel(page)
 
     await expect(streaming.getByRole('button', { name: 'My channel' })).toBeDisabled()
-    await expect(streaming.getByText('Set your Twitch channel below to use this.')).toBeVisible()
+    await expect(streaming.getByText('Set your Twitch channel on the Setup tab to use this.')).toBeVisible()
 
     server.channelFailure = { code: 'invalid_url', error: 'Field \'url\' must be an http or https URL.' }
     await streaming.getByRole('button', { name: 'UTBT channel' }).click()
@@ -211,7 +212,7 @@ test('My channel is disabled with a hint until a Twitch channel is set, and a se
 
 test('the own Twitch channel field normalises on save, rejects bad input and clears', async ({ page }) => {
     const server = await mockApi(page, { channel: null })
-    const { streaming, own } = await openChannel(page)
+    const { streaming, own } = await openChannel(page, 'Setup')
     const field = own.getByLabel('Twitch channel')
 
     await field.fill('bad')
@@ -222,8 +223,10 @@ test('the own Twitch channel field normalises on save, rejects bad input and cle
     await field.fill('https://www.twitch.tv/Rin_Plays/')
     await own.getByRole('button', { name: 'Save' }).click()
     await expect(field).toHaveValue('https://twitch.tv/rin_plays')
-    await expect(streaming.getByRole('button', { name: 'My channel' })).toBeEnabled()
     expect(server.twitchWrites).toEqual([{ twitch: 'https://twitch.tv/rin_plays' }])
+    await openStreamPanel(page, 'Match')
+    await expect(streaming.getByRole('button', { name: 'My channel' })).toBeEnabled()
+    await openStreamPanel(page, 'Setup')
 
     await own.getByRole('button', { name: 'Clear' }).click()
     await expect(field).toHaveValue('')
@@ -237,6 +240,7 @@ test('without a current match the streaming choice explains itself and the own c
 
     await expect(streaming.getByText('No match is on your scenes right now.')).toBeVisible()
     await expect(streaming.getByRole('button', { name: 'UTBT channel' })).toHaveCount(0)
+    await openStreamPanel(page, 'Setup')
     await expect(own.getByLabel('Twitch channel')).toHaveValue('https://twitch.tv/rin_plays')
 })
 
@@ -248,10 +252,13 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 1920, height: 1080
 
         await streaming.getByRole('button', { name: 'Other URL' }).click()
         await expect(streaming.getByLabel('Stream link')).toBeVisible()
-        await expect(own.getByLabel('Twitch channel')).toBeVisible()
         expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1)
 
         const box = await streaming.getByRole('button', { name: 'UTBT channel' }).boundingBox()
         expect(box?.height ?? 0).toBeGreaterThanOrEqual(32)
+
+        await openStreamPanel(page, 'Setup')
+        await expect(own.getByLabel('Twitch channel')).toBeVisible()
+        expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1)
     })
 }

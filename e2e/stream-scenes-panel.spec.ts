@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { horizontalOverflow } from './layout'
+import { openStreamPanel } from './streamPanels'
 
 const SLUG = 'stream-cup'
 const STREAMER_ID = '555555555555'
@@ -82,8 +83,9 @@ async function openScenes(page: Page) {
     })
 
     await page.goto(`/events/${SLUG}?tab=stream`)
-    await page.getByRole('navigation', { name: 'Stream panels' }).getByRole('button', { name: 'Scenes' }).click()
+    await openStreamPanel(page, 'Setup')
     await expect(page.getByRole('region', { name: 'Scenes' })).toBeVisible()
+    await page.getByRole('region', { name: 'Scenes' }).evaluate(element => element.scrollIntoView({ block: 'start' }))
 }
 
 test('every scene shows its URL with the streamer id and a copy button', async ({ page }) => {

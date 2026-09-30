@@ -16,7 +16,7 @@ const CHECKERBOARD = {
     backgroundSize: '16px 16px',
 }
 
-export function ScenesPanel() {
+export function ScenesSection() {
     const { eventSlug, streamerId } = useStreamTab()
     const links = useMemo(() => sceneLinks(eventSlug, streamerId, IS_WEB), [eventSlug, streamerId])
     const { copiedKey, copy } = useCopyFeedback(error => console.error('Copy scene URL failed', error))

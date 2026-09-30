@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useMemo, useState } from 'react'
+import { Fragment, Suspense, lazy, useEffect, useMemo, useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useNavState } from '@/app/components/navigation/useNavState'
@@ -10,8 +10,9 @@ import { fetchEventStreamers, type EventStreamer } from '@/app/utils/api'
 import { streamerName } from '@/app/components/pages/events/eventsShared'
 import { StreamLoading } from './StreamCard'
 import { StreamTabProvider, type StreamTabIdentity } from './StreamTabContext'
-import { STREAM_PANELS, type StreamPanelId } from './streamPanels'
+import { STREAM_PANELS, initialStreamPanel, isStreamPanelId } from './streamPanels'
 import { operatingAsChoices, operatingAsId, type OperatingViewer } from './streamTabAccess'
+import { useStreamKitState } from './useStreamKitState'
 
 const PANELS = STREAM_PANELS.map(panel => ({ ...panel, Component: lazy(panel.load) }))
 
@@ -23,7 +24,7 @@ interface StreamTabProps {
 
 export function StreamTab({ eventSlug, accessToken, viewer }: StreamTabProps) {
     const [chosenId, setChosenId] = useNavState<string | null>('event.streamAs', null)
-    const [panelId, setPanelId] = useNavState<StreamPanelId>('event.streamPanel', 'match')
+    const [rememberedPanel, setRememberedPanel] = useNavState<string | null>('event.streamPanel', null)
     const [streamers, setStreamers] = useState<EventStreamer[] | null>(null)
     const [streamersFailed, setStreamersFailed] = useState(false)
 
@@ -45,8 +46,9 @@ export function StreamTab({ eventSlug, accessToken, viewer }: StreamTabProps) {
 
     const choices = useMemo(() => operatingAsChoices(viewer, streamers), [viewer, streamers])
     const streamerId = operatingAsId(viewer, streamers, chosenId)
-    const activePanel = PANELS.find(panel => panel.id === panelId) ?? PANELS[0]
-    const ActivePanel = activePanel.Component
+    const kitState = useStreamKitState(eventSlug, streamerId, accessToken, !isStreamPanelId(rememberedPanel))
+    const panelId = initialStreamPanel(rememberedPanel, kitState)
+    const activePanel = PANELS.find(panel => panel.id === panelId) ?? null
 
     const context = useMemo<StreamTabIdentity | null>(() => (
         streamerId ? { eventSlug, streamerId, isManager: viewer.isManager, accessToken } : null
@@ -66,28 +68,36 @@ export function StreamTab({ eventSlug, accessToken, viewer }: StreamTabProps) {
             {context ? (
                 <>
                     <nav aria-label="Stream panels" className="flex items-center gap-1 border-b border-hairline/10 overflow-x-auto">
-                        {PANELS.map(panel => (
-                            <button
-                                key={panel.id}
-                                type="button"
-                                aria-pressed={activePanel.id === panel.id}
-                                onClick={() => setPanelId(panel.id)}
-                                className={cn(
-                                    'px-3 py-2 text-xs font-medium whitespace-nowrap border-b-2 -mb-px transition-colors cursor-pointer',
-                                    activePanel.id === panel.id
-                                        ? 'border-accent-400 text-foreground'
-                                        : 'border-transparent text-muted-foreground hover:text-foreground',
+                        {PANELS.map((panel, index) => (
+                            <Fragment key={panel.id}>
+                                {index > 0 && PANELS[index - 1].group !== panel.group && (
+                                    <span role="separator" aria-orientation="vertical" className="mx-1 sm:mx-1.5 h-4 w-px shrink-0 bg-hairline/20" />
                                 )}
-                            >
-                                {panel.label}
-                            </button>
+                                <button
+                                    type="button"
+                                    aria-pressed={activePanel?.id === panel.id}
+                                    onClick={() => setRememberedPanel(panel.id)}
+                                    className={cn(
+                                        'px-2.5 sm:px-3 py-2 text-xs font-medium whitespace-nowrap border-b-2 -mb-px transition-colors cursor-pointer',
+                                        activePanel?.id === panel.id
+                                            ? 'border-accent-400 text-foreground'
+                                            : 'border-transparent text-muted-foreground hover:text-foreground',
+                                    )}
+                                >
+                                    {panel.label}
+                                </button>
+                            </Fragment>
                         ))}
                     </nav>
 
                     <StreamTabProvider key={context.streamerId} identity={context}>
-                        <Suspense key={`${context.streamerId}:${activePanel.id}`} fallback={<StreamLoading label={activePanel.label} />}>
-                            <ActivePanel />
-                        </Suspense>
+                        {activePanel ? (
+                            <Suspense key={`${context.streamerId}:${activePanel.id}`} fallback={<StreamLoading label={activePanel.label} />}>
+                                <activePanel.Component />
+                            </Suspense>
+                        ) : (
+                            <StreamLoading label="your stream desk" />
+                        )}
                     </StreamTabProvider>
                 </>
             ) : (

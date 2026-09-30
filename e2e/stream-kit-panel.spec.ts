@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { horizontalOverflow } from './layout'
+import { openStreamPanel } from './streamPanels'
 
 const SLUG = 'stream-cup'
 const VIEWER_ID = '555555555555'
@@ -136,7 +137,7 @@ async function mockApi(page: Page, kit: KitState) {
 
 async function openKitPanel(page: Page) {
     await page.goto(`/events/${SLUG}?tab=stream`)
-    await page.getByRole('navigation', { name: 'Stream panels' }).getByRole('button', { name: 'Kit' }).click()
+    await openStreamPanel(page, 'Setup')
     await expect(page.getByRole('region', { name: 'Kit' })).toBeVisible()
 }
 
@@ -197,7 +198,7 @@ test('the folder choice persists across reloads', async ({ page }) => {
 
     await page.getByLabel('Kit folder').fill('E:\\OBS\\UTBT')
     await page.reload()
-    await page.getByRole('navigation', { name: 'Stream panels' }).getByRole('button', { name: 'Kit' }).click()
+    await openStreamPanel(page, 'Setup')
 
     await expect(page.getByLabel('Kit folder')).toHaveValue('E:\\OBS\\UTBT')
 })
