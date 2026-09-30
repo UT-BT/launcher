@@ -175,7 +175,7 @@ refused). Existing files are overwritten. Progress is pushed on
 new remote host (API, asset CDN) **won't load until it's added there**. Renderer
 HTTP failing with a CSP error usually means the host is missing from this list.
 
-`connect-src` and `img-src` are each built twice, packaged vs dev, because dev talks to a
+`connect-src`, `img-src` and `media-src` are each built twice, packaged vs dev, because dev talks to a
 localhost API. Adding a host to only one of them produces the worst kind of bug: works in
 `npm run dev`, silently blocked in the shipped build (or the reverse). Change both.
 

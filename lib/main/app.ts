@@ -30,13 +30,16 @@ export function createAppWindow(): void {
   const imgSrc = app.isPackaged
     ? "'self' data: blob: res: https://utbt.net https://gateway.utbt.net https://api.utbt.net https://flagcdn.com https://cdn.discordapp.com"
     : "'self' data: blob: res: https://utbt.net https://gateway.utbt.net https://api.utbt.net https://flagcdn.com https://cdn.discordapp.com http://localhost http://127.0.0.1"
+  const mediaSrc = app.isPackaged
+    ? "'self' https://api.utbt.net https://democonverter-com-ut99.s3.nl-ams.scw.cloud"
+    : "'self' https://api.utbt.net https://democonverter-com-ut99.s3.nl-ams.scw.cloud http://localhost http://127.0.0.1"
   const csp = [
     "default-src 'self'",
     `script-src ${scriptSrc}`,
     "style-src 'self' 'unsafe-inline'",
     `img-src ${imgSrc}`,
     `frame-src 'self' ${SITE_ORIGIN}`,
-    "media-src 'self' https://democonverter-com-ut99.s3.nl-ams.scw.cloud",
+    `media-src ${mediaSrc}`,
     `connect-src ${connectSrc}`,
   ].join('; ')
 
