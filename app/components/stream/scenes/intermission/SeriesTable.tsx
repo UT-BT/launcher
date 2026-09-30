@@ -11,14 +11,22 @@ import { revealDelayS, type MapReveal } from './useMapReveal'
 const SIDES: StreamSide[] = ['a', 'b']
 const NAME_WIDTH = 230
 const SERIES_WIDTH = 120
-const COLUMNS_WIDTH = 1020 - NAME_WIDTH - SERIES_WIDTH
 const COLUMN_GAP = 6
 const COLUMN_PADDING = 20
+
+const LAYOUTS = {
+    full: { width: 1750, maxTile: 220 },
+    beside: { width: 1020, maxTile: 150 },
+}
+
+export type SeriesTableLayout = keyof typeof LAYOUTS
+
 const GOLD = PICK_BAN_HUES.gold
 
-function tileSizeFor(count: number): number {
-    const column = (COLUMNS_WIDTH - COLUMN_GAP * (count + 1)) / Math.max(count, 1)
-    return Math.min(150, Math.floor(column - COLUMN_PADDING))
+function tileSizeFor(count: number, layout: SeriesTableLayout): number {
+    const { width, maxTile } = LAYOUTS[layout]
+    const column = (width - NAME_WIDTH - SERIES_WIDTH - COLUMN_GAP * (count + 1)) / Math.max(count, 1)
+    return Math.min(maxTile, Math.floor(column - COLUMN_PADDING))
 }
 
 function columnGlow(map: SeriesMapView): string | undefined {
@@ -53,7 +61,7 @@ function CapCell({ map, side, reveal }: { map: SeriesMapView; side: StreamSide; 
     )
 }
 
-function MapColumn({ map, size, reveal }: { map: SeriesMapView; size: number; reveal: MapReveal }) {
+function MapColumn({ map, size, reveal, fill }: { map: SeriesMapView; size: number; reveal: MapReveal; fill: boolean }) {
     const revealing = reveal?.ordinals.includes(map.ordinal) ?? false
     const label = statusLabel(map)
 
@@ -62,7 +70,7 @@ function MapColumn({ map, size, reveal }: { map: SeriesMapView; size: number; re
             data-map-column={map.number}
             data-map-status={map.status}
             data-map-revealing={revealing ? reveal?.seq : undefined}
-            className="relative flex shrink-0 flex-col gap-3 rounded-[18px] p-2.5"
+            className={cn('relative flex flex-col gap-3 rounded-[18px] p-2.5', fill ? 'min-w-0 flex-1' : 'shrink-0')}
             style={{ boxShadow: columnGlow(map) }}
         >
             {revealing && (
@@ -76,7 +84,9 @@ function MapColumn({ map, size, reveal }: { map: SeriesMapView; size: number; re
                     style={{ boxShadow: `0 0 0 4px ${GOLD}, 0 0 80px ${tint(GOLD, 70)}` }}
                 />
             )}
-            <SceneMapTile map={map.map} number={map.number} tone={mapToneOf(map.pickedBy, map.decider)} decider={map.decider} size={size} />
+            <div className="flex justify-center">
+                <SceneMapTile map={map.map} number={map.number} tone={mapToneOf(map.pickedBy, map.decider)} decider={map.decider} size={size} />
+            </div>
             {SIDES.map(side => <CapCell key={side} map={map} side={side} reveal={reveal} />)}
             <div className="flex h-11 flex-col items-center justify-start gap-1 text-center font-bold uppercase leading-none">
                 <p className={cn('h-4 text-base tracking-[0.16em]', map.latest ? PICK_BAN_TONES.gold.text : 'text-white/50')}>{label}</p>
@@ -86,13 +96,14 @@ function MapColumn({ map, size, reveal }: { map: SeriesMapView; size: number; re
     )
 }
 
-export function SeriesTable({ maps, series, teams, reveal }: {
+export function SeriesTable({ maps, series, teams, reveal, layout }: {
     maps: SeriesMapView[]
     series: SeriesScore
     teams: Record<StreamSide, StreamTeam | null>
     reveal: MapReveal
+    layout: SeriesTableLayout
 }) {
-    const size = tileSizeFor(maps.length)
+    const size = tileSizeFor(maps.length, layout)
 
     return (
         <div className="flex items-start" style={{ gap: COLUMN_GAP }}>
@@ -101,16 +112,13 @@ export function SeriesTable({ maps, series, teams, reveal }: {
                 {SIDES.map(side => {
                     const tone = sideToneClasses(side)
                     return (
-                        <div key={side} className="flex h-[72px] items-center gap-3.5">
-                            <span className={cn('inline-flex size-7 shrink-0 items-center justify-center rounded-md text-lg font-black italic uppercase', tone.solid, tone.onSolid)}>
-                                {side}
-                            </span>
+                        <div key={side} className="flex h-[72px] items-center">
                             <span className={cn('line-clamp-2 text-[40px] font-black italic uppercase leading-[0.95]', tone.text)}>{teams[side]?.name ?? 'TBD'}</span>
                         </div>
                     )
                 })}
             </div>
-            {maps.map(map => <MapColumn key={map.ordinal} map={map} size={size} reveal={reveal} />)}
+            {maps.map(map => <MapColumn key={map.ordinal} map={map} size={size} reveal={reveal} fill={layout === 'full'} />)}
             <div className="flex shrink-0 flex-col gap-3 py-2.5 pl-[18px]" style={{ width: SERIES_WIDTH }}>
                 <div className="flex items-end justify-center" style={{ height: size }}>
                     <p className="text-base font-bold uppercase tracking-[0.2em] text-white/60">Series</p>

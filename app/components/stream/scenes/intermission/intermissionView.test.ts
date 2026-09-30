@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { streamMapScore, streamScore } from '../../data/streamFixtures'
-import { ALL_DECIDED, MID_SERIES, intermissionMatch, intermissionRead } from './intermissionFixtures'
+import { streamMapScore, streamMaps, streamScore } from '../../data/streamFixtures'
+import { ALL_DECIDED, INTERMISSION_MAPS, INTERMISSION_PICKS, MID_SERIES, intermissionMatch } from './intermissionFixtures'
 import { advanceMapReveal, initialMapReveal, intermissionView } from './intermissionView'
 
 describe('intermissionView series', () => {
@@ -14,7 +14,7 @@ describe('intermissionView series', () => {
             ]),
         })
 
-        const view = intermissionView(match, null)
+        const view = intermissionView(match)
 
         expect(view.maps.map(map => [map.number, map.caps, map.winner, map.sourceLabel])).toEqual([
             [1, { a: 2, b: 1 }, 'a', 'Official'],
@@ -30,14 +30,14 @@ describe('intermissionView series', () => {
             score: streamScore([streamMapScore(0, [2, 0], 'a', { source: 'live' }), streamMapScore(1, [0, 1]), streamMapScore(2), streamMapScore(3)]),
         })
 
-        const view = intermissionView(match, null)
+        const view = intermissionView(match)
 
         expect(view.maps.map(map => map.status)).toEqual(['decided', 'next', 'open', 'open'])
         expect(view.maps.map(map => map.sourceLabel)).toEqual(['Live', 'Live', null, null])
     })
 
     it('names each map and its picker from the match maps, and flags the latest decided map', () => {
-        const view = intermissionView(intermissionMatch(MID_SERIES), null)
+        const view = intermissionView(intermissionMatch(MID_SERIES))
 
         expect(view.maps.map(map => [map.map, map.pickedBy, map.latest])).toEqual([
             ['CTF-BT-II-Synchronize-vF2', 'a', false],
@@ -51,115 +51,71 @@ describe('intermissionView series', () => {
     it('leaves a slot without a map row unnamed', () => {
         const match = intermissionMatch(MID_SERIES, { maps: [] })
 
-        expect(intermissionView(match, null).maps.map(map => map.map)).toEqual([null, null, null, null])
+        expect(intermissionView(match).maps.map(map => map.map)).toEqual([null, null, null, null])
     })
 
     it('has no latest map before any map is decided', () => {
-        expect(intermissionView(intermissionMatch([]), null).latest).toBeNull()
+        expect(intermissionView(intermissionMatch([])).latest).toBeNull()
     })
 
     it('numbers each map from its 0-based ordinal, not its place in the list', () => {
         const match = intermissionMatch([], { score: streamScore([streamMapScore(2, [2, 1], 'a'), streamMapScore(3)]) })
 
-        const view = intermissionView(match, null)
+        const view = intermissionView(match)
 
         expect(view.maps.map(map => [map.ordinal, map.number])).toEqual([[2, 3], [3, 4]])
         expect(view.latest?.number).toBe(3)
-        expect(view.next?.number).toBe(4)
+        expect(view.upNext?.text).toBe('Up next: II-FaithCB · picked by Crimson Cats')
         expect(view.kicker).toBe('Series 1–0 · map 4 next')
     })
 
     it('reads the series in the title kicker', () => {
-        expect(intermissionView(intermissionMatch(MID_SERIES), null).kicker).toBe('Series 2–1 · map 4 next')
+        expect(intermissionView(intermissionMatch(MID_SERIES)).kicker).toBe('Series 2–1 · map 4 next')
     })
 })
 
-describe('intermissionView next map', () => {
-    it('follows the score block current map, not the first map without caps', () => {
+describe('intermissionView up next', () => {
+    it('names the next map and the team that picked it', () => {
+        const view = intermissionView(intermissionMatch(MID_SERIES))
+
+        expect(view.upNext).toEqual({ text: 'Up next: II-FaithCB · picked by Crimson Cats', tone: 'a' })
+    })
+
+    it('names the picking team of the other side', () => {
+        const match = intermissionMatch([[2, 1, 'a'], [0, 2, 'b']])
+
+        expect(intermissionView(match).upNext).toEqual({ text: 'Up next: II-FuriumMineCE2 · picked by Azure Owls', tone: 'b' })
+    })
+
+    it('says so for the decider instead of naming a team', () => {
+        const match = intermissionMatch(MID_SERIES, { maps: streamMaps(INTERMISSION_MAPS, INTERMISSION_PICKS).map(row => (row.ordinal === 3 ? { ...row, kind: 'decider', picked_by: null } : row)) })
+
+        expect(intermissionView(match).upNext).toEqual({ text: 'Up next: II-FaithCB · decider', tone: 'gold' })
+    })
+
+    it('says the map is to be decided while pick/ban has not placed it', () => {
+        const match = intermissionMatch(MID_SERIES, { maps: streamMaps(INTERMISSION_MAPS.slice(0, 3), INTERMISSION_PICKS) })
+
+        expect(intermissionView(match).upNext).toEqual({ text: 'Up next: map to be decided', tone: 'neutral' })
+    })
+
+    it('says the map is to be decided when the match has no map rows', () => {
+        expect(intermissionView(intermissionMatch(MID_SERIES, { maps: [] })).upNext?.text).toBe('Up next: map to be decided')
+    })
+
+    it('follows the score block current map', () => {
         const match = intermissionMatch([[2, 1, 'a'], [0, 0, 'b']], {
             score: streamScore([streamMapScore(0, [2, 1], 'a'), streamMapScore(1, [0, 0], null), streamMapScore(2), streamMapScore(3)], { current_map: 2 }),
         })
 
-        const view = intermissionView(match, null)
+        const view = intermissionView(match)
 
-        expect(view.next?.ordinal).toBe(2)
-        expect(view.next?.number).toBe(3)
+        expect(view.upNext?.text).toBe('Up next: II-FuriumMineCE2 · picked by Azure Owls')
         expect(view.maps.map(map => map.status)).toEqual(['decided', 'open', 'next', 'open'])
     })
 
-    it('fills the card from the intermission read', () => {
-        const view = intermissionView(intermissionMatch(MID_SERIES), intermissionRead())
-
-        expect(view.next).toMatchObject({
-            ordinal: 3,
-            number: 4,
-            map: 'CTF-BT-II-FaithCB',
-            pickedBy: 'a',
-            decider: false,
-            mapper: 'RoelerCoaster',
-            screenshotVersion: '2026-08-01T12:00:00+00:00',
-            wrSeconds: 97.26,
-            loaded: true,
-        })
-    })
-
-    it('shows the hot-state map and picker while the read is missing, stale or for another map', () => {
-        const match = intermissionMatch(MID_SERIES)
-        const stale = [null, intermissionRead({ ordinal: 2 }), intermissionRead({ match_id: 'match-9' })]
-
-        for (const read of stale) {
-            expect(intermissionView(match, read).next).toMatchObject({
-                ordinal: 3,
-                map: 'CTF-BT-II-FaithCB',
-                pickedBy: 'a',
-                mapper: null,
-                wrSeconds: null,
-                loaded: false,
-            })
-        }
-    })
-
-    it('marks a decider and a slot the read has no map for yet', () => {
-        const view = intermissionView(intermissionMatch(MID_SERIES), intermissionRead({ kind: 'decider', picked_by: null, map: null, team_wr: null }))
-
-        expect(view.next).toMatchObject({ decider: true, pickedBy: null, map: 'CTF-BT-II-FaithCB', mapper: null, wrSeconds: null })
-    })
-})
-
-describe('intermissionView lineup PBs', () => {
-    it('lists the lineup A then B with each PB, and no PB for a player without a run', () => {
-        const players = intermissionView(intermissionMatch(MID_SERIES), intermissionRead()).next?.players
-
-        expect(players?.map(player => [player.slot, player.side, player.name, player.pb])).toEqual([
-            ['a1', 'a', 'Ada', { seconds: 101.87, verified: true }],
-            ['a2', 'a', 'Ben', { seconds: 104.02, verified: true }],
-            ['b1', 'b', 'Cleo', { seconds: 99.55, verified: false }],
-            ['b2', 'b', 'Dex', null],
-        ])
-    })
-
-    it('carries each player title from the team roster', () => {
-        const players = intermissionView(intermissionMatch(MID_SERIES), intermissionRead()).next?.players
-
-        expect(players?.map(player => player.title?.name ?? null)).toEqual(['Cap Machine', null, null, 'Speedrunner'])
-    })
-
-    it('skips an empty lineup slot', () => {
-        const read = intermissionRead()
-        const players = intermissionView(intermissionMatch(MID_SERIES), { ...read, lineup: { ...read.lineup, a2: null } }).next?.players
-
-        expect(players?.map(player => player.slot)).toEqual(['a1', 'b1', 'b2'])
-    })
-
-    it('shows the hot-state lineup with no PBs until the read lands', () => {
-        const players = intermissionView(intermissionMatch(MID_SERIES), null).next?.players
-
-        expect(players?.map(player => [player.slot, player.name, player.pb])).toEqual([
-            ['a1', 'Ada', null],
-            ['a2', 'Ben', null],
-            ['b1', 'Cleo', null],
-            ['b2', 'Dex', null],
-        ])
+    it('shows no up next line once the series is decided', () => {
+        expect(intermissionView(intermissionMatch(ALL_DECIDED)).upNext).toBeNull()
     })
 })
 
@@ -168,9 +124,9 @@ describe('intermissionView when every map is decided', () => {
         const match = intermissionMatch(ALL_DECIDED)
         const score = { ...match.score, winner: 'a' as const, live_decided: true }
 
-        const view = intermissionView({ ...match, status: 'complete', score }, null)
+        const view = intermissionView({ ...match, status: 'complete', score })
 
-        expect(view.next).toBeNull()
+        expect(view.upNext).toBeNull()
         expect(view.final).toEqual({ winner: 'a', series: { a: 3, b: 1 }, official: true })
         expect(view.kicker).toBe('Series 3–1 · final')
         expect(view.latest?.number).toBe(4)
@@ -185,7 +141,7 @@ describe('intermissionView when every map is decided', () => {
             }),
         })
 
-        const view = intermissionView(match, null)
+        const view = intermissionView(match)
 
         expect(view.final).toEqual({ winner: 'a', series: { a: 2, b: 0 }, official: false })
         expect(view.maps.map(map => map.status)).toEqual(['decided', 'decided', 'open', 'open'])
@@ -194,23 +150,23 @@ describe('intermissionView when every map is decided', () => {
     it('shows a drawn series with no winner', () => {
         const match = intermissionMatch([[2, 0, 'a'], [0, 2, 'b'], [2, 1, 'a'], [1, 2, 'b']], { status: 'complete' })
 
-        expect(intermissionView(match, null).final).toEqual({ winner: null, series: { a: 2, b: 2 }, official: true })
+        expect(intermissionView(match).final).toEqual({ winner: null, series: { a: 2, b: 2 }, official: true })
     })
 
     it('stays unofficial while every map is official but the match result is not in', () => {
         const match = intermissionMatch(ALL_DECIDED)
 
-        expect(intermissionView(match, null).final?.official).toBe(false)
+        expect(intermissionView(match).final?.official).toBe(false)
     })
 
     it.each(['forfeit', 'bye'])('calls a %s result official', status => {
         const match = intermissionMatch(ALL_DECIDED, { status })
 
-        expect(intermissionView(match, null).final?.official).toBe(true)
+        expect(intermissionView(match).final?.official).toBe(true)
     })
 
     it('is still mid-series while a map is current', () => {
-        expect(intermissionView(intermissionMatch(MID_SERIES), null).final).toBeNull()
+        expect(intermissionView(intermissionMatch(MID_SERIES)).final).toBeNull()
     })
 })
 
