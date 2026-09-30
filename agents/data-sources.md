@@ -964,7 +964,7 @@ re-derives it between polls from the absolute timestamps: `intro_ends_at`,
 waits for a poll. Every body except Open's carries the expected `version`.
 
 - **Participant commands:** `sendPickBanCommand(token, slug, matchId, command, body)` →
-  `POST .../matches/<id>/pick-ban/{ready,unready,hover,lock}`.
+  `POST .../matches/<id>/pick-ban/{choose-a,ready,unready,hover,lock}`. Lobby state exposes `chooser_side` and `capabilities.can_choose_a` for the stronger side's captain or acting captain.
 - **Manager commands:** `sendPickBanManagerCommand(token, slug, matchId, command, body?)` →
   `POST /tournaments/<slug>/admin/matches/<id>/pick-ban/<command>`. `open` takes no body.
   `lock` takes a `side`, and `override-sequence` takes a `preset_id` or a
@@ -1416,7 +1416,7 @@ answers `{ stages: [] }` when no format is attached. Each stage carries:
 
 - `key`, `name` and `best_of` (the stage's effective match default)
 - `pick_ban` — the block, or `null` when the stage has none yet:
-  `preset_id` (`bo4_picks` / `bo3_ban_pick` / `bo5_ban_pick`, or `null` for a custom
+  `preset_id` (`bo4_picks` / `bo4_ban_pick` / `bo3_ban_pick` / `bo5_ban_pick`, or `null` for a custom
   sequence), `sequence` (`steps: [{actor: 'A' | 'B', action: 'ban' | 'pick'}]` plus
   `ban_down`), `exclusions` (`[{tag, min_pre_cup_seed}]`) and `pacing` in seconds
   (`intro`, `spotlight`, `ban_down_spotlight`, `decider_spotlight`)

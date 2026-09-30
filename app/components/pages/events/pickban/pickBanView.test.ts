@@ -680,7 +680,7 @@ describe('affordances', () => {
     it('gives a spectator nothing to do', () => {
         const view = viewAt(asSpectator(awaitingA), INTRO_END + 1_000)
 
-        expect(view.affordances).toEqual({ actingSide: null, actingAb: null, canReady: false, isReady: false, canLock: false, manager: null })
+        expect(view.affordances).toEqual({ actingSide: null, actingAb: null, canReady: false, isReady: false, canLock: false, canChooseA: false, chooserSide: null, manager: null })
         expect(view.cards.some((c) => c.selectable)).toBe(false)
     })
 

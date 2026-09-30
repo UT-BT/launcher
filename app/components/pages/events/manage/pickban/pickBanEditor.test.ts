@@ -45,6 +45,9 @@ describe('sequenceCounts', () => {
         expect(sequenceCounts(PICK_BAN_PRESET_SEQUENCES.bo4_picks)).toEqual({
             lettered_picks: 4, lettered_bans: 0, maps_yielded: 4, full_sequence_minimum: 4, absolute_minimum: 4,
         })
+        expect(sequenceCounts(PICK_BAN_PRESET_SEQUENCES.bo4_ban_pick)).toEqual({
+            lettered_picks: 4, lettered_bans: 4, maps_yielded: 4, full_sequence_minimum: 8, absolute_minimum: 4,
+        })
         expect(sequenceCounts(PICK_BAN_PRESET_SEQUENCES.bo3_ban_pick)).toEqual({
             lettered_picks: 2, lettered_bans: 2, maps_yielded: 3, full_sequence_minimum: 5, absolute_minimum: 3,
         })
@@ -229,6 +232,14 @@ describe('drafts', () => {
         chosen.sequence?.steps.push({ actor: 'A', action: 'ban' })
 
         expect(PICK_BAN_PRESET_SEQUENCES.bo4_picks.steps).toHaveLength(4)
+        expect(PICK_BAN_PRESET_SEQUENCES.bo4_ban_pick).toEqual({
+            steps: [
+                { actor: 'A', action: 'ban' }, { actor: 'B', action: 'ban' },
+                { actor: 'B', action: 'pick' }, { actor: 'A', action: 'pick' },
+                { actor: 'B', action: 'ban' }, { actor: 'A', action: 'ban' },
+                { actor: 'B', action: 'pick' }, { actor: 'A', action: 'pick' },
+            ], ban_down: false,
+        })
     })
 
     it('keeps only the unsaved half after a partial save', () => {
