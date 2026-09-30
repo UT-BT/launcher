@@ -11,11 +11,8 @@ files:
   - '!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
   - '!{.env,.env.*}'
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
-  - '!node_modules/koffi/{doc,src,vendor}/**'
-  - '!node_modules/koffi/build/koffi/{darwin,freebsd,linux,musl,openbsd}_*/**'
 asarUnpack:
   - resources/**
-  - node_modules/koffi/**
 electronFuses:
   runAsNode: false
   enableCookieEncryption: true

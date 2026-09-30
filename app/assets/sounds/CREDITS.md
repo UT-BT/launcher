@@ -2,21 +2,15 @@
 
 The pick/ban show's sound cues (`intro`, `pick`, `ban`, `ban-down`, `decider`) are original mixes made for it: each file layers, edits and masters the sounds below with synthesized layers.
 
-The broadcast scenes reuse three of them as their cues: `pick` for the map-win reveal, `decider` for the match winner and `intro` for the countdown hitting zero.
-
-The stream stinger's whoosh (`stinger-whoosh.mp3`) is a single source sound, edited: trimmed to 1.2 s, faded in and out, and lowered 2 dB.
-
-All six files were then processed for broadcast balance: each is centred (left and right mixed to one identical signal on both channels) and set to the same integrated loudness (-15.7 LUFS) with its true peak at or below -1 dBTP. Only the channel mix and the overall level changed; the timing and the source sounds are the same.
-
 ## Attribution required (CC BY)
 
-- "thick-stamp-sub.wav" by newagesoup, https://freesound.org/people/newagesoup/sounds/347323/, licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Edited and layered (trimmed, filtered, level-shaped), then centred and level-matched. Used in: `ban.mp3`, `ban-down.mp3`.
+- "thick-stamp-sub.wav" by newagesoup, https://freesound.org/people/newagesoup/sounds/347323/, licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Edited and layered (trimmed, filtered, level-shaped). Used in: `ban.mp3`, `ban-down.mp3`.
 
 ## Public domain (CC0 1.0)
 
 No attribution is required for these; they are listed for provenance.
 
-- "Cinematic Woosh SFX-003.wav" by AudioPapkin, https://freesound.org/people/AudioPapkin/sounds/648536/ (CC0 1.0). Used in: `ban.mp3`, `ban-down.mp3`, `stinger-whoosh.mp3`.
+- "Cinematic Woosh SFX-003.wav" by AudioPapkin, https://freesound.org/people/AudioPapkin/sounds/648536/ (CC0 1.0). Used in: `ban.mp3`, `ban-down.mp3`.
 - "Cinematic Woosh SFX-006.wav" by AudioPapkin, https://freesound.org/people/AudioPapkin/sounds/648540/ (CC0 1.0). Used in: `intro.mp3`.
 - "Cinematic Woosh SFX-008.wav" by AudioPapkin, https://freesound.org/people/AudioPapkin/sounds/648610/ (CC0 1.0). Used in: `intro.mp3`.
 - "Cinematic Woosh SFX-010.wav" by AudioPapkin, https://freesound.org/people/AudioPapkin/sounds/648729/ (CC0 1.0). Used in: `intro.mp3`.

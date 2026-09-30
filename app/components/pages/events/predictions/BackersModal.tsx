@@ -102,7 +102,7 @@ export function BackersModal({ slug, accessToken, market, viewerId, onClose }: {
                                             {sideLabel(market, side)}
                                         </span>
                                         <span className="text-[11px] text-muted-foreground tabular-nums">
-                                            {rows.length} {rows.length === 1 ? 'bettor' : 'bettors'}
+                                            {rows.length} {rows.length === 1 ? 'backer' : 'backers'}
                                         </span>
                                     </div>
 
@@ -138,7 +138,7 @@ export function BackersModal({ slug, accessToken, market, viewerId, onClose }: {
 
                 {!hidden && backers.length > 0 && (
                 <p className="text-[11px] text-muted-foreground leading-relaxed">
-                    The multiplier is what each person locked in when they predicted, so earlier bettors on a side
+                    The multiplier is what each person locked in when they predicted, so earlier backers on a side
                     that has since become the favourite show a better return than the odds now offer. Current odds:{' '}
                     {sides.map(side => `${sideLabel(market, side)} ${formatPercent(priceOf(market, side))}`).join(', ')}.
                 </p>

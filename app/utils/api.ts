@@ -888,8 +888,6 @@ export interface AdminMapRow {
     required_players: number
     has_screenshot: boolean
     screenshot_updated: string | null
-    has_video: boolean
-    video_updated_at: string | null
 }
 
 export type AdminMapSort = 'name' | 'difficulty' | 'active' | 'added'
@@ -937,28 +935,6 @@ export async function fetchAdminMapTags(token: string, signal?: AbortSignal): Pr
 
 export async function deleteMapScreenshot(token: string, mapName: string): Promise<AdminMapRow> {
     return apiGet<AdminMapRow>(`/admin/maps/${encodeURIComponent(mapName)}/screenshot`, { token, method: 'DELETE' })
-}
-
-export async function uploadMapVideo(token: string, mapName: string, file: Blob, filename: string): Promise<AdminMapRow> {
-    const formData = new FormData()
-    formData.append('file', file, filename)
-    const res = await fetch(`${API_BASE_URL}/admin/maps/${encodeURIComponent(mapName)}/video`, {
-        method: 'POST',
-        headers: bearerHeaders(token),
-        body: formData,
-    })
-    if (!res.ok) {
-        throw await apiErrorFor(res)
-    }
-    const json = await res.json()
-    if (json && json.success && json.data) {
-        return json.data as AdminMapRow
-    }
-    throw new Error('Invalid response format from server')
-}
-
-export async function deleteMapVideo(token: string, mapName: string): Promise<AdminMapRow> {
-    return apiGet<AdminMapRow>(`/admin/maps/${encodeURIComponent(mapName)}/video`, { token, method: 'DELETE' })
 }
 
 export interface MapvoteStatus {
@@ -4348,58 +4324,6 @@ export async function revokeEventManager(accessToken: string, slug: string, user
     return data.items ?? []
 }
 
-export interface RosterEventRef {
-    slug: string
-    name: string
-}
-
-export interface RosterAssignment {
-    match_id: string
-    event: RosterEventRef
-    label: string
-    scheduled_at: string | null
-}
-
-export interface RosterStreamer {
-    user_id: string
-    display_name: string | null
-    avatar: string
-    twitch_url: string | null
-    added_by: { id: string; display_name: string | null } | null
-    added_at: string | null
-    note: string | null
-    upcoming_assignments: RosterAssignment[]
-}
-
-export interface RosterSuggestion {
-    user_id: string
-    display_name: string | null
-    avatar: string
-    twitch_url: string | null
-    event: RosterEventRef
-    signed_up_at: string | null
-}
-
-export async function fetchStreamerRoster(accessToken: string, signal?: AbortSignal): Promise<RosterStreamer[]> {
-    const data = await apiGet<{ items: RosterStreamer[] }>('/admin/streamers', { token: accessToken, signal })
-    return data.items ?? []
-}
-
-export async function putRosterStreamer(accessToken: string, userId: string, note: string | null): Promise<RosterStreamer[]> {
-    const data = await apiGet<{ items: RosterStreamer[] }>(`/admin/streamers/${encodeURIComponent(userId)}`, { token: accessToken, method: 'PUT', body: { note } })
-    return data.items ?? []
-}
-
-export async function removeRosterStreamer(accessToken: string, userId: string): Promise<RosterStreamer[]> {
-    const data = await apiGet<{ items: RosterStreamer[] }>(`/admin/streamers/${encodeURIComponent(userId)}`, { token: accessToken, method: 'DELETE' })
-    return data.items ?? []
-}
-
-export async function fetchRosterSuggestions(accessToken: string, signal?: AbortSignal): Promise<RosterSuggestion[]> {
-    const data = await apiGet<{ items: RosterSuggestion[] }>('/admin/streamers/suggestions', { token: accessToken, signal })
-    return data.items ?? []
-}
-
 export async function fetchEventAdminTeams(accessToken: string, slug: string, signal?: AbortSignal): Promise<EventTeam[]> {
     const data = await apiGet<{ items: EventTeam[] }>(`/tournaments/${encodeURIComponent(slug)}/admin/teams`, { token: accessToken, signal })
     return data.items ?? []
@@ -4855,23 +4779,15 @@ export interface EventStageDraw {
     dry_run: boolean
 }
 
-export interface EventCapCandidateMember {
+export interface EventCapCandidate {
     cap_id: string
     user: string
     alias: string | null
     side: EventSide | null
+    map: string | null
     cap_time_seconds: number | null
     added: string | null
     verified: boolean
-}
-
-export interface EventCapCandidate {
-    team_run_id: string | null
-    side: EventSide | null
-    map: string | null
-    complete: boolean
-    completed_at: string | null
-    members: EventCapCandidateMember[]
 }
 
 export interface EventMatchMapInput {

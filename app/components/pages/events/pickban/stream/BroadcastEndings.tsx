@@ -4,8 +4,8 @@ import { cn } from '@/lib/utils'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { displayMapName } from '@/app/utils/format'
 import type { PickBanSummaryEntry } from '../pickBanView'
-import { PICK_BAN_HUES, PICK_BAN_TONES, stepTone, tint } from '@/app/components/broadcast/broadcastTone'
-import { FADE_MOTION, staggeredCard } from '@/app/components/broadcast/broadcastMotion'
+import { PICK_BAN_HUES, PICK_BAN_TONES, stepTone, tint } from '../components/pickBanTone'
+import { FADE_MOTION, staggeredCard } from '../components/stageMotion'
 
 const LINEUP_CARD_MAX = 300
 

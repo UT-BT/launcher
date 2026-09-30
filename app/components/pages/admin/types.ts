@@ -14,7 +14,6 @@ export type AdminSectionId =
   | 'news-management'
   | 'events-management'
   | 'formats-management'
-  | 'streamers'
   | 'caps-management'
   | 'maps-management'
   | 'patches-management'

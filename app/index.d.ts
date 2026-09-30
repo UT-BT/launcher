@@ -84,9 +84,6 @@ interface Window {
   utbtUpdater: {
     onStateChanged: (cb: (state: import('@/lib/conveyor/schemas/updater-schema').UpdaterStateSnapshot) => void) => () => void
   }
-  utStreamKit: {
-    onKitProgress: (cb: (progress: import('@/lib/conveyor/schemas/stream-kit-schema').KitProgress) => void) => () => void
-  }
   uiScale: {
     set: (factor: number) => void
     get: () => number

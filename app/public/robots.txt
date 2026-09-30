@@ -2,7 +2,5 @@ User-agent: *
 Allow: /
 Disallow: /admin
 Disallow: /auth/callback
-Disallow: /stream/
-Disallow: /events/*/matches/*/stream
 
 Sitemap: https://utbt.net/sitemap.xml

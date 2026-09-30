@@ -16,7 +16,7 @@ import {
 } from '../editFinal'
 import type { ManagerFinalEditor } from '../managerDock'
 import { Rejection } from './CaptainDock'
-import { PICK_BAN_TONES, teamTone } from '@/app/components/broadcast/broadcastTone'
+import { PICK_BAN_TONES, teamTone } from './pickBanTone'
 
 type ChangeDraft = (change: (draft: FinalDraft) => FinalDraft) => void
 

@@ -1,6 +1,5 @@
 import { contextBridge, ipcRenderer, webUtils, webFrame } from 'electron'
 import { conveyor } from '@/lib/conveyor/api'
-import type { KitProgress } from '@/lib/conveyor/schemas/stream-kit-schema'
 
 // Use `contextBridge` APIs to expose APIs to
 // renderer only if context isolation is enabled, otherwise
@@ -116,13 +115,6 @@ if (process.contextIsolated) {
         const listener = (_: unknown, state: unknown) => cb(state)
         ipcRenderer.on('updater:state-changed', listener)
         return () => ipcRenderer.removeListener('updater:state-changed', listener)
-      }
-    })
-    contextBridge.exposeInMainWorld('utStreamKit', {
-      onKitProgress: (cb: (progress: KitProgress) => void) => {
-        const listener = (_: unknown, progress: KitProgress) => cb(progress)
-        ipcRenderer.on('stream-kit:kit-progress', listener)
-        return () => ipcRenderer.removeListener('stream-kit:kit-progress', listener)
       }
     })
     contextBridge.exposeInMainWorld('uiScale', {
@@ -241,13 +233,6 @@ if (process.contextIsolated) {
       const listener = (_: unknown, state: unknown) => cb(state)
       ipcRenderer.on('updater:state-changed', listener)
       return () => ipcRenderer.removeListener('updater:state-changed', listener)
-    }
-  }
-  window.utStreamKit = {
-    onKitProgress: (cb: (progress: KitProgress) => void) => {
-      const listener = (_: unknown, progress: KitProgress) => cb(progress)
-      ipcRenderer.on('stream-kit:kit-progress', listener)
-      return () => ipcRenderer.removeListener('stream-kit:kit-progress', listener)
     }
   }
   window.uiScale = {

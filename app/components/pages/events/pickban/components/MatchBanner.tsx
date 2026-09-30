@@ -7,8 +7,8 @@ import { matchSubtitle } from '../pickBanCopy'
 import { statusOfPhase } from '../pickBanStatus'
 import type { PickBanTeamPanel, PickBanView } from '../pickBanView'
 import { PickBanStatusChip } from './PickBanStatusChip'
-import { PICK_BAN_HUES, PICK_BAN_TONES, teamTone, tint } from '@/app/components/broadcast/broadcastTone'
-import { CHIP_MOTION } from '@/app/components/broadcast/broadcastMotion'
+import { PICK_BAN_HUES, PICK_BAN_TONES, teamTone, tint } from './pickBanTone'
+import { CHIP_MOTION } from './stageMotion'
 
 type PlateAlign = 'left' | 'right'
 
@@ -81,7 +81,7 @@ function TeamPlate({ panel, align, showReady, className }: {
                     <AnimatePresence initial={false}>
                         {onTurn && (
                             <motion.span key="on-turn" {...CHIP_MOTION} className={cn(CHIP, tone.solid, tone.onSolid)}>
-                                Currently choosing
+                                On the clock
                             </motion.span>
                         )}
                         {showReady && panel && (
