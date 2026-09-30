@@ -9,9 +9,9 @@ import { MapBoard } from './MapBoard'
 import { actorLabelsOf } from './MapTile'
 import { StageCaption } from './StageCaption'
 import { DISCARDED, IntroCard, PausedOverlay, RevealCard, StageNotice, endReasonOf, stageAnnouncement, useSceneDirection } from './StageScenes'
-import { PICK_BAN_HUES, teamTone, tint } from './pickBanTone'
-import { SCENE_VARIANTS } from './stageMotion'
-import './pickBanFonts.css'
+import { PICK_BAN_HUES, teamTone, tint } from '@/app/components/broadcast/broadcastTone'
+import { SCENE_VARIANTS } from '@/app/components/broadcast/broadcastMotion'
+import '@/app/components/broadcast/broadcastFonts.css'
 
 interface PickBanStageProps {
     view: PickBanView

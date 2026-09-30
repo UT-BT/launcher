@@ -7,7 +7,11 @@ import {
     eventErrorMessage, fetchEventCapCandidates,
     type EventCapCandidate, type EventMatchMap, type EventSide,
 } from '@/app/utils/api'
-import { formatSeconds, toIso, toLocalInput } from '../bracket/bracketShared'
+import { Chip, formatMatchTime, formatSeconds, toIso, toLocalInput } from '../bracket/bracketShared'
+import { candidateKey, defaultPicks, linkedCaps, tallyPicks, type CapLinkPicks } from './capLinkRuns'
+
+const COMPLETE_STYLE = 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+const INCOMPLETE_STYLE = 'bg-amber-500/15 text-amber-300 border-amber-500/30'
 
 interface CapLinkPickerProps {
     accessToken: string
@@ -25,7 +29,7 @@ export function CapLinkPicker({ accessToken, slug, matchId, row, teamNames, disa
     const [saving, setSaving] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [candidates, setCandidates] = useState<EventCapCandidate[]>([])
-    const [picked, setPicked] = useState<Record<string, EventSide>>({})
+    const [picked, setPicked] = useState<CapLinkPicks>({})
     const [from, setFrom] = useState(() => toLocalInput(row.started_at))
     const [to, setTo] = useState(() => toLocalInput(row.ended_at))
 
@@ -39,9 +43,7 @@ export function CapLinkPicker({ accessToken, slug, matchId, row, teamNames, disa
                 to: toIso(to),
             })
             setCandidates(rows)
-            setPicked(Object.fromEntries(
-                rows.filter(cap => cap.side).map(cap => [cap.cap_id, cap.side as EventSide]),
-            ))
+            setPicked(defaultPicks(rows))
             setOpen(true)
         } catch (e) {
             setError(eventErrorMessage(e))
@@ -51,16 +53,13 @@ export function CapLinkPicker({ accessToken, slug, matchId, row, teamNames, disa
     }, [accessToken, slug, matchId, row.map, from, to])
 
     const linked = new Set((row.caps ?? []).map(cap => cap.cap_id))
-    const counts = Object.values(picked).reduce(
-        (totals, side) => ({ ...totals, [side]: totals[side] + 1 }),
-        { a: 0, b: 0 } as Record<EventSide, number>,
-    )
+    const counts = tallyPicks(candidates, picked)
 
     const confirm = async () => {
         setSaving(true)
         setError(null)
         try {
-            await onLink(Object.entries(picked).map(([cap_id, side]) => ({ cap_id, side })))
+            await onLink(linkedCaps(candidates, picked))
             setOpen(false)
         } catch (e) {
             setError(eventErrorMessage(e))
@@ -119,31 +118,49 @@ export function CapLinkPicker({ accessToken, slug, matchId, row, teamNames, disa
                     ) : (
                         <>
                             <div className="max-h-56 overflow-auto divide-y divide-white/5">
-                                {candidates.map(cap => {
-                                    const side = picked[cap.cap_id]
+                                {candidates.map(candidate => {
+                                    const key = candidateKey(candidate)
+                                    const side = candidate.complete ? picked[key] : undefined
 
                                     return (
-                                        <div key={cap.cap_id} className="flex items-center gap-2 py-1.5 min-w-0">
+                                        <div key={key} className="flex flex-wrap items-center gap-2 py-1.5 min-w-0">
                                             <input
                                                 type="checkbox"
                                                 checked={!!side}
+                                                disabled={!candidate.complete}
                                                 style={{ colorScheme: 'dark' }}
                                                 onChange={event => setPicked(current => {
                                                     const next = { ...current }
-                                                    if (event.target.checked) next[cap.cap_id] = cap.side ?? 'a'
-                                                    else delete next[cap.cap_id]
+                                                    if (event.target.checked) next[key] = candidate.side ?? 'a'
+                                                    else delete next[key]
                                                     return next
                                                 })}
-                                                className="size-3.5 accent-accent-500 cursor-pointer shrink-0"
+                                                className="size-3.5 accent-accent-500 cursor-pointer shrink-0 disabled:cursor-not-allowed disabled:opacity-40"
                                             />
-                                            <PlayerInfo userId={cap.user} alias={cap.alias} size="sm" />
-                                            <span className="ml-auto shrink-0 text-[11px] tabular-nums text-muted-foreground">
-                                                {formatSeconds(cap.cap_time_seconds)}
+                                            <div className="flex flex-1 min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+                                                {candidate.members.map(member => (
+                                                    <span key={member.cap_id} className="inline-flex min-w-0 items-center gap-1.5">
+                                                        <PlayerInfo userId={member.user} alias={member.alias} size="sm" />
+                                                        <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">
+                                                            {formatSeconds(member.cap_time_seconds)}
+                                                        </span>
+                                                    </span>
+                                                ))}
+                                            </div>
+                                            <span className="ml-auto inline-flex shrink-0 items-center gap-2">
+                                                {candidate.complete && (
+                                                    <span className="text-[11px] tabular-nums text-muted-foreground">
+                                                        {formatMatchTime(candidate.completed_at)}
+                                                    </span>
+                                                )}
+                                                <Chip className={candidate.complete ? COMPLETE_STYLE : INCOMPLETE_STYLE}>
+                                                    {candidate.complete ? 'Complete' : 'Incomplete'}
+                                                </Chip>
                                             </span>
                                             <select
                                                 value={side ?? ''}
                                                 disabled={!side}
-                                                onChange={event => setPicked(current => ({ ...current, [cap.cap_id]: event.target.value as EventSide }))}
+                                                onChange={event => setPicked(current => ({ ...current, [key]: event.target.value as EventSide }))}
                                                 style={{ colorScheme: 'dark' }}
                                                 className={cn(teamInputClass, 'h-7 w-24 py-0 text-[11px] shrink-0 disabled:opacity-40')}
                                             >

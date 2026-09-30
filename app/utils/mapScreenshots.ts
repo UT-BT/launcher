@@ -24,6 +24,10 @@ export function canonicalScreenshotUrl(mapName: string, version?: string | numbe
     return `${API_BASE_URL}/screenshots/${encodeURIComponent(mapName)}.png${buster(version)}`
 }
 
+export function mapVideoUrl(mapName: string, version?: string | number | null): string {
+    return `${API_BASE_URL}/videos/${encodeURIComponent(mapName)}.webm${buster(version)}`
+}
+
 export function defaultScreenshotUrl(): string {
     return `${API_BASE_URL}/screenshots/default.png`
 }

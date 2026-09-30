@@ -22,6 +22,7 @@ import {
 import { ErrorBanner } from '@/app/components/pages/teams/teamsShared'
 import { PickBanStatusChip } from '@/app/components/pages/events/pickban/components/PickBanStatusChip'
 import { streamerName } from '@/app/components/pages/events/eventsShared'
+import { streamerListNote } from '@/app/components/pages/events/streamerRoster'
 import { streamerChoices, toQueueRow, withQueueStreamer, type PickBanQueueRow } from './pickBanQueue'
 
 const QUEUE_POLL_MS = 20_000
@@ -318,11 +319,7 @@ function StreamerPicker({ current, streamers, failed, saving, onOpen, onChange }
                     ))}
                 </DropdownMenuRadioGroup>
                 {choices.length === 0 && (
-                    <p className="px-2 py-1.5 text-xs text-muted-foreground">
-                        {failed
-                            ? 'The streaming volunteers could not be loaded.'
-                            : streamers === null ? 'Loading streamers…' : 'No volunteers have offered to stream yet.'}
-                    </p>
+                    <p className="px-2 py-1.5 text-xs text-muted-foreground">{streamerListNote(failed, streamers === null)}</p>
                 )}
             </DropdownMenuContent>
         </DropdownMenu>

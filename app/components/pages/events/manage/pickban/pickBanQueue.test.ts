@@ -111,13 +111,13 @@ describe('withQueueStreamer', () => {
 })
 
 describe('streamerChoices', () => {
-    it('lists the streaming volunteers as they are', () => {
+    it('lists the event streamers as they are', () => {
         const streamers = [ALICE, BOB]
         expect(streamerChoices(streamers, ALICE)).toBe(streamers)
         expect(streamerChoices(streamers, null)).toBe(streamers)
     })
 
-    it('keeps a current streamer who is no longer on the volunteer list, first', () => {
+    it('keeps a current streamer who is no longer in the list, first', () => {
         expect(streamerChoices([BOB], ALICE)).toEqual([ALICE, BOB])
     })
 })

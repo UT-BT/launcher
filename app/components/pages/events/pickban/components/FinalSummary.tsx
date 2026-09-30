@@ -4,8 +4,8 @@ import { cn } from '@/lib/utils'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { displayMapName } from '@/app/utils/format'
 import type { PickBanSummaryEntry } from '../pickBanView'
-import { PICK_BAN_HUES, PICK_BAN_TONES, stepTone, tint } from './pickBanTone'
-import { staggeredCard } from './stageMotion'
+import { PICK_BAN_HUES, PICK_BAN_TONES, stepTone, tint } from '@/app/components/broadcast/broadcastTone'
+import { staggeredCard } from '@/app/components/broadcast/broadcastMotion'
 
 interface FinalSummaryProps {
     entries: PickBanSummaryEntry[]

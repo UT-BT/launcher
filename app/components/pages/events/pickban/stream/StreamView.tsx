@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react'
 import { fetchEvent } from '@/app/utils/api'
 import type { MapThumbnailSize } from '@/app/utils/mapScreenshots'
+import { BroadcastStage } from '@/app/components/broadcast/BroadcastStage'
+import { ReconnectingBadge } from '@/app/components/broadcast/ReconnectingBadge'
 import { usePickBanSession, usePickBanView } from '../usePickBanSession'
 import { usePickBanPreload } from '../usePickBanPreload'
 import { usePickBanSound } from '../usePickBanSound'
 import { PickBanMotion } from '../components/PickBanMotion'
 import { PickBanUnavailable } from '../components/PickBanUnavailable'
 import { StreamBroadcast } from './StreamBroadcast'
-import { StreamStage } from './StreamStage'
 import type { StreamSound } from './streamSound'
 
 const BROADCAST_SIZES: MapThumbnailSize[] = ['card', 'hero']
@@ -43,7 +44,7 @@ export function StreamView({ eventSlug, matchId, sound, animate }: StreamViewPro
 
     return (
         <PickBanMotion animate={animate}>
-            <StreamStage>
+            <BroadcastStage>
                 <div className="flex h-full w-full flex-col overflow-hidden text-foreground">
                     {view ? (
                         <StreamBroadcast view={view} eventName={eventName} />
@@ -54,19 +55,8 @@ export function StreamView({ eventSlug, matchId, sound, animate }: StreamViewPro
                     )}
                     {session.reconnecting && <ReconnectingBadge />}
                 </div>
-            </StreamStage>
+            </BroadcastStage>
         </PickBanMotion>
-    )
-}
-
-function ReconnectingBadge() {
-    return (
-        <div
-            role="status"
-            className="absolute bottom-4 right-4 z-40 inline-flex items-center gap-1.5 rounded-md border border-amber-500/30 bg-card px-2.5 py-1.5 text-xs font-medium text-amber-300"
-        >
-            Connection lost, reconnecting…
-        </div>
     )
 }
 

@@ -11,14 +11,14 @@ read_when:
   - "sending the pick/ban selection preview (hover), or ordering pick/ban commands so each carries a fresh version"
   - "holding a pick/ban manager's act-for selection, command in flight, confirmation or refusal"
   - "editing a complete pick/ban's final maps (the Edit final draft and its checks)"
-keywords: [usePageState, useNavState, localStorage, PREF_KEYS, caches, querySig, presets, tutorial, persistence, controlled-page, userState, synced, badges, seen, polling, createPoller, pollOnStart, visibility, usePickBanSession, usePickBanView, mergePickBanState, structural sharing, clock offset, reconnecting, captainPlay, useCaptainPlay, withCaptainPlay, captainDockOf, optimistic lock-in, hover, hoverOf, createHoverSender, HOVER_DEBOUNCE_MS, selection preview, command queue, managerDock, useManagerDock, withManagerPlay, managerDockOf, confirmation, Reopen, editFinal, finalDraftOf, finalEditorOf, openFinalEditor, Edit final]
+keywords: [usePageState, useNavState, localStorage, PREF_KEYS, caches, querySig, presets, tutorial, persistence, controlled-page, userState, synced, badges, seen, polling, createPoller, pollOnStart, visibility, usePickBanSession, usePickBanView, mergePickBanState, structural sharing, clock offset, reconnecting, captainPlay, useCaptainPlay, withCaptainPlay, captainDockOf, optimistic lock-in, hover, hoverOf, createHoverSender, HOVER_DEBOUNCE_MS, selection preview, command queue, managerDock, useManagerDock, withManagerPlay, managerDockOf, confirmation, Reopen, editFinal, finalDraftOf, finalEditorOf, openFinalEditor, Edit final, Stream tab, StreamTabContext, event.streamAs, event.streamPanel, kit folder, deskPollEnvironment, insideObs, OBS, sceneCadence]
 provides: "the state tiers (incl. the account-synced tier), the localStorage key convention, how pages are controlled + hoisted, and the polling live-data tier"
 not_here:
   - "the navigation stack / navigate() / renderView wiring → navigation.md"
   - "the shared components used (FilterPresetsMenu, ColumnsMenu, Tutorial) → shared-components.md"
 sections: [controlled-pages-with-hoisted-state, navigation-history-per-entry-ui-state, account-synced-state, localstorage-persistence, filter-presets, tutorial-state, favorites, polling-live-data, naming-conventions]
-last_verified: 2026-09-28
-verify_against: [app/components/main/Main.tsx, app/components/navigation/useNavState.ts, app/hooks/useAsync.ts, app/utils/userState.ts, app/utils/poller.ts, app/components/pages/events/pickban/pickBanSession.ts, app/components/pages/events/pickban/usePickBanSession.ts, app/components/pages/events/pickban/mergePickBanState.ts, app/components/pages/events/pickban/captainPlay.ts, app/components/pages/events/pickban/useCaptainPlay.ts, app/components/pages/events/pickban/managerDock.ts, app/components/pages/events/pickban/useManagerDock.ts, app/components/pages/events/pickban/editFinal.ts, app/components/pages/events/pickban/pickBanMotionPreference.ts, app/components/pages/events/pickban/pickBanSoundPreference.ts, app/components/pages/MatchPickBanPage.tsx, app/components/navigation/nav-items.ts, app/utils/eventAttention.ts]
+last_verified: 2026-09-30
+verify_against: [app/components/main/Main.tsx, app/components/navigation/useNavState.ts, app/hooks/useAsync.ts, app/utils/userState.ts, app/utils/poller.ts, app/components/pages/events/pickban/pickBanSession.ts, app/components/pages/events/pickban/usePickBanSession.ts, app/components/pages/events/pickban/mergePickBanState.ts, app/components/pages/events/pickban/captainPlay.ts, app/components/pages/events/pickban/useCaptainPlay.ts, app/components/pages/events/pickban/managerDock.ts, app/components/pages/events/pickban/useManagerDock.ts, app/components/pages/events/pickban/editFinal.ts, app/components/pages/events/pickban/pickBanMotionPreference.ts, app/components/pages/events/pickban/pickBanSoundPreference.ts, app/components/pages/MatchPickBanPage.tsx, app/components/navigation/nav-items.ts, app/utils/eventAttention.ts, app/components/pages/events/stream/StreamTab.tsx, app/components/pages/events/stream/StreamTabContext.tsx, app/components/pages/events/stream/streamDesk.ts, app/components/pages/events/stream/panels/kit/kitFolder.ts, app/components/stream/data/sceneCadence.ts, app/components/stream/data/streamHotStateStore.ts, app/components/stream/data/sceneReadStore.ts, app/components/pages/events/stream/streamPanels.ts, app/components/pages/events/stream/useStreamKitState.ts, app/components/pages/events/stream/panels/cams/camToolHooks.ts, lib/main/config.ts]
 ---
 
 # State patterns
@@ -154,6 +154,19 @@ Rules for `useNavState`:
   `key={entry.id}` so a new param refetches and `useNavState` re-reads the right
   bag. Page-type cases are intentionally NOT keyed (one reused instance).
 - Scroll: use `useNavScrollRestore(ref, loadingDone)` for detail scroll containers.
+- The event page's Stream tab (`events/stream/StreamTab.tsx`) keeps two keys:
+  `event.streamAs` (the streamer a manager is operating as, `string | null`) and
+  `event.streamPanel` (the panel the streamer last clicked: `match`, `cams`, `score`, `studio`,
+  `setup` or `guide`; default `null`, meaning "nothing chosen yet"). Both restore on Back/Forward
+  and start from defaults on a fresh open. `?tab=stream` only selects the tab.
+  **The default-panel rule** is `initialStreamPanel(remembered, kit)` (`streamPanels.ts`, pure): a
+  valid remembered id wins; an old id (`show`, `channel`, `kit`, `scenes`) or `null` falls through to
+  the kit state. Kit state `loading` opens nothing (the tab reads "Loading your stream desk…" with no
+  panel pressed, so it never flashes one panel then another); `none` (no kit downloaded yet) opens
+  Setup; `downloaded` and `unknown` (the kit read failed) open Match. The kit state comes from
+  `useStreamKitState(eventSlug, streamerId, accessToken, needed)` (`useStreamKitState.ts`): it reads the
+  kit info of the streamer being operated as, only while nothing is remembered, once per event and
+  streamer. The resolved default is never written to nav state: only a click counts as remembered.
 
 ## Account-synced state (`app/utils/userState.ts`)
 
@@ -276,6 +289,7 @@ signed-in user across devices); everything else is device-local.
 | `utbt:replayVideoVolume:v1` | `app/utils/replayVideoVolume.ts` | no | replay player volume `0..1` |
 | `utbt:pickBanMotion:v1` | `events/pickban/pickBanMotionPreference.ts` | **yes** | `'on'` / `'off'` (JSON strings): the pick/ban page's Animations toggle (absent means on) |
 | `utbt:pickBanSound:v1` | `events/pickban/pickBanSoundPreference.ts` | **yes** | `{ enabled, volume }`: the pick/ban page's sound switch and Volume (`0..1`), merged over `{ enabled: false, volume: 0.4 }`. `enabled` counts only when it is `true`; a volume that is missing or not a number reads as 0.4; any other stored field (such as an older `pack`) is ignored. The page subscribes to both keys, so an account value arriving after it opened updates it live |
+| `utbt:streamKitFolder:v1` | `events/stream/panels/kit/kitFolder.ts` | no | `{ [userId]: folder }`: the Windows folder each signed-in user keeps the stream kit in (drive-letter path, backslashes, no trailing one). Read through `loadKitFolder`, which falls back to `C:\UTBT-StreamKit` for a missing or invalid value; written by `saveKitFolder`. On desktop the value comes from the native folder picker (`streamKit.selectKitFolder`); the web build types it. Device-local |
 | `utbt:patreon:v1` | `app/utils/patreon.ts` | no | cached patron tier map, 1 h TTL (pure cache) |
 | `ui-scale` | `LauncherGeneralSettings` | no | renderer zoom percent (pre-dates the key convention) |
 | `utbt:webAuth:v1` | `app/platform/web/auth-web.ts` (**web build only**) | never | `AuthProfile` — Discord identity + access/refresh tokens + expiry; the web equivalent of the desktop main-process auth config. Secrets never sync. |
@@ -656,6 +670,42 @@ senders.
 - It deliberately doesn't re-render every frame. Drive continuous countdowns and progress
   bars from `countdown.endsAt` (local epoch ms) on animation frames. `CountdownText` and
   `CountdownBar` (`events/pickban/components/Countdown.tsx`) already do this.
+
+### Stream tab and scene polling
+
+**The Cam FPS preference is not renderer state.** It is the launcher config's `camFps` (`60` or
+`120`, default 120), read and saved through `window.conveyor.streamKit.getCamFps()` / `setCamFps(fps)`
+(`lib/main/README.md`, `lib/conveyor/README.md`), so it survives restarts and is per device. The
+Cams tool loads it on mount (Launch waits for it), saves on each click and puts the value on every
+cam request; if saving fails, the choice still holds for the session and an amber line says it will
+reset on restart. It is not in `usePageState`, `useNavState` or `utbt:*` storage, and it does not sync
+across devices.
+
+**The Stream tab's context** (`events/stream/StreamTabContext.tsx`). `StreamTab` builds one
+identity (`eventSlug`, `streamerId`, `isManager`, `accessToken`) and wraps the open panel in
+`StreamTabProvider`. It owns one desk store (`createStreamDeskStore`, `streamDesk.ts`) per
+event and streamer, which polls the desk every `DESK_POLL_MS` (2 s) with `If-None-Match` and
+keeps the median clock offset like the pick/ban store. Panels read it with `useStreamTab()`:
+the identity plus `desk`, `deskLoading`, `deskError`, `clockOffsetMs` and `refresh()`. Call
+`refresh()` right after a write, as with `createPoller`'s `refresh`. The token is read through
+a ref, so a refresh doesn't reset the store; nothing is persisted.
+
+**Polling that ignores Page Visibility in OBS.** An OBS browser dock or source can report
+`document.visibilityState === 'hidden'` while it is on air, and a poller that rests when
+hidden would freeze. Two places handle it, both keyed off the `window.obsstudio` object OBS
+injects:
+
+- **The Stream tab desk** uses `deskPollEnvironment()` (`streamDesk.ts`) as the poller's
+  visibility environment. `insideObs(window)` detects OBS, and `deskPollActive(pageHidden,
+  inObs)` keeps polling whenever it is in OBS. Outside OBS the desk rests while the tab is
+  hidden, like every other poller.
+- **The scene pages** (`app/components/stream/data/`) ignore Page Visibility altogether. Their
+  hot-state and read stores are `createPoller` with `alwaysPoll: true`, and
+  `createSceneCadenceStore` (`sceneCadence.ts`) picks the interval from OBS's
+  `obsSourceActiveChanged` and `obsSourceVisibleChanged` events: 2 s (hot state) and 30 s
+  (composite reads) while the source is active or visible, 30 s and 120 s otherwise, with an
+  immediate refetch of the hot state and every mounted composite read when a source turns active. Outside OBS the page is always active,
+  and `preview=1` counts as inactive (the slow cadence).
 
 ## Naming conventions
 

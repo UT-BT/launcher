@@ -9,6 +9,8 @@ import { setUt99InstallPath, setInstalledPatch, getUt99InstallPath, getInstalled
 import { loggingService } from './logging-service'
 import { parseIni } from '../conveyor/handlers/ini-handler'
 import { resolveWithin } from '@/lib/main/path-safety'
+import { camService } from '@/lib/main/cam-service'
+import { hasPlayerGameProcess, parseTasklistPids } from '@/lib/main/game-processes'
 
 export class GameService {
     async selectInstallDirectory(window: BrowserWindow): Promise<string | undefined> {
@@ -513,12 +515,12 @@ export class GameService {
         return new Promise((resolve) => {
             const isWin = process.platform === 'win32'
             const command = isWin
-                ? 'tasklist /FI "IMAGENAME eq UnrealTournament.exe" /NH'
+                ? 'tasklist /FI "IMAGENAME eq UnrealTournament.exe" /FO CSV /NH'
                 : 'pgrep -x UnrealTournament'
 
             exec(command, (err, stdout) => {
                 if (isWin) {
-                    resolve(stdout.toLowerCase().includes('unrealtournament.exe'))
+                    resolve(hasPlayerGameProcess(parseTasklistPids(stdout), camService.runningPids()))
                 } else {
                     // pgrep returns 0 if found, >0 if not found
                     resolve(!err && stdout.trim().length > 0)

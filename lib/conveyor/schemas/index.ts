@@ -7,6 +7,7 @@ import { favoritesIpcSchema } from './favorites-schema'
 import { demosIpcSchema } from './demos-schema'
 import { mapsIpcSchema } from './maps-schema'
 import { updaterIpcSchema } from './updater-schema'
+import { streamKitIpcSchema } from './stream-kit-schema'
 
 // Define all IPC channel schemas in one place
 export const ipcSchemas = {
@@ -18,6 +19,7 @@ export const ipcSchemas = {
   ...demosIpcSchema,
   ...mapsIpcSchema,
   ...updaterIpcSchema,
+  ...streamKitIpcSchema,
 } as const
 
 // Extract types from Zod schemas

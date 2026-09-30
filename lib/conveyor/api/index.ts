@@ -8,6 +8,7 @@ import { FavoritesApi } from './favorites-api'
 import { DemosApi } from './demos-api'
 import { MapsApi } from './maps-api'
 import { UpdaterApi } from './updater-api'
+import { StreamKitApi } from './stream-kit-api'
 
 export const conveyor = {
   electron: electronAPI,
@@ -20,6 +21,7 @@ export const conveyor = {
   demos: new DemosApi(electronAPI),
   maps: new MapsApi(electronAPI),
   updater: new UpdaterApi(electronAPI),
+  streamKit: new StreamKitApi(electronAPI),
 }
 
 export type ConveyorApi = typeof conveyor
