@@ -29,6 +29,7 @@ test('the Standings scene shows the match group table with both teams highlighte
     await expect(scene.locator('[data-standings-row][data-side]')).toHaveCount(2)
     await expect(scene.getByText('1st–2nd · Final Stage')).toBeVisible()
     await expect(scene.getByText('Group B · after round 4 so far')).toBeVisible()
+    await expect(scene.getByText(/^[AB]$/)).toHaveCount(0)
 
     await expectSceneScreenshot(page, 'standings-groups.png')
 })
@@ -40,6 +41,7 @@ test('the Standings scene shows the Swiss records around the match bucket', asyn
     await expect(scene).toBeVisible()
     await expect(scene.locator(`[data-swiss-pairing="${STREAM_MATCH_ID}"] [data-side]`)).toHaveCount(2)
     await expect(scene.getByText('Round 3 · winners qualify, losers are out')).toBeVisible()
+    await expect(scene.getByText(/^[AB]$/)).toHaveCount(0)
 
     await expectSceneScreenshot(page, 'standings-swiss.png')
 })
@@ -52,6 +54,7 @@ test('the Standings scene shows the elimination bracket with the match and its p
     await expect(scene.locator(`[data-bracket-match="${STREAM_MATCH_ID}"]`)).toContainText('Live · this match')
     await expect(scene.locator('[data-bracket-match="sf-1"]')).toContainText('Winner goes here')
     await expect(scene.locator('[data-bracket-match="r1-b1"]')).toHaveCount(0)
+    await expect(scene.getByText(/^[AB]$/)).toHaveCount(0)
 
     await expectSceneScreenshot(page, 'standings-bracket.png')
 })

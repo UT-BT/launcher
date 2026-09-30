@@ -2,12 +2,11 @@ import { Fragment } from 'react'
 import { cn } from '@/lib/utils'
 import type { BracketBox, BracketLine, BracketRound, BracketView } from './standingsView'
 import { BRACKET_COLUMN_HEIGHT } from './standingsView'
-import { LABEL, SideBadge, TEAM_NAME, sideWash } from './StandingsParts'
+import { LABEL, TEAM_NAME, sideWash } from './StandingsParts'
 
 function Line({ line }: { line: BracketLine }) {
     return (
         <div data-side={line.side ?? undefined} className="flex h-[50px] items-center gap-2.5 px-3.5" style={sideWash(line.side, 20)}>
-            {line.side && <SideBadge side={line.side} size={24} />}
             <span className={cn(TEAM_NAME, 'min-w-0 flex-1 text-2xl', !line.known ? 'text-white/40' : !line.won && !line.side && 'text-white/60')}>{line.name}</span>
             {line.score !== null && (
                 <span className={cn('text-[26px] font-black italic leading-[0.9] tabular-nums', line.won ? 'text-pickban-gold' : 'text-white/50')}>{line.score}</span>

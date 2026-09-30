@@ -2,7 +2,7 @@ import { Fragment } from 'react'
 import { cn } from '@/lib/utils'
 import type { StandingsTeam, SwissCentre, SwissColumn, SwissPairing, SwissPath, SwissView } from './standingsView'
 import { SWISS_CHIPS } from './standingsView'
-import { LABEL, Panel, SideBadge, TEAM_NAME, sideWash } from './StandingsParts'
+import { LABEL, Panel, TEAM_NAME, sideWash } from './StandingsParts'
 
 type ChipSize = (typeof SWISS_CHIPS)[number]
 
@@ -13,7 +13,6 @@ function TeamChip({ team, size, big = false }: { team: StandingsTeam; size: Chip
             className={cn('flex min-w-0 items-center gap-3 rounded-xl px-5', !team.side && 'bg-white/5')}
             style={{ height: size.height + (big ? 8 : 0), ...sideWash(team.side, 18) }}
         >
-            {team.side && <SideBadge side={team.side} />}
             <span className={cn(TEAM_NAME, !team.side && 'text-white/80')} style={{ fontSize: size.font + (big ? 1 : 0) }}>{team.name}</span>
         </div>
     )
@@ -59,7 +58,7 @@ function Pairing({ pairing, size }: { pairing: SwissPairing; size: ChipSize }) {
 function PathLine({ path }: { path: SwissPath }) {
     return (
         <div className="flex min-w-0 items-center gap-3 whitespace-nowrap text-2xl font-bold uppercase tracking-[0.06em]">
-            <SideBadge side={path.side} />
+            <span className="truncate">{path.name}</span>
             <span className="text-white/55">Path</span>
             {path.steps.length === 0 && <span className="text-white/55">No results yet</span>}
             {path.steps.map((step, index) => (

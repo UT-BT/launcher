@@ -12,9 +12,6 @@ function ScoreRow({ side, team, large }: { side: StreamSide; team: SeriesScoreTe
             style={{ background: `linear-gradient(to right, ${tint(hue, 28)}, ${tint(hue, 5)})` }}
         >
             <span className="w-2 self-stretch" style={{ background: hue }} />
-            <span className="w-9 text-center text-2xl font-black italic" style={{ color: hue }}>
-                {side.toUpperCase()}
-            </span>
             <span className={cn('min-w-0 flex-1 truncate font-black italic uppercase', large ? 'text-[40px]' : 'text-[32px]')}>{team.name}</span>
             <span className="flex gap-1">
                 {team.flags.map((flag, index) => (

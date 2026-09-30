@@ -52,6 +52,42 @@ test('BRB shows the streamer message and the series score', async ({ page }) => 
     await expectSceneScreenshot(page, 'brb.png')
 })
 
+test('BRB centres the message and the score card in the frame and has no pause icon', async ({ page }) => {
+    await openScene(page, 'brb', { hotState: brb('Back in five') })
+    const scene = page.locator('[data-stream-scene="brb"]')
+    await expect(scene.locator('[data-brb-message]')).toBeVisible()
+    await settleScene(page)
+
+    await expect(scene.locator('svg')).toHaveCount(0)
+    const frame = (await scene.boundingBox())!
+    const message = (await scene.locator('[data-brb-message]').boundingBox())!
+    const score = (await scene.locator('[data-series-score]').boundingBox())!
+    const top = (await scene.getByText('Be right back', { exact: true }).nth(1).boundingBox())!
+    for (const box of [message, score, top]) {
+        expect(Math.abs(box.x + box.width / 2 - (frame.x + frame.width / 2))).toBeLessThan(2)
+    }
+    const stackTop = top.y
+    const stackBottom = score.y + score.height
+    expect(Math.abs((stackTop + stackBottom) / 2 - (frame.y + frame.height / 2))).toBeLessThan(4)
+})
+
+const SCORE_CARD_SCENES = [
+    { name: 'BRB', scene: 'brb', hotState: brb(null) },
+    { name: 'Caster Cam without the webcam', scene: 'caster', hotState: caster(false) },
+    { name: 'Caster Cam with the webcam', scene: 'caster', hotState: caster(true) },
+]
+
+for (const { name, scene, hotState } of SCORE_CARD_SCENES) {
+    test(`the series score card on ${name} has no side letters`, async ({ page }) => {
+        await openScene(page, scene, { hotState })
+        const card = page.locator('[data-series-score]')
+        await expect(card).toBeVisible()
+        await expect(card.locator('> div').first()).toHaveText(/^Crimson Cats\d+$/)
+        await expect(card.locator('> div').last()).toHaveText(/^Azure Owls\d+$/)
+        await expect(page.getByText(/^[AB]$/)).toHaveCount(0)
+    })
+}
+
 test('BRB falls back to a default line when there is no message', async ({ page }) => {
     await openScene(page, 'brb', { hotState: brb(null) })
     await expect(page.locator('[data-brb-message]')).toHaveText(BRB_DEFAULT_MESSAGE)

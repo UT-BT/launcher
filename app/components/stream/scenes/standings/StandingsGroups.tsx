@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils'
 import type { GroupMatchLine, GroupRow, GroupView } from './standingsView'
-import { KICKER, LABEL, Panel, SideBadge, TEAM_NAME, sideWash } from './StandingsParts'
+import { KICKER, LABEL, Panel, TEAM_NAME, sideWash } from './StandingsParts'
 
 const COLUMNS_WITH_DRAWS = '54px minmax(0,1fr) 60px 46px 38px 38px 38px 96px 92px 64px'
 const COLUMNS_WITHOUT_DRAWS = '54px minmax(0,1fr) 60px 46px 38px 38px 96px 92px 64px'
@@ -20,7 +20,6 @@ function GroupTableRow({ row, showDraws, columns, rowHeight, fontSize }: { row: 
                 {row.rank}
             </span>
             <span className="flex min-w-0 items-center gap-3 pl-2.5 text-left">
-                {row.side && <SideBadge side={row.side} />}
                 <span className={TEAM_NAME}>{row.name}</span>
             </span>
             {numbers.map((value, index) => <span key={index}>{value}</span>)}
@@ -87,7 +86,6 @@ export function StandingsGroups({ view }: { view: GroupView }) {
                     <p className={KICKER}>This match</p>
                     {(['a', 'b'] as const).map(side => (
                         <p key={side} className={cn('flex items-center gap-3 text-4xl font-black italic uppercase', side === 'a' ? 'mt-[18px]' : 'mt-2.5')}>
-                            <SideBadge side={side} />
                             <span className="truncate">{thisMatch[side]}</span>
                         </p>
                     ))}
