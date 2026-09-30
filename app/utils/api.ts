@@ -4324,6 +4324,58 @@ export async function revokeEventManager(accessToken: string, slug: string, user
     return data.items ?? []
 }
 
+export interface RosterEventRef {
+    slug: string
+    name: string
+}
+
+export interface RosterAssignment {
+    match_id: string
+    event: RosterEventRef
+    label: string
+    scheduled_at: string | null
+}
+
+export interface RosterStreamer {
+    user_id: string
+    display_name: string | null
+    avatar: string
+    twitch_url: string | null
+    added_by: { id: string; display_name: string | null } | null
+    added_at: string | null
+    note: string | null
+    upcoming_assignments: RosterAssignment[]
+}
+
+export interface RosterSuggestion {
+    user_id: string
+    display_name: string | null
+    avatar: string
+    twitch_url: string | null
+    event: RosterEventRef
+    signed_up_at: string | null
+}
+
+export async function fetchStreamerRoster(accessToken: string, signal?: AbortSignal): Promise<RosterStreamer[]> {
+    const data = await apiGet<{ items: RosterStreamer[] }>('/admin/streamers', { token: accessToken, signal })
+    return data.items ?? []
+}
+
+export async function putRosterStreamer(accessToken: string, userId: string, note: string | null): Promise<RosterStreamer[]> {
+    const data = await apiGet<{ items: RosterStreamer[] }>(`/admin/streamers/${encodeURIComponent(userId)}`, { token: accessToken, method: 'PUT', body: { note } })
+    return data.items ?? []
+}
+
+export async function removeRosterStreamer(accessToken: string, userId: string): Promise<RosterStreamer[]> {
+    const data = await apiGet<{ items: RosterStreamer[] }>(`/admin/streamers/${encodeURIComponent(userId)}`, { token: accessToken, method: 'DELETE' })
+    return data.items ?? []
+}
+
+export async function fetchRosterSuggestions(accessToken: string, signal?: AbortSignal): Promise<RosterSuggestion[]> {
+    const data = await apiGet<{ items: RosterSuggestion[] }>('/admin/streamers/suggestions', { token: accessToken, signal })
+    return data.items ?? []
+}
+
 export async function fetchEventAdminTeams(accessToken: string, slug: string, signal?: AbortSignal): Promise<EventTeam[]> {
     const data = await apiGet<{ items: EventTeam[] }>(`/tournaments/${encodeURIComponent(slug)}/admin/teams`, { token: accessToken, signal })
     return data.items ?? []
