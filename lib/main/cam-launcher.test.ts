@@ -6,6 +6,8 @@ import type { CamCommand } from '@/lib/stream-kit/cam-plan'
 import { CamLauncher, type CamLauncherOptions, type CamProcess, type CamRequest } from './cam-launcher'
 import type { CamTitleTarget, CamWindows } from './cam-windows'
 
+const describeOnWindows = describe.skipIf(process.platform !== 'win32')
+
 const A1 = '111111111111111111'
 const A2 = '222222222222222222'
 const B1 = '333333333333333333'
@@ -134,7 +136,7 @@ describe('CamLauncher.plan', () => {
     })
 })
 
-describe('CamLauncher.launch', () => {
+describeOnWindows('CamLauncher.launch', () => {
     it('writes separate files per cam under System and leaves the streamer ini files byte-identical', async () => {
         writeFileSync(join(systemDirectory, 'UTBTCamA1.log'), 'Log: LoadMap: 192.0.2.1:7777/BT-Old?Name=Cam\r\n')
         const result = await launcher().launch(REQUEST)
@@ -249,7 +251,7 @@ describe('CamLauncher.launch', () => {
     })
 })
 
-describe('CamLauncher window titles', () => {
+describeOnWindows('CamLauncher window titles', () => {
     it('titles each cam window by PID when launched', async () => {
         windows.titled = new Set([1000, 1001, 1002, 1003])
         const result = await launcher().launch(REQUEST)
@@ -304,7 +306,7 @@ describe('CamLauncher window titles', () => {
     })
 })
 
-describe('CamLauncher status', () => {
+describeOnWindows('CamLauncher status', () => {
     it('reads the server each cam is on from its own log', async () => {
         const cams = launcher()
         await cams.launch(REQUEST)
@@ -367,7 +369,7 @@ describe('CamLauncher status', () => {
     })
 })
 
-describe('CamLauncher.restart and stopAll', () => {
+describeOnWindows('CamLauncher.restart and stopAll', () => {
     it('relaunches only the one cam', async () => {
         const cams = launcher()
         await cams.launch(REQUEST)

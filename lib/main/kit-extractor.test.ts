@@ -5,6 +5,8 @@ import { crc32 } from 'zlib'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { extractKit, isAllowedKitUrl, type KitExtractorOptions, type KitProgress } from './kit-extractor'
 
+const describeOnWindows = describe.skipIf(process.platform !== 'win32')
+
 const KIT_URL = 'https://api.utbt.net/tournaments/cup/stream/42/kit?folder=C%3A%5CUTBT-StreamKit'
 const TOKEN = 'token-abc'
 
@@ -87,7 +89,7 @@ afterEach(() => {
     rmSync(root, { recursive: true, force: true })
 })
 
-describe('extractKit', () => {
+describeOnWindows('extractKit', () => {
     it('downloads the kit with the bearer token and extracts it into a new folder', async () => {
         const folder = join(root, 'UTBT-StreamKit')
         const result = await extractKit({ url: KIT_URL, token: TOKEN, folder }, options(zipResponse(SAMPLE_KIT)))
