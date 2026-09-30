@@ -34,7 +34,7 @@ export const GUIDE_STEPS: GuideStep[] = [
         title: 'Get the kit',
         desktopOnly: false,
         blocks: [
-            text('The kit is your personal set of OBS files. Open the Kit panel, check the kit folder (the default is C:\\UTBT-StreamKit) and press Download and extract kit in the desktop launcher, or Download kit on the website.'),
+            text('The kit is your personal set of OBS files. Open the Setup tab, check the kit folder in the Kit card (the default is C:\\UTBT-StreamKit) and press Download and extract kit in the desktop launcher, or Download kit on the website.'),
             list(
                 'In the desktop launcher the kit is extracted into the kit folder for you.',
                 'On the website it downloads as a ZIP. Unzip it into the kit folder you chose, so that stinger.webm ends up directly inside it. The scene collection looks for the stinger at that exact path.',
@@ -51,7 +51,7 @@ export const GUIDE_STEPS: GuideStep[] = [
                 'In OBS choose Scene Collection > Import and pick UTBT-StreamKit-Scenes.json from the kit folder. Then open the Scene Collection menu and switch to the imported collection.',
                 'Choose Profile > Import and pick the UTBT-StreamKit-Profile folder. Then open the Profile menu and switch to the imported profile.',
             ),
-            text('The collection has eleven scenes: Starting Soon, Match Preview, Pick & Ban, Betting, Match, Intermission, Post-match, Standings, BRB, Ending and Caster Cam. The profile sets 1920×1080 at 60 fps, Simple output mode, 8000 kbps video and 160 kbps audio.'),
+            text('The collection has twelve scenes: Starting Soon, Match Preview, Pick & Ban, Betting, Match, Intermission, Next Map, Post-match, Standings, BRB, Ending and Caster Cam. The profile sets 1920×1080 at 60 fps, Simple output mode, 8000 kbps video and 160 kbps audio.'),
         ],
     },
     {
@@ -94,9 +94,10 @@ export const GUIDE_STEPS: GuideStep[] = [
         title: 'Launch the cams',
         desktopOnly: true,
         blocks: [
-            text('In the desktop launcher open the Cams panel. It needs the game install path from Settings > Game Installation. Each team\'s server is detected from the server list, and you can override it, either with a server from the list or with an address you type.'),
+            text('In the desktop launcher open the Cams tab. It needs the game install path from Settings > Game Installation. Each team\'s server is detected from the server list, and you can override it, either with a server from the list or with an address you type.'),
             list(
-                'Every player in the lineup needs a linked Discord account. Fix missing players in the Match panel first.',
+                'Every player in the lineup needs a linked Discord account. Fix missing players in the Match tab first.',
+                'The cams run at 120 fps by default, which keeps a 60 fps stream smooth. On a weaker PC choose 60 under Cam FPS in the Cams tab, before you launch or restart the cams.',
                 'Press Launch cams. Four spectator windows open, one per lineup slot.',
                 'In OBS, open the Match scene and check that the four captures Cam A1, Cam A2, Cam B1 and Cam B2 each show their window. They bind by the window titles UTBT Cam A1, UTBT Cam A2, UTBT Cam B1 and UTBT Cam B2.',
                 'Check the four application audio captures in the mixer. Each one should move when its cam has sound.',
@@ -110,7 +111,7 @@ export const GUIDE_STEPS: GuideStep[] = [
         title: 'Repair or add a single source by hand',
         desktopOnly: false,
         blocks: [
-            text('The Scenes panel lists the address of each of your eleven scenes, with a copy button and a live preview.'),
+            text('The Scenes card on the Setup tab lists the address of each of your twelve scenes, with a copy button and a live preview.'),
             list(
                 'To repair a source, open its properties in OBS and paste the copied address into the URL field.',
                 'To add one, choose Add > Browser in OBS, paste the address, and set the size to 1920×1080 at 60 fps.',
@@ -124,27 +125,34 @@ export const GUIDE_STEPS: GuideStep[] = [
         desktopOnly: false,
         blocks: [
             list(
-                'Match panel, current match: your assigned matches are listed, and Next match moves to the following one. The current match drives your scenes.',
-                'Lineup: check the suggested lineup or type a name. Swap exchanges a team\'s left and right players when they are the wrong way round.',
-                'Match live: when a match starts without a pick and ban, press Match live so the overlay goes live.',
-                'Score: correct the score by hand when the game data is wrong.',
-                'Countdown: override the countdown when the match starts late.',
-                'Show panel: set the BRB message, name the casters for the current match, and turn the webcam frame on or off. The Caster Webcam source in OBS starts empty, so point it at your camera first, or leave the frame off when you have no camera.',
-                'Channel panel: choose My channel, UTBT channel or Other URL for where viewers are sent. Your own Twitch channel is saved in the Own Twitch channel card.',
+                'Match tab, Current match: your assigned matches are listed, and Next match moves to the following one. The current match drives your scenes.',
+                'Match tab, Lineup: check the suggested lineup or type a name. Swap exchanges a team\'s left and right players when they are the wrong way round.',
+                'Match tab, Streaming on: choose My channel, UTBT channel or Other URL for where viewers are sent. Your own Twitch channel is saved in the Own Twitch channel card on the Setup tab.',
+                'Match tab, Countdown: override the countdown when the match starts late.',
+                'Score tab: when a match starts without a pick and ban, press Match live so the overlay goes live. Correct the score by hand when the game data is wrong.',
+                'Studio tab: name the casters for the current match, set the BRB message, and turn the webcam frame on or off. The Caster Webcam source in OBS starts empty, so point it at your camera first, or leave the frame off when you have no camera.',
             ),
         ],
     },
     {
-        id: 'servers',
-        title: 'Servers without the new BTMod',
-        desktopOnly: true,
+        id: 'audio-levels',
+        title: 'Audio levels',
+        desktopOnly: false,
         blocks: [
-            text('The cams follow their players by themselves only on servers running the updated BTMod. On other servers the cams still connect, but they do not follow anyone. Do it by hand in each cam window:'),
+            text('The kit presets the levels for you, so you only nudge them. In the OBS Audio Mixer, healthy meters look like this: voices (Discord and your mic) peak well into the yellow and never touch red. The game bed sits lower, so the voices stay clear over it.'),
             list(
-                'Say !spec followed by the player\'s name in the game chat. The cam moves to that player, on another server too.',
-                'Or say !utbt_spec followed by the player\'s Discord ID.',
-                'Or open the game menu and set Auto Spectate. On servers without the update the labels are misleading: Any Player follows the first red player, Red Player the first blue player, Red Player 2 any player, Blue Player the second red player, and Blue Player 2 the second blue player. Discord ID follows the Discord ID you enter there.',
-                'Tell the server admin so the server can be updated. After that, the cams follow their players on their own.',
+                'The game drowns the voices: turn the cams down.',
+                'The casters in Discord are too quiet: turn Discord up.',
+                'Your own voice is too quiet or too loud: move the mic fader.',
+            ),
+            text('Leave the filters alone. They are already set up for you.'),
+            text('What the kit presets:'),
+            list(
+                'The four cams are at −15 dB.',
+                'Discord and your mic are at 0 dB.',
+                'The scene cues (Starting Soon, Intermission and Post-match) are at −6 dB.',
+                'The game audio ducks under Discord and the mic, so the cams get quieter by themselves while someone talks.',
+                'Limiters on the cams, Discord, the mic and the cues stop anything from clipping.',
             ),
         ],
     },
@@ -153,7 +161,7 @@ export const GUIDE_STEPS: GuideStep[] = [
         title: 'When the out-of-date banner shows',
         desktopOnly: false,
         blocks: [
-            text('The Kit panel shows a banner when the kit structure has changed since your last download, or when you never downloaded one.'),
+            text('The Kit card on the Setup tab shows a banner when the kit structure has changed since your last download, or when you never downloaded one.'),
             list(
                 'Download the kit again.',
                 'In OBS choose Scene Collection > Import for UTBT-StreamKit-Scenes.json, and Profile > Import for the UTBT-StreamKit-Profile folder.',
@@ -167,7 +175,7 @@ export const GUIDE_STEPS: GuideStep[] = [
         desktopOnly: false,
         blocks: [
             list(
-                'A capture does not bind: launch the cams first, then wait a few seconds. In the capture\'s properties pick the window called UTBT Cam A1 (or A2, B1, B2) by hand. If a cam shows "Not titled yet" in the Cams panel, its window has not been titled, so use Restart on that cam.',
+                'A capture does not bind: launch the cams first, then wait a few seconds. In the capture\'s properties pick the window called UTBT Cam A1 (or A2, B1, B2) by hand. If a cam shows "Not titled yet" in the Cams tab, its window has not been titled, so use Restart on that cam.',
                 'No cam audio: check that the application audio capture for that cam points at the window with the same title, and that the cam window is not muted in the Windows volume mixer. Application Audio Capture needs OBS 28 or newer.',
                 'The stinger shows black instead of transparent: check that stinger.webm sits directly in the kit folder, and that the transition path points at it. Download the kit again to restore the file.',
                 'Windows Graphics Capture is not available: update Windows to version 2004 or later. On a laptop with two graphics cards, run OBS and the game on the same one.',

@@ -78,7 +78,7 @@ test('every guide step is present, numbered and collapsible', async ({ page }) =
 
     const titles = ['Requirements', 'Get the kit', 'Import the scene collection and the profile', 'Pick an encoder', 'Add your stream key in OBS',
         'Add the Stream tab as an OBS dock', 'Launch the cams', 'Repair or add a single source by hand', 'Running a match',
-        'Servers without the new BTMod', 'When the out-of-date banner shows', 'Troubleshooting']
+        'Audio levels', 'When the out-of-date banner shows', 'Troubleshooting']
     for (const title of titles) await expect(panel.getByRole('button', { name: new RegExp(title) })).toBeVisible()
 
     const requirements = panel.getByRole('button', { name: /Requirements/ })
@@ -99,7 +99,7 @@ test('the website marks the cam steps desktop only and links to the launcher', a
     await openGuide(page)
     const panel = page.getByRole('region', { name: 'Guide' })
 
-    await expect(panel.getByText('Desktop only')).toHaveCount(2)
+    await expect(panel.getByText('Desktop only')).toHaveCount(1)
     await expect(panel.getByRole('link', { name: 'Get the desktop launcher' })).toHaveAttribute('href', 'https://github.com/UT-BT/launcher/releases/latest')
 
     await panel.getByRole('button', { name: /Launch the cams/ }).click()
