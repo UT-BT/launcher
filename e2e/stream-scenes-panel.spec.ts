@@ -12,6 +12,7 @@ const SCENES = [
     ['betting', 'Betting'],
     ['overlay', 'Match Overlay'],
     ['intermission', 'Intermission'],
+    ['next-map', 'Next Map'],
     ['post-match', 'Post-match'],
     ['standings', 'Standings'],
     ['brb', 'BRB'],
@@ -100,7 +101,7 @@ test('every scene shows its URL with the streamer id and a copy button', async (
         await expect(input).toHaveValue(new RegExp(`/stream/${SLUG}/${STREAMER_ID}/${id}$`))
         await expect(panel.getByRole('button', { name: `Copy ${label} URL` })).toBeVisible()
     }
-    await expect(panel.getByRole('textbox')).toHaveCount(11)
+    await expect(panel.getByRole('textbox')).toHaveCount(12)
 
     const brb = panel.getByRole('button', { name: 'Copy BRB URL' })
     await brb.click()
@@ -118,8 +119,11 @@ test('previews are preview=1 scene pages that load only while on screen', async 
     await expect(frames.first()).toBeVisible()
     const loaded = await frames.count()
     expect(loaded).toBeGreaterThan(0)
-    expect(loaded).toBeLessThan(11)
+    expect(loaded).toBeLessThan(12)
     await expect(frames.first()).toHaveAttribute('src', `/stream/${SLUG}/${STREAMER_ID}/starting-soon?preview=1`)
+
+    await page.getByTestId('scene-preview-next-map').scrollIntoViewIfNeeded()
+    await expect(page.locator(`iframe[src="/stream/${SLUG}/${STREAMER_ID}/next-map?preview=1"]`)).toHaveCount(1)
 
     await page.getByTestId('scene-preview-caster').scrollIntoViewIfNeeded()
     await expect(page.locator('iframe[src*="/caster?preview=1"]')).toHaveCount(1)

@@ -7,6 +7,7 @@ export const STREAM_SCENES = [
     { id: 'betting', label: 'Betting', transparent: false },
     { id: 'overlay', label: 'Match Overlay', transparent: true },
     { id: 'intermission', label: 'Intermission', transparent: false },
+    { id: 'next-map', label: 'Next Map', transparent: false },
     { id: 'post-match', label: 'Post-match', transparent: false },
     { id: 'standings', label: 'Standings', transparent: false },
     { id: 'brb', label: 'BRB', transparent: false },

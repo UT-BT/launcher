@@ -3,10 +3,10 @@ import { STREAM_SCENES } from '@/app/components/stream/streamScenes'
 import { sceneLinks } from './sceneLinks'
 
 describe('sceneLinks', () => {
-    it('lists the eleven scenes in contract order with the streamer id in every url', () => {
+    it('lists the twelve scenes in contract order with the streamer id in every url', () => {
         const links = sceneLinks('stream-cup', '111111111111', true)
         expect(links.map(link => link.id)).toEqual(STREAM_SCENES.map(scene => scene.id))
-        expect(links).toHaveLength(11)
+        expect(links).toHaveLength(12)
         for (const link of links) {
             expect(link.url).toMatch(/^https?:\/\/[^/]+\/stream\/stream-cup\/111111111111\/[a-z-]+$/)
         }

@@ -16,6 +16,7 @@ const SCENES: Record<StreamSceneId, LazyExoticComponent<ComponentType<StreamScen
     'betting': lazy(() => import('./scenes/BettingScene')),
     'overlay': lazy(() => import('./scenes/OverlayScene')),
     'intermission': lazy(() => import('./scenes/IntermissionScene')),
+    'next-map': lazy(() => import('./scenes/NextMapScene')),
     'post-match': lazy(() => import('./scenes/PostMatchScene')),
     'standings': lazy(() => import('./scenes/StandingsScene')),
     'brb': lazy(() => import('./scenes/BrbScene')),

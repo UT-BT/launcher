@@ -18,6 +18,7 @@ const SCENES = [
     { id: 'betting', label: 'Betting' },
     { id: 'overlay', label: 'Match Overlay' },
     { id: 'intermission', label: 'Intermission' },
+    { id: 'next-map', label: 'Next Map' },
     { id: 'post-match', label: 'Post-match' },
     { id: 'standings', label: 'Standings' },
     { id: 'brb', label: 'BRB' },
