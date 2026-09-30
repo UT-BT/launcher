@@ -30,10 +30,7 @@ export function SoonTeamPlate({ team }: { team: SoonTeam }) {
             <div aria-hidden className={cn('absolute inset-y-0 left-0 w-2', tone.solid)} />
             <div aria-hidden className="absolute inset-x-0 bottom-0 h-px" style={{ clipPath: PLATE_CLIP, background: `linear-gradient(to right, ${hue}, transparent 85%)` }} />
             <div className="relative flex h-full min-w-0 flex-col items-start justify-center gap-2.5 pl-12 pr-24">
-                <div className="flex items-center gap-2.5">
-                    <span className={cn('inline-flex size-7 items-center justify-center rounded-md text-lg font-black italic', tone.solid, tone.onSolid)}>{team.ab}</span>
-                    {team.seed !== null && <span className="text-lg font-bold uppercase tracking-[0.2em] text-white/70">Seed {team.seed}</span>}
-                </div>
+                {team.seed !== null && <span className="text-lg font-bold uppercase tracking-[0.2em] text-white/70">Seed {team.seed}</span>}
                 <h2
                     className="max-w-full truncate font-black italic uppercase leading-[0.9] tracking-tight text-white [text-shadow:0_4px_24px_rgba(0,0,0,0.45)]"
                     style={{ fontSize: nameSize(name) }}

@@ -1,4 +1,4 @@
-import type { PickBanActor, RawActiveTitle } from '@/app/utils/api'
+import type { RawActiveTitle } from '@/app/utils/api'
 import { parseApiInstant } from '@/app/utils/timezone'
 import type { StreamMatch, StreamSide, StreamTeam, StreamUserRef } from '../../data/streamHotState'
 import { formatLabel, relativeTimeText, stageLine, utcTimeText } from '../../sceneHelpers'
@@ -9,6 +9,7 @@ const SECOND_MS = 1_000
 const ALSO_TODAY_ROWS = 5
 const ALSO_TODAY_RESULT_ROWS = 2
 const CUE_LATE_LIMIT_MS = 5_000
+const MISSING_ODDS = '–'
 const HIDDEN_ODDS_STATES: ReadonlySet<StartingSoonBetting['state']> = new Set(['not_enabled', 'no_market'])
 
 export interface CountdownView {
@@ -27,15 +28,13 @@ export interface SoonPlayer {
 
 export interface SoonTeam {
     side: StreamSide
-    ab: PickBanActor
     name: string | null
     seed: number | null
     players: SoonPlayer[]
 }
 
 export interface OddsShare {
-    percent: string
-    odds: string
+    text: string
     share: number
 }
 
@@ -125,7 +124,6 @@ function teamOf(match: StreamMatch, side: StreamSide): SoonTeam {
     const team = match.teams[side]
     return {
         side,
-        ab: side === 'a' ? 'A' : 'B',
         name: team?.name ?? null,
         seed: team?.stage_seed ?? null,
         players: playersOf(match, side),
@@ -136,8 +134,16 @@ function countText(count: number, one: string, many: string): string {
     return `${count.toLocaleString('en-US')} ${count === 1 ? one : many}`
 }
 
-function oddsShare(side: BettingSidePrice, total: number): OddsShare {
-    return { percent: `${Math.round(side.price * 100)}%`, odds: side.odds.toFixed(2), share: total > 0 ? side.price / total : 0 }
+function payoutText(side: BettingSidePrice): string {
+    return side.odds === null ? MISSING_ODDS : `${side.odds.toFixed(2)}×`
+}
+
+function percentText(side: BettingSidePrice): string {
+    return `(${Math.round(side.price * 100)}%)`
+}
+
+function oddsShare(side: BettingSidePrice, total: number, text: string): OddsShare {
+    return { text, share: total > 0 ? side.price / total : 0 }
 }
 
 function oddsView(betting: StartingSoonBetting | null): OddsView | null {
@@ -145,9 +151,9 @@ function oddsView(betting: StartingSoonBetting | null): OddsView | null {
     const { a, b, draw } = betting.sides
     const total = a.price + b.price + (draw?.price ?? 0)
     return {
-        a: oddsShare(a, total),
-        b: oddsShare(b, total),
-        draw: draw ? oddsShare(draw, total) : null,
+        a: oddsShare(a, total, `${payoutText(a)} ${percentText(a)}`),
+        b: oddsShare(b, total, `${percentText(b)} ${payoutText(b)}`),
+        draw: draw ? oddsShare(draw, total, `Draw ${payoutText(draw)} ${percentText(draw)}`) : null,
         summary: `${countText(betting.market.predictions, 'prediction', 'predictions')} · ${countText(betting.market.pool, 'coin', 'coins')} in the pool`,
     }
 }

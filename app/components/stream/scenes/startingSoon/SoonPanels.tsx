@@ -54,10 +54,8 @@ export function SoonCountdown({ countdown, stage, format }: { countdown: Countdo
 function OddsSide({ side, share }: { side: 'A' | 'B'; share: OddsShare }) {
     const tone = sideToneClasses(side === 'A' ? 'a' : 'b')
     return (
-        <p data-soon-odds={side} className={cn('flex items-center gap-2.5 font-black italic uppercase', side === 'B' && 'flex-row-reverse')} style={{ fontSize: 28 }}>
-            <span className={cn('inline-flex size-7 items-center justify-center rounded-md text-lg font-black', tone.solid, tone.onSolid)}>{side}</span>
-            <span className={tone.text}>{share.percent}</span>
-            <span className="text-white/85">{share.odds}</span>
+        <p data-soon-odds={side} className={cn('font-black italic uppercase', tone.text)} style={{ fontSize: 28 }}>
+            {share.text}
         </p>
     )
 }
@@ -72,7 +70,7 @@ export function SoonOdds({ odds }: { odds: OddsView }) {
                 <OddsSide side="A" share={odds.a} />
                 {odds.draw && (
                     <p className="font-black italic uppercase text-white/60" style={{ fontSize: 22 }}>
-                        Draw {odds.draw.percent} · {odds.draw.odds}
+                        {odds.draw.text}
                     </p>
                 )}
                 <OddsSide side="B" share={odds.b} />

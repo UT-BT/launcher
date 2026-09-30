@@ -5,7 +5,7 @@ export type BettingReadState = 'not_enabled' | 'no_market' | 'open' | 'closed' |
 
 export interface BettingSidePrice {
     price: number
-    odds: number
+    odds: number | null
 }
 
 export interface StartingSoonBetting {

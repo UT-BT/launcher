@@ -66,12 +66,12 @@ describe('the stage and teams', () => {
 
     it('puts A on top and B below, with seeds and the lineup players and their titles', () => {
         const [a, b] = viewAt(NOW).teams
-        expect(a).toMatchObject({ side: 'a', ab: 'A', name: 'Crimson Cats', seed: 1 })
+        expect(a).toMatchObject({ side: 'a', name: 'Crimson Cats', seed: 1 })
         expect(a.players).toEqual([
             { id: '1000', name: 'Ada', title: streamTitle('Cap Machine') },
             { id: '1001', name: 'Ben', title: null },
         ])
-        expect(b).toMatchObject({ side: 'b', ab: 'B', name: 'Azure Owls', seed: 4 })
+        expect(b).toMatchObject({ side: 'b', name: 'Azure Owls', seed: 4 })
         expect(b.players.map(player => player.name)).toEqual(['Cleo', 'Dex'])
     })
 
@@ -94,15 +94,15 @@ describe('the stage and teams', () => {
 
     it('shows an undecided team as TBD with no seed or players', () => {
         const view = viewAt(NOW, { teams: { a: streamTeam('a'), b: null }, lineup: { a1: null, a2: null, b1: null, b2: null } })
-        expect(view.teams[1]).toEqual({ side: 'b', ab: 'B', name: null, seed: null, players: [] })
+        expect(view.teams[1]).toEqual({ side: 'b', name: null, seed: null, players: [] })
     })
 })
 
 describe('the odds bar', () => {
-    it('shows each side as a percentage and decimal odds, with the totals', () => {
+    it('shows each side as payout and percentage, payout on the outside, with the totals', () => {
         expect(viewAt(NOW).odds).toEqual({
-            a: { percent: '58%', odds: '1.72', share: 0.58 },
-            b: { percent: '42%', odds: '2.38', share: 0.42 },
+            a: { text: '1.72× (58%)', share: 0.58 },
+            b: { text: '(42%) 2.38×', share: 0.42 },
             draw: null,
             summary: '164 predictions · 12,450 coins in the pool',
         })
@@ -125,9 +125,20 @@ describe('the odds bar', () => {
             sides: { a: { price: 0.5, odds: 2 }, b: { price: 0.3, odds: 3.33 }, draw: { price: 0.2, odds: 5 } },
         })
         const odds = startingSoonView({ match: streamMatch(), betting, feed: null, now: NOW }).odds
-        expect(odds?.draw).toEqual({ percent: '20%', odds: '5.00', share: 0.2 })
-        expect(odds?.a.odds).toBe('2.00')
+        expect(odds?.draw).toEqual({ text: 'Draw 5.00× (20%)', share: 0.2 })
+        expect(odds?.a.text).toBe('2.00× (50%)')
+        expect(odds?.b.text).toBe('(30%) 3.33×')
         expect(odds?.summary).toBe('1 prediction · 250 coins in the pool')
+    })
+
+    it('shows a missing odds value as a dash on either side and on the draw', () => {
+        const betting = soonBetting({
+            sides: { a: { price: 0.5, odds: null }, b: { price: 0.3, odds: null }, draw: { price: 0.2, odds: null } },
+        })
+        const odds = startingSoonView({ match: streamMatch(), betting, feed: null, now: NOW }).odds
+        expect(odds?.a.text).toBe('– (50%)')
+        expect(odds?.b.text).toBe('(30%) –')
+        expect(odds?.draw?.text).toBe('Draw – (20%)')
     })
 })
 
