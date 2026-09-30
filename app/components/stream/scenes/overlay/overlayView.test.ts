@@ -91,13 +91,13 @@ describe('overlayView', () => {
             expect(view?.capsSource).toBe('live')
         })
 
-        it('shows the caps a streamer override set, with its source', () => {
-            const match = streamMatch({ maps: MAPS, score: streamScore([streamMapScore(0, [0, 1], null, { source: 'override' })]) })
+        it('shows the caps a streamer set by hand, with its source', () => {
+            const match = streamMatch({ maps: MAPS, score: streamScore([streamMapScore(0, [0, 1], null, { source: 'manual', pins: { a: null, b: 1 } })]) })
 
             const view = overlayView(match)
 
             expect(view?.teams.map(team => team.caps)).toEqual([0, 1])
-            expect(view?.capsSource).toBe('override')
+            expect(view?.capsSource).toBe('manual')
         })
 
         it('keeps the last decided map once the series is over', () => {

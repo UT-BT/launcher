@@ -51,13 +51,13 @@ export interface MapRevealState {
 const SOURCE_LABELS: Record<StreamScoreSource, CapsSourceLabel> = {
     official: 'Official',
     live: 'Live',
-    override: 'Corrected',
+    manual: 'Corrected',
 }
 
 const FINISHED_STATUSES = ['complete', 'forfeit', 'bye']
 
 function capsShown(score: StreamMapScore): boolean {
-    return score.decided || score.source === 'override' || (score.caps.a ?? 0) + (score.caps.b ?? 0) > 0
+    return score.decided || score.source === 'manual' || (score.caps.a ?? 0) + (score.caps.b ?? 0) > 0
 }
 
 function statusOf(score: StreamMapScore, current: number | null): SeriesMapStatus {

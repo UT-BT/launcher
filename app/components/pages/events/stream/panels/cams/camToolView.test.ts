@@ -79,7 +79,7 @@ function match(lineup: Partial<Lineup> = {}): StreamMatch {
             ...lineup,
         },
         maps: [],
-        score: { maps: [], current_map: null, series: { a: 0, b: 0 }, winner: null, live_decided: false },
+        score: { maps: [], current_map: null, series: { a: 0, b: 0 }, winner: null, live_decided: false, live_counting: true },
         casters: [],
     }
 }

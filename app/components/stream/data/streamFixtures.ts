@@ -64,7 +64,17 @@ export function streamTeam(side: StreamSide, overrides: Partial<StreamTeam> = {}
 
 export function streamMapScore(ordinal: number, caps: [number, number] = [0, 0], winner: StreamSide | null = null, overrides: Partial<StreamMapScore> = {}): StreamMapScore {
     const decided = winner !== null
-    return { ordinal, caps: { a: caps[0], b: caps[1] }, decided, winner, source: decided ? 'official' : 'live', ...overrides }
+    return {
+        ordinal,
+        caps: { a: caps[0], b: caps[1] },
+        decided,
+        winner,
+        source: decided ? 'official' : 'live',
+        closed_by: decided ? 'official' : null,
+        pins: { a: null, b: null },
+        winner_override: 'auto',
+        ...overrides,
+    }
 }
 
 export function streamScore(maps: StreamMapScore[], overrides: Partial<StreamScore> = {}): StreamScore {
@@ -73,7 +83,7 @@ export function streamScore(maps: StreamMapScore[], overrides: Partial<StreamSco
         b: maps.filter(map => map.winner === 'b').length,
     }
     const current = maps.find(map => !map.decided)
-    return { maps, current_map: current?.ordinal ?? null, series, winner: null, live_decided: false, ...overrides }
+    return { maps, current_map: current?.ordinal ?? null, series, winner: null, live_decided: false, live_counting: true, ...overrides }
 }
 
 export function streamMaps(names: string[], pickedBy: (StreamSide | null)[] = []): StreamMatchMap[] {

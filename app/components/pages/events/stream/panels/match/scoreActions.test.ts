@@ -1,17 +1,19 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '@/app/utils/api'
 import {
-    adjustMapScore,
     clearCountdown,
     clearMatchLive,
-    clearScoreOverrides,
     markMatchLive,
     matchBroadcastPath,
     moveCountdown,
+    resetAllMapScores,
+    resetMapScore,
+    setLiveCounting,
+    setMapScore,
 } from './scoreActions'
 
 const TARGET = { accessToken: 'token', slug: 'cup 1', matchId: 'm-1' }
-const BROADCAST = { match_id: 'm-1', live_at: null, countdown_override_at: null, countdown_at: null, score_overrides: {} }
+const BROADCAST = { match_id: 'm-1', live_at: null, countdown_override_at: null, countdown_at: null, score_state: {}, live_counting: true }
 
 function stubFetch(response: Response) {
     const fetchMock = vi.fn((_url: string, _init: RequestInit) => Promise.resolve(response))
@@ -35,8 +37,12 @@ describe('match broadcast writes', () => {
     it.each([
         ['mark live', () => markMatchLive(TARGET), 'POST', '/live', undefined],
         ['clear live', () => clearMatchLive(TARGET), 'DELETE', '/live', undefined],
-        ['adjust', () => adjustMapScore(TARGET, 1, 'b', -1), 'POST', '/score/overrides', { ordinal: 1, side: 'b', delta: -1 }],
-        ['clear overrides', () => clearScoreOverrides(TARGET), 'DELETE', '/score/overrides', undefined],
+        ['set map', () => setMapScore(TARGET, 1, { a: null, b: 3, winner: 'auto' }), 'PUT', '/score/maps/1', { a: null, b: 3, winner: 'auto' }],
+        ['set map winner', () => setMapScore(TARGET, 0, { a: 2, b: 2, winner: 'none' }), 'PUT', '/score/maps/0', { a: 2, b: 2, winner: 'none' }],
+        ['reset map', () => resetMapScore(TARGET, 2), 'DELETE', '/score/maps/2', undefined],
+        ['reset all maps', () => resetAllMapScores(TARGET), 'DELETE', '/score/maps', undefined],
+        ['live counting off', () => setLiveCounting(TARGET, false), 'PUT', '/score/live-counting', { enabled: false }],
+        ['live counting on', () => setLiveCounting(TARGET, true), 'PUT', '/score/live-counting', { enabled: true }],
         ['move countdown', () => moveCountdown(TARGET, { add_minutes: 10 }), 'PUT', '/countdown', { add_minutes: 10 }],
         ['set countdown', () => moveCountdown(TARGET, { at: '2026-09-26T21:00:00Z' }), 'PUT', '/countdown', { at: '2026-09-26T21:00:00Z' }],
         ['clear countdown', () => clearCountdown(TARGET), 'DELETE', '/countdown', undefined],
@@ -54,16 +60,16 @@ describe('match broadcast writes', () => {
 
     it('turns a rejected write into an error with the server message and code', async () => {
         stubFetch(new Response(
-            JSON.stringify({ success: false, error: 'That correction would not change the score shown for this map.', code: 'no_effect' }),
+            JSON.stringify({ success: false, error: 'That change would not change the stored score.', code: 'no_effect' }),
             { status: 422 },
         ))
 
-        const error = await adjustMapScore(TARGET, 0, 'a', -1).catch(caught => caught)
+        const error = await setMapScore(TARGET, 0, { a: null, b: null, winner: 'auto' }).catch(caught => caught)
 
         expect(error).toBeInstanceOf(ApiError)
         expect(error.status).toBe(422)
         expect(error.reason).toBe('no_effect')
-        expect(error.message).toBe('That correction would not change the score shown for this map.')
+        expect(error.message).toBe('That change would not change the stored score.')
     })
 
     it('rejects a response without the broadcast', async () => {

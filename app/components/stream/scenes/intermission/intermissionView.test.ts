@@ -8,7 +8,7 @@ describe('intermissionView series', () => {
         const match = intermissionMatch([], {
             score: streamScore([
                 streamMapScore(0, [2, 1], 'a'),
-                streamMapScore(1, [2, 3], 'b', { source: 'override' }),
+                streamMapScore(1, [2, 3], 'b', { source: 'manual', pins: { a: null, b: 3 } }),
                 streamMapScore(2, [1, 0], null),
                 streamMapScore(3, [0, 0], null),
             ]),

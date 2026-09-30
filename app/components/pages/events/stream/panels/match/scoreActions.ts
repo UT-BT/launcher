@@ -1,13 +1,20 @@
 import { apiRequest } from '@/app/utils/api'
 import { streamDeskError } from '../../streamDesk'
-import type { StreamSide } from '../../streamDesk'
+import type { StreamWinnerOverride } from '../../streamDesk'
+
+export interface MapScoreState {
+    a: number | null
+    b: number | null
+    winner: StreamWinnerOverride
+}
 
 export interface MatchBroadcast {
     match_id: string
     live_at: string | null
     countdown_override_at: string | null
     countdown_at: string | null
-    score_overrides: Record<string, { a: number; b: number }>
+    score_state: Record<string, MapScoreState>
+    live_counting: boolean
 }
 
 export type CountdownChange = { at: string } | { add_minutes: number }
@@ -43,12 +50,20 @@ export function clearMatchLive(target: BroadcastTarget): Promise<MatchBroadcast>
     return broadcastWrite(target, '/live', 'DELETE')
 }
 
-export function adjustMapScore(target: BroadcastTarget, ordinal: number, side: StreamSide, delta: 1 | -1): Promise<MatchBroadcast> {
-    return broadcastWrite(target, '/score/overrides', 'POST', { ordinal, side, delta })
+export function setMapScore(target: BroadcastTarget, ordinal: number, state: MapScoreState): Promise<MatchBroadcast> {
+    return broadcastWrite(target, `/score/maps/${ordinal}`, 'PUT', { a: state.a, b: state.b, winner: state.winner })
 }
 
-export function clearScoreOverrides(target: BroadcastTarget): Promise<MatchBroadcast> {
-    return broadcastWrite(target, '/score/overrides', 'DELETE')
+export function resetMapScore(target: BroadcastTarget, ordinal: number): Promise<MatchBroadcast> {
+    return broadcastWrite(target, `/score/maps/${ordinal}`, 'DELETE')
+}
+
+export function resetAllMapScores(target: BroadcastTarget): Promise<MatchBroadcast> {
+    return broadcastWrite(target, '/score/maps', 'DELETE')
+}
+
+export function setLiveCounting(target: BroadcastTarget, enabled: boolean): Promise<MatchBroadcast> {
+    return broadcastWrite(target, '/score/live-counting', 'PUT', { enabled })
 }
 
 export function moveCountdown(target: BroadcastTarget, change: CountdownChange): Promise<MatchBroadcast> {

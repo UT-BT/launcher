@@ -6,7 +6,9 @@ export const DESK_POLL_MS = 2_000
 
 export type StreamSide = 'a' | 'b'
 export type StreamReason = 'current' | 'live' | 'holding-finished' | 'next' | 'none'
-export type StreamScoreSource = 'official' | 'live' | 'override'
+export type StreamScoreSource = 'official' | 'live' | 'manual'
+export type StreamMapClosedBy = 'official' | 'override' | 'target' | 'later_map'
+export type StreamWinnerOverride = 'auto' | 'a' | 'b' | 'none'
 
 export interface StreamPerson {
     id: string
@@ -40,6 +42,9 @@ export interface StreamMapScore {
     decided: boolean
     winner: StreamSide | null
     source: StreamScoreSource
+    closed_by: StreamMapClosedBy | null
+    pins: { a: number | null; b: number | null }
+    winner_override: StreamWinnerOverride
 }
 
 export interface StreamMatch {
@@ -67,6 +72,7 @@ export interface StreamMatch {
         series: { a: number; b: number }
         winner: StreamSide | null
         live_decided: boolean
+        live_counting: boolean
     }
     casters: StreamCaster[]
 }

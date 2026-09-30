@@ -4,7 +4,9 @@ import { readConditional, type ConditionalReadOptions } from './conditionalRead'
 export type StreamSide = 'a' | 'b'
 export type BracketSide = 'a' | 'b'
 export type StreamReason = 'current' | 'live' | 'holding-finished' | 'next' | 'none'
-export type StreamScoreSource = 'official' | 'live' | 'override'
+export type StreamScoreSource = 'official' | 'live' | 'manual'
+export type StreamMapClosedBy = 'official' | 'override' | 'target' | 'later_map'
+export type StreamWinnerOverride = 'auto' | 'a' | 'b' | 'none'
 export type StreamLineupSlot = 'a1' | 'a2' | 'b1' | 'b2'
 
 export interface StreamUserRef {
@@ -43,6 +45,9 @@ export interface StreamMapScore {
     decided: boolean
     winner: StreamSide | null
     source: StreamScoreSource
+    closed_by: StreamMapClosedBy | null
+    pins: { a: number | null; b: number | null }
+    winner_override: StreamWinnerOverride
 }
 
 export interface StreamScore {
@@ -51,6 +56,7 @@ export interface StreamScore {
     series: { a: number; b: number }
     winner: StreamSide | null
     live_decided: boolean
+    live_counting: boolean
 }
 
 export interface StreamMatch {
