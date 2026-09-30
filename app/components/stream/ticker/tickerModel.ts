@@ -6,6 +6,7 @@ import { channelText, teamName, type FeedMatch, type FeedPredictor, type FeedRes
 const RESULT_LIMIT = 2
 const UPCOMING_LIMIT = 2
 const PREDICTOR_LIMIT = 3
+const UNSCHEDULED_TEXT = 'time TBD'
 
 export type TickerSetKind = 'results' | 'upcoming' | 'predictors' | 'next'
 
@@ -46,7 +47,7 @@ function resultItem(result: FeedResult): TickerItem {
 }
 
 function matchItem(kind: 'upcoming' | 'next', match: FeedMatch, now: number): TickerItem | null {
-    const when = sceneTimeText(match.scheduled_at, now)
+    const when = sceneTimeText(match.scheduled_at, now) ?? (kind === 'next' && match.scheduled_at === null ? UNSCHEDULED_TEXT : null)
     if (when === null) return null
     return { kind, key: match.id, when, teams: teamsOf(match), channel: channelText(match.stream_url) }
 }

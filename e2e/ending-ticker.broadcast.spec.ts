@@ -118,6 +118,21 @@ for (const [index, kind] of TICKER_SETS.entries()) {
     })
 }
 
+test('the ticker names an unscheduled next match as time TBD', async ({ page }) => {
+    const unscheduled = feedMatch('u4', 'Burrow Gang', 'Flagrunners', null, { status: 'pending', stream_url: 'https://twitch.tv/bramble_bt' })
+    await openScene(page, 'ending', {
+        hotState: HOT_STATE,
+        reads: { [FEED_PATH]: { ...FEED, next_match: unscheduled } },
+        at: atShowing(3),
+    })
+    const showing = page.locator('[data-ticker-set="next"]')
+
+    await expect(showing).toBeVisible()
+    await expect(showing).toContainText('time TBD')
+    await settleScene(page)
+    await expect(page).toHaveScreenshot('ticker-next-tbd.png', { clip: TICKER_STRIP })
+})
+
 test('the ticker renders nothing when the feed has nothing to show', async ({ page }) => {
     await openScene(page, 'ending', { hotState: HOT_STATE, reads: { [FEED_PATH]: streamFeed(STREAM_T0) } })
 

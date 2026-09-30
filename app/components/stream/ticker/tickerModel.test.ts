@@ -70,6 +70,17 @@ describe('tickerSets', () => {
         ])
     })
 
+    it('shows an unscheduled next match as time TBD', () => {
+        const feed = streamFeed(NOW, { next_match: feedMatch('tbd', 'Burrow Gang', 'Flagrunners', null, { status: 'pending', stream_url: 'https://twitch.tv/bramble_bt' }) })
+        expect(tickerSets(feed, NOW)).toEqual([
+            {
+                kind: 'next',
+                tag: 'Next on this channel',
+                items: [{ kind: 'next', key: 'tbd', teams: ['Burrow Gang', 'Flagrunners'], when: 'time TBD', channel: 'twitch.tv/bramble_bt' }],
+            },
+        ])
+    })
+
     it('names an undecided slot TBD', () => {
         const feed = streamFeed(NOW, { next_match: { ...feedMatch('m', 'x', 'y', NOW + HOUR), teams: { a: null, b: null } } })
         expect(tickerSets(feed, NOW)[0].items[0]).toMatchObject({ teams: ['TBD', 'TBD'] })
@@ -88,6 +99,19 @@ describe('tickerSets', () => {
     it('skips upcoming matches without a time', () => {
         const feed = streamFeed(NOW, { upcoming: [feedMatch('u', 'a', 'b', null)] })
         expect(tickerSets(feed, NOW)).toEqual([])
+    })
+})
+
+describe('tickerRotation with an unscheduled next match', () => {
+    const feed = { ...FULL, next_match: feedMatch('tbd', 'Burrow Gang', 'Flagrunners', null) }
+    const sets = tickerSets(feed, NOW)
+    const slot = Math.floor(NOW / TICKER_SET_MS)
+
+    it('keeps the four sets and the interval', () => {
+        expect(sets.map(set => set.kind)).toEqual(['results', 'upcoming', 'predictors', 'next'])
+        expect(tickerRotation(sets, slot * TICKER_SET_MS)?.index).toBe(slot % 4)
+        expect(tickerRotation(sets, (slot + 1) * TICKER_SET_MS)?.index).toBe((slot + 1) % 4)
+        expect(TICKER_SET_MS).toBe(10_000)
     })
 })
 
