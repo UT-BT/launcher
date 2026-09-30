@@ -10,7 +10,7 @@ not_here:
   - "IPC channel contract → lib/conveyor/README.md"
   - "build commands reference → agents/build.md"
 sections: [overview, platform-layer, capability-gates, web-auth, pre-shell-routes, anonymous-browsing, shareable-urls, responsive-layout, performance, build, seo-and-link-previews, hosting-note]
-last_verified: 2026-09-29
+last_verified: 2026-09-30
 verify_against:
   - app/public/route-contract.json
   - app/components/navigation/NavLink.tsx
@@ -35,6 +35,8 @@ verify_against:
   - app/components/broadcast/BroadcastStage.tsx
   - app/components/broadcast/stageScale.ts
   - app/components/stream/mountStreamSceneRoot.tsx
+  - app/components/stream/scenes/NextMapScene.tsx
+  - app/components/stream/scenes/nextMap/nextMapView.ts
   - app/components/stream/streamScenes.ts
   - app/components/stream/noIndex.ts
   - app/components/stream/streamScenes.css
@@ -209,6 +211,16 @@ banner). Scene ids are the `STREAM_SCENES` list in `streamScenes.ts`; an
 unknown id (`/stream/cup/42/scoreboard`) is still claimed by the stream root,
 never by the app. Each `stream/scenes/*Scene.tsx` is its own lazy chunk.
 `?preview=1` is described in `agents/data-sources.md` (stream kit).
+
+**The Next Map scene page** (`/stream/<slug>/<streamerId>/next-map`, `NextMapScene`, seventh of
+the twelve `STREAM_SCENES`, after Intermission and before Post-match) is a web-only page like every scene: an opaque frame
+with the ticker, its own lazy chunk (about 4 KiB) inside the stream-scene bundle budget. It plays
+the map's fly-through WebM from the API host through a plain `<video>` (`muted`, `loop`,
+`playsInline`, `preload="auto"`, paused under `motion=0`), so it needs no desktop capability. It never reads Page Visibility or the OBS source events for the
+video: the kit's browser source stays alive while hidden, so the video is already buffered and
+looping when the scene is cut to. If the video is missing or fails it falls back to the map
+screenshot. The scene list is guarded by `streamScenes.test.ts`, `sceneLinks.test.ts` and
+`routes.contract.test.ts`, which derives its scene paths from `STREAM_SCENES`.
 
 - **noindex, both ways.** `app/public/robots.txt` has `Disallow: /stream/` and
   `Disallow: /events/*/matches/*/stream`, and `renderer-web.tsx` calls

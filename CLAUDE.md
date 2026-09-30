@@ -31,11 +31,13 @@ every doc.
 | persist UI state / add a localStorage key | agents/state-patterns.md | the 3 state tiers + key convention |
 | navigation / Back-Forward / detail pages | agents/navigation.md | navigate(), renderView, sidebar, events |
 | call the API / asset URLs / favorites | agents/data-sources.md | endpoints + favorites/patreon sync |
-| stream kit: Stream tab, OBS scene pages, cam tool, OBS kit | agents/data-sources.md (stream kit section) | desk/scene reads + writes, polling cadences, `preview=1`, where the fetchers live |
-| build or style an OBS scene / use the broadcast module | agents/shared-components.md + agents/styling.md | broadcast module, scene frame + helpers, transparent stage, scene stylesheet, screenshot conventions |
+| stream kit: Stream tab, OBS scene pages, cam tool, OBS kit | agents/data-sources.md (stream kit section) | desk/scene reads + writes (score editor, local-time countdown, casters, next-map read), polling cadences, `preview=1`, Cam FPS, where the fetchers live |
+| Stream tab panels / default panel / Admin → Streamers | agents/navigation.md (Stream tab) + agents/state-patterns.md | panel order, the default-panel rule, the nav keys, the admin section |
+| streamer roster API, map fly-through videos, `mapVideoUrl` | agents/data-sources.md (Admin API, avatar URLs) | roster and video fetchers, the video URL helper |
+| build or style an OBS scene / use the broadcast module | agents/shared-components.md + agents/styling.md | broadcast module, scene frame + helpers, overlay and Next Map layouts, transparent stage, scene stylesheet, screenshot conventions |
 | make a feature work or hide on the web build / platform gating | agents/web-target.md | platform layer + capability gates + web build |
-| IPC channels / window.conveyor / events | lib/conveyor/README.md | channel inventory + add pattern |
-| main-process / services / file access | lib/main/README.md | services + path/url safety + config |
+| IPC channels / window.conveyor / events | lib/conveyor/README.md | channel inventory + add pattern (incl. Cam FPS) |
+| main-process / services / file access | lib/main/README.md | services + path/url safety + config (incl. `camFps`, what the cam plan writes) |
 | settings panels / UT99 ini keys | app/components/pages/settings/README.md | sections + ini flow + constants |
 | run / build / lint / typecheck / commit | agents/build.md | commands + pre-commit gate |
 

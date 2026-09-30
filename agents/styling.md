@@ -10,8 +10,8 @@ not_here:
   - "which component to use → shared-components.md"
   - "state / persistence → state-patterns.md"
 sections: [class-merging, tables-locked, responsive-columns, page-layout, filter-panel, buttons-toggle-states, form-inputs, card-backgrounds-borders, text, color-palette, animation, css-runtime-cost, broadcast-styling, scene-stylesheet, screenshot-conventions, donts]
-last_verified: 2026-09-29
-verify_against: [app/components/shared/DataTable.tsx, app/components/shared/LiveDot.tsx, app/components/shared/chipStyles.ts, app/styles/globals.css, app/styles/theme.css, app/styles/desktop.css, app/styles/index.css, lib/utils.ts, app/hooks/useElementWidth.ts, app/hooks/usePrefersReducedMotion.ts, app/components/broadcast/broadcastTone.ts, app/components/broadcast/broadcastMotion.ts, app/components/broadcast/broadcastFonts.ts, app/components/broadcast/broadcastFonts.css, app/components/broadcast/BroadcastStage.tsx, app/components/stream/streamScenes.css, app/components/stream/frame/SceneFrame.tsx, e2e/streamHarness.ts, playwright.config.ts]
+last_verified: 2026-09-30
+verify_against: [app/components/shared/DataTable.tsx, app/components/shared/LiveDot.tsx, app/components/shared/chipStyles.ts, app/styles/globals.css, app/styles/theme.css, app/styles/desktop.css, app/styles/index.css, lib/utils.ts, app/hooks/useElementWidth.ts, app/hooks/usePrefersReducedMotion.ts, app/components/broadcast/broadcastTone.ts, app/components/broadcast/broadcastMotion.ts, app/components/broadcast/broadcastFonts.ts, app/components/broadcast/broadcastFonts.css, app/components/broadcast/BroadcastStage.tsx, app/components/stream/streamScenes.css, app/components/stream/frame/SceneFrame.tsx, e2e/streamHarness.ts, playwright.config.ts, app/components/stream/scenes/overlay/overlayLayout.ts, app/components/stream/scenes/nextMap/NextMapHero.tsx, e2e/audio-balance.broadcast.spec.ts]
 ---
 
 # Styling reference
@@ -567,6 +567,35 @@ A class used only in a scene lives in the scene CSS bundle, and a class shared w
 must be in a file the app scans. The bundle check budgets the two separately
 (`agents/web-target.md`).
 
+### Scene layouts
+
+- **No A/B letters.** No scene draws an A/B chip or a "Team A" slot label: a side is its colour bar,
+  wash and tone, and the team's name. `TeamPlate`'s `ab` only picks the colour.
+- **Match overlay (layout 06)** (`scenes/overlay/`, transparent). Everything sits on the frame's
+  edges or its centre and stays clear of the four cam timer zones (360×96, checked by the spec).
+  - *Name tags* (`OverlayNameTag`, 360×60): round avatar and alias only, a 50px slant and a side
+    wash. A1 and A2 at top 466 on the left and right edges, B1 and B2 at bottom 28 in the lower
+    corners.
+  - *Score rows* (`OverlayHub`, 376×46, centred at 50%/50%): `#05070c` at 86% with a 1px white/12
+    ring and 10px radius, a 6px team bar and a 30%→8% team wash, the team name in 900 italic (29px, 25px
+    over 15 characters), 7×18 skewed win pips (the majority for a first-to series, the best-of for
+    all-maps), and a 46×38 score box at 38px holding the current map's caps. The rows sit at y 479–525
+    and 555–601.
+  - *Map strip* (`OverlayMapStrip`): a band up to 560px wide and 30px tall, centred on the seam at y
+    540, on `#05070c` at 92% with an 8px radius and 16px text. Played cells are dimmed with their
+    result, the current cell has a white underline and lighter wash, upcoming cells are outlined in the
+    picker's colour (gold for the decider). Played names cap at 110px, upcoming at 140px, the current
+    one is uncapped. A width estimate in the view model collapses played cells to number and score
+    when the band would pass 560px; if it still overflows, the upcoming-name cap steps down 8px at a
+    time to 40px, then upcoming cells show the number badge only. The **FT2 chip** (`FT{caps_to_win}`) sits outside the clipped cell
+    box at the band's right end so it is never cut off; with no chip and no maps the band is not drawn.
+  - The layout numbers live in `overlayLayout.ts`.
+- **Next Map scene** (`scenes/nextMap/`, opaque, 1792×824 body): a 1280×720 hero (video or
+  screenshot, with the "Map N" chip in the picker's tone, the name, mapper and pick line under it) and
+  a 472px column of panels (series card, Team WR, Lineup PBs, Cup history). The screenshot's slow pan is
+  one stage-level framer-motion loop (scale 1.12, x ±3%, 26s, mirrored), within the animation budget,
+  and it stops under `motion=0`, where the video also stays paused on its first frame.
+
 ### Screenshot conventions
 
 Scenes are checked visually at 1920×1080 with Playwright (`playwright.config.ts`):
@@ -595,8 +624,14 @@ Scenes are checked visually at 1920×1080 with Playwright (`playwright.config.ts
     four Barlow faces and every image to load) and masks the ticker strip, whose rotation
     is time-driven, with magenta.
 - **Transparency** is asserted, not eyeballed: the overlay spec screenshots the page with
-  `omitBackground`, composites it over a four-quadrant sample image
-  (`e2e/overlay-quadrants.jpg`) and checks that nothing outside the painted parts changed.
+  `omitBackground`, composites it over the four-quadrant sample image (`e2e/overlay-quadrants.jpg`) and checks that every part sits on an edge
+  or the centre, that no pixel differs from the image more than a 40px shadow margin outside a part's box, and that
+  the four timer zones have no alpha at all.
+- **Video scenes** (Next Map): the spec serves a small WebM fixture (`e2e/next-map-flythrough.webm`)
+  with range support through `page.route`, added after `serveStreamApi`, and waits for the video's
+  `readyState` before the baseline. A video baseline runs with `motion=0` so it is the first frame.
+- **Sound** has its own guard: `e2e/audio-balance.broadcast.spec.ts` decodes the shipped cue files
+  (see `agents/data-sources.md`, pick/ban sound).
 - **Fixtures** live beside the scene code (`stream/data/streamFixtures.ts`,
   `stream/scenes/<scene>/<scene>Fixtures.ts`): synthetic teams, players and maps only.
 

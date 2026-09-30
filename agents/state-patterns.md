@@ -17,8 +17,8 @@ not_here:
   - "the navigation stack / navigate() / renderView wiring → navigation.md"
   - "the shared components used (FilterPresetsMenu, ColumnsMenu, Tutorial) → shared-components.md"
 sections: [controlled-pages-with-hoisted-state, navigation-history-per-entry-ui-state, account-synced-state, localstorage-persistence, filter-presets, tutorial-state, favorites, polling-live-data, naming-conventions]
-last_verified: 2026-09-29
-verify_against: [app/components/main/Main.tsx, app/components/navigation/useNavState.ts, app/hooks/useAsync.ts, app/utils/userState.ts, app/utils/poller.ts, app/components/pages/events/pickban/pickBanSession.ts, app/components/pages/events/pickban/usePickBanSession.ts, app/components/pages/events/pickban/mergePickBanState.ts, app/components/pages/events/pickban/captainPlay.ts, app/components/pages/events/pickban/useCaptainPlay.ts, app/components/pages/events/pickban/managerDock.ts, app/components/pages/events/pickban/useManagerDock.ts, app/components/pages/events/pickban/editFinal.ts, app/components/pages/events/pickban/pickBanMotionPreference.ts, app/components/pages/events/pickban/pickBanSoundPreference.ts, app/components/pages/MatchPickBanPage.tsx, app/components/navigation/nav-items.ts, app/utils/eventAttention.ts, app/components/pages/events/stream/StreamTab.tsx, app/components/pages/events/stream/StreamTabContext.tsx, app/components/pages/events/stream/streamDesk.ts, app/components/pages/events/stream/panels/kit/kitFolder.ts, app/components/stream/data/sceneCadence.ts, app/components/stream/data/streamHotStateStore.ts, app/components/stream/data/sceneReadStore.ts]
+last_verified: 2026-09-30
+verify_against: [app/components/main/Main.tsx, app/components/navigation/useNavState.ts, app/hooks/useAsync.ts, app/utils/userState.ts, app/utils/poller.ts, app/components/pages/events/pickban/pickBanSession.ts, app/components/pages/events/pickban/usePickBanSession.ts, app/components/pages/events/pickban/mergePickBanState.ts, app/components/pages/events/pickban/captainPlay.ts, app/components/pages/events/pickban/useCaptainPlay.ts, app/components/pages/events/pickban/managerDock.ts, app/components/pages/events/pickban/useManagerDock.ts, app/components/pages/events/pickban/editFinal.ts, app/components/pages/events/pickban/pickBanMotionPreference.ts, app/components/pages/events/pickban/pickBanSoundPreference.ts, app/components/pages/MatchPickBanPage.tsx, app/components/navigation/nav-items.ts, app/utils/eventAttention.ts, app/components/pages/events/stream/StreamTab.tsx, app/components/pages/events/stream/StreamTabContext.tsx, app/components/pages/events/stream/streamDesk.ts, app/components/pages/events/stream/panels/kit/kitFolder.ts, app/components/stream/data/sceneCadence.ts, app/components/stream/data/streamHotStateStore.ts, app/components/stream/data/sceneReadStore.ts, app/components/pages/events/stream/streamPanels.ts, app/components/pages/events/stream/useStreamKitState.ts, app/components/pages/events/stream/panels/cams/camToolHooks.ts, lib/main/config.ts]
 ---
 
 # State patterns
@@ -156,8 +156,17 @@ Rules for `useNavState`:
 - Scroll: use `useNavScrollRestore(ref, loadingDone)` for detail scroll containers.
 - The event page's Stream tab (`events/stream/StreamTab.tsx`) keeps two keys:
   `event.streamAs` (the streamer a manager is operating as, `string | null`) and
-  `event.streamPanel` (the open panel id, default `'match'`). Both restore on Back/Forward
+  `event.streamPanel` (the panel the streamer last clicked: `match`, `cams`, `score`, `studio`,
+  `setup` or `guide`; default `null`, meaning "nothing chosen yet"). Both restore on Back/Forward
   and start from defaults on a fresh open. `?tab=stream` only selects the tab.
+  **The default-panel rule** is `initialStreamPanel(remembered, kit)` (`streamPanels.ts`, pure): a
+  valid remembered id wins; an old id (`show`, `channel`, `kit`, `scenes`) or `null` falls through to
+  the kit state. Kit state `loading` opens nothing (the tab reads "Loading your stream desk…" with no
+  panel pressed, so it never flashes one panel then another); `none` (no kit downloaded yet) opens
+  Setup; `downloaded` and `unknown` (the kit read failed) open Match. The kit state comes from
+  `useStreamKitState(eventSlug, streamerId, accessToken, needed)` (`useStreamKitState.ts`): it reads the
+  kit info of the streamer being operated as, only while nothing is remembered, once per event and
+  streamer. The resolved default is never written to nav state: only a click counts as remembered.
 
 ## Account-synced state (`app/utils/userState.ts`)
 
@@ -663,6 +672,14 @@ senders.
   `CountdownBar` (`events/pickban/components/Countdown.tsx`) already do this.
 
 ### Stream tab and scene polling
+
+**The Cam FPS preference is not renderer state.** It is the launcher config's `camFps` (`60` or
+`120`, default 120), read and saved through `window.conveyor.streamKit.getCamFps()` / `setCamFps(fps)`
+(`lib/main/README.md`, `lib/conveyor/README.md`), so it survives restarts and is per device. The
+Cams tool loads it on mount (Launch waits for it), saves on each click and puts the value on every
+cam request; if saving fails, the choice still holds for the session and an amber line says it will
+reset on restart. It is not in `usePageState`, `useNavState` or `utbt:*` storage, and it does not sync
+across devices.
 
 **The Stream tab's context** (`events/stream/StreamTabContext.tsx`). `StreamTab` builds one
 identity (`eventSlug`, `streamerId`, `isManager`, `accessToken`) and wraps the open panel in

@@ -11,7 +11,7 @@ not_here:
   - "the IPC channel/api/handler pattern → lib/conveyor/README.md"
   - "renderer HTTP calls → agents/data-sources.md"
 sections: [services, the-renderer-main-boundary, file-path-safety, opening-urls, config-storage, ini-access, stream-cams, stream-kit-extractor, window-security-csp]
-last_verified: 2026-09-29
+last_verified: 2026-09-30
 verify_against:
   - lib/main/app.ts
   - lib/main/config.ts
@@ -92,7 +92,9 @@ external links and stray navigations leave the app safely.
 atomically (tmp + rename). Typed accessors only — don't read the file directly:
 `getUt99InstallPath` / `setUt99InstallPath`, `getGatewayConfig`, `getInstalledPatch`,
 `getDemoWatcherConfig`, `getActiveProfile`, `getAuthConfig`,
-`getWindowBehavior` (minimize/close-to-tray + start-on-startup, applied by `tray-service`).
+`getWindowBehavior` (minimize/close-to-tray + start-on-startup, applied by `tray-service`),
+`getCamFps` / `setCamFps` (the `camFps` key, the stream cams' frame rate: `60` or `120`; anything
+else, a missing value or an unreadable file reads as `120`, and saving keeps the rest of the config).
 
 **Secrets are encrypted at rest.** Auth access/refresh tokens go through Electron
 `safeStorage` (`enc:` prefix) in `set/getAuthConfig`. Never log them or store
@@ -110,7 +112,7 @@ are the main consumer (see `app/components/pages/settings/README.md`).
 
 Four extra UT clients (slots A1, A2, B1, B2) for the Cams panel. Windows only;
 everything else refuses with `unsupported-platform`. The renderer sends only a
-lineup and two server addresses (`CamRequest`).
+lineup, two server addresses and the frame rate, `60` or `120` (`CamRequest`).
 
 - **Plan.** Main reads `UnrealTournament.ini` and `User.ini` through
   `resolveWithin({install}/System, name)` and calls the shared
@@ -124,6 +126,21 @@ lineup and two server addresses (`CamRequest`).
   edits single keys in the user's files, whereas these are whole per-instance
   copies. They still follow the same path rule (`resolveWithin` under System).
   Ini text is handled as latin1 (UTF-16LE with BOM preserved).
+- **Frame rate and audio.** Besides the window size and windowed-mode keys in
+  `[WinDrv.WindowsClient]`, the plan writes, per cam copy of the streamer's ini:
+  - `FrameRateLimit=<fps>` in `[WinDrv.WindowsClient]` and in the section named by
+    `GameRenderDevice` in `[Engine.Engine]` (any device: D3D9, D3D11, OpenGL, Vulkan, …);
+  - `MusicVolume=0` and `SoundVolume=200` in the section named by `AudioDevice` in
+    `[Engine.Engine]` (`ALAudio`, `Cluster` and `Galaxy` subsystems all use the same key
+    names). 200 is UT's stock sound level, so every cam plays at one known volume whatever the
+    streamer's own setting, and the mix is balanced in OBS; music is off. Other audio keys
+    (`UseDigitalMusic`, `SpeechVolume`, …) are left alone.
+  - The device names are read only from `[Engine.Engine]`, trimmed and matched without regard
+    to case. A missing or empty device key leaves that device's section untouched; a missing
+    section is appended; existing keys are replaced in place and every other line is kept.
+  - `fps` comes on the request (a restart without one keeps the rate the cam launched with).
+    It is the saved `camFps` preference, `60` or `120`, default 120: 120 keeps a 60 fps stream
+    smooth, 60 is for a PC that struggles.
 - **Lifecycle.** Clients are spawned detached and tracked by PID. `launch`,
   `restart` and `stopAll` run one at a time through a single queue. All cams are
   killed on `will-quit`. `game-processes.ts` lets `gameService.isGameRunning()`

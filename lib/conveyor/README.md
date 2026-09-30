@@ -11,7 +11,7 @@ not_here:
   - "the step-by-step add-a-channel procedure → .claude/skills/add-ipc-channel/SKILL.md"
   - "the main-process services behind the handlers → lib/main/README.md"
 sections: [overview, the-channel-inventory, calling-from-the-renderer, adding-a-channel, event-bridges, conventions]
-last_verified: 2026-09-29
+last_verified: 2026-09-30
 verify_against:
   - lib/conveyor/api/index.ts
   - lib/conveyor/schemas/index.ts
@@ -60,7 +60,7 @@ channel is one triple kept in three folders:
 | `maps` | `extractToInstall(mapName, bytes)` → extract a map zip into the install dir without overwriting |
 | `demos` | `saveToSystem(filename, bytes)` → write a demo into `{install}/System` |
 | `updater` | `check(manual?)`, `download()`, `quitAndInstall()`, `getState()` |
-| `streamKit` | Cam tool (Windows desktop only): `planCams(req)`, `launchCams(req)`, `retitleCams()`, `getCamStatus()`, `restartCam(slot, req?)`, `stopCams()`; kit: `extractKit({url,token,folder})` → channel `extractStreamKit` |
+| `streamKit` | Cam tool (Windows desktop only): `planCams(req)`, `launchCams(req)`, `retitleCams()`, `getCamStatus()`, `restartCam(slot, req?)`, `stopCams()`, `getCamFps()`, `setCamFps(fps)`; kit: `extractKit({url,token,folder})` → channel `extractStreamKit` |
 | `logging` | `log/info/warn/error/debug(message, context?, data?)`, `getLogFilePath()`, `getRecentLogs(lines?)` |
 
 Renderer method names and channel names sometimes differ (e.g.
@@ -74,15 +74,19 @@ must match exactly.
 Schemas, types and error codes live in `schemas/stream-kit-schema.ts`
 (`CamRequest`, `CamToolStatus`, `KitExtractRequest`, `KitProgress`).
 
-- **Cam calls** take `CamRequest` = `{ lineup: { A1, A2, B1, B2 }, servers: { A, B } }`
-  (strings or null). The renderer never sends paths, command lines or ini text;
+- **Cam calls** take `CamRequest` = `{ lineup: { A1, A2, B1, B2 }, servers: { A, B }, fps }`
+  (lineup and servers are strings or null; `fps` is required and is `60` or `120`). The renderer never sends paths, command lines or ini text;
   main reads the install itself. `plan`/`launch`/`restart` return `{ ok: true, … }`
   or `{ ok: false, errors }` (coded, e.g. `missing-slot`, `missing-server`,
   `no-install`, `unsupported-platform`); `retitle`/`getCamStatus`/`stopCams`
   return `CamToolStatus` = `{ supported, retitle: { available, error }, cams }`
   (always four slots A1, A2, B1, B2).
-- **`restartCam(slot, null)`** relaunches from the plan the cam started with;
-  with a request it rebuilds that slot from the current lineup and servers.
+- **`restartCam(slot, null)`** relaunches from the plan the cam started with (including its
+  frame rate); with a request it rebuilds that slot from the current lineup, servers and `fps`.
+- **`getCamFps()` / `setCamFps(fps)`** read and save the Cam FPS preference (`camFpsSchema`,
+  `60 | 120`). `getCamFps` answers 120 when nothing valid is stored. The renderer reads it, puts it
+  on the `CamRequest`, and main's cam plan writes the frame-rate limits and audio settings from
+  it (see `lib/main/README.md`).
 - **`extractKit`** downloads the kit ZIP with the caller's bearer token and
   extracts it into `folder`. Returns `{ ok: true, folder, files }` or
   `{ ok: false, reason, status? }`; reasons cover folder, URL/token, HTTP and

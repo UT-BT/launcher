@@ -11,7 +11,7 @@ not_here:
   - "the PlayerInfo / CapTimeLink components that trigger nav → shared-components.md"
   - "the Schedule tab's own visibility rule and its audiences → data-sources.md"
 sections: [the-model, navigate-is-the-only-entry-point, leave-guards, url-sync-web-build, link-semantics, page-views-vs-detail-pages, the-sidebar-registry, event-driven-navigation, sidebar-new-badges, page-refresh-registry, per-entry-state, shareable-match-links, match-pickban-page]
-last_verified: 2026-09-29
+last_verified: 2026-09-30
 verify_against:
   - app/components/main/Main.tsx
   - app/components/navigation/NavLink.tsx
@@ -32,6 +32,9 @@ verify_against:
   - app/components/pages/events/schedule/ScheduleTabContainer.tsx
   - app/components/pages/events/schedule/PublicSchedulePanel.tsx
   - app/components/pages/events/stream/streamTabAccess.ts
+  - app/components/pages/events/stream/streamPanels.ts
+  - app/components/pages/admin/registry.tsx
+  - app/components/pages/admin/types.ts
   - app/components/stream/streamScenes.ts
   - app/components/navigation/routes.contract.test.ts
 ---
@@ -91,13 +94,20 @@ const [cursor, setCursor] = useState(0)
   **`?tab=stream` works the same way.** The Stream tab (`StreamTab`, lazy) is in
   `BASE_TABS`, so `?tab=stream` is a valid initial tab, but it is visible only when
   `streamTabVisible` (`events/stream/streamTabAccess.ts`) passes: signed in AND
-  (the viewer is one of the event's streamers OR can manage the bracket). Both
+  (the viewer is on the streamer roster, which is global, OR can manage the bracket). Both
   facts come from the viewer's event status read, so until it lands the tab reads
   as `info` and switches to Stream once it resolves; a viewer who fails the rule
-  (signed out, or neither streamer nor manager) stays on `info`. Derived per
+  (signed out, or neither on the roster nor a manager) stays on `info`. Derived per
   render, never rewrites the URL. The Stream tab's content is in
-  `agents/data-sources.md` (stream kit). `e2e/stream-tab.spec.ts` checks that each Stream panel
-  (Show, Channel, Scenes, Kit, Guide) opens without horizontal overflow.
+  `agents/data-sources.md` (stream kit). The tab's panels, in order: **Match · Cams · Score · Studio │ Setup · Guide**
+  (`streamPanels.ts`; a `role="separator"` divider sits between the live group and the setup
+  group). The default-panel rule: a remembered panel wins; with none, Setup opens when the
+  streamer has no kit downloaded and Match otherwise (also when the kit read fails), and nothing
+  is pressed ("Loading your stream desk…") while the kit state loads. Old ids (`show`, `channel`,
+  `kit`, `scenes`) fall through to that rule, and only a click is remembered. A `#guide-<id>` hash
+  is read only by an already-open Guide panel, not by a fresh load. Details and the state keys are
+  in `agents/state-patterns.md`. `e2e/stream-tab.spec.ts` checks the order and divider and that each
+  panel opens without horizontal overflow at 390 and 1920 px.
 - The stack is **in-memory only** — it boots to a single `home` entry on every
   launch and is never persisted. (Preferences persist; history doesn't — see
   `state-patterns.md`.)
@@ -195,6 +205,8 @@ Model: **the in-memory stack stays master; browser history mirrors it.**
   (`app/components/stream/streamScenes.ts`) reads a five-segment `/stream/...`
   path back to `{ eventSlug, streamerId, scene }`, and `renderer-web.tsx` mounts
   the scene root instead of `Main` (see `agents/web-target.md` → `pre-shell-routes`).
+  The scene ids are the twelve in `STREAM_SCENES`; the Next Map page is `.../next-map`,
+  seventh after Intermission (see `agents/web-target.md`).
   `streamScenePath` / `streamSceneUrl` build them (the URL form uses
   `VITE_SITE_ORIGIN`, like the match links). `routes.contract.test.ts` pins that
   the contract has no `/stream` route, that every scene path (and an unknown
@@ -428,7 +440,11 @@ keep those states synchronized when changing the responsive navigation.
 the Staff group when `isStaff(userProfile)`, helpers in `app/utils/roles.ts`) **and**
 guard the `renderView` case — `admin` passes `forceDenied={!isStaff(userProfile)}` so
 a forced view renders a denied card instead of the page. The `admin` page is itself a
-section hub; see `app/components/pages/admin/registry.tsx`.
+section hub; see `app/components/pages/admin/registry.tsx`. **Admin → Streamers** is the section
+with id `streamers` ("Streamers", `Radio` icon, Events group, right after Tournament Formats),
+visible to Moderators and Admins only (`ADMIN_DASHBOARD_ROLES`; a Cup Admin does not see it). It
+manages the streamer roster (`agents/data-sources.md`, Admin API). Like every section it opens
+through the saved `utbt:adminState:v1` `activeSection`.
 
 ## Event-driven navigation
 
