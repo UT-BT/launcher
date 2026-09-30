@@ -63,6 +63,8 @@ function match(lineup: Partial<Lineup> = {}): StreamMatch {
         scheduled_at: null,
         countdown_at: null,
         live_at: null,
+        live_since: null,
+        live_source: null,
         status: 'scheduled',
         stream_url: null,
         pick_ban_status: 'complete',

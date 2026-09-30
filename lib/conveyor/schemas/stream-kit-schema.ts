@@ -138,6 +138,10 @@ export const streamKitIpcSchema = {
         args: z.tuple([camFpsSchema]),
         return: camFpsSchema,
     },
+    selectKitFolder: {
+        args: z.tuple([z.string().max(260)]),
+        return: z.string().nullable(),
+    },
     extractStreamKit: {
         args: z.tuple([kitExtractRequestSchema]),
         return: z.discriminatedUnion('ok', [

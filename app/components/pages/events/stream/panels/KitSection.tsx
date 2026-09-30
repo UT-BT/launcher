@@ -1,5 +1,5 @@
 import { useEffect, useId, useState } from 'react'
-import { AlertTriangle, CheckCircle2, Download, Info } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, Download, FolderOpen, Info } from 'lucide-react'
 import { usePlatform } from '@/app/platform'
 import { useAsync } from '@/app/hooks/useAsync'
 import { cn } from '@/lib/utils'
@@ -49,6 +49,12 @@ export function KitSection() {
         if (kitFolderError(value) === null) saveKitFolder(browserStore(), streamerId, value)
     }
 
+    async function chooseFolder() {
+        if (working) return
+        const picked = await window.conveyor.streamKit.selectKitFolder(normalizeKitFolder(folder))
+        if (picked) changeFolder(normalizeKitFolder(picked))
+    }
+
     async function startDownload() {
         if (folderError || working) return
         const target = normalizeKitFolder(folder)
@@ -83,26 +89,42 @@ export function KitSection() {
             <StreamCard title="Kit" description="Your personalised OBS kit: scenes, profile and stinger.">
                 <div className="max-w-xl space-y-1.5">
                     <label htmlFor={folderInputId} className="text-xs font-medium text-foreground">Kit folder</label>
-                    <input
-                        id={folderInputId}
-                        type="text"
-                        value={folder}
-                        onChange={event => changeFolder(event.target.value)}
-                        disabled={working}
-                        spellCheck={false}
-                        autoComplete="off"
-                        aria-invalid={folderError !== null}
-                        aria-describedby={folderError ? folderErrorId : undefined}
-                        className={cn(
-                            'h-9 w-full rounded-md border bg-card/40 px-3 font-mono text-xs text-foreground outline-none transition-colors focus-visible:border-accent-500/60 disabled:opacity-60',
-                            folderError ? 'border-destructive/60' : 'border-hairline/10',
+                    <div className="flex items-center gap-2">
+                        <input
+                            id={folderInputId}
+                            type="text"
+                            value={folder}
+                            onChange={event => changeFolder(event.target.value)}
+                            onClick={desktop ? () => void chooseFolder() : undefined}
+                            readOnly={desktop}
+                            disabled={working}
+                            spellCheck={false}
+                            autoComplete="off"
+                            aria-invalid={folderError !== null}
+                            aria-describedby={folderError ? folderErrorId : undefined}
+                            className={cn(
+                                'h-9 min-w-0 flex-1 rounded-md border bg-card/40 px-3 font-mono text-xs text-foreground outline-none transition-colors focus-visible:border-accent-500/60 disabled:opacity-60',
+                                desktop && 'cursor-pointer',
+                                folderError ? 'border-destructive/60' : 'border-hairline/10',
+                            )}
+                        />
+                        {desktop && (
+                            <button
+                                type="button"
+                                onClick={() => void chooseFolder()}
+                                disabled={working}
+                                className="inline-flex h-9 shrink-0 items-center gap-2 rounded-md border border-hairline/10 bg-card/50 px-3 text-xs font-medium text-muted-foreground transition-colors hover:border-hairline/20 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                <FolderOpen className="size-3.5" aria-hidden="true" />
+                                Browse…
+                            </button>
                         )}
-                    />
+                    </div>
                     {folderError ? (
                         <p id={folderErrorId} role="alert" className="text-xs text-destructive">{folderError}</p>
                     ) : (
                         <p className="text-xs text-muted-foreground">
-                            Where you keep the kit on your PC. The stinger path inside the scene collection points here.
+                            {desktop ? 'Choose' : 'Type'} where you keep the kit on your PC. The stinger path inside the scene collection points here.
                         </p>
                     )}
                 </div>

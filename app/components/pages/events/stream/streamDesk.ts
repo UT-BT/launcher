@@ -9,6 +9,7 @@ export type StreamReason = 'current' | 'live' | 'holding-finished' | 'next' | 'n
 export type StreamScoreSource = 'official' | 'live' | 'manual'
 export type StreamMapClosedBy = 'official' | 'override' | 'target' | 'later_map'
 export type StreamWinnerOverride = 'auto' | 'a' | 'b' | 'none'
+export type StreamLiveSource = 'manual' | 'pick_ban'
 
 export interface StreamPerson {
     id: string
@@ -59,6 +60,8 @@ export interface StreamMatch {
     scheduled_at: string | null
     countdown_at: string | null
     live_at: string | null
+    live_since: string | null
+    live_source: StreamLiveSource | null
     status: EventMatchStatus
     stream_url: string | null
     pick_ban_status: string

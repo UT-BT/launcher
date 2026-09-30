@@ -1,9 +1,10 @@
-import { app, BrowserWindow, net } from 'electron'
+import { app, BrowserWindow, dialog, net } from 'electron'
 import { handle } from '@/lib/main/shared'
 import { loggingService } from '@/lib/main/logging-service'
 import { camService } from '@/lib/main/cam-service'
 import { getCamFps, setCamFps } from '@/lib/main/config'
 import { extractKit } from '@/lib/main/kit-extractor'
+import { validateKitFolder } from '@/lib/main/kit-folder'
 
 const CONTEXT = 'StreamKitHandler'
 
@@ -36,6 +37,16 @@ export const registerStreamKitHandlers = (window: BrowserWindow) => {
     handle('setCamFps', (fps) => {
         setCamFps(fps)
         return getCamFps()
+    })
+
+    handle('selectKitFolder', async (current) => {
+        const start = validateKitFolder(current)
+        const result = await dialog.showOpenDialog(window, {
+            title: 'Choose your stream kit folder',
+            defaultPath: start.ok ? start.folder : undefined,
+            properties: ['openDirectory', 'createDirectory'],
+        })
+        return result.canceled ? null : (result.filePaths[0] ?? null)
     })
 
     handle('extractStreamKit', async (request) =>

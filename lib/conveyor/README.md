@@ -60,7 +60,7 @@ channel is one triple kept in three folders:
 | `maps` | `extractToInstall(mapName, bytes)` → extract a map zip into the install dir without overwriting |
 | `demos` | `saveToSystem(filename, bytes)` → write a demo into `{install}/System` |
 | `updater` | `check(manual?)`, `download()`, `quitAndInstall()`, `getState()` |
-| `streamKit` | Cam tool (Windows desktop only): `planCams(req)`, `launchCams(req)`, `retitleCams()`, `getCamStatus()`, `restartCam(slot, req?)`, `stopCams()`, `getCamFps()`, `setCamFps(fps)`; kit: `extractKit({url,token,folder})` → channel `extractStreamKit` |
+| `streamKit` | Cam tool (Windows desktop only): `planCams(req)`, `launchCams(req)`, `retitleCams()`, `getCamStatus()`, `restartCam(slot, req?)`, `stopCams()`, `getCamFps()`, `setCamFps(fps)`; kit: `selectKitFolder(current)`, `extractKit({url,token,folder})` → channel `extractStreamKit` |
 | `logging` | `log/info/warn/error/debug(message, context?, data?)`, `getLogFilePath()`, `getRecentLogs(lines?)` |
 
 Renderer method names and channel names sometimes differ (e.g.
@@ -87,6 +87,9 @@ Schemas, types and error codes live in `schemas/stream-kit-schema.ts`
   `60 | 120`). `getCamFps` answers 120 when nothing valid is stored. The renderer reads it, puts it
   on the `CamRequest`, and main's cam plan writes the frame-rate limits and audio settings from
   it (see `lib/main/README.md`).
+- **`selectKitFolder(current)`** opens the native folder picker (starting at `current` when it
+  is a valid drive path) and returns the chosen folder, or `null` when cancelled. The Kit card
+  on desktop fills its read-only folder field from it; the web build keeps a typed path.
 - **`extractKit`** downloads the kit ZIP with the caller's bearer token and
   extracts it into `folder`. Returns `{ ok: true, folder, files }` or
   `{ ok: false, reason, status? }`; reasons cover folder, URL/token, HTTP and

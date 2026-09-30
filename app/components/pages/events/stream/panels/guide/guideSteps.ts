@@ -129,7 +129,7 @@ export const GUIDE_STEPS: GuideStep[] = [
                 'Match tab, Lineup: check the suggested lineup or type a name. Swap exchanges a team\'s left and right players when they are the wrong way round.',
                 'Match tab, Streaming on: choose My channel, UTBT channel or Other URL for where viewers are sent. Your own Twitch channel is saved in the Own Twitch channel card on the Setup tab.',
                 'Match tab, Countdown: override the countdown when the match starts late.',
-                'Score tab: when a match starts without a pick and ban, press Match live so the overlay goes live. Correct the score by hand when the game data is wrong.',
+                'Score tab: a match goes live by itself when its pick and ban ends. When a match starts without a pick and ban, press Match live so the overlay goes live. Correct the score by hand when the game data is wrong.',
                 'Studio tab: name the casters for the current match, set the BRB message, and turn the webcam frame on or off. The Caster Webcam source in OBS starts empty, so point it at your camera first, or leave the frame off when you have no camera.',
             ),
         ],
@@ -150,7 +150,7 @@ export const GUIDE_STEPS: GuideStep[] = [
             list(
                 'The four cams are at −15 dB.',
                 'Discord and your mic are at 0 dB.',
-                'The scene cues (Starting Soon, Intermission and Post-match) are at −6 dB.',
+                'The scene cues (Starting Soon, Intermission and Post-match) are at −6 dB, and the Pick & Ban sound effects are at −35 dB.',
                 'The game audio ducks under Discord and the mic, so the cams get quieter by themselves while someone talks.',
                 'Limiters on the cams, Discord, the mic and the cues stop anything from clipping.',
             ),

@@ -1514,7 +1514,7 @@ the same median clock offset as pick/ban, `pickban/clockOffset.ts`).
 `createStreamDeskStore` (`streamDesk.ts`) polls it every `DESK_POLL_MS` (2 s) through
 `createPoller`, and `StreamTabContext` shares that one store with every panel. `reason` is
 `'current' | 'live' | 'holding-finished' | 'next' | 'none'`; `match` is the full
-`StreamMatch` (teams, lineup, maps, `score`, `countdown_at`, `live_at`, `casters`) or `null`. Map
+`StreamMatch` (teams, lineup, maps, `score`, `countdown_at`, `live_at`, `live_since`, `live_source`, `casters`) or `null`. `live_since` is when the match went live: `live_source` `'manual'` (Match live, the stored `live_at`) or `'pick_ban'` (the end of a completed pick & ban), both null before either; the Score tab shows it without anyone pressing Match live. Map
 ordinals are 0-based; scenes show `mapNumber(ordinal)` (1-based, `sceneHelpers.ts`). The `score`
 block has `live_counting` and a per-map entry with `source` (`'official' | 'live' | 'manual'`),
 `closed_by`, `pins` and `winner_override`, and a `series` line derived from the map winners. The launcher renders `reason`

@@ -55,6 +55,8 @@ function match(overrides: Partial<StreamMatch> = {}, maps: StreamMapScore[] = [m
         scheduled_at: '2026-09-26T20:00:00+00:00',
         countdown_at: '2026-09-26T20:00:00+00:00',
         live_at: null,
+        live_since: null,
+        live_source: null,
         status: 'live',
         stream_url: null,
         pick_ban_status: 'none',
@@ -83,14 +85,29 @@ describe('buildScoreView', () => {
     })
 
     it('says when the match was marked live', () => {
-        const view = buildScoreView(match({ live_at: '2026-09-26T20:03:00+00:00' }), NOW)
+        const at = '2026-09-26T20:03:00+00:00'
+        const view = buildScoreView(match({ live_at: at, live_since: at, live_source: 'manual' }), NOW)
         expect(view?.liveSet).toBe(true)
+        expect(view?.canClearLive).toBe(true)
         expect(view?.liveText).toBe('Live since 20:03 UTC · 7m ago')
     })
 
-    it('explains where counting starts when the match is not marked live', () => {
-        expect(buildScoreView(match(), NOW)?.liveText).toMatch(/starts counting once you mark the match live/)
-        expect(buildScoreView(match({ pick_ban_status: 'complete' }), NOW)?.liveText).toMatch(/counts from the end of pick & ban/)
+    it('shows the match live from the end of pick & ban without Match live', () => {
+        const view = buildScoreView(match({ pick_ban_status: 'complete', live_since: '2026-09-26T19:58:00+00:00', live_source: 'pick_ban' }), NOW)
+        expect(view?.liveSet).toBe(true)
+        expect(view?.canClearLive).toBe(false)
+        expect(view?.liveText).toBe('Live since 19:58 UTC · 12m ago, when pick & ban ended.')
+    })
+
+    it('explains how the match goes live when it is not live yet', () => {
+        const view = buildScoreView(match(), NOW)
+        expect(view?.liveSet).toBe(false)
+        expect(view?.liveText).toMatch(/goes live when pick & ban ends/)
+    })
+
+    it('says the match is over once it is finished', () => {
+        const view = buildScoreView(match({ status: 'complete', live_since: '2026-09-26T19:58:00+00:00', live_source: 'pick_ban' }), NOW)
+        expect(view?.liveText).toBe('The match is over.')
     })
 
     it('lists one row per map in pick order with its number, name, picker and source', () => {

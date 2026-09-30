@@ -66,6 +66,7 @@ export interface ScoreMapRow {
 
 export interface ScoreView {
     liveSet: boolean
+    canClearLive: boolean
     liveText: string
     liveCounting: boolean
     liveCountingText: string
@@ -79,10 +80,11 @@ function teamName(match: StreamMatch, side: StreamSide): string {
     return match.teams?.[side]?.name ?? `Team ${side.toUpperCase()}`
 }
 
-function liveText(match: StreamMatch, now: number): string {
-    if (match.live_at) return `Live since ${formatMatchTime(match.live_at, now)}`
-    if (match.pick_ban_status === 'complete') return 'Not marked live. The live score counts from the end of pick & ban.'
-    return 'Not marked live. The live score starts counting once you mark the match live.'
+function liveText(match: StreamMatch, finished: boolean, now: number): string {
+    if (finished) return 'The match is over.'
+    if (!match.live_since) return 'Not live yet. The match goes live when pick & ban ends. Without a pick & ban, press Match live.'
+    const since = `Live since ${formatMatchTime(match.live_since, now)}`
+    return match.live_source === 'pick_ban' ? `${since}, when pick & ban ended.` : since
 }
 
 function storedState(entry: StreamMapScore): MapScoreState {
@@ -162,8 +164,9 @@ export function buildScoreView(match: StreamMatch | null, now: number): ScoreVie
     const maps = [...match.score.maps].sort((left, right) => left.ordinal - right.ordinal)
 
     return {
-        liveSet: !!match.live_at,
-        liveText: liveText(match, now),
+        liveSet: !!match.live_since,
+        canClearLive: !!match.live_at,
+        liveText: liveText(match, finished, now),
         liveCounting,
         liveCountingText: liveCounting
             ? 'Runs from the servers count toward the score.'

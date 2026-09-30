@@ -49,6 +49,7 @@ interface Broadcast {
 
 interface Server {
     broadcast: Broadcast
+    pickBanEndedAt: string | null
     liveCaps: { a: number; b: number }[]
     official: Record<number, { caps: { a: number; b: number }; winner: Side }>
     writes: { method: string; path: string; body: unknown }[]
@@ -124,9 +125,11 @@ function matchBlock(server: Server) {
         scheduled_at: SCHEDULED,
         countdown_at: server.broadcast.countdownAt ?? SCHEDULED,
         live_at: server.broadcast.liveAt,
+        live_since: server.broadcast.liveAt ?? server.pickBanEndedAt,
+        live_source: server.broadcast.liveAt ? 'manual' : server.pickBanEndedAt ? 'pick_ban' : null,
         status: 'live',
         stream_url: null,
-        pick_ban_status: 'none',
+        pick_ban_status: server.pickBanEndedAt ? 'complete' : 'none',
         sides: { a: 'a', b: 'b' },
         teams: { a: team('ta', 'Crimson Tide', 'a'), b: team('tb', 'Azure Wave', 'b') },
         lineup: { a1: null, a2: null, b1: null, b2: null },
@@ -230,9 +233,10 @@ function applyWrite(server: Server, method: string, suffix: string, body: Record
     }
 }
 
-async function mockApi(page: Page): Promise<Server> {
+async function mockApi(page: Page, pickBanEndedAt: string | null = null): Promise<Server> {
     const server: Server = {
         broadcast: { liveAt: null, countdownAt: null, scoreState: {}, liveCounting: true },
+        pickBanEndedAt,
         liveCaps: [{ a: 0, b: 0 }, { a: 1, b: 0 }, { a: 0, b: 0 }],
         official: { 0: { caps: { a: 2, b: 1 }, winner: 'a' } },
         writes: [],
@@ -388,7 +392,7 @@ test('the score panel lists each map in pick order with its picker, source, scor
     await expect(second.getByText(HINT)).toBeVisible()
     await expect(scoreSection(page).getByTestId('series-score')).toHaveText('Series: Crimson Tide 1 – 0 Azure Wave')
     await expect(scoreSection(page).getByRole('switch', { name: 'Live counting' })).toHaveAttribute('aria-checked', 'true')
-    await expect(scoreSection(page).getByTestId('match-live-status')).toHaveText(/Not marked live/)
+    await expect(scoreSection(page).getByTestId('match-live-status')).toHaveText(/Not live yet/)
 })
 
 test('an official map is read-only', async ({ page }) => {
@@ -554,8 +558,24 @@ test('Match live records the time and can be cleared', async ({ page }) => {
     expect(server.writes[0]).toEqual({ method: 'POST', path: `${MATCH_PATH}/live`, body: null })
 
     await score.getByRole('button', { name: 'Clear live time' }).click()
-    await expect(score.getByTestId('match-live-status')).toHaveText(/Not marked live/, { timeout: 2_000 })
+    await expect(score.getByTestId('match-live-status')).toHaveText(/Not live yet/, { timeout: 2_000 })
     expect(server.writes[1]).toMatchObject({ method: 'DELETE' })
+})
+
+test('a finished pick and ban marks the match live without pressing Match live', async ({ page }) => {
+    const server = await mockApi(page, '2030-10-12T19:55:00+00:00')
+    await openStreamTab(page)
+    const score = scoreSection(page)
+
+    await expect(score.getByTestId('match-live-status')).toHaveText(/^Live since .*19:55 UTC.*, when pick & ban ended\.$/)
+    await expect(score.getByRole('button', { name: 'Mark live again now' })).toBeVisible()
+    await expect(score.getByRole('button', { name: 'Clear live time' })).toHaveCount(0)
+
+    await score.getByRole('button', { name: 'Mark live again now' }).click()
+    await expect(score.getByTestId('match-live-status')).toHaveText(/^Live since .*20:03 UTC/, { timeout: 2_000 })
+    await score.getByRole('button', { name: 'Clear live time' }).click()
+    await expect(score.getByTestId('match-live-status')).toHaveText(/19:55 UTC.*, when pick & ban ended\.$/, { timeout: 2_000 })
+    expect(server.writes.map(write => write.method)).toEqual(['POST', 'DELETE'])
 })
 
 for (const viewport of [{ width: 390, height: 844 }, { width: 1920, height: 1080 }]) {

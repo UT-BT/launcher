@@ -30,7 +30,7 @@ import { useMatchWrite, useServerNow } from './useMatchWrite'
 import { ACCENT_ACTION, ACTION_SHAPE, MUTED_ACTION } from './scoreControlStyles'
 
 const SECTION_TITLE = 'Score'
-const SECTION_DESCRIPTION = 'Mark the match live and set each map’s score and winner. What you set replaces the live count.'
+const SECTION_DESCRIPTION = 'The match goes live when pick & ban ends, or when you mark it live. Set each map’s score and winner. What you set replaces the live count.'
 
 const STEP_SHAPE = 'h-9 w-9 shrink-0 rounded-md border text-base font-semibold transition-colors cursor-pointer flex items-center justify-center disabled:cursor-default disabled:opacity-40'
 const INPUT_SHAPE = 'h-9 w-14 shrink-0 rounded-md border bg-card/50 px-1 text-center text-base font-bold tabular-nums text-foreground focus:outline-none focus:border-accent-500/60 disabled:opacity-60'
@@ -261,7 +261,7 @@ export function ScoreSection() {
                     >
                         {view.liveSet ? 'Mark live again now' : 'Match live'}
                     </button>
-                    {view.liveSet && (
+                    {view.canClearLive && (
                         <button type="button" disabled={pending} onClick={() => run(clearMatchLive)} className={cn(ACTION_SHAPE, MUTED_ACTION)}>
                             Clear live time
                         </button>
