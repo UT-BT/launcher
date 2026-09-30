@@ -1,6 +1,7 @@
 import { parseApiInstant } from '@/app/utils/timezone'
 import type { StreamMatch } from '../../streamDesk'
 import { formatMatchTime } from './currentMatchView'
+import { localInputFromInstant, utcFromLocalInput } from './localTime'
 
 export const COUNTDOWN_STEPS = [5, 10, 15] as const
 
@@ -11,28 +12,40 @@ export interface CountdownView {
     inputValue: string
 }
 
-function twoDigits(value: number): string {
-    return String(value).padStart(2, '0')
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+export interface LocalTimeView {
+    iso: string | null
+    utcText: string | null
+    notice: string | null
+    error: string | null
 }
 
-export function utcInputValue(iso: string | null): string {
-    const at = parseApiInstant(iso)
-    if (at === null) return ''
-    const date = new Date(at)
-    return `${date.getUTCFullYear()}-${twoDigits(date.getUTCMonth() + 1)}-${twoDigits(date.getUTCDate())}T${twoDigits(date.getUTCHours())}:${twoDigits(date.getUTCMinutes())}`
+export function buildLocalTimeView(value: string, timeZone: string): LocalTimeView | null {
+    if (!value) return null
+    const result = utcFromLocalInput(value, timeZone)
+    const clock = value.slice(11, 16)
+    if (result.status === 'invalid') return { iso: null, utcText: null, notice: null, error: 'Pick a date and time.' }
+    if (result.status === 'gap') {
+        return {
+            iso: null,
+            utcText: null,
+            notice: null,
+            error: `${clock} does not exist in ${timeZone} that day, because the clocks go forward. Pick a time before or after.`,
+        }
+    }
+    const utc = new Date(result.iso)
+    const utcDay = utc.toISOString().slice(0, 10)
+    const dayNote = utcDay === value.slice(0, 10) ? '' : ` · ${utc.getUTCDate()} ${MONTHS[utc.getUTCMonth()]}`
+    return {
+        iso: result.iso,
+        utcText: `= ${result.iso.slice(11, 16)} UTC${dayNote}`,
+        notice: result.ambiguous ? `The clocks repeat ${clock} that night. This is the first one, before they go back.` : null,
+        error: null,
+    }
 }
 
-export function isoFromUtcInput(value: string): string | null {
-    const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(value.trim())
-    if (!match) return null
-    const [, year, month, day, hour, minute] = match.map(Number)
-    const at = Date.UTC(year, month - 1, day, hour, minute)
-    const date = new Date(at)
-    if (date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day || hour > 23 || minute > 59) return null
-    return date.toISOString().replace('.000Z', 'Z')
-}
-
-export function buildCountdownView(match: StreamMatch | null, now: number): CountdownView | null {
+export function buildCountdownView(match: StreamMatch | null, now: number, timeZone: string): CountdownView | null {
     if (!match) return null
     const scheduled = parseApiInstant(match.scheduled_at)
     const target = parseApiInstant(match.countdown_at)
@@ -40,6 +53,6 @@ export function buildCountdownView(match: StreamMatch | null, now: number): Coun
         scheduledText: formatMatchTime(match.scheduled_at, now),
         targetText: target === null ? 'No countdown yet' : formatMatchTime(match.countdown_at, now),
         moved: target !== null && target !== scheduled,
-        inputValue: utcInputValue(match.countdown_at ?? match.scheduled_at),
+        inputValue: localInputFromInstant(match.countdown_at ?? match.scheduled_at, timeZone),
     }
 }

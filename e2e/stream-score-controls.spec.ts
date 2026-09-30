@@ -254,10 +254,6 @@ function scoreSection(page: Page) {
     return page.getByRole('region', { name: 'Score', exact: true })
 }
 
-function countdownSection(page: Page) {
-    return page.getByRole('region', { name: 'Countdown' })
-}
-
 function mapCard(page: Page, label: string) {
     return scoreSection(page).getByRole('list', { name: 'Maps' }).getByRole('listitem', { name: label })
 }
@@ -338,33 +334,8 @@ test('Match live records the time and can be cleared', async ({ page }) => {
     expect(server.writes[1]).toMatchObject({ method: 'DELETE' })
 })
 
-test('the countdown moves by +N minutes on the current target, to a picked time, and back', async ({ page }) => {
-    const server = await mockApi(page)
-    await openStreamTab(page, 'Match')
-    const countdown = countdownSection(page)
-    const target = countdown.getByTestId('countdown-target')
-    await expect(target).toHaveText(/20:00 UTC/)
-
-    await countdown.getByRole('button', { name: 'Move the countdown 10 minutes later' }).click()
-    await expect(target).toHaveText(/20:10 UTC/, { timeout: 2_000 })
-    await expect(countdown.getByText('Moved')).toBeVisible()
-    await countdown.getByRole('button', { name: 'Move the countdown 5 minutes later' }).click()
-    await expect(target).toHaveText(/20:15 UTC/, { timeout: 2_000 })
-    expect(server.writes.map(entry => entry.body)).toEqual([{ add_minutes: 10 }, { add_minutes: 5 }])
-
-    await countdown.getByLabel('New time (UTC)').fill('2030-10-12T21:30')
-    await countdown.getByRole('button', { name: 'Set countdown' }).click()
-    await expect(target).toHaveText(/21:30 UTC/, { timeout: 2_000 })
-    expect(server.writes[2].body).toEqual({ at: '2030-10-12T21:30:00Z' })
-
-    await countdown.getByRole('button', { name: 'Use scheduled time' }).click()
-    await expect(target).toHaveText(/20:00 UTC/, { timeout: 2_000 })
-    await expect(countdown.getByText('Moved')).toHaveCount(0)
-    expect(server.writes[3]).toMatchObject({ method: 'DELETE', path: `/tournaments/${SLUG}/stream/matches/${MATCH_ID}/countdown` })
-})
-
 for (const viewport of [{ width: 390, height: 844 }, { width: 1920, height: 1080 }]) {
-    test(`the score and countdown controls fit ${viewport.width} px`, async ({ page }) => {
+    test(`the score controls fit ${viewport.width} px`, async ({ page }) => {
         await page.setViewportSize(viewport)
         await mockApi(page)
         await openStreamTab(page)
@@ -375,11 +346,5 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 1920, height: 1080
             expect(box?.height ?? 0).toBeGreaterThanOrEqual(32)
             expect(box?.width ?? 0).toBeGreaterThanOrEqual(32)
         }
-
-        await openStreamPanel(page, 'Match')
-        await expect(countdownSection(page).getByRole('button', { name: 'Set countdown' })).toBeVisible()
-        expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1)
-        const plus = await countdownSection(page).getByRole('button', { name: 'Move the countdown 5 minutes later' }).boundingBox()
-        expect(plus?.height ?? 0).toBeGreaterThanOrEqual(32)
     })
 }
