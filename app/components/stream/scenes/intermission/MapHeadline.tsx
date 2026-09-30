@@ -4,7 +4,7 @@ import { PICK_BAN_HUES, PICK_BAN_TONES, tint } from '@/app/components/broadcast/
 import { EASE_OVERSHOOT } from '@/app/components/broadcast/broadcastMotion'
 import { displayMapName } from '@/app/utils/format'
 import type { StreamMatch } from '../../data/streamHotState'
-import { formatLabel, sideToneClasses } from '../../sceneHelpers'
+import { formatLabel, mapNumber, sideToneClasses } from '../../sceneHelpers'
 import { teamLabel, type SeriesMapView } from './intermissionView'
 import { revealDelayS, type MapReveal } from './useMapReveal'
 
@@ -23,7 +23,7 @@ export function MapHeadline({ match, latest, reveal }: { match: StreamMatch; lat
         return (
             <div className="pb-[26px]">
                 <p className="text-lg font-bold uppercase tracking-[0.3em] text-white/55">{formatLabel(match)}</p>
-                <p className="mt-2.5 text-8xl font-black italic uppercase leading-none">Map 1 up next</p>
+                <p className="mt-2.5 text-8xl font-black italic uppercase leading-none">Map {mapNumber(match.score.current_map ?? 0)} up next</p>
             </div>
         )
     }

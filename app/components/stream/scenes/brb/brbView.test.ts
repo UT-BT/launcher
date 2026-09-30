@@ -29,22 +29,26 @@ describe('brbView', () => {
     })
 
     it('carries the series score of the match', () => {
-        const score = streamScore([streamMapScore(1, [2, 1], 'a'), streamMapScore(2, [0, 2], 'b'), streamMapScore(3, [2, 0], 'a')], { current_map: 4 })
+        const score = streamScore([streamMapScore(0, [2, 1], 'a'), streamMapScore(1, [0, 2], 'b'), streamMapScore(2, [2, 0], 'a')], { current_map: 3 })
         const match = streamMatch({ maps: MAPS, score })
         expect(brbView(streamHotState({ match })).score).toEqual({
             a: { name: 'Crimson Cats', wins: 2, flags: ['won', 'won', 'open'] },
             b: { name: 'Azure Owls', wins: 1, flags: ['won', 'open', 'open'] },
-            caption: 'Series · map 4 · Bo4 · first to 2 team caps',
+            caption: 'Series · map 4 · Bo4 · first to 2',
         })
     })
 })
 
 describe('seriesScoreOf', () => {
     it('omits the map once the series is won', () => {
-        const score = streamScore([streamMapScore(1, [2, 0], 'a'), streamMapScore(2, [2, 1], 'a')], { winner: 'a' })
+        const score = streamScore([streamMapScore(0, [2, 0], 'a'), streamMapScore(1, [2, 1], 'a')], { winner: 'a' })
         const view = seriesScoreOf(streamMatch({ maps: MAPS, score }))
-        expect(view.caption).toBe('Series · Bo4 · first to 2 team caps')
+        expect(view.caption).toBe('Series · Bo4 · first to 2')
         expect(view.a.wins).toBe(2)
+    })
+
+    it('numbers the first map 1, never 0', () => {
+        expect(seriesScoreOf(streamMatch({ maps: MAPS })).caption).toBe('Series · map 1 · Bo4 · first to 2')
     })
 
     it('names an open team slot', () => {

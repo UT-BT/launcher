@@ -63,7 +63,11 @@ export function seriesFlags(match: Pick<StreamMatch, 'best_of' | 'mode' | 'score
 export function formatLabel(match: Pick<StreamMatch, 'best_of' | 'caps_to_win'>): string {
     const bestOf = `Bo${match.best_of}`
     if (match.caps_to_win === null) return bestOf
-    return `${bestOf} · first to ${match.caps_to_win} team ${match.caps_to_win === 1 ? 'cap' : 'caps'}`
+    return `${bestOf} · first to ${match.caps_to_win}`
+}
+
+export function mapNumber(ordinal: number): number {
+    return ordinal + 1
 }
 
 export function stageLine(match: Pick<StreamMatch, 'stage' | 'group' | 'round'>): string {

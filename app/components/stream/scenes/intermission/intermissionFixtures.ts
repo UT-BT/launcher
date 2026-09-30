@@ -10,7 +10,7 @@ type MapResult = [number, number, StreamSide | null] | null
 export function intermissionMatch(results: MapResult[], overrides: Partial<StreamMatch> = {}): StreamMatch {
     const maps = INTERMISSION_MAPS.map((_, index) => {
         const result = results[index] ?? null
-        return result ? streamMapScore(index + 1, [result[0], result[1]], result[2]) : streamMapScore(index + 1)
+        return result ? streamMapScore(index, [result[0], result[1]], result[2]) : streamMapScore(index)
     })
     return streamMatch({
         reason: 'current',
@@ -45,7 +45,7 @@ export function intermissionRead(overrides: Partial<IntermissionRead> = {}): Int
     return {
         server_now: streamIso(STREAM_T0),
         match_id: STREAM_MATCH_ID,
-        ordinal: 4,
+        ordinal: 3,
         kind: 'normal',
         picked_by: 'a',
         map: {

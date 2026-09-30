@@ -81,7 +81,7 @@ function TeamPlate({ panel, align, showReady, className }: {
                     <AnimatePresence initial={false}>
                         {onTurn && (
                             <motion.span key="on-turn" {...CHIP_MOTION} className={cn(CHIP, tone.solid, tone.onSolid)}>
-                                On the clock
+                                Currently choosing
                             </motion.span>
                         )}
                         {showReady && panel && (

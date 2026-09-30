@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import type { PickBanState } from '../app/utils/api'
-import { T0, asSpectator, iso, pickBanState } from '../app/components/pages/events/pickban/pickBanFixtures'
+import { INTRO_MS, LEAD_MS, T0, asSpectator, iso, pickBanState, readAt, started } from '../app/components/pages/events/pickban/pickBanFixtures'
 import { STREAM_EVENT, idleHotState, streamHotState, streamMatch } from '../app/components/stream/data/streamFixtures'
 import { expectSceneScreenshot, openScene, scenePath, type StreamFakeApi } from './streamHarness'
 
@@ -34,6 +34,14 @@ test('the Pick & Ban scene shows the pick/ban view of the resolved match', async
     await expect(page.getByText(STREAM_EVENT.name)).toBeVisible()
 
     await expectSceneScreenshot(page, 'pick-ban.png')
+})
+
+test('the Pick & Ban scene names the team currently choosing', async ({ page }) => {
+    const at = T0 + LEAD_MS + INTRO_MS + 1_000
+    await openScene(page, 'pick-ban', { hotState: CURRENT, pickBan: { 'match-1': asSpectator(readAt(started(), at)) }, at })
+
+    await expect(page.getByText('Currently choosing')).toBeVisible()
+    await expect(page.getByText(/on the clock/i)).toHaveCount(0)
 })
 
 test('the Pick & Ban scene follows the resolved match without a reload, and falls back to the idle frame', async ({ page }) => {

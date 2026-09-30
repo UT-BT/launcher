@@ -302,7 +302,7 @@ describe('standingsView for an elimination stage', () => {
     })
 
     it('says how both teams got here, and the match format', () => {
-        expect(view().footer).toBe(`${TEAM_A.name} came in with a bye · ${TEAM_B.name} won in the Opening round · Bo5 · first to 3 team caps`)
+        expect(view().footer).toBe(`${TEAM_A.name} came in with a bye · ${TEAM_B.name} won in the Opening round · Bo5 · first to 3`)
     })
 })
 

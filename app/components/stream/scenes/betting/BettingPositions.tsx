@@ -6,14 +6,14 @@ import { coins, plural, signedCoins, type BackerList, type BackerRow, type Betti
 type PositionsView = Exclude<BettingView, { kind: 'not-enabled' | 'no-market' | 'open' }>
 
 const COLUMNS: Record<BettingColumns, { template: string; heads: string[] }> = {
-    locked: { template: '1fr 150px 210px 130px', heads: ['Backer', 'Stake', 'Locked payout', 'Multiplier'] },
-    result: { template: '1fr 150px 190px 170px', heads: ['Backer', 'Stake', 'Profit', 'Payout'] },
+    locked: { template: '1fr 150px 210px 130px', heads: ['Bettor', 'Stake', 'Locked payout', 'Multiplier'] },
+    result: { template: '1fr 150px 190px 170px', heads: ['Bettor', 'Stake', 'Profit', 'Payout'] },
 }
 
 const NUMBER = 'text-right text-[26px] font-bold tabular-nums'
 
 function sideLine(odds: string, backers: number, staked: number): string {
-    return `Odds ${odds} · ${plural(backers, 'backer', 'backers')} · ${coins(staked)} staked`
+    return `Odds ${odds} · ${plural(backers, 'bettor', 'bettors')} · ${coins(staked)} staked`
 }
 
 function Backer({ row }: { row: BackerRow }) {
@@ -79,7 +79,7 @@ function BackerSection({ list, columns }: { list: BackerList; columns: BettingCo
                 ))}
             </div>
             {list.rows.length === 0 ? (
-                <p className="flex h-[46px] items-center px-4 text-[20px] font-bold uppercase tracking-[0.1em] text-white/45">No backers on this side</p>
+                <p className="flex h-[46px] items-center px-4 text-[20px] font-bold uppercase tracking-[0.1em] text-white/45">No bettors on this side</p>
             ) : (
                 <ul>
                     {list.rows.map(row => (

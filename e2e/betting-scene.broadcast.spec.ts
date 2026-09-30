@@ -13,7 +13,7 @@ const DECIDED = streamHotState({
     match: streamMatch({
         reason: 'holding-finished',
         status: 'in_progress',
-        score: streamScore([streamMapScore(1, [2, 0], 'b'), streamMapScore(2, [2, 1], 'b'), streamMapScore(3, [2, 0], 'b')], { winner: 'b', live_decided: true }),
+        score: streamScore([streamMapScore(0, [2, 0], 'b'), streamMapScore(1, [2, 1], 'b'), streamMapScore(2, [2, 0], 'b')], { winner: 'b', live_decided: true }),
     }),
 })
 
@@ -23,7 +23,7 @@ async function openBetting(page: Page, read: BettingRead, hotState: StreamHotSta
     return api
 }
 
-test('an open market shows totals, prices and the leaderboard, and no backer', async ({ page }) => {
+test('an open market shows totals, prices and the leaderboard, and no bettor', async ({ page }) => {
     await openBetting(page, bettingRead('open'), NEXT)
 
     await expect(page.locator('[data-betting-kind="open"]')).toBeVisible()
@@ -37,7 +37,7 @@ test('an open market shows totals, prices and the leaderboard, and no backer', a
     await expectSceneScreenshot(page, 'betting-open.png')
 })
 
-test('a closed market names the backers and highlights the one biggest bet', async ({ page }) => {
+test('a closed market names the bettors and highlights the one biggest bet', async ({ page }) => {
     await openBetting(page, bettingRead('closed'))
 
     await expect(page.getByText('Market closed')).toBeVisible()
@@ -45,7 +45,7 @@ test('a closed market names the backers and highlights the one biggest bet', asy
     const b = page.locator('[data-betting-side="b"]')
     await expect(a.getByRole('listitem')).toHaveCount(5)
     await expect(a.getByText('+ 61 more · 3,270 staked')).toBeVisible()
-    await expect(a.getByText('Odds 1.72 · 66 backers · 6,420 staked')).toBeVisible()
+    await expect(a.getByText('Odds 1.72 · 66 bettors · 6,420 staked')).toBeVisible()
     await expect(page.locator('[data-biggest-bet]')).toHaveCount(1)
     await expect(b.locator('[data-biggest-bet]')).toContainText('Harbinger')
     await expect(page.getByText('Won', { exact: true })).toHaveCount(0)

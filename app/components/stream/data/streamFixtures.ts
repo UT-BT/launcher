@@ -77,7 +77,7 @@ export function streamScore(maps: StreamMapScore[], overrides: Partial<StreamSco
 }
 
 export function streamMaps(names: string[], pickedBy: (StreamSide | null)[] = []): StreamMatchMap[] {
-    return names.map((map, index) => ({ ordinal: index + 1, map, kind: 'normal', picked_by: pickedBy[index] ?? null }))
+    return names.map((map, index) => ({ ordinal: index, map, kind: 'normal', picked_by: pickedBy[index] ?? null }))
 }
 
 export function streamMatch(overrides: Partial<StreamMatch> = {}): StreamMatch {
@@ -85,7 +85,7 @@ export function streamMatch(overrides: Partial<StreamMatch> = {}): StreamMatch {
     const b = streamTeam('b')
     const scheduledAt = streamIso(STREAM_T0 + 80 * 60_000)
     const bestOf = overrides.best_of ?? 4
-    const ordinals = Array.from({ length: bestOf }, (_, index) => index + 1)
+    const ordinals = Array.from({ length: bestOf }, (_, index) => index)
     return {
         id: STREAM_MATCH_ID,
         reason: 'next',

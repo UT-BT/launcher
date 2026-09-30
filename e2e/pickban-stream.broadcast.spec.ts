@@ -106,12 +106,12 @@ test('the lobby broadcast keeps its look', async ({ page }) => {
     await expect(page).toHaveScreenshot('lobby.png')
 })
 
-test('a team on the clock keeps its look', async ({ page }) => {
+test('the team currently choosing keeps its look', async ({ page }) => {
     await openStream(page, AWAITING, AWAITING_AT)
-    await expect(page.getByText('On the clock')).toBeVisible()
+    await expect(page.getByText('Currently choosing')).toBeVisible()
     await settle(page)
 
-    await expect(page).toHaveScreenshot('on-the-clock.png')
+    await expect(page).toHaveScreenshot('currently-choosing.png')
 })
 
 test('the reconnecting badge keeps its look and corner', async ({ page }) => {

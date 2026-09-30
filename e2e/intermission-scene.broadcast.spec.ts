@@ -3,11 +3,11 @@ import { STREAM_MATCH_ID, streamMapScore, streamScore } from '../app/components/
 import { MID_SERIES, intermissionHotState, intermissionRead } from '../app/components/stream/scenes/intermission/intermissionFixtures'
 import { SCENE_SLUG, expectSceneScreenshot, openScene } from './streamHarness'
 
-const NEXT_READ = { [`/tournaments/${SCENE_SLUG}/stream/matches/${STREAM_MATCH_ID}/intermission/4`]: intermissionRead() }
+const NEXT_READ = { [`/tournaments/${SCENE_SLUG}/stream/matches/${STREAM_MATCH_ID}/intermission/3`]: intermissionRead() }
 
 const FINISHED = intermissionHotState([], {
     score: streamScore(
-        [streamMapScore(1, [2, 1], 'a'), streamMapScore(2, [0, 2], 'b'), streamMapScore(3, [2, 1], 'a'), streamMapScore(4, [2, 0], 'a', { source: 'live' })],
+        [streamMapScore(0, [2, 1], 'a'), streamMapScore(1, [0, 2], 'b'), streamMapScore(2, [2, 1], 'a'), streamMapScore(3, [2, 0], 'a', { source: 'live' })],
         { winner: 'a', live_decided: true },
     ),
 })

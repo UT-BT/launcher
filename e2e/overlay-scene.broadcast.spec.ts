@@ -51,8 +51,8 @@ const JUMP = streamTeam('b', {
 const MAPS = streamMaps(['CTF-BT-II-Diplopia-V4', 'CTF-BT-II-InventionCE2', 'CTF-BT-II-Fabricatorium', 'CTF-BT-II-FaithCB'], ['a', 'b', 'b', 'a'])
 
 function liveState(fourth: [number, number], winner: 'a' | 'b' | null = null): StreamHotState {
-    const played = [streamMapScore(1, [2, 0], 'a'), streamMapScore(2, [1, 2], 'b'), streamMapScore(3, [2, 1], 'a')]
-    const current = winner ? streamMapScore(4, fourth, winner, { source: 'live' }) : streamMapScore(4, fourth)
+    const played = [streamMapScore(0, [2, 0], 'a'), streamMapScore(1, [1, 2], 'b'), streamMapScore(2, [2, 1], 'a')]
+    const current = winner ? streamMapScore(3, fourth, winner, { source: 'live' }) : streamMapScore(3, fourth)
     const score = streamScore([...played, current], winner ? { current_map: null, winner, live_decided: true } : {})
     return streamHotState({
         reason: 'current',
@@ -185,7 +185,7 @@ test('the overlay shows the lineup, the series flags, the current map caps, the 
     const map = page.locator('[data-overlay-part="map"]')
     await expect(map).toContainText('II-FaithCB')
     await expect(map).toContainText('Picked by Hop Theory')
-    await expect(map).toContainText('Group Stage · Group B · Round 4 · Bo4 · first to 2 team caps')
+    await expect(map.getByText('Group Stage · Group B · Round 4 · Bo4 · first to 2', { exact: true })).toBeVisible()
 })
 
 test('a completed team run shows on the next hot-state read, within seconds', async ({ page }) => {

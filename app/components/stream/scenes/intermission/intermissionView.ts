@@ -1,6 +1,7 @@
 import type { RawActiveTitle } from '@/app/utils/api'
 import type { PickBanTone } from '@/app/components/broadcast/broadcastTone'
 import type { StreamLineupSlot, StreamMapScore, StreamMatch, StreamScore, StreamScoreSource, StreamSide } from '../../data/streamHotState'
+import { mapNumber } from '../../sceneHelpers'
 import type { IntermissionRead } from './intermissionRead'
 
 export type SeriesScore = StreamScore['series']
@@ -91,12 +92,12 @@ function statusOf(score: StreamMapScore, current: number | null): SeriesMapStatu
 function seriesMaps(match: StreamMatch): SeriesMapView[] {
     const maps = [...match.score.maps].sort((left, right) => left.ordinal - right.ordinal)
     const latest = maps.filter(map => map.decided).at(-1)?.ordinal ?? null
-    return maps.map((score, index) => {
+    return maps.map(score => {
         const row = match.maps.find(map => map.ordinal === score.ordinal)
         const shown = capsShown(score)
         return {
             ordinal: score.ordinal,
-            number: index + 1,
+            number: mapNumber(score.ordinal),
             map: row?.map ?? null,
             pickedBy: row?.picked_by ?? null,
             decider: row?.kind === 'decider',

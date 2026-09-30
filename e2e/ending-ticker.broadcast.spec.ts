@@ -27,7 +27,7 @@ const HOT_STATE = streamHotState({
             { id: '300000000000000001', display_name: 'Echo', avatar: 'https://example.test/users/300000000000000001/avatar' },
             { id: null, display_name: 'Tilde', avatar: null },
         ],
-        score: streamScore([streamMapScore(1, [3, 1], 'a'), streamMapScore(2, [3, 0], 'a')], { winner: 'a' }),
+        score: streamScore([streamMapScore(0, [3, 1], 'a'), streamMapScore(1, [3, 0], 'a')], { winner: 'a' }),
     }),
 })
 

@@ -17,7 +17,7 @@ const SAMPLE_WEBCAM = `data:image/svg+xml,${encodeURIComponent(
 )}`
 
 const MAPS = streamMaps(['CTF-Face', 'CTF-Coret', 'CTF-Dq', 'CTF-Niven'], ['a', 'b', 'a', 'b'])
-const SCORE = streamScore([streamMapScore(1, [2, 1], 'a'), streamMapScore(2, [0, 2], 'b'), streamMapScore(3, [2, 0], 'a')], { current_map: 4 })
+const SCORE = streamScore([streamMapScore(0, [2, 1], 'a'), streamMapScore(1, [0, 2], 'b'), streamMapScore(2, [2, 0], 'a')], { current_map: 3 })
 const CASTERS = [
     { id: '228152236587483001', display_name: 'Ada Lovelace', avatar: null },
     { id: null, display_name: 'Guest Caster', avatar: null },
@@ -46,7 +46,7 @@ test('BRB shows the streamer message and the series score', async ({ page }) => 
     const score = page.locator('[data-series-score]')
     await expect(score).toContainText('Crimson Cats')
     await expect(score).toContainText('Azure Owls')
-    await expect(score).toContainText('Series · map 4')
+    await expect(score.getByText('Series · map 4 · Bo4 · first to 2', { exact: true })).toBeVisible()
     await expect(page.getByText(STREAM_EVENT.name)).toBeVisible()
 
     await expectSceneScreenshot(page, 'brb.png')

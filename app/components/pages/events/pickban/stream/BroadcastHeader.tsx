@@ -46,7 +46,7 @@ function PlateChips({ panel, showReady }: { panel: PickBanTeamPanel | null; show
                     {...CHIP_MOTION}
                     className={cn('rounded-md px-2.5 py-0.5 text-lg font-black italic uppercase tracking-wider', tone.solid, tone.onSolid)}
                 >
-                    On the clock
+                    Currently choosing
                 </motion.span>
             )}
             {showReady && panel && (

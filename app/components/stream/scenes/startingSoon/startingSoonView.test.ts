@@ -61,7 +61,7 @@ describe('the stage and teams', () => {
     it('carries the stage line and the format', () => {
         const view = viewAt(NOW)
         expect(view.stage).toBe('Group Stage · Group B · Round 4')
-        expect(view.format).toBe('Bo4 · first to 2 team caps')
+        expect(view.format).toBe('Bo4 · first to 2')
     })
 
     it('puts A on top and B below, with seeds and the lineup players and their titles', () => {

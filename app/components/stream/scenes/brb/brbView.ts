@@ -1,5 +1,5 @@
 import type { StreamHotState, StreamMatch, StreamSide } from '../../data/streamHotState'
-import { formatLabel, seriesFlags, type SeriesFlag } from '../../sceneHelpers'
+import { formatLabel, mapNumber, seriesFlags, type SeriesFlag } from '../../sceneHelpers'
 
 export const BRB_DEFAULT_MESSAGE = 'We’ll be right back — stay tuned.'
 
@@ -27,7 +27,7 @@ export function seriesScoreOf(match: StreamMatch): SeriesScoreView {
         wins: match.score.series[side],
         flags: flags[side],
     })
-    const map = match.score.winner === null && match.score.current_map !== null ? `map ${match.score.current_map}` : null
+    const map = match.score.winner === null && match.score.current_map !== null ? `map ${mapNumber(match.score.current_map)}` : null
     return { a: team('a'), b: team('b'), caption: ['Series', map, formatLabel(match)].filter(Boolean).join(' · ') }
 }
 

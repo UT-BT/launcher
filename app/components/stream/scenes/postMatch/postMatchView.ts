@@ -1,4 +1,5 @@
 import type { StreamMatch, StreamScore, StreamSide } from '../../data/streamHotState'
+import { mapNumber } from '../../sceneHelpers'
 import type {
     BracketConsequenceTeam,
     GroupConsequenceTeam,
@@ -53,11 +54,11 @@ function mapsOf(match: StreamMatch): PostMatchMapView[] {
     const slots = new Map(match.maps.map(slot => [slot.ordinal, slot]))
     return [...match.score.maps]
         .sort((left, right) => left.ordinal - right.ordinal)
-        .map((score, index) => {
+        .map(score => {
             const slot = slots.get(score.ordinal)
             return {
                 ordinal: score.ordinal,
-                number: index + 1,
+                number: mapNumber(score.ordinal),
                 map: slot?.map ?? null,
                 pickedBy: slot?.picked_by ?? null,
                 caps: score.caps,

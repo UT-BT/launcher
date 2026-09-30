@@ -8,7 +8,7 @@ function midSeries() {
     return streamMatch({
         reason: 'current',
         maps: MAPS,
-        score: streamScore([streamMapScore(1, [2, 0], 'a'), streamMapScore(2, [1, 2], 'b'), streamMapScore(3, [1, 1])]),
+        score: streamScore([streamMapScore(0, [2, 0], 'a'), streamMapScore(1, [1, 2], 'b'), streamMapScore(2, [1, 1])]),
     })
 }
 
@@ -69,7 +69,7 @@ describe('overlayView', () => {
     it('shows the caps a streamer override set, with its source', () => {
         const match = streamMatch({
             maps: MAPS,
-            score: streamScore([streamMapScore(1, [0, 1], null, { source: 'override' })]),
+            score: streamScore([streamMapScore(0, [0, 1], null, { source: 'override' })]),
         })
 
         const view = overlayView(match)
@@ -82,7 +82,7 @@ describe('overlayView', () => {
         const match = streamMatch({
             best_of: 1,
             maps: MAPS.slice(0, 1),
-            score: streamScore([streamMapScore(1, [2, 0], 'a')], { current_map: null, winner: 'a', live_decided: true }),
+            score: streamScore([streamMapScore(0, [2, 0], 'a')], { current_map: null, winner: 'a', live_decided: true }),
         })
 
         const view = overlayView(match)
@@ -97,7 +97,7 @@ describe('overlayView', () => {
         const match = streamMatch({
             maps: MAPS,
             score: streamScore(
-                [streamMapScore(1, [2, 0], 'a'), streamMapScore(2, [2, 1], 'a'), streamMapScore(3, [2, 0], 'a'), streamMapScore(4)],
+                [streamMapScore(0, [2, 0], 'a'), streamMapScore(1, [2, 1], 'a'), streamMapScore(2, [2, 0], 'a'), streamMapScore(3)],
                 { current_map: null, winner: 'a', live_decided: true },
             ),
         })
@@ -115,7 +115,7 @@ describe('overlayView', () => {
     it('leaves caps that were never entered empty', () => {
         const match = streamMatch({
             maps: MAPS,
-            score: streamScore([streamMapScore(1, [0, 0], 'b', { caps: { a: null, b: null } })], { current_map: 1 }),
+            score: streamScore([streamMapScore(0, [0, 0], 'b', { caps: { a: null, b: null } })], { current_map: 0 }),
         })
 
         expect(overlayView(match)?.teams.map(team => team.caps)).toEqual([null, null])
@@ -124,7 +124,7 @@ describe('overlayView', () => {
     it('names the current map and the team that picked it', () => {
         expect(overlayView(midSeries())?.map).toEqual({ name: 'II-Fabricatorium', pickedBy: { side: 'a', team: 'Crimson Cats' } })
 
-        const decider = streamMatch({ maps: MAPS, score: streamScore([1, 2, 3].map(ordinal => streamMapScore(ordinal, [2, 0], 'a')).concat(streamMapScore(4))) })
+        const decider = streamMatch({ maps: MAPS, score: streamScore([0, 1, 2].map(ordinal => streamMapScore(ordinal, [2, 0], 'a')).concat(streamMapScore(3))) })
         expect(overlayView(decider)?.map).toEqual({ name: 'II-FaithCB', pickedBy: null })
     })
 
@@ -136,9 +136,9 @@ describe('overlayView', () => {
     })
 
     it('shows the stage, round and format label', () => {
-        expect(overlayView(streamMatch({ best_of: 5 }))?.footer).toBe('Group Stage · Group B · Round 4 · Bo5 · first to 2 team caps')
+        expect(overlayView(streamMatch({ best_of: 5 }))?.footer).toBe('Group Stage · Group B · Round 4 · Bo5 · first to 2')
         expect(overlayView(streamMatch({ group: null, round: { no: 1, label: 'Final' }, stage: { key: 'final', name: 'Final Stage' }, caps_to_win: 3 }))?.footer).toBe(
-            'Final Stage · Final · Bo4 · first to 3 team caps',
+            'Final Stage · Final · Bo4 · first to 3',
         )
     })
 
@@ -150,7 +150,7 @@ describe('overlayView', () => {
     })
 
     it('counts every map in an all-maps series', () => {
-        const view = overlayView(streamMatch({ best_of: 2, mode: 'all_maps', score: streamScore([streamMapScore(1, [2, 1], 'a'), streamMapScore(2)]) }))
+        const view = overlayView(streamMatch({ best_of: 2, mode: 'all_maps', score: streamScore([streamMapScore(0, [2, 1], 'a'), streamMapScore(1)]) }))
 
         expect(view?.teams.map(team => team.flags)).toEqual([
             ['won', 'open'],

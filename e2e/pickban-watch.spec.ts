@@ -151,6 +151,15 @@ test('an anonymous visitor watches the lobby, a live step and the summary at a p
     await expect(page.getByRole('link', { name: /Back to Bracket/ })).toHaveAttribute('href', `/events/${SLUG}?tab=bracket`)
 })
 
+test('the match banner names the team currently choosing', async ({ page }) => {
+    const at = INTRO_END + 1_000
+    await serve(page, fakeServer(at, () => readAt(started(), at)))
+    await page.goto(PAGE_PATH)
+
+    await expect(page.getByText('Currently choosing')).toBeVisible()
+    await expect(page.getByText(/on the clock/i)).toHaveCount(0)
+})
+
 test('a lock-in delivered early is revealed at its reveal_at, at the same moment on two screens', async ({ browser, isMobile }) => {
     test.skip(isMobile)
 

@@ -3,6 +3,7 @@ import { PICK_BAN_TONES } from '@/app/components/broadcast/broadcastTone'
 import { STREAM_T0, streamMapScore, streamMatch, streamScore } from './data/streamFixtures'
 import {
     formatLabel,
+    mapNumber,
     relativeTimeText,
     sceneTimeText,
     seriesFlags,
@@ -89,11 +90,11 @@ describe('seriesTarget and seriesFlags', () => {
         const match = streamMatch({
             best_of: 5,
             score: streamScore([
-                streamMapScore(1, [2, 1], 'a'),
-                streamMapScore(2, [0, 2], 'b'),
-                streamMapScore(3, [2, 0], 'a'),
-                streamMapScore(4, [1, 0]),
-                streamMapScore(5),
+                streamMapScore(0, [2, 1], 'a'),
+                streamMapScore(1, [0, 2], 'b'),
+                streamMapScore(2, [2, 0], 'a'),
+                streamMapScore(3, [1, 0]),
+                streamMapScore(4),
             ]),
         })
 
@@ -104,21 +105,29 @@ describe('seriesTarget and seriesFlags', () => {
     })
 
     it('never shows more flags than the target, even if the series block says so', () => {
-        const match = streamMatch({ best_of: 1, score: streamScore([streamMapScore(1, [2, 0], 'a')], { series: { a: 4, b: 0 } }) })
+        const match = streamMatch({ best_of: 1, score: streamScore([streamMapScore(0, [2, 0], 'a')], { series: { a: 4, b: 0 } }) })
 
         expect(seriesFlags(match)).toEqual({ a: ['won'], b: ['open'] })
     })
 })
 
 describe('formatLabel', () => {
-    it('reads as best-of plus the caps target', () => {
-        expect(formatLabel(streamMatch({ best_of: 5, caps_to_win: 2 }))).toBe('Bo5 · first to 2 team caps')
-        expect(formatLabel(streamMatch({ best_of: 4, caps_to_win: 3 }))).toBe('Bo4 · first to 3 team caps')
-        expect(formatLabel(streamMatch({ best_of: 1, caps_to_win: 1 }))).toBe('Bo1 · first to 1 team cap')
+    it('reads as best-of plus the target, with no unit', () => {
+        expect(formatLabel(streamMatch({ best_of: 4, caps_to_win: 2 }))).toBe('Bo4 · first to 2')
+        expect(formatLabel(streamMatch({ best_of: 5, caps_to_win: 3 }))).toBe('Bo5 · first to 3')
+        expect(formatLabel(streamMatch({ best_of: 1, caps_to_win: 1 }))).toBe('Bo1 · first to 1')
     })
 
-    it('drops the caps target when the match has none', () => {
+    it('drops the target when the match has none', () => {
         expect(formatLabel(streamMatch({ best_of: 3, caps_to_win: null }))).toBe('Bo3')
+        expect(formatLabel(streamMatch({ best_of: 4, caps_to_win: null }))).toBe('Bo4')
+    })
+})
+
+describe('mapNumber', () => {
+    it('turns the 0-based ordinal into the 1-based map number', () => {
+        expect(mapNumber(0)).toBe(1)
+        expect(mapNumber(3)).toBe(4)
     })
 })
 

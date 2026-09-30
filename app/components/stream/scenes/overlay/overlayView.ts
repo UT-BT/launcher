@@ -1,6 +1,6 @@
 import { displayMapName } from '@/app/utils/format'
 import type { StreamLineupSlot, StreamMatch, StreamScore, StreamScoreSource, StreamSide } from '../../data/streamHotState'
-import { formatLabel, seriesFlags, stageLine, type SeriesFlag } from '../../sceneHelpers'
+import { formatLabel, mapNumber, seriesFlags, stageLine, type SeriesFlag } from '../../sceneHelpers'
 
 export type OverlayCorner = 'mid-left' | 'mid-right' | 'bottom-left' | 'bottom-right'
 
@@ -67,7 +67,7 @@ function overlayMap(match: StreamMatch, ordinal: number | null): OverlayMap | nu
 }
 
 function mapLine(match: StreamMatch, ordinal: number | null): string {
-    const parts = [ordinal === null ? null : `Map ${ordinal} of ${match.best_of}`, match.caps_to_win === null ? null : `first to ${match.caps_to_win}`]
+    const parts = [ordinal === null ? null : `Map ${mapNumber(ordinal)} of ${match.best_of}`, match.caps_to_win === null ? null : `first to ${match.caps_to_win}`]
     return parts.filter(Boolean).join(' · ')
 }
 

@@ -7,10 +7,10 @@ describe('intermissionView series', () => {
     it('shows caps per map with where each count comes from', () => {
         const match = intermissionMatch([], {
             score: streamScore([
-                streamMapScore(1, [2, 1], 'a'),
-                streamMapScore(2, [2, 3], 'b', { source: 'override' }),
-                streamMapScore(3, [1, 0], null),
-                streamMapScore(4, [0, 0], null),
+                streamMapScore(0, [2, 1], 'a'),
+                streamMapScore(1, [2, 3], 'b', { source: 'override' }),
+                streamMapScore(2, [1, 0], null),
+                streamMapScore(3, [0, 0], null),
             ]),
         })
 
@@ -27,7 +27,7 @@ describe('intermissionView series', () => {
 
     it('marks a live decided map, a map in play and an untouched map', () => {
         const match = intermissionMatch([], {
-            score: streamScore([streamMapScore(1, [2, 0], 'a', { source: 'live' }), streamMapScore(2, [0, 1]), streamMapScore(3), streamMapScore(4)]),
+            score: streamScore([streamMapScore(0, [2, 0], 'a', { source: 'live' }), streamMapScore(1, [0, 1]), streamMapScore(2), streamMapScore(3)]),
         })
 
         const view = intermissionView(match, null)
@@ -58,6 +58,17 @@ describe('intermissionView series', () => {
         expect(intermissionView(intermissionMatch([]), null).latest).toBeNull()
     })
 
+    it('numbers each map from its 0-based ordinal, not its place in the list', () => {
+        const match = intermissionMatch([], { score: streamScore([streamMapScore(2, [2, 1], 'a'), streamMapScore(3)]) })
+
+        const view = intermissionView(match, null)
+
+        expect(view.maps.map(map => [map.ordinal, map.number])).toEqual([[2, 3], [3, 4]])
+        expect(view.latest?.number).toBe(3)
+        expect(view.next?.number).toBe(4)
+        expect(view.kicker).toBe('Series 1–0 · map 4 next')
+    })
+
     it('reads the series in the title kicker', () => {
         expect(intermissionView(intermissionMatch(MID_SERIES), null).kicker).toBe('Series 2–1 · map 4 next')
     })
@@ -66,12 +77,12 @@ describe('intermissionView series', () => {
 describe('intermissionView next map', () => {
     it('follows the score block current map, not the first map without caps', () => {
         const match = intermissionMatch([[2, 1, 'a'], [0, 0, 'b']], {
-            score: streamScore([streamMapScore(1, [2, 1], 'a'), streamMapScore(2, [0, 0], null), streamMapScore(3), streamMapScore(4)], { current_map: 3 }),
+            score: streamScore([streamMapScore(0, [2, 1], 'a'), streamMapScore(1, [0, 0], null), streamMapScore(2), streamMapScore(3)], { current_map: 2 }),
         })
 
         const view = intermissionView(match, null)
 
-        expect(view.next?.ordinal).toBe(3)
+        expect(view.next?.ordinal).toBe(2)
         expect(view.next?.number).toBe(3)
         expect(view.maps.map(map => map.status)).toEqual(['decided', 'open', 'next', 'open'])
     })
@@ -80,7 +91,7 @@ describe('intermissionView next map', () => {
         const view = intermissionView(intermissionMatch(MID_SERIES), intermissionRead())
 
         expect(view.next).toMatchObject({
-            ordinal: 4,
+            ordinal: 3,
             number: 4,
             map: 'CTF-BT-II-FaithCB',
             pickedBy: 'a',
@@ -94,11 +105,11 @@ describe('intermissionView next map', () => {
 
     it('shows the hot-state map and picker while the read is missing, stale or for another map', () => {
         const match = intermissionMatch(MID_SERIES)
-        const stale = [null, intermissionRead({ ordinal: 3 }), intermissionRead({ match_id: 'match-9' })]
+        const stale = [null, intermissionRead({ ordinal: 2 }), intermissionRead({ match_id: 'match-9' })]
 
         for (const read of stale) {
             expect(intermissionView(match, read).next).toMatchObject({
-                ordinal: 4,
+                ordinal: 3,
                 map: 'CTF-BT-II-FaithCB',
                 pickedBy: 'a',
                 mapper: null,
@@ -167,7 +178,7 @@ describe('intermissionView when every map is decided', () => {
 
     it('calls the final series unofficial while any map comes from the live count', () => {
         const match = intermissionMatch([], {
-            score: streamScore([streamMapScore(1, [2, 0], 'a'), streamMapScore(2, [2, 1], 'a', { source: 'live' }), streamMapScore(3), streamMapScore(4)], {
+            score: streamScore([streamMapScore(0, [2, 0], 'a'), streamMapScore(1, [2, 1], 'a', { source: 'live' }), streamMapScore(2), streamMapScore(3)], {
                 current_map: null,
                 winner: 'a',
                 live_decided: true,
@@ -208,7 +219,7 @@ describe('map reveal', () => {
         const state = initialMapReveal('match-1', intermissionMatch(MID_SERIES).score)
 
         expect(state.reveal).toBeNull()
-        expect(state.decided).toEqual([1, 2, 3])
+        expect(state.decided).toEqual([0, 1, 2])
     })
 
     it('reveals a map that becomes decided while the scene runs, once', () => {
@@ -218,7 +229,7 @@ describe('map reveal', () => {
         const revealed = advanceMapReveal(opened, 'match-1', decided)
         const polledAgain = advanceMapReveal(revealed, 'match-1', decided)
 
-        expect(revealed.reveal).toEqual({ ordinals: [4], seq: 1 })
+        expect(revealed.reveal).toEqual({ ordinals: [3], seq: 1 })
         expect(polledAgain).toBe(revealed)
     })
 
@@ -234,7 +245,7 @@ describe('map reveal', () => {
 
         const next = advanceMapReveal(opened, 'match-1', intermissionMatch(MID_SERIES).score)
 
-        expect(next.reveal).toEqual({ ordinals: [2, 3], seq: 1 })
+        expect(next.reveal).toEqual({ ordinals: [1, 2], seq: 1 })
     })
 
     it('counts reveals up so each one plays', () => {
@@ -243,7 +254,7 @@ describe('map reveal', () => {
         const second = advanceMapReveal(opened, 'match-1', intermissionMatch([[2, 1, 'a'], [0, 2, 'b']]).score)
         const third = advanceMapReveal(second, 'match-1', intermissionMatch(MID_SERIES).score)
 
-        expect(third.reveal).toEqual({ ordinals: [3], seq: 2 })
+        expect(third.reveal).toEqual({ ordinals: [2], seq: 2 })
     })
 
     it('reveals a reopened map again when it is decided again', () => {
@@ -253,7 +264,7 @@ describe('map reveal', () => {
         const redecided = advanceMapReveal(reopened, 'match-1', intermissionMatch([[2, 1, 'a'], [0, 2, 'b'], [1, 2, 'b']]).score)
 
         expect(reopened.reveal).toBeNull()
-        expect(redecided.reveal).toEqual({ ordinals: [3], seq: 1 })
+        expect(redecided.reveal).toEqual({ ordinals: [2], seq: 1 })
     })
 
     it('starts over without a reveal when the scene moves to another match', () => {
@@ -261,6 +272,6 @@ describe('map reveal', () => {
 
         const switched = advanceMapReveal(opened, 'match-2', intermissionMatch(MID_SERIES).score)
 
-        expect(switched).toEqual({ matchId: 'match-2', decided: [1, 2, 3], reveal: null })
+        expect(switched).toEqual({ matchId: 'match-2', decided: [0, 1, 2], reveal: null })
     })
 })

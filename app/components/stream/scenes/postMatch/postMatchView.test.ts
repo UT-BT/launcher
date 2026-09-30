@@ -54,10 +54,10 @@ describe('postMatchView', () => {
 
     it('takes the caps from the official score once it replaces the live count', () => {
         const scores = [
-            streamMapScore(1, [2, 0], 'a'),
-            streamMapScore(2, [0, 2], 'b'),
-            streamMapScore(3, [2, 0], 'a'),
-            streamMapScore(4, [2, 1], 'a'),
+            streamMapScore(0, [2, 0], 'a'),
+            streamMapScore(1, [0, 2], 'b'),
+            streamMapScore(2, [2, 0], 'a'),
+            streamMapScore(3, [2, 1], 'a'),
         ]
         const match = officialMatch({ score: streamScore(scores, { winner: 'a', live_decided: true, current_map: null }) })
         const view = resultOf(postMatchView(match, officialRead()))
@@ -88,8 +88,8 @@ describe('postMatchView', () => {
 
     it('shows an all_maps draw as a decided result with no winner', () => {
         const scores = [
-            streamMapScore(1, [2, 1], 'a', { source: 'live' }),
-            streamMapScore(2, [0, 2], 'b', { source: 'live' }),
+            streamMapScore(0, [2, 1], 'a', { source: 'live' }),
+            streamMapScore(1, [0, 2], 'b', { source: 'live' }),
         ]
         const match = decidedMatch({
             mode: 'all_maps',
@@ -107,10 +107,10 @@ describe('postMatchView', () => {
 
     it('leaves the dead rubbers of a first_to series out of the result', () => {
         const scores = [
-            streamMapScore(1, [2, 0], 'a', { source: 'live' }),
-            streamMapScore(2, [2, 1], 'a', { source: 'live' }),
-            streamMapScore(3, [2, 0], 'a', { source: 'live' }),
-            streamMapScore(4),
+            streamMapScore(0, [2, 0], 'a', { source: 'live' }),
+            streamMapScore(1, [2, 1], 'a', { source: 'live' }),
+            streamMapScore(2, [2, 0], 'a', { source: 'live' }),
+            streamMapScore(3),
         ]
         const view = resultOf(postMatchView(decidedMatch({ score: streamScore(scores, { winner: 'a', live_decided: true, current_map: null }) }), null))
 
@@ -129,6 +129,12 @@ describe('postMatchView', () => {
             [3, 'live', 1, 1],
             [4, 'upcoming', 0, 0],
         ])
+    })
+
+    it('numbers each map from its 0-based ordinal, not its place in the list', () => {
+        const view = postMatchView(inProgressMatch({ score: streamScore([streamMapScore(2, [1, 1]), streamMapScore(3)], { current_map: 2 }) }), null)
+
+        expect(view.maps.map(map => [map.ordinal, map.number, map.state])).toEqual([[2, 3, 'live'], [3, 4, 'upcoming']])
     })
 
     it('keeps a map without a picked map name', () => {

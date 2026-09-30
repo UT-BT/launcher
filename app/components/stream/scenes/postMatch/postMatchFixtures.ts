@@ -14,10 +14,10 @@ export const POST_MATCH_PICKS: StreamSide[] = ['a', 'b', 'b', 'a']
 
 export function decidedMatch(overrides: Partial<StreamMatch> = {}): StreamMatch {
     const scores = [
-        streamMapScore(1, [2, 1], 'a', { source: 'live' }),
-        streamMapScore(2, [0, 2], 'b', { source: 'live' }),
-        streamMapScore(3, [2, 1], 'a', { source: 'live' }),
-        streamMapScore(4, [2, 0], 'a', { source: 'live' }),
+        streamMapScore(0, [2, 1], 'a', { source: 'live' }),
+        streamMapScore(1, [0, 2], 'b', { source: 'live' }),
+        streamMapScore(2, [2, 1], 'a', { source: 'live' }),
+        streamMapScore(3, [2, 0], 'a', { source: 'live' }),
     ]
     return streamMatch({
         reason: 'current',
@@ -32,20 +32,20 @@ export function decidedMatch(overrides: Partial<StreamMatch> = {}): StreamMatch 
 
 export function officialMatch(overrides: Partial<StreamMatch> = {}): StreamMatch {
     const scores = [
-        streamMapScore(1, [2, 1], 'a'),
-        streamMapScore(2, [0, 2], 'b'),
-        streamMapScore(3, [2, 1], 'a'),
-        streamMapScore(4, [2, 0], 'a'),
+        streamMapScore(0, [2, 1], 'a'),
+        streamMapScore(1, [0, 2], 'b'),
+        streamMapScore(2, [2, 1], 'a'),
+        streamMapScore(3, [2, 0], 'a'),
     ]
     return decidedMatch({ status: 'complete', score: streamScore(scores, { winner: 'a', live_decided: true, current_map: null }), ...overrides })
 }
 
 export function inProgressMatch(overrides: Partial<StreamMatch> = {}): StreamMatch {
     const scores = [
-        streamMapScore(1, [2, 1], 'a', { source: 'live' }),
-        streamMapScore(2, [0, 2], 'b', { source: 'live' }),
-        streamMapScore(3, [1, 1], null),
-        streamMapScore(4),
+        streamMapScore(0, [2, 1], 'a', { source: 'live' }),
+        streamMapScore(1, [0, 2], 'b', { source: 'live' }),
+        streamMapScore(2, [1, 1], null),
+        streamMapScore(3),
     ]
     return decidedMatch({ score: streamScore(scores), ...overrides })
 }

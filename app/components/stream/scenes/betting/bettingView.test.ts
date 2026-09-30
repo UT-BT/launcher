@@ -7,7 +7,7 @@ import { bettingView, coins, signedCoins, type BackerList, type BettingView } fr
 
 const MATCH = streamMatch()
 const DECIDED: StreamMatch = streamMatch({
-    score: streamScore([streamMapScore(1, [2, 0], 'b'), streamMapScore(2, [2, 1], 'b'), streamMapScore(3, [2, 0], 'b')], { winner: 'b', live_decided: true }),
+    score: streamScore([streamMapScore(0, [2, 0], 'b'), streamMapScore(1, [2, 1], 'b'), streamMapScore(2, [2, 0], 'b')], { winner: 'b', live_decided: true }),
 })
 
 function viewOf(read: BettingRead, match: StreamMatch = MATCH): BettingView {

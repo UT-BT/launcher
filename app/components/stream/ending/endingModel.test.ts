@@ -54,8 +54,8 @@ describe('endingModel credits', () => {
     })
 
     it('shows the final series as the kicker only once a winner exists', () => {
-        const won = streamMatch({ score: streamScore([streamMapScore(1, [3, 1], 'a'), streamMapScore(2, [3, 0], 'a')], { winner: 'a' }) })
-        const live = streamMatch({ score: streamScore([streamMapScore(1, [1, 0], null)]) })
+        const won = streamMatch({ score: streamScore([streamMapScore(0, [3, 1], 'a'), streamMapScore(1, [3, 0], 'a')], { winner: 'a' }) })
+        const live = streamMatch({ score: streamScore([streamMapScore(0, [1, 0], null)]) })
 
         expect(endingModel({ state: streamHotState({ match: won }), feed: null, now: NOW }).kicker).toBe('Crimson Cats 2–0 Azure Owls')
         expect(endingModel({ state: streamHotState({ match: live }), feed: null, now: NOW }).kicker).toBeNull()
