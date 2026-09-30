@@ -888,6 +888,8 @@ export interface AdminMapRow {
     required_players: number
     has_screenshot: boolean
     screenshot_updated: string | null
+    has_video: boolean
+    video_updated_at: string | null
 }
 
 export type AdminMapSort = 'name' | 'difficulty' | 'active' | 'added'
@@ -935,6 +937,28 @@ export async function fetchAdminMapTags(token: string, signal?: AbortSignal): Pr
 
 export async function deleteMapScreenshot(token: string, mapName: string): Promise<AdminMapRow> {
     return apiGet<AdminMapRow>(`/admin/maps/${encodeURIComponent(mapName)}/screenshot`, { token, method: 'DELETE' })
+}
+
+export async function uploadMapVideo(token: string, mapName: string, file: Blob, filename: string): Promise<AdminMapRow> {
+    const formData = new FormData()
+    formData.append('file', file, filename)
+    const res = await fetch(`${API_BASE_URL}/admin/maps/${encodeURIComponent(mapName)}/video`, {
+        method: 'POST',
+        headers: bearerHeaders(token),
+        body: formData,
+    })
+    if (!res.ok) {
+        throw await apiErrorFor(res)
+    }
+    const json = await res.json()
+    if (json && json.success && json.data) {
+        return json.data as AdminMapRow
+    }
+    throw new Error('Invalid response format from server')
+}
+
+export async function deleteMapVideo(token: string, mapName: string): Promise<AdminMapRow> {
+    return apiGet<AdminMapRow>(`/admin/maps/${encodeURIComponent(mapName)}/video`, { token, method: 'DELETE' })
 }
 
 export interface MapvoteStatus {
