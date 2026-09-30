@@ -3,7 +3,7 @@ import { PICK_BAN_HUES, tint } from '@/app/components/broadcast/broadcastTone'
 import { sideTone } from '../../sceneHelpers'
 import type { StreamSide } from '../../data/streamHotState'
 import { PREVIEW_SIDES, type GroupRowView, type NextStepView, type PathStepView, type PreviewStageViewModel, type SwissBucketView } from './previewView'
-import { Kicker, Label, Panel, RESULT_TEXT, SideBadge } from './previewParts'
+import { Kicker, Label, Panel, RESULT_TEXT } from './previewParts'
 
 const GROUP_COLUMNS = 'grid grid-cols-[64px_minmax(0,1fr)_104px_92px_56px] items-center gap-x-2'
 
@@ -31,7 +31,6 @@ function GroupRow({ row }: { row: GroupRowView }) {
                 {row.rank}
             </span>
             <span className="flex min-w-0 items-center gap-3 font-black italic uppercase">
-                {row.side && <SideBadge side={row.side} />}
                 <span className="truncate">{row.name}</span>
             </span>
             <span className="text-center">{row.record}</span>
@@ -74,7 +73,6 @@ function SwissBuckets({ buckets }: { buckets: SwissBucketView[] }) {
                     <span className="flex min-w-0 flex-1 flex-col gap-1">
                         {bucket.marked.map(entry => (
                             <span key={entry.side} className="flex min-w-0 items-center gap-2.5 text-[22px] font-black italic uppercase">
-                                <SideBadge side={entry.side} className="size-6 text-base" />
                                 <span className="truncate">{entry.name}</span>
                             </span>
                         ))}
@@ -119,7 +117,6 @@ function BracketPaths({ names, paths, winnerPath }: { names: Record<StreamSide, 
             {PREVIEW_SIDES.map(side => (
                 <div key={side} className="flex min-h-0 min-w-0 flex-col gap-2">
                     <p className="flex min-w-0 items-center gap-2.5 text-2xl font-black italic uppercase leading-tight">
-                        <SideBadge side={side} />
                         <span className="truncate">{names[side]}</span>
                     </p>
                     <ol className="flex min-h-0 min-w-0 flex-col gap-1.5">

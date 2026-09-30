@@ -36,15 +36,6 @@ export function VerdictChip({ verdict }: { verdict: BettingVerdict | null }) {
     return <Chip tone={verdict === 'won' ? 'emerald' : 'red'}>{verdict === 'won' ? 'Won' : 'Lost'}</Chip>
 }
 
-export function SideBadge({ side }: { side: StreamSide }) {
-    const tone = PICK_BAN_TONES[side]
-    return (
-        <span className={cn('inline-flex size-7 shrink-0 items-center justify-center rounded-md text-[18px] font-black italic uppercase', tone.solid, tone.onSolid)}>
-            {side}
-        </span>
-    )
-}
-
 export function SidePlate({ side, className, children }: { side: StreamSide; className: string; children: ReactNode }) {
     const hue = PICK_BAN_HUES[side]
     return (

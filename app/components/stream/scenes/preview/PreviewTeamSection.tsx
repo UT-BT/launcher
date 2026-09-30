@@ -7,7 +7,7 @@ import { PICK_BAN_HUES, tint } from '@/app/components/broadcast/broadcastTone'
 import { sideTone, sideToneClasses } from '../../sceneHelpers'
 import type { StreamSide } from '../../data/streamHotState'
 import type { CupRunChip, PreviewPlayerView, PreviewTeamView, ResultLetter } from './previewView'
-import { Label, RESULT_TEXT, SideBadge } from './previewParts'
+import { Label, RESULT_TEXT } from './previewParts'
 
 const PLATE_CLIP = 'polygon(0 0, 100% 0, calc(100% - 56px) 100%, 0 100%)'
 
@@ -43,7 +43,6 @@ function Plate({ side, team }: { side: StreamSide; team: PreviewTeamView | null 
             <div aria-hidden className="absolute inset-x-0 bottom-0 h-px" style={{ clipPath: PLATE_CLIP, background: `linear-gradient(to right, ${hue}, transparent 85%)` }} />
             <div className="relative flex h-full items-center justify-between gap-[18px] pl-11 pr-24">
                 <div className="flex min-w-0 items-center gap-4">
-                    <SideBadge side={side} />
                     <h2
                         className="min-w-0 truncate font-black italic uppercase leading-[0.95] tracking-tight [text-shadow:0_4px_24px_rgba(0,0,0,0.45)]"
                         style={{ fontSize: nameSize(name) }}

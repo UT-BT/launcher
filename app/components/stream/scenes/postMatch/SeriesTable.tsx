@@ -16,15 +16,6 @@ interface SeriesTableProps {
     live?: boolean
 }
 
-export function SideChip({ side, className }: { side: StreamSide; className?: string }) {
-    const tone = sideToneClasses(side)
-    return (
-        <span className={cn('inline-flex size-7 shrink-0 items-center justify-center rounded-md text-lg font-black italic uppercase leading-none', tone.solid, tone.onSolid, className)}>
-            {side}
-        </span>
-    )
-}
-
 function SeriesMapTile({ map, size }: { map: PostMatchMapView; size: number }) {
     const toneKey: PickBanTone = map.pickedBy ?? (map.map ? 'gold' : 'neutral')
     const tone = PICK_BAN_TONES[toneKey]
@@ -84,7 +75,6 @@ export function SeriesTable({ teams, series, maps, tileSize, live = false }: Ser
                 <div style={{ height: tileSize }} />
                 {SIDES.map(side => (
                     <div key={side} className="flex h-[72px] items-center gap-3.5">
-                        <SideChip side={side} />
                         <span className={cn('line-clamp-2 text-[40px] font-black italic uppercase leading-[0.95]', sideToneClasses(side).text)}>{teams[side]}</span>
                     </div>
                 ))}

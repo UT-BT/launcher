@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
-import { Chip, profitTone, SideBadge, SidePlate, StatusRow, VerdictChip } from './BettingParts'
+import { Chip, profitTone, SidePlate, StatusRow, VerdictChip } from './BettingParts'
 import { coins, plural, signedCoins, type BackerList, type BackerRow, type BettingColumns, type BettingView, type DrawLine } from './bettingView'
 
 type PositionsView = Exclude<BettingView, { kind: 'not-enabled' | 'no-market' | 'open' }>
@@ -66,7 +66,6 @@ function BackerSection({ list, columns }: { list: BackerList; columns: BettingCo
             <SidePlate side={list.side} className="h-[60px]">
                 <div className="flex items-center justify-between gap-6">
                     <div className="flex min-w-0 items-center gap-3.5">
-                        <SideBadge side={list.side} />
                         <h2 className="min-w-0 truncate text-[40px] font-black italic uppercase leading-[0.95] tracking-[-0.01em]">{list.name}</h2>
                         <VerdictChip verdict={list.verdict} />
                     </div>

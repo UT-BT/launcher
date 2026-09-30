@@ -2,8 +2,6 @@ import type { ReactNode } from 'react'
 import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { staggeredCard } from '@/app/components/broadcast/broadcastMotion'
-import { sideToneClasses } from '../../sceneHelpers'
-import type { StreamSide } from '../../data/streamHotState'
 import type { ResultLetter } from './previewView'
 
 export const RESULT_TEXT: Record<ResultLetter, string> = {
@@ -30,14 +28,5 @@ export function Panel({ order, className, children }: { order: number; className
         >
             {children}
         </motion.div>
-    )
-}
-
-export function SideBadge({ side, className }: { side: StreamSide; className?: string }) {
-    const tone = sideToneClasses(side)
-    return (
-        <span className={cn('inline-flex size-7 shrink-0 items-center justify-center rounded-md text-lg font-black italic uppercase', tone.solid, tone.onSolid, className)}>
-            {side}
-        </span>
     )
 }

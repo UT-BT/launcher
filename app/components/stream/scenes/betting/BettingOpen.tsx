@@ -2,7 +2,7 @@ import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { PICK_BAN_TONES } from '@/app/components/broadcast/broadcastTone'
 import { EASE_OUT } from '@/app/components/broadcast/broadcastMotion'
-import { PANEL, SideBadge, SidePlate, StatCell, StatusRow } from './BettingParts'
+import { PANEL, SidePlate, StatCell, StatusRow } from './BettingParts'
 import { coins, type BettingView, type OddsSide } from './bettingView'
 
 type OpenView = Extract<BettingView, { kind: 'open' }>
@@ -25,7 +25,6 @@ function TeamOdds({ entry }: { entry: OddsSide & { side: 'a' | 'b' } }) {
     return (
         <SidePlate side={entry.side} className="h-[196px]">
             <div className="flex items-center gap-2.5">
-                <SideBadge side={entry.side} />
                 {entry.label && <span className="text-[18px] font-bold uppercase tracking-[0.2em] text-white/70">{entry.label}</span>}
             </div>
             <h2 className="max-w-full truncate text-[72px] font-black italic uppercase leading-[0.95] tracking-[-0.01em]">{entry.name}</h2>

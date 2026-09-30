@@ -66,12 +66,7 @@ export function TeamPlate({ team, align, lit = false, chips }: { team: PlateTeam
                 style={{ clipPath: PLATE_CLIP[align], background: `linear-gradient(${direction}, ${hue}, transparent 85%)` }}
             />
             <div className={cn('relative flex h-full min-w-0 flex-col justify-center gap-2.5', mirrored ? 'items-end pl-24 pr-12 text-right' : 'items-start pl-12 pr-24')}>
-                <div className={cn('flex items-center gap-2.5', mirrored && 'flex-row-reverse')}>
-                    {team?.ab && (
-                        <span className={cn('inline-flex size-7 items-center justify-center rounded-md text-lg font-black italic', tone.solid, tone.onSolid)}>
-                            {team.ab}
-                        </span>
-                    )}
+                <div className={cn('flex min-h-7 items-center gap-2.5', mirrored && 'flex-row-reverse')}>
                     {team?.stageSeed != null && (
                         <span className="text-lg font-bold uppercase tracking-[0.2em] text-white/70">Seed {team.stageSeed}</span>
                     )}

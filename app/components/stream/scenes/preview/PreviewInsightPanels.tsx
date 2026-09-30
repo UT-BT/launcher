@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils'
 import { sideToneClasses } from '../../sceneHelpers'
 import type { HeadToHeadView, OddsView } from './previewView'
-import { Kicker, Label, Panel, SideBadge } from './previewParts'
+import { Kicker, Label, Panel } from './previewParts'
 
 export function HeadToHeadPanel({ headToHead, order }: { headToHead: HeadToHeadView; order: number }) {
     const meetings = headToHead.draws > 0 ? `${headToHead.meetings} · ${headToHead.draws} drawn` : headToHead.meetings
@@ -28,7 +28,6 @@ export function OddsPanel({ odds, order }: { odds: OddsView; order: number }) {
             <Kicker className="mb-3.5">Odds</Kicker>
             <div data-preview-odds className="mb-3 flex items-center justify-between text-[28px] font-black italic uppercase">
                 <p className="flex items-center gap-2.5">
-                    <SideBadge side="a" />
                     <span className={sideToneClasses('a').text}>{odds.a.percent}</span>
                     <span className="text-white/85">{odds.a.odds}</span>
                 </p>
@@ -36,7 +35,6 @@ export function OddsPanel({ odds, order }: { odds: OddsView; order: number }) {
                 <p className="flex items-center gap-2.5">
                     <span className="text-white/85">{odds.b.odds}</span>
                     <span className={sideToneClasses('b').text}>{odds.b.percent}</span>
-                    <SideBadge side="b" />
                 </p>
             </div>
             <div className="flex h-3.5 overflow-hidden rounded-full bg-white/10">
