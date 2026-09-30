@@ -6,9 +6,11 @@ The broadcast scenes reuse three of them as their cues: `pick` for the map-win r
 
 The stream stinger's whoosh (`stinger-whoosh.mp3`) is a single source sound, edited: trimmed to 1.2 s, faded in and out, and lowered 2 dB.
 
+All six files were then processed for broadcast balance: each is centred (left and right mixed to one identical signal on both channels) and set to the same integrated loudness (-15.7 LUFS) with its true peak at or below -1 dBTP. Only the channel mix and the overall level changed; the timing and the source sounds are the same.
+
 ## Attribution required (CC BY)
 
-- "thick-stamp-sub.wav" by newagesoup, https://freesound.org/people/newagesoup/sounds/347323/, licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Edited and layered (trimmed, filtered, level-shaped). Used in: `ban.mp3`, `ban-down.mp3`.
+- "thick-stamp-sub.wav" by newagesoup, https://freesound.org/people/newagesoup/sounds/347323/, licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Edited and layered (trimmed, filtered, level-shaped), then centred and level-matched. Used in: `ban.mp3`, `ban-down.mp3`.
 
 ## Public domain (CC0 1.0)
 
