@@ -11,10 +11,13 @@ import { registerFavoritesHandlers, startBackgroundGamePoller } from '@/lib/conv
 import { registerDemosHandlers } from '@/lib/conveyor/handlers/demos-handler'
 import { registerMapsHandlers } from '@/lib/conveyor/handlers/maps-handler'
 import { registerUpdaterHandlers } from '@/lib/conveyor/handlers/updater-handler'
+import { registerStreamKitHandlers } from '@/lib/conveyor/handlers/stream-kit-handler'
 import { demoWatcherService } from '@/lib/main/demo-watcher-service'
 import { updaterService } from '@/lib/main/updater-service'
 import { trayService } from '@/lib/main/tray-service'
 import windowStateKeeper from 'electron-window-state'
+
+const SITE_ORIGIN = 'https://utbt.net'
 
 export function createAppWindow(): void {
   // Register custom protocol for resources
@@ -27,16 +30,24 @@ export function createAppWindow(): void {
   const imgSrc = app.isPackaged
     ? "'self' data: blob: res: https://utbt.net https://gateway.utbt.net https://api.utbt.net https://flagcdn.com https://cdn.discordapp.com"
     : "'self' data: blob: res: https://utbt.net https://gateway.utbt.net https://api.utbt.net https://flagcdn.com https://cdn.discordapp.com http://localhost http://127.0.0.1"
+  const mediaSrc = app.isPackaged
+    ? "'self' https://api.utbt.net https://democonverter-com-ut99.s3.nl-ams.scw.cloud"
+    : "'self' https://api.utbt.net https://democonverter-com-ut99.s3.nl-ams.scw.cloud http://localhost http://127.0.0.1"
   const csp = [
     "default-src 'self'",
     `script-src ${scriptSrc}`,
     "style-src 'self' 'unsafe-inline'",
     `img-src ${imgSrc}`,
-    "media-src 'self' https://democonverter-com-ut99.s3.nl-ams.scw.cloud",
+    `frame-src 'self' ${SITE_ORIGIN}`,
+    `media-src ${mediaSrc}`,
     `connect-src ${connectSrc}`,
   ].join('; ')
 
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    if (details.resourceType === 'subFrame' && new URL(details.url).origin === SITE_ORIGIN) {
+      callback({ responseHeaders: details.responseHeaders })
+      return
+    }
     callback({
       responseHeaders: {
         ...details.responseHeaders,
@@ -88,6 +99,7 @@ export function createAppWindow(): void {
   registerDemosHandlers(mainWindow)
   registerMapsHandlers(mainWindow)
   registerUpdaterHandlers(mainWindow)
+  registerStreamKitHandlers(mainWindow)
   startBackgroundGamePoller(mainWindow)
 
   demoWatcherService.startWatching()

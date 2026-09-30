@@ -4,6 +4,8 @@ import { handleOAuthCallbackIfPresent } from './platform/web/auth-web'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { ThemeProvider } from './theme/ThemeProvider'
 import { parseStreamPath } from './components/navigation/matchLinks'
+import { parseStreamScenePath } from './components/stream/streamScenes'
+import { markPageNoIndex } from './components/stream/noIndex'
 import { pathToNav } from './components/navigation/routes'
 import { prefetchPage } from './components/main/pageLoaders'
 import App from './app'
@@ -19,10 +21,17 @@ window.addEventListener('vite:preloadError', event => {
 })
 
 const streamRoute = parseStreamPath(window.location.pathname)
+const sceneRoute = parseStreamScenePath(window.location.pathname)
+
+if (streamRoute || sceneRoute) markPageNoIndex()
 
 if (streamRoute) {
   void import('./components/pages/events/pickban/stream/mountStreamRoot').then(({ mountStreamRoot }) => {
     mountStreamRoot(document.getElementById('app') as HTMLElement, streamRoute)
+  })
+} else if (sceneRoute) {
+  void import('./components/stream/mountStreamSceneRoot').then(({ mountStreamSceneRoot }) => {
+    mountStreamSceneRoot(document.getElementById('app') as HTMLElement, sceneRoute)
   })
 } else {
   document.documentElement.style.setProperty('--window-titlebar-height', '0px')

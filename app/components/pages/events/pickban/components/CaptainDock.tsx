@@ -7,7 +7,7 @@ import type { PickBanSide } from '@/app/utils/api'
 import type { CaptainControls, CaptainDock as CaptainDockModel } from '../captainPlay'
 import { actionTagOf, type PickBanTurn } from '../pickBanView'
 import { CountdownBar, CountdownText } from './Countdown'
-import { PICK_BAN_TONES, stepTone, teamTone, type PickBanToneClasses } from './pickBanTone'
+import { PICK_BAN_TONES, stepTone, teamTone, type PickBanToneClasses } from '@/app/components/broadcast/broadcastTone'
 
 interface CaptainDockProps {
     dock: CaptainDockModel

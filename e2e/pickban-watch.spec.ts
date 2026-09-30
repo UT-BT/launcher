@@ -79,6 +79,10 @@ async function setAnimations(page: Page, animations: 'on' | 'off') {
     await page.addInitScript(value => localStorage.setItem('utbt:pickBanMotion:v1', JSON.stringify(value)), animations)
 }
 
+async function setSolidTheme(page: Page) {
+    await page.addInitScript(() => localStorage.setItem('utbt:theme:v1', JSON.stringify({ id: 'black' })))
+}
+
 const stage = (page: Page) => page.getByLabel('Picks & Bans Stage')
 
 function revealOf(state: PickBanState, index: number): number {
@@ -145,6 +149,15 @@ test('an anonymous visitor watches the lobby, a live step and the summary at a p
     }
 
     await expect(page.getByRole('link', { name: /Back to Bracket/ })).toHaveAttribute('href', `/events/${SLUG}?tab=bracket`)
+})
+
+test('the match banner names the team currently choosing', async ({ page }) => {
+    const at = INTRO_END + 1_000
+    await serve(page, fakeServer(at, () => readAt(started(), at)))
+    await page.goto(PAGE_PATH)
+
+    await expect(page.getByText('Currently choosing')).toBeVisible()
+    await expect(page.getByText(/on the clock/i)).toHaveCount(0)
 })
 
 test('a lock-in delivered early is revealed at its reveal_at, at the same moment on two screens', async ({ browser, isMobile }) => {
@@ -235,6 +248,7 @@ test('the stage keeps one height per width and fits every state inside it', asyn
         await page.setViewportSize({ width: STAGE_WIDTHS[0], height: 1_100 })
         await page.goto(PAGE_PATH)
         await expect(stage(page)).toContainText(scenario.expectText)
+        await page.evaluate(() => document.fonts.ready.then(() => undefined))
 
         for (const width of STAGE_WIDTHS) {
             await page.setViewportSize({ width, height: 1_100 })
@@ -300,6 +314,7 @@ function midway(opacities: number[]): number[] {
 
 test('an undo plays the reveal backwards, and is instant with animations off', async ({ page, isMobile }) => {
     test.skip(isMobile)
+    await setSolidTheme(page)
 
     const revealed = held(locked(started(), ALPHA, FIRST_LOCK))
     const reveal = revealOf(revealed, 0)
@@ -326,6 +341,7 @@ test('an undo plays the reveal backwards, and is instant with animations off', a
 
 test('the paused overlay fades in and out, and is instant with animations off', async ({ page, isMobile }) => {
     test.skip(isMobile)
+    await setSolidTheme(page)
 
     const revealed = held(locked(started(), ALPHA, FIRST_LOCK))
     const reveal = revealOf(revealed, 0)

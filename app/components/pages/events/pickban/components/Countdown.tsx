@@ -2,7 +2,7 @@ import { useLayoutEffect, useRef } from 'react'
 import { cn } from '@/lib/utils'
 import type { PickBanCountdown } from '../pickBanView'
 import { introCountdownWords } from '../pickBanCopy'
-import { PICK_BAN_TONES, type PickBanTone } from './pickBanTone'
+import { PICK_BAN_TONES, type PickBanTone } from '@/app/components/broadcast/broadcastTone'
 import { usePickBanAnimate } from './PickBanMotion'
 
 type CountdownPainter = (element: HTMLElement, remainingMs: number, fraction: number) => void

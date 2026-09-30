@@ -8,6 +8,7 @@ export interface PlatformCapabilities {
     windowChrome: boolean
     settingsModal: boolean
     anonymousBrowse: boolean
+    camTool: boolean
 }
 
 export const DESKTOP_CAPABILITIES: PlatformCapabilities = {
@@ -20,6 +21,7 @@ export const DESKTOP_CAPABILITIES: PlatformCapabilities = {
     windowChrome: true,
     settingsModal: true,
     anonymousBrowse: false,
+    camTool: true,
 }
 
 export const WEB_CAPABILITIES: PlatformCapabilities = {
@@ -32,4 +34,5 @@ export const WEB_CAPABILITIES: PlatformCapabilities = {
     windowChrome: false,
     settingsModal: true,
     anonymousBrowse: true,
+    camTool: false,
 }

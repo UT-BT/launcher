@@ -1,4 +1,4 @@
-import { LayoutDashboard, Tag, UserCog, Flag, Map as MapIcon, Package, ShieldAlert, ScrollText, Newspaper, Swords, Trophy, ShieldCheck, Activity, Server } from 'lucide-react'
+import { LayoutDashboard, Tag, UserCog, Flag, Map as MapIcon, Package, ShieldAlert, ScrollText, Newspaper, Swords, Trophy, ShieldCheck, Activity, Server, Radio } from 'lucide-react'
 import { ADMIN_DASHBOARD_ROLES, ADMIN_ONLY_ROLES } from '@/app/utils/roles'
 import type { AdminSection, AdminGroup, AdminSectionId } from './types'
 import { OverviewSection } from './sections/OverviewSection'
@@ -15,6 +15,7 @@ import { FormatsManagementSection } from './sections/FormatsManagementSection'
 import { RoleManagementSection } from './sections/RoleManagementSection'
 import { UsageHealthSection } from './sections/UsageHealthSection'
 import { HostsManagementSection } from './sections/HostsManagementSection'
+import { StreamersSection } from './sections/StreamersSection'
 
 export const ADMIN_GROUPS: AdminGroup[] = [
   { id: 'overview', title: 'Overview' },
@@ -33,6 +34,7 @@ export const ADMIN_SECTIONS: AdminSection[] = [
   { id: 'news-management', label: 'News', icon: Newspaper, group: 'community', roles: ADMIN_DASHBOARD_ROLES, Component: NewsManagementSection },
   { id: 'events-management', label: 'Events', icon: Swords, group: 'events', roles: ADMIN_DASHBOARD_ROLES, Component: EventsManagementSection },
   { id: 'formats-management', label: 'Tournament Formats', icon: Trophy, group: 'events', roles: ADMIN_DASHBOARD_ROLES, Component: FormatsManagementSection },
+  { id: 'streamers', label: 'Streamers', icon: Radio, group: 'events', roles: ADMIN_DASHBOARD_ROLES, Component: StreamersSection },
   { id: 'caps-management', label: 'Caps Management', icon: Flag, group: 'game-content', roles: ADMIN_DASHBOARD_ROLES, Component: CapsManagementSection },
   { id: 'maps-management', label: 'Maps Management', icon: MapIcon, group: 'game-content', roles: ADMIN_DASHBOARD_ROLES, Component: MapsManagementSection },
   { id: 'patches-management', label: 'Patch Releases', icon: Package, group: 'system', roles: ADMIN_ONLY_ROLES, Component: PatchesManagementSection },
