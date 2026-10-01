@@ -382,6 +382,8 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
                     'normal-case tracking-normal whitespace-nowrap',
                     // Center the label itself; the sort icon sits beside it without shifting it.
                     id !== 'player' && '[&>button]:relative [&>button]:gap-0 [&>button>svg]:absolute [&>button>svg]:left-full [&>button>svg]:ml-1',
+                    // Match PlayerInfo's 32px avatar and gap-2.5 so the label starts above the name.
+                    id === 'player' && '[&>button]:ml-[calc(2rem+0.625rem)]',
                 )}
                 sortable={!!sortField}
                 sortDirection={sortField ? directionFor(sortField) : null}
