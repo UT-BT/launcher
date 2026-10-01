@@ -366,7 +366,7 @@ export function Home({
                 articles={newsFeed}
                 categories={newsCategoryMap}
                 newSince={newsSeenIso ?? null}
-                className="grid grid-cols-1 md:grid-cols-1 gap-3 space-y-0 overflow-y-auto pr-1 [scrollbar-width:thin] [scrollbar-color:rgba(148,163,184,0.25)_transparent] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-hairline/20"
+                className="grid grid-cols-1 md:grid-cols-1 gap-3 space-y-0 overflow-y-auto pr-1"
             />
         </SpotlightSection>
     )

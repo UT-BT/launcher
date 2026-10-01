@@ -49,7 +49,7 @@ export function NewsDetailPage({ newsId, userProfile }: NewsDetailPageProps) {
     const category = article ? (data?.categories.find(c => c.key === article.category) ?? null) : null
 
     return (
-        <div ref={scrollRef} onScroll={onScroll} className="h-full overflow-y-auto custom-scrollbar">
+        <div ref={scrollRef} onScroll={onScroll} className="h-full overflow-y-auto">
             <div className="p-6">
                 {loading && !article && (
                     <div className="flex items-center justify-center py-24 text-muted-foreground">
