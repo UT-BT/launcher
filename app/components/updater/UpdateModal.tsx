@@ -6,7 +6,7 @@ import { useUpdater } from '@/app/hooks/useUpdater'
 import { cn } from '@/lib/utils'
 
 const RELEASE_NOTES_HTML_CLASSES = [
-    'text-muted-foreground max-h-96 overflow-y-auto custom-scrollbar pr-2',
+    'text-muted-foreground max-h-96 overflow-y-auto pr-2',
     '[&_p]:mb-3 [&_p]:last:mb-0 [&_p]:leading-relaxed',
     '[&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-3 [&_ul]:space-y-1',
     '[&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-3 [&_ol]:space-y-1',
@@ -49,7 +49,7 @@ function ReleaseNotes({ notes }: { notes: string }) {
         )
     }
     return (
-        <div className="text-muted-foreground max-h-96 overflow-y-auto custom-scrollbar pr-2">
+        <div className="text-muted-foreground max-h-96 overflow-y-auto pr-2">
             <ReactMarkdown
                 components={{
                     strong: ({ node: _node, ...props }) => <span className="font-bold text-foreground" {...props} />,
