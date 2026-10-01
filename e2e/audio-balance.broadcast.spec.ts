@@ -11,6 +11,9 @@ const MIN_CHANNEL_CORRELATION = 0.99
 const MAX_PEAK_DBFS = -1
 const WINDOW_SECONDS = 0.1
 const AUDIBLE_WINDOW_RANGE_DB = 30
+const SUB_BASS_HZ = 30
+const BUTTERWORTH_Q_DB = 20 * Math.log10(Math.SQRT1_2)
+const MAX_SUB_BASS_SHARE = 0.02
 
 interface Balance {
     channels: number
@@ -19,12 +22,13 @@ interface Balance {
     worstWindowGapDb: number
     correlation: number
     peakDbfs: number
+    subBassShare: number
 }
 
 async function measureBalance(page: Page, sound: string): Promise<Balance> {
     const base64 = readFileSync(path.join(SOUNDS_DIR, `${sound}.mp3`)).toString('base64')
     await page.goto('about:blank')
-    return page.evaluate(async ({ base64, windowSeconds, audibleRangeDb }) => {
+    return page.evaluate(async ({ base64, windowSeconds, audibleRangeDb, subBassHz, butterworthQDb }) => {
         const encoded = Uint8Array.from(atob(base64), character => character.charCodeAt(0))
         const audio = await new OfflineAudioContext(2, 1, 48000).decodeAudioData(encoded.buffer)
         const left = audio.getChannelData(0)
@@ -55,6 +59,12 @@ async function measureBalance(page: Page, sound: string): Promise<Balance> {
                 .filter(window => Math.max(window.left, window.right) >= audibleFloor)
                 .map(window => Math.abs(10 * Math.log10(window.left / window.right))),
         )
+        const lowpassed = new OfflineAudioContext(1, audio.length, audio.sampleRate)
+        const source = new AudioBufferSourceNode(lowpassed, { buffer: audio })
+        const lowpass = () => new BiquadFilterNode(lowpassed, { type: 'lowpass', frequency: subBassHz, Q: butterworthQDb })
+        source.connect(lowpass()).connect(lowpass()).connect(lowpassed.destination)
+        source.start()
+        const subBass = (await lowpassed.startRendering()).getChannelData(0)
         return {
             channels: audio.numberOfChannels,
             rmsLeftDb: decibels(Math.sqrt(leftEnergy / left.length)),
@@ -62,12 +72,13 @@ async function measureBalance(page: Page, sound: string): Promise<Balance> {
             worstWindowGapDb,
             correlation: crossEnergy / Math.sqrt(leftEnergy * rightEnergy),
             peakDbfs: decibels(peak),
+            subBassShare: energy(subBass, 0, subBass.length) / leftEnergy,
         }
-    }, { base64, windowSeconds: WINDOW_SECONDS, audibleRangeDb: AUDIBLE_WINDOW_RANGE_DB })
+    }, { base64, windowSeconds: WINDOW_SECONDS, audibleRangeDb: AUDIBLE_WINDOW_RANGE_DB, subBassHz: SUB_BASS_HZ, butterworthQDb: BUTTERWORTH_Q_DB })
 }
 
 for (const sound of SOUNDS) {
-    test(`${sound} decodes centred, with identical channels and headroom`, async ({ page }) => {
+    test(`${sound} decodes centred, with identical channels, headroom and no sub-bass rumble`, async ({ page }) => {
         const balance = await measureBalance(page, sound)
 
         expect(balance.channels).toBe(2)
@@ -75,5 +86,6 @@ for (const sound of SOUNDS) {
         expect(balance.worstWindowGapDb).toBeLessThanOrEqual(MAX_CHANNEL_RMS_GAP_DB)
         expect(balance.correlation).toBeGreaterThan(MIN_CHANNEL_CORRELATION)
         expect(balance.peakDbfs).toBeLessThanOrEqual(MAX_PEAK_DBFS)
+        expect(balance.subBassShare).toBeLessThanOrEqual(MAX_SUB_BASS_SHARE)
     })
 }
