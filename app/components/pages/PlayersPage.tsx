@@ -56,8 +56,8 @@ const COLUMN_WIDTH: Partial<Record<PlayerColumnId, string>> = {
     rank: '5rem',
     role: '7rem',
     points: '7rem',
-    world_records: '7.5rem',
-    champion_medals: '6rem',
+    world_records: '9rem',
+    champion_medals: '7.5rem',
     gold_medals: '5.5rem',
     silver_medals: '5.5rem',
     bronze_medals: '5.5rem',
@@ -99,7 +99,8 @@ const MEDAL_ICON: Partial<Record<PlayerColumnId, string>> = {
     bronze_medals: bronzeIcon,
 }
 
-const TABLE_ROW_HEIGHT_PX = 56
+// Keep in sync with the table body's h-16 rows, including loading placeholders.
+const TABLE_ROW_HEIGHT_PX = 64
 const TABLE_CHROME_PX = 260
 const AUTO_PAGE_SIZE_MIN_ROWS = 10
 const AUTO_PAGE_SIZE_MAX_ROWS = 60
@@ -370,19 +371,20 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
     const players = caches.players
     const showSkeleton = !error && (!cacheFresh || (pageLoading && players.length === 0))
 
-    const headerAlign = (id: PlayerColumnId): 'left' | 'center' | 'right' => {
-        if (id === 'player' || id === 'role' || id === 'registered_at') return 'left'
-        if (id === 'rank' || id === 'points') return 'right'
-        return 'center'
-    }
-
     const renderHeaderCell = (id: PlayerColumnId) => {
         const sortField = COLUMN_SORT_FIELD[id]
         return (
             <DataTableHeaderCell
                 key={id}
-                align={headerAlign(id)}
+                align={id === 'player' ? 'left' : 'center'}
                 width={COLUMN_WIDTH[id]}
+                className={cn(
+                    'normal-case tracking-normal whitespace-nowrap',
+                    // Center the label itself; the sort icon sits beside it without shifting it.
+                    id !== 'player' && '[&>button]:relative [&>button]:gap-0 [&>button>svg]:absolute [&>button>svg]:left-full [&>button>svg]:ml-1',
+                    // Match PlayerInfo's 32px avatar and gap-2.5 so the label starts above the name.
+                    id === 'player' && '[&>button]:ml-[calc(2rem+0.625rem)]',
+                )}
                 sortable={!!sortField}
                 sortDirection={sortField ? directionFor(sortField) : null}
                 onSort={sortField ? () => handleSort(sortField) : undefined}
@@ -418,7 +420,7 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
             case 'role': {
                 const role = ROLE_LABELS[p.utbt_role]
                 return (
-                    <DataTableCell key={id}>
+                    <DataTableCell key={id} align="center">
                         {role ? (
                             <span className={cn(
                                 'inline-flex items-center px-2 py-0.5 rounded-md border text-[10px] font-bold uppercase tracking-wider',
@@ -434,7 +436,7 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
             }
             case 'rank':
                 return (
-                    <DataTableCell key={id} align="right">
+                    <DataTableCell key={id} align="center">
                         {p.rank > 0
                             ? <span className="font-mono tabular-nums text-foreground">#{p.rank.toLocaleString()}</span>
                             : <span className="text-muted-foreground/40">—</span>}
@@ -442,7 +444,7 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
                 )
             case 'points':
                 return (
-                    <DataTableCell key={id} align="right">
+                    <DataTableCell key={id} align="center">
                         <span className={cn('font-mono tabular-nums', p.points > 0 ? 'text-foreground' : 'text-muted-foreground/40')}>
                             {p.points.toLocaleString()}
                         </span>
@@ -450,7 +452,7 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
                 )
             case 'registered_at':
                 return (
-                    <DataTableCell key={id}>
+                    <DataTableCell key={id} align="center" className="whitespace-nowrap">
                         <span className="text-muted-foreground">
                             {p.registered_at ? formatAddedDate(p.registered_at) : '—'}
                         </span>
@@ -523,12 +525,10 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
             <div className="flex items-end justify-between shrink-0">
                 <div>
                     <h1 className="text-2xl font-bold text-foreground leading-tight">Players</h1>
-                    {!showSkeleton && (
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                            Showing {totalCount.toLocaleString()} {totalCount === 1 ? 'player' : 'players'}
-                            {debouncedSearch && <span className="opacity-50"> matching “{debouncedSearch}”</span>}
-                        </p>
-                    )}
+                    <p className={cn('text-xs text-muted-foreground mt-0.5', showSkeleton && 'invisible')}>
+                        Showing {totalCount.toLocaleString()} {totalCount === 1 ? 'player' : 'players'}
+                        {debouncedSearch && <span className="opacity-50"> matching “{debouncedSearch}”</span>}
+                    </p>
                 </div>
                 <div className="flex items-center gap-1">
                     <Tooltip content="Launch Tutorial" side="bottom">
@@ -602,9 +602,9 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
                 <DataTableHeaderRow theadDataAttr="data-utbt-players-thead">
                     {effectiveColumns.map(id => renderHeaderCell(id))}
                 </DataTableHeaderRow>
-                <tbody>
+                <tbody className="[&>tr]:h-16">
                     {showSkeleton ? (
-                        Array.from({ length: Math.min(pageSize, AUTO_PAGE_SIZE_MAX_ROWS) }).map((_, i) => (
+                        Array.from({ length: pageSize }).map((_, i) => (
                             <DataTableSkeletonRow key={i} columnCount={visibleColumnCount} />
                         ))
                     ) : players.length === 0 ? (
@@ -619,10 +619,15 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
                             </DataTableRow>
                         ))
                     )}
+                    {!showSkeleton && players.length > 0 && players.length < pageSize && (
+                        <tr aria-hidden="true" style={{ height: (pageSize - players.length) * TABLE_ROW_HEIGHT_PX }}>
+                            <td colSpan={visibleColumnCount} className="p-0" />
+                        </tr>
+                    )}
                 </tbody>
             </DataTableShell>
 
-            {!showSkeleton && totalCount > 0 && (
+            {totalCount > 0 && (
                 <PaginationBar
                     page={page}
                     totalPages={totalPages}
