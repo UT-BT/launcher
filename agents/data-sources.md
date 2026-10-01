@@ -1258,8 +1258,11 @@ attribution, the rest are CC0), so whoever replaces a file updates it too. All s
 above and `stinger-whoosh.mp3`, which the stinger video's audio is rendered from) are centred (both
 channels identical) and loudness-matched at about -15.7 LUFS integrated, with the sample peak at or
 below -1 dBFS, and none of the hit times above moved. `e2e/audio-balance.broadcast.spec.ts` guards
-it: whole-file left/right level within 1 dB, channel correlation above 0.99, and every audible 100 ms window
-(within 30 dB of the loudest) within 1 dB left/right. If you replace a source, re-measure all six and keep them on one target.
+it: whole-file left/right level within 1 dB, channel correlation above 0.99, every audible 100 ms window
+(within 30 dB of the loudest) within 1 dB left/right, and at most 2% of the energy below 30 Hz (a 4th-order
+Butterworth low-pass). Sub-bass rumble under that line plays as static or crackle on most speakers and
+headsets, which is why the stinger whoosh is high-passed at 50 Hz. If you replace a source, re-measure all
+six and keep them on one target.
 `pickBanSoundCues.ts`'s `cuesToPlay(state, clock, played)` is the pure
 seam (Vitest, no DOM). It sounds nothing unless the status is `running` or `complete`, so a
 paused, cancelled or voided session stays silent. Reveal cues come from `pickBanView.ts`'s

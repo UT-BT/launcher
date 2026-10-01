@@ -4,7 +4,7 @@ The pick/ban show's sound cues (`intro`, `pick`, `ban`, `ban-down`, `decider`) a
 
 The broadcast scenes reuse three of them as their cues: `pick` for the map-win reveal, `decider` for the match winner and `intro` for the countdown hitting zero.
 
-The stream stinger's whoosh (`stinger-whoosh.mp3`) is a single source sound, edited: trimmed to 1.2 s, faded in and out, and lowered 2 dB.
+The stream stinger's whoosh (`stinger-whoosh.mp3`) is a single source sound, edited: trimmed to 1.2 s, faded in and out, lowered 2 dB, and high-passed at 50 Hz (4th-order Butterworth) to strip the sub-bass rumble under it, which played as static.
 
 All six files were then processed for broadcast balance: each is centred (left and right mixed to one identical signal on both channels) and set to the same integrated loudness (-15.7 LUFS) with its true peak at or below -1 dBTP. Only the channel mix and the overall level changed; the timing and the source sounds are the same.
 
