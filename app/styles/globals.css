@@ -45,6 +45,26 @@
   color-scheme: light;
 }
 
+/* Match the slim scrollbars used by the main content and home cards. */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.25) transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 0.25rem;
+  height: 0.25rem;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  border-radius: 9999px;
+  background: color-mix(in oklab, var(--color-hairline) 20%, transparent);
+}
+
 @keyframes legendaryAvatarPulse {
   0%, 100% { transform: scale(1); filter: brightness(1); }
   50% { transform: scale(1.02); filter: brightness(1.1); }
