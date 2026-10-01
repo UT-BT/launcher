@@ -10,7 +10,7 @@ not_here:
   - "which component to use → shared-components.md"
   - "state / persistence → state-patterns.md"
 sections: [class-merging, tables-locked, responsive-columns, page-layout, filter-panel, buttons-toggle-states, form-inputs, card-backgrounds-borders, text, color-palette, animation, css-runtime-cost, broadcast-styling, scene-stylesheet, screenshot-conventions, donts]
-last_verified: 2026-09-30
+last_verified: 2026-10-01
 verify_against: [app/components/shared/DataTable.tsx, app/components/shared/LiveDot.tsx, app/components/shared/chipStyles.ts, app/styles/globals.css, app/styles/theme.css, app/styles/desktop.css, app/styles/index.css, lib/utils.ts, app/hooks/useElementWidth.ts, app/hooks/usePrefersReducedMotion.ts, app/components/broadcast/broadcastTone.ts, app/components/broadcast/broadcastMotion.ts, app/components/broadcast/broadcastFonts.ts, app/components/broadcast/broadcastFonts.css, app/components/broadcast/BroadcastStage.tsx, app/components/stream/streamScenes.css, app/components/stream/frame/SceneFrame.tsx, e2e/streamHarness.ts, playwright.config.ts, app/components/stream/scenes/overlay/overlayLayout.ts, app/components/stream/scenes/nextMap/NextMapHero.tsx, e2e/audio-balance.broadcast.spec.ts]
 ---
 
@@ -572,17 +572,32 @@ must be in a file the app scans. The bundle check budgets the two separately
 - **No A/B letters.** No scene draws an A/B chip or a "Team A" slot label: a side is its colour bar,
   wash and tone, and the team's name. `TeamPlate`'s `ab` only picks the colour.
 - **Match overlay (layout 06)** (`scenes/overlay/`, transparent). Everything sits on the frame's
-  edges or its centre and stays clear of the four cam timer zones (360×96, checked by the spec).
-  - *Name tags* (`OverlayNameTag`, 360×60): round avatar and alias only, a 50px slant and a side
-    wash. A1 and A2 at top 466 on the left and right edges, B1 and B2 at bottom 28 in the lower
-    corners.
+  edges or its centre and stays clear of the four cam timer zones (360×96, checked by the spec). The
+  lower cams' zones start below the seam rail (y 543), since the rail only touches their top edge.
+  - *Seam rails* (`OverlaySeamRail`, `SEAM_RAIL`): 3px lines on the seam, Team A's crimson just
+    above it (y 537–540) and Team B's azure just below (y 540–543), one pair per side. They are
+    children of the hub's seam row (`data-overlay-seam`, as wide as the map strip or the score rows,
+    whichever is wider), anchored to its edges and sized `calc(961px - 50%)` out to the frame edge (1px
+    past it, so an odd strip width never leaves a sub-pixel gap; the frame clips it). So they always
+    end against the centre box, however many maps the strip holds, with no measuring. Each line is
+    solid from the frame edge to 226px from the box, then fades through 55% tint to transparent 6px
+    from it. The hub's drop shadow sits on the rows and the strip, not the hub, so the rails cast none.
+    They replace the old per-tag side bar and hairline.
+  - *Name tags* (`OverlayNameTag`, 300×60): round avatar and alias only (`PlayerInfo` `sm` at zoom
+    1.6, with a soft text shadow), no box: a `#05070c` 72% scrim faded away from the seam (solid to 45%
+    of the height) plus team light rising off the rail (46%→14% tint), both masked so they fade out
+    inward (solid to 35% of the width). Masks are nested rather than composited, so older browser
+    sources render them. Every tag sits flush against the horizontal seam on the outer left or right
+    edge: A1 and A2 on the bottom of their cams (y 480–540), B1 and B2 on the top of theirs (y
+    540–600), so each side's pair meets at the seam beside the hub. 300px is the most that clears the
+    lower cams' timer zones (x 300 and 1260); a 15-character alias still fits untruncated.
   - *Score rows* (`OverlayHub`, 376×46, centred at 50%/50%): `#05070c` at 86% with a 1px white/12
     ring and 10px radius, a 6px team bar and a 30%→8% team wash, the team name in 900 italic (29px, 25px
     over 15 characters), 7×18 skewed win pips (the majority for a first-to series, the best-of for
     all-maps), and a 46×38 score box at 38px holding the current map's caps. The rows sit at y 479–525
     and 555–601.
   - *Map strip* (`OverlayMapStrip`): a band up to 560px wide and 30px tall, centred on the seam at y
-    540, on `#05070c` at 92% with an 8px radius and 16px text. Played cells are dimmed with their
+    540, on solid `#05070c` (never see-through) with an 8px radius and 16px text. Played cells are dimmed with their
     result, the current cell has a white underline and lighter wash, upcoming cells are outlined in the
     picker's colour (gold for the decider). Played names cap at 110px, upcoming at 140px, the current
     one is uncapped. A width estimate in the view model collapses played cells to number and score

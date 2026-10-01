@@ -52,7 +52,7 @@ function entry(patch: Partial<ScheduleEntry> = {}): ScheduleEntry {
 function tournamentSummary(patch: Partial<EventSummary> = {}): EventSummary {
     return {
         id: 't1', slug: '2v2-cup', name: '2v2 Cup', summary: null, team_size: 2, bracket_type: null,
-        status: 'active', signups_open: false, signup_opens_at: null, signup_closes_at: null,
+        status: 'signups_open', signups_open: true, signup_opens_at: null, signup_closes_at: null,
         starts_at: null, ends_at: null, max_teams: null, team_count: 0, registered_team_count: 0,
         created_at: null,
         ...patch,
@@ -152,6 +152,17 @@ describe('computeEventAttention', () => {
         expect(map['2v2-cup'].invitations).toBe(1)
         expect(map['other-cup'].invitations).toBe(1)
         expect(map['third-cup']).toBeUndefined()
+    })
+
+    it('drops invitations once signups for that event have closed, since they can no longer be accepted', () => {
+        const map = computeEventAttention(
+            [],
+            [
+                membership({ membership_status: 'invited', tournament: tournamentSummary({ status: 'signups_closed', signups_open: false }) }),
+                membership({ membership_status: 'invited', tournament: tournamentSummary({ ...OTHER_CUP, status: 'active', signups_open: false }) }),
+            ],
+        )
+        expect(map).toEqual({})
     })
 
     it('marks an open lobby without counting it', () => {

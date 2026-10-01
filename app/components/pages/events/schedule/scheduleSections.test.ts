@@ -145,6 +145,24 @@ describe('scheduleSections', () => {
 
         expect(sections.showStreaming).toBe(true)
     })
+
+    it('lists a match admin the matches they referee, live first, apart from their own matches', () => {
+        const manager = { hasTeam: false, canManageBracket: true, isStreamer: false }
+        const sections = scheduleSections([], [
+            mine({ id: 'unbooked', status: 'pending', scheduled_at: null }, ['match_admin']),
+            mine({ id: 'booked', scheduled_at: '2026-09-26 18:00:00' }, ['match_admin']),
+            mine({ id: 'live', status: 'live' }, ['match_admin']),
+        ], manager)
+
+        expect(ids(sections.refereeing)).toEqual(['live', 'booked', 'unbooked'])
+        expect(sections.upcoming).toEqual([])
+        expect(sections.streaming).toEqual([])
+    })
+
+    it('has no refereeing for a viewer who admins no match', () => {
+        expect(scheduleSections([], [mine({ id: 'm1' })], PLAYER).refereeing).toEqual([])
+        expect(scheduleSections(null, null, PLAYER).refereeing).toEqual([])
+    })
 })
 
 describe('pickBanCallToAction', () => {

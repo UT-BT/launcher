@@ -1,15 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ChevronDown, DoorOpen, ExternalLink, Link as LinkIcon, Radio } from 'lucide-react'
+import { DoorOpen, ExternalLink, Link as LinkIcon, Radio } from 'lucide-react'
 import {
     DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow, DataTableCell,
     DataTableEmpty, DataTableSkeletonRow, type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
-import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { Button } from '@/app/components/ui/button'
-import {
-    DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from '@/app/components/ui/dropdown-menu'
 import { NavLink } from '@/app/components/navigation/NavLink'
 import { useNavigation } from '@/app/components/navigation/NavigationContext'
 import { formatSlotTime, useDisplayTimezone } from '@/app/utils/timezone'
@@ -23,11 +18,11 @@ import { ErrorBanner } from '@/app/components/pages/teams/teamsShared'
 import { PickBanStatusChip } from '@/app/components/pages/events/pickban/components/PickBanStatusChip'
 import { streamerName } from '@/app/components/pages/events/eventsShared'
 import { streamerListNote } from '@/app/components/pages/events/streamerRoster'
+import { StaffPicker } from '../StaffPicker'
 import { streamerChoices, toQueueRow, withQueueStreamer, type PickBanQueueRow } from './pickBanQueue'
 
 const QUEUE_POLL_MS = 20_000
 const SKELETON_ROWS = 4
-const NO_STREAMER = 'none'
 
 const COLUMNS: ResponsiveColumn[] = [
     { id: 'match', width: '14rem', priority: 70, required: true },
@@ -113,11 +108,14 @@ export function PickBanQueuePanel({ accessToken, slug }: PickBanQueuePanelProps)
     }
 
     const streamerPicker = (row: PickBanQueueRow) => (
-        <StreamerPicker
+        <StaffPicker
+            kind="Streamer"
+            noneLabel="No streamer"
             current={row.streamer}
-            streamers={streamers}
-            failed={streamersFailed}
+            choices={streamerChoices(streamers ?? [], row.streamer)}
+            emptyNote={streamerListNote(streamersFailed, streamers === null)}
             saving={savingStreamerId === row.matchId}
+            nameOf={streamerName}
             onOpen={() => { void loadStreamers() }}
             onChange={userId => { void assignStreamer(row.matchId, userId) }}
         />
@@ -273,55 +271,5 @@ function RowActions({ row, eventSlug, openingId, copiedKey, onOpenLobby, onOpenP
                 <Radio /> {copiedKey === streamKey ? 'Copied' : 'Copy Stream Link'}
             </Button>
         </div>
-    )
-}
-
-function StreamerPicker({ current, streamers, failed, saving, onOpen, onChange }: {
-    current: EventStreamer | null
-    streamers: EventStreamer[] | null
-    failed: boolean
-    saving: boolean
-    onOpen: () => void
-    onChange: (userId: string | null) => void
-}) {
-    const choices = streamerChoices(streamers ?? [], current)
-    const selected = current?.id ?? NO_STREAMER
-
-    return (
-        <DropdownMenu onOpenChange={open => { if (open) onOpen() }}>
-            <DropdownMenuTrigger asChild disabled={saving}>
-                <button
-                    type="button"
-                    aria-label={current ? `Streamer: ${streamerName(current)}` : 'Streamer: none'}
-                    className="inline-flex h-8 max-w-full min-w-0 items-center gap-1.5 rounded-lg border border-hairline/10 bg-card/50 px-2 text-xs text-foreground hover:border-hairline/20 transition-colors cursor-pointer disabled:cursor-default disabled:opacity-60"
-                >
-                    {saving ? (
-                        <span className="text-muted-foreground">Saving…</span>
-                    ) : current ? (
-                        <PlayerInfo userId={current.id} alias={streamerName(current)} size="sm" interactive={false} />
-                    ) : (
-                        <span className="text-muted-foreground">No streamer</span>
-                    )}
-                    <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
-                </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-64 max-h-80 overflow-y-auto">
-                <DropdownMenuRadioGroup
-                    value={selected}
-                    onValueChange={value => { if (value !== selected) onChange(value === NO_STREAMER ? null : value) }}
-                >
-                    <DropdownMenuRadioItem value={NO_STREAMER}>No streamer</DropdownMenuRadioItem>
-                    {choices.length > 0 && <DropdownMenuSeparator />}
-                    {choices.map(streamer => (
-                        <DropdownMenuRadioItem key={streamer.id} value={streamer.id}>
-                            <PlayerInfo userId={streamer.id} alias={streamerName(streamer)} size="sm" interactive={false} />
-                        </DropdownMenuRadioItem>
-                    ))}
-                </DropdownMenuRadioGroup>
-                {choices.length === 0 && (
-                    <p className="px-2 py-1.5 text-xs text-muted-foreground">{streamerListNote(failed, streamers === null)}</p>
-                )}
-            </DropdownMenuContent>
-        </DropdownMenu>
     )
 }

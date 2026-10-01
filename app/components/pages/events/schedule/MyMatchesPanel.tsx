@@ -9,7 +9,7 @@ import { useCopyFeedback } from '@/app/hooks/useCopyFeedback'
 import { useDisplayTimezone } from '@/app/utils/timezone'
 import { eventErrorMessage, type EventMatch, type MyMatchEntry, type MyPickBanSession, type ScheduleEntry } from '@/app/utils/api'
 import { Chip, MATCH_STATUS_STYLES, opponentNameOf } from '../bracket/bracketShared'
-import { streamerName } from '../eventsShared'
+import { matchAdminName, streamerName } from '../eventsShared'
 import { PickBanJoinBanner } from '../pickban/components/PickBanJoinBanner'
 import { PickBanLink } from '../pickban/components/PickBanLink'
 import { PickBanStatusChip } from '../pickban/components/PickBanStatusChip'
@@ -99,6 +99,18 @@ export function MyMatchesPanel({
                 </ScheduleSection>
             )}
 
+            {sections.refereeing.length > 0 && (
+                <ScheduleSection
+                    title="Match Admin"
+                    count={sections.refereeing.length}
+                    blurb="Matches you are the match admin for."
+                >
+                    {sections.refereeing.map(entry => (
+                        <RefereeMatchCard key={entry.match.id} entry={entry} eventSlug={eventSlug} />
+                    ))}
+                </ScheduleSection>
+            )}
+
             {sections.showStreaming && (
                 <ScheduleSection
                     title="Streaming"
@@ -176,7 +188,7 @@ function BookedMatchCard({ entry, myTeamId, eventSlug, pickBanSession }: {
     eventSlug: string
     pickBanSession: MyPickBanSession | null
 }) {
-    const { match, streamer } = entry
+    const { match, streamer, match_admin: matchAdmin } = entry
     const action = pickBanCallToAction(match, pickBanSession)
 
     return (
@@ -194,6 +206,12 @@ function BookedMatchCard({ entry, myTeamId, eventSlug, pickBanSession }: {
                     <span className="flex items-center gap-1.5 min-w-0 text-xs text-muted-foreground">
                         Streamed by
                         <PlayerInfo userId={streamer.id} alias={streamerName(streamer)} size="sm" />
+                    </span>
+                )}
+                {matchAdmin && (
+                    <span className="flex items-center gap-1.5 min-w-0 text-xs text-muted-foreground">
+                        Match admin
+                        <PlayerInfo userId={matchAdmin.id} alias={matchAdminName(matchAdmin)} size="sm" />
                     </span>
                 )}
                 {action !== 'join' && (
@@ -231,6 +249,38 @@ function StreamingMatchCard({ entry, eventSlug, copied, onCopy }: {
                 <Button size="sm" variant="secondary" onClick={() => onCopy(match.id, streamLink)}>
                     {copied ? 'Copied' : 'Copy Stream Link'}
                 </Button>
+                <Button asChild size="sm" variant="outline">
+                    <PickBanLink eventSlug={eventSlug} matchId={match.id}>
+                        Open Picks & Bans
+                    </PickBanLink>
+                </Button>
+            </div>
+        </div>
+    )
+}
+
+function RefereeMatchCard({ entry, eventSlug }: { entry: MyMatchEntry; eventSlug: string }) {
+    const { match, streamer } = entry
+
+    return (
+        <div className="rounded-lg border border-white/10 bg-card/40 p-3 flex flex-col gap-2">
+            <MatchHeading match={match} stageName={entry.stage.name} />
+
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                <MatchTime match={match} />
+                <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    State:
+                    <PickBanStatusChip status={match.pick_ban_status} />
+                </span>
+                {streamer && (
+                    <span className="flex items-center gap-1.5 min-w-0 text-xs text-muted-foreground">
+                        Streamed by
+                        <PlayerInfo userId={streamer.id} alias={streamerName(streamer)} size="sm" />
+                    </span>
+                )}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-1.5">
                 <Button asChild size="sm" variant="outline">
                     <PickBanLink eventSlug={eventSlug} matchId={match.id}>
                         Open Picks & Bans

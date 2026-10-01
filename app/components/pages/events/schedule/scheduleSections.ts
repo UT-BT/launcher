@@ -12,6 +12,7 @@ export interface ScheduleSections {
     upcoming: MyMatchEntry[]
     needsTime: ScheduleEntry[]
     streaming: MyMatchEntry[]
+    refereeing: MyMatchEntry[]
     showPlayer: boolean
     showStreaming: boolean
 }
@@ -49,11 +50,15 @@ export function scheduleSections(
     const streaming = matches
         .filter(entry => entry.roles.includes('streamer'))
         .sort(liveFirstThenSoonest)
+    const refereeing = matches
+        .filter(entry => entry.roles.includes('match_admin'))
+        .sort(liveFirstThenSoonest)
 
     return {
         upcoming,
         needsTime,
         streaming,
+        refereeing,
         showPlayer: viewer.hasTeam || viewer.canManageBracket || upcoming.length > 0 || needsTime.length > 0,
         showStreaming: viewer.isStreamer || streaming.length > 0,
     }

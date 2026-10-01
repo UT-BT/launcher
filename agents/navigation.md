@@ -11,7 +11,7 @@ not_here:
   - "the PlayerInfo / CapTimeLink components that trigger nav → shared-components.md"
   - "the Schedule tab's own visibility rule and its audiences → data-sources.md"
 sections: [the-model, navigate-is-the-only-entry-point, leave-guards, url-sync-web-build, link-semantics, page-views-vs-detail-pages, the-sidebar-registry, event-driven-navigation, sidebar-new-badges, page-refresh-registry, per-entry-state, shareable-match-links, match-pickban-page]
-last_verified: 2026-09-30
+last_verified: 2026-10-01
 verify_against:
   - app/components/main/Main.tsx
   - app/components/navigation/NavLink.tsx
@@ -27,6 +27,7 @@ verify_against:
   - app/components/navigation/matchLinks.ts
   - app/public/route-contract.json
   - app/components/pages/EventDetailPage.tsx
+  - app/utils/signupWindow.ts
   - app/components/pages/MatchPickBanPage.tsx
   - app/components/pages/events/pickban/components/PickBanSoundControl.tsx
   - app/components/pages/events/schedule/ScheduleTabContainer.tsx
@@ -81,6 +82,11 @@ const [cursor, setCursor] = useState(0)
   own visibility rule in `agents/data-sources.md`, the Stream tab's `streamTabVisible`
   rule below — failing, or `manage` without
   `canManageBracket`) silently falls back to `info` rather than erroring.
+  `players` (Looking for Partner) and `signup` are hidden once
+  `signupsClosed(event, now)` (`app/utils/signupWindow.ts`) is true — signups no
+  longer open and the status is `signups_closed`/`active`/`completed`/`archived`,
+  or an `announced` event's `signup_closes_at` has passed; a stored or `?tab=`
+  value for either then falls back to `info`. Manage → Signups stays for managers.
   **`?tab=schedule` now serves both audiences from the one link.** Before the
   bracket read lands, `EventDetailPage` doesn't yet know whether Schedule is
   visible, so the tab reads as `info`; once `fetchEventBracket` resolves,

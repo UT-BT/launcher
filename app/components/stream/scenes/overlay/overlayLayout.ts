@@ -1,7 +1,10 @@
 export type OverlayMapState = 'played' | 'current' | 'upcoming'
 
 export const SCORE_ROW = { width: 376, height: 46 }
-export const NAME_TAG = { width: 360, height: 60 }
+export const STAGE_WIDTH = 1920
+export const SEAM_Y = 540
+export const NAME_TAG = { width: 300, height: 60 }
+export const SEAM_RAIL = { thickness: 3, gapPx: 6, fadePx: 220 }
 export const BAND = { maxWidth: 560, height: 30, paddingX: 4 }
 export const LONG_TEAM_NAME_CHARS = 15
 

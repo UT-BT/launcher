@@ -21,6 +21,7 @@ import { SchedulingWindowsPanel } from './manage/SchedulingWindowsPanel'
 import type { PickBanDrafts } from './manage/pickban/pickBanEditor'
 
 const PickBanPanel = lazy(() => import('./manage/pickban/PickBanPanel').then(m => ({ default: m.PickBanPanel })))
+const MatchesPanel = lazy(() => import('./manage/matches/MatchesPanel').then(m => ({ default: m.MatchesPanel })))
 
 interface ManagePanelProps {
     accessToken: string
@@ -107,6 +108,20 @@ const MANAGE_TABS: ManageTab[] = [
                 onBracketChange={context.onBracketChange}
                 onMapSelect={context.onMapSelect}
             />
+        ),
+    },
+    {
+        id: 'matches',
+        label: 'Matches',
+        render: context => (
+            <Suspense fallback={<p className="text-xs text-muted-foreground">Loading the matches…</p>}>
+                <MatchesPanel
+                    accessToken={context.accessToken}
+                    slug={context.slug}
+                    bracket={context.bracket}
+                    onBracketChange={context.onBracketChange}
+                />
+            </Suspense>
         ),
     },
     {

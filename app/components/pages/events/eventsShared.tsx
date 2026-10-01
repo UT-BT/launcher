@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils'
 import { CHIP_SHAPE } from '@/app/components/shared/chipStyles'
-import type { EventBracket, EventBracketStage, EventStatus, EventStreamer, EventSummary } from '@/app/utils/api'
+import type { EventBracket, EventBracketStage, EventMatchAdmin, EventStatus, EventStreamer, EventSummary } from '@/app/utils/api'
 
 const STATUS_STYLES: Record<EventStatus, string> = {
     draft: 'bg-white/5 text-muted-foreground border-white/10',
@@ -80,6 +80,10 @@ export function autoScheduleView(awaitingCount: number, hasPickBanSession: boole
 
 export function streamerName(streamer: Pick<EventStreamer, 'display_name'>): string {
     return streamer.display_name?.trim() || 'Unnamed streamer'
+}
+
+export function matchAdminName(admin: Pick<EventMatchAdmin, 'display_name'>): string {
+    return admin.display_name?.trim() || 'Unnamed admin'
 }
 
 export const BROWSER_TIMEZONE = (() => {

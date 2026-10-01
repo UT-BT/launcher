@@ -4154,13 +4154,21 @@ export interface EventStreamer {
     twitch_url: string | null
 }
 
-export type MyMatchRole = 'player' | 'streamer'
+export interface EventMatchAdmin {
+    id: string
+    display_name: string | null
+    role: number
+    event_manager: boolean
+}
+
+export type MyMatchRole = 'player' | 'streamer' | 'match_admin'
 
 export interface MyMatchEntry {
     match: EventMatch
     stage: { key: string; name: string }
     roles: MyMatchRole[]
     streamer: EventStreamer | null
+    match_admin?: EventMatchAdmin | null
 }
 
 export async function fetchMyEventMatches(accessToken: string, slug: string, signal?: AbortSignal): Promise<MyMatchEntry[]> {
@@ -4780,6 +4788,8 @@ export interface EventMatch {
     loser_to_slot: EventSide | null
     pick_ban_status: MatchPickBanStatus
     maps?: EventMatchMap[]
+    streamer?: EventStreamer | null
+    match_admin?: EventMatchAdmin | null
 }
 
 export interface EventStandingRow {
@@ -6087,4 +6097,17 @@ export async function setMatchStreamer(accessToken: string, slug: string, matchI
         { token: accessToken, method: 'PUT', body: { user_id: userId } },
     )
     return data.streamer ?? null
+}
+
+export async function fetchEventMatchAdmins(accessToken: string, slug: string, signal?: AbortSignal): Promise<EventMatchAdmin[]> {
+    const data = await apiGetOr<{ items?: EventMatchAdmin[] }>(eventPath(slug, '/admin/match-admins'), { items: [] }, { token: accessToken, signal })
+    return asArray<EventMatchAdmin>(data.items)
+}
+
+export async function setMatchAdmin(accessToken: string, slug: string, matchId: string, userId: string | null): Promise<EventMatchAdmin | null> {
+    const data = await apiGet<{ match_admin: EventMatchAdmin | null }>(
+        eventPath(slug, `/admin/matches/${encodeURIComponent(matchId)}/match-admin`),
+        { token: accessToken, method: 'PUT', body: { user_id: userId } },
+    )
+    return data.match_admin ?? null
 }
