@@ -39,7 +39,7 @@ export function AdminLayout({ sections, activeSection, onSectionChange, children
         </select>
       </div>
 
-      <aside className="max-lg:hidden w-64 shrink-0 sticky top-0 self-start max-h-[calc(100vh-4rem)] overflow-y-auto custom-scrollbar border-r border-hairline/10 pr-4 pt-1 space-y-8">
+      <aside className="max-lg:hidden w-64 shrink-0 sticky top-0 self-start max-h-[calc(100vh-4rem)] overflow-y-auto border-r border-hairline/10 pr-4 pt-1 space-y-8">
         {groups.map((group) => (
           <div key={group.id}>
             <h3 className="mb-3 px-3 text-[10px] font-bold text-muted-foreground/60 uppercase tracking-[0.2em]">

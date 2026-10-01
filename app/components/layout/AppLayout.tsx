@@ -303,7 +303,7 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                     ))}
                 </div>
 
-                <nav className="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-4 max-lg:pt-6 space-y-6 [@media(max-height:800px)]:space-y-3 relative z-10">
+                <nav className="flex-1 min-h-0 overflow-y-auto px-4 max-lg:pt-6 space-y-6 [@media(max-height:800px)]:space-y-3 relative z-10">
                     {navSections.map((section) => (
                         <div key={section.title} className="space-y-2">
                             <h3 className="px-4 mb-1 text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider">
@@ -458,7 +458,7 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 overflow-y-auto relative z-10 pr-1 max-lg:pt-14 [scrollbar-width:thin] [scrollbar-color:rgba(148,163,184,0.25)_transparent] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-hairline/20">
+            <main className="flex-1 overflow-y-auto relative z-10 pr-1 max-lg:pt-14">
                 <PageRefreshProvider>
                     <div className="p-4 sm:p-6 lg:p-8 min-h-full">
                         <NavHistoryBar />

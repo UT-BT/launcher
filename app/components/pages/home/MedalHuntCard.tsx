@@ -720,7 +720,7 @@ function OpportunityHeader({
               side="bottom"
               align="end"
               avoidCollisions={false}
-              className="w-64 max-h-[calc(100vh-4rem)] overflow-y-auto bg-popover/95 backdrop-blur-xl border-hairline/10 [scrollbar-width:thin] [scrollbar-color:rgba(148,163,184,0.25)_transparent] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-hairline/20"
+              className="w-64 max-h-[calc(100vh-4rem)] overflow-y-auto bg-popover/95 backdrop-blur-xl border-hairline/10"
             >
               <DropdownMenuLabel className="text-[10px] uppercase tracking-widest text-muted-foreground">
                 Sort

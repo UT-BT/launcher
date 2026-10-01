@@ -45,24 +45,35 @@
   color-scheme: light;
 }
 
-/* Match the slim scrollbars used by the main content and home cards. */
-.custom-scrollbar {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(148, 163, 184, 0.25) transparent;
-}
+/* Shared by every scroll container, including the viewport and portaled menus. */
+@layer base {
+  @media (forced-colors: none) {
+    :root {
+      --scrollbar-thumb: rgba(148, 163, 184, 0.25);
+    }
 
-.custom-scrollbar::-webkit-scrollbar {
-  width: 0.25rem;
-  height: 0.25rem;
-}
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: var(--scrollbar-thumb) transparent;
+    }
 
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-}
+    /* Preserve the original native thin style; WebKit rules are a fallback only. */
+    @supports not (scrollbar-width: thin) {
+      *::-webkit-scrollbar {
+        @apply size-2;
+      }
 
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  border-radius: 9999px;
-  background: color-mix(in oklab, var(--color-hairline) 20%, transparent);
+      *::-webkit-scrollbar-track,
+      *::-webkit-scrollbar-corner {
+        @apply bg-transparent;
+      }
+
+      *::-webkit-scrollbar-thumb {
+        @apply rounded-full;
+        background-color: var(--scrollbar-thumb);
+      }
+    }
+  }
 }
 
 @keyframes legendaryAvatarPulse {

@@ -99,7 +99,7 @@ export function FavoritesSyncModal({
                             : `${total} ${total === 1 ? 'map' : 'maps'}`}
                     </span>
                 </div>
-                <div className="flex flex-col gap-1 max-h-64 overflow-y-auto custom-scrollbar pr-1">
+                <div className="flex flex-col gap-1 max-h-64 overflow-y-auto pr-1">
                     {visibleCount === 0 && (
                         <div className="flex items-center justify-between gap-2 px-2 py-1 rounded text-xs font-mono border border-dashed border-hairline/10 text-muted-foreground italic leading-5">
                             <span>{onlyDiffs && total > 0 ? 'No differences' : 'Empty'}</span>
