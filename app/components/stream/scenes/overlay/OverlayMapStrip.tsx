@@ -71,7 +71,7 @@ export function OverlayMapStrip({ strip }: { strip: OverlayStrip }) {
         <div
             data-overlay-strip
             data-compact={strip.compact}
-            className="relative z-10 flex items-stretch rounded-lg bg-[#05070c]/92 text-base leading-none shadow-[0_0_0_1px_rgba(255,255,255,0.14)]"
+            className="relative z-10 flex items-stretch rounded-lg bg-[#05070c] text-base leading-none shadow-[0_0_0_1px_rgba(255,255,255,0.14)]"
             style={{ height: BAND.height, maxWidth: BAND.maxWidth, paddingInline: BAND.paddingX }}
         >
             <div className="flex min-w-0 items-stretch overflow-hidden">

@@ -1,9 +1,12 @@
 import { cn } from '@/lib/utils'
 import { PICK_BAN_HUES, tint } from '@/app/components/broadcast/broadcastTone'
 import { sideTone, sideToneClasses, type SeriesFlag } from '../../sceneHelpers'
-import { SCORE_ROW } from './overlayLayout'
+import { BAND, SCORE_ROW } from './overlayLayout'
 import { OverlayMapStrip } from './OverlayMapStrip'
+import { OverlaySeamRail } from './OverlaySeamRails'
 import type { OverlayTeamRow, OverlayView } from './overlayView'
+
+const HUB_SHADOW = 'drop-shadow-[0_10px_12px_rgba(0,0,0,0.4)]'
 
 function Pips({ pips }: { pips: SeriesFlag[] }) {
     const won = pips.filter(pip => pip === 'won').length
@@ -62,11 +65,17 @@ export function OverlayHub({ view }: { view: OverlayView }) {
         <div
             data-overlay-part="hub"
             data-caps-source={view.capsSource ?? undefined}
-            className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center drop-shadow-[0_10px_12px_rgba(0,0,0,0.4)]"
+            className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center"
         >
-            <ScoreRow team={view.teams[0]} className="rounded-t-[10px]" />
-            <OverlayMapStrip strip={view.strip} />
-            <ScoreRow team={view.teams[1]} className="rounded-b-[10px]" />
+            <ScoreRow team={view.teams[0]} className={cn('rounded-t-[10px]', HUB_SHADOW)} />
+            <div data-overlay-seam className="relative flex justify-center" style={{ minWidth: SCORE_ROW.width, height: BAND.height }}>
+                <OverlaySeamRail edge="left" />
+                <OverlaySeamRail edge="right" />
+                <div className={HUB_SHADOW}>
+                    <OverlayMapStrip strip={view.strip} />
+                </div>
+            </div>
+            <ScoreRow team={view.teams[1]} className={cn('rounded-b-[10px]', HUB_SHADOW)} />
         </div>
     )
 }

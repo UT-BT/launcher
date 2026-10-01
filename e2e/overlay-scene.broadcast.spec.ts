@@ -13,7 +13,7 @@ import {
     streamTeam,
     streamUserRef,
 } from '../app/components/stream/data/streamFixtures'
-import { BAND, SCORE_ROW } from '../app/components/stream/scenes/overlay/overlayLayout'
+import { BAND, SCORE_ROW, SEAM_RAIL } from '../app/components/stream/scenes/overlay/overlayLayout'
 import { openScene, settleScene } from './streamHarness'
 
 interface Box {
@@ -32,14 +32,15 @@ interface Painted {
 const CAMS = `data:image/jpeg;base64,${readFileSync(path.resolve(__dirname, 'overlay-quadrants.jpg')).toString('base64')}`
 const CANVAS = { width: 1920, height: 1080 }
 const CENTRE = { x: 960, y: 540 }
+const BELOW_RAIL = 540 + SEAM_RAIL.thickness
 const TIMER_ZONES: Box[] = [
-    [300, 0],
-    [1260, 0],
-    [300, 540],
-    [1260, 540],
-].map(([x, y]) => ({ x, y, width: 360, height: 96 }))
+    { x: 300, y: 0, width: 360, height: 96 },
+    { x: 1260, y: 0, width: 360, height: 96 },
+    { x: 300, y: BELOW_RAIL, width: 360, height: 96 - SEAM_RAIL.thickness },
+    { x: 1260, y: BELOW_RAIL, width: 360, height: 96 - SEAM_RAIL.thickness },
+]
 const SHADOW_PX = 40
-const PARTS = ['tag-a1', 'tag-a2', 'tag-b1', 'tag-b2', 'hub']
+const PARTS = ['tag-a1', 'tag-a2', 'tag-b1', 'tag-b2', 'rail-left', 'rail-right', 'hub']
 
 const HAWKS = streamTeam('a', {
     name: 'Crimson Hawks',
@@ -78,6 +79,7 @@ function liveState(maps: StreamMapScore[], options: { teamB?: StreamTeam; mapLis
 
 const LIVE = liveState([streamMapScore(0, [2, 1], 'a'), streamMapScore(1, [1, 0]), streamMapScore(2), streamMapScore(3)])
 const LONG = liveState([streamMapScore(0, [2, 0], 'a'), streamMapScore(1, [1, 2], 'b'), streamMapScore(2, [0, 1]), streamMapScore(3)], { teamB: JUMP, mapList: LONG_MAPS })
+const SHORT = liveState([streamMapScore(0, [1, 0])], { mapList: streamMaps(['CTF-BT-Skyfall'], [null]) })
 
 function grow(box: Box, by: number): Box {
     return { x: box.x - by, y: box.y - by, width: box.width + 2 * by, height: box.height + 2 * by }
@@ -203,7 +205,55 @@ test('the score rows sit on either side of the seam, with the map strip centred 
     expect(Math.abs(band.y + band.height / 2 - CENTRE.y)).toBeLessThanOrEqual(1)
     expect(top.y + top.height).toBeLessThanOrEqual(CENTRE.y)
     expect(bottom.y).toBeGreaterThanOrEqual(CENTRE.y)
+    expect(await page.locator('[data-overlay-strip]').evaluate(element => getComputedStyle(element).backgroundColor)).toBe('rgb(5, 7, 12)')
 })
+
+test('the name tags sit on the outer edges against the seam: Team A above it, Team B below it', async ({ page }) => {
+    await openScene(page, 'overlay', { hotState: LIVE })
+    await settleScene(page)
+
+    const tags = Object.fromEntries(await Promise.all(
+        ['a1', 'a2', 'b1', 'b2'].map(async slot => [slot, await boxOf(page, `[data-overlay-part="tag-${slot}"]`)] as const),
+    ))
+
+    for (const slot of ['a1', 'a2']) expect(tags[slot].y + tags[slot].height, `${slot} bottom edge on the seam`).toBe(CENTRE.y)
+    for (const slot of ['b1', 'b2']) expect(tags[slot].y, `${slot} top edge on the seam`).toBe(CENTRE.y)
+    for (const slot of ['a1', 'b1']) expect(tags[slot].x, `${slot} on the left edge`).toBe(0)
+    for (const slot of ['a2', 'b2']) expect(tags[slot].x + tags[slot].width, `${slot} on the right edge`).toBe(CANVAS.width)
+
+    const truncated = await page.locator('[data-overlay-part^="tag-"] .truncate').evaluateAll(elements =>
+        elements.filter(element => element.scrollWidth > element.clientWidth).map(element => element.textContent),
+    )
+    expect(truncated).toEqual([])
+})
+
+for (const [label, hotState] of [['four maps', LIVE], ['four long map names', LONG], ['one map', SHORT]] as const) {
+    test(`with ${label} the seam rails run from the frame edges and end against the centre box`, async ({ page }) => {
+        await openScene(page, 'overlay', { hotState })
+        await settleScene(page)
+
+        const seam = await boxOf(page, '[data-overlay-seam]')
+        const strip = await page.locator('[data-overlay-strip]').boundingBox()
+        const left = await boxOf(page, '[data-overlay-part="rail-left"]')
+        const right = await boxOf(page, '[data-overlay-part="rail-right"]')
+        const near = (actual: number, expected: number) => expect(Math.abs(actual - expected)).toBeLessThanOrEqual(1)
+
+        near(seam.width, Math.max(SCORE_ROW.width, strip?.width ?? 0))
+        near(left.x, 0)
+        near(left.x + left.width, seam.x)
+        near(right.x, seam.x + seam.width)
+        near(right.x + right.width, CANVAS.width)
+        for (const rail of [left, right]) {
+            expect(rail.y).toBe(CENTRE.y - SEAM_RAIL.thickness)
+            expect(rail.height).toBe(SEAM_RAIL.thickness * 2)
+        }
+
+        const lines = await page.locator('[data-overlay-part="rail-left"] [data-rail-side]').evaluateAll(elements =>
+            elements.map(element => [element.getAttribute('data-rail-side'), element.getBoundingClientRect().y]),
+        )
+        expect(lines).toEqual([['a', CENTRE.y - SEAM_RAIL.thickness], ['b', CENTRE.y]])
+    })
+}
 
 test('the overlay shows the lineup, the pips, the current map caps, the map strip and the caps target', async ({ page }) => {
     await openScene(page, 'overlay', { hotState: LIVE })

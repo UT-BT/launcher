@@ -1,4 +1,5 @@
 import type { EventTeam, MyTournamentMembership, ScheduleEntry } from './api'
+import { signupsClosed } from './signupWindow'
 
 export type EventTodo =
     | { kind: 'answer-times'; entry: ScheduleEntry }
@@ -65,9 +66,9 @@ export function todoCountsByKind(todos: EventTodo[]): TodoCounts {
     }
 }
 
-export function computeEventAttention(schedule: ScheduleEntry[], memberships: MyTournamentMembership[]): EventAttentionMap {
+export function computeEventAttention(schedule: ScheduleEntry[], memberships: MyTournamentMembership[], now = Date.now()): EventAttentionMap {
     const myTeamIds = myTeamIdsByTournament(memberships)
-    const invited = memberships.filter(membership => membership.membership_status === 'invited')
+    const invited = memberships.filter(membership => membership.membership_status === 'invited' && !signupsClosed(membership.tournament, now))
     const openPickBanSlugs = openLobbySlugs(memberships)
     const slugs = new Set([
         ...schedule.map(entry => entry.tournament.slug),

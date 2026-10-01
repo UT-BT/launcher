@@ -3,13 +3,13 @@ import type { StreamLineupSlot, StreamMatch, StreamScore, StreamScoreSource, Str
 import { mapNumber, seriesFlags, type SeriesFlag } from '../../sceneHelpers'
 import { BAND, LONG_TEAM_NAME_CHARS, MAP_NAME_MAX_PX, STRIP_ESTIMATE, UPCOMING_NAME_MIN_PX, type OverlayMapState } from './overlayLayout'
 
-export type OverlayCorner = 'mid-left' | 'mid-right' | 'bottom-left' | 'bottom-right'
+export type OverlayTagPlacement = 'above-seam-left' | 'above-seam-right' | 'below-seam-left' | 'below-seam-right'
 export type OverlayPickTone = StreamSide | 'gold'
 
 export interface OverlayTag {
     slot: StreamLineupSlot
     side: StreamSide
-    corner: OverlayCorner
+    placement: OverlayTagPlacement
     userId: string | null
     name: string | null
 }
@@ -52,11 +52,11 @@ export interface OverlayView {
     strip: OverlayStrip
 }
 
-const QUADRANTS: { slot: StreamLineupSlot; side: StreamSide; corner: OverlayCorner }[] = [
-    { slot: 'a1', side: 'a', corner: 'mid-left' },
-    { slot: 'a2', side: 'a', corner: 'mid-right' },
-    { slot: 'b1', side: 'b', corner: 'bottom-left' },
-    { slot: 'b2', side: 'b', corner: 'bottom-right' },
+const QUADRANTS: { slot: StreamLineupSlot; side: StreamSide; placement: OverlayTagPlacement }[] = [
+    { slot: 'a1', side: 'a', placement: 'above-seam-left' },
+    { slot: 'a2', side: 'a', placement: 'above-seam-right' },
+    { slot: 'b1', side: 'b', placement: 'below-seam-left' },
+    { slot: 'b2', side: 'b', placement: 'below-seam-right' },
 ]
 
 function shownMapOrdinal(score: StreamScore): number | null {
@@ -70,10 +70,10 @@ function teamName(match: StreamMatch, side: StreamSide): string {
 }
 
 function nameTags(match: StreamMatch): OverlayTag[] {
-    return QUADRANTS.flatMap(({ slot, side, corner }) => {
+    return QUADRANTS.flatMap(({ slot, side, placement }) => {
         const player = match.lineup[slot]
         if (!player || (player.id === null && player.display_name === null)) return []
-        return [{ slot, side, corner, userId: player.id, name: player.display_name }]
+        return [{ slot, side, placement, userId: player.id, name: player.display_name }]
     })
 }
 

@@ -35,6 +35,7 @@ import type { PickBanDrafts } from './events/manage/pickban/pickBanEditor'
 import { SlotPickerModal } from './events/schedule/SlotPickerModal'
 import { EventTodoPanel } from './events/EventTodoPanel'
 import { eventTodos, scheduleTodoSummary, todoCountsByKind } from '@/app/utils/eventAttention'
+import { isSignupOnlyTab, signupsClosed } from '@/app/utils/signupWindow'
 import { streamTabVisible, type OperatingViewer } from './events/stream/streamTabAccess'
 
 const StreamTab = lazy(() => import('./events/stream/StreamTab').then(m => ({ default: m.StreamTab })))
@@ -273,7 +274,11 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
         const match = bracket?.stages.flatMap(stage => stage.matches).find(candidate => candidate.id === pickBanMatchId)
         return opponentNameOf(match, myTeamId)
     }, [bracket, pickBanMatchId, myTeamId])
-    const todos = useMemo(() => eventTodos(schedule ?? [], myTeamId, my?.invitations ?? []), [schedule, myTeamId, my?.invitations])
+    const signupsOver = event ? signupsClosed(event, now) : false
+    const todos = useMemo(
+        () => eventTodos(schedule ?? [], myTeamId, signupsOver ? [] : my?.invitations ?? []),
+        [schedule, myTeamId, signupsOver, my?.invitations],
+    )
     const mapsStages = useMemo(() => stagesWithPools(pickBanConfig), [pickBanConfig])
     const hasMapsPool = mapsStages.length > 0
 
@@ -320,6 +325,7 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
         .filter(t => t.id !== 'predictions' || predictionsOn)
         .filter(t => t.id !== 'schedule' || scheduleVisible)
         .filter(t => t.id !== 'stream' || streamVisible)
+        .filter(t => !signupsOver || !isSignupOnlyTab(t.id))
     const todoCounts = todoCountsByKind(todos)
     const scheduleTodo = scheduleTodoSummary(todoCounts)
     const scheduleTodoTitle = scheduleTodo.lines.join(' · ')
@@ -328,7 +334,8 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
         || (tab === 'maps' && !hasMapsPool)
         || (tab === 'predictions' && !predictionsOn)
         || (tab === 'schedule' && !scheduleVisible)
-        || (tab === 'stream' && !streamVisible) ? 'info' : tab
+        || (tab === 'stream' && !streamVisible)
+        || (signupsOver && isSignupOnlyTab(tab)) ? 'info' : tab
 
     return (
         <div className="h-full flex flex-col overflow-hidden space-y-4 animate-in fade-in slide-in-from-bottom-0 duration-500">
@@ -349,7 +356,7 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
                         <span className="inline-flex items-center gap-1.5"><CalendarDays className="size-3.5" /> {dates.join(' – ')}</span>
                     )}
                     {event.signups_open && signupCloses && <span className="text-emerald-300">Signups close {signupCloses}</span>}
-                    {!event.signups_open && event.status === 'announced' && signupOpens && <span className="text-sky-300">Signups open {signupOpens}</span>}
+                    {!event.signups_open && !signupsOver && event.status === 'announced' && signupOpens && <span className="text-sky-300">Signups open {signupOpens}</span>}
                 </div>
                 {error && <ErrorBanner message={error} />}
                 <EventTodoPanel

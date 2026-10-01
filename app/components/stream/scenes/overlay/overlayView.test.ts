@@ -19,14 +19,14 @@ describe('overlayView', () => {
         expect(overlayView(null)).toBeNull()
     })
 
-    it('puts a name tag with only the alias and avatar on each quadrant: A on top, B at the bottom, slot 1 left', () => {
+    it('puts a name tag with only the alias and avatar on each quadrant against the seam: A above it, B below it, slot 1 left', () => {
         const view = overlayView(midSeries())
 
         expect(view?.tags).toEqual([
-            { slot: 'a1', side: 'a', corner: 'mid-left', userId: '1000', name: 'Ada' },
-            { slot: 'a2', side: 'a', corner: 'mid-right', userId: '1001', name: 'Ben' },
-            { slot: 'b1', side: 'b', corner: 'bottom-left', userId: '2000', name: 'Cleo' },
-            { slot: 'b2', side: 'b', corner: 'bottom-right', userId: '2001', name: 'Dex' },
+            { slot: 'a1', side: 'a', placement: 'above-seam-left', userId: '1000', name: 'Ada' },
+            { slot: 'a2', side: 'a', placement: 'above-seam-right', userId: '1001', name: 'Ben' },
+            { slot: 'b1', side: 'b', placement: 'below-seam-left', userId: '2000', name: 'Cleo' },
+            { slot: 'b2', side: 'b', placement: 'below-seam-right', userId: '2001', name: 'Dex' },
         ])
     })
 
