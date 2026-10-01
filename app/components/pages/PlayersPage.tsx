@@ -378,7 +378,11 @@ export function PlayersPage({ userProfile, state, onStateChange, caches, onCache
                 key={id}
                 align={id === 'player' ? 'left' : 'center'}
                 width={COLUMN_WIDTH[id]}
-                className="normal-case tracking-normal whitespace-nowrap"
+                className={cn(
+                    'normal-case tracking-normal whitespace-nowrap',
+                    // Center the label itself; the sort icon sits beside it without shifting it.
+                    id !== 'player' && '[&>button]:relative [&>button]:gap-0 [&>button>svg]:absolute [&>button>svg]:left-full [&>button>svg]:ml-1',
+                )}
                 sortable={!!sortField}
                 sortDirection={sortField ? directionFor(sortField) : null}
                 onSort={sortField ? () => handleSort(sortField) : undefined}
