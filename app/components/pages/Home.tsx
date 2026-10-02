@@ -27,6 +27,7 @@ import { RecentCapsCard } from './home/RecentCapsCard'
 import { MapsToReviewCard } from './home/MapsToReviewCard'
 import { NewsCard } from './home/news/NewsCard'
 import { PersonalProgressSnapshot } from './home/PersonalProgressSnapshot'
+import { CAP_IT_ALL_CACHE_MS, fetchCapItAllProgress, type CapItAllProgressCache } from './home/capItAllProgress'
 import { AchievementProgressPreview } from './home/AchievementProgressPreview'
 import { FavoriteServersCard } from './home/FavoriteServersCard'
 import { MedalHuntCard } from './home/MedalHuntCard'
@@ -53,6 +54,7 @@ export interface HomePageCaches {
     news: NewsArticle[]
     newsCategories: NewsCategoryDef[]
     userSummary: UserSummary | null
+    capItAllProgress: CapItAllProgressCache | null
     servers: Server[] | null
     medalHunt: MedalHuntOpportunity[] | null
     mapsCount: number | null
@@ -67,6 +69,7 @@ export const DEFAULT_HOME_CACHES: HomePageCaches = {
     news: [],
     newsCategories: [],
     userSummary: null,
+    capItAllProgress: null,
     servers: null,
     medalHunt: null,
     mapsCount: null,
@@ -125,6 +128,42 @@ export function Home({
     const mountedRef = useRef(true)
 
     const replay = useReplayWatch()
+
+    const progressUserId = userProfile?.id == null ? null : String(userProfile.id)
+    const progressAlias = userSummary?.profile.id === progressUserId
+        ? userSummary.profile.alias?.trim() ?? '' : ''
+    const progressCache = caches.capItAllProgress?.userId === progressUserId
+        && caches.capItAllProgress.alias === progressAlias ? caches.capItAllProgress : null
+
+    useEffect(() => {
+        // Defer optional stats until the main Home request has settled.
+        if (loading || !userProfile?.accessToken || !progressUserId || !progressAlias) return
+        if (progressCache && Date.now() - progressCache.fetchedAt < CAP_IT_ALL_CACHE_MS) return
+
+        const controller = new AbortController()
+        const timeout = setTimeout(() => controller.abort(), 10_000)
+        let active = true
+        const load = async () => {
+            let data: CapItAllProgressCache['data'] = null
+            try {
+                data = await fetchCapItAllProgress(userProfile.accessToken, progressUserId, progressAlias, controller.signal)
+            } catch {
+                // Optional stats must not fail Home or turn request failures into zeroes.
+            } finally {
+                clearTimeout(timeout)
+            }
+            if (active) onCachesChange(prev => ({
+                ...prev,
+                capItAllProgress: { userId: progressUserId, alias: progressAlias, fetchedAt: Date.now(), data },
+            }))
+        }
+        void load()
+        return () => {
+            active = false
+            clearTimeout(timeout)
+            controller.abort()
+        }
+    }, [loading, userProfile?.accessToken, progressUserId, progressAlias, progressCache, onCachesChange])
 
     const loadData = useCallback(async (isActive: () => boolean = () => true) => {
         if (!userProfile?.accessToken && !capabilities.anonymousBrowse) return
@@ -203,6 +242,7 @@ export function Home({
                 mapsCount: null,
                 playersCount: null,
                 pendingReviews: null,
+                capItAllProgress: null,
             }))
             loadData(() => mountedRef.current)
             onEnsureAchievements(true)
@@ -478,9 +518,13 @@ export function Home({
                     {renderFavoriteServersSection(newsFeed.length > 0 ? 'lg:col-span-6' : 'lg:col-span-12')}
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
                     <SpotlightSection title="Your Progress" accent={ACCENTS.personal} className="lg:col-span-6">
-                        <PersonalProgressSnapshot summary={userSummary} />
+                        <PersonalProgressSnapshot
+                            summary={userSummary}
+                            capItAll={progressCache?.data ?? null}
+                            capItAllLoading={Boolean(progressAlias && !progressCache)}
+                        />
                     </SpotlightSection>
                     <SpotlightSection title="Achievement Progress" accent={ACCENTS.achievements} className="lg:col-span-6">
                         <AchievementProgressPreview
