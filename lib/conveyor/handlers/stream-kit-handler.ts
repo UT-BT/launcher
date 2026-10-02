@@ -2,7 +2,7 @@ import { app, BrowserWindow, dialog, net } from 'electron'
 import { handle } from '@/lib/main/shared'
 import { loggingService } from '@/lib/main/logging-service'
 import { camService } from '@/lib/main/cam-service'
-import { getCamFps, setCamFps } from '@/lib/main/config'
+import { getCamFps, getCamVolume, setCamFps, setCamVolume } from '@/lib/main/config'
 import { extractKit } from '@/lib/main/kit-extractor'
 import { validateKitFolder } from '@/lib/main/kit-folder'
 
@@ -37,6 +37,13 @@ export const registerStreamKitHandlers = (window: BrowserWindow) => {
     handle('setCamFps', (fps) => {
         setCamFps(fps)
         return getCamFps()
+    })
+
+    handle('getCamVolume', () => getCamVolume())
+
+    handle('setCamVolume', (volume) => {
+        setCamVolume(volume)
+        return getCamVolume()
     })
 
     handle('selectKitFolder', async (current) => {

@@ -135,7 +135,9 @@ test('four cams launch for the live lineup on one shared server and each window 
     const expected = {
         lineup: { A1: ALICE.id, A2: ANNA.id, B1: BOB.id, B2: BEA.id },
         servers: { A: '203.0.113.10:7777', B: '203.0.113.10:7777' },
+        passwords: { A: null, B: null },
         fps: 120,
+        volume: 50,
     }
     await expect.poll(() => calls(page, 'launchCams')).toEqual([[expected]])
     expect(await calls(page, 'planCams')).toEqual([[expected]])
@@ -168,10 +170,37 @@ test('the cams run at 120 fps unless the streamer picks 60, and the choice reach
     await expect.poll(() => calls(page, 'launchCams')).toEqual([[{
         lineup: { A1: ALICE.id, A2: ANNA.id, B1: BOB.id, B2: BEA.id },
         servers: { A: '203.0.113.10:7777', B: '203.0.113.10:7777' },
+        passwords: { A: null, B: null },
         fps: 60,
+        volume: 50,
     }]])
     await cam(page, 'B1').getByRole('button', { name: 'Restart B1' }).click()
     await expect.poll(async () => (await calls(page, 'restartCam')).map(([slot, request]) => [slot, (request as { fps: number }).fps])).toEqual([['B1', 60]])
+})
+
+test('the cam volume slider saves on release and reaches the launch request', async ({ page }) => {
+    await openHarness(page, { lineup: FULL_LINEUP, servers: [SHARED] })
+
+    const volume = page.getByLabel('Cam volume')
+    await expect(volume).toHaveValue('50')
+    await volume.focus()
+    for (let step = 0; step < 4; step += 1) await page.keyboard.press('ArrowLeft')
+
+    await expect(volume).toHaveValue('30')
+    await expect.poll(async () => (await calls(page, 'setCamVolume')).at(-1)).toEqual([30])
+    await launchButton(page).click()
+
+    await expect.poll(async () => (await calls(page, 'launchCams')).map(([request]) => (request as { volume: number }).volume)).toEqual([30])
+})
+
+test('the cam tool opens on the saved volume', async ({ page }) => {
+    await openHarness(page, { lineup: FULL_LINEUP, servers: [SHARED] }, '?volume=15')
+
+    await expect(page.getByLabel('Cam volume')).toHaveValue('15')
+    await launchButton(page).click()
+
+    await expect.poll(async () => (await calls(page, 'launchCams')).map(([request]) => (request as { volume: number }).volume)).toEqual([15])
+    expect(await calls(page, 'setCamVolume')).toEqual([])
 })
 
 test('the cam tool opens on the saved frame rate', async ({ page }) => {
@@ -194,7 +223,9 @@ test('each team goes to its own server when they play on two', async ({ page }) 
     await expect.poll(() => calls(page, 'launchCams')).toEqual([[{
         lineup: { A1: ALICE.id, A2: ANNA.id, B1: BOB.id, B2: BEA.id },
         servers: { A: '203.0.113.10:7777', B: '203.0.113.20:7788' },
+        passwords: { A: null, B: null },
         fps: 120,
+        volume: 50,
     }]])
     await expect(page.getByTestId('cam-B1-server')).toContainText('203.0.113.20:7788')
 })
@@ -202,11 +233,11 @@ test('each team goes to its own server when they play on two', async ({ page }) 
 test('a picked or typed server overrides detection', async ({ page }) => {
     await openHarness(page, { lineup: FULL_LINEUP, servers: [SPLIT_A, SPLIT_B] })
 
-    await page.getByTestId('cam-team-B').getByLabel('Server').selectOption({ label: 'UTBT Cup #1 · 2 playing' })
+    await page.getByTestId('cam-team-B').getByLabel('Server', { exact: true }).selectOption({ label: 'UTBT Cup #1 · 2 playing' })
     await expect(page.getByTestId('cam-team-B-address')).toHaveText('203.0.113.10:7777')
     await expect(page.getByTestId('cam-layout')).toContainText('one server')
 
-    await page.getByTestId('cam-team-A').getByLabel('Server').selectOption({ label: 'Type an address…' })
+    await page.getByTestId('cam-team-A').getByLabel('Server', { exact: true }).selectOption({ label: 'Type an address…' })
     const typed = page.getByLabel('Crimson Tide server address')
     await typed.fill('not a server')
     await expect(page.getByText("The address typed for Crimson Tide can't be joined.", { exact: false })).toBeVisible()
@@ -219,8 +250,44 @@ test('a picked or typed server overrides detection', async ({ page }) => {
     await expect.poll(() => calls(page, 'launchCams')).toEqual([[{
         lineup: { A1: ALICE.id, A2: ANNA.id, B1: BOB.id, B2: BEA.id },
         servers: { A: 'bt.example.net:7790', B: '203.0.113.10:7777' },
+        passwords: { A: null, B: null },
         fps: 120,
+        volume: 50,
     }]])
+})
+
+test('a server password typed once joins both teams on a shared server without a prompt', async ({ page }) => {
+    await openHarness(page, { lineup: FULL_LINEUP, servers: [SHARED] })
+
+    const passwordA = page.getByTestId('cam-team-A').getByLabel('Server password')
+    const passwordB = page.getByTestId('cam-team-B').getByLabel('Server password')
+    await expect(passwordA).toHaveAttribute('type', 'password')
+
+    await passwordA.fill('two words')
+    await expect(page.getByText("The password typed for Crimson Tide can't be sent to the game.", { exact: false })).toBeVisible()
+    await expect(launchButton(page)).toBeDisabled()
+
+    await passwordA.fill('cup2026')
+    await expect(passwordB).toHaveAttribute('placeholder', 'Same as Team A')
+    await launchButton(page).click()
+
+    await expect.poll(() => calls(page, 'launchCams')).toEqual([[{
+        lineup: { A1: ALICE.id, A2: ANNA.id, B1: BOB.id, B2: BEA.id },
+        servers: { A: '203.0.113.10:7777', B: '203.0.113.10:7777' },
+        passwords: { A: 'cup2026', B: 'cup2026' },
+        fps: 120,
+        volume: 50,
+    }]])
+})
+
+test('each team keeps its own server password on two servers', async ({ page }) => {
+    await openHarness(page, { lineup: FULL_LINEUP, servers: [SPLIT_A, SPLIT_B] })
+
+    await page.getByTestId('cam-team-B').getByLabel('Server password').fill('azure')
+    await expect(page.getByTestId('cam-team-A').getByLabel('Server password')).toHaveAttribute('placeholder', 'Only for a locked server')
+    await launchButton(page).click()
+
+    await expect.poll(async () => (await calls(page, 'launchCams')).map(([request]) => (request as { passwords: unknown }).passwords)).toEqual([{ A: null, B: 'azure' }])
 })
 
 test('a team on an uncertified server is warned, and a certified team is not', async ({ page }) => {
@@ -235,7 +302,7 @@ test('picking an uncertified server from the list warns for that team only', asy
     await expect(page.getByTestId('cam-team-A-uncertified')).toHaveCount(0)
     await expect(page.getByTestId('cam-team-B-uncertified')).toHaveCount(0)
 
-    await page.getByTestId('cam-team-A').getByLabel('Server').selectOption({ label: 'Private Cup #3 · 0 playing' })
+    await page.getByTestId('cam-team-A').getByLabel('Server', { exact: true }).selectOption({ label: 'Private Cup #3 · 0 playing' })
 
     await expect(page.getByTestId('cam-team-A-uncertified')).toHaveText(UNCERTIFIED_WARNING)
     await expect(page.getByTestId('cam-team-B-uncertified')).toHaveCount(0)
@@ -258,7 +325,9 @@ test('a lineup change flags the right cam and restarting it clears the flag', as
     await expect.poll(() => calls(page, 'restartCam')).toEqual([['A2', {
         lineup: { A1: ALICE.id, A2: AXEL.id, B1: BOB.id, B2: BEA.id },
         servers: { A: '203.0.113.10:7777', B: '203.0.113.10:7777' },
+        passwords: { A: null, B: null },
         fps: 120,
+        volume: 50,
     }]])
     await expect(page.getByTestId('cam-A2-target')).toContainText('Axel')
     await expect(page.getByTestId('cam-stale-summary')).toHaveCount(0)
