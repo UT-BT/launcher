@@ -18,16 +18,22 @@ import type { CapItAllPageCaches, CapItAllPageState } from './CapItAllPage.types
 
 type CapItAllColumnId = 'rank' | 'player' | 'certified' | 'noncertified' | 'teammaps' | 'total'
 
+const COLUMN_LABELS: Record<CapItAllColumnId, string> = {
+    rank: 'Rank', player: 'Player', certified: 'Certified',
+    noncertified: 'Non-certified', teammaps: 'Team Maps', total: 'Total',
+}
+
 const CAP_IT_ALL_COLUMNS: ResponsiveColumn[] = [
     { id: 'rank', width: '72px', priority: 30, required: true },
     { id: 'player', required: true },
-    { id: 'certified', width: '220px', priority: 60 },
-    { id: 'noncertified', width: '220px', priority: 50 },
-    { id: 'teammaps', width: '220px', priority: 40 },
-    { id: 'total', width: '220px', required: true },
+    { id: 'certified', width: '10rem', priority: 60 },
+    { id: 'noncertified', width: '10rem', priority: 50 },
+    { id: 'teammaps', width: '10rem', priority: 40 },
+    { id: 'total', width: '10rem', required: true },
 ]
 
-const TABLE_ROW_HEIGHT_PX = 56
+// Matches the table body's h-16 rows, including loading placeholders.
+const TABLE_ROW_HEIGHT_PX = 64
 const TABLE_CHROME_PX = 300
 const AUTO_PAGE_SIZE_MIN_ROWS = 10
 const AUTO_PAGE_SIZE_MAX_ROWS = 60
@@ -291,16 +297,22 @@ export function CapItAllPage({ userProfile, state, onStateChange, caches, onCach
                 }}
             >
                 <DataTableHeaderRow theadDataAttr="data-utbt-capitall-thead">
-                    {isVisible('rank') && <DataTableHeaderCell align="right" width="72px">#</DataTableHeaderCell>}
-                    {isVisible('player') && <DataTableHeaderCell align="left">Player</DataTableHeaderCell>}
-                    {isVisible('certified') && <DataTableHeaderCell align="left" width="220px">Certified</DataTableHeaderCell>}
-                    {isVisible('noncertified') && <DataTableHeaderCell align="left" width="220px">Non-certified</DataTableHeaderCell>}
-                    {isVisible('teammaps') && <DataTableHeaderCell align="left" width="220px">Team Maps</DataTableHeaderCell>}
-                    {isVisible('total') && <DataTableHeaderCell align="left" width="220px">Total %</DataTableHeaderCell>}
+                    {CAP_IT_ALL_COLUMNS.filter(column => isVisible(column.id as CapItAllColumnId)).map(column => (
+                        <DataTableHeaderCell
+                            key={column.id}
+                            align={column.id === 'player' ? 'left' : 'center'}
+                            width={column.width}
+                            className="normal-case tracking-normal whitespace-nowrap"
+                        >
+                            <span className={column.id === 'player' ? 'ml-[calc(2rem+0.625rem)]' : undefined}>
+                                {COLUMN_LABELS[column.id as CapItAllColumnId]}
+                            </span>
+                        </DataTableHeaderCell>
+                    ))}
                 </DataTableHeaderRow>
-                <tbody>
+                <tbody className="[&>tr]:h-16">
                     {showSkeleton ? (
-                        Array.from({ length: Math.min(pageSize, AUTO_PAGE_SIZE_MAX_ROWS) }).map((_, i) => (
+                        Array.from({ length: pageSize }).map((_, i) => (
                             <DataTableSkeletonRow key={i} columnCount={visibleColumnCount} />
                         ))
                     ) : items.length === 0 ? (
@@ -314,7 +326,7 @@ export function CapItAllPage({ userProfile, state, onStateChange, caches, onCach
                             return (
                                 <DataTableRow key={row.user_id}>
                                     {isVisible('rank') && (
-                                        <DataTableCell align="right">
+                                        <DataTableCell align="center">
                                             <span className={cn(
                                                 'font-mono tabular-nums',
                                                 row.rank <= 3 ? 'text-foreground font-bold' : 'text-muted-foreground',
@@ -336,33 +348,38 @@ export function CapItAllPage({ userProfile, state, onStateChange, caches, onCach
                                         </DataTableCell>
                                     )}
                                     {isVisible('certified') && (
-                                        <DataTableCell width="220px">
-                                            <MetricCell caps={row.certified_caps} pct={row.certified_percentage} barClass="bg-emerald-500/70" />
+                                        <DataTableCell align="center">
+                                            <MetricCell caps={row.certified_caps} pct={row.certified_percentage} colorClass="bg-emerald-500/70" />
                                         </DataTableCell>
                                     )}
                                     {isVisible('noncertified') && (
-                                        <DataTableCell width="220px">
-                                            <MetricCell caps={row.non_certified_caps} pct={row.non_certified_percentage} barClass="bg-amber-400/60" />
+                                        <DataTableCell align="center">
+                                            <MetricCell caps={row.non_certified_caps} pct={row.non_certified_percentage} indicator="dot" colorClass="bg-amber-400" />
                                         </DataTableCell>
                                     )}
                                     {isVisible('teammaps') && (
-                                        <DataTableCell width="220px">
-                                            <MetricCell caps={row.team_caps} pct={row.team_percentage} barClass="bg-sky-400/60" />
+                                        <DataTableCell align="center">
+                                            <MetricCell caps={row.team_caps} pct={row.team_percentage} indicator="dot" colorClass="bg-sky-400" />
                                         </DataTableCell>
                                     )}
                                     {isVisible('total') && (
-                                        <DataTableCell width="220px">
-                                            <MetricCell caps={row.total_caps} pct={row.total_percentage} barClass="bg-violet-400/60" />
+                                        <DataTableCell align="center">
+                                            <MetricCell caps={row.total_caps} pct={row.total_percentage} colorClass="bg-violet-400/60" />
                                         </DataTableCell>
                                     )}
                                 </DataTableRow>
                             )
                         })
                     )}
+                    {!showSkeleton && items.length > 0 && items.length < pageSize && (
+                        <tr aria-hidden="true" style={{ height: (pageSize - items.length) * TABLE_ROW_HEIGHT_PX }}>
+                            <td colSpan={visibleColumnCount} className="p-0" />
+                        </tr>
+                    )}
                 </tbody>
             </DataTableShell>
 
-            {!showSkeleton && totalCount > 0 && (
+            {totalCount > 0 && (
                 <PaginationBar
                     page={page}
                     totalPages={totalPages}
@@ -379,14 +396,32 @@ export function CapItAllPage({ userProfile, state, onStateChange, caches, onCach
     )
 }
 
-function MetricCell({ caps, pct, barClass }: { caps: number; pct: number; barClass: string }) {
+function MetricCell({ caps, pct, colorClass, indicator = 'bar' }: {
+    caps: number
+    pct: number
+    colorClass: string
+    indicator?: 'bar' | 'dot'
+}) {
+    const progress = Number.isFinite(pct) ? Math.max(0, Math.min(100, pct)) : 0
     return (
-        <div className="flex items-center gap-2">
-            <div className="flex-1 h-1.5 rounded-full bg-hairline/10 overflow-hidden">
-                <div className={cn('h-full rounded-full', barClass)} style={{ width: `${Math.min(100, pct)}%` }} />
+        <div className="mx-auto max-w-40 space-y-1.5">
+            <div className="flex items-center justify-center gap-2 whitespace-nowrap">
+                {indicator === 'dot' && (
+                    <span
+                        aria-hidden="true"
+                        className={cn('size-2 shrink-0 rounded-full', colorClass)}
+                        // Keep zero visible; increase brightness steadily up to the full color at 100%.
+                        style={{ filter: `brightness(${0.35 + 0.65 * progress / 100})` }}
+                    />
+                )}
+                <span className="font-mono tabular-nums text-foreground">{caps.toLocaleString()}</span>
+                <span className="font-mono tabular-nums text-[11px] text-muted-foreground">{pct.toFixed(2)}%</span>
             </div>
-            <span className="font-mono tabular-nums text-foreground w-12 text-right">{caps.toLocaleString()}</span>
-            <span className="font-mono tabular-nums text-[11px] text-muted-foreground w-14 text-right">{pct.toFixed(2)}%</span>
+            {indicator === 'bar' && (
+                <div className="h-1.5 rounded-full bg-hairline/10 overflow-hidden">
+                    <div className={cn('h-full rounded-full', colorClass)} style={{ width: `${progress}%` }} />
+                </div>
+            )}
         </div>
     )
 }
