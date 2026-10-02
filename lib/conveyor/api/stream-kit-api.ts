@@ -11,6 +11,8 @@ export class StreamKitApi extends ConveyorApi {
     stopCams = () => this.invoke('stopCams')
     getCamFps = () => this.invoke('getCamFps')
     setCamFps = (fps: CamFps) => this.invoke('setCamFps', fps)
+    getCamVolume = () => this.invoke('getCamVolume')
+    setCamVolume = (volume: number) => this.invoke('setCamVolume', volume)
     selectKitFolder = (current: string) => this.invoke('selectKitFolder', current)
     extractKit = (request: KitExtractRequest) => this.invoke('extractStreamKit', request)
 }

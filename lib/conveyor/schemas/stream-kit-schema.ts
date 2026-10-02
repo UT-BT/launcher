@@ -5,12 +5,16 @@ const camTeam = z.enum(['A', 'B'])
 const iniFile = z.enum(['main', 'user'])
 const lineupValue = z.string().max(64).nullable().optional()
 const serverValue = z.string().max(260).nullable().optional()
+const passwordValue = z.string().max(64).nullable().optional()
 export const camFpsSchema = z.union([z.literal(60), z.literal(120)])
+export const camVolumeSchema = z.number().int().min(0).max(100)
 
 export const camRequestSchema = z.object({
     lineup: z.object({ A1: lineupValue, A2: lineupValue, B1: lineupValue, B2: lineupValue }),
     servers: z.object({ A: serverValue, B: serverValue }),
+    passwords: z.object({ A: passwordValue, B: passwordValue }).optional(),
     fps: camFpsSchema,
+    volume: camVolumeSchema,
 })
 
 const camToolError = z.discriminatedUnion('code', [
@@ -20,6 +24,7 @@ const camToolError = z.discriminatedUnion('code', [
     z.object({ code: z.literal('invalid-discord-id'), slot: camSlot, value: z.string() }),
     z.object({ code: z.literal('missing-server'), team: camTeam }),
     z.object({ code: z.literal('invalid-server'), team: camTeam, value: z.string() }),
+    z.object({ code: z.literal('invalid-password'), team: camTeam }),
     z.object({ code: z.literal('unsupported-platform') }),
     z.object({ code: z.literal('no-install') }),
     z.object({ code: z.literal('ini-unreadable'), file: iniFile }),
@@ -137,6 +142,14 @@ export const streamKitIpcSchema = {
     setCamFps: {
         args: z.tuple([camFpsSchema]),
         return: camFpsSchema,
+    },
+    getCamVolume: {
+        args: z.tuple([]),
+        return: camVolumeSchema,
+    },
+    setCamVolume: {
+        args: z.tuple([camVolumeSchema]),
+        return: camVolumeSchema,
     },
     selectKitFolder: {
         args: z.tuple([z.string().max(260)]),
