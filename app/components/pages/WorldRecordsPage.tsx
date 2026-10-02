@@ -699,9 +699,7 @@ export function WorldRecordsPage({
             : {}
         const headerClass = cn(
             'normal-case tracking-normal whitespace-nowrap',
-            // Map thumbnail (48px), gap-3, favorite button (22px), and gap-2.
             id === 'map' && '[&>button]:ml-[5.625rem]',
-            // PlayerInfo uses a 24px avatar and gap-2.5 at size sm.
             id === 'holder' && '[&>button]:ml-[2.125rem]',
             (id === 'time' || id === 'difficulty' || id === 'date') &&
                 '[&>button]:relative [&>button]:gap-0 [&>button>svg]:absolute [&>button>svg]:left-full [&>button>svg]:ml-1 [&>button>svg]:shrink-0',
