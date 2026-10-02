@@ -71,22 +71,23 @@ const COLUMN_LAYOUT: Record<ServerColumnId, { width?: string; align?: 'left' | '
     map: { width: '14rem', align: 'left' },
     region: { width: '6rem', align: 'center' },
     ping: { width: '6rem', align: 'center' },
-    players: { width: '10rem', align: 'center' },
-    spectators: { width: '10rem', align: 'center' },
+    players: { width: '9rem', align: 'center' },
+    spectators: { width: '8rem', align: 'center' },
     status: { width: '9rem', align: 'center' },
-    actions: { width: '12rem', align: 'center' },
+    actions: { width: '11rem', align: 'center' },
 }
 
 const REQUIRED_COLUMNS: ReadonlySet<ServerColumnId> = new Set(['name', 'actions'])
 
 const RESPONSIVE_REQUIRED_COLUMNS: ReadonlySet<ServerColumnId> = new Set([
-    'name', 'actions', 'players', 'spectators', 'status',
+    'name', 'actions', 'players', 'spectators',
 ])
 
 const COLUMN_PRIORITY: Partial<Record<ServerColumnId, number>> = {
     map: 60,
-    ping: 55,
-    region: 40,
+    ping: 80,
+    region: 80,
+    status: 20,
     type: 35,
     thumbnail: 30,
 }
@@ -266,7 +267,7 @@ const PlayerListCell = ({ players, displayText, displayColor, singular, plural }
 
     const trigger = (
         <div className={cn(
-            'inline-flex items-center gap-2 px-2 py-1 rounded border transition-colors',
+            'inline-flex max-w-full flex-wrap items-center justify-center gap-1.5 px-2 py-1 rounded border transition-colors',
             sorted.length > 0
                 ? 'bg-card/50 border-hairline/5 hover:border-hairline/20 hover:bg-card/80 cursor-pointer'
                 : 'bg-card/30 border-hairline/5 cursor-default',
@@ -642,7 +643,8 @@ export function ServerBrowserPage({
                         'normal-case tracking-normal whitespace-nowrap',
                         // FavoriteStar (sm) is 22px wide, followed by gap-2.
                         id === 'name' && '[&>button]:ml-[1.875rem]',
-                        layout.align === 'center' && '[&>button]:relative [&>button]:gap-0 [&>button>svg]:absolute [&>button>svg]:left-full [&>button>svg]:ml-1',
+                        // Center the text itself; the adjacent sort icon does not affect its position.
+                        layout.align === 'center' && '[&>button]:relative [&>button]:gap-0 [&>button>svg]:absolute [&>button>svg]:left-full [&>button>svg]:ml-1 [&>button>svg]:shrink-0',
                     )}
                 >
                     {SERVER_COLUMN_LABELS[id]}
