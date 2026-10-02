@@ -1,4 +1,4 @@
-import { mkdtempSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync, appendFileSync } from 'fs'
+import { existsSync, mkdtempSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync, appendFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -21,10 +21,12 @@ const REQUEST: CamRequest = {
     lineup: { A1, A2, B1, B2 },
     servers: { A: '203.0.113.10:7777', B: '198.51.100.20:7778' },
     fps: 120,
+    volume: 50,
 }
 
 class FakeProcess implements CamProcess {
     killed = false
+    stopped = false
     private exitListeners: ((code: number | null) => void)[] = []
 
     constructor(readonly pid: number | undefined, readonly command: CamCommand) {}
@@ -41,17 +43,31 @@ class FakeProcess implements CamProcess {
     }
 
     exit(code: number | null) {
+        this.stopped = true
         for (const listener of this.exitListeners) listener(code)
     }
 }
 
+type CloseBehaviour = 'closes' | 'hangs' | 'unposted' | 'throws'
+
 class FakeWindows implements CamWindows {
     calls: CamTitleTarget[][] = []
+    closeCalls: CamTitleTarget[][] = []
     titled = new Set<number>()
+    closeBehaviour: CloseBehaviour = 'closes'
 
     applyTitles = async (targets: readonly CamTitleTarget[]) => {
         this.calls.push([...targets])
         return new Map(targets.map(target => [target.pid, this.titled.has(target.pid)]))
+    }
+
+    requestClose = (targets: readonly CamTitleTarget[]) => {
+        this.closeCalls.push([...targets])
+        if (this.closeBehaviour === 'throws') throw new Error('PostMessageW failed')
+        if (this.closeBehaviour === 'closes') {
+            for (const target of targets) queueMicrotask(() => processes.find(process => process.pid === target.pid)?.exit(0))
+        }
+        return new Map(targets.map(target => [target.pid, this.closeBehaviour !== 'unposted']))
     }
 }
 
@@ -73,6 +89,7 @@ function launcher(overrides: Partial<CamLauncherOptions> = {}) {
         },
         loadWindows: async () => windows,
         logger: { info: () => {}, warn: () => {}, error: () => {} },
+        closeTimeoutMs: 50,
         exitTimeoutMs: 50,
         ...overrides,
     })
@@ -172,6 +189,17 @@ describeOnWindows('CamLauncher.launch', () => {
         }
     })
 
+    it('writes the requested volume into every cam ini', async () => {
+        writeFileSync(join(systemDirectory, 'UnrealTournament.ini'), '[Engine.Engine]\r\nAudioDevice=ALAudio.ALAudioSubsystem\r\n')
+        const result = await launcher().launch({ ...REQUEST, volume: 20 })
+        expect(result.ok).toBe(true)
+        for (const slot of ['A1', 'A2', 'B1', 'B2']) {
+            const camIni = readFileSync(join(systemDirectory, `UTBTCam${slot}.ini`), 'latin1')
+            expect(camIni).toContain('SoundVolume=51\r\n')
+            expect(camIni).toContain('SpeechVolume=51\r\n')
+        }
+    })
+
     it('spawns four clients from the install with the plan command lines', async () => {
         await launcher().launch(REQUEST)
         expect(processes).toHaveLength(4)
@@ -185,6 +213,12 @@ describeOnWindows('CamLauncher.launch', () => {
             'USERINI=UTBTCamA1User.ini',
             'LOG=UTBTCamA1.log',
         ])
+    })
+
+    it('joins with the server password of each cam\'s team', async () => {
+        await launcher().launch({ ...REQUEST, passwords: { A: 'cup2026', B: null } })
+        expect(processFor('A2').command.args[0].endsWith('?password=cup2026')).toBe(true)
+        expect(processFor('B1').command.args[0]).not.toContain('password')
     })
 
     it('tracks each cam by PID', async () => {
@@ -218,7 +252,7 @@ describeOnWindows('CamLauncher.launch', () => {
         await cams.launch(REQUEST)
         const first = [...processes]
         await cams.launch(REQUEST)
-        expect(first.every(process => process.killed)).toBe(true)
+        expect(first.every(process => process.stopped)).toBe(true)
         expect([...cams.runningPids()]).toEqual([1004, 1005, 1006, 1007])
     })
 
@@ -226,8 +260,8 @@ describeOnWindows('CamLauncher.launch', () => {
         const cams = launcher()
         await Promise.all([cams.launch(REQUEST), cams.launch(REQUEST)])
         expect(processes).toHaveLength(8)
-        expect(processes.slice(0, 4).every(process => process.killed)).toBe(true)
-        expect(processes.slice(4).some(process => process.killed)).toBe(false)
+        expect(processes.slice(0, 4).every(process => process.stopped)).toBe(true)
+        expect(processes.slice(4).some(process => process.stopped)).toBe(false)
         expect([...cams.runningPids()]).toEqual([1004, 1005, 1006, 1007])
     })
 
@@ -235,7 +269,7 @@ describeOnWindows('CamLauncher.launch', () => {
         const cams = launcher()
         const [, stopped] = await Promise.all([cams.launch(REQUEST), cams.stopAll()])
         expect(processes).toHaveLength(4)
-        expect(processes.every(process => process.killed)).toBe(true)
+        expect(processes.every(process => process.stopped)).toBe(true)
         expect(stopped.cams.every(cam => !cam.running)).toBe(true)
         expect(cams.runningPids().size).toBe(0)
     })
@@ -376,8 +410,8 @@ describeOnWindows('CamLauncher.restart and stopAll', () => {
         const [a1, a2, b1, b2] = ['A1', 'A2', 'B1', 'B2'].map(processFor)
         const result = await cams.restart('B1')
         expect(result.ok).toBe(true)
-        expect(b1.killed).toBe(true)
-        expect([a1, a2, b2].some(process => process.killed)).toBe(false)
+        expect(b1.stopped).toBe(true)
+        expect([a1, a2, b2].some(process => process.stopped)).toBe(false)
         expect(processes).toHaveLength(5)
         expect(processFor('B1').pid).toBe(1004)
         expect([...cams.runningPids()].sort()).toEqual([1000, 1001, 1003, 1004])
@@ -390,7 +424,14 @@ describeOnWindows('CamLauncher.restart and stopAll', () => {
         if (!result.ok) throw new Error('restart failed')
         expect(processFor('B2').command.args[0]).toContain(`UTBTFollow=${B2_NEW}`)
         expect(result.status.cams.map(cam => cam.target)).toEqual([A1, A2, B1, B2_NEW])
-        expect(processes.slice(0, 3).some(process => process.killed)).toBe(false)
+        expect(processes.slice(0, 3).some(process => process.stopped)).toBe(false)
+    })
+
+    it('restarts with the server password of the request it is given', async () => {
+        const cams = launcher()
+        await cams.launch(REQUEST)
+        await cams.restart('B2', { ...REQUEST, passwords: { A: null, B: 'cup2026' } })
+        expect(processFor('B2').command.args[0].endsWith('?password=cup2026')).toBe(true)
     })
 
     it('restarts with the frame rate of the request it is given', async () => {
@@ -418,8 +459,79 @@ describeOnWindows('CamLauncher.restart and stopAll', () => {
         const cams = launcher()
         await cams.launch(REQUEST)
         const status = await cams.stopAll()
-        expect(processes.every(process => process.killed)).toBe(true)
+        expect(processes.every(process => process.stopped)).toBe(true)
         expect(status.cams.every(cam => !cam.running)).toBe(true)
         expect(cams.runningPids().size).toBe(0)
+    })
+})
+
+describeOnWindows('CamLauncher clean shutdown', () => {
+    it('closes each cam through its window so UT shuts down cleanly instead of being killed', async () => {
+        const cams = launcher()
+        await cams.launch(REQUEST)
+        await cams.stopAll()
+        expect(windows.closeCalls.flat().sort((a, b) => a.pid - b.pid)).toEqual([
+            { pid: 1000, title: 'UTBT Cam A1' },
+            { pid: 1001, title: 'UTBT Cam A2' },
+            { pid: 1002, title: 'UTBT Cam B1' },
+            { pid: 1003, title: 'UTBT Cam B2' },
+        ])
+        expect(processes.some(process => process.killed)).toBe(false)
+    })
+
+    it('closes only the restarted cam', async () => {
+        const cams = launcher()
+        await cams.launch(REQUEST)
+        await cams.restart('A2')
+        expect(windows.closeCalls).toEqual([[{ pid: 1001, title: 'UTBT Cam A2' }]])
+        expect(processes.some(process => process.killed)).toBe(false)
+    })
+
+    const fallbacks: [string, CloseBehaviour][] = [
+        ['does not close in time', 'hangs'],
+        ['has no window to close', 'unposted'],
+        ['cannot be asked to close', 'throws'],
+    ]
+    for (const [situation, behaviour] of fallbacks) {
+        it(`kills a cam that ${situation}`, async () => {
+            const cams = launcher()
+            await cams.launch(REQUEST)
+            windows.closeBehaviour = behaviour
+            const status = await cams.stopAll()
+            expect(processes.every(process => process.killed)).toBe(true)
+            expect(status.cams.every(cam => !cam.running)).toBe(true)
+        })
+    }
+
+    it('kills the cams when window control never loaded', async () => {
+        const cams = launcher({ loadWindows: async () => { throw new Error('native module missing') } })
+        await cams.launch(REQUEST)
+        await cams.stopAll()
+        expect(processes.every(process => process.killed)).toBe(true)
+    })
+
+    it('asks the cams to close when the launcher quits and kills only those it cannot ask', async () => {
+        const cams = launcher()
+        await cams.launch(REQUEST)
+        windows.closeBehaviour = 'hangs'
+        cams.stopAllNow()
+        expect(windows.closeCalls.at(-1)).toHaveLength(4)
+        expect(processes.some(process => process.killed)).toBe(false)
+
+        windows.closeBehaviour = 'unposted'
+        cams.stopAllNow()
+        expect(processes.every(process => process.killed)).toBe(true)
+    })
+
+    it('removes the crash marker UT left behind before starting cams, so none opens the recovery prompt', async () => {
+        const marker = join(systemDirectory, 'Running.ini')
+        writeFileSync(marker, '')
+        const cams = launcher()
+        await cams.launch(REQUEST)
+        expect(existsSync(marker)).toBe(false)
+
+        writeFileSync(marker, '')
+        await cams.restart('B1')
+        expect(existsSync(marker)).toBe(false)
     })
 })

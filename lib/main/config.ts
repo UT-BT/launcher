@@ -1,7 +1,7 @@
 import { app, safeStorage } from 'electron'
 import { readFileSync, writeFileSync, mkdirSync, existsSync, renameSync } from 'fs'
 import { join } from 'path'
-import { camFpsOf, type CamFps } from '@/lib/stream-kit/cam-plan'
+import { camFpsOf, camVolumeOf, type CamFps } from '@/lib/stream-kit/cam-plan'
 
 const ENC_PREFIX = 'enc:'
 
@@ -44,6 +44,7 @@ type LauncherConfig = {
   activeProfile?: string
   windowBehavior?: WindowBehaviorConfig
   camFps?: CamFps
+  camVolume?: number
 }
 
 const CONFIG_FILE_NAME = 'config.json'
@@ -267,5 +268,15 @@ export function getCamFps(): CamFps {
 export function setCamFps(fps: CamFps): void {
   const current = readConfig()
   const next: LauncherConfig = { ...current, camFps: camFpsOf(fps) }
+  writeConfig(next)
+}
+
+export function getCamVolume(): number {
+  return camVolumeOf(readConfig().camVolume)
+}
+
+export function setCamVolume(volume: number): void {
+  const current = readConfig()
+  const next: LauncherConfig = { ...current, camVolume: camVolumeOf(volume) }
   writeConfig(next)
 }
