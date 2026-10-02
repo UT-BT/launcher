@@ -20,7 +20,7 @@ const CAP_COLUMNS: ResponsiveColumn[] = [
     { id: 'map', required: true },
     { id: 'holder', width: '9rem', priority: 20 },
     { id: 'time', width: '6rem', priority: 70, required: true },
-    { id: 'when', width: '4rem', priority: 30 },
+    { id: 'when', width: '7rem', priority: 30 },
     { id: 'replay', width: '3rem', priority: 40 },
 ]
 
@@ -89,7 +89,7 @@ export function RecentCapsCard({
                         />
                     </div>
                     <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground tabular-nums">{cap.timeAgo}</span>
+                        <span className="text-xs text-muted-foreground tabular-nums whitespace-nowrap">{cap.timeAgo}</span>
                         {cap.verified && (
                             <IconActionButton
                                 variant="replay"
@@ -120,7 +120,7 @@ export function RecentCapsCard({
                 <DataTableHeaderCell align="center">Map</DataTableHeaderCell>
                 {isVisible('holder') && <DataTableHeaderCell align="center" width="9rem"></DataTableHeaderCell>}
                 {isVisible('time') && <DataTableHeaderCell align="center" width="6rem">Time</DataTableHeaderCell>}
-                {isVisible('when') && <DataTableHeaderCell align="center" width="4rem">When</DataTableHeaderCell>}
+                {isVisible('when') && <DataTableHeaderCell align="center" width="7rem">When</DataTableHeaderCell>}
                 {isVisible('replay') && <DataTableHeaderCell align="center" width="3rem" />}
             </DataTableHeaderRow>
             <tbody>
@@ -177,7 +177,7 @@ export function RecentCapsCard({
                             )}
                             {isVisible('when') && (
                                 <DataTableCell align="center">
-                                    <span className="text-xs text-muted-foreground tabular-nums">{cap.timeAgo}</span>
+                                    <span className="text-xs text-muted-foreground tabular-nums whitespace-nowrap">{cap.timeAgo}</span>
                                 </DataTableCell>
                             )}
                             {isVisible('replay') && (

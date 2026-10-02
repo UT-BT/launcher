@@ -11,7 +11,7 @@ not_here:
   - "the IPC channel/api/handler pattern → lib/conveyor/README.md"
   - "renderer HTTP calls → agents/data-sources.md"
 sections: [services, the-renderer-main-boundary, file-path-safety, opening-urls, config-storage, ini-access, stream-cams, stream-kit-extractor, window-security-csp]
-last_verified: 2026-09-30
+last_verified: 2026-10-02
 verify_against:
   - lib/main/app.ts
   - lib/main/config.ts
@@ -94,7 +94,9 @@ atomically (tmp + rename). Typed accessors only — don't read the file directly
 `getDemoWatcherConfig`, `getActiveProfile`, `getAuthConfig`,
 `getWindowBehavior` (minimize/close-to-tray + start-on-startup, applied by `tray-service`),
 `getCamFps` / `setCamFps` (the `camFps` key, the stream cams' frame rate: `60` or `120`; anything
-else, a missing value or an unreadable file reads as `120`, and saving keeps the rest of the config).
+else, a missing value or an unreadable file reads as `120`, and saving keeps the rest of the config),
+`getCamVolume` / `setCamVolume` (the `camVolume` key, the stream cams' game volume in whole percent
+`0`-`100`; anything else reads as `50`, the same way).
 
 **Secrets are encrypted at rest.** Auth access/refresh tokens go through Electron
 `safeStorage` (`enc:` prefix) in `set/getAuthConfig`. Never log them or store
@@ -112,7 +114,8 @@ are the main consumer (see `app/components/pages/settings/README.md`).
 
 Four extra UT clients (slots A1, A2, B1, B2) for the Cams panel. Windows only;
 everything else refuses with `unsupported-platform`. The renderer sends only a
-lineup, two server addresses and the frame rate, `60` or `120` (`CamRequest`).
+lineup, two server addresses, an optional password per team and the frame rate,
+`60` or `120` (`CamRequest`).
 
 - **Plan.** Main reads `UnrealTournament.ini` and `User.ini` through
   `resolveWithin({install}/System, name)` and calls the shared
@@ -130,26 +133,53 @@ lineup, two server addresses and the frame rate, `60` or `120` (`CamRequest`).
   `[WinDrv.WindowsClient]`, the plan writes, per cam copy of the streamer's ini:
   - `FrameRateLimit=<fps>` in `[WinDrv.WindowsClient]` and in the section named by
     `GameRenderDevice` in `[Engine.Engine]` (any device: D3D9, D3D11, OpenGL, Vulkan, …);
-  - `MusicVolume=0` and `SoundVolume=200` in the section named by `AudioDevice` in
-    `[Engine.Engine]` (`ALAudio`, `Cluster` and `Galaxy` subsystems all use the same key
-    names). 200 is UT's stock sound level, so every cam plays at one known volume whatever the
-    streamer's own setting, and the mix is balanced in OBS; music is off. Other audio keys
-    (`UseDigitalMusic`, `SpeechVolume`, …) are left alone.
+  - `UseShaderGamma` and `UseFragmentProgram=True` in that render device section when the
+    device is `D3D9Drv` (`UseShaderGamma=2`) or `OpenGLDrv` (`UseShaderGamma=True`), from
+    `CAM_SHADER_GAMMA_SETTINGS`. Without shader gamma these renderers apply the Brightness
+    setting through the display's hardware gamma ramp, which window capture never sees, so OBS
+    got a darker picture than the screen. Shader gamma draws the brightness into the frame
+    itself. D3D11, Vulkan, XOpenGL and ICBINDx11 already do, so their sections only get the
+    frame-rate limit;
+  - `MusicVolume=0`, plus `SoundVolume` and `SpeechVolume` both set to the request's `volume`
+    scaled from percent to UT's 0-255 (`utVolumeOf`: 50% is 128, 100% is 255), in the section
+    named by `AudioDevice` in `[Engine.Engine]` (`ALAudio`, `Cluster` and `Galaxy` subsystems all
+    use the same key names). Every cam plays at that one volume whatever the streamer's own
+    setting, and music is always off. Other audio keys (`UseDigitalMusic`, …) are left alone.
+    `volume` is the saved `camVolume` preference (default 50%), which the Cams tool's slider sets
+    because four cams at UT's usual level are very loud together.
   - The device names are read only from `[Engine.Engine]`, trimmed and matched without regard
     to case. A missing or empty device key leaves that device's section untouched; a missing
     section is appended; existing keys are replaced in place and every other line is kept.
-  - `fps` comes on the request (a restart without one keeps the rate the cam launched with).
+  - `fps` and `volume` come on the request (a restart without one keeps the values the cam launched with).
     It is the saved `camFps` preference, `60` or `120`, default 120: 120 keeps a 60 fps stream
     smooth, 60 is for a PC that struggles.
+- **Server passwords.** A team's password goes last on its cams' connect URL as
+  `?password=<password>`, the option UT's login reads, so a locked server lets the cams in
+  without the password prompt. It never enters `joinOptions`. `isValidServerPassword` refuses
+  whitespace, `?`, `#` and `"` (UT splits URL options on `?` and `#` and drops a URL whose
+  option holds a space) and anything over 64 characters, as `invalid-password` with the team
+  only. The password is on the cam's command line, so it shows in that cam's own UT log the
+  way any typed UT join URL does.
 - **Lifecycle.** Clients are spawned detached and tracked by PID. `launch`,
-  `restart` and `stopAll` run one at a time through a single queue. All cams are
-  killed on `will-quit`. `game-processes.ts` lets `gameService.isGameRunning()`
-  ignore cam PIDs so cams don't fire game-closed or pause server refreshes.
+  `restart` and `stopAll` run one at a time through a single queue.
+  `game-processes.ts` lets `gameService.isGameRunning()` ignore cam PIDs so cams
+  don't fire game-closed or pause server refreshes.
+- **Clean shutdown.** UT writes `System/Running.ini` at startup and deletes it only
+  on a clean exit. When it finds the file and no other UT is running, it opens a
+  recovery prompt that offers safe mode. A killed cam leaves the file behind, so the
+  next cam or the streamer's own game would open that prompt. Stopping a cam therefore
+  posts `WM_CLOSE` to its game window (`CamWindows.requestClose`, the window
+  `pickCamWindow` chooses), which UT handles as a normal quit, and waits up to 8 s
+  (`closeTimeoutMs`). Only a cam that has no window to close, cannot be asked, or
+  does not exit in time is killed. On `will-quit`, `stopAllNow` posts the same
+  close without waiting and kills only the cams it could not ask. As a backstop,
+  every launch and restart deletes a leftover `Running.ini` before spawning, so the
+  cams always open straight into the game.
 - **Status.** `cam-log.ts` reads each cam's log incrementally and takes the
   server from the last network `LoadMap:` line (`Browse:` is ignored).
-  `cam-window-match.ts` picks which top-level window of a PID to title.
+  `cam-window-match.ts` picks which top-level window of a PID to title or close.
 - **Window titles** are set through `koffi` bindings to user32 in
-  `cam-windows.ts` (`EnumWindows`, `SendMessageTimeoutW`, …), re-applied about
+  `cam-windows.ts` (`EnumWindows`, `SendMessageTimeoutW`, `PostMessageW`, …), re-applied about
   every 2 s while a cam runs. koffi loads lazily via
   `createRequire(__filename)('koffi')`; a dynamic `import()` would stay native
   ESM in the CJS main bundle. If it fails to load the cams still run and

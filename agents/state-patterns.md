@@ -17,7 +17,7 @@ not_here:
   - "the navigation stack / navigate() / renderView wiring → navigation.md"
   - "the shared components used (FilterPresetsMenu, ColumnsMenu, Tutorial) → shared-components.md"
 sections: [controlled-pages-with-hoisted-state, navigation-history-per-entry-ui-state, account-synced-state, localstorage-persistence, filter-presets, tutorial-state, favorites, polling-live-data, naming-conventions]
-last_verified: 2026-09-30
+last_verified: 2026-10-02
 verify_against: [app/components/main/Main.tsx, app/components/navigation/useNavState.ts, app/hooks/useAsync.ts, app/utils/userState.ts, app/utils/poller.ts, app/components/pages/events/pickban/pickBanSession.ts, app/components/pages/events/pickban/usePickBanSession.ts, app/components/pages/events/pickban/mergePickBanState.ts, app/components/pages/events/pickban/captainPlay.ts, app/components/pages/events/pickban/useCaptainPlay.ts, app/components/pages/events/pickban/managerDock.ts, app/components/pages/events/pickban/useManagerDock.ts, app/components/pages/events/pickban/editFinal.ts, app/components/pages/events/pickban/pickBanMotionPreference.ts, app/components/pages/events/pickban/pickBanSoundPreference.ts, app/components/pages/MatchPickBanPage.tsx, app/components/navigation/nav-items.ts, app/utils/eventAttention.ts, app/components/pages/events/stream/StreamTab.tsx, app/components/pages/events/stream/StreamTabContext.tsx, app/components/pages/events/stream/streamDesk.ts, app/components/pages/events/stream/panels/kit/kitFolder.ts, app/components/stream/data/sceneCadence.ts, app/components/stream/data/streamHotStateStore.ts, app/components/stream/data/sceneReadStore.ts, app/components/pages/events/stream/streamPanels.ts, app/components/pages/events/stream/useStreamKitState.ts, app/components/pages/events/stream/panels/cams/camToolHooks.ts, lib/main/config.ts]
 ---
 
@@ -679,7 +679,10 @@ senders.
 Cams tool loads it on mount (Launch waits for it), saves on each click and puts the value on every
 cam request; if saving fails, the choice still holds for the session and an amber line says it will
 reset on restart. It is not in `usePageState`, `useNavState` or `utbt:*` storage, and it does not sync
-across devices.
+across devices. The Cam volume preference works the same way: the config's `camVolume` (whole percent,
+default 50) through `getCamVolume()` / `setCamVolume(volume)`, saved when the slider is released.
+The cam server passwords are the opposite: they live only in nav state (`event.camPasswords`), so they
+are never written to disk and are gone once the launcher closes.
 
 **The Stream tab's context** (`events/stream/StreamTabContext.tsx`). `StreamTab` builds one
 identity (`eventSlug`, `streamerId`, `isManager`, `accessToken`) and wraps the open panel in

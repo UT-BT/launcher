@@ -12,6 +12,7 @@ const whoosh = join(root, 'app', 'assets', 'sounds', 'stinger-whoosh.mp3')
 const page = '/components/stream/stinger/stinger.html'
 const width = 1920
 const height = 1080
+const whooshGainDb = -6
 
 const usage = 'Usage: node scripts/render-stinger.mjs <output.webm> [--event "<event name>"] [--ffmpeg <path to ffmpeg>]'
 
@@ -80,7 +81,7 @@ async function encode(ffmpeg, framesDir, timeline, output) {
     '-framerate', String(timeline.fps),
     '-i', join(framesDir, 'frame-%04d.png'),
     '-i', whoosh,
-    '-filter_complex', '[1:a]apad[audio]',
+    '-filter_complex', `[1:a]volume=${whooshGainDb}dB,apad[audio]`,
     '-map', '0:v', '-map', '[audio]',
     '-c:v', 'libvpx-vp9', '-pix_fmt', 'yuva420p', '-crf', '20', '-b:v', '0',
     '-deadline', 'good', '-cpu-used', '2', '-row-mt', '1', '-auto-alt-ref', '0',
