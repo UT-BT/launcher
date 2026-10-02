@@ -46,7 +46,7 @@ export function PersonalProgressSnapshot({ summary, capItAll, capItAllLoading }:
         <div className="grid flex-1 auto-rows-fr grid-cols-2 sm:grid-cols-3 gap-2">
             {stats.map(stat => (
                 <div key={stat.label} className="bg-card/30 border border-hairline/5 rounded-xl px-3 py-2.5">
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{stat.label}</div>
+                    <div className="text-center text-[10px] uppercase tracking-wider text-muted-foreground">{stat.label}</div>
                     <div className="mt-1 text-center text-lg font-bold font-mono tabular-nums text-foreground truncate" aria-busy={stat.loading || undefined}>
                         {stat.loading ? (
                             <span role="status" aria-label={`Loading ${stat.label}`} className="inline-block h-5 w-12 rounded bg-hairline/5 animate-pulse motion-reduce:animate-none" />

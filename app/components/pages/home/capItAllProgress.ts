@@ -23,8 +23,6 @@ function countOrNull(value: unknown): number | null {
     return Number.isSafeInteger(count) && count >= 0 ? count : null
 }
 
-// The existing API searches aliases, not IDs. Bound the work for common aliases
-// and only accept the signed-in user's ID, never the first name match.
 export async function fetchCapItAllProgress(
     token: string,
     userId: string,
