@@ -11,7 +11,7 @@ not_here:
   - "the step-by-step add-a-channel procedure → .claude/skills/add-ipc-channel/SKILL.md"
   - "the main-process services behind the handlers → lib/main/README.md"
 sections: [overview, the-channel-inventory, calling-from-the-renderer, adding-a-channel, event-bridges, conventions]
-last_verified: 2026-09-30
+last_verified: 2026-10-02
 verify_against:
   - lib/conveyor/api/index.ts
   - lib/conveyor/schemas/index.ts
@@ -74,19 +74,23 @@ must match exactly.
 Schemas, types and error codes live in `schemas/stream-kit-schema.ts`
 (`CamRequest`, `CamToolStatus`, `KitExtractRequest`, `KitProgress`).
 
-- **Cam calls** take `CamRequest` = `{ lineup: { A1, A2, B1, B2 }, servers: { A, B }, fps }`
-  (lineup and servers are strings or null; `fps` is required and is `60` or `120`). The renderer never sends paths, command lines or ini text;
+- **Cam calls** take `CamRequest` = `{ lineup: { A1, A2, B1, B2 }, servers: { A, B }, passwords?: { A, B }, fps, volume }`
+  (lineup, servers and passwords are strings or null; a password is at most 64 characters; `fps` is required and is `60` or `120`;
+  `volume` is required and is a whole percent `0`-`100`). The renderer never sends paths, command lines or ini text;
   main reads the install itself. `plan`/`launch`/`restart` return `{ ok: true, … }`
   or `{ ok: false, errors }` (coded, e.g. `missing-slot`, `missing-server`,
-  `no-install`, `unsupported-platform`); `retitle`/`getCamStatus`/`stopCams`
+  `invalid-password`, `no-install`, `unsupported-platform`; `invalid-password` names only the
+  team, never the password); `retitle`/`getCamStatus`/`stopCams`
   return `CamToolStatus` = `{ supported, retitle: { available, error }, cams }`
   (always four slots A1, A2, B1, B2).
 - **`restartCam(slot, null)`** relaunches from the plan the cam started with (including its
-  frame rate); with a request it rebuilds that slot from the current lineup, servers and `fps`.
+  frame rate); with a request it rebuilds that slot from the current lineup, servers, passwords, `fps` and `volume`.
 - **`getCamFps()` / `setCamFps(fps)`** read and save the Cam FPS preference (`camFpsSchema`,
   `60 | 120`). `getCamFps` answers 120 when nothing valid is stored. The renderer reads it, puts it
-  on the `CamRequest`, and main's cam plan writes the frame-rate limits and audio settings from
-  it (see `lib/main/README.md`).
+  on the `CamRequest`, and main's cam plan writes the frame-rate limits from it (see `lib/main/README.md`).
+- **`getCamVolume()` / `setCamVolume(volume)`** do the same for the Cam volume preference
+  (`camVolumeSchema`, a whole number `0`-`100`, default 50). Main's cam plan writes each cam's
+  `SoundVolume` and `SpeechVolume` from the request's `volume`.
 - **`selectKitFolder(current)`** opens the native folder picker (starting at `current` when it
   is a valid drive path) and returns the chosen folder, or `null` when cancelled. The Kit card
   on desktop fills its read-only folder field from it; the web build keeps a typed path.

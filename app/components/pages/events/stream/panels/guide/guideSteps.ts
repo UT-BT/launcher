@@ -141,7 +141,7 @@ export const GUIDE_STEPS: GuideStep[] = [
         blocks: [
             text('The kit presets the levels for you, so you only nudge them. In the OBS Audio Mixer, healthy meters look like this: voices (Discord and your mic) peak well into the yellow and never touch red. The game bed sits lower, so the voices stay clear over it.'),
             list(
-                'The game drowns the voices: turn the cams down.',
+                'The game drowns the voices: turn the cams down in OBS, or lower Cam volume in the Cams tab and relaunch the cams.',
                 'The casters in Discord are too quiet: turn Discord up.',
                 'Your own voice is too quiet or too loud: move the mic fader.',
             ),
@@ -177,6 +177,8 @@ export const GUIDE_STEPS: GuideStep[] = [
             list(
                 'A capture does not bind: launch the cams first, then wait a few seconds. In the capture\'s properties pick the window called UTBT Cam A1 (or A2, B1, B2) by hand. If a cam shows "Not titled yet" in the Cams tab, its window has not been titled, so use Restart on that cam.',
                 'No cam audio: check that the application audio capture for that cam points at the window with the same title, and that the cam window is not muted in the Windows volume mixer. Application Audio Capture needs OBS 28 or newer.',
+                'A password prompt shows in every cam: the server is locked. Type its password under that team\'s server in the Cams tab, then relaunch the cams.',
+                'The cams look darker on stream than in the game: with the D3D9 or OpenGL renderer the cam tool switches the cams to shader gamma, so your Brightness setting is drawn into the picture OBS captures. Relaunch the cams after a launcher update. If a cam still looks dark, raise Brightness in the game\'s video settings and relaunch, or add a Color Correction filter to that cam capture in OBS.',
                 'The stinger shows black instead of transparent: check that stinger.webm sits directly in the kit folder, and that the transition path points at it. Download the kit again to restore the file.',
                 'Windows Graphics Capture is not available: update Windows to version 2004 or later. On a laptop with two graphics cards, run OBS and the game on the same one.',
             ),

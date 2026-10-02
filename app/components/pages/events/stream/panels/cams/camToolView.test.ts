@@ -4,6 +4,7 @@ import type { Server } from '@/app/utils/server-utils'
 import type { StreamDesk, StreamMatch, StreamMember, StreamPerson } from '../../streamDesk'
 import {
     DETECTED_CHOICES,
+    NO_PASSWORDS,
     buildCamToolView,
     camErrorMessage,
     normaliseTypedAddress,
@@ -114,9 +115,11 @@ function input(overrides: Partial<CamToolViewInput> = {}): CamToolViewInput {
         desk: desk(),
         servers: ONE_SERVER,
         choices: DETECTED_CHOICES,
+        passwords: NO_PASSWORDS,
         installPath: INSTALL,
         status: null,
         fps: 120,
+        volume: 50,
         ...overrides,
     }
 }
@@ -287,7 +290,9 @@ describe('one server and two servers', () => {
         expect(view.launch.request).toEqual({
             lineup: { A1: ALICE, A2: ANNA, B1: BOB, B2: BEA },
             servers: { A: '10.0.0.1:7777', B: '10.0.0.1:7777' },
+            passwords: { A: null, B: null },
             fps: 120,
+            volume: 50,
         })
     })
 
@@ -306,6 +311,43 @@ describe('one server and two servers', () => {
     it('has no layout until both teams have a server', () => {
         const view = buildCamToolView(input({ servers: [server('s1', '10.0.0.1', 7777, [ALICE])] }))
         expect(view.layout).toBeNull()
+    })
+})
+
+describe('server passwords', () => {
+    it('sends no password until one is typed', () => {
+        const view = buildCamToolView(input())
+        expect(view.launch.request?.passwords).toEqual({ A: null, B: null })
+        expect(view.passwords.A).toMatchObject({ value: '', effective: '', sharedFrom: null, invalid: false })
+    })
+
+    it('shares one typed password with the other team when both play on one server', () => {
+        const view = buildCamToolView(input({ servers: ONE_SERVER, passwords: { A: ' cup2026 ', B: '' } }))
+        expect(view.launch.request?.passwords).toEqual({ A: 'cup2026', B: 'cup2026' })
+        expect(view.passwords.A.sharedFrom).toBeNull()
+        expect(view.passwords.B.sharedFrom).toBe('A')
+    })
+
+    it('keeps each team to its own password on two servers', () => {
+        const view = buildCamToolView(input({ servers: TWO_SERVERS, passwords: { A: 'cup2026', B: '' } }))
+        expect(view.launch.request?.passwords).toEqual({ A: 'cup2026', B: null })
+        expect(view.passwords.B.sharedFrom).toBeNull()
+    })
+
+    it('prefers a team\'s own password over the shared one', () => {
+        const view = buildCamToolView(input({ servers: ONE_SERVER, passwords: { A: 'cup2026', B: 'other' } }))
+        expect(view.launch.request?.passwords).toEqual({ A: 'cup2026', B: 'other' })
+        expect(view.passwords.B.sharedFrom).toBeNull()
+    })
+
+    it('blocks the launch on a password the game can\'t take, without sharing it', () => {
+        const view = buildCamToolView(input({ servers: ONE_SERVER, passwords: { A: 'two words', B: '' } }))
+        expect(view.launch.request).toBeNull()
+        expect(view.passwords.A.invalid).toBe(true)
+        expect(view.passwords.B).toMatchObject({ sharedFrom: null, invalid: false })
+        expect(view.launch.blockers).toEqual([
+            expect.objectContaining({ code: 'password', team: 'A', message: expect.stringContaining('Crimson Tide') }),
+        ])
     })
 })
 
@@ -364,6 +406,20 @@ describe('cam fps', () => {
 
     it('holds launch while the frame rate preference is still being read', () => {
         const view = buildCamToolView(input({ fps: undefined }))
+        expect(view.launch.request).toBeNull()
+        expect(view.launch.blockers).toEqual([])
+    })
+})
+
+describe('cam volume', () => {
+    it('carries the chosen volume on the launch request', () => {
+        for (const volume of [0, 35, 100]) {
+            expect(buildCamToolView(input({ volume })).launch.request?.volume).toBe(volume)
+        }
+    })
+
+    it('holds launch while the volume preference is still being read', () => {
+        const view = buildCamToolView(input({ volume: undefined }))
         expect(view.launch.request).toBeNull()
         expect(view.launch.blockers).toEqual([])
     })
@@ -494,6 +550,7 @@ describe('launcher errors', () => {
     it('names the slot or team the error is about', () => {
         expect(camErrorMessage({ code: 'invalid-discord-id', slot: 'B1', value: '12' })).toContain('B1')
         expect(camErrorMessage({ code: 'missing-server', team: 'A' })).toContain('Team A')
+        expect(camErrorMessage({ code: 'invalid-password', team: 'B' })).toContain('Team B')
         expect(camErrorMessage({ code: 'write-failed', slot: 'A2' })).toContain('A2')
         expect(camErrorMessage({ code: 'ini-unreadable', file: 'user' })).toContain('User.ini')
     })

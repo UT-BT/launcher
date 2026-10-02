@@ -17,7 +17,7 @@ import { resolveWithin } from './path-safety'
 import { EMPTY_CAM_LOG_STATE, readCamLogChunk, type CamLogState } from './cam-log'
 import type { CamWindows } from './cam-windows'
 
-export type CamRequest = Pick<CamPlanInput, 'lineup' | 'servers' | 'fps'>
+export type CamRequest = Pick<CamPlanInput, 'lineup' | 'servers' | 'passwords' | 'fps' | 'volume'>
 
 export type CamToolError =
     | CamPlanError
@@ -87,6 +87,7 @@ export interface CamLauncherOptions {
     loadWindows: () => Promise<CamWindows>
     logger: CamLogger
     retitleIntervalMs?: number
+    closeTimeoutMs?: number
     exitTimeoutMs?: number
     now?: () => Date
 }
@@ -130,9 +131,11 @@ interface CamRecord {
 
 const MAIN_INI = 'UnrealTournament.ini'
 const USER_INI = 'User.ini'
+const RUNNING_MARKER = 'Running.ini'
 const UTF16_BOM = Buffer.from([0xff, 0xfe])
 const MAX_LOG_READ_BYTES = 4 * 1024 * 1024
 const DEFAULT_RETITLE_INTERVAL_MS = 2000
+const DEFAULT_CLOSE_TIMEOUT_MS = 8000
 const DEFAULT_EXIT_TIMEOUT_MS = 5000
 
 function decodeIni(bytes: Buffer): IniText {
@@ -170,6 +173,7 @@ export class CamLauncher {
     private retitleTimer: ReturnType<typeof setInterval> | null = null
     private retitlePass: Promise<void> | null = null
     private windows: Promise<CamWindows> | null = null
+    private loadedWindows: CamWindows | null = null
     private retitleError: string | null = null
     private pending: Promise<unknown> = Promise.resolve()
 
@@ -217,8 +221,10 @@ export class CamLauncher {
     }
 
     stopAllNow(): void {
-        for (const record of this.records.values()) {
-            if (record.running) record.process.kill()
+        const running = [...this.records.values()].filter(record => record.running)
+        const closing = this.loadedWindows ? this.requestClose(this.loadedWindows, running) : new Map<number, boolean>()
+        for (const record of running) {
+            if (record.pid === null || !closing.get(record.pid)) record.process.kill()
         }
         this.stopRetitleLoop()
     }
@@ -244,6 +250,7 @@ export class CamLauncher {
         }
         if (writeErrors.length > 0) return { ok: false, errors: writeErrors }
 
+        await this.clearRunningMarker(plan.systemDirectory)
         for (const cam of plan.cams) this.startCam(cam, plan)
         this.options.logger.info('Launched stream cams', { pids: [...this.runningPids()] })
         await this.retitle()
@@ -273,6 +280,7 @@ export class CamLauncher {
         if (!(await this.writeCamFiles(cam, plan))) {
             return { ok: false, errors: [{ code: 'write-failed', slot }] }
         }
+        await this.clearRunningMarker(plan.systemDirectory)
         this.startCam(cam, plan)
         this.options.logger.info('Restarted stream cam', { slot, pid: this.records.get(slot)?.pid })
         await this.retitle()
@@ -302,9 +310,11 @@ export class CamLauncher {
             installPath,
             lineup: request.lineup,
             servers: request.servers,
+            passwords: request.passwords,
             mainIni: main.text,
             userIni: user.text,
             fps: request.fps,
+            volume: request.volume,
         })
         if (!result.ok) return { ok: false, errors: result.errors }
         return {
@@ -338,6 +348,12 @@ export class CamLauncher {
             this.options.logger.error(`Could not write the files of cam ${cam.slot}`, error)
             return false
         }
+    }
+
+    private async clearRunningMarker(systemDirectory: string): Promise<void> {
+        await rm(resolveWithin(systemDirectory, RUNNING_MARKER), { force: true }).catch(error => {
+            this.options.logger.warn(`Could not clear ${RUNNING_MARKER}, so a cam may open UT's recovery prompt`, error)
+        })
     }
 
     private startCam(cam: CamPlanCam, plan: CamFileTarget): void {
@@ -387,22 +403,58 @@ export class CamLauncher {
     private async stopCam(slot: CamSlot): Promise<void> {
         const record = this.records.get(slot)
         if (!record?.running) return
-        record.process.kill()
-        const timeoutMs = this.options.exitTimeoutMs ?? DEFAULT_EXIT_TIMEOUT_MS
-        let timer: ReturnType<typeof setTimeout> | undefined
-        await Promise.race([
-            record.exited,
-            new Promise<void>(resolve => {
-                timer = setTimeout(resolve, timeoutMs)
-            }),
-        ])
-        clearTimeout(timer)
+        if (!(await this.closeCam(record))) {
+            record.process.kill()
+            await this.waitForExit(record, this.options.exitTimeoutMs ?? DEFAULT_EXIT_TIMEOUT_MS)
+        }
         record.running = false
         record.titled = false
     }
 
+    private async closeCam(record: CamRecord): Promise<boolean> {
+        if (record.pid === null) return false
+        let windows: CamWindows
+        try {
+            windows = await this.loadWindows()
+        } catch {
+            return false
+        }
+        if (!this.requestClose(windows, [record]).get(record.pid)) return false
+        const closed = await this.waitForExit(record, this.options.closeTimeoutMs ?? DEFAULT_CLOSE_TIMEOUT_MS)
+        if (!closed) this.options.logger.warn(`Cam ${record.cam.slot} did not close in time, so it is stopped by force`)
+        return closed
+    }
+
+    private requestClose(windows: CamWindows, records: readonly CamRecord[]): Map<number, boolean> {
+        const targets = records
+            .filter(record => record.pid !== null)
+            .map(record => ({ pid: record.pid as number, title: record.cam.windowTitle }))
+        if (targets.length === 0) return new Map()
+        try {
+            return windows.requestClose(targets)
+        } catch (error) {
+            this.options.logger.warn('Could not ask the cams to close', error)
+            return new Map()
+        }
+    }
+
+    private async waitForExit(record: CamRecord, timeoutMs: number): Promise<boolean> {
+        let timer: ReturnType<typeof setTimeout> | undefined
+        const exited = await Promise.race([
+            record.exited.then(() => true),
+            new Promise<boolean>(resolve => {
+                timer = setTimeout(() => resolve(false), timeoutMs)
+            }),
+        ])
+        clearTimeout(timer)
+        return exited
+    }
+
     private loadWindows(): Promise<CamWindows> {
-        this.windows ??= this.options.loadWindows()
+        this.windows ??= this.options.loadWindows().then(windows => {
+            this.loadedWindows = windows
+            return windows
+        })
         return this.windows
     }
 

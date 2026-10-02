@@ -1,26 +1,30 @@
 import { useId, useRef, useState } from 'react'
-import { AlertTriangle, Play, RotateCw, Settings, Square } from 'lucide-react'
+import { AlertTriangle, Play, RotateCw, Settings, Square, Volume2, VolumeX } from 'lucide-react'
 import type { CamRequest } from '@/lib/conveyor/schemas/stream-kit-schema'
-import { CAM_FPS_OPTIONS, type CamFps, type CamSlot, type CamTeam } from '@/lib/stream-kit/cam-plan'
+import { CAM_FPS_OPTIONS, CAM_PASSWORD_MAX_LENGTH, CAM_VOLUME_MAX, type CamFps, type CamSlot, type CamTeam } from '@/lib/stream-kit/cam-plan'
 import { useNavState } from '@/app/components/navigation/useNavState'
 import { PICK_BAN_TONES } from '@/app/components/broadcast/broadcastTone'
 import { CHIP_SHAPE } from '@/app/components/shared/chipStyles'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
+import { Slider } from '@/app/components/ui/slider'
 import type { Server } from '@/app/utils/server-utils'
 import { cn } from '@/lib/utils'
 import { StreamCard, StreamLoading } from '../StreamCard'
 import { UncertifiedServerWarning } from '../UncertifiedServerWarning'
 import { useStreamTab } from '../StreamTabContext'
-import { useCamFps, useCamStatus, useInstallPath, useServerList } from './cams/camToolHooks'
+import { useCamFps, useCamStatus, useCamVolume, useInstallPath, useServerList } from './cams/camToolHooks'
 import {
     CAM_TEAMS,
     DETECTED_CHOICES,
+    NO_PASSWORDS,
     buildCamToolView,
     camErrorMessages,
     serverAddressOf,
     type CamServerChoice,
     type CamServerChoices,
+    type CamServerPasswords,
     type CamStatusView,
+    type CamTeamPasswordView,
     type CamTeamServerView,
     type CamToolError,
 } from './cams/camToolView'
@@ -77,19 +81,28 @@ function detectionText(view: CamTeamServerView): string {
     return `No ${view.teamName} player is on a listed server right now.`
 }
 
+function passwordPlaceholder(password: CamTeamPasswordView): string {
+    return password.sharedFrom ? `Same as Team ${password.sharedFrom}` : 'Only for a locked server'
+}
+
 function TeamServerPicker({
     view,
+    password,
     servers,
     onChange,
+    onPasswordChange,
     disabled,
 }: {
     view: CamTeamServerView
+    password: CamTeamPasswordView
     servers: readonly Server[] | null
     onChange: (choice: CamServerChoice) => void
+    onPasswordChange: (value: string) => void
     disabled: boolean
 }) {
     const selectId = useId()
     const typedId = useId()
+    const passwordId = useId()
     const tone = teamTone(view.team)
     const choice = view.choice
     const pickedMissing = choice.mode === 'list' && !servers?.some(server => serverAddressOf(server) === choice.address)
@@ -145,6 +158,20 @@ function TeamServerPicker({
             )}
             <p className="text-xs text-muted-foreground break-words">{detectionText(view)}</p>
             {view.uncertified && <UncertifiedServerWarning testId={`cam-team-${view.team}-uncertified`} />}
+            <label htmlFor={passwordId} className="block text-[10px] uppercase tracking-wider text-muted-foreground">Server password</label>
+            <input
+                id={passwordId}
+                type="password"
+                value={password.value}
+                disabled={disabled}
+                onChange={event => onPasswordChange(event.target.value)}
+                placeholder={passwordPlaceholder(password)}
+                maxLength={CAM_PASSWORD_MAX_LENGTH}
+                spellCheck={false}
+                autoComplete="off"
+                aria-invalid={password.invalid}
+                className={cn(FIELD, password.invalid && 'border-red-500/50')}
+            />
             <p className="text-xs text-foreground break-all">
                 <span className="text-muted-foreground">Cams join </span>
                 <span data-testid={`cam-team-${view.team}-address`} className="font-mono">{view.address ?? '—'}</span>
@@ -188,6 +215,61 @@ function FpsPicker({
                 120 keeps the cams smooth on a 60 fps stream. Pick 60 if your PC struggles to run four cams. It applies the next time the cams launch or restart.
             </p>
             {saveFailed && <p role="alert" className="text-xs text-amber-300 break-words">Could not save the frame rate, so it resets when the launcher restarts.</p>}
+        </div>
+    )
+}
+
+function VolumePicker({
+    volume,
+    onChoose,
+    saveFailed,
+    disabled,
+}: {
+    volume: number | undefined
+    onChoose: (volume: number) => void
+    saveFailed: boolean
+    disabled: boolean
+}) {
+    const id = useId()
+    const [draft, setDraft] = useState<number | null>(null)
+    const percent = draft ?? volume ?? 0
+    const Icon = percent === 0 ? VolumeX : Volume2
+
+    function commit() {
+        if (draft === null) return
+        setDraft(null)
+        if (draft !== volume) onChoose(draft)
+    }
+
+    return (
+        <div className="max-w-md space-y-2">
+            <div className="flex items-center justify-between gap-3">
+                <label htmlFor={id} className="text-[10px] uppercase tracking-wider text-muted-foreground">Cam volume</label>
+                <span aria-hidden className="inline-flex items-center gap-1.5 text-xs font-bold tabular-nums text-foreground">
+                    <Icon className="size-3.5 text-muted-foreground" />
+                    {volume === undefined ? '…' : `${percent}%`}
+                </span>
+            </div>
+            <Slider
+                id={id}
+                min={0}
+                max={CAM_VOLUME_MAX}
+                step={5}
+                value={percent}
+                disabled={disabled || volume === undefined}
+                aria-valuetext={`${percent}%`}
+                onChange={event => setDraft(Number(event.target.value))}
+                onPointerUp={commit}
+                onPointerCancel={commit}
+                onKeyUp={commit}
+                onBlur={commit}
+                style={{ backgroundImage: `linear-gradient(to right, var(--accent-500) ${percent}%, var(--secondary) ${percent}%)` }}
+                className="h-11 bg-transparent bg-[length:100%_0.375rem] bg-center bg-no-repeat accent-[var(--accent-500)] disabled:cursor-default disabled:opacity-50 sm:h-8"
+            />
+            <p className="text-xs text-muted-foreground break-words">
+                Game and announcer volume in all four cams; their music is always off. It applies the next time the cams launch or restart.
+            </p>
+            {saveFailed && <p role="alert" className="text-xs text-amber-300 break-words">Could not save the volume, so it resets when the launcher restarts.</p>}
         </div>
     )
 }
@@ -285,17 +367,23 @@ export function CamTool() {
     const { servers, failed: serversFailed } = useServerList()
     const { status, setStatus, read } = useCamStatus()
     const { fps, choose: chooseFps, saveFailed: fpsSaveFailed } = useCamFps()
+    const { volume, choose: chooseVolume, saveFailed: volumeSaveFailed } = useCamVolume()
     const [stored, setStored] = useNavState<StoredChoices>('event.camServers', NO_STORED_CHOICES)
+    const [passwords, setPasswords] = useNavState<CamServerPasswords>('event.camPasswords', NO_PASSWORDS)
     const busy = useRef(false)
     const [pending, setPending] = useState(false)
     const [errors, setErrors] = useState<string[]>([])
 
     const matchId = desk?.match?.id ?? null
     const choices = stored.matchId === matchId ? stored.choices : DETECTED_CHOICES
-    const view = buildCamToolView({ desk, servers, choices, installPath, status, fps })
+    const view = buildCamToolView({ desk, servers, choices, passwords, installPath, status, fps, volume })
 
     function changeChoice(team: CamTeam, choice: CamServerChoice) {
         setStored({ matchId, choices: { ...choices, [team]: choice } })
+    }
+
+    function changePassword(team: CamTeam, value: string) {
+        setPasswords({ ...passwords, [team]: value })
     }
 
     async function run(action: CamAction) {
@@ -358,9 +446,11 @@ export function CamTool() {
                             <TeamServerPicker
                                 key={team}
                                 view={view.teams[team]}
+                                password={view.passwords[team]}
                                 servers={servers}
                                 disabled={pending}
                                 onChange={choice => changeChoice(team, choice)}
+                                onPasswordChange={value => changePassword(team, value)}
                             />
                         ))}
                     </div>
@@ -371,10 +461,15 @@ export function CamTool() {
                                 : "The teams are on two servers, so each team's cams join its own."}
                         </p>
                     )}
+                    <p className="text-xs text-muted-foreground break-words">
+                        Is the server locked? Type its password and the cams join without the password prompt. When both teams are on one server, typing it once is enough.
+                    </p>
                     {serversFailed && <p className="text-xs text-amber-300">Could not refresh the server list, retrying.</p>}
                 </div>
 
                 <FpsPicker fps={fps} onChoose={next => void chooseFps(next)} saveFailed={fpsSaveFailed} disabled={pending} />
+
+                <VolumePicker volume={volume} onChoose={next => void chooseVolume(next)} saveFailed={volumeSaveFailed} disabled={pending} />
 
                 {launchBlockers.length > 0 && (
                     <ul aria-label="Why the cams can't launch" className="space-y-1.5">

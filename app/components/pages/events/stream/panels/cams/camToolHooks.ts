@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { CamToolStatus } from '@/lib/conveyor/schemas/stream-kit-schema'
-import { DEFAULT_CAM_FPS, type CamFps } from '@/lib/stream-kit/cam-plan'
+import { DEFAULT_CAM_FPS, DEFAULT_CAM_VOLUME, type CamFps } from '@/lib/stream-kit/cam-plan'
 import { usePlatform } from '@/app/platform'
 import { createPoller } from '@/app/utils/poller'
 import type { Server } from '@/app/utils/server-utils'
@@ -121,4 +121,33 @@ export function useCamFps() {
     }, [])
 
     return { fps, choose, saveFailed }
+}
+
+export function useCamVolume() {
+    const [volume, setVolume] = useState<number | undefined>(undefined)
+    const [saveFailed, setSaveFailed] = useState(false)
+    const chosen = useRef(false)
+    const saves = useRef(0)
+
+    useEffect(() => {
+        let active = true
+        window.conveyor.streamKit.getCamVolume()
+            .catch(() => DEFAULT_CAM_VOLUME)
+            .then(stored => {
+                if (active && !chosen.current) setVolume(stored)
+            })
+        return () => {
+            active = false
+        }
+    }, [])
+
+    const choose = useCallback(async (next: number) => {
+        chosen.current = true
+        const save = ++saves.current
+        setVolume(next)
+        const saved = await window.conveyor.streamKit.setCamVolume(next).then(() => true, () => false)
+        if (save === saves.current) setSaveFailed(!saved)
+    }, [])
+
+    return { volume, choose, saveFailed }
 }

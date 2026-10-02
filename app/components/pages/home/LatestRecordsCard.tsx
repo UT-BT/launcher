@@ -18,7 +18,7 @@ const RECORD_COLUMNS: ResponsiveColumn[] = [
     { id: 'map', required: true },
     { id: 'holder', width: '9rem', priority: 30, required: true },
     { id: 'time', width: '5rem', priority: 70, required: true },
-    { id: 'when', width: '4rem', priority: 10 },
+    { id: 'when', width: '7rem', priority: 10 },
     { id: 'replay', width: '3rem', priority: 20 },
 ]
 
@@ -80,7 +80,7 @@ export function LatestRecordsCard({
                         className="font-mono tabular-nums font-bold text-blue-300"
                     />
                     <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground tabular-nums">{r.timeAgo}</span>
+                        <span className="text-xs text-muted-foreground tabular-nums whitespace-nowrap">{r.timeAgo}</span>
                         <IconActionButton
                             variant="replay"
                             icon={Play}
@@ -119,7 +119,7 @@ export function LatestRecordsCard({
                 <DataTableHeaderCell align="center">Map</DataTableHeaderCell>
                 {isVisible('holder') && <DataTableHeaderCell align="center" width="9rem">Holder</DataTableHeaderCell>}
                 {isVisible('time') && <DataTableHeaderCell align="center" width="5rem">Time</DataTableHeaderCell>}
-                {isVisible('when') && <DataTableHeaderCell align="center" width="4rem">When</DataTableHeaderCell>}
+                {isVisible('when') && <DataTableHeaderCell align="center" width="7rem">When</DataTableHeaderCell>}
                 {isVisible('replay') && <DataTableHeaderCell align="center" width="3rem" />}
             </DataTableHeaderRow>
             <tbody>
@@ -174,7 +174,7 @@ export function LatestRecordsCard({
                             {isVisible('when') && (
                                 <DataTableCell>
                                     <div className="flex justify-center">
-                                        <span className="text-xs text-muted-foreground tabular-nums">{r.timeAgo}</span>
+                                        <span className="text-xs text-muted-foreground tabular-nums whitespace-nowrap">{r.timeAgo}</span>
                                     </div>
                                 </DataTableCell>
                             )}

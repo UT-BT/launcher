@@ -1,5 +1,14 @@
 import type { CamRequest, CamToolStatus } from '@/lib/conveyor/schemas/stream-kit-schema'
-import { CAM_SLOTS, CAM_WINDOW_TITLES, parseServerAddress, type CamFps, type CamSlot, type CamTeam } from '@/lib/stream-kit/cam-plan'
+import {
+    CAM_PASSWORD_MAX_LENGTH,
+    CAM_SLOTS,
+    CAM_WINDOW_TITLES,
+    isValidServerPassword,
+    parseServerAddress,
+    type CamFps,
+    type CamSlot,
+    type CamTeam,
+} from '@/lib/stream-kit/cam-plan'
 import { isDiscordId } from '@/lib/stream-kit/discord-id'
 import { detectTeamServers } from '@/lib/stream-kit/team-server-detection'
 import type { Server } from '@/app/utils/server-utils'
@@ -14,6 +23,10 @@ export type CamServerChoices = Record<CamTeam, CamServerChoice>
 
 export const DETECTED_CHOICES: CamServerChoices = { A: { mode: 'detected' }, B: { mode: 'detected' } }
 
+export type CamServerPasswords = Record<CamTeam, string>
+
+export const NO_PASSWORDS: CamServerPasswords = { A: '', B: '' }
+
 export const CAM_TEAMS: readonly CamTeam[] = ['A', 'B']
 
 const DEFAULT_PORT = 7777
@@ -27,9 +40,11 @@ export interface CamToolViewInput {
     desk: StreamDesk | null
     servers: readonly Server[] | null
     choices: CamServerChoices
+    passwords: CamServerPasswords
     installPath: string | null | undefined
     status: CamToolStatus | null
     fps: CamFps | undefined
+    volume: number | undefined
 }
 
 export type CamServerProblem = 'loading' | 'not-detected' | 'invalid-address'
@@ -46,6 +61,14 @@ export interface CamTeamServerView {
     problem: CamServerProblem | null
 }
 
+export interface CamTeamPasswordView {
+    team: CamTeam
+    value: string
+    effective: string
+    sharedFrom: CamTeam | null
+    invalid: boolean
+}
+
 export interface CamLineupSlotView {
     slot: CamSlot
     team: CamTeam
@@ -59,6 +82,7 @@ export type CamLaunchBlocker =
     | { code: 'no-match'; message: string }
     | { code: 'lineup'; slots: CamSlot[]; message: string }
     | { code: 'server'; team: CamTeam; message: string }
+    | { code: 'password'; team: CamTeam; message: string }
     | { code: 'install-path'; message: string }
 
 export interface CamLaunchView {
@@ -83,6 +107,7 @@ export interface CamStatusView {
 
 export interface CamToolView {
     teams: Record<CamTeam, CamTeamServerView>
+    passwords: Record<CamTeam, CamTeamPasswordView>
     layout: 'one-server' | 'two-servers' | null
     lineup: CamLineupSlotView[]
     launch: CamLaunchView
@@ -180,6 +205,34 @@ function buildTeams(match: StreamMatch | null, servers: readonly Server[] | null
     return { A: build('A'), B: build('B') }
 }
 
+function otherTeam(team: CamTeam): CamTeam {
+    return team === 'A' ? 'B' : 'A'
+}
+
+function buildPasswords(teams: Record<CamTeam, CamTeamServerView>, passwords: CamServerPasswords): Record<CamTeam, CamTeamPasswordView> {
+    const build = (team: CamTeam): CamTeamPasswordView => {
+        const own = passwords[team].trim()
+        const other = otherTeam(team)
+        const otherOwn = passwords[other].trim()
+        const address = teams[team].address
+        const shared = own === '' && otherOwn !== '' && isValidServerPassword(otherOwn)
+            && address !== null && address === teams[other].address
+        return {
+            team,
+            value: passwords[team],
+            effective: shared ? otherOwn : own,
+            sharedFrom: shared ? other : null,
+            invalid: !isValidServerPassword(own),
+        }
+    }
+
+    return { A: build('A'), B: build('B') }
+}
+
+function passwordBlockerMessage(teamName: string): string {
+    return `The password typed for ${teamName} can't be sent to the game. It can't contain spaces, ?, # or ", and it can be at most ${CAM_PASSWORD_MAX_LENGTH} characters.`
+}
+
 function serverBlockerMessage(view: CamTeamServerView): string {
     if (view.problem === 'invalid-address') {
         return `The address typed for ${view.teamName} can't be joined. Use host:port, for example 203.0.113.5:7777.`
@@ -197,8 +250,10 @@ function buildLaunch(
     match: StreamMatch | null,
     lineup: CamLineupSlotView[],
     teams: Record<CamTeam, CamTeamServerView>,
+    passwords: Record<CamTeam, CamTeamPasswordView>,
     installPath: string | null | undefined,
     fps: CamFps | undefined,
+    volume: number | undefined,
 ): CamLaunchView {
     const blockers: CamLaunchBlocker[] = []
     const installMissing = installPath !== undefined && !(installPath ?? '').trim()
@@ -212,19 +267,24 @@ function buildLaunch(
             const view = teams[team]
             if (view.problem && view.problem !== 'loading') blockers.push({ code: 'server', team, message: serverBlockerMessage(view) })
         }
+        for (const team of CAM_TEAMS) {
+            if (passwords[team].invalid) blockers.push({ code: 'password', team, message: passwordBlockerMessage(teams[team].teamName) })
+        }
     }
     if (installMissing) {
         blockers.push({ code: 'install-path', message: `The cams start from your own UT install, and the launcher doesn't know where it is. ${SETTINGS_HINT}` })
     }
 
-    const ready = blockers.length === 0 && match !== null && installPath !== undefined && fps !== undefined
+    const ready = blockers.length === 0 && match !== null && installPath !== undefined && fps !== undefined && volume !== undefined
         && CAM_TEAMS.every(team => teams[team].address !== null)
     const idOf = (slot: CamSlot) => lineup.find(entry => entry.slot === slot)?.discordId ?? null
     const request: CamRequest | null = ready
         ? {
             lineup: { A1: idOf('A1'), A2: idOf('A2'), B1: idOf('B1'), B2: idOf('B2') },
             servers: { A: teams.A.address, B: teams.B.address },
+            passwords: { A: passwords.A.effective || null, B: passwords.B.effective || null },
             fps,
+            volume,
         }
         : null
 
@@ -287,16 +347,18 @@ function buildCams(
     })
 }
 
-export function buildCamToolView({ desk, servers, choices, installPath, status, fps }: CamToolViewInput): CamToolView {
+export function buildCamToolView({ desk, servers, choices, passwords, installPath, status, fps, volume }: CamToolViewInput): CamToolView {
     const match = desk?.match ?? null
     const lineup = buildLineup(match)
     const teams = buildTeams(match, servers, choices)
-    const launch = buildLaunch(match, lineup, teams, installPath, fps)
+    const teamPasswords = buildPasswords(teams, passwords)
+    const launch = buildLaunch(match, lineup, teams, teamPasswords, installPath, fps, volume)
     const cams = buildCams(status, lineup, knownNames(match), servers, launch.request !== null)
     const addresses = CAM_TEAMS.map(team => teams[team].address)
 
     return {
         teams,
+        passwords: teamPasswords,
         layout: addresses.every(address => address !== null)
             ? addresses[0] === addresses[1] ? 'one-server' : 'two-servers'
             : null,
@@ -330,6 +392,8 @@ export function camErrorMessage(error: CamToolError): string {
             return `Team ${error.team} has no server.`
         case 'invalid-server':
             return `Team ${error.team}'s server address (${error.value}) can't be joined.`
+        case 'invalid-password':
+            return `Team ${error.team}'s server password can't be sent to the game.`
         case 'unsupported-platform':
             return 'The cam tool runs on Windows only.'
         case 'write-failed':
