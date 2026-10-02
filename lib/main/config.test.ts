@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { getCamFps, setActiveProfile, setCamFps } from './config'
+import { getCamFps, getCamVolume, setActiveProfile, setCamFps, setCamVolume } from './config'
 
 const userData = vi.hoisted(() => ({ path: '' }))
 
@@ -62,5 +62,30 @@ describe('cam fps preference', () => {
         storeRaw('{ not json')
 
         expect(getCamFps()).toBe(120)
+    })
+})
+
+describe('cam volume preference', () => {
+    it('defaults to 50 when nothing is stored', () => {
+        expect(getCamVolume()).toBe(50)
+    })
+
+    it('persists the chosen value next to the rest of the config', () => {
+        setCamFps(60)
+        setCamVolume(30)
+
+        expect(JSON.parse(readFileSync(configFile(), 'utf-8'))).toEqual({ camFps: 60, camVolume: 30 })
+        expect(getCamVolume()).toBe(30)
+
+        setCamVolume(0)
+
+        expect(getCamVolume()).toBe(0)
+    })
+
+    it('falls back to 50 for a stored value that is not a whole percentage', () => {
+        for (const camVolume of [-5, 101, 12.5, '30', null, true]) {
+            storeRaw(JSON.stringify({ camVolume }))
+            expect(getCamVolume()).toBe(50)
+        }
     })
 })

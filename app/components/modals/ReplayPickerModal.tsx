@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Loader2, ChevronLeft, ChevronRight, Download, Play, Columns2 } from 'lucide-react'
+import { Loader2, ChevronLeft, ChevronRight, Download, Play, Columns2, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Modal } from '@/app/components/ui/modal'
 import { Tooltip } from '@/app/components/ui/tooltip'
@@ -50,6 +50,23 @@ function readCache(mapName: string): RunRow[] | null {
 
 function writeCache(mapName: string, rows: RunRow[]): void {
     replayCache.set(mapName, { rows, fetchedAt: Date.now() })
+}
+
+function NoReplayIndicator({ padded = false }: { padded?: boolean }) {
+    return (
+        <Tooltip content="No replay available" side="top">
+            <span
+                role="img"
+                aria-label="No replay available"
+                className={cn(
+                    'inline-flex items-center justify-center text-rose-400/50 shrink-0',
+                    padded ? 'size-7 rounded-md' : 'size-4',
+                )}
+            >
+                <X className="size-5" aria-hidden="true" />
+            </span>
+        </Tooltip>
+    )
 }
 
 export function ReplayPickerModal({
@@ -280,7 +297,7 @@ export function ReplayPickerModal({
                                             {checking ? (
                                                 <Loader2 className="size-4 animate-spin text-muted-foreground/60 shrink-0" />
                                             ) : unavailable ? (
-                                                <span className="text-[10px] uppercase tracking-wider text-muted-foreground/60 shrink-0">No replay</span>
+                                                <NoReplayIndicator />
                                             ) : (
                                                 <Columns2 className="size-4 text-accent-300/80 shrink-0" />
                                             )}
@@ -330,11 +347,11 @@ export function ReplayPickerModal({
                                             {formatCapTime(row.entry.cap_time_seconds)}
                                         </span>
                                         {checking ? (
-                                            <Loader2 className="size-4 animate-spin text-muted-foreground/60 shrink-0" />
-                                        ) : unavailable ? (
-                                            <span className="text-[10px] uppercase tracking-wider text-muted-foreground/60 shrink-0">
-                                                No replay
+                                            <span className="inline-flex size-7 items-center justify-center shrink-0">
+                                                <Loader2 className="size-4 animate-spin text-muted-foreground/60" />
                                             </span>
+                                        ) : unavailable ? (
+                                            <NoReplayIndicator padded />
                                         ) : (
                                             <Tooltip content={compareMode ? 'Compare side by side' : 'Watch'} side="top">
                                                 <button

@@ -60,7 +60,7 @@ export function NewsPage({ userProfile }: NewsPageProps) {
     const firstNewIdx = filtered.findIndex(a => highlight.isNew(a.publishedAt))
 
     return (
-        <div ref={scrollRef} onScroll={onScroll} className="h-full overflow-y-auto custom-scrollbar">
+        <div ref={scrollRef} onScroll={onScroll} className="h-full overflow-y-auto">
             <div className="p-6 space-y-5">
                 <header className="flex items-center gap-2.5">
                     <span className="h-5 w-1 rounded-full bg-accent-400 shrink-0" aria-hidden />

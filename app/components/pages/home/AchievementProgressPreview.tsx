@@ -43,7 +43,7 @@ export function AchievementProgressPreview({ achievements, definitions }: Achiev
     }
 
     return (
-        <div className="grid grid-cols-2 gap-2 max-h-[15.5rem] overflow-y-auto pr-1 [scrollbar-width:thin] [scrollbar-color:rgba(148,163,184,0.25)_transparent] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-hairline/20 sm:max-h-none sm:overflow-visible sm:pr-0">
+        <div className="grid grid-cols-2 gap-2 max-h-[15.5rem] overflow-y-auto pr-1 sm:max-h-none sm:overflow-visible sm:pr-0">
             {rows.map(a => {
                 const pct = Math.max(0, Math.min(100, a.percent_to_next || 0))
                 const remaining = a.next_threshold == null ? 0 : Math.max(0, a.next_threshold - a.current_value)

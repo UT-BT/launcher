@@ -45,6 +45,37 @@
   color-scheme: light;
 }
 
+/* Shared by every scroll container, including the viewport and portaled menus. */
+@layer base {
+  @media (forced-colors: none) {
+    :root {
+      --scrollbar-thumb: rgba(148, 163, 184, 0.25);
+    }
+
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: var(--scrollbar-thumb) transparent;
+    }
+
+    /* Preserve the original native thin style; WebKit rules are a fallback only. */
+    @supports not (scrollbar-width: thin) {
+      *::-webkit-scrollbar {
+        @apply size-2;
+      }
+
+      *::-webkit-scrollbar-track,
+      *::-webkit-scrollbar-corner {
+        @apply bg-transparent;
+      }
+
+      *::-webkit-scrollbar-thumb {
+        @apply rounded-full;
+        background-color: var(--scrollbar-thumb);
+      }
+    }
+  }
+}
+
 @keyframes legendaryAvatarPulse {
   0%, 100% { transform: scale(1); filter: brightness(1); }
   50% { transform: scale(1.02); filter: brightness(1.1); }

@@ -697,17 +697,24 @@ export function WorldRecordsPage({
                 onSort: () => handleSort(id as WorldRecordsSortField),
             }
             : {}
+        const headerClass = cn(
+            'normal-case tracking-normal whitespace-nowrap',
+            id === 'map' && '[&>button]:ml-[5.625rem]',
+            id === 'holder' && '[&>button]:ml-[2.125rem]',
+            (id === 'time' || id === 'difficulty' || id === 'date') &&
+                '[&>button]:relative [&>button]:gap-0 [&>button>svg]:absolute [&>button>svg]:left-full [&>button>svg]:ml-1 [&>button>svg]:shrink-0',
+        )
         switch (id) {
             case 'map':
-                return <DataTableHeaderCell key={id} align="left" {...sortProps}>Map</DataTableHeaderCell>
+                return <DataTableHeaderCell key={id} align="left" className={headerClass} {...sortProps}>Map</DataTableHeaderCell>
             case 'holder':
-                return <DataTableHeaderCell key={id} align="left" {...sortProps}>Record Holder</DataTableHeaderCell>
+                return <DataTableHeaderCell key={id} align="left" className={headerClass} {...sortProps}>Record Holder</DataTableHeaderCell>
             case 'time':
-                return <DataTableHeaderCell key={id} align="right" width="8rem" {...sortProps}>Time</DataTableHeaderCell>
+                return <DataTableHeaderCell key={id} align="center" width={COLUMN_WIDTH[id]} className={headerClass} {...sortProps}>Time</DataTableHeaderCell>
             case 'difficulty':
-                return <DataTableHeaderCell key={id} align="center" width="7rem" {...sortProps}>Difficulty</DataTableHeaderCell>
+                return <DataTableHeaderCell key={id} align="center" width={COLUMN_WIDTH[id]} className={headerClass} {...sortProps}>Difficulty</DataTableHeaderCell>
             case 'date':
-                return <DataTableHeaderCell key={id} align="right" width="8rem" {...sortProps}>Date Set</DataTableHeaderCell>
+                return <DataTableHeaderCell key={id} align="center" width={COLUMN_WIDTH[id]} className={headerClass} {...sortProps}>Date Set</DataTableHeaderCell>
             case 'actions':
                 return <DataTableHeaderCell key={id} align="center" width="8.5rem"><span className="sr-only">Actions</span></DataTableHeaderCell>
         }
@@ -777,7 +784,7 @@ export function WorldRecordsPage({
             case 'time': {
                 const isTeamRow = !!(r.members && r.members.length > 0)
                 return (
-                    <DataTableCell key={id} align="right">
+                    <DataTableCell key={id} align="center">
                         <CapTimeLink
                             capId={isTeamRow ? undefined : r.cap_id}
                             teamCapId={isTeamRow ? r.cap_id : undefined}
@@ -801,7 +808,7 @@ export function WorldRecordsPage({
                 )
             case 'date':
                 return (
-                    <DataTableCell key={id} align="right">
+                    <DataTableCell key={id} align="center" className="whitespace-nowrap">
                         <Tooltip content={new Date(r.added).toLocaleString()} side="top">
                             <span className="text-xs text-muted-foreground tabular-nums">
                                 {formatAddedDate(r.added)}
@@ -1250,12 +1257,19 @@ export function WorldRecordsPage({
                     }}
                 >
                     <DataTableHeaderRow theadDataAttr="data-utbt-rushers-thead">
-                        {isRusherColumnVisible('rank') && <DataTableHeaderCell align="right" width="5rem">#</DataTableHeaderCell>}
-                        {isRusherColumnVisible('rusher') && <DataTableHeaderCell align="left">Rusher</DataTableHeaderCell>}
-                        {isRusherColumnVisible('records') && <DataTableHeaderCell align="left" width="20rem">World Records</DataTableHeaderCell>}
-                        {isRusherColumnVisible('share') && <DataTableHeaderCell align="right" width="6rem">Share</DataTableHeaderCell>}
-                        {isRusherColumnVisible('median') && <DataTableHeaderCell align="right" width="8rem">Median WR</DataTableHeaderCell>}
-                        {isRusherColumnVisible('average') && <DataTableHeaderCell align="right" width="8rem">Average WR</DataTableHeaderCell>}
+                        {isRusherColumnVisible('rank') && <DataTableHeaderCell className="normal-case tracking-normal whitespace-nowrap" align="center" width="5rem">#</DataTableHeaderCell>}
+                        {isRusherColumnVisible('rusher') && <DataTableHeaderCell className="normal-case tracking-normal whitespace-nowrap pl-[3.625rem]" align="left">Rusher</DataTableHeaderCell>}
+                        {isRusherColumnVisible('records') && (
+                            <DataTableHeaderCell className="normal-case tracking-normal whitespace-nowrap" align="center" width="20rem">
+                                <div className="flex items-center gap-2.5">
+                                    <span className="flex-1 min-w-16">World Records</span>
+                                    <span className="w-10 shrink-0" aria-hidden="true" />
+                                </div>
+                            </DataTableHeaderCell>
+                        )}
+                        {isRusherColumnVisible('share') && <DataTableHeaderCell className="normal-case tracking-normal whitespace-nowrap" align="center" width="6rem">Share</DataTableHeaderCell>}
+                        {isRusherColumnVisible('median') && <DataTableHeaderCell className="normal-case tracking-normal whitespace-nowrap" align="center" width="8rem">Median WR</DataTableHeaderCell>}
+                        {isRusherColumnVisible('average') && <DataTableHeaderCell className="normal-case tracking-normal whitespace-nowrap" align="center" width="8rem">Average WR</DataTableHeaderCell>}
                     </DataTableHeaderRow>
                     <tbody>
                         {showSkeleton ? (
@@ -1276,7 +1290,7 @@ export function WorldRecordsPage({
                                 return (
                                     <DataTableRow key={r.user_id}>
                                         {isRusherColumnVisible('rank') && (
-                                            <DataTableCell align="right">
+                                            <DataTableCell align="center">
                                                 <span className={cn('font-mono font-bold tabular-nums', medalText(rank))}>
                                                     #{rank}
                                                 </span>
@@ -1307,21 +1321,21 @@ export function WorldRecordsPage({
                                             </DataTableCell>
                                         )}
                                         {isRusherColumnVisible('share') && (
-                                            <DataTableCell align="right">
+                                            <DataTableCell align="center">
                                                 <span className="font-mono tabular-nums text-xs text-muted-foreground">
                                                     {share.toFixed(1)}%
                                                 </span>
                                             </DataTableCell>
                                         )}
                                         {isRusherColumnVisible('median') && (
-                                            <DataTableCell align="right">
+                                            <DataTableCell align="center">
                                                 <span className="font-mono tabular-nums text-xs text-foreground/80">
                                                     {r.median != null ? formatCapTime(r.median) : '—'}
                                                 </span>
                                             </DataTableCell>
                                         )}
                                         {isRusherColumnVisible('average') && (
-                                            <DataTableCell align="right">
+                                            <DataTableCell align="center">
                                                 <span className="font-mono tabular-nums text-xs text-muted-foreground">
                                                     {r.average != null ? formatCapTime(r.average) : '—'}
                                                 </span>

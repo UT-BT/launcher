@@ -106,7 +106,7 @@ export function FavoriteServersCard({
     }
 
     return (
-        <div className="@container/favservers bg-card/30 border border-hairline/5 rounded-xl overflow-hidden max-h-[10.75rem] sm:max-h-[14.25rem] overflow-y-auto pr-1 [scrollbar-width:thin] [scrollbar-color:rgba(148,163,184,0.25)_transparent] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-hairline/20">
+        <div className="@container/favservers bg-card/30 border border-hairline/5 rounded-xl overflow-hidden max-h-[10.75rem] sm:max-h-[14.25rem] overflow-y-auto pr-1">
             {rows.map(server => {
                 const isFull = server.player_count >= server.max_players
                 const canJoin = installationStatus === 'valid' && !isFull
