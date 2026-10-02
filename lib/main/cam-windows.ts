@@ -8,9 +8,11 @@ export interface CamTitleTarget {
 
 export interface CamWindows {
     applyTitles: (targets: readonly CamTitleTarget[]) => Promise<Map<number, boolean>>
+    requestClose: (targets: readonly CamTitleTarget[]) => Map<number, boolean>
 }
 
 const WM_SETTEXT = 0x000c
+const WM_CLOSE = 0x0010
 const GW_OWNER = 4
 const SMTO_ABORTIFHUNG = 0x0002
 const SET_TITLE_TIMEOUT_MS = 1000
@@ -38,6 +40,7 @@ async function bindCamWindows(): Promise<CamWindows> {
     const GetWindowTextW = user32.func('int __stdcall GetWindowTextW(CamHWND hWnd, _Out_ uint8_t *lpString, int nMaxCount)')
     const GetClassNameW = user32.func('int __stdcall GetClassNameW(CamHWND hWnd, _Out_ uint8_t *lpClassName, int nMaxCount)')
     const SendMessageTimeoutW = user32.func('intptr_t __stdcall SendMessageTimeoutW(CamHWND hWnd, uint32_t Msg, uintptr_t wParam, const char16_t *lParam, uint32_t fuFlags, uint32_t uTimeout, _Out_ uintptr_t *lpdwResult)')
+    const PostMessageW = user32.func('bool __stdcall PostMessageW(CamHWND hWnd, uint32_t Msg, uintptr_t wParam, intptr_t lParam)')
 
     const readText = (read: (hwnd: unknown, buffer: Buffer, max: number) => number, hwnd: unknown): string => {
         const buffer = Buffer.alloc(TEXT_BUFFER_CHARS * 2)
@@ -86,6 +89,13 @@ async function bindCamWindows(): Promise<CamWindows> {
                 results.set(target.pid, readText(GetWindowTextW, window.handle) === target.title)
             }))
             return results
+        },
+        requestClose: targets => {
+            const windows = listWindows(new Set(targets.map(target => target.pid)))
+            return new Map(targets.map(target => {
+                const window = pickCamWindow(windows, target.pid, target.title)
+                return [target.pid, window !== null && PostMessageW(window.handle, WM_CLOSE, 0, 0)]
+            }))
         },
     }
 }

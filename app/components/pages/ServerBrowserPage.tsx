@@ -65,28 +65,29 @@ const SERVER_COLUMN_LABELS: Record<ServerColumnId, string> = {
 }
 
 const COLUMN_LAYOUT: Record<ServerColumnId, { width?: string; align?: 'left' | 'center' | 'right' }> = {
-    thumbnail: { width: '4.5rem', align: 'center' },
+    thumbnail: { width: '5rem', align: 'center' },
     type: { width: '3.5rem', align: 'center' },
     name: { align: 'left' },
     map: { width: '14rem', align: 'left' },
-    region: { width: '5rem', align: 'center' },
-    ping: { width: '6rem', align: 'right' },
-    players: { width: '7rem', align: 'center' },
-    spectators: { width: '7rem', align: 'center' },
+    region: { width: '6rem', align: 'center' },
+    ping: { width: '6rem', align: 'center' },
+    players: { width: '9rem', align: 'center' },
+    spectators: { width: '8rem', align: 'center' },
     status: { width: '9rem', align: 'center' },
-    actions: { width: '12rem', align: 'center' },
+    actions: { width: '11rem', align: 'center' },
 }
 
 const REQUIRED_COLUMNS: ReadonlySet<ServerColumnId> = new Set(['name', 'actions'])
 
 const RESPONSIVE_REQUIRED_COLUMNS: ReadonlySet<ServerColumnId> = new Set([
-    'name', 'actions', 'players', 'spectators', 'status',
+    'name', 'actions', 'players', 'spectators',
 ])
 
 const COLUMN_PRIORITY: Partial<Record<ServerColumnId, number>> = {
     map: 60,
-    ping: 55,
-    region: 40,
+    ping: 80,
+    region: 80,
+    status: 20,
     type: 35,
     thumbnail: 30,
 }
@@ -266,7 +267,7 @@ const PlayerListCell = ({ players, displayText, displayColor, singular, plural }
 
     const trigger = (
         <div className={cn(
-            'inline-flex items-center gap-2 px-2 py-1 rounded border transition-colors',
+            'inline-flex max-w-full flex-wrap items-center justify-center gap-1.5 px-2 py-1 rounded border transition-colors',
             sorted.length > 0
                 ? 'bg-card/50 border-hairline/5 hover:border-hairline/20 hover:bg-card/80 cursor-pointer'
                 : 'bg-card/30 border-hairline/5 cursor-default',
@@ -638,6 +639,13 @@ export function ServerBrowserPage({
                     buttonRef={id === 'name' ? sortHeaderRef : undefined}
                     width={layout.width}
                     align={layout.align}
+                    className={cn(
+                        'normal-case tracking-normal whitespace-nowrap',
+                        // FavoriteStar (sm) is 22px wide, followed by gap-2.
+                        id === 'name' && '[&>button]:ml-[1.875rem]',
+                        // Center the text itself; the adjacent sort icon does not affect its position.
+                        layout.align === 'center' && '[&>button]:relative [&>button]:gap-0 [&>button>svg]:absolute [&>button>svg]:left-full [&>button>svg]:ml-1 [&>button>svg]:shrink-0',
+                    )}
                 >
                     {SERVER_COLUMN_LABELS[id]}
                 </DataTableHeaderCell>
@@ -645,7 +653,7 @@ export function ServerBrowserPage({
         }
         const showLabel = id !== 'thumbnail' && id !== 'actions' && id !== 'type'
         return (
-            <DataTableHeaderCell key={id} width={layout.width} align={layout.align}>
+            <DataTableHeaderCell key={id} width={layout.width} align={layout.align} className="normal-case tracking-normal whitespace-nowrap">
                 {showLabel ? SERVER_COLUMN_LABELS[id] : null}
             </DataTableHeaderCell>
         )
@@ -660,7 +668,7 @@ export function ServerBrowserPage({
             case 'thumbnail':
                 return (
                     <DataTableCell key={id} align={align}>
-                        <MapThumbnail mapName={server.map_name} className="w-12 h-12 rounded shadow-sm" />
+                        <MapThumbnail mapName={server.map_name} className="mx-auto w-12 h-12 rounded shadow-sm" />
                     </DataTableCell>
                 )
             case 'type':
@@ -675,8 +683,8 @@ export function ServerBrowserPage({
                 const trimmed = trimServerName(server.hostname).replace(/\s*\([^)]+\)\s*$/, '')
                 return (
                     <DataTableCell key={id} align={align}>
-                        <div className="flex items-center gap-2">
-                            <span ref={isFirstRow ? firstRowFavRef : undefined} className="inline-flex">
+                        <div className="flex items-center gap-2 min-w-0">
+                            <span ref={isFirstRow ? firstRowFavRef : undefined} className="inline-flex shrink-0">
                                 <FavoriteStar
                                     name={trimmed}
                                     isFavorited={favoriteServerIds.has(server.id)}
@@ -684,7 +692,7 @@ export function ServerBrowserPage({
                                     size="sm"
                                 />
                             </span>
-                            <span className="text-sm font-bold text-foreground">{trimmed}</span>
+                            <span className="min-w-0 truncate text-sm font-bold text-foreground" title={trimmed}>{trimmed}</span>
                         </div>
                     </DataTableCell>
                 )
@@ -696,12 +704,12 @@ export function ServerBrowserPage({
                             <MapNavLink
                                 mapName={server.map_name}
                                 onMapSelect={onMapSelect}
-                                className="text-sm font-semibold text-foreground truncate inline-block max-w-[220px] align-middle text-left hover:text-accent-300 hover:underline underline-offset-2 transition-colors cursor-pointer"
+                                className="text-sm font-semibold text-foreground truncate inline-block max-w-full align-middle text-left hover:text-accent-300 hover:underline underline-offset-2 transition-colors cursor-pointer"
                             >
                                 {displayMapName(server.map_name)}
                             </MapNavLink>
                         ) : (
-                            <span className="text-sm font-semibold text-foreground truncate inline-block max-w-[220px] align-middle">
+                            <span className="text-sm font-semibold text-foreground truncate inline-block max-w-full align-middle">
                                 {displayMapName(server.map_name)}
                             </span>
                         )}
@@ -718,7 +726,7 @@ export function ServerBrowserPage({
                                 height={16}
                                 loading="lazy"
                                 decoding="async"
-                                className="h-4 w-6 object-cover rounded-[2px] border border-hairline/10"
+                                className="inline-block align-middle h-4 w-6 object-cover rounded-[2px] border border-hairline/10"
                             />
                         </Tooltip>
                     </DataTableCell>

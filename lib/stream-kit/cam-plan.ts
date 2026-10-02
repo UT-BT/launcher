@@ -41,7 +41,11 @@ export const DEFAULT_CAM_FPS: CamFps = 120
 
 export const CAM_MUSIC_VOLUME = 0
 
-export const CAM_SOUND_VOLUME = 200
+export const CAM_VOLUME_MAX = 100
+
+export const DEFAULT_CAM_VOLUME = 50
+
+const UT_VOLUME_MAX = 255
 
 const ENGINE_SECTION = 'Engine.Engine'
 const GLOBAL_FRAME_RATE_SECTION = 'WinDrv.WindowsClient'
@@ -49,6 +53,41 @@ const FRAME_RATE_KEY = 'FrameRateLimit'
 
 export function camFpsOf(value: unknown): CamFps {
     return CAM_FPS_OPTIONS.find(fps => fps === value) ?? DEFAULT_CAM_FPS
+}
+
+export function camVolumeOf(value: unknown): number {
+    return typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= CAM_VOLUME_MAX
+        ? value
+        : DEFAULT_CAM_VOLUME
+}
+
+export function utVolumeOf(volume: number): number {
+    return Math.round((camVolumeOf(volume) * UT_VOLUME_MAX) / CAM_VOLUME_MAX)
+}
+
+export interface CamIniSetting {
+    key: string
+    value: string
+}
+
+export const CAM_SHADER_GAMMA_SETTINGS: Readonly<Record<string, readonly CamIniSetting[]>> = {
+    'D3D9Drv.D3D9RenderDevice': [
+        { key: 'UseShaderGamma', value: '2' },
+        { key: 'UseFragmentProgram', value: 'True' },
+    ],
+    'OpenGLDrv.OpenGLRenderDevice': [
+        { key: 'UseShaderGamma', value: 'True' },
+        { key: 'UseFragmentProgram', value: 'True' },
+    ],
+}
+
+export const CAM_PASSWORD_MAX_LENGTH = 64
+
+const PASSWORD_OPTION = 'password'
+const PASSWORD_FORBIDDEN = /[\s?#"]/
+
+export function isValidServerPassword(value: string): boolean {
+    return value.length <= CAM_PASSWORD_MAX_LENGTH && !PASSWORD_FORBIDDEN.test(value)
 }
 
 export const CAM_USER_INI_OVERRIDES: readonly IniOverride[] = [
@@ -59,9 +98,11 @@ export interface CamPlanInput {
     installPath: string
     lineup: Partial<Record<CamSlot, string | null>>
     servers: Partial<Record<CamTeam, string | null>>
+    passwords?: Partial<Record<CamTeam, string | null>>
     mainIni: string
     userIni: string
     fps: CamFps
+    volume: number
 }
 
 export interface CamCommand {
@@ -101,6 +142,7 @@ export type CamPlanError =
     | { code: 'invalid-discord-id'; slot: CamSlot; value: string }
     | { code: 'missing-server'; team: CamTeam }
     | { code: 'invalid-server'; team: CamTeam; value: string }
+    | { code: 'invalid-password'; team: CamTeam }
 
 export type CamPlanResult =
     | { ok: true; plan: CamPlan }
@@ -208,18 +250,27 @@ function iniValue(content: string, section: string, key: string): string | null 
     return null
 }
 
-function camIniOverrides(mainIni: string, fps: CamFps): IniOverride[] {
+function shaderGammaOverrides(renderDevice: string): IniOverride[] {
+    const settings = Object.entries(CAM_SHADER_GAMMA_SETTINGS).find(([device]) => sameName(device, renderDevice))?.[1] ?? []
+    return settings.map(setting => ({ section: renderDevice, ...setting }))
+}
+
+function camIniOverrides(mainIni: string, fps: CamFps, volume: number): IniOverride[] {
     const renderDevice = iniValue(mainIni, ENGINE_SECTION, 'GameRenderDevice')
     const audioDevice = iniValue(mainIni, ENGINE_SECTION, 'AudioDevice')
     const frameRate = String(fps)
+    const gameVolume = String(utVolumeOf(volume))
     return [
         ...CAM_INI_OVERRIDES,
         { section: GLOBAL_FRAME_RATE_SECTION, key: FRAME_RATE_KEY, value: frameRate },
-        ...(renderDevice ? [{ section: renderDevice, key: FRAME_RATE_KEY, value: frameRate }] : []),
+        ...(renderDevice
+            ? [{ section: renderDevice, key: FRAME_RATE_KEY, value: frameRate }, ...shaderGammaOverrides(renderDevice)]
+            : []),
         ...(audioDevice
             ? [
                 { section: audioDevice, key: 'MusicVolume', value: String(CAM_MUSIC_VOLUME) },
-                { section: audioDevice, key: 'SoundVolume', value: String(CAM_SOUND_VOLUME) },
+                { section: audioDevice, key: 'SoundVolume', value: gameVolume },
+                { section: audioDevice, key: 'SpeechVolume', value: gameVolume },
             ]
             : []),
     ]
@@ -247,9 +298,10 @@ function joinOptionsFor(discordId: string): Record<string, string> {
     )
 }
 
-function connectUrl(address: string, joinOptions: Record<string, string>): string {
+function connectUrl(address: string, joinOptions: Record<string, string>, password: string): string {
     const options = Object.entries(joinOptions).map(([name, value]) => `?${name}=${value}`).join('')
-    return `unreal://${address}${options}`
+    const passwordOption = password === '' ? '' : `?${PASSWORD_OPTION}=${password}`
+    return `unreal://${address}${options}${passwordOption}`
 }
 
 export function buildCamPlan(input: CamPlanInput): CamPlanResult {
@@ -275,10 +327,17 @@ export function buildCamPlan(input: CamPlanInput): CamPlanResult {
         else servers[team] = `${address.host}:${address.port}`
     }
 
+    const passwords: Partial<Record<CamTeam, string>> = {}
+    for (const team of CAM_TEAMS) {
+        const value = (input.passwords?.[team] ?? '').trim()
+        if (!isValidServerPassword(value)) errors.push({ code: 'invalid-password', team })
+        else passwords[team] = value
+    }
+
     if (errors.length > 0) return { ok: false, errors }
 
     const systemDirectory = systemDirectoryOf(input.installPath)
-    const iniContent = applyIniOverrides(input.mainIni, camIniOverrides(input.mainIni, input.fps))
+    const iniContent = applyIniOverrides(input.mainIni, camIniOverrides(input.mainIni, input.fps, input.volume))
     const userIniContent = applyIniOverrides(input.userIni, CAM_USER_INI_OVERRIDES)
     const cams = CAM_SLOTS.map((slot): CamPlanCam => {
         const team = teamOf(slot)
@@ -286,7 +345,7 @@ export function buildCamPlan(input: CamPlanInput): CamPlanResult {
         const server = servers[team] ?? ''
         const files = camFilesFor(slot)
         const joinOptions = joinOptionsFor(discordId)
-        const url = connectUrl(server, joinOptions)
+        const url = connectUrl(server, joinOptions, passwords[team] ?? '')
         return {
             slot,
             team,

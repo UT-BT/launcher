@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { AUDIO_DEVICE_SETTINGS, RENDER_DEVICE_SETTINGS } from '@/app/components/pages/settings/constants'
-import { buildCamPlan, CAM_FPS_OPTIONS, camFpsOf, type CamPlan, type CamPlanInput } from './cam-plan'
+import { buildCamPlan, CAM_FPS_OPTIONS, camFpsOf, camVolumeOf, isValidServerPassword, utVolumeOf, type CamPlan, type CamPlanInput } from './cam-plan'
 
 const A1 = '111111111111111111'
 const A2 = '222222222222222222'
@@ -54,6 +54,7 @@ function input(overrides: Partial<CamPlanInput> = {}): CamPlanInput {
         mainIni: MAIN_INI,
         userIni: USER_INI,
         fps: 120,
+        volume: 50,
         ...overrides,
     }
 }
@@ -136,12 +137,14 @@ describe('buildCamPlan per-instance ini', () => {
             '[D3D9Drv.D3D9RenderDevice]',
             'FrameRateLimit=120',
             'UseVSync=True',
+            'UseShaderGamma=2',
+            'UseFragmentProgram=True',
             '',
             '[ALAudio.ALAudioSubsystem]',
             'UseDigitalMusic=True',
             'MusicVolume=0',
-            'SoundVolume=200',
-            'SpeechVolume=255',
+            'SoundVolume=128',
+            'SpeechVolume=128',
             '',
         ].join('\r\n'))
     })
@@ -250,6 +253,10 @@ function mainIniWith(engine: string[], sections: Record<string, string[]>): stri
 }
 
 const RENDER_DEVICES = Object.keys(RENDER_DEVICE_SETTINGS)
+const SHADER_GAMMA_LINES: Record<string, string[]> = {
+    'D3D9Drv.D3D9RenderDevice': ['UseShaderGamma=2', 'UseFragmentProgram=True'],
+    'OpenGLDrv.OpenGLRenderDevice': ['UseShaderGamma=True', 'UseFragmentProgram=True'],
+}
 const AUDIO_DEVICES = Object.keys(AUDIO_DEVICE_SETTINGS)
 
 describe('buildCamPlan frame rate', () => {
@@ -269,7 +276,7 @@ describe('buildCamPlan frame rate', () => {
                 const cam = planOf(input({ mainIni, fps })).cams[0]
 
                 expect(sectionOf(cam.iniContent, 'WinDrv.WindowsClient')).toContain(`FrameRateLimit=${fps}`)
-                expect(sectionOf(cam.iniContent, device)).toEqual([`FrameRateLimit=${fps}`, 'Coronas=True'])
+                expect(sectionOf(cam.iniContent, device)).toEqual([`FrameRateLimit=${fps}`, 'Coronas=True', ...(SHADER_GAMMA_LINES[device] ?? [])])
                 expect(sectionOf(cam.iniContent, otherDevice)).toEqual(['FrameRateLimit=0'])
             })
         }
@@ -279,7 +286,7 @@ describe('buildCamPlan frame rate', () => {
 
             const cam = planOf(input({ mainIni, fps: 60 })).cams[0]
 
-            expect(sectionOf(cam.iniContent, device)).toEqual(['FrameRateLimit=60'])
+            expect(sectionOf(cam.iniContent, device)).toEqual(['FrameRateLimit=60', ...(SHADER_GAMMA_LINES[device] ?? [])])
         })
     }
 
@@ -290,7 +297,7 @@ describe('buildCamPlan frame rate', () => {
 
         const cam = planOf(input({ mainIni, fps: 60 })).cams[0]
 
-        expect(sectionOf(cam.iniContent, 'OpenGLDrv.OpenGLRenderDevice')).toEqual(['FrameRateLimit=60'])
+        expect(sectionOf(cam.iniContent, 'OpenGLDrv.OpenGLRenderDevice')).toEqual(['FrameRateLimit=60', ...SHADER_GAMMA_LINES['OpenGLDrv.OpenGLRenderDevice']])
     })
 
     it('reads the render device from the engine section only', () => {
@@ -310,6 +317,57 @@ describe('buildCamPlan frame rate', () => {
     })
 })
 
+describe('buildCamPlan shader gamma', () => {
+    it('switches D3D9 to shader gamma so the brightness is drawn into the frame OBS captures', () => {
+        const mainIni = mainIniWith(['GameRenderDevice=D3D9Drv.D3D9RenderDevice'], {
+            'D3D9Drv.D3D9RenderDevice': ['UseShaderGamma=0', 'UseFragmentProgram=False', 'GammaOffset=0.000000'],
+        })
+
+        const cam = planOf(input({ mainIni })).cams[0]
+
+        expect(sectionOf(cam.iniContent, 'D3D9Drv.D3D9RenderDevice')).toEqual([
+            'UseShaderGamma=2',
+            'UseFragmentProgram=True',
+            'GammaOffset=0.000000',
+            'FrameRateLimit=120',
+        ])
+    })
+
+    it('switches OpenGL to shader gamma when the streamer turned it off', () => {
+        const mainIni = mainIniWith(['GameRenderDevice=OpenGLDrv.OpenGLRenderDevice'], {
+            'OpenGLDrv.OpenGLRenderDevice': ['UseShaderGamma=False', 'UseFragmentProgram=False'],
+        })
+
+        const cam = planOf(input({ mainIni })).cams[0]
+
+        expect(sectionOf(cam.iniContent, 'OpenGLDrv.OpenGLRenderDevice')).toEqual([
+            'UseShaderGamma=True',
+            'UseFragmentProgram=True',
+            'FrameRateLimit=120',
+        ])
+    })
+
+    it('leaves the gamma of renderers that already draw it into the frame alone', () => {
+        for (const device of ['D3D11Drv.D3D11RenderDevice', 'VulkanDrv.VulkanRenderDevice', 'XOpenGLDrv.XOpenGLRenderDevice']) {
+            const mainIni = mainIniWith([`GameRenderDevice=${device}`], { [device]: ['GammaOffset=0.000000'] })
+
+            const cam = planOf(input({ mainIni })).cams[0]
+
+            expect(sectionOf(cam.iniContent, device)).toEqual(['GammaOffset=0.000000', 'FrameRateLimit=120'])
+        }
+    })
+
+    it('only touches the renderer the streamer plays with', () => {
+        const mainIni = mainIniWith(['GameRenderDevice=D3D11Drv.D3D11RenderDevice'], {
+            'D3D9Drv.D3D9RenderDevice': ['UseShaderGamma=0'],
+        })
+
+        const cam = planOf(input({ mainIni })).cams[0]
+
+        expect(sectionOf(cam.iniContent, 'D3D9Drv.D3D9RenderDevice')).toEqual(['UseShaderGamma=0'])
+    })
+})
+
 describe('camFpsOf', () => {
     it('keeps 60 and 120', () => {
         expect(camFpsOf(60)).toBe(60)
@@ -325,14 +383,14 @@ describe('camFpsOf', () => {
 
 describe('buildCamPlan audio', () => {
     for (const device of AUDIO_DEVICES) {
-        it(`turns the music off and sets the fixed sound volume in ${device} only`, () => {
+        it(`turns the music off and sets the chosen game and speech volume in ${device} only`, () => {
             const untouched = ['UseDigitalMusic=True', 'MusicVolume=160', 'SoundVolume=255']
             const sections = Object.fromEntries(AUDIO_DEVICES.map(name => [name, untouched]))
             const mainIni = mainIniWith([`AudioDevice=${device}`], sections)
 
             const cam = planOf(input({ mainIni })).cams[0]
 
-            expect(sectionOf(cam.iniContent, device)).toEqual(['UseDigitalMusic=True', 'MusicVolume=0', 'SoundVolume=200'])
+            expect(sectionOf(cam.iniContent, device)).toEqual(['UseDigitalMusic=True', 'MusicVolume=0', 'SoundVolume=128', 'SpeechVolume=128'])
             for (const other of AUDIO_DEVICES.filter(name => name !== device)) {
                 expect(sectionOf(cam.iniContent, other)).toEqual(untouched)
             }
@@ -345,7 +403,7 @@ describe('buildCamPlan audio', () => {
 
             const cam = planOf(input({ mainIni })).cams[0]
 
-            expect(sectionOf(cam.iniContent, device)).toEqual(['MusicVolume=0', 'SoundVolume=200'])
+            expect(sectionOf(cam.iniContent, device)).toEqual(['MusicVolume=0', 'SoundVolume=128', 'SpeechVolume=128'])
         })
     }
 
@@ -355,7 +413,35 @@ describe('buildCamPlan audio', () => {
             return planOf(input({ mainIni })).cams.map(cam => sectionOf(cam.iniContent, 'Galaxy.GalaxyAudioSubsystem'))
         })
 
-        expect(levels.flat()).toEqual(Array(8).fill(['MusicVolume=0', 'SoundVolume=200']))
+        expect(levels.flat()).toEqual(Array(8).fill(['MusicVolume=0', 'SoundVolume=128', 'SpeechVolume=128']))
+    })
+
+    it('scales the chosen volume from percent to UT\'s 0 to 255', () => {
+        const mainIni = mainIniWith(['AudioDevice=ALAudio.ALAudioSubsystem'], { 'ALAudio.ALAudioSubsystem': ['SoundVolume=255', 'SpeechVolume=255'] })
+
+        const levels = [0, 25, 100].map(volume => sectionOf(planOf(input({ mainIni, volume })).cams[3].iniContent, 'ALAudio.ALAudioSubsystem'))
+
+        expect(levels).toEqual([
+            ['SoundVolume=0', 'SpeechVolume=0', 'MusicVolume=0'],
+            ['SoundVolume=64', 'SpeechVolume=64', 'MusicVolume=0'],
+            ['SoundVolume=255', 'SpeechVolume=255', 'MusicVolume=0'],
+        ])
+    })
+})
+
+describe('camVolumeOf and utVolumeOf', () => {
+    it('keeps whole percentages from 0 to 100', () => {
+        for (const volume of [0, 1, 50, 99, 100]) expect(camVolumeOf(volume)).toBe(volume)
+    })
+
+    it('falls back to 50 for anything else', () => {
+        for (const value of [undefined, null, -1, 101, 42.5, '50', Number.NaN, {}, []]) {
+            expect(camVolumeOf(value)).toBe(50)
+        }
+    })
+
+    it('maps percent onto UT\'s 0 to 255 volume', () => {
+        expect([0, 50, 80, 100].map(utVolumeOf)).toEqual([0, 128, 204, 255])
     })
 })
 
@@ -410,6 +496,52 @@ describe('buildCamPlan join options', () => {
             `unreal://203.0.113.10:7777?OverrideClass=Botpack.CHSpectator?UTBTSpectator=True?UTBTFollow=${B2}?UTBTHud=Broadcast?UTBTMuteJoinLeave=True`,
         )
         expect(cam.command.args[0]).toBe(cam.url)
+    })
+})
+
+describe('buildCamPlan server passwords', () => {
+    it('adds the password option to the connect URL of that team\'s cams only', () => {
+        const cams = planOf(input({
+            servers: { A: '203.0.113.10:7777', B: 'eu.example.net:7800' },
+            passwords: { A: 'cup2026', B: null },
+        })).cams
+
+        expect(cams.map(cam => cam.command.args[0])).toEqual([
+            `unreal://203.0.113.10:7777?OverrideClass=Botpack.CHSpectator?UTBTSpectator=True?UTBTFollow=${A1}?UTBTHud=Broadcast?UTBTMuteJoinLeave=True?password=cup2026`,
+            `unreal://203.0.113.10:7777?OverrideClass=Botpack.CHSpectator?UTBTSpectator=True?UTBTFollow=${A2}?UTBTHud=Broadcast?UTBTMuteJoinLeave=True?password=cup2026`,
+            `unreal://eu.example.net:7800?OverrideClass=Botpack.CHSpectator?UTBTSpectator=True?UTBTFollow=${B1}?UTBTHud=Broadcast?UTBTMuteJoinLeave=True`,
+            `unreal://eu.example.net:7800?OverrideClass=Botpack.CHSpectator?UTBTSpectator=True?UTBTFollow=${B2}?UTBTHud=Broadcast?UTBTMuteJoinLeave=True`,
+        ])
+    })
+
+    it('keeps the password out of the join options', () => {
+        const cam = planOf(input({ passwords: { A: 'cup2026', B: 'cup2026' } })).cams[0]
+
+        expect(Object.values(cam.joinOptions)).not.toContain('cup2026')
+    })
+
+    it('trims spaces around a typed password and sends none when it is blank', () => {
+        const cams = planOf(input({ passwords: { A: '  cup2026 ', B: '   ' } })).cams
+
+        expect(cams[0].url.endsWith('?password=cup2026')).toBe(true)
+        expect(cams[2].url).not.toContain('password')
+    })
+
+    it('accepts the symbols UT passes through unchanged', () => {
+        for (const password of ['p@ss/w0rd!', 'a=b', '\u00dcnreal', 'x'.repeat(64)]) {
+            expect(isValidServerPassword(password)).toBe(true)
+            expect(buildCamPlan(input({ passwords: { A: password } })).ok).toBe(true)
+        }
+    })
+
+    it('refuses passwords that would split or break the connect URL, without echoing them', () => {
+        for (const password of ['two words', 'cup?Name=x', 'cup#portal', 'say"hi"', 'tab\there', 'x'.repeat(65)]) {
+            expect(isValidServerPassword(password)).toBe(false)
+            expect(buildCamPlan(input({ passwords: { B: password } }))).toEqual({
+                ok: false,
+                errors: [{ code: 'invalid-password', team: 'B' }],
+            })
+        }
     })
 })
 
