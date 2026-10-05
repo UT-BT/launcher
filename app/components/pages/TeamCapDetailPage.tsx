@@ -20,7 +20,7 @@ import { useRefreshCooldown } from '@/app/hooks/useRefreshCooldown'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
 import { useReplayWatch } from '@/app/hooks/useReplayWatch'
 import { useDemoDownload } from '@/app/hooks/useDemoDownload'
-import { resolveCompareVideoUrl } from '@/app/hooks/useVideoCompareAvailability'
+import { resolveCompareVideo } from '@/app/hooks/useVideoCompareAvailability'
 import { formatCapTime, displayMapName, formatAddedDate } from '@/app/utils/format'
 import { medalIconForInt, medalLabelForInt, formatSignedDelta, deltaClass } from './capDetail/capStats'
 import { MedalThresholdsStrip } from './capDetail/MedalThresholdsStrip'
@@ -246,8 +246,8 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
         const eligible = (detail.members ?? []).filter(member => member.has_demo)
         const resolved = await mapWithConcurrency(eligible, 3, async member => {
             if (member.cap_time_seconds == null) return null
-            const url = await resolveCompareVideoUrl(member.cap_id)
-            if (!url) return null
+            const video = await resolveCompareVideo(member.cap_id)
+            if (!video) return null
             const cps = await fetchCapCheckpoints(accessToken, member.cap_id)
             return {
                 capId: member.cap_id,
@@ -256,7 +256,7 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
                 title: member.active_title,
                 capTime: member.cap_time_seconds,
                 checkpoints: cps?.checkpoints ?? [],
-                url,
+                video,
             } as CompareRun
         })
         if (compareReqRef.current !== req) return
@@ -644,7 +644,7 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
                     </div>
                 ) : (
                     <p className="text-sm text-muted-foreground py-2">
-                        Not enough replays have finished processing yet — try again later.
+                        Not enough replay videos are available yet — try again later.
                     </p>
                 )}
             </Modal>

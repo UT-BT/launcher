@@ -2013,11 +2013,13 @@ export async function fetchWorldRecordsForMaps(accessToken: string, mapNames: st
     }
 }
 
-export interface DemoVideo { type: string; url: string }
-export interface DemoConverterStatus {
-    response?: { status?: number }
-    videos?: DemoVideo[]
-    status?: string
+export type ReplaySource = 'utrecorder' | 'democonverter'
+
+export interface ReplayVideo {
+    source: ReplaySource
+    mp4_url: string
+    view_url: string | null
+    fps: number | null
 }
 
 export interface LeaderboardEntry {
@@ -2265,23 +2267,15 @@ export async function fetchTeamCapDetail(
     }
 }
 
-export async function fetchDemoStatus(capId: string): Promise<DemoConverterStatus | null> {
+export async function fetchReplayVideo(capId: string): Promise<ReplayVideo | null> {
     try {
-        const res = await fetch(`${GATEWAY_BASE_URL}/democonverter/status/${capId}`)
+        const res = await fetch(`${GATEWAY_BASE_URL}/replays/${capId}`)
         if (!res.ok) return null
-        const data = await res.json() as DemoConverterStatus
-        if (data?.status === 'error') return null
-        return data
+        const data = await res.json() as ReplayVideo
+        return typeof data?.mp4_url === 'string' && data.mp4_url ? data : null
     } catch {
         return null
     }
-}
-
-export function getFirstPersonVideoUrl(status: DemoConverterStatus | null): string | null {
-    if (!status || status.status === 'error') return null
-    if (status.response?.status !== 4) return null
-    const fp = status.videos?.find(v => v.type === 'first_person')
-    return fp?.url ?? null
 }
 
 export interface CapCheckpoint {

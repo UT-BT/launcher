@@ -9,8 +9,8 @@ import { openTeamCap } from '@/app/components/shared/CapTimeLink'
 import { DemoDownloadStatusModal } from '@/app/components/shared/DemoDownloadStatusModal'
 import { useDemoDownload } from '@/app/hooks/useDemoDownload'
 import {
-    fetchMapLeaderboard, fetchTeamMapLeaderboard, fetchDemoStatus, getFirstPersonVideoUrl,
-    LeaderboardEntry, TeamLeaderboardEntry, MapMetadata,
+    fetchMapLeaderboard, fetchTeamMapLeaderboard, fetchReplayVideo,
+    LeaderboardEntry, TeamLeaderboardEntry, MapMetadata, ReplayVideo,
 } from '@/app/utils/api'
 import { computeMedalTier, TIER_ICONS, TIER_LABELS, type MedalTier } from '@/app/components/pages/maps/medals'
 import { formatCapTime, displayMapName } from '@/app/utils/format'
@@ -22,14 +22,14 @@ interface ReplayPickerModalProps {
     userId?: string | number
     mapName: string | null
     mapMetadata?: MapMetadata
-    onSelect: (url: string, mapName: string, entry: LeaderboardEntry) => void
+    onSelect: (video: ReplayVideo, mapName: string, entry: LeaderboardEntry) => void
     compareMode?: boolean
     excludeCapId?: string
 }
 
 type RunRow = {
     entry: LeaderboardEntry
-    videoUrl: string | null | undefined  // undefined = not checked, null = no video, string = video URL
+    video: ReplayVideo | null | undefined
 }
 
 const PAGE_SIZE = 10
@@ -134,7 +134,7 @@ export function ReplayPickerModal({
                 const leaderboard = await fetchMapLeaderboard(accessToken ?? '', mapName, true)
                 if (cancelled || requestRef.current !== myRequest) return
                 const eligible = leaderboard.filter(e => e.id && e.id !== excludeCapId)
-                const initial: RunRow[] = eligible.map(e => ({ entry: e, videoUrl: undefined }))
+                const initial: RunRow[] = eligible.map(e => ({ entry: e, video: undefined }))
                 setRows(initial)
                 setLoading(false)
             } catch {
@@ -149,14 +149,14 @@ export function ReplayPickerModal({
         }
     }, [open, mapName, accessToken, excludeCapId, isTeam])
 
-    // Fetch demo statuses with a small worker pool, prioritizing the visible
+    // Fetch replay videos with a small worker pool, prioritizing the visible
     // page so users don't wait for off-page rows before seeing playability.
     useEffect(() => {
         if (rows.length === 0) return
         const snapshotIds = rows.map(r => r.entry.id)
         const fetched = new Set<string>()
         for (const r of rows) {
-            if (r.videoUrl !== undefined) fetched.add(r.entry.id)
+            if (r.video !== undefined) fetched.add(r.entry.id)
         }
         let cancelled = false
         const CONCURRENCY = 3
@@ -180,11 +180,10 @@ export function ReplayPickerModal({
                 const id = pickNext()
                 if (!id) return
                 fetched.add(id)
-                const status = await fetchDemoStatus(id)
+                const video = await fetchReplayVideo(id)
                 if (cancelled) return
-                const url = getFirstPersonVideoUrl(status)
                 setRows(prev => {
-                    const next = prev.map(r => r.entry.id === id ? { ...r, videoUrl: url } : r)
+                    const next = prev.map(r => r.entry.id === id ? { ...r, video } : r)
                     if (mapName) writeCache(mapName, next)
                     return next
                 })
@@ -270,12 +269,12 @@ export function ReplayPickerModal({
                             ) : (
                                 pageRows.map(({ row, rank }) => {
                                 const isOwn = userIdStr != null && String(row.entry.user) === userIdStr
-                                const checking = row.videoUrl === undefined
-                                const unavailable = row.videoUrl === null
-                                const url = row.videoUrl
-                                const playable = typeof url === 'string'
+                                const checking = row.video === undefined
+                                const unavailable = row.video === null
+                                const video = row.video
+                                const playable = video != null
                                 if (compareMode) {
-                                    const onPick = () => { if (playable && mapName) onSelect(url as string, mapName, row.entry) }
+                                    const onPick = () => { if (video && mapName) onSelect(video, mapName, row.entry) }
                                     return (
                                         <div
                                             key={row.entry.id}
@@ -357,7 +356,7 @@ export function ReplayPickerModal({
                                                 <button
                                                     type="button"
                                                     onClick={() => {
-                                                        if (playable && mapName) onSelect(url as string, mapName, row.entry)
+                                                        if (video && mapName) onSelect(video, mapName, row.entry)
                                                     }}
                                                     disabled={!playable}
                                                     aria-label={compareMode ? 'Compare side by side' : 'Watch Replay'}

@@ -56,7 +56,8 @@ full loop).
 | Players | `fetchPlayers`, `fetchPlayersCount` (→ `/v2/players`, server-side alias search/sort/pagination + medals; row type `PlayerListRow`) |
 | Reviews | `fetchMapReviews`, `fetchAllMapReviews`, `submitSummaryReview` |
 | Favorites | `fetchUserFavorites`, `addFavoriteMap`, `removeFavoriteMap`, `replaceFavoriteMaps` |
-| Demos | `fetchDemoStatus`, `getFirstPersonVideoUrl`, `downloadDemo` |
+| Demos | `downloadDemo` |
+| Replay videos | `fetchReplayVideo(capId)` → gateway `GET /replays/{capId}` → `ReplayVideo` `{source, mp4_url, view_url, fps}`, or `null` when no video exists yet (`404`). The gateway picks the source: UTRecorder first, democonverter.com as the fallback for older caps. Play `mp4_url`; share `view_url ?? mp4_url` (`view_url` is a UTRecorder page that previews in Discord); `view_url` and `fps` are `null` for democonverter.com. The comparison view steps frames at the lowest `fps` of its runs, 30 when unknown. Credit the source with `ReplaySourceCredit`. |
 | Cap detail | `fetchCapDetail`, `fetchCapCheckpoints` |
 | Achievements | `fetchMyAchievements`, `fetchAchievementDefinitions` |
 | Home / summary | `fetchSummary` (homepage feed), `fetchHotMaps` (→ `GET /v2/summary/hot_maps` → `HotMap[]`), `fetchMedalHunt` (→ `GET /v2/summary/medal_hunt` → `MedalHuntOpportunity[]`), `fetchPendingReviews` |

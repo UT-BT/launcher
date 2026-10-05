@@ -4,8 +4,9 @@ import { Modal } from '@/app/components/ui/modal'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { formatCapTime, displayMapName } from '@/app/utils/format'
+import { ReplaySourceCredit } from '@/app/components/shared/ReplayVideoModal'
 import { cn } from '@/lib/utils'
-import type { ActiveTitle, CapCheckpoint } from '@/app/utils/api'
+import type { ActiveTitle, CapCheckpoint, ReplayVideo } from '@/app/utils/api'
 import { buildSyncAnchors, formatSignedDelta, deltaClass } from '@/app/components/pages/capDetail/capStats'
 import { CompareScrubber, type ScrubTick, type ScrubLane } from './CompareScrubber'
 import { CompareDeltaBar } from './CompareDeltaBar'
@@ -17,7 +18,7 @@ export interface CompareRun {
     title: ActiveTitle | null
     capTime: number
     checkpoints: CapCheckpoint[]
-    url: string
+    video: ReplayVideo
 }
 
 interface VideoCompareModalProps {
@@ -29,7 +30,7 @@ interface VideoCompareModalProps {
 
 const NUDGE_STEP = 0.1
 const END_EPS = 0.06
-const FRAME_STEP = 1 / 30
+const FALLBACK_FPS = 30
 const SKIP_SECONDS = 5
 const RATES = [0.25, 0.5, 1, 1.5, 2] as const
 
@@ -95,6 +96,7 @@ export function VideoCompareModal({ open, onClose, mapName, runs }: VideoCompare
     const setMaster = (t: number) => { masterRef.current = t; setMasterState(t) }
 
     const tMax = durations.reduce<number>((m, d) => Math.max(m, d ?? 0), 0)
+    const frameStep = 1 / Math.min(...runs.map(r => r.video.fps ?? FALLBACK_FPS))
 
     const refIndex = useMemo(
         () => runs.reduce((maxI, r, i, arr) => (r.capTime > arr[maxI].capTime ? i : maxI), 0),
@@ -234,7 +236,7 @@ export function VideoCompareModal({ open, onClose, mapName, runs }: VideoCompare
                 e.preventDefault()
                 if (rafRef.current != null) stopPlay()
                 const dir = k === 'ArrowRight' ? 1 : -1
-                const next = Math.min(tMax, Math.max(0, masterRef.current + dir * FRAME_STEP))
+                const next = Math.min(tMax, Math.max(0, masterRef.current + dir * frameStep))
                 setMaster(next)
                 seekToMaster(next)
             } else if (k === 'j' || k === 'J') {
@@ -248,7 +250,7 @@ export function VideoCompareModal({ open, onClose, mapName, runs }: VideoCompare
         window.addEventListener('keydown', onKey)
         return () => window.removeEventListener('keydown', onKey)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [open, tMax])
+    }, [open, tMax, frameStep])
 
     const paneAnchors = useMemo(
         () => runs.map(r => buildSyncAnchors(r.checkpoints, refRun.checkpoints, r.capTime, refRun.capTime)),
@@ -325,17 +327,7 @@ export function VideoCompareModal({ open, onClose, mapName, runs }: VideoCompare
             maxWidth="min(95vw, 1500px)"
             footer={
                 <div className="p-3 border-t border-border bg-muted/50 flex items-center justify-end shrink-0">
-                    <div className="text-xs text-muted-foreground flex items-center">
-                        Powered by{' '}
-                        <a
-                            href="https://democonverter.com"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="ml-1 text-accent-400 hover:underline"
-                        >
-                            democonverter.com
-                        </a>
-                    </div>
+                    <ReplaySourceCredit sources={runs.map(run => run.video.source)} />
                 </div>
             }
         >
@@ -472,8 +464,8 @@ function VideoPane({
                     <>
                         <video
                             ref={videoRefCb}
-                            key={run.url}
-                            src={run.url}
+                            key={run.video.mp4_url}
+                            src={run.video.mp4_url}
                             muted={muted}
                             playsInline
                             preload="metadata"

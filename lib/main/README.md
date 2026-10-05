@@ -11,7 +11,7 @@ not_here:
   - "the IPC channel/api/handler pattern → lib/conveyor/README.md"
   - "renderer HTTP calls → agents/data-sources.md"
 sections: [services, the-renderer-main-boundary, file-path-safety, opening-urls, config-storage, ini-access, stream-cams, stream-kit-extractor, window-security-csp]
-last_verified: 2026-10-02
+last_verified: 2026-10-05
 verify_against:
   - lib/main/app.ts
   - lib/main/config.ts
@@ -204,6 +204,12 @@ refused). Existing files are overwritten. Progress is pushed on
 `img-src`, and `media-src` pin the exact remote hosts the launcher may reach — a
 new remote host (API, asset CDN) **won't load until it's added there**. Renderer
 HTTP failing with a CSP error usually means the host is missing from this list.
+
+CSP is checked on every redirect hop, not just the first URL. Replay videos from
+`recorder.utbt.net` redirect archived recordings to `archive.org`, which redirects again
+to a numbered `*.archive.org` node, so `media-src` lists `https://archive.org` and
+`https://*.archive.org` too (the wildcard does not cover the bare domain). Drop either
+and only older replays break.
 
 `connect-src`, `img-src` and `media-src` are each built twice, packaged vs dev, because dev talks to a
 localhost API. Adding a host to only one of them produces the worst kind of bug: works in
