@@ -30,7 +30,7 @@ export function MapHeadline({ match, latest, reveal }: { match: StreamMatch; lat
 
     const winner = latest.winner
     const team = winner ? teamLabel(match, winner) : null
-    const rest = winner ? ` take map ${latest.number}` : `Map ${latest.number} ends level`
+    const rest = winner ? ` take map ${latest.number}` : `Map ${latest.number} drawn`
     const hue = PICK_BAN_HUES[winner ?? 'gold']
     const revealing = reveal?.ordinals.at(-1) === latest.ordinal
     const mapName = latest.map ? ` · ${displayMapName(latest.map)}` : ''

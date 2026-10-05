@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { streamMapScore, streamMaps, streamScore } from '../../data/streamFixtures'
+import { streamDrawnMapScore, streamMapScore, streamMaps, streamScore } from '../../data/streamFixtures'
 import { ALL_DECIDED, INTERMISSION_MAPS, INTERMISSION_PICKS, MID_SERIES, intermissionMatch } from './intermissionFixtures'
 import { advanceMapReveal, initialMapReveal, intermissionView } from './intermissionView'
 
@@ -144,7 +144,7 @@ describe('intermissionView when every map is decided', () => {
         const view = intermissionView(match)
 
         expect(view.final).toEqual({ winner: 'a', series: { a: 2, b: 0 }, official: false })
-        expect(view.maps.map(map => map.status)).toEqual(['decided', 'decided', 'open', 'open'])
+        expect(view.maps.map(map => map.status)).toEqual(['decided', 'decided', 'skipped', 'skipped'])
     })
 
     it('shows a drawn series with no winner', () => {
@@ -154,7 +154,8 @@ describe('intermissionView when every map is decided', () => {
     })
 
     it('stays unofficial while every map is official but the match result is not in', () => {
-        const match = intermissionMatch(ALL_DECIDED)
+        const base = intermissionMatch(ALL_DECIDED)
+        const match = { ...base, score: { ...base.score, winner: 'a' as const, live_decided: true } }
 
         expect(intermissionView(match).final?.official).toBe(false)
     })
@@ -167,6 +168,49 @@ describe('intermissionView when every map is decided', () => {
 
     it('is still mid-series while a map is current', () => {
         expect(intermissionView(intermissionMatch(MID_SERIES)).final).toBeNull()
+    })
+
+    it('ends a four-map race at 2-0 after a drawn map and marks the last map not played', () => {
+        const match = intermissionMatch([], {
+            score: streamScore([streamMapScore(0, [2, 0], 'a'), streamDrawnMapScore(1), streamMapScore(2, [2, 1], 'a'), streamMapScore(3)], {
+                current_map: null,
+                winner: 'a',
+                live_decided: true,
+            }),
+        })
+
+        const view = intermissionView(match)
+
+        expect(view.maps.map(map => [map.status, map.drawn])).toEqual([
+            ['decided', false], ['decided', true], ['decided', false], ['skipped', false],
+        ])
+        expect(view.final).toEqual({ winner: 'a', series: { a: 2, b: 0 }, official: false })
+        expect(view.kicker).toBe('Series 2–0 · final')
+    })
+
+    it('shows a drawn series once it is decided with no winner', () => {
+        const match = intermissionMatch([], {
+            score: streamScore([streamMapScore(0, [2, 0], 'a'), streamDrawnMapScore(1), streamMapScore(2, [0, 2], 'b'), streamDrawnMapScore(3, [0, 0])], {
+                live_decided: true,
+            }),
+        })
+
+        expect(intermissionView(match).final).toEqual({ winner: null, series: { a: 1, b: 1 }, official: false })
+    })
+
+    it('never calls a level knockout with no map left drawn, it waits for a decider', () => {
+        const match = intermissionMatch([], {
+            best_of: 3,
+            stage: { key: 'playoffs', name: 'Playoffs' },
+            maps: streamMaps(INTERMISSION_MAPS.slice(0, 3), INTERMISSION_PICKS.slice(0, 3)),
+            score: streamScore([streamMapScore(0, [2, 0], 'a'), streamMapScore(1, [0, 2], 'b'), streamDrawnMapScore(2)], { series_state: 'unresolved' }),
+        })
+
+        const view = intermissionView(match)
+
+        expect(view.final).toBeNull()
+        expect(view.upNext).toBeNull()
+        expect(view.kicker).toBe('Series 1–1 · level, decider to come')
     })
 })
 

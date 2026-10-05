@@ -1,11 +1,11 @@
 import { displayMapName } from '@/app/utils/format'
 import type { PickBanTone } from '@/app/components/broadcast/broadcastTone'
 import type { StreamMapScore, StreamMatch, StreamScore, StreamScoreSource, StreamSide } from '../../data/streamHotState'
-import { mapNumber } from '../../sceneHelpers'
+import { mapDrawn, mapNumber } from '../../sceneHelpers'
 
 export type SeriesScore = StreamScore['series']
 
-export type SeriesMapStatus = 'decided' | 'next' | 'open'
+export type SeriesMapStatus = 'decided' | 'next' | 'open' | 'skipped'
 
 export type CapsSourceLabel = 'Official' | 'Live' | 'Corrected'
 
@@ -17,6 +17,7 @@ export interface SeriesMapView {
     decider: boolean
     caps: { a: number | null; b: number | null } | null
     winner: StreamSide | null
+    drawn: boolean
     status: SeriesMapStatus
     sourceLabel: CapsSourceLabel | null
     latest: boolean
@@ -60,14 +61,20 @@ function capsShown(score: StreamMapScore): boolean {
     return score.decided || score.source === 'manual' || (score.caps.a ?? 0) + (score.caps.b ?? 0) > 0
 }
 
-function statusOf(score: StreamMapScore, current: number | null): SeriesMapStatus {
+function statusOf(score: StreamMapScore, current: number | null, over: boolean): SeriesMapStatus {
     if (score.decided) return 'decided'
-    return score.ordinal === current ? 'next' : 'open'
+    if (score.ordinal === current) return 'next'
+    return over ? 'skipped' : 'open'
+}
+
+function seriesOver(match: StreamMatch): boolean {
+    return match.score.live_decided || FINISHED_STATUSES.includes(match.status)
 }
 
 function seriesMaps(match: StreamMatch): SeriesMapView[] {
     const maps = [...match.score.maps].sort((left, right) => left.ordinal - right.ordinal)
     const latest = maps.filter(map => map.decided).at(-1)?.ordinal ?? null
+    const over = seriesOver(match)
     return maps.map(score => {
         const row = match.maps.find(map => map.ordinal === score.ordinal)
         const shown = capsShown(score)
@@ -79,7 +86,8 @@ function seriesMaps(match: StreamMatch): SeriesMapView[] {
             decider: row?.kind === 'decider',
             caps: shown ? { a: score.caps.a, b: score.caps.b } : null,
             winner: score.winner,
-            status: statusOf(score, match.score.current_map),
+            drawn: mapDrawn(score),
+            status: statusOf(score, match.score.current_map, over),
             sourceLabel: shown ? SOURCE_LABELS[score.source] : null,
             latest: score.ordinal === latest,
         }
@@ -96,7 +104,7 @@ function upNextOf(match: StreamMatch, column: SeriesMapView | undefined): UpNext
 }
 
 function seriesFinal(match: StreamMatch, maps: SeriesMapView[]): SeriesFinalView | null {
-    if (match.score.current_map !== null || maps.length === 0) return null
+    if (match.score.current_map !== null || maps.length === 0 || !seriesOver(match)) return null
     return { winner: match.score.winner, series: { ...match.score.series }, official: FINISHED_STATUSES.includes(match.status) }
 }
 
@@ -107,8 +115,13 @@ export function intermissionView(match: StreamMatch): IntermissionView {
     const upNext = upNextOf(match, next)
     const final = upNext ? null : seriesFinal(match, maps)
     const tally = `Series ${series.a}–${series.b}`
-    const kicker = next ? `${tally} · map ${next.number} next` : final ? `${tally} · final` : tally
+    const kicker = next ? `${tally} · map ${next.number} next` : final ? `${tally} · final` : stalledKicker(match, tally)
     return { maps, series, latest: maps.find(map => map.latest) ?? null, upNext, final, kicker }
+}
+
+function stalledKicker(match: StreamMatch, tally: string): string {
+    if (match.score.series_state !== 'unresolved') return tally
+    return match.score.series.a === match.score.series.b ? `${tally} · level, decider to come` : `${tally} · awaiting the result`
 }
 
 export function teamLabel(match: StreamMatch, side: StreamSide): string {

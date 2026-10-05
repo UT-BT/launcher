@@ -38,7 +38,7 @@ describe('standingsView for a group stage', () => {
         expect(view.title).toBe('Standings')
         expect(view.kicker).toBe('Group B · after round 4 so far')
         expect(view.group.name).toBe('Group B')
-        expect(view.group.pointsRule).toBe('3 pts win · 1 pt 2–2 draw')
+        expect(view.group.pointsRule).toBe('3 pts win · 1 pt draw')
         expect(view.group.showDraws).toBe(true)
         expect(view.group.rows.map(row => row.name)).toEqual([
             'Warp Rabbits', TEAM_A.name, TEAM_B.name, 'Ledge Lords', 'Burrow Gang', 'Flagrunners',
@@ -140,6 +140,31 @@ describe('where the group teams go', () => {
 describe('pointsRule', () => {
     it('is null without a points table', () => {
         expect(pointsRule([])).toBeNull()
+    })
+
+    it('reads every level scoreline as one draw when they all pay the same', () => {
+        const table = [
+            { maps_won: 3, maps_lost: 0, points: 3 },
+            { maps_won: 2, maps_lost: 0, points: 3 },
+            { maps_won: 1, maps_lost: 0, points: 3 },
+            { maps_won: 2, maps_lost: 2, points: 1 },
+            { maps_won: 1, maps_lost: 1, points: 1 },
+            { maps_won: 0, maps_lost: 0, points: 1 },
+            { maps_won: 0, maps_lost: 2, points: 0 },
+        ]
+
+        expect(pointsRule(table)).toBe('3 pts win · 1 pt draw')
+    })
+
+    it('spells out each level scoreline when they pay differently', () => {
+        const table = [
+            { maps_won: 2, maps_lost: 0, points: 3 },
+            { maps_won: 2, maps_lost: 2, points: 2 },
+            { maps_won: 0, maps_lost: 0, points: 1 },
+            { maps_won: 0, maps_lost: 2, points: 0 },
+        ]
+
+        expect(pointsRule(table)).toBe('3 pts win · 2 pts 2–2 draw · 1 pt 0–0 draw')
     })
 })
 

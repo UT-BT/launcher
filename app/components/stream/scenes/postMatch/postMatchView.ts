@@ -1,5 +1,5 @@
 import type { StreamMatch, StreamScore, StreamSide } from '../../data/streamHotState'
-import { mapNumber } from '../../sceneHelpers'
+import { mapDrawn, mapNumber } from '../../sceneHelpers'
 import type {
     BracketConsequenceTeam,
     GroupConsequenceTeam,
@@ -18,6 +18,7 @@ export interface PostMatchMapView {
     pickedBy: StreamSide | null
     caps: { a: number | null; b: number | null }
     winner: StreamSide | null
+    drawn: boolean
     state: PostMatchMapState
 }
 
@@ -63,6 +64,7 @@ function mapsOf(match: StreamMatch): PostMatchMapView[] {
                 pickedBy: slot?.picked_by ?? null,
                 caps: score.caps,
                 winner: score.winner,
+                drawn: mapDrawn(score),
                 state: score.decided ? 'decided' : score.ordinal === match.score.current_map ? 'live' : 'upcoming',
             }
         })

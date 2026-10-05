@@ -134,6 +134,7 @@ export function playedMaps(maps: EventMatchMap[] | undefined): EventMatchMap[] {
 }
 
 export function mapWinnerOf(row: EventMatchMap, capsToWin: number): EventSide | null {
+    if (row.winner_side === 'draw') return null
     if (row.winner_side) return row.winner_side
 
     const target = capsToWin || 0
@@ -149,6 +150,10 @@ export function mapWinnerOf(row: EventMatchMap, capsToWin: number): EventSide | 
 
 export function mapWasContested(row: EventMatchMap): boolean {
     return row.winner_side !== null || row.caps_a !== null || row.caps_b !== null
+}
+
+export function mapIsDrawn(row: EventMatchMap, capsToWin: number): boolean {
+    return mapWasContested(row) && mapWinnerOf(row, capsToWin) === null
 }
 
 export function pickBanMapLabel(
@@ -176,7 +181,6 @@ export function seriesProgress(
     drawsAllowed = false,
 ) {
     const race = match.mode !== 'all_maps'
-    const needed = race ? Math.floor(match.best_of / 2) + 1 : match.best_of
 
     let scoreA = 0
     let scoreB = 0
@@ -190,12 +194,13 @@ export function seriesProgress(
         if (mapWasContested(row)) played += 1
         if (side === 'a') scoreA += 1
         if (side === 'b') scoreB += 1
-        settled = race && (scoreA >= needed || scoreB >= needed)
+        settled = race && Math.abs(scoreA - scoreB) > Math.max(match.best_of - played, 0)
     }
 
-    const won = race && (scoreA >= needed || scoreB >= needed)
+    const left = Math.max(match.best_of - played, 0)
+    const lead = Math.abs(scoreA - scoreB)
     const level = scoreA === scoreB
-    const complete = won || (played >= match.best_of && (!level || drawsAllowed))
+    const complete = settled || (played >= match.best_of && (!level || drawsAllowed))
 
     return {
         decided: scoreA + scoreB,
@@ -204,9 +209,7 @@ export function seriesProgress(
         scoreB,
         complete,
         isDraw: complete && level,
-        remaining: won ? 0 : Math.max(0, race
-            ? Math.min(needed - Math.max(scoreA, scoreB), match.best_of - played)
-            : match.best_of - played),
+        remaining: settled ? 0 : race ? Math.min(left, Math.floor((left - lead) / 2) + 1) : left,
     }
 }
 
@@ -294,6 +297,7 @@ function MapRow({ row, capsToWin, teamA, teamB, onMapSelect }: {
     onMapSelect?: (mapName: string) => void
 }) {
     const winner = mapWinnerOf(row, capsToWin)
+    const drawn = mapIsDrawn(row, capsToWin)
     const pickBanLabel = pickBanMapLabel(row, teamA, teamB)
 
     return (
@@ -314,6 +318,7 @@ function MapRow({ row, capsToWin, teamA, teamB, onMapSelect }: {
                 </span>
             )}
             <span className="ml-auto shrink-0 tabular-nums text-muted-foreground">
+                {drawn && <span className="mr-1.5 text-[10px] uppercase tracking-wider text-muted-foreground/70">Draw</span>}
                 <span className={cn(winner === 'a' && 'text-white font-medium')}>{row.caps_a ?? '–'}</span>
                 {' – '}
                 <span className={cn(winner === 'b' && 'text-white font-medium')}>{row.caps_b ?? '–'}</span>

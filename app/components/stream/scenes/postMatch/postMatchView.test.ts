@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { streamMapScore, streamScore } from '../../data/streamFixtures'
+import { streamDrawnMapScore, streamMapScore, streamScore } from '../../data/streamFixtures'
 import {
     bracketConsequence,
     decidedMatch,
@@ -103,6 +103,29 @@ describe('postMatchView', () => {
         expect(view.series).toEqual({ a: 1, b: 1 })
         expect(view.maps).toHaveLength(2)
         expect(view.consequence.map(line => line.text)).toEqual(['2nd in Group B on 10 pts', '3rd in Group B on 6 pts'])
+    })
+
+    it('marks drawn maps and wins a four-map race 2-0 without the last map', () => {
+        const scores = [
+            streamMapScore(0, [2, 0], 'a'),
+            streamDrawnMapScore(1),
+            streamMapScore(2, [2, 1], 'a'),
+            streamMapScore(3),
+        ]
+        const view = resultOf(postMatchView(decidedMatch({ score: streamScore(scores, { winner: 'a', live_decided: true, current_map: null }) }), null))
+
+        expect(view.winner).toBe('a')
+        expect(view.series).toEqual({ a: 2, b: 0 })
+        expect(view.maps.map(map => [map.number, map.winner, map.drawn])).toEqual([[1, 'a', false], [2, null, true], [3, 'a', false]])
+    })
+
+    it('shows a group series drawn on drawn maps as a result with no winner', () => {
+        const scores = [streamMapScore(0, [2, 0], 'a'), streamDrawnMapScore(1), streamMapScore(2, [0, 2], 'b'), streamDrawnMapScore(3, [0, 0])]
+        const view = resultOf(postMatchView(decidedMatch({ score: streamScore(scores, { winner: null, live_decided: true, current_map: null }) }), null))
+
+        expect(view.winner).toBeNull()
+        expect(view.series).toEqual({ a: 1, b: 1 })
+        expect(view.maps.filter(map => map.drawn).map(map => map.number)).toEqual([2, 4])
     })
 
     it('leaves the dead rubbers of a first_to series out of the result', () => {

@@ -47,8 +47,20 @@ describe('nextMapView: which map', () => {
 
     it('has no next map once the series is decided', () => {
         const match = nextMapMatch([[2, 1, 'a'], [2, 0, 'a']])
-        const decided = { ...match, score: streamScore(match.score.maps, { current_map: null, winner: 'a', live_decided: true }) }
-        expect(nextMapView(input({ match: decided }))).toEqual({ state: 'over', kicker: 'Series 2–0 · final' })
+        const decided = { ...match, score: streamScore(match.score.maps, { current_map: null, winner: 'a', live_decided: true, series_state: 'won' }) }
+        expect(nextMapView(input({ match: decided }))).toEqual({ state: 'over', kicker: 'Series 2–0 · final', headline: 'Series complete' })
+    })
+
+    it('says the series is drawn when it ends level in a group', () => {
+        const match = nextMapMatch([[2, 0, 'a'], [0, 2, 'b']])
+        const drawn = { ...match, score: streamScore(match.score.maps, { current_map: null, live_decided: true, series_state: 'drawn' }) }
+        expect(nextMapView(input({ match: drawn }))).toEqual({ state: 'over', kicker: 'Series 1–1 · final', headline: 'Series drawn' })
+    })
+
+    it('waits for a decider when a knockout is level with no map left', () => {
+        const match = nextMapMatch([[2, 0, 'a'], [0, 2, 'b']])
+        const level = { ...match, score: streamScore(match.score.maps.slice(0, 2), { current_map: null, series_state: 'unresolved' }) }
+        expect(nextMapView(input({ match: level }))).toEqual({ state: 'stalled', kicker: 'Series 1–1 · decider to come', headline: 'Series level' })
     })
 })
 
