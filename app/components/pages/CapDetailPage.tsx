@@ -19,6 +19,7 @@ import {
     fetchTeamRunStatus,
     type CapDetail,
     type LeaderboardEntry,
+    type ReplayVideo,
     type TeamRunStatus,
     type UserProfile,
 } from '@/app/utils/api'
@@ -269,7 +270,7 @@ export function CapDetailPage({ capId, userProfile, onMapSelect }: CapDetailPage
                 mapName={cap?.map ?? null}
                 compareMode
                 excludeCapId={cap?.id}
-                onSelect={(_url, _map, entry) => {
+                onSelect={(_video, _map, entry) => {
                     setVideoOpponent(entry)
                     setComparePickerOpen(false)
                 }}
@@ -289,11 +290,11 @@ export function CapDetailPage({ capId, userProfile, onMapSelect }: CapDetailPage
                     </div>
                 ) : (
                     <p className="text-sm text-muted-foreground py-2">
-                        {videoAvail.urlA === null && videoAvail.urlB === null
-                            ? 'Neither replay has finished processing yet — try again later.'
-                            : videoAvail.urlA === null
-                                ? "This run's replay is still being processed by DemoConverter — try again later."
-                                : "The other run's replay is still being processed — try again later."}
+                        {videoAvail.videoA === null && videoAvail.videoB === null
+                            ? 'Neither replay video is available yet — try again later.'
+                            : videoAvail.videoA === null
+                                ? "This run's replay video isn't available yet — try again later."
+                                : "The other run's replay video isn't available yet — try again later."}
                     </p>
                 )}
             </Modal>
@@ -311,7 +312,7 @@ export function CapDetailPage({ capId, userProfile, onMapSelect }: CapDetailPage
                             title: cap.active_title ?? null,
                             capTime: cap.cap_time_seconds,
                             checkpoints: videoSameTeam ? detail.checkpoints : [],
-                            url: videoAvail.urlA as string,
+                            video: videoAvail.videoA as ReplayVideo,
                         },
                         {
                             capId: videoOpponent.id,
@@ -320,7 +321,7 @@ export function CapDetailPage({ capId, userProfile, onMapSelect }: CapDetailPage
                             title: videoOpponent.active_title ?? null,
                             capTime: videoOpponent.cap_time_seconds,
                             checkpoints: videoSameTeam ? (videoOpponentData?.checkpoints ?? []) : [],
-                            url: videoAvail.urlB as string,
+                            video: videoAvail.videoB as ReplayVideo,
                         },
                     ]}
                 />

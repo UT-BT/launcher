@@ -3,7 +3,7 @@ import { useRefreshCooldown } from '@/app/hooks/useRefreshCooldown'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
 import { useAutoPageSize } from '@/app/hooks/useAutoPageSize'
 import { useNewItemHighlight } from '@/app/hooks/useNewItemHighlight'
-import { Search, RefreshCw, SlidersHorizontal, X, ArrowLeft, HelpCircle, Share2, Check } from 'lucide-react'
+import { Search, RefreshCw, SlidersHorizontal, X, ArrowLeft, HelpCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/app/components/ui/button'
 import { Modal } from '@/app/components/ui/modal'
@@ -11,12 +11,12 @@ import { Tooltip } from '@/app/components/ui/tooltip'
 import {
     UserProfile, Map, MapMetadata, MapReview, BestCap,
     fetchMaps, fetchMapsCount, fetchMapsMetadata, fetchMapsFuzzy, fetchAllMapReviews, fetchMapAuthors,
-    fetchBestCaps, fetchWorldRecordsForMaps, asStringArray,
+    fetchBestCaps, fetchWorldRecordsForMaps, asStringArray, ReplayVideo,
 } from '@/app/utils/api'
 
 import { MapReviewsModal } from '@/app/components/modals/MapReviewsModal'
 import { ReplayPickerModal } from '@/app/components/modals/ReplayPickerModal'
-import { ReplayVideoPlayer } from '@/app/components/shared/ReplayVideoModal'
+import { ReplayVideoFooter, ReplayVideoPlayer } from '@/app/components/shared/ReplayVideoModal'
 import { openCap, openTeamCap } from '@/app/components/shared/CapTimeLink'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
@@ -594,7 +594,7 @@ export function MapsPage({
     const [columnVisibility, setColumnVisibility] = useState<Record<ColumnId, boolean>>(() => loadColumnVisibility())
     const [expandedTagMaps, setExpandedTagMaps] = useState<Set<string>>(() => new Set())
     const [videoModal, setVideoModal] = useState<{
-        url: string
+        video: ReplayVideo
         mapName: string
         time?: number
         alias?: string
@@ -602,20 +602,6 @@ export function MapsPage({
     } | null>(null)
     const [replayPickerMap, setReplayPickerMap] = useState<string | null>(null)
     const [replayError, setReplayError] = useState<string | null>(null)
-    const [shareCopied, setShareCopied] = useState(false)
-    const shareTimerRef = useRef<number | null>(null)
-
-    const copyReplayLink = async () => {
-        if (!videoModal?.url) return
-        try {
-            await navigator.clipboard.writeText(videoModal.url)
-            setShareCopied(true)
-            if (shareTimerRef.current) window.clearTimeout(shareTimerRef.current)
-            shareTimerRef.current = window.setTimeout(() => setShareCopied(false), 1500)
-        } catch (err) {
-            console.error('Copy replay link failed', err)
-        }
-    }
 
     const toggleTagExpansion = (mapName: string) => {
         setExpandedTagMaps(prev => {
@@ -2304,10 +2290,10 @@ export function MapsPage({
                 userId={userId}
                 mapName={replayPickerMap}
                 mapMetadata={replayPickerMap ? caches.metadata?.find(m => m.name === replayPickerMap) : undefined}
-                onSelect={(url, mapName, entry) => {
+                onSelect={(video, mapName, entry) => {
                     setReplayPickerMap(null)
                     setVideoModal({
-                        url,
+                        video,
                         mapName,
                         time: entry.cap_time_seconds,
                         alias: entry.alias,
@@ -2345,39 +2331,9 @@ export function MapsPage({
                         </button>
                     </Tooltip>
                 ) : undefined}
-                footer={
-                    <div className="p-3 border-t border-border bg-muted/50 flex items-center justify-between gap-3 shrink-0">
-                        <Tooltip content={shareCopied ? 'Link copied!' : 'Copy replay link'} side="top">
-                            <button
-                                type="button"
-                                onClick={copyReplayLink}
-                                aria-label="Copy replay link"
-                                className={cn(
-                                    "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border transition-colors cursor-pointer",
-                                    shareCopied
-                                        ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-300"
-                                        : "bg-hairline/[0.03] border-hairline/10 text-muted-foreground hover:text-foreground hover:bg-hairline/[0.06] hover:border-hairline/20",
-                                )}
-                            >
-                                {shareCopied ? <Check className="size-3.5" /> : <Share2 className="size-3.5" />}
-                                {shareCopied ? 'Copied' : 'Share'}
-                            </button>
-                        </Tooltip>
-                        <div className="text-xs text-muted-foreground flex items-center">
-                            Powered by{' '}
-                            <a
-                                href="https://democonverter.com"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="ml-1 text-accent-400 hover:underline"
-                            >
-                                democonverter.com
-                            </a>
-                        </div>
-                    </div>
-                }
+                footer={<ReplayVideoFooter video={videoModal?.video ?? null} />}
             >
-                {videoModal && <ReplayVideoPlayer url={videoModal.url} />}
+                {videoModal && <ReplayVideoPlayer url={videoModal.video.mp4_url} />}
             </Modal>
 
             <Modal

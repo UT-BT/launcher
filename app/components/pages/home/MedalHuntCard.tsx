@@ -15,7 +15,7 @@ import {
   Timer,
   TvMinimalPlay,
 } from 'lucide-react'
-import { fetchMap, fetchMedalHunt, type MapMetadata, type MedalHuntOpportunity } from '@/app/utils/api'
+import { fetchMap, fetchMedalHunt, type MapMetadata, type MedalHuntOpportunity, type ReplayVideo } from '@/app/utils/api'
 import { getSynced, setSynced, subscribeSynced } from '@/app/utils/userState'
 import { toOpportunities, type Opportunity, type TargetMedal } from '@/app/utils/medalHunt'
 import { displayMapName, formatCapTime, formatDelta } from '@/app/utils/format'
@@ -167,7 +167,7 @@ export function MedalHuntCard({
   const [replayPickerMap, setReplayPickerMap] = useState<string | null>(null)
   const [replayPickerMapMetadata, setReplayPickerMapMetadata] = useState<MapMetadata | null>(null)
   const [videoModal, setVideoModal] = useState<{
-    url: string
+    video: ReplayVideo
     mapName: string
     time?: number
     alias?: string
@@ -448,10 +448,10 @@ export function MedalHuntCard({
         userId={userId ?? undefined}
         mapName={replayPickerMap}
         mapMetadata={replayPickerMapMetadata ?? undefined}
-        onSelect={(url, mapName, entry) => {
+        onSelect={(video, mapName, entry) => {
           setReplayPickerMap(null)
           setVideoModal({
-            url,
+            video,
             mapName,
             time: entry.cap_time_seconds,
             alias: entry.alias ?? undefined,

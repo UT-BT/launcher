@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { fetchDemoStatus, getFirstPersonVideoUrl } from '@/app/utils/api'
+import { fetchReplayVideo } from '@/app/utils/api'
 import type { ReplayVideoState } from '@/app/components/shared/ReplayVideoModal'
 
 interface OpenArgs {
@@ -18,12 +18,11 @@ export function useReplayWatch() {
         if (!capId) return
         setLoadingCapId(capId)
         try {
-            const status = await fetchDemoStatus(capId)
-            const url = getFirstPersonVideoUrl(status)
-            if (url) {
-                setVideo({ url, mapName, time, alias })
+            const replayVideo = await fetchReplayVideo(capId)
+            if (replayVideo) {
+                setVideo({ video: replayVideo, mapName, time, alias })
             } else {
-                setError('Demo is still being processed by DemoConverter. Please try again later.')
+                setError('Replay video not available yet. Please try again later.')
             }
         } catch {
             setError('Could not load this replay. Please try again later.')
