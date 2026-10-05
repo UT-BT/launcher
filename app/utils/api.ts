@@ -4592,6 +4592,8 @@ export type EventEntrantStatus = 'active' | 'qualified' | 'eliminated'
 export type EventMatchStatus = 'pending' | 'scheduled' | 'live' | 'complete' | 'bye' | 'forfeit' | 'cancelled'
 export type EventMapKind = 'normal' | 'decider'
 export type EventSide = 'a' | 'b'
+
+export type EventMapOutcome = EventSide | 'draw'
 export type MatchPickBanStatus = 'none' | 'lobby' | 'running' | 'paused' | 'complete'
 export type EventMatchMode = 'first_to' | 'all_maps'
 export type EventTiebreaker =
@@ -4742,7 +4744,7 @@ export interface EventMatchMap {
     caps_b: number | null
     deaths_a: number | null
     deaths_b: number | null
-    winner_side: EventSide | null
+    winner_side: EventMapOutcome | null
     started_at: string | null
     ended_at: string | null
     notes: string | null
@@ -4893,7 +4895,7 @@ export interface EventMatchMapInput {
     caps_b?: number | null
     deaths_a?: number | null
     deaths_b?: number | null
-    winner_side?: EventSide | null
+    winner_side?: EventMapOutcome | null
     started_at?: string | null
     ended_at?: string | null
     notes?: string | null

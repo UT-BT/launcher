@@ -10,7 +10,7 @@ import { MapSearchInput } from '@/app/components/shared/MapSearchInput'
 import {
     clearEventMatchResult, deleteEventMatch, eventErrorMessage, fetchEventMatch, linkEventMatchMapCaps,
     setEventMatchResult, updateEventMatch,
-    type EventBracketEntrant, type EventMatch, type EventMatchMap, type EventMatchMapInput,
+    type EventBracketEntrant, type EventMapOutcome, type EventMatch, type EventMatchMap, type EventMatchMapInput,
     type EventMatchStatus, type EventSide,
 } from '@/app/utils/api'
 import {
@@ -260,7 +260,7 @@ export function MatchEditorModal({
                                 {progress.complete
                                     ? 'The result is complete and counts towards the standings.'
                                     : progress.remaining > 0
-                                        ? `${progress.remaining} more map${progress.remaining === 1 ? '' : 's'} to record — a map the time limit ended still counts.`
+                                        ? `${progress.remaining} more map${progress.remaining === 1 ? '' : 's'} to record — a drawn map still counts.`
                                         : 'Level, and this stage needs a winner — name one on a map, or record a forfeit.'}
                             </span>
                         </div>
@@ -345,8 +345,9 @@ export function MatchEditorModal({
                         {maps.length === 0 ? (
                             <p className="text-[11px] text-muted-foreground">No map slots on this match.</p>
                         ) : maps.map(row => {
-                            const winner = mapWinnerOf(row, match.caps_to_win)
-                            const undecided = !winner && (row.caps_a != null || row.caps_b != null)
+                            const capsEntered = row.caps_a != null || row.caps_b != null
+                            const fromCaps = mapWinnerOf({ ...row, winner_side: null }, match.caps_to_win)
+                            const drawnByCaps = row.winner_side === null && capsEntered && !fromCaps
 
                             return (
                                 <div key={row.ordinal} className="rounded-md border border-white/5 bg-card/20 p-2.5 space-y-2">
@@ -415,26 +416,26 @@ export function MatchEditorModal({
                                                 value={row.winner_side ?? ''}
                                                 disabled={busy}
                                                 aria-label={`Map ${row.ordinal + 1} winner`}
-                                                onChange={event => setRow(row.ordinal, { winner_side: (event.target.value || null) as EventSide | null })}
+                                                onChange={event => setRow(row.ordinal, { winner_side: (event.target.value || null) as EventMapOutcome | null })}
                                                 style={{ colorScheme: 'dark' }}
-                                                className={cn(
-                                                    teamInputClass, 'h-8 w-40 py-1 text-xs',
-                                                    undecided && 'border-amber-500/50',
-                                                )}
+                                                className={cn(teamInputClass, 'h-8 w-40 py-1 text-xs')}
                                             >
                                                 <option value="">
-                                                    {winner ? `From caps — ${teamNames[winner]}` : 'From caps — undecided'}
+                                                    {fromCaps
+                                                        ? `From caps — ${teamNames[fromCaps]}`
+                                                        : capsEntered ? 'From caps — draw' : 'From caps — not played'}
                                                 </option>
                                                 <option value="a">{teamNames.a}</option>
                                                 <option value="b">{teamNames.b}</option>
+                                                <option value="draw">Draw</option>
                                             </select>
                                         </div>
                                     </div>
 
-                                    {undecided && (
-                                        <p className="text-[11px] text-amber-300">
-                                            Nobody reached {match.caps_to_win} caps. If the time limit ended this map,
-                                            pick the winner above — it still counts as a full map win.
+                                    {drawnByCaps && (
+                                        <p className="text-[11px] text-muted-foreground">
+                                            Nobody reached {match.caps_to_win} caps, so this map counts as a draw. If it
+                                            was awarded to one team instead, pick that team above.
                                         </p>
                                     )}
 

@@ -137,7 +137,7 @@ function MatchFormatEditor({ defaults, onChange, base, errors, disabled, needsAW
                     ]}
                     hint={defaults.mode === 'all_maps'
                         ? 'Every map is played, whatever the score.'
-                        : `Stops as soon as one side reaches ${Math.floor(defaults.best_of / 2) + 1}.`}
+                        : `Stops as soon as one side reaches ${Math.floor(defaults.best_of / 2) + 1}, or once drawn maps leave a lead out of reach.`}
                     path={`${base}.mode`}
                     errors={errors}
                     disabled={disabled}

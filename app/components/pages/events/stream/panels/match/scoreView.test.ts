@@ -132,17 +132,17 @@ describe('buildScoreView', () => {
             mapScore(2),
         ]))
 
-        expect(rows.map(row => row.resultText)).toEqual(['Alpha won', 'No winner', null])
+        expect(rows.map(row => row.resultText)).toEqual(['Alpha won', 'Draw', null])
     })
 
-    it('offers Auto, both team names and No winner, with the stored override selected', () => {
+    it('offers Auto, both team names and Draw, with the stored override selected', () => {
         const row = rowsOf(match({}, [mapScore(0, { winner_override: 'b', decided: true, winner: 'b', source: 'manual' }), mapScore(1)]))[0]
 
         expect(row.winnerOptions).toEqual([
             { value: 'auto', label: 'Auto' },
             { value: 'a', label: 'Alpha' },
             { value: 'b', label: 'Bravo' },
-            { value: 'none', label: 'No winner' },
+            { value: 'none', label: 'Draw' },
         ])
         expect(row.winner).toBe('b')
     })
@@ -150,14 +150,14 @@ describe('buildScoreView', () => {
     it('names the teams in stream order and falls back to a side name when a team is missing', () => {
         const view = buildScoreView(match({ teams: { a: null, b: team('Bravo', 'b') } }), NOW)!
         expect(view.rows[0].sides[0].team).toBe('Team A')
-        expect(view.rows[0].winnerOptions.map(option => option.label)).toEqual(['Auto', 'Team A', 'Bravo', 'No winner'])
+        expect(view.rows[0].winnerOptions.map(option => option.label)).toEqual(['Auto', 'Team A', 'Bravo', 'Draw'])
     })
 
     it('shows the no-winner hint on the current map only', () => {
         const rows = rowsOf(match({}, [official(0, { a: 2, b: 0 }, 'a'), mapScore(1, { caps: { a: 1, b: 1 } }), mapScore(2)]))
 
         expect(rows.map(row => row.current)).toEqual([false, true, false])
-        expect(rows.map(row => row.hint)).toEqual([null, 'Map over without a winner? Close it here.', null])
+        expect(rows.map(row => row.hint)).toEqual([null, 'Map ended level? Close it here as a draw.', null])
     })
 
     it('shows no hint when there is no current map', () => {

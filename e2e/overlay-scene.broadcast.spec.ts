@@ -4,6 +4,7 @@ import { expect, test, type Page } from '@playwright/test'
 import type { StreamHotState, StreamMapScore, StreamMatchMap, StreamTeam } from '../app/components/stream/data/streamHotState'
 import {
     idleHotState,
+    streamDrawnMapScore,
     streamHotState,
     streamMapScore,
     streamMaps,
@@ -291,6 +292,23 @@ test('the overlay shows the lineup, the pips, the current map caps, the map stri
     expect(text).not.toMatch(/\b[AB][12]?\b/)
     expect(text).not.toContain('Group Stage')
     expect(text).not.toContain('Picked by')
+})
+
+test('a drawn map reads as a draw, takes a pip off each side, and a clinched series skips the map never played', async ({ page }) => {
+    const base = liveState([streamMapScore(0, [2, 1], 'a'), streamDrawnMapScore(1), streamMapScore(2, [2, 0], 'a'), streamMapScore(3)])
+    const match = base.match!
+    await openScene(page, 'overlay', {
+        hotState: { ...base, match: { ...match, score: { ...match.score, current_map: null, winner: 'a', live_decided: true } } },
+    })
+
+    await expect(page.locator('[data-overlay-team="a"]').getByRole('img', { name: '2 of 2 maps won' })).toBeVisible()
+    await expect(page.locator('[data-overlay-team="b"]').getByRole('img', { name: '0 of 2 maps won' })).toBeVisible()
+
+    const cells = page.locator('[data-overlay-map]')
+    await expect(cells.nth(1)).toHaveAttribute('data-map-state', 'played')
+    await expect(cells.nth(1).locator('[data-map-draw]')).toHaveText('Draw')
+    await expect(cells.nth(0).locator('[data-map-draw]')).toHaveCount(0)
+    await expect(cells.nth(3)).toHaveAttribute('data-map-state', 'skipped')
 })
 
 test('a completed team run shows on the next hot-state read, within seconds', async ({ page }) => {

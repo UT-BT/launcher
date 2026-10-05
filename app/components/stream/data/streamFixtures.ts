@@ -77,13 +77,28 @@ export function streamMapScore(ordinal: number, caps: [number, number] = [0, 0],
     }
 }
 
+export function streamDrawnMapScore(ordinal: number, caps: [number, number] = [1, 1], overrides: Partial<StreamMapScore> = {}): StreamMapScore {
+    return streamMapScore(ordinal, caps, null, { decided: true, source: 'official', closed_by: 'official', ...overrides })
+}
+
 export function streamScore(maps: StreamMapScore[], overrides: Partial<StreamScore> = {}): StreamScore {
     const series = {
         a: maps.filter(map => map.winner === 'a').length,
         b: maps.filter(map => map.winner === 'b').length,
     }
     const current = maps.find(map => !map.decided)
-    return { maps, current_map: current?.ordinal ?? null, series, winner: null, live_decided: false, live_counting: true, ...overrides }
+    const drawnMaps = maps.filter(map => map.decided && map.winner === null).length
+    return {
+        maps,
+        current_map: current?.ordinal ?? null,
+        series,
+        series_state: 'open',
+        drawn_maps: drawnMaps,
+        winner: null,
+        live_decided: false,
+        live_counting: true,
+        ...overrides,
+    }
 }
 
 export function streamMaps(names: string[], pickedBy: (StreamSide | null)[] = []): StreamMatchMap[] {

@@ -60,6 +60,12 @@ describe('endingModel credits', () => {
         expect(endingModel({ state: streamHotState({ match: won }), feed: null, now: NOW }).kicker).toBe('Crimson Cats 2–0 Azure Owls')
         expect(endingModel({ state: streamHotState({ match: live }), feed: null, now: NOW }).kicker).toBeNull()
     })
+
+    it('shows a drawn series as the kicker too', () => {
+        const drawn = streamMatch({ score: streamScore([streamMapScore(0, [2, 0], 'a'), streamMapScore(1, [0, 2], 'b')], { live_decided: true }) })
+
+        expect(endingModel({ state: streamHotState({ match: drawn }), feed: null, now: NOW }).kicker).toBe('Crimson Cats 1–1 Azure Owls')
+    })
 })
 
 describe('endingModel next matches', () => {

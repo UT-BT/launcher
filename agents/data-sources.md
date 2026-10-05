@@ -20,7 +20,7 @@ not_here:
   - "how UI state persists in localStorage → state-patterns.md"
   - "the procedure to wire a new endpoint into the UI → skill: consume-api-data"
 sections: [backend-api, errors, admin-api, event-brackets, event-scheduling, event-predictions, public-maps-tab-pick-ban-pools, event-pickban-sessions, event-pick-ban-setup, stream-kit, changing-a-map-screenshot, cap-detail-page-endpoints, world-records-page-endpoints, team-maps-and-team-runs, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites, account-state-and-badges]
-last_verified: 2026-10-02
+last_verified: 2026-10-05
 verify_against: [app/utils/api.ts, app/utils/chartBuckets.ts, app/components/pages/admin/components/controls.tsx, app/components/pages/admin/sections/HostsManagementSection.tsx, app/utils/patreon.ts, app/utils/server-utils.ts, app/hooks/useServerFavorites.ts, app/components/pages/events/manage/formatFields.tsx, app/components/pages/events/bracket/bracketShared.tsx, app/components/pages/events/bracket/BracketTab.tsx, app/components/pages/events/bracket/GroupStageView.tsx, app/components/pages/events/bracket/SwissStageView.tsx, app/components/pages/events/bracket/ElimStageView.tsx, app/components/pages/events/predictions/predictionsShared.tsx, app/components/pages/events/predictions/PredictionsTab.tsx, app/components/pages/events/schedule/scheduleShared.tsx, app/components/pages/events/schedule/scheduleSections.ts, app/components/pages/events/schedule/MyMatchesPanel.tsx, app/components/pages/events/schedule/ScheduleTabContainer.tsx, app/components/pages/events/schedule/PublicSchedulePanel.tsx, app/components/pages/events/schedule/publicSchedule.ts, app/components/pages/events/predictions/marketLock.ts, app/components/pages/events/predictions/MarketCard.tsx, app/components/pages/home/ClosingSoonBanner.tsx, app/components/pages/events/schedule/SlotPickerModal.tsx, app/components/pages/events/schedule/slotGeneration.ts, app/components/pages/events/schedule/SlotGrid.tsx, app/components/pages/events/manage/DateTimeField.tsx, app/components/pages/events/eventsShared.tsx, app/components/pages/EventDetailPage.tsx, app/utils/timezone.ts, app/components/pages/events/manage/ScheduleOversightPanel.tsx, app/components/pages/events/ManagePanel.tsx, app/components/main/Main.tsx, app/components/layout/AppLayout.tsx, app/components/pages/events/maps/MapsTab.tsx, app/components/pages/events/maps/mapsShared.ts, app/components/pages/events/pickban/pickBanView.ts, app/components/pages/events/pickban/pickBanStatus.ts, app/components/pages/events/pickban/pickBanSession.ts, app/components/pages/events/pickban/pickBanEntryPoints.ts, app/components/pages/events/pickban/components/PickBanLink.tsx, app/components/pages/events/pickban/components/PickBanJoinBanner.tsx, app/components/pages/events/pickban/clockOffset.ts, app/components/pages/events/manage/pickban/pickBanEditor.ts, app/components/pages/events/manage/pickban/PickBanPanel.tsx, app/components/pages/events/manage/pickban/PickBanStageCard.tsx, app/components/pages/events/manage/pickban/PickBanQueuePanel.tsx, app/components/pages/events/manage/pickban/pickBanQueue.ts, app/components/pages/events/manage/StaffPicker.tsx, app/components/pages/events/manage/matches/MatchesPanel.tsx, app/components/pages/events/manage/matches/matchesTable.ts, app/utils/signupWindow.ts, app/components/pages/events/pickBanTags.ts, app/components/navigation/matchLinks.ts, app/utils/poller.ts, app/components/pages/events/pickban/stream/StreamView.tsx, app/components/pages/events/pickban/pickBanCopy.ts, app/components/pages/events/pickban/components/PickBanUnavailable.tsx, app/components/pages/events/pickban/pickBanSoundCues.ts, app/components/pages/events/pickban/pickBanSoundPlayer.ts, app/components/pages/events/pickban/usePickBanSound.ts, app/components/pages/events/pickban/pickBanSounds.ts, app/components/pages/events/pickban/pickBanBeats.ts, app/components/pages/MatchPickBanPage.tsx, app/components/pages/events/pickban/managerDock.ts, app/components/pages/events/pickban/pickBanSoundPreference.ts, app/components/pages/events/pickban/stream/streamSound.ts, app/utils/eventAttention.ts, app/components/navigation/nav-items.ts, app/components/pages/events/EventTodoPanel.tsx, app/components/pages/events/manage/CapLinkPicker.tsx, app/components/pages/events/manage/capLinkRuns.ts, app/components/pages/events/pickban/stream/StreamBroadcast.tsx, app/components/pages/events/pickban/stream/boardLayout.ts, app/components/pages/events/pickban/components/stageMotion.ts, app/components/broadcast/BroadcastStage.tsx, app/components/broadcast/stageScale.ts, app/components/stream/streamScenes.ts, app/components/stream/streamSceneOptions.ts, app/components/stream/data/streamHotState.ts, app/components/stream/data/streamHotStateStore.ts, app/components/stream/data/conditionalRead.ts, app/components/stream/data/sceneCadence.ts, app/components/stream/data/sceneReadStore.ts, app/components/stream/data/sceneReadRegistry.ts, app/components/stream/data/StreamDataProvider.tsx, app/components/stream/data/useStreamData.ts, app/components/stream/ticker/streamFeed.ts, app/components/stream/scenes/betting/bettingRead.ts, app/components/stream/scenes/nextMap/nextMapRead.ts, app/components/stream/scenes/postMatch/postMatchRead.ts, app/components/stream/scenes/preview/previewRead.ts, app/components/stream/scenes/standings/standingsRead.ts, app/components/stream/scenes/startingSoon/startingSoonReads.ts, app/components/pages/events/stream/streamDesk.ts, app/components/pages/events/stream/StreamTabContext.tsx, app/components/pages/events/stream/panels/match/currentMatchActions.ts, app/components/pages/events/stream/panels/match/lineupActions.ts, app/components/pages/events/stream/panels/match/scoreActions.ts, app/components/pages/events/stream/panels/match/scoreView.ts, app/components/pages/events/stream/panels/match/localTime.ts, app/components/pages/events/stream/panels/match/countdownView.ts, app/components/pages/events/stream/panels/match/lineupView.ts, app/components/pages/events/stream/panels/studio/casterList.ts, app/components/pages/events/stream/panels/cams/camToolView.ts, app/components/pages/events/streamerRoster.ts, app/components/pages/admin/sections/StreamersSection.tsx, app/components/pages/admin/sections/streamerRoster.ts, app/components/pages/admin/sections/MapVideoControl.tsx, app/components/pages/admin/sections/mapVideoFile.ts, app/utils/mapScreenshots.ts, app/components/stream/ticker/tickerModel.ts, lib/main/config.ts, lib/stream-kit/cam-plan.ts, app/components/pages/events/stream/panels/studio/showActions.ts, app/components/pages/events/stream/panels/channel/channelActions.ts, app/components/pages/events/stream/panels/kit/kitFetch.ts, app/components/pages/events/stream/panels/cams/camToolHooks.ts]
 ---
 
@@ -232,8 +232,10 @@ the map, and map wins decide the match. `setEventMatchResult` treats the submitt
 
 A map is won by whoever reaches `caps_to_win`; caps are bounded to `0..caps_to_win`
 on both sides, since a side stops capping the moment it gets there. A map the
-**time limit** ended short of the target has no winner until one is named —
-`winner_side` on the map row does that, and the map then counts in full. `Final`
+**time limit** ended short of the target (0-0, 1-1, 1-0 on a two-cap map) is a
+**drawn map**: played, won by nobody. `winner_side` on the map row overrides the
+caps — `a` or `b` awards the map to a team, `draw` records a draw even with no caps
+entered. The editor's "Won by" select offers all three. `Final`
 and `Forfeit` are **derived** from the result, never set directly: the match editor
 offers only the states an admin owns (`pending`, `scheduled`, `live`, `bye`,
 `cancelled`) so the form cannot claim an outcome the server then overrules.
@@ -252,15 +254,18 @@ draw` is never gated — a dry run is the safe way to look.
 
 How map wins settle the match depends on the match's `mode`:
 
-- `first_to` — a race to a majority of `best_of`. Complete the moment one side
-  reaches it; anything entered on a later map is a dead rubber and does not
-  count. `best_of` may be even, which is how "first to three of four" works.
+- `first_to` — a race. Complete the moment one side's lead in map wins is bigger
+  than the maps left to play; anything entered on a later map is a dead rubber and
+  does not count. Without drawn maps that is a majority of `best_of`; with one, a
+  four-map race ends 2-0 after map three. `best_of` may be even, which is how
+  "first to three of four" works.
 - `all_maps` — every map is played and the higher map count takes it.
 
 **A map can be played and won by nobody**, because the time limit can beat the cap
-target. Length is therefore measured in maps *played* (`mapPlayed`: any caps, or a
-named `winner_side`), not maps won, so a four-map race settles on any of thirteen
-scorelines — 3-0 and 0-0 included — and never reaches 4-0. A level series only
+target. Length is therefore measured in maps *played* (`mapWasContested`: any caps,
+or a named `winner_side`), not maps won, so a four-map race settles on any of
+thirteen scorelines — 3-0, 2-0 and 0-0 included — and never reaches 4-0.
+`mapIsDrawn` marks a drawn map, and the public bracket labels it "Draw". A level series only
 counts as a result where the stage allows it, which is why `seriesProgress` takes
 `drawsAllowed` and `BracketPanel` passes `stage.kind === 'groups'`.
 
@@ -1645,7 +1650,12 @@ polled every 30 s (`cams/camToolHooks.ts`), and the rest goes through
   scene: `GET .../stream/matches/<matchId>/{betting, preview, standings, post-match,
   next-map/<ordinal>}` (`scenes/*/…Read.ts`, via `streamMatchReadPath`), and the ticker /
   event feed `GET .../stream/feed?streamer=<streamerId>` (`ticker/streamFeed.ts`: `results`,
-  `upcoming`, `top_predictors`, `next_match`). The Intermission scene reads the hot state only and
+  `upcoming`, `top_predictors`, `next_match`; a result with a level score is a draw). In the hot state a map entry that is `decided` with a
+  null `winner` is a drawn map. The score block's `series_state` says where the series stands: `won`,
+  `drawn`, `open`, or `unresolved` (every map decided but no result, such as a level knockout waiting for
+  a decider; scenes never call that a draw). `drawn_maps` is how many drawn maps count towards the
+  series (a draw after the race was already won does not). Scenes read both as given and never work them
+  out from the map list. The Intermission scene reads the hot state only and
   fetches no composite read: it shows the series recap (`SeriesTable`, full width mid-series, beside
   the result once the series is decided) and an `UpNextLine`. The Starting Soon prices come from the
   betting read, where `odds` can be null: a side reads "1.72× (58%)" (b: "(42%) 2.38×"), the draw

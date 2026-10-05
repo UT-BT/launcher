@@ -47,6 +47,12 @@ function SeriesMapTile({ map, size }: { map: PostMatchMapView; size: number }) {
     )
 }
 
+function capsTone(map: PostMatchMapView, won: boolean, side: StreamSide): string {
+    if (won) return cn(sideToneClasses(side).solid, 'text-white')
+    if (map.drawn) return 'bg-white/14 text-white/85'
+    return 'bg-white/6 text-white/55'
+}
+
 function CapsCell({ map, side }: { map: PostMatchMapView; side: StreamSide }) {
     const won = map.winner === side
     const caps = map.state === 'upcoming' ? null : map.caps[side]
@@ -54,7 +60,7 @@ function CapsCell({ map, side }: { map: PostMatchMapView; side: StreamSide }) {
         <div
             className={cn(
                 'flex h-[72px] items-center justify-center rounded-xl text-5xl font-black italic leading-[0.9] tabular-nums',
-                won ? cn(sideToneClasses(side).solid, 'text-white') : 'bg-white/6 text-white/55',
+                capsTone(map, won, side),
             )}
         >
             {caps ?? '–'}
@@ -63,12 +69,14 @@ function CapsCell({ map, side }: { map: PostMatchMapView; side: StreamSide }) {
 }
 
 function mapNote(map: PostMatchMapView): string {
+    if (map.drawn) return 'Drawn'
     if (map.state === 'live') return 'Live'
     if (map.state === 'upcoming') return 'Up next'
     return ''
 }
 
 export function SeriesTable({ teams, series, maps, tileSize, live = false }: SeriesTableProps) {
+    const notes = live || maps.some(map => map.drawn)
     return (
         <div className="flex items-start gap-1.5">
             <div className="flex w-[250px] shrink-0 flex-col gap-3 py-2.5">
@@ -87,8 +95,8 @@ export function SeriesTable({ teams, series, maps, tileSize, live = false }: Ser
                 >
                     <SeriesMapTile map={map} size={tileSize} />
                     {SIDES.map(side => <CapsCell key={side} map={map} side={side} />)}
-                    {live && (
-                        <p className="h-5 text-center text-base font-bold uppercase tracking-[0.16em] text-white/50">{mapNote(map)}</p>
+                    {notes && (
+                        <p data-series-map-note className="h-5 text-center text-base font-bold uppercase tracking-[0.16em] text-white/50">{mapNote(map)}</p>
                     )}
                 </div>
             ))}

@@ -57,7 +57,7 @@ export interface NextMapShown {
 export type NextMapView =
     | { state: 'map'; kicker: string; next: NextMapShown }
     | { state: 'tbd'; kicker: string; number: number }
-    | { state: 'over'; kicker: string }
+    | { state: 'over' | 'stalled'; kicker: string; headline: string }
 
 export interface NextMapInput {
     match: StreamMatch
@@ -139,9 +139,20 @@ export function nextMapReadOrdinal(match: StreamMatch): number | null {
     return match.maps.some(map => map.ordinal === ordinal && map.map) ? ordinal : null
 }
 
+function seriesEnd(match: StreamMatch): NextMapView {
+    const { a, b } = match.score.series
+    const tally = `Series ${a}–${b}`
+    const state = match.score.series_state
+    if (state === 'won') return { state: 'over', kicker: `${tally} · final`, headline: 'Series complete' }
+    if (state === 'drawn') return { state: 'over', kicker: `${tally} · final`, headline: 'Series drawn' }
+    if (state === 'unresolved' && a === b) return { state: 'stalled', kicker: `${tally} · decider to come`, headline: 'Series level' }
+    if (state === 'unresolved') return { state: 'stalled', kicker: tally, headline: 'Awaiting the result' }
+    return { state: 'tbd', kicker: `Map 1 of ${match.best_of}`, number: 1 }
+}
+
 export function nextMapView({ match, read, readFailed, failedVideo, animate }: NextMapInput): NextMapView {
     const ordinal = match.score.current_map
-    if (ordinal === null) return { state: 'over', kicker: `Series ${match.score.series.a}–${match.score.series.b} · final` }
+    if (ordinal === null) return seriesEnd(match)
     const number = mapNumber(ordinal)
     const kicker = `Map ${number} of ${match.best_of}`
     const row = match.maps.find(map => map.ordinal === ordinal)

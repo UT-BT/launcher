@@ -9,7 +9,7 @@ import { SceneFrame } from '../frame/SceneFrame'
 import { seriesScoreOf } from './brb/brbView'
 import { SeriesScoreCard } from './brb/SeriesScoreCard'
 import { nextMapReadPath, type NextMapRead } from './nextMap/nextMapRead'
-import { nextMapReadOrdinal, nextMapView, type NextMapShown } from './nextMap/nextMapView'
+import { nextMapReadOrdinal, nextMapView, type NextMapShown, type NextMapView } from './nextMap/nextMapView'
 import { NextMapHero } from './nextMap/NextMapHero'
 import { NextMapColumn } from './nextMap/NextMapColumn'
 
@@ -33,7 +33,7 @@ function MapLayout({ next, match, onVideoFailed }: { next: NextMapShown; match: 
     )
 }
 
-function MessageLayout({ state, headline, match }: { state: 'tbd' | 'over'; headline: string; match: StreamMatch }) {
+function MessageLayout({ state, headline, match }: { state: NextMapView['state']; headline: string; match: StreamMatch }) {
     return (
         <div data-next-map-state={state} className="flex h-full flex-col items-center justify-center gap-14">
             <p className="text-center text-[112px] font-black italic uppercase leading-none [text-shadow:0_6px_30px_rgba(0,0,0,0.6)]">{headline}</p>
@@ -56,7 +56,7 @@ function NextMapBody({ match, eventSlug, animate }: { match: StreamMatch; eventS
         <SceneFrame scene="next-map" title="Next Map" kicker={view.kicker}>
             {view.state === 'map' && <MapLayout next={view.next} match={match} onVideoFailed={setFailedVideo} />}
             {view.state === 'tbd' && <MessageLayout state="tbd" headline="Maps to be decided" match={match} />}
-            {view.state === 'over' && <MessageLayout state="over" headline="Series complete" match={match} />}
+            {(view.state === 'over' || view.state === 'stalled') && <MessageLayout state={view.state} headline={view.headline} match={match} />}
         </SceneFrame>
     )
 }

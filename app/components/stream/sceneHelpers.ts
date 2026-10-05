@@ -1,6 +1,6 @@
 import { parseApiInstant } from '@/app/utils/timezone'
 import { PICK_BAN_TONES, type PickBanTone, type PickBanToneClasses } from '@/app/components/broadcast/broadcastTone'
-import type { StreamMatch, StreamSide } from './data/streamHotState'
+import type { StreamMapScore, StreamMatch, StreamSide } from './data/streamHotState'
 
 const MINUTE_MS = 60_000
 const HOUR_MINUTES = 60
@@ -50,8 +50,18 @@ export function sceneTimeText(iso: string | null, now: number): string | null {
     return `${utcTimeText(at, now)} · ${relativeTimeText(at, now)}`
 }
 
-export function seriesTarget(match: Pick<StreamMatch, 'best_of' | 'mode'>): number {
-    return match.mode === 'all_maps' ? match.best_of : Math.floor(match.best_of / 2) + 1
+export function mapDrawn(score: Pick<StreamMapScore, 'decided' | 'winner'>): boolean {
+    return score.decided && score.winner === null
+}
+
+export function seriesTarget(match: Pick<StreamMatch, 'best_of' | 'mode' | 'score'>): number {
+    const decisive = Math.max(match.best_of - match.score.drawn_maps, 0)
+    return match.mode === 'all_maps' ? decisive : Math.floor(decisive / 2) + 1
+}
+
+export function drawnMapsText(count: number): string | null {
+    if (count === 0) return null
+    return `${count} map${count === 1 ? '' : 's'} drawn`
 }
 
 export function seriesFlags(match: Pick<StreamMatch, 'best_of' | 'mode' | 'score'>): Record<StreamSide, SeriesFlag[]> {

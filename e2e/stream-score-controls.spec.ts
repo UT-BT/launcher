@@ -340,7 +340,7 @@ async function mockApi(page: Page, pickBanEndedAt: string | null = null): Promis
     return server
 }
 
-const HINT = 'Map over without a winner? Close it here.'
+const HINT = 'Map ended level? Close it here as a draw.'
 
 function scoreSection(page: Page) {
     return page.getByRole('region', { name: 'Score', exact: true })
@@ -385,7 +385,7 @@ test('the score panel lists each map in pick order with its picker, source, scor
     await expect(second.getByText('Live', { exact: true })).toBeVisible()
     await expect(scoreInput(page, 'Azure Wave', 2)).toHaveValue('0')
     await expect(stepButton(page, 'Lower', 'Azure Wave', 2)).toBeDisabled()
-    await expect(winnerSelect(page, 2).locator('option')).toHaveText(['Auto', 'Crimson Tide', 'Azure Wave', 'No winner'])
+    await expect(winnerSelect(page, 2).locator('option')).toHaveText(['Auto', 'Crimson Tide', 'Azure Wave', 'Draw'])
 
     await expect(mapRow(page, 3)).toContainText('Decider')
     await expect(scoreSection(page).getByText(HINT)).toHaveCount(1)
@@ -460,16 +460,16 @@ test('a typed score outside 0 to 20 is refused before it is sent', async ({ page
     expect(server.writes).toHaveLength(0)
 })
 
-test('setting No winner closes the current map and moves the current map on', async ({ page }) => {
+test('setting Draw closes the current map and moves the current map on', async ({ page }) => {
     const server = await mockApi(page)
     await openStreamTab(page)
 
-    await winnerSelect(page, 2).selectOption({ label: 'No winner' })
+    await winnerSelect(page, 2).selectOption({ label: 'Draw' })
 
     await expect(mapRow(page, 3).getByText('Current', { exact: true })).toBeVisible({ timeout: 2_000 })
     await expect(mapRow(page, 3).getByText(HINT)).toBeVisible()
     await expect(mapRow(page, 2).getByText(HINT)).toHaveCount(0)
-    await expect(mapRow(page, 2)).toContainText('No winner')
+    await expect(mapRow(page, 2)).toContainText('Draw')
     await expect(winnerSelect(page, 2)).toHaveValue('none')
     await expect(scoreSection(page).getByTestId('series-score')).toHaveText('Series: Crimson Tide 1 – 0 Azure Wave')
     expect(server.writes[0]).toEqual({ method: 'PUT', path: `${MATCH_PATH}/score/maps/1`, body: { a: null, b: null, winner: 'none' } })
