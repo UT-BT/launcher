@@ -295,18 +295,88 @@ export class ApiError extends Error {
     }
 }
 
+function apiErrorFromBody(status: number, body: unknown): ApiError {
+    const fields = body && typeof body === 'object' ? (body as { error?: string; reason?: string; code?: string }) : undefined
+    const message = fields?.error || fields?.reason || undefined
+    const reason = fields?.code || undefined
+    return new ApiError(status, message, `Request failed (${status})`, reason)
+}
+
 async function apiErrorFor(res: Response): Promise<ApiError> {
-    let message: string | undefined
-    let reason: string | undefined
+    let body: unknown
     try {
-        const body = await res.json()
-        message = body?.error || body?.reason || undefined
-        reason = body?.code || undefined
+        body = await res.json()
     } catch {
-        message = undefined
-        reason = undefined
+        body = undefined
     }
-    return new ApiError(res.status, message, `Request failed (${res.status})`, reason)
+    return apiErrorFromBody(res.status, body)
+}
+
+export interface UploadProgress {
+    loaded: number
+    total: number
+}
+
+export interface ApiUploadOptions {
+    token?: string
+    method?: 'POST' | 'PUT'
+    signal?: AbortSignal
+    timeoutMs?: number
+    onProgress?: (progress: UploadProgress) => void
+}
+
+function parseJsonOrUndefined(text: string): unknown {
+    try {
+        return JSON.parse(text)
+    } catch {
+        return undefined
+    }
+}
+
+function uploadCancelled(): DOMException {
+    return new DOMException('The upload was cancelled.', 'AbortError')
+}
+
+export function apiUpload<T>(path: string, body: FormData, opts: ApiUploadOptions = {}): Promise<T> {
+    const { token, method = 'POST', signal, timeoutMs = 0, onProgress } = opts
+    return new Promise<T>((resolve, reject) => {
+        if (signal?.aborted) {
+            reject(uploadCancelled())
+            return
+        }
+        const xhr = new XMLHttpRequest()
+        const onAbort = () => xhr.abort()
+        const settle = (finish: () => void) => {
+            signal?.removeEventListener('abort', onAbort)
+            finish()
+        }
+        let reported = -1
+
+        xhr.upload.onprogress = (event) => {
+            if (!onProgress || event.loaded <= reported) return
+            reported = event.loaded
+            onProgress({ loaded: event.loaded, total: event.lengthComputable ? event.total : 0 })
+        }
+        xhr.onload = () => settle(() => {
+            const json = parseJsonOrUndefined(xhr.responseText) as { success?: boolean; data?: unknown } | undefined
+            if (xhr.status < 200 || xhr.status >= 300) {
+                reject(apiErrorFromBody(xhr.status, json))
+            } else if (json && json.success && json.data !== null && json.data !== undefined) {
+                resolve(json.data as T)
+            } else {
+                reject(new Error('Invalid response format from server'))
+            }
+        })
+        xhr.onerror = () => settle(() => reject(new Error('The upload could not reach the server. Check your connection and try again.')))
+        xhr.onabort = () => settle(() => reject(uploadCancelled()))
+        xhr.ontimeout = () => settle(() => reject(new DOMException('The upload timed out.', 'TimeoutError')))
+
+        xhr.open(method, path.startsWith('http') ? path : `${API_BASE_URL}${path}`)
+        xhr.timeout = timeoutMs
+        for (const [name, value] of Object.entries(bearerHeaders(token))) xhr.setRequestHeader(name, value)
+        signal?.addEventListener('abort', onAbort, { once: true })
+        xhr.send(body)
+    })
 }
 
 export function asNum(v: unknown, fallback = 0): number {

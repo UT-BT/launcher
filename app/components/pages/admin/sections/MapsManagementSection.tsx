@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Map as MapIcon, Plus, Pencil, RefreshCw, X, ImagePlus, ImageOff, AlertTriangle, Search, Megaphone, Gauge, Loader2, CheckCircle2, Link2 } from 'lucide-react'
 import {
-  fetchAdminMaps, fetchAdminMapsCount, createMap, updateMap, fetchAdminUsers, fetchAdminMapTags,
-  fetchMapvoteStatus, setMapvoteAnnouncement, regenerateMapvote, toActiveTitle,
+  fetchAdminMaps, fetchAdminMapsCount, createMap, updateMap, fetchAdminMapTags,
+  fetchMapvoteStatus, setMapvoteAnnouncement, regenerateMapvote,
   fetchDifficultySyncPreview, applyDifficultySync, deleteMapScreenshot,
-  type AdminMapRow, type AdminMapSort, type AdminUserRow, type MapvoteStatus, type DifficultySyncChange,
+  type AdminMapRow, type AdminMapSort, type MapvoteStatus, type DifficultySyncChange,
 } from '@/app/utils/api'
 import { cn } from '@/lib/utils'
 import type { AdminSectionProps } from '../types'
@@ -16,6 +16,8 @@ import { TableControls } from '../components/TableControls'
 import { PANEL_LABEL, useResetOnChange, useAdminPageSize } from '../components/shared'
 import { MapLink } from '../components/MapLink'
 import { MapAuthorsModal } from './MapAuthorsModal'
+import { AuthorPicker, type AuthorUser } from '../components/AuthorPicker'
+import { TagEditor } from '../components/TagEditor'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { FilterPanelRow } from '@/app/components/ui/filter-panel-row'
@@ -90,121 +92,6 @@ interface MapFilters {
 
 function fieldLabel(text: string) {
   return <label className={PANEL_LABEL}>{text}</label>
-}
-
-interface AuthorUser { id: string; alias: string | null }
-
-function AuthorPicker({ mode, setMode, authorStr, setAuthorStr, authorUser, setAuthorUser, token }: {
-  mode: 'text' | 'player'
-  setMode: (m: 'text' | 'player') => void
-  authorStr: string
-  setAuthorStr: (v: string) => void
-  authorUser: AuthorUser | null
-  setAuthorUser: (u: AuthorUser | null) => void
-  token: string
-}) {
-  const [query, setQuery] = useState('')
-  const [results, setResults] = useState<AdminUserRow[]>([])
-
-  useEffect(() => {
-    if (mode !== 'player' || authorUser || !query.trim()) { setResults([]); return }
-    const ctrl = new AbortController()
-    const t = setTimeout(() => {
-      fetchAdminUsers(token, { search: query, limit: 8 }, ctrl.signal).then(setResults).catch(() => {})
-    }, 300)
-    return () => { clearTimeout(t); ctrl.abort() }
-  }, [mode, query, authorUser, token])
-
-  return (
-    <div className="space-y-2">
-      <div className="inline-flex rounded-md border border-hairline/10 overflow-hidden text-xs">
-        {(['text', 'player'] as const).map((m) => (
-          <button key={m} type="button" onClick={() => setMode(m)}
-            className={cn('px-3 py-1.5 cursor-pointer transition-colors', mode === m ? 'bg-accent-500/15 text-accent-200' : 'text-muted-foreground hover:text-foreground')}>
-            {m === 'text' ? 'Name' : 'Player'}
-          </button>
-        ))}
-      </div>
-
-      {mode === 'text' ? (
-        <Input value={authorStr} onChange={(e) => setAuthorStr(e.target.value)} placeholder="Author name" className="h-9" />
-      ) : authorUser ? (
-        <div className="flex items-center justify-between gap-2 bg-card/30 border border-hairline/10 rounded-md px-3 h-10">
-          <PlayerInfo userId={authorUser.id} alias={authorUser.alias} title={null} size="sm" interactive={false} />
-          <button type="button" onClick={() => setAuthorUser(null)} className="text-muted-foreground/60 hover:text-foreground cursor-pointer shrink-0"><X className="size-4" /></button>
-        </div>
-      ) : (
-        <div className="space-y-1.5">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground/60 pointer-events-none" />
-            <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search players…" className="h-9 pl-9" />
-          </div>
-          {results.length > 0 && (
-            <ul className="bg-card/30 border border-hairline/10 rounded-md divide-y divide-hairline/5 max-h-44 overflow-y-auto">
-              {results.map((u) => (
-                <li key={u.id}>
-                  <button type="button" onClick={() => { setAuthorUser({ id: u.id, alias: u.alias }); setQuery('') }}
-                    className="w-full text-left px-3 py-2 hover:bg-hairline/5 cursor-pointer">
-                    <PlayerInfo userId={u.id} alias={u.alias} title={toActiveTitle(u.active_title)} size="sm" interactive={false} />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
-
-function TagEditor({ tags, onChange, suggestions }: { tags: string[]; onChange: (t: string[]) => void; suggestions: string[] }) {
-  const [input, setInput] = useState('')
-  const q = input.trim().toLowerCase()
-  const hasTag = (value: string) => tags.some((t) => t.toLowerCase() === value.toLowerCase())
-  const add = (tag: string) => {
-    const v = tag.trim()
-    if (v && !hasTag(v)) onChange([...tags, v])
-    setInput('')
-  }
-  const matches = q ? suggestions.filter((s) => s.toLowerCase().includes(q) && !hasTag(s)).slice(0, 8) : []
-  const exact = !!q && suggestions.some((s) => s.toLowerCase() === q)
-  const canAddNew = !!q && !exact && !hasTag(input.trim())
-  return (
-    <div className="space-y-2">
-      <div className="flex gap-2">
-        <Input value={input} onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add(input) } }}
-          placeholder="Search or add a tag…" className="h-9 flex-1" />
-        <ActionButton tone="accent" icon={Plus} onClick={() => add(input)} disabled={!input.trim()}>Add</ActionButton>
-      </div>
-      {(matches.length > 0 || canAddNew) && (
-        <ul className="bg-card/30 border border-hairline/10 rounded-md divide-y divide-hairline/5 max-h-44 overflow-y-auto">
-          {matches.map((s) => (
-            <li key={s}>
-              <button type="button" onClick={() => add(s)} className="w-full text-left px-3 py-2 text-sm hover:bg-hairline/5 cursor-pointer">{s}</button>
-            </li>
-          ))}
-          {canAddNew && (
-            <li>
-              <button type="button" onClick={() => add(input.trim())} className="w-full text-left px-3 py-2 text-sm text-accent-300 hover:bg-hairline/5 cursor-pointer">
-                Add new tag “{input.trim()}”
-              </button>
-            </li>
-          )}
-        </ul>
-      )}
-      {tags.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {tags.map((t) => (
-            <span key={t} className="inline-flex items-center gap-1 text-xs bg-accent-500/10 border border-accent-500/20 text-accent-200 rounded px-2 py-0.5">
-              {t}
-              <button type="button" onClick={() => onChange(tags.filter((x) => x !== t))} className="text-accent-200/60 hover:text-accent-100 cursor-pointer"><X className="size-3" /></button>
-            </span>
-          ))}
-        </div>
-      )}
-    </div>
-  )
 }
 
 function SupersedePicker({ token, value, onChange, excludeName }: {
