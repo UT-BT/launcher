@@ -10,7 +10,7 @@ not_here:
   - "which component to use → shared-components.md"
   - "state / persistence → state-patterns.md"
 sections: [class-merging, tables-locked, responsive-columns, page-layout, filter-panel, buttons-toggle-states, form-inputs, card-backgrounds-borders, text, color-palette, animation, css-runtime-cost, broadcast-styling, scene-stylesheet, screenshot-conventions, donts]
-last_verified: 2026-10-01
+last_verified: 2026-10-05
 verify_against: [app/components/shared/DataTable.tsx, app/components/shared/LiveDot.tsx, app/components/shared/chipStyles.ts, app/styles/globals.css, app/styles/theme.css, app/styles/desktop.css, app/styles/index.css, lib/utils.ts, app/hooks/useElementWidth.ts, app/hooks/usePrefersReducedMotion.ts, app/components/broadcast/broadcastTone.ts, app/components/broadcast/broadcastMotion.ts, app/components/broadcast/broadcastFonts.ts, app/components/broadcast/broadcastFonts.css, app/components/broadcast/BroadcastStage.tsx, app/components/stream/streamScenes.css, app/components/stream/frame/SceneFrame.tsx, e2e/streamHarness.ts, playwright.config.ts, app/components/stream/scenes/overlay/overlayLayout.ts, app/components/stream/scenes/nextMap/NextMapHero.tsx, e2e/audio-balance.broadcast.spec.ts]
 ---
 
@@ -594,13 +594,14 @@ must be in a file the app scans. The bundle check budgets the two separately
   - *Score rows* (`OverlayHub`, 376×46, centred at 50%/50%): `#05070c` at 86% with a 1px white/12
     ring and 10px radius, a 6px team bar and a 30%→8% team wash, the team name in 900 italic (29px, 25px
     over 15 characters), 7×18 skewed win pips (the majority for a first-to series, the best-of for
-    all-maps), and a 46×38 score box at 38px holding the current map's caps. The rows sit at y 479–525
+    all-maps, both counted over the maps that were not drawn, so each drawn map takes one pip off), and a 46×38 score box at 38px holding the current map's caps. The rows sit at y 479–525
     and 555–601.
   - *Map strip* (`OverlayMapStrip`): a band up to 560px wide and 30px tall, centred on the seam at y
     540, on solid `#05070c` (never see-through) with an 8px radius and 16px text. Played cells are dimmed with their
-    result, the current cell has a white underline and lighter wash, upcoming cells are outlined in the
-    picker's colour (gold for the decider). Played names cap at 110px, upcoming at 140px, the current
-    one is uncapped. A width estimate in the view model collapses played cells to number and score
+    result (a drawn map adds a "Draw" word after its score), the current cell has a white underline and lighter wash, upcoming cells are outlined in the
+    picker's colour (gold for the decider), and once the series is decided the maps never played are skipped cells: outlined like
+    upcoming at 35% with a faded name. Played names cap at 110px, upcoming at 140px, the current
+    one is uncapped. A width estimate in the view model (the Draw word included) collapses played and skipped cells to number and score
     when the band would pass 560px; if it still overflows, the upcoming-name cap steps down 8px at a
     time to 40px, then upcoming cells show the number badge only. The **FT2 chip** (`FT{caps_to_win}`) sits outside the clipped cell
     box at the band's right end so it is never cut off; with no chip and no maps the band is not drawn.

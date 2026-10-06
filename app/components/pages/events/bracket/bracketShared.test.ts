@@ -3,7 +3,7 @@ import type {
     EventBracketGroup, EventBracketStage, EventBracketTeamRef, EventFormatSpec, EventMatch, EventMatchMap,
 } from '@/app/utils/api'
 import {
-    mapWinnerOf, matchOrder, nextOwnMatch, opponentNameOf, pickBanMapLabel, schedulingWindowLabel, schedulingWindowState,
+    mapIsDrawn, mapWinnerOf, matchOrder, nextOwnMatch, opponentNameOf, pickBanMapLabel, schedulingWindowLabel, schedulingWindowState,
     seriesProgress, unfinishedFeeders,
 } from './bracketShared'
 
@@ -36,6 +36,27 @@ describe('mapWinnerOf', () => {
 
     it('has no winner for an untouched map', () => {
         expect(mapWinnerOf(mapRow(), 4)).toBeNull()
+    })
+
+    it('has no winner for a hand-set draw whatever the caps', () => {
+        expect(mapWinnerOf(mapRow({ caps_a: 2, caps_b: 0, winner_side: 'draw' }), 2)).toBeNull()
+    })
+})
+
+describe('mapIsDrawn', () => {
+    it('reads a played map short of the target as drawn', () => {
+        expect(mapIsDrawn(mapRow({ caps_a: 1, caps_b: 1 }), 2)).toBe(true)
+        expect(mapIsDrawn(mapRow({ caps_a: 0, caps_b: 0 }), 2)).toBe(true)
+    })
+
+    it('reads a hand-set draw as drawn even without caps', () => {
+        expect(mapIsDrawn(mapRow({ winner_side: 'draw' }), 2)).toBe(true)
+    })
+
+    it('never calls a won or untouched map drawn', () => {
+        expect(mapIsDrawn(mapRow({ caps_a: 2, caps_b: 1 }), 2)).toBe(false)
+        expect(mapIsDrawn(mapRow({ caps_a: 1, caps_b: 1, winner_side: 'b' }), 2)).toBe(false)
+        expect(mapIsDrawn(mapRow(), 2)).toBe(false)
     })
 })
 
@@ -138,6 +159,54 @@ describe('seriesProgress', () => {
         const maps = [mapRow({ ordinal: 0, caps_a: 4, caps_b: 1 }), mapRow({ ordinal: 1 }), mapRow({ ordinal: 2 })]
 
         expect(seriesProgress(bo3, maps)).toMatchObject({ complete: false, remaining: 1 })
+    })
+
+    const cupGroup = { best_of: 4, caps_to_win: 2, mode: 'first_to' as const }
+
+    it('ends a race once a drawn map leaves the leader out of reach', () => {
+        const maps = [
+            mapRow({ ordinal: 0, caps_a: 2, caps_b: 0 }),
+            mapRow({ ordinal: 1, caps_a: 1, caps_b: 1 }),
+            mapRow({ ordinal: 2, caps_a: 2, caps_b: 1 }),
+            mapRow({ ordinal: 3 }),
+        ]
+
+        expect(seriesProgress(cupGroup, maps, true))
+            .toMatchObject({ complete: true, scoreA: 2, scoreB: 0, played: 3, isDraw: false, remaining: 0 })
+    })
+
+    it('keeps a race open while the last map could still level it', () => {
+        const maps = [
+            mapRow({ ordinal: 0, caps_a: 2, caps_b: 0 }),
+            mapRow({ ordinal: 1, winner_side: 'draw' }),
+            mapRow({ ordinal: 2, caps_a: 0, caps_b: 2 }),
+            mapRow({ ordinal: 3 }),
+        ]
+
+        expect(seriesProgress(cupGroup, maps, true))
+            .toMatchObject({ complete: false, scoreA: 1, scoreB: 1, played: 3, remaining: 1 })
+    })
+
+    it('needs one more win after a win and a drawn map', () => {
+        const maps = [
+            mapRow({ ordinal: 0, caps_a: 2, caps_b: 0 }),
+            mapRow({ ordinal: 1, caps_a: 0, caps_b: 0 }),
+            mapRow({ ordinal: 2 }),
+            mapRow({ ordinal: 3 }),
+        ]
+
+        expect(seriesProgress(cupGroup, maps, true)).toMatchObject({ complete: false, remaining: 1 })
+    })
+
+    it('calls a win, a loss and two drawn maps a group draw', () => {
+        const maps = [
+            mapRow({ ordinal: 0, caps_a: 2, caps_b: 0 }),
+            mapRow({ ordinal: 1, caps_a: 1, caps_b: 1 }),
+            mapRow({ ordinal: 2, caps_a: 0, caps_b: 2 }),
+            mapRow({ ordinal: 3, caps_a: 0, caps_b: 0 }),
+        ]
+
+        expect(seriesProgress(cupGroup, maps, true)).toMatchObject({ complete: true, isDraw: true, remaining: 0 })
     })
 })
 

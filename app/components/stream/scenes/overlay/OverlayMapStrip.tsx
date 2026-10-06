@@ -4,17 +4,19 @@ import { PICK_BAN_HUES, PICK_BAN_TONES } from '@/app/components/broadcast/broadc
 import { sideToneClasses } from '../../sceneHelpers'
 import { BAND } from './overlayLayout'
 import type { StreamSide } from '../../data/streamHotState'
-import type { OverlayMapResult, OverlayStrip, OverlayStripMap } from './overlayView'
+import { DRAW_LABEL, type OverlayMapResult, type OverlayStrip, type OverlayStripMap } from './overlayView'
 
 const NAME_CLASSES: Record<OverlayStripMap['state'], string> = {
     played: 'text-white/42',
     current: 'font-extrabold italic tracking-[0.03em] text-white',
     upcoming: 'text-white/50',
+    skipped: 'text-white/25',
 }
 
 function badgeStyle(map: OverlayStripMap): CSSProperties {
     const hue = PICK_BAN_HUES[map.tone]
     if (map.state === 'upcoming') return { boxShadow: `inset 0 0 0 1.5px ${hue}`, color: hue }
+    if (map.state === 'skipped') return { boxShadow: `inset 0 0 0 1.5px ${hue}`, color: hue, opacity: 0.35 }
     return { background: hue, opacity: map.state === 'played' ? 0.5 : 1 }
 }
 
@@ -26,6 +28,11 @@ function Result({ result }: { result: OverlayMapResult }) {
             {score('a')}
             <i className="px-[0.12em] not-italic">–</i>
             {score('b')}
+            {result.drawn && (
+                <span data-map-draw className="ml-[0.45em] text-[0.82em] font-extrabold uppercase tracking-[0.06em] text-white/80">
+                    {DRAW_LABEL}
+                </span>
+            )}
         </span>
     )
 }
@@ -45,7 +52,7 @@ function MapCell({ map, divider }: { map: OverlayStripMap; divider: boolean }) {
             <span
                 className={cn(
                     'inline-flex size-[1.2em] shrink-0 items-center justify-center rounded-[0.22em] pr-[0.06em] text-[0.86em] font-black italic leading-none',
-                    map.state !== 'upcoming' && PICK_BAN_TONES[map.tone].onSolid,
+                    map.state !== 'upcoming' && map.state !== 'skipped' && PICK_BAN_TONES[map.tone].onSolid,
                 )}
                 style={badgeStyle(map)}
             >

@@ -7,6 +7,7 @@ export type StreamReason = 'current' | 'live' | 'holding-finished' | 'next' | 'n
 export type StreamScoreSource = 'official' | 'live' | 'manual'
 export type StreamMapClosedBy = 'official' | 'override' | 'target' | 'later_map'
 export type StreamWinnerOverride = 'auto' | 'a' | 'b' | 'none'
+export type StreamSeriesState = 'open' | 'won' | 'drawn' | 'unresolved'
 export type StreamLineupSlot = 'a1' | 'a2' | 'b1' | 'b2'
 
 export interface StreamUserRef {
@@ -54,6 +55,8 @@ export interface StreamScore {
     maps: StreamMapScore[]
     current_map: number | null
     series: { a: number; b: number }
+    series_state: StreamSeriesState
+    drawn_maps: number
     winner: StreamSide | null
     live_decided: boolean
     live_counting: boolean

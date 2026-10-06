@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { PICK_BAN_TONES } from '@/app/components/broadcast/broadcastTone'
-import { STREAM_T0, streamMapScore, streamMatch, streamScore } from './data/streamFixtures'
+import { STREAM_T0, streamDrawnMapScore, streamMapScore, streamMatch, streamScore } from './data/streamFixtures'
 import {
     formatLabel,
+    mapDrawn,
     mapNumber,
     relativeTimeText,
     sceneTimeText,
@@ -108,6 +109,44 @@ describe('seriesTarget and seriesFlags', () => {
         const match = streamMatch({ best_of: 1, score: streamScore([streamMapScore(0, [2, 0], 'a')], { series: { a: 4, b: 0 } }) })
 
         expect(seriesFlags(match)).toEqual({ a: ['won'], b: ['open'] })
+    })
+
+    it('takes a drawn map out of the race, so a four-map series becomes first to two', () => {
+        const match = streamMatch({ best_of: 4, score: streamScore([streamMapScore(0, [2, 0], 'a'), streamDrawnMapScore(1), streamMapScore(2)]) })
+
+        expect(seriesTarget(match)).toBe(2)
+        expect(seriesFlags(match)).toEqual({ a: ['won', 'open'], b: ['open', 'open'] })
+    })
+
+    it('takes drawn maps off an all-maps series too', () => {
+        const match = streamMatch({ best_of: 4, mode: 'all_maps', score: streamScore([streamDrawnMapScore(0), streamMapScore(1)]) })
+
+        expect(seriesTarget(match)).toBe(3)
+    })
+
+    it('trusts the drawn-map count of the score block over the drawn maps it can see', () => {
+        const match = streamMatch({
+            best_of: 4,
+            score: streamScore(
+                [
+                    streamMapScore(0, [2, 0], 'a'),
+                    streamMapScore(1, [2, 1], 'a'),
+                    streamMapScore(2, [2, 0], 'a'),
+                    streamDrawnMapScore(3),
+                ],
+                { drawn_maps: 0 },
+            ),
+        })
+
+        expect(seriesTarget(match)).toBe(3)
+    })
+})
+
+describe('mapDrawn', () => {
+    it('calls a decided map without a winner drawn', () => {
+        expect(mapDrawn(streamDrawnMapScore(0))).toBe(true)
+        expect(mapDrawn(streamMapScore(0, [2, 0], 'a'))).toBe(false)
+        expect(mapDrawn(streamMapScore(0, [1, 1]))).toBe(false)
     })
 })
 

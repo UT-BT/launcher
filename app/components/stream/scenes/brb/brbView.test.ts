@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { streamHotState, streamMatch, streamMaps, streamMapScore, streamScore } from '../../data/streamFixtures'
+import { streamDrawnMapScore, streamHotState, streamMatch, streamMaps, streamMapScore, streamScore } from '../../data/streamFixtures'
 import { BRB_DEFAULT_MESSAGE, brbView, seriesScoreOf } from './brbView'
 
 const MAPS = streamMaps(['CTF-Face', 'CTF-Coret', 'CTF-Dq', 'CTF-Niven'], ['a', 'b', 'a', 'b'])
@@ -49,6 +49,27 @@ describe('seriesScoreOf', () => {
 
     it('numbers the first map 1, never 0', () => {
         expect(seriesScoreOf(streamMatch({ maps: MAPS })).caption).toBe('Series · map 1 · Bo4 · first to 2')
+    })
+
+    it('counts the drawn maps and shrinks the pips to what the race still needs', () => {
+        const score = streamScore([streamMapScore(0, [2, 0], 'a'), streamDrawnMapScore(1), streamMapScore(2), streamMapScore(3)])
+        const view = seriesScoreOf(streamMatch({ maps: MAPS, score }))
+        expect(view.caption).toBe('Series · map 3 · 1 map drawn · Bo4 · first to 2')
+        expect(view.a.flags).toEqual(['won', 'open'])
+    })
+
+    it('reads a decided series without a winner as drawn', () => {
+        const score = streamScore(
+            [streamMapScore(0, [2, 0], 'a'), streamDrawnMapScore(1), streamMapScore(2, [0, 2], 'b'), streamDrawnMapScore(3, [0, 0])],
+            { live_decided: true, series_state: 'drawn' },
+        )
+        expect(seriesScoreOf(streamMatch({ maps: MAPS, score })).caption).toBe('Series drawn · 2 maps drawn · Bo4 · first to 2')
+    })
+
+    it('reads a level knockout with no map left as level, not drawn', () => {
+        const score = streamScore([streamMapScore(0, [2, 0], 'a'), streamMapScore(1, [0, 2], 'b'), streamDrawnMapScore(2)], { series_state: 'unresolved' })
+        const view = seriesScoreOf(streamMatch({ best_of: 3, maps: MAPS.slice(0, 3), stage: { key: 'playoffs', name: 'Playoffs' }, score }))
+        expect(view.caption).toBe('Series level · 1 map drawn · Bo3 · first to 2')
     })
 
     it('names an open team slot', () => {

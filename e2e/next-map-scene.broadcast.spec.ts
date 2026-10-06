@@ -142,7 +142,7 @@ test('before pick and ban places the map, the scene says Maps to be decided and 
 test('once the series is decided, the scene says so instead of naming a map', async ({ page }) => {
     const decided = nextMapHotState([[2, 1, 'a'], [2, 0, 'a']])
     const match = decided.match!
-    await openNextMap(page, { hotState: streamHotState({ match: { ...match, score: { ...match.score, current_map: null, winner: 'a', live_decided: true } } }) })
+    await openNextMap(page, { hotState: streamHotState({ match: { ...match, score: { ...match.score, current_map: null, winner: 'a', live_decided: true, series_state: 'won' } } }) })
 
     await expect(page.locator('[data-next-map-state="over"]')).toContainText('Series complete')
     await expect(page.getByText('Series 2–0 · final')).toBeVisible()

@@ -1,6 +1,6 @@
 import { displayMapName } from '@/app/utils/format'
 import type { StreamLineupSlot, StreamMatch, StreamScore, StreamScoreSource, StreamSide } from '../../data/streamHotState'
-import { mapNumber, seriesFlags, type SeriesFlag } from '../../sceneHelpers'
+import { mapDrawn, mapNumber, seriesFlags, type SeriesFlag } from '../../sceneHelpers'
 import { BAND, LONG_TEAM_NAME_CHARS, MAP_NAME_MAX_PX, STRIP_ESTIMATE, UPCOMING_NAME_MIN_PX, type OverlayMapState } from './overlayLayout'
 
 export type OverlayTagPlacement = 'above-seam-left' | 'above-seam-right' | 'below-seam-left' | 'below-seam-right'
@@ -26,7 +26,10 @@ export interface OverlayMapResult {
     a: number
     b: number
     winner: StreamSide | null
+    drawn: boolean
 }
+
+export const DRAW_LABEL = 'Draw'
 
 export interface OverlayStripMap {
     ordinal: number
@@ -81,6 +84,11 @@ function resultText(result: OverlayMapResult): string {
     return `${result.a}–${result.b}`
 }
 
+function resultPx(result: OverlayMapResult): number {
+    const draw = result.drawn ? STRIP_ESTIMATE.gapPx + textPx(DRAW_LABEL) : 0
+    return STRIP_ESTIMATE.gapPx + textPx(resultText(result)) + draw + STRIP_ESTIMATE.resultPaddingPx
+}
+
 function textPx(text: string, maxPx: number | null = null): number {
     const px = text.length * STRIP_ESTIMATE.charPx
     return maxPx === null ? px : Math.min(px, maxPx)
@@ -88,7 +96,7 @@ function textPx(text: string, maxPx: number | null = null): number {
 
 function cellPx(map: OverlayStripMap): number {
     const name = map.showName ? STRIP_ESTIMATE.gapPx + textPx(map.name, map.nameMaxPx) : 0
-    const result = map.result ? STRIP_ESTIMATE.gapPx + textPx(resultText(map.result)) + STRIP_ESTIMATE.resultPaddingPx : 0
+    const result = map.result ? resultPx(map.result) : 0
     return STRIP_ESTIMATE.cellPaddingPx + STRIP_ESTIMATE.badgePx + name + result
 }
 
@@ -97,14 +105,22 @@ function bandPx(maps: OverlayStripMap[], target: string | null): number {
     return 2 * BAND.paddingX + maps.reduce((sum, map) => sum + cellPx(map), 0) + chip
 }
 
+function mapState(match: StreamMatch, ordinal: number, decided: boolean): OverlayMapState {
+    if (decided) return 'played'
+    if (ordinal === match.score.current_map) return 'current'
+    return match.score.live_decided ? 'skipped' : 'upcoming'
+}
+
 function stripMaps(match: StreamMatch): OverlayStripMap[] {
     return [...match.maps]
         .sort((left, right) => left.ordinal - right.ordinal)
         .map(map => {
             const score = match.score.maps.find(entry => entry.ordinal === map.ordinal)
-            const state: OverlayMapState = score?.decided ? 'played' : map.ordinal === match.score.current_map ? 'current' : 'upcoming'
+            const state = mapState(match, map.ordinal, score?.decided ?? false)
             const caps = score?.caps
-            const result = state === 'played' && caps && caps.a !== null && caps.b !== null ? { a: caps.a, b: caps.b, winner: score?.winner ?? null } : null
+            const result = state === 'played' && score && caps && caps.a !== null && caps.b !== null
+                ? { a: caps.a, b: caps.b, winner: score.winner, drawn: mapDrawn(score) }
+                : null
             return {
                 ordinal: map.ordinal,
                 number: mapNumber(map.ordinal),
@@ -134,7 +150,7 @@ function mapStrip(match: StreamMatch): OverlayStrip {
     const target = match.caps_to_win === null ? null : `FT${match.caps_to_win}`
     const full = stripMaps(match)
     if (bandPx(full, target) <= BAND.maxWidth) return { maps: full, target, compact: false }
-    const collapsed = full.map(map => (map.state === 'played' ? { ...map, showName: false } : map))
+    const collapsed = full.map(map => (map.state === 'played' || map.state === 'skipped' ? { ...map, showName: false } : map))
     return { maps: fitUpcomingNames(collapsed, target), target, compact: true }
 }
 

@@ -1,13 +1,14 @@
-import { useEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 import { Share2, Check } from 'lucide-react'
 import { Modal } from '@/app/components/ui/modal'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import { formatCapTime, displayMapName } from '@/app/utils/format'
 import { loadReplayVideoVolume, saveReplayVideoVolume } from '@/app/utils/replayVideoVolume'
 import { cn } from '@/lib/utils'
+import type { ReplaySource, ReplayVideo } from '@/app/utils/api'
 
 export interface ReplayVideoState {
-    url: string
+    video: ReplayVideo
     mapName: string
     time?: number
     alias?: string
@@ -52,7 +53,36 @@ export function ReplayVideoPlayer({ url, className }: { url: string; className?:
     )
 }
 
-export function ReplayVideoModal({ state, onClose, leftAction }: ReplayVideoModalProps) {
+const REPLAY_SOURCE_CREDITS: Record<ReplaySource, { label: string; href: string }> = {
+    utrecorder: { label: 'UTRecorder', href: 'https://recorder.utbt.net' },
+    democonverter: { label: 'democonverter.com', href: 'https://democonverter.com' },
+}
+
+export function ReplaySourceCredit({ sources }: { sources: ReplaySource[] }) {
+    const unique = Array.from(new Set(sources))
+    if (unique.length === 0) return null
+
+    return (
+        <div className="text-xs text-muted-foreground flex items-center">
+            Powered by{' '}
+            {unique.map((source, index) => (
+                <Fragment key={source}>
+                    {index > 0 && <span className="ml-1">&amp;</span>}
+                    <a
+                        href={REPLAY_SOURCE_CREDITS[source].href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="ml-1 text-accent-400 hover:underline"
+                    >
+                        {REPLAY_SOURCE_CREDITS[source].label}
+                    </a>
+                </Fragment>
+            ))}
+        </div>
+    )
+}
+
+export function ReplayVideoFooter({ video }: { video: ReplayVideo | null }) {
     const [shareCopied, setShareCopied] = useState(false)
     const shareTimerRef = useRef<number | null>(null)
 
@@ -61,9 +91,9 @@ export function ReplayVideoModal({ state, onClose, leftAction }: ReplayVideoModa
     }, [])
 
     const copyLink = async () => {
-        if (!state?.url) return
+        if (!video) return
         try {
-            await navigator.clipboard.writeText(state.url)
+            await navigator.clipboard.writeText(video.view_url ?? video.mp4_url)
             setShareCopied(true)
             if (shareTimerRef.current) window.clearTimeout(shareTimerRef.current)
             shareTimerRef.current = window.setTimeout(() => setShareCopied(false), 1500)
@@ -73,6 +103,30 @@ export function ReplayVideoModal({ state, onClose, leftAction }: ReplayVideoModa
     }
 
     return (
+        <div className="p-3 border-t border-border bg-muted/50 flex items-center justify-between gap-3 shrink-0">
+            <Tooltip content={shareCopied ? 'Link copied!' : 'Copy replay link'} side="top">
+                <button
+                    type="button"
+                    onClick={copyLink}
+                    aria-label="Copy replay link"
+                    className={cn(
+                        'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border transition-colors cursor-pointer',
+                        shareCopied
+                            ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
+                            : 'bg-hairline/[0.03] border-hairline/10 text-muted-foreground hover:text-foreground hover:bg-hairline/[0.06] hover:border-hairline/20',
+                    )}
+                >
+                    {shareCopied ? <Check className="size-3.5" /> : <Share2 className="size-3.5" />}
+                    {shareCopied ? 'Copied' : 'Share'}
+                </button>
+            </Tooltip>
+            <ReplaySourceCredit sources={video ? [video.source] : []} />
+        </div>
+    )
+}
+
+export function ReplayVideoModal({ state, onClose, leftAction }: ReplayVideoModalProps) {
+    return (
         <Modal
             isOpen={state !== null}
             onClose={onClose}
@@ -81,39 +135,9 @@ export function ReplayVideoModal({ state, onClose, leftAction }: ReplayVideoModa
             className="bg-card/98 border-hairline/5"
             maxWidth="min(90vw, 1280px)"
             leftAction={leftAction}
-            footer={
-                <div className="p-3 border-t border-border bg-muted/50 flex items-center justify-between gap-3 shrink-0">
-                    <Tooltip content={shareCopied ? 'Link copied!' : 'Copy replay link'} side="top">
-                        <button
-                            type="button"
-                            onClick={copyLink}
-                            aria-label="Copy replay link"
-                            className={cn(
-                                'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border transition-colors cursor-pointer',
-                                shareCopied
-                                    ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
-                                    : 'bg-hairline/[0.03] border-hairline/10 text-muted-foreground hover:text-foreground hover:bg-hairline/[0.06] hover:border-hairline/20',
-                            )}
-                        >
-                            {shareCopied ? <Check className="size-3.5" /> : <Share2 className="size-3.5" />}
-                            {shareCopied ? 'Copied' : 'Share'}
-                        </button>
-                    </Tooltip>
-                    <div className="text-xs text-muted-foreground flex items-center">
-                        Powered by{' '}
-                        <a
-                            href="https://democonverter.com"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="ml-1 text-accent-400 hover:underline"
-                        >
-                            democonverter.com
-                        </a>
-                    </div>
-                </div>
-            }
+            footer={<ReplayVideoFooter video={state?.video ?? null} />}
         >
-            {state && <ReplayVideoPlayer url={state.url} />}
+            {state && <ReplayVideoPlayer url={state.video.mp4_url} />}
         </Modal>
     )
 }

@@ -52,7 +52,7 @@ function casterCredits(casters: StreamUserRef[]): EndingCredit[] {
 }
 
 function kickerOf(match: StreamHotState['match']): string | null {
-    if (!match || match.score.winner === null || !match.teams.a || !match.teams.b) return null
+    if (!match || (match.score.winner === null && !match.score.live_decided) || !match.teams.a || !match.teams.b) return null
     return `${match.teams.a.name} ${match.score.series.a}–${match.score.series.b} ${match.teams.b.name}`
 }
 

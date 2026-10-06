@@ -243,14 +243,18 @@ export function pointsRule(points: EventPointsRow[]): string | null {
     const scoring = points.filter(row => row.points > 0)
     if (scoring.length === 0) return null
     const wins = scoring.filter(row => row.maps_won > row.maps_lost)
-    const others = scoring.filter(row => row.maps_won <= row.maps_lost)
+    const levels = points.filter(row => row.maps_won === row.maps_lost)
+    const drawPoints = new Set(levels.map(row => row.points))
+    const oneDraw = levels.length > 0 && drawPoints.size === 1 && levels[0].points > 0
+    const others = scoring.filter(row => row.maps_won < row.maps_lost || (row.maps_won === row.maps_lost && !oneDraw))
     const winValues = new Set(wins.map(row => row.points))
     const allWins = points.filter(row => row.maps_won > row.maps_lost)
     const winText = wins.length > 0 && winValues.size === 1 && wins.length === allWins.length
         ? [`${pts(wins[0].points)} win`]
         : wins.map(row => `${pts(row.points)} ${row.maps_won}${DASH}${row.maps_lost}`)
     const otherText = others.map(row => `${pts(row.points)} ${row.maps_won}${DASH}${row.maps_lost}${row.maps_won === row.maps_lost ? ' draw' : ''}`)
-    return [...winText, ...otherText].join(' · ')
+    const drawText = oneDraw ? [`${pts(levels[0].points)} draw`] : []
+    return [...winText, ...drawText, ...otherText].join(' · ')
 }
 
 export function groupFit(rowCount: number): GroupFit {

@@ -5,7 +5,7 @@ import type { MapScoreState } from './scoreActions'
 
 export const MIN_SCORE = 0
 export const MAX_SCORE = 20
-export const NO_WINNER_HINT = 'Map over without a winner? Close it here.'
+export const NO_WINNER_HINT = 'Map ended level? Close it here as a draw.'
 
 const FINISHED: ReadonlySet<EventMatchStatus> = new Set(['complete', 'forfeit', 'cancelled', 'bye'])
 const SIDES: readonly StreamSide[] = ['a', 'b']
@@ -109,7 +109,7 @@ function pickedText(match: StreamMatch, kind: string | undefined, pickedBy: Stre
 
 function resultText(match: StreamMatch, entry: StreamMapScore): string | null {
     if (!entry.decided) return null
-    return entry.winner ? `${teamName(match, entry.winner)} won` : 'No winner'
+    return entry.winner ? `${teamName(match, entry.winner)} won` : 'Draw'
 }
 
 function winnerOptions(match: StreamMatch): WinnerOption[] {
@@ -117,7 +117,7 @@ function winnerOptions(match: StreamMatch): WinnerOption[] {
         { value: 'auto', label: 'Auto' },
         { value: 'a', label: teamName(match, 'a') },
         { value: 'b', label: teamName(match, 'b') },
-        { value: 'none', label: 'No winner' },
+        { value: 'none', label: 'Draw' },
     ]
 }
 

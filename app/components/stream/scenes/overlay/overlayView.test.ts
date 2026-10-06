@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { streamMapScore, streamMaps, streamMatch, streamScore, streamTeam } from '../../data/streamFixtures'
+import { streamDrawnMapScore, streamMapScore, streamMaps, streamMatch, streamScore, streamTeam } from '../../data/streamFixtures'
 import { MAP_NAME_MAX_PX, UPCOMING_NAME_MIN_PX } from './overlayLayout'
 import { overlayView } from './overlayView'
 
@@ -81,6 +81,14 @@ describe('overlayView', () => {
                 ['open', 'open', 'open', 'open'],
             ])
         })
+
+        it('drops a pip from the race for every drawn map', () => {
+            const one = overlayView(streamMatch({ best_of: 4, score: streamScore([streamDrawnMapScore(0), streamMapScore(1)]) }))
+            const two = overlayView(streamMatch({ best_of: 5, score: streamScore([streamDrawnMapScore(0), streamDrawnMapScore(1, [0, 0]), streamMapScore(2)]) }))
+
+            expect(one?.teams.map(team => team.pips)).toEqual([['open', 'open'], ['open', 'open']])
+            expect(two?.teams[0].pips).toHaveLength(2)
+        })
     })
 
     describe('score box', () => {
@@ -150,7 +158,7 @@ describe('overlayView', () => {
         })
 
         it('gives played maps their result and the winner, and upcoming maps none', () => {
-            expect(overlayView(midSeries())?.strip.maps.map(map => map.result)).toEqual([{ a: 2, b: 1, winner: 'a' }, null, null, null])
+            expect(overlayView(midSeries())?.strip.maps.map(map => map.result)).toEqual([{ a: 2, b: 1, winner: 'a', drawn: false }, null, null, null])
         })
 
         it('shows a map decided with no winner at its level score', () => {
@@ -162,8 +170,8 @@ describe('overlayView', () => {
             const maps = overlayView(match)?.strip.maps
 
             expect(maps?.map(map => map.state)).toEqual(['played', 'played', 'current', 'upcoming'])
-            expect(maps?.[0].result).toEqual({ a: 1, b: 1, winner: null })
-            expect(maps?.[1].result).toEqual({ a: 0, b: 2, winner: 'b' })
+            expect(maps?.[0].result).toEqual({ a: 1, b: 1, winner: null, drawn: true })
+            expect(maps?.[1].result).toEqual({ a: 0, b: 2, winner: 'b', drawn: false })
         })
 
         it('gives a decided map with no caps no result', () => {
@@ -182,7 +190,24 @@ describe('overlayView', () => {
                 }),
             })
 
-            expect(overlayView(match)?.strip.maps.map(map => map.state)).toEqual(['played', 'played', 'played', 'upcoming'])
+            expect(overlayView(match)?.strip.maps.map(map => map.state)).toEqual(['played', 'played', 'played', 'skipped'])
+        })
+
+        it('ends a four-map race at 2-0 after a drawn map, with the last map skipped', () => {
+            const match = streamMatch({
+                maps: MAPS,
+                score: streamScore([streamMapScore(0, [2, 0], 'a'), streamDrawnMapScore(1), streamMapScore(2, [2, 1], 'a'), streamMapScore(3)], {
+                    current_map: null,
+                    winner: 'a',
+                    live_decided: true,
+                }),
+            })
+
+            const view = overlayView(match)
+
+            expect(view?.strip.maps.map(map => map.state)).toEqual(['played', 'played', 'played', 'skipped'])
+            expect(view?.strip.maps[1].result).toEqual({ a: 1, b: 1, winner: null, drawn: true })
+            expect(view?.teams.map(team => team.pips)).toEqual([['won', 'won'], ['open', 'open']])
         })
 
         it('is empty before pick/ban has placed any map', () => {
@@ -235,7 +260,7 @@ describe('overlayView', () => {
                 ['current', true],
                 ['upcoming', true],
             ])
-            expect(strip?.maps[0].result).toEqual({ a: 2, b: 0, winner: 'a' })
+            expect(strip?.maps[0].result).toEqual({ a: 2, b: 0, winner: 'a', drawn: false })
         })
 
         it('counts the caps target chip in the band width', () => {

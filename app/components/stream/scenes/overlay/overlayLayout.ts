@@ -1,4 +1,4 @@
-export type OverlayMapState = 'played' | 'current' | 'upcoming'
+export type OverlayMapState = 'played' | 'current' | 'upcoming' | 'skipped'
 
 export const SCORE_ROW = { width: 376, height: 46 }
 export const STAGE_WIDTH = 1920
@@ -12,6 +12,7 @@ export const MAP_NAME_MAX_PX = {
     played: 110,
     current: null,
     upcoming: 140,
+    skipped: 110,
 } satisfies Record<OverlayMapState, number | null>
 
 export const UPCOMING_NAME_MIN_PX = 40

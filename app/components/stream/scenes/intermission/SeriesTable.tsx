@@ -36,15 +36,22 @@ function columnGlow(map: SeriesMapView): string | undefined {
 }
 
 function statusLabel(map: SeriesMapView): string | null {
+    if (map.drawn) return 'Drawn'
     if (map.latest) return 'Just decided'
     if (map.status === 'next') return 'Up next'
+    if (map.status === 'skipped') return 'Not played'
     return null
+}
+
+function capCellTone(map: SeriesMapView, won: boolean, side: StreamSide): string {
+    if (won) return cn(sideToneClasses(side).solid, sideToneClasses(side).onSolid)
+    if (map.drawn) return 'bg-white/[0.14] text-white/85'
+    return 'bg-white/[0.06] text-white/55'
 }
 
 function CapCell({ map, side, reveal }: { map: SeriesMapView; side: StreamSide; reveal: MapReveal }) {
     const caps = map.caps?.[side] ?? null
     const won = map.winner === side
-    const tone = sideToneClasses(side)
     const popping = won && reveal?.ordinals.includes(map.ordinal)
 
     return (
@@ -53,7 +60,7 @@ function CapCell({ map, side, reveal }: { map: SeriesMapView; side: StreamSide; 
             animate={popping ? { ...REVEAL_POP, transition: { ...REVEAL_POP.transition, delay: revealDelayS(reveal, map.ordinal) } } : undefined}
             className={cn(
                 'flex h-[72px] items-center justify-center rounded-xl text-5xl font-black italic leading-[0.9] tabular-nums',
-                won ? cn(tone.solid, tone.onSolid) : 'bg-white/[0.06] text-white/55',
+                capCellTone(map, won, side),
             )}
         >
             {caps ?? '–'}
@@ -70,7 +77,7 @@ function MapColumn({ map, size, reveal, fill }: { map: SeriesMapView; size: numb
             data-map-column={map.number}
             data-map-status={map.status}
             data-map-revealing={revealing ? reveal?.seq : undefined}
-            className={cn('relative flex flex-col gap-3 rounded-[18px] p-2.5', fill ? 'min-w-0 flex-1' : 'shrink-0')}
+            className={cn('relative flex flex-col gap-3 rounded-[18px] p-2.5', fill ? 'min-w-0 flex-1' : 'shrink-0', map.status === 'skipped' && 'opacity-45')}
             style={{ boxShadow: columnGlow(map) }}
         >
             {revealing && (
