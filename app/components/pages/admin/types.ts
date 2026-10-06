@@ -17,6 +17,7 @@ export type AdminSectionId =
   | 'streamers'
   | 'caps-management'
   | 'maps-management'
+  | 'map-uploads'
   | 'patches-management'
   | 'anti-cheat'
   | 'audit-logs'

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { Map as MapIcon, Plus, Pencil, RefreshCw, X, ImagePlus, ImageOff, AlertTriangle, Search, Megaphone, Gauge, Loader2, CheckCircle2, Link2 } from 'lucide-react'
+import { Map as MapIcon, Plus, Pencil, RefreshCw, ImagePlus, ImageOff, AlertTriangle, Megaphone, Gauge, Loader2, CheckCircle2, Link2 } from 'lucide-react'
 import {
-  fetchAdminMaps, fetchAdminMapsCount, createMap, updateMap, fetchAdminMapTags,
+  fetchAdminMaps, fetchAdminMapsCount, updateMap, fetchAdminMapTags,
   fetchMapvoteStatus, setMapvoteAnnouncement, regenerateMapvote,
   fetchDifficultySyncPreview, applyDifficultySync, deleteMapScreenshot,
   type AdminMapRow, type AdminMapSort, type MapvoteStatus, type DifficultySyncChange,
@@ -34,6 +34,7 @@ import {
 } from '@/app/components/shared/DataTable'
 import { MapScreenshotModal } from '@/app/components/modals/MapScreenshotModal'
 import { MapVideoControl, type MapVideoState } from './MapVideoControl'
+import { useMapUploadsNav } from './mapUploads/useMapUploadsNav'
 
 const MAPVOTE_STALE_KEY = 'utbt:admin:maps:mapvoteStale:v1'
 const DIFFICULTY_OPTIONS = Array.from({ length: 10 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) }))
@@ -94,56 +95,6 @@ function fieldLabel(text: string) {
   return <label className={PANEL_LABEL}>{text}</label>
 }
 
-function SupersedePicker({ token, value, onChange, excludeName }: {
-  token: string
-  value: string | null
-  onChange: (v: string | null) => void
-  excludeName?: string
-}) {
-  const [query, setQuery] = useState('')
-  const [results, setResults] = useState<AdminMapRow[]>([])
-
-  useEffect(() => {
-    if (value || !query.trim()) { setResults([]); return }
-    const ctrl = new AbortController()
-    const t = setTimeout(() => {
-      fetchAdminMaps(token, { search: query, limit: 8 }, ctrl.signal)
-        .then((rows) => setResults(rows.filter((m) => m.name !== excludeName && !m.superseded_by)))
-        .catch(() => {})
-    }, 300)
-    return () => { clearTimeout(t); ctrl.abort() }
-  }, [query, value, excludeName, token])
-
-  if (value) {
-    return (
-      <div className="flex items-center justify-between gap-2 bg-card/30 border border-hairline/10 rounded-md px-3 h-10">
-        <span className="text-sm text-foreground truncate">{value}</span>
-        <button type="button" onClick={() => onChange(null)} className="text-muted-foreground/60 hover:text-foreground cursor-pointer shrink-0"><X className="size-4" /></button>
-      </div>
-    )
-  }
-
-  return (
-    <div className="space-y-1.5">
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground/60 pointer-events-none" />
-        <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search a map to supersede…" className="h-9 pl-9" />
-      </div>
-      {results.length > 0 && (
-        <ul className="bg-card/30 border border-hairline/10 rounded-md divide-y divide-hairline/5 max-h-44 overflow-y-auto">
-          {results.map((m) => (
-            <li key={m.name}>
-              <button type="button" onClick={() => { onChange(m.name); setQuery('') }} className="w-full text-left px-3 py-2 text-sm hover:bg-hairline/5 cursor-pointer">{m.name}</button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  )
-}
-
-const MAP_NAME_PREFIXES = ['CTF-BT-', 'CTF-BT+']
-
 function MapFormModal({ open, onClose, token, editing, onSaved, onReload, allTags }: {
   open: boolean
   onClose: () => void
@@ -153,8 +104,6 @@ function MapFormModal({ open, onClose, token, editing, onSaved, onReload, allTag
   onReload: () => void
   allTags: string[]
 }) {
-  const isEdit = !!editing
-  const [name, setName] = useState('')
   const [difficulty, setDifficulty] = useState('5')
   const [requiredPlayers, setRequiredPlayers] = useState('1')
   const [active, setActive] = useState(true)
@@ -162,11 +111,6 @@ function MapFormModal({ open, onClose, token, editing, onSaved, onReload, allTag
   const [authorStr, setAuthorStr] = useState('')
   const [authorUser, setAuthorUser] = useState<AuthorUser | null>(null)
   const [tags, setTags] = useState<string[]>([])
-  const [url, setUrl] = useState('')
-  const [changelog, setChangelog] = useState('')
-  const [precededBy, setPrecededBy] = useState<string | null>(null)
-  const [transferRecords, setTransferRecords] = useState(false)
-  const [supersedeAck, setSupersedeAck] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [shot, setShot] = useState<{ has: boolean; version: string | null }>({ has: false, version: null })
@@ -176,12 +120,11 @@ function MapFormModal({ open, onClose, token, editing, onSaved, onReload, allTag
 
   useEffect(() => {
     if (!open) return
-    setError(null); setBusy(false); setUrl(''); setChangelog(''); setPrecededBy(null); setTransferRecords(false); setSupersedeAck(false)
+    setError(null); setBusy(false)
     setShotBusy(false); setShotModalOpen(false)
     setShot({ has: editing?.has_screenshot ?? false, version: editing?.screenshot_updated ?? null })
     setVideo({ has: editing?.has_video ?? false, version: editing?.video_updated_at ?? null })
     if (editing) {
-      setName(editing.name)
       setDifficulty(String(editing.difficulty ?? 5))
       setRequiredPlayers(String(editing.required_players ?? 1))
       setActive(editing.active)
@@ -191,9 +134,6 @@ function MapFormModal({ open, onClose, token, editing, onSaved, onReload, allTag
       } else {
         setAuthorMode('text'); setAuthorStr(editing.author_str || ''); setAuthorUser(null)
       }
-    } else {
-      setName(''); setDifficulty('5'); setRequiredPlayers('1'); setActive(true); setTags([])
-      setAuthorMode('text'); setAuthorStr(''); setAuthorUser(null)
     }
   }, [open, editing])
 
@@ -202,8 +142,7 @@ function MapFormModal({ open, onClose, token, editing, onSaved, onReload, allTag
   ), [authorMode, authorUser, authorStr])
 
   const authorValid = authorMode === 'player' ? !!authorUser : !!authorStr.trim()
-  const nameValid = isEdit || MAP_NAME_PREFIXES.some((p) => name.trim().startsWith(p))
-  const blocked = busy || !authorValid || (!isEdit && (!name.trim() || !nameValid)) || (!!precededBy && transferRecords && !supersedeAck)
+  const blocked = busy || !editing || !authorValid
 
   const runScreenshot = async (fn: () => Promise<AdminMapRow>) => {
     setShotBusy(true); setError(null)
@@ -224,24 +163,13 @@ function MapFormModal({ open, onClose, token, editing, onSaved, onReload, allTag
   }
 
   const submit = async () => {
+    if (!editing) return
     setBusy(true); setError(null)
     try {
-      const tagsStr = tags.join(',')
-      if (isEdit && editing) {
-        await updateMap(token, editing.name, {
-          active, difficulty: parseInt(difficulty, 10), required_players: parseInt(requiredPlayers, 10),
-          tags: tagsStr, ...authorPayload,
-        })
-      } else {
-        await createMap(token, {
-          name: name.trim(), difficulty: parseInt(difficulty, 10), required_players: parseInt(requiredPlayers, 10),
-          active, tags: tagsStr,
-          url: url.trim() || undefined, changelog: changelog.trim() || undefined,
-          preceded_by: precededBy || undefined,
-          transfer_records: precededBy ? transferRecords : undefined,
-          ...authorPayload,
-        })
-      }
+      await updateMap(token, editing.name, {
+        active, difficulty: parseInt(difficulty, 10), required_players: parseInt(requiredPlayers, 10),
+        tags: tags.join(','), ...authorPayload,
+      })
       onSaved(); onClose()
     } catch (e) {
       setError(errMessage(e))
@@ -254,31 +182,28 @@ function MapFormModal({ open, onClose, token, editing, onSaved, onReload, allTag
     <Modal
       isOpen={open}
       onClose={onClose}
-      title={isEdit ? `Edit map — ${editing?.name}` : 'Add a new map'}
+      title={`Edit map — ${editing?.name ?? ''}`}
       offsetSidebar
       maxWidth="42rem"
       footer={
         <div className="p-4 border-t border-border bg-muted/50 flex justify-end gap-2">
           <Button variant="outline" onClick={onClose} disabled={busy}>Cancel</Button>
-          <Button onClick={submit} disabled={blocked}>{busy ? 'Saving…' : isEdit ? 'Save changes' : (precededBy ? 'Create & supersede' : 'Create map')}</Button>
+          <Button onClick={submit} disabled={blocked}>{busy ? 'Saving…' : 'Save changes'}</Button>
         </div>
       }
     >
       <div className="space-y-4">
         <Feedback message={error} tone="red" onDismiss={() => setError(null)} />
 
-        {isEdit && editing && (
+        {editing && (
           <div className="flex justify-center">
             <MapThumbnail mapName={editing.name} size="card" className="size-48" version={shot.version} />
           </div>
         )}
 
         <div className="space-y-1.5">
-          {fieldLabel(isEdit ? 'Map name (immutable)' : 'Map name')}
-          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="CTF-BT-Example" className="h-9" disabled={isEdit} />
-          {!isEdit && name.trim() && !nameValid && (
-            <p className="text-xs text-red-300">Map name must start with “CTF-BT-” or “CTF-BT+”.</p>
-          )}
+          {fieldLabel('Map name (immutable)')}
+          <Input value={editing?.name ?? ''} placeholder="CTF-BT-Example" className="h-9" disabled />
         </div>
 
         <div className="grid grid-cols-3 gap-4">
@@ -310,51 +235,7 @@ function MapFormModal({ open, onClose, token, editing, onSaved, onReload, allTag
           <TagEditor tags={tags} onChange={setTags} suggestions={allTags} />
         </div>
 
-        {!isEdit && (
-          <>
-            <div className="space-y-1.5">
-              {fieldLabel('Download URL (optional)')}
-              <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://…/map.zip" className="h-9" />
-            </div>
-            <div className="space-y-1.5">
-              {fieldLabel('Changelog (optional)')}
-              <Input value={changelog} onChange={(e) => setChangelog(e.target.value)} placeholder="What changed in this version" className="h-9" />
-            </div>
-            <div className="space-y-1.5">
-              {fieldLabel('Supersedes (optional)')}
-              <SupersedePicker token={token} value={precededBy} onChange={(v) => { setPrecededBy(v); setTransferRecords(false); setSupersedeAck(false) }} excludeName={name.trim()} />
-              {precededBy && (
-                <div className="mt-2 space-y-2">
-                  <label className="flex items-center gap-2 cursor-pointer select-none">
-                    <input type="checkbox" checked={transferRecords} onChange={(e) => { setTransferRecords(e.target.checked); setSupersedeAck(false) }} style={{ colorScheme: 'dark' }} className="size-4 accent-emerald-500 cursor-pointer" />
-                    <span className="text-sm text-foreground">Transfer records from {precededBy} to this map</span>
-                  </label>
-                  {transferRecords ? (
-                    <div className="rounded-xl border border-red-500/40 bg-red-500/10 p-3 space-y-2 text-red-300">
-                      <div className="flex items-start gap-2.5">
-                        <AlertTriangle className="size-4 shrink-0 mt-0.5" />
-                        <p className="text-xs leading-relaxed">
-                          Every cap, playtime record, and review on <span className="font-semibold">{precededBy}</span> will be moved onto this
-                          map, and <span className="font-semibold">{precededBy}</span> will be retired. <span className="font-semibold">This cannot be undone.</span>
-                        </p>
-                      </div>
-                      <label className="flex items-center gap-2 cursor-pointer select-none pl-6">
-                        <input type="checkbox" checked={supersedeAck} onChange={(e) => setSupersedeAck(e.target.checked)} style={{ colorScheme: 'dark' }} className="size-4 accent-red-500 cursor-pointer" />
-                        <span className="text-xs">I understand this is irreversible.</span>
-                      </label>
-                    </div>
-                  ) : (
-                    <p className="text-xs text-muted-foreground pl-6">
-                      {precededBy} will be deactivated, but its records stay on the old map — this new map starts with a fresh leaderboard.
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-          </>
-        )}
-
-        {isEdit && (
+        {editing && (
           <div className="space-y-1.5">
             {fieldLabel('Screenshot')}
             <div className="flex items-center gap-2">
@@ -371,7 +252,7 @@ function MapFormModal({ open, onClose, token, editing, onSaved, onReload, allTag
           </div>
         )}
 
-        {isEdit && editing && (
+        {editing && (
           <MapVideoControl
             token={token}
             mapName={editing.name}
@@ -757,7 +638,7 @@ function DifficultySyncModal({ open, onClose, token, onApplied }: {
   )
 }
 
-export function MapsManagementSection({ userProfile, onMapSelect }: AdminSectionProps) {
+export function MapsManagementSection({ userProfile, onMapSelect, onNavigate }: AdminSectionProps) {
   const token = userProfile?.accessToken
   const PAGE = useAdminPageSize()
   const tbl = useAdminTable('utbt:admin:maps:cols:v2', MAP_COLUMNS)
@@ -775,8 +656,8 @@ export function MapsManagementSection({ userProfile, onMapSelect }: AdminSection
   const [total, setTotal] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [adding, setAdding] = useState(false)
   const [editing, setEditing] = useState<AdminMapRow | null>(null)
+  const { openDraft: openUploadDraft } = useMapUploadsNav()
   const [mapvoteOpen, setMapvoteOpen] = useState(false)
   const [diffSyncOpen, setDiffSyncOpen] = useState(false)
   const [authorsOpen, setAuthorsOpen] = useState(false)
@@ -788,6 +669,11 @@ export function MapsManagementSection({ userProfile, onMapSelect }: AdminSection
     setMapvoteStaleState(v)
     try { if (v) localStorage.setItem(MAPVOTE_STALE_KEY, '1'); else localStorage.removeItem(MAPVOTE_STALE_KEY) } catch { /* ignore */ }
   }, [])
+
+  const addMap = () => {
+    openUploadDraft(null)
+    onNavigate?.('map-uploads')
+  }
 
   const loadTags = useCallback(() => {
     if (!token) return
@@ -988,7 +874,7 @@ export function MapsManagementSection({ userProfile, onMapSelect }: AdminSection
           <ActionButton tone="accent" icon={Gauge} onClick={() => setDiffSyncOpen(true)} disabled={!token}>Sync Difficulties</ActionButton>
           <ActionButton tone="accent" icon={Link2} onClick={() => setAuthorsOpen(true)} disabled={!token}>Authors</ActionButton>
           <ActionButton tone="accent" icon={Megaphone} onClick={() => setMapvoteOpen(true)} disabled={!token}>Mapvote</ActionButton>
-          <ActionButton tone="accent" icon={Plus} disabled title="Adding maps is temporarily disabled — coming soon">Add Map</ActionButton>
+          <ActionButton tone="accent" icon={Plus} onClick={addMap}>Add Map</ActionButton>
         </>
       }
     >
@@ -1077,7 +963,6 @@ export function MapsManagementSection({ userProfile, onMapSelect }: AdminSection
         onPrev={() => setOffset(Math.max(0, offset - PAGE))}
         onNext={() => setOffset(offset + PAGE)} />
 
-      {token && <MapFormModal open={adding} onClose={() => setAdding(false)} token={token} editing={null} allTags={allTags} onSaved={() => { reload(); setMapvoteStale(true) }} onReload={reload} />}
       {token && <MapFormModal open={!!editing} onClose={() => setEditing(null)} token={token} editing={editing} allTags={allTags} onSaved={() => { reload(); setMapvoteStale(true) }} onReload={reload} />}
       {token && <MapvoteModal open={mapvoteOpen} onClose={() => setMapvoteOpen(false)} token={token} onRegenerated={() => setMapvoteStale(false)} />}
       {token && <DifficultySyncModal open={diffSyncOpen} onClose={() => setDiffSyncOpen(false)} token={token} onApplied={() => { reload(); setMapvoteStale(true) }} />}

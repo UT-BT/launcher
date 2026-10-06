@@ -1,6 +1,7 @@
 import type { AuthConfig } from '@/lib/main/config'
 import { IS_WEB } from '@/app/platform/target'
 import { getImpersonatedUserId, IMPERSONATION_HEADER } from '@/app/utils/devImpersonation'
+import { MAP_UPLOAD_ERROR_CODES, type Draft, type DraftDeleted, type DraftSummary, type DraftUploadResult, type MapUploadErrorCode } from '@/app/utils/mapUploadTypes'
 
 export const GATEWAY_BASE_URL = (import.meta.env.VITE_GATEWAY_BASE_URL || 'https://gateway.utbt.net').replace(/\/$/, '')
 
@@ -1279,24 +1280,6 @@ export async function fetchAcCapMapComparison(token: string, capId: string, sign
     return apiGet<AcMapComparison>(`/admin/anti-cheat/cap/${encodeURIComponent(capId)}/map-comparison`, { token, signal })
 }
 
-export interface CreateMapInput {
-    name: string
-    difficulty: number
-    active: boolean
-    author_str?: string | null
-    author_ref?: string | number | null
-    tags?: string
-    url?: string
-    changelog?: string
-    preceded_by?: string
-    transfer_records?: boolean
-    required_players: number
-}
-
-export async function createMap(token: string, input: CreateMapInput): Promise<{ ok: boolean }> {
-    return apiGet('/admin/maps', { token, method: 'POST', body: input })
-}
-
 export interface UpdateMapInput {
     active?: boolean
     difficulty?: number
@@ -1308,6 +1291,60 @@ export interface UpdateMapInput {
 
 export async function updateMap(token: string, name: string, input: UpdateMapInput): Promise<{ ok: boolean }> {
     return apiGet(`/admin/maps/${encodeURIComponent(name)}`, { token, method: 'PATCH', body: input })
+}
+
+export const MAP_ARCHIVE_MAX_MB = 200
+export const MAP_ARCHIVE_MAX_BYTES = MAP_ARCHIVE_MAX_MB * 1024 * 1024
+
+export interface MapArchiveUploadOptions {
+    signal?: AbortSignal
+    onProgress?: (progress: UploadProgress) => void
+}
+
+export function uploadMapArchive(token: string, archive: Blob, filename: string, opts: MapArchiveUploadOptions = {}): Promise<DraftUploadResult> {
+    const form = new FormData()
+    form.append('archive', archive, filename)
+    return apiUpload<DraftUploadResult>('/admin/map-uploads', form, { token, signal: opts.signal, onProgress: opts.onProgress })
+}
+
+export async function fetchMapUploadDrafts(token: string, signal?: AbortSignal): Promise<DraftSummary[]> {
+    return apiGetList<DraftSummary>('/admin/map-uploads/drafts', { token, signal })
+}
+
+export async function fetchMapUploadDraft(token: string, draftId: number, signal?: AbortSignal): Promise<Draft> {
+    return apiGet<Draft>(`/admin/map-uploads/drafts/${draftId}`, { token, signal })
+}
+
+export async function discardMapUploadDraft(token: string, draftId: number): Promise<DraftDeleted> {
+    return apiGet<DraftDeleted>(`/admin/map-uploads/drafts/${draftId}`, { token, method: 'DELETE' })
+}
+
+const MAP_UPLOAD_ERROR_MESSAGES: { [K in MapUploadErrorCode]: string } = {
+    no_map: 'This archive has no map in it. It needs at least one .unr file.',
+    bad_archive: 'This archive could not be opened. Check that it is a working zip, rar or 7z file.',
+    draft_invalid: 'The draft no longer passes its checks. Fix the blocks in the report and try again.',
+    too_early: 'It is too early to force this map live. Wait until the force option opens.',
+    stragglers_changed: 'The hosts still missing the map have changed. Check the list and confirm again.',
+    not_distributing: 'This publish is no longer waiting on hosts, so it cannot be forced live.',
+}
+
+function isMapUploadErrorCode(code: string | undefined): code is MapUploadErrorCode {
+    return !!code && (MAP_UPLOAD_ERROR_CODES as readonly string[]).includes(code)
+}
+
+export function isAbortError(e: unknown): boolean {
+    return e instanceof DOMException && e.name === 'AbortError'
+}
+
+export function mapUploadErrorMessage(e: unknown): string {
+    if (isAbortError(e)) return 'The upload was cancelled.'
+    if (e instanceof ApiError) {
+        if (e.status === 413) return `This archive is over the ${MAP_ARCHIVE_MAX_MB} MB upload limit.`
+        if (isMapUploadErrorCode(e.reason)) return MAP_UPLOAD_ERROR_MESSAGES[e.reason]
+        if (e.status === 404) return 'This draft no longer exists. It may have been discarded or have expired.'
+    }
+    if (e instanceof Error && e.message) return e.message
+    return 'Something went wrong. Please try again.'
 }
 
 export interface DifficultySyncChange {
