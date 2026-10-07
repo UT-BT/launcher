@@ -38,6 +38,11 @@ verify_against:
   - app/components/pages/admin/sections/mapUploads/VersionTargetPicker.tsx
   - app/components/pages/admin/sections/mapUploads/PublishingTab.tsx
   - app/components/pages/admin/sections/mapUploads/DriftTab.tsx
+  - app/components/pages/admin/sections/mapUploads/PublishList.tsx
+  - app/components/pages/admin/sections/mapUploads/PublishDetail.tsx
+  - app/components/pages/admin/sections/mapUploads/publishState.ts
+  - app/components/pages/admin/sections/mapUploads/publishLabels.ts
+  - app/components/pages/admin/sections/mapUploads/driftView.ts
 ---
 
 # Admin → Map Uploads
@@ -80,7 +85,13 @@ Folder: `app/components/pages/admin/sections/mapUploads/`.
 | `draftFormState.ts` | Pure form state: values from a draft, the PATCH diff, autosave with debouncing, the rename suggestion, the publish rules and the 409 outcome |
 | `DraftScreenshot.tsx` | The staged screenshot with Replace, Use embedded and Remove |
 | `VersionTargetPicker.tsx` | The new-version toggle, the old map and the version mode |
-| `PublishingTab.tsx`, `DriftTab.tsx` | Placeholders, see [Publishing, Recent and Drift](#publishing-recent-and-drift) |
+| `PublishingTab.tsx` | The Publishing / Recent tab: the selected publish above the recent list, see [Publishing, Recent and Drift](#publishing-recent-and-drift) |
+| `PublishList.tsx` | The recent publishes table |
+| `PublishDetail.tsx` | One publish: state, error, version, hosts, and Force live with its confirmation |
+| `publishState.ts` | Pure publish logic: stragglers, when Force live opens, the confirmation payload, the force errors, when polling stops |
+| `publishLabels.ts` | Plain-language labels for publish states, host states, activation, version modes and drift states |
+| `DriftTab.tsx` | The read-only drift report with its file-name filter |
+| `driftView.ts` | Pure drift helpers: the filter, the short sha256, the size |
 
 Tabs: **Drafts**, **Publishing / Recent**, **Drift**. The shell owns the open tab,
 the open draft and the selected publish. The hand-over props:
@@ -269,9 +280,94 @@ draft never drops typing.
 
 ## Publishing, Recent and Drift
 
-Not written yet. The ticket that replaces `PublishingTab.tsx` and `DriftTab.tsx`
-documents here `GET /admin/map-uploads/publishes`, `GET /admin/map-uploads/publishes/<id>`,
-`POST /admin/map-uploads/publishes/<id>/force-activate` and `GET /admin/map-uploads/drift`.
+### Routes
+
+| Route | Function | Answer |
+|---|---|---|
+| `GET /admin/map-uploads/publishes?limit=20` | `fetchMapUploadPublishes(token, signal?, limit = MAP_UPLOAD_PUBLISHES_LIMIT)` | `PublishSummary[]`, newest first; `{ "success": true }` alone reads as `[]` |
+| `GET /admin/map-uploads/publishes/<id>` | `fetchMapUploadPublish(token, id, signal?)` | `Publish` |
+| `POST /admin/map-uploads/publishes/<id>/force-activate`, body `{ confirm_hosts: string[] }` (`ForceActivateInput`) | `forceActivateMapUploadPublish(token, id, input)` | the activated `Publish` |
+| `GET /admin/map-uploads/drift` | `fetchMapUploadDrift(token, signal?)` | `DriftRow[]`; `{ "success": true }` alone reads as `[]` |
+
+### Shapes
+
+- `PublishSummary`: `id`, `draft_id`, `map_name`, `state`, `error`, `created_at`,
+  `activated_at`, `activation`, `hosts_confirmed`, `hosts_total`.
+- `Publish`: `id`, `draft_id`, `map_name`, `state`, `error`, `created_at`, `updated_at`,
+  `activated_at`, `activation` (`auto` or `forced`), `activated_by` (a person, render
+  with `PlayerInfo`), `version` `{ old_map, mode }` (both `null` for a new map),
+  `force_available_at` (may be `null` before the hosts are asked), and `hosts`.
+- **Publish states**: `validating` → `storing` → `compressing` → `registering` →
+  `distributing` → `active`, or `failed` from any step. `error` holds the reason of a
+  failed publish.
+- **Hosts**: `{ host, state, detail, updated_at }`. `host` is the name the API returns;
+  the launcher knows nothing else about a host. States: `pending`, `installed`,
+  `conflict` (the host holds a different copy of a package), `error` (the host could
+  not install a file). `detail` says what is wrong, or is `null`.
+- `DriftRow`: `{ file, locations }`. Each location is `{ location, sha256, size, state,
+  last_seen }`, where `location` is `redirect` (the download server players fetch
+  from) or a host name, and `state` is `present`, `conflict` or `error`.
+
+### The Publishing / Recent tab
+
+- The selected publish (`publishId` from the shell, or a map name clicked in the
+  list) shows above the recent list. **Close** clears the selection, **Open draft**
+  opens its draft in the Drafts tab.
+- The list: map name (with the reason under a failed one), state, hosts confirmed
+  of total, when it started, and whether it went live automatically or was forced,
+  in the order the API sends. The selected row is tinted.
+- The publish: its state, when it started, which map it replaces and in which mode,
+  then one row per host with its state, detail and last update. Conflict and error
+  rows are tinted red and their detail is red. A failed publish shows
+  "This publish failed:" and its `error` in a red alert. A live one shows when, how
+  and by whom.
+- On narrow screens both tables turn into cards.
+
+### Force live
+
+`publishState.ts` holds the rules:
+
+- **Stragglers** (`publishStragglers`) are every host not `installed`, so `pending`,
+  `conflict` and `error`, in the order the API sends.
+- **Availability** (`forceAvailability(publish, now)`): `closed` unless the publish is
+  `distributing` with at least one straggler; `waiting` before `force_available_at`
+  (or while it is `null`); `available` from `force_available_at` on. The server sets
+  that time 15 minutes after the hosts were asked. The panel says when it opens and
+  re-renders at that moment.
+- **Confirmation** (`forceConfirmation(publish)`): a snapshot of the stragglers taken
+  when the dialog opens. The dialog lists them by name with their state and detail,
+  and confirming sends exactly those names as `confirm_hosts`, even if a poll changes
+  the publish behind the dialog.
+- **Errors** (`forceActivateFailure(error)`) are all 409 with the code in
+  `ApiError.reason`, each mapped to a plain message by `mapUploadErrorMessage`:
+
+  | Code | Meaning | What the launcher does |
+  |---|---|---|
+  | `too_early` | `force_available_at` has not passed on the server | Closes the dialog, shows the message, re-reads the publish |
+  | `stragglers_changed` | `confirm_hosts` is not exactly the current stragglers | Re-reads the publish and, if force is still available, asks again with the new list and the message in the dialog; otherwise closes the dialog quietly |
+  | `not_distributing` | The publish went live or failed meanwhile | Closes the dialog, shows the message, re-reads the publish |
+
+- A successful force answers the activated `Publish` (`activation: "forced"`), which
+  replaces the one on screen; the list is re-read. The dialog closes by itself if a
+poll shows the publish is no longer `distributing`.
+- A publish that answers 404 shows "This publish no longer exists."
+  (`publishErrorMessage`) and stops polling.
+
+### Polling
+
+The selected publish is polled every 3 s (`usePollWhile`, so `createPoller`) while
+`shouldPollPublish` holds: until its state is `active` or `failed`, including after a
+first read that failed, but not once it answered 404. The list is polled
+the same way while any listed publish has not settled. Both pause while the page is
+hidden.
+
+### The Drift tab
+
+A read-only table of packages whose copies differ between locations: the file, then
+one row per location with its state, sha256 (first 12 characters, the full value on
+hover), size and when it was last seen. Rows that are not `present` are tinted red.
+A filter matches part of the file name, ignoring case (`filterDriftRows`). There are
+no actions; the report is read once when the tab opens.
 
 ## Tests
 
@@ -280,6 +376,13 @@ documents here `GET /admin/map-uploads/publishes`, `GET /admin/map-uploads/publi
 - `mapUploads/uploadState.test.ts`: the upload states, the file checks and what opens
   afterwards.
 - `mapUploads/reportLabels.test.ts`: every code has words.
+- `app/utils/api.mapPublishes.test.ts`: the publish and drift functions against the
+  fixtures, the force-activate body, and every force-activate error.
+- `mapUploads/publishState.test.ts`: stragglers, force availability before and after
+  `force_available_at`, the confirmation payload, the force errors, and polling stops
+  on `active` and `failed`.
+- `mapUploads/publishLabels.test.ts`, `mapUploads/driftView.test.ts`: every state has
+  words and conflicts are red; the drift filter, short sha256 and sizes.
 - `app/utils/api.mapUploadDraftForm.test.ts`: the PATCH, screenshot and publish
   functions against the fixtures: method, path, body and multipart field; 404 and
   refused values; the screenshot 404 as `null`; and, for publish, 202, 409

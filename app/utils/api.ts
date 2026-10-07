@@ -2,6 +2,7 @@ import type { AuthConfig } from '@/lib/main/config'
 import { IS_WEB } from '@/app/platform/target'
 import { getImpersonatedUserId, IMPERSONATION_HEADER } from '@/app/utils/devImpersonation'
 import { MAP_UPLOAD_ERROR_CODES, type Draft, type DraftAcknowledgements, type DraftDeleted, type DraftSummary, type DraftUploadResult, type MapUploadErrorCode, type PublishStarted, type VersionMode } from '@/app/utils/mapUploadTypes'
+import type { DriftRow, Publish, PublishSummary } from '@/app/utils/mapUploadTypes'
 
 export const GATEWAY_BASE_URL = (import.meta.env.VITE_GATEWAY_BASE_URL || 'https://gateway.utbt.net').replace(/\/$/, '')
 
@@ -1399,6 +1400,28 @@ export function mapUploadErrorMessage(e: unknown): string {
     }
     if (e instanceof Error && e.message) return e.message
     return 'Something went wrong. Please try again.'
+}
+
+export const MAP_UPLOAD_PUBLISHES_LIMIT = 20
+
+export async function fetchMapUploadPublishes(token: string, signal?: AbortSignal, limit = MAP_UPLOAD_PUBLISHES_LIMIT): Promise<PublishSummary[]> {
+    return apiGetList<PublishSummary>(`/admin/map-uploads/publishes?limit=${limit}`, { token, signal })
+}
+
+export async function fetchMapUploadPublish(token: string, publishId: number, signal?: AbortSignal): Promise<Publish> {
+    return apiGet<Publish>(`/admin/map-uploads/publishes/${publishId}`, { token, signal })
+}
+
+export interface ForceActivateInput {
+    confirm_hosts: string[]
+}
+
+export async function forceActivateMapUploadPublish(token: string, publishId: number, input: ForceActivateInput): Promise<Publish> {
+    return apiGet<Publish>(`/admin/map-uploads/publishes/${publishId}/force-activate`, { token, method: 'POST', body: input })
+}
+
+export async function fetchMapUploadDrift(token: string, signal?: AbortSignal): Promise<DriftRow[]> {
+    return apiGetList<DriftRow>('/admin/map-uploads/drift', { token, signal })
 }
 
 export interface DifficultySyncChange {
