@@ -1,6 +1,8 @@
 import type { AuthConfig } from '@/lib/main/config'
 import { IS_WEB } from '@/app/platform/target'
 import { getImpersonatedUserId, IMPERSONATION_HEADER } from '@/app/utils/devImpersonation'
+import { MAP_UPLOAD_ERROR_CODES, type Draft, type DraftAcknowledgements, type DraftDeleted, type DraftSummary, type DraftUploadResult, type MapUploadErrorCode, type PublishStarted, type VersionMode } from '@/app/utils/mapUploadTypes'
+import type { DriftRow, Publish, PublishSummary } from '@/app/utils/mapUploadTypes'
 
 export const GATEWAY_BASE_URL = (import.meta.env.VITE_GATEWAY_BASE_URL || 'https://gateway.utbt.net').replace(/\/$/, '')
 
@@ -287,26 +289,98 @@ export async function apiRequest(path: string, opts: ApiRequestOptions = {}): Pr
 export class ApiError extends Error {
     status: number
     reason?: string
+    serverMessage?: string
     constructor(status: number, message: string | undefined, fallback: string, reason?: string) {
         super(message || fallback)
         this.name = 'ApiError'
         this.status = status
         this.reason = reason
+        this.serverMessage = message || undefined
     }
 }
 
+function apiErrorFromBody(status: number, body: unknown): ApiError {
+    const fields = body && typeof body === 'object' ? (body as { error?: string; reason?: string; code?: string }) : undefined
+    const message = fields?.error || fields?.reason || undefined
+    const reason = fields?.code || undefined
+    return new ApiError(status, message, `Request failed (${status})`, reason)
+}
+
 async function apiErrorFor(res: Response): Promise<ApiError> {
-    let message: string | undefined
-    let reason: string | undefined
+    let body: unknown
     try {
-        const body = await res.json()
-        message = body?.error || body?.reason || undefined
-        reason = body?.code || undefined
+        body = await res.json()
     } catch {
-        message = undefined
-        reason = undefined
+        body = undefined
     }
-    return new ApiError(res.status, message, `Request failed (${res.status})`, reason)
+    return apiErrorFromBody(res.status, body)
+}
+
+export interface UploadProgress {
+    loaded: number
+    total: number
+}
+
+export interface ApiUploadOptions {
+    token?: string
+    method?: 'POST' | 'PUT'
+    signal?: AbortSignal
+    timeoutMs?: number
+    onProgress?: (progress: UploadProgress) => void
+}
+
+function parseJsonOrUndefined(text: string): unknown {
+    try {
+        return JSON.parse(text)
+    } catch {
+        return undefined
+    }
+}
+
+function uploadCancelled(): DOMException {
+    return new DOMException('The upload was cancelled.', 'AbortError')
+}
+
+export function apiUpload<T>(path: string, body: FormData, opts: ApiUploadOptions = {}): Promise<T> {
+    const { token, method = 'POST', signal, timeoutMs = 0, onProgress } = opts
+    return new Promise<T>((resolve, reject) => {
+        if (signal?.aborted) {
+            reject(uploadCancelled())
+            return
+        }
+        const xhr = new XMLHttpRequest()
+        const onAbort = () => xhr.abort()
+        const settle = (finish: () => void) => {
+            signal?.removeEventListener('abort', onAbort)
+            finish()
+        }
+        let reported = -1
+
+        xhr.upload.onprogress = (event) => {
+            if (!onProgress || event.loaded <= reported) return
+            reported = event.loaded
+            onProgress({ loaded: event.loaded, total: event.lengthComputable ? event.total : 0 })
+        }
+        xhr.onload = () => settle(() => {
+            const json = parseJsonOrUndefined(xhr.responseText) as { success?: boolean; data?: unknown } | undefined
+            if (xhr.status < 200 || xhr.status >= 300) {
+                reject(apiErrorFromBody(xhr.status, json))
+            } else if (json && json.success && json.data !== null && json.data !== undefined) {
+                resolve(json.data as T)
+            } else {
+                reject(new Error('Invalid response format from server'))
+            }
+        })
+        xhr.onerror = () => settle(() => reject(new Error('The upload could not reach the server. Check your connection and try again.')))
+        xhr.onabort = () => settle(() => reject(uploadCancelled()))
+        xhr.ontimeout = () => settle(() => reject(new DOMException('The upload timed out.', 'TimeoutError')))
+
+        xhr.open(method, path.startsWith('http') ? path : `${API_BASE_URL}${path}`)
+        xhr.timeout = timeoutMs
+        for (const [name, value] of Object.entries(bearerHeaders(token))) xhr.setRequestHeader(name, value)
+        signal?.addEventListener('abort', onAbort, { once: true })
+        xhr.send(body)
+    })
 }
 
 export function asNum(v: unknown, fallback = 0): number {
@@ -1209,24 +1283,6 @@ export async function fetchAcCapMapComparison(token: string, capId: string, sign
     return apiGet<AcMapComparison>(`/admin/anti-cheat/cap/${encodeURIComponent(capId)}/map-comparison`, { token, signal })
 }
 
-export interface CreateMapInput {
-    name: string
-    difficulty: number
-    active: boolean
-    author_str?: string | null
-    author_ref?: string | number | null
-    tags?: string
-    url?: string
-    changelog?: string
-    preceded_by?: string
-    transfer_records?: boolean
-    required_players: number
-}
-
-export async function createMap(token: string, input: CreateMapInput): Promise<{ ok: boolean }> {
-    return apiGet('/admin/maps', { token, method: 'POST', body: input })
-}
-
 export interface UpdateMapInput {
     active?: boolean
     difficulty?: number
@@ -1238,6 +1294,136 @@ export interface UpdateMapInput {
 
 export async function updateMap(token: string, name: string, input: UpdateMapInput): Promise<{ ok: boolean }> {
     return apiGet(`/admin/maps/${encodeURIComponent(name)}`, { token, method: 'PATCH', body: input })
+}
+
+export const MAP_ARCHIVE_MAX_LABEL = '1 GB'
+export const MAP_ARCHIVE_MAX_BYTES = 1024 * 1024 * 1024
+
+export interface MapArchiveUploadOptions {
+    signal?: AbortSignal
+    onProgress?: (progress: UploadProgress) => void
+}
+
+export function uploadMapArchive(token: string, archive: Blob, filename: string, opts: MapArchiveUploadOptions = {}): Promise<DraftUploadResult> {
+    const form = new FormData()
+    form.append('archive', archive, filename)
+    return apiUpload<DraftUploadResult>('/admin/map-uploads', form, { token, signal: opts.signal, onProgress: opts.onProgress })
+}
+
+export async function fetchMapUploadDrafts(token: string, signal?: AbortSignal): Promise<DraftSummary[]> {
+    return apiGetList<DraftSummary>('/admin/map-uploads/drafts', { token, signal })
+}
+
+export async function fetchMapUploadDraft(token: string, draftId: number, signal?: AbortSignal): Promise<Draft> {
+    return apiGet<Draft>(`/admin/map-uploads/drafts/${draftId}`, { token, signal })
+}
+
+export async function discardMapUploadDraft(token: string, draftId: number): Promise<DraftDeleted> {
+    return apiGet<DraftDeleted>(`/admin/map-uploads/drafts/${draftId}`, { token, method: 'DELETE' })
+}
+
+export interface MapUploadDraftPatch {
+    map_name?: string
+    author_str?: string | null
+    author_ref?: string | null
+    difficulty?: number | null
+    tags?: string[]
+    changelog?: string
+    required_players?: number | null
+    version_target?: string | null
+    version_mode?: VersionMode | null
+    acknowledgements?: Partial<DraftAcknowledgements>
+}
+
+export async function patchMapUploadDraft(token: string, draftId: number, patch: MapUploadDraftPatch): Promise<Draft> {
+    return apiGet<Draft>(`/admin/map-uploads/drafts/${draftId}`, { token, method: 'PATCH', body: patch })
+}
+
+export function uploadMapUploadScreenshot(token: string, draftId: number, image: Blob, filename: string): Promise<Draft> {
+    const form = new FormData()
+    form.append('file', image, filename)
+    return apiUpload<Draft>(`/admin/map-uploads/drafts/${draftId}/screenshot`, form, { token, method: 'PUT' })
+}
+
+export async function selectEmbeddedMapUploadScreenshot(token: string, draftId: number): Promise<Draft> {
+    return apiGet<Draft>(`/admin/map-uploads/drafts/${draftId}/screenshot/embedded`, { token, method: 'POST' })
+}
+
+export async function removeMapUploadScreenshot(token: string, draftId: number): Promise<Draft> {
+    return apiGet<Draft>(`/admin/map-uploads/drafts/${draftId}/screenshot`, { token, method: 'DELETE' })
+}
+
+export async function fetchMapUploadScreenshot(token: string, draftId: number, source: 'staged' | 'embedded', signal?: AbortSignal): Promise<Blob | null> {
+    const res = await apiRequest(`/admin/map-uploads/drafts/${draftId}/screenshot?source=${source}`, { token, signal })
+    if (res.status === 404) return null
+    if (!res.ok) throw await apiErrorFor(res)
+    return res.blob()
+}
+
+export type PublishDraftResult =
+    | { kind: 'started'; publishId: number }
+    | { kind: 'invalid'; draft: Draft }
+
+export async function publishMapUploadDraft(token: string, draftId: number): Promise<PublishDraftResult> {
+    const res = await apiRequest(`/admin/map-uploads/drafts/${draftId}/publish`, { token, method: 'POST' })
+    const body = await res.json().catch(() => undefined) as { success?: boolean; code?: string; data?: unknown } | undefined
+    if (res.status === 409 && body?.code === 'draft_invalid' && body.data && typeof body.data === 'object') {
+        return { kind: 'invalid', draft: body.data as Draft }
+    }
+    if (!res.ok) throw apiErrorFromBody(res.status, body)
+    const started = body?.success ? body.data as PublishStarted | undefined : undefined
+    if (typeof started?.publish_id !== 'number') throw new Error('Invalid response format from server')
+    return { kind: 'started', publishId: started.publish_id }
+}
+
+const MAP_UPLOAD_ERROR_MESSAGES: { [K in MapUploadErrorCode]: string } = {
+    no_map: 'This archive has no map in it. It needs at least one .unr file.',
+    bad_archive: 'This archive could not be opened. Check that it is a working zip, rar or 7z file.',
+    draft_invalid: 'The draft no longer passes its checks. Fix the blocks in the report and try again.',
+    too_early: 'It is too early to force this map live. Wait until the force option opens.',
+    stragglers_changed: 'The hosts still missing the map have changed. Check the list and confirm again.',
+    not_distributing: 'This publish is no longer waiting on hosts, so it cannot be forced live.',
+}
+
+function isMapUploadErrorCode(code: string | undefined): code is MapUploadErrorCode {
+    return !!code && (MAP_UPLOAD_ERROR_CODES as readonly string[]).includes(code)
+}
+
+export function isAbortError(e: unknown): boolean {
+    return e instanceof DOMException && e.name === 'AbortError'
+}
+
+export function mapUploadErrorMessage(e: unknown): string {
+    if (isAbortError(e)) return 'The upload was cancelled.'
+    if (e instanceof ApiError) {
+        if (e.status === 413) return e.serverMessage ?? `This archive is over the ${MAP_ARCHIVE_MAX_LABEL} upload limit.`
+        if (isMapUploadErrorCode(e.reason)) return MAP_UPLOAD_ERROR_MESSAGES[e.reason]
+        if (e.status === 404) return 'This draft no longer exists. It may have been discarded or have expired.'
+    }
+    if (e instanceof Error && e.message) return e.message
+    return 'Something went wrong. Please try again.'
+}
+
+export const MAP_UPLOAD_PUBLISHES_LIMIT = 20
+
+export async function fetchMapUploadPublishes(token: string, signal?: AbortSignal, limit = MAP_UPLOAD_PUBLISHES_LIMIT): Promise<PublishSummary[]> {
+    return apiGetList<PublishSummary>(`/admin/map-uploads/publishes?limit=${limit}`, { token, signal })
+}
+
+export async function fetchMapUploadPublish(token: string, publishId: number, signal?: AbortSignal): Promise<Publish> {
+    return apiGet<Publish>(`/admin/map-uploads/publishes/${publishId}`, { token, signal })
+}
+
+export interface ForceActivateInput {
+    confirm_hosts: string[]
+}
+
+export async function forceActivateMapUploadPublish(token: string, publishId: number, input: ForceActivateInput): Promise<Publish> {
+    return apiGet<Publish>(`/admin/map-uploads/publishes/${publishId}/force-activate`, { token, method: 'POST', body: input })
+}
+
+export async function fetchMapUploadDrift(token: string, signal?: AbortSignal): Promise<DriftRow[]> {
+    return apiGetList<DriftRow>('/admin/map-uploads/drift', { token, signal })
 }
 
 export interface DifficultySyncChange {

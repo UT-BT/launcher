@@ -1,4 +1,4 @@
-import { LayoutDashboard, Tag, UserCog, Flag, Map as MapIcon, Package, ShieldAlert, ScrollText, Newspaper, Swords, Trophy, ShieldCheck, Activity, Server, Radio } from 'lucide-react'
+import { LayoutDashboard, Tag, UserCog, Flag, Map as MapIcon, Package, ShieldAlert, ScrollText, Newspaper, Swords, Trophy, ShieldCheck, Activity, Server, Radio, FileUp } from 'lucide-react'
 import { ADMIN_DASHBOARD_ROLES, ADMIN_ONLY_ROLES } from '@/app/utils/roles'
 import type { AdminSection, AdminGroup, AdminSectionId } from './types'
 import { OverviewSection } from './sections/OverviewSection'
@@ -16,6 +16,7 @@ import { RoleManagementSection } from './sections/RoleManagementSection'
 import { UsageHealthSection } from './sections/UsageHealthSection'
 import { HostsManagementSection } from './sections/HostsManagementSection'
 import { StreamersSection } from './sections/StreamersSection'
+import { MapUploadsSection } from './sections/mapUploads/MapUploadsSection'
 
 export const ADMIN_GROUPS: AdminGroup[] = [
   { id: 'overview', title: 'Overview' },
@@ -37,6 +38,7 @@ export const ADMIN_SECTIONS: AdminSection[] = [
   { id: 'streamers', label: 'Streamers', icon: Radio, group: 'events', roles: ADMIN_DASHBOARD_ROLES, Component: StreamersSection },
   { id: 'caps-management', label: 'Caps Management', icon: Flag, group: 'game-content', roles: ADMIN_DASHBOARD_ROLES, Component: CapsManagementSection },
   { id: 'maps-management', label: 'Maps Management', icon: MapIcon, group: 'game-content', roles: ADMIN_DASHBOARD_ROLES, Component: MapsManagementSection },
+  { id: 'map-uploads', label: 'Map Uploads', icon: FileUp, group: 'game-content', roles: ADMIN_DASHBOARD_ROLES, Component: MapUploadsSection },
   { id: 'patches-management', label: 'Patch Releases', icon: Package, group: 'system', roles: ADMIN_ONLY_ROLES, Component: PatchesManagementSection },
   { id: 'anti-cheat', label: 'Anti-Cheat', icon: ShieldAlert, group: 'integrity', roles: ADMIN_DASHBOARD_ROLES, Component: AntiCheatSection },
   { id: 'audit-logs', label: 'Audit Logs', icon: ScrollText, group: 'system', roles: ADMIN_DASHBOARD_ROLES, Component: AuditLogsSection },
