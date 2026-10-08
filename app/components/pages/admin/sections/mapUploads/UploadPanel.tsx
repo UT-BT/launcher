@@ -1,20 +1,25 @@
 import { useState, type DragEvent } from 'react'
-import { FileArchive, Upload, X } from 'lucide-react'
+import { FileArchive, FolderUp, UploadCloud, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { MAP_ARCHIVE_MAX_MB } from '@/app/utils/api'
+import { MAP_ARCHIVE_MAX_LABEL } from '@/app/utils/api'
 import { ActionButton, Feedback } from '../../components/controls'
 import { ARCHIVE_ACCEPT, megabytes, uploadPercent, type UploadState } from './uploadState'
 import { countLabel } from './reportLabels'
+import { IconTile } from './Panel'
 
 function UploadProgress({ state, onCancel }: { state: Extract<UploadState, { phase: 'uploading' }>; onCancel: () => void }) {
   const percent = uploadPercent(state)
   return (
-    <div className="rounded-lg border border-hairline/10 bg-card/30 p-4 space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="inline-flex min-w-0 items-center gap-2 text-sm text-foreground">
-          <FileArchive className="size-4 shrink-0 text-accent-300" />
-          <span className="break-all">{state.fileName}</span>
-        </span>
+    <div className="rounded-xl border border-accent-500/30 bg-accent-500/[0.06] p-4 space-y-3">
+      <div className="flex flex-wrap items-center gap-3">
+        <IconTile icon={FileArchive} />
+        <div className="min-w-0 flex-1">
+          <p className="break-all text-sm font-medium text-foreground">{state.fileName}</p>
+          <p className="text-xs text-muted-foreground tabular-nums">
+            Uploading · {megabytes(state.loaded)} of {megabytes(state.total)}
+          </p>
+        </div>
+        <span className="text-lg font-bold tabular-nums text-accent-200">{percent}%</span>
         <ActionButton tone="red" icon={X} onClick={onCancel}>Cancel</ActionButton>
       </div>
       <div
@@ -23,13 +28,10 @@ function UploadProgress({ state, onCancel }: { state: Extract<UploadState, { pha
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={percent}
-        className="h-2 rounded-full bg-hairline/10 overflow-hidden"
+        className="h-1.5 overflow-hidden rounded-full bg-hairline/10"
       >
-        <div className="h-full bg-accent-500 transition-[width] duration-200" style={{ width: `${percent}%` }} />
+        <div className="h-full rounded-full bg-accent-500 transition-[width] duration-200" style={{ width: `${percent}%` }} />
       </div>
-      <p className="text-xs text-muted-foreground tabular-nums">
-        {percent}% · {megabytes(state.loaded)} of {megabytes(state.total)}
-      </p>
     </div>
   )
 }
@@ -50,13 +52,25 @@ function DropZone({ onFile }: { onFile: (file: File) => void }) {
       onDragLeave={() => setDragging(false)}
       onDrop={onDrop}
       className={cn(
-        'flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed px-4 py-8 text-center cursor-pointer transition-colors',
-        dragging ? 'border-accent-500/60 bg-accent-500/10' : 'border-hairline/20 bg-card/30 hover:border-hairline/30',
+        'group flex cursor-pointer flex-wrap items-center gap-4 rounded-xl border border-dashed px-5 py-5 transition-colors',
+        dragging ? 'border-accent-500/70 bg-accent-500/10' : 'border-hairline/15 bg-card/30 hover:border-accent-500/40 hover:bg-card/50',
       )}
     >
-      <Upload className="size-6 text-accent-300" />
-      <span className="text-sm text-foreground">Drop a map archive here, or click to choose one</span>
-      <span className="text-xs text-muted-foreground">.zip, .rar or .7z, up to {MAP_ARCHIVE_MAX_MB} MB. A map pack becomes one draft per map.</span>
+      <span className={cn(
+        'inline-flex size-12 shrink-0 items-center justify-center rounded-xl border transition-colors',
+        dragging ? 'border-accent-500/60 bg-accent-500/20 text-accent-200' : 'border-accent-500/30 bg-accent-500/10 text-accent-300',
+      )}>
+        <UploadCloud className="size-6" />
+      </span>
+      <span className="min-w-0 flex-1 basis-56">
+        <span className="block text-sm font-semibold text-foreground">{dragging ? 'Drop it to upload' : 'Upload a map archive'}</span>
+        <span className="block text-xs text-muted-foreground">
+          Drag a .zip, .rar or .7z here, up to {MAP_ARCHIVE_MAX_LABEL}. A map pack becomes one draft per map.
+        </span>
+      </span>
+      <span className="inline-flex h-9 items-center gap-2 rounded-lg border border-accent-500/40 bg-accent-500/15 px-4 text-sm font-medium text-accent-200 transition-colors group-hover:border-accent-500/60 group-hover:bg-accent-500/25">
+        <FolderUp className="size-4" />Choose archive
+      </span>
       <input
         type="file"
         accept={ARCHIVE_ACCEPT}

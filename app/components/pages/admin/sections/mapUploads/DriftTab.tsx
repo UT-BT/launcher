@@ -22,7 +22,7 @@ const COLUMNS: ResponsiveColumn[] = [
 
 function StateChip({ location }: { location: DriftLocation }) {
   const state = DRIFT_STATE_LABEL[location.state]
-  return <ToneChip tone={state.tone}>{state.label}</ToneChip>
+  return <ToneChip tone={state.tone} dot>{state.label}</ToneChip>
 }
 
 function Sha({ location }: { location: DriftLocation }) {
@@ -80,10 +80,12 @@ export function DriftTab({ token }: DriftTabProps) {
 
   return (
     <section aria-label="Drift" className="space-y-3">
-      <p className="text-sm text-muted-foreground">
-        Packages whose copies differ between the hosts and the download server. Read only.
-      </p>
-      <SearchInput value={query} onChange={setQuery} placeholder="Filter by file name…" className="max-w-sm" />
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="max-w-xl text-xs text-muted-foreground">
+          Packages whose copies differ between the hosts and the download server. Read only.
+        </p>
+        <SearchInput value={query} onChange={setQuery} placeholder="Filter by file name…" className="w-full max-w-xs" />
+      </div>
       <Feedback message={error} tone="red" onDismiss={() => setError(null)} />
       <DataTableShell
         className="!flex-none"

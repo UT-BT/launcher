@@ -8,11 +8,11 @@ export const DRAFT_STATUS_LABEL: Record<DraftStatus, { label: string; tone: Tone
   published: { label: 'Published', tone: 'accent' },
 }
 
-export const DISPOSITION_LABEL: Record<FileDisposition, { label: string; tone: Tone }> = {
-  install: { label: 'Install', tone: 'emerald' },
-  'skip-identical': { label: 'Skip, identical', tone: 'accent' },
-  'keep-existing': { label: 'Keep ours', tone: 'amber' },
-  dropped: { label: 'Dropped', tone: 'red' },
+export const DISPOSITION_LABEL: Record<FileDisposition, { label: string; summary: string; tone: Tone }> = {
+  install: { label: 'Install', summary: 'to install', tone: 'emerald' },
+  'skip-identical': { label: 'Already there', summary: 'already there', tone: 'accent' },
+  'keep-existing': { label: 'Keep ours', summary: 'kept ours', tone: 'amber' },
+  dropped: { label: 'Dropped', summary: 'dropped', tone: 'red' },
 }
 
 export const FILE_KIND_LABEL: Record<FileKind, string> = {
@@ -38,6 +38,9 @@ export const BLOCK_TITLE: Record<BlockCode, string> = {
   code_package_unacknowledged: 'The code package has not been reviewed yet',
   version_target_invalid: 'The map this replaces cannot be used',
   version_target_has_successor: 'The map this replaces already has a newer version',
+  name_empty: 'The map name is empty after its prefix',
+  author_missing: 'The author is not set',
+  difficulty_missing: 'The difficulty is not set',
 }
 
 export const WARNING_TITLE: Record<WarningCode, string> = {

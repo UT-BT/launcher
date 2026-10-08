@@ -3,6 +3,7 @@ import { ApiError } from '@/app/utils/api'
 import { mapUploadErrorFixture, mapUploadFixture } from '@/app/utils/fixtures/mapUploadFixtures'
 import { PUBLISH_STATES, type Publish, type PublishState } from '@/app/utils/mapUploadTypes'
 import {
+  hostProgress, publishSteps,
   forceActivateFailure, forceAvailability, forceConfirmation, isPublishSettled, publishErrorMessage, publishStragglers,
   shouldPollPublish,
 } from './publishState'
@@ -121,5 +122,30 @@ describe('publishErrorMessage', () => {
   it('falls back to the map upload messages', () => {
     expect(publishErrorMessage(apiError('errorNotDistributing'))).toMatch(/no longer waiting on hosts/)
     expect(publishErrorMessage(new Error('Offline'))).toBe('Offline')
+  })
+})
+
+describe('publishSteps', () => {
+  it('marks the steps before the current state done and the rest to do', () => {
+    expect(publishSteps('compressing')?.map((step) => step.status)).toEqual(['done', 'done', 'current', 'todo', 'todo', 'todo'])
+  })
+
+  it('marks every step done once the map is live', () => {
+    expect(publishSteps('active')?.every((step) => step.status === 'done')).toBe(true)
+  })
+
+  it('has no steps for a failed publish, which does not say where it stopped', () => {
+    expect(publishSteps('failed')).toBeNull()
+  })
+
+  it('covers every state but failed, in order', () => {
+    expect(publishSteps('validating')?.map((step) => step.state)).toEqual(PUBLISH_STATES.filter((state) => state !== 'failed'))
+  })
+})
+
+describe('hostProgress', () => {
+  it('counts the installed hosts', () => {
+    const hosts = mapUploadFixture('publish').hosts
+    expect(hostProgress(hosts)).toEqual({ installed: hosts.filter((h) => h.state === 'installed').length, total: hosts.length })
   })
 })

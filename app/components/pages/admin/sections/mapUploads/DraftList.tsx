@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react'
-import { FolderOpen, Trash2, X } from 'lucide-react'
+import { useCallback, useEffect, useState, type MouseEvent } from 'react'
+import { AlertTriangle, CheckCircle2, ChevronRight, FolderOpen, Loader2, OctagonX, Trash2, X } from 'lucide-react'
 import { fetchMapUploadDrafts, mapUploadErrorMessage } from '@/app/utils/api'
 import type { DraftSummary } from '@/app/utils/mapUploadTypes'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
@@ -16,46 +16,77 @@ import { DraftExpiry } from './DraftExpiry'
 import { usePollWhile } from './usePollWhile'
 
 const COLUMNS: ResponsiveColumn[] = [
-  { id: 'map', width: '16rem', required: true },
+  { id: 'map', required: true },
   { id: 'status', width: '8rem', required: true },
-  { id: 'issues', width: '10rem', priority: 65 },
-  { id: 'creator', width: '11rem', priority: 50 },
+  { id: 'issues', width: '8rem', priority: 65 },
+  { id: 'creator', width: '10rem', priority: 50 },
   { id: 'expires', width: '8rem', priority: 40 },
-  { id: 'actions', width: '13rem', required: true },
+  { id: 'actions', width: '7.5rem', required: true },
 ]
 
 function Issues({ draft }: { draft: DraftSummary }) {
-  if (draft.status === 'analyzing') return <span className="text-xs text-muted-foreground">Checking…</span>
-  if (draft.blocks_count === 0 && draft.warnings_count === 0) return <span className="text-xs text-muted-foreground">None</span>
+  if (draft.status === 'analyzing') {
+    return <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"><Loader2 className="size-3.5 animate-spin" />Checking</span>
+  }
+  if (draft.blocks_count === 0 && draft.warnings_count === 0) {
+    return <span className="inline-flex items-center gap-1.5 text-xs text-emerald-300"><CheckCircle2 className="size-3.5" />Clean</span>
+  }
   return (
-    <span className="flex flex-wrap gap-1">
-      {draft.blocks_count > 0 && <ToneChip tone="red">{countLabel(draft.blocks_count, 'block')}</ToneChip>}
-      {draft.warnings_count > 0 && <ToneChip tone="amber">{countLabel(draft.warnings_count, 'warning')}</ToneChip>}
+    <span className="inline-flex items-center gap-3 text-xs font-medium tabular-nums">
+      {draft.blocks_count > 0 && (
+        <span className="inline-flex items-center gap-1 text-red-300" title={countLabel(draft.blocks_count, 'block')}>
+          <OctagonX className="size-3.5" />{draft.blocks_count}
+        </span>
+      )}
+      {draft.warnings_count > 0 && (
+        <span className="inline-flex items-center gap-1 text-amber-300" title={countLabel(draft.warnings_count, 'warning')}>
+          <AlertTriangle className="size-3.5" />{draft.warnings_count}
+        </span>
+      )}
     </span>
   )
 }
 
 function StatusChip({ draft }: { draft: DraftSummary }) {
   const status = DRAFT_STATUS_LABEL[draft.status]
-  return <ToneChip tone={status.tone}>{status.label}</ToneChip>
+  return <ToneChip tone={status.tone} dot pulse={draft.status === 'analyzing'}>{status.label}</ToneChip>
+}
+
+function stop(handler: () => void) {
+  return (event: MouseEvent) => {
+    event.stopPropagation()
+    handler()
+  }
 }
 
 function RowActions({ onOpen, onDiscard }: { onOpen: () => void; onDiscard: () => void }) {
   return (
-    <div className="flex flex-wrap justify-end gap-2">
-      <ActionButton icon={FolderOpen} onClick={onOpen}>Open</ActionButton>
-      <ActionButton tone="red" icon={Trash2} onClick={onDiscard}>Discard</ActionButton>
+    <div className="flex items-center justify-end gap-1.5">
+      <button
+        type="button"
+        onClick={stop(onDiscard)}
+        title="Discard"
+        aria-label="Discard"
+        className="inline-flex size-8 items-center justify-center rounded-md border border-transparent text-muted-foreground transition-colors hover:border-red-500/30 hover:bg-red-500/10 hover:text-red-300 cursor-pointer"
+      >
+        <Trash2 className="size-3.5" />
+      </button>
+      <button
+        type="button"
+        onClick={stop(onOpen)}
+        className="inline-flex h-8 items-center gap-1 rounded-md border border-accent-500/40 bg-accent-500/15 pl-3 pr-2 text-xs font-medium text-accent-200 transition-colors hover:bg-accent-500/25 cursor-pointer"
+      >
+        Open<ChevronRight className="size-3.5" />
+      </button>
     </div>
   )
 }
 
-function MapCell({ draft, onOpen }: { draft: DraftSummary; onOpen: () => void }) {
+function MapCell({ draft }: { draft: DraftSummary }) {
   return (
     <div className="min-w-0">
-      <button type="button" onClick={onOpen} className="text-sm font-semibold text-foreground hover:text-accent-300 cursor-pointer text-left break-all">
-        {draft.map_name}
-      </button>
-      <div className="text-xs text-muted-foreground break-all">{draft.source_archive}</div>
+      <p className="break-all text-sm font-semibold text-foreground group-hover:text-accent-200">{draft.map_name}</p>
+      <p className="truncate text-xs text-muted-foreground" title={draft.source_archive}>{draft.source_archive}</p>
     </div>
   )
 }
@@ -66,9 +97,11 @@ function UploadedDrafts({ drafts, onOpen, onDismiss }: {
   onDismiss: () => void
 }) {
   return (
-    <section aria-label="Drafts from this upload" className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-4 space-y-2">
+    <section aria-label="Drafts from this upload" className="rounded-xl border border-emerald-500/30 bg-emerald-500/[0.07] p-4 space-y-3">
       <div className="flex items-center justify-between gap-2">
-        <h3 className={PANEL_LABEL}>This archive made {countLabel(drafts.length, 'draft')}</h3>
+        <p className="flex items-center gap-2 text-sm font-medium text-emerald-200">
+          <CheckCircle2 className="size-4" />This archive made {countLabel(drafts.length, 'draft')}
+        </p>
         <button type="button" onClick={onDismiss} aria-label="Dismiss" className="text-muted-foreground hover:text-foreground cursor-pointer">
           <X className="size-4" />
         </button>
@@ -127,13 +160,15 @@ export function DraftList({ token, refreshKey, uploadedIds, onDismissUploaded, o
 
   const compactRows = (
     <ul className="space-y-2">
-      {drafts.map((draft) => (
-        <li key={draft.id} className="rounded-lg border border-hairline/10 bg-card/30 px-4 py-3 space-y-2">
+      {loading && Array.from({ length: 3 }).map((_, i) => <li key={i} className="h-24 rounded-xl border border-hairline/5 bg-hairline/[0.03] animate-pulse" />)}
+      {!loading && drafts.length === 0 && <li className="px-4 py-12 text-center text-sm text-muted-foreground">No drafts. Upload an archive to start one.</li>}
+      {!loading && drafts.map((draft) => (
+        <li key={draft.id} className="rounded-xl border border-hairline/5 bg-card/30 px-4 py-3 space-y-2.5">
           <div className="flex items-start justify-between gap-2">
-            <MapCell draft={draft} onOpen={() => onOpenDraft(draft.id)} />
+            <MapCell draft={draft} />
             <StatusChip draft={draft} />
           </div>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
             <Issues draft={draft} />
             <PlayerInfo userId={draft.created_by.id} alias={draft.created_by.alias} size="sm" />
             <span className="text-xs text-muted-foreground"><DraftExpiry draft={draft} /></span>
@@ -147,18 +182,22 @@ export function DraftList({ token, refreshKey, uploadedIds, onDismissUploaded, o
   return (
     <section aria-label="Drafts" className="space-y-3">
       {uploaded.length > 0 && <UploadedDrafts drafts={uploaded} onOpen={onOpenDraft} onDismiss={onDismissUploaded} />}
+      <div className="flex items-baseline justify-between gap-3">
+        <h3 className={PANEL_LABEL}>Drafts{!loading && drafts.length > 0 && <span className="ml-1.5 tabular-nums text-muted-foreground/70">{drafts.length}</span>}</h3>
+        <p className="text-xs text-muted-foreground">Unpublished drafts are deleted after 14 days.</p>
+      </div>
       <Feedback message={error} tone="red" onDismiss={() => setError(null)} />
       <DataTableShell
         className="!flex-none"
         responsive={{ columns: COLUMNS, onResolve: handleResolve, compactContent: compactRows, compactAriaLabel: 'Drafts' }}
       >
         <DataTableHeaderRow>
-          <DataTableHeaderCell width="16rem">Map</DataTableHeaderCell>
+          <DataTableHeaderCell>Map</DataTableHeaderCell>
           <DataTableHeaderCell width="8rem">Status</DataTableHeaderCell>
-          {isVisible('issues') && <DataTableHeaderCell width="10rem">Blocks / warnings</DataTableHeaderCell>}
-          {isVisible('creator') && <DataTableHeaderCell width="11rem">Created by</DataTableHeaderCell>}
+          {isVisible('issues') && <DataTableHeaderCell width="8rem">Issues</DataTableHeaderCell>}
+          {isVisible('creator') && <DataTableHeaderCell width="10rem">Uploaded by</DataTableHeaderCell>}
           {isVisible('expires') && <DataTableHeaderCell width="8rem">Expires</DataTableHeaderCell>}
-          <DataTableHeaderCell width="13rem" align="right">Actions</DataTableHeaderCell>
+          <DataTableHeaderCell width="7.5rem" align="right"><span className="sr-only">Actions</span></DataTableHeaderCell>
         </DataTableHeaderRow>
         <tbody>
           {loading ? (
@@ -166,8 +205,8 @@ export function DraftList({ token, refreshKey, uploadedIds, onDismissUploaded, o
           ) : drafts.length === 0 ? (
             <DataTableEmpty colSpan={visibleCount} message="No drafts. Upload an archive to start one." />
           ) : drafts.map((draft) => (
-            <DataTableRow key={draft.id}>
-              <DataTableCell><MapCell draft={draft} onOpen={() => onOpenDraft(draft.id)} /></DataTableCell>
+            <DataTableRow key={draft.id} onClick={() => onOpenDraft(draft.id)} className="cursor-pointer">
+              <DataTableCell><MapCell draft={draft} /></DataTableCell>
               <DataTableCell><StatusChip draft={draft} /></DataTableCell>
               {isVisible('issues') && <DataTableCell><Issues draft={draft} /></DataTableCell>}
               {isVisible('creator') && (

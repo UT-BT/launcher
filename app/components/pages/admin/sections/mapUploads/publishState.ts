@@ -12,6 +12,37 @@ export function shouldPollPublish(publish: Pick<Publish, 'state'> | null, missin
   return publish === null || !isPublishSettled(publish.state)
 }
 
+export type PublishStepStatus = 'done' | 'current' | 'todo'
+
+export interface PublishStep {
+  state: PublishState
+  label: string
+  status: PublishStepStatus
+}
+
+const PUBLISH_STEP_LABELS: [PublishState, string][] = [
+  ['validating', 'Checked'],
+  ['storing', 'Stored'],
+  ['compressing', 'Compressed'],
+  ['registering', 'Registered'],
+  ['distributing', 'On the hosts'],
+  ['active', 'Live'],
+]
+
+export function publishSteps(state: PublishState): PublishStep[] | null {
+  if (state === 'failed') return null
+  const current = PUBLISH_STEP_LABELS.findIndex(([step]) => step === state)
+  return PUBLISH_STEP_LABELS.map(([step, label], index) => ({
+    state: step,
+    label,
+    status: state === 'active' || index < current ? 'done' : index === current ? 'current' : 'todo',
+  }))
+}
+
+export function hostProgress(hosts: PublishHost[]): { installed: number; total: number } {
+  return { installed: hosts.filter((host) => host.state === 'installed').length, total: hosts.length }
+}
+
 export function publishStragglers(hosts: PublishHost[]): PublishHost[] {
   return hosts.filter((host) => host.state !== 'installed')
 }

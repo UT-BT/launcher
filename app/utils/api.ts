@@ -289,11 +289,13 @@ export async function apiRequest(path: string, opts: ApiRequestOptions = {}): Pr
 export class ApiError extends Error {
     status: number
     reason?: string
+    serverMessage?: string
     constructor(status: number, message: string | undefined, fallback: string, reason?: string) {
         super(message || fallback)
         this.name = 'ApiError'
         this.status = status
         this.reason = reason
+        this.serverMessage = message || undefined
     }
 }
 
@@ -1294,8 +1296,8 @@ export async function updateMap(token: string, name: string, input: UpdateMapInp
     return apiGet(`/admin/maps/${encodeURIComponent(name)}`, { token, method: 'PATCH', body: input })
 }
 
-export const MAP_ARCHIVE_MAX_MB = 200
-export const MAP_ARCHIVE_MAX_BYTES = MAP_ARCHIVE_MAX_MB * 1024 * 1024
+export const MAP_ARCHIVE_MAX_LABEL = '1 GB'
+export const MAP_ARCHIVE_MAX_BYTES = 1024 * 1024 * 1024
 
 export interface MapArchiveUploadOptions {
     signal?: AbortSignal
@@ -1394,7 +1396,7 @@ export function isAbortError(e: unknown): boolean {
 export function mapUploadErrorMessage(e: unknown): string {
     if (isAbortError(e)) return 'The upload was cancelled.'
     if (e instanceof ApiError) {
-        if (e.status === 413) return `This archive is over the ${MAP_ARCHIVE_MAX_MB} MB upload limit.`
+        if (e.status === 413) return e.serverMessage ?? `This archive is over the ${MAP_ARCHIVE_MAX_LABEL} upload limit.`
         if (isMapUploadErrorCode(e.reason)) return MAP_UPLOAD_ERROR_MESSAGES[e.reason]
         if (e.status === 404) return 'This draft no longer exists. It may have been discarded or have expired.'
     }

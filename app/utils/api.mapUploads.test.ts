@@ -167,7 +167,16 @@ describe('uploadMapArchive', () => {
         const error = await rejectionOf(pending)
 
         expect((error as ApiError).status).toBe(413)
-        expect(mapUploadErrorMessage(error)).toBe('This archive is over the 200 MB upload limit.')
+        expect(mapUploadErrorMessage(error)).toBe('This archive is over the 1 GB upload limit.')
+    })
+
+    it('shows the reason the server gives for a 413', async () => {
+        const pending = uploadMapArchive('t', archive, 'many.zip')
+        lastXhr().respond(413, JSON.stringify({ error: 'The archive holds more than 500 entries.', success: false }))
+        const error = await rejectionOf(pending)
+
+        expect((error as ApiError).status).toBe(413)
+        expect(mapUploadErrorMessage(error)).toBe('The archive holds more than 500 entries.')
     })
 })
 
@@ -257,7 +266,7 @@ describe('mapUploadErrorMessage', () => {
         expect(mapUploadErrorMessage('nope')).toBe('Something went wrong. Please try again.')
     })
 
-    it('uses the 200 MB cap the client checks', () => {
-        expect(MAP_ARCHIVE_MAX_BYTES).toBe(200 * 1024 * 1024)
+    it('uses the 1 GB cap the client checks', () => {
+        expect(MAP_ARCHIVE_MAX_BYTES).toBe(1024 * 1024 * 1024)
     })
 })

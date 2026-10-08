@@ -7,7 +7,20 @@ import { Input } from '@/app/components/ui/input'
 
 export interface AuthorUser { id: string; alias: string | null }
 
-export function AuthorPicker({ mode, setMode, authorStr, setAuthorStr, authorUser, setAuthorUser, token }: {
+export function AuthorModeToggle({ mode, setMode }: { mode: 'text' | 'player'; setMode: (m: 'text' | 'player') => void }) {
+  return (
+    <div className="inline-flex rounded-md border border-hairline/10 overflow-hidden text-xs">
+      {(['player', 'text'] as const).map((m) => (
+        <button key={m} type="button" onClick={() => setMode(m)}
+          className={cn('px-3 py-1.5 cursor-pointer transition-colors', mode === m ? 'bg-accent-500/15 text-accent-200' : 'text-muted-foreground hover:text-foreground')}>
+          {m === 'text' ? 'Name' : 'Player'}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+export function AuthorPicker({ mode, setMode, authorStr, setAuthorStr, authorUser, setAuthorUser, token, showModeToggle = true, invalid = false }: {
   mode: 'text' | 'player'
   setMode: (m: 'text' | 'player') => void
   authorStr: string
@@ -15,6 +28,8 @@ export function AuthorPicker({ mode, setMode, authorStr, setAuthorStr, authorUse
   authorUser: AuthorUser | null
   setAuthorUser: (u: AuthorUser | null) => void
   token: string
+  showModeToggle?: boolean
+  invalid?: boolean
 }) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<AdminUserRow[]>([])
@@ -30,17 +45,11 @@ export function AuthorPicker({ mode, setMode, authorStr, setAuthorStr, authorUse
 
   return (
     <div className="space-y-2">
-      <div className="inline-flex rounded-md border border-hairline/10 overflow-hidden text-xs">
-        {(['text', 'player'] as const).map((m) => (
-          <button key={m} type="button" onClick={() => setMode(m)}
-            className={cn('px-3 py-1.5 cursor-pointer transition-colors', mode === m ? 'bg-accent-500/15 text-accent-200' : 'text-muted-foreground hover:text-foreground')}>
-            {m === 'text' ? 'Name' : 'Player'}
-          </button>
-        ))}
-      </div>
+      {showModeToggle && <AuthorModeToggle mode={mode} setMode={setMode} />}
 
       {mode === 'text' ? (
-        <Input value={authorStr} onChange={(e) => setAuthorStr(e.target.value)} placeholder="Author name" className="h-9" />
+        <Input value={authorStr} onChange={(e) => setAuthorStr(e.target.value)} placeholder="Author name" aria-invalid={invalid || undefined}
+          className={cn('h-9', invalid && 'border-red-500/40')} />
       ) : authorUser ? (
         <div className="flex items-center justify-between gap-2 bg-card/30 border border-hairline/10 rounded-md px-3 h-10">
           <PlayerInfo userId={authorUser.id} alias={authorUser.alias} title={null} size="sm" interactive={false} />
@@ -50,7 +59,8 @@ export function AuthorPicker({ mode, setMode, authorStr, setAuthorStr, authorUse
         <div className="space-y-1.5">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground/60 pointer-events-none" />
-            <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search players…" className="h-9 pl-9" />
+            <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search players…" aria-invalid={invalid || undefined}
+              className={cn('h-9 pl-9', invalid && 'border-red-500/40')} />
           </div>
           {results.length > 0 && (
             <ul className="bg-card/30 border border-hairline/10 rounded-md divide-y divide-hairline/5 max-h-44 overflow-y-auto">

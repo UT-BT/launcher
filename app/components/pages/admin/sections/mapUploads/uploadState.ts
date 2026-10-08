@@ -1,4 +1,4 @@
-import { MAP_ARCHIVE_MAX_BYTES, MAP_ARCHIVE_MAX_MB, isAbortError, mapUploadErrorMessage } from '@/app/utils/api'
+import { MAP_ARCHIVE_MAX_BYTES, MAP_ARCHIVE_MAX_LABEL, isAbortError, mapUploadErrorMessage } from '@/app/utils/api'
 
 export const ARCHIVE_EXTENSIONS = ['.zip', '.rar', '.7z'] as const
 export const ARCHIVE_ACCEPT = ARCHIVE_EXTENSIONS.join(',')
@@ -30,7 +30,7 @@ export function archiveProblem(file: { name: string; size: number }): string | n
   const name = file.name.toLowerCase()
   if (!ARCHIVE_EXTENSIONS.some((ext) => name.endsWith(ext) && name.length > ext.length)) return 'Choose a .zip, .rar or .7z archive.'
   if (file.size === 0) return 'This file is empty.'
-  if (file.size > MAP_ARCHIVE_MAX_BYTES) return `This archive is ${megabytes(file.size)}, over the ${MAP_ARCHIVE_MAX_MB} MB limit.`
+  if (file.size > MAP_ARCHIVE_MAX_BYTES) return `This archive is ${megabytes(file.size)}, over the ${MAP_ARCHIVE_MAX_LABEL} limit.`
   return null
 }
 

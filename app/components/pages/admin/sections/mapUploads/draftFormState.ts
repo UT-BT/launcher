@@ -23,7 +23,7 @@ export function formValuesFromDraft(draft: Draft): DraftFormValues {
   const { metadata } = draft
   const linked = metadata.author_ref
   return {
-    authorMode: linked ? 'player' : 'text',
+    authorMode: !linked && metadata.author_str ? 'text' : 'player',
     authorStr: linked ? '' : metadata.author_str ?? '',
     authorUser: linked ? { id: linked, alias: metadata.author || null } : null,
     difficulty: metadata.difficulty,
@@ -34,6 +34,14 @@ export function formValuesFromDraft(draft: Draft): DraftFormValues {
     versionMode: draft.version.mode,
     codePackageAcknowledged: draft.acknowledgements.code_package,
   }
+}
+
+export function hasAuthor(values: DraftFormValues): boolean {
+  return values.authorMode === 'player' ? values.authorUser !== null : values.authorStr.trim() !== ''
+}
+
+function sameAuthor(a: DraftFormValues, b: DraftFormValues): boolean {
+  return a.authorStr === b.authorStr && a.authorUser?.id === b.authorUser?.id
 }
 
 function patchFields(values: DraftFormValues): Record<string, unknown> {
@@ -62,7 +70,13 @@ export function draftPatch(base: DraftFormValues, next: DraftFormValues): MapUpl
   return patch
 }
 
-const NAME_BLOCK_CODES: BlockCode[] = ['bad_prefix', 'bad_characters', 'name_too_long', 'name_taken']
+const NAME_BLOCK_CODES: BlockCode[] = ['bad_prefix', 'name_empty', 'bad_characters', 'name_too_long', 'name_taken']
+const PREFIXED_TITLE = /^ctf-bt[-+](?:[ivx]+-)?(.*)$/i
+
+export function hasMapTitle(name: string): boolean {
+  const match = PREFIXED_TITLE.exec(name.trim())
+  return !match || /[a-z]/i.test(match[1])
+}
 
 export function nameBlocks(draft: Draft): DraftBlock[] {
   return draft.blocks.filter((block) => NAME_BLOCK_CODES.includes(block.code))
@@ -194,9 +208,10 @@ export function createDraftAutosave({ initial, save, onSaved, onError, onState, 
     },
     sync(draft) {
       if (timer !== null || pending > 0) return
-      const keepPlayerMode = values.authorMode === 'player' && !values.authorUser
-      base = formValuesFromDraft(draft)
-      values = keepPlayerMode ? { ...base, authorMode: 'player' } : base
+      const read = formValuesFromDraft(draft)
+      const keepMode = !hasAuthor(values) && sameAuthor(base, read)
+      base = keepMode ? { ...read, authorMode: values.authorMode } : read
+      values = base
       emit()
     },
     async flush() {

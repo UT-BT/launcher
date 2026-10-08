@@ -107,7 +107,7 @@ function MapFormModal({ open, onClose, token, editing, onSaved, onReload, allTag
   const [difficulty, setDifficulty] = useState('5')
   const [requiredPlayers, setRequiredPlayers] = useState('1')
   const [active, setActive] = useState(true)
-  const [authorMode, setAuthorMode] = useState<'text' | 'player'>('text')
+  const [authorMode, setAuthorMode] = useState<'text' | 'player'>('player')
   const [authorStr, setAuthorStr] = useState('')
   const [authorUser, setAuthorUser] = useState<AuthorUser | null>(null)
   const [tags, setTags] = useState<string[]>([])
@@ -132,7 +132,7 @@ function MapFormModal({ open, onClose, token, editing, onSaved, onReload, allTag
       if (editing.author_ref) {
         setAuthorMode('player'); setAuthorUser({ id: editing.author_ref, alias: editing.author_alias }); setAuthorStr('')
       } else {
-        setAuthorMode('text'); setAuthorStr(editing.author_str || ''); setAuthorUser(null)
+        setAuthorMode(editing.author_str ? 'text' : 'player'); setAuthorStr(editing.author_str || ''); setAuthorUser(null)
       }
     }
   }, [open, editing])

@@ -4,14 +4,14 @@ read_when:
   - "working on Admin → Map Uploads: uploading an archive, the drafts list, the draft report, the draft form, publishing or drift"
   - "calling a /admin/map-uploads route or changing a map-upload function in app/utils/api.ts"
   - "changing the Add Map button in Admin → Maps Management"
-keywords: [map uploads, Map Uploads, Add Map, draft, DraftSummary, Draft, archive, zip, rar, 7z, uploadMapArchive, fetchMapUploadDrafts, fetchMapUploadDraft, discardMapUploadDraft, mapUploadErrorMessage, patchMapUploadDraft, MapUploadDraftPatch, uploadMapUploadScreenshot, selectEmbeddedMapUploadScreenshot, removeMapUploadScreenshot, fetchMapUploadScreenshot, publishMapUploadDraft, PublishDraftResult, draftFormState, createDraftAutosave, publishGate, suggestMapName, draft_invalid, rename, version target, version mode, code package, MAP_ARCHIVE_MAX_MB, MAP_ARCHIVE_MAX_BYTES, no_map, bad_archive, 413, analyzing, disposition, block, warning, uploadState, uploadReducer, useArchiveUpload, usePollWhile, useMapUploadsNav, handover, DraftForm, PublishingTab, DriftTab, mapUploadFixtures]
+keywords: [map uploads, Map Uploads, Add Map, draft, DraftSummary, Draft, archive, zip, rar, 7z, uploadMapArchive, fetchMapUploadDrafts, fetchMapUploadDraft, discardMapUploadDraft, mapUploadErrorMessage, patchMapUploadDraft, MapUploadDraftPatch, uploadMapUploadScreenshot, selectEmbeddedMapUploadScreenshot, removeMapUploadScreenshot, fetchMapUploadScreenshot, publishMapUploadDraft, PublishDraftResult, draftFormState, createDraftAutosave, publishGate, suggestMapName, draft_invalid, rename, version target, version mode, code package, MAP_ARCHIVE_MAX_LABEL, MAP_ARCHIVE_MAX_BYTES, no_map, bad_archive, 413, analyzing, disposition, block, warning, uploadState, uploadReducer, useArchiveUpload, usePollWhile, useMapUploadsNav, handover, DraftForm, PublishingTab, DriftTab, mapUploadFixtures]
 provides: "the client contract of Admin → Map Uploads: the routes the launcher calls, the shapes it relies on, the error codes, the polling, and the section's layout and hand-over props"
 not_here:
   - "the upload-with-progress helper apiUpload itself → data-sources.md (Backend API)"
   - "how admin sections are registered and gated → navigation.md (the sidebar registry)"
   - "AuthorPicker, TagEditor and the screenshot modal's callback mode → shared-components.md"
 sections: [who-can-use-it, the-section, routes, shapes, errors, upload, drafts-and-the-report, polling, draft-form-and-publish, publishing-recent-and-drift, tests]
-last_verified: 2026-10-07
+last_verified: 2026-10-08
 verify_against:
   - app/utils/api.ts
   - app/utils/mapUploadTypes.ts
@@ -43,6 +43,10 @@ verify_against:
   - app/components/pages/admin/sections/mapUploads/publishState.ts
   - app/components/pages/admin/sections/mapUploads/publishLabels.ts
   - app/components/pages/admin/sections/mapUploads/driftView.ts
+  - app/components/pages/admin/sections/mapUploads/Panel.tsx
+  - app/components/pages/admin/sections/mapUploads/DraftChecks.tsx
+  - app/components/pages/admin/sections/mapUploads/DraftFiles.tsx
+  - app/components/pages/admin/sections/mapUploads/reportView.ts
 ---
 
 # Admin → Map Uploads
@@ -73,22 +77,26 @@ Folder: `app/components/pages/admin/sections/mapUploads/`.
 | `handover.ts` | The props the shell passes to the draft form and the Publishing and Drift tabs |
 | `uploadState.ts` | Pure upload state: file checks, the reducer, percent, what to open afterwards |
 | `useArchiveUpload.ts` | Runs one upload at a time through `uploadMapArchive` and feeds the reducer |
-| `UploadPanel.tsx` | Drop zone and file picker, progress bar with Cancel, the result or error line |
-| `DraftList.tsx` | The Drafts tab list, and the drafts a map pack created |
-| `DraftReport.tsx` | One draft: header, blocks, warnings, the files table, then the draft form |
+| `UploadPanel.tsx` | The drop zone card with its Choose archive button, the progress card with Cancel, the result or error line |
+| `DraftList.tsx` | The Drafts tab list (whole rows open the draft), and the drafts a map pack created |
+| `DraftReport.tsx` | One draft: the back link, the hero (screenshot, name, status, archive, uploader, expiry, Discard), then `DraftWorkspace` holding the checks and files |
 | `DiscardDraftDialog.tsx` | The discard confirmation, used by the list and the report |
 | `DraftExpiry.tsx` | When a draft expires, or that it never does once it has a publish |
-| `ToneChip.tsx` | The small coloured chip for statuses, dispositions and counts |
+| `ToneChip.tsx` | The small coloured chip for statuses, dispositions and counts; `dot` adds a status dot, `pulse` makes it pulse while something is in progress |
+| `Panel.tsx` | The section's card: `Panel` (icon tile, title, one-line meta, header actions), `IconTile` and `MonoChip` |
+| `DraftChecks.tsx` | The Checks panel: blocks then warnings as rows, package and host chips, object lists, and a Fix or Review link to the field that resolves each one |
+| `DraftFiles.tsx` | The Files panel: one row per file with a kind icon, size, reason and outcome, and a count per outcome |
+| `reportView.ts` | Pure report helpers: object grouping, file order and counts, which field fixes which finding, the field ids and scrolling, and the publish checklist (`readinessItems`) |
 | `reportLabels.ts` | Plain-language labels for statuses, dispositions, kinds, blocks and warnings |
 | `usePollWhile.ts` | Polls with `createPoller` while a condition holds |
-| `DraftForm.tsx` | The draft form and the Publish button, see [Draft form and publish](#draft-form-and-publish) |
+| `DraftForm.tsx` | `DraftWorkspace`: the two-column layout, the Map details panel and the Publish panel, see [Draft form and publish](#draft-form-and-publish) |
 | `draftFormState.ts` | Pure form state: values from a draft, the PATCH diff, autosave with debouncing, the rename suggestion, the publish rules and the 409 outcome |
-| `DraftScreenshot.tsx` | The staged screenshot with Replace, Use embedded and Remove |
-| `VersionTargetPicker.tsx` | The new-version toggle, the old map and the version mode |
+| `DraftScreenshot.tsx` | `useStagedScreenshot` (the staged image as an object URL, shared by the hero and the form), `ScreenshotTile`, and the screenshot block with Upload or Replace, Use the map's own and Remove |
+| `VersionTargetPicker.tsx` | The new-version switch, the suggested and searched old map, and the three modes as selectable cards |
 | `PublishingTab.tsx` | The Publishing / Recent tab: the selected publish above the recent list, see [Publishing, Recent and Drift](#publishing-recent-and-drift) |
-| `PublishList.tsx` | The recent publishes table |
-| `PublishDetail.tsx` | One publish: state, error, version, hosts, and Force live with its confirmation |
-| `publishState.ts` | Pure publish logic: stragglers, when Force live opens, the confirmation payload, the force errors, when polling stops |
+| `PublishList.tsx` | The recent publishes table; whole rows select a publish |
+| `PublishDetail.tsx` | One publish: the header, the step tracker, the status line, Force live with its confirmation, and the Hosts panel of host cards |
+| `publishState.ts` | Pure publish logic: stragglers, when Force live opens, the confirmation payload, the force errors, when polling stops, the step tracker (`publishSteps`) and host progress (`hostProgress`) |
 | `publishLabels.ts` | Plain-language labels for publish states, host states, activation, version modes and drift states |
 | `DriftTab.tsx` | The read-only drift report with its file-name filter |
 | `driftView.ts` | Pure drift helpers: the filter, the short sha256, the size |
@@ -96,10 +104,11 @@ Folder: `app/components/pages/admin/sections/mapUploads/`.
 Tabs: **Drafts**, **Publishing / Recent**, **Drift**. The shell owns the open tab,
 the open draft and the selected publish. The hand-over props:
 
-- `DraftFormProps { token, draft, onDraftChange(draft), onPublished(publishId) }`. The
-  report renders the form under the files table for every draft status.
-  `onDraftChange` replaces the draft the report shows. `onPublished` is the shell's
-  `openPublish`: it switches to Publishing / Recent with that publish selected.
+- `DraftFormProps { token, draft, onDraftChange(draft), onPublished(publishId) }`, and
+  `DraftWorkspaceProps`, which adds `screenshotUrl`, `onScreenshotChanged()` and
+  `children` (the report's Checks and Files panels). `onDraftChange` replaces the
+  draft the report shows. `onPublished` is the shell's `openPublish`: it switches to
+  Publishing / Recent with that publish selected.
 - `PublishingTabProps { token, publishId, onSelectPublish(id | null), onOpenDraft(id) }`.
   `publishId` is the selected publish or `null` for the list.
 - `DriftTabProps { token }`.
@@ -163,7 +172,8 @@ typed over the full code list, so a new code fails the typecheck until it has wo
 | Error | Message |
 |---|---|
 | Cancelled upload (`AbortError`) | The upload was cancelled. |
-| 413 (any body, often not JSON) | This archive is over the 200 MB upload limit. |
+| 413 with a JSON `error` (too many entries, expands too far) | The server's message |
+| 413 without one (often not JSON) | This archive is over the 1 GB upload limit. |
 | 422 `no_map` | The archive has no `.unr` map. |
 | 422 `bad_archive` | The archive could not be opened. |
 | 404 | The draft no longer exists (discarded or expired). |
@@ -175,7 +185,7 @@ The code arrives as `ApiError.reason`.
 ## Upload
 
 - Accepts `.zip`, `.rar` and `.7z` (`ARCHIVE_ACCEPT`), checked by name before sending.
-  Files over `MAP_ARCHIVE_MAX_BYTES` (`MAP_ARCHIVE_MAX_MB` = 200, so 200 × 1024 × 1024 bytes) and empty files are
+  Files over `MAP_ARCHIVE_MAX_BYTES` (1024 × 1024 × 1024 bytes, shown as `MAP_ARCHIVE_MAX_LABEL`, "1 GB") and empty files are
   refused before sending, with the reason.
 - The upload goes through `apiUpload`, so the bar shows real bytes sent. The total is
   the file size until the browser reports one.
@@ -197,9 +207,27 @@ The code arrives as `ApiError.reason`.
   list and its files are deleted, but the server keeps it with its publish history.
 - If the open draft answers 404 (someone else discarded it), the report drops it,
   shows the message and stops polling.
-- The report shows the blocks (or "Nothing blocks publishing"), the warnings, and
-  every file with its kind, what happens to it and why. A published draft links to
-  its publish.
+- The report is a container (`@container/draft`), so its layout follows its own
+  width, not the window's. From 64rem (`@5xl/draft`) it has two columns: the panels on
+  the left, the Publish panel on the right, sticky at the top. Below that it is one
+  column and the Publish panel becomes a bar that sticks to the bottom of the view.
+- **Hero**: the staged screenshot (also blurred faintly behind the card), the map
+  name, the status chip, the archive, who uploaded it and when, the expiry, and
+  Discard (plus View publish once published).
+- **Checks** (`DraftChecks`): one panel, blocks first, then warnings, each a row with
+  a red or amber edge and icon, its plain title, the server's message, the package
+  and hosts as chips, and the objects. Up to 6 objects show inline as
+  `Group.name` chips; more collapse behind "Show the N objects the map uses", which
+  opens a scrollable list grouped by the part between the package and the object
+  name, with Copy all. A finding that a form field fixes gets **Fix** (blocks) or
+  **Review** (warnings), which scrolls to that field (`blockField`, `warningField`,
+  `scrollToDraftField`). No findings shows one emerald line; while `analyzing` the
+  panel shows skeleton rows.
+- **Files** (`DraftFiles`): the map first, then by outcome (install, already there,
+  keep ours, dropped), then by name (`sortFiles`). Each row has a kind icon, the name,
+  kind, size and reason (an install without a server reason shows none), and the
+  outcome chip; dropped rows are dimmed. The header counts each outcome and the bytes
+  to install.
 
 ## Polling
 
@@ -210,8 +238,16 @@ hidden, as `createPoller` does by default.
 
 ## Draft form and publish
 
-The report renders `DraftForm` under the files table. A published draft shows no
-form; its header links to the publish instead.
+The report renders `DraftWorkspace` with the Checks and Files panels as children.
+For a draft that is not published it adds the **Map details** panel under them and
+the **Publish** panel beside them (`DraftEditor`). A published draft gets no form; a
+small Published card links to the publish instead.
+
+Map details is split into sections, each with an id from `draftFieldId(draft.id,
+field)` so Fix, Review and the publish checklist can scroll to it: Map name (only
+while a name block is present), Credits (author, tags), Gameplay (difficulty,
+required players, changelog), Screenshot, Version, and Code package (only when the
+report has a code package).
 
 **Fields.** Every field saves itself. Each change sends a `PATCH` with only the
 fields that changed, and the report shows the `Draft` that comes back, so the blocks
@@ -221,14 +257,19 @@ saves at once. One save runs at a time; edits made meanwhile go in the next one.
 
 | Field | Control | Sent as |
 |---|---|---|
-| Map name | Shown only while a name block (`bad_prefix`, `bad_characters`, `name_too_long`, `name_taken`) is present: its plain title, a text field prefilled with `suggestMapName`, and **Rename** | `map_name` (the checks run again, so the draft goes back to `analyzing`) |
-| Author | `AuthorPicker`: free text, or a linked player | `author_str` with `author_ref: null`, or `author_ref` with `author_str: null`. Choosing Player sends nothing until a player is picked, and stays chosen when the form re-reads the `Draft` |
-| Tags | `TagEditor`, with suggestions from `fetchAdminMapTags` | `tags` |
-| Difficulty | 1–10, or Not set | `difficulty` |
-| Required players | 1–12, prefilled by the server. A value other than `metadata.required_players_suggested` shows an inline note | `required_players` |
-| Changelog | Text | `changelog` |
+| Map name (required) | Shown only while a name block (`bad_prefix`, `name_empty`, `bad_characters`, `name_too_long`, `name_taken`) is present: its plain title, a text field prefilled with `suggestMapName`, and **Rename**. Rename stays off while `hasMapTitle` is false (no letter after the prefix and team marker), with a note saying so | `map_name` (the checks run again, so the draft goes back to `analyzing`) |
+| Author (required) | `AuthorPicker` with `showModeToggle={false}`, its `AuthorModeToggle` in the label row so the input lines up with Tags; a red border while empty | `author_str` with `author_ref: null`, or `author_ref` with `author_str: null`. Player is the default and comes first in the toggle; Name is the fallback, shown when the draft stores a free-text author (`formValuesFromDraft`). Choosing Player sends nothing until a player is picked. While no author is set (`hasAuthor`), the chosen mode stays when the form re-reads the `Draft`, unless the server's author changed (a version target's prefill), which then shows in its own mode |
+| Tags (optional) | `TagEditor`, with suggestions from `fetchAdminMapTags` | `tags` |
+| Difficulty (required) | 1–10; a red border while not set | `difficulty` |
+| Required players (required) | 1–12, prefilled by the server. A value other than `metadata.required_players_suggested` shows an inline note | `required_players` |
+| Changelog (optional) | Text | `changelog` |
 | Version | A toggle, the old map, the mode | `version_target`, `version_mode`; turning the toggle off clears both |
-| Code package | "I reviewed this code package", shown when the report has a `code_package` warning or a `code_package_unacknowledged` block | `acknowledgements: { code_package }` |
+| Code package | "I reviewed the code in this archive", listing the code files, shown when the report has a `code_package` warning or a `code_package_unacknowledged` block | `acknowledgements: { code_package }` |
+
+Required fields carry a red asterisk in their label, optional ones (tags, changelog, the
+screenshot) the word "optional". The server enforces the same rule: a draft without an author or
+difficulty has the `author_missing` and `difficulty_missing` blocks, and an empty name the
+`name_empty` block, each with a **Fix** link to its field.
 
 `suggestMapName` fixes the prefix: `ctf-bt-Foo` → `CTF-BT-Foo`, `Foo` → `CTF-BT-Foo`,
 `CTF-BTFoo` → `CTF-BT-Foo` (also `CTF-Foo`, `BT-Foo` and `ctf_bt_Foo`). The field
@@ -236,9 +277,11 @@ stays editable.
 
 **Screenshot.** The staged image is read with `fetchMapUploadScreenshot(…, 'staged')`
 as a blob with the staff bearer and shown through an object URL, with its source:
-embedded in the map, uploaded, from the old version, or none. **Replace** opens
-`MapScreenshotModal` in callback mode and sends the square crop with
-`uploadMapUploadScreenshot`. **Use embedded** appears when
+taken from the map file, uploaded, kept from the old version, or none. The report
+loads it once (`useStagedScreenshot`) and passes it to the hero and the form; a
+change bumps a revision that reloads it. **Upload** or **Replace** (or clicking the
+tile) opens `MapScreenshotModal` in callback mode and sends the square crop with
+`uploadMapUploadScreenshot`. **Use the map's own** appears when
 `screenshot.embedded_available` is true and another source is staged. **Remove**
 clears it. With no screenshot, the report shows the `no_screenshot` warning and
 Publish asks for confirmation.
@@ -259,7 +302,14 @@ show with the report's other warnings and blocks, right above the form.
 
 **Publish.** `publishGate(draft)` enables the button only when the draft is `ready`
 with no blocks, its code package (if any) is acknowledged, and it has a mode whenever
-it has an old map. Otherwise the reason shows next to the button. Pressing Publish
+it has an old map. The Publish panel shows a headline (Not ready to publish, Almost
+ready, Ready, with warnings, or Ready to publish) and, in the two-column layout, the
+checklist from `readinessItems(draft, values)`: the author, the difficulty and the
+required players first (to do while missing, from the live form values), then the other
+blocks (not counting `author_missing` and `difficulty_missing` again), the warnings, the
+code package review, new map or the old one it replaces, and the screenshot (optional),
+each ok, to do, a warning or optional, each scrolling to its field. As a bottom bar it shows
+the first item still to do (or the gate's reason) next to the button. Pressing Publish
 first sends any waiting edit, then checks the gate again on the saved draft. If that
 save fails, nothing is published and the error shows (`flush` rejects). With no
 screenshot it asks for confirmation. Then:
@@ -314,14 +364,19 @@ draft never drops typing.
   list) shows above the recent list. **Close** clears the selection, **Open draft**
   opens its draft in the Drafts tab.
 - The list: map name (with the reason under a failed one), state, hosts confirmed
-  of total, when it started, and whether it went live automatically or was forced,
-  in the order the API sends. The selected row is tinted.
-- The publish: its state, when it started, which map it replaces and in which mode,
-  then one row per host with its state, detail and last update. Conflict and error
-  rows are tinted red and their detail is red. A failed publish shows
-  "This publish failed:" and its `error` in a red alert. A live one shows when, how
-  and by whom.
-- On narrow screens both tables turn into cards.
+  of total with a small bar, when it started, and whether it went live automatically
+  or was forced, in the order the API sends. Clicking a row selects it; the selected
+  row is tinted.
+- The publish (a container, `@container/publish`): its state, when it started, which
+  map it replaces and in which mode, then the step tracker (`publishSteps`: Checked,
+  Stored, Compressed, Registered, On the hosts, Live; done, current or to do, with
+  labels from 42rem), the status line and Force live. A failed publish has no
+  tracker, since the API does not say where it stopped; it shows "This publish
+  failed:" and its `error` in a red alert. A live one shows when, how and by whom.
+- The Hosts panel shows how many hosts have every file with a bar, then one card per
+  host with its state, detail and last update, in one to three columns by width.
+  Conflict and error cards are tinted red and their detail is red.
+- On narrow screens the list turns into cards.
 
 ### Force live
 
@@ -376,11 +431,15 @@ no actions; the report is read once when the tab opens.
 - `mapUploads/uploadState.test.ts`: the upload states, the file checks and what opens
   afterwards.
 - `mapUploads/reportLabels.test.ts`: every code has words.
+- `mapUploads/reportView.test.ts`: object grouping, file order, outcome counts and
+  installed bytes, which field fixes which finding, the field ids, and the publish checklist
+  (required details first, never counted twice, the screenshot optional).
+- `mapUploads/draftFormState.test.ts` also covers `hasMapTitle`, `hasAuthor` and the Player default.
 - `app/utils/api.mapPublishes.test.ts`: the publish and drift functions against the
   fixtures, the force-activate body, and every force-activate error.
 - `mapUploads/publishState.test.ts`: stragglers, force availability before and after
-  `force_available_at`, the confirmation payload, the force errors, and polling stops
-  on `active` and `failed`.
+  `force_available_at`, the confirmation payload, the force errors, polling stops
+  on `active` and `failed`, the step tracker and host progress.
 - `mapUploads/publishLabels.test.ts`, `mapUploads/driftView.test.ts`: every state has
   words and conflicts are red; the drift filter, short sha256 and sizes.
 - `app/utils/api.mapUploadDraftForm.test.ts`: the PATCH, screenshot and publish

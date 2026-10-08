@@ -3,7 +3,8 @@ import type { MapUploadDraftPatch } from '@/app/utils/api'
 import type { Draft } from '@/app/utils/mapUploadTypes'
 import { mapUploadErrorFixture, mapUploadFixture } from '@/app/utils/fixtures/mapUploadFixtures'
 import {
-  DRAFT_CHANGED_MESSAGE, TEXT_DEBOUNCE_MS, createDraftAutosave, draftPatch, formValuesFromDraft, hasCodePackage,
+  hasMapTitle,
+  DRAFT_CHANGED_MESSAGE, TEXT_DEBOUNCE_MS, createDraftAutosave, draftPatch, formValuesFromDraft, hasAuthor, hasCodePackage,
   nameBlocks, publishGate, publishNextStep, publishOutcome, requiredPlayersMismatch, suggestMapName,
   type DraftAutosaveState, type DraftFormValues,
 } from './draftFormState'
@@ -31,6 +32,21 @@ describe('formValuesFromDraft', () => {
     expect(values.authorStr).toBe('')
     expect(values.versionTarget).toBe('CTF-BT-Foo-v1')
     expect(values.versionMode).toBe('update')
+  })
+
+  it('starts in player mode when no author is stored', () => {
+    const values = formValuesFromDraft(draftWith({ metadata: { ...ready.metadata, author_str: null, author_ref: null } }))
+    expect(values).toMatchObject({ authorMode: 'player', authorStr: '', authorUser: null })
+    expect(hasAuthor(values)).toBe(false)
+  })
+})
+
+describe('hasAuthor', () => {
+  it('needs a picked player in player mode and a non-blank name in name mode', () => {
+    expect(hasAuthor({ ...readyValues, authorMode: 'player', authorUser: null })).toBe(false)
+    expect(hasAuthor({ ...readyValues, authorMode: 'player', authorUser: { id: '42', alias: 'Dave' } })).toBe(true)
+    expect(hasAuthor({ ...readyValues, authorMode: 'text', authorStr: '  ' })).toBe(false)
+    expect(hasAuthor(readyValues)).toBe(true)
   })
 })
 
@@ -80,6 +96,24 @@ describe('suggestMapName', () => {
     ['CTF-BT-Foo', 'CTF-BT-Foo'],
   ])('suggests a corrected name for %s', (name, expected) => {
     expect(suggestMapName(name)).toBe(expected)
+  })
+})
+
+describe('hasMapTitle', () => {
+  it('needs a letter after the prefix', () => {
+    for (const name of ['CTF-BT-', 'CTF-BT+', 'ctf-bt-', 'CTF-BT-123', 'CTF-BT-II-', 'CTF-BT-IV-42']) {
+      expect(hasMapTitle(name)).toBe(false)
+    }
+  })
+
+  it('accepts any name with a letter after the prefix or the team marker', () => {
+    for (const name of ['CTF-BT-Foo', 'CTF-BT+a', 'CTF-BT-1v1', 'CTF-BT-X-Scape', 'CTF-BT-II-Duo']) {
+      expect(hasMapTitle(name)).toBe(true)
+    }
+  })
+
+  it('leaves a name without the prefix to the prefix check', () => {
+    expect(hasMapTitle('Foo')).toBe(true)
   })
 })
 
@@ -258,6 +292,24 @@ describe('createDraftAutosave', () => {
     expect(autosave.state().values).toEqual(formValuesFromDraft(prefilled))
     autosave.edit({ difficulty: 6 })
     expect(saves).toHaveLength(1)
+  })
+
+  it('keeps name mode chosen with no name typed yet when a draft without an author is re-read', async () => {
+    const unset = draftWith({ metadata: { ...ready.metadata, author_str: null, author_ref: null } })
+    const autosave = setup(unset)
+    autosave.edit({ authorMode: 'text' })
+    await settle()
+    expect(saves).toEqual([{ author_str: null, author_ref: null }])
+    resolvers[0](unset)
+    await settle()
+    autosave.sync({ ...unset, updated_at: '2026-10-06T20:09:00+00:00' })
+    expect(autosave.state().values).toMatchObject({ authorMode: 'text', authorStr: '' })
+  })
+
+  it('shows an author the server prefilled even while player mode waits for a pick', async () => {
+    const autosave = setup(draftWith({ metadata: { ...ready.metadata, author_str: null, author_ref: null } }))
+    autosave.sync(draftWith({ updated_at: '2026-10-06T20:09:00+00:00' }))
+    expect(autosave.state().values).toMatchObject({ authorMode: 'text', authorStr: 'Bob' })
   })
 
   it('keeps player mode chosen with nobody picked yet when a draft is re-read', async () => {

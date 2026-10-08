@@ -21,9 +21,9 @@ describe('archiveProblem', () => {
     expect(archiveProblem({ name, size: 10 })).toBe('Choose a .zip, .rar or .7z archive.')
   })
 
-  it('accepts an archive at the 200 MB cap and refuses one byte more', () => {
+  it('accepts an archive at the 1 GB cap and refuses one byte more', () => {
     expect(archiveProblem({ name: 'big.zip', size: MAP_ARCHIVE_MAX_BYTES })).toBeNull()
-    expect(archiveProblem({ name: 'big.zip', size: MAP_ARCHIVE_MAX_BYTES + 1 })).toMatch(/over the 200 MB limit/)
+    expect(archiveProblem({ name: 'big.zip', size: MAP_ARCHIVE_MAX_BYTES + 1 })).toMatch(/over the 1 GB limit/)
   })
 
   it('refuses an empty file', () => {
@@ -55,7 +55,7 @@ describe('uploadReducer', () => {
 
   it('fails on a 413 with the size limit', () => {
     const state = run([start, { type: 'failed', error: new ApiError(413, undefined, 'Request failed (413)') }])
-    expect(state).toMatchObject({ phase: 'error', message: 'This archive is over the 200 MB upload limit.' })
+    expect(state).toMatchObject({ phase: 'error', message: 'This archive is over the 1 GB upload limit.' })
   })
 
   it('records a file refused before sending', () => {

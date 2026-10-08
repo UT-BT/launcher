@@ -46,6 +46,9 @@ export const BLOCK_CODES = [
     'code_package_unacknowledged',
     'version_target_invalid',
     'version_target_has_successor',
+    'name_empty',
+    'author_missing',
+    'difficulty_missing',
 ] as const
 export type BlockCode = (typeof BLOCK_CODES)[number]
 

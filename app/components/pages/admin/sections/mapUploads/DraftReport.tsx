@@ -1,156 +1,64 @@
 import { useCallback, useEffect, useState } from 'react'
-import { AlertTriangle, ArrowLeft, CheckCircle2, Loader2, OctagonX, Send, Trash2 } from 'lucide-react'
+import { ArrowLeft, Clock3, FileArchive, Send, Trash2 } from 'lucide-react'
 import { ApiError, fetchMapUploadDraft, mapUploadErrorMessage } from '@/app/utils/api'
-import type { Draft, DraftBlock, DraftFile } from '@/app/utils/mapUploadTypes'
+import type { Draft } from '@/app/utils/mapUploadTypes'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
-import {
-  DataTableShell, DataTableHeaderRow, DataTableHeaderCell, DataTableRow, DataTableCell, type ResponsiveColumn,
-} from '@/app/components/shared/DataTable'
 import { ActionButton, Feedback, formatDateTime, relTime } from '../../components/controls'
-import { PANEL_LABEL } from '../../components/shared'
-import { BLOCK_TITLE, DISPOSITION_LABEL, DRAFT_STATUS_LABEL, FILE_KIND_LABEL, WARNING_TITLE, fileReason } from './reportLabels'
+import { DRAFT_STATUS_LABEL } from './reportLabels'
+import { draftFieldId, scrollToDraftField } from './reportView'
 import { ToneChip } from './ToneChip'
 import { DiscardDraftDialog } from './DiscardDraftDialog'
 import { DraftExpiry } from './DraftExpiry'
-import { DraftForm } from './DraftForm'
+import { DraftWorkspace } from './DraftForm'
+import { DraftChecks } from './DraftChecks'
+import { DraftFiles } from './DraftFiles'
+import { ScreenshotTile, useStagedScreenshot } from './DraftScreenshot'
 import { usePollWhile } from './usePollWhile'
 
-const FILE_COLUMNS: ResponsiveColumn[] = [
-  { id: 'file', width: '14rem', required: true },
-  { id: 'kind', width: '9rem', priority: 50 },
-  { id: 'disposition', width: '9rem', required: true },
-  { id: 'reason', width: '20rem', priority: 60 },
-]
-
-function BlockItem({ block }: { block: DraftBlock }) {
-  return (
-    <li className="rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 space-y-1 text-red-200">
-      <p className="text-sm font-medium">{BLOCK_TITLE[block.code]}</p>
-      <p className="text-xs">{block.message}</p>
-      {block.package && <p className="text-xs">Package: <span className="font-mono break-all">{block.package}</span></p>}
-      {block.hosts.length > 0 && <p className="text-xs">On: {block.hosts.join(', ')}</p>}
-      {block.objects.length > 0 && <p className="text-xs break-words">Missing objects: <span className="font-mono">{block.objects.join(', ')}</span></p>}
-    </li>
-  )
-}
-
-function Findings({ draft }: { draft: Draft }) {
-  if (draft.status === 'analyzing') return null
-  return (
-    <div className="grid gap-3 lg:grid-cols-2">
-      <section aria-label="Blocks" className="space-y-2">
-        <h3 className={PANEL_LABEL}>Blocks</h3>
-        {draft.blocks.length === 0 ? (
-          <p className="inline-flex items-center gap-2 text-sm text-emerald-300"><CheckCircle2 className="size-4" />Nothing blocks publishing.</p>
-        ) : (
-          <ul className="space-y-2">{draft.blocks.map((block, i) => <BlockItem key={`${block.code}-${i}`} block={block} />)}</ul>
-        )}
-      </section>
-      <section aria-label="Warnings" className="space-y-2">
-        <h3 className={PANEL_LABEL}>Warnings</h3>
-        {draft.warnings.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No warnings.</p>
-        ) : (
-          <ul className="space-y-2">
-            {draft.warnings.map((warning, i) => (
-              <li key={`${warning.code}-${i}`} className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 space-y-1 text-amber-200">
-                <p className="text-sm font-medium">{WARNING_TITLE[warning.code]}</p>
-                <p className="text-xs">{warning.message}</p>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-    </div>
-  )
-}
-
-function DispositionChip({ file }: { file: DraftFile }) {
-  const disposition = DISPOSITION_LABEL[file.disposition]
-  return <ToneChip tone={disposition.tone}>{disposition.label}</ToneChip>
-}
-
-function FilesTable({ files }: { files: DraftFile[] }) {
-  const [resolved, setResolved] = useState<Set<string> | null>(null)
-  const handleResolve = useCallback((ids: Set<string>) => setResolved(ids), [])
-  const isVisible = (id: string) => !resolved || resolved.has(id)
-
-  const compactRows = (
-    <ul className="space-y-2">
-      {files.map((file) => (
-        <li key={file.file} className="rounded-lg border border-hairline/10 bg-card/30 px-4 py-3 space-y-1">
-          <div className="flex items-start justify-between gap-2">
-            <span className="text-sm font-mono text-foreground break-all">{file.file}</span>
-            <DispositionChip file={file} />
-          </div>
-          <p className="text-xs text-muted-foreground">{FILE_KIND_LABEL[file.kind]} · {fileReason(file)}</p>
-        </li>
-      ))}
-    </ul>
-  )
-
-  return (
-    <section aria-label="Files" className="space-y-2">
-      <h3 className={PANEL_LABEL}>Files in the archive</h3>
-      <DataTableShell
-        className="!flex-none"
-        responsive={{ columns: FILE_COLUMNS, onResolve: handleResolve, compactContent: compactRows, compactAriaLabel: 'Files' }}
-      >
-        <DataTableHeaderRow>
-          <DataTableHeaderCell width="14rem">File</DataTableHeaderCell>
-          {isVisible('kind') && <DataTableHeaderCell width="9rem">Kind</DataTableHeaderCell>}
-          <DataTableHeaderCell width="9rem">What happens</DataTableHeaderCell>
-          {isVisible('reason') && <DataTableHeaderCell width="20rem">Why</DataTableHeaderCell>}
-        </DataTableHeaderRow>
-        <tbody>
-          {files.map((file) => (
-            <DataTableRow key={file.file}>
-              <DataTableCell><span className="font-mono text-sm text-foreground break-all">{file.file}</span></DataTableCell>
-              {isVisible('kind') && <DataTableCell><span className="text-xs text-muted-foreground">{FILE_KIND_LABEL[file.kind]}</span></DataTableCell>}
-              <DataTableCell><DispositionChip file={file} /></DataTableCell>
-              {isVisible('reason') && <DataTableCell><span className="text-xs text-muted-foreground">{fileReason(file)}</span></DataTableCell>}
-            </DataTableRow>
-          ))}
-        </tbody>
-      </DataTableShell>
-    </section>
-  )
-}
-
-function ReportHeader({ draft, onDiscard, onOpenPublish }: { draft: Draft; onDiscard: () => void; onOpenPublish: (id: number) => void }) {
+function DraftHero({ draft, screenshotUrl, onDiscard, onOpenPublish }: {
+  draft: Draft
+  screenshotUrl: string | null
+  onDiscard: () => void
+  onOpenPublish: (id: number) => void
+}) {
   const status = DRAFT_STATUS_LABEL[draft.status]
   const publishId = draft.publish_id
   return (
-    <div className="rounded-lg border border-hairline/10 bg-card/30 p-4 space-y-3">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 space-y-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-lg font-semibold text-foreground break-all">{draft.map_name}</h2>
-            <ToneChip tone={status.tone}>{status.label}</ToneChip>
+    <div className="relative overflow-hidden rounded-xl border border-hairline/5 bg-card/30">
+      {screenshotUrl && (
+        <img src={screenshotUrl} alt="" aria-hidden className="pointer-events-none absolute inset-0 size-full scale-125 object-cover opacity-[0.08] blur-2xl" />
+      )}
+      <div className="relative flex flex-wrap items-center gap-4 p-4">
+        <ScreenshotTile url={screenshotUrl} className="size-16 @xl/draft:size-20" />
+        <div className="min-w-0 flex-1 basis-56 space-y-1.5">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <h2 className="line-clamp-2 break-all text-lg font-bold leading-tight text-foreground @xl/draft:text-xl">{draft.map_name}</h2>
+            <ToneChip tone={status.tone} dot pulse={draft.status === 'analyzing'}>{status.label}</ToneChip>
           </div>
-          <p className="text-xs text-muted-foreground break-all">from {draft.source_archive}</p>
+          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <FileArchive className="size-3.5 shrink-0" /><span className="break-all">{draft.source_archive}</span>
+          </p>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted-foreground">
+            <PlayerInfo userId={draft.created_by.id} alias={draft.created_by.alias} size="sm" />
+            <span title={formatDateTime(draft.created_at)}>uploaded {relTime(draft.created_at)}</span>
+            <span className="inline-flex items-center gap-1"><Clock3 className="size-3" /><DraftExpiry draft={draft} /></span>
+          </div>
         </div>
         <div className="flex flex-wrap gap-2">
           {publishId !== null && <ActionButton icon={Send} onClick={() => onOpenPublish(publishId)}>View publish</ActionButton>}
           <ActionButton tone="red" icon={Trash2} onClick={onDiscard}>Discard</ActionButton>
         </div>
       </div>
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
-        <span className="inline-flex items-center gap-2">Created by <PlayerInfo userId={draft.created_by.id} alias={draft.created_by.alias} size="sm" /></span>
-        <span title={formatDateTime(draft.created_at)}>{relTime(draft.created_at)}</span>
-        <DraftExpiry draft={draft} />
-      </div>
-      {draft.status === 'analyzing' && (
-        <p className="inline-flex items-center gap-2 text-sm text-amber-300">
-          <Loader2 className="size-4 animate-spin" />Checking the archive. This report updates by itself.
-        </p>
-      )}
-      {draft.status === 'invalid' && (
-        <p className="inline-flex items-center gap-2 text-sm text-red-300"><OctagonX className="size-4" />This draft cannot be published until its blocks are fixed.</p>
-      )}
-      {draft.status === 'ready' && draft.warnings.length > 0 && (
-        <p className="inline-flex items-center gap-2 text-sm text-amber-300"><AlertTriangle className="size-4" />Read the warnings before publishing.</p>
-      )}
+    </div>
+  )
+}
+
+function LoadingDraft() {
+  return (
+    <div className="space-y-4" aria-busy aria-label="Loading the draft">
+      <div className="h-28 rounded-xl border border-hairline/5 bg-hairline/[0.03] animate-pulse" />
+      <div className="h-40 rounded-xl border border-hairline/5 bg-hairline/[0.03] animate-pulse" />
+      <div className="h-64 rounded-xl border border-hairline/5 bg-hairline/[0.03] animate-pulse" />
     </div>
   )
 }
@@ -165,6 +73,8 @@ export function DraftReport({ token, draftId, onBack, onDiscarded, onOpenPublish
   const [draft, setDraft] = useState<Draft | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [discarding, setDiscarding] = useState(false)
+  const [screenshotRevision, setScreenshotRevision] = useState(0)
+  const screenshotUrl = useStagedScreenshot(token, draft, screenshotRevision)
 
   const load = useCallback(async (signal?: AbortSignal) => {
     try {
@@ -187,17 +97,30 @@ export function DraftReport({ token, draftId, onBack, onDiscarded, onOpenPublish
   usePollWhile(draft?.status === 'analyzing', load)
 
   return (
-    <div className="space-y-4">
-      <ActionButton icon={ArrowLeft} onClick={onBack}>All drafts</ActionButton>
+    <div className="@container/draft space-y-4">
+      <button type="button" onClick={onBack} className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground cursor-pointer">
+        <ArrowLeft className="size-3.5" />All drafts
+      </button>
       <Feedback message={error} tone="red" onDismiss={() => setError(null)} />
       {!draft ? (
-        !error && <p className="inline-flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin" />Loading the draft…</p>
+        !error && <LoadingDraft />
       ) : (
         <>
-          <ReportHeader draft={draft} onDiscard={() => setDiscarding(true)} onOpenPublish={onOpenPublish} />
-          <Findings draft={draft} />
-          <FilesTable files={draft.files} />
-          <DraftForm token={token} draft={draft} onDraftChange={setDraft} onPublished={onOpenPublish} />
+          <DraftHero draft={draft} screenshotUrl={screenshotUrl} onDiscard={() => setDiscarding(true)} onOpenPublish={onOpenPublish} />
+          <DraftWorkspace
+            token={token}
+            draft={draft}
+            onDraftChange={setDraft}
+            onPublished={onOpenPublish}
+            onOpenPublish={onOpenPublish}
+            screenshotUrl={screenshotUrl}
+            onScreenshotChanged={() => setScreenshotRevision((revision) => revision + 1)}
+          >
+            <div id={draftFieldId(draft.id, 'checks')} className="scroll-mt-4">
+              <DraftChecks draft={draft} onJump={(field) => scrollToDraftField(draft.id, field)} />
+            </div>
+            {draft.files.length > 0 && <DraftFiles files={draft.files} />}
+          </DraftWorkspace>
         </>
       )}
       <DiscardDraftDialog
