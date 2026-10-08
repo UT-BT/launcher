@@ -11,7 +11,7 @@ not_here:
   - "the PlayerInfo / CapTimeLink components that trigger nav → shared-components.md"
   - "the Schedule tab's own visibility rule and its audiences → data-sources.md"
 sections: [the-model, navigate-is-the-only-entry-point, leave-guards, url-sync-web-build, link-semantics, page-views-vs-detail-pages, the-sidebar-registry, event-driven-navigation, sidebar-new-badges, page-refresh-registry, per-entry-state, shareable-match-links, match-pickban-page]
-last_verified: 2026-10-01
+last_verified: 2026-10-07
 verify_against:
   - app/components/main/Main.tsx
   - app/components/navigation/NavLink.tsx
@@ -36,6 +36,8 @@ verify_against:
   - app/components/pages/events/stream/streamPanels.ts
   - app/components/pages/admin/registry.tsx
   - app/components/pages/admin/types.ts
+  - app/components/pages/admin/sections/mapUploads/useMapUploadsNav.ts
+  - app/components/pages/admin/sections/MapsManagementSection.tsx
   - app/components/stream/streamScenes.ts
   - app/components/navigation/routes.contract.test.ts
 ---
@@ -451,6 +453,14 @@ with id `streamers` ("Streamers", `Radio` icon, Events group, right after Tourna
 visible to Moderators and Admins only (`ADMIN_DASHBOARD_ROLES`; a Cup Admin does not see it). It
 manages the streamer roster (`agents/data-sources.md`, Admin API). Like every section it opens
 through the saved `utbt:adminState:v1` `activeSection`.
+**Admin → Map Uploads** is the section with id `map-uploads` ("Map Uploads", `FileUp` icon, Game
+Content group, right after Maps Management), also visible to Moderators and Admins only. It is the
+only way to add a map: the **Add Map** button in Maps Management calls `openDraft(null)` from
+`useMapUploadsNav` (back to the Drafts list) and then `onNavigate('map-uploads')`, so it switches
+section in place like the sidebar does, with no new history entry. Inside the section, the open tab
+(Drafts, Publishing / Recent, Drift), the open draft, the selected publish and the drafts a map pack
+just created are per-entry state (`useNavState` keys `admin.mapUploads.tab`, `.draftId`,
+`.publishId`, `.uploadedIds`), so Back and Forward keep them. See `agents/admin-map-uploads.md`.
 
 ## Event-driven navigation
 

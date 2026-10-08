@@ -4,34 +4,62 @@ import { Modal } from '@/app/components/ui/modal'
 import { Button } from '@/app/components/ui/button'
 import { Slider } from '@/app/components/ui/slider'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
-import { uploadOwnMapScreenshot, type MapMetadata } from '@/app/utils/api'
+import type { MapMetadata } from '@/app/utils/api'
 import { displayMapName } from '@/app/utils/format'
 import { cn } from '@/lib/utils'
+import {
+    SCREENSHOT_ACCEPTED_TYPES,
+    SCREENSHOT_MAX_ZOOM,
+    SCREENSHOT_MIN_SOURCE_EDGE,
+    deliverScreenshot,
+    screenshotCropRect,
+    screenshotDestinationReady,
+    screenshotMaxZoom,
+    screenshotTooSmall,
+    type ScreenshotDestination,
+} from './mapScreenshotCrop'
 
 const MAX_FRAME = 320
-const OUTPUT_SIZE = 1024
-const MIN_SOURCE_EDGE = 256
-const MAX_ZOOM = 4
-const ACCEPTED_TYPES = 'image/png,image/jpeg,image/webp'
 
-interface MapScreenshotModalProps {
+interface SharedProps {
     open: boolean
     onClose: () => void
-    accessToken?: string
     mapName: string
+}
+
+export interface UploadToMapProps extends SharedProps {
+    accessToken?: string
     hasScreenshot: boolean
     screenshotVersion?: string | null
     onUploaded: (map: MapMetadata) => void
+    onCropped?: never
+    previewUrl?: never
 }
+
+export interface HandToCallbackProps extends SharedProps {
+    onCropped: (image: Blob, filename: string) => Promise<void> | void
+    previewUrl?: string | null
+    accessToken?: never
+    hasScreenshot?: never
+    screenshotVersion?: never
+    onUploaded?: never
+}
+
+export type MapScreenshotModalProps = UploadToMapProps | HandToCallbackProps
 
 interface Loaded {
     image: HTMLImageElement
     objectUrl: string
 }
 
-export function MapScreenshotModal({
-    open, onClose, accessToken, mapName, hasScreenshot, screenshotVersion, onUploaded,
-}: MapScreenshotModalProps) {
+export function MapScreenshotModal(props: MapScreenshotModalProps) {
+    const { open, onClose, mapName } = props
+    const destination: ScreenshotDestination = props.onCropped
+        ? { kind: 'callback', mapName, onCropped: props.onCropped }
+        : { kind: 'map', mapName, accessToken: props.accessToken, onUploaded: props.onUploaded }
+    const ready = screenshotDestinationReady(destination)
+    const previewUrl = props.onCropped ? props.previewUrl ?? null : null
+    const hasScreenshot = props.onCropped ? !!previewUrl : props.hasScreenshot
     const [loaded, setLoaded] = useState<Loaded | null>(null)
     const [zoom, setZoom] = useState(1)
     const [offset, setOffset] = useState({ x: 0, y: 0 })
@@ -81,7 +109,7 @@ export function MapScreenshotModal({
     }, [loaded])
 
     const sourceEdgePixels = loaded ? Math.min(loaded.image.naturalWidth, loaded.image.naturalHeight) : 0
-    const maxZoom = loaded ? Math.max(1, Math.min(MAX_ZOOM, sourceEdgePixels / MIN_SOURCE_EDGE)) : MAX_ZOOM
+    const maxZoom = loaded ? screenshotMaxZoom(sourceEdgePixels) : SCREENSHOT_MAX_ZOOM
     const baseScale = loaded ? frame / sourceEdgePixels : 1
     const displayedWidth = loaded ? loaded.image.naturalWidth * baseScale * zoom : frame
     const displayedHeight = loaded ? loaded.image.naturalHeight * baseScale * zoom : frame
@@ -109,10 +137,10 @@ export function MapScreenshotModal({
                 URL.revokeObjectURL(objectUrl)
                 return
             }
-            if (Math.min(image.naturalWidth, image.naturalHeight) < MIN_SOURCE_EDGE) {
+            if (screenshotTooSmall(image.naturalWidth, image.naturalHeight)) {
                 URL.revokeObjectURL(objectUrl)
                 setLoaded(null)
-                setError(`That image is only ${image.naturalWidth} × ${image.naturalHeight}. Screenshots need to be at least ${MIN_SOURCE_EDGE} × ${MIN_SOURCE_EDGE}.`)
+                setError(`That image is only ${image.naturalWidth} × ${image.naturalHeight}. Screenshots need to be at least ${SCREENSHOT_MIN_SOURCE_EDGE} × ${SCREENSHOT_MIN_SOURCE_EDGE}.`)
                 return
             }
             const cover = frame / Math.min(image.naturalWidth, image.naturalHeight)
@@ -163,15 +191,11 @@ export function MapScreenshotModal({
     const endDrag = () => { dragOrigin.current = null }
 
     const save = async () => {
-        if (!loaded || !accessToken) return
+        if (!loaded || !ready) return
         setSaving(true)
         setError(null)
         try {
-            const scale = baseScale * zoom
-            const sourceEdge = frame / scale
-            const sourceX = -offset.x / scale
-            const sourceY = -offset.y / scale
-            const outputEdge = Math.min(OUTPUT_SIZE, Math.round(sourceEdge))
+            const { sourceX, sourceY, sourceEdge, outputEdge } = screenshotCropRect({ frame, baseScale, zoom, offset })
 
             const canvas = document.createElement('canvas')
             canvas.width = outputEdge
@@ -183,8 +207,7 @@ export function MapScreenshotModal({
             const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'))
             if (!blob) throw new Error('Your browser could not process that image.')
 
-            const updated = await uploadOwnMapScreenshot(accessToken, mapName, blob, `${mapName}.png`)
-            onUploaded(updated)
+            await deliverScreenshot(destination, blob)
             onClose()
         } catch (e) {
             setError(e instanceof Error ? e.message : 'Failed to upload the screenshot. Please try again.')
@@ -252,10 +275,17 @@ export function MapScreenshotModal({
                             />
                         ) : (
                             <>
-                                {hasScreenshot && (
+                                {previewUrl ? (
+                                    <img
+                                        src={previewUrl}
+                                        alt=""
+                                        draggable={false}
+                                        className="absolute inset-0 w-full h-full object-cover opacity-25 pointer-events-none"
+                                    />
+                                ) : hasScreenshot && (
                                     <MapThumbnail
                                         mapName={mapName}
-                                        version={screenshotVersion}
+                                        version={props.screenshotVersion}
                                         size="hero"
                                         className="absolute inset-0 w-full h-full rounded-none border-0 opacity-25"
                                     />
@@ -266,7 +296,7 @@ export function MapScreenshotModal({
                                         {hasScreenshot ? 'Drop a new screenshot' : 'Drop a screenshot'}
                                     </div>
                                     <div className="text-[11px] text-muted-foreground">
-                                        or click to browse — PNG, JPG or WEBP, at least {MIN_SOURCE_EDGE} × {MIN_SOURCE_EDGE}
+                                        or click to browse — PNG, JPG or WEBP, at least {SCREENSHOT_MIN_SOURCE_EDGE} × {SCREENSHOT_MIN_SOURCE_EDGE}
                                     </div>
                                 </div>
                             </>
@@ -298,7 +328,7 @@ export function MapScreenshotModal({
                 <input
                     ref={inputRef}
                     type="file"
-                    accept={ACCEPTED_TYPES}
+                    accept={SCREENSHOT_ACCEPTED_TYPES}
                     className="hidden"
                     onChange={e => {
                         accept(e.target.files?.[0])
@@ -308,7 +338,7 @@ export function MapScreenshotModal({
 
                 <Button
                     onClick={save}
-                    disabled={!loaded || saving || !accessToken}
+                    disabled={!loaded || saving || !ready}
                     className="w-full h-10 bg-accent-500/15 border border-accent-500/40 text-accent-200 hover:bg-accent-500/25 hover:text-foreground hover:border-accent-500/60 transition-all font-semibold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     {saving ? <Loader2 className="size-4 animate-spin" /> : 'Save Screenshot'}

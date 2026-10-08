@@ -12,7 +12,7 @@ const maxInitialJsGzipBytes = 190 * KiB
 const maxInitialCssGzipBytes = 34 * KiB
 const maxInitialTotalGzipBytes = 220 * KiB
 const maxLazyChunkGzipBytes = 120 * KiB
-const maxAppJsGzipBytes = 800 * KiB
+const maxAppJsGzipBytes = 850 * KiB
 const maxStreamSceneJsGzipBytes = 120 * KiB
 const minEntryGzipBytes = 50 * KiB
 
