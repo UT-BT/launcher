@@ -7,7 +7,7 @@ production releases predictable. All work lands on `staging` first; `main` only
 moves forward by promoting `staging` at release time.
 
 ## Prerequisites
-- Node.js (v20 or higher)
+- Node.js (v22 or higher)
 - npm
 
 ## Installation
