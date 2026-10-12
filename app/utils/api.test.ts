@@ -16,6 +16,8 @@ import {
     fetchUserFavoriteServers,
     addFavoriteServer,
     removeFavoriteServer,
+    ApiError,
+    uploadDemo,
 } from './api'
 
 function okJson(data: unknown) {
@@ -274,5 +276,30 @@ describe('server favorites', () => {
 
         vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('', { status: 401 })))
         await expect(removeFavoriteServer('token', 'x')).rejects.toThrow()
+    })
+})
+
+describe('demo upload errors', () => {
+    it('carries the status and the server reason so callers can tell a refusal from a transient failure', async () => {
+        const reason = 'A world record can only be verified with a demo uploaded within 24 hours of setting the time.'
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ success: false, reason }), {
+            status: 422,
+            headers: { 'Content-Type': 'application/json' },
+        })))
+
+        const error = await uploadDemo(new Blob(['demo']), 'run.dem', 'token').catch((caught: unknown) => caught)
+
+        expect(error).toBeInstanceOf(ApiError)
+        expect((error as ApiError).status).toBe(422)
+        expect((error as ApiError).message).toBe(reason)
+    })
+
+    it('falls back to a generic message when the body is not JSON', async () => {
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('<html>bad gateway</html>', { status: 502 })))
+
+        const error = await uploadDemo(new Blob(['demo']), 'run.dem', 'token').catch((caught: unknown) => caught)
+
+        expect((error as ApiError).status).toBe(502)
+        expect((error as ApiError).message).toBe('Request failed (502)')
     })
 })

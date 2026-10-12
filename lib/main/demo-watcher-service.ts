@@ -5,7 +5,7 @@ import { getUt99InstallPath, getDemoWatcherConfig, getAuthConfig, type DemoWatch
 import { readFile, writeFile, rename, unlink, mkdir, access, readdir, stat } from 'fs/promises'
 import { existsSync, type Stats } from 'fs'
 import { gatewayService } from '@/lib/main/gateway-service'
-import { uploadDemo } from '@/app/utils/api'
+import { ApiError, uploadDemo } from '@/app/utils/api'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
 import { app } from 'electron'
@@ -76,6 +76,7 @@ export class DemoWatcherService {
     private static readonly RETRY_LIFETIME_MS = 24 * 60 * 60 * 1000
     private static readonly ADD_DEBOUNCE_MS = 3000
     private static readonly LASTADD_TTL_MS = 60 * 1000
+    private static readonly REFUSED_STATUS = 422
 
     constructor() {
         this.systemPath = undefined
@@ -624,6 +625,13 @@ export class DemoWatcherService {
                     success = true
                     this.updateLogStatus(filename, 'success')
                     break
+                }
+
+                if (error instanceof ApiError && error.status === DemoWatcherService.REFUSED_STATUS) {
+                    loggingService.warn(`Demo ${filename} was refused and will not be retried: ${errorMessage}`, 'DemoWatcher')
+                    this.updateLogStatus(filename, 'failed', errorMessage)
+                    this.markCompleted(filename, 'rejected')
+                    return
                 }
 
                 const isLastAttempt = attempts === maxAttempts
