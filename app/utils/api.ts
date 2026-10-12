@@ -521,17 +521,7 @@ export async function uploadDemo(file: Blob, filename: string, accessToken: stri
     })
 
     if (!response.ok) {
-        const errorText = await response.text()
-        let errorMessage = `Upload failed: ${response.statusText} (${response.status})`
-        try {
-            const json = JSON.parse(errorText)
-            if (json.reason) {
-                errorMessage = json.reason
-            }
-        } catch {
-            // If response isn't JSON, we'll just use the generic error message
-        }
-        throw new Error(errorMessage)
+        throw await apiErrorFor(response)
     }
 
     return await response.json()
