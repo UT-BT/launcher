@@ -11,7 +11,7 @@ not_here:
   - "how admin sections are registered and gated → navigation.md (the sidebar registry)"
   - "AuthorPicker, TagEditor and the screenshot modal's callback mode → shared-components.md"
 sections: [who-can-use-it, the-section, routes, shapes, errors, upload, drafts-and-the-report, polling, draft-form-and-publish, publishing-recent-and-drift, tests]
-last_verified: 2026-10-08
+last_verified: 2026-10-13
 verify_against:
   - app/utils/api.ts
   - app/utils/mapUploadTypes.ts

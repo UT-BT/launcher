@@ -61,6 +61,8 @@ function match(overrides: Partial<StreamMatch> = {}, maps: StreamMapScore[] = [m
         stream_url: null,
         pick_ban_status: 'none',
         sides: { a: 'a', b: 'b' },
+        side_status: { confirmed: false, source: null },
+        side_controls: { can_swap: false, blocked_reason: null },
         teams: { a: team('Alpha', 'a'), b: team('Bravo', 'b') },
         lineup: { a1: null, a2: null, b1: null, b2: null },
         maps: [

@@ -1,4 +1,4 @@
-import type { EventMatchMode, PickBanSessionStatus, RawActiveTitle } from '@/app/utils/api'
+import type { EventMatchMode, MatchSideStatus, PickBanSessionStatus, RawActiveTitle } from '@/app/utils/api'
 import { readConditional, type ConditionalReadOptions } from './conditionalRead'
 
 export type StreamSide = 'a' | 'b'
@@ -78,6 +78,7 @@ export interface StreamMatch {
     stream_url: string | null
     pick_ban_status: PickBanSessionStatus
     sides: { a: BracketSide; b: BracketSide }
+    side_status: MatchSideStatus
     teams: { a: StreamTeam | null; b: StreamTeam | null }
     lineup: Record<StreamLineupSlot, StreamUserRef | null>
     maps: StreamMatchMap[]

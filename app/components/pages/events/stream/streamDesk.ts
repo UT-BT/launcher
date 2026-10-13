@@ -1,4 +1,11 @@
-import { ApiError, apiRequest, type EventMatchStatus, type RawActiveTitle } from '@/app/utils/api'
+import {
+    ApiError,
+    apiRequest,
+    type EventMatchStatus,
+    type MatchSideStatus,
+    type RawActiveTitle,
+    type StreamSideControls,
+} from '@/app/utils/api'
 import { createPoller, type PollerEnvironment } from '@/app/utils/poller'
 import { addClockSample, clockSample, medianClockOffset } from '@/app/components/pages/events/pickban/clockOffset'
 
@@ -66,6 +73,8 @@ export interface StreamMatch {
     stream_url: string | null
     pick_ban_status: string
     sides: { a: StreamSide; b: StreamSide }
+    side_status: MatchSideStatus
+    side_controls: StreamSideControls
     teams: { a: StreamTeam | null; b: StreamTeam | null }
     lineup: { a1: StreamPerson | null; a2: StreamPerson | null; b1: StreamPerson | null; b2: StreamPerson | null }
     maps: { ordinal: number; map: string | null; kind: string; picked_by: StreamSide | null }[]

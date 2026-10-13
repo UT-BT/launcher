@@ -4353,6 +4353,7 @@ export interface MyMatchEntry {
     roles: MyMatchRole[]
     streamer: EventStreamer | null
     match_admin?: EventMatchAdmin | null
+    side_color: SideColor | null
 }
 
 export async function fetchMyEventMatches(accessToken: string, slug: string, signal?: AbortSignal): Promise<MyMatchEntry[]> {
@@ -4973,6 +4974,8 @@ export interface EventMatch {
     loser_to_match_id: string | null
     loser_to_slot: EventSide | null
     pick_ban_status: MatchPickBanStatus
+    red_team_id: string | null
+    red_side_source: MatchSideSource | null
     maps?: EventMatchMap[]
     streamer?: EventStreamer | null
     match_admin?: EventMatchAdmin | null
@@ -5103,6 +5106,7 @@ export interface EventMatchInput {
     stream_url?: string | null
     notes?: string | null
     published?: boolean
+    red_team_id?: string | null
 }
 
 export interface EventDrawOptions {
@@ -5526,12 +5530,15 @@ export interface PredictionLeaderboardRow {
     positions_won: number
     positions_lost: number
     positions_refunded: number
+    pending: boolean
+    pending_count: number
 }
 
 export interface PredictionLeaderboard {
     total: number
     items: PredictionLeaderboardRow[]
     your_rank: number | null
+    projected?: boolean
 }
 
 export interface PredictionBetResult {
@@ -6027,6 +6034,97 @@ export type PickBanSessionStatus = 'none' | 'lobby' | 'running' | 'paused' | 'co
 
 export type PickBanPhase = 'lobby' | 'intro' | 'awaiting' | 'spotlight' | 'paused' | 'complete' | 'cancelled' | 'voided'
 
+export const PICK_BAN_SIDE_PHASES = ['side_choice', 'side_spotlight'] as const
+
+export type PickBanSidePhase = typeof PICK_BAN_SIDE_PHASES[number]
+
+export type PickBanContractPhase = PickBanPhase | PickBanSidePhase
+
+export const SIDE_COLORS = ['red', 'blue'] as const
+
+export type SideColor = typeof SIDE_COLORS[number]
+
+export const MATCH_SIDE_SOURCES = ['step0', 'admin', 'caster', 'backfill'] as const
+
+export type MatchSideSource = typeof MATCH_SIDE_SOURCES[number]
+
+export interface MatchSideStatus {
+    confirmed: boolean
+    source: MatchSideSource | null
+}
+
+export interface MatchSides {
+    red_team_id: string
+    blue_team_id: string
+    a_match_side: EventSide
+    confirmed: boolean
+    source: MatchSideSource
+}
+
+export interface MatchSidesBody {
+    red_team_id: string
+}
+
+export const MATCH_SIDES_ERROR_CODES = ['not_authorized', 'pick_ban_in_progress', 'invalid_side'] as const
+
+export type MatchSidesErrorCode = typeof MATCH_SIDES_ERROR_CODES[number]
+
+export const STREAM_SIDE_BLOCKED_REASONS = ['pick_ban_in_progress'] as const
+
+export type StreamSideBlockedReason = typeof STREAM_SIDE_BLOCKED_REASONS[number]
+
+export interface StreamSideControls {
+    can_swap: boolean
+    blocked_reason: StreamSideBlockedReason | null
+}
+
+export const PICK_BAN_CHOOSER_REASONS = [
+    'lower_pre_cup_seed',
+    'lower_group_placing',
+    'lower_knockout_differential',
+    'admin',
+] as const
+
+export type PickBanChooserReason = typeof PICK_BAN_CHOOSER_REASONS[number]
+
+export interface PickBanSideCardStep {
+    n: number
+    action: PickBanSequenceAction
+    segment: PickBanSegment
+}
+
+export interface PickBanSideCard {
+    color: SideColor
+    letter: PickBanActor
+    steps: PickBanSideCardStep[]
+}
+
+export interface PickBanSideBlock {
+    red: PickBanSide | null
+    source: MatchSideSource | null
+    confirmed: boolean
+    set_at: string | null
+    changed_mid_veto: boolean
+    chooser: PickBanSide | null
+    chooser_reason: PickBanChooserReason | null
+    cards: PickBanSideCard[]
+}
+
+export interface PickBanSideCommandBody {
+    choice: SideColor
+    version: number
+}
+
+export interface PickBanSideChooserBody {
+    side: PickBanSide
+    version: number
+}
+
+export interface PickBanSetSidesBody {
+    red: PickBanSide
+    version: number
+}
+
 export type PickBanSegment = 'lettered' | 'ban_down' | 'decider'
 
 export type PickBanStepAction = PickBanSequenceAction | 'decider'
@@ -6034,6 +6132,7 @@ export type PickBanStepAction = PickBanSequenceAction | 'decider'
 export type PickBanBlockingReason =
     | 'teams_not_decided'
     | 'a_undetermined'
+    | 'side_chooser_undetermined'
     | 'pre_cup_seed_missing'
     | 'sequence_mismatch'
     | 'pool_too_small'
@@ -6062,9 +6161,14 @@ export const PICK_BAN_ERROR_CODES = [
     'match_live',
     'wrong_status',
     'nothing_to_undo',
+    'side_chooser_undetermined',
 ] as const
 
 export type PickBanErrorCode = typeof PICK_BAN_ERROR_CODES[number]
+
+export const PICK_BAN_SIDE_ERROR_CODES = ['side_choice_active', 'side_not_open'] as const
+
+export type PickBanSideErrorCode = typeof PICK_BAN_SIDE_ERROR_CODES[number]
 
 export function pickBanErrorCode(error: unknown): PickBanErrorCode | null {
     if (!(error instanceof ApiError) || !error.reason) return null
@@ -6162,6 +6266,7 @@ export interface PickBanCapabilities {
     acting_side: PickBanSide | null
     can_ready: boolean
     can_choose_a: boolean
+    can_choose_side: boolean
     can_lock_now: boolean
 }
 
@@ -6199,6 +6304,7 @@ export interface PickBanState {
     a_side: PickBanSide | null
     chooser_side: PickBanSide | null
     a_confirmed: boolean
+    side: PickBanSideBlock
     ready: { team_a: PickBanReady | null; team_b: PickBanReady | null }
     selection_preview: PickBanSelectionPreview | null
     pacing: PickBanPacing
@@ -6254,6 +6360,7 @@ export async function fetchPickBanState(
 
 export interface PickBanParticipantCommandBodies {
     'choose-a': { side: PickBanSide; version: number }
+    side: PickBanSideCommandBody
     ready: { version: number }
     unready: { version: number }
     hover: { map: string | null; version: number }
@@ -6278,6 +6385,7 @@ export interface PickBanManagerCommandBodies {
     cancel: { version: number }
     swap: { version: number }
     'choose-a': { side: PickBanSide; version: number }
+    side: PickBanSideCommandBody
     'override-sequence': PickBanOverrideSequenceBody
     lock: { side: PickBanSide; map: string; plan_index: number; version: number }
     'hand-over': { side: PickBanSide; user_id: string | null; version: number }

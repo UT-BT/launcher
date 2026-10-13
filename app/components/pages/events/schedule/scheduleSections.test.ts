@@ -20,6 +20,7 @@ function match(patch: Partial<EventMatch> = {}): EventMatch {
         stream_url: null, notes: null, published: true,
         winner_to_match_id: null, winner_to_slot: null, loser_to_match_id: null, loser_to_slot: null,
         pick_ban_status: 'none',
+        red_team_id: null, red_side_source: null,
         ...patch,
     }
 }
@@ -30,6 +31,7 @@ function mine(patch: Partial<EventMatch>, roles: MyMatchEntry['roles'] = ['playe
         stage: { key: 'groups', name: 'Group Stage' },
         roles,
         streamer: null,
+        side_color: null,
     }
 }
 

@@ -127,6 +127,7 @@ export function streamMatch(overrides: Partial<StreamMatch> = {}): StreamMatch {
         stream_url: 'https://twitch.tv/utbt',
         pick_ban_status: 'none',
         sides: { a: 'a', b: 'b' },
+        side_status: { confirmed: false, source: null },
         teams: { a, b },
         lineup: {
             a1: streamUserRef(a.members[0]),
