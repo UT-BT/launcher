@@ -684,6 +684,20 @@ default 50) through `getCamVolume()` / `setCamVolume(volume)`, saved when the sl
 The cam server passwords are the opposite: they live only in nav state (`event.camPasswords`), so they
 are never written to disk and are gone once the launcher closes.
 
+**Cam choices are keyed by team id.** The Cams tool keeps its server choices in nav state
+`event.camServers` as `{ matchId, teams: { <teamId>: choice } }`, and its passwords in
+`event.camPasswords` as `{ teams: { <teamId>: password } }`. A choice is `{ mode: 'detected' }`, or
+`{ mode: 'list' | 'typed', address }`. `cams/camChoices.ts` converts between them and the per-letter
+`{ A, B }` the view model takes:
+- `camTeamIds(match)` maps each letter to a team id through the desk's `sides` mapping.
+- `readCamServerChoices` and `readCamPasswords` give the per-letter values.
+- `storeCamServerChoice` and `storeCamPassword` write one letter's value under its team.
+So a Red/Blue swap moves each team's server and password to its new letter. Server choices for
+another match read as detection, but passwords carry over to the team's next match. Both readers take
+the stored value as `unknown` and keep only entries under `teams` with the right shape. Older values
+keyed by `A` / `B` are dropped, and the caster picks again. A letter with no team yet can't store a
+server, and its picker is disabled.
+
 **The Stream tab's context** (`events/stream/StreamTabContext.tsx`). `StreamTab` builds one
 identity (`eventSlug`, `streamerId`, `isManager`, `accessToken`) and wraps the open panel in
 `StreamTabProvider`. It owns one desk store (`createStreamDeskStore`, `streamDesk.ts`) per

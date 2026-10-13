@@ -14,15 +14,20 @@ import { UncertifiedServerWarning } from '../UncertifiedServerWarning'
 import { useStreamTab } from '../StreamTabContext'
 import { useCamFps, useCamStatus, useCamVolume, useInstallPath, useServerList } from './cams/camToolHooks'
 import {
+    NO_STORED_CAM_PASSWORDS,
+    NO_STORED_CAM_SERVERS,
+    camTeamIds,
+    readCamPasswords,
+    readCamServerChoices,
+    storeCamPassword,
+    storeCamServerChoice,
+} from './cams/camChoices'
+import {
     CAM_TEAMS,
-    DETECTED_CHOICES,
-    NO_PASSWORDS,
     buildCamToolView,
     camErrorMessages,
     serverAddressOf,
     type CamServerChoice,
-    type CamServerChoices,
-    type CamServerPasswords,
     type CamStatusView,
     type CamTeamPasswordView,
     type CamTeamServerView,
@@ -40,13 +45,6 @@ const IDLE_CHIP = 'bg-card/50 border-hairline/10 text-muted-foreground'
 const TYPED_VALUE = 'typed'
 const DETECTED_VALUE = 'detected'
 const LIST_PREFIX = 'list:'
-
-interface StoredChoices {
-    matchId: string | null
-    choices: CamServerChoices
-}
-
-const NO_STORED_CHOICES: StoredChoices = { matchId: null, choices: DETECTED_CHOICES }
 
 type CamAction = () => Promise<{ ok: true } | { ok: false; errors: CamToolError[] } | void>
 
@@ -368,22 +366,24 @@ export function CamTool() {
     const { status, setStatus, read } = useCamStatus()
     const { fps, choose: chooseFps, saveFailed: fpsSaveFailed } = useCamFps()
     const { volume, choose: chooseVolume, saveFailed: volumeSaveFailed } = useCamVolume()
-    const [stored, setStored] = useNavState<StoredChoices>('event.camServers', NO_STORED_CHOICES)
-    const [passwords, setPasswords] = useNavState<CamServerPasswords>('event.camPasswords', NO_PASSWORDS)
+    const [storedServers, setStoredServers] = useNavState<unknown>('event.camServers', NO_STORED_CAM_SERVERS)
+    const [storedPasswords, setStoredPasswords] = useNavState<unknown>('event.camPasswords', NO_STORED_CAM_PASSWORDS)
     const busy = useRef(false)
     const [pending, setPending] = useState(false)
     const [errors, setErrors] = useState<string[]>([])
 
-    const matchId = desk?.match?.id ?? null
-    const choices = stored.matchId === matchId ? stored.choices : DETECTED_CHOICES
+    const match = desk?.match ?? null
+    const teamIds = camTeamIds(match)
+    const choices = readCamServerChoices(storedServers, match)
+    const passwords = readCamPasswords(storedPasswords, match)
     const view = buildCamToolView({ desk, servers, choices, passwords, installPath, status, fps, volume })
 
     function changeChoice(team: CamTeam, choice: CamServerChoice) {
-        setStored({ matchId, choices: { ...choices, [team]: choice } })
+        setStoredServers(storeCamServerChoice(storedServers, match, team, choice))
     }
 
     function changePassword(team: CamTeam, value: string) {
-        setPasswords({ ...passwords, [team]: value })
+        setStoredPasswords(storeCamPassword(storedPasswords, match, team, value))
     }
 
     async function run(action: CamAction) {
@@ -448,7 +448,7 @@ export function CamTool() {
                                 view={view.teams[team]}
                                 password={view.passwords[team]}
                                 servers={servers}
-                                disabled={pending}
+                                disabled={pending || teamIds[team] === null}
                                 onChange={choice => changeChoice(team, choice)}
                                 onPasswordChange={value => changePassword(team, value)}
                             />

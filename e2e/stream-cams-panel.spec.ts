@@ -1,5 +1,5 @@
 import path from 'node:path'
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Page, type Route } from '@playwright/test'
 import { horizontalOverflow } from './layout'
 
 const HARNESS = `/@fs/${path.resolve(__dirname, 'camToolHarness.html').replace(/\\/g, '/').replace(/^\/+/, '')}`
@@ -23,7 +23,37 @@ function member(person: Person, captain = false) {
     return { ...person, title: null, captain }
 }
 
-function deskPayload(lineup: Lineup) {
+const CRIMSON = { id: 'ta', name: 'Crimson Tide', stage_seed: 1, pre_cup_seed: 1, members: [member(ALICE, true), member(ANNA), member(AXEL)] }
+const AZURE = { id: 'tb', name: 'Azure Wave', stage_seed: 2, pre_cup_seed: 2, members: [member(BOB, true), member(BEA)] }
+
+interface SidesState {
+    flipped: boolean
+    confirmed: boolean
+    controls: { can_swap: boolean; blocked_reason: 'pick_ban_in_progress' | null }
+    refusal: { status: number; code: string; error: string } | null
+    puts: unknown[]
+}
+
+function sidesState(patch: Partial<SidesState> = {}): SidesState {
+    return { flipped: false, confirmed: true, controls: { can_swap: false, blocked_reason: null }, refusal: null, puts: [], ...patch }
+}
+
+function deskMatchSides(sides: SidesState, lineup: Lineup) {
+    if (!sides.flipped) {
+        return {
+            sides: { a: 'a', b: 'b' },
+            teams: { a: { ...CRIMSON, match_side: 'a' }, b: { ...AZURE, match_side: 'b' } },
+            lineup,
+        }
+    }
+    return {
+        sides: { a: 'b', b: 'a' },
+        teams: { a: { ...AZURE, match_side: 'b' }, b: { ...CRIMSON, match_side: 'a' } },
+        lineup: { a1: lineup.b1, a2: lineup.b2, b1: lineup.a1, b2: lineup.a2 },
+    }
+}
+
+function deskPayload(lineup: Lineup, sides: SidesState) {
     return {
         server_now: new Date().toISOString().replace('Z', '+00:00'),
         event: { name: 'Cam Cup', slug: SLUG },
@@ -45,12 +75,9 @@ function deskPayload(lineup: Lineup) {
             status: 'live',
             stream_url: null,
             pick_ban_status: 'complete',
-            sides: { a: 'a', b: 'b' },
-            teams: {
-                a: { id: 'ta', name: 'Crimson Tide', match_side: 'a', stage_seed: 1, pre_cup_seed: 1, members: [member(ALICE, true), member(ANNA), member(AXEL)] },
-                b: { id: 'tb', name: 'Azure Wave', match_side: 'b', stage_seed: 2, pre_cup_seed: 2, members: [member(BOB, true), member(BEA)] },
-            },
-            lineup,
+            ...deskMatchSides(sides, lineup),
+            side_status: { confirmed: sides.confirmed, source: sides.confirmed ? 'caster' : null },
+            side_controls: sides.controls,
             maps: [],
             score: { maps: [], current_map: null, series: { a: 0, b: 0 }, winner: null, live_decided: false },
             casters: [],
@@ -87,9 +114,24 @@ const UNCERTIFIED_WARNING = "Uncertified server: caps here won't count for the l
 interface MockState {
     lineup: Lineup
     servers: unknown[]
+    sides?: SidesState
+}
+
+async function answerSidesPut(route: Route, sides: SidesState) {
+    sides.puts.push(route.request().postDataJSON())
+    if (sides.refusal) {
+        await route.fulfill({ status: sides.refusal.status, json: { success: false, error: sides.refusal.error, code: sides.refusal.code } })
+        return
+    }
+    sides.flipped = !sides.flipped
+    sides.confirmed = true
+    const red = sides.flipped ? AZURE : CRIMSON
+    const blue = sides.flipped ? CRIMSON : AZURE
+    await route.fulfill({ json: { success: true, data: { red_team_id: red.id, blue_team_id: blue.id, a_match_side: sides.flipped ? 'b' : 'a', confirmed: true, source: 'caster' } } })
 }
 
 async function openHarness(page: Page, state: MockState, query = '') {
+    const sides = state.sides ?? sidesState()
     await page.route(/https:\/\/(api|gateway)\.utbt\.net\/.*/, async route => {
         const url = new URL(route.request().url())
         if (url.hostname === 'gateway.utbt.net') {
@@ -97,13 +139,18 @@ async function openHarness(page: Page, state: MockState, query = '') {
             return
         }
         if (url.pathname === `/tournaments/${SLUG}/stream/${STREAMER_ID}/desk`) {
-            await route.fulfill({ json: { success: true, data: deskPayload(state.lineup) } })
+            await route.fulfill({ json: { success: true, data: deskPayload(state.lineup, sides) } })
+            return
+        }
+        if (url.pathname === `/tournaments/${SLUG}/stream/matches/m1/sides` && route.request().method() === 'PUT') {
+            await answerSidesPut(route, sides)
             return
         }
         await route.fulfill({ json: { success: true, data: [] } })
     })
     await page.goto(`${HARNESS}${query}`)
     await expect(page.getByRole('region', { name: 'Cams' })).toBeVisible()
+    await expect(page.getByRole('region', { name: 'Red and Blue' })).toBeVisible()
 }
 
 function calls(page: Page, channel: string) {
@@ -382,10 +429,148 @@ test('without the install path the panel points to the settings', async ({ page 
     expect(await opened).toEqual({ section: 'game-installation' })
 })
 
+function sidesCard(page: Page) {
+    return page.getByRole('region', { name: 'Red and Blue' })
+}
+
+const swapButton = (page: Page) => sidesCard(page).getByRole('button', { name: 'Swap Red/Blue' })
+
+test('the caster swaps Red and Blue after confirming a dialog that names both teams', async ({ page }) => {
+    const sides = sidesState({ controls: { can_swap: true, blocked_reason: null } })
+    await openHarness(page, { lineup: FULL_LINEUP, servers: [SHARED], sides })
+
+    await expect(page.getByTestId('cam-sides-red')).toContainText('Crimson Tide')
+    await expect(page.getByTestId('cam-sides-blue')).toContainText('Azure Wave')
+    await expect(page.getByTestId('cam-sides-swapped')).toHaveCount(0)
+
+    await swapButton(page).click()
+    await expect(page.getByRole('heading', { name: 'Swap Red and Blue?' })).toBeVisible()
+    await expect(page.getByText('Crimson Tide becomes Blue, Azure Wave becomes Red. Everything on stream follows.')).toBeVisible()
+    await page.getByRole('button', { name: 'Cancel' }).click()
+    expect(sides.puts).toEqual([])
+
+    await swapButton(page).click()
+    await page.getByRole('button', { name: 'Swap sides' }).click()
+
+    await expect.poll(() => sides.puts).toEqual([{ red_team_id: AZURE.id }])
+    await expect(page.getByRole('heading', { name: 'Swap Red and Blue?' })).toHaveCount(0)
+    await expect(page.getByTestId('cam-sides-red')).toContainText('Azure Wave')
+    await expect(page.getByTestId('cam-sides-blue')).toContainText('Crimson Tide')
+    await expect(page.getByTestId('cam-sides-swapped')).toHaveText('Sides swapped. Azure Wave is now Red, Crimson Tide is now Blue.')
+    await expect(page.getByTestId('cam-team-A')).toContainText('Azure Wave')
+
+    await page.getByRole('button', { name: 'Dismiss the sides swapped notice' }).click()
+    await expect(page.getByTestId('cam-sides-swapped')).toHaveCount(0)
+})
+
+test('the swap is disabled with the reason while pick/ban runs', async ({ page }) => {
+    await openHarness(page, { lineup: FULL_LINEUP, servers: [SHARED], sides: sidesState({ controls: { can_swap: true, blocked_reason: 'pick_ban_in_progress' } }) })
+
+    await expect(swapButton(page)).toBeDisabled()
+    await expect(sidesCard(page).getByText('Finish pick/ban first, or ask an admin.')).toBeVisible()
+    await expect(swapButton(page)).toHaveAccessibleDescription('Finish pick/ban first, or ask an admin.')
+})
+
+test('the swap is hidden from a caster who may not swap', async ({ page }) => {
+    await openHarness(page, { lineup: FULL_LINEUP, servers: [SHARED], sides: sidesState({ controls: { can_swap: false, blocked_reason: null } }) })
+
+    await expect(page.getByTestId('cam-sides-red')).toContainText('Crimson Tide')
+    await expect(swapButton(page)).toHaveCount(0)
+})
+
+test('a refused swap explains why', async ({ page }) => {
+    const sides = sidesState({
+        controls: { can_swap: true, blocked_reason: null },
+        refusal: { status: 409, code: 'pick_ban_in_progress', error: 'Picks & Bans is in progress for this match.' },
+    })
+    await openHarness(page, { lineup: FULL_LINEUP, servers: [SHARED], sides })
+
+    await swapButton(page).click()
+    await page.getByRole('button', { name: 'Swap sides' }).click()
+
+    await expect(sidesCard(page).getByRole('alert')).toHaveText('Finish pick/ban first, or ask an admin.')
+    await expect(page.getByTestId('cam-sides-red')).toContainText('Crimson Tide')
+    await expect(page.getByTestId('cam-sides-swapped')).toHaveCount(0)
+})
+
+test('the panel says Sides TBC until the side is confirmed', async ({ page }) => {
+    const sides = sidesState({ confirmed: false })
+    await openHarness(page, { lineup: FULL_LINEUP, servers: [SHARED], sides })
+
+    await expect(page.getByTestId('cam-sides-tbc')).toContainText('Sides TBC')
+
+    sides.confirmed = true
+
+    await expect(page.getByTestId('cam-sides-tbc')).toHaveCount(0, { timeout: 5_000 })
+    await expect(page.getByTestId('cam-sides-swapped')).toHaveCount(0)
+})
+
+test('a swap made elsewhere shows Sides swapped, and a server picked for a team stays with that team', async ({ page }) => {
+    const sides = sidesState()
+    await openHarness(page, { lineup: FULL_LINEUP, servers: [SPLIT_A, SPLIT_B], sides })
+
+    await page.getByTestId('cam-team-A').getByLabel('Server', { exact: true }).selectOption({ label: 'UTBT Cup #2 · 2 playing' })
+    await page.getByTestId('cam-team-A').getByLabel('Server password').fill('crimson')
+    await expect(page.getByTestId('cam-team-A-address')).toHaveText('203.0.113.20:7788')
+
+    sides.flipped = true
+
+    await expect(page.getByTestId('cam-sides-swapped')).toHaveText('Sides swapped. Azure Wave is now Red, Crimson Tide is now Blue.', { timeout: 5_000 })
+    await expect(page.getByTestId('cam-team-B')).toContainText('Crimson Tide')
+    await expect(page.getByTestId('cam-team-B-address')).toHaveText('203.0.113.20:7788')
+    await expect(page.getByTestId('cam-team-B').getByLabel('Server password')).toHaveValue('crimson')
+    await expect(page.getByTestId('cam-team-A').getByLabel('Server password')).toHaveValue('')
+
+    await launchButton(page).click()
+
+    await expect.poll(() => calls(page, 'launchCams')).toEqual([[{
+        lineup: { A1: BOB.id, A2: BEA.id, B1: ALICE.id, B2: ANNA.id },
+        servers: { A: '203.0.113.20:7788', B: '203.0.113.20:7788' },
+        passwords: { A: 'crimson', B: 'crimson' },
+        fps: 120,
+        volume: 50,
+    }]])
+})
+
+test('on the website the swap sits above the desktop-only cam notice', async ({ page }) => {
+    const sides = sidesState({ confirmed: false, controls: { can_swap: true, blocked_reason: null } })
+    await page.route(/https:\/\/(api|gateway)\.utbt\.net\/.*/, async route => {
+        const url = new URL(route.request().url())
+        if (url.pathname === `/tournaments/${SLUG}/stream/${STREAMER_ID}/desk`) {
+            await route.fulfill({ json: { success: true, data: deskPayload(FULL_LINEUP, sides) } })
+            return
+        }
+        if (url.pathname === `/tournaments/${SLUG}/stream/matches/m1/sides` && route.request().method() === 'PUT') {
+            await answerSidesPut(route, sides)
+            return
+        }
+        await route.fulfill({ json: { success: true, data: [] } })
+    })
+    await page.goto(`${HARNESS}?panel=web`)
+
+    const cams = page.getByRole('region', { name: 'Cams' })
+    await expect(cams.getByText('The cam tool needs the desktop launcher.')).toBeVisible()
+    await expect(page.getByTestId('cam-sides-tbc')).toBeVisible()
+    const swapBox = await swapButton(page).boundingBox()
+    const camsBox = await cams.boundingBox()
+    expect(swapBox?.y ?? Infinity).toBeLessThan(camsBox?.y ?? 0)
+
+    await swapButton(page).click()
+    await page.getByRole('button', { name: 'Swap sides' }).click()
+
+    await expect.poll(() => sides.puts).toEqual([{ red_team_id: AZURE.id }])
+    await expect(page.getByTestId('cam-sides-swapped')).toBeVisible()
+    await expect(page.getByTestId('cam-sides-tbc')).toHaveCount(0)
+})
+
 for (const viewport of [{ width: 390, height: 844 }, { width: 1920, height: 1080 }]) {
     test(`the cam tool fits at ${viewport.width}px`, async ({ page }) => {
         await page.setViewportSize(viewport)
-        const state: MockState = { lineup: FULL_LINEUP, servers: [UNCERTIFIED_A, UNCERTIFIED_B] }
+        const state: MockState = {
+            lineup: FULL_LINEUP,
+            servers: [UNCERTIFIED_A, UNCERTIFIED_B],
+            sides: sidesState({ confirmed: false, controls: { can_swap: true, blocked_reason: 'pick_ban_in_progress' } }),
+        }
         await openHarness(page, state)
         await expect(page.getByTestId('cam-team-A-uncertified')).toBeVisible()
         await expect(page.getByTestId('cam-team-B-uncertified')).toBeVisible()
@@ -395,7 +580,8 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 1920, height: 1080
         await expect(page.getByTestId('cam-stale-summary')).toBeVisible({ timeout: 5_000 })
 
         expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1)
-        for (const name of ['Relaunch cams', 'Stop all', 'Restart A2', '60', '120']) {
+        await expect(page.getByTestId('cam-sides-tbc')).toBeVisible()
+        for (const name of ['Swap Red/Blue', 'Relaunch cams', 'Stop all', 'Restart A2', '60', '120']) {
             const box = await page.getByRole('button', { name }).boundingBox()
             expect(box?.height ?? 0).toBeGreaterThanOrEqual(28)
             expect(box?.x ?? -1).toBeGreaterThanOrEqual(0)

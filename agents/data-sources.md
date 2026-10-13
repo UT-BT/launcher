@@ -1618,6 +1618,7 @@ its own (the lineup section) passes the same environment.
 | Channel | `setMatchChannel` → `PUT .../stream/matches/<matchId>/channel` `{ choice, url? }`, reads `channel.stream_url`; `fetchOwnTwitchChannel` (`GET /users/me`, reads `twitch_url`) and `setOwnTwitchChannel` (`PUT /users/me/twitch` `{ twitch }`) (`channel/channelActions.ts`) |
 | Lineup | `fetchStreamLineup` / `saveStreamLineup` → `GET` / `PUT .../stream/matches/<matchId>/lineup` `{ a1, a2, b1, b2, only_if_empty? }`, answers `{ match_id, lineup, effective }` (`match/lineupActions.ts`) |
 | Live, score, countdown | `markMatchLive` / `clearMatchLive` → `POST` / `DELETE .../stream/matches/<matchId>/live`; `setMapScore` / `resetMapScore` → `PUT` / `DELETE .../score/maps/<ordinal>` (`{ a, b, winner }`: a pin per side or null, and the winner override), `resetAllMapScores` → `DELETE .../score/maps`, `setLiveCounting` → `PUT .../score/live-counting` `{ enabled }`; `moveCountdown` / `clearCountdown` → `PUT` / `DELETE .../countdown` `{ at }` (a UTC ISO instant) or `{ add_minutes }`. Each answers the match's `broadcast` block (`live_at`, `countdown_override_at`, `countdown_at`, `score_state`, `live_counting`) (`match/scoreActions.ts`) |
+| Red and Blue | `setMatchSides` → `PUT .../stream/matches/<matchId>/sides` `MatchSidesBody` `{ red_team_id }`, answers `MatchSides`; the panel refreshes the desk after it (`cams/sidesActions.ts`) |
 | OBS kit | `fetchKitInfo` → `GET .../stream/<streamerId>/kit/info` (`current_version`, `downloaded_version`, `default_folder`); `fetchKitZip` / `kitDownloadUrl` → `GET .../<streamerId>/kit?folder=<folder>`, a zip with a 120 s timeout (`kit/kitFetch.ts`) |
 
 **Score editor writes.** The Score panel (`match/ScoreSection.tsx`, model `scoreView.ts`) edits
@@ -1665,11 +1666,35 @@ every launch and restart request (it takes effect when a cam starts). Launch wai
 to load, and a failed save shows the same amber line as Cam FPS.
 
 **Server passwords.** Each team's server picker has a masked Server password field for a locked
-server. The values live in nav state (`event.camPasswords`), so they survive a match change but are
-never written to disk. A blank field takes the other team's password when both teams resolve to the
+server. The values live in nav state (`event.camPasswords`), keyed by team id, so a team's password
+follows it into its next match but is never written to disk. A blank field takes the other team's password when both teams resolve to the
 same address (its placeholder then reads "Same as Team A"); otherwise each team sends its own. The
 request carries `passwords: { A, B }`, null for none. A password the game can't take (whitespace,
 `?`, `#`, `"`, or over 64 characters) blocks Launch with a message for that team and is never shared.
+
+**Choices follow the team, not the letter.** A server picked or typed for a team and its password are
+stored under the team's id (`cams/camChoices.ts`). The picker for side A or B reads the team the desk's
+`sides` mapping puts on that letter, so after a Red/Blue swap the old Team A's server and password move
+with it to side B. Server choices start from detection again for a new match. Values stored under the
+letters A and B are ignored, and the caster picks again. See "Cam choices are keyed by team id" in `agents/state-patterns.md`.
+
+**Red and Blue (Cams panel).** A "Red and Blue" card sits above the cam tool, and on the website above
+the desktop-launcher notice, so a web caster can still fix the colours. `camSidesView(match)`
+(`cams/camSidesView.ts`) builds it from the desk's `match`:
+- `red` / `blue` are the teams on sides A and B (Red is A).
+- `tbc` is true while `side_status.confirmed` is false, and the card shows a "Sides TBC" tag.
+- `swap` is null (the button is hidden) unless `side_controls.can_swap` is true and both teams are set.
+  With `blocked_reason` `pick_ban_in_progress` the button is disabled and shows "Finish pick/ban
+  first, or ask an admin.".
+- `swap.confirmMessage` is the dialog text, "X becomes Blue, Y becomes Red. Everything on stream
+  follows.", and `swap.body` is `{ red_team_id }` with the current Blue team.
+
+Confirming sends `setMatchSides` and refreshes the desk. `sidesSwapErrorMessage` words the refusals
+`pick_ban_in_progress`, `not_authorized` and `invalid_side`; anything else shows the server's message.
+While the panel is open, `nextSidesSwappedNotice` compares each desk read with the one before. When the
+same match's `sides` mapping flips, after this caster's swap or anyone else's, `SidesSwappedNotice`
+(`cams/CamSides.tsx`) says "Sides swapped. X is now Red, Y is now Blue." until it is dismissed or the
+desk moves to another match. A desk without `side_status` / `side_controls` shows no tag and no button.
 
 The cam tool reads no stream route of its own: its team-server list is `gateway.fetchServers()`
 polled every 30 s (`cams/camToolHooks.ts`), and the rest goes through
