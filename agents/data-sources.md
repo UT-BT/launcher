@@ -253,6 +253,31 @@ offers only the states an admin owns (`pending`, `scheduled`, `live`, `bye`,
 `mapWinnerOf` and `seriesProgress` in `bracket/bracketShared.tsx` mirror the
 server's rules so the editor can say what a result still needs.
 
+**Bracket slots and the Red side in the match editor.** The editor's team selects are
+"Bracket slot 1" and "Bracket slot 2" (`team_a_id` / `team_b_id`). Any change to them,
+order included, voids the match's prediction market and refunds every bet, so when the
+slots differ from the saved match and the match has a market that is not already voided,
+the editor shows "Changing bracket slots voids the prediction market and refunds every bet."
+before saving. Colours are fixed with the separate **Red side** select instead (Not set, or
+either slot's current team), which starts from the match's `red_team_id`, shows its
+`red_side_source` beside it (Step 0, Admin, Caster, Backfill) while unchanged, and resets
+to Not set when its team leaves the slots. A slot swap of the same two teams keeps it. A
+PATCH that changes the team set clears the side unless it carries `red_team_id`, so when
+the other slot gets a new team the editor sends the Red side it still shows.
+`manage/matchEditorForm.ts` decides what Save sends, tracking the form fields, the Red side
+and the result section apart by comparing them with the saved match:
+
+| Changed | `PATCH .../admin/matches/<id>` (`updateEventMatch`) | `PUT .../result` (`setEventMatchResult`) |
+|---|---|---|
+| Red side only | `{ red_team_id }` (null for Not set) | not sent |
+| Form fields (slots included) | every form field, plus `red_team_id` only if the Red side changed or is still set across a new team set | not sent |
+| Result section only (maps, or a forfeit button) | not sent | the map rows and `forfeit_winner` |
+| Slots and the result section | refused client-side: "Save the bracket slots first, then edit results" | not sent |
+| Nothing | not sent ("No changes to save.") | not sent |
+
+So map rows are never sent in the orientation they were loaded in once the slots move:
+the slots save first, the editor reloads the match, and the results are edited after.
+
 **Drawing a stage early.** A fed stage is seeded from its feeders' standings, and
 those exist from the moment a group stage is drawn — so "the top two in each
 group" resolves to the entry seeds long before it means anything. The server
@@ -614,7 +639,7 @@ event is refused with 422 `invalid_request`. For managers only, every bracket ma
 matches: one row per match of every stage (`matchRows(bracket)` in `matchesTable.ts`, ordered
 by scheduled time with unscheduled last, then stage, round and match order), with a match admin
 and a streamer picker (the shared `StaffPicker`), the status chip, the series score once a match
-is live or finished, and Edit (the bracket's `MatchEditorModal`: result, maps, time, stream link,
+is live or finished, and Edit (the bracket's `MatchEditorModal`: bracket slots, Red side, result, maps, time, stream link,
 notes) plus a Picks & Bans link. Filters (`filterMatchRows`: stage, open/finished/all, needs a
 match admin / needs a streamer, and a search over team and staff names) persist per history
 entry in `useNavState('event.manage.matches.filter')`; open matches are the default. Summary
@@ -1736,7 +1761,8 @@ change lands; the types are additive, so nothing that compiles today stops compi
 - **Matches.** `MyMatchEntry.side_color` is the viewer's colour once the side is confirmed,
   else null (null for non-players too). `EventMatch` carries `red_team_id` and
   `red_side_source`; `EventMatchInput.red_team_id` (uuid or null) sets or clears the side in
-  the same PATCH as the bracket slots, and leaving it out leaves the side alone.
+  the same PATCH as the bracket slots, and leaving it out leaves the side alone. The match
+  editor sends it only when its Red side select changed.
 - **Projected standings.** Leaderboard rows carry `pending` and `pending_count`, and the
   leaderboard says `projected`; the feed's `top_predictors` rows carry `pending`. The
   Predictor Standings read (`stream/scenes/standings/predictorStandingsRead.ts`,
