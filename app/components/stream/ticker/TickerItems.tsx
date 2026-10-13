@@ -36,6 +36,12 @@ export function TickerItemView({ item }: { item: TickerItem }) {
                         <PlayerInfo userId={item.userId} alias={item.alias} size="md" presentation="full" interactive={false} />
                     </span>
                     <span className={item.profit.startsWith('−') ? 'text-red-300' : 'text-emerald-300'}>{item.profit}</span>
+                    {item.pending && (
+                        <span className={DIM} title="Payout pending">
+                            <span aria-hidden>⏳</span>
+                            <span className="sr-only">Payout pending</span>
+                        </span>
+                    )}
                 </>
             )
         case 'next':

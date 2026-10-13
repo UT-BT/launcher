@@ -58,9 +58,15 @@ describe('tickerSets', () => {
         expect(tickerSets(feed, NOW)[0].items[0]).toMatchObject({ channel: null })
     })
 
+    it('marks pending predictors', () => {
+        const feed = { ...FULL, top_predictors: [feedPredictor(1, '1', 'Harbinger', 500, true), feedPredictor(2, '2', 'Nimbus', 300)] }
+        const items = tickerSets(feed, NOW).find(set => set.kind === 'predictors')!.items
+        expect(items.map(item => item.kind === 'predictor' && item.pending)).toEqual([true, false])
+    })
+
     it('builds predictor items with signed profit', () => {
         const items = tickerSets(FULL, NOW)[2].items
-        expect(items[0]).toEqual({ kind: 'predictor', key: '1', rank: 1, userId: '1', alias: 'Harbinger', profit: '+18,420' })
+        expect(items[0]).toEqual({ kind: 'predictor', key: '1', rank: 1, userId: '1', alias: 'Harbinger', profit: '+18,420', pending: false })
         expect(items[2]).toMatchObject({ profit: '−310' })
     })
 

@@ -9,9 +9,11 @@ import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { ErrorBanner } from '@/app/components/pages/teams/teamsShared'
 import {
     eventErrorMessage, fetchEventPredictionLeaderboard,
-    type PredictionLeaderboard,
+    type PredictionLeaderboard, type PredictionLeaderboardRow,
 } from '@/app/utils/api'
+import { CHIP_SHAPE } from '@/app/components/shared/chipStyles'
 import { CoinAmount, formatCoins } from './predictionsShared'
+import { PROJECTED_NOTE, pendingChipLabel, pendingChipTitle, showsProjectedNote } from './leaderboardView'
 
 const COLUMNS: ResponsiveColumn[] = [
     { id: 'rank', width: '3rem', required: true },
@@ -21,6 +23,20 @@ const COLUMNS: ResponsiveColumn[] = [
     { id: 'inplay', width: '6rem', priority: 70 },
     { id: 'record', width: '7rem', priority: 60 },
 ]
+
+function PendingChip({ row }: { row: PredictionLeaderboardRow }) {
+    const label = pendingChipLabel(row)
+    if (label === null) return null
+    return (
+        <span
+            title={pendingChipTitle(row) ?? undefined}
+            className={cn('shrink-0', CHIP_SHAPE, 'bg-amber-500/15 text-amber-300 border-amber-500/30')}
+        >
+            {label}
+            <span className="sr-only"> ({pendingChipTitle(row)})</span>
+        </span>
+    )
+}
 
 const EMPTY: PredictionLeaderboard = { total: 0, items: [], your_rank: null }
 
@@ -68,6 +84,7 @@ export function PredictionsLeaderboard({ slug, accessToken, viewerId }: {
                     <div className="flex items-center gap-2 min-w-0">
                         <span className="w-6 shrink-0 text-right tabular-nums text-muted-foreground">{row.rank}</span>
                         <PlayerInfo userId={row.user_id} alias={row.alias} size="sm" />
+                        <PendingChip row={row} />
                     </div>
                     <div className="shrink-0 text-right">
                         <div className="tabular-nums text-foreground font-semibold">{formatCoins(row.net_worth)}</div>
@@ -87,6 +104,10 @@ export function PredictionsLeaderboard({ slug, accessToken, viewerId }: {
                     You are ranked <span className="text-accent-300 font-semibold tabular-nums">#{board.your_rank}</span>
                     {' '}of {board.total.toLocaleString()}.
                 </div>
+            )}
+
+            {showsProjectedNote(board) && (
+                <div className="text-xs text-amber-300">{PROJECTED_NOTE}</div>
             )}
 
             <DataTableShell responsive={{
@@ -119,7 +140,10 @@ export function PredictionsLeaderboard({ slug, accessToken, viewerId }: {
                                 {row.rank}
                             </DataTableCell>
                             <DataTableCell>
-                                <PlayerInfo userId={row.user_id} alias={row.alias} size="sm" />
+                                <div className="flex items-center gap-2 min-w-0">
+                                    <PlayerInfo userId={row.user_id} alias={row.alias} size="sm" />
+                                    <PendingChip row={row} />
+                                </div>
                             </DataTableCell>
                             <DataTableCell align="right" className="tabular-nums font-semibold text-foreground">
                                 {formatCoins(row.net_worth)}

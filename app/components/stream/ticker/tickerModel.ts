@@ -13,7 +13,7 @@ export type TickerSetKind = 'results' | 'upcoming' | 'predictors' | 'next'
 export type TickerItem =
     | { kind: 'result'; key: string; teams: [string, string]; score: string; where: string }
     | { kind: 'upcoming'; key: string; when: string; teams: [string, string]; channel: string | null }
-    | { kind: 'predictor'; key: string; rank: number; userId: string; alias: string; profit: string }
+    | { kind: 'predictor'; key: string; rank: number; userId: string; alias: string; profit: string; pending: boolean }
     | { kind: 'next'; key: string; when: string; teams: [string, string]; channel: string | null }
 
 export interface TickerSet {
@@ -60,6 +60,7 @@ function predictorItem(row: FeedPredictor): TickerItem {
         userId: row.user_id,
         alias: row.alias ?? 'Predictor',
         profit: signedCoins(row.profit),
+        pending: row.pending,
     }
 }
 
