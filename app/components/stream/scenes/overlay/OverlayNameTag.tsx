@@ -38,7 +38,18 @@ export function OverlayNameTag({ tag }: { tag: OverlayTag }) {
                     style={{ background: `linear-gradient(${offSeam}, ${tint(hue, 46)} 0%, ${tint(hue, 14)} 45%, transparent 85%)` }}
                 />
             </div>
-            <div className={cn('relative flex h-full min-w-0 items-center', right ? 'flex-row-reverse pl-11 pr-[18px]' : 'pl-[18px] pr-11')}>
+            <div
+                className={cn(
+                    'relative flex h-full min-w-0 flex-col justify-center',
+                    right ? 'items-end pl-11 pr-[18px]' : 'items-start pl-[18px] pr-11',
+                    !above && 'flex-col-reverse',
+                )}
+            >
+                {tag.sidesNote && (
+                    <span data-overlay-sides-note className="text-[13px] font-bold uppercase leading-none tracking-[0.18em] text-white/75 [text-shadow:0_1px_6px_rgba(0,0,0,0.6)]">
+                        {tag.sidesNote}
+                    </span>
+                )}
                 <div className="min-w-0 font-sans [zoom:1.6] [text-shadow:0_1px_6px_rgba(0,0,0,0.6)]">
                     <PlayerInfo
                         userId={tag.userId ?? undefined}

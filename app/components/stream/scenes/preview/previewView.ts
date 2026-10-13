@@ -1,6 +1,7 @@
-import type { RawActiveTitle } from '@/app/utils/api'
+import type { MatchSideStatus, RawActiveTitle } from '@/app/utils/api'
 import { formatOdds, formatPercent } from '@/app/components/pages/events/predictions/predictionsShared'
 import { sceneTimeText } from '../../sceneHelpers'
+import { sceneSideTags, type SceneSideTag, type SceneSideTags } from '../../sceneSideTags'
 import type { StreamSide } from '../../data/streamHotState'
 import type {
     PreviewCupRunEntry,
@@ -47,6 +48,7 @@ export interface CupRunChip {
 export interface PreviewTeamView {
     side: StreamSide
     name: string
+    sideTag: SceneSideTag
     stageSeed: number | null
     preCupSeed: number | null
     odds: string | null
@@ -187,7 +189,7 @@ function formOf(insights: PreviewInsights, side: StreamSide): (ResultLetter | nu
     return Array.from({ length: FORM_LENGTH }, (_, index) => letters[index] ?? null)
 }
 
-function teamView(preview: StreamPreview, side: StreamSide, odds: OddsView | null): PreviewTeamView | null {
+function teamView(preview: StreamPreview, side: StreamSide, odds: OddsView | null, sideTags: SceneSideTags): PreviewTeamView | null {
     const team = preview.teams[side]
     if (!team) return null
     const run = team.cup_run.map(cupRunChip)
@@ -196,6 +198,7 @@ function teamView(preview: StreamPreview, side: StreamSide, odds: OddsView | nul
     return {
         side,
         name: team.name,
+        sideTag: sideTags[side],
         stageSeed: team.stage_seed,
         preCupSeed: team.pre_cup_seed,
         odds: price ? `${price.percent} · ${price.odds}` : null,
@@ -342,11 +345,19 @@ function oddsOf(preview: StreamPreview): OddsView | null {
     }
 }
 
-export function previewView({ preview, startsAt, now }: { preview: StreamPreview; startsAt: string | null; now: number }): PreviewViewModel {
+export interface PreviewViewInput {
+    preview: StreamPreview
+    sideStatus: MatchSideStatus
+    startsAt: string | null
+    now: number
+}
+
+export function previewView({ preview, sideStatus, startsAt, now }: PreviewViewInput): PreviewViewModel {
     const odds = oddsOf(preview)
+    const sideTags = sceneSideTags(sideStatus)
     return {
         kicker: sceneTimeText(startsAt, now),
-        teams: { a: teamView(preview, 'a', odds), b: teamView(preview, 'b', odds) },
+        teams: { a: teamView(preview, 'a', odds, sideTags), b: teamView(preview, 'b', odds, sideTags) },
         stageView: stageViewOf(preview.stage_view, preview.teams),
         headToHead: headToHeadOf(preview, now),
         odds,

@@ -9,6 +9,7 @@ const LONG_MAPS = streamMaps(['CTF-BT-II-Diplopia-V4', 'CTF-BT-II-InventionCE2',
 function midSeries() {
     return streamMatch({
         reason: 'current',
+        side_status: { confirmed: true, source: 'step0' },
         maps: MAPS,
         score: streamScore([streamMapScore(0, [2, 1], 'a'), streamMapScore(1, [1, 0]), streamMapScore(2), streamMapScore(3)]),
     })
@@ -23,10 +24,21 @@ describe('overlayView', () => {
         const view = overlayView(midSeries())
 
         expect(view?.tags).toEqual([
-            { slot: 'a1', side: 'a', placement: 'above-seam-left', userId: '1000', name: 'Ada' },
-            { slot: 'a2', side: 'a', placement: 'above-seam-right', userId: '1001', name: 'Ben' },
-            { slot: 'b1', side: 'b', placement: 'below-seam-left', userId: '2000', name: 'Cleo' },
-            { slot: 'b2', side: 'b', placement: 'below-seam-right', userId: '2001', name: 'Dex' },
+            { slot: 'a1', side: 'a', placement: 'above-seam-left', userId: '1000', name: 'Ada', sidesNote: null },
+            { slot: 'a2', side: 'a', placement: 'above-seam-right', userId: '1001', name: 'Ben', sidesNote: null },
+            { slot: 'b1', side: 'b', placement: 'below-seam-left', userId: '2000', name: 'Cleo', sidesNote: null },
+            { slot: 'b2', side: 'b', placement: 'below-seam-right', userId: '2001', name: 'Dex', sidesNote: null },
+        ])
+    })
+
+    it('marks every name tag Sides TBC while the side is unconfirmed', () => {
+        const view = overlayView({ ...midSeries(), side_status: { confirmed: false, source: null } })
+
+        expect(view?.tags.map(tag => [tag.slot, tag.sidesNote])).toEqual([
+            ['a1', 'Sides TBC'],
+            ['a2', 'Sides TBC'],
+            ['b1', 'Sides TBC'],
+            ['b2', 'Sides TBC'],
         ])
     })
 

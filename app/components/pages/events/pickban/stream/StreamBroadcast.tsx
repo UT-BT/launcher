@@ -13,31 +13,35 @@ import { BroadcastBoard } from './BroadcastBoard'
 import { BroadcastCaption } from './BroadcastCaption'
 import { BroadcastLineup, BroadcastNotice, BroadcastPaused } from './BroadcastEndings'
 import { BroadcastHeader } from './BroadcastHeader'
-import { BroadcastIntro, BroadcastReveal } from './BroadcastMoments'
-
-function backdropLit(view: PickBanView): 'left' | 'right' | null {
-    const acting = view.stagePhase === 'awaiting' ? view.turn?.ab ?? null : view.stagePhase === 'spotlight' ? view.spotlight?.actor ?? null : null
-    if (acting === 'A') return 'left'
-    if (acting === 'B') return 'right'
-    return null
-}
+import { BroadcastIntro, BroadcastReveal, BroadcastSideChoice, BroadcastSideReveal } from './BroadcastMoments'
+import { broadcastBackdropLit, broadcastMomentOf } from './broadcastMoment'
 
 function sceneOverlay(view: PickBanView): ReactNode {
-    switch (view.stagePhase) {
+    const moment = broadcastMomentOf(view)
+    switch (moment?.kind) {
         case 'intro':
-            return <BroadcastIntro left={view.teams.left} right={view.teams.right} countdown={view.countdown} entranceMs={view.scene.entranceMs} />
-        case 'spotlight':
-            return view.spotlight
-                ? <BroadcastReveal entry={view.spotlight} countdown={view.countdown} upNext={view.turn} entranceMs={view.scene.entranceMs} />
-                : null
-        case 'complete':
+            return (
+                <BroadcastIntro
+                    left={view.teams.left}
+                    right={view.teams.right}
+                    countdown={view.countdown}
+                    sidesLine={moment.sidesLine}
+                    entranceMs={view.scene.entranceMs}
+                />
+            )
+        case 'side_choice':
+            return <BroadcastSideChoice chooser={moment.chooser} options={moment.options} entranceMs={view.scene.entranceMs} />
+        case 'side_reveal':
+            return <BroadcastSideReveal reveal={moment.reveal} countdown={view.countdown} upNext={view.turn} entranceMs={view.scene.entranceMs} />
+        case 'reveal':
+            return <BroadcastReveal entry={moment.entry} countdown={view.countdown} upNext={view.turn} entranceMs={view.scene.entranceMs} />
+        case 'lineup':
             return <BroadcastLineup entries={view.summary} edited={view.edited} />
-        case 'cancelled':
-        case 'voided':
+        case 'notice':
             return (
                 <BroadcastNotice
-                    kind={view.stagePhase}
-                    reason={endReasonOf(view.banners) ?? (view.stagePhase === 'voided' ? 'The match changed after this session opened.' : null)}
+                    kind={moment.notice}
+                    reason={endReasonOf(view.banners) ?? (moment.notice === 'voided' ? 'The match changed after this session opened.' : null)}
                     detail={DISCARDED}
                 />
             )
@@ -56,7 +60,7 @@ export function StreamBroadcast({ view, eventName }: { view: PickBanView; eventN
 
     return (
         <div className={cn('relative flex h-full w-full flex-col overflow-hidden', BROADCAST_SURFACE)}>
-            <BroadcastBackdrop left={teamTone(view.teams.left?.ab ?? null)} right={teamTone(view.teams.right?.ab ?? null)} lit={backdropLit(view)} />
+            <BroadcastBackdrop left={teamTone(view.teams.left?.ab ?? null)} right={teamTone(view.teams.right?.ab ?? null)} lit={broadcastBackdropLit(view)} />
             <BroadcastHeader view={view} eventName={eventName} />
             <main className="relative flex min-h-0 flex-1 flex-col">
                 <motion.div initial={false} animate={{ opacity: boardHidden ? 0 : 1 }} transition={{ duration: boardHidden ? 0.2 : 0.45 }} className="flex min-h-0 flex-1 flex-col">

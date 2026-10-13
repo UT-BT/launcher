@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
+import type { MatchSideStatus } from '../app/utils/api'
 import type { StreamHotState, StreamMapScore, StreamMatchMap, StreamTeam } from '../app/components/stream/data/streamHotState'
 import {
     idleHotState,
@@ -55,7 +56,9 @@ const JUMP = streamTeam('b', { name: 'Jumpstart Syndicate', members: FROST.membe
 const MAPS = streamMaps(['CTF-BT-Maverick', 'CTF-BT-(Ultimate)Mandarin', 'CTF-BT-Letss-Go', 'CTF-BT-Skyfall'], ['a', 'b', 'b', null])
 const LONG_MAPS = streamMaps(['CTF-BT-II-Synchronize-vF2', 'CTF-BT-(Ultimate)Mandarin', 'CTF-BT-II-FuriumMineCE2', 'CTF-BT-Skyfall'], ['a', 'b', 'b', null])
 
-function liveState(maps: StreamMapScore[], options: { teamB?: StreamTeam; mapList?: StreamMatchMap[] } = {}): StreamHotState {
+const CONFIRMED: MatchSideStatus = { confirmed: true, source: 'step0' }
+
+function liveState(maps: StreamMapScore[], options: { teamB?: StreamTeam; mapList?: StreamMatchMap[]; sideStatus?: MatchSideStatus } = {}): StreamHotState {
     const teamB = options.teamB ?? FROST
     const decided = maps.every(map => map.decided) || maps.filter(map => map.winner === 'a').length >= 3
     const score = streamScore(maps, decided ? { current_map: null, winner: 'a', live_decided: true } : {})
@@ -65,6 +68,7 @@ function liveState(maps: StreamMapScore[], options: { teamB?: StreamTeam; mapLis
             reason: 'current',
             status: 'in_progress',
             pick_ban_status: 'complete',
+            side_status: options.sideStatus ?? CONFIRMED,
             teams: { a: HAWKS, b: teamB },
             lineup: {
                 a1: streamUserRef(HAWKS.members[0]),
@@ -80,6 +84,10 @@ function liveState(maps: StreamMapScore[], options: { teamB?: StreamTeam; mapLis
 
 const LIVE = liveState([streamMapScore(0, [2, 1], 'a'), streamMapScore(1, [1, 0]), streamMapScore(2), streamMapScore(3)])
 const LONG = liveState([streamMapScore(0, [2, 0], 'a'), streamMapScore(1, [1, 2], 'b'), streamMapScore(2, [0, 1]), streamMapScore(3)], { teamB: JUMP, mapList: LONG_MAPS })
+const SIDES_TBC = liveState(
+    [streamMapScore(0, [2, 1], 'a'), streamMapScore(1, [1, 0]), streamMapScore(2), streamMapScore(3)],
+    { sideStatus: { confirmed: false, source: null } },
+)
 const SHORT = liveState([streamMapScore(0, [1, 0])], { mapList: streamMaps(['CTF-BT-Skyfall'], [null]) })
 
 function grow(box: Box, by: number): Box {
@@ -178,6 +186,28 @@ test('over the four cams the overlay shows the cams everywhere except its own el
 
     const painted = await expectClearOfTimers(page)
     expect(pngOf(painted.composite)).toMatchSnapshot('overlay-over-cams.png', { threshold: 0.2, maxDiffPixelRatio: 0.001 })
+})
+
+test('while the sides are unconfirmed every name tag says Sides TBC, still on its edge and clear of the timer zones', async ({ page }) => {
+    await openScene(page, 'overlay', { hotState: SIDES_TBC })
+
+    for (const slot of ['a1', 'a2', 'b1', 'b2']) {
+        await expect(page.locator(`[data-overlay-part="tag-${slot}"] [data-overlay-sides-note]`)).toHaveText('Sides TBC')
+    }
+    const truncated = await page.locator('[data-overlay-part^="tag-"] .truncate').evaluateAll(elements =>
+        elements.filter(element => element.scrollWidth > element.clientWidth).map(element => element.textContent),
+    )
+    expect(truncated).toEqual([])
+
+    const painted = await expectClearOfTimers(page)
+    expect(pngOf(painted.composite)).toMatchSnapshot('overlay-sides-tbc.png', { threshold: 0.2, maxDiffPixelRatio: 0.001 })
+})
+
+test('once the sides are confirmed the name tags say nothing about them', async ({ page }) => {
+    await openScene(page, 'overlay', { hotState: LIVE })
+
+    await expect(page.locator('[data-overlay-part="tag-a1"]')).toHaveText('Vexa')
+    await expect(page.locator('[data-overlay-sides-note]')).toHaveCount(0)
 })
 
 test('with long team and map names the band stays within its width and the timer zones stay clear', async ({ page }) => {

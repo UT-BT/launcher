@@ -5,17 +5,24 @@ import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { displayMapName } from '@/app/utils/format'
 import { toActiveTitle } from '@/app/utils/api'
-import { type PickBanCountdown, type PickBanTeamPanel, type PickBanTimelineEntry, type PickBanTurn } from '../pickBanView'
+import { sideColorTag, sideColorTone } from '@/app/utils/sideLabels'
+import { type PickBanCountdown, type PickBanSideReveal, type PickBanTeamPanel, type PickBanTimelineEntry, type PickBanTurn } from '../pickBanView'
 import { CountdownBar, IntroCountdownWords } from '../components/Countdown'
 import { DECIDER_LETTERS, frameOf, nextStepLabel, revealByline, revealKindOf, shakeOf } from '../components/StageScenes'
 import { Aura, ConfettiBurst, Flash, Rays, Ribbon, Shockwave, SparkBurst, Strike } from '../components/RevealEffects'
 import { PICK_BAN_HUES, PICK_BAN_TONES, stepTone, teamTone, tint } from '@/app/components/broadcast/broadcastTone'
 import { choreography } from '../components/stageMotion'
+import type { BroadcastSideOption } from './broadcastMoment'
 
-export function BroadcastIntro({ left, right, countdown, entranceMs }: {
+const MOMENT_KICKER = 'text-[26px] font-bold uppercase leading-none tracking-[0.3em] text-white/55'
+
+const REVEAL_TAG_PX = 168
+
+export function BroadcastIntro({ left, right, countdown, sidesLine, entranceMs }: {
     left: PickBanTeamPanel | null
     right: PickBanTeamPanel | null
     countdown: PickBanCountdown | null
+    sidesLine: string | null
     entranceMs: number
 }) {
     const motionOf = useMemo(() => choreography(entranceMs), [entranceMs])
@@ -39,6 +46,88 @@ export function BroadcastIntro({ left, right, countdown, entranceMs }: {
             <motion.div variants={motionOf.countdown} className="flex flex-col items-center gap-4">
                 <IntroCountdownWords countdown={countdown} className="text-[40px] font-black italic uppercase leading-none tracking-wide text-white/85" />
                 <CountdownBar countdown={countdown} tone="neutral" className="h-2 w-[560px] bg-white/10" />
+                {sidesLine && <p className="mt-2 text-[28px] font-bold uppercase leading-none tracking-[0.2em] text-white/70">{sidesLine}</p>}
+            </motion.div>
+        </motion.div>
+    )
+}
+
+export function BroadcastSideChoice({ chooser, options, entranceMs }: { chooser: string; options: BroadcastSideOption[]; entranceMs: number }) {
+    const motionOf = useMemo(() => choreography(entranceMs), [entranceMs])
+
+    return (
+        <div data-broadcast-moment="side-choice" className="flex w-full flex-col items-center gap-14 text-center">
+            <motion.div variants={motionOf.fromLeft} className="flex max-w-[1500px] flex-col items-center gap-5">
+                <p className={MOMENT_KICKER}>Side choice</p>
+                <p className="max-w-full truncate text-[112px] font-black italic uppercase leading-[0.95] tracking-tight text-white [text-shadow:0_6px_30px_rgba(0,0,0,0.6)]">
+                    {chooser}
+                </p>
+                <p className="text-[44px] font-black italic uppercase leading-none text-white/85">choose their side</p>
+            </motion.div>
+            <div className="flex items-stretch gap-10">
+                {options.map((option, index) => (
+                    <SideOption key={option.color} option={option} variants={index === 0 ? motionOf.fromLeft : motionOf.fromRight} />
+                ))}
+            </div>
+        </div>
+    )
+}
+
+function SideOption({ option, variants }: { option: BroadcastSideOption; variants: Variants }) {
+    const toneKey = sideColorTone(option.color)
+    const tone = PICK_BAN_TONES[toneKey]
+    const hue = PICK_BAN_HUES[toneKey]
+
+    return (
+        <motion.div
+            variants={variants}
+            data-side-option={option.color}
+            className={cn('flex w-[480px] flex-col items-center gap-3 rounded-3xl border-[5px] px-6 py-8', tone.border)}
+            style={{ background: `linear-gradient(to bottom, ${tint(hue, 30)}, ${tint(hue, 6)})`, boxShadow: `0 0 50px ${tint(hue, 30)}, 0 24px 60px rgba(0,0,0,0.6)` }}
+        >
+            <span className="text-[112px] font-black italic leading-none text-white [text-shadow:0_6px_30px_rgba(0,0,0,0.6)]">{option.tag}</span>
+            <span className={cn('text-[34px] font-bold uppercase leading-none tracking-[0.16em]', tone.text)}>{option.lead}</span>
+        </motion.div>
+    )
+}
+
+export function BroadcastSideReveal({ reveal, countdown, upNext, entranceMs }: {
+    reveal: PickBanSideReveal
+    countdown: PickBanCountdown | null
+    upNext: PickBanTurn | null
+    entranceMs: number
+}) {
+    const toneKey = sideColorTone(reveal.color)
+    const tone = PICK_BAN_TONES[toneKey]
+    const hue = PICK_BAN_HUES[toneKey]
+    const motionOf = useMemo(() => choreography(entranceMs), [entranceMs])
+
+    return (
+        <motion.div data-broadcast-moment="side-reveal" variants={motionOf.shakeOnImpact} className="flex w-full flex-col items-center gap-7 text-center">
+            <p className={MOMENT_KICKER}>Sides set</p>
+            <div className="relative w-[560px]">
+                <Aura variants={motionOf.aura} hue={hue} />
+                <Shockwave variants={motionOf.shockwave} hue={hue} />
+                <motion.div
+                    data-stage-part="side-reveal"
+                    variants={motionOf.pickFrame}
+                    className={cn('relative flex h-64 items-center justify-center overflow-hidden rounded-3xl border-[5px]', tone.border)}
+                    style={{ background: `linear-gradient(to bottom, ${tint(hue, 55)}, ${tint(hue, 18)})`, boxShadow: `0 0 60px ${tint(hue, 50)}, 0 24px 60px rgba(0,0,0,0.6)` }}
+                >
+                    <Flash variants={motionOf.teamFlash} className="bg-white/60" />
+                    <span className="relative font-black italic leading-none text-white [text-shadow:0_6px_30px_rgba(0,0,0,0.6)]" style={{ fontSize: REVEAL_TAG_PX }}>
+                        {sideColorTag(reveal.color)}
+                    </span>
+                </motion.div>
+            </div>
+            <motion.p variants={motionOf.caption} className={cn('max-w-[1500px] truncate text-[64px] font-black italic uppercase leading-none tracking-tight', tone.text)}>
+                {reveal.text}
+            </motion.p>
+            <motion.div variants={motionOf.caption} className="flex flex-col items-center gap-3">
+                <CountdownBar countdown={countdown} tone={toneKey} className="h-2 w-[560px] bg-white/10" />
+                <p className={cn('text-xl font-bold uppercase tracking-[0.2em] text-white/55', !upNext && 'invisible')}>
+                    Next: {upNext ? nextStepLabel(upNext) : ''}
+                </p>
             </motion.div>
         </motion.div>
     )

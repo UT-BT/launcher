@@ -12,7 +12,7 @@ function previewPath(matchId: string): string {
     return `/tournaments/${SCENE_SLUG}/stream/matches/${matchId}/preview`
 }
 
-const GROUP_STATE = streamHotState()
+const GROUP_STATE = streamHotState({ match: streamMatch({ side_status: { confirmed: true, source: 'step0' } }) })
 const GROUP_PREVIEW = streamPreview()
 
 const ELIMINATION_MATCH = {
@@ -42,6 +42,8 @@ test('the Match Preview shows both lineups, the group table, head-to-head and od
     await expect(teamA.getByText('Stage seed 2')).toBeVisible()
     await expect(teamA.getByText('Pre-cup seed 5')).toBeVisible()
     await expect(teamA.getByText('58% · 1.72')).toBeVisible()
+    await expect(teamA.locator('[data-side-tag]')).toHaveText('RED')
+    await expect(scene.locator('[data-preview-team="b"] [data-side-tag]')).toHaveText('BLUE')
     await expect(teamA.getByText('1,284')).toBeVisible()
     await expect(teamA.getByText('17 solo · 6 team')).toBeVisible()
     await expect(teamA.getByRole('img', { name: 'Ada' })).toBeVisible()
@@ -68,6 +70,9 @@ test('the Match Preview shows the bracket path in an elimination stage and hides
     await expect(scene.getByText('vs Warp Rabbits')).toBeVisible()
     await expect(scene.locator('[data-preview-odds]')).toHaveCount(0)
     await expect(scene.getByText('58% · 1.72')).toHaveCount(0)
+    await expect(scene.locator('[data-preview-team="a"] [data-side-tag="tbc"]')).toHaveText('Sides TBC')
+    await expect(scene.locator('[data-preview-team="b"] [data-side-tag="tbc"]')).toHaveText('Sides TBC')
+    await expect(scene.getByText('RED', { exact: true })).toHaveCount(0)
 
     await expectSceneScreenshot(page, 'preview-elimination.png')
 })

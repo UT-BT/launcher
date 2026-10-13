@@ -1,4 +1,5 @@
 import { displayMapName } from '@/app/utils/format'
+import { SIDES_TBC } from '@/app/utils/sideLabels'
 import type { StreamLineupSlot, StreamMatch, StreamScore, StreamScoreSource, StreamSide } from '../../data/streamHotState'
 import { mapDrawn, mapNumber, seriesFlags, type SeriesFlag } from '../../sceneHelpers'
 import { BAND, LONG_TEAM_NAME_CHARS, MAP_NAME_MAX_PX, STRIP_ESTIMATE, UPCOMING_NAME_MIN_PX, type OverlayMapState } from './overlayLayout'
@@ -12,6 +13,7 @@ export interface OverlayTag {
     placement: OverlayTagPlacement
     userId: string | null
     name: string | null
+    sidesNote: string | null
 }
 
 export interface OverlayTeamRow {
@@ -73,10 +75,11 @@ function teamName(match: StreamMatch, side: StreamSide): string {
 }
 
 function nameTags(match: StreamMatch): OverlayTag[] {
+    const sidesNote = match.side_status.confirmed ? null : SIDES_TBC
     return QUADRANTS.flatMap(({ slot, side, placement }) => {
         const player = match.lineup[slot]
         if (!player || (player.id === null && player.display_name === null)) return []
-        return [{ slot, side, placement, userId: player.id, name: player.display_name }]
+        return [{ slot, side, placement, userId: player.id, name: player.display_name, sidesNote }]
     })
 }
 

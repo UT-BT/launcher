@@ -1825,7 +1825,10 @@ change lands; the types are additive, so nothing that compiles today stops compi
 - **Stream reads.** The hot state's and the desk's `match` carry `side_status`
   (`MatchSideStatus`) next to the unchanged `sides` mapping; the desk's `match` also carries
   `side_controls` (`StreamSideControls`: `can_swap`, `blocked_reason` `'pick_ban_in_progress'
-  | null`; `can_swap` false hides the control). The Cams switch
+  | null`; `can_swap` false hides the control). The overlay, Match preview and Next Map scenes
+  label the teams from `side_status` through `stream/sceneSideTags.ts` (RED for the top/left
+  stream side, BLUE for the other, "Sides TBC" while unconfirmed); the preview read carries no
+  side status of its own, so the preview takes it from the hot state's `match`. The Cams switch
   `PUT .../stream/matches/<matchId>/sides` takes `MatchSidesBody` `{ red_team_id }` and answers
   `MatchSides` `{ red_team_id, blue_team_id, a_match_side, confirmed, source }`; its refusals
   are `MATCH_SIDES_ERROR_CODES` (`not_authorized`, `pick_ban_in_progress`, `invalid_side`).

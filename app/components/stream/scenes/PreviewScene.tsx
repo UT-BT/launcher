@@ -32,7 +32,11 @@ export default function PreviewScene({ eventSlug }: StreamSceneProps) {
     const read = useSceneRead<StreamPreview>(match ? previewReadPath(eventSlug, match.id) : null)
     const now = useSceneNow(NOW_STEP_MS)
     const startsAt = match ? match.countdown_at ?? match.scheduled_at : null
-    const view = useMemo(() => (read.data ? previewView({ preview: read.data, startsAt, now }) : null), [read.data, startsAt, now])
+    const sideStatus = match?.side_status ?? null
+    const view = useMemo(
+        () => (read.data && sideStatus ? previewView({ preview: read.data, sideStatus, startsAt, now }) : null),
+        [read.data, sideStatus, startsAt, now],
+    )
 
     if (phase === 'loading') return <BlankFrame scene="preview" />
     if (phase === 'idle') return <IdleFrame scene="preview" />
