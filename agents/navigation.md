@@ -702,6 +702,12 @@ web build opens it straight from a deep link.
 - The header buttons (sound, Animations, Copy Link) and the summary's **Back to
   Bracket** share one class (`HEADER_BUTTON` in the page, 44px tall below `sm` and 32px from
   it), so they stay alike.
+- **Sides strip.** Under the match banner, a player in the match sees "You’re Red" or
+  "You’re Blue" once the side is confirmed, with "Join Red in UT for every map of this
+  match." In the lobby, and through the intro when the side was set before Start, everyone
+  else sees the sides line instead ("Sides TBC: T04 choose Red or Blue when Picks & Bans
+  start." or "Sides set by admin: T04 are Red, T01 are Blue."). The "Sides changed by
+  admin" notice shows here too. It sits outside the stage, so the stage keeps one height.
 - **Into the page.** The Manage → Pick/Ban queue's **Open Page** is a `NavLink` to
   `match-pickban` (a `Button asChild` around it), so on web it is a real anchor that opens
   in a new tab like any other link.

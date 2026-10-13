@@ -13,6 +13,7 @@ import { matchAdminName, streamerName } from '../eventsShared'
 import { PickBanJoinBanner } from '../pickban/components/PickBanJoinBanner'
 import { PickBanLink } from '../pickban/components/PickBanLink'
 import { PickBanStatusChip } from '../pickban/components/PickBanStatusChip'
+import { YoureSide } from '../pickban/components/YoureSide'
 import {
     formatSlotTime, proposerName, schedulabilityReason, ScheduleLoading, ScheduleSection, TeamPair, whoseTurnLabel,
 } from './scheduleShared'
@@ -202,6 +203,7 @@ function BookedMatchCard({ entry, myTeamId, eventSlug, pickBanSession }: {
 
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                 <MatchTime match={match} />
+                {entry.side_color && <YoureSide color={entry.side_color} />}
                 {streamer && (
                     <span className="flex items-center gap-1.5 min-w-0 text-xs text-muted-foreground">
                         Streamed by

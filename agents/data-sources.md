@@ -453,7 +453,7 @@ shape stays exactly this; booked matches come from a second, per-event read.
 then by stage, round and match order) is that read. Each `MyMatchEntry` is
 `{ match: EventMatch, stage: {key, name}, roles: ('player' | 'streamer' |
 'match_admin')[], streamer: EventStreamer | null, match_admin?: EventMatchAdmin |
-null }`, where `EventStreamer` is `{id, display_name, twitch_url}` and
+null, side_color: 'red' | 'blue' | null }`, where `EventStreamer` is `{id, display_name, twitch_url}` and
 `EventMatchAdmin` is `{id, display_name, role, event_manager}` (`role` is the staff role
 number, `ROLE_LABELS` in `app/utils/roles.ts`, `0` without one; `event_manager` is whether
 they manage this event). `display_name` is `null` for a user with no alias,
@@ -483,7 +483,9 @@ a team member or bracket manager, or whenever either has a match in it; the
 Streaming section shows for `is_streamer`, or whenever a match is assigned.
 `matchTimeLabel` reads a live match as "Live Now", a booked one through
 `formatSlotTime` in the display zone, and an unbooked one as "No time booked
-yet". An Upcoming card names its streamer through `PlayerInfo`. A Streaming
+yet". An Upcoming card names its streamer through `PlayerInfo`, and shows "You’re **Red**"
+or "You’re **Blue**" (the `YoureSide` chip) from the entry's `side_color`, which is set only
+for a player once the match's side is confirmed. A Streaming
 card shows time, teams, stage and round and the pick/ban status chip, with
 **Copy Stream Link** (`buildMatchLinks(slug, matchId).streamLink`, the OBS
 browser source, with `useCopyFeedback`) and **Open Picks & Bans**; the
@@ -1049,7 +1051,13 @@ re-derives it between polls from the absolute timestamps: `intro_ends_at`,
 waits for a poll. Every body except Open's carries the expected `version`.
 
 - **Participant commands:** `sendPickBanCommand(token, slug, matchId, command, body)` →
-  `POST .../matches/<id>/pick-ban/{choose-a,ready,unready,hover,lock}`. Lobby state exposes `chooser_side` and `capabilities.can_choose_a` for the stronger side's captain or acting captain.
+  `POST .../matches/<id>/pick-ban/{side,ready,unready,hover,lock}`. `side` takes
+  `{ choice: 'red' | 'blue', version }`: the chooser team's captain or acting captain picks a
+  colour for the whole match in phase `side_choice` (step 0), and
+  `capabilities.can_choose_side` is true for exactly that viewer while it is open. Outside
+  `side_choice` it is refused with `side_not_open`, and a lettered lock during it with
+  `side_choice_active`. The page words those and the usual `not_authorized`,
+  `version_conflict`, `wrong_status` and `paused`.
 - **Manager commands:** `sendPickBanManagerCommand(token, slug, matchId, command, body?)` →
   `POST /tournaments/<slug>/admin/matches/<id>/pick-ban/<command>`. `open` takes no body.
   `lock` takes a `side`, and `override-sequence` takes a `preset_id` or a
@@ -1221,7 +1229,9 @@ pure and tested without a DOM. It returns:
   `remainingMs`.
 - `stagePhase`: the same as `phase`, except that while paused it keeps the phase the pause
   froze (`intro`, `awaiting` or `spotlight`), so a paused overlay can sit over it
-- `turn`, with `actorLabel` and `actionLabel`, the `mapNumber` a pick decides (`null` for a
+- `turn`, with `actorLabel` (the team's name, or its colour while the team is undecided),
+  `color` (`red` for side A, `blue` for side B, `null` for the decider) and `actionLabel`
+  ("Crimson Cats (Red) bans"), the `mapNumber` a pick decides (`null` for a
   ban) and whether the viewer acts, and `spotlight`, the step being revealed
 - `cards`: `available`, `banned`, `picked`, `decider` or `excluded`, with the acting side,
   step number, map number, exclusion reason (the raw `exclusion` plus `exclusionReason`, a
@@ -1244,7 +1254,32 @@ pure and tested without a DOM. It returns:
   steps, shown all at once with no reveal gating — `side`/`ab` come from comparing each
   entry's side to `a_side`, and `actorLabel`/`decider` read the same as ever. Otherwise it is
   exactly the plan-derived summary described above.
-- `teams.left` (A) and `teams.right` (B), falling back to `team_a` on the left while A is
+- `side`: Red/Blue and step 0, from the payload's `side` block.
+  - `red` is the Red team's side, falling back to A (`team_a` while unset); `confirmed`,
+    `tbc` (its opposite, for "Sides TBC") and `source` pass through. `viewerColor` is the
+    viewer's own colour once confirmed, and `null` for a non-player.
+  - `chooser`, `chooserName`, and `canChoose` (the payload's `can_choose_side`, only while
+    `side_choice` runs and the session is running). `viewerChooses` says the viewer's team
+    is the chooser during `side_choice`, even while the choice is closed by a pause.
+  - `phase` is `side_choice` or `side_spotlight` while step 0 runs, else `null`.
+    `side_choice` runs once the intro ends while the side is unset and a chooser is known.
+    It has no timer, and the stage shows it as `awaiting` with no `turn` and no open step.
+    `side_spotlight` runs from `side.set_at` until the payload's `phase_ends_at`, while the
+    server's phase is `side_spotlight` and the side came from step 0. The stage shows it as
+    `spotlight`, with no `spotlight` entry, the countdown to lettered step 1, and step 1 as
+    the next `turn`.
+  - `waiting` is "X are choosing their side" during `side_choice`. `reveal` (`side`,
+    `teamName`, `color`, and `text` such as "T04 → RED · bans first") is set during
+    `side_spotlight`.
+  - `introLine` is "Sides set by admin" for a side an admin set, so step 0 is skipped
+    (other sources have their own line). `notice` is "Sides changed by admin. Remaining
+    steps follow the new colours." when `changed_mid_veto` is set.
+  - `cards` are the payload's `side.cards`, Red then Blue. Each has a `title` ("Red ·
+    Side A"), a `lead` ("Ban 1st, pick 2nd": for each action, whether this colour does it
+    before the other), and `steps` with `number`, `action`, `segment`, the plan's
+    `mapNumber`, and a `label` ("Ban", "Pick map 2", "Ban (ban-down)"). When the match
+    has no plan, `cards` is empty.
+- `teams.left` (A) and `teams.right` (B), each with its `color`, falling back to `team_a` on the left while A is
   undetermined
 - `banners`: voided, cancelled, paused, skipped bans and warnings
 - `affordances`: `actingSide` and its letter `actingAb`, `canReady`, `isReady`, `canLock`, and
@@ -1265,7 +1300,9 @@ pure and tested without a DOM. It returns:
   `a_confirmed` (a manager chose A or swapped, rather than A following the stage seeds)
 - `nextBoundaryAt`: when the view next changes on its own
 - `scene`: what the centre stage shows, for animating it. `key` (`lobby`, `intro`,
-  `turn-<index>`, `reveal-<index>`, `complete`, `none`, `cancelled` or `voided`) stays the
+  `side-choice`, `side-reveal`, `turn-<index>`, `reveal-<index>`, `complete`, `none`,
+  `cancelled` or `voided`; the two step-0 scenes have kinds `side_choice` and
+  `side_reveal`, between the intro and the first turn) stays the
   same across every poll within one stage moment. `position` orders scenes through a run.
   `elapsedMs` is how long ago the scene began on the server timeline (a reveal at its
   `reveal_at`, a turn when the intro or the previous spotlight ended), frozen while paused
@@ -1792,6 +1829,7 @@ change lands; the types are additive, so nothing that compiles today stops compi
   `PUT .../stream/matches/<matchId>/sides` takes `MatchSidesBody` `{ red_team_id }` and answers
   `MatchSides` `{ red_team_id, blue_team_id, a_match_side, confirmed, source }`; its refusals
   are `MATCH_SIDES_ERROR_CODES` (`not_authorized`, `pick_ban_in_progress`, `invalid_side`).
+- **Labels.** Red/Blue copy comes from `app/utils/sideLabels.ts` (see `agents/styling.md`).
 - **Matches.** `MyMatchEntry.side_color` is the viewer's colour once the side is confirmed,
   else null (null for non-players too). `EventMatch` carries `red_team_id` and
   `red_side_source`; `EventMatchInput.red_team_id` (uuid or null) sets or clears the side in

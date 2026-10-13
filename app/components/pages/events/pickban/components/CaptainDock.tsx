@@ -1,12 +1,13 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { AlertTriangle, Check, Loader2, Lock, WifiOff, X, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { displayMapName } from '@/app/utils/format'
-import type { PickBanActor, PickBanStepAction } from '@/app/utils/api'
-import type { PickBanSide } from '@/app/utils/api'
+import type { PickBanActor, PickBanStepAction, SideColor } from '@/app/utils/api'
+import { sideColorName, sideColorTitle, sideColorTone } from '@/app/utils/sideLabels'
 import type { CaptainControls, CaptainDock as CaptainDockModel } from '../captainPlay'
-import { actionTagOf, type PickBanTurn } from '../pickBanView'
+import { actionTagOf, type PickBanSideCardView, type PickBanSideView, type PickBanTurn } from '../pickBanView'
 import { CountdownBar, CountdownText } from './Countdown'
+import { YoureSide } from './YoureSide'
 import { PICK_BAN_TONES, stepTone, teamTone, type PickBanToneClasses } from '@/app/components/broadcast/broadcastTone'
 
 interface CaptainDockProps {
@@ -16,8 +17,9 @@ interface CaptainDockProps {
     actingFor?: string
     onLockIn: () => void
     onToggleReady?: () => void
-    canChooseA?: boolean
-    onChooseA?: (side: PickBanSide) => void
+    side?: PickBanSideView
+    choosingSide?: SideColor | null
+    onChooseSide?: (color: SideColor) => void
     onDismiss: () => void
     className?: string
 }
@@ -25,6 +27,11 @@ interface CaptainDockProps {
 const BUTTON = 'inline-flex h-11 w-full shrink-0 items-center justify-center gap-2 rounded-lg border px-4 font-pickban text-lg font-black italic uppercase tracking-wide transition-colors sm:w-48'
 
 const LOCKED_BUTTON = cn(BUTTON, 'cursor-not-allowed border-hairline/10 bg-hairline/5 text-muted-foreground')
+
+const PLAIN_SIDE_CARDS: PickBanSideCardView[] = [
+    { color: 'red', letter: 'A', title: sideColorTitle('red'), lead: 'Acts first', steps: [] },
+    { color: 'blue', letter: 'B', title: sideColorTitle('blue'), lead: 'Acts second', steps: [] },
+]
 
 const LOCKED_EYEBROW: Record<Extract<CaptainControls, { kind: 'locked' }>['reason'], string> = {
     intro: 'Starting',
@@ -43,7 +50,7 @@ function upNext(next: PickBanTurn | null): string {
     return `Next: ${actionTagOf(next)}`
 }
 
-export function CaptainDock({ dock, ab, reconnecting, actingFor, onLockIn, onToggleReady, canChooseA, onChooseA, onDismiss, className }: CaptainDockProps) {
+export function CaptainDock({ dock, ab, reconnecting, actingFor, onLockIn, onToggleReady, side, choosingSide = null, onChooseSide, onDismiss, className }: CaptainDockProps) {
     const tone = PICK_BAN_TONES[teamTone(ab)]
 
     return (
@@ -53,14 +60,8 @@ export function CaptainDock({ dock, ab, reconnecting, actingFor, onLockIn, onTog
         >
             <span aria-hidden className={cn('absolute inset-0 -z-10 bg-gradient-to-r to-transparent to-70%', tone.wash)} />
             {dock.rejection && <Rejection message={dock.rejection} onDismiss={onDismiss} />}
+            {side && <SideStep side={side} choosing={choosingSide} onChoose={onChooseSide} />}
             {dock.controls && <Controls controls={dock.controls} tone={tone} actingFor={actingFor} onLockIn={onLockIn} onToggleReady={onToggleReady} />}
-            {canChooseA && onChooseA && (
-                <div className="flex flex-wrap items-center gap-2 border-t border-hairline/10 pt-3">
-                    <span className="mr-1 text-xs text-muted-foreground">Choose side A</span>
-                    <button type="button" onClick={() => onChooseA('team_a')} className={BUTTON}>Team A</button>
-                    <button type="button" onClick={() => onChooseA('team_b')} className={BUTTON}>Team B</button>
-                </div>
-            )}
             {reconnecting && (
                 <p role="status" className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-300">
                     <WifiOff className="size-3.5" />
@@ -190,6 +191,123 @@ function Controls({ controls, tone, actingFor, onLockIn, onToggleReady }: {
                 />
             )
     }
+}
+
+function SideStep({ side, choosing, onChoose }: {
+    side: PickBanSideView
+    choosing: SideColor | null
+    onChoose?: (color: SideColor) => void
+}) {
+    if (side.phase === 'side_choice' && side.canChoose && onChoose) {
+        return <SideChoice cards={side.cards.length > 0 ? side.cards : PLAIN_SIDE_CARDS} choosing={choosing} onChoose={onChoose} />
+    }
+    if (side.phase === 'side_choice' && side.viewerChooses) {
+        return (
+            <ControlRow
+                eyebrow={<Eyebrow className="text-muted-foreground">Side choice</Eyebrow>}
+                title="Choose Red or Blue"
+                detail="Your side choice unlocks when an admin resumes. Red is side A and acts first."
+                action={<LockedButton icon={Lock} label="Locked" />}
+            />
+        )
+    }
+    if (side.phase === 'side_choice') {
+        return (
+            <ControlRow
+                eyebrow={<Eyebrow className="text-muted-foreground">Side choice</Eyebrow>}
+                title={side.waiting ?? 'Choosing sides'}
+                detail="Your team gets the other colour. Red is side A and acts first."
+                action={<LockedButton icon={Lock} label="Locked" />}
+            />
+        )
+    }
+    if (side.phase === 'side_spotlight' && side.reveal) {
+        const tone = PICK_BAN_TONES[sideColorTone(side.reveal.color)]
+        return (
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-hairline/10 pb-3">
+                <Eyebrow className="text-muted-foreground">Sides set</Eyebrow>
+                <p aria-live="polite" className={cn('min-w-0 break-words font-pickban text-lg font-black italic uppercase leading-none tracking-tight', tone.text)}>{side.reveal.text}</p>
+                {side.viewerColor && <YoureSide color={side.viewerColor} className="sm:ml-auto" />}
+            </div>
+        )
+    }
+    return null
+}
+
+function SideChoice({ cards, choosing, onChoose }: {
+    cards: PickBanSideCardView[]
+    choosing: SideColor | null
+    onChoose: (color: SideColor) => void
+}) {
+    const [selected, setSelected] = useState<SideColor | null>(null)
+    const busy = choosing !== null
+    const tone = selected ? PICK_BAN_TONES[sideColorTone(selected)] : null
+
+    return (
+        <div className="flex flex-col gap-3">
+            <div className="space-y-1">
+                <Eyebrow className="text-foreground">Your call</Eyebrow>
+                <p aria-live="polite" className="break-words font-pickban text-2xl font-black italic uppercase leading-none tracking-tight text-foreground">Choose Red or Blue</p>
+                <p className="text-xs text-muted-foreground">Red is side A and acts first. The other team gets the other colour, for every map of the match.</p>
+            </div>
+            <div role="radiogroup" aria-label="Side" className="grid gap-3 sm:grid-cols-2">
+                {cards.map(card => (
+                    <SideCard key={card.color} card={card} selected={selected === card.color} disabled={busy} onSelect={() => setSelected(card.color)} />
+                ))}
+            </div>
+            <div className="flex justify-end">
+                <button
+                    type="button"
+                    onClick={() => selected && onChoose(selected)}
+                    disabled={selected === null || busy}
+                    className={cn(
+                        BUTTON,
+                        'cursor-pointer border-transparent hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:brightness-100',
+                        tone ? cn(tone.solid, tone.onSolid) : 'bg-hairline/10 text-muted-foreground',
+                    )}
+                >
+                    {busy ? <Loader2 className="size-4 animate-spin" /> : <Lock className="size-4" />}
+                    {selected ? `Lock In ${sideColorName(selected)}` : 'Lock In'}
+                </button>
+            </div>
+        </div>
+    )
+}
+
+function SideCard({ card, selected, disabled, onSelect }: {
+    card: PickBanSideCardView
+    selected: boolean
+    disabled: boolean
+    onSelect: () => void
+}) {
+    const tone = PICK_BAN_TONES[sideColorTone(card.color)]
+
+    return (
+        <button
+            type="button"
+            role="radio"
+            aria-checked={selected}
+            onClick={onSelect}
+            disabled={disabled}
+            className={cn(
+                'flex min-h-28 cursor-pointer flex-col items-start gap-2 rounded-xl border-2 p-3 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60 sm:p-4',
+                tone.line,
+                selected ? cn(tone.soft, tone.border, 'ring-2', tone.ring) : 'bg-card/40 hover:bg-hairline/5',
+            )}
+        >
+            <span className={cn('font-pickban text-3xl font-black italic uppercase leading-none tracking-tight', tone.text)}>{card.title}</span>
+            <span className="text-sm font-semibold text-foreground">{card.lead}</span>
+            {card.steps.length > 0 && (
+                <ul className="flex flex-wrap gap-1.5" aria-label={`${sideColorName(card.color)} steps`}>
+                    {card.steps.map(step => (
+                        <li key={step.number} className="rounded-md border border-hairline/10 bg-card/60 px-1.5 py-0.5 text-[11px] text-muted-foreground">
+                            <span className="font-semibold tabular-nums text-foreground">{step.number}</span> {step.label}
+                        </li>
+                    ))}
+                </ul>
+            )}
+        </button>
+    )
 }
 
 function Eyebrow({ className, children }: { className?: string; children: ReactNode }) {

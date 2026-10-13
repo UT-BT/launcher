@@ -1,6 +1,8 @@
 import type {
+    MatchSideSource,
     PickBanActor,
     PickBanBlockingReason,
+    PickBanContractPhase,
     PickBanExclusion,
     PickBanFinalMap,
     PickBanMember,
@@ -10,14 +12,21 @@ import type {
     PickBanPresetId,
     PickBanReady,
     PickBanSegment,
+    PickBanSequenceAction,
     PickBanSessionStatus,
     PickBanSide,
+    PickBanSideCard,
+    PickBanSidePhase,
     PickBanState,
     PickBanStepAction,
     PickBanUserRef,
     PickBanWarning,
+    SideColor,
 } from '@/app/utils/api'
 import { parseApiInstant } from '@/app/utils/timezone'
+import { sideColorName, sideColorOfLetter, sideColorTag, sideColorTitle, withSideColor } from '@/app/utils/sideLabels'
+
+export type PickBanViewState = Omit<PickBanState, 'phase'> & { phase: PickBanContractPhase | null }
 
 export type PickBanViewPhase = PickBanPhase | 'none'
 
@@ -42,6 +51,7 @@ export interface PickBanTimelineEntry {
     action: PickBanStepAction
     actor: PickBanActor | null
     side: PickBanSide | null
+    color: SideColor | null
     actorLabel: string
     actionLabel: string
     mapNumber: number | null
@@ -86,6 +96,7 @@ export interface PickBanTurn {
     stepNumber: number
     side: PickBanSide | null
     ab: PickBanActor | null
+    color: SideColor | null
     actorLabel: string
     action: PickBanStepAction
     segment: PickBanSegment
@@ -118,6 +129,7 @@ export interface PickBanTeamPanel {
     key: PickBanSide
     side: PickBanSide
     ab: PickBanActor | null
+    color: SideColor
     name: string
     stageSeed: number | null
     preCupSeed: number | null
@@ -170,11 +182,50 @@ export interface PickBanAffordances {
     actingSide: PickBanSide | null
     actingAb: PickBanActor | null
     canReady: boolean
-    canChooseA: boolean
-    chooserSide: PickBanSide | null
     isReady: boolean
     canLock: boolean
     manager: PickBanManagerControls | null
+}
+
+export interface PickBanSideCardStepView {
+    number: number
+    action: PickBanSequenceAction
+    segment: PickBanSegment
+    mapNumber: number | null
+    label: string
+}
+
+export interface PickBanSideCardView {
+    color: SideColor
+    letter: PickBanActor
+    title: string
+    lead: string
+    steps: PickBanSideCardStepView[]
+}
+
+export interface PickBanSideReveal {
+    side: PickBanSide
+    teamName: string
+    color: SideColor
+    text: string
+}
+
+export interface PickBanSideView {
+    phase: PickBanSidePhase | null
+    red: PickBanSide
+    confirmed: boolean
+    tbc: boolean
+    source: MatchSideSource | null
+    chooser: PickBanSide | null
+    chooserName: string | null
+    canChoose: boolean
+    viewerChooses: boolean
+    waiting: string | null
+    reveal: PickBanSideReveal | null
+    viewerColor: SideColor | null
+    introLine: string | null
+    notice: string | null
+    cards: PickBanSideCardView[]
 }
 
 export interface PickBanView {
@@ -191,6 +242,7 @@ export interface PickBanView {
     skippedBans: PickBanSkippedBan[]
     summary: PickBanSummaryEntry[]
     teams: { left: PickBanTeamPanel | null; right: PickBanTeamPanel | null }
+    side: PickBanSideView
     banners: PickBanBanner[]
     affordances: PickBanAffordances
     edited: boolean
@@ -199,7 +251,7 @@ export interface PickBanView {
     scene: PickBanScene
 }
 
-export type PickBanSceneKind = 'none' | 'lobby' | 'intro' | 'turn' | 'reveal' | 'complete' | 'cancelled' | 'voided'
+export type PickBanSceneKind = 'none' | 'lobby' | 'intro' | 'side_choice' | 'side_reveal' | 'turn' | 'reveal' | 'complete' | 'cancelled' | 'voided'
 
 export interface PickBanScene {
     key: string
@@ -217,7 +269,7 @@ export interface PickBanClock {
 }
 
 
-type LivePhase = 'lobby' | 'intro' | 'awaiting' | 'spotlight' | 'complete'
+type LivePhase = 'lobby' | 'intro' | PickBanSidePhase | 'awaiting' | 'spotlight' | 'complete'
 
 interface LiveTiming {
     phase: LivePhase
@@ -226,7 +278,7 @@ interface LiveTiming {
 }
 
 interface Moment {
-    state: PickBanState
+    state: PickBanViewState
     clock: number
     frozenAt: number | null
     toLocal: (serverInstant: number) => number
@@ -281,20 +333,20 @@ function isRevealedAt(step: PickBanPlanStep, clock: number): boolean {
     return isExecuted(step) && (revealAtOf(step) ?? -Infinity) <= clock
 }
 
-export function introStartsAt(state: PickBanState): number | null {
+export function introStartsAt(state: PickBanViewState): number | null {
     const introEnd = parseApiInstant(state.intro_ends_at)
     return introEnd === null ? null : introEnd - state.pacing.intro * 1000
 }
 
-function teamNameOf(state: PickBanState, side: PickBanSide | null): string | null {
+function teamNameOf(state: PickBanViewState, side: PickBanSide | null): string | null {
     return side ? state.teams[side]?.name ?? null : null
 }
 
-function screenshotVersionOf(state: PickBanState, map: string | null): string | null {
+function screenshotVersionOf(state: PickBanViewState, map: string | null): string | null {
     return map === null ? null : state.pool.find((card) => card.map === map)?.screenshot_version ?? null
 }
 
-function viewerActs(state: PickBanState, step: PickBanPlanStep): boolean {
+function viewerActs(state: PickBanViewState, step: PickBanPlanStep): boolean {
     return !step.automatic && step.side !== null && step.side === state.capabilities.acting_side
 }
 
@@ -303,7 +355,7 @@ function warningMessage(warning: PickBanWarning): string {
     return warning.message || warning.code || 'Warning'
 }
 
-function exclusionReasonOf(state: PickBanState, exclusion: PickBanExclusion | null): string | null {
+function exclusionReasonOf(state: PickBanViewState, exclusion: PickBanExclusion | null): string | null {
     if (!exclusion) return null
     const triggers = exclusion.triggered_by
         .map((trigger) => `${teamNameOf(state, trigger.side) ?? trigger.team_id} has pre-cup seed ${trigger.pre_cup_seed}`)
@@ -312,22 +364,34 @@ function exclusionReasonOf(state: PickBanState, exclusion: PickBanExclusion | nu
     return `${exclusion.tag} maps are excluded because ${triggers} (${exclusion.min_pre_cup_seed} or higher).`
 }
 
-function actorLabelForActor(state: PickBanState, actor: PickBanActor | null, side: PickBanSide | null): string {
-    if (actor === null) return 'Decider'
-    return teamNameOf(state, side) ?? `Team ${actor}`
+function colorOfActor(actor: PickBanActor | null): SideColor | null {
+    return actor === null ? null : sideColorOfLetter(actor)
 }
 
-function actorLabelOf(state: PickBanState, step: PickBanPlanStep): string {
+function redSideOf(state: PickBanViewState): PickBanSide {
+    return state.side.red ?? state.a_side ?? 'team_a'
+}
+
+function colorOfSide(state: PickBanViewState, side: PickBanSide): SideColor {
+    return side === redSideOf(state) ? 'red' : 'blue'
+}
+
+function actorLabelForActor(state: PickBanViewState, actor: PickBanActor | null, side: PickBanSide | null): string {
+    if (actor === null) return 'Decider'
+    return teamNameOf(state, side) ?? sideColorName(sideColorOfLetter(actor))
+}
+
+function actorLabelOf(state: PickBanViewState, step: PickBanPlanStep): string {
     return actorLabelForActor(state, step.actor, step.side)
 }
 
-function abOfSide(state: PickBanState, side: PickBanSide | null): PickBanActor | null {
+function abOfSide(state: PickBanViewState, side: PickBanSide | null): PickBanActor | null {
     return side === null ? null : side === state.a_side ? 'A' : 'B'
 }
 
-function actionLabelOf(state: PickBanState, step: PickBanPlanStep): string {
+function actionLabelOf(state: PickBanViewState, step: PickBanPlanStep): string {
     if (step.action === 'decider') return 'Decider'
-    return `${actorLabelOf(state, step)} ${step.action === 'ban' ? 'bans' : 'picks'}`
+    return `${withSideColor(actorLabelOf(state, step), colorOfActor(step.actor))} ${step.action === 'ban' ? 'bans' : 'picks'}`
 }
 
 export function actionTagOf(turn: Pick<PickBanTurn, 'action' | 'actorLabel'>): string {
@@ -335,9 +399,23 @@ export function actionTagOf(turn: Pick<PickBanTurn, 'action' | 'actorLabel'>): s
     return `${turn.actorLabel} (${turn.action})`
 }
 
+const STAGE_PHASE_OF_LIVE_PHASE: Record<LivePhase, PickBanStagePhase> = {
+    lobby: 'lobby',
+    intro: 'intro',
+    side_choice: 'awaiting',
+    side_spotlight: 'spotlight',
+    awaiting: 'awaiting',
+    spotlight: 'spotlight',
+    complete: 'complete',
+}
+
 function stagePhaseOf(status: PickBanSessionStatus, livePhase: LivePhase): PickBanStagePhase {
     if (status === 'none' || status === 'cancelled' || status === 'voided') return status
-    return livePhase
+    return STAGE_PHASE_OF_LIVE_PHASE[livePhase]
+}
+
+function isSidePhase(phase: LivePhase): phase is PickBanSidePhase {
+    return phase === 'side_choice' || phase === 'side_spotlight'
 }
 
 export interface PickBanRevealedSteps {
@@ -347,7 +425,7 @@ export interface PickBanRevealedSteps {
     revealed: PickBanPlanStep[]
 }
 
-export function revealedStepsAt(state: PickBanState, { clockOffsetMs, now }: PickBanClock): PickBanRevealedSteps {
+export function revealedStepsAt(state: PickBanViewState, { clockOffsetMs, now }: PickBanClock): PickBanRevealedSteps {
     const frozenAt = state.status === 'paused' ? parseApiInstant(state.paused_at) : null
     const serverNow = now + clockOffsetMs
     const clock = frozenAt === null ? serverNow : Math.min(serverNow, frozenAt)
@@ -356,7 +434,7 @@ export function revealedStepsAt(state: PickBanState, { clockOffsetMs, now }: Pic
     return { clock, frozenAt, steps, revealed }
 }
 
-function momentOf(state: PickBanState, clockInput: PickBanClock): Moment {
+function momentOf(state: PickBanViewState, clockInput: PickBanClock): Moment {
     const { clock, frozenAt, steps, revealed: revealedSteps } = revealedStepsAt(state, clockInput)
     const currentStep = steps.find((step) => !isRevealedAt(step, clock)) ?? null
     return {
@@ -380,6 +458,19 @@ function spotlightEndOf(moment: Moment, step: PickBanPlanStep): number {
     return own
 }
 
+function sideSpotlightEndOf(state: PickBanViewState): number | null {
+    return state.side.source === 'step0' && state.phase === 'side_spotlight' ? parseApiInstant(state.phase_ends_at) : null
+}
+
+function sideStepTiming(moment: Moment, introEnd: number | null): LiveTiming | null {
+    const { state, clock } = moment
+    if (moment.steps.some(isExecuted)) return null
+    if (state.side.red === null && state.side.chooser !== null) return { phase: 'side_choice', startsAt: introEnd, endsAt: null }
+    const spotlightEnd = sideSpotlightEndOf(state)
+    if (spotlightEnd === null || clock >= spotlightEnd) return null
+    return { phase: 'side_spotlight', startsAt: parseApiInstant(state.side.set_at), endsAt: spotlightEnd }
+}
+
 function liveTiming(moment: Moment): LiveTiming {
     const { state, clock, lastRevealed, currentStep } = moment
     if (!LIVE_STATUSES.includes(state.status)) return IDLE_TIMING
@@ -387,13 +478,15 @@ function liveTiming(moment: Moment): LiveTiming {
     if (introStart !== null && clock < introStart) return IDLE_TIMING
     const introEnd = parseApiInstant(state.intro_ends_at)
     if (introEnd !== null && clock < introEnd) return { phase: 'intro', startsAt: introStart, endsAt: introEnd }
+    const sideStep = sideStepTiming(moment, introEnd)
+    if (sideStep) return sideStep
     const settledPhase = currentStep ? 'awaiting' : 'complete'
     if (lastRevealed) {
         const spotlightEnd = spotlightEndOf(moment, lastRevealed)
         if (clock < spotlightEnd) return { phase: 'spotlight', startsAt: revealAtOf(lastRevealed), endsAt: spotlightEnd }
         return { phase: settledPhase, startsAt: spotlightEnd, endsAt: null }
     }
-    return { phase: settledPhase, startsAt: introEnd, endsAt: null }
+    return { phase: settledPhase, startsAt: sideSpotlightEndOf(state) ?? introEnd, endsAt: null }
 }
 
 function countdownOf(moment: Moment, timing: LiveTiming): PickBanCountdown | null {
@@ -442,8 +535,6 @@ function affordancesOf(moment: Moment, awaitedStep: PickBanPlanStep | null, live
         actingSide,
         actingAb: actingSide ? state.teams[actingSide]?.ab ?? null : null,
         canReady: state.status === 'lobby' && state.capabilities.can_ready,
-        canChooseA: state.status === 'lobby' && state.capabilities.can_choose_a,
-        chooserSide: state.chooser_side,
         isReady: actingSide !== null && state.ready[actingSide] !== null,
         canLock: state.status === 'running'
             && awaitedStep !== null
@@ -469,6 +560,7 @@ function timelineOf(moment: Moment, inProgress: boolean, revealingIndex: number 
             action: step.action,
             actor: step.actor,
             side: step.side,
+            color: colorOfActor(step.actor),
             actorLabel: actorLabelOf(state, step),
             actionLabel: actionLabelOf(state, step),
             mapNumber: step.map_number,
@@ -484,7 +576,7 @@ function timelineOf(moment: Moment, inProgress: boolean, revealingIndex: number 
     })
 }
 
-function skippedBansOf(state: PickBanState): PickBanSkippedBan[] {
+function skippedBansOf(state: PickBanViewState): PickBanSkippedBan[] {
     return state.skipped_bans.map((skipped, order) => ({
         key: `skipped-${order}`,
         actor: skipped.actor,
@@ -528,7 +620,7 @@ function cardsOf(moment: Moment, awaitedStep: PickBanPlanStep | null, canChoose:
     })
 }
 
-function finalSummaryOf(state: PickBanState, finalMaps: PickBanFinalMap[]): PickBanSummaryEntry[] {
+function finalSummaryOf(state: PickBanViewState, finalMaps: PickBanFinalMap[]): PickBanSummaryEntry[] {
     return [...finalMaps]
         .sort((a, b) => a.map_number - b.map_number)
         .map((entry) => {
@@ -578,6 +670,7 @@ function turnOf(moment: Moment, inProgress: boolean): PickBanTurn | null {
         stepNumber: currentStep.index + 1,
         side: currentStep.side,
         ab: currentStep.actor,
+        color: colorOfActor(currentStep.actor),
         actorLabel: actorLabelOf(state, currentStep),
         action: currentStep.action,
         segment: currentStep.segment,
@@ -596,6 +689,7 @@ function panelOf(moment: Moment, side: PickBanSide, awaitedStep: PickBanPlanStep
         key: side,
         side,
         ab: team.ab,
+        color: colorOfSide(state, side),
         name: team.name,
         stageSeed: team.stage_seed,
         preCupSeed: team.pre_cup_seed,
@@ -607,7 +701,7 @@ function panelOf(moment: Moment, side: PickBanSide, awaitedStep: PickBanPlanStep
     }
 }
 
-function matchHeadingOf(state: PickBanState, leftSide: PickBanSide): PickBanMatchHeading {
+function matchHeadingOf(state: PickBanViewState, leftSide: PickBanSide): PickBanMatchHeading {
     const nameOf = (side: PickBanSide) => teamNameOf(state, side) ?? 'TBD'
     return {
         title: `${nameOf(leftSide)} vs ${nameOf(otherSide(leftSide))}`,
@@ -630,7 +724,95 @@ function bannersOf(moment: Moment): PickBanBanner[] {
     return banners
 }
 
-function setupOf(state: PickBanState): PickBanSetup {
+const SIDE_INTRO_LINES: Record<MatchSideSource, string | null> = {
+    step0: null,
+    admin: 'Sides set by admin',
+    caster: 'Sides set by the caster',
+    backfill: 'Sides already set',
+}
+
+const SIDES_CHANGED_NOTICE = 'Sides changed by admin. Remaining steps follow the new colours.'
+
+const ORDINALS = ['1st', '2nd']
+
+const ORDINAL_WORDS = ['first', 'second']
+
+interface ActionLead {
+    action: PickBanSequenceAction
+    order: number
+}
+
+function firstStepOf(card: PickBanSideCard | undefined, action: PickBanSequenceAction): number {
+    return card?.steps.find((step) => step.action === action)?.n ?? Infinity
+}
+
+function actionLeadsOf(card: PickBanSideCard, other: PickBanSideCard | undefined): ActionLead[] {
+    const actions = [...new Set(card.steps.map((step) => step.action))]
+    return actions.map((action) => ({ action, order: firstStepOf(card, action) < firstStepOf(other, action) ? 0 : 1 }))
+}
+
+function leadOf(card: PickBanSideCard, other: PickBanSideCard | undefined): string {
+    const lead = actionLeadsOf(card, other).map(({ action, order }) => `${action} ${ORDINALS[order]}`).join(', ')
+    return lead.charAt(0).toUpperCase() + lead.slice(1)
+}
+
+function cardStepLabel(action: PickBanSequenceAction, segment: PickBanSegment, mapNumber: number | null): string {
+    if (action === 'pick') return mapNumber === null ? 'Pick' : `Pick map ${mapNumber}`
+    return segment === 'ban_down' ? 'Ban (ban-down)' : 'Ban'
+}
+
+function sideCardsOf(moment: Moment): PickBanSideCardView[] {
+    const { cards } = moment.state.side
+    return cards.map((card) => {
+        const other = cards.find((candidate) => candidate.color !== card.color)
+        return {
+            color: card.color,
+            letter: card.letter,
+            title: sideColorTitle(card.color),
+            lead: leadOf(card, other),
+            steps: card.steps.map((step) => {
+                const mapNumber = moment.steps.find((planStep) => planStep.index === step.n - 1)?.map_number ?? null
+                return { number: step.n, action: step.action, segment: step.segment, mapNumber, label: cardStepLabel(step.action, step.segment, mapNumber) }
+            }),
+        }
+    })
+}
+
+function sideRevealOf(state: PickBanViewState): PickBanSideReveal {
+    const side = state.side.chooser ?? redSideOf(state)
+    const color = colorOfSide(state, side)
+    const teamName = teamNameOf(state, side) ?? sideColorName(color)
+    const card = state.side.cards.find((candidate) => candidate.color === color)
+    const opening = card ? actionLeadsOf(card, state.side.cards.find((candidate) => candidate !== card))[0] : undefined
+    const what = opening ? ` · ${opening.action}s ${ORDINAL_WORDS[opening.order]}` : ''
+    return { side, teamName, color, text: `${teamName} → ${sideColorTag(color)}${what}` }
+}
+
+function sideViewOf(moment: Moment, livePhase: LivePhase): PickBanSideView {
+    const { state } = moment
+    const { side } = state
+    const phase = isSidePhase(livePhase) ? livePhase : null
+    const chooserName = side.chooser === null ? null : teamNameOf(state, side.chooser) ?? 'TBD'
+    return {
+        phase,
+        red: redSideOf(state),
+        confirmed: side.confirmed,
+        tbc: !side.confirmed,
+        source: side.source,
+        chooser: side.chooser,
+        chooserName,
+        canChoose: phase === 'side_choice' && state.status === 'running' && state.capabilities.can_choose_side,
+        viewerChooses: phase === 'side_choice' && side.chooser !== null && side.chooser === state.capabilities.acting_side,
+        waiting: phase === 'side_choice' ? `${chooserName ?? 'A team'} are choosing their side` : null,
+        reveal: phase === 'side_spotlight' ? sideRevealOf(state) : null,
+        viewerColor: side.confirmed && state.viewer.side !== null ? colorOfSide(state, state.viewer.side) : null,
+        introLine: side.confirmed && side.source !== null ? SIDE_INTRO_LINES[side.source] : null,
+        notice: side.changed_mid_veto ? SIDES_CHANGED_NOTICE : null,
+        cards: sideCardsOf(moment),
+    }
+}
+
+function setupOf(state: PickBanViewState): PickBanSetup {
     const { sequence } = state
     return {
         sequence: sequence && {
@@ -654,10 +836,10 @@ function nextBoundaryOf(moment: Moment, timing: LiveTiming): number | null {
     return upcoming.length > 0 ? moment.toLocal(Math.min(...upcoming)) : null
 }
 
-export function buildPickBanView(state: PickBanState, clock: PickBanClock): PickBanView {
+export function buildPickBanView(state: PickBanViewState, clock: PickBanClock): PickBanView {
     const moment = momentOf(state, clock)
     const timing = liveTiming(moment)
-    const inProgress = timing.phase === 'intro' || timing.phase === 'awaiting' || timing.phase === 'spotlight'
+    const inProgress = timing.phase === 'intro' || timing.phase === 'awaiting' || timing.phase === 'spotlight' || timing.phase === 'side_spotlight'
     const awaitedStep = timing.phase === 'awaiting' && !moment.pendingStep ? moment.currentStep : null
     const affordances = affordancesOf(moment, awaitedStep, timing.phase)
     const canChoose = affordances.canLock || (affordances.manager?.actForSide ?? null) !== null
@@ -682,6 +864,7 @@ export function buildPickBanView(state: PickBanState, clock: PickBanClock): Pick
         skippedBans: skippedBansOf(state),
         summary: summaryOf(moment),
         teams: { left: panelOf(moment, leftSide, awaitedStep), right: panelOf(moment, otherSide(leftSide), awaitedStep) },
+        side: sideViewOf(moment, timing.phase),
         banners: bannersOf(moment),
         affordances,
         edited: state.edited,
@@ -693,9 +876,11 @@ export function buildPickBanView(state: PickBanState, clock: PickBanClock): Pick
 
 type SceneIdentity = Pick<PickBanScene, 'key' | 'kind' | 'position'>
 
-function sceneIdentityOf(moment: Moment, stagePhase: PickBanStagePhase): SceneIdentity {
+function sceneIdentityOf(moment: Moment, stagePhase: PickBanStagePhase, livePhase: LivePhase): SceneIdentity {
     const { currentStep, lastRevealed, steps } = moment
     const end = 2 + 2 * steps.length
+    if (livePhase === 'side_choice') return { key: 'side-choice', kind: 'side_choice', position: 1.25 }
+    if (livePhase === 'side_spotlight') return { key: 'side-reveal', kind: 'side_reveal', position: 1.5 }
     if (stagePhase === 'awaiting' && currentStep) {
         return { key: `turn-${currentStep.index}`, kind: 'turn', position: 2 + 2 * currentStep.index }
     }
@@ -730,7 +915,7 @@ function entranceMsOf(moment: Moment, kind: PickBanSceneKind): number {
 }
 
 function sceneOf(moment: Moment, stagePhase: PickBanStagePhase, timing: LiveTiming): PickBanScene {
-    const identity = sceneIdentityOf(moment, stagePhase)
+    const identity = sceneIdentityOf(moment, stagePhase, timing.phase)
     return {
         ...identity,
         elapsedMs: timing.startsAt === null ? null : moment.clock - timing.startsAt,

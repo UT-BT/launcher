@@ -158,7 +158,7 @@ describe('locked controls', () => {
             kind: 'locked', reason: 'spotlight', countdown, next: { stepIndex: 1, viewerActs: true },
         })
         expect(captainDockOf(previous, IDLE_CAPTAIN_PLAY)?.controls).toMatchObject({
-            kind: 'locked', reason: 'spotlight', countdown, next: { stepIndex: 1, viewerActs: false, actionLabel: 'Azure Owls bans' },
+            kind: 'locked', reason: 'spotlight', countdown, next: { stepIndex: 1, viewerActs: false, actionLabel: 'Azure Owls (Blue) bans' },
         })
         expect(selectMap(IDLE_CAPTAIN_PLAY, next, BRAVO)).toBe(IDLE_CAPTAIN_PLAY)
     })
@@ -192,7 +192,7 @@ describe('locked controls', () => {
         const view = viewAt(asCaptain(readAt(started(), AWAITING_A), 'team_b'), AWAITING_A)
 
         expect(captainDockOf(view, IDLE_CAPTAIN_PLAY)?.controls).toMatchObject({
-            kind: 'waiting', turn: { stepIndex: 0, viewerActs: false, actionLabel: 'Crimson Cats bans' },
+            kind: 'waiting', turn: { stepIndex: 0, viewerActs: false, actionLabel: 'Crimson Cats (Red) bans' },
         })
         expect(view.cards.some((card) => card.selectable)).toBe(false)
         expect(selectMap(IDLE_CAPTAIN_PLAY, view, BRAVO)).toBe(IDLE_CAPTAIN_PLAY)

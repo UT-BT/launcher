@@ -530,6 +530,27 @@ tick is refused before React re-renders. `select` also requests a hover, and an 
 hover before it submits, and the store's one-command-at-a-time rule covers a hover already in
 flight. The pending hover is cancelled on unmount too.
 
+**The side choice (step 0)** doesn't go through captain play. The view model's `side` block
+(see `agents/data-sources.md`) says when it runs (`side.phase` is `side_choice`, then
+`side_spotlight`) and whether this viewer may choose (`side.canChoose`). The match page
+(`MatchPickBanPage.tsx`) handles it:
+
+- While a step-0 phase runs, anyone with `affordances.actingSide` gets the captain dock with
+  `side={view.side}`, even when `captainDockOf` is `null`. That happens during
+  `side_choice`, because no lettered turn is open yet.
+- The chooser sees the two side cards (`CaptainDock`). The selected card is plain
+  `useState` inside the dock, so it is dropped once the phase ends. Lock In sends
+  `sendCommand('side', { choice })`.
+- While the choice is closed for the chooser (a pause), `side.viewerChooses` keeps their dock
+  on "Choose Red or Blue" with locked controls rather than the other captain's waiting row.
+- The other captain sees "X are choosing their side". In `side_spotlight` both captains
+  see the reveal and their own colour. Under it, `captainDockOf` gives the usual `locked`
+  controls (reason `spotlight`) with the countdown to step 1.
+- The page keeps `{ choosing, rejection }` in `useState`. `choosing` disables the cards
+  and spins the button. A refusal becomes the dock's refusal message, worded for
+  `side_not_open`, `not_authorized`, `version_conflict`, `wrong_status`, `paused` and
+  `no_session`, with the server's own message for anything else. Dismiss clears it.
+
 **Manager play** (`events/pickban/managerDock.ts`, pure, Vitest without a DOM) is the same
 idea for a viewer with `can_manage`, on its own path so a manager never goes through the
 captain's select. `ManagerPlay` holds the act-for selection (tied to its plan index), the

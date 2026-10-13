@@ -10,7 +10,7 @@ not_here:
   - "which component to use → shared-components.md"
   - "state / persistence → state-patterns.md"
 sections: [class-merging, tables-locked, responsive-columns, page-layout, filter-panel, buttons-toggle-states, form-inputs, card-backgrounds-borders, text, color-palette, animation, css-runtime-cost, broadcast-styling, scene-stylesheet, screenshot-conventions, donts]
-last_verified: 2026-10-05
+last_verified: 2026-10-13
 verify_against: [app/components/shared/DataTable.tsx, app/components/shared/LiveDot.tsx, app/components/shared/chipStyles.ts, app/styles/globals.css, app/styles/theme.css, app/styles/desktop.css, app/styles/index.css, lib/utils.ts, app/hooks/useElementWidth.ts, app/hooks/usePrefersReducedMotion.ts, app/components/broadcast/broadcastTone.ts, app/components/broadcast/broadcastMotion.ts, app/components/broadcast/broadcastFonts.ts, app/components/broadcast/broadcastFonts.css, app/components/broadcast/BroadcastStage.tsx, app/components/stream/streamScenes.css, app/components/stream/frame/SceneFrame.tsx, e2e/streamHarness.ts, playwright.config.ts, app/components/stream/scenes/overlay/overlayLayout.ts, app/components/stream/scenes/nextMap/NextMapHero.tsx, e2e/audio-balance.broadcast.spec.ts]
 ---
 
@@ -382,6 +382,28 @@ Game identity, not chrome — keep these **literal**, never route through `accen
   (`app/components/broadcast/broadcastTone.ts`) rather than spelling the classes out. A
   gradient, glow or shadow that needs the raw colour takes it from `PICK_BAN_HUES` in the
   same file (a `var(--color-pickban-*)` value, mixed with `color-mix()` for alpha).
+
+### Red/Blue sides: wording and labels
+
+A match has one Red team and one Blue team for the whole series. **Red is side A and acts
+first, Blue is side B**, and the tones keep their meaning: Red is the crimson `pickban-a`
+tone, Blue the azure `pickban-b` one.
+
+- **Wording.** Player- and caster-facing text leads with Red/Blue and keeps A/B secondary:
+  step labels read "Crimson Cats (Red) bans", a side card's title reads "Red · Side A", the
+  reveal reads "T04 → RED · bans first", and a player's own colour reads "You’re **Red**".
+  Admin tools show both. Until the side is confirmed, show "Sides TBC" rather than a colour
+  you can't stand behind.
+- **Labels.** Build every one of these from `app/utils/sideLabels.ts`, never by hand:
+  `sideColorName` (`Red`), `sideColorTag` (`RED`), `sideColorTitle` (`Red · Side A`),
+  `sideLetterOf` / `sideColorOfLetter` (Red ↔ A), `otherSideColor`, `withSideColor(name,
+  color)` (`T04 (Red)`, and just the colour when the name already is one), `sideTagOf(color,
+  confirmed)` (the tag, or `SIDES_TBC` while unconfirmed) and `youreSideLabel(color)`
+  (`You’re Red`, or `null`).
+- **Tones.** `sideColorTone(color)` maps a colour to its `PICK_BAN_TONES` / `PICK_BAN_HUES`
+  key (`a` or `b`).
+- **"You’re Red" chip.** `events/pickban/components/YoureSide.tsx` renders it in the colour's
+  tone, on the pick/ban page and on My Matches cards.
 
 ## Themes
 

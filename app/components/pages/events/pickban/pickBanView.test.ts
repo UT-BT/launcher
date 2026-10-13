@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import type { PickBanState } from '@/app/utils/api'
-import { buildPickBanView, playsEntrance, sceneDirection } from './pickBanView'
+import type { PickBanSideCard, PickBanState } from '@/app/utils/api'
+import { streamSidesFixture } from '@/app/utils/fixtures/streamSidesFixtures'
+import { buildPickBanView, playsEntrance, sceneDirection, type PickBanViewState } from './pickBanView'
 import {
     BAN_DOWN_SPOTLIGHT_MS,
     DECIDER_SPOTLIGHT_MS,
@@ -36,7 +37,7 @@ const INTRO_START = T0 + LEAD_MS
 const INTRO_END = INTRO_START + INTRO_MS
 const FIRST_LOCK = INTRO_END + 2_000
 
-function viewAt(state: PickBanState, serverTime: number, clockOffsetMs = 0) {
+function viewAt(state: PickBanViewState, serverTime: number, clockOffsetMs = 0) {
     return buildPickBanView(state, { clockOffsetMs, now: serverTime - clockOffsetMs })
 }
 
@@ -72,7 +73,7 @@ describe('phase between polls', () => {
         expect(awaiting.phase).toBe('awaiting')
         expect(awaiting.countdown).toBeNull()
         expect(awaiting.turn).toMatchObject({
-            stepIndex: 0, side: 'team_a', ab: 'A', action: 'ban', actorLabel: 'Crimson Cats', actionLabel: 'Crimson Cats bans',
+            stepIndex: 0, side: 'team_a', ab: 'A', action: 'ban', actorLabel: 'Crimson Cats', actionLabel: 'Crimson Cats (Red) bans',
         })
     })
 
@@ -104,7 +105,7 @@ describe('phase between polls', () => {
         const next = viewAt(state, FIRST_LOCK + LEAD_MS + SPOTLIGHT_MS)
         expect(next.phase).toBe('awaiting')
         expect(next.spotlight).toBeNull()
-        expect(next.turn).toMatchObject({ stepIndex: 1, side: 'team_b', action: 'ban', actionLabel: 'Azure Owls bans' })
+        expect(next.turn).toMatchObject({ stepIndex: 1, side: 'team_b', action: 'ban', actionLabel: 'Azure Owls (Blue) bans' })
     })
 
     it('says which map the awaited pick decides, and none for a ban', () => {
@@ -114,7 +115,7 @@ describe('phase between polls', () => {
 
         expect(viewAt(awaitingBan, INTRO_END + 1_000).turn).toMatchObject({ action: 'ban', mapNumber: null })
         expect(viewAt(awaitingPick, unlockAt(bothBansIn) + 1_000).turn).toMatchObject({
-            stepIndex: 2, side: 'team_b', action: 'pick', mapNumber: 1, actionLabel: 'Azure Owls picks',
+            stepIndex: 2, side: 'team_b', action: 'pick', mapNumber: 1, actionLabel: 'Azure Owls (Blue) picks',
         })
     })
 
@@ -498,21 +499,21 @@ describe('timeline', () => {
         expect(viewAt(asSpectator(versioned(pickBanState())), T0).summary.every((entry) => entry.screenshotVersion === null)).toBe(true)
     })
 
-    it('labels who acts at every step: the team, its letter while the team is undecided, or the decider', () => {
+    it('labels who acts at every step: the team, its colour while the team is undecided, or the decider', () => {
         const undecidedB = pickBanState({ teams: { ...pickBanState().teams, team_b: null } })
 
         const view = viewAt(asSpectator(undecidedB), T0)
 
         expect(view.timeline.map((entry) => [entry.actorLabel, entry.actionLabel])).toEqual([
-            ['Crimson Cats', 'Crimson Cats bans'],
-            ['Team B', 'Team B bans'],
-            ['Team B', 'Team B picks'],
-            ['Crimson Cats', 'Crimson Cats picks'],
-            ['Team B', 'Team B bans'],
-            ['Crimson Cats', 'Crimson Cats bans'],
+            ['Crimson Cats', 'Crimson Cats (Red) bans'],
+            ['Blue', 'Blue bans'],
+            ['Blue', 'Blue picks'],
+            ['Crimson Cats', 'Crimson Cats (Red) picks'],
+            ['Blue', 'Blue bans'],
+            ['Crimson Cats', 'Crimson Cats (Red) bans'],
             ['Decider', 'Decider'],
         ])
-        expect(view.summary.map((entry) => entry.actorLabel)).toEqual(['Team B', 'Crimson Cats', 'Decider'])
+        expect(view.summary.map((entry) => entry.actorLabel)).toEqual(['Blue', 'Crimson Cats', 'Decider'])
     })
 })
 
@@ -680,7 +681,7 @@ describe('affordances', () => {
     it('gives a spectator nothing to do', () => {
         const view = viewAt(asSpectator(awaitingA), INTRO_END + 1_000)
 
-        expect(view.affordances).toEqual({ actingSide: null, actingAb: null, canReady: false, isReady: false, canLock: false, canChooseA: false, chooserSide: null, manager: null })
+        expect(view.affordances).toEqual({ actingSide: null, actingAb: null, canReady: false, isReady: false, canLock: false, manager: null })
         expect(view.cards.some((c) => c.selectable)).toBe(false)
     })
 
@@ -998,5 +999,298 @@ describe('stage scene', () => {
         expect(backToTurn.elapsedMs).toBeGreaterThan(backToTurn.entranceMs)
         expect(playsEntrance(backToTurn, -1)).toBe(true)
         expect(playsEntrance(viewAt(asSpectator(pickBanState()), T0).scene, 1)).toBe(true)
+    })
+})
+
+type ContractFixtureName = 'pickBanLobby' | 'pickBanLobbyUndetermined' | 'pickBanSideChoice' | 'pickBanSideSpotlight' | 'pickBanAdminSet'
+
+function contractState(name: ContractFixtureName): PickBanViewState {
+    const fixture = streamSidesFixture(name)
+    return { ...fixture, chooser_side: null, a_confirmed: false, capabilities: { ...fixture.capabilities, can_choose_a: false } }
+}
+
+function serverNowOf(state: PickBanViewState): number {
+    return Date.parse(state.server_now)
+}
+
+function contractViewOf(state: PickBanViewState, serverTime = serverNowOf(state)) {
+    return viewAt(state, serverTime)
+}
+
+function asOtherCaptain(state: PickBanViewState): PickBanViewState {
+    return {
+        ...state,
+        viewer: { side: 'team_a', roster_captain: true },
+        capabilities: { ...state.capabilities, acting_side: 'team_a', can_choose_side: false },
+    }
+}
+
+function asContractSpectator(state: PickBanViewState): PickBanViewState {
+    return {
+        ...state,
+        viewer: { side: null, roster_captain: false },
+        capabilities: { ...state.capabilities, acting_side: null, can_choose_side: false },
+    }
+}
+
+const BO3_CARDS: PickBanSideCard[] = [
+    {
+        color: 'red',
+        letter: 'A',
+        steps: [{ n: 1, action: 'ban', segment: 'lettered' }, { n: 4, action: 'pick', segment: 'lettered' }, { n: 6, action: 'ban', segment: 'ban_down' }],
+    },
+    {
+        color: 'blue',
+        letter: 'B',
+        steps: [{ n: 2, action: 'ban', segment: 'lettered' }, { n: 3, action: 'pick', segment: 'lettered' }, { n: 5, action: 'ban', segment: 'ban_down' }],
+    },
+]
+
+const BO4_PICK_CARDS: PickBanSideCard[] = [
+    { color: 'red', letter: 'A', steps: [{ n: 1, action: 'pick', segment: 'lettered' }, { n: 3, action: 'pick', segment: 'lettered' }] },
+    { color: 'blue', letter: 'B', steps: [{ n: 2, action: 'pick', segment: 'lettered' }, { n: 4, action: 'pick', segment: 'lettered' }] },
+]
+
+const BO5_RED_CARD = {
+    color: 'red',
+    letter: 'A',
+    title: 'Red · Side A',
+    lead: 'Ban 1st, pick 2nd',
+    steps: [
+        { number: 1, label: 'Ban' },
+        { number: 4, label: 'Pick map 2' },
+        { number: 6, label: 'Pick map 4' },
+        { number: 8, label: 'Ban' },
+        { number: 10, label: 'Ban (ban-down)' },
+    ],
+}
+
+const BO5_BLUE_CARD = {
+    color: 'blue',
+    letter: 'B',
+    title: 'Blue · Side B',
+    lead: 'Ban 2nd, pick 1st',
+    steps: [
+        { number: 2, label: 'Ban' },
+        { number: 3, label: 'Pick map 1' },
+        { number: 5, label: 'Pick map 3' },
+        { number: 7, label: 'Ban' },
+        { number: 9, label: 'Ban (ban-down)' },
+        { number: 11, label: 'Ban (ban-down)' },
+    ],
+}
+
+describe('step 0: the side choice', () => {
+    const choice = contractState('pickBanSideChoice')
+
+    it('lets the chooser’s captain pick Red or Blue from two cards once the intro ends', () => {
+        const view = contractViewOf(choice)
+
+        expect(view.side).toMatchObject({
+            phase: 'side_choice',
+            chooser: 'team_b',
+            chooserName: 'T04',
+            canChoose: true,
+            viewerChooses: true,
+            confirmed: false,
+            tbc: true,
+            waiting: 'T04 are choosing their side',
+            reveal: null,
+            viewerColor: null,
+        })
+        expect(view.side.cards).toMatchObject([BO5_RED_CARD, BO5_BLUE_CARD])
+    })
+
+    it('runs the choice as the live stage moment, with no lettered step open and no countdown', () => {
+        const view = contractViewOf(choice)
+
+        expect(view.phase).toBe('awaiting')
+        expect(view.stagePhase).toBe('awaiting')
+        expect(view.turn).toBeNull()
+        expect(view.countdown).toBeNull()
+        expect(view.affordances.canLock).toBe(false)
+        expect(view.cards.some((card) => card.selectable)).toBe(false)
+        expect(view.timeline.every((entry) => entry.status === 'upcoming')).toBe(true)
+        expect(view.scene).toMatchObject({ key: 'side-choice', kind: 'side_choice' })
+    })
+
+    it('shows the other captain who is choosing, with nothing to choose', () => {
+        const view = contractViewOf(asOtherCaptain(choice))
+
+        expect(view.side).toMatchObject({ phase: 'side_choice', canChoose: false, viewerChooses: false, waiting: 'T04 are choosing their side' })
+        expect(view.affordances.actingSide).toBe('team_a')
+    })
+
+    it('shows a spectator who is choosing too', () => {
+        const view = contractViewOf(asContractSpectator(choice))
+
+        expect(view.side).toMatchObject({ phase: 'side_choice', canChoose: false, viewerChooses: false, waiting: 'T04 are choosing their side', viewerColor: null })
+    })
+
+    it('keeps the intro on screen until it ends, then opens the choice without another poll', () => {
+        const introEnd = Date.parse(choice.intro_ends_at!)
+
+        expect(contractViewOf(choice, introEnd - 1_000)).toMatchObject({ phase: 'intro', side: { phase: null, canChoose: false } })
+        expect(contractViewOf(choice, introEnd)).toMatchObject({ phase: 'awaiting', side: { phase: 'side_choice', canChoose: true } })
+    })
+
+    it('closes the choice while paused, still knowing the viewer is the chooser', () => {
+        const pausedAt = serverNowOf(choice)
+        const view = contractViewOf({ ...choice, status: 'paused', phase: 'paused', paused: true, paused_at: choice.server_now }, pausedAt + 5_000)
+
+        expect(view.phase).toBe('paused')
+        expect(view.side).toMatchObject({ phase: 'side_choice', canChoose: false, viewerChooses: true })
+    })
+})
+
+describe('step 0: the side spotlight', () => {
+    const spotlight = contractState('pickBanSideSpotlight')
+    const endsAt = Date.parse(spotlight.phase_ends_at!)
+
+    it('reveals which colour the chooser took and what it means for them', () => {
+        const view = contractViewOf(spotlight)
+
+        expect(view.side).toMatchObject({
+            phase: 'side_spotlight',
+            red: 'team_b',
+            confirmed: true,
+            tbc: false,
+            source: 'step0',
+            waiting: null,
+            canChoose: false,
+            reveal: { side: 'team_b', teamName: 'T04', color: 'red', text: 'T04 → RED · bans first' },
+            viewerColor: 'red',
+        })
+        expect(view.scene).toMatchObject({ key: 'side-reveal', kind: 'side_reveal' })
+    })
+
+    it('counts the spotlight down to the first lettered step, which waits until it ends', () => {
+        const view = contractViewOf(spotlight)
+
+        expect(view.stagePhase).toBe('spotlight')
+        expect(view.spotlight).toBeNull()
+        expect(view.countdown).toMatchObject({ endsAt, remainingMs: endsAt - serverNowOf(spotlight), frozen: false })
+        expect(view.turn).toMatchObject({ stepIndex: 0, side: 'team_b', color: 'red', actionLabel: 'T04 (Red) bans' })
+        expect(view.affordances.canLock).toBe(false)
+        expect(view.nextBoundaryAt).toBe(endsAt)
+    })
+
+    it('opens lettered step 1 once the spotlight ends, between polls', () => {
+        const view = contractViewOf(spotlight, endsAt)
+
+        expect(view.stagePhase).toBe('awaiting')
+        expect(view.side).toMatchObject({ phase: null, reveal: null, red: 'team_b', confirmed: true })
+        expect(view.turn).toMatchObject({ stepIndex: 0, actorLabel: 'T04', actionLabel: 'T04 (Red) bans' })
+        expect(view.scene).toMatchObject({ key: 'turn-0', elapsedMs: 0 })
+    })
+
+    it('tells the other captain which colour they got', () => {
+        expect(contractViewOf(asOtherCaptain(spotlight)).side.viewerColor).toBe('blue')
+        expect(contractViewOf(asContractSpectator(spotlight)).side.viewerColor).toBeNull()
+    })
+
+    it('says picks second when the chooser took Blue in a sequence that opens with picks', () => {
+        const picks = exactFitPicks()
+        const running = asSpectator(started(picks))
+        const state: PickBanViewState = {
+            ...running,
+            phase: 'side_spotlight',
+            phase_ends_at: iso(INTRO_END + 20_000),
+            side: { ...picks.side, red: 'team_b', source: 'step0', confirmed: true, set_at: iso(INTRO_END + 5_000), chooser: 'team_a', cards: BO4_PICK_CARDS },
+        }
+
+        expect(viewAt(state, INTRO_END + 8_000).side.reveal).toMatchObject({ teamName: 'Crimson Cats', color: 'blue', text: 'Crimson Cats → BLUE · picks second' })
+    })
+
+    it('moves forward from the choice to the reveal to step 1, and back on an undo of the choice', () => {
+        const choiceScene = contractViewOf(contractState('pickBanSideChoice')).scene
+        const intro = contractViewOf(spotlight, Date.parse(spotlight.intro_ends_at!) - 1_000).scene
+        const reveal = contractViewOf(spotlight).scene
+        const firstTurn = contractViewOf(spotlight, endsAt).scene
+
+        expect(sceneDirection(intro, choiceScene)).toBe(1)
+        expect(sceneDirection(choiceScene, reveal)).toBe(1)
+        expect(sceneDirection(reveal, firstTurn)).toBe(1)
+        expect(sceneDirection(reveal, choiceScene)).toBe(-1)
+    })
+})
+
+describe('step 0: the cards', () => {
+    it('lists each colour’s real steps for a Bo5 with ban-down', () => {
+        expect(contractViewOf(contractState('pickBanLobby')).side.cards).toMatchObject([BO5_RED_CARD, BO5_BLUE_CARD])
+    })
+
+    it('lists each colour’s real steps for a Bo3 with a decider', () => {
+        const state = pickBanState({ side: { ...pickBanState().side, cards: BO3_CARDS } })
+
+        expect(viewAt(asSpectator(state), T0).side.cards).toMatchObject([
+            {
+                color: 'red',
+                letter: 'A',
+                title: 'Red · Side A',
+                lead: 'Ban 1st, pick 2nd',
+                steps: [{ number: 1, label: 'Ban' }, { number: 4, label: 'Pick map 2' }, { number: 6, label: 'Ban (ban-down)' }],
+            },
+            {
+                color: 'blue',
+                letter: 'B',
+                title: 'Blue · Side B',
+                lead: 'Ban 2nd, pick 1st',
+                steps: [{ number: 2, label: 'Ban' }, { number: 3, label: 'Pick map 1' }, { number: 5, label: 'Ban (ban-down)' }],
+            },
+        ])
+    })
+
+    it('lists each colour’s real steps for a Bo4 of picks only', () => {
+        const state = exactFitPicks()
+
+        expect(viewAt(asSpectator({ ...state, side: { ...state.side, cards: BO4_PICK_CARDS } }), T0).side.cards).toMatchObject([
+            { color: 'red', letter: 'A', title: 'Red · Side A', lead: 'Pick 1st', steps: [{ number: 1, label: 'Pick map 1' }, { number: 3, label: 'Pick map 3' }] },
+            { color: 'blue', letter: 'B', title: 'Blue · Side B', lead: 'Pick 2nd', steps: [{ number: 2, label: 'Pick map 2' }, { number: 4, label: 'Pick map 4' }] },
+        ])
+    })
+
+    it('shows no cards when the match has no plan', () => {
+        expect(viewAt(asSpectator(pickBanState()), T0).side.cards).toEqual([])
+    })
+})
+
+describe('step 0: sides before and around the choice', () => {
+    it('falls back to team_a as Red with Sides TBC in an unconfirmed lobby, and tells no player a colour yet', () => {
+        const view = contractViewOf(contractState('pickBanLobby'))
+
+        expect(view.side).toMatchObject({ phase: null, red: 'team_a', confirmed: false, tbc: true, viewerColor: null, chooserName: 'T04', introLine: null })
+        expect(view.teams.left).toMatchObject({ side: 'team_a', name: 'T01', color: 'red' })
+        expect(view.teams.right).toMatchObject({ side: 'team_b', name: 'T04', color: 'blue' })
+        expect(view.timeline[0]).toMatchObject({ color: 'red', actionLabel: 'T01 (Red) bans' })
+        expect(view.timeline[1]).toMatchObject({ color: 'blue', actionLabel: 'T04 (Blue) bans' })
+    })
+
+    it('names no chooser while the lobby can’t decide one', () => {
+        expect(contractViewOf(contractState('pickBanLobbyUndetermined')).side).toMatchObject({ chooser: null, chooserName: null, tbc: true, waiting: null })
+    })
+
+    it('skips the choice for a side an admin set before Start, and says so', () => {
+        const view = contractViewOf(contractState('pickBanAdminSet'))
+
+        expect(view.side).toMatchObject({ phase: null, red: 'team_b', source: 'admin', confirmed: true, tbc: false, introLine: 'Sides set by admin', notice: null, viewerColor: 'blue' })
+        expect(view.teams.left).toMatchObject({ side: 'team_b', name: 'T04', color: 'red' })
+        expect(view.turn).toMatchObject({ stepIndex: 1, color: 'blue', actionLabel: 'T01 (Blue) bans', viewerActs: true })
+        expect(view.affordances.canLock).toBe(true)
+        expect(view.timeline[0]).toMatchObject({ status: 'revealed', actionLabel: 'T04 (Red) bans' })
+    })
+
+    it('shows a side set by admin in the intro too', () => {
+        const state = contractState('pickBanAdminSet')
+
+        expect(contractViewOf(state, Date.parse(state.intro_ends_at!) - 1_000)).toMatchObject({ phase: 'intro', side: { introLine: 'Sides set by admin' } })
+    })
+
+    it('warns that the remaining steps follow new colours when an admin changed the side mid-veto', () => {
+        const state = contractState('pickBanAdminSet')
+
+        expect(contractViewOf({ ...state, side: { ...state.side, changed_mid_veto: true } }).side.notice)
+            .toBe('Sides changed by admin. Remaining steps follow the new colours.')
+        expect(contractViewOf(state).side.notice).toBeNull()
     })
 })

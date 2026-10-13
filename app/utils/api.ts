@@ -6359,7 +6359,6 @@ export async function fetchPickBanState(
 }
 
 export interface PickBanParticipantCommandBodies {
-    'choose-a': { side: PickBanSide; version: number }
     side: PickBanSideCommandBody
     ready: { version: number }
     unready: { version: number }
