@@ -1,5 +1,6 @@
 import { Award } from 'lucide-react'
 import type { AchievementDefinition, AchievementProgress } from '@/app/utils/api'
+import { awardedAtEnd, isStillWinnable } from '@/app/components/pages/achievements/eventAchievements'
 
 function achievementName(definitions: Map<string, AchievementDefinition>, code: string): string {
     return definitions.get(code)?.name ?? code.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
@@ -21,6 +22,10 @@ interface AchievementProgressPreviewProps {
 export function AchievementProgressPreview({ achievements, definitions }: AchievementProgressPreviewProps) {
     const rows = achievements
         .filter(a => !a.maxed && a.next_threshold != null)
+        .filter(a => {
+            const def = definitions.get(a.code)
+            return !def || (isStillWinnable(def) && !awardedAtEnd(def))
+        })
         .sort((a, b) => b.percent_to_next - a.percent_to_next)
         .slice(0, 6)
 

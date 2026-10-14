@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { AlertTriangle, RefreshCw } from 'lucide-react'
+import { AlertTriangle, Award, RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/app/components/ui/button'
 import { ErrorBanner } from '@/app/components/pages/teams/teamsShared'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import {
-    eventErrorMessage, fetchEventPredictionAdminMarkets, syncEventPredictions,
+    eventErrorMessage, fetchEventPredictionAdminMarkets, finaliseEventPredictions, syncEventPredictions,
     updateEventPredictionConfig, updateEventPredictionMarket,
-    type PredictionAdminMarkets, type PredictionConfig, type PredictionMarket,
+    type PredictionAdminMarkets, type PredictionConfig, type PredictionEventAchievements,
+    type PredictionMarket,
 } from '@/app/utils/api'
 import { formatMatchTime } from '../bracket/bracketShared'
 import { PredictionLedgerPanel } from './PredictionLedgerPanel'
@@ -228,6 +229,15 @@ export function PredictionsManagePanel({ accessToken, slug, onRefresh }: {
                 </div>
             )}
 
+            <FinalisePanel
+                achievements={data.achievements}
+                busy={busy}
+                onFinalise={() => run(
+                    () => finaliseEventPredictions(accessToken, slug),
+                    'Titles awarded.',
+                )}
+            />
+
             <PredictionLedgerPanel accessToken={accessToken} slug={slug} />
 
             <div className="space-y-2">
@@ -245,6 +255,79 @@ export function PredictionsManagePanel({ accessToken, slug, onRefresh }: {
                     />
                 ))}
             </div>
+        </div>
+    )
+}
+
+/**
+ * Awarding the event's titles.
+ *
+ * Two clicks rather than one, and the second says what it does: the titles this
+ * grants are permanent and there is no route that takes one back. Everything
+ * else on this panel can be undone.
+ */
+function FinalisePanel({ achievements, busy, onFinalise }: {
+    achievements?: PredictionEventAchievements
+    busy: boolean
+    onFinalise: () => void
+}) {
+    const [confirming, setConfirming] = useState(false)
+    const event = achievements?.event
+
+    if (!event) return null
+
+    if (event.finalised_at) {
+        return (
+            <div className="p-3 rounded-lg border border-hairline/10 bg-card/30 text-sm text-muted-foreground flex gap-2">
+                <Award className="size-4 shrink-0 mt-0.5 text-violet-300" />
+                <span>
+                    <span className="text-foreground">{event.name}</span> titles have been awarded.
+                    Correcting a result from here on changes the coins, not the titles.
+                </span>
+            </div>
+        )
+    }
+
+    const blockers: string[] = []
+
+    if (achievements?.unfinished_markets) {
+        blockers.push(`${achievements.unfinished_markets} market${achievements.unfinished_markets === 1 ? '' : 's'} still to settle`)
+    }
+
+    if (achievements?.undecided_matches) {
+        blockers.push(`${achievements.undecided_matches} match${achievements.undecided_matches === 1 ? '' : 'es'} still to be decided`)
+    }
+
+    return (
+        <div className="p-3 rounded-lg border border-violet-500/30 bg-card/30 text-sm space-y-2">
+            <div className="flex gap-2">
+                <Award className="size-4 shrink-0 mt-0.5 text-violet-300" />
+                <span className="text-muted-foreground">
+                    <span className="text-foreground">{event.name}</span> titles have not been awarded yet.
+                    {!achievements?.ready_to_finalise && blockers.length > 0 && ` Waiting on ${blockers.join(' and ')}.`}
+                </span>
+            </div>
+            {achievements?.ready_to_finalise && (
+                <div className="flex flex-wrap items-center gap-2 pl-6">
+                    {confirming ? (
+                        <>
+                            <span className="text-amber-200 text-[13px]">
+                                This awards the titles for good — they cannot be taken back.
+                            </span>
+                            <Button size="sm" variant="secondary" disabled={busy} onClick={onFinalise}>
+                                Yes, award them
+                            </Button>
+                            <Button size="sm" variant="ghost" disabled={busy} onClick={() => setConfirming(false)}>
+                                Cancel
+                            </Button>
+                        </>
+                    ) : (
+                        <Button size="sm" variant="secondary" disabled={busy} onClick={() => setConfirming(true)}>
+                            Award titles
+                        </Button>
+                    )}
+                </div>
+            )}
         </div>
     )
 }
