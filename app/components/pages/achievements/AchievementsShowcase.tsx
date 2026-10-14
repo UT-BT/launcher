@@ -1,11 +1,5 @@
 import { Fragment, useMemo, useState } from 'react'
-import {
-    Lock, Sparkles, Award, Crown, Check, ChevronDown,
-    Clock, Map as MapIcon, Trophy, Medal, Star, Swords, Tags, Globe, Shield, Wind, Flame, Snowflake,
-    Users, Handshake, ShieldCheck, Zap, Gem,
-    Hammer, Hourglass, Heart, PenTool, Blocks, Repeat,
-    type LucideIcon,
-} from 'lucide-react'
+import { Lock, Award, Check, ChevronDown, Snowflake } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import { getTitleTextStyle } from '@/app/utils/titleStyles'
@@ -17,6 +11,16 @@ import {
     type AchievementTitle,
     type ActiveTitle,
 } from '@/app/utils/api'
+import {
+    AWARDED_AT_END_TEXT,
+    EVENT_CATEGORY,
+    awardedAtEnd,
+    eventSectionFirst,
+    eventSectionLabel,
+    eventStateOf,
+    eventWindowNotice,
+} from './eventAchievements'
+import { achievementIcon } from './achievementIcons'
 
 export type AchievementStatusFilter = 'all' | 'unlocked' | 'locked' | 'maxed'
 
@@ -26,12 +30,6 @@ export const STATUS_FILTERS: { id: AchievementStatusFilter; label: string }[] = 
     { id: 'locked', label: 'Locked' },
     { id: 'maxed', label: 'Maxed' },
 ]
-
-const ICON_MAP: Record<string, LucideIcon> = {
-    Clock, Map: MapIcon, Crown, Medal, Award, Trophy, Swords, Star, Tags, Globe, Shield, Wind, Flame, Sparkles,
-    Users, Handshake, ShieldCheck, Zap, Gem,
-    Hammer, Hourglass, Heart, PenTool, Blocks, Repeat,
-}
 
 function goalTextFor(def: AchievementDefinition, tier: AchievementTier): string {
     return tier.is_all
@@ -100,6 +98,7 @@ const CATEGORIES = [
     { id: 'team', label: 'Team' },
     { id: 'mapper', label: 'Mapper' },
     { id: 'mastery', label: 'Mastery' },
+    { id: 'event', label: 'Limited time' },
 ] as const
 
 function categoryOf(def: AchievementDefinition): AchievementCategory {
@@ -112,6 +111,54 @@ function SectionHeading({ label, maxed, total }: { label: string; maxed: number;
             <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground shrink-0">{label}</h2>
             <span className="flex-1 h-px bg-hairline/10" />
             <span className="text-[11px] tabular-nums text-muted-foreground/70 shrink-0">{maxed}/{total} maxed</span>
+        </div>
+    )
+}
+
+function windowText(def: AchievementDefinition): string | null {
+    const notice = eventWindowNotice(def)
+
+    if (!notice) return null
+    if (notice.at === null) return notice.prefix === 'Ended' ? 'Ended' : null
+
+    const when = new Date(notice.at).toLocaleDateString(undefined, {
+        year: 'numeric', month: 'short', day: '2-digit',
+    })
+
+    return `${notice.prefix} ${when}`
+}
+
+/**
+ * The heading for a limited-time section. It carries what the ordinary one
+ * cannot: which event this is, and whether there is still time.
+ */
+function EventSectionHeading({
+    definitions, maxed, total,
+}: { definitions: AchievementDefinition[]; maxed: number; total: number }) {
+    const first = definitions[0]
+    const state = first ? eventStateOf(first) : null
+    const ended = state === 'ended'
+    const when = first ? windowText(first) : null
+
+    return (
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 pt-2 first:pt-0">
+            <h2 className={cn(
+                'text-[11px] font-semibold uppercase tracking-wider shrink-0',
+                ended ? 'text-muted-foreground/70' : 'text-violet-300',
+            )}>
+                {eventSectionLabel(definitions)}
+            </h2>
+            <span className={cn(
+                'shrink-0 text-[9px] font-bold uppercase tracking-wider px-1 py-0.5 rounded',
+                ended ? 'bg-white/5 text-muted-foreground' : 'bg-violet-500/15 text-violet-300',
+            )}>
+                {ended ? 'Ended' : 'Limited time'}
+            </span>
+            {when && <span className="shrink-0 text-[11px] text-muted-foreground/70">{when}</span>}
+            <span className="flex-1 min-w-4 h-px bg-hairline/10" />
+            <span className="text-[11px] tabular-nums text-muted-foreground/70 shrink-0">
+                {ended ? `${maxed}/${total} earned` : `${maxed}/${total} maxed`}
+            </span>
         </div>
     )
 }
@@ -155,9 +202,16 @@ export function AchievementsShowcase({
             return true
         }), [definitions, progressByCode, statusFilter])
 
-    const sections = useMemo(() => CATEGORIES
+    const ordered = useMemo(() => {
+        const rest = CATEGORIES.filter(c => c.id !== EVENT_CATEGORY)
+        const event = CATEGORIES.filter(c => c.id === EVENT_CATEGORY)
+
+        return eventSectionFirst(definitions) ? [...event, ...rest] : [...rest, ...event]
+    }, [definitions])
+
+    const sections = useMemo(() => ordered
         .map(c => ({ ...c, rows: filtered.filter(({ def }) => categoryOf(def) === c.id) }))
-        .filter(s => s.rows.length > 0), [filtered])
+        .filter(s => s.rows.length > 0), [filtered, ordered])
 
     const totals = useMemo(() => {
         const tally: Record<string, { total: number; maxed: number }> = {}
@@ -191,7 +245,12 @@ export function AchievementsShowcase({
         <>
             {sections.map(section => (
                 <Fragment key={section.id}>
-                    {showHeadings && <SectionHeading label={section.label} {...totals[section.id]} />}
+                    {showHeadings && (section.id === EVENT_CATEGORY
+                        ? <EventSectionHeading
+                            definitions={definitions.filter(d => categoryOf(d) === EVENT_CATEGORY)}
+                            {...totals[section.id]}
+                        />
+                        : <SectionHeading label={section.label} {...totals[section.id]} />)}
                     {section.rows.map(({ def, progress }) => (
                         <AchievementRow key={def.code} def={def} progress={progress} anonymous={anonymous} />
                     ))}
@@ -253,12 +312,14 @@ function TierBar({ def, progress }: { def: AchievementDefinition; progress: Achi
 
 function AchievementRow({ def, progress, anonymous }: { def: AchievementDefinition; progress: AchievementProgress; anonymous: boolean }) {
     const [showTitles, setShowTitles] = useState(false)
-    const Icon = ICON_MAP[def.icon] ?? Award
+    const Icon = achievementIcon(def.icon)
     const maxed = progress.maxed
     const isBadge = (def.tiers ?? []).length === 1    // single-tier "earn it" achievement
     const rIdx = progress.current_level - 1           // rarity index of current tier (-1 when locked)
     const rarity = progress.current_level >= 1 ? rarityOf(rIdx) : null
     const goal = progress.next_threshold ?? progress.max_threshold
+    const heldToEnd = awardedAtEnd(def) && !progress.unlocked
+    const onTrack = heldToEnd && progress.percent_to_next >= 100
 
     return (
         <div
@@ -305,10 +366,13 @@ function AchievementRow({ def, progress, anonymous }: { def: AchievementDefiniti
                                 {!anonymous && <span className="text-muted-foreground"> / {(goal ?? 0).toLocaleString()}</span>}
                             </span>
                             <span className={cn('font-semibold', maxed ? 'text-emerald-300' : 'text-muted-foreground')}>
-                                {maxed ? (isBadge ? 'Earned' : 'Complete') : `${progress.percent_to_next}%`}
+                                {maxed ? (isBadge ? 'Earned' : 'Complete') : onTrack ? 'On track' : `${progress.percent_to_next}%`}
                             </span>
                         </div>
                         {!anonymous && <TierBar def={def} progress={progress} />}
+                        {heldToEnd && (
+                            <div className="text-[10px] text-muted-foreground">{AWARDED_AT_END_TEXT}</div>
+                        )}
                         {!anonymous && progress.current && (
                             <div className="text-[10px] text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-0.5">
                                 <span>
@@ -348,7 +412,7 @@ function AchievementRow({ def, progress, anonymous }: { def: AchievementDefiniti
                             const r = rarityOf(tier.level - 1)
                             const name = tier.title?.name ?? `Rarity ${tier.level} title`
                             const goalText = goalTextFor(def, tier)
-                            const remainingText = remainingTextFor(def, tier, progress)
+                            const remainingText = onTrack ? AWARDED_AT_END_TEXT : remainingTextFor(def, tier, progress)
                             return (
                                 <Tooltip
                                     key={tier.level}

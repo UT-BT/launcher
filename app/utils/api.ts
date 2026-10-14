@@ -3203,7 +3203,18 @@ export interface AchievementTitle {
     color_b: number
 }
 
-export type AchievementCategory = 'general' | 'solo' | 'team' | 'mapper' | 'mastery'
+export type AchievementCategory = 'general' | 'solo' | 'team' | 'mapper' | 'mastery' | 'event'
+
+export type AchievementEventState = 'upcoming' | 'live' | 'ended'
+
+export interface AchievementEvent {
+    key: string
+    name: string
+    opens_at: string | null // ISO with a +00:00 offset; read with parseApiInstant
+    closes_at: string | null
+    finalised_at: string | null
+    state: AchievementEventState
+}
 
 export interface AchievementTier {
     index?: number
@@ -3227,6 +3238,8 @@ export interface AchievementDefinition {
     unit?: string           // short noun for the "N <unit> to go" countdown, e.g. "hours"
     team?: boolean
     category?: AchievementCategory
+    event?: AchievementEvent | null // limited-time achievements only
+    unlocks_mid_event?: boolean
     tiers: AchievementTier[]
 }
 
@@ -4171,6 +4184,7 @@ export interface EventDetail extends EventSummary {
     description: string | null
     rules: string | null
     predictions_enabled?: boolean
+    achievements_enabled?: boolean
 }
 
 export interface EventTeamMember {
@@ -5541,11 +5555,71 @@ export interface PredictionBetResult {
     replayed: boolean
 }
 
+export interface PredictionEventAchievements {
+    event: { key: string; name: string; finalised_at: string | null } | null
+    ready_to_finalise?: boolean
+    unfinished_markets?: number
+    undecided_matches?: number
+}
+
 export interface PredictionAdminMarkets {
     items: PredictionMarket[]
     unscheduled_open_count: number
     bracket_published?: boolean
     config: PredictionConfig
+    achievements?: PredictionEventAchievements
+}
+
+export interface PredictionFinaliseResult {
+    finalised: boolean
+    already_finalised: boolean
+    participants: number
+    unlocks: number
+    achievements?: PredictionEventAchievements
+}
+
+export type EventAchievementMeasureKind = 'coins' | 'signed_coins' | 'percent' | 'signed_percent' | 'count' | 'flag'
+
+export interface EventAchievementStanding {
+    value: number | null
+    settled: number
+    qualifies: boolean
+    awarded: boolean
+}
+
+export interface EventAchievementPlayer extends EventAchievementStanding {
+    user_id: string
+    alias: string | null
+    title: RawActiveTitle | null
+}
+
+export interface EventAchievementBoardEntry {
+    code: string
+    name: string
+    description: string
+    goal: string
+    icon: string
+    unit: string
+    level: number
+    title: RawActiveTitle | null
+    unlocks_mid_event: boolean
+    measure: { kind: EventAchievementMeasureKind; label: string | null }
+    threshold: number
+    min_settled: number | null
+    awaiting_final: boolean
+    names_hidden: boolean
+    qualifying_count: number
+    awarded_count: number
+    qualifying: EventAchievementPlayer[]
+    chasing: EventAchievementPlayer[]
+    you: EventAchievementStanding | null
+}
+
+export interface EventAchievementBoard {
+    event: AchievementEvent | null
+    finalised: boolean
+    participants: number
+    achievements: EventAchievementBoardEntry[]
 }
 
 const PREDICTIONS_OFF: PredictionsOverview = {
@@ -5679,6 +5753,26 @@ export async function updateEventPredictionMarket(
 
 export async function syncEventPredictions(accessToken: string, slug: string): Promise<{ changed: number }> {
     return apiGetOr<{ changed: number }>(predictionsPath(slug, '/admin/sync'), { changed: 0 }, { token: accessToken, method: 'POST' })
+}
+
+/**
+ * Award the event's achievements off the final standings. One way — the titles it
+ * grants are never revoked — so this uses apiGet, not apiGetOr: a refusal has to
+ * reach the manager rather than being swallowed into a default.
+ */
+export async function finaliseEventPredictions(accessToken: string, slug: string): Promise<PredictionFinaliseResult> {
+    return apiGet<PredictionFinaliseResult>(
+        predictionsPath(slug, '/admin/finalise'),
+        { token: accessToken, method: 'POST' },
+    )
+}
+
+export async function fetchEventAchievementBoard(
+    accessToken: string,
+    slug: string,
+    signal?: AbortSignal,
+): Promise<EventAchievementBoard> {
+    return apiGet<EventAchievementBoard>(predictionsPath(slug, '/achievements'), { token: accessToken, signal })
 }
 
 export interface PredictionFormEntry {

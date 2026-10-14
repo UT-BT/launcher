@@ -11,7 +11,7 @@ not_here:
   - "the PlayerInfo / CapTimeLink components that trigger nav → shared-components.md"
   - "the Schedule tab's own visibility rule and its audiences → data-sources.md"
 sections: [the-model, navigate-is-the-only-entry-point, leave-guards, url-sync-web-build, link-semantics, page-views-vs-detail-pages, the-sidebar-registry, event-driven-navigation, sidebar-new-badges, page-refresh-registry, per-entry-state, shareable-match-links, match-pickban-page]
-last_verified: 2026-10-07
+last_verified: 2026-10-14
 verify_against:
   - app/components/main/Main.tsx
   - app/components/navigation/NavLink.tsx
@@ -78,9 +78,9 @@ const [cursor, setCursor] = useState(0)
   new tab (e.g. the public Maps tab listing each stage's pick/ban pool) is therefore a change local
   to `EventDetailPage.tsx` with no routing/`route-contract.json`/title change
   needed, the same way Schedule and Predictions needed none.
-  `EventTab` is `'info' | 'teams' | 'bracket' | 'maps' | 'predictions' | 'schedule'
-  | 'players' | 'signup' | 'stream' | 'manage'`; a tab not in the currently visible set (its
-  gate — bracket presence, a Maps pool, `predictions_enabled`, the Schedule tab's
+  `EventTab` is `'info' | 'teams' | 'bracket' | 'maps' | 'predictions' | 'achievements'
+  | 'schedule' | 'players' | 'signup' | 'stream' | 'manage'`; a tab not in the currently visible set (its
+  gate — bracket presence, a Maps pool, `predictions_enabled`, `achievements_enabled`, the Schedule tab's
   own visibility rule in `agents/data-sources.md`, the Stream tab's `streamTabVisible`
   rule below — failing, or `manage` without
   `canManageBracket`) silently falls back to `info` rather than erroring.
