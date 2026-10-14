@@ -775,14 +775,19 @@ describe('affordances', () => {
 
         expect(controls(pickBanState({ id: null, status: 'none', phase: null }))).toMatchObject({ open: true, start: false, cancel: false })
         expect(controls(pickBanState({ blocking_reason: 'pool_too_small', blocking_reasons: ['pool_too_small'] }))).toMatchObject({
-            open: false, start: true, startBlockedBy: 'pool_too_small', chooseA: true, swap: true, overrideSequence: true,
+            open: false, start: true, startBlockedBy: 'pool_too_small', sideChooser: true, setSides: true, swap: false, overrideSequence: true,
             handOver: true, cancel: true, pause: false, restart: false, actForSide: null,
         })
         expect(controls(awaitingA, INTRO_END + 1_000)).toMatchObject({
-            start: false, chooseA: false, swap: true, pause: true, resume: false, undo: false, restart: true, cancel: true, actForSide: 'team_a',
+            start: false, sideChooser: false, setSides: true, swap: false, pause: true, resume: false, undo: false, restart: true, cancel: true,
+            actForSide: 'team_a', actForSideChoice: null,
         })
+        const sidesSet = { ...awaitingA.side, red: 'team_a', source: 'admin', confirmed: true } as const
+        expect(controls({ ...awaitingA, side: sidesSet }, INTRO_END + 1_000)).toMatchObject({ setSides: true, swap: true })
+        expect(controls(pickBanState({ side: sidesSet }))).toMatchObject({ sideChooser: false, setSides: true, swap: true })
+        expect(controls(pickBanState({ side: { ...sidesSet, source: 'caster' } }))).toMatchObject({ sideChooser: true, setSides: true, swap: true })
         const afterFirstStep = readAt(firstBanLocked(), FIRST_LOCK + 20_000)
-        expect(controls(afterFirstStep, FIRST_LOCK + 20_000)).toMatchObject({ swap: false, undo: true, actForSide: 'team_b' })
+        expect(controls({ ...afterFirstStep, side: sidesSet }, FIRST_LOCK + 20_000)).toMatchObject({ setSides: false, swap: false, undo: true, actForSide: 'team_b' })
         expect(controls(firstBanLocked(), FIRST_LOCK + LEAD_MS + 1_000)).toMatchObject({ actForSide: null })
         expect(controls(paused(firstBanLocked(), FIRST_LOCK + 5_000), FIRST_LOCK + 6_000)).toMatchObject({
             pause: false, resume: true, undo: true, actForSide: null,
@@ -864,17 +869,15 @@ describe('match heading', () => {
 })
 
 describe('setup', () => {
-    it('says where the sequence came from and whether a manager set A', () => {
+    it('says where the sequence came from', () => {
         const state = asManager(pickBanState())
         const sequence = state.sequence!
 
         expect(viewAt(state, T0).setup).toEqual({
             sequence: { presetId: 'bo3_ban_pick', stageKey: 'bracket', ownStage: true },
-            aConfirmed: false,
         })
-        expect(viewAt({ ...state, a_confirmed: true, sequence: { ...sequence, preset_id: null, from_stage_key: 'groups' } }, T0).setup).toEqual({
+        expect(viewAt({ ...state, sequence: { ...sequence, preset_id: null, from_stage_key: 'groups' } }, T0).setup).toEqual({
             sequence: { presetId: null, stageKey: 'groups', ownStage: false },
-            aConfirmed: true,
         })
         expect(viewAt({ ...state, sequence: { ...sequence, preset_id: 'bo5_ban_pick', from_stage_key: null } }, T0).setup.sequence).toEqual({
             presetId: 'bo5_ban_pick',
@@ -1005,8 +1008,7 @@ describe('stage scene', () => {
 type ContractFixtureName = 'pickBanLobby' | 'pickBanLobbyUndetermined' | 'pickBanSideChoice' | 'pickBanSideSpotlight' | 'pickBanAdminSet'
 
 function contractState(name: ContractFixtureName): PickBanViewState {
-    const fixture = streamSidesFixture(name)
-    return { ...fixture, chooser_side: null, a_confirmed: false, capabilities: { ...fixture.capabilities, can_choose_a: false } }
+    return streamSidesFixture(name)
 }
 
 function serverNowOf(state: PickBanViewState): number {

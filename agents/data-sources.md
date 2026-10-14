@@ -1108,7 +1108,7 @@ waits for a poll. Every body except Open's carries the expected `version`.
   branch on the code only where a screen reacts to a specific one. The captain controls do:
   `captainPlay.ts` words each Ready/Unready and Lock refusal for the captain
   (`version_conflict`, `not_your_turn`, `map_unavailable`, `spotlight_active`,
-  `intro_active`, `paused`, `wrong_status`, `not_authorized`, `no_session`), and falls back
+  `intro_active`, `side_choice_active`, `paused`, `wrong_status`, `not_authorized`, `no_session`), and falls back
   to `err.message` for any other code. The manager dock words every code: its own sentence
   for each code that isn't a Start blocking reason, and `blockingReasonLabel` for the seven
   that are (see the watch page's manager dock below).
@@ -1258,7 +1258,8 @@ pure and tested without a DOM. It returns:
   - `red` is the Red team's side, falling back to A (`team_a` while unset); `confirmed`,
     `tbc` (its opposite, for "Sides TBC") and `source` pass through. `viewerColor` is the
     viewer's own colour once confirmed, and `null` for a non-player.
-  - `chooser`, `chooserName`, and `canChoose` (the payload's `can_choose_side`, only while
+  - `chooser`, `chooserName`, `chooserReason` (the payload's `chooser_reason`, for the
+    manager dock's chooser rule), and `canChoose` (the payload's `can_choose_side`, only while
     `side_choice` runs and the session is running). `viewerChooses` says the viewer's team
     is the chooser during `side_choice`, even while the choice is closed by a pause.
   - `phase` is `side_choice` or `side_spotlight` while step 0 runs, else `null`.
@@ -1284,10 +1285,13 @@ pure and tested without a DOM. It returns:
 - `banners`: voided, cancelled, paused, skipped bans and warnings
 - `affordances`: `actingSide` and its letter `actingAb`, `canReady`, `isReady`, `canLock`, and
   `manager` (which dock controls apply to the current status, `startBlockedBy`,
-  `resultsPresent`, `lockForSide` and `actForSide`). `resultsPresent` is the payload's
+  `resultsPresent`, `lockForSide`, `actForSide` and `actForSideChoice`). `resultsPresent` is the payload's
   `results_present`. `lockForSide` is false for a manager who plays in the match (the
   payload's `viewer.side` is set): such a manager never acts for a team, so `actForSide`
-  stays `null`.
+  and `actForSideChoice` stay `null`. The side windows: `sideChooser` in the lobby unless
+  an admin has set the side, `setSides` in the lobby or running before the first step, `swap`
+  in that window once the side is confirmed, and `actForSideChoice` (the chooser team)
+  while running in phase `side_choice`.
   `undo` and `reopen` need a human step in the plan, one that isn't `automatic` (a plan
   that is only an automatic step has nothing to undo). `reopen` applies from the moment the status is `complete`, and `editFinal` only
   once the view's `phase` is `complete` too, after the last spotlight, so the editor never
@@ -1296,8 +1300,7 @@ pure and tested without a DOM. It returns:
   the viewer saw
 - `setup`: `sequence`, where the session's sequence came from (the `presetId` it was copied
   from, the `stageKey` of the stage it was copied from and whether that is the match's own
-  stage, from the payload's `sequence`; `null` without one), and `aConfirmed`, the payload's
-  `a_confirmed` (a manager chose A or swapped, rather than A following the stage seeds)
+  stage, from the payload's `sequence`; `null` without one)
 - `nextBoundaryAt`: when the view next changes on its own
 - `scene`: what the centre stage shows, for animating it. `key` (`lobby`, `intro`,
   `side-choice`, `side-reveal`, `turn-<index>`, `reveal-<index>`, `complete`, `none`,
@@ -1470,9 +1473,19 @@ only from the view model, through the pick/ban visual core (see
   - `open` (no body) while there is no live session: none, cancelled or voided
   - `start`, disabled while Start would be refused, with `blockingReasonLabel(startBlockedBy)`
     and what clears it in a callout beside it
-  - `choose-a` with `{ side }`, from the "Who is Team A?" chooser the lobby shows while A
-    is undetermined or the stage seeds are tied, and `swap` otherwise, in the lobby
-    (`swap` also runs before the first step)
+  - `side-chooser` with `{ side }` (`PUT`), from the Chooser the lobby shows while the side
+    is unconfirmed: a prompt while no chooser is known (Start is blocked by
+    `side_chooser_undetermined` until then), an override otherwise
+  - `sides` with `{ red }` (`PUT`, Set sides), in the lobby or while running before the
+    first step; outside that window it stays visible, disabled, with the reason. A side set
+    in the lobby skips step 0.
+  - `swap` in the same window, once the side is confirmed
+  - `side` with `{ choice }` (Act for team on step 0), on the admin path for the chooser
+    team while the phase is `side_choice`, after a confirmation. A manager who plays in the
+    match doesn't get it.
+  - The Sides board badges where the side came from (`Step 0`, `Admin`, `Caster`,
+    `Backfill`, or `Sides TBC`) and states the chooser rule with its reason ("T04 choose:
+    lower pre-cup seed").
   - `override-sequence` with `{ preset_id }` or `{ from_stage_key }`, in the lobby. The
     Sequence dropdown loads the stages with `fetchPickBanConfig` once the lobby dock
     mounts, and offers every preset plus each stage that has a block.
@@ -1805,8 +1818,7 @@ of previews stays cheap. `streamSceneOptionsOf` reads it together with `?sound=0
 ### Red/Blue sides and projected standings (contract)
 
 The types below describe payloads the API adds for authoritative Red/Blue sides and
-projected prediction standings. Some screens still read the older fields until their own
-change lands; the types are additive, so nothing that compiles today stops compiling.
+projected prediction standings.
 
 - **Side vocabulary** (`app/utils/api.ts`): `SideColor` (`SIDE_COLORS`, `'red' | 'blue'`),
   `MatchSideSource` (`MATCH_SIDE_SOURCES`: `step0`, `admin`, `caster`, `backfill`) and
@@ -1817,11 +1829,17 @@ change lands; the types are additive, so nothing that compiles today stops compi
   (`PickBanSideCard`: `color`, `letter`, `steps` of `{ n, action, segment }`).
   `capabilities.can_choose_side` is true for the viewer who may choose now. Step 0 adds the
   phases `side_choice` and `side_spotlight` (`PICK_BAN_SIDE_PHASES`, `PickBanContractPhase`),
-  the blocking reason `side_chooser_undetermined`, and the refusals `side_choice_active` and
-  `side_not_open` (`PICK_BAN_SIDE_ERROR_CODES`). Bodies: `POST .../pick-ban/side` and the
+  the blocking reason `side_chooser_undetermined` (it replaces the old A-undetermined
+  reason), and the refusals `side_choice_active` and `side_not_open`
+  (`PICK_BAN_SIDE_ERROR_CODES`, also part of `PICK_BAN_ERROR_CODES`). `statusOfPhase` reads
+  both step-0 phases as `running`, and `sidePhaseLabel` names them for the manager dock. The
+  old choose-A command, `chooser_side`, `a_confirmed` and `capabilities.can_choose_a` are
+  gone from the types. Bodies: `POST .../pick-ban/side` and the
   manager's Act for team take `PickBanSideCommandBody` `{ choice, version }`; the manager's
   `PUT .../pick-ban/side-chooser` takes `PickBanSideChooserBody` `{ side, version }` and
-  `PUT .../pick-ban/sides` takes `PickBanSetSidesBody` `{ red, version }`.
+  `PUT .../pick-ban/sides` takes `PickBanSetSidesBody` `{ red, version }`; the manager
+  sender (`sendPickBanManagerCommand`, and the store through `postPickBanCommand`) sends
+  those two with `PUT` and every other command with `POST`.
 - **Stream reads.** The hot state's and the desk's `match` carry `side_status`
   (`MatchSideStatus`) next to the unchanged `sides` mapping; the desk's `match` also carries
   `side_controls` (`StreamSideControls`: `can_swap`, `blocked_reason` `'pick_ban_in_progress'

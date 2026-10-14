@@ -1,8 +1,11 @@
 import {
     PICK_BAN_PRESET_IDS,
+    SIDE_COLORS,
     pickBanErrorCode,
+    type MatchSideSource,
     type PickBanActor,
     type PickBanBlockingReason,
+    type PickBanChooserReason,
     type PickBanErrorCode,
     type PickBanManagerCommand,
     type PickBanManagerCommandBodies,
@@ -11,7 +14,9 @@ import {
     type PickBanSessionStatus,
     type PickBanSide,
     type PickBanStageConfig,
+    type SideColor,
 } from '@/app/utils/api'
+import { SIDES_TBC, sideColorName, sideColorTitle } from '@/app/utils/sideLabels'
 import {
     selectedMapOf,
     unwordedRejection,
@@ -23,7 +28,7 @@ import {
 } from './captainPlay'
 import { finalDraftOf, finalEditorOf, type FinalDraft, type FinalEditor } from './editFinal'
 import { PICK_BAN_PRESET_LABELS } from './pickBanCopy'
-import { blockingReasonLabel } from './pickBanStatus'
+import { blockingReasonLabel, sidePhaseLabel } from './pickBanStatus'
 import { actionTagOf, type PickBanBanner, type PickBanManagerControls, type PickBanTeamPanel, type PickBanView } from './pickBanView'
 
 type ButtonCommand = 'open' | 'start' | 'swap' | 'pause' | 'resume' | 'undo' | 'restart' | 'cancel'
@@ -33,7 +38,9 @@ type WithoutVersion<B> = B extends unknown ? Omit<B, 'version'> : never
 type BodyOf<C extends PickBanManagerCommand> = WithoutVersion<PickBanManagerCommandBodies[C]>
 
 type BodyRequest =
-    | { command: 'choose-a'; body: BodyOf<'choose-a'> }
+    | { command: 'side-chooser'; body: BodyOf<'side-chooser'> }
+    | { command: 'sides'; body: BodyOf<'sides'> }
+    | { command: 'side'; body: BodyOf<'side'> }
     | { command: 'override-sequence'; body: BodyOf<'override-sequence'> }
     | { command: 'hand-over'; body: BodyOf<'hand-over'> }
     | { command: 'lock'; body: BodyOf<'lock'> }
@@ -55,7 +62,7 @@ type DangerCommand = 'restart' | 'cancel'
 
 type ButtonAction = PrimaryCommand | HistoryCommand | DangerCommand | 'swap'
 
-type ConfirmedCommand = 'reopen' | 'restart' | 'cancel' | 'edit-final'
+type ConfirmedCommand = 'reopen' | 'restart' | 'cancel' | 'edit-final' | 'side'
 
 interface PendingConfirmation {
     command: ConfirmedCommand
@@ -102,13 +109,49 @@ export interface ManagerConfirm {
     message: string
     confirmLabel: string
     dismissLabel: string
+    destructive: boolean
 }
 
-export interface ManagerAChoice {
+export interface ManagerTeamChoice {
     side: PickBanSide
     name: string
-    stageSeed: number | null
     chosen: boolean
+}
+
+export interface ManagerChooserChoice extends ManagerTeamChoice {
+    preCupSeed: number | null
+}
+
+export interface ManagerChooser {
+    undetermined: boolean
+    choices: ManagerChooserChoice[]
+    disabled: boolean
+}
+
+export interface ManagerSetSides {
+    choices: ManagerTeamChoice[]
+    hint: string
+    disabled: boolean
+    reason: string | null
+}
+
+export interface ManagerSideOption {
+    color: SideColor
+    title: string
+    lead: string
+}
+
+export interface ManagerStepZero {
+    side: PickBanSide
+    teamName: string
+    options: ManagerSideOption[]
+    disabled: boolean
+}
+
+export interface ManagerSourceBadge {
+    source: MatchSideSource | null
+    label: string
+    hint: string
 }
 
 export interface ManagerHandOverMember {
@@ -120,16 +163,20 @@ export interface ManagerHandOverMember {
 export interface ManagerSideTile {
     side: PickBanSide
     ab: PickBanActor | null
+    color: SideColor
     name: string
-    stageSeed: number | null
     handOver: ManagerHandOverMember[] | null
 }
 
 export interface ManagerSides {
     tiles: ManagerSideTile[]
-    chooseA: ManagerAChoice[] | null
-    swap: ManagerButton<'swap'> | null
+    confirmed: boolean
+    badge: ManagerSourceBadge
     basis: string | null
+    chooser: ManagerChooser | null
+    setSides: ManagerSetSides | null
+    swap: ManagerButton<'swap'> | null
+    stepZero: ManagerStepZero | null
 }
 
 export interface ManagerSequence {
@@ -198,7 +245,9 @@ export const IDLE_MANAGER_PLAY: ManagerPlay = {
 const CONTROL_OF: Record<Exclude<ManagerCommand, 'lock'>, keyof PickBanManagerControls> = {
     open: 'open',
     start: 'start',
-    'choose-a': 'chooseA',
+    'side-chooser': 'sideChooser',
+    sides: 'setSides',
+    side: 'actForSideChoice',
     swap: 'swap',
     'override-sequence': 'overrideSequence',
     pause: 'pause',
@@ -224,7 +273,7 @@ const BUTTON_LABELS: Record<ButtonAction, string> = {
     start: 'Start',
     pause: 'Pause',
     resume: 'Resume',
-    swap: 'Swap A and B',
+    swap: 'Swap Red and Blue',
     undo: 'Undo Last Step',
     reopen: 'Reopen',
     'edit-final': 'Edit Final Maps…',
@@ -237,7 +286,7 @@ const BUTTON_HINTS: Record<ButtonAction, string> = {
     start: 'Starts the Picks & Bans process. The match goes live and its predictions close.',
     pause: 'Freezes every countdown until you resume.',
     resume: 'Every countdown carries on from where it stopped.',
-    swap: 'Swaps which team is A. Both Ready marks clear.',
+    swap: 'Swaps Red and Blue, so the other team is Side A and acts first.',
     undo: 'Takes back the last pick or ban, with any automatic step after it.',
     reopen: 'Takes back the last pick or ban, with any automatic step after it, and continues the Picks & Bans process from there.',
     'edit-final': 'Rewrites the match’s maps: their order, who picked each and the decider.',
@@ -247,7 +296,7 @@ const BUTTON_HINTS: Record<ButtonAction, string> = {
 
 const START_FIXES: Partial<Record<PickBanBlockingReason, string>> = {
     teams_not_decided: 'Both teams need to be decided in the bracket first.',
-    a_undetermined: 'The stage seeds are missing or tied, so choose who is Team A under Sides.',
+    side_chooser_undetermined: 'The seeds can’t decide which team chooses Red or Blue, so name it under Chooser, or set the sides yourself.',
     pre_cup_seed_missing: 'An exclusion rule needs both teams’ pre-cup seeds. Add the missing seed, then start.',
     sequence_mismatch: 'Choose a sequence that fits the match’s best-of under Sequence.',
     pool_too_small: 'Add maps to the stage’s pool in Manage, or choose a shorter sequence under Sequence.',
@@ -257,32 +306,71 @@ const RESULTS_WARNING = 'Results are already entered for this match, so the Pick
 
 const KEEP_IT = 'Keep It'
 
-const CONFIRMATIONS: Record<ConfirmedCommand, Omit<ManagerConfirm, 'command'>> = {
+const CONFIRMATIONS: Record<Exclude<ConfirmedCommand, 'side'>, Omit<ManagerConfirm, 'command'>> = {
     reopen: {
         title: 'Reopen the Picks & Bans process?',
         message: 'The last pick or ban is undone, with any automatic step after it, and the Picks & Bans process waits on that step again. The maps it wrote into the match are removed, and any edits to the final maps are discarded.',
         confirmLabel: BUTTON_LABELS.reopen,
         dismissLabel: KEEP_IT,
+        destructive: true,
     },
     restart: {
         title: 'Restart the Picks & Bans process?',
         message: 'Every pick and ban so far is undone and both teams go back to the lobby. Both Ready marks clear, and any maps this Picks & Bans process wrote into the match are removed.',
         confirmLabel: BUTTON_LABELS.restart,
         dismissLabel: KEEP_IT,
+        destructive: true,
     },
     cancel: {
         title: 'Cancel the Picks & Bans process?',
         message: 'This ends the Picks & Bans process for good. Its picks and bans won’t count, and any maps it wrote into the match are removed. You can open a new lobby afterwards.',
         confirmLabel: BUTTON_LABELS.cancel,
         dismissLabel: KEEP_IT,
+        destructive: true,
     },
     'edit-final': {
         title: 'Save the edited final maps?',
         message: 'The match’s maps are rewritten to your list, in its order, with the picks and decider you set. The final summary is marked Edited, and the timeline keeps the picks and bans as they were played.',
         confirmLabel: 'Save Final Maps',
         dismissLabel: 'Keep Editing',
+        destructive: false,
     },
 }
+
+const CHOOSER_REASONS: Record<PickBanChooserReason, string> = {
+    lower_pre_cup_seed: 'lower pre-cup seed',
+    lower_group_placing: 'lower group placing',
+    lower_knockout_differential: 'lower knockout differential',
+    admin: 'named by an admin',
+}
+
+const SOURCE_BADGES: Record<MatchSideSource, Omit<ManagerSourceBadge, 'source'>> = {
+    step0: { label: 'Step 0', hint: 'Chosen by a team at step 0.' },
+    admin: { label: 'Admin', hint: 'Set by an admin.' },
+    caster: { label: 'Caster', hint: 'Set by the caster.' },
+    backfill: { label: 'Backfill', hint: 'Carried over from before sides were recorded.' },
+}
+
+const TBC_BADGE: ManagerSourceBadge = {
+    source: null,
+    label: SIDES_TBC,
+    hint: 'Nobody has set the sides yet, so Red is the bracket’s first team for now.',
+}
+
+const SIDES_SET_BASIS = 'The sides are set, so step 0 is skipped.'
+
+const SET_SIDES_HINTS = {
+    lobby: 'Setting the sides skips step 0.',
+    running: 'Step 1 follows the new colours.',
+}
+
+const SET_SIDES_AFTER_STEP_ONE = 'Step 1 is in, so change the sides in the match editor instead.'
+
+const SET_SIDES_PAUSED = 'Resume the Picks & Bans process to set the sides.'
+
+const SWAP_TBC = 'Set the sides first: there’s nothing to swap while they’re TBC.'
+
+const SIDE_OPTION_FALLBACK_LEADS: Record<SideColor, string> = { red: 'Acts first', blue: 'Acts second' }
 
 const PLAYING_NOTE = 'You play in this match, so you can’t lock in on a team’s behalf. An admin who isn’t playing has to do that.'
 
@@ -301,6 +389,8 @@ const REJECTIONS: Record<Exclude<PickBanErrorCode, PickBanBlockingReason>, strin
     match_live: 'The match is already live, so a lobby can’t open.',
     wrong_status: 'The session moved on just before your click, so that no longer applies.',
     nothing_to_undo: 'There’s no pick or ban to undo.',
+    side_choice_active: 'Wait for the side choice to finish, then lock in.',
+    side_not_open: 'The sides can’t change at this point any more.',
 }
 
 const COMMAND_REJECTIONS: Partial<Record<ManagerCommand, Partial<Record<PickBanErrorCode, (detail: string) => string>>>> = {
@@ -310,6 +400,15 @@ const COMMAND_REJECTIONS: Partial<Record<ManagerCommand, Partial<Record<PickBanE
     'edit-final': {
         invalid_request: (detail) => `The server didn’t accept that final list. ${detail}`,
         version_conflict: () => 'The final maps changed since you opened the editor.',
+    },
+    side: {
+        side_not_open: () => 'Step 0 is over, so the side can’t be chosen any more.',
+    },
+    sides: {
+        side_not_open: () => SET_SIDES_AFTER_STEP_ONE,
+    },
+    'side-chooser': {
+        side_not_open: () => 'The lobby has closed, so the chooser can’t change any more.',
     },
 }
 
@@ -322,7 +421,7 @@ function rejectionMessage(command: ManagerCommand | null, error: unknown): strin
 }
 
 function needsConfirmation(command: ManagerCommand): command is ConfirmedCommand {
-    return command in CONFIRMATIONS
+    return command === 'side' || command in CONFIRMATIONS
 }
 
 function allowed(controls: PickBanManagerControls, command: ManagerCommand): boolean {
@@ -375,6 +474,7 @@ function doneOf(view: PickBanView): string | null {
 
 function phaseOf(view: PickBanView): string | null {
     const stepOf = (number: number) => `Step ${number} of ${view.timeline.length}`
+    if (view.side.phase && view.status === 'running') return sidePhaseLabel(view.side.phase)
     switch (view.phase) {
         case 'lobby':
             return view.status === 'lobby' ? 'Waiting for Start' : 'Starting'
@@ -394,32 +494,104 @@ function phaseOf(view: PickBanView): string | null {
     }
 }
 
-function seedsDecideA([first, second]: PickBanTeamPanel[]): boolean {
-    return first?.stageSeed != null && second?.stageSeed != null && first.stageSeed !== second.stageSeed
+function bySide(panels: PickBanTeamPanel[]): PickBanTeamPanel[] {
+    return [...panels].sort((a, b) => a.side.localeCompare(b.side))
 }
 
-function aBasisOf(view: PickBanView, panels: PickBanTeamPanel[]): string | null {
-    if (panels.every((panel) => panel.ab === null)) return null
-    return view.setup.aConfirmed ? 'A was set by a manager.' : 'A has the better stage seed.'
+function badgeOf({ side }: PickBanView): ManagerSourceBadge {
+    return side.confirmed && side.source !== null ? { source: side.source, ...SOURCE_BADGES[side.source] } : TBC_BADGE
+}
+
+function basisOf({ side, status }: PickBanView): string | null {
+    if (status === 'lobby' && side.confirmed && side.source === 'admin') return SIDES_SET_BASIS
+    if (status !== 'lobby' && side.confirmed) return null
+    if (side.chooserName === null || side.chooserReason === null) return null
+    return `${side.chooserName} choose: ${CHOOSER_REASONS[side.chooserReason]}`
+}
+
+function chooserOf(view: PickBanView, panels: PickBanTeamPanel[], controls: PickBanManagerControls, busy: boolean): ManagerChooser | null {
+    if (!controls.sideChooser) return null
+    return {
+        undetermined: view.side.chooser === null,
+        choices: bySide(panels).map(({ side, name, preCupSeed }) => ({ side, name, preCupSeed, chosen: side === view.side.chooser })),
+        disabled: busy,
+    }
+}
+
+function setSidesReasonOf(view: PickBanView, controls: PickBanManagerControls): string | null {
+    if (controls.setSides) return null
+    const stepOneIn = controls.undo || view.timeline.some((entry) => entry.map !== null)
+    return view.status === 'paused' && !stepOneIn ? SET_SIDES_PAUSED : SET_SIDES_AFTER_STEP_ONE
+}
+
+function setSidesOf(view: PickBanView, panels: PickBanTeamPanel[], controls: PickBanManagerControls, busy: boolean): ManagerSetSides {
+    return {
+        choices: bySide(panels).map(({ side, name }) => ({ side, name, chosen: view.side.confirmed && side === view.side.red })),
+        hint: view.status === 'lobby' ? SET_SIDES_HINTS.lobby : SET_SIDES_HINTS.running,
+        disabled: busy || !controls.setSides,
+        reason: setSidesReasonOf(view, controls),
+    }
+}
+
+function swapOf(controls: PickBanManagerControls, busy: boolean): ManagerButton<'swap'> | null {
+    if (!controls.setSides) return null
+    const button = buttonOf(controls, 'swap', busy)
+    return controls.swap ? button : { ...button, hint: SWAP_TBC }
+}
+
+function sideOptionOf(view: PickBanView, color: SideColor): ManagerSideOption {
+    const card = view.side.cards.find((candidate) => candidate.color === color)
+    return { color, title: sideColorTitle(color), lead: card?.lead ?? SIDE_OPTION_FALLBACK_LEADS[color] }
+}
+
+function stepZeroOf(view: PickBanView, controls: PickBanManagerControls, busy: boolean): ManagerStepZero | null {
+    const side = controls.actForSideChoice
+    if (side === null) return null
+    return { side, teamName: view.side.chooserName ?? 'TBD', options: SIDE_COLORS.map((color) => sideOptionOf(view, color)), disabled: busy }
 }
 
 function sidesOf(view: PickBanView, controls: PickBanManagerControls, busy: boolean): ManagerSides | null {
+    if (!controls.handOver) return null
     const panels = panelsOf(view)
-    const choosing = controls.chooseA && (panels.every((panel) => panel.ab === null) || !seedsDecideA(panels))
-    const swap = controls.swap && !choosing ? buttonOf(controls, 'swap', busy) : null
-    if (!controls.handOver && !choosing && !swap) return null
     return {
         tiles: panels.map((panel) => ({
             side: panel.side,
             ab: panel.ab,
+            color: panel.color,
             name: panel.name,
-            stageSeed: panel.stageSeed,
-            handOver: controls.handOver ? handOverOf(panel) : null,
+            handOver: handOverOf(panel),
         })),
-        chooseA: choosing ? [...panels].sort((a, b) => a.side.localeCompare(b.side)).map(({ side, name, stageSeed, ab }) => ({ side, name, stageSeed, chosen: ab === 'A' })) : null,
-        swap,
-        basis: aBasisOf(view, panels),
+        confirmed: view.side.confirmed,
+        badge: badgeOf(view),
+        basis: basisOf(view),
+        chooser: chooserOf(view, panels, controls, busy),
+        setSides: setSidesOf(view, panels, controls, busy),
+        swap: swapOf(controls, busy),
+        stepZero: stepZeroOf(view, controls, busy),
     }
+}
+
+function lowerFirst(text: string): string {
+    return text.charAt(0).toLowerCase() + text.slice(1)
+}
+
+function sideConfirmOf(view: PickBanView, choice: SideColor): ManagerConfirm {
+    const option = sideOptionOf(view, choice)
+    const team = view.side.chooserName ?? 'The team'
+    const colour = sideColorName(choice)
+    return {
+        command: 'side',
+        title: `Lock in ${colour} for ${team}?`,
+        message: `${team} become ${option.title}: ${lowerFirst(option.lead)}. The reveal plays, then step 1 opens.`,
+        confirmLabel: `Lock In ${colour}`,
+        dismissLabel: 'Go Back',
+        destructive: false,
+    }
+}
+
+function confirmOf(view: PickBanView, { command, request }: PendingConfirmation): ManagerConfirm {
+    if (command === 'side' && request.command === 'side') return sideConfirmOf(view, request.body.choice)
+    return { command, ...CONFIRMATIONS[command as Exclude<ConfirmedCommand, 'side'>] }
 }
 
 function presetChoiceKey(id: PickBanPresetId): string {
@@ -543,9 +715,7 @@ export function managerDockOf(view: PickBanView, play: ManagerPlay): ManagerDock
         resultsWarning: controls.resultsPresent ? RESULTS_WARNING : null,
         voided: view.banners.find((banner) => banner.kind === 'voided') ?? null,
         finalEditor,
-        confirm: play.confirming && allowed(controls, play.confirming.command)
-            ? { command: play.confirming.command, ...CONFIRMATIONS[play.confirming.command] }
-            : null,
+        confirm: play.confirming && allowed(controls, play.confirming.command) ? confirmOf(view, play.confirming) : null,
         actFor,
         playingNote: !controls.lockForSide && (view.status === 'running' || view.status === 'paused') ? PLAYING_NOTE : null,
         rejection: (actFor && play.rejected === 'lock') || (finalEditor && play.rejected === 'edit-final') ? null : play.rejection,

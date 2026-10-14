@@ -579,8 +579,9 @@ paused one, so neither can run as the other.
   Every button carries its label, a one-line `hint` and a `disabled` flag (every one is
   disabled while a command is in flight, and `submitting` names that command). It holds:
   - `status` (the session's) and `phase`, a status line: `Waiting for Start`, `Starting`,
-    `Intro`, `Step 3 of 7 · Azure Owls (pick)`, `Step 3 of 7 · Revealing`, `Step 3 of 7`
-    while paused, `Final maps written` or `Final maps edited`. For a manager who plays in
+    `Intro`, `Step 0 · Side choice` and `Step 0 · Revealing` (`sidePhaseLabel` in
+    `pickBanStatus.ts`), `Step 3 of 7 · Azure Owls (pick)`, `Step 3 of 7 · Revealing`,
+    `Step 3 of 7` while paused, `Final maps written` or `Final maps edited`. For a manager who plays in
     the match (`lockForSide` false) the awaiting line is just `Step 3 of 7`, without whose
     turn it is
   - `primary`, the one call to action for the status: Open Lobby (none, cancelled or
@@ -588,13 +589,34 @@ paused one, so neither can run as the other.
     `blocked`, the worded blocking reason with a `fix` naming what clears it (or `null`),
     and `readiness`, each team's Ready mark, A first. Once complete it is `null`, and
     `done` says the final maps are in the match.
-  - `sides`, while the session is in the lobby, running or paused: a tile per team, A
-    first (letter, name, stage seed, and while Hand over applies its roster with who is in
-    control; choosing the captain sends `user_id: null`), `swap` (lobby, or running before
-    the first step), and `chooseA` in the lobby while A is undetermined or the stage seeds
-    don't decide it (missing or tied). The choices stay in `team_a`, `team_b` order, so
-    choosing never reorders them, and they replace Swap. `basis` says why A is A: the
-    better stage seed, or set by a manager (`view.setup.aConfirmed`).
+  - `sides`, while the session is in the lobby, running or paused (Red/Blue first, A/B
+    alongside, since admin tools show both). Every window below comes from
+    `affordances.manager`, so the dock and `beginManagerCommand` agree:
+    - `tiles`, one per team, A first: letter, colour, name, and the roster with who is in
+      control (choosing the captain sends `user_id: null`). `confirmed` is the side's;
+      while it is false the tiles read "Sides TBC".
+    - `badge`, where the side came from: `Step 0`, `Admin`, `Caster` or `Backfill` from
+      `side.source`, or `Sides TBC` while unconfirmed, each with a one-line hint.
+    - `basis`, "The sides are set, so step 0 is skipped." in a lobby whose side an admin
+      set; otherwise the chooser rule in the lobby, or while running with the side
+      unconfirmed ("T04 choose: lower pre-cup seed", from `side.chooser` and
+      `side.chooser_reason`; `null` while no chooser is known).
+    - `chooser` (`sideChooser`: lobby, unless an admin set the side): both teams in `team_a`, `team_b`
+      order with their pre-cup seeds and the current chooser checked. `undetermined` while
+      no chooser is known, which is when Start is blocked by `side_chooser_undetermined`
+      (its fix points here). Choosing the other team sends `side-chooser`.
+    - `setSides` (`setSides`: lobby, or running before step 1): both teams with the Red
+      one checked once confirmed; choosing sends `sides` with `red`. Outside its window
+      it stays visible but disabled, with a `reason`: paused before step 1 (no step
+      revealed and none to undo) says resume first, otherwise that step 1 is in and the match editor changes the sides now.
+    - `swap`, shown in the same window as Set sides, enabled only once the side is
+      confirmed (`affordances.manager.swap`); while it is TBC its hint says there is
+      nothing to swap.
+    - `stepZero` (`actForSideChoice`: running, phase `side_choice`, a manager who doesn't
+      play): Act for team on step 0, the chooser team's name and a Red and a Blue option
+      titled and led from `side.cards` ("Red · Side A", "Ban 1st, pick 2nd"; "Acts
+      first"/"Acts second" without cards). Choosing one asks for confirmation first, then
+      sends `side` with `choice`.
   - `sequence`, in the same statuses: the preset's label (or Custom sequence), the step
     count and best-of, whether it was changed for this match and from which stage, the
     choice keys it matches (the stage it was copied from, then its preset), and whether it
@@ -602,7 +624,10 @@ paused one, so neither can run as the other.
   - `history` (Undo Last Step, Reopen, Edit Final Maps…) and `danger` (Restart, Cancel
     Picks & Bans), each listed only while it applies
   - the results warning, the voided banner, the open editor, the pending confirmation
-    (title, message, confirm and dismiss labels), the act-for controls, and the refusal
+    (title, message, confirm and dismiss labels, and whether it is `destructive`), the
+    act-for controls, and the refusal. A refused `side`, `sides` or `side-chooser` with
+    `side_not_open` is worded by what it tried (step 0 is over, step 1 is in, the lobby
+    has closed)
 
   The act-for controls are a `CaptainDock` model, so the captain's dock renders
   them, and a refused lock-in shows there rather than in the panel. They mirror the
@@ -616,8 +641,8 @@ paused one, so neither can run as the other.
   admin who isn't playing has to lock in on a team's behalf.
 - `beginManagerCommand(play, view, action)` returns the next play and the request to
   send, or `null` when the control isn't open, a command is in flight, or an Edit final
-  save has no open, valid, current draft. For `reopen`, `restart`, `cancel` and
-  `edit-final` it first returns a play holding the resolved request awaiting confirmation
+  save has no open, valid, current draft. For `reopen`, `restart`, `cancel`, `edit-final`
+  and the step-0 `side` it first returns a play holding the resolved request awaiting confirmation
   and no request; `confirmManagerCommand` sends exactly that request (an edit-final with
   the list and version as they were confirmed) and `dismissManagerConfirm` drops it.
   Asking again just asks again: only the confirmation sends. `selectActForMap` and

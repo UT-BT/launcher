@@ -2,6 +2,7 @@ import type {
     MatchSideSource,
     PickBanActor,
     PickBanBlockingReason,
+    PickBanChooserReason,
     PickBanContractPhase,
     PickBanExclusion,
     PickBanFinalMap,
@@ -152,7 +153,8 @@ export interface PickBanManagerControls {
     start: boolean
     startBlockedBy: PickBanBlockingReason | null
     resultsPresent: boolean
-    chooseA: boolean
+    sideChooser: boolean
+    setSides: boolean
     swap: boolean
     overrideSequence: boolean
     pause: boolean
@@ -165,6 +167,7 @@ export interface PickBanManagerControls {
     editFinal: boolean
     lockForSide: boolean
     actForSide: PickBanSide | null
+    actForSideChoice: PickBanSide | null
 }
 
 export interface PickBanSequenceSource {
@@ -175,7 +178,6 @@ export interface PickBanSequenceSource {
 
 export interface PickBanSetup {
     sequence: PickBanSequenceSource | null
-    aConfirmed: boolean
 }
 
 export interface PickBanAffordances {
@@ -218,6 +220,7 @@ export interface PickBanSideView {
     source: MatchSideSource | null
     chooser: PickBanSide | null
     chooserName: string | null
+    chooserReason: PickBanChooserReason | null
     canChoose: boolean
     viewerChooses: boolean
     waiting: string | null
@@ -507,13 +510,15 @@ function managerControlsOf(moment: Moment, awaitedStep: PickBanPlanStep | null, 
     const live = LIVE_STATUSES.includes(status)
     const humanStepIn = steps.some((step) => isExecuted(step) && !step.automatic)
     const lockForSide = state.viewer.side === null
+    const beforeFirstStep = status === 'lobby' || (status === 'running' && !steps.some(isExecuted))
     return {
         open: status === 'none' || status === 'cancelled' || status === 'voided',
         start: status === 'lobby',
         startBlockedBy: status === 'lobby' ? state.blocking_reason : null,
         resultsPresent: state.results_present,
-        chooseA: status === 'lobby',
-        swap: state.a_side !== null && (status === 'lobby' || (status === 'running' && !steps.some(isExecuted))),
+        sideChooser: status === 'lobby' && !(state.side.confirmed && state.side.source === 'admin'),
+        setSides: beforeFirstStep,
+        swap: state.a_side !== null && state.side.confirmed && beforeFirstStep,
         overrideSequence: status === 'lobby',
         pause: status === 'running',
         resume: status === 'paused',
@@ -525,6 +530,7 @@ function managerControlsOf(moment: Moment, awaitedStep: PickBanPlanStep | null, 
         editFinal: status === 'complete' && livePhase === 'complete',
         lockForSide,
         actForSide: lockForSide && status === 'running' && awaitedStep ? awaitedStep.side : null,
+        actForSideChoice: lockForSide && status === 'running' && livePhase === 'side_choice' ? state.side.chooser : null,
     }
 }
 
@@ -801,6 +807,7 @@ function sideViewOf(moment: Moment, livePhase: LivePhase): PickBanSideView {
         source: side.source,
         chooser: side.chooser,
         chooserName,
+        chooserReason: side.chooser_reason,
         canChoose: phase === 'side_choice' && state.status === 'running' && state.capabilities.can_choose_side,
         viewerChooses: phase === 'side_choice' && side.chooser !== null && side.chooser === state.capabilities.acting_side,
         waiting: phase === 'side_choice' ? `${chooserName ?? 'A team'} are choosing their side` : null,
@@ -820,7 +827,6 @@ function setupOf(state: PickBanViewState): PickBanSetup {
             stageKey: sequence.from_stage_key,
             ownStage: sequence.from_stage_key === state.match.stage_key,
         },
-        aConfirmed: state.a_confirmed,
     }
 }
 

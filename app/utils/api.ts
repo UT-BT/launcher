@@ -6131,7 +6131,6 @@ export type PickBanStepAction = PickBanSequenceAction | 'decider'
 
 export type PickBanBlockingReason =
     | 'teams_not_decided'
-    | 'a_undetermined'
     | 'side_chooser_undetermined'
     | 'pre_cup_seed_missing'
     | 'sequence_mismatch'
@@ -6139,13 +6138,16 @@ export type PickBanBlockingReason =
     | 'results_present'
     | 'match_finished'
 
+export const PICK_BAN_SIDE_ERROR_CODES = ['side_choice_active', 'side_not_open'] as const
+
+export type PickBanSideErrorCode = typeof PICK_BAN_SIDE_ERROR_CODES[number]
+
 export const PICK_BAN_ERROR_CODES = [
     'not_authorized',
     'not_your_turn',
     'plays_in_match',
     'session_exists',
     'teams_not_decided',
-    'a_undetermined',
     'pre_cup_seed_missing',
     'sequence_mismatch',
     'pool_too_small',
@@ -6162,13 +6164,10 @@ export const PICK_BAN_ERROR_CODES = [
     'wrong_status',
     'nothing_to_undo',
     'side_chooser_undetermined',
+    ...PICK_BAN_SIDE_ERROR_CODES,
 ] as const
 
 export type PickBanErrorCode = typeof PICK_BAN_ERROR_CODES[number]
-
-export const PICK_BAN_SIDE_ERROR_CODES = ['side_choice_active', 'side_not_open'] as const
-
-export type PickBanSideErrorCode = typeof PICK_BAN_SIDE_ERROR_CODES[number]
 
 export function pickBanErrorCode(error: unknown): PickBanErrorCode | null {
     if (!(error instanceof ApiError) || !error.reason) return null
@@ -6265,7 +6264,6 @@ export interface PickBanCapabilities {
     can_manage: boolean
     acting_side: PickBanSide | null
     can_ready: boolean
-    can_choose_a: boolean
     can_choose_side: boolean
     can_lock_now: boolean
 }
@@ -6302,8 +6300,6 @@ export interface PickBanState {
     pool: PickBanPoolCard[]
     teams: { team_a: PickBanTeam | null; team_b: PickBanTeam | null }
     a_side: PickBanSide | null
-    chooser_side: PickBanSide | null
-    a_confirmed: boolean
     side: PickBanSideBlock
     ready: { team_a: PickBanReady | null; team_b: PickBanReady | null }
     selection_preview: PickBanSelectionPreview | null
@@ -6383,8 +6379,9 @@ export interface PickBanManagerCommandBodies {
     restart: { version: number }
     cancel: { version: number }
     swap: { version: number }
-    'choose-a': { side: PickBanSide; version: number }
     side: PickBanSideCommandBody
+    'side-chooser': PickBanSideChooserBody
+    sides: PickBanSetSidesBody
     'override-sequence': PickBanOverrideSequenceBody
     lock: { side: PickBanSide; map: string; plan_index: number; version: number }
     'hand-over': { side: PickBanSide; user_id: string | null; version: number }
@@ -6396,6 +6393,8 @@ export type PickBanParticipantCommand = keyof PickBanParticipantCommandBodies
 export type PickBanManagerCommand = keyof PickBanManagerCommandBodies
 
 export type PickBanCommandScope = 'participant' | 'manager'
+
+const PICK_BAN_MANAGER_PUT_COMMANDS: readonly PickBanManagerCommand[] = ['side-chooser', 'sides']
 
 type PickBanCommandBodyArgs<B> = B extends undefined ? [] : [body: B]
 
@@ -6410,7 +6409,8 @@ export async function postPickBanCommand(
     const path = scope === 'manager'
         ? pickBanAdminMatchPath(slug, matchId, `/${command}`)
         : pickBanMatchPath(slug, matchId, `/${command}`)
-    return apiGet<PickBanState>(path, { token: accessToken, method: 'POST', body })
+    const method = scope === 'manager' && PICK_BAN_MANAGER_PUT_COMMANDS.includes(command as PickBanManagerCommand) ? 'PUT' : 'POST'
+    return apiGet<PickBanState>(path, { token: accessToken, method, body })
 }
 
 export async function sendPickBanCommand<C extends PickBanParticipantCommand>(

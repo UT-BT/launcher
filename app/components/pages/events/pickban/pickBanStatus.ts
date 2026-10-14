@@ -1,4 +1,4 @@
-import type { PickBanErrorCode, PickBanSessionStatus } from '@/app/utils/api'
+import type { PickBanErrorCode, PickBanSessionStatus, PickBanSidePhase } from '@/app/utils/api'
 import type { PickBanViewPhase } from './pickBanView'
 
 export type PickBanStatusTone = 'idle' | 'ready' | 'live' | 'paused' | 'done'
@@ -23,12 +23,17 @@ const UNKNOWN_BLOCKING_REASON = 'Not startable'
 const BLOCKING_REASON_LABELS: Partial<Record<PickBanErrorCode, string>> = {
     no_session: 'No lobby open',
     teams_not_decided: 'Teams not decided',
-    a_undetermined: 'Team A undetermined',
+    side_chooser_undetermined: 'No team to choose Red or Blue',
     pre_cup_seed_missing: 'A team is missing its pre-cup seed',
     sequence_mismatch: 'Sequence does not match the best-of',
     pool_too_small: 'Map pool is too small',
     results_present: 'Results already entered',
     match_finished: 'Match already finished',
+}
+
+const SIDE_PHASE_LABELS: Record<PickBanSidePhase, string> = {
+    side_choice: 'Step 0 · Side choice',
+    side_spotlight: 'Step 0 · Revealing',
 }
 
 const WRONG_STATUS_LABELS: Partial<Record<PickBanSessionStatus, string>> = {
@@ -47,7 +52,11 @@ export function pickBanStatusBadge(status: PickBanSessionStatus): PickBanStatusB
     return STATUS_BADGES[status]
 }
 
-export function statusOfPhase(phase: PickBanViewPhase): PickBanSessionStatus {
-    if (phase === 'intro' || phase === 'awaiting' || phase === 'spotlight') return 'running'
+export function sidePhaseLabel(phase: PickBanSidePhase): string {
+    return SIDE_PHASE_LABELS[phase]
+}
+
+export function statusOfPhase(phase: PickBanViewPhase | PickBanSidePhase): PickBanSessionStatus {
+    if (phase === 'intro' || phase === 'awaiting' || phase === 'spotlight' || phase === 'side_choice' || phase === 'side_spotlight') return 'running'
     return phase
 }

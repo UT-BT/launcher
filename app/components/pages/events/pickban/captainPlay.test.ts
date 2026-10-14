@@ -555,6 +555,7 @@ describe('refusals', () => {
         ['map_unavailable', 409, 'That map can’t be chosen any more. Select another.'],
         ['spotlight_active', 409, 'Wait for the reveal to finish, then lock in.'],
         ['intro_active', 409, 'Wait for the intro to finish, then lock in.'],
+        ['side_choice_active', 409, 'Wait for the side choice to finish, then lock in.'],
         ['paused', 409, 'The session is paused. Lock in once an admin resumes it.'],
         ['wrong_status', 409, 'The Picks & Bans aren’t running any more.'],
         ['not_authorized', 403, 'You no longer control your team’s choices in this Picks & Bans process.'],

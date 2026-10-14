@@ -318,19 +318,19 @@ describe('commands', () => {
 
     it('posts manager commands with the version, and Open without a body', async () => {
         const state = runningState()
-        const fetchMock = stubFetch((_url, init) => fresh(init.method === 'POST' ? { ...state, version: state.version + 1 } : state, '"v1"'))
+        const fetchMock = stubFetch((_url, init) => fresh(init.method === 'POST' || init.method === 'PUT' ? { ...state, version: state.version + 1 } : state, '"v1"'))
         const session = store()
         session.start()
         await vi.advanceTimersByTimeAsync(0)
 
         await session.sendManagerCommand('pause')
-        await session.sendManagerCommand('choose-a', { side: 'team_b' })
+        await session.sendManagerCommand('sides', { red: 'team_b' })
         await session.sendManagerCommand('open')
 
-        const posts = fetchMock.mock.calls.filter(([, init]) => init.method === 'POST')
-        expect(posts.map(([url]) => url.replace(/^.*\/pick-ban\//, ''))).toEqual(['pause', 'choose-a', 'open'])
+        const posts = fetchMock.mock.calls.filter(([, init]) => init.method === 'POST' || init.method === 'PUT')
+        expect(posts.map(([url, init]) => `${init.method} ${url.replace(/^.*\/pick-ban\//, '')}`)).toEqual(['POST pause', 'PUT sides', 'POST open'])
         expect(JSON.parse(posts[0][1].body as string)).toEqual({ version: state.version })
-        expect(JSON.parse(posts[1][1].body as string)).toEqual({ side: 'team_b', version: state.version + 1 })
+        expect(JSON.parse(posts[1][1].body as string)).toEqual({ red: 'team_b', version: state.version + 1 })
         expect(posts[2][1].body).toBeUndefined()
         session.stop()
     })

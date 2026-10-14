@@ -40,20 +40,24 @@ import { Tooltip } from '@/app/components/ui/tooltip'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import type { MatchLinks } from '@/app/components/navigation/matchLinks'
 import { useCopyFeedback } from '@/app/hooks/useCopyFeedback'
-import { fetchPickBanConfig, type PickBanActor, type PickBanSide, type PickBanStageConfig } from '@/app/utils/api'
+import { fetchPickBanConfig, type PickBanActor, type PickBanSide, type PickBanStageConfig, type SideColor } from '@/app/utils/api'
+import { SIDES_TBC, sideColorTitle, sideColorTone } from '@/app/utils/sideLabels'
 import {
     sequenceChoices,
-    type ManagerAChoice,
     type ManagerButton,
+    type ManagerChooser,
     type ManagerDock as ManagerDockModel,
     type ManagerHandOverMember,
     type ManagerPrimary,
     type ManagerReadiness,
     type ManagerSequence,
     type ManagerSequenceChoice,
+    type ManagerSetSides,
     type ManagerSides,
     type ManagerSideTile,
+    type ManagerSourceBadge,
     type ManagerStartBlock,
+    type ManagerStepZero,
 } from '../managerDock'
 import type { UseManagerDockResult } from '../useManagerDock'
 import { Rejection } from './CaptainDock'
@@ -110,6 +114,14 @@ const ZONE_ICONS: Record<ZoneCommand, LucideIcon> = {
     'edit-final': PencilLine,
     restart: RotateCcw,
     cancel: CircleX,
+}
+
+const BADGE_TONES: Record<NonNullable<ManagerSourceBadge['source']> | 'tbc', string> = {
+    step0: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300',
+    admin: 'border-accent-500/40 bg-accent-500/10 text-accent-200',
+    caster: 'border-sky-500/40 bg-sky-500/10 text-sky-300',
+    backfill: 'border-hairline/20 bg-hairline/5 text-muted-foreground',
+    tbc: 'border-dashed border-amber-500/40 bg-amber-500/10 text-amber-300',
 }
 
 const FIELD = 'flex w-full cursor-pointer items-center gap-2.5 rounded-lg border border-hairline/10 bg-card/60 text-left transition-colors hover:border-hairline/20 disabled:cursor-not-allowed disabled:opacity-50 data-[state=open]:border-accent-500/50'
@@ -190,7 +202,9 @@ export function ManagerDock({ manager, slug, accessToken, links }: ManagerDockPr
                                 sides={sides}
                                 busy={busy}
                                 submitting={dock.submitting}
-                                onChooseA={(side) => manager.run({ command: 'choose-a', body: { side } })}
+                                onNameChooser={(side) => manager.run({ command: 'side-chooser', body: { side } })}
+                                onSetSides={(red) => manager.run({ command: 'sides', body: { red } })}
+                                onChooseSide={(choice) => manager.run({ command: 'side', body: { choice } })}
                                 onSwap={() => manager.run({ command: 'swap' })}
                                 onHandOver={(body) => manager.run({ command: 'hand-over', body })}
                             />
@@ -245,7 +259,7 @@ export function ManagerDock({ manager, slug, accessToken, links }: ManagerDockPr
                     onClose={manager.dismissConfirm}
                     dismissLabel={confirm.dismissLabel}
                     action={(
-                        <Button variant={confirm.command === 'edit-final' ? 'default' : 'destructive'} disabled={busy} onClick={manager.confirm}>
+                        <Button variant={confirm.destructive ? 'destructive' : 'default'} disabled={busy} onClick={manager.confirm}>
                             {confirm.confirmLabel}
                         </Button>
                     )}
@@ -392,22 +406,25 @@ function FieldLabel({ id, icon: Icon, children }: { id: string; icon: LucideIcon
     )
 }
 
-function SidesBoard({ sides, busy, submitting, onChooseA, onSwap, onHandOver }: {
+function SidesBoard({ sides, busy, submitting, onNameChooser, onSetSides, onChooseSide, onSwap, onHandOver }: {
     sides: ManagerSides
     busy: boolean
     submitting: ManagerDockModel['submitting']
-    onChooseA: (side: PickBanSide) => void
+    onNameChooser: (side: PickBanSide) => void
+    onSetSides: (red: PickBanSide) => void
+    onChooseSide: (choice: SideColor) => void
     onSwap: () => void
     onHandOver: (body: HandOverBody) => void
 }) {
     const labelId = useId()
     const [handingOver, setHandingOver] = useState<PickBanSide | null>(null)
     const [first, second] = sides.tiles
+    const swapReason = sides.swap?.disabled && !busy ? sides.swap.hint : null
     const tileOf = (tile: ManagerSideTile) => (
         <SideTile
             key={tile.side}
             tile={tile}
-            light={sides.chooseA !== null}
+            confirmed={sides.confirmed}
             disabled={busy}
             pending={submitting === 'hand-over' && handingOver === tile.side}
             onHandOver={(body) => {
@@ -419,8 +436,12 @@ function SidesBoard({ sides, busy, submitting, onChooseA, onSwap, onHandOver }: 
 
     return (
         <div role="group" aria-labelledby={labelId} className="@container/sides flex min-w-0 flex-col gap-2.5 rounded-lg border border-hairline/10 bg-card/40 p-3">
-            <FieldLabel id={labelId} icon={Swords}>Sides</FieldLabel>
-            {sides.chooseA && <AChooser choices={sides.chooseA} busy={busy} pending={submitting === 'choose-a'} onChoose={onChooseA} />}
+            <div className="flex flex-wrap items-center justify-between gap-2">
+                <FieldLabel id={labelId} icon={Swords}>Sides</FieldLabel>
+                <SourceBadge badge={sides.badge} />
+            </div>
+            {sides.stepZero && <StepZeroChoice stepZero={sides.stepZero} pending={submitting === 'side'} onChoose={onChooseSide} />}
+            {sides.chooser && <ChooserField chooser={sides.chooser} pending={submitting === 'side-chooser'} onChoose={onNameChooser} />}
             <div className="grid grid-cols-1 items-center gap-2 @lg/sides:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
                 {first && tileOf(first)}
                 {sides.swap ? (
@@ -430,8 +451,101 @@ function SidesBoard({ sides, busy, submitting, onChooseA, onSwap, onHandOver }: 
                 )}
                 {second && tileOf(second)}
             </div>
-            {sides.basis && <p className="text-xs text-muted-foreground">{sides.basis}</p>}
+            {(sides.basis || swapReason) && (
+                <div className="space-y-0.5 text-xs text-muted-foreground">
+                    {sides.basis && <p>{sides.basis}</p>}
+                    {swapReason && <p>{swapReason}</p>}
+                </div>
+            )}
+            {sides.setSides && <SetSidesField setSides={sides.setSides} pending={submitting === 'sides'} onChoose={onSetSides} />}
         </div>
+    )
+}
+
+function SourceBadge({ badge }: { badge: ManagerSourceBadge }) {
+    return (
+        <Tooltip content={badge.hint}>
+            <span className={cn('inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider', BADGE_TONES[badge.source ?? 'tbc'])}>
+                <span className="sr-only">Sides from: </span>
+                {badge.label}
+            </span>
+        </Tooltip>
+    )
+}
+
+function StepZeroChoice({ stepZero, pending, onChoose }: { stepZero: ManagerStepZero; pending: boolean; onChoose: (choice: SideColor) => void }) {
+    const labelId = useId()
+
+    return (
+        <div role="group" aria-labelledby={labelId} className="space-y-2.5 rounded-lg border border-accent-500/30 bg-accent-500/5 p-3">
+            <div className="space-y-0.5">
+                <p id={labelId} className="flex items-center gap-2 text-sm font-bold text-foreground">
+                    Step 0 · Act for {stepZero.teamName}
+                    {pending && <Loader2 className="size-3.5 animate-spin text-muted-foreground" />}
+                </p>
+                <p className="text-xs text-muted-foreground">{stepZero.teamName} choose Red or Blue. Choose for them only if they can’t.</p>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2">
+                {stepZero.options.map((option) => {
+                    const tone = PICK_BAN_TONES[sideColorTone(option.color)]
+                    return (
+                        <button
+                            key={option.color}
+                            type="button"
+                            disabled={stepZero.disabled}
+                            onClick={() => onChoose(option.color)}
+                            className={cn(
+                                'flex min-h-11 min-w-0 cursor-pointer flex-col items-start justify-center gap-0.5 rounded-lg border bg-gradient-to-br to-transparent to-70% px-3 py-2 text-left transition-colors hover:bg-hairline/5 disabled:cursor-not-allowed disabled:opacity-50',
+                                tone.wash,
+                                tone.line,
+                            )}
+                        >
+                            <span className={cn('text-sm font-bold', tone.text)}>{option.title}</span>
+                            <span className="text-xs text-muted-foreground">{option.lead}</span>
+                        </button>
+                    )
+                })}
+            </div>
+        </div>
+    )
+}
+
+function ChooserField({ chooser, pending, onChoose }: { chooser: ManagerChooser; pending: boolean; onChoose: (side: PickBanSide) => void }) {
+    return (
+        <TeamRadios
+            label="Chooser"
+            hint={chooser.undetermined
+                ? 'The seeds can’t decide which team chooses. Name the team that chooses Red or Blue at step 0.'
+                : 'The team that chooses Red or Blue at step 0. Pick the other team to override it.'}
+            choices={chooser.choices.map(({ side, name, preCupSeed, chosen }) => ({
+                side,
+                name,
+                detail: preCupSeed === null ? 'No pre-cup seed' : `Pre-cup seed ${preCupSeed}`,
+                chosen,
+            }))}
+            disabled={chooser.disabled}
+            pending={pending}
+            highlight={chooser.undetermined}
+            refused={false}
+            indicator="bg-accent-500 shadow-accent-500/25"
+            onChoose={onChoose}
+        />
+    )
+}
+
+function SetSidesField({ setSides, pending, onChoose }: { setSides: ManagerSetSides; pending: boolean; onChoose: (red: PickBanSide) => void }) {
+    return (
+        <TeamRadios
+            label="Set sides: who is Red"
+            hint={setSides.reason ?? setSides.hint}
+            choices={setSides.choices.map(({ side, name, chosen }) => ({ side, name, detail: chosen ? sideColorTitle('red') : null, chosen }))}
+            disabled={setSides.disabled}
+            pending={pending}
+            highlight={false}
+            refused={setSides.reason !== null}
+            indicator="bg-pickban-a shadow-pickban-a/30"
+            onChoose={onChoose}
+        />
     )
 }
 
@@ -459,9 +573,9 @@ function SwapButton({ button, aSide, pending, onSwap }: { button: ManagerButton<
     )
 }
 
-function SideTile({ tile, light, disabled, pending, onHandOver }: {
+function SideTile({ tile, confirmed, disabled, pending, onHandOver }: {
     tile: ManagerSideTile
-    light: boolean
+    confirmed: boolean
     disabled: boolean
     pending: boolean
     onHandOver: (body: HandOverBody) => void
@@ -475,16 +589,10 @@ function SideTile({ tile, light, disabled, pending, onHandOver }: {
             className={cn('flex min-w-0 flex-col gap-3 rounded-lg border bg-gradient-to-br to-transparent to-70% p-3 transition-colors duration-300', tone.wash, tone.line)}
         >
             <div className="flex items-center gap-2.5">
-                {(!light || tile.ab) && <SideBadge ab={tile.ab} className={light ? 'size-6 rounded-md text-xs' : 'size-7 rounded-md text-sm'} />}
+                <SideBadge ab={tile.ab} className="size-7 rounded-md text-sm" />
                 <div className="min-w-0 flex-1">
                     <p className="line-clamp-2 break-words text-sm font-bold leading-tight text-foreground">{tile.name}</p>
-                    {!light && (
-                        <p className={SMALL_CAPS}>
-                            {tile.ab ? `Team ${tile.ab}` : 'Side to choose'}
-                            <span aria-hidden> · </span>
-                            {tile.stageSeed === null ? 'No stage seed' : `Stage Seed ${tile.stageSeed}`}
-                        </p>
-                    )}
+                    <p className={SMALL_CAPS}>{confirmed ? sideColorTitle(tile.color) : SIDES_TBC}</p>
                 </div>
             </div>
             {tile.handOver && <ControlPicker tile={tile} members={tile.handOver} disabled={disabled} pending={pending} onHandOver={onHandOver} />}
@@ -557,18 +665,31 @@ function RoleTag({ children }: { children: ReactNode }) {
     )
 }
 
-function AChooser({ choices, busy, pending, onChoose }: {
-    choices: ManagerAChoice[]
-    busy: boolean
+interface TeamRadio {
+    side: PickBanSide
+    name: string
+    detail: string | null
+    chosen: boolean
+}
+
+function TeamRadios({ label, hint, choices, disabled, pending, highlight, refused, indicator, onChoose }: {
+    label: string
+    hint: string
+    choices: TeamRadio[]
+    disabled: boolean
     pending: boolean
+    highlight: boolean
+    refused: boolean
+    indicator: string
     onChoose: (side: PickBanSide) => void
 }) {
     const labelId = useId()
     const hintId = useId()
+    const indicatorId = useId()
     const radios = useRef<(HTMLButtonElement | null)[]>([])
     const focusable = Math.max(0, choices.findIndex((choice) => choice.chosen))
-    const choose = (choice: ManagerAChoice) => {
-        if (!busy && !choice.chosen) onChoose(choice.side)
+    const choose = (choice: TeamRadio) => {
+        if (!disabled && !choice.chosen) onChoose(choice.side)
     }
     const onKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
         const step = ARROW_STEPS[event.key]
@@ -580,17 +701,15 @@ function AChooser({ choices, busy, pending, onChoose }: {
     }
 
     return (
-        <div className="space-y-2.5 rounded-lg border border-pickban-a/30 bg-pickban-a/5 p-3">
+        <div className={cn('space-y-2', highlight && 'rounded-lg border border-amber-500/30 bg-amber-500/10 p-3')}>
             <div className="space-y-0.5">
-                <p id={labelId} className="flex items-center gap-2 text-sm font-bold text-foreground">
-                    Who is Team A?
+                <p id={labelId} className={cn('flex items-center gap-2', highlight ? 'text-sm font-bold text-foreground' : SMALL_CAPS)}>
+                    {label}
                     {pending && <Loader2 className="size-3.5 animate-spin text-muted-foreground" />}
                 </p>
-                <p id={hintId} className="text-xs text-muted-foreground">
-                    A normally goes to the better stage seed. These seeds are missing or tied, so choose which team is A.
-                </p>
+                <p id={hintId} className={cn('text-xs', refused ? 'text-amber-300' : 'text-muted-foreground')}>{hint}</p>
             </div>
-            <div role="radiogroup" aria-labelledby={labelId} aria-describedby={hintId} className="grid grid-cols-2 gap-1 rounded-lg border border-hairline/10 bg-card/60 p-1">
+            <div role="radiogroup" aria-labelledby={labelId} aria-describedby={hintId} className={cn('grid grid-cols-2 gap-1 rounded-lg border border-hairline/10 bg-card/60 p-1 transition-opacity', refused && 'opacity-50')}>
                 {choices.map((choice, index) => (
                     <button
                         key={choice.side}
@@ -600,7 +719,7 @@ function AChooser({ choices, busy, pending, onChoose }: {
                         type="button"
                         role="radio"
                         aria-checked={choice.chosen}
-                        aria-disabled={busy}
+                        aria-disabled={disabled}
                         tabIndex={index === focusable ? 0 : -1}
                         onClick={() => choose(choice)}
                         onKeyDown={(event) => onKeyDown(event, index)}
@@ -611,15 +730,17 @@ function AChooser({ choices, busy, pending, onChoose }: {
                     >
                         {choice.chosen && (
                             <motion.span
-                                layoutId="manager-dock-team-a"
+                                layoutId={indicatorId}
                                 transition={INDICATOR_TRANSITION}
-                                className="absolute inset-0 rounded-md bg-pickban-a shadow-md shadow-pickban-a/30"
+                                className={cn('absolute inset-0 rounded-md shadow-md', indicator)}
                             />
                         )}
                         <span className="relative line-clamp-2 break-words text-sm font-bold leading-tight">{choice.name}</span>
-                        <span className={cn('relative text-[10px] font-bold uppercase tracking-wider', choice.chosen ? 'text-white/80' : 'text-muted-foreground')}>
-                            {choice.stageSeed === null ? 'No stage seed' : `Stage Seed ${choice.stageSeed}`}
-                        </span>
+                        {choice.detail && (
+                            <span className={cn('relative text-[10px] font-bold uppercase tracking-wider', choice.chosen ? 'text-white/80' : 'text-muted-foreground')}>
+                                {choice.detail}
+                            </span>
+                        )}
                     </button>
                 ))}
             </div>
