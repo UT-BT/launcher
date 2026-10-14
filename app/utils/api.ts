@@ -4184,6 +4184,7 @@ export interface EventDetail extends EventSummary {
     description: string | null
     rules: string | null
     predictions_enabled?: boolean
+    achievements_enabled?: boolean
 }
 
 export interface EventTeamMember {
@@ -5577,6 +5578,50 @@ export interface PredictionFinaliseResult {
     achievements?: PredictionEventAchievements
 }
 
+export type EventAchievementMeasureKind = 'coins' | 'signed_coins' | 'percent' | 'signed_percent' | 'count' | 'flag'
+
+export interface EventAchievementStanding {
+    value: number | null
+    settled: number
+    qualifies: boolean
+    awarded: boolean
+}
+
+export interface EventAchievementPlayer extends EventAchievementStanding {
+    user_id: string
+    alias: string | null
+    title: RawActiveTitle | null
+}
+
+export interface EventAchievementBoardEntry {
+    code: string
+    name: string
+    description: string
+    goal: string
+    icon: string
+    unit: string
+    level: number
+    title: RawActiveTitle | null
+    unlocks_mid_event: boolean
+    measure: { kind: EventAchievementMeasureKind; label: string | null }
+    threshold: number
+    min_settled: number | null
+    awaiting_final: boolean
+    names_hidden: boolean
+    qualifying_count: number
+    awarded_count: number
+    qualifying: EventAchievementPlayer[]
+    chasing: EventAchievementPlayer[]
+    you: EventAchievementStanding | null
+}
+
+export interface EventAchievementBoard {
+    event: AchievementEvent | null
+    finalised: boolean
+    participants: number
+    achievements: EventAchievementBoardEntry[]
+}
+
 const PREDICTIONS_OFF: PredictionsOverview = {
     enabled: false,
     config: { enabled: false },
@@ -5720,6 +5765,14 @@ export async function finaliseEventPredictions(accessToken: string, slug: string
         predictionsPath(slug, '/admin/finalise'),
         { token: accessToken, method: 'POST' },
     )
+}
+
+export async function fetchEventAchievementBoard(
+    accessToken: string,
+    slug: string,
+    signal?: AbortSignal,
+): Promise<EventAchievementBoard> {
+    return apiGet<EventAchievementBoard>(predictionsPath(slug, '/achievements'), { token: accessToken, signal })
 }
 
 export interface PredictionFormEntry {

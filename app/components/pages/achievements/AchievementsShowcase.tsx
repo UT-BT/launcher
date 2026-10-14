@@ -1,12 +1,5 @@
 import { Fragment, useMemo, useState } from 'react'
-import {
-    Lock, Sparkles, Award, Crown, Check, ChevronDown,
-    Clock, Map as MapIcon, Trophy, Medal, Star, Swords, Tags, Globe, Shield, Wind, Flame, Snowflake,
-    Users, Handshake, ShieldCheck, Zap, Gem,
-    Hammer, Hourglass, Heart, PenTool, Blocks, Repeat,
-    Eye, TrendingUp, Percent, Dices, Coins, Ticket,
-    type LucideIcon,
-} from 'lucide-react'
+import { Lock, Award, Check, ChevronDown, Snowflake } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import { getTitleTextStyle } from '@/app/utils/titleStyles'
@@ -27,6 +20,7 @@ import {
     eventStateOf,
     eventWindowNotice,
 } from './eventAchievements'
+import { achievementIcon } from './achievementIcons'
 
 export type AchievementStatusFilter = 'all' | 'unlocked' | 'locked' | 'maxed'
 
@@ -36,13 +30,6 @@ export const STATUS_FILTERS: { id: AchievementStatusFilter; label: string }[] = 
     { id: 'locked', label: 'Locked' },
     { id: 'maxed', label: 'Maxed' },
 ]
-
-const ICON_MAP: Record<string, LucideIcon> = {
-    Clock, Map: MapIcon, Crown, Medal, Award, Trophy, Swords, Star, Tags, Globe, Shield, Wind, Flame, Sparkles,
-    Users, Handshake, ShieldCheck, Zap, Gem,
-    Hammer, Hourglass, Heart, PenTool, Blocks, Repeat,
-    Eye, TrendingUp, Percent, Dices, Coins, Ticket,
-}
 
 function goalTextFor(def: AchievementDefinition, tier: AchievementTier): string {
     return tier.is_all
@@ -325,7 +312,7 @@ function TierBar({ def, progress }: { def: AchievementDefinition; progress: Achi
 
 function AchievementRow({ def, progress, anonymous }: { def: AchievementDefinition; progress: AchievementProgress; anonymous: boolean }) {
     const [showTitles, setShowTitles] = useState(false)
-    const Icon = ICON_MAP[def.icon] ?? Award
+    const Icon = achievementIcon(def.icon)
     const maxed = progress.maxed
     const isBadge = (def.tiers ?? []).length === 1    // single-tier "earn it" achievement
     const rIdx = progress.current_level - 1           // rarity index of current tier (-1 when locked)

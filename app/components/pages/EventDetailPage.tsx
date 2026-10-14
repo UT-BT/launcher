@@ -39,6 +39,7 @@ import { isSignupOnlyTab, signupsClosed } from '@/app/utils/signupWindow'
 import { streamTabVisible, type OperatingViewer } from './events/stream/streamTabAccess'
 
 const StreamTab = lazy(() => import('./events/stream/StreamTab').then(m => ({ default: m.StreamTab })))
+const EventAchievementsTab = lazy(() => import('./events/achievements/EventAchievementsTab').then(m => ({ default: m.EventAchievementsTab })))
 
 const PICK_BAN_ME_REFRESH_MS = 30_000
 
@@ -65,7 +66,7 @@ function NextMatchBanner({ match, myTeamId, now }: {
     )
 }
 
-export type EventTab = 'info' | 'teams' | 'bracket' | 'maps' | 'predictions' | 'schedule' | 'players' | 'signup' | 'stream' | 'manage'
+export type EventTab = 'info' | 'teams' | 'bracket' | 'maps' | 'predictions' | 'achievements' | 'schedule' | 'players' | 'signup' | 'stream' | 'manage'
 
 interface EventDetailPageProps {
     eventSlug: string
@@ -82,6 +83,7 @@ const BASE_TABS: { id: EventTab; label: string }[] = [
     { id: 'maps', label: 'Maps' },
     { id: 'schedule', label: 'Schedule' },
     { id: 'predictions', label: 'Predictions' },
+    { id: 'achievements', label: 'Achievements' },
     { id: 'players', label: 'Looking for Partner' },
     { id: 'signup', label: 'Signup' },
     { id: 'stream', label: 'Stream' },
@@ -318,11 +320,13 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
     const signupOpens = formatEventDateTime(event.signup_opens_at)
     const hasBracket = (bracket?.stages?.length ?? 0) > 0
     const predictionsOn = !!event.predictions_enabled
+    const achievementsOn = !!event.achievements_enabled
     const scheduleVisible = scheduleTabVisible(scheduleParticipant, bracket)
     const visibleTabs = (canManageBracket ? TABS : BASE_TABS)
         .filter(t => t.id !== 'bracket' || hasBracket)
         .filter(t => t.id !== 'maps' || hasMapsPool)
         .filter(t => t.id !== 'predictions' || predictionsOn)
+        .filter(t => t.id !== 'achievements' || achievementsOn)
         .filter(t => t.id !== 'schedule' || scheduleVisible)
         .filter(t => t.id !== 'stream' || streamVisible)
         .filter(t => !signupsOver || !isSignupOnlyTab(t.id))
@@ -333,6 +337,7 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
         || (tab === 'bracket' && !hasBracket)
         || (tab === 'maps' && !hasMapsPool)
         || (tab === 'predictions' && !predictionsOn)
+        || (tab === 'achievements' && !achievementsOn)
         || (tab === 'schedule' && !scheduleVisible)
         || (tab === 'stream' && !streamVisible)
         || (signupsOver && isSignupOnlyTab(tab)) ? 'info' : tab
@@ -471,6 +476,11 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
                         onRefresh={refreshPredictions}
                         onMapSelect={onMapSelect}
                     />
+                )}
+                {activeTab === 'achievements' && achievementsOn && (
+                    <Suspense fallback={<p className="text-xs text-muted-foreground">Loading achievements…</p>}>
+                        <EventAchievementsTab slug={eventSlug} accessToken={browseToken} viewerId={viewerId || undefined} />
+                    </Suspense>
                 )}
                 {activeTab === 'players' && <EventLfpList entries={lfp} loading={loading} />}
                 {activeTab === 'signup' && (
