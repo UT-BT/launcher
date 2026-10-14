@@ -10,10 +10,8 @@ function contractState(name: ContractFixtureName): PickBanViewState {
     const fixture = streamSidesFixture(name)
     return {
         ...fixture,
-        chooser_side: null,
-        a_confirmed: false,
         viewer: { side: null, roster_captain: false },
-        capabilities: { ...fixture.capabilities, acting_side: null, can_choose_side: false, can_choose_a: false },
+        capabilities: { ...fixture.capabilities, acting_side: null, can_choose_side: false },
     }
 }
 
