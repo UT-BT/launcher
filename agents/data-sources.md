@@ -19,8 +19,8 @@ not_here:
   - "IPC channels (window.conveyor.*) → lib/conveyor/README.md"
   - "how UI state persists in localStorage → state-patterns.md"
   - "the procedure to wire a new endpoint into the UI → skill: consume-api-data"
-sections: [backend-api, errors, admin-api, event-brackets, event-scheduling, event-predictions, public-maps-tab-pick-ban-pools, event-pickban-sessions, event-pick-ban-setup, stream-kit, red-blue-sides-and-projected-standings-contract, changing-a-map-screenshot, cap-detail-page-endpoints, world-records-page-endpoints, team-maps-and-team-runs, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites, account-state-and-badges, limited-time-achievements]
-last_verified: 2026-10-14
+sections: [backend-api, errors, admin-api, event-brackets, event-scheduling, event-predictions, public-maps-tab-pick-ban-pools, event-pickban-sessions, event-pick-ban-setup, stream-kit, red-blue-sides-and-projected-standings-contract, hard-map-veto-and-ban-down-order-contract, changing-a-map-screenshot, cap-detail-page-endpoints, world-records-page-endpoints, team-maps-and-team-runs, avatar-urls, map-download-service, map-favorites-dual-storage, patreon-members, server-favorites, account-state-and-badges, limited-time-achievements]
+last_verified: 2026-10-23
 verify_against: [app/utils/api.ts, app/utils/chartBuckets.ts, app/components/pages/admin/components/controls.tsx, app/components/pages/admin/sections/HostsManagementSection.tsx, app/utils/patreon.ts, app/utils/server-utils.ts, app/hooks/useServerFavorites.ts, app/components/pages/events/manage/formatFields.tsx, app/components/pages/events/bracket/bracketShared.tsx, app/components/pages/events/bracket/BracketTab.tsx, app/components/pages/events/bracket/GroupStageView.tsx, app/components/pages/events/bracket/SwissStageView.tsx, app/components/pages/events/bracket/ElimStageView.tsx, app/components/pages/events/predictions/predictionsShared.tsx, app/components/pages/events/predictions/PredictionsTab.tsx, app/components/pages/events/schedule/scheduleShared.tsx, app/components/pages/events/schedule/scheduleSections.ts, app/components/pages/events/schedule/MyMatchesPanel.tsx, app/components/pages/events/schedule/ScheduleTabContainer.tsx, app/components/pages/events/schedule/PublicSchedulePanel.tsx, app/components/pages/events/schedule/publicSchedule.ts, app/components/pages/events/predictions/marketLock.ts, app/components/pages/events/predictions/PredictionsLeaderboard.tsx, app/components/pages/events/predictions/leaderboardView.ts, app/components/pages/events/predictions/MarketCard.tsx, app/components/pages/home/ClosingSoonBanner.tsx, app/components/pages/events/schedule/SlotPickerModal.tsx, app/components/pages/events/schedule/slotGeneration.ts, app/components/pages/events/schedule/SlotGrid.tsx, app/components/pages/events/manage/DateTimeField.tsx, app/components/pages/events/eventsShared.tsx, app/components/pages/EventDetailPage.tsx, app/utils/timezone.ts, app/components/pages/events/manage/ScheduleOversightPanel.tsx, app/components/pages/events/ManagePanel.tsx, app/components/main/Main.tsx, app/components/layout/AppLayout.tsx, app/components/pages/events/maps/MapsTab.tsx, app/components/pages/events/maps/mapsShared.ts, app/components/pages/events/pickban/pickBanView.ts, app/components/pages/events/pickban/pickBanStatus.ts, app/components/pages/events/pickban/pickBanSession.ts, app/components/pages/events/pickban/pickBanEntryPoints.ts, app/components/pages/events/pickban/components/PickBanLink.tsx, app/components/pages/events/pickban/components/PickBanJoinBanner.tsx, app/components/pages/events/pickban/clockOffset.ts, app/components/pages/events/manage/pickban/pickBanEditor.ts, app/components/pages/events/manage/pickban/PickBanPanel.tsx, app/components/pages/events/manage/pickban/PickBanStageCard.tsx, app/components/pages/events/manage/pickban/PickBanQueuePanel.tsx, app/components/pages/events/manage/pickban/pickBanQueue.ts, app/components/pages/events/manage/StaffPicker.tsx, app/components/pages/events/manage/matches/MatchesPanel.tsx, app/components/pages/events/manage/matches/matchesTable.ts, app/utils/signupWindow.ts, app/components/pages/events/pickBanTags.ts, app/components/navigation/matchLinks.ts, app/utils/poller.ts, app/components/pages/events/pickban/stream/StreamView.tsx, app/components/pages/events/pickban/pickBanCopy.ts, app/components/pages/events/pickban/components/PickBanUnavailable.tsx, app/components/pages/events/pickban/pickBanSoundCues.ts, app/components/pages/events/pickban/pickBanSoundPlayer.ts, app/components/pages/events/pickban/usePickBanSound.ts, app/components/pages/events/pickban/pickBanSounds.ts, app/components/pages/events/pickban/pickBanBeats.ts, app/components/pages/MatchPickBanPage.tsx, app/components/pages/events/pickban/managerDock.ts, app/components/pages/events/pickban/pickBanSoundPreference.ts, app/components/pages/events/pickban/stream/streamSound.ts, app/utils/eventAttention.ts, app/components/navigation/nav-items.ts, app/components/pages/events/EventTodoPanel.tsx, app/components/pages/events/manage/CapLinkPicker.tsx, app/components/pages/events/manage/capLinkRuns.ts, app/components/pages/events/pickban/stream/StreamBroadcast.tsx, app/components/pages/events/pickban/stream/boardLayout.ts, app/components/pages/events/pickban/components/stageMotion.ts, app/components/broadcast/BroadcastStage.tsx, app/components/broadcast/stageScale.ts, app/components/stream/streamScenes.ts, app/components/stream/streamSceneOptions.ts, app/components/stream/data/streamHotState.ts, app/components/stream/data/streamHotStateStore.ts, app/components/stream/data/conditionalRead.ts, app/components/stream/data/sceneCadence.ts, app/components/stream/data/sceneReadStore.ts, app/components/stream/data/sceneReadRegistry.ts, app/components/stream/data/StreamDataProvider.tsx, app/components/stream/data/useStreamData.ts, app/components/stream/ticker/streamFeed.ts, app/components/stream/scenes/betting/bettingRead.ts, app/components/stream/scenes/nextMap/nextMapRead.ts, app/components/stream/scenes/postMatch/postMatchRead.ts, app/components/stream/scenes/preview/previewRead.ts, app/components/stream/scenes/standings/standingsRead.ts, app/components/stream/scenes/startingSoon/startingSoonReads.ts, app/components/pages/events/stream/streamDesk.ts, app/components/pages/events/stream/StreamTabContext.tsx, app/components/pages/events/stream/panels/match/currentMatchActions.ts, app/components/pages/events/stream/panels/match/lineupActions.ts, app/components/pages/events/stream/panels/match/scoreActions.ts, app/components/pages/events/stream/panels/match/scoreView.ts, app/components/pages/events/stream/panels/match/localTime.ts, app/components/pages/events/stream/panels/match/countdownView.ts, app/components/pages/events/stream/panels/match/lineupView.ts, app/components/pages/events/stream/panels/studio/casterList.ts, app/components/pages/events/stream/panels/cams/camToolView.ts, app/components/pages/events/streamerRoster.ts, app/components/pages/admin/sections/StreamersSection.tsx, app/components/pages/admin/sections/streamerRoster.ts, app/components/pages/admin/sections/MapVideoControl.tsx, app/components/pages/admin/sections/mapVideoFile.ts, app/utils/mapScreenshots.ts, app/components/modals/mapScreenshotCrop.ts, app/components/stream/ticker/tickerModel.ts, app/components/stream/ticker/TickerItems.tsx, lib/main/config.ts, lib/stream-kit/cam-plan.ts, app/components/pages/events/stream/panels/studio/showActions.ts, app/components/pages/events/stream/panels/channel/channelActions.ts, app/components/pages/events/stream/panels/kit/kitFetch.ts, app/components/pages/events/stream/panels/cams/camToolHooks.ts, app/components/pages/achievements/eventAchievements.ts, app/components/pages/achievements/AchievementsShowcase.tsx, app/components/pages/home/AchievementProgressPreview.tsx, app/components/pages/events/achievements/eventAchievementBoard.ts, app/components/pages/events/achievements/EventAchievementsTab.tsx]
 ---
 
@@ -1868,6 +1868,61 @@ projected prediction standings.
   Load them through `streamSidesFixture(name)` (a typed copy of `data`),
   `streamSidesErrorFixture(name)` or `streamSidesFixtureResponse(name)` (a mock `Response`)
   from `app/utils/fixtures/streamSidesFixtures.ts`. A contract change edits these files and
+  their pins together with the API.
+
+### Hard-map veto and ban-down order (contract)
+
+The types below describe what the API adds for a team-chosen Hard-map veto, an explicit
+ban-down order and the weaker-team reasons. The pick/ban types keep the new keys optional
+until the screens that read them land; the contract fixture types below require them.
+
+- **Sequence.** `PickBanSequence.ban_down_order` (`PickBanActor[]`) is sent only when a
+  sequence sets it: ban-down step *k* is taken by `ban_down_order[k % length]`. Without it the
+  ban-down alternates as before.
+- **Exclusion rules.** `PickBanExclusionRule.mode` (`PICK_BAN_EXCLUSION_MODES`: `auto`,
+  `choice`) is sent on a stage config only for `choice`; a rule without it is `auto`. On the
+  pick/ban state every exclusion carries `mode` and `vetoed_by` (the side that vetoed, null for
+  `auto`).
+- **Pacing.** `PickBanContractPacing` is the pacing as sent: the four spotlight keys plus
+  `side_spotlight` and `veto_spotlight` (seconds, default 7).
+- **Veto block.** `PickBanState.veto` is a `PickBanVeto`, or null when the stage has no
+  `choice` rule: `active` (a choice rule exists and at least one side is eligible), `tag`,
+  `min_pre_cup_seed`, `maps` (the pool maps carrying the tag), `eligible` (sides),
+  `choices` (one entry per eligible side: `VetoChoice` `veto | play`, or null before it
+  chooses), `outcome` (`VetoOutcome` `vetoed | played`, null while unresolved), `vetoed_by`,
+  `pool_sizes` (`PickBanVetoPoolSizes` `{ vetoed, played }`), `resolved_at` and `reveal_at`
+  (the veto spotlight runs from `reveal_at` for `veto_spotlight` seconds). With nobody
+  eligible the outcome is `played` from Start, with no phase and no spotlight.
+- **While the veto is unresolved** (`active` and `outcome` null) `plan` and `side.cards` are
+  empty, and every pool card carrying the tag has `pending_choice: true`. The plan appears
+  when the veto resolves: 9 maps after a veto, 13 when the maps stay in.
+- **Phases.** `veto_choice` and `veto_spotlight` (`PICK_BAN_VETO_PHASES`, part of
+  `PickBanContractPhase`) run after the intro and before `side_choice`. `veto_choice` has no
+  timer.
+- **Capabilities.** `capabilities.can_veto` is true for the viewer who may send the veto now.
+- **Bodies.** The captain's `POST .../pick-ban/veto` takes `PickBanVetoCommandBody`
+  `{ choice, version }`; the manager's Act for team takes `PickBanVetoForTeamBody`
+  `{ side, choice, version }`. Both answer the pick/ban state.
+- **Weaker team.** `PICK_BAN_CONTRACT_CHOOSER_REASONS` (`PickBanContractChooserReason`):
+  `direct_qualifier`, `lower_playoff_record`, `lower_group_placing`, `lower_pre_cup_seed`,
+  `admin`. `side.chooser_basis` (`PickBanChooserBasis` `{ chooser, other }`) gives the numbers
+  behind the reason, the chooser first: group finishing positions, pre-cup seeds, or
+  `PickBanPlayoffRecord` `{ wins, losses }` objects; null for `direct_qualifier` and `admin`.
+  `PICK_BAN_CHOOSER_REASONS` still lists the reasons the screens word today.
+- **Refusals.** `PICK_BAN_VETO_ERROR_CODES`: `veto_not_open` (a veto outside `veto_choice`),
+  `already_chosen` (a side that already chose), `veto_choice_active` (a lettered step during
+  `veto_choice`); a lettered step during `veto_spotlight` is `spotlight_active`, and the side
+  command during either veto phase is `side_not_open`. `MATCH_EDITOR_SIDE_ERROR_CODES`:
+  `side_locked`, when the match editor changes or clears the Red side while the match's
+  pick/ban session is running or paused. All four answer 409. Neither list is part of
+  `PICK_BAN_ERROR_CODES` yet.
+- **Fixtures.** `app/utils/fixtures/pickBanVeto/` holds the veto payloads (lobby, veto choice,
+  both spotlights, the side step after a veto, no eligible team, a direct qualifier, the stage
+  config and the four refusals), byte-identical to what the API sends and pinned by sha256 in
+  `pickBanVetoFixtures.test.ts`. Load them through `pickBanVetoFixture(name)`,
+  `pickBanVetoErrorFixture(name)` or `pickBanVetoFixtureResponse(name)` from
+  `app/utils/fixtures/pickBanVetoFixtures.ts`. The `streamSides` pick/ban fixtures carry the same
+  new keys for a stage without a veto (`veto` null). A contract change edits these files and
   their pins together with the API.
 
 ### Limited-time achievements

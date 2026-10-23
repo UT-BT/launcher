@@ -40,11 +40,11 @@ const PINNED_SHA256: Record<string, string> = {
     'error_side_not_open.json': 'eaa63b08b48f4928874b456790699d56a9975c526e5a07d2d5d23373f10a611d',
     'leaderboard.json': '05bd495d5dccb81a191902735b1e790cb19fafc005837abe760be23667d189b9',
     'me_matches.json': '6a4dab64118f6dc6ee5363686884a5688ab7a2989f9f923838515789bd2a23c8',
-    'pick_ban_admin_set.json': 'decacc6e1e3ee9a0e84ce5545c6f7d8bc2ca188e414693998f3b69c7a9de6827',
-    'pick_ban_lobby.json': 'fcb93cea646d9df2e09ed07995c6d4a4c41c60f553173ea65364572a574ee4fb',
-    'pick_ban_lobby_undetermined.json': 'efccebead9f4b10d5a9de7db1f29388deb9af3cb10f67bacc3710ce7fd07ca17',
-    'pick_ban_side_choice.json': '830f49214e5204b2cfccad56fdeb9fea4293b32828f4e628ed2f9dc5598cdcd7',
-    'pick_ban_side_spotlight.json': 'ac174330a45b6fdf5c379d59b73b451c3637375cd70216d04fa4911b628e11d7',
+    'pick_ban_admin_set.json': 'ed7bd010fbd832e9a51e165ef417bd17ac840da48f8fec0fb0678775b5a88c52',
+    'pick_ban_lobby.json': '177eb1692c5112a79642ff08fae1b667b89d710ae3a500722a50913a8146639f',
+    'pick_ban_lobby_undetermined.json': '542b9f7216e78d14ad5ceaea303a38c29fc1125c874a6441c06abe8ec5000f80',
+    'pick_ban_side_choice.json': '7f1607f539949e3e404a5cfa1ec30b51ec753a1167a5998daf6fcf436dce5d86',
+    'pick_ban_side_spotlight.json': '36657dd4794c1e522b1976ad19b273db0243239ee8cf297cb3d46ceeb2f2131e',
     'predictor_standings.json': 'a8a26a0b20fc6e3b831deaf0345aac2d0391657dfd107620167959a343d70ba3',
     'predictor_standings_matchless.json': 'b70fe79c86d5f2e6df96ad53d9f30661ae782c471714fad6a99e362dc8e5c1bb',
     'stream_sides_put.json': '9cfd031c985dfcc00c5aaaee138470ed980c45f82f4335eac740975245f3bdfe',
@@ -54,6 +54,8 @@ const PINNED_SHA256: Record<string, string> = {
 const PHASES = {
     lobby: true,
     intro: true,
+    veto_choice: true,
+    veto_spotlight: true,
     side_choice: true,
     side_spotlight: true,
     awaiting: true,
@@ -72,6 +74,7 @@ const SIDE_BLOCK_KEYS = {
     changed_mid_veto: true,
     chooser: true,
     chooser_reason: true,
+    chooser_basis: true,
     cards: true,
 } satisfies Record<keyof PickBanSideBlock, true>
 
@@ -192,6 +195,17 @@ describe('stream sides fixtures', () => {
         expect(state.capabilities).not.toHaveProperty('can_choose_a')
         expect(state).not.toHaveProperty('chooser_side')
         expect(state).not.toHaveProperty('a_confirmed')
+    })
+
+    it.each(PICK_BAN_NAMES)('%s carries the veto keys for a stage without a veto', (name) => {
+        const state = streamSidesFixture(name)
+
+        expect(state.veto).toBeNull()
+        expect(state.capabilities.can_veto).toBe(false)
+        expect(state.pool.every((card) => card.pending_choice === false)).toBe(true)
+        expect(state.pacing.veto_spotlight).toBe(7)
+        expect(state.sequence).not.toHaveProperty('ban_down_order')
+        expect(state.side.chooser_basis).toEqual(state.side.chooser === null ? null : { chooser: 9, other: 3 })
     })
 
     it('walks a lobby, an undetermined chooser, step 0 and an admin-set side', () => {
