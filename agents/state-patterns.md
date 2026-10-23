@@ -17,7 +17,7 @@ not_here:
   - "the navigation stack / navigate() / renderView wiring → navigation.md"
   - "the shared components used (FilterPresetsMenu, ColumnsMenu, Tutorial) → shared-components.md"
 sections: [controlled-pages-with-hoisted-state, navigation-history-per-entry-ui-state, account-synced-state, localstorage-persistence, filter-presets, tutorial-state, favorites, polling-live-data, naming-conventions]
-last_verified: 2026-10-13
+last_verified: 2026-10-23
 verify_against: [app/components/main/Main.tsx, app/components/navigation/useNavState.ts, app/hooks/useAsync.ts, app/utils/userState.ts, app/utils/poller.ts, app/components/pages/events/pickban/pickBanSession.ts, app/components/pages/events/pickban/usePickBanSession.ts, app/components/pages/events/pickban/mergePickBanState.ts, app/components/pages/events/pickban/captainPlay.ts, app/components/pages/events/pickban/useCaptainPlay.ts, app/components/pages/events/pickban/managerDock.ts, app/components/pages/events/pickban/useManagerDock.ts, app/components/pages/events/pickban/editFinal.ts, app/components/pages/events/pickban/pickBanMotionPreference.ts, app/components/pages/events/pickban/pickBanSoundPreference.ts, app/components/pages/MatchPickBanPage.tsx, app/components/navigation/nav-items.ts, app/utils/eventAttention.ts, app/components/pages/events/stream/StreamTab.tsx, app/components/pages/events/stream/StreamTabContext.tsx, app/components/pages/events/stream/streamDesk.ts, app/components/pages/events/stream/panels/kit/kitFolder.ts, app/components/stream/data/sceneCadence.ts, app/components/stream/data/streamHotStateStore.ts, app/components/stream/data/sceneReadStore.ts, app/components/pages/events/stream/streamPanels.ts, app/components/pages/events/stream/useStreamKitState.ts, app/components/pages/events/stream/panels/cams/camToolHooks.ts, lib/main/config.ts]
 ---
 
@@ -550,6 +550,20 @@ flight. The pending hover is cancelled on unmount too.
   and spins the button. A refusal becomes the dock's refusal message, worded for
   `side_not_open`, `not_authorized`, `version_conflict`, `wrong_status`, `paused` and
   `no_session`, with the server's own message for anything else. Dismiss clears it.
+
+**The Hard-map veto** runs before step 0 and doesn't go through captain play either. The view
+model's `veto` block says when it runs (`veto.phase` is `veto_choice`, then `veto_spotlight`)
+and what this viewer may do (`veto.canVeto`, `veto.viewerChooses`, `veto.waiting`). The match
+page handles it like the side choice:
+
+- While a veto phase runs, anyone with `affordances.actingSide` gets the captain dock with
+  `veto={view.veto}` and the view's countdown. The dock's lettered `controls` are dropped
+  during both veto phases, so its rows never announce step 1 before the side choice.
+- An eligible captain who hasn't chosen sees the two veto cards. The selected card is plain
+  `useState` inside the dock. Lock In sends `sendCommand('veto', { choice })`.
+- The page keeps `{ choosing, rejection }` for the veto in its own `useState`; a refusal is
+  worded by `vetoRejection` (`events/pickban/captainVeto.ts`) and shows as the dock's refusal.
+  Dismiss clears both the veto and the side refusal.
 
 **Manager play** (`events/pickban/managerDock.ts`, pure, Vitest without a DOM) is the same
 idea for a viewer with `can_manage`, on its own path so a manager never goes through the

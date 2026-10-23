@@ -1051,7 +1051,15 @@ re-derives it between polls from the absolute timestamps: `intro_ends_at`,
 waits for a poll. Every body except Open's carries the expected `version`.
 
 - **Participant commands:** `sendPickBanCommand(token, slug, matchId, command, body)` →
-  `POST .../matches/<id>/pick-ban/{side,ready,unready,hover,lock}`. `side` takes
+  `POST .../matches/<id>/pick-ban/{veto,side,ready,unready,hover,lock}`. `veto` takes
+  `{ choice: 'veto' | 'play', version }` (`PickBanVetoCommandBody`): an eligible team's
+  captain or acting captain keeps or removes the tagged maps in phase `veto_choice`, and
+  `capabilities.can_veto` is true for exactly that viewer while it is open. Each eligible team
+  chooses once; the first `veto` removes the maps for both teams, and the maps stay in once every
+  eligible team chose `play`. It answers the pick/ban state. The page words `veto_not_open`,
+  `already_chosen`, `paused`, `version_conflict`, `not_authorized`, `wrong_status` and
+  `no_session` (`vetoRejection` in `events/pickban/captainVeto.ts`, naming the veto's `tag`) and shows the server's
+  message for anything else. `side` takes
   `{ choice: 'red' | 'blue', version }`: the chooser team's captain or acting captain picks a
   colour for the whole match in phase `side_choice` (step 0), and
   `capabilities.can_choose_side` is true for exactly that viewer while it is open. Outside
@@ -1104,7 +1112,8 @@ waits for a poll. Every body except Open's carries the expected `version`.
   while a session runs.
 - **Refusals.** A refusal is an `ApiError` whose `.reason` is a stable code (403
   authorization, 409 state conflict, 422 validation). `pickBanErrorCode(err)` narrows it to
-  `PickBanErrorCode`, and `PICK_BAN_ERROR_CODES` lists every code. Show `err.message`, and
+  `PickBanErrorCode`, and `PICK_BAN_ERROR_CODES` lists every code (the veto codes are in
+  `PICK_BAN_VETO_ERROR_CODES` instead, read straight off `err.reason`). Show `err.message`, and
   branch on the code only where a screen reacts to a specific one. The captain controls do:
   `captainPlay.ts` words each Ready/Unready and Lock refusal for the captain
   (`version_conflict`, `not_your_turn`, `map_unavailable`, `spotlight_active`,
@@ -1238,6 +1247,11 @@ pure and tested without a DOM. It returns:
   sentence naming the team and seed that triggered it) and the `previewed`, `lockedIn`,
   `selected` and `selectable` flags. `selected` is always `false` here: the captain's own
   selection is layered on by `withCaptainPlay` (see `agents/state-patterns.md`).
+  For the team-chosen veto, `pendingChoice` is true on an available card the payload marks
+  `pending_choice`, with `pendingLabel` ("Hard?", the veto's tag) for the tile. A card removed
+  by a veto (an exclusion with `mode: 'choice'`) is `excluded` with `vetoedBy` (the side) and
+  `vetoedByName`, and its `exclusionReason` reads "Hard maps are vetoed by T15." Every other
+  card has `pendingChoice` false and `vetoedBy` null.
 - `timeline`: `upcoming`, `current`, `locked_in` or `revealed`, with each step's
   `actorLabel` and `actionLabel`, its `automatic` flag, and its map and screenshot version
   once revealed
@@ -1258,8 +1272,10 @@ pure and tested without a DOM. It returns:
   - `red` is the Red team's side, falling back to A (`team_a` while unset); `confirmed`,
     `tbc` (its opposite, for "Sides TBC") and `source` pass through. `viewerColor` is the
     viewer's own colour once confirmed, and `null` for a non-player.
-  - `chooser`, `chooserName`, `chooserReason` (the payload's `chooser_reason`, for the
-    manager dock's chooser rule), and `canChoose` (the payload's `can_choose_side`, only while
+  - `chooser`, `chooserName`, `chooserReason` (the payload's `chooser_reason` when it is one
+    of `PICK_BAN_CHOOSER_REASONS`, else `null`), `chooserBasis` (the payload's
+    `chooser_basis`), `chooserLine` ("Hop n' Twerk choose: lower group finish (4th vs 3rd)",
+    for every reason; see the chooser copy below), and `canChoose` (the payload's `can_choose_side`, only while
     `side_choice` runs and the session is running). `viewerChooses` says the viewer's team
     is the chooser during `side_choice`, even while the choice is closed by a pause.
   - `phase` is `side_choice` or `side_spotlight` while step 0 runs, else `null`.
@@ -1280,6 +1296,40 @@ pure and tested without a DOM. It returns:
     before the other), and `steps` with `number`, `action`, `segment`, the plan's
     `mapNumber`, and a `label` ("Ban", "Pick map 2", "Ban (ban-down)"). When the match
     has no plan, `cards` is empty.
+- `veto`: the team-chosen veto, from the payload's `veto` block, or `null` when the stage has
+  no `choice` rule.
+  - `active`, `tag`, `minPreCupSeed`, `maps`, `eligible` with `eligibleNames`, `outcome`,
+    `vetoedBy` / `vetoedByName` and `poolSizes` (`{ vetoed, played }`) pass through. `choices`
+    lists each eligible team as `{ side, teamName, choice }` (`choice` null until it chooses).
+  - `phase` is `veto_choice` or `veto_spotlight` while the veto runs, else `null`. Both come
+    before the side step. `veto_choice` runs once the intro ends while `active` and
+    `outcome` is null; it has no timer, and the stage shows it as `awaiting` with no `turn`.
+    `veto_spotlight` runs from `resolved_at` to the payload's `phase_ends_at` while the
+    server's phase is `veto_spotlight`, else to `reveal_at` plus `pacing.veto_spotlight`
+    (so a pause or a late poll holds it). The stage shows it as `spotlight` with no
+    `spotlight` entry and no `turn`, counting down to its end; then the side step (or step
+    1) opens without another poll.
+  - `poolLine` is "13 or 9 maps" (`played` or `vetoed`) while the veto is unresolved, when
+    `plan` is still empty, else `null`.
+  - The viewer: `canVeto` (the payload's `can_veto`, only while `veto_choice` runs and the
+    session is running), `viewerEligible` (the viewer's acting side is eligible),
+    `viewerChoice`, and `viewerChooses` (eligible and not chosen yet during `veto_choice`,
+    even while a pause closes it).
+  - `waiting` during `veto_choice`: "Waiting for T16" for an eligible captain who has chosen,
+    "T15 are deciding on the Hard maps" (or "T12 and T16 are…") for everyone else, and
+    `null` for a viewer who still chooses.
+  - `reveal` during `veto_spotlight`: `{ outcome, side, teamName, text, mapCount, revealAt }`.
+    `text` is "T15 veto the Hard maps" or "Hard maps stay in", `mapCount` 9 or 13, and
+    `revealAt` the payload's `reveal_at` on the local clock.
+  - The scene adds `veto_choice` (key `veto-choice`, position 1.1) and `veto_reveal`
+    (`veto-reveal`, 1.2), between the intro and the side step.
+- **Chooser copy** (`events/pickban/chooserReasonCopy.ts`, shared by the page, the manager
+  dock and the stream). `chooserReasonText(reason, basis)` words a reason, adding the numbers
+  when `chooser_basis` fits it: "lower group finish (4th vs 3rd)", "higher pre-cup seed (16 vs
+  12)", "worse playoff record (2-1 vs 2-0)", "playoff qualifier vs direct qualifier", "named
+  by an admin" (and "lower knockout differential" for the older reason).
+  `chooserLine(teamName, reason, basis)` puts the team first: "T15 choose: …". `ChooserReason`
+  is either reason union.
 - `teams.left` (A) and `teams.right` (B), each with its `color`, falling back to `team_a` on the left while A is
   undetermined
 - `banners`: voided, cancelled, paused, skipped bans and warnings
@@ -1291,8 +1341,12 @@ pure and tested without a DOM. It returns:
   and `actForSideChoice` stay `null`. The side windows: `sideChooser` in the lobby unless
   an admin has set the side, `setSides` in the lobby or running before the first step, `swap`
   in that window once the side is confirmed, and `actForSideChoice` (the chooser team)
-  while running in phase `side_choice`.
-  `undo` and `reopen` need a human step in the plan, one that isn't `automatic` (a plan
+  while running in phase `side_choice`. `actForVeto` lists the eligible teams that haven't
+  chosen while running in phase `veto_choice` (empty for a manager who plays in the match).
+  `undoTarget` says what Undo takes back: `step` (a human step is in), `side` (no step yet,
+  the veto resolved and step 0 set the side), `veto` (no step and no step-0 side, the veto
+  resolved) or `null`; `undo` is `undoTarget !== null`.
+  Without a resolved veto, `undo` and `reopen` need a human step in the plan, one that isn't `automatic` (a plan
   that is only an automatic step has nothing to undo). `reopen` applies from the moment the status is `complete`, and `editFinal` only
   once the view's `phase` is `complete` too, after the last spotlight, so the editor never
   opens on an unrevealed slot.
@@ -1937,6 +1991,9 @@ until the screens that read them land; the contract fixture types below require 
   `side_locked`, when the match editor changes or clears the Red side while the match's
   pick/ban session is running or paused. All four answer 409. Neither list is part of
   `PICK_BAN_ERROR_CODES` yet.
+- **On the page.** The view model's `veto` block, the pool cards' `pendingChoice` /
+  `vetoedBy` and the captain's `veto` command are described under the pick/ban sessions'
+  view model above.
 - **Fixtures.** `app/utils/fixtures/pickBanVeto/` holds the veto payloads (lobby, veto choice,
   both spotlights, the side step after a veto, no eligible team, a direct qualifier, the stage
   config and the four refusals), byte-identical to what the API sends and pinned by sha256 in

@@ -21,6 +21,8 @@ interface MapTileProps {
 
 const BADGE = 'absolute left-[5cqw] top-[5cqw] flex items-center gap-[2cqw] rounded-[3cqw] px-[4cqw] py-[1.5cqw] text-[clamp(11px,9cqw,28px)] font-black italic uppercase leading-none shadow-lg'
 
+const PENDING_BADGE = 'bg-black/65 text-white/85 ring-1 ring-inset ring-white/30'
+
 const WIDE_BADGE = 'absolute inset-x-[5cqw] top-[5cqw] rounded-[3cqw] py-[1.5cqw] text-center text-[clamp(10px,7.5cqw,22px)] font-black italic uppercase leading-none tracking-wider shadow-lg'
 
 export function actorLabelsOf(left: { ab: PickBanActor | null; name: string } | null, right: { ab: PickBanActor | null; name: string } | null): ActorLabels {
@@ -41,6 +43,7 @@ function tileLabel(card: PickBanCardView, name: string, actorLabels: ActorLabels
         case 'decider':
             return `${name}, the decider, map ${card.mapNumber}`
         default:
+            if (card.pendingLabel) return `${name}, waiting on the ${card.pendingLabel.slice(0, -1)} map choice`
             return card.previewed ? `${name}, being considered` : name
     }
 }
@@ -119,6 +122,11 @@ export function MapTile({ card, previewActor, actorLabels, dimmed, imageSize, on
                             </span>
                             <span className={cn('text-[clamp(11px,12cqw,34px)] font-black italic uppercase leading-none tracking-[0.12em]', tone.text)}>Banned</span>
                         </motion.div>
+                    )}
+                    {card.pendingLabel && (
+                        <motion.span key="pending-choice" {...CHIP_MOTION} className={cn(BADGE, PENDING_BADGE)}>
+                            {card.pendingLabel}
+                        </motion.span>
                     )}
                     {chosen && (
                         <motion.span key="map-number" {...CHIP_MOTION} className={cn(BADGE, tone.solid, tone.onSolid)}>

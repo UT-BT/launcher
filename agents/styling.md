@@ -10,7 +10,7 @@ not_here:
   - "which component to use → shared-components.md"
   - "state / persistence → state-patterns.md"
 sections: [class-merging, tables-locked, responsive-columns, page-layout, filter-panel, buttons-toggle-states, form-inputs, card-backgrounds-borders, text, color-palette, animation, css-runtime-cost, broadcast-styling, scene-stylesheet, screenshot-conventions, donts]
-last_verified: 2026-10-13
+last_verified: 2026-10-23
 verify_against: [app/components/shared/DataTable.tsx, app/components/shared/LiveDot.tsx, app/components/shared/chipStyles.ts, app/styles/globals.css, app/styles/theme.css, app/styles/desktop.css, app/styles/index.css, lib/utils.ts, app/hooks/useElementWidth.ts, app/hooks/usePrefersReducedMotion.ts, app/components/broadcast/broadcastTone.ts, app/components/broadcast/broadcastMotion.ts, app/components/broadcast/broadcastFonts.ts, app/components/broadcast/broadcastFonts.css, app/components/broadcast/BroadcastStage.tsx, app/components/stream/streamScenes.css, app/components/stream/frame/SceneFrame.tsx, e2e/streamHarness.ts, playwright.config.ts, app/components/stream/scenes/overlay/overlayLayout.ts, app/components/stream/scenes/nextMap/NextMapHero.tsx, e2e/audio-balance.broadcast.spec.ts]
 ---
 
@@ -428,6 +428,31 @@ tone, Blue the azure `pickban-b` one.
     reveal line ("T04 → RED · bans first") at 64px in the tone, the countdown to step 1 and
     the next turn, with the chosen team's half of the backdrop lit. The intro adds the
     `introLine` ("Sides set by admin") under its countdown when step 0 is skipped.
+
+### Hard-map veto: cards and pool states
+
+A team-chosen veto removes the tagged maps (Hard) for both teams. It runs before the side
+step, while no team has a colour yet, so its controls never use the Red or Blue tones.
+
+- **Veto cards** (captain dock). Two cards in a `radiogroup`, built like the side cards
+  (`rounded-xl border-2`, `bg-card/40` until selected, one column on phones), in the
+  `PICK_BAN_TONES.gold` tone: "**Veto Hard maps**" with "Play 9 maps" and the four maps as
+  small chips, and "**Play Hard maps**" with "Play 13 maps". The Lock In button turns gold once
+  a card is selected and reads "Lock In Veto" or "Lock In Play".
+- **Waiting.** The other captain, or one who has chosen, gets the usual locked control row:
+  "T15 are deciding on the Hard maps" or "Waiting for T16".
+- **Outcome.** The stage caption and the dock's reveal row say "T15 veto the Hard maps" or
+  "Hard maps stay in" in `text-pickban-gold`, with "9 maps" or "13 maps" in the muted detail.
+- **Pending cards.** While teams decide, each tagged tile keeps its normal look and gets a
+  top-left badge "Hard?" (the tile's `BADGE` shape, `bg-black/65 text-white/85` with an inset
+  `ring-white/30`): neutral, neither banned nor picked.
+- **Vetoed cards.** They leave the board like any excluded map and sit in the `ExcludedMaps`
+  row (grey thumbnail and name), each with a gold outlined stamp "VETOED · T15"
+  (`border-pickban-gold/55 text-pickban-gold`, 10px black uppercase). The reason under the
+  row names the team: "Hard maps are vetoed by T15."
+- **Played.** When the maps stay in, the cards are plain again.
+- **Before the plan exists** the step track's place shows "13 or 9 maps" in `font-pickban`
+  with "The steps appear once the Hard maps are decided." under it.
 
 ## Themes
 

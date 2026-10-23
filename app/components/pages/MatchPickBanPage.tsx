@@ -5,12 +5,13 @@ import { useNavigation } from '@/app/components/navigation/NavigationContext'
 import { buildMatchLinks } from '@/app/components/navigation/matchLinks'
 import { useDocumentTitle } from '@/app/components/navigation/useDocumentMeta'
 import { SITE_NAME } from '@/app/components/navigation/titles'
-import { ApiError, type PickBanErrorCode, type PickBanSideErrorCode, type SideColor, type UserProfile } from '@/app/utils/api'
+import { ApiError, type PickBanErrorCode, type PickBanSideErrorCode, type SideColor, type UserProfile, type VetoChoice } from '@/app/utils/api'
 import { SIDES_TBC, sideColorName } from '@/app/utils/sideLabels'
 import { useCopyFeedback } from '@/app/hooks/useCopyFeedback'
 import { usePickBanSession, usePickBanView } from '@/app/components/pages/events/pickban/usePickBanSession'
 import { useCaptainPlay } from '@/app/components/pages/events/pickban/useCaptainPlay'
 import { unwordedRejection } from '@/app/components/pages/events/pickban/captainPlay'
+import { vetoRejection } from '@/app/components/pages/events/pickban/captainVeto'
 import { useManagerDock } from '@/app/components/pages/events/pickban/useManagerDock'
 import { usePickBanPreload } from '@/app/components/pages/events/pickban/usePickBanPreload'
 import { usePickBanSound } from '@/app/components/pages/events/pickban/usePickBanSound'
@@ -60,6 +61,13 @@ interface SideChoiceState {
 
 const IDLE_SIDE_CHOICE: SideChoiceState = { choosing: null, rejection: null }
 
+interface VetoChoiceState {
+    choosing: VetoChoice | null
+    rejection: string | null
+}
+
+const IDLE_VETO_CHOICE: VetoChoiceState = { choosing: null, rejection: null }
+
 function sideChoiceRejection(error: unknown): string {
     const reason = error instanceof ApiError ? error.reason as PickBanErrorCode | PickBanSideErrorCode | undefined : undefined
     return (reason && SIDE_CHOICE_REJECTIONS[reason]) ?? unwordedRejection(error)
@@ -75,6 +83,7 @@ export function MatchPickBanPage({ eventSlug, matchId, userProfile, onBackToEven
     const [soundPreference, setSoundPreference] = useState(loadPickBanSoundPreference)
     const [animate, setAnimate] = useState(loadPickBanMotion)
     const [sideChoice, setSideChoice] = useState<SideChoiceState>(IDLE_SIDE_CHOICE)
+    const [vetoChoice, setVetoChoice] = useState<VetoChoiceState>(IDLE_VETO_CHOICE)
     usePickBanPreload(view?.cards)
     const sound = usePickBanSound({
         state: session.state,
@@ -95,13 +104,23 @@ export function MatchPickBanPage({ eventSlug, matchId, userProfile, onBackToEven
 
     const actFor = manager.dock?.actFor ?? null
     const captainSide = view && view.affordances.actingSide !== null && view.side.phase !== null ? view.side : undefined
-    const sideOnlyDock = captain.dock ?? (captainSide || sideChoice.rejection ? { controls: null, rejection: null } : null)
-    const captainDock = sideOnlyDock && sideChoice.rejection ? { ...sideOnlyDock, rejection: sideChoice.rejection } : sideOnlyDock
+    const captainVeto = view && view.affordances.actingSide !== null && view.veto?.phase ? view.veto : undefined
+    const captainBase = captain.dock && captainVeto ? { ...captain.dock, controls: null } : captain.dock
+    const stepRejection = vetoChoice.rejection ?? sideChoice.rejection
+    const stepOnlyDock = captainBase ?? (captainSide || captainVeto || stepRejection ? { controls: null, rejection: null } : null)
+    const captainDock = stepOnlyDock && stepRejection ? { ...stepOnlyDock, rejection: stepRejection } : stepOnlyDock
     const chooseSide = (choice: SideColor) => {
         setSideChoice({ choosing: choice, rejection: null })
         session.sendCommand('side', { choice }).then(
             () => setSideChoice(IDLE_SIDE_CHOICE),
             (error: unknown) => setSideChoice({ choosing: null, rejection: sideChoiceRejection(error) }),
+        )
+    }
+    const chooseVeto = (choice: VetoChoice) => {
+        setVetoChoice({ choosing: choice, rejection: null })
+        session.sendCommand('veto', { choice }).then(
+            () => setVetoChoice(IDLE_VETO_CHOICE),
+            (error: unknown) => setVetoChoice({ choosing: null, rejection: vetoRejection(error, view?.veto?.tag ?? 'Hard') }),
         )
     }
     const controls = captainDock ? (
@@ -114,7 +133,11 @@ export function MatchPickBanPage({ eventSlug, matchId, userProfile, onBackToEven
             side={captainSide}
             choosingSide={sideChoice.choosing}
             onChooseSide={chooseSide}
-            onDismiss={() => { setSideChoice(IDLE_SIDE_CHOICE); captain.dismiss() }}
+            veto={captainVeto}
+            vetoCountdown={view?.countdown}
+            choosingVeto={vetoChoice.choosing}
+            onVeto={chooseVeto}
+            onDismiss={() => { setSideChoice(IDLE_SIDE_CHOICE); setVetoChoice(IDLE_VETO_CHOICE); captain.dismiss() }}
         />
     ) : actFor ? (
         <CaptainDock
@@ -212,6 +235,7 @@ function PickBanBody({ view, summaryAction, controls, onSelect, children }: {
 }) {
     const notes = view.banners.filter(banner => banner.kind === 'skipped_bans' || banner.kind === 'warning')
     const hasExcluded = excludedCardsOf(view.cards).length > 0
+    const poolLine = view.timeline.length === 0 ? view.veto?.poolLine ?? null : null
 
     return (
         <div className="@container/page flex flex-col gap-4">
@@ -228,9 +252,10 @@ function PickBanBody({ view, summaryAction, controls, onSelect, children }: {
 
             {controls}
 
-            {(view.timeline.length > 0 || hasExcluded || notes.length > 0) && (
+            {(view.timeline.length > 0 || poolLine || hasExcluded || notes.length > 0) && (
                 <section aria-label="Steps" className="flex flex-col items-center gap-3 rounded-2xl border border-hairline/10 bg-card/30 px-3 py-4 sm:px-5">
                     {view.timeline.length > 0 && <StepTrack entries={view.timeline} skippedBans={view.skippedBans} size="page" />}
+                    {poolLine && view.veto && <VetoPoolLine line={poolLine} tag={view.veto.tag} />}
                     <ExcludedMaps cards={view.cards} />
                     {notes.map(banner => (
                         <PickBanBannerNote key={banner.key} banner={banner} className="w-full" />
@@ -239,6 +264,15 @@ function PickBanBody({ view, summaryAction, controls, onSelect, children }: {
             )}
 
             {children}
+        </div>
+    )
+}
+
+function VetoPoolLine({ line, tag }: { line: string; tag: string }) {
+    return (
+        <div className="flex flex-col items-center gap-1 text-center">
+            <p className="font-pickban text-lg font-black italic uppercase leading-none tracking-tight text-foreground">{line}</p>
+            <p className="text-xs text-muted-foreground">The steps appear once the {tag} maps are decided.</p>
         </div>
     )
 }

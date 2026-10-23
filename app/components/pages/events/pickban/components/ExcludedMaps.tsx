@@ -30,6 +30,11 @@ export function ExcludedMaps({ cards }: { cards: PickBanCardView[] }) {
                     >
                         <MapThumbnail mapName={card.map} version={card.screenshotVersion} size="thumb" alt="" className="size-7 rounded-md border-0 opacity-60 grayscale" />
                         <span className="truncate font-pickban text-sm font-bold uppercase text-muted-foreground">{displayMapName(card.map)}</span>
+                        {card.vetoedBy && (
+                            <span className="shrink-0 rounded border border-pickban-gold/55 px-1 text-[10px] font-black uppercase leading-4 tracking-wider text-pickban-gold">
+                                Vetoed{card.vetoedByName ? ` · ${card.vetoedByName}` : ''}
+                            </span>
+                        )}
                         <span className="sr-only">{card.exclusionReason ? `, excluded: ${card.exclusionReason}` : ', excluded'}</span>
                     </li>
                 ))}

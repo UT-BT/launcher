@@ -6442,6 +6442,7 @@ export async function fetchPickBanState(
 
 export interface PickBanParticipantCommandBodies {
     side: PickBanSideCommandBody
+    veto: PickBanVetoCommandBody
     ready: { version: number }
     unready: { version: number }
     hover: { map: string | null; version: number }
