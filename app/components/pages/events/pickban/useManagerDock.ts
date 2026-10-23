@@ -52,6 +52,8 @@ function sendManagerRequest({ sendManagerCommand: send, sendManagerCommandAt: se
             return send(request.command, request.body)
         case 'side':
             return send(request.command, request.body)
+        case 'veto':
+            return send(request.command, request.body)
         case 'override-sequence':
             return 'preset_id' in request.body ? send(request.command, request.body) : send(request.command, request.body)
         case 'hand-over':

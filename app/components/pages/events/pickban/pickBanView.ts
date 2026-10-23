@@ -3,7 +3,6 @@ import type {
     PickBanActor,
     PickBanBlockingReason,
     PickBanChooserBasis,
-    PickBanChooserReason,
     PickBanContractPhase,
     PickBanExclusion,
     PickBanFinalMap,
@@ -31,7 +30,6 @@ import type {
     VetoChoice,
     VetoOutcome,
 } from '@/app/utils/api'
-import { PICK_BAN_CHOOSER_REASONS } from '@/app/utils/api'
 import { parseApiInstant } from '@/app/utils/timezone'
 import { sideColorName, sideColorOfLetter, sideColorTag, sideColorTitle, withSideColor } from '@/app/utils/sideLabels'
 import { chooserLine, type ChooserReason } from './chooserReasonCopy'
@@ -245,7 +243,7 @@ export interface PickBanSideView {
     source: MatchSideSource | null
     chooser: PickBanSide | null
     chooserName: string | null
-    chooserReason: PickBanChooserReason | null
+    chooserReason: ChooserReason | null
     chooserBasis: PickBanChooserBasis | null
     chooserLine: string | null
     canChoose: boolean
@@ -932,10 +930,6 @@ function sideRevealOf(state: PickBanViewState): PickBanSideReveal {
     return { side, teamName, color, text: `${teamName} → ${sideColorTag(color)}${what}` }
 }
 
-function screenChooserReasonOf(reason: ChooserReason | null): PickBanChooserReason | null {
-    return PICK_BAN_CHOOSER_REASONS.find((known) => known === reason) ?? null
-}
-
 function sideViewOf(moment: Moment, livePhase: LivePhase): PickBanSideView {
     const { state } = moment
     const { side } = state
@@ -949,7 +943,7 @@ function sideViewOf(moment: Moment, livePhase: LivePhase): PickBanSideView {
         source: side.source,
         chooser: side.chooser,
         chooserName,
-        chooserReason: screenChooserReasonOf(side.chooser_reason),
+        chooserReason: side.chooser_reason,
         chooserBasis: side.chooser_basis ?? null,
         chooserLine: chooserName !== null && side.chooser_reason !== null ? chooserLine(chooserName, side.chooser_reason, side.chooser_basis) : null,
         canChoose: phase === 'side_choice' && state.status === 'running' && state.capabilities.can_choose_side,

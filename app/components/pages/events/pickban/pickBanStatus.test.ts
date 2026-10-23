@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { blockingReasonLabel, pickBanStatusBadge, sidePhaseLabel, statusOfPhase } from './pickBanStatus'
+import { blockingReasonLabel, pickBanStatusBadge, sidePhaseLabel, statusOfPhase, vetoPhaseLabel } from './pickBanStatus'
 
 describe('pickBanStatusBadge', () => {
     it('reads every session status in the same words wherever it is shown', () => {
@@ -38,6 +38,11 @@ describe('statusOfPhase', () => {
         expect(statusOfPhase('side_spotlight')).toBe('running')
     })
 
+    it('reads the veto and its reveal as a running session', () => {
+        expect(statusOfPhase('veto_choice')).toBe('running')
+        expect(statusOfPhase('veto_spotlight')).toBe('running')
+    })
+
     it('keeps every other phase as the status of the same name', () => {
         expect(statusOfPhase('none')).toBe('none')
         expect(statusOfPhase('lobby')).toBe('lobby')
@@ -52,6 +57,13 @@ describe('sidePhaseLabel', () => {
     it('names step 0 while a team chooses its side and while the choice is revealed', () => {
         expect(sidePhaseLabel('side_choice')).toBe('Step 0 · Side choice')
         expect(sidePhaseLabel('side_spotlight')).toBe('Step 0 · Revealing')
+    })
+})
+
+describe('vetoPhaseLabel', () => {
+    it('names the map veto while the teams choose and while it is revealed', () => {
+        expect(vetoPhaseLabel('veto_choice')).toBe('Map veto')
+        expect(vetoPhaseLabel('veto_spotlight')).toBe('Map veto · Revealing')
     })
 })
 

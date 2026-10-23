@@ -35,10 +35,6 @@ describe('chooser reason copy', () => {
         expect(chooserReasonText('admin', { chooser: 4, other: 3 })).toBe('named by an admin')
     })
 
-    it('keeps wording the reason the screens knew before', () => {
-        expect(chooserReasonText('lower_knockout_differential', null)).toBe('lower knockout differential')
-    })
-
     it('names the team that chooses', () => {
         expect(chooserLine("Hop n' Twerk", 'lower_group_placing', { chooser: 4, other: 3 })).toBe("Hop n' Twerk choose: lower group finish (4th vs 3rd)")
     })

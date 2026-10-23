@@ -342,12 +342,12 @@ describe('veto: the side step after it', () => {
             chooserBasis: { chooser: 4, other: 3 },
             chooserLine: 'T15 choose: lower group finish (4th vs 3rd)',
         })
-        expect(viewOf(vetoState('pickBanNoVeto')).side.chooserLine).toBe('T07 choose: worse playoff record (2-1 vs 2-0)')
+        expect(viewOf(vetoState('pickBanNoVeto')).side).toMatchObject({ chooserReason: 'lower_playoff_record', chooserLine: 'T07 choose: worse playoff record (2-1 vs 2-0)' })
     })
 
-    it('keeps the reasons the older screens don’t know out of chooserReason', () => {
+    it('carries every contract reason in chooserReason', () => {
         expect(viewOf(vetoState('pickBanDirectQualifier')).side).toMatchObject({
-            chooserReason: null,
+            chooserReason: 'direct_qualifier',
             chooserLine: 'T09 choose: playoff qualifier vs direct qualifier',
         })
     })

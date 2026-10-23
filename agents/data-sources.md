@@ -1121,8 +1121,8 @@ waits for a poll. Every body except Open's carries the expected `version`.
   while a session runs.
 - **Refusals.** A refusal is an `ApiError` whose `.reason` is a stable code (403
   authorization, 409 state conflict, 422 validation). `pickBanErrorCode(err)` narrows it to
-  `PickBanErrorCode`, and `PICK_BAN_ERROR_CODES` lists every code (the veto codes are in
-  `PICK_BAN_VETO_ERROR_CODES` instead, read straight off `err.reason`). Show `err.message`, and
+  `PickBanErrorCode`, and `PICK_BAN_ERROR_CODES` lists every code, the veto codes
+  (`PICK_BAN_VETO_ERROR_CODES`) included. Show `err.message`, and
   branch on the code only where a screen reacts to a specific one. The captain controls do:
   `captainPlay.ts` words each Ready/Unready and Lock refusal for the captain
   (`version_conflict`, `not_your_turn`, `map_unavailable`, `spotlight_active`,
@@ -1281,8 +1281,7 @@ pure and tested without a DOM. It returns:
   - `red` is the Red team's side, falling back to A (`team_a` while unset); `confirmed`,
     `tbc` (its opposite, for "Sides TBC") and `source` pass through. `viewerColor` is the
     viewer's own colour once confirmed, and `null` for a non-player.
-  - `chooser`, `chooserName`, `chooserReason` (the payload's `chooser_reason` when it is one
-    of `PICK_BAN_CHOOSER_REASONS`, else `null`), `chooserBasis` (the payload's
+  - `chooser`, `chooserName`, `chooserReason` (the payload's `chooser_reason`), `chooserBasis` (the payload's
     `chooser_basis`), `chooserLine` ("Hop n' Twerk choose: lower group finish (4th vs 3rd)",
     for every reason; see the chooser copy below), and `canChoose` (the payload's `can_choose_side`, only while
     `side_choice` runs and the session is running). `viewerChooses` says the viewer's team
@@ -1336,9 +1335,8 @@ pure and tested without a DOM. It returns:
   dock and the stream). `chooserReasonText(reason, basis)` words a reason, adding the numbers
   when `chooser_basis` fits it: "lower group finish (4th vs 3rd)", "higher pre-cup seed (16 vs
   12)", "worse playoff record (2-1 vs 2-0)", "playoff qualifier vs direct qualifier", "named
-  by an admin" (and "lower knockout differential" for the older reason).
-  `chooserLine(teamName, reason, basis)` puts the team first: "T15 choose: …". `ChooserReason`
-  is either reason union.
+  by an admin". `chooserLine(teamName, reason, basis)` puts the team first: "T15 choose:
+  …". `ChooserReason` is `PickBanContractChooserReason`.
 - `teams.left` (A) and `teams.right` (B), each with its `color`, falling back to `team_a` on the left while A is
   undetermined
 - `banners`: voided, cancelled, paused, skipped bans and warnings
@@ -1546,13 +1544,25 @@ only from the view model, through the pick/ban visual core (see
   - `side` with `{ choice }` (Act for team on step 0), on the admin path for the chooser
     team while the phase is `side_choice`, after a confirmation. A manager who plays in the
     match doesn't get it.
+  - `veto` with `{ side, choice }` (Act for team on the veto, `choice` `veto` or `play`), on
+    the admin path for each eligible team that hasn't chosen while the phase is `veto_choice`,
+    after a confirmation. A manager who plays in the match doesn't get it; the server refuses
+    it with `plays_in_match`.
   - The Sides board badges where the side came from (`Step 0`, `Admin`, `Caster`,
-    `Backfill`, or `Sides TBC`) and states the chooser rule with its reason ("T04 choose:
-    lower pre-cup seed").
+    `Backfill`, or `Sides TBC`) and states the chooser rule with its reason, from
+    `side.chooserLine` ("T04 choose: higher pre-cup seed (9 vs 3)").
+  - The Map Veto card shows when the stage has a choice rule. In the lobby it says whether a
+    veto will happen ("Hard-map veto: T15 eligible", "Hard-map veto: both teams eligible" or
+    "No veto: neither team eligible"). Once the match is live it lists each eligible team as
+    Deciding, Veto or Play, then the outcome ("T15 vetoed the Hard maps · 9 maps" or "Hard
+    maps stay in · 13 maps"), and offers Veto and Play for each team that hasn't chosen. Its
+    words use the veto's `tag`.
   - `override-sequence` with `{ preset_id }` or `{ from_stage_key }`, in the lobby. The
     Sequence dropdown loads the stages with `fetchPickBanConfig` once the lobby dock
     mounts, and offers every preset plus each stage that has a block.
-  - `pause` / `resume`, `undo` (Undo Last Step, while running or paused), and `hand-over`
+  - `pause` / `resume`, `undo` (while running or paused; its label says what it takes back:
+    Undo Last Step, Undo Side Choice or Undo Veto, from `affordances.manager.undoTarget`), and
+    `hand-over`
     with `{ side, user_id }`, picked from that side's roster in the payload (choosing the
     captain sends `user_id: null`)
   - Reopen, which sends `undo` on a complete session with a ban or pick in it, pinned to
@@ -1916,7 +1926,7 @@ projected prediction standings.
   the blocking reason `side_chooser_undetermined` (it replaces the old A-undetermined
   reason), and the refusals `side_choice_active` and `side_not_open`
   (`PICK_BAN_SIDE_ERROR_CODES`, also part of `PICK_BAN_ERROR_CODES`). `statusOfPhase` reads
-  both step-0 phases as `running`, and `sidePhaseLabel` names them for the manager dock. The
+  both step-0 phases as `running`, and `sidePhaseLabel` names them for the manager dock (`vetoPhaseLabel` does the same for the veto phases). The
   old choose-A command, `chooser_side`, `a_confirmed` and `capabilities.can_choose_a` are
   gone from the types. Bodies: `POST .../pick-ban/side` and the
   manager's Act for team take `PickBanSideCommandBody` `{ choice, version }`; the manager's
@@ -1992,14 +2002,14 @@ until the screens that read them land; the contract fixture types below require 
   `admin`. `side.chooser_basis` (`PickBanChooserBasis` `{ chooser, other }`) gives the numbers
   behind the reason, the chooser first: group finishing positions, pre-cup seeds, or
   `PickBanPlayoffRecord` `{ wins, losses }` objects; null for `direct_qualifier` and `admin`.
-  `PICK_BAN_CHOOSER_REASONS` still lists the reasons the screens word today.
+  `PICK_BAN_CHOOSER_REASONS` is the same list.
 - **Refusals.** `PICK_BAN_VETO_ERROR_CODES`: `veto_not_open` (a veto outside `veto_choice`),
   `already_chosen` (a side that already chose), `veto_choice_active` (a lettered step during
   `veto_choice`); a lettered step during `veto_spotlight` is `spotlight_active`, and the side
   command during either veto phase is `side_not_open`. `MATCH_EDITOR_SIDE_ERROR_CODES`:
   `side_locked`, when the match editor changes or clears the Red side while the match's
-  pick/ban session is running or paused. All four answer 409. Neither list is part of
-  `PICK_BAN_ERROR_CODES` yet.
+  pick/ban session is running or paused. All four answer 409. The veto codes are part of
+  `PICK_BAN_ERROR_CODES`; `side_locked` is not.
 - **On the page.** The view model's `veto` block, the pool cards' `pendingChoice` /
   `vetoedBy` and the captain's `veto` command are described under the pick/ban sessions'
   view model above.

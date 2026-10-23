@@ -1,6 +1,6 @@
-import type { PickBanChooserBasis, PickBanChooserReason, PickBanContractChooserReason, PickBanPlayoffRecord } from '@/app/utils/api'
+import type { PickBanChooserBasis, PickBanContractChooserReason, PickBanPlayoffRecord } from '@/app/utils/api'
 
-export type ChooserReason = PickBanContractChooserReason | PickBanChooserReason
+export type ChooserReason = PickBanContractChooserReason
 
 type BasisValue = PickBanChooserBasis['chooser']
 
@@ -37,7 +37,6 @@ const REASON_COPY: Record<ChooserReason, ReasonCopy> = {
     lower_playoff_record: { text: 'worse playoff record', basis: recordOf },
     lower_group_placing: { text: 'lower group finish', basis: placingOf },
     lower_pre_cup_seed: { text: 'higher pre-cup seed', basis: seedOf },
-    lower_knockout_differential: { text: 'lower knockout differential' },
     admin: { text: 'named by an admin' },
 }
 

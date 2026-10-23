@@ -6093,15 +6093,6 @@ export interface StreamSideControls {
     blocked_reason: StreamSideBlockedReason | null
 }
 
-export const PICK_BAN_CHOOSER_REASONS = [
-    'lower_pre_cup_seed',
-    'lower_group_placing',
-    'lower_knockout_differential',
-    'admin',
-] as const
-
-export type PickBanChooserReason = typeof PICK_BAN_CHOOSER_REASONS[number]
-
 export const PICK_BAN_CONTRACT_CHOOSER_REASONS = [
     'direct_qualifier',
     'lower_playoff_record',
@@ -6111,6 +6102,8 @@ export const PICK_BAN_CONTRACT_CHOOSER_REASONS = [
 ] as const
 
 export type PickBanContractChooserReason = typeof PICK_BAN_CONTRACT_CHOOSER_REASONS[number]
+
+export const PICK_BAN_CHOOSER_REASONS = PICK_BAN_CONTRACT_CHOOSER_REASONS
 
 export interface PickBanPlayoffRecord {
     wins: number
@@ -6141,7 +6134,7 @@ export interface PickBanSideBlock {
     set_at: string | null
     changed_mid_veto: boolean
     chooser: PickBanSide | null
-    chooser_reason: PickBanChooserReason | null
+    chooser_reason: PickBanContractChooserReason | null
     chooser_basis?: PickBanChooserBasis | null
     cards: PickBanSideCard[]
 }
@@ -6247,6 +6240,7 @@ export const PICK_BAN_ERROR_CODES = [
     'nothing_to_undo',
     'side_chooser_undetermined',
     ...PICK_BAN_SIDE_ERROR_CODES,
+    ...PICK_BAN_VETO_ERROR_CODES,
 ] as const
 
 export type PickBanErrorCode = typeof PICK_BAN_ERROR_CODES[number]
@@ -6467,6 +6461,7 @@ export interface PickBanManagerCommandBodies {
     cancel: { version: number }
     swap: { version: number }
     side: PickBanSideCommandBody
+    veto: PickBanVetoForTeamBody
     'side-chooser': PickBanSideChooserBody
     sides: PickBanSetSidesBody
     'override-sequence': PickBanOverrideSequenceBody

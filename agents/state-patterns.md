@@ -594,7 +594,7 @@ paused one, so neither can run as the other.
   disabled while a command is in flight, and `submitting` names that command). It holds:
   - `status` (the session's) and `phase`, a status line: `Waiting for Start`, `Starting`,
     `Intro`, `Step 0 · Side choice` and `Step 0 · Revealing` (`sidePhaseLabel` in
-    `pickBanStatus.ts`), `Step 3 of 7 · Azure Owls (pick)`, `Step 3 of 7 · Revealing`,
+    `pickBanStatus.ts`), `Map veto` and `Map veto · Revealing` (`vetoPhaseLabel`), `Step 3 of 7 · Azure Owls (pick)`, `Step 3 of 7 · Revealing`,
     `Step 3 of 7` while paused, `Final maps written` or `Final maps edited`. For a manager who plays in
     the match (`lockForSide` false) the awaiting line is just `Step 3 of 7`, without whose
     turn it is
@@ -613,8 +613,8 @@ paused one, so neither can run as the other.
       `side.source`, or `Sides TBC` while unconfirmed, each with a one-line hint.
     - `basis`, "The sides are set, so step 0 is skipped." in a lobby whose side an admin
       set; otherwise the chooser rule in the lobby, or while running with the side
-      unconfirmed ("T04 choose: lower pre-cup seed", from `side.chooser` and
-      `side.chooser_reason`; `null` while no chooser is known).
+      unconfirmed ("T04 choose: higher pre-cup seed (9 vs 3)", the view's
+      `side.chooserLine`; `null` while no chooser is known).
     - `chooser` (`sideChooser`: lobby, unless an admin set the side): both teams in `team_a`, `team_b`
       order with their pre-cup seeds and the current chooser checked. `undetermined` while
       no chooser is known, which is when Start is blocked by `side_chooser_undetermined`
@@ -631,11 +631,25 @@ paused one, so neither can run as the other.
       titled and led from `side.cards` ("Red · Side A", "Ban 1st, pick 2nd"; "Acts
       first"/"Acts second" without cards). Choosing one asks for confirmation first, then
       sends `side` with `choice`.
+  - `veto`, when the stage has a choice rule (`null` otherwise, and `null` once the match is
+    live with nobody eligible):
+    - `lobbyLine`, in the lobby only: "Hard-map veto: T15 eligible", "Hard-map veto: both
+      teams eligible" or "No veto: neither team eligible" (the veto's `tag` leads)
+    - `teams`, once live and while the veto is active: each eligible team with its `state`
+      (`deciding`, `veto` or `play`) and `label` (Deciding, Veto, Play)
+    - `outcome`, once resolved: "T15 vetoed the Hard maps · 9 maps" (naming `vetoed_by`) or "Hard
+      maps stay in · 13 maps"
+    - `actFor` (`affordances.manager.actForVeto`: running, phase `veto_choice`, a manager who
+      doesn't play): one entry per eligible team that hasn't chosen, with a `Veto Hard maps` /
+      "Play 9 maps" option and a `Play Hard maps` / "Play 13 maps" option. Choosing one asks for
+      confirmation first, then sends `veto` with `side` and `choice`. A confirmation goes stale
+      when that team has chosen meanwhile.
   - `sequence`, in the same statuses: the preset's label (or Custom sequence), the step
     count and best-of, whether it was changed for this match and from which stage, the
     choice keys it matches (the stage it was copied from, then its preset), and whether it
     can change (lobby only)
-  - `history` (Undo Last Step, Reopen, Edit Final Maps…) and `danger` (Restart, Cancel
+  - `history` (Undo, Reopen, Edit Final Maps…; Undo reads Undo Last Step, Undo Side Choice or
+    Undo Veto by what `undoTarget` says it takes back) and `danger` (Restart, Cancel
     Picks & Bans), each listed only while it applies
   - the results warning, the voided banner, the open editor, the pending confirmation
     (title, message, confirm and dismiss labels, and whether it is `destructive`), the
@@ -655,8 +669,8 @@ paused one, so neither can run as the other.
   admin who isn't playing has to lock in on a team's behalf.
 - `beginManagerCommand(play, view, action)` returns the next play and the request to
   send, or `null` when the control isn't open, a command is in flight, or an Edit final
-  save has no open, valid, current draft. For `reopen`, `restart`, `cancel`, `edit-final`
-  and the step-0 `side` it first returns a play holding the resolved request awaiting confirmation
+  save has no open, valid, current draft. For `reopen`, `restart`, `cancel`, `edit-final`,
+  the step-0 `side` and the `veto` it first returns a play holding the resolved request awaiting confirmation
   and no request; `confirmManagerCommand` sends exactly that request (an edit-final with
   the list and version as they were confirmed) and `dismissManagerConfirm` drops it.
   Asking again just asks again: only the confirmation sends. `selectActForMap` and

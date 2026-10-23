@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode 
 import { AnimatePresence, motion, type Transition } from 'framer-motion'
 import {
     ArrowLeftRight,
+    Ban,
     Check,
     CheckCircle2,
     ChevronDown,
@@ -40,7 +41,7 @@ import { Tooltip } from '@/app/components/ui/tooltip'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import type { MatchLinks } from '@/app/components/navigation/matchLinks'
 import { useCopyFeedback } from '@/app/hooks/useCopyFeedback'
-import { fetchPickBanConfig, type PickBanActor, type PickBanSide, type PickBanStageConfig, type SideColor } from '@/app/utils/api'
+import { fetchPickBanConfig, type PickBanActor, type PickBanSide, type PickBanStageConfig, type SideColor, type VetoChoice } from '@/app/utils/api'
 import { SIDES_TBC, sideColorTitle, sideColorTone } from '@/app/utils/sideLabels'
 import {
     sequenceChoices,
@@ -58,6 +59,9 @@ import {
     type ManagerSourceBadge,
     type ManagerStartBlock,
     type ManagerStepZero,
+    type ManagerVeto,
+    type ManagerVetoActFor,
+    type ManagerVetoTeam,
 } from '../managerDock'
 import type { UseManagerDockResult } from '../useManagerDock'
 import { Rejection } from './CaptainDock'
@@ -140,7 +144,7 @@ export function ManagerDock({ manager, slug, accessToken, links }: ManagerDockPr
     const titleId = useId()
     const { dock } = manager
     if (!dock) return null
-    const { busy, confirm, finalEditor, primary, sides, sequence } = dock
+    const { busy, confirm, finalEditor, primary, sides, sequence, veto } = dock
 
     const runZone = (command: ZoneCommand) => {
         if (command === 'edit-final') manager.openFinalEditor()
@@ -194,6 +198,13 @@ export function ManagerDock({ manager, slug, accessToken, links }: ManagerDockPr
                                     disabled={busy}
                                     pending={dock.submitting === 'override-sequence'}
                                     onChange={(body) => manager.run({ command: 'override-sequence', body })}
+                                />
+                            )}
+                            {veto && (
+                                <VetoField
+                                    veto={veto}
+                                    pending={dock.submitting === 'veto'}
+                                    onChoose={(side, choice) => manager.run({ command: 'veto', body: { side, choice } })}
                                 />
                             )}
                         </div>
@@ -820,6 +831,77 @@ function SequenceField({ sequence, slug, accessToken, disabled, pending, onChang
             ) : (
                 <div className="flex rounded-lg border border-hairline/5 bg-hairline/5 px-3 py-2">{value}</div>
             )}
+        </div>
+    )
+}
+
+const VETO_TONE = PICK_BAN_TONES.gold
+
+const VETO_STATE_TONES: Record<ManagerVetoTeam['state'], string> = {
+    deciding: 'border-hairline/10 bg-hairline/5 text-muted-foreground',
+    veto: cn(VETO_TONE.line, VETO_TONE.soft, VETO_TONE.text),
+    play: 'border-emerald-500/40 bg-emerald-500/15 text-emerald-300',
+}
+
+function VetoField({ veto, pending, onChoose }: { veto: ManagerVeto; pending: boolean; onChoose: (side: PickBanSide, choice: VetoChoice) => void }) {
+    const labelId = useId()
+    const [actingFor, setActingFor] = useState<PickBanSide | null>(null)
+
+    return (
+        <div role="group" aria-labelledby={labelId} className="flex min-w-0 flex-col gap-2.5 rounded-lg border border-hairline/10 bg-card/40 p-3">
+            <FieldLabel id={labelId} icon={Ban}>Map Veto</FieldLabel>
+            {veto.lobbyLine && <p className="text-sm font-semibold text-foreground">{veto.lobbyLine}</p>}
+            {veto.teams.length > 0 && (
+                <ul aria-label="Veto choices" className="grid gap-1.5 @md/dock:grid-cols-2">
+                    {veto.teams.map((team) => (
+                        <li key={team.side} className="flex min-w-0 items-center gap-2 rounded-md border border-hairline/5 bg-hairline/5 px-2.5 py-1.5">
+                            <span className="min-w-0 flex-1 break-words text-sm font-semibold leading-tight text-foreground">{team.name}</span>
+                            <span className={cn('inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider', VETO_STATE_TONES[team.state])}>
+                                {team.label}
+                            </span>
+                        </li>
+                    ))}
+                </ul>
+            )}
+            {veto.outcome && <p role="status" className={cn('text-sm font-bold', VETO_TONE.text)}>{veto.outcome}</p>}
+            {veto.actFor.map((actFor) => (
+                <VetoActFor
+                    key={actFor.side}
+                    actFor={actFor}
+                    pending={pending && actingFor === actFor.side}
+                    onChoose={(side, choice) => {
+                        setActingFor(side)
+                        onChoose(side, choice)
+                    }}
+                />
+            ))}
+        </div>
+    )
+}
+
+function VetoActFor({ actFor, pending, onChoose }: { actFor: ManagerVetoActFor; pending: boolean; onChoose: (side: PickBanSide, choice: VetoChoice) => void }) {
+    const labelId = useId()
+
+    return (
+        <div role="group" aria-labelledby={labelId} className={cn('space-y-2.5 rounded-lg border bg-gradient-to-br to-transparent to-70% p-3', VETO_TONE.wash, VETO_TONE.line)}>
+            <p id={labelId} className="flex items-center gap-2 text-sm font-bold text-foreground">
+                Act for {actFor.teamName}
+                {pending && <Loader2 className="size-3.5 animate-spin text-muted-foreground" />}
+            </p>
+            <div className="grid gap-2 sm:grid-cols-2">
+                {actFor.options.map((option) => (
+                    <button
+                        key={option.choice}
+                        type="button"
+                        disabled={actFor.disabled}
+                        onClick={() => onChoose(actFor.side, option.choice)}
+                        className="flex min-h-11 min-w-0 cursor-pointer flex-col items-start justify-center gap-0.5 rounded-lg border border-hairline/10 bg-card/60 px-3 py-2 text-left transition-colors hover:border-hairline/20 hover:bg-hairline/5 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        <span className="text-sm font-bold text-foreground">{option.label}</span>
+                        <span className="text-xs text-muted-foreground">{option.lead}</span>
+                    </button>
+                ))}
+            </div>
         </div>
     )
 }
