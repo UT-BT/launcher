@@ -1559,7 +1559,8 @@ answers `{ stages: [] }` when no format is attached. Each stage carries:
 - `pick_ban` — the block, or `null` when the stage has none yet:
   `preset_id` (`bo4_picks` / `bo4_ban_pick` / `bo3_ban_pick` / `bo5_ban_pick`, or `null` for a custom
   sequence), `sequence` (`steps: [{actor: 'A' | 'B', action: 'ban' | 'pick'}]` plus
-  `ban_down`), `exclusions` (`[{tag, min_pre_cup_seed}]`) and `pacing` in seconds
+  `ban_down` and an optional `ban_down_order`), `exclusions`
+  (`[{tag, min_pre_cup_seed, mode?}]`) and `pacing` in seconds
   (`intro`, `spotlight`, `ban_down_spotlight`, `decider_spotlight`)
 - `counts` (`lettered_picks`, `lettered_bans`, `maps_yielded`, `full_sequence_minimum`,
   `absolute_minimum`) and `sequence_mismatch` (`maps_yielded !== best_of`); `null` and
@@ -1567,7 +1568,9 @@ answers `{ stages: [] }` when no format is attached. Each stage carries:
 - `pool` — `[{map, tags, screenshot_version}]` in saved order
 - `pool_status` — `{normal, exempt}`, each `{size, status}` with status
   `full_sequence` / `bans_dropped` / `too_small`. `exempt` is the pool minus every map
-  carrying an exclusion tag, and is `null` when the block has no exclusion rules.
+  carrying an exclusion tag, and is `null` when the block has no exclusion rules. With a
+  `choice` rule the two sizes are the two outcomes: `normal` is the pool if the tagged maps
+  are played, `exempt` the pool if they are vetoed.
 
 Writes (bracket managers only):
 
@@ -1589,8 +1592,26 @@ typing instead of after a round trip):
 - Tags are trimmed, non-empty, at most 32 characters and matched case-insensitively
   ("Hard" is just a tag). The match itself is `tagKey` / `sameTag` in
   `events/pickBanTags.ts`, shared with the Maps tab's badges so that tab never loads the
-  lazy editor module. Pacing is a whole number from 0 to 60 (defaults 5 / 10 / 4 / 10).
+  lazy editor module. Pacing is a whole number from 0 to 60 (defaults 5 / 10 / 4 / 10;
+  pacing keys the editor has no input for, such as `side_spotlight` and `veto_spotlight`,
+  are sent back unchanged).
   An exclusion threshold is a whole number of at least 1.
+
+**The veto mode and the ban-down order are kept on every save.** An exclusion rule has a
+"Teams choose (veto)" toggle (`mode: "choice"`). The draft holds it as `veto`, and
+`configInput` sends the `mode` key only for a veto rule, so an `auto` rule goes out as
+`{tag, min_pre_cup_seed}` exactly as before. A stage has at most one veto rule: the toggle is
+disabled on the other rules while one is set (`canMakeVetoRule`, `withVetoRule`), and
+`validateConfigDraft` flags a second at `exclusions[n].mode`. The sequence has a "Ban-down
+order" input of A/B chips (add, remove, reorder), shown only while `ban_down` is on.
+`ban_down_order` is sent only when `ban_down` is on and the order is not empty; turning
+ban-down off, or emptying the order, leaves the key out. Editing the order of a preset
+sequence makes the draft a custom sequence (`withBanDownOrder`), because the steps no longer
+equal the preset's. `configChanged` compares both `veto` and the order. For a stage with a
+veto rule the pool status reads "13 maps if played, 9 if vetoed" (`poolSummary`), and the
+pool warnings say "If the tagged maps are played…" / "…are vetoed…" for whichever pool
+cannot run the sequence. Server errors at `sequence.ban_down_order` and `exclusions[n].mode`
+are placed next to those inputs.
 
 **A preset is re-sent only when re-copying it changes nothing.** `configInput` sends
 `preset_id` only when the draft's steps equal the shipped preset's: the admin just chose

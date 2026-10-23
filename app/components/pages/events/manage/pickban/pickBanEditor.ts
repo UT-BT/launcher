@@ -1,6 +1,6 @@
 import type {
     EventFormatSpec, PickBanBlock, PickBanCounts, PickBanPacing, PickBanPoolEntryInput, PickBanPoolMap,
-    PickBanPoolSizeStatus, PickBanPoolStatus, PickBanPresetId, PickBanSequence, PickBanStageConfig,
+    PickBanActor, PickBanPoolSizeStatus, PickBanPoolStatus, PickBanPresetId, PickBanSequence, PickBanStageConfig,
     PickBanStageConfigInput,
 } from '@/app/utils/api'
 import { parseSpecErrors } from '../formatFields'
@@ -44,16 +44,18 @@ export const PICK_BAN_PRESET_SEQUENCES: Record<PickBanPresetId, PickBanSequence>
         steps: [
             { actor: 'A', action: 'ban' }, { actor: 'B', action: 'ban' },
             { actor: 'B', action: 'pick' }, { actor: 'A', action: 'pick' },
-            { actor: 'B', action: 'pick' }, { actor: 'A', action: 'pick' },
             { actor: 'B', action: 'ban' }, { actor: 'A', action: 'ban' },
+            { actor: 'B', action: 'pick' }, { actor: 'A', action: 'pick' },
         ],
         ban_down: true,
+        ban_down_order: ['A', 'B', 'B', 'A'],
     },
 }
 
 export interface PickBanExclusionDraft {
     tag: string
     min_pre_cup_seed: number | null
+    veto: boolean
 }
 
 export interface PickBanStageDraft {
@@ -70,7 +72,7 @@ export type PickBanPoolScope = 'normal' | 'exempt'
 
 export type PickBanWarning =
     | { kind: 'sequence_mismatch'; mapsYielded: number; bestOf: number }
-    | { kind: 'pool_too_small' | 'bans_dropped'; scope: PickBanPoolScope; size: number; minimum: number }
+    | { kind: 'pool_too_small' | 'bans_dropped'; scope: PickBanPoolScope; size: number; minimum: number; veto?: true }
 
 export function sequenceCounts(sequence: PickBanSequence): PickBanCounts {
     const picks = sequence.steps.filter(step => step.action === 'pick').length
@@ -96,23 +98,40 @@ function carriesTag(tags: string[], tag: string): boolean {
     return tags.some(candidate => sameTag(candidate, tag))
 }
 
+function exemptPoolSize(pool: PickBanPoolMap[], exclusionTags: string[]): number {
+    return pool.filter(entry => !exclusionTags.some(tag => carriesTag(entry.tags, tag))).length
+}
+
 export function poolStatusFor(pool: PickBanPoolMap[], exclusionTags: string[], counts: PickBanCounts): PickBanPoolStatus {
     const normal = { size: pool.length, status: poolSizeStatus(pool.length, counts) }
     if (exclusionTags.length === 0) return { normal, exempt: null }
 
-    const exemptSize = pool.filter(entry => !exclusionTags.some(tag => carriesTag(entry.tags, tag))).length
+    const exemptSize = exemptPoolSize(pool, exclusionTags)
     return { normal, exempt: { size: exemptSize, status: poolSizeStatus(exemptSize, counts) } }
 }
 
-function poolWarnings(status: PickBanPoolStatus, counts: PickBanCounts): PickBanWarning[] {
+function poolWarnings(status: PickBanPoolStatus, counts: PickBanCounts, veto: boolean): PickBanWarning[] {
     const scoped: Array<[PickBanPoolScope, PickBanPoolStatus['normal'] | null]> = [['normal', status.normal], ['exempt', status.exempt]]
+    const mark = veto ? { veto: true as const } : {}
 
     return scoped.flatMap(([scope, entry]): PickBanWarning[] => {
         if (!entry || entry.status === 'full_sequence') return []
         return entry.status === 'too_small'
-            ? [{ kind: 'pool_too_small', scope, size: entry.size, minimum: counts.absolute_minimum }]
-            : [{ kind: 'bans_dropped', scope, size: entry.size, minimum: counts.full_sequence_minimum }]
+            ? [{ kind: 'pool_too_small', scope, size: entry.size, minimum: counts.absolute_minimum, ...mark }]
+            : [{ kind: 'bans_dropped', scope, size: entry.size, minimum: counts.full_sequence_minimum, ...mark }]
     })
+}
+
+function taggedRules(rules: PickBanExclusionDraft[]): PickBanExclusionDraft[] {
+    return rules.filter(rule => rule.tag.trim())
+}
+
+export function poolSummary(draft: PickBanStageDraft): string | null {
+    const tagged = taggedRules(draft.exclusions)
+    if (!tagged.some(rule => rule.veto)) return null
+
+    const vetoed = exemptPoolSize(draft.pool, tagged.map(rule => rule.tag.trim()))
+    return `${plural(draft.pool.length, 'map')} if played, ${vetoed} if vetoed`
 }
 
 function mismatchWarnings(mismatch: boolean, counts: PickBanCounts, bestOf: number): PickBanWarning[] {
@@ -123,11 +142,11 @@ export function draftWarnings(draft: PickBanStageDraft, bestOf: number): PickBan
     if (!draft.sequence) return []
 
     const counts = sequenceCounts(draft.sequence)
-    const exclusionTags = draft.exclusions.map(rule => rule.tag.trim()).filter(Boolean)
+    const tagged = taggedRules(draft.exclusions)
 
     return [
         ...mismatchWarnings(counts.maps_yielded !== bestOf, counts, bestOf),
-        ...poolWarnings(poolStatusFor(draft.pool, exclusionTags, counts), counts),
+        ...poolWarnings(poolStatusFor(draft.pool, tagged.map(rule => rule.tag.trim()), counts), counts, tagged.some(rule => rule.veto)),
     ]
 }
 
@@ -136,7 +155,7 @@ export function savedWarnings(stage: PickBanStageConfig): PickBanWarning[] {
 
     return [
         ...mismatchWarnings(stage.sequence_mismatch, stage.counts, stage.best_of),
-        ...poolWarnings(stage.pool_status, stage.counts),
+        ...poolWarnings(stage.pool_status, stage.counts, !!stage.pick_ban?.exclusions.some(rule => rule.mode === 'choice')),
     ]
 }
 
@@ -148,10 +167,23 @@ function plural(count: number, word: string): string {
     return `${count} ${word}${count === 1 ? '' : 's'}`
 }
 
+function vetoWarningMessage(warning: Extract<PickBanWarning, { scope: PickBanPoolScope }>): string {
+    const condition = warning.scope === 'exempt' ? 'If the tagged maps are vetoed' : 'If the tagged maps are played'
+    const left = warning.scope === 'exempt'
+        ? `${warning.size} ${warning.size === 1 ? 'is' : 'are'} left once they are removed`
+        : `the pool has ${warning.size}`
+
+    return warning.kind === 'pool_too_small'
+        ? `${condition}, there are too few maps: ${left}, and the sequence needs at least ${warning.minimum}.`
+        : `${condition}, matches will skip ${plural(warning.minimum - warning.size, 'ban')}: ${left}, and the full sequence needs ${warning.minimum}.`
+}
+
 export function warningMessage(warning: PickBanWarning): string {
     if (warning.kind === 'sequence_mismatch') {
         return `The sequence yields ${plural(warning.mapsYielded, 'map')}, but this stage is best of ${warning.bestOf}.`
     }
+
+    if (warning.veto) return vetoWarningMessage(warning)
 
     const exempt = warning.scope === 'exempt'
     const left = `${warning.size} ${warning.size === 1 ? 'is' : 'are'} left once tagged maps are excluded`
@@ -168,8 +200,15 @@ export function warningMessage(warning: PickBanWarning): string {
         : `Normal matches will skip ${skipped}: the pool has ${warning.size}, and the full sequence needs ${warning.minimum}.`
 }
 
+function banDownOrderOf(sequence: PickBanSequence): PickBanActor[] {
+    return sequence.ban_down ? sequence.ban_down_order ?? [] : []
+}
+
 function copySequence(sequence: PickBanSequence): PickBanSequence {
-    return { steps: sequence.steps.map(step => ({ actor: step.actor, action: step.action })), ban_down: sequence.ban_down }
+    const copy = { steps: sequence.steps.map(step => ({ actor: step.actor, action: step.action })), ban_down: sequence.ban_down }
+    const order = banDownOrderOf(sequence)
+
+    return order.length > 0 ? { ...copy, ban_down_order: [...order] } : copy
 }
 
 export function draftFromStage(stage: PickBanStageConfig): PickBanStageDraft {
@@ -179,9 +218,36 @@ export function draftFromStage(stage: PickBanStageConfig): PickBanStageDraft {
         presetId: block?.preset_id ?? null,
         sequence: block ? copySequence(block.sequence) : null,
         pacing: { ...DEFAULT_PICK_BAN_PACING, ...block?.pacing },
-        exclusions: (block?.exclusions ?? []).map(rule => ({ tag: rule.tag, min_pre_cup_seed: rule.min_pre_cup_seed })),
+        exclusions: (block?.exclusions ?? []).map(rule => ({ tag: rule.tag, min_pre_cup_seed: rule.min_pre_cup_seed, veto: rule.mode === 'choice' })),
         pool: stage.pool.map(entry => ({ ...entry, tags: [...entry.tags] })),
     }
+}
+
+export function withBanDownOrder(draft: PickBanStageDraft, order: PickBanActor[]): PickBanStageDraft {
+    if (!draft.sequence) return draft
+
+    const sequence = copySequence({ ...draft.sequence, ban_down_order: order })
+    const preset = draft.presetId ? PICK_BAN_PRESET_SEQUENCES[draft.presetId] : null
+
+    return { ...draft, presetId: preset && sequencesEqual(sequence, preset) ? draft.presetId : null, sequence }
+}
+
+export function moveBanDownActor(order: PickBanActor[], index: number, offset: -1 | 1): PickBanActor[] {
+    const target = index + offset
+    if (target < 0 || target >= order.length) return order
+
+    const next = [...order]
+    ;[next[index], next[target]] = [next[target], next[index]]
+    return next
+}
+
+export function canMakeVetoRule(rules: PickBanExclusionDraft[], index: number): boolean {
+    return rules.every((rule, at) => at === index || !rule.veto)
+}
+
+export function withVetoRule(rules: PickBanExclusionDraft[], index: number, veto: boolean): PickBanExclusionDraft[] {
+    if (veto && !canMakeVetoRule(rules, index)) return rules
+    return rules.map((rule, at) => (at === index ? { ...rule, veto } : rule))
 }
 
 export function withPreset(draft: PickBanStageDraft, presetId: PickBanPresetId): PickBanStageDraft {
@@ -191,11 +257,12 @@ export function withPreset(draft: PickBanStageDraft, presetId: PickBanPresetId):
 function sequencesEqual(a: PickBanSequence | null, b: PickBanSequence | null): boolean {
     if (!a || !b) return a === b
     return a.ban_down === b.ban_down
+        && listsEqual(banDownOrderOf(a), banDownOrderOf(b))
         && a.steps.length === b.steps.length
         && a.steps.every((step, index) => step.actor === b.steps[index].actor && step.action === b.steps[index].action)
 }
 
-function tagsEqual(a: string[], b: string[]): boolean {
+function listsEqual(a: readonly string[], b: readonly string[]): boolean {
     return a.length === b.length && a.every((tag, index) => tag === b[index])
 }
 
@@ -207,13 +274,15 @@ export function configChanged(stage: PickBanStageConfig, draft: PickBanStageDraf
         || PICK_BAN_PACING_KEYS.some(key => saved.pacing[key] !== draft.pacing[key])
         || saved.exclusions.length !== draft.exclusions.length
         || saved.exclusions.some((rule, index) => (
-            rule.tag !== draft.exclusions[index].tag || rule.min_pre_cup_seed !== draft.exclusions[index].min_pre_cup_seed
+            rule.tag !== draft.exclusions[index].tag
+            || rule.min_pre_cup_seed !== draft.exclusions[index].min_pre_cup_seed
+            || rule.veto !== draft.exclusions[index].veto
         ))
 }
 
 export function poolChanged(stage: PickBanStageConfig, draft: PickBanStageDraft): boolean {
     return stage.pool.length !== draft.pool.length
-        || stage.pool.some((entry, index) => entry.map !== draft.pool[index].map || !tagsEqual(entry.tags, draft.pool[index].tags))
+        || stage.pool.some((entry, index) => entry.map !== draft.pool[index].map || !listsEqual(entry.tags, draft.pool[index].tags))
 }
 
 export function settledDraft(stage: PickBanStageConfig, draft: PickBanStageDraft): PickBanStageDraft | null {
@@ -310,6 +379,9 @@ export function validateConfigDraft(draft: PickBanStageDraft): Record<string, st
     draft.exclusions.forEach((rule, index) => {
         add(`exclusions[${index}].tag`, tagError(rule.tag))
         add(`exclusions[${index}].min_pre_cup_seed`, wholeNumberError(rule.min_pre_cup_seed, 1))
+        if (rule.veto && draft.exclusions.slice(0, index).some(earlier => earlier.veto)) {
+            add(`exclusions[${index}].mode`, 'only one rule can let teams choose')
+        }
     })
 
     return errors
@@ -324,7 +396,11 @@ export function configInput(draft: PickBanStageDraft): PickBanStageConfigInput |
     if (!draft.sequence) return null
 
     const rest = {
-        exclusions: draft.exclusions.map(rule => ({ tag: rule.tag.trim(), min_pre_cup_seed: rule.min_pre_cup_seed ?? 0 })),
+        exclusions: draft.exclusions.map(rule => ({
+            tag: rule.tag.trim(),
+            min_pre_cup_seed: rule.min_pre_cup_seed ?? 0,
+            ...(rule.veto ? { mode: 'choice' as const } : {}),
+        })),
         pacing: { ...draft.pacing },
     }
 
@@ -338,9 +414,10 @@ export function poolInput(draft: PickBanStageDraft): PickBanPoolEntryInput[] {
 }
 
 function configField(path: string): string | null {
+    if (/^sequence\.ban_down_order(\[\d+\])?$/.test(path)) return 'sequence.ban_down_order'
     if (path === 'preset_id' || path === 'sequence' || path.startsWith('sequence.')) return 'sequence'
     if (/^pacing\.(intro|spotlight|ban_down_spotlight|decider_spotlight)$/.test(path)) return path
-    if (/^exclusions\[\d+\]\.(tag|min_pre_cup_seed)$/.test(path)) return path
+    if (/^exclusions\[\d+\]\.(tag|min_pre_cup_seed|mode)$/.test(path)) return path
     if (/^exclusions(\[\d+\])?$/.test(path)) return 'exclusions'
     return null
 }

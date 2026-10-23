@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import type { EventFormatSpec, PickBanBlock, PickBanPoolMap, PickBanStageConfig } from '@/app/utils/api'
+import type { EventFormatSpec, PickBanBlock, PickBanContractPacing, PickBanPoolMap, PickBanStageConfig } from '@/app/utils/api'
 import {
-    DEFAULT_PICK_BAN_PACING, PICK_BAN_PRESET_SEQUENCES, addPoolMap, configChanged, configErrors, configInput,
-    draftFromStage, draftWarnings, movePoolMap, poolChanged, poolError, poolInput, poolStatusFor, pruneDrafts,
-    presetDrifted, rebaseDraft, removePoolMap, savedWarnings, sequenceCounts, settledDraft, stageWarnings, tagError,
-    validateConfigDraft, warningMessage, withDraft, withPoolTag, withPreset, withStagePickBan, withoutPoolTag,
+    DEFAULT_PICK_BAN_PACING, PICK_BAN_PRESET_SEQUENCES, addPoolMap, canMakeVetoRule, configChanged, configErrors,
+    configInput, draftFromStage, draftWarnings, moveBanDownActor, movePoolMap, poolChanged, poolError, poolInput,
+    poolStatusFor, poolSummary, pruneDrafts, presetDrifted, rebaseDraft, removePoolMap, savedWarnings, sequenceCounts,
+    settledDraft, stageWarnings, tagError, validateConfigDraft, warningMessage, withBanDownOrder, withDraft,
+    withPoolTag, withPreset, withStagePickBan, withVetoRule, withoutPoolTag,
     type PickBanStageDraft,
 } from './pickBanEditor'
 
@@ -155,7 +156,7 @@ describe('warnings', () => {
     })
 
     it('ignores an exclusion row whose tag is still blank', () => {
-        const draft = { ...draftFromStage(stage()), exclusions: [{ tag: '  ', min_pre_cup_seed: 10 }], pool: pool(9, 9) }
+        const draft = { ...draftFromStage(stage()), exclusions: [{ tag: '  ', min_pre_cup_seed: 10, veto: false }], pool: pool(9, 9) }
         expect(draftWarnings(draft, 5)).toEqual([])
     })
 
@@ -193,7 +194,11 @@ describe('drafts', () => {
     it('ignores key order the server may return', () => {
         const saved = stage({
             pick_ban: block({
-                sequence: { ban_down: true, steps: PICK_BAN_PRESET_SEQUENCES.bo5_ban_pick.steps.map(step => ({ action: step.action, actor: step.actor })) },
+                sequence: {
+                    ban_down: true,
+                    ban_down_order: ['A', 'B', 'B', 'A'],
+                    steps: PICK_BAN_PRESET_SEQUENCES.bo5_ban_pick.steps.map(step => ({ action: step.action, actor: step.actor })),
+                },
                 pacing: { spotlight: 10, intro: 5, decider_spotlight: 10, ban_down_spotlight: 4 },
             }),
         })
@@ -349,9 +354,9 @@ describe('validateConfigDraft', () => {
         expect(validateConfigDraft({
             ...valid,
             exclusions: [
-                { tag: 'Hard', min_pre_cup_seed: 10 },
-                { tag: ' ', min_pre_cup_seed: null },
-                { tag: 'x'.repeat(40), min_pre_cup_seed: 0 },
+                { tag: 'Hard', min_pre_cup_seed: 10, veto: false },
+                { tag: ' ', min_pre_cup_seed: null, veto: false },
+                { tag: 'x'.repeat(40), min_pre_cup_seed: 0, veto: false },
             ],
         })).toEqual({
             'exclusions[1].tag': 'is required',
@@ -364,7 +369,7 @@ describe('validateConfigDraft', () => {
 
 describe('payloads', () => {
     it('sends a preset by id', () => {
-        const draft = { ...withPreset(draftFromStage(stage()), 'bo3_ban_pick'), exclusions: [{ tag: ' Hard ', min_pre_cup_seed: 10 }] }
+        const draft = { ...withPreset(draftFromStage(stage()), 'bo3_ban_pick'), exclusions: [{ tag: ' Hard ', min_pre_cup_seed: 10, veto: false }] }
 
         expect(configInput(draft)).toEqual({
             preset_id: 'bo3_ban_pick',
@@ -506,5 +511,252 @@ describe('withStagePickBan', () => {
         expect(next.stages[1].pick_ban).toBe(saved)
         expect(next.stages[0]).toBe(spec.stages[0])
         expect(spec.stages[1].pick_ban).toBeUndefined()
+    })
+})
+
+describe('veto exclusion rule', () => {
+    const vetoBlock = () => block({
+        exclusions: [{ tag: 'Hard', min_pre_cup_seed: 11, mode: 'choice' }],
+    })
+
+    it('reads mode choice as the veto toggle and absent mode as auto', () => {
+        expect(draftFromStage(stage({ pick_ban: vetoBlock() })).exclusions).toEqual([{ tag: 'Hard', min_pre_cup_seed: 11, veto: true }])
+        expect(draftFromStage(stage()).exclusions).toEqual([{ tag: 'Hard', min_pre_cup_seed: 10, veto: false }])
+        expect(draftFromStage(stage({ pick_ban: block({ exclusions: [{ tag: 'Hard', min_pre_cup_seed: 10, mode: 'auto' }] }) })).exclusions)
+            .toEqual([{ tag: 'Hard', min_pre_cup_seed: 10, veto: false }])
+    })
+
+    it('round-trips mode through load, edit and save', () => {
+        const saved = stage({ pick_ban: vetoBlock() })
+        const draft = { ...draftFromStage(saved), pacing: { ...DEFAULT_PICK_BAN_PACING, intro: 8 } }
+
+        expect(configInput(draft)).toMatchObject({ exclusions: [{ tag: 'Hard', min_pre_cup_seed: 11, mode: 'choice' }] })
+    })
+
+    it('sends mode choice when the toggle is set and no mode key when it is cleared', () => {
+        const saved = stage()
+        const on = { ...draftFromStage(saved), exclusions: withVetoRule(draftFromStage(saved).exclusions, 0, true) }
+        const off = { ...on, exclusions: withVetoRule(on.exclusions, 0, false) }
+
+        expect(configInput(on)).toMatchObject({ exclusions: [{ tag: 'Hard', min_pre_cup_seed: 10, mode: 'choice' }] })
+        expect(configInput(off)?.exclusions).toEqual([{ tag: 'Hard', min_pre_cup_seed: 10 }])
+        expect(Object.keys(configInput(off)?.exclusions?.[0] ?? {})).not.toContain('mode')
+    })
+
+    it('notices the toggle in the dirty check', () => {
+        const saved = stage()
+        const on = { ...draftFromStage(saved), exclusions: withVetoRule(draftFromStage(saved).exclusions, 0, true) }
+
+        expect(configChanged(saved, on)).toBe(true)
+        expect(settledDraft(saved, { ...on, exclusions: withVetoRule(on.exclusions, 0, false) })).toBeNull()
+    })
+
+    it('prevents a second veto rule', () => {
+        const rules = [
+            { tag: 'Hard', min_pre_cup_seed: 11, veto: true },
+            { tag: 'Fast', min_pre_cup_seed: 9, veto: false },
+        ]
+
+        expect(canMakeVetoRule(rules, 0)).toBe(true)
+        expect(canMakeVetoRule(rules, 1)).toBe(false)
+        expect(withVetoRule(rules, 1, true)).toBe(rules)
+        expect(withVetoRule(rules, 0, false)[0].veto).toBe(false)
+        expect(canMakeVetoRule(withVetoRule(rules, 0, false), 1)).toBe(true)
+    })
+
+    it('flags a draft that already holds two veto rules', () => {
+        const valid = withPreset(draftFromStage(stage({ pick_ban: null })), 'bo4_picks')
+
+        expect(validateConfigDraft({
+            ...valid,
+            exclusions: [
+                { tag: 'Hard', min_pre_cup_seed: 11, veto: true },
+                { tag: 'Fast', min_pre_cup_seed: 9, veto: true },
+            ],
+        })).toEqual({ 'exclusions[1].mode': 'only one rule can let teams choose' })
+    })
+
+    it('places a server error on the toggle', () => {
+        expect(configErrors('stages[1].pick_ban.exclusions[0].mode: must be one of: auto, choice', 1)).toEqual({
+            fields: { 'exclusions[0].mode': 'must be one of: auto, choice' },
+            general: null,
+        })
+    })
+
+    it('words both pools for a veto rule', () => {
+        expect(warningMessage({ kind: 'bans_dropped', scope: 'normal', size: 8, minimum: 9, veto: true }))
+            .toBe('If the tagged maps are played, matches will skip 1 ban: the pool has 8, and the full sequence needs 9.')
+        expect(warningMessage({ kind: 'bans_dropped', scope: 'exempt', size: 6, minimum: 9, veto: true }))
+            .toBe('If the tagged maps are vetoed, matches will skip 3 bans: 6 are left once they are removed, and the full sequence needs 9.')
+        expect(warningMessage({ kind: 'pool_too_small', scope: 'normal', size: 4, minimum: 5, veto: true }))
+            .toBe('If the tagged maps are played, there are too few maps: the pool has 4, and the sequence needs at least 5.')
+        expect(warningMessage({ kind: 'pool_too_small', scope: 'exempt', size: 1, minimum: 5, veto: true }))
+            .toBe('If the tagged maps are vetoed, there are too few maps: 1 is left once they are removed, and the sequence needs at least 5.')
+    })
+
+    it('marks saved and draft warnings of a veto stage the same way', () => {
+        const saved = stage({
+            pick_ban: vetoBlock(),
+            pool: pool(9, 5),
+            pool_status: { normal: { size: 9, status: 'full_sequence' }, exempt: { size: 4, status: 'too_small' } },
+        })
+
+        expect(savedWarnings(saved)).toEqual([{ kind: 'pool_too_small', scope: 'exempt', size: 4, minimum: 5, veto: true }])
+        expect(draftWarnings(draftFromStage(saved), 5)).toEqual(savedWarnings(saved))
+    })
+
+    it('warns when either pool of a veto stage cannot run the sequence', () => {
+        const saved = stage({ pick_ban: vetoBlock(), pool: pool(8, 4) })
+
+        expect(draftWarnings(draftFromStage(saved), 5)).toEqual([
+            { kind: 'bans_dropped', scope: 'normal', size: 8, minimum: 9, veto: true },
+            { kind: 'pool_too_small', scope: 'exempt', size: 4, minimum: 5, veto: true },
+        ])
+    })
+
+    it('leaves the warnings of a stage without a veto rule as they were', () => {
+        const saved = stage({
+            pool: pool(9, 5),
+            pool_status: { normal: { size: 9, status: 'full_sequence' }, exempt: { size: 4, status: 'too_small' } },
+        })
+
+        expect(savedWarnings(saved)).toEqual([{ kind: 'pool_too_small', scope: 'exempt', size: 4, minimum: 5 }])
+    })
+
+    it('summarises both pools of a veto stage', () => {
+        expect(poolSummary(draftFromStage(stage({ pick_ban: vetoBlock(), pool: pool(13, 4) })))).toBe('13 maps if played, 9 if vetoed')
+        expect(poolSummary(draftFromStage(stage({ pick_ban: vetoBlock(), pool: pool(1, 1) })))).toBe('1 map if played, 0 if vetoed')
+        expect(poolSummary(draftFromStage(stage()))).toBeNull()
+    })
+})
+
+describe('ban-down order', () => {
+    const ordered = () => stage({
+        pick_ban: block({ sequence: { ...PICK_BAN_PRESET_SEQUENCES.bo5_ban_pick, ban_down_order: ['A', 'B', 'B', 'A'] } }),
+    })
+
+    it('ships the order with the Bo5 preset', () => {
+        expect(PICK_BAN_PRESET_SEQUENCES.bo5_ban_pick.ban_down_order).toEqual(['A', 'B', 'B', 'A'])
+        expect(PICK_BAN_PRESET_SEQUENCES.bo4_ban_pick.ban_down_order).toBeUndefined()
+    })
+
+    it('round-trips the order through load, edit and save', () => {
+        const draft = draftFromStage(ordered())
+
+        expect(draft.sequence?.ban_down_order).toEqual(['A', 'B', 'B', 'A'])
+        expect(configInput({ ...draft, pacing: { ...DEFAULT_PICK_BAN_PACING, intro: 8 } })).toMatchObject({ preset_id: 'bo5_ban_pick' })
+        expect(configInput(withBanDownOrder(draft, ['B', 'A']))).toMatchObject({
+            sequence: { ban_down: true, ban_down_order: ['B', 'A'] },
+        })
+    })
+
+    it('copies the order instead of sharing it', () => {
+        const saved = ordered()
+        const draft = draftFromStage(saved)
+        draft.sequence?.ban_down_order?.push('A')
+
+        expect(saved.pick_ban?.sequence.ban_down_order).toEqual(['A', 'B', 'B', 'A'])
+    })
+
+    it('notices an order edit in the dirty check', () => {
+        const saved = ordered()
+        const draft = draftFromStage(saved)
+
+        expect(configChanged(saved, withBanDownOrder(draft, ['B', 'A', 'A', 'B']))).toBe(true)
+        expect(configChanged(saved, withBanDownOrder(draft, ['A', 'B']))).toBe(true)
+        expect(configChanged(saved, withBanDownOrder(draft, ['A', 'B', 'B', 'A']))).toBe(false)
+        expect(configChanged(saved, { ...draft, sequence: draft.sequence && { ...draft.sequence } })).toBe(false)
+    })
+
+    it('turns a preset draft into a custom sequence once the order is edited', () => {
+        const edited = withBanDownOrder(draftFromStage(ordered()), ['B', 'A'])
+        const sent = configInput(edited)
+
+        expect(edited.presetId).toBeNull()
+        expect(sent).toHaveProperty('sequence')
+        expect(sent).not.toHaveProperty('preset_id')
+    })
+
+    it('does not send an empty order', () => {
+        const emptied = withBanDownOrder(draftFromStage(ordered()), [])
+        const sent = configInput(emptied)
+
+        expect(emptied.sequence?.ban_down_order).toBeUndefined()
+        expect(sent && 'sequence' in sent ? Object.keys(sent.sequence) : []).not.toContain('ban_down_order')
+        expect(configChanged(ordered(), emptied)).toBe(true)
+    })
+
+    it('clears the order when ban-down is turned off', () => {
+        const draft = draftFromStage(ordered())
+        const off = { ...draft, presetId: null, sequence: draft.sequence && { ...draft.sequence, ban_down: false } }
+        const sent = configInput(off)
+
+        expect(sent && 'sequence' in sent ? Object.keys(sent.sequence) : []).not.toContain('ban_down_order')
+        expect(sent).toMatchObject({ sequence: { ban_down: false } })
+        expect(withBanDownOrder(off, ['A']).sequence?.ban_down_order).toBeUndefined()
+    })
+
+    it('keeps the order of a saved custom sequence verbatim', () => {
+        const sequence = { steps: [{ actor: 'A' as const, action: 'pick' as const }], ban_down: true, ban_down_order: ['B' as const, 'A' as const] }
+        const draft = draftFromStage(stage({ pick_ban: block({ preset_id: null, sequence, exclusions: [] }) }))
+
+        expect(configInput(draft)).toEqual({ sequence, exclusions: [], pacing: DEFAULT_PICK_BAN_PACING })
+    })
+
+    it('places a server error on the order input', () => {
+        expect(configErrors(
+            'stages[1].pick_ban.sequence.ban_down_order: must be non-empty; stages[1].pick_ban.sequence.ban_down_order[2]: must be one of: A, B',
+            1,
+        )).toEqual({
+            fields: { 'sequence.ban_down_order': 'must be non-empty' },
+            general: null,
+        })
+        expect(configErrors('sequence.ban_down_order: is only allowed when ban_down is true', 0).fields)
+            .toEqual({ 'sequence.ban_down_order': 'is only allowed when ban_down is true' })
+    })
+
+    it('moves a chip and stops at the ends', () => {
+        expect(moveBanDownActor(['A', 'B', 'B'], 0, 1)).toEqual(['B', 'A', 'B'])
+        expect(moveBanDownActor(['A', 'B', 'B'], 2, -1)).toEqual(['A', 'B', 'B'])
+        expect(moveBanDownActor(['A', 'B'], 0, -1)).toEqual(['A', 'B'])
+    })
+})
+
+describe('saving a config without the new fields', () => {
+    it('sends none of them, the same body as before', () => {
+        const saved = stage({
+            pick_ban: block({
+                preset_id: 'bo4_ban_pick',
+                sequence: PICK_BAN_PRESET_SEQUENCES.bo4_ban_pick,
+                exclusions: [{ tag: 'Hard', min_pre_cup_seed: 11 }],
+            }),
+        })
+        const draft = { ...draftFromStage(saved), pacing: { ...DEFAULT_PICK_BAN_PACING, intro: 8 } }
+
+        expect(JSON.stringify(configInput(draft))).toBe(JSON.stringify({
+            preset_id: 'bo4_ban_pick',
+            exclusions: [{ tag: 'Hard', min_pre_cup_seed: 11 }],
+            pacing: { ...DEFAULT_PICK_BAN_PACING, intro: 8 },
+        }))
+    })
+
+    it('keeps a saved custom sequence byte-identical', () => {
+        const sequence = { steps: [{ actor: 'A' as const, action: 'ban' as const }], ban_down: true }
+        const draft = draftFromStage(stage({ pick_ban: block({ preset_id: null, sequence, exclusions: [{ tag: 'Hard', min_pre_cup_seed: 11 }] }) }))
+
+        expect(JSON.stringify(configInput(draft))).toBe(JSON.stringify({
+            sequence,
+            exclusions: [{ tag: 'Hard', min_pre_cup_seed: 11 }],
+            pacing: DEFAULT_PICK_BAN_PACING,
+        }))
+    })
+
+    it('keeps the stored pacing keys the editor has no input for', () => {
+        const pacing: PickBanContractPacing = { ...DEFAULT_PICK_BAN_PACING, side_spotlight: 6, veto_spotlight: 7 }
+        const saved = stage({ pick_ban: block({ pacing }) })
+        const draft = { ...draftFromStage(saved), pacing: { ...draftFromStage(saved).pacing, intro: 8 } }
+
+        expect(configInput(draft)?.pacing).toEqual({ ...pacing, intro: 8 })
+        expect(configChanged(saved, draftFromStage(saved))).toBe(false)
     })
 })
