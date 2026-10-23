@@ -17,7 +17,7 @@ not_here:
   - "the navigation stack / navigate() / renderView wiring → navigation.md"
   - "the shared components used (FilterPresetsMenu, ColumnsMenu, Tutorial) → shared-components.md"
 sections: [controlled-pages-with-hoisted-state, navigation-history-per-entry-ui-state, account-synced-state, localstorage-persistence, filter-presets, tutorial-state, favorites, polling-live-data, naming-conventions]
-last_verified: 2026-10-02
+last_verified: 2026-10-13
 verify_against: [app/components/main/Main.tsx, app/components/navigation/useNavState.ts, app/hooks/useAsync.ts, app/utils/userState.ts, app/utils/poller.ts, app/components/pages/events/pickban/pickBanSession.ts, app/components/pages/events/pickban/usePickBanSession.ts, app/components/pages/events/pickban/mergePickBanState.ts, app/components/pages/events/pickban/captainPlay.ts, app/components/pages/events/pickban/useCaptainPlay.ts, app/components/pages/events/pickban/managerDock.ts, app/components/pages/events/pickban/useManagerDock.ts, app/components/pages/events/pickban/editFinal.ts, app/components/pages/events/pickban/pickBanMotionPreference.ts, app/components/pages/events/pickban/pickBanSoundPreference.ts, app/components/pages/MatchPickBanPage.tsx, app/components/navigation/nav-items.ts, app/utils/eventAttention.ts, app/components/pages/events/stream/StreamTab.tsx, app/components/pages/events/stream/StreamTabContext.tsx, app/components/pages/events/stream/streamDesk.ts, app/components/pages/events/stream/panels/kit/kitFolder.ts, app/components/stream/data/sceneCadence.ts, app/components/stream/data/streamHotStateStore.ts, app/components/stream/data/sceneReadStore.ts, app/components/pages/events/stream/streamPanels.ts, app/components/pages/events/stream/useStreamKitState.ts, app/components/pages/events/stream/panels/cams/camToolHooks.ts, lib/main/config.ts]
 ---
 
@@ -530,6 +530,27 @@ tick is refused before React re-renders. `select` also requests a hover, and an 
 hover before it submits, and the store's one-command-at-a-time rule covers a hover already in
 flight. The pending hover is cancelled on unmount too.
 
+**The side choice (step 0)** doesn't go through captain play. The view model's `side` block
+(see `agents/data-sources.md`) says when it runs (`side.phase` is `side_choice`, then
+`side_spotlight`) and whether this viewer may choose (`side.canChoose`). The match page
+(`MatchPickBanPage.tsx`) handles it:
+
+- While a step-0 phase runs, anyone with `affordances.actingSide` gets the captain dock with
+  `side={view.side}`, even when `captainDockOf` is `null`. That happens during
+  `side_choice`, because no lettered turn is open yet.
+- The chooser sees the two side cards (`CaptainDock`). The selected card is plain
+  `useState` inside the dock, so it is dropped once the phase ends. Lock In sends
+  `sendCommand('side', { choice })`.
+- While the choice is closed for the chooser (a pause), `side.viewerChooses` keeps their dock
+  on "Choose Red or Blue" with locked controls rather than the other captain's waiting row.
+- The other captain sees "X are choosing their side". In `side_spotlight` both captains
+  see the reveal and their own colour. Under it, `captainDockOf` gives the usual `locked`
+  controls (reason `spotlight`) with the countdown to step 1.
+- The page keeps `{ choosing, rejection }` in `useState`. `choosing` disables the cards
+  and spins the button. A refusal becomes the dock's refusal message, worded for
+  `side_not_open`, `not_authorized`, `version_conflict`, `wrong_status`, `paused` and
+  `no_session`, with the server's own message for anything else. Dismiss clears it.
+
 **Manager play** (`events/pickban/managerDock.ts`, pure, Vitest without a DOM) is the same
 idea for a viewer with `can_manage`, on its own path so a manager never goes through the
 captain's select. `ManagerPlay` holds the act-for selection (tied to its plan index), the
@@ -558,8 +579,9 @@ paused one, so neither can run as the other.
   Every button carries its label, a one-line `hint` and a `disabled` flag (every one is
   disabled while a command is in flight, and `submitting` names that command). It holds:
   - `status` (the session's) and `phase`, a status line: `Waiting for Start`, `Starting`,
-    `Intro`, `Step 3 of 7 · Azure Owls (pick)`, `Step 3 of 7 · Revealing`, `Step 3 of 7`
-    while paused, `Final maps written` or `Final maps edited`. For a manager who plays in
+    `Intro`, `Step 0 · Side choice` and `Step 0 · Revealing` (`sidePhaseLabel` in
+    `pickBanStatus.ts`), `Step 3 of 7 · Azure Owls (pick)`, `Step 3 of 7 · Revealing`,
+    `Step 3 of 7` while paused, `Final maps written` or `Final maps edited`. For a manager who plays in
     the match (`lockForSide` false) the awaiting line is just `Step 3 of 7`, without whose
     turn it is
   - `primary`, the one call to action for the status: Open Lobby (none, cancelled or
@@ -567,13 +589,34 @@ paused one, so neither can run as the other.
     `blocked`, the worded blocking reason with a `fix` naming what clears it (or `null`),
     and `readiness`, each team's Ready mark, A first. Once complete it is `null`, and
     `done` says the final maps are in the match.
-  - `sides`, while the session is in the lobby, running or paused: a tile per team, A
-    first (letter, name, stage seed, and while Hand over applies its roster with who is in
-    control; choosing the captain sends `user_id: null`), `swap` (lobby, or running before
-    the first step), and `chooseA` in the lobby while A is undetermined or the stage seeds
-    don't decide it (missing or tied). The choices stay in `team_a`, `team_b` order, so
-    choosing never reorders them, and they replace Swap. `basis` says why A is A: the
-    better stage seed, or set by a manager (`view.setup.aConfirmed`).
+  - `sides`, while the session is in the lobby, running or paused (Red/Blue first, A/B
+    alongside, since admin tools show both). Every window below comes from
+    `affordances.manager`, so the dock and `beginManagerCommand` agree:
+    - `tiles`, one per team, A first: letter, colour, name, and the roster with who is in
+      control (choosing the captain sends `user_id: null`). `confirmed` is the side's;
+      while it is false the tiles read "Sides TBC".
+    - `badge`, where the side came from: `Step 0`, `Admin`, `Caster` or `Backfill` from
+      `side.source`, or `Sides TBC` while unconfirmed, each with a one-line hint.
+    - `basis`, "The sides are set, so step 0 is skipped." in a lobby whose side an admin
+      set; otherwise the chooser rule in the lobby, or while running with the side
+      unconfirmed ("T04 choose: lower pre-cup seed", from `side.chooser` and
+      `side.chooser_reason`; `null` while no chooser is known).
+    - `chooser` (`sideChooser`: lobby, unless an admin set the side): both teams in `team_a`, `team_b`
+      order with their pre-cup seeds and the current chooser checked. `undetermined` while
+      no chooser is known, which is when Start is blocked by `side_chooser_undetermined`
+      (its fix points here). Choosing the other team sends `side-chooser`.
+    - `setSides` (`setSides`: lobby, or running before step 1): both teams with the Red
+      one checked once confirmed; choosing sends `sides` with `red`. Outside its window
+      it stays visible but disabled, with a `reason`: paused before step 1 (no step
+      revealed and none to undo) says resume first, otherwise that step 1 is in and the match editor changes the sides now.
+    - `swap`, shown in the same window as Set sides, enabled only once the side is
+      confirmed (`affordances.manager.swap`); while it is TBC its hint says there is
+      nothing to swap.
+    - `stepZero` (`actForSideChoice`: running, phase `side_choice`, a manager who doesn't
+      play): Act for team on step 0, the chooser team's name and a Red and a Blue option
+      titled and led from `side.cards` ("Red · Side A", "Ban 1st, pick 2nd"; "Acts
+      first"/"Acts second" without cards). Choosing one asks for confirmation first, then
+      sends `side` with `choice`.
   - `sequence`, in the same statuses: the preset's label (or Custom sequence), the step
     count and best-of, whether it was changed for this match and from which stage, the
     choice keys it matches (the stage it was copied from, then its preset), and whether it
@@ -581,7 +624,10 @@ paused one, so neither can run as the other.
   - `history` (Undo Last Step, Reopen, Edit Final Maps…) and `danger` (Restart, Cancel
     Picks & Bans), each listed only while it applies
   - the results warning, the voided banner, the open editor, the pending confirmation
-    (title, message, confirm and dismiss labels), the act-for controls, and the refusal
+    (title, message, confirm and dismiss labels, and whether it is `destructive`), the
+    act-for controls, and the refusal. A refused `side`, `sides` or `side-chooser` with
+    `side_not_open` is worded by what it tried (step 0 is over, step 1 is in, the lobby
+    has closed)
 
   The act-for controls are a `CaptainDock` model, so the captain's dock renders
   them, and a refused lock-in shows there rather than in the panel. They mirror the
@@ -595,8 +641,8 @@ paused one, so neither can run as the other.
   admin who isn't playing has to lock in on a team's behalf.
 - `beginManagerCommand(play, view, action)` returns the next play and the request to
   send, or `null` when the control isn't open, a command is in flight, or an Edit final
-  save has no open, valid, current draft. For `reopen`, `restart`, `cancel` and
-  `edit-final` it first returns a play holding the resolved request awaiting confirmation
+  save has no open, valid, current draft. For `reopen`, `restart`, `cancel`, `edit-final`
+  and the step-0 `side` it first returns a play holding the resolved request awaiting confirmation
   and no request; `confirmManagerCommand` sends exactly that request (an edit-final with
   the list and version as they were confirmed) and `dismissManagerConfirm` drops it.
   Asking again just asks again: only the confirmation sends. `selectActForMap` and
@@ -683,6 +729,20 @@ across devices. The Cam volume preference works the same way: the config's `camV
 default 50) through `getCamVolume()` / `setCamVolume(volume)`, saved when the slider is released.
 The cam server passwords are the opposite: they live only in nav state (`event.camPasswords`), so they
 are never written to disk and are gone once the launcher closes.
+
+**Cam choices are keyed by team id.** The Cams tool keeps its server choices in nav state
+`event.camServers` as `{ matchId, teams: { <teamId>: choice } }`, and its passwords in
+`event.camPasswords` as `{ teams: { <teamId>: password } }`. A choice is `{ mode: 'detected' }`, or
+`{ mode: 'list' | 'typed', address }`. `cams/camChoices.ts` converts between them and the per-letter
+`{ A, B }` the view model takes:
+- `camTeamIds(match)` maps each letter to a team id through the desk's `sides` mapping.
+- `readCamServerChoices` and `readCamPasswords` give the per-letter values.
+- `storeCamServerChoice` and `storeCamPassword` write one letter's value under its team.
+So a Red/Blue swap moves each team's server and password to its new letter. Server choices for
+another match read as detection, but passwords carry over to the team's next match. Both readers take
+the stored value as `unknown` and keep only entries under `teams` with the right shape. Older values
+keyed by `A` / `B` are dropped, and the caster picks again. A letter with no team yet can't store a
+server, and its picker is disabled.
 
 **The Stream tab's context** (`events/stream/StreamTabContext.tsx`). `StreamTab` builds one
 identity (`eventSlug`, `streamerId`, `isManager`, `accessToken`) and wraps the open panel in

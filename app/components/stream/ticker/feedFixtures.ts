@@ -23,8 +23,8 @@ export function feedResult(id: string, a: string, b: string, at: number, score: 
     }
 }
 
-export function feedPredictor(rank: number, userId: string, alias: string, profit: number): FeedPredictor {
-    return { rank, user_id: userId, alias, profit }
+export function feedPredictor(rank: number, userId: string, alias: string, profit: number, pending = false): FeedPredictor {
+    return { rank, user_id: userId, alias, profit, pending }
 }
 
 export function streamFeed(now: number, overrides: Partial<StreamFeed> = {}): StreamFeed {

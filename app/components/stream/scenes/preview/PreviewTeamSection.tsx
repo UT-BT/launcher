@@ -5,6 +5,7 @@ import { toActiveTitle } from '@/app/utils/api'
 import { staggeredCard } from '@/app/components/broadcast/broadcastMotion'
 import { PICK_BAN_HUES, tint } from '@/app/components/broadcast/broadcastTone'
 import { sideTone, sideToneClasses } from '../../sceneHelpers'
+import { SceneSideTagChip } from '../../SceneSideTagChip'
 import type { StreamSide } from '../../data/streamHotState'
 import type { CupRunChip, PreviewPlayerView, PreviewTeamView, ResultLetter } from './previewView'
 import { Label, RESULT_TEXT } from './previewParts'
@@ -49,6 +50,7 @@ function Plate({ side, team }: { side: StreamSide; team: PreviewTeamView | null 
                     >
                         {name}
                     </h2>
+                    {team && <SceneSideTagChip tag={team.sideTag} className="px-2.5 py-[3px] text-xl" />}
                 </div>
                 {team && (
                     <div className="flex shrink-0 items-center gap-2.5">

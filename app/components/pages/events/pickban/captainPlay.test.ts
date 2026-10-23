@@ -158,7 +158,7 @@ describe('locked controls', () => {
             kind: 'locked', reason: 'spotlight', countdown, next: { stepIndex: 1, viewerActs: true },
         })
         expect(captainDockOf(previous, IDLE_CAPTAIN_PLAY)?.controls).toMatchObject({
-            kind: 'locked', reason: 'spotlight', countdown, next: { stepIndex: 1, viewerActs: false, actionLabel: 'Azure Owls bans' },
+            kind: 'locked', reason: 'spotlight', countdown, next: { stepIndex: 1, viewerActs: false, actionLabel: 'Azure Owls (Blue) bans' },
         })
         expect(selectMap(IDLE_CAPTAIN_PLAY, next, BRAVO)).toBe(IDLE_CAPTAIN_PLAY)
     })
@@ -192,7 +192,7 @@ describe('locked controls', () => {
         const view = viewAt(asCaptain(readAt(started(), AWAITING_A), 'team_b'), AWAITING_A)
 
         expect(captainDockOf(view, IDLE_CAPTAIN_PLAY)?.controls).toMatchObject({
-            kind: 'waiting', turn: { stepIndex: 0, viewerActs: false, actionLabel: 'Crimson Cats bans' },
+            kind: 'waiting', turn: { stepIndex: 0, viewerActs: false, actionLabel: 'Crimson Cats (Red) bans' },
         })
         expect(view.cards.some((card) => card.selectable)).toBe(false)
         expect(selectMap(IDLE_CAPTAIN_PLAY, view, BRAVO)).toBe(IDLE_CAPTAIN_PLAY)
@@ -555,6 +555,7 @@ describe('refusals', () => {
         ['map_unavailable', 409, 'That map can’t be chosen any more. Select another.'],
         ['spotlight_active', 409, 'Wait for the reveal to finish, then lock in.'],
         ['intro_active', 409, 'Wait for the intro to finish, then lock in.'],
+        ['side_choice_active', 409, 'Wait for the side choice to finish, then lock in.'],
         ['paused', 409, 'The session is paused. Lock in once an admin resumes it.'],
         ['wrong_status', 409, 'The Picks & Bans aren’t running any more.'],
         ['not_authorized', 403, 'You no longer control your team’s choices in this Picks & Bans process.'],

@@ -15,18 +15,37 @@ import {
     swissStageView,
 } from './previewFixtures'
 import type { StreamPreview } from './previewRead'
+import type { MatchSideStatus } from '@/app/utils/api'
 
 const NOW = Date.parse('2026-09-29T18:40:00Z')
 const STARTS_AT = '2026-09-29T20:00:00+00:00'
+const CONFIRMED: MatchSideStatus = { confirmed: true, source: 'step0' }
+const UNCONFIRMED: MatchSideStatus = { confirmed: false, source: null }
 
-function viewOf(overrides: Partial<StreamPreview> = {}) {
-    return previewView({ preview: streamPreview(overrides), startsAt: STARTS_AT, now: NOW })
+function viewOf(overrides: Partial<StreamPreview> = {}, sideStatus: MatchSideStatus = CONFIRMED) {
+    return previewView({ preview: streamPreview(overrides), sideStatus, startsAt: STARTS_AT, now: NOW })
 }
 
 describe('previewView', () => {
     it('times the scene in UTC plus relative text', () => {
         expect(viewOf().kicker).toBe('20:00 UTC · in 1h 20m')
-        expect(previewView({ preview: streamPreview(), startsAt: null, now: NOW }).kicker).toBeNull()
+        expect(previewView({ preview: streamPreview(), sideStatus: CONFIRMED, startsAt: null, now: NOW }).kicker).toBeNull()
+    })
+
+    describe('side labels', () => {
+        it('labels the top team RED and the bottom team BLUE once the side is confirmed', () => {
+            const view = viewOf()
+
+            expect(view.teams.a?.sideTag).toEqual({ label: 'RED', tone: 'a', confirmed: true })
+            expect(view.teams.b?.sideTag).toEqual({ label: 'BLUE', tone: 'b', confirmed: true })
+        })
+
+        it('says Sides TBC by both team names while the side is unconfirmed', () => {
+            const view = viewOf({}, UNCONFIRMED)
+
+            expect(view.teams.a?.sideTag).toEqual({ label: 'Sides TBC', tone: 'neutral', confirmed: false })
+            expect(view.teams.b?.sideTag.label).toBe('Sides TBC')
+        })
     })
 
     describe('lineup players', () => {

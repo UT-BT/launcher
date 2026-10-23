@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { ApiError, PICK_BAN_ERROR_CODES, type PickBanStageConfig, type PickBanState } from '@/app/utils/api'
-import { buildPickBanView, type PickBanView } from './pickBanView'
+import {
+    ApiError,
+    MATCH_SIDE_SOURCES,
+    PICK_BAN_CHOOSER_REASONS,
+    PICK_BAN_ERROR_CODES,
+    type PickBanStageConfig,
+    type PickBanState,
+} from '@/app/utils/api'
+import { streamSidesFixture, type StreamSidesSuccessFixtureName } from '@/app/utils/fixtures/streamSidesFixtures'
+import { buildPickBanView, type PickBanView, type PickBanViewState } from './pickBanView'
 import { moveFinalEntry } from './editFinal'
 import {
     IDLE_MANAGER_PLAY,
@@ -76,13 +84,29 @@ function commandsOf(dock: ManagerDock | null | undefined): string[] | undefined 
 }
 
 function undeterminedLobby(): PickBanState {
-    const { team_a, team_b } = pickBanState().teams
     return pickBanState({
-        a_side: null,
-        teams: { team_a: { ...team_a!, ab: null }, team_b: { ...team_b!, ab: null } },
-        blocking_reason: 'a_undetermined',
-        blocking_reasons: ['a_undetermined'],
+        blocking_reason: 'side_chooser_undetermined',
+        blocking_reasons: ['side_chooser_undetermined'],
     })
+}
+
+type PickBanFixtureName = Extract<StreamSidesSuccessFixtureName, `pickBan${string}`>
+
+function managing(state: PickBanViewState): PickBanViewState {
+    return {
+        ...state,
+        viewer: { side: null, roster_captain: false },
+        capabilities: { can_manage: true, acting_side: null, can_ready: false, can_choose_side: false, can_lock_now: false },
+    }
+}
+
+function contractView(name: PickBanFixtureName, change: (state: PickBanViewState) => PickBanViewState = managing): PickBanView {
+    const state = change(streamSidesFixture(name))
+    return buildPickBanView(state, { clockOffsetMs: 0, now: Date.parse(state.server_now) })
+}
+
+function withSide(state: PickBanViewState, side: Partial<PickBanViewState['side']>): PickBanViewState {
+    return managing({ ...state, side: { ...state.side, ...side } })
 }
 
 describe('who gets the dock', () => {
@@ -100,7 +124,7 @@ describe('who gets the dock', () => {
 })
 
 describe('running a whole session', () => {
-    it('opens, chooses A, starts and acts for both sides until the pick/ban is complete', () => {
+    it('opens, names the chooser, starts and acts for both sides until the pick/ban is complete', () => {
         let play = IDLE_MANAGER_PLAY
         const send = (state: PickBanState, serverTime: number, request: ManagerRequest) => {
             const submission = beginManagerCommand(play, viewAt(asManager(state), serverTime), request)
@@ -111,8 +135,8 @@ describe('running a whole session', () => {
         send(pickBanState({ id: null, status: 'none', phase: null }), T0 - 600_000, { command: 'open' })
 
         const lobby = undeterminedLobby()
-        expect(managerDockOf(viewAt(asManager(lobby), T0 - 300_000), play)?.primary?.blocked?.reason).toBe('Team A undetermined')
-        send(lobby, T0 - 300_000, { command: 'choose-a', body: { side: 'team_a' } })
+        expect(managerDockOf(viewAt(asManager(lobby), T0 - 300_000), play)?.primary?.blocked?.reason).toBe('No team to choose Red or Blue')
+        send(lobby, T0 - 300_000, { command: 'side-chooser', body: { side: 'team_b' } })
 
         send(pickBanState(), T0 - 1_000, { command: 'start' })
 
@@ -199,16 +223,16 @@ describe('starting', () => {
                     fix: 'Add maps to the stage’s pool in Manage, or choose a shorter sequence under Sequence.',
                 },
             },
-            sides: { swap: { command: 'swap', disabled: false } },
+            sides: { swap: { command: 'swap', disabled: true } },
             history: [],
             danger: [{ command: 'cancel', disabled: false }],
         })
         expect(beginManagerCommand(IDLE_MANAGER_PLAY, tooSmall, { command: 'start' })).toBeNull()
 
         const blockedBy = (reason: PickBanState['blocking_reason']) => managerDockOf(blocked(reason), IDLE_MANAGER_PLAY)?.primary?.blocked
-        expect(blockedBy('a_undetermined')).toEqual({
-            reason: 'Team A undetermined',
-            fix: 'The stage seeds are missing or tied, so choose who is Team A under Sides.',
+        expect(blockedBy('side_chooser_undetermined')).toEqual({
+            reason: 'No team to choose Red or Blue',
+            fix: 'The seeds can’t decide which team chooses Red or Blue, so name it under Chooser, or set the sides yourself.',
         })
         expect(blockedBy('pre_cup_seed_missing')).toMatchObject({ reason: 'A team is missing its pre-cup seed' })
         expect(blockedBy('sequence_mismatch')).toEqual({
@@ -292,12 +316,12 @@ describe('warnings', () => {
     it('warns when results already exist, whatever else blocks Start', () => {
         const withResults = pickBanState({
             results_present: true,
-            blocking_reason: 'a_undetermined',
-            blocking_reasons: ['a_undetermined', 'results_present'],
+            blocking_reason: 'side_chooser_undetermined',
+            blocking_reasons: ['side_chooser_undetermined', 'results_present'],
         })
 
         expect(managerDockOf(viewAt(asManager(withResults), T0), IDLE_MANAGER_PLAY)).toMatchObject({
-            primary: { blocked: { reason: 'Team A undetermined' } },
+            primary: { blocked: { reason: 'No team to choose Red or Blue' } },
             resultsWarning: RESULTS_WARNING,
         })
         expect(managerDockOf(viewAt(asManager(pickBanState()), T0), IDLE_MANAGER_PLAY)?.resultsWarning).toBeNull()
@@ -336,67 +360,6 @@ describe('warnings', () => {
 })
 
 describe('lobby setup', () => {
-    it('asks who is Team A while it is undetermined, with each team’s stage seed, and hides Swap', () => {
-        const dock = managerDockOf(viewAt(asManager(undeterminedLobby()), T0), IDLE_MANAGER_PLAY)
-
-        expect(dock).toMatchObject({
-            sides: {
-                tiles: [
-                    { side: 'team_a', ab: null, name: 'Crimson Cats', stageSeed: 1 },
-                    { side: 'team_b', ab: null, name: 'Azure Owls', stageSeed: 4 },
-                ],
-                chooseA: [
-                    { side: 'team_a', name: 'Crimson Cats', stageSeed: 1, chosen: false },
-                    { side: 'team_b', name: 'Azure Owls', stageSeed: 4, chosen: false },
-                ],
-                swap: null,
-                basis: null,
-            },
-            primary: { command: 'start', disabled: true },
-            danger: [{ command: 'cancel' }],
-        })
-        expect(beginManagerCommand(IDLE_MANAGER_PLAY, viewAt(asManager(undeterminedLobby()), T0), { command: 'choose-a', body: { side: 'team_b' } })?.request)
-            .toEqual({ command: 'choose-a', body: { side: 'team_b' } })
-    })
-
-    it('keeps the chooser up while the seeds are tied, marking the chosen A and keeping each team in its place', () => {
-        const { team_a, team_b } = pickBanState().teams
-        const tiedAzureA = pickBanState({
-            a_side: 'team_b',
-            a_confirmed: true,
-            teams: { team_a: { ...team_a!, ab: 'B', stage_seed: 2 }, team_b: { ...team_b!, ab: 'A', stage_seed: 2 } },
-        })
-
-        expect(managerDockOf(viewAt(asManager(tiedAzureA), T0), IDLE_MANAGER_PLAY)?.sides).toMatchObject({
-            tiles: [{ side: 'team_b', ab: 'A' }, { side: 'team_a', ab: 'B' }],
-            chooseA: [
-                { side: 'team_a', name: 'Crimson Cats', stageSeed: 2, chosen: false },
-                { side: 'team_b', name: 'Azure Owls', stageSeed: 2, chosen: true },
-            ],
-            swap: null,
-            basis: 'A was set by a manager.',
-        })
-    })
-
-    it('offers Swap once the seeds decide A, in the lobby and before the first step, saying why A is A', () => {
-        const lobby = viewAt(asManager(pickBanState()), T0)
-
-        expect(managerDockOf(lobby, IDLE_MANAGER_PLAY)?.sides).toMatchObject({
-            tiles: [{ side: 'team_a', ab: 'A', stageSeed: 1 }, { side: 'team_b', ab: 'B', stageSeed: 4 }],
-            chooseA: null,
-            swap: { command: 'swap', label: 'Swap A and B', disabled: false },
-            basis: 'A has the better stage seed.',
-        })
-        expect(beginManagerCommand(IDLE_MANAGER_PLAY, lobby, { command: 'swap' })?.request).toEqual({ command: 'swap' })
-
-        const swapped = viewAt(asManager({ ...readAt(started(), AWAITING_A), a_confirmed: true }), AWAITING_A)
-        expect(managerDockOf(swapped, IDLE_MANAGER_PLAY)?.sides).toMatchObject({ chooseA: null, swap: { command: 'swap' }, basis: 'A was set by a manager.' })
-
-        const firstBan = locked(readAt(started(), AWAITING_A), BRAVO, AWAITING_A + 100)
-        const afterFirstStep = viewAt(asManager(readAt(firstBan, unlockAt(firstBan) + 1_000)), unlockAt(firstBan) + 1_000)
-        expect(managerDockOf(afterFirstStep, IDLE_MANAGER_PLAY)?.sides).toMatchObject({ chooseA: null, swap: null })
-    })
-
     it('shows the sequence with where it came from, and offers the override in the lobby only', () => {
         const lobby = viewAt(asManager(pickBanState()), T0)
         const running = viewAt(asManager(readAt(started(), AWAITING_A)), AWAITING_A)
@@ -455,6 +418,243 @@ describe('lobby setup', () => {
         const keys = sequenceChoices([stageConfig('group-a', 'Groups', 4, true), stageConfig('group-b', 'Groups', 4, true)]).map((choice) => choice.key)
 
         expect(new Set(keys).size).toBe(keys.length)
+    })
+})
+
+describe('sides', () => {
+    const TBC = { source: null, label: 'Sides TBC', hint: 'Nobody has set the sides yet, so Red is the bracket’s first team for now.' }
+    const SWAP_TBC = 'Set the sides first: there’s nothing to swap while they’re TBC.'
+
+    it('says who chooses and why, offers the Chooser as an override and Set sides, and holds Swap while the sides are TBC', () => {
+        const lobby = contractView('pickBanLobby')
+        const dock = managerDockOf(lobby, IDLE_MANAGER_PLAY)
+
+        expect(dock?.primary).toMatchObject({ command: 'start', disabled: false, blocked: null })
+        expect(dock?.sides).toMatchObject({
+            tiles: [
+                { side: 'team_a', ab: 'A', color: 'red', name: 'T01' },
+                { side: 'team_b', ab: 'B', color: 'blue', name: 'T04' },
+            ],
+            badge: TBC,
+            basis: 'T04 choose: lower pre-cup seed',
+            chooser: {
+                undetermined: false,
+                choices: [
+                    { side: 'team_a', name: 'T01', preCupSeed: 3, chosen: false },
+                    { side: 'team_b', name: 'T04', preCupSeed: 9, chosen: true },
+                ],
+                disabled: false,
+            },
+            setSides: {
+                choices: [{ side: 'team_a', name: 'T01', chosen: false }, { side: 'team_b', name: 'T04', chosen: false }],
+                hint: 'Setting the sides skips step 0.',
+                disabled: false,
+                reason: null,
+            },
+            swap: { command: 'swap', label: 'Swap Red and Blue', disabled: true, hint: SWAP_TBC },
+            stepZero: null,
+        })
+
+        const chooser = { command: 'side-chooser', body: { side: 'team_a' } } as const
+        const setSides = { command: 'sides', body: { red: 'team_b' } } as const
+        expect(beginManagerCommand(IDLE_MANAGER_PLAY, lobby, chooser)?.request).toEqual(chooser)
+        expect(beginManagerCommand(IDLE_MANAGER_PLAY, lobby, setSides)?.request).toEqual(setSides)
+        expect(beginManagerCommand(IDLE_MANAGER_PLAY, lobby, { command: 'swap' })).toBeNull()
+        expect(beginManagerCommand(IDLE_MANAGER_PLAY, lobby, { command: 'side', body: { choice: 'red' } })).toBeNull()
+    })
+
+    it('blocks Start while seeds can’t name the chooser, pointing at the Chooser', () => {
+        const dock = managerDockOf(contractView('pickBanLobbyUndetermined'), IDLE_MANAGER_PLAY)
+
+        expect(dock?.primary).toMatchObject({
+            command: 'start',
+            disabled: true,
+            blocked: {
+                reason: 'No team to choose Red or Blue',
+                fix: 'The seeds can’t decide which team chooses Red or Blue, so name it under Chooser, or set the sides yourself.',
+            },
+        })
+        expect(dock?.sides).toMatchObject({
+            badge: TBC,
+            basis: null,
+            chooser: {
+                undetermined: true,
+                choices: [
+                    { side: 'team_a', name: 'T01', preCupSeed: 2, chosen: false },
+                    { side: 'team_b', name: 'T04', preCupSeed: 2, chosen: false },
+                ],
+            },
+            setSides: { disabled: false },
+        })
+    })
+
+    it('drops the Chooser once an admin has set the sides in the lobby, saying step 0 is skipped, and offers Swap', () => {
+        const adminSet = contractView('pickBanLobby', (state) => withSide(state, { red: 'team_b', source: 'admin', confirmed: true, chooser: null, chooser_reason: null }))
+        const dock = managerDockOf(adminSet, IDLE_MANAGER_PLAY)
+
+        expect(dock?.sides).toMatchObject({
+            badge: { source: 'admin', label: 'Admin', hint: 'Set by an admin.' },
+            basis: 'The sides are set, so step 0 is skipped.',
+            chooser: null,
+            setSides: { choices: [{ side: 'team_a', chosen: false }, { side: 'team_b', chosen: true }], disabled: false },
+            swap: { command: 'swap', disabled: false, hint: 'Swaps Red and Blue, so the other team is Side A and acts first.' },
+        })
+        expect(beginManagerCommand(IDLE_MANAGER_PLAY, adminSet, { command: 'side-chooser', body: { side: 'team_a' } })).toBeNull()
+        expect(beginManagerCommand(IDLE_MANAGER_PLAY, adminSet, { command: 'swap' })?.request).toEqual({ command: 'swap' })
+    })
+
+    it('keeps the Chooser and the chooser rule in a lobby whose side a caster set, since only an admin-set side skips step 0', () => {
+        const casterSet = contractView('pickBanLobby', (state) => withSide(state, { red: 'team_b', source: 'caster', confirmed: true }))
+        const dock = managerDockOf(casterSet, IDLE_MANAGER_PLAY)
+
+        expect(dock?.sides).toMatchObject({
+            badge: { source: 'caster', label: 'Caster' },
+            basis: 'T04 choose: lower pre-cup seed',
+            chooser: { undetermined: false },
+            swap: { disabled: false },
+        })
+        const chooser = { command: 'side-chooser', body: { side: 'team_a' } } as const
+        expect(beginManagerCommand(IDLE_MANAGER_PLAY, casterSet, chooser)?.request).toEqual(chooser)
+    })
+
+    it('offers Act for team on step 0 with both sides’ steps, confirming before it sends the side', () => {
+        const view = contractView('pickBanSideChoice')
+        const dock = managerDockOf(view, IDLE_MANAGER_PLAY)
+
+        expect(dock).toMatchObject({
+            phase: 'Step 0 · Side choice',
+            actFor: null,
+            sides: {
+                badge: TBC,
+                basis: 'T04 choose: lower pre-cup seed',
+                chooser: null,
+                setSides: { hint: 'Step 1 follows the new colours.', disabled: false, reason: null },
+                swap: { disabled: true, hint: SWAP_TBC },
+                stepZero: {
+                    side: 'team_b',
+                    teamName: 'T04',
+                    options: [
+                        { color: 'red', title: 'Red · Side A', lead: 'Ban 1st, pick 2nd' },
+                        { color: 'blue', title: 'Blue · Side B', lead: 'Ban 2nd, pick 1st' },
+                    ],
+                    disabled: false,
+                },
+            },
+        })
+
+        const choose = { command: 'side', body: { choice: 'red' } } as const
+        const asked = beginManagerCommand(IDLE_MANAGER_PLAY, view, choose)
+        expect(asked?.request).toBeNull()
+        expect(managerDockOf(view, asked!.play)?.confirm).toEqual({
+            command: 'side',
+            title: 'Lock in Red for T04?',
+            message: 'T04 become Red · Side A: ban 1st, pick 2nd. The reveal plays, then step 1 opens.',
+            confirmLabel: 'Lock In Red',
+            dismissLabel: 'Go Back',
+            destructive: false,
+        })
+        const confirmed = confirmManagerCommand(asked!.play, view)
+        expect(confirmed?.request).toEqual(choose)
+        expect(managerDockOf(view, confirmed!.play)?.sides?.stepZero?.disabled).toBe(true)
+    })
+
+    it('never lets a manager who plays in the match choose the side for a team', () => {
+        const player = contractView('pickBanSideChoice', (state) => ({ ...state, capabilities: { ...state.capabilities, can_manage: true } }))
+
+        expect(managerDockOf(player, IDLE_MANAGER_PLAY)?.sides?.stepZero).toBeNull()
+        expect(beginManagerCommand(IDLE_MANAGER_PLAY, player, { command: 'side', body: { choice: 'blue' } })).toBeNull()
+    })
+
+    it('shows the step-0 reveal with its source, and Swap before step 1', () => {
+        const dock = managerDockOf(contractView('pickBanSideSpotlight'), IDLE_MANAGER_PLAY)
+
+        expect(dock).toMatchObject({
+            phase: 'Step 0 · Revealing',
+            sides: {
+                badge: { source: 'step0', label: 'Step 0', hint: 'Chosen by a team at step 0.' },
+                basis: null,
+                stepZero: null,
+                setSides: { choices: [{ side: 'team_a', chosen: false }, { side: 'team_b', chosen: true }], disabled: false },
+                swap: { disabled: false },
+            },
+        })
+    })
+
+    it('keeps Set sides visible but disabled once step 1 is in, saying where the sides can still change', () => {
+        const view = contractView('pickBanAdminSet')
+        const dock = managerDockOf(view, IDLE_MANAGER_PLAY)
+
+        expect(dock?.sides).toMatchObject({
+            badge: { source: 'admin', label: 'Admin' },
+            chooser: null,
+            setSides: {
+                disabled: true,
+                reason: 'Step 1 is in, so change the sides in the match editor instead.',
+            },
+            swap: null,
+            stepZero: null,
+        })
+        expect(beginManagerCommand(IDLE_MANAGER_PLAY, view, { command: 'sides', body: { red: 'team_a' } })).toBeNull()
+
+        const onHold = contractView('pickBanSideChoice', (state) => managing({ ...state, status: 'paused', phase: 'paused', paused: true, paused_at: state.server_now }))
+        expect(managerDockOf(onHold, IDLE_MANAGER_PLAY)?.sides).toMatchObject({
+            setSides: { disabled: true, reason: 'Resume the Picks & Bans process to set the sides.' },
+            stepZero: null,
+        })
+    })
+
+    it('says step 1 is in, not to resume, when a paused session’s only steps so far were automatic', () => {
+        const view = contractView('pickBanAdminSet', (state) => managing({
+            ...state,
+            status: 'paused',
+            phase: 'paused',
+            paused: true,
+            paused_at: state.server_now,
+            plan: state.plan.map((step) => ({ ...step, automatic: step.map !== null })),
+        }))
+
+        expect(managerDockOf(view, IDLE_MANAGER_PLAY)?.sides?.setSides).toMatchObject({
+            disabled: true,
+            reason: 'Step 1 is in, so change the sides in the match editor instead.',
+        })
+    })
+
+    it('words the chooser rule for every reason', () => {
+        const basisOf = (reason: (typeof PICK_BAN_CHOOSER_REASONS)[number]) =>
+            managerDockOf(contractView('pickBanLobby', (state) => withSide(state, { chooser_reason: reason })), IDLE_MANAGER_PLAY)?.sides?.basis
+
+        expect(PICK_BAN_CHOOSER_REASONS.map(basisOf)).toEqual([
+            'T04 choose: lower pre-cup seed',
+            'T04 choose: lower group placing',
+            'T04 choose: lower knockout differential',
+            'T04 choose: named by an admin',
+        ])
+    })
+
+    it('badges where the side came from, for every source', () => {
+        const badgeOf = (source: (typeof MATCH_SIDE_SOURCES)[number]) =>
+            managerDockOf(contractView('pickBanLobby', (state) => withSide(state, { red: 'team_a', source, confirmed: true })), IDLE_MANAGER_PLAY)?.sides?.badge
+
+        expect(MATCH_SIDE_SOURCES.map(badgeOf)).toEqual([
+            { source: 'step0', label: 'Step 0', hint: 'Chosen by a team at step 0.' },
+            { source: 'admin', label: 'Admin', hint: 'Set by an admin.' },
+            { source: 'caster', label: 'Caster', hint: 'Set by the caster.' },
+            { source: 'backfill', label: 'Backfill', hint: 'Carried over from before sides were recorded.' },
+        ])
+        expect(managerDockOf(contractView('pickBanLobby'), IDLE_MANAGER_PLAY)?.sides?.badge).toEqual(TBC)
+    })
+
+    it('words a refused side command by what it tried', () => {
+        const refusal = new ApiError(409, 'The server’s own words', 'Request failed', 'side_not_open')
+        const rejectionOf = (view: PickBanView, action: Parameters<typeof beginManagerCommand>[2]) => {
+            const asked = beginManagerCommand(IDLE_MANAGER_PLAY, view, action)!
+            const sending = asked.request ? asked.play : confirmManagerCommand(asked.play, view)!.play
+            return managerDockOf(view, managerCommandRejected(sending, refusal))?.rejection
+        }
+
+        expect(rejectionOf(contractView('pickBanSideChoice'), { command: 'side', body: { choice: 'blue' } })).toBe('Step 0 is over, so the side can’t be chosen any more.')
+        expect(rejectionOf(contractView('pickBanSideChoice'), { command: 'sides', body: { red: 'team_a' } })).toBe('Step 1 is in, so change the sides in the match editor instead.')
+        expect(rejectionOf(contractView('pickBanLobby'), { command: 'side-chooser', body: { side: 'team_a' } })).toBe('The lobby has closed, so the chooser can’t change any more.')
     })
 })
 
@@ -717,6 +917,7 @@ describe('restarting and cancelling', () => {
             message: 'Every pick and ban so far is undone and both teams go back to the lobby. Both Ready marks clear, and any maps this Picks & Bans process wrote into the match are removed.',
             confirmLabel: 'Restart',
             dismissLabel: 'Keep It',
+            destructive: true,
         })
 
         const confirmed = confirmManagerCommand(asked!.play, view)
@@ -775,6 +976,7 @@ describe('reopening', () => {
             message: 'The last pick or ban is undone, with any automatic step after it, and the Picks & Bans process waits on that step again. The maps it wrote into the match are removed, and any edits to the final maps are discarded.',
             confirmLabel: 'Reopen',
             dismissLabel: 'Keep It',
+            destructive: true,
         })
 
         const confirmed = confirmManagerCommand(asked!.play, view)
@@ -874,6 +1076,7 @@ describe('editing the final maps', () => {
             message: 'The match’s maps are rewritten to your list, in its order, with the picks and decider you set. The final summary is marked Edited, and the timeline keeps the picks and bans as they were played.',
             confirmLabel: 'Save Final Maps',
             dismissLabel: 'Keep Editing',
+            destructive: false,
         })
         expect(managerDockOf(view, dismissManagerConfirm(asked.play))?.finalEditor?.body).toEqual(EDITED.body)
 

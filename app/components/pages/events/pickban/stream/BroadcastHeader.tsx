@@ -6,6 +6,7 @@ import { CHIP_MOTION } from '@/app/components/broadcast/broadcastMotion'
 import { TeamPlate } from '@/app/components/broadcast/TeamPlate'
 import { matchSubtitle } from '../pickBanCopy'
 import type { PickBanTeamPanel, PickBanView } from '../pickBanView'
+import { plateSideTagOf } from './broadcastMoment'
 
 export function BroadcastHeader({ view, eventName }: { view: PickBanView; eventName: string | null }) {
     const lobby = view.stagePhase === 'lobby'
@@ -16,6 +17,7 @@ export function BroadcastHeader({ view, eventName }: { view: PickBanView; eventN
                 team={view.teams.left}
                 align="left"
                 lit={view.teams.left?.onTurn ?? false}
+                tag={plateSideTagOf(view, view.teams.left)}
                 chips={<PlateChips panel={view.teams.left} showReady={lobby} />}
             />
             <div className="flex w-[480px] shrink-0 flex-col items-center justify-center gap-1 px-6 text-center">
@@ -29,6 +31,7 @@ export function BroadcastHeader({ view, eventName }: { view: PickBanView; eventN
                 team={view.teams.right}
                 align="right"
                 lit={view.teams.right?.onTurn ?? false}
+                tag={plateSideTagOf(view, view.teams.right)}
                 chips={<PlateChips panel={view.teams.right} showReady={lobby} />}
             />
         </header>

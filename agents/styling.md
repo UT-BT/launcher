@@ -10,7 +10,7 @@ not_here:
   - "which component to use → shared-components.md"
   - "state / persistence → state-patterns.md"
 sections: [class-merging, tables-locked, responsive-columns, page-layout, filter-panel, buttons-toggle-states, form-inputs, card-backgrounds-borders, text, color-palette, animation, css-runtime-cost, broadcast-styling, scene-stylesheet, screenshot-conventions, donts]
-last_verified: 2026-10-05
+last_verified: 2026-10-13
 verify_against: [app/components/shared/DataTable.tsx, app/components/shared/LiveDot.tsx, app/components/shared/chipStyles.ts, app/styles/globals.css, app/styles/theme.css, app/styles/desktop.css, app/styles/index.css, lib/utils.ts, app/hooks/useElementWidth.ts, app/hooks/usePrefersReducedMotion.ts, app/components/broadcast/broadcastTone.ts, app/components/broadcast/broadcastMotion.ts, app/components/broadcast/broadcastFonts.ts, app/components/broadcast/broadcastFonts.css, app/components/broadcast/BroadcastStage.tsx, app/components/stream/streamScenes.css, app/components/stream/frame/SceneFrame.tsx, e2e/streamHarness.ts, playwright.config.ts, app/components/stream/scenes/overlay/overlayLayout.ts, app/components/stream/scenes/nextMap/NextMapHero.tsx, e2e/audio-balance.broadcast.spec.ts]
 ---
 
@@ -383,6 +383,52 @@ Game identity, not chrome — keep these **literal**, never route through `accen
   gradient, glow or shadow that needs the raw colour takes it from `PICK_BAN_HUES` in the
   same file (a `var(--color-pickban-*)` value, mixed with `color-mix()` for alpha).
 
+### Red/Blue sides: wording and labels
+
+A match has one Red team and one Blue team for the whole series. **Red is side A and acts
+first, Blue is side B**, and the tones keep their meaning: Red is the crimson `pickban-a`
+tone, Blue the azure `pickban-b` one.
+
+- **Wording.** Player- and caster-facing text leads with Red/Blue and keeps A/B secondary:
+  step labels read "Crimson Cats (Red) bans", a side card's title reads "Red · Side A", the
+  reveal reads "T04 → RED · bans first", and a player's own colour reads "You’re **Red**".
+  Admin tools show both. Until the side is confirmed, show "Sides TBC" rather than a colour
+  you can't stand behind.
+- **Labels.** Build every one of these from `app/utils/sideLabels.ts`, never by hand:
+  `sideColorName` (`Red`), `sideColorTag` (`RED`), `sideColorTitle` (`Red · Side A`),
+  `sideLetterOf` / `sideColorOfLetter` (Red ↔ A), `otherSideColor`, `withSideColor(name,
+  color)` (`T04 (Red)`, and just the colour when the name already is one), `sideTagOf(color,
+  confirmed)` (the tag, or `SIDES_TBC` while unconfirmed) and `youreSideLabel(color)`
+  (`You’re Red`, or `null`).
+- **Tones.** `sideColorTone(color)` maps a colour to its `PICK_BAN_TONES` / `PICK_BAN_HUES`
+  key (`a` or `b`).
+- **"You’re Red" chip.** `events/pickban/components/YoureSide.tsx` renders it in the colour's
+  tone, on the pick/ban page and on My Matches cards.
+- **On stream.** Scenes say RED and BLUE (`sideColorTag`), never "Side A"; the colour bar and
+  wash already carry the side.
+  - *Scene tags.* `stream/sceneSideTags.ts` turns the hot state's `side_status` into one tag per
+    stream side: `RED` on the top/left team and `BLUE` on the bottom/right one, in their tones,
+    or "Sides TBC" in the neutral tone while unconfirmed. `stream/SceneSideTagChip.tsx` draws it
+    beside a team name: a solid chip in the side's tone, or a white/30 outlined chip at
+    white/75 for "Sides TBC". The Match preview puts it after each team plate's name, and the
+    Next Map scene's series card (`SeriesScoreCard` `sideTags`) after each row's name; BRB and
+    Caster Cam pass no `sideTags`, so their cards are unchanged.
+  - *Overlay name tags.* While unconfirmed each tag adds a 13px bold uppercase "Sides TBC" note
+    at white/75 on the side away from the seam (above an upper tag's player, below a lower
+    tag's), inside the 300×60 box. A confirmed side adds nothing: the seam rails and team light
+    already say it.
+  - *Pick & Ban scene.* `TeamPlate` takes a `tag` (`PlateTag`: `label`, `tone`), drawn first in
+    the plate's top row as a solid chip with a 2px white/80 border. `plateSideTagOf` sets it once the
+    side is confirmed and outside step 0's choice, so the plates read RED and BLUE from the
+    reveal on, and from the start when an admin set the side. The two step-0 moments are
+    overlays like the intro and the map reveal (see `agents/shared-components.md`, stream
+    broadcast layout): the choice names the chooser at 112px over two 480px option cards in
+    the colours' tones ("RED" at 112px, the card's lead such as "Ban 1st, pick 2nd" in the
+    tone); the reveal slams a 560×256 slab in the chosen colour with the tag at 168px, the
+    reveal line ("T04 → RED · bans first") at 64px in the tone, the countdown to step 1 and
+    the next turn, with the chosen team's half of the backdrop lit. The intro adds the
+    `introLine` ("Sides set by admin") under its countdown when step 0 is skipped.
+
 ## Themes
 
 The accent is the **only** themeable scale. Themes swap CSS-variable *values* only —
@@ -583,8 +629,8 @@ must be in a file the app scans. The bundle check budgets the two separately
     solid from the frame edge to 226px from the box, then fades through 55% tint to transparent 6px
     from it. The hub's drop shadow sits on the rows and the strip, not the hub, so the rails cast none.
     They replace the old per-tag side bar and hairline.
-  - *Name tags* (`OverlayNameTag`, 300×60): round avatar and alias only (`PlayerInfo` `sm` at zoom
-    1.6, with a soft text shadow), no box: a `#05070c` 72% scrim faded away from the seam (solid to 45%
+  - *Name tags* (`OverlayNameTag`, 300×60): round avatar and alias (`PlayerInfo` `sm` at zoom
+    1.6, with a soft text shadow), plus a "Sides TBC" note while the side is unconfirmed, no box: a `#05070c` 72% scrim faded away from the seam (solid to 45%
     of the height) plus team light rising off the rail (46%→14% tint), both masked so they fade out
     inward (solid to 35% of the width). Masks are nested rather than composited, so older browser
     sources render them. Every tag sits flush against the horizontal seam on the outer left or right
@@ -608,7 +654,8 @@ must be in a file the app scans. The bundle check budgets the two separately
   - The layout numbers live in `overlayLayout.ts`.
 - **Next Map scene** (`scenes/nextMap/`, opaque, 1792×824 body): a 1280×720 hero (video or
   screenshot, with the "Map N" chip in the picker's tone, the name, mapper and pick line under it) and
-  a 472px column of panels (series card, Team WR, Lineup PBs, Cup history). The screenshot's slow pan is
+  a 472px column of panels (series card with RED/BLUE or "Sides TBC" by each name, Team WR,
+  Lineup PBs, Cup history). The screenshot's slow pan is
   one stage-level framer-motion loop (scale 1.12, x ±3%, 26s, mirrored), within the animation budget,
   and it stops under `motion=0`, where the video also stays paused on its first frame.
 

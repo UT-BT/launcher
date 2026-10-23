@@ -27,6 +27,7 @@ export interface FeedPredictor {
     user_id: string
     alias: string | null
     profit: number
+    pending: boolean
 }
 
 export interface StreamFeed {

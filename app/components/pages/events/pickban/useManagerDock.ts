@@ -46,7 +46,11 @@ type ManagerSender = Pick<PickBanSessionStore, 'sendManagerCommand' | 'sendManag
 
 function sendManagerRequest({ sendManagerCommand: send, sendManagerCommandAt: sendAt }: ManagerSender, request: ManagerRequest): Promise<PickBanState> {
     switch (request.command) {
-        case 'choose-a':
+        case 'side-chooser':
+            return send(request.command, request.body)
+        case 'sides':
+            return send(request.command, request.body)
+        case 'side':
             return send(request.command, request.body)
         case 'override-sequence':
             return 'preset_id' in request.body ? send(request.command, request.body) : send(request.command, request.body)

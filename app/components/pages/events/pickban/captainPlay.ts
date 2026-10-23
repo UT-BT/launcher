@@ -53,6 +53,7 @@ const LOCK_REJECTIONS: RejectionMessages = {
     map_unavailable: 'That map can’t be chosen any more. Select another.',
     spotlight_active: 'Wait for the reveal to finish, then lock in.',
     intro_active: 'Wait for the intro to finish, then lock in.',
+    side_choice_active: 'Wait for the side choice to finish, then lock in.',
     paused: 'The session is paused. Lock in once an admin resumes it.',
     wrong_status: 'The Picks & Bans aren’t running any more.',
 }

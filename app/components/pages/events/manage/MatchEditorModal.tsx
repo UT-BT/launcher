@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Plus, Trash2 } from 'lucide-react'
+import { AlertTriangle, Plus, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/app/components/ui/button'
 import { Modal } from '@/app/components/ui/modal'
@@ -8,19 +8,23 @@ import { ConfirmModal } from '@/app/components/shared/ConfirmModal'
 import { ErrorBanner, teamInputClass } from '@/app/components/pages/teams/teamsShared'
 import { MapSearchInput } from '@/app/components/shared/MapSearchInput'
 import {
-    clearEventMatchResult, deleteEventMatch, eventErrorMessage, fetchEventMatch, linkEventMatchMapCaps,
-    setEventMatchResult, updateEventMatch,
-    type EventBracketEntrant, type EventMapOutcome, type EventMatch, type EventMatchMap, type EventMatchMapInput,
-    type EventMatchStatus, type EventSide,
+    clearEventMatchResult, deleteEventMatch, eventErrorMessage, fetchEventMatch, fetchEventPredictionMarket,
+    linkEventMatchMapCaps, setEventMatchResult, updateEventMatch,
+    type EventBracketEntrant, type EventMapOutcome, type EventMatch, type EventMatchMap, type EventMatchStatus,
+    type EventSide, type PredictionMarket,
 } from '@/app/utils/api'
 import {
-    Chip, DRAW_STYLE, MATCH_STATUS_LABELS, MATCH_STATUS_STYLES, mapWinnerOf, seriesProgress, sideOf,
+    Chip, DRAW_STYLE, MATCH_STATUS_LABELS, MATCH_STATUS_STYLES, mapWinnerOf, seriesProgress,
 } from '../bracket/bracketShared'
-import { fromZonedInput, toZonedInput, useDisplayTimezone } from '@/app/utils/timezone'
+import { useDisplayTimezone } from '@/app/utils/timezone'
 import { DateTimeField } from './DateTimeField'
 import { CapLinkPicker } from './CapLinkPicker'
 import { MarketControl } from './MarketControl'
 import { Field, SubCard } from './formatFields'
+import {
+    SLOT_CHANGE_WARNING, changesOf, draftFrom, hasChanges, planSave, redSideOptions, redSideSourceLabel,
+    showsSlotWarning, withField, withMapRow, withRedSide, type MatchEditorFields,
+} from './matchEditorForm'
 
 const STATUS_OPTIONS: Array<{ value: EventMatchStatus; label: string }> = [
     { value: 'pending', label: 'Not played' },
@@ -29,47 +33,6 @@ const STATUS_OPTIONS: Array<{ value: EventMatchStatus; label: string }> = [
     { value: 'bye', label: 'Bye' },
     { value: 'cancelled', label: 'Cancelled' },
 ]
-
-const DERIVED_STATUSES: EventMatchStatus[] = ['complete', 'forfeit']
-
-interface Form {
-    teamA: string
-    teamB: string
-    status: EventMatchStatus
-    scheduledAt: string
-    streamUrl: string
-    notes: string
-    published: boolean
-}
-
-function formFrom(match: EventMatch, timezone: string): Form {
-    return {
-        teamA: match.team_a?.id ?? '',
-        teamB: match.team_b?.id ?? '',
-        status: DERIVED_STATUSES.includes(match.status) ? 'pending' : match.status,
-        scheduledAt: toZonedInput(match.scheduled_at, timezone),
-        streamUrl: match.stream_url ?? '',
-        notes: match.notes ?? '',
-        published: match.published,
-    }
-}
-
-function toMapInput(row: EventMatchMap): EventMatchMapInput {
-    return {
-        ordinal: row.ordinal,
-        map: row.map,
-        kind: row.kind,
-        picked_by: row.picked_by,
-        caps_a: row.caps_a,
-        caps_b: row.caps_b,
-        deaths_a: row.deaths_a,
-        deaths_b: row.deaths_b,
-        winner_side: row.winner_side,
-        started_at: row.started_at,
-        ended_at: row.ended_at,
-        notes: row.notes,
-    }
-}
 
 interface MatchEditorModalProps {
     accessToken: string
@@ -87,9 +50,8 @@ export function MatchEditorModal({
 }: MatchEditorModalProps) {
     const timezone = useDisplayTimezone()
     const [match, setMatch] = useState(initial)
-    const [form, setForm] = useState<Form>(() => formFrom(initial, timezone))
-    const [maps, setMaps] = useState<EventMatchMap[]>(initial.maps ?? [])
-    const [dirty, setDirty] = useState(false)
+    const [draft, setDraft] = useState(() => draftFrom(initial, timezone))
+    const [market, setMarket] = useState<PredictionMarket | null>(null)
     const [busy, setBusy] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [notice, setNotice] = useState<string | null>(null)
@@ -97,24 +59,43 @@ export function MatchEditorModal({
 
     const syncFrom = useCallback((fresh: EventMatch) => {
         setMatch(fresh)
-        setForm(formFrom(fresh, timezone))
-        setMaps(fresh.maps ?? [])
-        setDirty(false)
+        setDraft(draftFrom(fresh, timezone))
     }, [timezone])
+
+    const loadMarket = useCallback(async (signal?: AbortSignal) => {
+        try {
+            setMarket((await fetchEventPredictionMarket(accessToken, slug, initial.id, signal)).market)
+        } catch {
+            setMarket(null)
+        }
+    }, [accessToken, slug, initial.id])
+
+    useEffect(() => {
+        const controller = new AbortController()
+        void loadMarket(controller.signal)
+        return () => controller.abort()
+    }, [loadMarket])
 
     const reload = useCallback(async () => {
         syncFrom(await fetchEventMatch(accessToken, slug, initial.id))
-    }, [accessToken, slug, initial.id, syncFrom])
+        void loadMarket()
+    }, [accessToken, slug, initial.id, syncFrom, loadMarket])
 
     const mergeFrom = useCallback((fresh: EventMatch, replaceOrdinal?: number) => {
         setMatch(fresh)
         const byOrdinal = new Map((fresh.maps ?? []).map(row => [row.ordinal, row]))
-        setMaps(current => current.map(row => {
-            const server = byOrdinal.get(row.ordinal)
-            if (!server) return row
-            return row.ordinal === replaceOrdinal ? server : { ...row, caps: server.caps }
+        setDraft(current => ({
+            ...current,
+            maps: current.maps.map(row => {
+                const server = byOrdinal.get(row.ordinal)
+                if (!server) return row
+                return row.ordinal === replaceOrdinal ? server : { ...row, caps: server.caps }
+            }),
         }))
     }, [])
+
+    const changes = useMemo(() => changesOf(match, draft, timezone), [match, draft, timezone])
+    const dirty = hasChanges(changes)
 
     const dirtyRef = useRef(dirty)
     dirtyRef.current = dirty
@@ -155,20 +136,32 @@ export function MatchEditorModal({
         }
     }
 
-    const setField = <K extends keyof Form>(key: K, value: Form[K]) => {
-        setForm(current => ({ ...current, [key]: value }))
-        setDirty(true)
+    const setField = <K extends keyof MatchEditorFields>(key: K, value: MatchEditorFields[K]) => {
+        setDraft(current => withField(current, key, value))
     }
 
     const setRow = (ordinal: number, patch: Partial<EventMatchMap>) => {
-        setMaps(current => current.map(row => (row.ordinal === ordinal ? { ...row, ...patch } : row)))
-        setDirty(true)
+        setDraft(current => withMapRow(current, ordinal, patch))
     }
+
+    const setMaps = (update: (current: EventMatchMap[]) => EventMatchMap[]) => {
+        setDraft(current => ({ ...current, maps: update(current.maps) }))
+    }
+
+    const form = draft.fields
+    const maps = draft.maps
 
     const teamOptions = [
         { value: '', label: 'Undecided' },
         ...entrants.map(entrant => ({ value: entrant.team_id, label: entrant.team?.name ?? entrant.team_id })),
     ]
+
+    const teamName = (teamId: string) =>
+        entrants.find(entrant => entrant.team_id === teamId)?.team?.name
+        ?? [match.team_a, match.team_b].find(team => team?.id === teamId)?.name
+        ?? teamId
+
+    const redSideSource = redSideSourceLabel(match, draft, changes)
 
     const teamNames: Record<EventSide, string> = {
         a: match.team_a?.name ?? 'Side A',
@@ -177,23 +170,25 @@ export function MatchEditorModal({
 
     const progress = useMemo(() => seriesProgress(match, maps, drawsAllowed), [match, maps, drawsAllowed])
 
-    const recordedForfeit = match.status === 'forfeit' ? sideOf(match, match.winner_team_id) : null
+    const save = (forfeit?: EventSide) => {
+        const plan = planSave(match, draft, timezone, forfeit)
+        if ('refused' in plan) {
+            setNotice(null)
+            setError(plan.refused)
+            return
+        }
+        if (!plan.patch && !plan.result) {
+            setError(null)
+            setNotice('No changes to save.')
+            return
+        }
 
-    const save = (forfeit?: EventSide) => run(async () => {
-        await updateEventMatch(accessToken, slug, match.id, {
-            team_a_id: form.teamA || null,
-            team_b_id: form.teamB || null,
-            status: form.status,
-            scheduled_at: fromZonedInput(form.scheduledAt, timezone),
-            stream_url: form.streamUrl.trim() || null,
-            notes: form.notes.trim() || null,
-            published: form.published,
-        })
-        await setEventMatchResult(accessToken, slug, match.id, {
-            maps: maps.map(toMapInput),
-            forfeit_winner: forfeit ?? recordedForfeit,
-        })
-    }, forfeit ? 'Forfeit recorded.' : 'Saved.')
+        const { patch, result } = plan
+        void run(async () => {
+            if (patch) await updateEventMatch(accessToken, slug, match.id, patch)
+            if (result) await setEventMatchResult(accessToken, slug, match.id, result)
+        }, forfeit ? 'Forfeit recorded.' : 'Saved.')
+    }
 
     const numberField = (
         value: number | null,
@@ -235,7 +230,7 @@ export function MatchEditorModal({
                     <div className="p-4 border-t border-border bg-muted/50 flex flex-wrap items-center justify-end gap-2">
                         {dirty && <span className="mr-auto text-[11px] text-amber-300">Unsaved changes</span>}
                         <Button variant="outline" onClick={onClose} disabled={busy}>Close</Button>
-                        <Button onClick={() => void save()} disabled={busy}>Save match</Button>
+                        <Button onClick={() => save()} disabled={busy}>Save match</Button>
                     </div>
                 }
             >
@@ -266,13 +261,29 @@ export function MatchEditorModal({
                         </div>
 
                         <div className="grid gap-3 sm:grid-cols-2">
-                            <Field label="Side A">
+                            <Field label="Bracket slot 1">
                                 <AdminSelect value={form.teamA} onChange={value => setField('teamA', value)} options={teamOptions}
-                                    ariaLabel="Side A" className="h-8 w-full text-xs" />
+                                    ariaLabel="Bracket slot 1" className="h-8 w-full text-xs" />
                             </Field>
-                            <Field label="Side B">
+                            <Field label="Bracket slot 2">
                                 <AdminSelect value={form.teamB} onChange={value => setField('teamB', value)} options={teamOptions}
-                                    ariaLabel="Side B" className="h-8 w-full text-xs" />
+                                    ariaLabel="Bracket slot 2" className="h-8 w-full text-xs" />
+                            </Field>
+                            {showsSlotWarning(changes, market) && (
+                                <p role="alert" className="sm:col-span-2 flex items-start gap-1.5 rounded-md border border-amber-500/30 bg-amber-500/10 px-2.5 py-1.5 text-[11px] text-amber-300">
+                                    <AlertTriangle className="size-3.5 shrink-0 mt-px" />
+                                    {SLOT_CHANGE_WARNING}
+                                </p>
+                            )}
+                            <Field label="Red side" className="sm:col-span-2"
+                                hint="Red is Side A and acts first. Changing it leaves the bracket slots and the prediction market alone.">
+                                <div className="grid gap-3 sm:grid-cols-2 items-center">
+                                    <AdminSelect value={draft.redSide} onChange={value => setDraft(current => withRedSide(current, value))}
+                                        options={redSideOptions(form, teamName)} ariaLabel="Red side" className="h-8 w-full text-xs" />
+                                    {redSideSource && (
+                                        <span className="text-[11px] text-muted-foreground">Set by {redSideSource}</span>
+                                    )}
+                                </div>
                             </Field>
                             <Field label="State" hint="Final and Forfeit are set by the result below, not here.">
                                 <AdminSelect value={form.status} onChange={value => setField('status', value as EventMatchStatus)}
@@ -334,7 +345,6 @@ export function MatchEditorModal({
                                         caps_a: null, caps_b: null, deaths_a: null, deaths_b: null,
                                         winner_side: null, started_at: null, ended_at: null, notes: null, caps: [],
                                     }])
-                                    setDirty(true)
                                 }}
                                 className="inline-flex items-center gap-1 text-[11px] text-accent-300 hover:text-accent-200 cursor-pointer disabled:opacity-40"
                             >
@@ -389,7 +399,6 @@ export function MatchEditorModal({
                                             disabled={busy}
                                             onClick={() => {
                                                 setMaps(current => current.filter(entry => entry.ordinal !== row.ordinal))
-                                                setDirty(true)
                                             }}
                                             className="p-1 rounded-md text-red-300 hover:bg-red-500/10 cursor-pointer disabled:opacity-40 shrink-0"
                                         >
@@ -463,10 +472,10 @@ export function MatchEditorModal({
 
                     <SubCard title="Other outcomes">
                         <div className="flex flex-wrap gap-2">
-                            <Button size="sm" variant="outline" onClick={() => void save('a')} disabled={busy || !match.team_a}>
+                            <Button size="sm" variant="outline" onClick={() => save('a')} disabled={busy || !match.team_a}>
                                 {teamNames.a} wins by forfeit
                             </Button>
-                            <Button size="sm" variant="outline" onClick={() => void save('b')} disabled={busy || !match.team_b}>
+                            <Button size="sm" variant="outline" onClick={() => save('b')} disabled={busy || !match.team_b}>
                                 {teamNames.b} wins by forfeit
                             </Button>
                             <Button size="sm" variant="outline"

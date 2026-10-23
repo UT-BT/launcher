@@ -3,6 +3,7 @@ import { Download } from 'lucide-react'
 import { usePlatform } from '@/app/platform'
 import { StreamCard, StreamLoading } from '../StreamCard'
 import { camsPanelView } from './camsGate'
+import { CamSides } from './cams/CamSides'
 
 const DESKTOP_LAUNCHER_URL = 'https://github.com/UT-BT/launcher/releases/latest'
 
@@ -11,12 +12,17 @@ const CamTool = lazy(() => import('./CamTool').then(m => ({ default: m.CamTool }
 export function CamsPanel() {
     const { capabilities } = usePlatform()
 
-    if (camsPanelView(capabilities) === 'web-notice') return <CamsWebNotice />
-
     return (
-        <Suspense fallback={<StreamLoading label="the cam tool" />}>
-            <CamTool />
-        </Suspense>
+        <div className="space-y-4">
+            <CamSides />
+            {camsPanelView(capabilities) === 'web-notice' ? (
+                <CamsWebNotice />
+            ) : (
+                <Suspense fallback={<StreamLoading label="the cam tool" />}>
+                    <CamTool />
+                </Suspense>
+            )}
+        </div>
     )
 }
 

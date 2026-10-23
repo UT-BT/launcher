@@ -55,6 +55,8 @@ export function stageMatch(overrides: Partial<EventMatch> = {}): EventMatch {
         loser_to_match_id: null,
         loser_to_slot: null,
         pick_ban_status: 'none',
+        red_team_id: null,
+        red_side_source: null,
         ...overrides,
     }
 }

@@ -1,19 +1,22 @@
 import { Suspense, lazy, useEffect, useState, type ReactNode } from 'react'
-import { ArrowLeft, Check, Link2, Sparkles, Swords, WifiOff, ZapOff } from 'lucide-react'
+import { ArrowLeft, Check, Link2, Sparkles, Swords, TriangleAlert, WifiOff, ZapOff } from 'lucide-react'
 import { NavLink } from '@/app/components/navigation/NavLink'
 import { useNavigation } from '@/app/components/navigation/NavigationContext'
 import { buildMatchLinks } from '@/app/components/navigation/matchLinks'
 import { useDocumentTitle } from '@/app/components/navigation/useDocumentMeta'
 import { SITE_NAME } from '@/app/components/navigation/titles'
-import type { UserProfile } from '@/app/utils/api'
+import { ApiError, type PickBanErrorCode, type PickBanSideErrorCode, type SideColor, type UserProfile } from '@/app/utils/api'
+import { SIDES_TBC, sideColorName } from '@/app/utils/sideLabels'
 import { useCopyFeedback } from '@/app/hooks/useCopyFeedback'
 import { usePickBanSession, usePickBanView } from '@/app/components/pages/events/pickban/usePickBanSession'
 import { useCaptainPlay } from '@/app/components/pages/events/pickban/useCaptainPlay'
+import { unwordedRejection } from '@/app/components/pages/events/pickban/captainPlay'
 import { useManagerDock } from '@/app/components/pages/events/pickban/useManagerDock'
 import { usePickBanPreload } from '@/app/components/pages/events/pickban/usePickBanPreload'
 import { usePickBanSound } from '@/app/components/pages/events/pickban/usePickBanSound'
 import type { PickBanView } from '@/app/components/pages/events/pickban/pickBanView'
 import { CaptainDock } from '@/app/components/pages/events/pickban/components/CaptainDock'
+import { YoureSide } from '@/app/components/pages/events/pickban/components/YoureSide'
 import { PickBanBannerNote } from '@/app/components/pages/events/pickban/components/PickBanBannerNote'
 import { PickBanMotion } from '@/app/components/pages/events/pickban/components/PickBanMotion'
 import { PickBanSoundControl } from '@/app/components/pages/events/pickban/components/PickBanSoundControl'
@@ -41,6 +44,27 @@ const ManagerDock = lazy(() => import('@/app/components/pages/events/pickban/com
 
 const HEADER_BUTTON = 'inline-flex h-11 cursor-pointer items-center gap-2 rounded-md border border-accent-500/40 bg-accent-500/15 px-3 text-xs font-medium text-accent-200 transition-colors hover:border-accent-500/60 hover:bg-accent-500/25 sm:h-8'
 
+const SIDE_CHOICE_REJECTIONS: Partial<Record<PickBanErrorCode | PickBanSideErrorCode, string>> = {
+    side_not_open: 'The side choice is closed: the sides are already set.',
+    not_authorized: 'Only the choosing team’s captain can pick the side.',
+    version_conflict: 'The session changed at the same moment. Try again.',
+    wrong_status: 'The Picks & Bans aren’t running any more.',
+    paused: 'The session is paused. Choose once an admin resumes it.',
+    no_session: 'This match has no Picks & Bans session any more.',
+}
+
+interface SideChoiceState {
+    choosing: SideColor | null
+    rejection: string | null
+}
+
+const IDLE_SIDE_CHOICE: SideChoiceState = { choosing: null, rejection: null }
+
+function sideChoiceRejection(error: unknown): string {
+    const reason = error instanceof ApiError ? error.reason as PickBanErrorCode | PickBanSideErrorCode | undefined : undefined
+    return (reason && SIDE_CHOICE_REJECTIONS[reason]) ?? unwordedRejection(error)
+}
+
 export function MatchPickBanPage({ eventSlug, matchId, userProfile, onBackToEvent }: MatchPickBanPageProps) {
     const session = usePickBanSession({ accessToken: userProfile?.accessToken, slug: eventSlug, matchId })
     const captain = useCaptainPlay(usePickBanView(session.state, session.clockOffsetMs), session.sendCommand)
@@ -50,7 +74,7 @@ export function MatchPickBanPage({ eventSlug, matchId, userProfile, onBackToEven
     const { navigate } = useNavigation()
     const [soundPreference, setSoundPreference] = useState(loadPickBanSoundPreference)
     const [animate, setAnimate] = useState(loadPickBanMotion)
-    const [chooseAError, setChooseAError] = useState<string | null>(null)
+    const [sideChoice, setSideChoice] = useState<SideChoiceState>(IDLE_SIDE_CHOICE)
     usePickBanPreload(view?.cards)
     const sound = usePickBanSound({
         state: session.state,
@@ -70,24 +94,27 @@ export function MatchPickBanPage({ eventSlug, matchId, userProfile, onBackToEven
     useDocumentTitle(view ? `${view.match.title} — Picks & Bans` : undefined, SITE_NAME)
 
     const actFor = manager.dock?.actFor ?? null
-    const captainDock = captain.dock && chooseAError
-        ? { ...captain.dock, rejection: chooseAError }
-        : captain.dock
-    const controls = captain.dock ? (
+    const captainSide = view && view.affordances.actingSide !== null && view.side.phase !== null ? view.side : undefined
+    const sideOnlyDock = captain.dock ?? (captainSide || sideChoice.rejection ? { controls: null, rejection: null } : null)
+    const captainDock = sideOnlyDock && sideChoice.rejection ? { ...sideOnlyDock, rejection: sideChoice.rejection } : sideOnlyDock
+    const chooseSide = (choice: SideColor) => {
+        setSideChoice({ choosing: choice, rejection: null })
+        session.sendCommand('side', { choice }).then(
+            () => setSideChoice(IDLE_SIDE_CHOICE),
+            (error: unknown) => setSideChoice({ choosing: null, rejection: sideChoiceRejection(error) }),
+        )
+    }
+    const controls = captainDock ? (
         <CaptainDock
-            dock={captainDock!}
-            ab={view?.affordances.actingAb ?? null}
+            dock={captainDock}
+            ab={view?.side.confirmed ? view.affordances.actingAb : null}
             reconnecting={session.reconnecting}
             onLockIn={captain.lockIn}
             onToggleReady={captain.toggleReady}
-            canChooseA={view?.affordances.canChooseA ?? false}
-            onChooseA={(side) => {
-                setChooseAError(null)
-                void session.sendCommand('choose-a', { side }).catch((error: unknown) => {
-                    setChooseAError(error instanceof Error ? error.message : 'Could not choose side A. Please try again.')
-                })
-            }}
-            onDismiss={() => { setChooseAError(null); captain.dismiss() }}
+            side={captainSide}
+            choosingSide={sideChoice.choosing}
+            onChooseSide={chooseSide}
+            onDismiss={() => { setSideChoice(IDLE_SIDE_CHOICE); captain.dismiss() }}
         />
     ) : actFor ? (
         <CaptainDock
@@ -190,6 +217,8 @@ function PickBanBody({ view, summaryAction, controls, onSelect, children }: {
         <div className="@container/page flex flex-col gap-4">
             <MatchBanner view={view} />
 
+            <SideStrip view={view} />
+
             <PickBanStage
                 view={view}
                 summaryAction={summaryAction}
@@ -211,6 +240,51 @@ function PickBanBody({ view, summaryAction, controls, onSelect, children }: {
 
             {children}
         </div>
+    )
+}
+
+function setSidesLine(view: PickBanView): string | null {
+    const { side, teams } = view
+    const red = [teams.left, teams.right].find(team => team?.color === 'red')
+    const blue = [teams.left, teams.right].find(team => team?.color === 'blue')
+    const named = red && blue ? `${red.name} are ${sideColorName('red')}, ${blue.name} are ${sideColorName('blue')}.` : null
+    return [side.introLine, named].filter(Boolean).join(': ') || null
+}
+
+function sidesLine(view: PickBanView): string | null {
+    const { side } = view
+    if (side.viewerColor) return null
+    if (view.stagePhase === 'intro' && side.confirmed) return setSidesLine(view)
+    if (view.status !== 'lobby') return null
+    if (!side.confirmed) {
+        return side.chooserName
+            ? `${SIDES_TBC}: ${side.chooserName} choose Red or Blue when Picks & Bans start.`
+            : `${SIDES_TBC}: an admin names the team that chooses Red or Blue.`
+    }
+    return setSidesLine(view)
+}
+
+function SideStrip({ view }: { view: PickBanView }) {
+    const { side } = view
+    const line = sidesLine(view)
+    if (!side.viewerColor && !side.notice && !line) return null
+
+    return (
+        <section aria-label="Sides" className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+            {side.viewerColor && (
+                <p className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    <YoureSide color={side.viewerColor} className="text-sm" />
+                    Join {sideColorName(side.viewerColor)} in UT for every map of this match.
+                </p>
+            )}
+            {line && <p className="text-xs text-muted-foreground">{line}</p>}
+            {side.notice && (
+                <p role="status" className="inline-flex items-start gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-300">
+                    <TriangleAlert className="mt-px size-3.5 shrink-0" />
+                    {side.notice}
+                </p>
+            )}
+        </section>
     )
 }
 

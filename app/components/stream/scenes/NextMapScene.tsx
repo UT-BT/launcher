@@ -4,6 +4,7 @@ import { PICK_BAN_TONES } from '@/app/components/broadcast/broadcastTone'
 import type { StreamSceneProps } from '../streamSceneOptions'
 import type { StreamMatch } from '../data/streamHotState'
 import { useSceneMatch, useSceneRead } from '../data/useStreamData'
+import { sceneSideTags } from '../sceneSideTags'
 import { BlankFrame, IdleFrame } from '../frame/IdleFrame'
 import { SceneFrame } from '../frame/SceneFrame'
 import { seriesScoreOf } from './brb/brbView'
@@ -28,7 +29,7 @@ function MapLayout({ next, match, onVideoFailed }: { next: NextMapShown; match: 
                     </div>
                 </div>
             </div>
-            <NextMapColumn next={next} scoreCard={<SeriesScoreCard score={seriesScoreOf(match)} />} />
+            <NextMapColumn next={next} scoreCard={<SeriesScoreCard score={seriesScoreOf(match)} sideTags={sceneSideTags(match.side_status)} />} />
         </div>
     )
 }
@@ -37,7 +38,7 @@ function MessageLayout({ state, headline, match }: { state: NextMapView['state']
     return (
         <div data-next-map-state={state} className="flex h-full flex-col items-center justify-center gap-14">
             <p className="text-center text-[112px] font-black italic uppercase leading-none [text-shadow:0_6px_30px_rgba(0,0,0,0.6)]">{headline}</p>
-            <SeriesScoreCard score={seriesScoreOf(match)} large className="w-[760px]" />
+            <SeriesScoreCard score={seriesScoreOf(match)} sideTags={sceneSideTags(match.side_status)} large className="w-[760px]" />
         </div>
     )
 }

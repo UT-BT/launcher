@@ -70,6 +70,8 @@ function match(lineup: Partial<Lineup> = {}): StreamMatch {
         stream_url: null,
         pick_ban_status: 'complete',
         sides: { a: 'a', b: 'b' },
+        side_status: { confirmed: false, source: null },
+        side_controls: { can_swap: false, blocked_reason: null },
         teams: {
             a: { id: 'ta', name: 'Crimson Tide', match_side: 'a', stage_seed: 1, pre_cup_seed: 1, members: [member(ALICE, 'Alice', true), member(ANNA, 'Anna'), member(AXEL, 'Axel')] },
             b: { id: 'tb', name: 'Azure Wave', match_side: 'b', stage_seed: 2, pre_cup_seed: 2, members: [member(BOB, 'Bob', true), member(BEA, 'Bea')] },

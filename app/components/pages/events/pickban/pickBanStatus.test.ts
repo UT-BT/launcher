@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { blockingReasonLabel, pickBanStatusBadge, statusOfPhase } from './pickBanStatus'
+import { blockingReasonLabel, pickBanStatusBadge, sidePhaseLabel, statusOfPhase } from './pickBanStatus'
 
 describe('pickBanStatusBadge', () => {
     it('reads every session status in the same words wherever it is shown', () => {
@@ -33,6 +33,11 @@ describe('statusOfPhase', () => {
         expect(statusOfPhase('spotlight')).toBe('running')
     })
 
+    it('reads step 0, the side choice and its reveal, as a running session', () => {
+        expect(statusOfPhase('side_choice')).toBe('running')
+        expect(statusOfPhase('side_spotlight')).toBe('running')
+    })
+
     it('keeps every other phase as the status of the same name', () => {
         expect(statusOfPhase('none')).toBe('none')
         expect(statusOfPhase('lobby')).toBe('lobby')
@@ -43,11 +48,18 @@ describe('statusOfPhase', () => {
     })
 })
 
+describe('sidePhaseLabel', () => {
+    it('names step 0 while a team chooses its side and while the choice is revealed', () => {
+        expect(sidePhaseLabel('side_choice')).toBe('Step 0 · Side choice')
+        expect(sidePhaseLabel('side_spotlight')).toBe('Step 0 · Revealing')
+    })
+})
+
 describe('blockingReasonLabel', () => {
     it('maps every reason the queue can send to human words', () => {
         expect(blockingReasonLabel('no_session', 'none')).toBe('No lobby open')
         expect(blockingReasonLabel('teams_not_decided', 'lobby')).toBe('Teams not decided')
-        expect(blockingReasonLabel('a_undetermined', 'lobby')).toBe('Team A undetermined')
+        expect(blockingReasonLabel('side_chooser_undetermined', 'lobby')).toBe('No team to choose Red or Blue')
         expect(blockingReasonLabel('pre_cup_seed_missing', 'lobby')).toBe('A team is missing its pre-cup seed')
         expect(blockingReasonLabel('sequence_mismatch', 'lobby')).toBe('Sequence does not match the best-of')
         expect(blockingReasonLabel('pool_too_small', 'lobby')).toBe('Map pool is too small')

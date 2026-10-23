@@ -95,11 +95,29 @@ describe('pick/ban commands', () => {
         const fetchMock = vi.fn().mockResolvedValue(stateResponse(pickBanState()))
         vi.stubGlobal('fetch', fetchMock)
 
-        await sendPickBanManagerCommand('token', 'cup', 'm1', 'choose-a', { side: 'team_b', version: 3 })
+        await sendPickBanManagerCommand('token', 'cup', 'm1', 'side', { choice: 'blue', version: 3 })
 
         const { url, init } = lastCall(fetchMock)
-        expect(url).toMatch(/\/tournaments\/cup\/admin\/matches\/m1\/pick-ban\/choose-a$/)
-        expect(JSON.parse(init.body as string)).toEqual({ side: 'team_b', version: 3 })
+        expect(url).toMatch(/\/tournaments\/cup\/admin\/matches\/m1\/pick-ban\/side$/)
+        expect(init.method).toBe('POST')
+        expect(JSON.parse(init.body as string)).toEqual({ choice: 'blue', version: 3 })
+    })
+
+    it('puts Set sides and the side chooser under the admin namespace', async () => {
+        const fetchMock = vi.fn().mockImplementation(async () => stateResponse(pickBanState()))
+        vi.stubGlobal('fetch', fetchMock)
+
+        await sendPickBanManagerCommand('token', 'cup', 'm1', 'sides', { red: 'team_b', version: 4 })
+        const sides = lastCall(fetchMock)
+        expect(sides.url).toMatch(/\/tournaments\/cup\/admin\/matches\/m1\/pick-ban\/sides$/)
+        expect(sides.init.method).toBe('PUT')
+        expect(JSON.parse(sides.init.body as string)).toEqual({ red: 'team_b', version: 4 })
+
+        await sendPickBanManagerCommand('token', 'cup', 'm1', 'side-chooser', { side: 'team_a', version: 5 })
+        const chooser = lastCall(fetchMock)
+        expect(chooser.url).toMatch(/\/tournaments\/cup\/admin\/matches\/m1\/pick-ban\/side-chooser$/)
+        expect(chooser.init.method).toBe('PUT')
+        expect(JSON.parse(chooser.init.body as string)).toEqual({ side: 'team_a', version: 5 })
     })
 
     it('opens a lobby without a body', async () => {

@@ -7,6 +7,8 @@ import { NavigationContext, type NavigationContextValue } from '../app/component
 import { ThemeProvider } from '../app/theme/ThemeProvider'
 import { StreamTabProvider } from '../app/components/pages/events/stream/StreamTabContext'
 import { CamTool } from '../app/components/pages/events/stream/panels/CamTool'
+import { CamsPanel } from '../app/components/pages/events/stream/panels/CamsPanel'
+import { CamSides } from '../app/components/pages/events/stream/panels/cams/CamSides'
 import '../app/styles/index.css'
 
 type CamStatus = CamToolStatus['cams'][number]
@@ -136,10 +138,14 @@ function HarnessNavigation({ children }: { children: ReactNode }) {
 
 const identity = { eventSlug: 'cam-cup', streamerId: '555555555555555555', isManager: false, accessToken: 'cam-token' }
 
+const panel = search.get('panel') === 'web'
+    ? createElement(CamsPanel)
+    : createElement('div', { className: 'space-y-4' }, createElement(CamSides), createElement(CamTool))
+
 createRoot(document.getElementById('app') as HTMLElement).render(
     createElement(ThemeProvider, null,
         createElement(HarnessNavigation, null,
-            createElement(StreamTabProvider, { identity }, createElement(CamTool)),
+            createElement(StreamTabProvider, { identity }, panel),
         ),
     ),
 )

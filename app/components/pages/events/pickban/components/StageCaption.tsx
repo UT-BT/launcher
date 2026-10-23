@@ -2,7 +2,9 @@ import type { ReactNode } from 'react'
 import { motion } from 'framer-motion'
 import { CalendarClock, ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { PickBanCardView, PickBanTurn, PickBanView } from '../pickBanView'
+import type { SideColor } from '@/app/utils/api'
+import { SIDES_TBC, sideColorTone, withSideColor, youreSideLabel } from '@/app/utils/sideLabels'
+import type { PickBanCardView, PickBanSideReveal, PickBanSideView, PickBanTurn, PickBanView } from '../pickBanView'
 import { PICK_BAN_HUES, PICK_BAN_TONES, stepTone, tint } from '@/app/components/broadcast/broadcastTone'
 
 const CHEVRONS = [0, 1, 2]
@@ -36,10 +38,12 @@ function CaptionContent({ view }: { view: PickBanView }) {
                 />
             )
         case 'lobby':
-            return <Notice kicker="Lobby open" title="Waiting for an admin to start" />
+            return <Notice kicker={view.side.tbc ? `Lobby open · ${SIDES_TBC}` : 'Lobby open'} title="Waiting for an admin to start" />
         case 'intro':
         case 'awaiting':
         case 'spotlight':
+            if (view.side.phase === 'side_choice') return <SideChoiceCaption side={view.side} />
+            if (view.side.phase === 'side_spotlight' && view.side.reveal) return <SideRevealCaption reveal={view.side.reveal} viewerColor={view.side.viewerColor} />
             return view.turn
                 ? <TurnCaption turn={view.turn} stepCount={view.timeline.length} mapCount={view.summary.length} previewCard={view.cards.find(card => card.previewed) ?? null} />
                 : null
@@ -54,6 +58,33 @@ function Notice({ kicker, title, detail }: { kicker: ReactNode; title: string; d
             <p className={KICKER}>{kicker}</p>
             <h2 className={cn(TITLE, 'text-foreground')}>{title}</h2>
             {detail && <p className={DETAIL}>{detail}</p>}
+        </>
+    )
+}
+
+function SideChoiceCaption({ side }: { side: PickBanSideView }) {
+    return (
+        <>
+            <p className={KICKER}>Side choice</p>
+            <h2 className={cn(TITLE, 'min-w-0 break-words text-foreground')}>{side.canChoose || side.viewerChooses ? 'Choose Red or Blue' : side.waiting}</h2>
+            <p className={cn(DETAIL, side.canChoose && 'font-semibold text-foreground')}>
+                {side.canChoose ? 'Your call: pick a side below, then lock it in' : 'Red is side A and acts first'}
+            </p>
+        </>
+    )
+}
+
+function SideRevealCaption({ reveal, viewerColor }: { reveal: PickBanSideReveal; viewerColor: SideColor | null }) {
+    const tone = PICK_BAN_TONES[sideColorTone(reveal.color)]
+    const yours = youreSideLabel(viewerColor)
+
+    return (
+        <>
+            <p className={KICKER}>Sides set</p>
+            <h2 className={cn(TITLE, 'min-w-0 break-words', tone.text)}>{reveal.text}</h2>
+            <p className={cn(DETAIL, yours && 'font-semibold text-foreground')}>
+                {yours ? `${yours}. Step 1 opens when the countdown ends` : 'Step 1 opens when the countdown ends'}
+            </p>
         </>
     )
 }
@@ -89,7 +120,7 @@ function TurnCaption({ turn, stepCount, mapCount, previewCard }: {
                         <span className={tone.text}>Decider</span>
                     ) : (
                         <>
-                            <span className={tone.text}>{turn.actorLabel}</span>
+                            <span className={tone.text}>{withSideColor(turn.actorLabel, turn.color)}</span>
                             <span className="text-foreground"> to {turn.action}</span>
                         </>
                     )}

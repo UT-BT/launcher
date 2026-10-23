@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { toActiveTitle, type PickBanActor, type RawActiveTitle } from '@/app/utils/api'
-import { PICK_BAN_HUES, PICK_BAN_TONES, teamTone, tint } from './broadcastTone'
+import { PICK_BAN_HUES, PICK_BAN_TONES, teamTone, tint, type PickBanTone } from './broadcastTone'
 
 export type PlateAlign = 'left' | 'right'
 
@@ -20,6 +20,11 @@ export interface PlateTeam {
     members: PlateMember[]
 }
 
+export interface PlateTag {
+    label: string
+    tone: PickBanTone
+}
+
 const PLATE_CLIP: Record<PlateAlign, string> = {
     left: 'polygon(0 0, 100% 0, calc(100% - 56px) 100%, 0 100%)',
     right: 'polygon(0 0, 100% 0, 100% 100%, 56px 100%)',
@@ -31,7 +36,13 @@ function plateNameSize(name: string): number {
     return 64
 }
 
-export function TeamPlate({ team, align, lit = false, chips }: { team: PlateTeam | null; align: PlateAlign; lit?: boolean; chips?: ReactNode }) {
+export function TeamPlate({ team, align, lit = false, tag = null, chips }: {
+    team: PlateTeam | null
+    align: PlateAlign
+    lit?: boolean
+    tag?: PlateTag | null
+    chips?: ReactNode
+}) {
     const toneKey = teamTone(team?.ab ?? null)
     const tone = PICK_BAN_TONES[toneKey]
     const hue = PICK_BAN_HUES[toneKey]
@@ -67,6 +78,18 @@ export function TeamPlate({ team, align, lit = false, chips }: { team: PlateTeam
             />
             <div className={cn('relative flex h-full min-w-0 flex-col justify-center gap-2.5', mirrored ? 'items-end pl-24 pr-12 text-right' : 'items-start pl-12 pr-24')}>
                 <div className={cn('flex min-h-7 items-center gap-2.5', mirrored && 'flex-row-reverse')}>
+                    {tag && (
+                        <span
+                            data-plate-tag={tag.label}
+                            className={cn(
+                                'rounded-md border-2 border-white/80 px-2.5 py-0.5 text-lg font-black italic uppercase tracking-[0.16em]',
+                                PICK_BAN_TONES[tag.tone].solid,
+                                PICK_BAN_TONES[tag.tone].onSolid,
+                            )}
+                        >
+                            {tag.label}
+                        </span>
+                    )}
                     {team?.stageSeed != null && (
                         <span className="text-lg font-bold uppercase tracking-[0.2em] text-white/70">Seed {team.stageSeed}</span>
                     )}

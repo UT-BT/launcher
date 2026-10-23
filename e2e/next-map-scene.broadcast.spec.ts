@@ -1,12 +1,20 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
+import type { MatchSideStatus } from '../app/utils/api'
+import type { StreamHotState } from '../app/components/stream/data/streamHotState'
 import { STREAM_T0, streamHotState } from '../app/components/stream/data/streamFixtures'
 import { ONE_PLAYED, nextMapDetails, nextMapHotState, nextMapRead } from '../app/components/stream/scenes/nextMap/nextMapFixtures'
 import { expectSceneScreenshot, scenePath, serveStreamApi, SCENE_OPTIONS, SCENE_SLUG, type StreamApiSetup, type StreamFakeApi } from './streamHarness'
 
 const VIDEO = readFileSync(resolve(__dirname, 'next-map-flythrough.webm'))
 const READ_PATH = (ordinal: number) => `/tournaments/${SCENE_SLUG}/stream/matches/match-1/next-map/${ordinal}`
+const CONFIRMED: MatchSideStatus = { confirmed: true, source: 'step0' }
+
+function confirmedSides(state: StreamHotState): StreamHotState {
+    return { ...state, match: state.match && { ...state.match, side_status: CONFIRMED } }
+}
+
 const NO_VIDEO = nextMapRead({ map: nextMapDetails({ video: { available: false, version: null, url: null } }) })
 
 interface NextMapPage {
@@ -53,10 +61,11 @@ async function waitForFirstFrame(page: Page) {
 }
 
 test('the Next Map scene shows the fly-through video beside the map, its times, its cup history and the series', async ({ page }) => {
-    await openNextMap(page, { hotState: nextMapHotState(ONE_PLAYED), reads: { [READ_PATH(1)]: nextMapRead() } })
+    await openNextMap(page, { hotState: confirmedSides(nextMapHotState(ONE_PLAYED)), reads: { [READ_PATH(1)]: nextMapRead() } })
 
     const scene = page.locator('[data-stream-scene="next-map"]')
     await expect(scene.locator('[data-next-map-state="map"]')).toHaveAttribute('data-next-map', '2')
+    await expect(page.locator('[data-series-score] [data-side-tag]')).toHaveText(['RED', 'BLUE'])
     await expect(scene.getByText('Map 2 of 4')).toBeVisible()
     await expect(page.locator('[data-next-map-name]')).toHaveText('II-MountainBase')
     await expect(scene.getByText('by RoelerCoaster')).toBeVisible()
@@ -81,7 +90,7 @@ test('the Next Map scene shows the fly-through video beside the map, its times, 
 })
 
 test('a map with no video shows its screenshot instead', async ({ page }) => {
-    const { videoRequests } = await openNextMap(page, { hotState: nextMapHotState(ONE_PLAYED), reads: { [READ_PATH(1)]: NO_VIDEO } })
+    const { videoRequests } = await openNextMap(page, { hotState: confirmedSides(nextMapHotState(ONE_PLAYED)), reads: { [READ_PATH(1)]: NO_VIDEO } })
 
     await expect(page.locator('[data-next-map-screenshot="still"]')).toBeVisible()
     await expect(page.locator('[data-next-map-video]')).toHaveCount(0)
@@ -132,6 +141,7 @@ test('before pick and ban places the map, the scene says Maps to be decided and 
     await openNextMap(page, { hotState: nextMapHotState(ONE_PLAYED, 1) })
 
     await expect(page.locator('[data-next-map-state="tbd"]')).toContainText('Maps to be decided')
+    await expect(page.locator('[data-series-score] [data-side-tag="tbc"]')).toHaveText(['Sides TBC', 'Sides TBC'])
     await expect(page.getByText('Map 2 of 4')).toBeVisible()
     await expect(page.locator('[data-next-map-video]')).toHaveCount(0)
     expect(requested).toEqual([])

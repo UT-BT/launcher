@@ -10,7 +10,7 @@ not_here:
   - "IPC channel contract → lib/conveyor/README.md"
   - "build commands reference → agents/build.md"
 sections: [overview, platform-layer, capability-gates, web-auth, pre-shell-routes, anonymous-browsing, shareable-urls, responsive-layout, performance, build, seo-and-link-previews, hosting-note]
-last_verified: 2026-10-07
+last_verified: 2026-10-13
 verify_against:
   - app/public/route-contract.json
   - app/components/navigation/NavLink.tsx
@@ -94,7 +94,7 @@ desktop-only UI and swaps a handful of bridge calls for browser equivalents.
 | Launcher telemetry (`logLauncherStartup`) | skipped | `IS_WEB` in `app/utils/api.ts` |
 | Nav bar (`NavHistoryBar` — Back/Forward + Refresh) | never rendered — browser chrome owns history and reload; pages revalidate on mount instead (see navigation.md, page-refresh-registry) | `IS_WEB` in `app/components/navigation/NavHistoryBar.tsx` |
 | Navigation triggers | render as real `<a href>` (new-tab / copy-link work); desktop keeps buttons | `NavLink` (`agents/navigation.md` → link semantics) |
-| Stream tab Cams panel | web shows a notice instead of the cam tool (cams need the desktop app) | `capabilities.camTool` via `camsPanelView` in `events/stream/panels/camsGate.ts` |
+| Stream tab Cams panel | web shows the Red and Blue card, then a notice instead of the cam tool (cams need the desktop app) | `capabilities.camTool` via `camsPanelView` in `events/stream/panels/camsGate.ts` |
 | Splash screen | replaced by `WebBootScreen` (logo + spinner, error+retry variant); `SplashScreen` is lazy and never fetched on web | `IS_WEB` in `app/app.tsx` |
 
 **Bundle split reality check:** desktop-only surfaces (`SplashScreen`,
