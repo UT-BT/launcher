@@ -4,7 +4,8 @@ import { DEFAULT_PICK_BAN_PACING } from '../manage/pickban/pickBanEditor'
 import { DECIDER_IMPACT, IMPACT, VS_HIT } from './pickBanBeats'
 import { STALE_HIT_MS, animationHitAt, cuesToPlay, soundScheduleAt } from './pickBanSoundCues'
 import { SOUND_HIT_MS, type PickBanSoundCueKind } from './pickBanSounds'
-import { buildPickBanView, entranceMsFor } from './pickBanView'
+import { pickBanVetoFixture } from '@/app/utils/fixtures/pickBanVetoFixtures'
+import { buildPickBanView, entranceMsFor, type PickBanViewState } from './pickBanView'
 import {
     ELIGIBLE_MAPS,
     INTRO_MS,
@@ -378,5 +379,49 @@ describe('cuesToPlay: the intro', () => {
 
         const atShifted = cuesAt(resumedState, shiftedStart, beforeShifted.played)
         expect(atShifted.cues).toEqual([{ key: `intro:${state.started_at}`, kind: 'intro', schedule: ON_BEAT }])
+    })
+})
+
+describe('cuesToPlay: the Hard-map veto', () => {
+    const vetoed = pickBanVetoFixture('pickBanVetoSpotlightVetoed')
+    const played = pickBanVetoFixture('pickBanVetoSpotlightPlayed')
+    const resolvedAt = ms(vetoed.veto!.resolved_at)
+    const revealAt = ms(vetoed.veto!.reveal_at)
+    const vetoKey = `veto:${vetoed.veto!.resolved_at}`
+
+    function vetoCuesAt(state: PickBanViewState, now: number, playedKeys: ReadonlySet<string> = new Set()) {
+        return cuesToPlay(state, { clockOffsetMs: 0, now }, playedKeys)
+    }
+
+    it('plays the ban cue as the spotlight opens, so its hit lands on the first VETOED stamp at reveal_at', () => {
+        const result = vetoCuesAt(vetoed, resolvedAt)
+
+        expect(result.cues).toEqual([{ key: vetoKey, kind: 'ban', schedule: { delayMs: revealAt - SOUND_HIT_MS.ban - resolvedAt, offsetMs: 0 } }])
+    })
+
+    it('waits for the veto to resolve', () => {
+        expect(vetoCuesAt(vetoed, resolvedAt - 1).cues.filter(cue => cue.key === vetoKey)).toEqual([])
+    })
+
+    it('never replays the veto cue on a refresh or 304', () => {
+        const first = vetoCuesAt(vetoed, resolvedAt)
+
+        expect(vetoCuesAt(vetoed, resolvedAt + 500, first.played).cues).toEqual([])
+    })
+
+    it('marks a veto detected more than STALE_HIT_MS past the stamp as played, without sounding', () => {
+        const result = vetoCuesAt(vetoed, revealAt + STALE_HIT_MS + 1)
+
+        expect(result.cues).toEqual([])
+        expect(result.played.has(vetoKey)).toBe(true)
+    })
+
+    it('sounds nothing when the Hard maps stay in', () => {
+        expect(vetoCuesAt(played, ms(played.veto!.resolved_at)).cues).toEqual([])
+    })
+
+    it('sounds nothing for a stage without a choice rule or with nobody eligible', () => {
+        expect(vetoCuesAt({ ...vetoed, veto: null }, resolvedAt).cues).toEqual([])
+        expect(vetoCuesAt({ ...vetoed, veto: { ...vetoed.veto!, active: false } }, resolvedAt).cues).toEqual([])
     })
 })

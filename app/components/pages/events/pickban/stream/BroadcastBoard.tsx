@@ -1,9 +1,8 @@
 import type { PickBanActor } from '@/app/utils/api'
-import { displayMapName } from '@/app/utils/format'
 import type { PickBanCardView } from '../pickBanView'
-import { eligibleCardsOf, excludedCardsOf } from '../components/ExcludedMaps'
 import { MapTile, type ActorLabels } from '../components/MapTile'
 import { boardLayout } from './boardLayout'
+import { broadcastBoardOf } from './broadcastMoment'
 
 const BOARD_WIDTH = 1792
 
@@ -19,17 +18,8 @@ interface BroadcastBoardProps {
     actorLabels: ActorLabels
 }
 
-function excludedLines(cards: PickBanCardView[]): string[] {
-    const byTag = new Map<string, string[]>()
-    for (const card of excludedCardsOf(cards)) {
-        const label = card.exclusion ? `${card.exclusion.tag} maps are out` : 'Excluded'
-        byTag.set(label, [...(byTag.get(label) ?? []), displayMapName(card.map)])
-    }
-    return [...byTag].map(([label, maps]) => `${label}: ${maps.join(' · ')}`)
-}
-
 export function BroadcastBoard({ cards, previewActor, actorLabels }: BroadcastBoardProps) {
-    const eligible = eligibleCardsOf(cards)
+    const { cards: eligible, excludedLines } = broadcastBoardOf(cards)
     const layout = boardLayout(eligible.length, BOARD_WIDTH, BOARD_HEIGHT, BOARD_GAP, MAX_TILE)
     const focused = eligible.some(card => card.previewed)
 
@@ -51,7 +41,7 @@ export function BroadcastBoard({ cards, previewActor, actorLabels }: BroadcastBo
                     </li>
                 ))}
             </ul>
-            <p className="h-8 max-w-full truncate text-center text-lg font-bold uppercase leading-8 tracking-[0.18em] text-white/45">{excludedLines(cards).join('   |   ')}</p>
+            <p className="h-8 max-w-full truncate text-center text-lg font-bold uppercase leading-8 tracking-[0.18em] text-white/45">{excludedLines.join('   |   ')}</p>
         </div>
     )
 }

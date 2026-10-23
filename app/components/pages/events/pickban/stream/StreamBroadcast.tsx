@@ -13,7 +13,7 @@ import { BroadcastBoard } from './BroadcastBoard'
 import { BroadcastCaption } from './BroadcastCaption'
 import { BroadcastLineup, BroadcastNotice, BroadcastPaused } from './BroadcastEndings'
 import { BroadcastHeader } from './BroadcastHeader'
-import { BroadcastIntro, BroadcastReveal, BroadcastSideChoice, BroadcastSideReveal } from './BroadcastMoments'
+import { BroadcastIntro, BroadcastReveal, BroadcastSideChoice, BroadcastSideReveal, BroadcastVetoReveal } from './BroadcastMoments'
 import { broadcastBackdropLit, broadcastMomentOf } from './broadcastMoment'
 
 function sceneOverlay(view: PickBanView): ReactNode {
@@ -29,8 +29,20 @@ function sceneOverlay(view: PickBanView): ReactNode {
                     entranceMs={view.scene.entranceMs}
                 />
             )
+        case 'veto_reveal':
+            return (
+                <BroadcastVetoReveal
+                    key={moment.reveal.revealAt ?? 'veto'}
+                    tag={moment.tag}
+                    reveal={moment.reveal}
+                    maps={moment.maps}
+                    next={moment.next}
+                    countdown={view.countdown}
+                    entranceMs={view.scene.entranceMs}
+                />
+            )
         case 'side_choice':
-            return <BroadcastSideChoice chooser={moment.chooser} options={moment.options} entranceMs={view.scene.entranceMs} />
+            return <BroadcastSideChoice chooser={moment.chooser} options={moment.options} reason={moment.reason} entranceMs={view.scene.entranceMs} />
         case 'side_reveal':
             return <BroadcastSideReveal reveal={moment.reveal} countdown={view.countdown} upNext={view.turn} entranceMs={view.scene.entranceMs} />
         case 'reveal':

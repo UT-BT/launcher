@@ -1229,7 +1229,9 @@ needed) that the store's poller consults every cycle:
   (`stream/StreamBroadcast.tsx`, see `agents/shared-components.md` → the stream broadcast
   layout), fixed in pixels rather than responsive: the eligible maps fill the middle of the
   1920px stage as large tiles, laid out by `stream/boardLayout.ts` in however many rows keep
-  them biggest, and excluded maps are listed in one line under them.
+  them biggest, and excluded maps are listed in one line under them. A map a team vetoed stays
+  on the board instead, as a greyed tile stamped VETOED (`broadcastBoardOf` in
+  `stream/broadcastMoment.ts`).
   It also reads the event's name once with `fetchEvent('', slug)` for its header and
   shows nothing there if that fails.
 - A failed poll keeps the last good state, and `reconnecting` turns on after
@@ -1397,7 +1399,7 @@ next poll. The server's `can_lock_now` only overrides it for a payload read whil
 
 **Sound.** Five bundled cues, one pre-mixed file each: `intro` as the intro scene begins,
 `pick` for a pick (lettered, or locked automatically as the last map standing), `ban` for a
-lettered ban, `ban_down` for a ban-down step and `decider` for the decider. `pickBanSounds.ts`
+lettered ban or a team's Hard-map veto, `ban_down` for a ban-down step and `decider` for the decider. `pickBanSounds.ts`
 is the one place that names the files: `SOUND_URLS` maps each cue to its `.mp3`,
 `app/assets/sounds/{intro,pick,ban,ban-down,decider}.mp3`. Next to it are
 `PickBanSoundCueKind` and `SOUND_HIT_MS`: how far into each file its main hit sits (intro
@@ -1422,7 +1424,11 @@ paused, cancelled or voided session stays silent. Reveal cues come from `pickBan
 `revealedStepsAt(state, clock)` — the same reveal gate and pause-frozen clock the view model
 itself uses via `momentOf` — keyed by plan index plus that step's raw `reveal_at`. The intro
 cue is due from `introStartsAt(state)` and keyed `intro:<started_at>`, so a restart, with its
-new `started_at`, plays it again. It returns the newly-due cues plus the next played set (the
+new `started_at`, plays it again. A team-chosen veto that a team vetoed (`veto.active`, outcome
+`vetoed`) plays the `ban` cue: it is due from the veto's `resolved_at`, keyed
+`veto:<resolved_at>` (so a new resolution after an undo sounds again), and its hit is the veto's
+`reveal_at`, where the stream's first VETOED stamp lands. "Hard maps stay in" makes no sound.
+`cuesToPlay` takes a `PickBanViewState`, which a full `PickBanState` satisfies. It returns the newly-due cues plus the next played set (the
 same object, with no new allocation, when nothing is newly due) — so a refresh, remount or
 304 never replays a cue, while an undo followed by a new lock at the same index gets a fresh
 key and does sound. Each cue carries a `schedule` that lands its file's hit on the

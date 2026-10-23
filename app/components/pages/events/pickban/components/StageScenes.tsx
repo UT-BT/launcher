@@ -21,7 +21,7 @@ import {
 import { CountdownBar, IntroCountdownWords } from './Countdown'
 import { Aura, ConfettiBurst, Flash, Rays, Ribbon, Shockwave, SparkBurst, Strike } from './RevealEffects'
 import { PICK_BAN_HUES, PICK_BAN_TONES, stepTone, teamTone } from '@/app/components/broadcast/broadcastTone'
-import { FADE_MOTION } from '@/app/components/broadcast/broadcastMotion'
+import { EASE_OUT, FADE_MOTION, SLAM } from '@/app/components/broadcast/broadcastMotion'
 import { choreography, type Choreography } from './stageMotion'
 
 const REVEAL_WIDTH = 'w-36 @md/stage:w-48 @3xl/stage:w-60 @[80rem]/stage:w-96 max-w-[calc(100cqh-10.5rem)]'
@@ -33,6 +33,46 @@ export const DECIDER_LETTERS = [...'DECIDER']
 const DECIDER_BYLINE = 'Left by both teams'
 
 export type RevealKind = 'pick' | 'ban' | 'ban_down' | 'decider'
+
+export const VETOED_STAMP = 'Vetoed'
+
+const VETO_STAMP_IN_S = 0.14
+
+const VETO_STAMP_GAP_S = 0.12
+
+const VETO_SETTLE_S = 0.3
+
+function after(seconds: number): number {
+    return Math.max(0, seconds)
+}
+
+export type VetoRevealMotion = ReturnType<typeof vetoRevealMotion>
+
+export function vetoRevealMotion(leadS: number) {
+    const landsAt = (order: number) => leadS + order * VETO_STAMP_GAP_S
+    return {
+        stamp: (order: number): Variants => ({
+            hidden: { opacity: 0, scale: 2.6, rotate: -14 },
+            shown: { opacity: 1, scale: 1, rotate: 0, transition: { delay: after(landsAt(order) - VETO_STAMP_IN_S), duration: VETO_STAMP_IN_S, ease: SLAM } },
+        }),
+        desaturate: (order: number): Variants => ({
+            hidden: { filter: 'grayscale(0) brightness(1)' },
+            shown: { filter: 'grayscale(1) brightness(0.45)', transition: { delay: after(landsAt(order)), duration: VETO_SETTLE_S, ease: EASE_OUT } },
+        }),
+        badge: (order: number): Variants => ({
+            hidden: { opacity: 0, scale: 0.4, y: -8 },
+            shown: { opacity: 1, scale: [0.4, 1.2, 1], y: 0, transition: { delay: after(landsAt(order)), duration: VETO_SETTLE_S, ease: EASE_OUT } },
+        }),
+        pending: {
+            hidden: { opacity: 1 },
+            shown: { opacity: 0, transition: { delay: after(leadS - VETO_STAMP_IN_S), duration: VETO_STAMP_IN_S } },
+        } satisfies Variants,
+        outcome: {
+            hidden: { opacity: 0, y: 8 },
+            shown: { opacity: 1, y: 0, transition: { delay: after(leadS) + 0.1, duration: VETO_SETTLE_S + 0.05, ease: EASE_OUT } },
+        } satisfies Variants,
+    }
+}
 
 export function useSceneDirection(scene: PickBanScene): PickBanSceneDirection {
     const [shown, setShown] = useState<{ scene: PickBanScene; direction: PickBanSceneDirection }>({ scene, direction: 0 })
@@ -151,7 +191,7 @@ export function IntroCard({ left, right, countdown, entranceMs = INTRO_ENTRANCE_
     )
 }
 
-export function nextStepLabel(turn: PickBanTurn): string {
+export function nextStepLabel(turn: Pick<PickBanTurn, 'action' | 'actorLabel'>): string {
     return turn.action === 'decider' ? 'Decider' : `${turn.actorLabel} to ${turn.action}`
 }
 

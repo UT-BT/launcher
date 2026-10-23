@@ -453,6 +453,23 @@ step, while no team has a colour yet, so its controls never use the Red or Blue 
 - **Played.** When the maps stay in, the cards are plain again.
 - **Before the plan exists** the step track's place shows "13 or 9 maps" in `font-pickban`
   with "The steps appear once the Hard maps are decided." under it.
+- **On stream** (the Pick & Ban scene), still in the gold tone:
+  - *Deciding.* The board keeps every map, the tagged tiles wear the "Hard?" badge, and the
+    caption reads "Hard-map veto · 13 or 9 maps" over "T16 are deciding on the Hard maps".
+  - *Veto moment.* An overlay in the step-0 card style (`BroadcastVetoReveal`): the
+    "Hard-map veto" kicker, the four maps as 360px square cards with a 5px gold border and glow,
+    each map's name under its card, then the outcome at 72px ("T15 veto the Hard maps" or
+    "Hard maps stay in") with "9 maps in play" / "13 maps in play" in gold, a gold countdown
+    bar and "Next: T15 choose their side" (or the first step when the side is already set).
+    The cards carry the "Hard?" badge until `reveal_at`; then, 0.12s apart, a vetoed card
+    greys out under a slanted gold "VETOED" stamp (the BANNED stamp's shape), or a kept card
+    gets a solid gold "In play" badge. The lit half of the backdrop is the team that vetoed.
+  - *Stamped cards.* After the veto the vetoed maps stay on the board, not in the line under
+    it: the tile greys out like a banned one, with a slanted gold outlined "VETOED" stamp and
+    "By T15" in gold. Auto exclusions still leave the board for the "Hard maps are out" line.
+  - *Side choice after a veto.* When the stage has a team-chosen veto, the step-0 choice adds
+    the chooser line under "choose their side" ("T15 choose: lower group finish (4th vs 3rd)",
+    28px white/70 uppercase). Stages without one keep the step-0 choice exactly as before.
 
 ## Themes
 
