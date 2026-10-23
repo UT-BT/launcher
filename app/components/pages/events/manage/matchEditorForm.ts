@@ -1,12 +1,15 @@
-import type {
-    EventMatch, EventMatchInput, EventMatchMap, EventMatchMapInput, EventMatchStatus, EventSide, MatchSideSource,
-    PredictionMarket,
+import {
+    ApiError, MATCH_EDITOR_SIDE_ERROR_CODES, eventErrorMessage,
+    type EventMatch, type EventMatchInput, type EventMatchMap, type EventMatchMapInput, type EventMatchStatus,
+    type EventSide, type MatchSideSource, type PredictionMarket,
 } from '@/app/utils/api'
 import { fromZonedInput, toZonedInput } from '@/app/utils/timezone'
 import { sideOf } from '../bracket/bracketShared'
 
 export const SLOT_CHANGE_WARNING = 'Changing bracket slots voids the prediction market and refunds every bet.'
 export const RESULTS_AFTER_SLOTS = 'Save the bracket slots first, then edit results'
+
+export const SIDE_LOCKED_HINT = 'Pick & ban is running. Change sides with Undo, Restart or Swap in the pick/ban dock.'
 
 export const RED_SIDE_SOURCE_LABELS: Record<MatchSideSource, string> = {
     step0: 'Step 0',
@@ -69,6 +72,18 @@ function savedRedSide(match: EventMatch): string {
     return redSideWithin(match.red_team_id, { teamA: match.team_a?.id ?? '', teamB: match.team_b?.id ?? '' })
 }
 
+export function redSideLocked(match: EventMatch): boolean {
+    return match.pick_ban_status === 'running' || match.pick_ban_status === 'paused'
+}
+
+export function isSideLockedError(error: unknown): boolean {
+    return error instanceof ApiError && (MATCH_EDITOR_SIDE_ERROR_CODES as readonly string[]).includes(error.reason ?? '')
+}
+
+export function matchEditorErrorMessage(error: unknown): string {
+    return isSideLockedError(error) ? SIDE_LOCKED_HINT : eventErrorMessage(error)
+}
+
 export function draftFrom(match: EventMatch, timezone: string): MatchEditorDraft {
     return { fields: fieldsFrom(match, timezone), redSide: savedRedSide(match), maps: match.maps ?? [] }
 }
@@ -126,7 +141,7 @@ export function changesOf(match: EventMatch, draft: MatchEditorDraft, timezone: 
     return {
         fields: !sameFields(saved, draft.fields),
         slots: saved.teamA !== draft.fields.teamA || saved.teamB !== draft.fields.teamB,
-        redSide: draft.redSide !== savedRedSide(match) || keptAcrossNewTeams,
+        redSide: !redSideLocked(match) && (draft.redSide !== savedRedSide(match) || keptAcrossNewTeams),
         result: !sameMaps(match.maps ?? [], draft.maps),
     }
 }

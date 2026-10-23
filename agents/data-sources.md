@@ -278,6 +278,15 @@ and the result section apart by comparing them with the saved match:
 So map rows are never sent in the orientation they were loaded in once the slots move:
 the slots save first, the editor reloads the match, and the results are edited after.
 
+**The Red side is locked while pick/ban runs.** When the match's `pick_ban_status` is
+`running` or `paused`, the Red side shows read-only with the hint "Pick & ban is running.
+Change sides with Undo, Restart or Swap in the pick/ban dock.", and Save never sends
+`red_team_id` (`redSideLocked` in `manage/matchEditorForm.ts`; a slot change that pushes the
+Red team out sends no clear either, since the API handles it). Lobby, complete and no session
+leave the field editable. If the status was stale and the API answers `side_locked`
+(`MATCH_EDITOR_SIDE_ERROR_CODES`), `matchEditorErrorMessage` shows the same sentence and the
+editor re-reads the match so the field locks.
+
 **Drawing a stage early.** A fed stage is seeded from its feeders' standings, and
 those exist from the moment a group stage is drawn — so "the top two in each
 group" resolves to the entry seeds long before it means anything. The server

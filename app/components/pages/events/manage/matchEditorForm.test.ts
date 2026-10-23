@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import type { EventMatch, PredictionMarket, PredictionMarketStatus } from '@/app/utils/api'
+import { ApiError, type EventMatch, type MatchPickBanStatus, type PredictionMarket, type PredictionMarketStatus } from '@/app/utils/api'
+import { pickBanVetoErrorFixture } from '@/app/utils/fixtures/pickBanVetoFixtures'
 import { streamSidesFixture } from '@/app/utils/fixtures/streamSidesFixtures'
 import {
-    RESULTS_AFTER_SLOTS, changesOf, draftFrom, planSave, redSideOptions, redSideSourceLabel,
-    showsSlotWarning, withField, withMapRow, withRedSide, type MatchEditorDraft,
+    RESULTS_AFTER_SLOTS, SIDE_LOCKED_HINT, changesOf, draftFrom, isSideLockedError, matchEditorErrorMessage, planSave,
+    redSideLocked, redSideOptions, redSideSourceLabel, showsSlotWarning, withField, withMapRow, withRedSide, type MatchEditorDraft,
 } from './matchEditorForm'
 
 const TIMEZONE = 'UTC'
@@ -241,5 +242,80 @@ describe('slot change warning', () => {
         const draft = draftOf(match, d => withField(withRedSide(d, T01), 'notes', 'moved'))
 
         expect(showsSlotWarning(changesOf(match, draft, TIMEZONE), market('open'))).toBe(false)
+    })
+})
+
+describe('Red side lock', () => {
+    const statusOf = (status: MatchPickBanStatus) => savedMatch({ pick_ban_status: status })
+
+    it.each<[MatchPickBanStatus, boolean]>([
+        ['none', false],
+        ['lobby', false],
+        ['running', true],
+        ['paused', true],
+        ['complete', false],
+    ])('pick & ban %s locks the field: %s', (status, locked) => {
+        expect(redSideLocked(statusOf(status))).toBe(locked)
+    })
+
+    it('words the hint as the dock instructions', () => {
+        expect(SIDE_LOCKED_HINT).toBe('Pick & ban is running. Change sides with Undo, Restart or Swap in the pick/ban dock.')
+    })
+
+    it('sends no Red side while locked, even if the draft differs', () => {
+        const match = statusOf('running')
+        const draft = draftOf(match, d => withRedSide(d, T01))
+
+        expect(changesOf(match, draft, TIMEZONE).redSide).toBe(false)
+        expect(planSave(match, draft, TIMEZONE)).toEqual({ patch: null, result: null })
+    })
+
+    it('leaves red_team_id out of a slot or field save while locked', () => {
+        const match = statusOf('paused')
+        const plan = planSave(match, draftOf(match, d => withField(d, 'notes', 'moved')), TIMEZONE)
+
+        expect(plan).toMatchObject({ patch: { notes: 'moved' } })
+        expect(plan).not.toHaveProperty('patch.red_team_id')
+    })
+
+    it('does not send a clear when new slots push the Red team out while locked', () => {
+        const match = statusOf('running')
+        const redSlot = match.team_a?.id === match.red_team_id ? 'teamA' : 'teamB'
+        const draft = draftOf(match, d => withField(d, redSlot, T07))
+        const plan = planSave(match, draft, TIMEZONE)
+
+        expect(draft.redSide).toBe('')
+        expect(plan).toMatchObject({ patch: { team_a_id: expect.any(String) } })
+        expect(plan).not.toHaveProperty('patch.red_team_id')
+    })
+
+    it('still sends the Red side when the lobby or a finished session leaves it open', () => {
+        for (const status of ['lobby', 'complete', 'none'] as const) {
+            const match = statusOf(status)
+            const plan = planSave(match, draftOf(match, d => withRedSide(d, T01)), TIMEZONE)
+
+            expect(plan).toEqual({ patch: { red_team_id: T01 }, result: null })
+        }
+    })
+})
+
+describe('matchEditorErrorMessage', () => {
+    it('maps side_locked to the same sentence as the lock hint', () => {
+        const refusal = pickBanVetoErrorFixture('errorSideLocked')
+        const error = new ApiError(409, refusal.error, 'Request failed', refusal.code)
+
+        expect(matchEditorErrorMessage(error)).toBe(SIDE_LOCKED_HINT)
+        expect(isSideLockedError(error)).toBe(true)
+    })
+
+    it('keeps the server wording for any other refusal', () => {
+        const conflict = new ApiError(409, 'Version mismatch', 'Request failed', 'version_conflict')
+
+        expect(matchEditorErrorMessage(conflict)).toBe('Version mismatch')
+        expect(isSideLockedError(conflict)).toBe(false)
+    })
+
+    it('falls back for an unknown error', () => {
+        expect(matchEditorErrorMessage('boom')).toBe('Something went wrong. Please try again.')
     })
 })
