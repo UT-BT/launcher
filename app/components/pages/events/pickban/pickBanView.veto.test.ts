@@ -164,6 +164,14 @@ describe('veto: the spotlight', () => {
         expect(view.scene).toMatchObject({ key: 'veto-reveal', kind: 'veto_reveal' })
     })
 
+    it('keeps one reveal id while each poll re-samples the clock offset', () => {
+        const serverTime = serverNowOf(vetoed)
+        const reveals = [0, 37, -112].map(clockOffsetMs => buildPickBanView(vetoed, { clockOffsetMs, now: serverTime - clockOffsetMs }).veto?.reveal)
+
+        expect(new Set(reveals.map(reveal => reveal?.revealAt)).size).toBe(3)
+        expect(reveals.map(reveal => reveal?.id)).toEqual([vetoed.veto!.resolved_at, vetoed.veto!.resolved_at, vetoed.veto!.resolved_at])
+    })
+
     it('says the Hard maps stay in when every eligible team plays them', () => {
         expect(viewOf(played).veto).toMatchObject({
             phase: 'veto_spotlight',

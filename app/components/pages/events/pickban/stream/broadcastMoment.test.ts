@@ -168,6 +168,7 @@ describe('the broadcast moment for the Hard-map veto', () => {
             kind: 'veto_reveal',
             tag: 'Hard',
             reveal: {
+                id: state.veto!.resolved_at,
                 outcome: 'vetoed',
                 side: 'team_b',
                 teamName: 'T15',
@@ -187,6 +188,7 @@ describe('the broadcast moment for the Hard-map veto', () => {
             kind: 'veto_reveal',
             tag: 'Hard',
             reveal: {
+                id: state.veto!.resolved_at,
                 outcome: 'played',
                 side: null,
                 teamName: null,

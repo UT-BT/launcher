@@ -263,6 +263,7 @@ export interface PickBanVetoChoiceView {
 }
 
 export interface PickBanVetoReveal {
+    id: string
     outcome: VetoOutcome
     side: PickBanSide | null
     teamName: string | null
@@ -966,6 +967,7 @@ function vetoRevealOf(moment: Moment, veto: PickBanVeto, outcome: VetoOutcome): 
     const side = outcome === 'vetoed' ? veto.vetoed_by : null
     const teamName = teamNameOf(moment.state, side)
     return {
+        id: veto.resolved_at ?? veto.reveal_at ?? outcome,
         outcome,
         side,
         teamName,

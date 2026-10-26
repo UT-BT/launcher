@@ -32,7 +32,7 @@ function sceneOverlay(view: PickBanView): ReactNode {
         case 'veto_reveal':
             return (
                 <BroadcastVetoReveal
-                    key={moment.reveal.revealAt ?? 'veto'}
+                    key={moment.reveal.id}
                     tag={moment.tag}
                     reveal={moment.reveal}
                     maps={moment.maps}

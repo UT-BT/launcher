@@ -1328,9 +1328,11 @@ pure and tested without a DOM. It returns:
   - `waiting` during `veto_choice`: "Waiting for T16" for an eligible captain who has chosen,
     "T15 are deciding on the Hard maps" (or "T12 and T16 are…") for everyone else, and
     `null` for a viewer who still chooses.
-  - `reveal` during `veto_spotlight`: `{ outcome, side, teamName, text, mapCount, revealAt }`.
+  - `reveal` during `veto_spotlight`: `{ id, outcome, side, teamName, text, mapCount, revealAt }`.
     `text` is "T15 veto the Hard maps" or "Hard maps stay in", `mapCount` 9 or 13, and
-    `revealAt` the payload's `reveal_at` on the local clock.
+    `revealAt` the payload's `reveal_at` on the local clock. `revealAt` moves by a few ms
+    whenever a poll re-samples the clock offset, so anything that must stay mounted for one
+    reveal (the stream moment's React key) uses `id`, the payload's `resolved_at`.
   - The scene adds `veto_choice` (key `veto-choice`, position 1.1) and `veto_reveal`
     (`veto-reveal`, 1.2), between the intro and the side step.
 - **Chooser copy** (`events/pickban/chooserReasonCopy.ts`, shared by the page, the manager
