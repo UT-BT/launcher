@@ -232,7 +232,7 @@ describe('bettingView leaderboard', () => {
         const view = viewOf(bettingRead('closed'))
         if (!('leaderboard' in view)) throw new Error(view.kind)
         expect(view.leaderboard).toHaveLength(5)
-        expect(view.leaderboard[0]).toEqual({
+        expect(view.leaderboard?.[0]).toEqual({
             rank: 1,
             userId: '310000000000000001',
             name: 'Harbinger',
@@ -244,9 +244,19 @@ describe('bettingView leaderboard', () => {
 
     it('keeps at most five rows', () => {
         const read = bettingRead('closed')
-        const view = viewOf({ ...read, leaderboard: [...read.leaderboard, { ...read.leaderboard[4], rank: 6 }] })
+        const rows = read.leaderboard ?? []
+        const view = viewOf({ ...read, leaderboard: [...rows, { ...rows[4], rank: 6 }] })
         if (!('leaderboard' in view)) throw new Error(view.kind)
-        expect(view.leaderboard.map(row => row.rank)).toEqual([1, 2, 3, 4, 5])
+        expect(view.leaderboard?.map(row => row.rank)).toEqual([1, 2, 3, 4, 5])
+    })
+
+    it('has no leaderboard when the read carries none, as the API no longer sends one', () => {
+        for (const state of ['no_market', 'open', 'closed'] as const) {
+            const { leaderboard: _dropped, ...read } = bettingRead(state)
+            const view = viewOf(read)
+            if (!('leaderboard' in view)) throw new Error(view.kind)
+            expect(view.leaderboard).toBeNull()
+        }
     })
 })
 

@@ -78,7 +78,7 @@ export interface BettingRead {
     positions_visible: boolean
     sides: BettingSides | null
     result: BettingResult | null
-    leaderboard: BettingLeaderboardRow[]
+    leaderboard?: BettingLeaderboardRow[]
 }
 
 export function bettingReadPath(eventSlug: string, matchId: string): string {

@@ -1879,7 +1879,8 @@ polled every 30 s (`cams/camToolHooks.ts`), and the rest goes through
   fetches no composite read: it shows the series recap (`SeriesTable`, full width mid-series, beside
   the result once the series is decided) and an `UpNextLine`. The Starting Soon prices come from the
   betting read, where `odds` can be null: a side reads "1.72× (58%)" (b: "(42%) 2.38×"), the draw
-  "Draw 4.10× (20%)", and a null price shows "–". The feed's `top_predictors` lists bettors only, and `next_match` can
+  "Draw 4.10× (20%)", and a null price shows "–". The betting read no longer carries a `leaderboard`; without one the
+  Predictions scene drops its Top predictors column and runs the market at full width. The feed's `top_predictors` lists bettors only, and `next_match` can
   have a null `scheduled_at`: the ticker then shows "time TBD" for it, while "Coming up" still skips
   unscheduled matches. A `null` path reads nothing. The pick/ban scene
   reuses the pick/ban state route and `fetchEvent` (see "Event pick/ban sessions"), not a

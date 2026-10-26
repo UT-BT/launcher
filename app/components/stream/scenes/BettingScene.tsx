@@ -19,6 +19,13 @@ function BettingBody({ view }: { view: BettingView }) {
     if (view.kind === 'no-market') market = <NoMarket />
     else if (view.kind === 'open') market = <BettingOpen view={view} />
     else market = <BettingPositions view={view} />
+    if (!view.leaderboard) {
+        return (
+            <div data-betting-kind={view.kind} className="h-full min-w-0 leading-[1.2]">
+                {market}
+            </div>
+        )
+    }
     return (
         <div data-betting-kind={view.kind} className="grid h-full grid-cols-[1fr_520px] gap-x-10 leading-[1.2]">
             <div className="min-w-0">{market}</div>

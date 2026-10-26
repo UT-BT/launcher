@@ -72,7 +72,7 @@ export type BettingPositionsKind = 'closed' | 'awaiting' | 'paying-out' | 'settl
 
 export type BettingView =
     | { kind: 'not-enabled' }
-    | { kind: 'no-market'; leaderboard: PredictorRow[] }
+    | { kind: 'no-market'; leaderboard: PredictorRow[] | null }
     | {
         kind: 'open'
         status: BettingStatus
@@ -82,7 +82,7 @@ export type BettingView =
         pool: number
         predictions: number
         closes: { value: string; sub: string }
-        leaderboard: PredictorRow[]
+        leaderboard: PredictorRow[] | null
     }
     | {
         kind: BettingPositionsKind
@@ -91,7 +91,7 @@ export type BettingView =
         a: BackerList
         b: BackerList
         draw: DrawLine | null
-        leaderboard: PredictorRow[]
+        leaderboard: PredictorRow[] | null
     }
 
 export function coins(value: number): string {
@@ -245,7 +245,7 @@ function positionsStatus(kind: BettingPositionsKind, read: BettingRead, a: strin
 
 export function bettingView(read: BettingRead, match: Pick<StreamMatch, 'scheduled_at' | 'score'>, now: number): BettingView {
     if (read.state === 'not_enabled') return { kind: 'not-enabled' }
-    const leaderboard = predictorRows(read.leaderboard)
+    const leaderboard = read.leaderboard ? predictorRows(read.leaderboard) : null
     const { market, sides } = read
     if (read.state === 'no_market' || !market || !sides) return { kind: 'no-market', leaderboard }
 
