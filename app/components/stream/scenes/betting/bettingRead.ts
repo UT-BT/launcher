@@ -26,7 +26,7 @@ export interface BettingBacker {
     title: RawActiveTitle | null
     stake: number
     payout: number
-    multiplier: number
+    multiplier: number | null
     biggest: boolean
     outcome: BettingOutcome | null
     profit: number | null
@@ -36,7 +36,7 @@ export interface BettingBacker {
 export interface BettingSide {
     team: { id: string; name: string } | null
     price: number
-    odds: number
+    odds: number | null
     count: number | null
     stake: number | null
     backers: BettingBacker[]
@@ -56,20 +56,6 @@ export interface BettingResult {
     payout_state: BettingPayoutState | null
 }
 
-export interface BettingLeaderboardRow {
-    rank: number
-    user_id: string
-    display_name: string | null
-    avatar: string | null
-    title: RawActiveTitle | null
-    net_worth: number
-    profit: number
-    bets_placed: number
-    positions_won: number
-    positions_lost: number
-    positions_refunded: number
-}
-
 export interface BettingRead {
     server_now: string
     match_id: string
@@ -78,7 +64,6 @@ export interface BettingRead {
     positions_visible: boolean
     sides: BettingSides | null
     result: BettingResult | null
-    leaderboard?: BettingLeaderboardRow[]
 }
 
 export function bettingReadPath(eventSlug: string, matchId: string): string {

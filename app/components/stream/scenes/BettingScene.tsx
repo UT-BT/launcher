@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from 'react'
+import { useMemo } from 'react'
 import type { StreamSceneProps } from '../streamSceneOptions'
 import type { StreamMatch } from '../data/streamHotState'
 import { useSceneMatch, useSceneNow, useSceneRead } from '../data/useStreamData'
@@ -9,27 +9,20 @@ import { bettingView, type BettingView } from './betting/bettingView'
 import { BettingOpen } from './betting/BettingOpen'
 import { BettingPositions } from './betting/BettingPositions'
 import { NoMarket, PredictionsNotEnabled } from './betting/BettingNotices'
-import { TopPredictors } from './betting/TopPredictors'
 
 const NOW_STEP_MS = 10_000
 
+function BettingMarket({ view }: { view: Exclude<BettingView, { kind: 'not-enabled' }> }) {
+    if (view.kind === 'no-market') return <NoMarket />
+    if (view.kind === 'open') return <BettingOpen view={view} />
+    return <BettingPositions view={view} />
+}
+
 function BettingBody({ view }: { view: BettingView }) {
     if (view.kind === 'not-enabled') return <PredictionsNotEnabled />
-    let market: ReactNode
-    if (view.kind === 'no-market') market = <NoMarket />
-    else if (view.kind === 'open') market = <BettingOpen view={view} />
-    else market = <BettingPositions view={view} />
-    if (!view.leaderboard) {
-        return (
-            <div data-betting-kind={view.kind} className="h-full min-w-0 leading-[1.2]">
-                {market}
-            </div>
-        )
-    }
     return (
-        <div data-betting-kind={view.kind} className="grid h-full grid-cols-[1fr_520px] gap-x-10 leading-[1.2]">
-            <div className="min-w-0">{market}</div>
-            <TopPredictors rows={view.leaderboard} />
+        <div data-betting-kind={view.kind} className="h-full min-w-0 leading-[1.2]">
+            <BettingMarket view={view} />
         </div>
     )
 }

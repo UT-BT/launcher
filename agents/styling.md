@@ -11,7 +11,7 @@ not_here:
   - "state / persistence → state-patterns.md"
 sections: [class-merging, tables-locked, responsive-columns, page-layout, filter-panel, buttons-toggle-states, form-inputs, card-backgrounds-borders, text, color-palette, animation, css-runtime-cost, broadcast-styling, scene-stylesheet, screenshot-conventions, donts]
 last_verified: 2026-10-26
-verify_against: [app/components/shared/DataTable.tsx, app/components/shared/LiveDot.tsx, app/components/shared/chipStyles.ts, app/styles/globals.css, app/styles/theme.css, app/styles/desktop.css, app/styles/index.css, lib/utils.ts, app/hooks/useElementWidth.ts, app/hooks/usePrefersReducedMotion.ts, app/components/broadcast/broadcastTone.ts, app/components/broadcast/broadcastMotion.ts, app/components/broadcast/broadcastFonts.ts, app/components/broadcast/broadcastFonts.css, app/components/broadcast/BroadcastStage.tsx, app/components/stream/streamScenes.css, app/components/stream/frame/SceneFrame.tsx, e2e/streamHarness.ts, playwright.config.ts, app/components/stream/scenes/overlay/overlayLayout.ts, app/components/stream/scenes/nextMap/NextMapHero.tsx, e2e/audio-balance.broadcast.spec.ts]
+verify_against: [app/components/shared/DataTable.tsx, app/components/shared/LiveDot.tsx, app/components/shared/chipStyles.ts, app/styles/globals.css, app/styles/theme.css, app/styles/desktop.css, app/styles/index.css, lib/utils.ts, app/hooks/useElementWidth.ts, app/hooks/usePrefersReducedMotion.ts, app/components/broadcast/broadcastTone.ts, app/components/broadcast/broadcastMotion.ts, app/components/broadcast/broadcastFonts.ts, app/components/broadcast/broadcastFonts.css, app/components/broadcast/BroadcastStage.tsx, app/components/stream/streamScenes.css, app/components/stream/frame/SceneFrame.tsx, e2e/streamHarness.ts, playwright.config.ts, app/components/stream/scenes/overlay/overlayLayout.ts, app/components/stream/scenes/betting/bettingLayout.ts, app/components/stream/scenes/nextMap/NextMapHero.tsx, e2e/audio-balance.broadcast.spec.ts]
 ---
 
 # Styling reference
@@ -700,6 +700,31 @@ must be in a file the app scans. The bundle check budgets the two separately
   Lineup PBs, Cup history). The screenshot's slow pan is
   one stage-level framer-motion loop (scale 1.12, x ±3%, 26s, mirrored), within the animation budget,
   and it stops under `motion=0`, where the video also stays paused on its first frame.
+
+- **Predictions scene** (`scenes/betting/`, opaque, 1792×824 body). Before the market closes it shows the
+  odds plates at full width. After that it names every bettor on every outcome in groups A | Draw | B
+  (no Draw group on a two-way market), in the order the API serves them. Nothing scrolls or pages, so
+  every source shows the same frame. The fit is the pure `bettingLayout(counts, box)` (`bettingLayout.ts`):
+  - the body stacks a 52px status row (with the "Biggest bet" ring legend on the right), 12px, 64px group
+    plates, 8px, 20px column heads, 4px, and a 664px rows box;
+  - one row height for the whole scene, stepping 44 → 40 → 36 → 33 → 30 until every group fits in at most
+    4 columns (fewest columns first). Each group gets `max(1, ceil(n / rowsPerColumn))` columns, so an
+    outcome nobody backed keeps a column reading "No bettors on this outcome";
+  - only when nothing fits at 30 does a group fold: the spare columns go one at a time to the group with
+    the most bettors per column, and an overflowing group shows `columns × 22 − 1` rows and a
+    "+ N more · X staked" line, cutting the lowest potential payouts (the biggest bet replaces the last row
+    if it would be cut);
+  - columns share one width, `(1792 − (C − G) × 16 − (G − 1) × 32) / C` (16px between a group's columns,
+    32px between groups), and fill top to bottom;
+  - densities: primary number 22/22/21/20/20px, secondary 19/19/18/18/17px, chip 15/15/14/14/14px;
+    the multiplier ("Odds") column drops at 33 and 30. The avatar zooms to 36px only at 44/40 in columns
+    of 480px or more, otherwise it stays 24px beside an 18px name (`PlayerInfo` `sm` at zoom 1.5);
+  - number columns are sized from the longest value in the whole scene (characters × 0.5em at the
+    column's size; the profit column never narrower than its head), chips from the widest label present.
+  Before the result rows show stake, locked payout and multiplier. After it they show stake, payout,
+  profit and a Pending/Paid chip, winners washed emerald and losers at 0.42 opacity with their lost stake;
+  a voided market refunds every row and lights nobody. The layout depends only on the bettor counts, so
+  closed → awaiting → paying out → settled never moves a row.
 
 ### Screenshot conventions
 

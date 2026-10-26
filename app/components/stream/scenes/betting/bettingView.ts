@@ -1,18 +1,17 @@
-import type { RawActiveTitle } from '@/app/utils/api'
 import { parseApiInstant } from '@/app/utils/timezone'
 import type { StreamMatch, StreamSide } from '../../data/streamHotState'
 import { relativeTimeText, sceneTimeText, utcTimeText } from '../../sceneHelpers'
-import type { BettingBacker, BettingLeaderboardRow, BettingRead, BettingResult, BettingSide } from './bettingRead'
+import type { BettingBacker, BettingRead, BettingResult, BettingSide } from './bettingRead'
+import { bettingLayout, chipWidth, columnMajor, headWidth, numberWidth, type BettingChipLabel, type BettingLayout } from './bettingLayout'
 
-const BACKER_ROWS = 5
-const BACKER_ROWS_WITH_DRAW = 4
-const LEADERBOARD_ROWS = 5
 const MINUS = '−'
+const DASH = '—'
 
 export type BettingTone = 'emerald' | 'amber' | 'sky' | 'neutral'
 export type BettingVerdict = 'won' | 'lost'
-export type BettingPayoutChip = 'Pending' | 'Paid' | 'Refunded'
+export type BettingPayoutChip = BettingChipLabel
 export type BettingColumns = 'locked' | 'result'
+export type BettingGroupKey = StreamSide | 'draw'
 
 export interface BettingStatus {
     chip: string
@@ -21,7 +20,7 @@ export interface BettingStatus {
 }
 
 export interface OddsSide {
-    side: StreamSide | 'draw'
+    side: BettingGroupKey
     name: string
     label: string | null
     percent: number
@@ -32,47 +31,49 @@ export interface OddsSide {
 export interface BackerRow {
     userId: string
     name: string
-    stake: number
-    payout: number
-    multiplier: string
     biggest: boolean
+    tone: BettingVerdict | null
+    stake: string
+    payout: string
+    multiplier: string
     profit: number | null
     payoutChip: BettingPayoutChip | null
 }
 
-export interface BackerList {
-    side: StreamSide
+export type BettingSlot =
+    | { kind: 'backer'; row: BackerRow }
+    | { kind: 'note'; text: string }
+
+export interface BettingGroup {
+    side: BettingGroupKey
     name: string
-    odds: string
-    backers: number
-    staked: number
+    meta: string
     verdict: BettingVerdict | null
-    rows: BackerRow[]
-    more: { count: number; stake: number } | null
+    columns: BettingSlot[][]
 }
 
-export interface DrawLine {
-    odds: string
-    backers: number
-    staked: number
-    verdict: BettingVerdict | null
-    biggest: BackerRow | null
+export interface BettingFit {
+    rowHeight: number
+    columnWidth: number
+    avatarZoom: boolean
+    primary: number
+    secondary: number
+    chip: number
 }
 
-export interface PredictorRow {
-    rank: number
-    userId: string
-    name: string
-    title: RawActiveTitle | null
+export interface BettingCells {
+    stake: number
+    payout: number
+    multiplier: number | null
     profit: number
-    correct: string
+    chip: number
 }
 
 export type BettingPositionsKind = 'closed' | 'awaiting' | 'paying-out' | 'settled' | 'voided'
 
 export type BettingView =
     | { kind: 'not-enabled' }
-    | { kind: 'no-market'; leaderboard: PredictorRow[] | null }
+    | { kind: 'no-market' }
     | {
         kind: 'open'
         status: BettingStatus
@@ -82,16 +83,15 @@ export type BettingView =
         pool: number
         predictions: number
         closes: { value: string; sub: string }
-        leaderboard: PredictorRow[] | null
     }
     | {
         kind: BettingPositionsKind
         status: BettingStatus
         columns: BettingColumns
-        a: BackerList
-        b: BackerList
-        draw: DrawLine | null
-        leaderboard: PredictorRow[] | null
+        legend: boolean
+        fit: BettingFit
+        cells: BettingCells
+        groups: BettingGroup[]
     }
 
 export function coins(value: number): string {
@@ -108,8 +108,8 @@ export function plural(count: number, one: string, many: string): string {
     return `${coins(count)} ${count === 1 ? one : many}`
 }
 
-function oddsText(odds: number): string {
-    return odds.toFixed(2)
+function oddsText(odds: number | null): string {
+    return odds === null ? DASH : odds.toFixed(2)
 }
 
 function teamName(side: BettingSide, fallback: string): string {
@@ -124,19 +124,10 @@ function stakeOf(backers: BettingBacker[]): number {
     return backers.reduce((sum, backer) => sum + backer.stake, 0)
 }
 
-function sideTotals(side: BettingSide): { backers: number; staked: number } {
-    return { backers: side.count ?? side.backers.length, staked: side.stake ?? stakeOf(side.backers) }
-}
-
-function predictorRows(rows: BettingLeaderboardRow[]): PredictorRow[] {
-    return rows.slice(0, LEADERBOARD_ROWS).map(row => ({
-        rank: row.rank,
-        userId: row.user_id,
-        name: userName(row.display_name),
-        title: row.title,
-        profit: row.profit,
-        correct: `${row.positions_won} / ${row.positions_won + row.positions_lost}`,
-    }))
+function sideMeta(side: BettingSide): string {
+    const backers = side.count ?? side.backers.length
+    const staked = side.stake ?? stakeOf(side.backers)
+    return `Odds ${oddsText(side.odds)} · ${plural(backers, 'bettor', 'bettors')} · ${coins(staked)} staked`
 }
 
 function isOfficial(result: BettingResult | null): result is BettingResult {
@@ -149,16 +140,24 @@ function payoutChipOf(backer: BettingBacker): BettingPayoutChip | null {
     return backer.outcome === 'refunded' ? 'Refunded' : 'Paid'
 }
 
-function backerRow(backer: BettingBacker, columns: BettingColumns): BackerRow {
+function resultPayout(backer: BettingBacker): string {
+    if (backer.outcome === 'won') return coins(backer.payout)
+    if (backer.outcome === 'refunded') return coins(backer.stake)
+    return DASH
+}
+
+function backerRow(backer: BettingBacker, columns: BettingColumns, tone: BettingVerdict | null): BackerRow {
+    const result = columns === 'result'
     return {
         userId: backer.user_id,
         name: userName(backer.display_name),
-        stake: backer.stake,
-        payout: backer.payout,
-        multiplier: `${backer.multiplier.toFixed(2)}x`,
         biggest: backer.biggest,
-        profit: columns === 'result' ? backer.profit : null,
-        payoutChip: columns === 'result' ? payoutChipOf(backer) : null,
+        tone,
+        stake: coins(backer.stake),
+        payout: result ? resultPayout(backer) : coins(backer.payout),
+        multiplier: backer.multiplier === null ? DASH : `${backer.multiplier.toFixed(2)}x`,
+        profit: result ? backer.profit : null,
+        payoutChip: result ? payoutChipOf(backer) : null,
     }
 }
 
@@ -169,35 +168,46 @@ function shownBackers(backers: BettingBacker[], limit: number): BettingBacker[] 
     return [...shown.slice(0, limit - 1), biggest]
 }
 
-function sideVerdict(result: BettingResult | null, side: StreamSide | 'draw'): BettingVerdict | null {
+function sideVerdict(result: BettingResult | null, side: BettingGroupKey): BettingVerdict | null {
     if (!isOfficial(result) || result.refunded || result.outcome === null || result.outcome === 'void') return null
     return result.outcome === side ? 'won' : 'lost'
 }
 
-function backerList(side: BettingSide, key: StreamSide, name: string, limit: number, columns: BettingColumns, result: BettingResult | null): BackerList {
-    const shown = shownBackers(side.backers, limit)
-    const { backers, staked } = sideTotals(side)
-    const moreCount = backers - shown.length
+interface GroupSource {
+    key: BettingGroupKey
+    name: string
+    side: BettingSide
+}
+
+function bettingGroup(source: GroupSource, columnCount: number, limit: number, columns: BettingColumns, result: BettingResult | null): { group: BettingGroup; rows: BackerRow[] } {
+    const verdict = sideVerdict(result, source.key)
+    const backers = source.side.backers
+    const shown = shownBackers(backers, limit)
+    const rows = shown.map(backer => backerRow(backer, columns, verdict))
+    const slots: BettingSlot[] = rows.map(row => ({ kind: 'backer', row }))
+    const hidden = backers.length - shown.length
+    if (hidden > 0) slots.push({ kind: 'note', text: `+ ${coins(hidden)} more · ${coins(stakeOf(backers) - stakeOf(shown))} staked` })
+    if (backers.length === 0) slots.push({ kind: 'note', text: 'No bettors on this outcome' })
     return {
-        side: key,
-        name,
-        odds: oddsText(side.odds),
-        backers,
-        staked,
-        verdict: sideVerdict(result, key),
-        rows: shown.map(backer => backerRow(backer, columns)),
-        more: moreCount > 0 ? { count: moreCount, stake: staked - stakeOf(shown) } : null,
+        group: { side: source.key, name: source.name, meta: sideMeta(source.side), verdict, columns: columnMajor(slots, columnCount) },
+        rows,
     }
 }
 
-function drawLine(side: BettingSide, columns: BettingColumns, result: BettingResult | null): DrawLine {
-    const biggest = side.backers.find(backer => backer.biggest)
-    return {
-        odds: oddsText(side.odds),
-        ...sideTotals(side),
-        verdict: sideVerdict(result, 'draw'),
-        biggest: biggest ? backerRow(biggest, columns) : null,
+function scenePayouts(backers: BettingBacker[], columns: BettingColumns): string[] {
+    return backers.map(backer => (columns === 'result' ? resultPayout(backer) : coins(backer.payout)))
+}
+
+function bettingCells(backers: BettingBacker[], rows: BackerRow[], columns: BettingColumns, layout: BettingLayout): BettingCells {
+    const { primary, secondary, chip, multiplier } = layout.density
+    const all = backers.map(backer => backerRow(backer, columns, null))
+    const stake = numberWidth(all.map(row => row.stake), secondary)
+    const payout = numberWidth(scenePayouts(backers, columns), columns === 'result' ? secondary : primary)
+    if (columns === 'locked') {
+        return { stake, payout, multiplier: multiplier ? numberWidth(all.map(row => row.multiplier), secondary) : null, profit: 0, chip: 0 }
     }
+    const chips = [...new Set(rows.flatMap(row => (row.payoutChip ? [row.payoutChip] : [])))]
+    return { stake, payout, multiplier: null, profit: Math.max(numberWidth(backers.map(backer => signedCoins(backer.profit ?? 0)), primary), headWidth('Profit')), chip: chipWidth(chips, chip) }
 }
 
 function oddsLabel(price: number, other: number): string {
@@ -245,9 +255,8 @@ function positionsStatus(kind: BettingPositionsKind, read: BettingRead, a: strin
 
 export function bettingView(read: BettingRead, match: Pick<StreamMatch, 'scheduled_at' | 'score'>, now: number): BettingView {
     if (read.state === 'not_enabled') return { kind: 'not-enabled' }
-    const leaderboard = read.leaderboard ? predictorRows(read.leaderboard) : null
     const { market, sides } = read
-    if (read.state === 'no_market' || !market || !sides) return { kind: 'no-market', leaderboard }
+    if (read.state === 'no_market' || !market || !sides) return { kind: 'no-market' }
 
     const a = teamName(sides.a, 'Team A')
     const b = teamName(sides.b, 'Team B')
@@ -267,21 +276,28 @@ export function bettingView(read: BettingRead, match: Pick<StreamMatch, 'schedul
             pool: market.pool,
             predictions: market.predictions,
             closes: closesText(market.closes_at, now),
-            leaderboard,
         }
     }
 
     const kind = positionsKind(read, match.score.live_decided)
     const columns: BettingColumns = kind === 'closed' || kind === 'awaiting' ? 'locked' : 'result'
-    const limit = draw ? BACKER_ROWS_WITH_DRAW : BACKER_ROWS
     const result = columns === 'result' ? read.result : null
+    const sources: GroupSource[] = [
+        { key: 'a', name: a, side: sides.a },
+        ...(draw ? [{ key: 'draw' as const, name: 'Draw', side: draw }] : []),
+        { key: 'b', name: b, side: sides.b },
+    ]
+    const layout = bettingLayout(sources.map(source => source.side.backers.length))
+    const built = sources.map((source, index) => bettingGroup(source, layout.groups[index].columns, layout.groups[index].shown, columns, result))
+    const rows = built.flatMap(entry => entry.rows)
+    const { rowHeight, columnWidth, avatarZoom, density } = layout
     return {
         kind,
         status: positionsStatus(kind, read, a, b, now),
         columns,
-        a: backerList(sides.a, 'a', a, limit, columns, result),
-        b: backerList(sides.b, 'b', b, limit, columns, result),
-        draw: draw ? drawLine(draw, columns, result) : null,
-        leaderboard,
+        legend: rows.some(row => row.biggest),
+        fit: { rowHeight, columnWidth, avatarZoom, primary: density.primary, secondary: density.secondary, chip: density.chip },
+        cells: bettingCells(sources.flatMap(source => source.side.backers), rows, columns, layout),
+        groups: built.map(entry => entry.group),
     }
 }
