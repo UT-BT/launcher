@@ -24,7 +24,8 @@ export function CountdownSection() {
     const target = view?.inputValue ?? ''
     const time = draft.base === target ? draft.value : target
     const local = buildLocalTimeView(time, timeZone)
-    const zoneName = timeZoneLabel(timeZone, (local?.iso ? parseApiInstant(local.iso) : null) ?? now)
+    const labelInstant = parseApiInstant(local?.iso ?? match?.countdown_at ?? match?.scheduled_at)
+    const zoneName = timeZoneLabel(timeZone, labelInstant ?? now)
 
     if (!view) {
         return (
