@@ -10,7 +10,7 @@ not_here:
   - "which component to use → shared-components.md"
   - "state / persistence → state-patterns.md"
 sections: [class-merging, tables-locked, responsive-columns, page-layout, filter-panel, buttons-toggle-states, form-inputs, card-backgrounds-borders, text, color-palette, animation, css-runtime-cost, broadcast-styling, scene-stylesheet, screenshot-conventions, donts]
-last_verified: 2026-10-23
+last_verified: 2026-10-26
 verify_against: [app/components/shared/DataTable.tsx, app/components/shared/LiveDot.tsx, app/components/shared/chipStyles.ts, app/styles/globals.css, app/styles/theme.css, app/styles/desktop.css, app/styles/index.css, lib/utils.ts, app/hooks/useElementWidth.ts, app/hooks/usePrefersReducedMotion.ts, app/components/broadcast/broadcastTone.ts, app/components/broadcast/broadcastMotion.ts, app/components/broadcast/broadcastFonts.ts, app/components/broadcast/broadcastFonts.css, app/components/broadcast/BroadcastStage.tsx, app/components/stream/streamScenes.css, app/components/stream/frame/SceneFrame.tsx, e2e/streamHarness.ts, playwright.config.ts, app/components/stream/scenes/overlay/overlayLayout.ts, app/components/stream/scenes/nextMap/NextMapHero.tsx, e2e/audio-balance.broadcast.spec.ts]
 ---
 

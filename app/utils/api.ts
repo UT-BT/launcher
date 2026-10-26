@@ -4812,7 +4812,7 @@ export interface EventMatchDefaults {
 export interface EventGroupsConfig {
     group_count: number
     group_size: number
-    seeding: 'tiered' | 'snake' | 'random' | 'manual'
+    seeding: 'tiered' | 'snake' | 'random'
     double_round_robin: boolean
     points: EventPointsRow[]
     tiebreakers: EventTiebreaker[]
