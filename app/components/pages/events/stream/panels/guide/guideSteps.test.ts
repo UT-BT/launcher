@@ -33,10 +33,11 @@ describe('guide steps', () => {
         for (const preset of ['−15 dB', '0 dB', '−6 dB', 'ducks', 'Limiters', 'Leave the filters alone', 'turn the cams down', 'turn Discord up', 'mic fader']) expect(audio).toContain(preset)
     })
 
-    it('names the twelve scenes and the current tabs', () => {
+    it('names the thirteen scenes and the current tabs', () => {
         const all = JSON.stringify(GUIDE_STEPS)
-        expect(all).toContain('twelve scenes')
+        expect(all).toContain('thirteen scenes')
         expect(all).toContain('Next Map')
+        expect(all).toContain('Predictor Standings')
         expect(all).not.toMatch(/eleven|Show panel|Channel panel|Kit panel|Scenes panel|Cams panel|Match panel/)
         expect(all).toContain('120 fps')
     })

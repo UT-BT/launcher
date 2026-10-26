@@ -10,3 +10,9 @@ export function kitBannerState(info: Pick<KitInfo, 'currentVersion' | 'downloade
     if (info.downloadedVersion === null) return 'never-downloaded'
     return info.currentVersion > info.downloadedVersion ? 'outdated' : 'current'
 }
+
+export function kitBannerHeadline(state: Exclude<KitBannerState, 'current'>): string {
+    return state === 'never-downloaded'
+        ? "You haven't downloaded your kit yet."
+        : 'Kit updated — re-import to get Predictor Standings'
+}

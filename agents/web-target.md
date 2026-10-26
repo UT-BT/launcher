@@ -10,7 +10,7 @@ not_here:
   - "IPC channel contract → lib/conveyor/README.md"
   - "build commands reference → agents/build.md"
 sections: [overview, platform-layer, capability-gates, web-auth, pre-shell-routes, anonymous-browsing, shareable-urls, responsive-layout, performance, build, seo-and-link-previews, hosting-note]
-last_verified: 2026-10-13
+last_verified: 2026-10-26
 verify_against:
   - app/public/route-contract.json
   - app/components/navigation/NavLink.tsx
@@ -213,7 +213,7 @@ never by the app. Each `stream/scenes/*Scene.tsx` is its own lazy chunk.
 `?preview=1` is described in `agents/data-sources.md` (stream kit).
 
 **The Next Map scene page** (`/stream/<slug>/<streamerId>/next-map`, `NextMapScene`, seventh of
-the twelve `STREAM_SCENES`, after Intermission and before Post-match) is a web-only page like every scene: an opaque frame
+the thirteen `STREAM_SCENES`, after Intermission and before Post-match) is a web-only page like every scene: an opaque frame
 with the ticker, its own lazy chunk (about 4 KiB) inside the stream-scene bundle budget. It plays
 the map's fly-through WebM from the API host through a plain `<video>` (`muted`, `loop`,
 `playsInline`, `preload="auto"`, paused under `motion=0`), so it needs no desktop capability. It never reads Page Visibility or the OBS source events for the

@@ -11,7 +11,7 @@ not_here:
   - "the PlayerInfo / CapTimeLink components that trigger nav → shared-components.md"
   - "the Schedule tab's own visibility rule and its audiences → data-sources.md"
 sections: [the-model, navigate-is-the-only-entry-point, leave-guards, url-sync-web-build, link-semantics, page-views-vs-detail-pages, the-sidebar-registry, event-driven-navigation, sidebar-new-badges, page-refresh-registry, per-entry-state, shareable-match-links, match-pickban-page]
-last_verified: 2026-10-23
+last_verified: 2026-10-26
 verify_against:
   - app/components/main/Main.tsx
   - app/components/navigation/NavLink.tsx
@@ -213,7 +213,7 @@ Model: **the in-memory stack stays master; browser history mirrors it.**
   (`app/components/stream/streamScenes.ts`) reads a five-segment `/stream/...`
   path back to `{ eventSlug, streamerId, scene }`, and `renderer-web.tsx` mounts
   the scene root instead of `Main` (see `agents/web-target.md` → `pre-shell-routes`).
-  The scene ids are the twelve in `STREAM_SCENES`; the Next Map page is `.../next-map`,
+  The scene ids are the thirteen in `STREAM_SCENES`; the Next Map page is `.../next-map`,
   seventh after Intermission (see `agents/web-target.md`).
   `streamScenePath` / `streamSceneUrl` build them (the URL form uses
   `VITE_SITE_ORIGIN`, like the match links). `routes.contract.test.ts` pins that

@@ -19,13 +19,14 @@ const SCENE_IDS: StreamSceneId[] = [
     'next-map',
     'post-match',
     'standings',
+    'predictor-standings',
     'brb',
     'ending',
     'caster',
 ]
 
 describe('STREAM_SCENES', () => {
-    it('lists the twelve scene ids in order, each with a display label', () => {
+    it('lists the thirteen scene ids in order, each with a display label', () => {
         expect(STREAM_SCENES.map(scene => scene.id)).toEqual(SCENE_IDS)
         for (const scene of STREAM_SCENES) {
             expect(scene.label.trim().length).toBeGreaterThan(0)

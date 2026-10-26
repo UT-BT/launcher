@@ -15,6 +15,7 @@ const SCENES = [
     ['next-map', 'Next Map'],
     ['post-match', 'Post-match'],
     ['standings', 'Standings'],
+    ['predictor-standings', 'Predictor Standings'],
     ['brb', 'BRB'],
     ['ending', 'Ending'],
     ['caster', 'Caster Cam'],
@@ -97,11 +98,11 @@ test('every scene shows its URL with the streamer id and a copy button', async (
     await expect(panel.getByText(/Visual changes reach OBS automatically/)).toBeVisible()
 
     for (const [id, label] of SCENES) {
-        const input = panel.getByRole('textbox', { name: `${label} URL` })
+        const input = panel.getByRole('textbox', { name: `${label} URL`, exact: true })
         await expect(input).toHaveValue(new RegExp(`/stream/${SLUG}/${STREAMER_ID}/${id}$`))
-        await expect(panel.getByRole('button', { name: `Copy ${label} URL` })).toBeVisible()
+        await expect(panel.getByRole('button', { name: `Copy ${label} URL`, exact: true })).toBeVisible()
     }
-    await expect(panel.getByRole('textbox')).toHaveCount(12)
+    await expect(panel.getByRole('textbox')).toHaveCount(13)
 
     const brb = panel.getByRole('button', { name: 'Copy BRB URL' })
     await brb.click()

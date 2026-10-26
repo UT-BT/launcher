@@ -5,7 +5,7 @@ import { useAsync } from '@/app/hooks/useAsync'
 import { cn } from '@/lib/utils'
 import { StreamCard, StreamLoading } from '../StreamCard'
 import { useStreamTab } from '../StreamTabContext'
-import { kitBannerState, type KitBannerState } from './kit/kitBanner'
+import { kitBannerHeadline, kitBannerState, type KitBannerState } from './kit/kitBanner'
 import { kitExtractFailureMessage } from './kit/kitExtractMessages'
 import { fetchKitInfo, fetchKitZip, kitDownloadUrl, kitZipName, saveBlobAsFile } from './kit/kitFetch'
 import { browserStore, kitFolderError, loadKitFolder, normalizeKitFolder, saveKitFolder } from './kit/kitFolder'
@@ -158,9 +158,7 @@ export function KitSection() {
 }
 
 function KitBanner({ state }: { state: Exclude<KitBannerState, 'current'> }) {
-    const headline = state === 'never-downloaded'
-        ? "You haven't downloaded your kit yet."
-        : 'Your OBS kit is out of date. Download it again and re-import it.'
+    const headline = kitBannerHeadline(state)
 
     return (
         <div role="status" className="flex items-start gap-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-foreground">

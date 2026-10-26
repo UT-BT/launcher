@@ -11,7 +11,7 @@ not_here:
   - "state / persistence → state-patterns.md"
 sections: [class-merging, tables-locked, responsive-columns, page-layout, filter-panel, buttons-toggle-states, form-inputs, card-backgrounds-borders, text, color-palette, animation, css-runtime-cost, broadcast-styling, scene-stylesheet, screenshot-conventions, donts]
 last_verified: 2026-10-26
-verify_against: [app/components/shared/DataTable.tsx, app/components/shared/LiveDot.tsx, app/components/shared/chipStyles.ts, app/styles/globals.css, app/styles/theme.css, app/styles/desktop.css, app/styles/index.css, lib/utils.ts, app/hooks/useElementWidth.ts, app/hooks/usePrefersReducedMotion.ts, app/components/broadcast/broadcastTone.ts, app/components/broadcast/broadcastMotion.ts, app/components/broadcast/broadcastFonts.ts, app/components/broadcast/broadcastFonts.css, app/components/broadcast/BroadcastStage.tsx, app/components/stream/streamScenes.css, app/components/stream/frame/SceneFrame.tsx, e2e/streamHarness.ts, playwright.config.ts, app/components/stream/scenes/overlay/overlayLayout.ts, app/components/stream/scenes/betting/bettingLayout.ts, app/components/stream/scenes/nextMap/NextMapHero.tsx, e2e/audio-balance.broadcast.spec.ts]
+verify_against: [app/components/shared/DataTable.tsx, app/components/shared/LiveDot.tsx, app/components/shared/chipStyles.ts, app/styles/globals.css, app/styles/theme.css, app/styles/desktop.css, app/styles/index.css, lib/utils.ts, app/hooks/useElementWidth.ts, app/hooks/usePrefersReducedMotion.ts, app/components/broadcast/broadcastTone.ts, app/components/broadcast/broadcastMotion.ts, app/components/broadcast/broadcastFonts.ts, app/components/broadcast/broadcastFonts.css, app/components/broadcast/BroadcastStage.tsx, app/components/stream/streamScenes.css, app/components/stream/frame/SceneFrame.tsx, e2e/streamHarness.ts, playwright.config.ts, app/components/stream/scenes/overlay/overlayLayout.ts, app/components/stream/scenes/betting/bettingLayout.ts, app/components/stream/scenes/nextMap/NextMapHero.tsx, e2e/audio-balance.broadcast.spec.ts, app/components/stream/scenes/PredictorStandingsScene.tsx, app/components/stream/scenes/standings/predictorStandingsFit.ts, app/components/stream/scenes/standings/predictorStandingsView.ts, app/components/stream/scenes/standings/PredictorStandingsBoard.tsx]
 ---
 
 # Styling reference
@@ -659,6 +659,31 @@ must be in a file the app scans. The bundle check budgets the two separately
 
 - **No A/B letters.** No scene draws an A/B chip or a "Team A" slot label: a side is its colour bar,
   wash and tone, and the team's name. `TeamPlate`'s `ab` only picks the colour.
+- **Predictor Standings scene** (`PredictorStandingsScene`, `scenes/standings/predictorStandings*`, opaque,
+  1792×824 body). Every predictor at once, never scrolled or paged:
+  - *Fit* (`standingsFit(count, box)` in `predictorStandingsFit.ts`): 22px column heads, a 6px gap, then
+    a 796px rows box. Row heights step 44 → 40 → 36 → 33 → 30 (18, 19, 22, 24, 26 rows per column);
+    at each step try 3 columns then 4 (24px gutter, so 581.3px or 430px wide), and take the first
+    that holds everyone, filled column by column in rank order (`ceil(n / columns)` per column).
+    1–54 predictors: 44px × 3; 55–72: 44px × 4; 73–76: 40px; 77–88: 36px; 89–96: 33px;
+    97–104: 30px. Only past the 30px floor does the tail fold: 4 × 26 slots, 103 rows and
+    "+ N more predictors" in the last slot (17px 700, white/45).
+  - *Density* (`standingsDensity`): primary number 22/22/21/20/20px, secondary 19/19/18/18/17,
+    rank 26/25/24/23/22, movement 18/17/17/16/16, chip 15/15/14/14/14 at 44/40/36/33/30. The
+    avatar zooms (one `PlayerInfo size="sm"` at `zoom: 1.5`: 36px avatar, 18px name) only at 44
+    and 40 in a column at least 480px wide; otherwise a native 24px `presentation="avatar"` (kept
+    from shrinking) plus a 10px gap and a `presentation="name"` at `zoom: 1.5`, so the name is
+    18px at every density. The title shows only at 44 with the zoom.
+  - *Row* (a grid per row, `minmax(0,1fr)` for the name, 6px gap and padding, `rounded-lg`, white/3%
+    zebra on even rows): rank (900 italic, white/80, rank 1 `pickban-gold`), movement (▲n
+    emerald-400, ▼n red-400, – white/30, NEW a gold chip at chip size − 2), avatar + name, projected
+    profit (`profitTone`), the sky Pending chip, the "won/decided" record (white/60). Number cells
+    are sized from the longest value on screen: characters × 0.5em (rank 0.55em), the movement cell
+    `ceil((1 + digits × 0.5) × size)` and at least the NEW chip, the chip cell `ceil(3.5em + 16px)`.
+    The movement cell always keeps at least the arrow width, even when every row's is empty (the
+    match-less read, a voided market); the chip cell is left out when no row is
+    pending. Heads: `# · Predictor · Profit · Won`, 14px 700 uppercase, white/50.
+  - *Header*: "Predictor Standings", kicker "Projected" while any payout is pending. No status row.
 - **Match overlay (layout 06)** (`scenes/overlay/`, transparent). Everything sits on the frame's
   edges or its centre and stays clear of the four cam timer zones (360×96, checked by the spec). The
   lower cams' zones start below the seam rail (y 543), since the rail only touches their top edge.
