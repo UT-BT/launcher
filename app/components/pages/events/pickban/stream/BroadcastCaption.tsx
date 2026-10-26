@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { CalendarClock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { sideColorTone, withSideColor } from '@/app/utils/sideLabels'
-import type { PickBanSideReveal, PickBanTurn, PickBanView } from '../pickBanView'
+import type { PickBanSideReveal, PickBanTurn, PickBanVetoView, PickBanView } from '../pickBanView'
 import { PICK_BAN_HUES, PICK_BAN_TONES, stepTone } from '@/app/components/broadcast/broadcastTone'
 import { Chevrons } from '../components/StageCaption'
 
@@ -32,6 +32,7 @@ function CaptionContent({ view }: { view: PickBanView }) {
         case 'awaiting':
         case 'spotlight':
         case 'intro':
+            if (view.veto?.phase === 'veto_choice') return <VetoChoiceCaption veto={view.veto} />
             if (view.side.phase === 'side_choice') return <CaptionNotice kicker="Side choice" title={view.side.waiting ?? 'Choosing sides'} titleClassName={SIDE_TITLE} />
             if (view.side.phase === 'side_spotlight' && view.side.reveal) return <SideRevealCaption reveal={view.side.reveal} />
             return view.turn ? <TurnCaption turn={view.turn} stepCount={view.timeline.length} mapCount={view.summary.length} /> : null
@@ -47,6 +48,11 @@ function CaptionNotice({ kicker, title, titleClassName = 'text-white' }: { kicke
             <p className={cn('text-[52px] font-black italic uppercase leading-none', titleClassName)}>{title}</p>
         </div>
     )
+}
+
+function VetoChoiceCaption({ veto }: { veto: PickBanVetoView }) {
+    const kicker = [`${veto.tag}-map veto`, veto.poolLine].filter(Boolean).join('  ·  ')
+    return <CaptionNotice kicker={kicker} title={veto.waiting ?? `Deciding on the ${veto.tag} maps`} titleClassName={SIDE_TITLE} />
 }
 
 function SideRevealCaption({ reveal }: { reveal: PickBanSideReveal }) {

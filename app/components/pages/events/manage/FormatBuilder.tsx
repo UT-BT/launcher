@@ -347,7 +347,6 @@ function GroupsEditor({ config, onChange, base, defaults, errors, disabled }: {
                         { value: 'tiered', label: 'Tiered (one per tier)' },
                         { value: 'snake', label: 'Snake' },
                         { value: 'random', label: 'Random' },
-                        { value: 'manual', label: 'Manual' },
                     ]}
                     path={`${base}.seeding`}
                     errors={errors}

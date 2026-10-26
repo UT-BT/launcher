@@ -4,6 +4,7 @@ import { T0, asSpectator, iso, pickBanState } from '../app/components/pages/even
 const SLUG = '2v2-cup-2026'
 const STREAMER = '228152236587483136'
 const OPTIONS = '?sound=0&motion=0'
+const PER_SCENE_TIMEOUT_MS = 5_000
 const MAGENTA = { r: 255, g: 0, b: 255 }
 const CORS = {
     'access-control-allow-origin': '*',
@@ -21,6 +22,7 @@ const SCENES = [
     { id: 'next-map', label: 'Next Map' },
     { id: 'post-match', label: 'Post-match' },
     { id: 'standings', label: 'Standings' },
+    { id: 'predictor-standings', label: 'Predictor Standings' },
     { id: 'brb', label: 'BRB' },
     { id: 'ending', label: 'Ending' },
     { id: 'caster', label: 'Caster Cam' },
@@ -115,6 +117,7 @@ test.beforeEach(async ({ page }) => {
 
 test('every scene URL renders its own scene with no app shell and noindex', async ({ page, isMobile }) => {
     test.skip(isMobile)
+    test.setTimeout(SCENES.length * PER_SCENE_TIMEOUT_MS)
     for (const scene of SCENES) {
         await page.goto(scenePage(scene.id))
         await expect(page.locator(`[data-stream-scene="${scene.id}"]`).first(), scene.id).toBeVisible()

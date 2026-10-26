@@ -19,6 +19,7 @@ const SCENES: Record<StreamSceneId, LazyExoticComponent<ComponentType<StreamScen
     'next-map': lazy(() => import('./scenes/NextMapScene')),
     'post-match': lazy(() => import('./scenes/PostMatchScene')),
     'standings': lazy(() => import('./scenes/StandingsScene')),
+    'predictor-standings': lazy(() => import('./scenes/PredictorStandingsScene')),
     'brb': lazy(() => import('./scenes/BrbScene')),
     'ending': lazy(() => import('./scenes/EndingScene')),
     'caster': lazy(() => import('./scenes/CasterScene')),

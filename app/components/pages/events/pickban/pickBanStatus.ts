@@ -1,4 +1,4 @@
-import type { PickBanErrorCode, PickBanSessionStatus, PickBanSidePhase } from '@/app/utils/api'
+import type { PickBanErrorCode, PickBanSessionStatus, PickBanSidePhase, PickBanVetoPhase } from '@/app/utils/api'
 import type { PickBanViewPhase } from './pickBanView'
 
 export type PickBanStatusTone = 'idle' | 'ready' | 'live' | 'paused' | 'done'
@@ -36,6 +36,11 @@ const SIDE_PHASE_LABELS: Record<PickBanSidePhase, string> = {
     side_spotlight: 'Step 0 · Revealing',
 }
 
+const VETO_PHASE_LABELS: Record<PickBanVetoPhase, string> = {
+    veto_choice: 'Map veto',
+    veto_spotlight: 'Map veto · Revealing',
+}
+
 const WRONG_STATUS_LABELS: Partial<Record<PickBanSessionStatus, string>> = {
     running: 'Picks & Bans are already in progress',
     paused: 'Picks & Bans are paused',
@@ -56,7 +61,19 @@ export function sidePhaseLabel(phase: PickBanSidePhase): string {
     return SIDE_PHASE_LABELS[phase]
 }
 
-export function statusOfPhase(phase: PickBanViewPhase | PickBanSidePhase): PickBanSessionStatus {
-    if (phase === 'intro' || phase === 'awaiting' || phase === 'spotlight' || phase === 'side_choice' || phase === 'side_spotlight') return 'running'
+export function vetoPhaseLabel(phase: PickBanVetoPhase): string {
+    return VETO_PHASE_LABELS[phase]
+}
+
+export function statusOfPhase(phase: PickBanViewPhase | PickBanSidePhase | PickBanVetoPhase): PickBanSessionStatus {
+    if (
+        phase === 'intro'
+        || phase === 'awaiting'
+        || phase === 'spotlight'
+        || phase === 'side_choice'
+        || phase === 'side_spotlight'
+        || phase === 'veto_choice'
+        || phase === 'veto_spotlight'
+    ) return 'running'
     return phase
 }

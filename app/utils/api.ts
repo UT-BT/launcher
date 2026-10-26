@@ -4812,7 +4812,7 @@ export interface EventMatchDefaults {
 export interface EventGroupsConfig {
     group_count: number
     group_size: number
-    seeding: 'tiered' | 'snake' | 'random' | 'manual'
+    seeding: 'tiered' | 'snake' | 'random'
     double_round_robin: boolean
     points: EventPointsRow[]
     tiebreakers: EventTiebreaker[]
@@ -5936,11 +5936,17 @@ export interface PickBanSequenceStep {
 export interface PickBanSequence {
     steps: PickBanSequenceStep[]
     ban_down: boolean
+    ban_down_order?: PickBanActor[]
 }
+
+export const PICK_BAN_EXCLUSION_MODES = ['auto', 'choice'] as const
+
+export type PickBanExclusionMode = typeof PICK_BAN_EXCLUSION_MODES[number]
 
 export interface PickBanExclusionRule {
     tag: string
     min_pre_cup_seed: number
+    mode?: PickBanExclusionMode
 }
 
 export interface PickBanPacing {
@@ -5948,6 +5954,11 @@ export interface PickBanPacing {
     spotlight: number
     ban_down_spotlight: number
     decider_spotlight: number
+}
+
+export interface PickBanContractPacing extends PickBanPacing {
+    side_spotlight: number
+    veto_spotlight: number
 }
 
 export interface PickBanBlock {
@@ -6038,7 +6049,11 @@ export const PICK_BAN_SIDE_PHASES = ['side_choice', 'side_spotlight'] as const
 
 export type PickBanSidePhase = typeof PICK_BAN_SIDE_PHASES[number]
 
-export type PickBanContractPhase = PickBanPhase | PickBanSidePhase
+export const PICK_BAN_VETO_PHASES = ['veto_choice', 'veto_spotlight'] as const
+
+export type PickBanVetoPhase = typeof PICK_BAN_VETO_PHASES[number]
+
+export type PickBanContractPhase = PickBanPhase | PickBanVetoPhase | PickBanSidePhase
 
 export const SIDE_COLORS = ['red', 'blue'] as const
 
@@ -6078,14 +6093,27 @@ export interface StreamSideControls {
     blocked_reason: StreamSideBlockedReason | null
 }
 
-export const PICK_BAN_CHOOSER_REASONS = [
-    'lower_pre_cup_seed',
+export const PICK_BAN_CONTRACT_CHOOSER_REASONS = [
+    'direct_qualifier',
+    'lower_playoff_record',
     'lower_group_placing',
-    'lower_knockout_differential',
+    'lower_pre_cup_seed',
     'admin',
 ] as const
 
-export type PickBanChooserReason = typeof PICK_BAN_CHOOSER_REASONS[number]
+export type PickBanContractChooserReason = typeof PICK_BAN_CONTRACT_CHOOSER_REASONS[number]
+
+export const PICK_BAN_CHOOSER_REASONS = PICK_BAN_CONTRACT_CHOOSER_REASONS
+
+export interface PickBanPlayoffRecord {
+    wins: number
+    losses: number
+}
+
+export interface PickBanChooserBasis {
+    chooser: number | PickBanPlayoffRecord
+    other: number | PickBanPlayoffRecord
+}
 
 export interface PickBanSideCardStep {
     n: number
@@ -6106,7 +6134,8 @@ export interface PickBanSideBlock {
     set_at: string | null
     changed_mid_veto: boolean
     chooser: PickBanSide | null
-    chooser_reason: PickBanChooserReason | null
+    chooser_reason: PickBanContractChooserReason | null
+    chooser_basis?: PickBanChooserBasis | null
     cards: PickBanSideCard[]
 }
 
@@ -6122,6 +6151,44 @@ export interface PickBanSideChooserBody {
 
 export interface PickBanSetSidesBody {
     red: PickBanSide
+    version: number
+}
+
+export const PICK_BAN_VETO_CHOICES = ['veto', 'play'] as const
+
+export type VetoChoice = typeof PICK_BAN_VETO_CHOICES[number]
+
+export const PICK_BAN_VETO_OUTCOMES = ['vetoed', 'played'] as const
+
+export type VetoOutcome = typeof PICK_BAN_VETO_OUTCOMES[number]
+
+export interface PickBanVetoPoolSizes {
+    vetoed: number
+    played: number
+}
+
+export interface PickBanVeto {
+    active: boolean
+    tag: string
+    min_pre_cup_seed: number
+    maps: string[]
+    eligible: PickBanSide[]
+    choices: { team_a?: VetoChoice | null; team_b?: VetoChoice | null }
+    outcome: VetoOutcome | null
+    vetoed_by: PickBanSide | null
+    pool_sizes: PickBanVetoPoolSizes
+    resolved_at: string | null
+    reveal_at: string | null
+}
+
+export interface PickBanVetoCommandBody {
+    choice: VetoChoice
+    version: number
+}
+
+export interface PickBanVetoForTeamBody {
+    side: PickBanSide
+    choice: VetoChoice
     version: number
 }
 
@@ -6141,6 +6208,14 @@ export type PickBanBlockingReason =
 export const PICK_BAN_SIDE_ERROR_CODES = ['side_choice_active', 'side_not_open'] as const
 
 export type PickBanSideErrorCode = typeof PICK_BAN_SIDE_ERROR_CODES[number]
+
+export const PICK_BAN_VETO_ERROR_CODES = ['veto_not_open', 'already_chosen', 'veto_choice_active'] as const
+
+export type PickBanVetoErrorCode = typeof PICK_BAN_VETO_ERROR_CODES[number]
+
+export const MATCH_EDITOR_SIDE_ERROR_CODES = ['side_locked'] as const
+
+export type MatchEditorSideErrorCode = typeof MATCH_EDITOR_SIDE_ERROR_CODES[number]
 
 export const PICK_BAN_ERROR_CODES = [
     'not_authorized',
@@ -6165,6 +6240,7 @@ export const PICK_BAN_ERROR_CODES = [
     'nothing_to_undo',
     'side_chooser_undetermined',
     ...PICK_BAN_SIDE_ERROR_CODES,
+    ...PICK_BAN_VETO_ERROR_CODES,
 ] as const
 
 export type PickBanErrorCode = typeof PICK_BAN_ERROR_CODES[number]
@@ -6202,11 +6278,13 @@ export interface PickBanExclusionTrigger {
 
 export interface PickBanExclusion extends PickBanExclusionRule {
     triggered_by: PickBanExclusionTrigger[]
+    vetoed_by?: PickBanSide | null
 }
 
 export interface PickBanPoolCard extends PickBanPoolMap {
     excluded: boolean
     exclusion: PickBanExclusion | null
+    pending_choice?: boolean
 }
 
 export interface PickBanMember {
@@ -6266,6 +6344,7 @@ export interface PickBanCapabilities {
     can_ready: boolean
     can_choose_side: boolean
     can_lock_now: boolean
+    can_veto?: boolean
 }
 
 export type PickBanWarning = string | { code?: string | null; message?: string | null }
@@ -6301,6 +6380,7 @@ export interface PickBanState {
     teams: { team_a: PickBanTeam | null; team_b: PickBanTeam | null }
     a_side: PickBanSide | null
     side: PickBanSideBlock
+    veto?: PickBanVeto | null
     ready: { team_a: PickBanReady | null; team_b: PickBanReady | null }
     selection_preview: PickBanSelectionPreview | null
     pacing: PickBanPacing
@@ -6356,6 +6436,7 @@ export async function fetchPickBanState(
 
 export interface PickBanParticipantCommandBodies {
     side: PickBanSideCommandBody
+    veto: PickBanVetoCommandBody
     ready: { version: number }
     unready: { version: number }
     hover: { map: string | null; version: number }
@@ -6380,6 +6461,7 @@ export interface PickBanManagerCommandBodies {
     cancel: { version: number }
     swap: { version: number }
     side: PickBanSideCommandBody
+    veto: PickBanVetoForTeamBody
     'side-chooser': PickBanSideChooserBody
     sides: PickBanSetSidesBody
     'override-sequence': PickBanOverrideSequenceBody

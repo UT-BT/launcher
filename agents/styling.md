@@ -10,8 +10,8 @@ not_here:
   - "which component to use → shared-components.md"
   - "state / persistence → state-patterns.md"
 sections: [class-merging, tables-locked, responsive-columns, page-layout, filter-panel, buttons-toggle-states, form-inputs, card-backgrounds-borders, text, color-palette, animation, css-runtime-cost, broadcast-styling, scene-stylesheet, screenshot-conventions, donts]
-last_verified: 2026-10-13
-verify_against: [app/components/shared/DataTable.tsx, app/components/shared/LiveDot.tsx, app/components/shared/chipStyles.ts, app/styles/globals.css, app/styles/theme.css, app/styles/desktop.css, app/styles/index.css, lib/utils.ts, app/hooks/useElementWidth.ts, app/hooks/usePrefersReducedMotion.ts, app/components/broadcast/broadcastTone.ts, app/components/broadcast/broadcastMotion.ts, app/components/broadcast/broadcastFonts.ts, app/components/broadcast/broadcastFonts.css, app/components/broadcast/BroadcastStage.tsx, app/components/stream/streamScenes.css, app/components/stream/frame/SceneFrame.tsx, e2e/streamHarness.ts, playwright.config.ts, app/components/stream/scenes/overlay/overlayLayout.ts, app/components/stream/scenes/nextMap/NextMapHero.tsx, e2e/audio-balance.broadcast.spec.ts]
+last_verified: 2026-10-26
+verify_against: [app/components/shared/DataTable.tsx, app/components/shared/LiveDot.tsx, app/components/shared/chipStyles.ts, app/styles/globals.css, app/styles/theme.css, app/styles/desktop.css, app/styles/index.css, lib/utils.ts, app/hooks/useElementWidth.ts, app/hooks/usePrefersReducedMotion.ts, app/components/broadcast/broadcastTone.ts, app/components/broadcast/broadcastMotion.ts, app/components/broadcast/broadcastFonts.ts, app/components/broadcast/broadcastFonts.css, app/components/broadcast/BroadcastStage.tsx, app/components/stream/streamScenes.css, app/components/stream/frame/SceneFrame.tsx, e2e/streamHarness.ts, playwright.config.ts, app/components/stream/scenes/overlay/overlayLayout.ts, app/components/stream/scenes/betting/bettingLayout.ts, app/components/stream/scenes/nextMap/NextMapHero.tsx, e2e/audio-balance.broadcast.spec.ts, app/components/stream/scenes/PredictorStandingsScene.tsx, app/components/stream/scenes/standings/predictorStandingsFit.ts, app/components/stream/scenes/standings/predictorStandingsView.ts, app/components/stream/scenes/standings/PredictorStandingsBoard.tsx]
 ---
 
 # Styling reference
@@ -429,6 +429,48 @@ tone, Blue the azure `pickban-b` one.
     the next turn, with the chosen team's half of the backdrop lit. The intro adds the
     `introLine` ("Sides set by admin") under its countdown when step 0 is skipped.
 
+### Hard-map veto: cards and pool states
+
+A team-chosen veto removes the tagged maps (Hard) for both teams. It runs before the side
+step, while no team has a colour yet, so its controls never use the Red or Blue tones.
+
+- **Veto cards** (captain dock). Two cards in a `radiogroup`, built like the side cards
+  (`rounded-xl border-2`, `bg-card/40` until selected, one column on phones), in the
+  `PICK_BAN_TONES.gold` tone: "**Veto Hard maps**" with "Play 9 maps" and the four maps as
+  small chips, and "**Play Hard maps**" with "Play 13 maps". The Lock In button turns gold once
+  a card is selected and reads "Lock In Veto" or "Lock In Play".
+- **Waiting.** The other captain, or one who has chosen, gets the usual locked control row:
+  "T15 are deciding on the Hard maps" or "Waiting for T16".
+- **Outcome.** The stage caption and the dock's reveal row say "T15 veto the Hard maps" or
+  "Hard maps stay in" in `text-pickban-gold`, with "9 maps" or "13 maps" in the muted detail.
+- **Pending cards.** While teams decide, each tagged tile keeps its normal look and gets a
+  top-left badge "Hard?" (the tile's `BADGE` shape, `bg-black/65 text-white/85` with an inset
+  `ring-white/30`): neutral, neither banned nor picked.
+- **Vetoed cards.** They leave the board like any excluded map and sit in the `ExcludedMaps`
+  row (grey thumbnail and name), each with a gold outlined stamp "VETOED · T15"
+  (`border-pickban-gold/55 text-pickban-gold`, 10px black uppercase). The reason under the
+  row names the team: "Hard maps are vetoed by T15."
+- **Played.** When the maps stay in, the cards are plain again.
+- **Before the plan exists** the step track's place shows "13 or 9 maps" in `font-pickban`
+  with "The steps appear once the Hard maps are decided." under it.
+- **On stream** (the Pick & Ban scene), still in the gold tone:
+  - *Deciding.* The board keeps every map, the tagged tiles wear the "Hard?" badge, and the
+    caption reads "Hard-map veto · 13 or 9 maps" over "T16 are deciding on the Hard maps".
+  - *Veto moment.* An overlay in the step-0 card style (`BroadcastVetoReveal`): the
+    "Hard-map veto" kicker, the four maps as 360px square cards with a 5px gold border and glow,
+    each map's name under its card, then the outcome at 72px ("T15 veto the Hard maps" or
+    "Hard maps stay in") with "9 maps in play" / "13 maps in play" in gold, a gold countdown
+    bar and "Next: T15 choose their side" (or the first step when the side is already set).
+    The cards carry the "Hard?" badge until `reveal_at`; then, 0.12s apart, a vetoed card
+    greys out under a slanted gold "VETOED" stamp (the BANNED stamp's shape), or a kept card
+    gets a solid gold "In play" badge. The lit half of the backdrop is the team that vetoed.
+  - *Stamped cards.* After the veto the vetoed maps stay on the board, not in the line under
+    it: the tile greys out like a banned one, with a slanted gold outlined "VETOED" stamp and
+    "By T15" in gold. Auto exclusions still leave the board for the "Hard maps are out" line.
+  - *Side choice after a veto.* When the stage has a team-chosen veto, the step-0 choice adds
+    the chooser line under "choose their side" ("T15 choose: lower group finish (4th vs 3rd)",
+    28px white/70 uppercase). Stages without one keep the step-0 choice exactly as before.
+
 ## Themes
 
 The accent is the **only** themeable scale. Themes swap CSS-variable *values* only —
@@ -617,6 +659,31 @@ must be in a file the app scans. The bundle check budgets the two separately
 
 - **No A/B letters.** No scene draws an A/B chip or a "Team A" slot label: a side is its colour bar,
   wash and tone, and the team's name. `TeamPlate`'s `ab` only picks the colour.
+- **Predictor Standings scene** (`PredictorStandingsScene`, `scenes/standings/predictorStandings*`, opaque,
+  1792×824 body). Every predictor at once, never scrolled or paged:
+  - *Fit* (`standingsFit(count, box)` in `predictorStandingsFit.ts`): 22px column heads, a 6px gap, then
+    a 796px rows box. Row heights step 44 → 40 → 36 → 33 → 30 (18, 19, 22, 24, 26 rows per column);
+    at each step try 3 columns then 4 (24px gutter, so 581.3px or 430px wide), and take the first
+    that holds everyone, filled column by column in rank order (`ceil(n / columns)` per column).
+    1–54 predictors: 44px × 3; 55–72: 44px × 4; 73–76: 40px; 77–88: 36px; 89–96: 33px;
+    97–104: 30px. Only past the 30px floor does the tail fold: 4 × 26 slots, 103 rows and
+    "+ N more predictors" in the last slot (17px 700, white/45).
+  - *Density* (`standingsDensity`): primary number 22/22/21/20/20px, secondary 19/19/18/18/17,
+    rank 26/25/24/23/22, movement 18/17/17/16/16, chip 15/15/14/14/14 at 44/40/36/33/30. The
+    avatar zooms (one `PlayerInfo size="sm"` at `zoom: 1.5`: 36px avatar, 18px name) only at 44
+    and 40 in a column at least 480px wide; otherwise a native 24px `presentation="avatar"` (kept
+    from shrinking) plus a 10px gap and a `presentation="name"` at `zoom: 1.5`, so the name is
+    18px at every density. The title shows only at 44 with the zoom.
+  - *Row* (a grid per row, `minmax(0,1fr)` for the name, 6px gap and padding, `rounded-lg`, white/3%
+    zebra on even rows): rank (900 italic, white/80, rank 1 `pickban-gold`), movement (▲n
+    emerald-400, ▼n red-400, – white/30, NEW a gold chip at chip size − 2), avatar + name, projected
+    profit (`profitTone`), the sky Pending chip, the "won/decided" record (white/60). Number cells
+    are sized from the longest value on screen: characters × 0.5em (rank 0.55em), the movement cell
+    `ceil((1 + digits × 0.5) × size)` and at least the NEW chip, the chip cell `ceil(3.5em + 16px)`.
+    The movement cell always keeps at least the arrow width, even when every row's is empty (the
+    match-less read, a voided market); the chip cell is left out when no row is
+    pending. Heads: `# · Predictor · Profit · Won`, 14px 700 uppercase, white/50.
+  - *Header*: "Predictor Standings", kicker "Projected" while any payout is pending. No status row.
 - **Match overlay (layout 06)** (`scenes/overlay/`, transparent). Everything sits on the frame's
   edges or its centre and stays clear of the four cam timer zones (360×96, checked by the spec). The
   lower cams' zones start below the seam rail (y 543), since the rail only touches their top edge.
@@ -658,6 +725,33 @@ must be in a file the app scans. The bundle check budgets the two separately
   Lineup PBs, Cup history). The screenshot's slow pan is
   one stage-level framer-motion loop (scale 1.12, x ±3%, 26s, mirrored), within the animation budget,
   and it stops under `motion=0`, where the video also stays paused on its first frame.
+
+- **Predictions scene** (`scenes/betting/`, opaque, 1792×824 body). Before the market closes it shows the
+  odds plates at full width. After that it names every bettor on every outcome in groups A | Draw | B
+  (no Draw group on a two-way market), in the order the API serves them (potential payout, highest
+  first). Once the result is official, a losing group re-sorts by stake, biggest loss first; the
+  winning group keeps the served order. Nothing scrolls or pages, so
+  every source shows the same frame. The fit is the pure `bettingLayout(counts, box)` (`bettingLayout.ts`):
+  - the body stacks a 52px status row (with the "Biggest bet" ring legend on the right), 12px, 64px group
+    plates, 8px, 20px column heads, 4px, and a 664px rows box;
+  - one row height for the whole scene, stepping 44 → 40 → 36 → 33 → 30 until every group fits in at most
+    4 columns (fewest columns first). Each group gets `max(1, ceil(n / rowsPerColumn))` columns, so an
+    outcome nobody backed keeps a column reading "No bettors on this outcome";
+  - only when nothing fits at 30 does a group fold: the spare columns go one at a time to the group with
+    the most bettors per column, and an overflowing group shows `columns × 22 − 1` rows and a
+    "+ N more · X staked" line, cutting the lowest potential payouts (the biggest bet replaces the last row
+    if it would be cut);
+  - columns share one width, `(1792 − (C − G) × 16 − (G − 1) × 32) / C` (16px between a group's columns,
+    32px between groups), and fill top to bottom;
+  - densities: primary number 22/22/21/20/20px, secondary 19/19/18/18/17px, chip 15/15/14/14/14px;
+    the multiplier ("Odds") column drops at 33 and 30. The avatar zooms to 36px only at 44/40 in columns
+    of 480px or more, otherwise it stays 24px beside an 18px name (`PlayerInfo` `sm` at zoom 1.5);
+  - number columns are sized from the longest value in the whole scene (characters × 0.5em at the
+    column's size; the profit column never narrower than its head), chips from the widest label present.
+  Before the result rows show stake, locked payout and multiplier. After it they show stake, payout,
+  profit and a Pending/Paid chip, winners washed emerald and losers at 0.42 opacity with their lost stake;
+  a voided market refunds every row and lights nobody. The layout depends only on the bettor counts, so
+  closed → awaiting → paying out → settled never moves a row.
 
 ### Screenshot conventions
 

@@ -10,6 +10,7 @@ export const STREAM_SCENES = [
     { id: 'next-map', label: 'Next Map', transparent: false },
     { id: 'post-match', label: 'Post-match', transparent: false },
     { id: 'standings', label: 'Standings', transparent: false },
+    { id: 'predictor-standings', label: 'Predictor Standings', transparent: false },
     { id: 'brb', label: 'BRB', transparent: false },
     { id: 'ending', label: 'Ending', transparent: false },
     { id: 'caster', label: 'Caster Cam', transparent: true },

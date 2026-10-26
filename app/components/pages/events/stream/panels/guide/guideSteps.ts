@@ -51,7 +51,7 @@ export const GUIDE_STEPS: GuideStep[] = [
                 'In OBS choose Scene Collection > Import and pick UTBT-StreamKit-Scenes.json from the kit folder. Then open the Scene Collection menu and switch to the imported collection.',
                 'Choose Profile > Import and pick the UTBT-StreamKit-Profile folder. Then open the Profile menu and switch to the imported profile.',
             ),
-            text('The collection has twelve scenes: Starting Soon, Match Preview, Pick & Ban, Betting, Match, Intermission, Next Map, Post-match, Standings, BRB, Ending and Caster Cam. The profile sets 1920×1080 at 60 fps, Simple output mode, 8000 kbps video and 160 kbps audio.'),
+            text('The collection has thirteen scenes: Starting Soon, Match Preview, Pick & Ban, Betting, Match, Intermission, Next Map, Post-match, Standings, Predictor Standings, BRB, Ending and Caster Cam. The profile sets 1920×1080 at 60 fps, Simple output mode, 8000 kbps video and 160 kbps audio.'),
         ],
     },
     {
@@ -111,7 +111,7 @@ export const GUIDE_STEPS: GuideStep[] = [
         title: 'Repair or add a single source by hand',
         desktopOnly: false,
         blocks: [
-            text('The Scenes card on the Setup tab lists the address of each of your twelve scenes, with a copy button and a live preview.'),
+            text('The Scenes card on the Setup tab lists the address of each of your thirteen scenes, with a copy button and a live preview.'),
             list(
                 'To repair a source, open its properties in OBS and paste the copied address into the URL field.',
                 'To add one, choose Add > Browser in OBS, paste the address, and set the size to 1920×1080 at 60 fps.',

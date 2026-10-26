@@ -5,6 +5,7 @@ import { MapThumbnail, type MapThumbnailSize } from '@/app/components/shared/Map
 import { displayMapName } from '@/app/utils/format'
 import type { PickBanActor } from '@/app/utils/api'
 import type { PickBanCardView } from '../pickBanView'
+import { VETOED_STAMP } from './StageScenes'
 import { PICK_BAN_HUES, PICK_BAN_TONES, stepTone, teamTone, tint } from '@/app/components/broadcast/broadcastTone'
 import { CHIP_MOTION, REVEAL_FLASH_MOTION, REVEAL_POP, STAMP_MOTION } from '@/app/components/broadcast/broadcastMotion'
 
@@ -20,6 +21,8 @@ interface MapTileProps {
 }
 
 const BADGE = 'absolute left-[5cqw] top-[5cqw] flex items-center gap-[2cqw] rounded-[3cqw] px-[4cqw] py-[1.5cqw] text-[clamp(11px,9cqw,28px)] font-black italic uppercase leading-none shadow-lg'
+
+const PENDING_BADGE = 'bg-black/65 text-white/85 ring-1 ring-inset ring-white/30'
 
 const WIDE_BADGE = 'absolute inset-x-[5cqw] top-[5cqw] rounded-[3cqw] py-[1.5cqw] text-center text-[clamp(10px,7.5cqw,22px)] font-black italic uppercase leading-none tracking-wider shadow-lg'
 
@@ -40,7 +43,10 @@ function tileLabel(card: PickBanCardView, name: string, actorLabels: ActorLabels
             return `${name}, map ${card.mapNumber}, picked by ${by}`
         case 'decider':
             return `${name}, the decider, map ${card.mapNumber}`
+        case 'excluded':
+            return card.vetoedBy ? `${name}, vetoed by ${card.vetoedByName ?? 'a team'}` : `${name}, excluded`
         default:
+            if (card.pendingLabel) return `${name}, waiting on the ${card.pendingLabel.slice(0, -1)} map choice`
             return card.previewed ? `${name}, being considered` : name
     }
 }
@@ -50,6 +56,7 @@ function bylineOf(card: PickBanCardView, actorLabels: ActorLabels): string | nul
     if (card.state === 'decider') return 'Decider'
     if (card.state === 'banned') return `By ${by}`
     if (card.state === 'picked') return `Picked by ${by}`
+    if (card.vetoedBy) return `By ${card.vetoedByName ?? 'a team'}`
     return null
 }
 
@@ -62,6 +69,7 @@ export function MapTile({ card, previewActor, actorLabels, dimmed, imageSize, on
     const focusHue = PICK_BAN_HUES[focusToneKey]
     const focusTone = PICK_BAN_TONES[focusToneKey]
     const banned = card.state === 'banned'
+    const vetoed = card.state === 'excluded' && card.vetoedBy !== null
     const chosen = card.state === 'picked' || card.state === 'decider'
     const acted = banned || chosen
     const choosable = onSelect !== undefined && card.selectable
@@ -96,7 +104,7 @@ export function MapTile({ card, previewActor, actorLabels, dimmed, imageSize, on
                     alt=""
                     className={cn(
                         'absolute inset-0 size-full rounded-none border-0 transition-[filter,opacity,transform] duration-500',
-                        banned && 'grayscale brightness-[0.32]',
+                        (banned || vetoed) && 'grayscale brightness-[0.32]',
                         dimmed && 'brightness-[0.55] saturate-[0.7]',
                         choosable && 'group-hover/tile:scale-[1.04] group-hover/tile:brightness-100 group-hover/tile:saturate-100',
                     )}
@@ -119,6 +127,18 @@ export function MapTile({ card, previewActor, actorLabels, dimmed, imageSize, on
                             </span>
                             <span className={cn('text-[clamp(11px,12cqw,34px)] font-black italic uppercase leading-none tracking-[0.12em]', tone.text)}>Banned</span>
                         </motion.div>
+                    )}
+                    {vetoed && (
+                        <motion.div key="vetoed" {...STAMP_MOTION} className="absolute inset-0 flex items-center justify-center pb-[14cqw]">
+                            <span className={cn('-rotate-8 rounded-[3cqw] border-[1.5cqw] bg-black/40 px-[4cqw] py-[1.5cqw] text-[clamp(11px,12cqw,34px)] font-black italic uppercase leading-none tracking-[0.12em]', tone.border, tone.text)}>
+                                {VETOED_STAMP}
+                            </span>
+                        </motion.div>
+                    )}
+                    {card.pendingLabel && (
+                        <motion.span key="pending-choice" {...CHIP_MOTION} className={cn(BADGE, PENDING_BADGE)}>
+                            {card.pendingLabel}
+                        </motion.span>
                     )}
                     {chosen && (
                         <motion.span key="map-number" {...CHIP_MOTION} className={cn(BADGE, tone.solid, tone.onSolid)}>
@@ -145,7 +165,7 @@ export function MapTile({ card, previewActor, actorLabels, dimmed, imageSize, on
                     <p
                         className={cn(
                             'truncate text-[clamp(11px,9cqw,28px)] font-bold uppercase leading-none tracking-wide text-white',
-                            banned && 'text-white/55',
+                            (banned || vetoed) && 'text-white/55',
                         )}
                     >
                         {name}

@@ -1,7 +1,10 @@
 import { SIDE_COLORS, type SideColor } from '@/app/utils/api'
 import { sideColorTag, sideColorTone } from '@/app/utils/sideLabels'
 import type { PlateTag } from '@/app/components/broadcast/TeamPlate'
-import type { PickBanSideCardView, PickBanSideReveal, PickBanTeamPanel, PickBanTimelineEntry, PickBanView } from '../pickBanView'
+import { displayMapName } from '@/app/utils/format'
+import type { PickBanCardView, PickBanSideCardView, PickBanSideReveal, PickBanTeamPanel, PickBanTimelineEntry, PickBanVetoReveal, PickBanView } from '../pickBanView'
+import { eligibleCardsOf, excludedCardsOf } from '../components/ExcludedMaps'
+import { nextStepLabel } from '../components/StageScenes'
 
 export interface BroadcastSideOption {
     color: SideColor
@@ -9,9 +12,20 @@ export interface BroadcastSideOption {
     lead: string
 }
 
+export interface BroadcastVetoMap {
+    map: string
+    screenshotVersion: string | null
+}
+
+export interface BroadcastBoardCards {
+    cards: PickBanCardView[]
+    excludedLines: string[]
+}
+
 export type BroadcastMoment =
     | { kind: 'intro'; sidesLine: string | null }
-    | { kind: 'side_choice'; chooser: string; options: BroadcastSideOption[] }
+    | { kind: 'veto_reveal'; tag: string; reveal: PickBanVetoReveal; maps: BroadcastVetoMap[]; next: string | null }
+    | { kind: 'side_choice'; chooser: string; options: BroadcastSideOption[]; reason: string | null }
     | { kind: 'side_reveal'; reveal: PickBanSideReveal }
     | { kind: 'reveal'; entry: PickBanTimelineEntry }
     | { kind: 'lineup' }
@@ -27,9 +41,30 @@ function sideOptionsOf(cards: PickBanSideCardView[]): BroadcastSideOption[] {
     }))
 }
 
-export function broadcastMomentOf(view: PickBanView): BroadcastMoment | null {
+function vetoMapsOf(view: PickBanView, maps: string[]): BroadcastVetoMap[] {
+    return maps.map(map => ({ map, screenshotVersion: view.cards.find(card => card.map === map)?.screenshotVersion ?? null }))
+}
+
+function afterVetoOf(view: PickBanView): string | null {
     const { side } = view
-    if (side.phase === 'side_choice') return { kind: 'side_choice', chooser: side.chooserName ?? 'A team', options: sideOptionsOf(side.cards) }
+    if (!side.confirmed && side.chooserName) return `${side.chooserName} choose their side`
+    const first = view.timeline[0]
+    return first ? nextStepLabel(first) : null
+}
+
+export function broadcastMomentOf(view: PickBanView): BroadcastMoment | null {
+    const { side, veto } = view
+    if (veto?.phase === 'veto_spotlight' && veto.reveal) {
+        return { kind: 'veto_reveal', tag: veto.tag, reveal: veto.reveal, maps: vetoMapsOf(view, veto.maps), next: afterVetoOf(view) }
+    }
+    if (side.phase === 'side_choice') {
+        return {
+            kind: 'side_choice',
+            chooser: side.chooserName ?? 'A team',
+            options: sideOptionsOf(side.cards),
+            reason: veto ? side.chooserLine : null,
+        }
+    }
     if (side.phase === 'side_spotlight' && side.reveal) return { kind: 'side_reveal', reveal: side.reveal }
     switch (view.stagePhase) {
         case 'intro':
@@ -59,8 +94,26 @@ function halfOf(view: PickBanView, side: PickBanTeamPanel['side']): 'left' | 'ri
 
 export function broadcastBackdropLit(view: PickBanView): 'left' | 'right' | null {
     if (view.side.reveal) return halfOf(view, view.side.reveal.side)
+    if (view.veto?.reveal) return view.veto.reveal.side ? halfOf(view, view.veto.reveal.side) : null
     const acting = view.stagePhase === 'awaiting' ? view.turn?.ab ?? null : view.stagePhase === 'spotlight' ? view.spotlight?.actor ?? null : null
     if (acting === 'A') return 'left'
     if (acting === 'B') return 'right'
     return null
+}
+
+function vetoedByTeam(card: PickBanCardView): boolean {
+    return card.vetoedBy !== null
+}
+
+export function broadcastBoardOf(cards: PickBanCardView[]): BroadcastBoardCards {
+    const byTag = new Map<string, string[]>()
+    for (const card of excludedCardsOf(cards).filter(card => !vetoedByTeam(card))) {
+        const label = card.exclusion ? `${card.exclusion.tag} maps are out` : 'Excluded'
+        byTag.set(label, [...(byTag.get(label) ?? []), displayMapName(card.map)])
+    }
+    const eligible = new Set(eligibleCardsOf(cards))
+    return {
+        cards: cards.filter(card => eligible.has(card) || vetoedByTeam(card)),
+        excludedLines: [...byTag].map(([label, maps]) => `${label}: ${maps.join(' · ')}`),
+    }
 }

@@ -2,7 +2,7 @@ import type {
     MatchSideSource,
     PickBanActor,
     PickBanBlockingReason,
-    PickBanChooserReason,
+    PickBanChooserBasis,
     PickBanContractPhase,
     PickBanExclusion,
     PickBanFinalMap,
@@ -16,18 +16,33 @@ import type {
     PickBanSequenceAction,
     PickBanSessionStatus,
     PickBanSide,
+    PickBanSideBlock,
     PickBanSideCard,
     PickBanSidePhase,
     PickBanState,
     PickBanStepAction,
     PickBanUserRef,
+    PickBanVeto,
+    PickBanVetoPhase,
+    PickBanVetoPoolSizes,
     PickBanWarning,
     SideColor,
+    VetoChoice,
+    VetoOutcome,
 } from '@/app/utils/api'
 import { parseApiInstant } from '@/app/utils/timezone'
 import { sideColorName, sideColorOfLetter, sideColorTag, sideColorTitle, withSideColor } from '@/app/utils/sideLabels'
+import { chooserLine, type ChooserReason } from './chooserReasonCopy'
 
-export type PickBanViewState = Omit<PickBanState, 'phase'> & { phase: PickBanContractPhase | null }
+export type PickBanViewSideBlock = Omit<PickBanSideBlock, 'chooser_reason'> & { chooser_reason: ChooserReason | null }
+
+export type PickBanViewPacing = PickBanPacing & { veto_spotlight?: number }
+
+export type PickBanViewState = Omit<PickBanState, 'phase' | 'side' | 'pacing'> & {
+    phase: PickBanContractPhase | null
+    side: PickBanViewSideBlock
+    pacing: PickBanViewPacing
+}
 
 export type PickBanViewPhase = PickBanPhase | 'none'
 
@@ -85,6 +100,10 @@ export interface PickBanCardView {
     mapNumber: number | null
     exclusion: PickBanExclusion | null
     exclusionReason: string | null
+    pendingChoice: boolean
+    pendingLabel: string | null
+    vetoedBy: PickBanSide | null
+    vetoedByName: string | null
     previewed: boolean
     lockedIn: boolean
     selected: boolean
@@ -168,7 +187,11 @@ export interface PickBanManagerControls {
     lockForSide: boolean
     actForSide: PickBanSide | null
     actForSideChoice: PickBanSide | null
+    actForVeto: PickBanSide[]
+    undoTarget: PickBanUndoTarget | null
 }
+
+export type PickBanUndoTarget = 'step' | 'side' | 'veto'
 
 export interface PickBanSequenceSource {
     presetId: PickBanPresetId | null
@@ -220,7 +243,9 @@ export interface PickBanSideView {
     source: MatchSideSource | null
     chooser: PickBanSide | null
     chooserName: string | null
-    chooserReason: PickBanChooserReason | null
+    chooserReason: ChooserReason | null
+    chooserBasis: PickBanChooserBasis | null
+    chooserLine: string | null
     canChoose: boolean
     viewerChooses: boolean
     waiting: string | null
@@ -229,6 +254,44 @@ export interface PickBanSideView {
     introLine: string | null
     notice: string | null
     cards: PickBanSideCardView[]
+}
+
+export interface PickBanVetoChoiceView {
+    side: PickBanSide
+    teamName: string
+    choice: VetoChoice | null
+}
+
+export interface PickBanVetoReveal {
+    id: string
+    outcome: VetoOutcome
+    side: PickBanSide | null
+    teamName: string | null
+    text: string
+    mapCount: number
+    revealAt: number | null
+}
+
+export interface PickBanVetoView {
+    phase: PickBanVetoPhase | null
+    active: boolean
+    tag: string
+    minPreCupSeed: number
+    maps: string[]
+    eligible: PickBanSide[]
+    eligibleNames: string[]
+    choices: PickBanVetoChoiceView[]
+    outcome: VetoOutcome | null
+    vetoedBy: PickBanSide | null
+    vetoedByName: string | null
+    poolSizes: PickBanVetoPoolSizes
+    poolLine: string | null
+    canVeto: boolean
+    viewerEligible: boolean
+    viewerChoice: VetoChoice | null
+    viewerChooses: boolean
+    waiting: string | null
+    reveal: PickBanVetoReveal | null
 }
 
 export interface PickBanView {
@@ -246,6 +309,7 @@ export interface PickBanView {
     summary: PickBanSummaryEntry[]
     teams: { left: PickBanTeamPanel | null; right: PickBanTeamPanel | null }
     side: PickBanSideView
+    veto: PickBanVetoView | null
     banners: PickBanBanner[]
     affordances: PickBanAffordances
     edited: boolean
@@ -254,7 +318,19 @@ export interface PickBanView {
     scene: PickBanScene
 }
 
-export type PickBanSceneKind = 'none' | 'lobby' | 'intro' | 'side_choice' | 'side_reveal' | 'turn' | 'reveal' | 'complete' | 'cancelled' | 'voided'
+export type PickBanSceneKind =
+    | 'none'
+    | 'lobby'
+    | 'intro'
+    | 'veto_choice'
+    | 'veto_reveal'
+    | 'side_choice'
+    | 'side_reveal'
+    | 'turn'
+    | 'reveal'
+    | 'complete'
+    | 'cancelled'
+    | 'voided'
 
 export interface PickBanScene {
     key: string
@@ -272,7 +348,7 @@ export interface PickBanClock {
 }
 
 
-type LivePhase = 'lobby' | 'intro' | PickBanSidePhase | 'awaiting' | 'spotlight' | 'complete'
+type LivePhase = 'lobby' | 'intro' | PickBanVetoPhase | PickBanSidePhase | 'awaiting' | 'spotlight' | 'complete'
 
 interface LiveTiming {
     phase: LivePhase
@@ -360,11 +436,17 @@ function warningMessage(warning: PickBanWarning): string {
 
 function exclusionReasonOf(state: PickBanViewState, exclusion: PickBanExclusion | null): string | null {
     if (!exclusion) return null
+    const vetoedBy = vetoedByOf(exclusion)
+    if (vetoedBy !== null) return `${exclusion.tag} maps are vetoed by ${teamNameOf(state, vetoedBy) ?? 'a team'}.`
     const triggers = exclusion.triggered_by
         .map((trigger) => `${teamNameOf(state, trigger.side) ?? trigger.team_id} has pre-cup seed ${trigger.pre_cup_seed}`)
         .join(' and ')
     if (!triggers) return `${exclusion.tag} maps are excluded for this match.`
     return `${exclusion.tag} maps are excluded because ${triggers} (${exclusion.min_pre_cup_seed} or higher).`
+}
+
+function vetoedByOf(exclusion: PickBanExclusion | null): PickBanSide | null {
+    return exclusion?.mode === 'choice' ? exclusion.vetoed_by ?? null : null
 }
 
 function colorOfActor(actor: PickBanActor | null): SideColor | null {
@@ -405,6 +487,8 @@ export function actionTagOf(turn: Pick<PickBanTurn, 'action' | 'actorLabel'>): s
 const STAGE_PHASE_OF_LIVE_PHASE: Record<LivePhase, PickBanStagePhase> = {
     lobby: 'lobby',
     intro: 'intro',
+    veto_choice: 'awaiting',
+    veto_spotlight: 'spotlight',
     side_choice: 'awaiting',
     side_spotlight: 'spotlight',
     awaiting: 'awaiting',
@@ -419,6 +503,18 @@ function stagePhaseOf(status: PickBanSessionStatus, livePhase: LivePhase): PickB
 
 function isSidePhase(phase: LivePhase): phase is PickBanSidePhase {
     return phase === 'side_choice' || phase === 'side_spotlight'
+}
+
+function isVetoPhase(phase: LivePhase): phase is PickBanVetoPhase {
+    return phase === 'veto_choice' || phase === 'veto_spotlight'
+}
+
+function activeVetoOf(state: PickBanViewState): PickBanVeto | null {
+    return state.veto?.active ? state.veto : null
+}
+
+function vetoChoiceOf(veto: PickBanVeto, side: PickBanSide): VetoChoice | null {
+    return veto.choices[side] ?? null
 }
 
 export interface PickBanRevealedSteps {
@@ -465,10 +561,30 @@ function sideSpotlightEndOf(state: PickBanViewState): number | null {
     return state.side.source === 'step0' && state.phase === 'side_spotlight' ? parseApiInstant(state.phase_ends_at) : null
 }
 
-function sideStepTiming(moment: Moment, introEnd: number | null): LiveTiming | null {
+function vetoSpotlightEndOf(state: PickBanViewState): number | null {
+    const veto = activeVetoOf(state)
+    if (!veto || veto.outcome === null) return null
+    const phaseEnd = state.phase === 'veto_spotlight' ? parseApiInstant(state.phase_ends_at) : null
+    if (phaseEnd !== null) return phaseEnd
+    const revealAt = parseApiInstant(veto.reveal_at)
+    const length = state.pacing.veto_spotlight
+    return revealAt === null || length === undefined ? null : revealAt + length * 1000
+}
+
+function vetoStepTiming(moment: Moment, introEnd: number | null): LiveTiming | null {
+    const { state, clock } = moment
+    const veto = activeVetoOf(state)
+    if (!veto || moment.steps.some(isExecuted)) return null
+    if (veto.outcome === null) return { phase: 'veto_choice', startsAt: introEnd, endsAt: null }
+    const spotlightEnd = vetoSpotlightEndOf(state)
+    if (spotlightEnd === null || clock >= spotlightEnd) return null
+    return { phase: 'veto_spotlight', startsAt: parseApiInstant(veto.resolved_at), endsAt: spotlightEnd }
+}
+
+function sideStepTiming(moment: Moment, opensAt: number | null): LiveTiming | null {
     const { state, clock } = moment
     if (moment.steps.some(isExecuted)) return null
-    if (state.side.red === null && state.side.chooser !== null) return { phase: 'side_choice', startsAt: introEnd, endsAt: null }
+    if (state.side.red === null && state.side.chooser !== null) return { phase: 'side_choice', startsAt: opensAt, endsAt: null }
     const spotlightEnd = sideSpotlightEndOf(state)
     if (spotlightEnd === null || clock >= spotlightEnd) return null
     return { phase: 'side_spotlight', startsAt: parseApiInstant(state.side.set_at), endsAt: spotlightEnd }
@@ -481,7 +597,10 @@ function liveTiming(moment: Moment): LiveTiming {
     if (introStart !== null && clock < introStart) return IDLE_TIMING
     const introEnd = parseApiInstant(state.intro_ends_at)
     if (introEnd !== null && clock < introEnd) return { phase: 'intro', startsAt: introStart, endsAt: introEnd }
-    const sideStep = sideStepTiming(moment, introEnd)
+    const vetoStep = vetoStepTiming(moment, introEnd)
+    if (vetoStep) return vetoStep
+    const stepsOpenAt = vetoSpotlightEndOf(state) ?? introEnd
+    const sideStep = sideStepTiming(moment, stepsOpenAt)
     if (sideStep) return sideStep
     const settledPhase = currentStep ? 'awaiting' : 'complete'
     if (lastRevealed) {
@@ -489,7 +608,7 @@ function liveTiming(moment: Moment): LiveTiming {
         if (clock < spotlightEnd) return { phase: 'spotlight', startsAt: revealAtOf(lastRevealed), endsAt: spotlightEnd }
         return { phase: settledPhase, startsAt: spotlightEnd, endsAt: null }
     }
-    return { phase: settledPhase, startsAt: sideSpotlightEndOf(state) ?? introEnd, endsAt: null }
+    return { phase: settledPhase, startsAt: sideSpotlightEndOf(state) ?? stepsOpenAt, endsAt: null }
 }
 
 function countdownOf(moment: Moment, timing: LiveTiming): PickBanCountdown | null {
@@ -511,6 +630,8 @@ function managerControlsOf(moment: Moment, awaitedStep: PickBanPlanStep | null, 
     const humanStepIn = steps.some((step) => isExecuted(step) && !step.automatic)
     const lockForSide = state.viewer.side === null
     const beforeFirstStep = status === 'lobby' || (status === 'running' && !steps.some(isExecuted))
+    const veto = activeVetoOf(state)
+    const undoTarget = status === 'running' || status === 'paused' ? undoTargetOf(state, humanStepIn) : null
     return {
         open: status === 'none' || status === 'cancelled' || status === 'voided',
         start: status === 'lobby',
@@ -522,7 +643,7 @@ function managerControlsOf(moment: Moment, awaitedStep: PickBanPlanStep | null, 
         overrideSequence: status === 'lobby',
         pause: status === 'running',
         resume: status === 'paused',
-        undo: (status === 'running' || status === 'paused') && humanStepIn,
+        undo: undoTarget !== null,
         reopen: status === 'complete' && humanStepIn,
         restart: live,
         cancel: status === 'lobby' || live,
@@ -531,7 +652,17 @@ function managerControlsOf(moment: Moment, awaitedStep: PickBanPlanStep | null, 
         lockForSide,
         actForSide: lockForSide && status === 'running' && awaitedStep ? awaitedStep.side : null,
         actForSideChoice: lockForSide && status === 'running' && livePhase === 'side_choice' ? state.side.chooser : null,
+        actForVeto: lockForSide && status === 'running' && livePhase === 'veto_choice' && veto
+            ? veto.eligible.filter((side) => vetoChoiceOf(veto, side) === null)
+            : [],
+        undoTarget,
     }
+}
+
+function undoTargetOf(state: PickBanViewState, humanStepIn: boolean): PickBanUndoTarget | null {
+    if (humanStepIn) return 'step'
+    if (!activeVetoOf(state)?.outcome) return null
+    return state.side.confirmed && state.side.source === 'step0' ? 'side' : 'veto'
 }
 
 function affordancesOf(moment: Moment, awaitedStep: PickBanPlanStep | null, livePhase: LivePhase): PickBanAffordances {
@@ -600,6 +731,8 @@ function cardsOf(moment: Moment, awaitedStep: PickBanPlanStep | null, canChoose:
         if (step) cardState = CARD_STATE_OF_ACTION[step.action]
         else if (poolCard.excluded) cardState = 'excluded'
         const available = cardState === 'available'
+        const vetoedBy = vetoedByOf(poolCard.exclusion)
+        const pendingChoice = available && poolCard.pending_choice === true
         return {
             key: poolCard.map,
             map: poolCard.map,
@@ -613,6 +746,10 @@ function cardsOf(moment: Moment, awaitedStep: PickBanPlanStep | null, canChoose:
             mapNumber: step?.map_number ?? null,
             exclusion: poolCard.exclusion,
             exclusionReason: exclusionReasonOf(state, poolCard.exclusion),
+            pendingChoice,
+            pendingLabel: pendingChoice ? `${state.veto?.tag ?? poolCard.tags[0] ?? 'Map'}?` : null,
+            vetoedBy,
+            vetoedByName: teamNameOf(state, vetoedBy),
             previewed: available
                 && awaitedStep !== null
                 && preview !== null
@@ -808,6 +945,8 @@ function sideViewOf(moment: Moment, livePhase: LivePhase): PickBanSideView {
         chooser: side.chooser,
         chooserName,
         chooserReason: side.chooser_reason,
+        chooserBasis: side.chooser_basis ?? null,
+        chooserLine: chooserName !== null && side.chooser_reason !== null ? chooserLine(chooserName, side.chooser_reason, side.chooser_basis) : null,
         canChoose: phase === 'side_choice' && state.status === 'running' && state.capabilities.can_choose_side,
         viewerChooses: phase === 'side_choice' && side.chooser !== null && side.chooser === state.capabilities.acting_side,
         waiting: phase === 'side_choice' ? `${chooserName ?? 'A team'} are choosing their side` : null,
@@ -816,6 +955,62 @@ function sideViewOf(moment: Moment, livePhase: LivePhase): PickBanSideView {
         introLine: side.confirmed && side.source !== null ? SIDE_INTRO_LINES[side.source] : null,
         notice: side.changed_mid_veto ? SIDES_CHANGED_NOTICE : null,
         cards: sideCardsOf(moment),
+    }
+}
+
+function joinTeamNames(names: string[]): string {
+    return names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}` : names[0] ?? 'The teams'
+}
+
+function vetoRevealOf(moment: Moment, veto: PickBanVeto, outcome: VetoOutcome): PickBanVetoReveal {
+    const revealAt = parseApiInstant(veto.reveal_at)
+    const side = outcome === 'vetoed' ? veto.vetoed_by : null
+    const teamName = teamNameOf(moment.state, side)
+    return {
+        id: veto.resolved_at ?? veto.reveal_at ?? outcome,
+        outcome,
+        side,
+        teamName,
+        text: outcome === 'vetoed' ? `${teamName ?? 'A team'} veto the ${veto.tag} maps` : `${veto.tag} maps stay in`,
+        mapCount: outcome === 'vetoed' ? veto.pool_sizes.vetoed : veto.pool_sizes.played,
+        revealAt: revealAt === null ? null : moment.toLocal(revealAt),
+    }
+}
+
+function vetoWaitingOf(veto: PickBanVeto, choices: PickBanVetoChoiceView[], viewer: PickBanVetoChoiceView | null): string | null {
+    if (viewer?.choice === null) return null
+    const deciding = joinTeamNames(choices.filter((entry) => entry.choice === null).map((entry) => entry.teamName))
+    return viewer ? `Waiting for ${deciding}` : `${deciding} are deciding on the ${veto.tag} maps`
+}
+
+function vetoViewOf(moment: Moment, livePhase: LivePhase): PickBanVetoView | null {
+    const { state } = moment
+    const { veto } = state
+    if (!veto) return null
+    const phase = isVetoPhase(livePhase) ? livePhase : null
+    const choosing = phase === 'veto_choice'
+    const choices = veto.eligible.map((side) => ({ side, teamName: teamNameOf(state, side) ?? 'TBD', choice: vetoChoiceOf(veto, side) }))
+    const viewer = choices.find((entry) => entry.side === state.capabilities.acting_side) ?? null
+    return {
+        phase,
+        active: veto.active,
+        tag: veto.tag,
+        minPreCupSeed: veto.min_pre_cup_seed,
+        maps: veto.maps,
+        eligible: veto.eligible,
+        eligibleNames: choices.map((entry) => entry.teamName),
+        choices,
+        outcome: veto.outcome,
+        vetoedBy: veto.vetoed_by,
+        vetoedByName: teamNameOf(state, veto.vetoed_by),
+        poolSizes: veto.pool_sizes,
+        poolLine: veto.active && veto.outcome === null ? `${veto.pool_sizes.played} or ${veto.pool_sizes.vetoed} maps` : null,
+        canVeto: choosing && state.status === 'running' && state.capabilities.can_veto === true,
+        viewerEligible: viewer !== null,
+        viewerChoice: viewer?.choice ?? null,
+        viewerChooses: choosing && viewer !== null && viewer.choice === null,
+        waiting: choosing ? vetoWaitingOf(veto, choices, viewer) : null,
+        reveal: phase === 'veto_spotlight' && veto.outcome !== null ? vetoRevealOf(moment, veto, veto.outcome) : null,
     }
 }
 
@@ -871,6 +1066,7 @@ export function buildPickBanView(state: PickBanViewState, clock: PickBanClock): 
         summary: summaryOf(moment),
         teams: { left: panelOf(moment, leftSide, awaitedStep), right: panelOf(moment, otherSide(leftSide), awaitedStep) },
         side: sideViewOf(moment, timing.phase),
+        veto: vetoViewOf(moment, timing.phase),
         banners: bannersOf(moment),
         affordances,
         edited: state.edited,
@@ -885,6 +1081,8 @@ type SceneIdentity = Pick<PickBanScene, 'key' | 'kind' | 'position'>
 function sceneIdentityOf(moment: Moment, stagePhase: PickBanStagePhase, livePhase: LivePhase): SceneIdentity {
     const { currentStep, lastRevealed, steps } = moment
     const end = 2 + 2 * steps.length
+    if (livePhase === 'veto_choice') return { key: 'veto-choice', kind: 'veto_choice', position: 1.1 }
+    if (livePhase === 'veto_spotlight') return { key: 'veto-reveal', kind: 'veto_reveal', position: 1.2 }
     if (livePhase === 'side_choice') return { key: 'side-choice', kind: 'side_choice', position: 1.25 }
     if (livePhase === 'side_spotlight') return { key: 'side-reveal', kind: 'side_reveal', position: 1.5 }
     if (stagePhase === 'awaiting' && currentStep) {

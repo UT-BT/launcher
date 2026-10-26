@@ -4,7 +4,7 @@ import { CalendarClock, ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { SideColor } from '@/app/utils/api'
 import { SIDES_TBC, sideColorTone, withSideColor, youreSideLabel } from '@/app/utils/sideLabels'
-import type { PickBanCardView, PickBanSideReveal, PickBanSideView, PickBanTurn, PickBanView } from '../pickBanView'
+import type { PickBanCardView, PickBanSideReveal, PickBanSideView, PickBanTurn, PickBanVetoReveal, PickBanVetoView, PickBanView } from '../pickBanView'
 import { PICK_BAN_HUES, PICK_BAN_TONES, stepTone, tint } from '@/app/components/broadcast/broadcastTone'
 
 const CHEVRONS = [0, 1, 2]
@@ -42,6 +42,8 @@ function CaptionContent({ view }: { view: PickBanView }) {
         case 'intro':
         case 'awaiting':
         case 'spotlight':
+            if (view.veto?.phase === 'veto_choice') return <VetoChoiceCaption veto={view.veto} />
+            if (view.veto?.phase === 'veto_spotlight' && view.veto.reveal) return <VetoRevealCaption tag={view.veto.tag} reveal={view.veto.reveal} />
             if (view.side.phase === 'side_choice') return <SideChoiceCaption side={view.side} />
             if (view.side.phase === 'side_spotlight' && view.side.reveal) return <SideRevealCaption reveal={view.side.reveal} viewerColor={view.side.viewerColor} />
             return view.turn
@@ -58,6 +60,30 @@ function Notice({ kicker, title, detail }: { kicker: ReactNode; title: string; d
             <p className={KICKER}>{kicker}</p>
             <h2 className={cn(TITLE, 'text-foreground')}>{title}</h2>
             {detail && <p className={DETAIL}>{detail}</p>}
+        </>
+    )
+}
+
+function VetoChoiceCaption({ veto }: { veto: PickBanVetoView }) {
+    const yours = veto.canVeto || veto.viewerChooses
+
+    return (
+        <>
+            <p className={KICKER}>{veto.tag} maps</p>
+            <h2 className={cn(TITLE, 'min-w-0 break-words text-foreground')}>{yours ? `Veto or play the ${veto.tag} maps` : veto.waiting}</h2>
+            <p className={cn(DETAIL, veto.canVeto && 'font-semibold text-foreground')}>
+                {veto.canVeto ? 'Your call: choose below, then lock it in' : veto.poolLine}
+            </p>
+        </>
+    )
+}
+
+function VetoRevealCaption({ tag, reveal }: { tag: string; reveal: PickBanVetoReveal }) {
+    return (
+        <>
+            <p className={KICKER}>{tag} maps</p>
+            <h2 className={cn(TITLE, 'min-w-0 break-words', PICK_BAN_TONES.gold.text)}>{reveal.text}</h2>
+            <p className={DETAIL}>{reveal.mapCount} maps in the pool</p>
         </>
     )
 }

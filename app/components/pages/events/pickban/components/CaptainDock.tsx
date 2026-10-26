@@ -2,10 +2,10 @@ import { useState, type ReactNode } from 'react'
 import { AlertTriangle, Check, Loader2, Lock, WifiOff, X, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { displayMapName } from '@/app/utils/format'
-import type { PickBanActor, PickBanStepAction, SideColor } from '@/app/utils/api'
+import type { PickBanActor, PickBanStepAction, SideColor, VetoChoice } from '@/app/utils/api'
 import { sideColorName, sideColorTitle, sideColorTone } from '@/app/utils/sideLabels'
 import type { CaptainControls, CaptainDock as CaptainDockModel } from '../captainPlay'
-import { actionTagOf, type PickBanSideCardView, type PickBanSideView, type PickBanTurn } from '../pickBanView'
+import { actionTagOf, type PickBanCountdown, type PickBanSideCardView, type PickBanSideView, type PickBanTurn, type PickBanVetoView } from '../pickBanView'
 import { CountdownBar, CountdownText } from './Countdown'
 import { YoureSide } from './YoureSide'
 import { PICK_BAN_TONES, stepTone, teamTone, type PickBanToneClasses } from '@/app/components/broadcast/broadcastTone'
@@ -20,6 +20,10 @@ interface CaptainDockProps {
     side?: PickBanSideView
     choosingSide?: SideColor | null
     onChooseSide?: (color: SideColor) => void
+    veto?: PickBanVetoView
+    vetoCountdown?: PickBanCountdown | null
+    choosingVeto?: VetoChoice | null
+    onVeto?: (choice: VetoChoice) => void
     onDismiss: () => void
     className?: string
 }
@@ -50,7 +54,23 @@ function upNext(next: PickBanTurn | null): string {
     return `Next: ${actionTagOf(next)}`
 }
 
-export function CaptainDock({ dock, ab, reconnecting, actingFor, onLockIn, onToggleReady, side, choosingSide = null, onChooseSide, onDismiss, className }: CaptainDockProps) {
+export function CaptainDock({
+    dock,
+    ab,
+    reconnecting,
+    actingFor,
+    onLockIn,
+    onToggleReady,
+    side,
+    choosingSide = null,
+    onChooseSide,
+    veto,
+    vetoCountdown = null,
+    choosingVeto = null,
+    onVeto,
+    onDismiss,
+    className,
+}: CaptainDockProps) {
     const tone = PICK_BAN_TONES[teamTone(ab)]
 
     return (
@@ -60,6 +80,7 @@ export function CaptainDock({ dock, ab, reconnecting, actingFor, onLockIn, onTog
         >
             <span aria-hidden className={cn('absolute inset-0 -z-10 bg-gradient-to-r to-transparent to-70%', tone.wash)} />
             {dock.rejection && <Rejection message={dock.rejection} onDismiss={onDismiss} />}
+            {veto && <VetoStep veto={veto} countdown={vetoCountdown} choosing={choosingVeto} onChoose={onVeto} />}
             {side && <SideStep side={side} choosing={choosingSide} onChoose={onChooseSide} />}
             {dock.controls && <Controls controls={dock.controls} tone={tone} actingFor={actingFor} onLockIn={onLockIn} onToggleReady={onToggleReady} />}
             {reconnecting && (
@@ -191,6 +212,151 @@ function Controls({ controls, tone, actingFor, onLockIn, onToggleReady }: {
                 />
             )
     }
+}
+
+const VETO_TONE = PICK_BAN_TONES.gold
+
+function vetoDetail(veto: PickBanVetoView): string {
+    if (veto.viewerChoice === 'play') return `You chose to play the ${veto.tag} maps. One veto is enough to remove them.`
+    return `A veto removes the ${veto.maps.length} ${veto.tag} maps and leaves ${veto.poolSizes.vetoed}; otherwise all ${veto.poolSizes.played} are played.`
+}
+
+function VetoStep({ veto, countdown, choosing, onChoose }: {
+    veto: PickBanVetoView
+    countdown: PickBanCountdown | null
+    choosing: VetoChoice | null
+    onChoose?: (choice: VetoChoice) => void
+}) {
+    if (veto.phase === 'veto_choice' && veto.canVeto && onChoose) return <VetoChoiceCards veto={veto} choosing={choosing} onChoose={onChoose} />
+    if (veto.phase === 'veto_choice' && veto.viewerChooses) {
+        return (
+            <ControlRow
+                eyebrow={<Eyebrow className="text-muted-foreground">{veto.tag} maps</Eyebrow>}
+                title={`Veto or play the ${veto.tag} maps`}
+                detail="Your choice unlocks when an admin resumes."
+                action={<LockedButton icon={Lock} label="Locked" />}
+            />
+        )
+    }
+    if (veto.phase === 'veto_choice') {
+        return (
+            <ControlRow
+                eyebrow={<Eyebrow className="text-muted-foreground">{veto.tag} maps</Eyebrow>}
+                title={veto.waiting ?? `Deciding on the ${veto.tag} maps`}
+                detail={vetoDetail(veto)}
+                action={<LockedButton icon={veto.viewerChoice ? Check : Lock} label={veto.viewerChoice ? 'Locked In' : 'Locked'} />}
+            />
+        )
+    }
+    if (veto.phase === 'veto_spotlight' && veto.reveal) {
+        return (
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-hairline/10 pb-3">
+                <Eyebrow className="text-muted-foreground">
+                    {veto.tag} maps
+                    {countdown && (
+                        <>
+                            <span aria-hidden> · </span>
+                            <CountdownText countdown={countdown} className="text-foreground" />
+                        </>
+                    )}
+                </Eyebrow>
+                <p aria-live="polite" className={cn('min-w-0 break-words font-pickban text-lg font-black italic uppercase leading-none tracking-tight', VETO_TONE.text)}>
+                    {veto.reveal.text}
+                </p>
+                <p className="text-xs text-muted-foreground sm:ml-auto">{veto.reveal.mapCount} maps</p>
+            </div>
+        )
+    }
+    return null
+}
+
+function VetoChoiceCards({ veto, choosing, onChoose }: {
+    veto: PickBanVetoView
+    choosing: VetoChoice | null
+    onChoose: (choice: VetoChoice) => void
+}) {
+    const [selected, setSelected] = useState<VetoChoice | null>(null)
+    const busy = choosing !== null
+
+    return (
+        <div className="flex flex-col gap-3">
+            <div className="space-y-1">
+                <Eyebrow className="text-foreground">Your call</Eyebrow>
+                <p aria-live="polite" className="break-words font-pickban text-2xl font-black italic uppercase leading-none tracking-tight text-foreground">
+                    Veto or play the {veto.tag} maps
+                </p>
+                <p className="text-xs text-muted-foreground">One veto removes them for both teams, for every map of the match.</p>
+            </div>
+            <div role="radiogroup" aria-label={`${veto.tag} maps`} className="grid gap-3 sm:grid-cols-2">
+                <VetoCard
+                    title={`Veto ${veto.tag} maps`}
+                    lead={`Play ${veto.poolSizes.vetoed} maps`}
+                    maps={veto.maps}
+                    selected={selected === 'veto'}
+                    disabled={busy}
+                    onSelect={() => setSelected('veto')}
+                />
+                <VetoCard
+                    title={`Play ${veto.tag} maps`}
+                    lead={`Play ${veto.poolSizes.played} maps`}
+                    selected={selected === 'play'}
+                    disabled={busy}
+                    onSelect={() => setSelected('play')}
+                />
+            </div>
+            <div className="flex justify-end">
+                <button
+                    type="button"
+                    onClick={() => selected && onChoose(selected)}
+                    disabled={selected === null || busy}
+                    className={cn(
+                        BUTTON,
+                        'cursor-pointer border-transparent hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:brightness-100',
+                        selected ? cn(VETO_TONE.solid, VETO_TONE.onSolid) : 'bg-hairline/10 text-muted-foreground',
+                    )}
+                >
+                    {busy ? <Loader2 className="size-4 animate-spin" /> : <Lock className="size-4" />}
+                    {selected === 'veto' ? 'Lock In Veto' : selected === 'play' ? 'Lock In Play' : 'Lock In'}
+                </button>
+            </div>
+        </div>
+    )
+}
+
+function VetoCard({ title, lead, maps = [], selected, disabled, onSelect }: {
+    title: string
+    lead: string
+    maps?: string[]
+    selected: boolean
+    disabled: boolean
+    onSelect: () => void
+}) {
+    return (
+        <button
+            type="button"
+            role="radio"
+            aria-checked={selected}
+            onClick={onSelect}
+            disabled={disabled}
+            className={cn(
+                'flex min-h-28 cursor-pointer flex-col items-start gap-2 rounded-xl border-2 p-3 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60 sm:p-4',
+                VETO_TONE.line,
+                selected ? cn(VETO_TONE.soft, VETO_TONE.border, 'ring-2', VETO_TONE.ring) : 'bg-card/40 hover:bg-hairline/5',
+            )}
+        >
+            <span className={cn('font-pickban text-3xl font-black italic uppercase leading-none tracking-tight', VETO_TONE.text)}>{title}</span>
+            <span className="text-sm font-semibold text-foreground">{lead}</span>
+            {maps.length > 0 && (
+                <ul className="flex flex-wrap gap-1.5" aria-label="Maps removed">
+                    {maps.map(map => (
+                        <li key={map} className="rounded-md border border-hairline/10 bg-card/60 px-1.5 py-0.5 text-[11px] text-muted-foreground">
+                            {displayMapName(map)}
+                        </li>
+                    ))}
+                </ul>
+            )}
+        </button>
+    )
 }
 
 function SideStep({ side, choosing, onChoose }: {

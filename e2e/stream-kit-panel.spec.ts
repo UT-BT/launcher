@@ -155,7 +155,7 @@ test('a streamer who never downloaded the kit is asked to import it', async ({ p
 test('an outdated kit shows the re-import banner and a current kit does not', async ({ page }) => {
     await mockApi(page, { currentVersion: 3, downloadedVersion: 2, zipRequests: [] })
     await openKitPanel(page)
-    await expect(page.getByRole('status').filter({ hasText: 'out of date' })).toBeVisible()
+    await expect(page.getByRole('status').filter({ hasText: 'Kit updated — re-import to get Predictor Standings' })).toBeVisible()
     await expect(page.getByRole('status').filter({ hasText: 'Scene Collection > Import' })).toBeVisible()
 })
 

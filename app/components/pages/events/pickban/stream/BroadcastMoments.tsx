@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { motion, type Variants } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
@@ -6,17 +6,23 @@ import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { displayMapName } from '@/app/utils/format'
 import { toActiveTitle } from '@/app/utils/api'
 import { sideColorTag, sideColorTone } from '@/app/utils/sideLabels'
-import { type PickBanCountdown, type PickBanSideReveal, type PickBanTeamPanel, type PickBanTimelineEntry, type PickBanTurn } from '../pickBanView'
+import { type PickBanCountdown, type PickBanSideReveal, type PickBanTeamPanel, type PickBanTimelineEntry, type PickBanTurn, type PickBanVetoReveal } from '../pickBanView'
 import { CountdownBar, IntroCountdownWords } from '../components/Countdown'
-import { DECIDER_LETTERS, frameOf, nextStepLabel, revealByline, revealKindOf, shakeOf } from '../components/StageScenes'
+import { DECIDER_LETTERS, VETOED_STAMP, frameOf, nextStepLabel, revealByline, revealKindOf, shakeOf, vetoRevealMotion, type VetoRevealMotion } from '../components/StageScenes'
 import { Aura, ConfettiBurst, Flash, Rays, Ribbon, Shockwave, SparkBurst, Strike } from '../components/RevealEffects'
 import { PICK_BAN_HUES, PICK_BAN_TONES, stepTone, teamTone, tint } from '@/app/components/broadcast/broadcastTone'
 import { choreography } from '../components/stageMotion'
-import type { BroadcastSideOption } from './broadcastMoment'
+import type { BroadcastSideOption, BroadcastVetoMap } from './broadcastMoment'
 
 const MOMENT_KICKER = 'text-[26px] font-bold uppercase leading-none tracking-[0.3em] text-white/55'
 
 const REVEAL_TAG_PX = 168
+
+const VETO_CARD_PX = 360
+
+const GOLD = PICK_BAN_TONES.gold
+
+const GOLD_HUE = PICK_BAN_HUES.gold
 
 export function BroadcastIntro({ left, right, countdown, sidesLine, entranceMs }: {
     left: PickBanTeamPanel | null
@@ -52,7 +58,12 @@ export function BroadcastIntro({ left, right, countdown, sidesLine, entranceMs }
     )
 }
 
-export function BroadcastSideChoice({ chooser, options, entranceMs }: { chooser: string; options: BroadcastSideOption[]; entranceMs: number }) {
+export function BroadcastSideChoice({ chooser, options, reason, entranceMs }: {
+    chooser: string
+    options: BroadcastSideOption[]
+    reason: string | null
+    entranceMs: number
+}) {
     const motionOf = useMemo(() => choreography(entranceMs), [entranceMs])
 
     return (
@@ -63,6 +74,7 @@ export function BroadcastSideChoice({ chooser, options, entranceMs }: { chooser:
                     {chooser}
                 </p>
                 <p className="text-[44px] font-black italic uppercase leading-none text-white/85">choose their side</p>
+                {reason && <p data-chooser-reason className="mt-2 max-w-full truncate text-[28px] font-bold uppercase leading-none tracking-[0.2em] text-white/70">{reason}</p>}
             </motion.div>
             <div className="flex items-stretch gap-10">
                 {options.map((option, index) => (
@@ -130,6 +142,99 @@ export function BroadcastSideReveal({ reveal, countdown, upNext, entranceMs }: {
                 </p>
             </motion.div>
         </motion.div>
+    )
+}
+
+export function BroadcastVetoReveal({ tag, reveal, maps, next, countdown, entranceMs }: {
+    tag: string
+    reveal: PickBanVetoReveal
+    maps: BroadcastVetoMap[]
+    next: string | null
+    countdown: PickBanCountdown | null
+    entranceMs: number
+}) {
+    const motionOf = useMemo(() => choreography(entranceMs), [entranceMs])
+    const [leadS] = useState(() => Math.max(0, ((reveal.revealAt ?? 0) - Date.now()) / 1000))
+    const vetoMotion = useMemo(() => vetoRevealMotion(leadS), [leadS])
+    const vetoed = reveal.outcome === 'vetoed'
+
+    return (
+        <motion.div
+            data-broadcast-moment="veto-reveal"
+            data-veto-outcome={reveal.outcome}
+            initial={leadS > 0 ? 'hidden' : false}
+            animate="shown"
+            className="flex w-full flex-col items-center gap-7 text-center"
+        >
+            <motion.p variants={motionOf.fromLeft} className={MOMENT_KICKER}>{tag}-map veto</motion.p>
+            <ul className="flex items-start gap-10">
+                {maps.map((map, order) => (
+                    <VetoMapCard
+                        key={map.map}
+                        map={map}
+                        tag={tag}
+                        vetoed={vetoed}
+                        order={order}
+                        entrance={order < maps.length / 2 ? motionOf.fromLeft : motionOf.fromRight}
+                        vetoMotion={vetoMotion}
+                    />
+                ))}
+            </ul>
+            <motion.div variants={vetoMotion.outcome} className="flex min-w-0 max-w-[1500px] flex-col items-center gap-3">
+                <p className="max-w-full truncate text-[72px] font-black italic uppercase leading-none tracking-tight text-white [text-shadow:0_6px_30px_rgba(0,0,0,0.6)]">
+                    {reveal.text}
+                </p>
+                <p className={cn('text-[34px] font-bold uppercase leading-none tracking-[0.16em]', GOLD.text)}>{reveal.mapCount} maps in play</p>
+            </motion.div>
+            <motion.div variants={motionOf.caption} className="flex flex-col items-center gap-3">
+                <CountdownBar countdown={countdown} tone="gold" className="h-2 w-[560px] bg-white/10" />
+                <p className={cn('text-xl font-bold uppercase tracking-[0.2em] text-white/55', !next && 'invisible')}>Next: {next ?? ''}</p>
+            </motion.div>
+        </motion.div>
+    )
+}
+
+function VetoMapCard({ map, tag, vetoed, order, entrance, vetoMotion }: {
+    map: BroadcastVetoMap
+    tag: string
+    vetoed: boolean
+    order: number
+    entrance: Variants
+    vetoMotion: VetoRevealMotion
+}) {
+    return (
+        <motion.li variants={entrance} data-veto-map={map.map} className="flex flex-col items-center gap-4" style={{ width: VETO_CARD_PX }}>
+            <div
+                className={cn('relative flex aspect-square w-full items-center justify-center overflow-hidden rounded-3xl border-[5px]', GOLD.border)}
+                style={{ boxShadow: `0 0 50px ${tint(GOLD_HUE, vetoed ? 25 : 45)}, 0 24px 60px rgba(0,0,0,0.6)` }}
+            >
+                <motion.div variants={vetoed ? vetoMotion.desaturate(order) : undefined} className="absolute inset-0">
+                    <MapThumbnail mapName={map.map} version={map.screenshotVersion} size="hero" alt="" priority className="absolute inset-0 size-full rounded-none border-0" />
+                </motion.div>
+                <motion.span
+                    aria-hidden
+                    variants={vetoMotion.pending}
+                    className="absolute top-5 rounded-xl bg-black/65 px-5 py-1.5 text-[34px] font-black italic uppercase leading-none text-white/85 ring-1 ring-inset ring-white/30"
+                >
+                    {tag}?
+                </motion.span>
+                {vetoed ? (
+                    <motion.span variants={vetoMotion.stamp(order)} className="relative">
+                        <span className={cn('block -rotate-8 rounded-lg border-[5px] bg-black/55 px-6 py-1 text-[64px] font-black italic uppercase leading-none tracking-[0.12em]', GOLD.text, GOLD.border)}>
+                            {VETOED_STAMP}
+                        </span>
+                    </motion.span>
+                ) : (
+                    <motion.span
+                        variants={vetoMotion.badge(order)}
+                        className={cn('absolute top-5 rounded-xl px-5 py-1.5 text-[34px] font-black italic uppercase leading-none shadow-xl', GOLD.solid, GOLD.onSolid)}
+                    >
+                        In play
+                    </motion.span>
+                )}
+            </div>
+            <p className={cn('max-w-full truncate text-[34px] font-bold uppercase leading-none tracking-wide', vetoed ? 'text-white/55' : 'text-white')}>{displayMapName(map.map)}</p>
+        </motion.li>
     )
 }
 

@@ -22,8 +22,9 @@ import { CapLinkPicker } from './CapLinkPicker'
 import { MarketControl } from './MarketControl'
 import { Field, SubCard } from './formatFields'
 import {
-    SLOT_CHANGE_WARNING, changesOf, draftFrom, hasChanges, planSave, redSideOptions, redSideSourceLabel,
-    showsSlotWarning, withField, withMapRow, withRedSide, type MatchEditorFields,
+    SIDE_LOCKED_HINT, SLOT_CHANGE_WARNING, changesOf, draftFrom, hasChanges, isSideLockedError, matchEditorErrorMessage,
+    planSave, redSideLocked, redSideOptions, redSideSourceLabel, showsSlotWarning, withField, withMapRow, withRedSide,
+    type MatchEditorFields,
 } from './matchEditorForm'
 
 const STATUS_OPTIONS: Array<{ value: EventMatchStatus; label: string }> = [
@@ -116,7 +117,10 @@ export function MatchEditorModal({
             onSaved()
             if (message) setNotice(message)
         } catch (e) {
-            setError(eventErrorMessage(e))
+            setError(matchEditorErrorMessage(e))
+            if (isSideLockedError(e)) {
+                void fetchEventMatch(accessToken, slug, initial.id).then(setMatch).catch(() => undefined)
+            }
         } finally {
             setBusy(false)
         }
@@ -161,6 +165,7 @@ export function MatchEditorModal({
         ?? [match.team_a, match.team_b].find(team => team?.id === teamId)?.name
         ?? teamId
 
+    const sideLocked = redSideLocked(match)
     const redSideSource = redSideSourceLabel(match, draft, changes)
 
     const teamNames: Record<EventSide, string> = {
@@ -276,10 +281,19 @@ export function MatchEditorModal({
                                 </p>
                             )}
                             <Field label="Red side" className="sm:col-span-2"
-                                hint="Red is Side A and acts first. Changing it leaves the bracket slots and the prediction market alone.">
+                                hint={sideLocked
+                                    ? SIDE_LOCKED_HINT
+                                    : 'Red is Side A and acts first. Changing it leaves the bracket slots and the prediction market alone.'}>
                                 <div className="grid gap-3 sm:grid-cols-2 items-center">
-                                    <AdminSelect value={draft.redSide} onChange={value => setDraft(current => withRedSide(current, value))}
-                                        options={redSideOptions(form, teamName)} ariaLabel="Red side" className="h-8 w-full text-xs" />
+                                    {sideLocked ? (
+                                        <div role="textbox" aria-readonly="true" aria-label="Red side"
+                                            className="h-8 w-full px-3 rounded-md border border-hairline/10 bg-card/20 text-xs flex items-center opacity-70 cursor-not-allowed">
+                                            <span className="truncate">{match.red_team_id ? teamName(match.red_team_id) : 'Not set'}</span>
+                                        </div>
+                                    ) : (
+                                        <AdminSelect value={draft.redSide} onChange={value => setDraft(current => withRedSide(current, value))}
+                                            options={redSideOptions(form, teamName)} ariaLabel="Red side" className="h-8 w-full text-xs" />
+                                    )}
                                     {redSideSource && (
                                         <span className="text-[11px] text-muted-foreground">Set by {redSideSource}</span>
                                     )}

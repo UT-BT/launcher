@@ -20,6 +20,7 @@ import type {
     MatchSides,
     MatchSidesErrorCode,
     MyMatchEntry,
+    PickBanContractPacing,
     PickBanContractPhase,
     PickBanErrorCode,
     PickBanSideErrorCode,
@@ -31,8 +32,9 @@ import type { StreamHotState } from '@/app/components/stream/data/streamHotState
 import type { BettingBacker, BettingRead, BettingSide } from '@/app/components/stream/scenes/betting/bettingRead'
 import type { PredictorStandings } from '@/app/components/stream/scenes/standings/predictorStandingsRead'
 
-export type ContractPickBanState = Omit<PickBanState, 'phase'> & {
+export type ContractPickBanState = Omit<PickBanState, 'phase' | 'pacing'> & {
     phase: PickBanContractPhase | null
+    pacing: PickBanContractPacing
 }
 
 export type ContractBettingBacker = Omit<BettingBacker, 'multiplier'> & { multiplier: number | null }

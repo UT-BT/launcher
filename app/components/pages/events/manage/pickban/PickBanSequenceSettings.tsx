@@ -1,11 +1,12 @@
-import { Plus, Trash2 } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Plus, Trash2, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { AdminSelect } from '@/app/components/pages/admin/components/controls'
-import { PICK_BAN_PRESET_IDS, type PickBanPresetId, type PickBanSequence, type PickBanStageConfig } from '@/app/utils/api'
+import { PICK_BAN_PRESET_IDS, type PickBanActor, type PickBanPresetId, type PickBanSequence, type PickBanStageConfig } from '@/app/utils/api'
 import { PICK_BAN_PRESET_LABELS } from '@/app/components/pages/events/pickban/pickBanCopy'
-import { Field, NumberField, SubCard, TextField } from '../formatFields'
+import { CheckField, Field, NumberField, SubCard, TextField } from '../formatFields'
 import {
-    PICK_BAN_PACING_KEYS, PICK_BAN_PACING_MAX_SECONDS, presetDrifted, sequenceCounts, withPreset,
+    PICK_BAN_PACING_KEYS, PICK_BAN_PACING_MAX_SECONDS, canMakeVetoRule, moveBanDownActor, poolSummary, presetDrifted,
+    sequenceCounts, withBanDownOrder, withPreset, withVetoRule,
     type PickBanExclusionDraft, type PickBanPacingKey, type PickBanStageDraft,
 } from './pickBanEditor'
 
@@ -63,53 +64,117 @@ function SequencePreview({ sequence }: { sequence: PickBanSequence }) {
     )
 }
 
-function ExclusionRow({ rule, index, errors, disabled, onChange, onRemove }: {
+const BAN_DOWN_ACTORS: PickBanActor[] = ['A', 'B']
+
+function BanDownOrderInput({ order, errors, disabled, onChange }: {
+    order: PickBanActor[]
+    errors: Record<string, string>
+    disabled: boolean
+    onChange: (order: PickBanActor[]) => void
+}) {
+    const iconButton = 'size-7 inline-flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed'
+
+    return (
+        <Field label="Ban-down order" path="sequence.ban_down_order" errors={errors}>
+            {order.length === 0 ? (
+                <p className="text-[11px] text-muted-foreground">No order. The two teams alternate.</p>
+            ) : (
+                <ol className="flex flex-wrap gap-1.5" aria-label="Ban-down order">
+                    {order.map((actor, index) => (
+                        <li key={index} className="inline-flex items-center gap-0.5 rounded-md border border-white/10 bg-white/5 pl-2 pr-0.5 h-8">
+                            <span className="text-[11px] font-medium text-foreground">{actor}</span>
+                            <button type="button" disabled={disabled || index === 0} aria-label={`Move ban-down ${actor} number ${index + 1} earlier`} onClick={() => onChange(moveBanDownActor(order, index, -1))} className={iconButton}>
+                                <ArrowLeft className="size-3" />
+                            </button>
+                            <button type="button" disabled={disabled || index === order.length - 1} aria-label={`Move ban-down ${actor} number ${index + 1} later`} onClick={() => onChange(moveBanDownActor(order, index, 1))} className={iconButton}>
+                                <ArrowRight className="size-3" />
+                            </button>
+                            <button type="button" disabled={disabled} aria-label={`Remove ban-down ${actor} number ${index + 1}`} onClick={() => onChange(order.filter((_, at) => at !== index))} className={iconButton}>
+                                <X className="size-3" />
+                            </button>
+                        </li>
+                    ))}
+                </ol>
+            )}
+            <div className="flex flex-wrap items-center gap-1">
+                {BAN_DOWN_ACTORS.map(actor => (
+                    <button
+                        key={actor}
+                        type="button"
+                        disabled={disabled}
+                        onClick={() => onChange([...order, actor])}
+                        className="inline-flex items-center gap-1 h-8 px-2 rounded-md text-[11px] font-medium text-accent-300 hover:text-accent-200 hover:bg-white/5 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                        <Plus className="size-3" /> Add {actor}
+                    </button>
+                ))}
+            </div>
+        </Field>
+    )
+}
+
+function ExclusionRow({ rule, index, errors, disabled, vetoAllowed, onChange, onVeto, onRemove }: {
     rule: PickBanExclusionDraft
     index: number
     errors: Record<string, string>
     disabled: boolean
+    vetoAllowed: boolean
     onChange: (rule: PickBanExclusionDraft) => void
+    onVeto: (veto: boolean) => void
     onRemove: () => void
 }) {
+    const modeError = errors[`exclusions[${index}].mode`]
+
     return (
-        <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,8rem)_auto] items-start gap-2">
-            <TextField
-                label="Tag"
-                path={`exclusions[${index}].tag`}
-                errors={errors}
-                value={rule.tag}
-                placeholder="Hard"
-                disabled={disabled}
-                onChange={tag => onChange({ ...rule, tag })}
+        <div className="space-y-1.5">
+            <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,8rem)_auto] items-start gap-2">
+                <TextField
+                    label="Tag"
+                    path={`exclusions[${index}].tag`}
+                    errors={errors}
+                    value={rule.tag}
+                    placeholder="Hard"
+                    disabled={disabled}
+                    onChange={tag => onChange({ ...rule, tag })}
+                />
+                <NumberField
+                    label="From pre-cup seed"
+                    path={`exclusions[${index}].min_pre_cup_seed`}
+                    errors={errors}
+                    value={rule.min_pre_cup_seed}
+                    min={1}
+                    nullable
+                    disabled={disabled}
+                    onChange={min_pre_cup_seed => onChange({ ...rule, min_pre_cup_seed })}
+                />
+                <button
+                    type="button"
+                    onClick={onRemove}
+                    disabled={disabled}
+                    aria-label={`Remove the ${rule.tag.trim() || 'blank'} exclusion rule`}
+                    className="mt-[1.125rem] size-8 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-red-300 hover:bg-white/5 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                    <Trash2 className="size-3.5" />
+                </button>
+            </div>
+            <CheckField
+                checked={rule.veto}
+                onChange={onVeto}
+                label="Teams choose (veto)"
+                hint={vetoAllowed ? 'Each eligible team decides whether the tagged maps stay in.' : 'Another rule already lets teams choose. Only one rule per stage can.'}
+                disabled={disabled || (!rule.veto && !vetoAllowed)}
             />
-            <NumberField
-                label="From pre-cup seed"
-                path={`exclusions[${index}].min_pre_cup_seed`}
-                errors={errors}
-                value={rule.min_pre_cup_seed}
-                min={1}
-                nullable
-                disabled={disabled}
-                onChange={min_pre_cup_seed => onChange({ ...rule, min_pre_cup_seed })}
-            />
-            <button
-                type="button"
-                onClick={onRemove}
-                disabled={disabled}
-                aria-label={`Remove the ${rule.tag.trim() || 'blank'} exclusion rule`}
-                className="mt-[1.125rem] size-8 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-red-300 hover:bg-white/5 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-                <Trash2 className="size-3.5" />
-            </button>
+            {modeError && <p className="text-[11px] text-red-300">{modeError}</p>}
         </div>
     )
 }
 
 export function PickBanSequenceSettings({ stage, draft, errors, disabled, onChange }: PickBanSequenceSettingsProps) {
     const storedCustom = stage.pick_ban && stage.pick_ban.preset_id === null ? stage.pick_ban.sequence : null
+    const customSelected = draft.presetId === null && draft.sequence !== null
     const options = [
         ...PICK_BAN_PRESET_IDS.map(id => ({ value: id, label: PICK_BAN_PRESET_LABELS[id] })),
-        ...(storedCustom ? [{ value: CUSTOM_SEQUENCE, label: 'Custom sequence' }] : []),
+        ...(storedCustom || customSelected ? [{ value: CUSTOM_SEQUENCE, label: 'Custom sequence' }] : []),
     ]
     const selected = draft.presetId ?? (draft.sequence ? CUSTOM_SEQUENCE : '')
 
@@ -125,6 +190,9 @@ export function PickBanSequenceSettings({ stage, draft, errors, disabled, onChan
     const setRule = (index: number, rule: PickBanExclusionDraft) => {
         onChange({ ...draft, exclusions: draft.exclusions.map((current, at) => (at === index ? rule : current)) })
     }
+
+    const summary = poolSummary(draft)
+    const hasVetoRule = draft.exclusions.some(rule => rule.veto)
 
     return (
         <div className="flex flex-col gap-4 min-w-0">
@@ -146,6 +214,14 @@ export function PickBanSequenceSettings({ stage, draft, errors, disabled, onChan
                     </p>
                 )}
                 {draft.sequence && <SequencePreview sequence={draft.sequence} />}
+                {draft.sequence?.ban_down && (
+                    <BanDownOrderInput
+                        order={draft.sequence.ban_down_order ?? []}
+                        errors={errors}
+                        disabled={disabled}
+                        onChange={order => onChange(withBanDownOrder(draft, order))}
+                    />
+                )}
             </SubCard>
 
             <SubCard title="Pacing (seconds)">
@@ -171,7 +247,7 @@ export function PickBanSequenceSettings({ stage, draft, errors, disabled, onChan
                 action={
                     <button
                         type="button"
-                        onClick={() => onChange({ ...draft, exclusions: [...draft.exclusions, { tag: '', min_pre_cup_seed: null }] })}
+                        onClick={() => onChange({ ...draft, exclusions: [...draft.exclusions, { tag: '', min_pre_cup_seed: null, veto: false }] })}
                         disabled={disabled}
                         className="inline-flex items-center gap-1 h-8 px-2 rounded-md text-[11px] font-medium text-accent-300 hover:text-accent-200 hover:bg-white/5 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                     >
@@ -191,13 +267,17 @@ export function PickBanSequenceSettings({ stage, draft, errors, disabled, onChan
                                 index={index}
                                 errors={errors}
                                 disabled={disabled}
+                                vetoAllowed={canMakeVetoRule(draft.exclusions, index)}
                                 onChange={next => setRule(index, next)}
+                                onVeto={veto => onChange({ ...draft, exclusions: withVetoRule(draft.exclusions, index, veto) })}
                                 onRemove={() => onChange({ ...draft, exclusions: draft.exclusions.filter((_, at) => at !== index) })}
                             />
                         ))}
                         <p className="text-[11px] text-muted-foreground leading-snug">
                             When either team&apos;s pre-cup seed is at or past the threshold, maps carrying the tag leave that match&apos;s pool for both teams.
+                            {hasVetoRule && ' A rule where teams choose leaves them in until an eligible team vetoes them.'}
                         </p>
+                        {summary && <p className="text-[11px] font-medium text-foreground" aria-label="Pool sizes with the veto">{summary}</p>}
                     </>
                 )}
             </SubCard>

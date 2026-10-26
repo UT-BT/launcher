@@ -5,7 +5,6 @@ import {
     type MatchSideSource,
     type PickBanActor,
     type PickBanBlockingReason,
-    type PickBanChooserReason,
     type PickBanErrorCode,
     type PickBanManagerCommand,
     type PickBanManagerCommandBodies,
@@ -15,6 +14,7 @@ import {
     type PickBanSide,
     type PickBanStageConfig,
     type SideColor,
+    type VetoChoice,
 } from '@/app/utils/api'
 import { SIDES_TBC, sideColorName, sideColorTitle } from '@/app/utils/sideLabels'
 import {
@@ -28,8 +28,16 @@ import {
 } from './captainPlay'
 import { finalDraftOf, finalEditorOf, type FinalDraft, type FinalEditor } from './editFinal'
 import { PICK_BAN_PRESET_LABELS } from './pickBanCopy'
-import { blockingReasonLabel, sidePhaseLabel } from './pickBanStatus'
-import { actionTagOf, type PickBanBanner, type PickBanManagerControls, type PickBanTeamPanel, type PickBanView } from './pickBanView'
+import { blockingReasonLabel, sidePhaseLabel, vetoPhaseLabel } from './pickBanStatus'
+import {
+    actionTagOf,
+    type PickBanBanner,
+    type PickBanManagerControls,
+    type PickBanTeamPanel,
+    type PickBanUndoTarget,
+    type PickBanVetoView,
+    type PickBanView,
+} from './pickBanView'
 
 type ButtonCommand = 'open' | 'start' | 'swap' | 'pause' | 'resume' | 'undo' | 'restart' | 'cancel'
 
@@ -41,6 +49,7 @@ type BodyRequest =
     | { command: 'side-chooser'; body: BodyOf<'side-chooser'> }
     | { command: 'sides'; body: BodyOf<'sides'> }
     | { command: 'side'; body: BodyOf<'side'> }
+    | { command: 'veto'; body: BodyOf<'veto'> }
     | { command: 'override-sequence'; body: BodyOf<'override-sequence'> }
     | { command: 'hand-over'; body: BodyOf<'hand-over'> }
     | { command: 'lock'; body: BodyOf<'lock'> }
@@ -62,7 +71,9 @@ type DangerCommand = 'restart' | 'cancel'
 
 type ButtonAction = PrimaryCommand | HistoryCommand | DangerCommand | 'swap'
 
-type ConfirmedCommand = 'reopen' | 'restart' | 'cancel' | 'edit-final' | 'side'
+type BodyConfirmedCommand = 'side' | 'veto'
+
+type ConfirmedCommand = 'reopen' | 'restart' | 'cancel' | 'edit-final' | BodyConfirmedCommand
 
 interface PendingConfirmation {
     command: ConfirmedCommand
@@ -200,6 +211,36 @@ export interface ManagerFinalEditor extends FinalEditor {
     rejection: string | null
 }
 
+export type ManagerVetoTeamState = 'deciding' | VetoChoice
+
+export interface ManagerVetoTeam {
+    side: PickBanSide
+    name: string
+    state: ManagerVetoTeamState
+    label: string
+}
+
+export interface ManagerVetoOption {
+    choice: VetoChoice
+    label: string
+    lead: string
+}
+
+export interface ManagerVetoActFor {
+    side: PickBanSide
+    ab: PickBanActor | null
+    teamName: string
+    options: ManagerVetoOption[]
+    disabled: boolean
+}
+
+export interface ManagerVeto {
+    lobbyLine: string | null
+    teams: ManagerVetoTeam[]
+    outcome: string | null
+    actFor: ManagerVetoActFor[]
+}
+
 export interface ManagerActFor {
     side: PickBanSide | null
     ab: PickBanActor | null
@@ -216,6 +257,7 @@ export interface ManagerDock {
     done: string | null
     sides: ManagerSides | null
     sequence: ManagerSequence | null
+    veto: ManagerVeto | null
     history: ManagerButton<HistoryCommand>[]
     danger: ManagerButton<DangerCommand>[]
     resultsWarning: string | null
@@ -242,7 +284,7 @@ export const IDLE_MANAGER_PLAY: ManagerPlay = {
     rejection: null,
 }
 
-const CONTROL_OF: Record<Exclude<ManagerCommand, 'lock'>, keyof PickBanManagerControls> = {
+const CONTROL_OF: Record<Exclude<ManagerCommand, 'lock' | 'veto'>, keyof PickBanManagerControls> = {
     open: 'open',
     start: 'start',
     'side-chooser': 'sideChooser',
@@ -268,13 +310,25 @@ const DANGER_COMMANDS: DangerCommand[] = ['restart', 'cancel']
 
 const ACTIVE_STATUSES: PickBanSessionStatus[] = ['lobby', 'running', 'paused']
 
+const UNDO_LABELS: Record<PickBanUndoTarget, string> = {
+    step: 'Undo Last Step',
+    side: 'Undo Side Choice',
+    veto: 'Undo Veto',
+}
+
+const UNDO_HINTS: Record<PickBanUndoTarget, string> = {
+    step: 'Takes back the last pick or ban, with any automatic step after it.',
+    side: 'Takes back the side choice, so the team chooses again.',
+    veto: 'Takes back the veto, so the eligible teams choose again.',
+}
+
 const BUTTON_LABELS: Record<ButtonAction, string> = {
     open: 'Open Lobby',
     start: 'Start',
     pause: 'Pause',
     resume: 'Resume',
     swap: 'Swap Red and Blue',
-    undo: 'Undo Last Step',
+    undo: UNDO_LABELS.step,
     reopen: 'Reopen',
     'edit-final': 'Edit Final Maps…',
     restart: 'Restart',
@@ -287,7 +341,7 @@ const BUTTON_HINTS: Record<ButtonAction, string> = {
     pause: 'Freezes every countdown until you resume.',
     resume: 'Every countdown carries on from where it stopped.',
     swap: 'Swaps Red and Blue, so the other team is Side A and acts first.',
-    undo: 'Takes back the last pick or ban, with any automatic step after it.',
+    undo: UNDO_HINTS.step,
     reopen: 'Takes back the last pick or ban, with any automatic step after it, and continues the Picks & Bans process from there.',
     'edit-final': 'Rewrites the match’s maps: their order, who picked each and the decider.',
     restart: 'Undoes every step and sends both teams back to the lobby.',
@@ -306,7 +360,7 @@ const RESULTS_WARNING = 'Results are already entered for this match, so the Pick
 
 const KEEP_IT = 'Keep It'
 
-const CONFIRMATIONS: Record<Exclude<ConfirmedCommand, 'side'>, Omit<ManagerConfirm, 'command'>> = {
+const CONFIRMATIONS: Record<Exclude<ConfirmedCommand, BodyConfirmedCommand>, Omit<ManagerConfirm, 'command'>> = {
     reopen: {
         title: 'Reopen the Picks & Bans process?',
         message: 'The last pick or ban is undone, with any automatic step after it, and the Picks & Bans process waits on that step again. The maps it wrote into the match are removed, and any edits to the final maps are discarded.',
@@ -335,13 +389,6 @@ const CONFIRMATIONS: Record<Exclude<ConfirmedCommand, 'side'>, Omit<ManagerConfi
         dismissLabel: 'Keep Editing',
         destructive: false,
     },
-}
-
-const CHOOSER_REASONS: Record<PickBanChooserReason, string> = {
-    lower_pre_cup_seed: 'lower pre-cup seed',
-    lower_group_placing: 'lower group placing',
-    lower_knockout_differential: 'lower knockout differential',
-    admin: 'named by an admin',
 }
 
 const SOURCE_BADGES: Record<MatchSideSource, Omit<ManagerSourceBadge, 'source'>> = {
@@ -374,6 +421,12 @@ const SIDE_OPTION_FALLBACK_LEADS: Record<SideColor, string> = { red: 'Acts first
 
 const PLAYING_NOTE = 'You play in this match, so you can’t lock in on a team’s behalf. An admin who isn’t playing has to do that.'
 
+const VETO_TEAM_LABELS: Record<ManagerVetoTeamState, string> = {
+    deciding: 'Deciding',
+    veto: 'Veto',
+    play: 'Play',
+}
+
 const REJECTIONS: Record<Exclude<PickBanErrorCode, PickBanBlockingReason>, string> = {
     not_authorized: 'You can’t manage this Picks & Bans process any more.',
     not_your_turn: 'That team isn’t choosing any more.',
@@ -391,6 +444,9 @@ const REJECTIONS: Record<Exclude<PickBanErrorCode, PickBanBlockingReason>, strin
     nothing_to_undo: 'There’s no pick or ban to undo.',
     side_choice_active: 'Wait for the side choice to finish, then lock in.',
     side_not_open: 'The sides can’t change at this point any more.',
+    veto_not_open: 'The veto isn’t open any more. Check the session and try again.',
+    already_chosen: 'That team has already chosen.',
+    veto_choice_active: 'Wait for the veto to finish, then lock in.',
 }
 
 const COMMAND_REJECTIONS: Partial<Record<ManagerCommand, Partial<Record<PickBanErrorCode, (detail: string) => string>>>> = {
@@ -421,13 +477,23 @@ function rejectionMessage(command: ManagerCommand | null, error: unknown): strin
 }
 
 function needsConfirmation(command: ManagerCommand): command is ConfirmedCommand {
-    return command === 'side' || command in CONFIRMATIONS
+    return command === 'side' || command === 'veto' || command in CONFIRMATIONS
 }
 
 function allowed(controls: PickBanManagerControls, command: ManagerCommand): boolean {
     if (command === 'lock') return false
+    if (command === 'veto') return controls.actForVeto.length > 0
     if (command === 'start' && controls.startBlockedBy !== null) return false
     return Boolean(controls[CONTROL_OF[command]])
+}
+
+function allowedRequest(controls: PickBanManagerControls, request: ManagerAction | ManagerRequest): boolean {
+    if (request.command === 'veto') return controls.actForVeto.includes(request.body.side)
+    return allowed(controls, request.command)
+}
+
+function allowedConfirmation(controls: PickBanManagerControls, { command, request }: PendingConfirmation): boolean {
+    return request.command === 'veto' ? allowedRequest(controls, request) : allowed(controls, command)
 }
 
 function panelsOf(view: PickBanView): PickBanTeamPanel[] {
@@ -444,7 +510,13 @@ function handOverOf({ members }: PickBanTeamPanel): ManagerHandOverMember[] {
 }
 
 function buttonOf<C extends ButtonAction>(controls: PickBanManagerControls, command: C, busy: boolean): ManagerButton<C> {
-    return { command, label: BUTTON_LABELS[command], hint: BUTTON_HINTS[command], disabled: busy || !allowed(controls, command) }
+    const undoing = command === 'undo' ? controls.undoTarget : null
+    return {
+        command,
+        label: undoing ? UNDO_LABELS[undoing] : BUTTON_LABELS[command],
+        hint: undoing ? UNDO_HINTS[undoing] : BUTTON_HINTS[command],
+        disabled: busy || !allowed(controls, command),
+    }
 }
 
 function buttonsOf<C extends ButtonAction>(controls: PickBanManagerControls, commands: C[], busy: boolean): ManagerButton<C>[] {
@@ -475,6 +547,7 @@ function doneOf(view: PickBanView): string | null {
 function phaseOf(view: PickBanView): string | null {
     const stepOf = (number: number) => `Step ${number} of ${view.timeline.length}`
     if (view.side.phase && view.status === 'running') return sidePhaseLabel(view.side.phase)
+    if (view.veto?.phase && view.status === 'running') return vetoPhaseLabel(view.veto.phase)
     switch (view.phase) {
         case 'lobby':
             return view.status === 'lobby' ? 'Waiting for Start' : 'Starting'
@@ -505,8 +578,7 @@ function badgeOf({ side }: PickBanView): ManagerSourceBadge {
 function basisOf({ side, status }: PickBanView): string | null {
     if (status === 'lobby' && side.confirmed && side.source === 'admin') return SIDES_SET_BASIS
     if (status !== 'lobby' && side.confirmed) return null
-    if (side.chooserName === null || side.chooserReason === null) return null
-    return `${side.chooserName} choose: ${CHOOSER_REASONS[side.chooserReason]}`
+    return side.chooserLine
 }
 
 function chooserOf(view: PickBanView, panels: PickBanTeamPanel[], controls: PickBanManagerControls, busy: boolean): ManagerChooser | null {
@@ -575,6 +647,73 @@ function lowerFirst(text: string): string {
     return text.charAt(0).toLowerCase() + text.slice(1)
 }
 
+function vetoLobbyLineOf({ tag, active, eligibleNames }: PickBanVetoView): string {
+    if (!active) return 'No veto: neither team eligible'
+    return `${tag}-map veto: ${eligibleNames.length > 1 ? 'both teams' : eligibleNames[0]} eligible`
+}
+
+function vetoOutcomeOf(veto: PickBanVetoView): string | null {
+    if (!veto.active || veto.outcome === null) return null
+    const mapCount = veto.outcome === 'vetoed' ? veto.poolSizes.vetoed : veto.poolSizes.played
+    const what = veto.outcome === 'vetoed' ? `${veto.vetoedByName ?? 'A team'} vetoed the ${veto.tag} maps` : `${veto.tag} maps stay in`
+    return `${what} · ${mapCount} maps`
+}
+
+function vetoTeamOf(side: PickBanSide, name: string, choice: VetoChoice | null): ManagerVetoTeam {
+    const state = choice ?? 'deciding'
+    return { side, name, state, label: VETO_TEAM_LABELS[state] }
+}
+
+function vetoOptionsOf(veto: PickBanVetoView): ManagerVetoOption[] {
+    return [
+        { choice: 'veto', label: `Veto ${veto.tag} maps`, lead: `Play ${veto.poolSizes.vetoed} maps` },
+        { choice: 'play', label: `Play ${veto.tag} maps`, lead: `Play ${veto.poolSizes.played} maps` },
+    ]
+}
+
+function vetoTeamNameOf(veto: PickBanVetoView, side: PickBanSide): string | null {
+    return veto.choices.find((entry) => entry.side === side)?.teamName ?? null
+}
+
+function vetoActForOf(view: PickBanView, veto: PickBanVetoView, controls: PickBanManagerControls, busy: boolean): ManagerVetoActFor[] {
+    return controls.actForVeto.map((side) => ({
+        side,
+        ab: panelsOf(view).find((panel) => panel.side === side)?.ab ?? null,
+        teamName: vetoTeamNameOf(veto, side) ?? 'TBD',
+        options: vetoOptionsOf(veto),
+        disabled: busy,
+    }))
+}
+
+function vetoOf(view: PickBanView, controls: PickBanManagerControls, busy: boolean): ManagerVeto | null {
+    const { veto } = view
+    if (!veto) return null
+    const lobby = view.status === 'lobby'
+    const shown = {
+        lobbyLine: lobby ? vetoLobbyLineOf(veto) : null,
+        teams: veto.active && !lobby ? veto.choices.map(({ side, teamName, choice }) => vetoTeamOf(side, teamName, choice)) : [],
+        outcome: vetoOutcomeOf(veto),
+        actFor: vetoActForOf(view, veto, controls, busy),
+    }
+    return shown.lobbyLine === null && shown.teams.length === 0 && shown.outcome === null && shown.actFor.length === 0 ? null : shown
+}
+
+function vetoConfirmOf(view: PickBanView, { side, choice }: BodyOf<'veto'>): ManagerConfirm {
+    const tag = view.veto?.tag ?? 'Hard'
+    const team = (view.veto && vetoTeamNameOf(view.veto, side)) ?? 'The team'
+    const vetoing = choice === 'veto'
+    return {
+        command: 'veto',
+        title: `${vetoing ? 'Veto' : 'Play'} the ${tag} maps for ${team}?`,
+        message: vetoing
+            ? `${team} veto the ${tag} maps. One veto is enough: the ${tag} maps are removed and ${view.veto?.poolSizes.vetoed ?? 0} maps are played.`
+            : `${team} play the ${tag} maps. They stay in unless another eligible team vetoes them.`,
+        confirmLabel: `${vetoing ? 'Veto' : 'Play'} ${tag} Maps`,
+        dismissLabel: 'Go Back',
+        destructive: false,
+    }
+}
+
 function sideConfirmOf(view: PickBanView, choice: SideColor): ManagerConfirm {
     const option = sideOptionOf(view, choice)
     const team = view.side.chooserName ?? 'The team'
@@ -591,7 +730,8 @@ function sideConfirmOf(view: PickBanView, choice: SideColor): ManagerConfirm {
 
 function confirmOf(view: PickBanView, { command, request }: PendingConfirmation): ManagerConfirm {
     if (command === 'side' && request.command === 'side') return sideConfirmOf(view, request.body.choice)
-    return { command, ...CONFIRMATIONS[command as Exclude<ConfirmedCommand, 'side'>] }
+    if (command === 'veto' && request.command === 'veto') return vetoConfirmOf(view, request.body)
+    return { command, ...CONFIRMATIONS[command as Exclude<ConfirmedCommand, BodyConfirmedCommand>] }
 }
 
 function presetChoiceKey(id: PickBanPresetId): string {
@@ -710,21 +850,22 @@ export function managerDockOf(view: PickBanView, play: ManagerPlay): ManagerDock
         done: doneOf(view),
         sides: sidesOf(view, controls, busy),
         sequence: sequenceOf(view, controls),
+        veto: vetoOf(view, controls, busy),
         history: buttonsOf(controls, HISTORY_COMMANDS, busy),
         danger: buttonsOf(controls, DANGER_COMMANDS, busy),
         resultsWarning: controls.resultsPresent ? RESULTS_WARNING : null,
         voided: view.banners.find((banner) => banner.kind === 'voided') ?? null,
         finalEditor,
-        confirm: play.confirming && allowed(controls, play.confirming.command) ? confirmOf(view, play.confirming) : null,
+        confirm: play.confirming && allowedConfirmation(controls, play.confirming) ? confirmOf(view, play.confirming) : null,
         actFor,
         playingNote: !controls.lockForSide && (view.status === 'running' || view.status === 'paused') ? PLAYING_NOTE : null,
         rejection: (actFor && play.rejected === 'lock') || (finalEditor && play.rejected === 'edit-final') ? null : play.rejection,
     }
 }
 
-function accepts(view: PickBanView, play: ManagerPlay, command: ManagerCommand): boolean {
+function accepts(view: PickBanView, play: ManagerPlay, request: ManagerAction | ManagerRequest): boolean {
     const controls = view.affordances.manager
-    return controls !== null && play.submitting === null && allowed(controls, command)
+    return controls !== null && play.submitting === null && allowedRequest(controls, request)
 }
 
 function finalSaveOf(play: ManagerPlay, view: PickBanView): ManagerRequest | null {
@@ -747,7 +888,7 @@ function submitted(play: ManagerPlay, command: ManagerCommand, request: ManagerR
 }
 
 export function beginManagerCommand(play: ManagerPlay, view: PickBanView, action: ManagerAction): ManagerSubmission | null {
-    const request = accepts(view, play, action.command) ? requestOf(play, view, action) : null
+    const request = accepts(view, play, action) ? requestOf(play, view, action) : null
     if (!request) return null
     if (needsConfirmation(action.command)) return { play: { ...play, confirming: { command: action.command, request } }, request: null }
     return submitted(play, action.command, request)
@@ -755,7 +896,9 @@ export function beginManagerCommand(play: ManagerPlay, view: PickBanView, action
 
 export function confirmManagerCommand(play: ManagerPlay, view: PickBanView): ManagerSubmission | null {
     const { confirming } = play
-    return confirming && accepts(view, play, confirming.command) ? submitted(play, confirming.command, confirming.request) : null
+    const controls = view.affordances.manager
+    if (!confirming || controls === null || play.submitting !== null || !allowedConfirmation(controls, confirming)) return null
+    return submitted(play, confirming.command, confirming.request)
 }
 
 export function dismissManagerConfirm(play: ManagerPlay): ManagerPlay {
@@ -767,7 +910,7 @@ function withoutFinalRejection(play: ManagerPlay): ManagerPlay {
 }
 
 export function openFinalEditor(play: ManagerPlay, view: PickBanView): ManagerPlay {
-    return accepts(view, play, 'edit-final') ? withoutFinalRejection({ ...play, editing: finalDraftOf(view) }) : play
+    return accepts(view, play, { command: 'edit-final' }) ? withoutFinalRejection({ ...play, editing: finalDraftOf(view) }) : play
 }
 
 export function changeFinalEditor(play: ManagerPlay, change: (draft: FinalDraft) => FinalDraft): ManagerPlay {
@@ -781,7 +924,7 @@ export function closeFinalEditor(play: ManagerPlay): ManagerPlay {
 export function settleManagerPlay(play: ManagerPlay, view: PickBanView): ManagerPlay {
     const controls = view.affordances.manager
     const applies = (command: ManagerCommand) => controls !== null && allowed(controls, command)
-    const staleConfirm = play.confirming !== null && !applies(play.confirming.command)
+    const staleConfirm = play.confirming !== null && (controls === null || !allowedConfirmation(controls, play.confirming))
     const staleLock = play.lockingIn !== null && play.submitting === null && optimisticLockOf(view, play) === null
     const staleEditor = play.editing !== null && !applies('edit-final')
     if (!staleConfirm && !staleLock && !staleEditor) return play

@@ -2,11 +2,14 @@ import { describe, expect, it } from 'vitest'
 import {
     ApiError,
     MATCH_SIDE_SOURCES,
-    PICK_BAN_CHOOSER_REASONS,
+    pickBanErrorCode,
+    PICK_BAN_CONTRACT_CHOOSER_REASONS,
     PICK_BAN_ERROR_CODES,
+    PICK_BAN_VETO_ERROR_CODES,
     type PickBanStageConfig,
     type PickBanState,
 } from '@/app/utils/api'
+import { pickBanVetoFixture, type PickBanVetoSuccessFixtureName } from '@/app/utils/fixtures/pickBanVetoFixtures'
 import { streamSidesFixture, type StreamSidesSuccessFixtureName } from '@/app/utils/fixtures/streamSidesFixtures'
 import { buildPickBanView, type PickBanView, type PickBanViewState } from './pickBanView'
 import { moveFinalEntry } from './editFinal'
@@ -103,6 +106,33 @@ function managing(state: PickBanViewState): PickBanViewState {
 function contractView(name: PickBanFixtureName, change: (state: PickBanViewState) => PickBanViewState = managing): PickBanView {
     const state = change(streamSidesFixture(name))
     return buildPickBanView(state, { clockOffsetMs: 0, now: Date.parse(state.server_now) })
+}
+
+type VetoStateName = Exclude<PickBanVetoSuccessFixtureName, 'pickBanConfig'>
+
+function managingVeto(state: PickBanViewState): PickBanViewState {
+    return {
+        ...state,
+        viewer: { side: null, roster_captain: false },
+        capabilities: { ...state.capabilities, can_manage: true, acting_side: null, can_veto: false, can_choose_side: false },
+    }
+}
+
+function vetoContractView(name: VetoStateName, change: (state: PickBanViewState) => PickBanViewState = (state) => state): PickBanView {
+    const state = change(managingVeto(pickBanVetoFixture(name)))
+    return buildPickBanView(state, { clockOffsetMs: 0, now: Date.parse(state.server_now) })
+}
+
+function withVeto(state: PickBanViewState, veto: Partial<NonNullable<PickBanViewState['veto']>>): PickBanViewState {
+    return { ...state, veto: { ...state.veto!, ...veto } }
+}
+
+function playingInMatch(state: PickBanViewState): PickBanViewState {
+    return { ...state, viewer: { side: 'team_a', roster_captain: false } }
+}
+
+function vetoOf(view: PickBanView) {
+    return managerDockOf(view, IDLE_MANAGER_PLAY)?.veto
 }
 
 function withSide(state: PickBanViewState, side: Partial<PickBanViewState['side']>): PickBanViewState {
@@ -436,7 +466,7 @@ describe('sides', () => {
                 { side: 'team_b', ab: 'B', color: 'blue', name: 'T04' },
             ],
             badge: TBC,
-            basis: 'T04 choose: lower pre-cup seed',
+            basis: 'T04 choose: higher pre-cup seed (9 vs 3)',
             chooser: {
                 undetermined: false,
                 choices: [
@@ -509,7 +539,7 @@ describe('sides', () => {
 
         expect(dock?.sides).toMatchObject({
             badge: { source: 'caster', label: 'Caster' },
-            basis: 'T04 choose: lower pre-cup seed',
+            basis: 'T04 choose: higher pre-cup seed (9 vs 3)',
             chooser: { undetermined: false },
             swap: { disabled: false },
         })
@@ -526,7 +556,7 @@ describe('sides', () => {
             actFor: null,
             sides: {
                 badge: TBC,
-                basis: 'T04 choose: lower pre-cup seed',
+                basis: 'T04 choose: higher pre-cup seed (9 vs 3)',
                 chooser: null,
                 setSides: { hint: 'Step 1 follows the new colours.', disabled: false, reason: null },
                 swap: { disabled: true, hint: SWAP_TBC },
@@ -620,15 +650,23 @@ describe('sides', () => {
     })
 
     it('words the chooser rule for every reason', () => {
-        const basisOf = (reason: (typeof PICK_BAN_CHOOSER_REASONS)[number]) =>
-            managerDockOf(contractView('pickBanLobby', (state) => withSide(state, { chooser_reason: reason })), IDLE_MANAGER_PLAY)?.sides?.basis
+        const basisOf = (reason: (typeof PICK_BAN_CONTRACT_CHOOSER_REASONS)[number]) =>
+            managerDockOf(contractView('pickBanLobby', (state) => withSide(state, { chooser_reason: reason, chooser_basis: null })), IDLE_MANAGER_PLAY)?.sides?.basis
 
-        expect(PICK_BAN_CHOOSER_REASONS.map(basisOf)).toEqual([
-            'T04 choose: lower pre-cup seed',
-            'T04 choose: lower group placing',
-            'T04 choose: lower knockout differential',
+        expect(PICK_BAN_CONTRACT_CHOOSER_REASONS.map(basisOf)).toEqual([
+            'T04 choose: playoff qualifier vs direct qualifier',
+            'T04 choose: worse playoff record',
+            'T04 choose: lower group finish',
+            'T04 choose: higher pre-cup seed',
             'T04 choose: named by an admin',
         ])
+    })
+
+    it('words the chooser rule with the numbers behind it', () => {
+        const basisOf = (name: VetoStateName) => managerDockOf(vetoContractView(name), IDLE_MANAGER_PLAY)?.sides?.basis
+
+        expect(basisOf('pickBanLobbyVeto')).toBe('T15 choose: lower group finish (4th vs 3rd)')
+        expect(basisOf('pickBanDirectQualifier')).toBe('T09 choose: playoff qualifier vs direct qualifier')
     })
 
     it('badges where the side came from, for every source', () => {
@@ -1176,5 +1214,235 @@ describe('editing the final maps', () => {
         const reopening = confirmManagerCommand(beginManagerCommand(IDLE_MANAGER_PLAY, view, { command: 'reopen' })!.play, view)!.play
 
         expect(managerDockOf(view, managerCommandRejected(reopening, nothingToUndo))?.rejection).toBe('There’s no pick or ban to undo.')
+    })
+})
+
+describe('the lobby veto line', () => {
+    const lobbyLine = (change: (state: PickBanViewState) => PickBanViewState = (state) => state) =>
+        vetoOf(vetoContractView('pickBanLobbyVeto', change))?.lobbyLine
+
+    it('names the one eligible team', () => {
+        expect(lobbyLine()).toBe('Hard-map veto: T15 eligible')
+    })
+
+    it('says both teams are eligible', () => {
+        expect(lobbyLine((state) => withVeto(state, { eligible: ['team_a', 'team_b'], choices: { team_a: null, team_b: null } }))).toBe(
+            'Hard-map veto: both teams eligible',
+        )
+    })
+
+    it('says there is no veto when neither team is eligible', () => {
+        expect(lobbyLine((state) => withVeto(state, { active: false, eligible: [], choices: {} }))).toBe('No veto: neither team eligible')
+    })
+
+    it('words the tag the stage uses', () => {
+        expect(lobbyLine((state) => withVeto(state, { tag: 'Fast' }))).toBe('Fast-map veto: T15 eligible')
+    })
+
+    it('says nothing for a stage without a choice rule', () => {
+        expect(vetoOf(vetoContractView('pickBanDirectQualifier'))).toBeNull()
+        expect(managerDockOf(contractView('pickBanLobby'), IDLE_MANAGER_PLAY)?.veto).toBeNull()
+    })
+
+    it('goes once the match is live', () => {
+        expect(vetoOf(vetoContractView('pickBanVetoChoice'))?.lobbyLine).toBeNull()
+    })
+})
+
+describe('the veto status', () => {
+    const teamsOf = (view: PickBanView) => vetoOf(view)?.teams.map(({ name, state, label }) => [name, state, label])
+
+    it('has nothing to show in the lobby or when nobody is eligible', () => {
+        expect(vetoOf(vetoContractView('pickBanLobbyVeto'))).toMatchObject({ teams: [], outcome: null })
+        expect(vetoOf(vetoContractView('pickBanNoVeto'))).toBeNull()
+    })
+
+    it('shows each eligible team deciding while nobody has chosen', () => {
+        const view = vetoContractView('pickBanVetoChoice', (state) => withVeto(state, { choices: { team_a: null, team_b: null } }))
+
+        expect(teamsOf(view)).toEqual([['T12', 'deciding', 'Deciding'], ['T16', 'deciding', 'Deciding']])
+        expect(vetoOf(view)?.outcome).toBeNull()
+    })
+
+    it('shows the team that chose to play and the one still deciding', () => {
+        expect(teamsOf(vetoContractView('pickBanVetoChoice'))).toEqual([['T12', 'play', 'Play'], ['T16', 'deciding', 'Deciding']])
+    })
+
+    it('names who vetoed and what is left once the veto resolved', () => {
+        const view = vetoContractView('pickBanVetoSpotlightVetoed')
+
+        expect(teamsOf(view)).toEqual([['T15', 'veto', 'Veto']])
+        expect(vetoOf(view)?.outcome).toBe('T15 vetoed the Hard maps · 9 maps')
+    })
+
+    it('says who vetoed when both teams were eligible', () => {
+        const view = vetoContractView('pickBanVetoSpotlightPlayed', (state) =>
+            withVeto(state, { choices: { team_a: 'play', team_b: 'veto' }, outcome: 'vetoed', vetoed_by: 'team_b' }),
+        )
+
+        expect(teamsOf(view)).toEqual([['T12', 'play', 'Play'], ['T16', 'veto', 'Veto']])
+        expect(vetoOf(view)?.outcome).toBe('T16 vetoed the Hard maps · 9 maps')
+    })
+
+    it('says the maps stay in when every eligible team played', () => {
+        const view = vetoContractView('pickBanVetoSpotlightPlayed')
+
+        expect(teamsOf(view)).toEqual([['T12', 'play', 'Play'], ['T16', 'play', 'Play']])
+        expect(vetoOf(view)?.outcome).toBe('Hard maps stay in · 13 maps')
+    })
+
+    it('keeps the outcome through the side choice', () => {
+        expect(vetoOf(vetoContractView('pickBanSideChoiceAfterVeto'))?.outcome).toBe('T15 vetoed the Hard maps · 9 maps')
+    })
+})
+
+describe('acting for a team in the veto', () => {
+    const actForOf = (view: PickBanView) => vetoOf(view)?.actFor
+    const vetoFor = (side: 'team_a' | 'team_b', choice: 'veto' | 'play' = 'veto') => ({ command: 'veto', body: { side, choice } }) as const
+
+    it('offers each eligible team that hasn’t chosen a veto and a play', () => {
+        expect(actForOf(vetoContractView('pickBanVetoChoice'))).toEqual([
+            {
+                side: 'team_b',
+                ab: 'B',
+                teamName: 'T16',
+                options: [
+                    { choice: 'veto', label: 'Veto Hard maps', lead: 'Play 9 maps' },
+                    { choice: 'play', label: 'Play Hard maps', lead: 'Play 13 maps' },
+                ],
+                disabled: false,
+            },
+        ])
+    })
+
+    it('offers both teams while neither has chosen', () => {
+        const view = vetoContractView('pickBanVetoChoice', (state) => withVeto(state, { choices: { team_a: null, team_b: null } }))
+
+        expect(actForOf(view)?.map(({ side, teamName }) => [side, teamName])).toEqual([['team_a', 'T12'], ['team_b', 'T16']])
+    })
+
+    it('offers nothing once every eligible team has chosen or the veto resolved', () => {
+        expect(actForOf(vetoContractView('pickBanVetoChoice', (state) => withVeto(state, { choices: { team_a: 'play', team_b: 'play' } })))).toEqual([])
+        expect(actForOf(vetoContractView('pickBanVetoSpotlightVetoed'))).toEqual([])
+        expect(actForOf(vetoContractView('pickBanSideChoiceAfterVeto'))).toEqual([])
+    })
+
+    it('offers nothing in the lobby or while paused', () => {
+        expect(actForOf(vetoContractView('pickBanLobbyVeto'))).toEqual([])
+        const paused = vetoContractView('pickBanVetoChoice', (state) => ({ ...state, status: 'paused', phase: 'paused', paused: true, paused_at: state.server_now }))
+        expect(actForOf(paused)).toEqual([])
+    })
+
+    it('is hidden from a manager who plays in the match', () => {
+        const view = vetoContractView('pickBanVetoChoice', playingInMatch)
+
+        expect(actForOf(view)).toEqual([])
+        expect(managerDockOf(view, IDLE_MANAGER_PLAY)?.playingNote).not.toBeNull()
+    })
+
+    it('asks before sending the veto command for the named team', () => {
+        const view = vetoContractView('pickBanVetoChoice')
+        const asked = beginManagerCommand(IDLE_MANAGER_PLAY, view, vetoFor('team_b'))
+
+        expect(asked?.request).toBeNull()
+        expect(managerDockOf(view, asked!.play)?.confirm).toMatchObject({
+            command: 'veto',
+            title: 'Veto the Hard maps for T16?',
+            confirmLabel: 'Veto Hard Maps',
+            dismissLabel: 'Go Back',
+        })
+
+        const sent = confirmManagerCommand(asked!.play, view)
+        expect(sent?.request).toEqual(vetoFor('team_b'))
+        expect(sent?.play.submitting).toBe('veto')
+        expect(managerDockOf(view, sent!.play)?.busy).toBe(true)
+    })
+
+    it('words playing the maps for a team', () => {
+        const view = vetoContractView('pickBanVetoChoice')
+        const asked = beginManagerCommand(IDLE_MANAGER_PLAY, view, vetoFor('team_b', 'play'))
+
+        expect(managerDockOf(view, asked!.play)?.confirm).toMatchObject({ title: 'Play the Hard maps for T16?', confirmLabel: 'Play Hard Maps' })
+    })
+
+    it('refuses a team that already chose, a team that isn’t eligible and a manager who plays', () => {
+        expect(beginManagerCommand(IDLE_MANAGER_PLAY, vetoContractView('pickBanVetoChoice'), vetoFor('team_a'))).toBeNull()
+        expect(beginManagerCommand(IDLE_MANAGER_PLAY, vetoContractView('pickBanLobbyVeto'), vetoFor('team_b'))).toBeNull()
+        expect(beginManagerCommand(IDLE_MANAGER_PLAY, vetoContractView('pickBanVetoChoice', playingInMatch), vetoFor('team_b'))).toBeNull()
+    })
+
+    it('drops a pending confirmation once the team has chosen', () => {
+        const view = vetoContractView('pickBanVetoChoice')
+        const asked = beginManagerCommand(IDLE_MANAGER_PLAY, view, vetoFor('team_b'))!
+        const chosen = vetoContractView('pickBanVetoChoice', (state) => withVeto(state, { choices: { team_a: 'play', team_b: 'play' } }))
+
+        expect(settleManagerPlay(asked.play, view)).toBe(asked.play)
+        expect(settleManagerPlay(asked.play, chosen).confirming).toBeNull()
+        expect(confirmManagerCommand(asked.play, chosen)).toBeNull()
+    })
+
+    it('words the refusals the veto can meet', () => {
+        const view = vetoContractView('pickBanVetoChoice')
+        const sending = confirmManagerCommand(beginManagerCommand(IDLE_MANAGER_PLAY, view, vetoFor('team_b'))!.play, view)!.play
+        const wordOf = (code: string) =>
+            managerDockOf(view, managerCommandRejected(sending, new ApiError(409, 'The server’s own words', 'Request failed', code)))?.rejection
+
+        expect(wordOf('veto_not_open')).toBe('The veto isn’t open any more. Check the session and try again.')
+        expect(wordOf('already_chosen')).toBe('That team has already chosen.')
+        expect(wordOf('paused')).toBe('The Picks & Bans process is paused. Resume it first.')
+        expect(wordOf('plays_in_match')).toBe(
+            'You play in this match, so you can’t lock in on a team’s behalf. An admin who isn’t playing has to do that.',
+        )
+        expect(wordOf('version_conflict')).toBe('The session changed just before your click. Check it and try again.')
+    })
+
+    it('recognises the veto error codes', () => {
+        expect(PICK_BAN_VETO_ERROR_CODES.every((code) => PICK_BAN_ERROR_CODES.includes(code))).toBe(true)
+        expect(pickBanErrorCode(new ApiError(409, 'x', 'Request failed', 'already_chosen'))).toBe('already_chosen')
+    })
+})
+
+describe('undoing the veto', () => {
+    const undoOf = (view: PickBanView) => managerDockOf(view, IDLE_MANAGER_PLAY)?.history.find((button) => button.command === 'undo')
+
+    it('says it undoes the last step once a step is in', () => {
+        const firstBan = locked(readAt(started(), AWAITING_A), BRAVO, AWAITING_A + 100)
+        const at = unlockAt(firstBan) + 1_000
+
+        expect(undoOf(viewAt(asManager(readAt(firstBan, at)), at))).toMatchObject({ label: 'Undo Last Step', disabled: false })
+    })
+
+    it('says it undoes the veto once it resolved', () => {
+        expect(undoOf(vetoContractView('pickBanVetoSpotlightVetoed'))).toMatchObject({
+            label: 'Undo Veto',
+            hint: 'Takes back the veto, so the eligible teams choose again.',
+            disabled: false,
+        })
+    })
+
+    it('says it undoes the side before the veto once step 0 set the side', () => {
+        const view = vetoContractView('pickBanSideChoiceAfterVeto', (state) => ({
+            ...state,
+            side: { ...state.side, red: 'team_b', source: 'step0', confirmed: true },
+        }))
+
+        expect(undoOf(view)).toMatchObject({ label: 'Undo Side Choice', hint: 'Takes back the side choice, so the team chooses again.' })
+    })
+
+    it('has nothing to undo while the veto is open', () => {
+        expect(undoOf(vetoContractView('pickBanVetoChoice'))).toBeUndefined()
+    })
+})
+
+describe('the veto phase label', () => {
+    const phaseOf = (name: VetoStateName) => managerDockOf(vetoContractView(name), IDLE_MANAGER_PLAY)?.phase
+
+    it('names the veto while the teams choose and while it is revealed', () => {
+        expect(phaseOf('pickBanVetoChoice')).toBe('Map veto')
+        expect(phaseOf('pickBanVetoSpotlightVetoed')).toBe('Map veto · Revealing')
+    })
+
+    it('goes back to the side choice after it', () => {
+        expect(phaseOf('pickBanSideChoiceAfterVeto')).toBe('Step 0 · Side choice')
     })
 })
