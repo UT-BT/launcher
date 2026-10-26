@@ -179,9 +179,13 @@ interface GroupSource {
     side: BettingSide
 }
 
+function byStakeDescending(backers: BettingBacker[]): BettingBacker[] {
+    return [...backers].sort((left, right) => right.stake - left.stake)
+}
+
 function bettingGroup(source: GroupSource, columnCount: number, limit: number, columns: BettingColumns, result: BettingResult | null): { group: BettingGroup; rows: BackerRow[] } {
     const verdict = sideVerdict(result, source.key)
-    const backers = source.side.backers
+    const backers = verdict === 'lost' ? byStakeDescending(source.side.backers) : source.side.backers
     const shown = shownBackers(backers, limit)
     const rows = shown.map(backer => backerRow(backer, columns, verdict))
     const slots: BettingSlot[] = rows.map(row => ({ kind: 'backer', row }))

@@ -250,7 +250,7 @@ describe('bettingView full-width groups', () => {
         expect(group(view, 'draw').columns).toEqual([[{ kind: 'note', text: 'No bettors on this outcome' }]])
     })
 
-    it.each(['21/6/4', '80/7'] as const)('never moves a row between closed, awaiting, paying out and settled (%s)', shape => {
+    it.each(['21/6/4', '80/7'] as const)('keeps every row in place until the result, then moves only the losing groups (%s)', shape => {
         const order = [
             positions(bettingMarketRead(shape, 'closed')),
             positions(bettingMarketRead(shape, 'closed'), DECIDED),
@@ -258,10 +258,30 @@ describe('bettingView full-width groups', () => {
             positions(bettingMarketRead(shape, 'settled')),
         ]
         expect(order.map(view => view.kind)).toEqual(['closed', 'awaiting', 'paying-out', 'settled'])
+        expect(names(order[1])).toEqual(names(order[0]))
         for (const view of order.slice(1)) {
-            expect(names(view)).toEqual(names(order[0]))
             expect(view.fit.rowHeight).toBe(order[0].fit.rowHeight)
+            expect(names(view)[0]).toEqual(names(order[0])[0])
         }
+    })
+
+    function withRisingStakes(read: BettingRead): BettingRead {
+        const backers = read.sides!.b.backers.map((backer, index) => ({ ...backer, stake: 100 * (index + 1) }))
+        return { ...read, sides: { ...read.sides!, b: { ...read.sides!.b, backers } } }
+    }
+
+    it('lists a losing group by stake, biggest first, once the result is in', () => {
+        const read = withRisingStakes(bettingMarketRead('21/6/4', 'settled'))
+        const view = positions(read)
+        expect(view.groups.map(entry => entry.verdict)).toEqual(['won', 'lost', 'lost'])
+        expect(rowsOf(group(view, 'b')).map(row => row.userId)).toEqual([...read.sides!.b.backers].reverse().map(backer => backer.user_id))
+        expect(rowsOf(group(view, 'a')).map(row => row.userId)).toEqual(read.sides!.a.backers.map(backer => backer.user_id))
+    })
+
+    it('keeps the served payout order before the result is official', () => {
+        const read = withRisingStakes(bettingMarketRead('21/6/4', 'closed'))
+        const view = positions(read, DECIDED)
+        expect(rowsOf(group(view, 'b')).map(row => row.userId)).toEqual(read.sides!.b.backers.map(backer => backer.user_id))
     })
 
     it('lights the draw and dims both teams when the draw wins', () => {

@@ -728,7 +728,9 @@ must be in a file the app scans. The bundle check budgets the two separately
 
 - **Predictions scene** (`scenes/betting/`, opaque, 1792×824 body). Before the market closes it shows the
   odds plates at full width. After that it names every bettor on every outcome in groups A | Draw | B
-  (no Draw group on a two-way market), in the order the API serves them. Nothing scrolls or pages, so
+  (no Draw group on a two-way market), in the order the API serves them (potential payout, highest
+  first). Once the result is official, a losing group re-sorts by stake, biggest loss first; the
+  winning group keeps the served order. Nothing scrolls or pages, so
   every source shows the same frame. The fit is the pure `bettingLayout(counts, box)` (`bettingLayout.ts`):
   - the body stacks a 52px status row (with the "Biggest bet" ring legend on the right), 12px, 64px group
     plates, 8px, 20px column heads, 4px, and a 664px rows box;
