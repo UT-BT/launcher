@@ -9,6 +9,7 @@ import { TeamName } from '../TeamRoster'
 import { MatchOddsChip } from '../predictions/predictionsShared'
 import { pickBanCardAffordance } from '../pickban/pickBanEntryPoints'
 import { PickBanLink } from '../pickban/components/PickBanLink'
+import { linkedCapRows } from '../manage/capLinkRuns'
 import type {
     EventBracketGroup, EventBracketStage, EventBracketTeamRef, EventEntrantStatus, EventFormatSpec,
     EventMatch, EventMatchMap,
@@ -327,23 +328,41 @@ function MapRow({ row, capsToWin, teamA, teamB, onMapSelect }: {
     )
 }
 
+const CAP_SIDE_STYLES: Record<EventSide, string> = {
+    a: 'bg-accent-500/15 text-accent-300 border-accent-500/30',
+    b: 'bg-sky-500/15 text-sky-300 border-sky-500/30',
+}
+
 function CapList({ row }: { row: EventMatchMap }) {
     if (!row.caps?.length) return null
 
     return (
         <div className="pl-5 space-y-0.5">
-            {row.caps.map(cap => (
-                <div key={cap.cap_id} className="flex items-center gap-2 text-[11px] min-w-0">
-                    <Chip className={cap.side === 'a'
-                        ? 'bg-accent-500/15 text-accent-300 border-accent-500/30'
-                        : 'bg-sky-500/15 text-sky-300 border-sky-500/30'}>
-                        {cap.side}
-                    </Chip>
-                    <PlayerInfo userId={cap.user} alias={cap.alias} size="sm" />
-                    {cap.cap_time_seconds != null && (
+            {linkedCapRows(row.caps).map(entry => entry.kind === 'run' ? (
+                <div key={entry.key} className="flex items-center gap-2 text-[11px] min-w-0">
+                    <Chip className={CAP_SIDE_STYLES[entry.side]}>{entry.side}</Chip>
+                    <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
+                        {entry.members.map(member => (
+                            <PlayerInfo key={member.capId} userId={member.user} alias={member.alias} size="sm" />
+                        ))}
+                    </span>
+                    {entry.seconds != null && (
                         <CapTimeLink
-                            capId={cap.cap_id}
-                            seconds={cap.cap_time_seconds}
+                            teamCapId={entry.teamCapId}
+                            capId={entry.members[0]?.capId}
+                            seconds={entry.seconds}
+                            className="ml-auto shrink-0 tabular-nums text-muted-foreground"
+                        />
+                    )}
+                </div>
+            ) : (
+                <div key={entry.key} className="flex items-center gap-2 text-[11px] min-w-0">
+                    <Chip className={CAP_SIDE_STYLES[entry.cap.side]}>{entry.cap.side}</Chip>
+                    <PlayerInfo userId={entry.cap.user} alias={entry.cap.alias} size="sm" />
+                    {entry.cap.cap_time_seconds != null && (
+                        <CapTimeLink
+                            capId={entry.cap.cap_id}
+                            seconds={entry.cap.cap_time_seconds}
                             className="ml-auto shrink-0 tabular-nums text-muted-foreground"
                         />
                     )}

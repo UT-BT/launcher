@@ -8,7 +8,7 @@ import {
     type EventCapCandidate, type EventMatchMap, type EventSide,
 } from '@/app/utils/api'
 import { Chip, formatMatchTime, formatSeconds, toIso, toLocalInput } from '../bracket/bracketShared'
-import { candidateKey, defaultPicks, linkedCaps, tallyPicks, type CapLinkPicks } from './capLinkRuns'
+import { candidateKey, capLinkSearchStart, defaultPicks, linkedCaps, tallyPicks, type CapLinkPicks } from './capLinkRuns'
 
 const COMPLETE_STYLE = 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
 const INCOMPLETE_STYLE = 'bg-amber-500/15 text-amber-300 border-amber-500/30'
@@ -20,25 +20,31 @@ interface CapLinkPickerProps {
     row: EventMatchMap
     teamNames: Record<EventSide, string>
     disabled?: boolean
+    initialMap?: string | null
+    initialFrom?: string | null
+    initialTo?: string | null
     onLink: (caps: Array<{ cap_id: string; side: EventSide }>) => Promise<void>
 }
 
-export function CapLinkPicker({ accessToken, slug, matchId, row, teamNames, disabled, onLink }: CapLinkPickerProps) {
+export function CapLinkPicker({
+    accessToken, slug, matchId, row, teamNames, disabled, initialMap, initialFrom, initialTo, onLink,
+}: CapLinkPickerProps) {
+    const start = capLinkSearchStart(row, { map: initialMap, from: initialFrom, to: initialTo })
     const [open, setOpen] = useState(false)
     const [loading, setLoading] = useState(false)
     const [saving, setSaving] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [candidates, setCandidates] = useState<EventCapCandidate[]>([])
     const [picked, setPicked] = useState<CapLinkPicks>({})
-    const [from, setFrom] = useState(() => toLocalInput(row.started_at))
-    const [to, setTo] = useState(() => toLocalInput(row.ended_at))
+    const [from, setFrom] = useState(() => toLocalInput(start.from))
+    const [to, setTo] = useState(() => toLocalInput(start.to))
 
     const search = useCallback(async () => {
         setLoading(true)
         setError(null)
         try {
             const rows = await fetchEventCapCandidates(accessToken, slug, matchId, {
-                map: row.map,
+                map: start.map,
                 from: toIso(from),
                 to: toIso(to),
             })
@@ -50,7 +56,7 @@ export function CapLinkPicker({ accessToken, slug, matchId, row, teamNames, disa
         } finally {
             setLoading(false)
         }
-    }, [accessToken, slug, matchId, row.map, from, to])
+    }, [accessToken, slug, matchId, start.map, from, to])
 
     const linked = new Set((row.caps ?? []).map(cap => cap.cap_id))
     const counts = tallyPicks(candidates, picked)
