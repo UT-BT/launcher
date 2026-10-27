@@ -30,6 +30,7 @@ const SAMPLES: Record<string, string> = {
     newsId: '42',
     eventSlug: '2v2-cup-2026',
     matchId: '77',
+    eventTeamId: '0afeb020-f471-4988-9201-2676902cc2b3',
 }
 
 function paramsFor(route: ContractRoute): NavParams {
@@ -101,6 +102,24 @@ describe('malformed urls', () => {
 describe('the stream sub-route', () => {
     it('is never resolved as match-pickban by pathToNav, since it is handled before the app shell mounts', () => {
         expect(pathToNav('/events/cup/matches/77/stream', '').view).not.toBe('match-pickban')
+    })
+})
+
+describe('the event team route', () => {
+    it('resolves a team id under an event to the team page', () => {
+        expect(pathToNav('/events/2v2-cup-2026/teams/0afeb020-f471-4988-9201-2676902cc2b3', '')).toEqual({
+            view: 'event-team',
+            params: { eventSlug: '2v2-cup-2026', eventTeamId: '0afeb020-f471-4988-9201-2676902cc2b3' },
+        })
+    })
+
+    it('leaves a teams path without an id, or with extra segments, on the event page', () => {
+        expect(pathToNav('/events/2v2-cup-2026/teams', '').view).toBe('event-detail')
+        expect(pathToNav('/events/2v2-cup-2026/teams/abc/extra', '').view).toBe('event-detail')
+    })
+
+    it('builds the team path from its params', () => {
+        expect(viewToPath('event-team', { eventSlug: 'cup 2026', eventTeamId: 'a/b' })).toBe('/events/cup%202026/teams/a%2Fb')
     })
 })
 

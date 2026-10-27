@@ -84,7 +84,7 @@ export function navItemDestination(item: NavItem): NavDestination {
 }
 
 export function eventSlugOfView(view: string, params: NavParams): string | null {
-    if (view !== 'event-detail' && view !== 'match-pickban') return null
+    if (view !== 'event-detail' && view !== 'match-pickban' && view !== 'event-team') return null
     return params.eventSlug || null
 }
 

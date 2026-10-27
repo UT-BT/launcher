@@ -10,6 +10,10 @@ describe('paramsEqual', () => {
         expect(paramsEqual({ eventSlug: 'cup', matchId: '1' }, { eventSlug: 'cup', matchId: '1' })).toBe(true)
     })
 
+    it('treats two different event team ids as different params', () => {
+        expect(paramsEqual({ eventSlug: 'cup', eventTeamId: 'a' }, { eventSlug: 'cup', eventTeamId: 'b' })).toBe(false)
+    })
+
     it('treats two different event tabs as different params', () => {
         expect(paramsEqual({ eventSlug: 'cup', eventTab: 'predictions' }, { eventSlug: 'cup', eventTab: 'schedule' })).toBe(false)
     })

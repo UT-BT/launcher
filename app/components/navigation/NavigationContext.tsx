@@ -10,6 +10,7 @@ export interface NavParams {
     eventSlug?: string
     eventTab?: string
     matchId?: string
+    eventTeamId?: string
     mapsNewOnly?: boolean
 }
 
@@ -51,5 +52,6 @@ export function paramsEqual(a: NavParams, b: NavParams): boolean {
         && a.eventSlug === b.eventSlug
         && a.eventTab === b.eventTab
         && a.matchId === b.matchId
+        && a.eventTeamId === b.eventTeamId
         && !!a.mapsNewOnly === !!b.mapsNewOnly
 }

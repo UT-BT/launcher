@@ -43,6 +43,14 @@ describe('isNavItemActive', () => {
             expect(isNavItemActive(cupItem, 'match-pickban', { eventSlug: '2v2-cup-2026', matchId: '42' })).toBe(true)
         })
 
+        it('is active on a cup team page', () => {
+            expect(isNavItemActive(cupItem, 'event-team', { eventSlug: '2v2-cup-2026', eventTeamId: 'team-1' })).toBe(true)
+        })
+
+        it('is inactive on a team page of another event', () => {
+            expect(isNavItemActive(cupItem, 'event-team', { eventSlug: 'other-cup', eventTeamId: 'team-1' })).toBe(false)
+        })
+
         it('is inactive on a different event page', () => {
             expect(isNavItemActive(cupItem, 'event-detail', { eventSlug: 'other-cup' })).toBe(false)
             expect(isNavItemActive(cupItem, 'match-pickban', { eventSlug: 'other-cup', matchId: '42' })).toBe(false)
@@ -87,6 +95,10 @@ describe('eventSlugOfView', () => {
 
     it('gives the slug of a match picks & bans page', () => {
         expect(eventSlugOfView('match-pickban', { eventSlug: '2v2-cup-2026', matchId: '42' })).toBe('2v2-cup-2026')
+    })
+
+    it('gives the slug of an event team page', () => {
+        expect(eventSlugOfView('event-team', { eventSlug: '2v2-cup-2026', eventTeamId: 'team-1' })).toBe('2v2-cup-2026')
     })
 
     it('gives nothing for a view that belongs to no event', () => {
