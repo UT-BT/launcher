@@ -114,6 +114,10 @@ export function formatCountdown(target: string | null | undefined, now: number):
     return `${seconds}s`
 }
 
+export function kickoffOf(market: Pick<PredictionMarket, 'match'>): number | null {
+    return parseApiInstant(market.match?.scheduled_at)
+}
+
 /**
  * Which outcomes this market offers. A group match races to three maps of four
  * and can finish level, so the draw is a third thing to back; a knockout has to

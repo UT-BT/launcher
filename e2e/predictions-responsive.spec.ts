@@ -29,7 +29,6 @@ function market(id: string, overrides: Record<string, unknown> = {}) {
         position_count: 9,
         liquidity_b: 9110,
         manual_override: null,
-        closes_at: new Date(Date.now() + 45 * 60_000).toISOString(),
         closed_at: null,
         resolved_at: null,
         settles_at: null,
@@ -84,7 +83,6 @@ const PREDICTIONS = {
         min_stake: 10,
         max_stake_pct: 25,
         liquidity_b: 9110,
-        close_buffer_seconds: 0,
         settlement_hold_minutes: 30,
         roster_bets_allowed: true,
         void_on_result_while_open: true,
@@ -94,7 +92,7 @@ const PREDICTIONS = {
     stages: [{ id: 'stage-1', stage_key: 'groups', name: 'Group Stage', kind: 'groups', ordinal: 0 }],
     markets: [
         market('1'),
-        market('2', { status: 'closed', closes_at: new Date(Date.now() - 60_000).toISOString() }),
+        market('2', { status: 'closed' }),
         market('3', {
             status: 'settled',
             outcome: 'void',

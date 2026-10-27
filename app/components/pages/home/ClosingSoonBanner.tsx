@@ -5,7 +5,7 @@ import { NavLink } from '@/app/components/navigation/NavLink'
 import { useNavigation } from '@/app/components/navigation/NavigationContext'
 import { fetchUpcomingPredictions, type UpcomingPredictionMarket } from '@/app/utils/api'
 import {
-    formatCountdown, formatPercent, priceOf, sidesOf, useNow,
+    formatCountdown, formatPercent, kickoffOf, priceOf, sidesOf, useNow,
 } from '@/app/components/pages/events/predictions/predictionsShared'
 import { marketTakesPredictions } from '@/app/components/pages/events/predictions/marketLock'
 
@@ -17,8 +17,9 @@ const URGENT_MS = 30 * 60 * 1000
  * else. Deliberately not a section: most days there is nothing closing, and the
  * banner has to be able to disappear without leaving a hole.
  *
- * The API only returns markets with a real close time inside the window, so an
- * unscheduled match never appears here — it is not closing soon in any sense.
+ * A market closes when its match's pick/ban starts, so the countdown runs to
+ * kick-off. The API only returns matches starting inside the window or running
+ * late, so an unscheduled match never appears here.
  */
 export function ClosingSoonBanner({ accessToken }: { accessToken: string }) {
     const [items, setItems] = useState<UpcomingPredictionMarket[]>([])
@@ -34,10 +35,7 @@ export function ClosingSoonBanner({ accessToken }: { accessToken: string }) {
         return () => controller.abort()
     }, [accessToken])
 
-    const live = items.filter(market => {
-        const closes = market.closes_at ? new Date(market.closes_at).getTime() : 0
-        return closes > now && marketTakesPredictions(market)
-    })
+    const live = items.filter(market => kickoffOf(market) !== null && marketTakesPredictions(market))
 
     if (live.length === 0) return null
 
@@ -50,9 +48,9 @@ export function ClosingSoonBanner({ accessToken }: { accessToken: string }) {
 
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 min-w-0">
                 {live.map(market => {
-                    const countdown = formatCountdown(market.closes_at, now)
-                    const urgent = !!market.closes_at
-                        && new Date(market.closes_at).getTime() - now < URGENT_MS
+                    const countdown = formatCountdown(market.match?.scheduled_at, now) ?? 'Starting'
+                    const kickoff = kickoffOf(market)
+                    const urgent = kickoff !== null && kickoff - now < URGENT_MS
 
                     return (
                         <NavLink

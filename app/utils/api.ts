@@ -5362,7 +5362,6 @@ export interface PredictionConfig {
     min_stake?: number
     max_stake_pct?: number
     liquidity_b?: number
-    close_buffer_seconds?: number
     settlement_hold_minutes?: number
     roster_bets_allowed?: boolean
     void_on_result_while_open?: boolean
@@ -5420,7 +5419,6 @@ export interface PredictionMarket {
     position_count: number
     liquidity_b: number
     manual_override: PredictionOverride | null
-    closes_at: string | null
     closed_at: string | null
     resolved_at: string | null
     settles_at: string | null
@@ -5571,7 +5569,6 @@ export interface PredictionEventAchievements {
 
 export interface PredictionAdminMarkets {
     items: PredictionMarket[]
-    unscheduled_open_count: number
     bracket_published?: boolean
     config: PredictionConfig
     achievements?: PredictionEventAchievements
@@ -5735,7 +5732,7 @@ export async function updateEventPredictionConfig(accessToken: string, slug: str
 export async function fetchEventPredictionAdminMarkets(accessToken: string, slug: string, signal?: AbortSignal): Promise<PredictionAdminMarkets> {
     return apiGetOr<PredictionAdminMarkets>(
         predictionsPath(slug, '/admin/markets'),
-        { items: [], unscheduled_open_count: 0, config: { enabled: false } },
+        { items: [], config: { enabled: false } },
         { token: accessToken, signal },
     )
 }
@@ -5840,8 +5837,8 @@ export async function fetchEventPredictionInsights(
 }
 
 /**
- * Markets closing inside `withinHours`. Only ever returns markets with a real
- * close time — an unscheduled match is not closing soon.
+ * Open markets whose match starts inside `withinHours`, or started late within
+ * the last hour. Unscheduled matches never appear.
  */
 export async function fetchUpcomingPredictions(
     accessToken: string,
