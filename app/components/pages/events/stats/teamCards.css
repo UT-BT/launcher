@@ -1,0 +1,15 @@
+.team-cards {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
+}
+
+.team-card {
+  background-image: radial-gradient(22rem 9rem at 0% 0%, color-mix(in oklab, var(--team-accent) 16%, transparent), transparent 70%);
+}
+
+.team-card:hover {
+  border-color: color-mix(in oklab, var(--team-accent) 55%, transparent);
+}
+
+.team-card-avatar {
+  box-shadow: 0 0 0 2px var(--background), 0 0 0 3.5px color-mix(in oklab, var(--team-accent) 85%, transparent);
+}

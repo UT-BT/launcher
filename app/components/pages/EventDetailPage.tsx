@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { ArrowLeft, CalendarClock, CalendarDays, Users2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useNavState } from '@/app/components/navigation/useNavState'
@@ -37,9 +37,11 @@ import { EventTodoPanel } from './events/EventTodoPanel'
 import { eventTodos, scheduleTodoSummary, todoCountsByKind } from '@/app/utils/eventAttention'
 import { isSignupOnlyTab, signupsClosed } from '@/app/utils/signupWindow'
 import { streamTabVisible, type OperatingViewer } from './events/stream/streamTabAccess'
+import { statsMode } from './events/stats/statsView'
 
 const StreamTab = lazy(() => import('./events/stream/StreamTab').then(m => ({ default: m.StreamTab })))
 const EventAchievementsTab = lazy(() => import('./events/achievements/EventAchievementsTab').then(m => ({ default: m.EventAchievementsTab })))
+const StatsOverview = lazy(() => import('./events/stats/StatsOverview').then(m => ({ default: m.StatsOverview })))
 
 const PICK_BAN_ME_REFRESH_MS = 30_000
 
@@ -63,6 +65,26 @@ function NextMatchBanner({ match, myTeamId, now }: {
             </span>
             <span className="ml-auto shrink-0 font-medium tabular-nums text-accent-300">{countdown}</span>
         </div>
+    )
+}
+
+function TeamsLoading() {
+    return <div className="py-10 text-center text-sm text-muted-foreground">Loading teams…</div>
+}
+
+function TeamsTab({ eventSlug, accessToken, bracket, bracketLoaded, roster }: {
+    eventSlug: string
+    accessToken: string
+    bracket: EventBracket | null
+    bracketLoaded: boolean
+    roster: ReactNode
+}) {
+    if (!bracketLoaded) return <TeamsLoading />
+    if (statsMode(bracket) === 'roster') return roster
+    return (
+        <Suspense fallback={<TeamsLoading />}>
+            <StatsOverview eventSlug={eventSlug} accessToken={accessToken} refreshKey={bracket} roster={roster} />
+        </Suspense>
     )
 }
 
@@ -433,7 +455,15 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
                         )}
                     </div>
                 )}
-                {activeTab === 'teams' && <EventTeamsList teams={teams} teamSize={event.team_size} loading={loading} />}
+                {activeTab === 'teams' && (
+                    <TeamsTab
+                        eventSlug={eventSlug}
+                        accessToken={browseToken}
+                        bracket={bracket}
+                        bracketLoaded={bracketLoaded}
+                        roster={<EventTeamsList teams={teams} teamSize={event.team_size} loading={loading} />}
+                    />
+                )}
                 {activeTab === 'bracket' && (
                     <BracketTab bracket={bracket} loading={loading} onMapSelect={onMapSelect} onScheduleMatch={setSchedulerMatchId}
                         eventSlug={eventSlug} myTeamId={myTeamId} />
