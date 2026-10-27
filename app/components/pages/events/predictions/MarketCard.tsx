@@ -9,8 +9,8 @@ import { MatchupInsights } from './MatchupInsights'
 import { marketTakesPredictions } from './marketLock'
 import {
     CoinAmount, MarketStatusChip, SIDE_BAR_STYLES, SIDE_TEXT_STYLES, formatCoins, formatCountdown,
-    formatMultiplier, formatOdds, formatPercent, openingPriceOf, outcomeLabel, priceDrift, priceOf,
-    sideLabel,
+    formatMultiplier, formatOdds, formatPercent, kickoffOf, openingPriceOf, outcomeLabel, priceDrift,
+    priceOf, sideLabel,
 } from './predictionsShared'
 
 interface MarketCardProps {
@@ -29,12 +29,13 @@ export function MarketCard({
 }: MarketCardProps) {
     const [showInsights, setShowInsights] = useState(false)
     const held = market.your_position
-    const countdown = market.status === 'open' ? formatCountdown(market.closes_at, now) : null
+    const open = market.status === 'open'
+    const startsIn = open ? formatCountdown(market.match?.scheduled_at, now) : null
     const payoutIn = market.status === 'resolved' ? formatCountdown(market.settles_at, now) : null
     const settled = outcomeLabel(market)
     const label = market.match?.round_label || (market.match?.round_no ? `Round ${market.match.round_no}` : null)
-    const urgent = market.status === 'open' && !!market.closes_at
-        && new Date(market.closes_at).getTime() - now < 60 * 60 * 1000
+    const kickoff = kickoffOf(market)
+    const urgent = open && kickoff !== null && kickoff - now < 60 * 60 * 1000
 
     return (
         <div className={cn(
@@ -64,9 +65,9 @@ export function MarketCard({
                         <span className="tabular-nums">
                             {market.position_count} {market.position_count === 1 ? 'prediction' : 'predictions'}
                         </span>
-                        {countdown && (
+                        {open && (
                             <span className={cn('tabular-nums', urgent ? 'text-amber-300 font-medium' : 'text-white/70')}>
-                                Closes in {countdown}
+                                {startsIn ? `Starts in ${startsIn} · closes at pick/ban` : 'Closes at pick/ban'}
                             </span>
                         )}
                         {payoutIn && <span className="text-sky-300 tabular-nums">Pays out in {payoutIn}</span>}

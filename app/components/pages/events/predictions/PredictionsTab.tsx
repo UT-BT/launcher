@@ -14,7 +14,7 @@ import { BetModal } from './BetModal'
 import { MarketCard } from './MarketCard'
 import { PredictionsLeaderboard } from './PredictionsLeaderboard'
 import { marketTakesPredictions } from './marketLock'
-import { CoinAmount, formatCoins, parseApiInstant, useNow } from './predictionsShared'
+import { CoinAmount, formatCoins, kickoffOf, useNow } from './predictionsShared'
 
 type PredictionsView = 'markets' | 'mine' | 'leaderboard'
 
@@ -45,21 +45,18 @@ const SECTIONS: Array<{ id: string; title: string; blurb?: string }> = [
 ]
 
 /**
- * Markets sort by when they stop taking predictions, not by bracket position: the
- * only question on this page is what can still be predicted on and how long is
- * left. A market with no deadline sorts last — it is not "upcoming" in any useful
- * sense, and the manage panel flags those separately.
+ * Markets sort by kick-off, not by bracket position: a market closes when its
+ * match's pick/ban starts, so kick-off is the best guess at how long is left. An
+ * unscheduled match sorts last — it is not "upcoming" in any useful sense.
  */
 function sortKey(market: PredictionMarket): number {
-    return parseApiInstant(market.closes_at)
-        ?? parseApiInstant(market.match?.scheduled_at)
-        ?? Number.POSITIVE_INFINITY
+    return kickoffOf(market) ?? Number.POSITIVE_INFINITY
 }
 
 function sectionFor(market: PredictionMarket, now: number): string {
     if (marketTakesPredictions(market)) {
-        const closes = parseApiInstant(market.closes_at)
-        return closes !== null && closes - now < CLOSING_SOON_MS ? 'closing' : 'open'
+        const kickoff = kickoffOf(market)
+        return kickoff !== null && kickoff - now < CLOSING_SOON_MS ? 'closing' : 'open'
     }
     if (market.status === 'open' || market.status === 'closed') return 'awaiting'
     if (market.status === 'resolved') return 'paying'

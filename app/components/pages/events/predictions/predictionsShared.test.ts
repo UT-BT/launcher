@@ -26,7 +26,6 @@ function aMarket(overrides: Partial<PredictionMarket> = {}): PredictionMarket {
         position_count: 0,
         liquidity_b: 1000,
         manual_override: null,
-        closes_at: null,
         closed_at: null,
         resolved_at: null,
         settles_at: null,

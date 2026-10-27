@@ -21,7 +21,7 @@ const PER_MATCH_HINT =
     'Prevents users from betting significant portions of their wealth on one match. Share of what a '
     + 'player is worth right now, so it stays fair as they win or lose'
 
-const EMPTY: PredictionAdminMarkets = { items: [], unscheduled_open_count: 0, config: { enabled: false } }
+const EMPTY: PredictionAdminMarkets = { items: [], config: { enabled: false } }
 
 /** Named by what a big prediction visibly does, because "b = 1000" tells nobody anything. */
 const LIQUIDITY_PRESETS: Array<{ id: string; label: string; targetPrice: number; blurb: string }> = [
@@ -142,13 +142,6 @@ export function PredictionsManagePanel({ accessToken, slug, onRefresh }: {
                         value={draft.settlement_hold_minutes}
                         onChange={value => set({ settlement_hold_minutes: value })}
                     />
-                    <NumberField
-                        label="Close early"
-                        suffix="sec"
-                        hint="Stops predictions this many seconds BEFORE the scheduled kick-off, instead of exactly on it."
-                        value={draft.close_buffer_seconds}
-                        onChange={value => set({ close_buffer_seconds: value })}
-                    />
                 </div>
 
                 <LiquidityField
@@ -218,16 +211,6 @@ export function PredictionsManagePanel({ accessToken, slug, onRefresh }: {
                 </div>
             )}
 
-            {data.unscheduled_open_count > 0 && (
-                <div className="p-3 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-200 text-sm flex gap-2">
-                    <AlertTriangle className="size-4 shrink-0 mt-0.5" />
-                    <span>
-                        {data.unscheduled_open_count} open {data.unscheduled_open_count === 1 ? 'market has' : 'markets have'}
-                        {' '}no scheduled close time. Give those matches a kick-off time, or close them by hand before
-                        scoring, otherwise scoring them refunds every prediction on them.
-                    </span>
-                </div>
-            )}
 
             <FinalisePanel
                 achievements={data.achievements}
@@ -432,7 +415,7 @@ function MarketRow({ market, busy, onAction }: {
                     {sidesOf(market).map(side => formatPercent(priceOf(market, side))).join(' / ')}
                     {' · '}{formatCoins(market.pool_stake)} staked
                     {' · '}{market.position_count} predictions
-                    {market.closes_at ? ` · closes ${formatMatchTime(market.closes_at)}` : ' · no close time'}
+                    {market.match?.scheduled_at ? ` · starts ${formatMatchTime(market.match.scheduled_at)}` : ' · unscheduled'}
                 </div>
                 {market.outcome_reason && (
                     <div className="text-[11px] text-amber-200/80 mt-0.5">{market.outcome_reason}</div>
