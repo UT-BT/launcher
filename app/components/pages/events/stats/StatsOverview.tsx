@@ -11,12 +11,20 @@ import {
 } from './statsView'
 import { StageChips } from './StageChips'
 import { TeamCardsGrid, TeamSortControl } from './TeamCardsGrid'
+import { CupAtAGlance } from './CupAtAGlance'
+import { MapStatsTable } from './MapStatsTable'
 
 export function overviewTeamCards(stats: EventStats, allTeams: readonly EventStatsTeam[] | null, sort: TeamSortKey): TeamCardView[] {
     const known = allTeams ?? stats.teams
     const slots = accentSlots(known)
     const names = teamNames([...known, ...stats.teams])
     return sortTeams(stats.teams, sort).map(team => teamCardView(team, { slots, names }))
+}
+
+export type OverviewTeam = Pick<TeamCardView, 'id' | 'name' | 'members' | 'accentSlot'>
+
+export function overviewTeams(cards: readonly OverviewTeam[]): Record<string, OverviewTeam> {
+    return Object.fromEntries(cards.map(card => [card.id, card]))
 }
 
 interface StatsOverviewProps {
@@ -38,6 +46,7 @@ export function StatsOverview({ eventSlug, accessToken, refreshKey, roster }: St
     const [allTeams, setAllTeams] = useState<EventStatsTeam[] | null>(null)
     if (stats && stats.stage === null && stats.teams !== allTeams) setAllTeams(stats.teams)
     const teamsHeadingId = useId()
+    const mapsHeadingId = useId()
 
     if (!stats) {
         if (read.error) return <StatsError message={read.error} onRetry={read.reload} />
@@ -51,6 +60,7 @@ export function StatsOverview({ eventSlug, accessToken, refreshKey, roster }: St
     if (statsMode(stats) === 'roster') return <>{roster}</>
 
     const cards = overviewTeamCards(stats, allTeams, sort)
+    const teams = overviewTeams(cards)
 
     return (
         <div className={cn('flex flex-col gap-6 transition-opacity', read.loading && 'opacity-60')} aria-busy={read.loading}>
@@ -61,12 +71,22 @@ export function StatsOverview({ eventSlug, accessToken, refreshKey, roster }: St
                 <TeamSortControl value={sort} onChange={setSort} />
             </div>
 
+            <CupAtAGlance records={stats.records} teams={teams} eventSlug={eventSlug} />
+
             <section aria-labelledby={teamsHeadingId} className="flex flex-col gap-2.5">
                 <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                     <h2 id={teamsHeadingId} className="text-[10px] uppercase tracking-wider text-muted-foreground">Teams</h2>
                     <span className="text-xs text-muted-foreground">{stageScopeLabel(stats.stages, stats.stage)} · official results only</span>
                 </div>
                 <TeamCardsGrid cards={cards} eventSlug={eventSlug} />
+            </section>
+
+            <section aria-labelledby={mapsHeadingId} className="flex flex-col gap-2.5">
+                <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                    <h2 id={mapsHeadingId} className="text-[10px] uppercase tracking-wider text-muted-foreground">Maps</h2>
+                    <span className="text-xs text-muted-foreground">Bans and picks from fully revealed pick & bans · renamed maps grouped under their newest name</span>
+                </div>
+                <MapStatsTable maps={stats.maps} teams={teams} eventSlug={eventSlug} />
             </section>
         </div>
     )

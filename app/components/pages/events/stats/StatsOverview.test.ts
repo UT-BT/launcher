@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { eventStatsFixture } from '@/app/utils/fixtures/eventStatsFixtures'
-import { overviewTeamCards } from './StatsOverview'
+import { overviewTeamCards, overviewTeams } from './StatsOverview'
 import { DEFAULT_TEAM_SORT, accentSlots, sortTeams } from './statsView'
 
 describe('overviewTeamCards', () => {
@@ -51,5 +51,15 @@ describe('overviewTeamCards', () => {
                 }
             }
         }
+    })
+})
+
+describe('overviewTeams', () => {
+    it('looks up every card by team id', () => {
+        const cards = overviewTeamCards(eventStatsFixture('overviewAll'), null, DEFAULT_TEAM_SORT)
+        const teams = overviewTeams(cards)
+
+        expect(Object.keys(teams)).toHaveLength(cards.length)
+        for (const card of cards) expect(teams[card.id]).toBe(card)
     })
 })
