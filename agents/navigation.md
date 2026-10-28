@@ -10,8 +10,8 @@ not_here:
   - "where page state / persistence lives → state-patterns.md"
   - "the PlayerInfo / CapTimeLink components that trigger nav → shared-components.md"
   - "the Schedule tab's own visibility rule and its audiences → data-sources.md"
-sections: [the-model, navigate-is-the-only-entry-point, leave-guards, url-sync-web-build, link-semantics, page-views-vs-detail-pages, the-sidebar-registry, event-driven-navigation, sidebar-new-badges, page-refresh-registry, per-entry-state, shareable-match-links, match-pickban-page]
-last_verified: 2026-10-26
+sections: [the-model, navigate-is-the-only-entry-point, leave-guards, url-sync-web-build, link-semantics, page-views-vs-detail-pages, the-sidebar-registry, event-driven-navigation, sidebar-new-badges, page-refresh-registry, per-entry-state, shareable-match-links, event-team-page, teams-tab-roster-or-stats, manage-matches-caps-need-linking, match-pickban-page]
+last_verified: 2026-10-28
 verify_against:
   - app/components/main/Main.tsx
   - app/components/navigation/NavLink.tsx
@@ -27,6 +27,13 @@ verify_against:
   - app/components/navigation/matchLinks.ts
   - app/public/route-contract.json
   - app/components/pages/EventDetailPage.tsx
+  - app/components/pages/EventTeamPage.tsx
+  - app/components/pages/events/stats/StatsOverview.tsx
+  - app/components/pages/events/stats/statsView.ts
+  - app/components/pages/events/stats/team/MatchTimeline.tsx
+  - app/components/pages/events/stats/team/TeamRunsTable.tsx
+  - app/components/pages/events/manage/matches/CapsNeedLinking.tsx
+  - app/components/pages/events/manage/matches/MatchesPanel.tsx
   - app/utils/signupWindow.ts
   - app/components/pages/MatchPickBanPage.tsx
   - app/components/pages/events/pickban/components/PickBanSoundControl.tsx
@@ -62,10 +69,10 @@ const [cursor, setCursor] = useState(0)
   `{ id, view, params: NavParams, state: Record<string, unknown> }`. `id` is a
   monotonic counter; `state` is the per-entry bag (see below).
 - **`NavParams`** = `{ mapName?, playerId?, capId?, teamCapId?, newsId?, teamId?, eventSlug?,
-  eventTab?, matchId?, mapsNewOnly? }` — the params a view can carry. Add a field
+  eventTab?, matchId?, eventTeamId?, mapsNewOnly? }` — the params a view can carry. Add a field
   here if a new detail page needs a different identifier, or if a page must open
   in a specific state. A view is not limited to one param — `match-pickban` reads
-  both `eventSlug` and `matchId` — but `paramsEqual` (below) must compare every
+  both `eventSlug` and `matchId`, and `event-team` reads `eventSlug` and `eventTeamId` — but `paramsEqual` (below) must compare every
   field the view uses, or a param-only change silently no-ops as "already here".
   `mapsNewOnly` seeds the Maps page's new-only filter when opened from the Home
   "new maps" tile; `MapsPage` reads it via its `initialNewOnly` prop on mount.
@@ -317,7 +324,7 @@ Two kinds of case:
 | Kind | Views | Keyed? | Why |
 |---|---|---|---|
 | **Page-views** | `home`, `servers`, `maps`, `players`, `teams`, `cap-it-all`, `world-records`, `achievements`, `news`, `admin` | **No** — one reused instance per view | Not-keyed means no remount between *entries of the same view*. It does **not** mean the component survives a view change: `renderView()` returns exactly one element, so `home` -> `maps` unmounts `Home`. State and data survive because they are hoisted to `Main` — per-entry via `usePageState`, data via a `caches` singleton — and read back on remount, **not** because the component stays mounted. A page-view that keeps data in its own `useState` refetches it on every visit. |
-| **Detail-pages** | `maps-detail`, `player-detail`, `cap-detail`, `news-detail`, `team-detail`, `event-detail`, `match-pickban` | **Yes — `key={entry.id}`** | A new visit must remount so it refetches for the new param and `useNavState` re-reads the right entry's bag. |
+| **Detail-pages** | `maps-detail`, `player-detail`, `cap-detail`, `news-detail`, `team-detail`, `event-detail`, `match-pickban`, `event-team` | **Yes — `key={entry.id}`** | A new visit must remount so it refetches for the new param and `useNavState` re-reads the right entry's bag. |
 
 Detail cases pull their identifier from `entry.params` (`mapName!` / `playerId!` /
 `capId!` / `newsId!` / `teamId!`). Forgetting `key={entry.id}` on a detail case is a bug: the page keeps
@@ -412,7 +419,7 @@ Link semantics below). Activation calls `onViewChange(view, params)`, which
 loader-key list in `pageLoaders.test.ts` stays as the page-view set).
 
 **Which event a view belongs to** is one pure function, `eventSlugOfView(view,
-params): string | null`: `event-detail` and `match-pickban` belong to
+params): string | null`: `event-detail`, `match-pickban` and `event-team` belong to
 `params.eventSlug`; any other view, or an event view without a slug, belongs to
 none (`null`). Use it wherever a rule asks "is this view part of event X?" rather
 than re-listing the event views.
@@ -421,7 +428,7 @@ than re-listing the event views.
 currentParams)`:
 - a plain item is active when `currentView` equals its `id`;
 - an event link is active when `eventSlugOfView(currentView, currentParams)` is
-  its `slug` — so on the event page and on that event's match picks & bans pages.
+  its `slug` — so on the event page, on that event's match picks & bans pages and on its team pages.
   `eventTab` is ignored, so switching tabs never flickers the highlight.
 
 `AppLayout` reads the current entry's params from `useNavigation()` (it already
@@ -657,6 +664,61 @@ targets.
   deciding whether to mount the app shell at all — see `agents/web-target.md` →
   `pre-shell-routes` for the mount itself and why the path stays out of the
   route contract on purpose.
+
+## Event team page
+
+`EventTeamPage` (`event-team`, `app/components/pages/EventTeamPage.tsx`) is a detail page: lazy
+(`lazy()` in `Main.tsx`), keyed by `entry.id`, reading `eventSlug` and `eventTeamId` from the entry's
+params. It needs no login, and the web build opens it straight from a deep link.
+
+- **Route.** `/events/:eventSlug/teams/:eventTeamId`, view and kind `event-team`, params
+  `["eventSlug", "eventTeamId"]`. `viewToPath` URI-encodes both parts; `pathToNav` resolves only exactly
+  four segments, so `/events/x/teams` and `/events/x/teams/id/extra` stay on `event-detail`. The same
+  entry is in `app/public/route-contract.json` (version unchanged), whose contract test
+  (`routes.contract.test.ts`) round-trips it. The title is `Team — UTBT.net`, and the page then sets the
+  team's name through `useDocumentTitle`. `paramsEqual` compares `eventTeamId`, so two team pages are
+  different entries.
+- **Event-scoped.** `eventSlugOfView` covers it, so the cup's sidebar item stays active on a team page.
+- **Back.** The back `NavLink` goes to `event-detail` with `eventTab: 'teams'` (the Teams tab), via
+  `onBackToTeams` from `Main.tsx`.
+- **Into the page.** Every team card on the Teams tab overview, the team names in the Cup at a glance
+  strip and the map table, and the opponent names on a team page are `NavLink`s to `event-team`, so on
+  web each is a real `<a href="/events/<slug>/teams/<id>">`. Each match on the page links to
+  `match-pickban`.
+- **Per-entry state** (`useNavState`, restored by Back/Forward): `teamPage.stage` (the selected stage,
+  default `null` = All), `teamMatches.toggles` (which match cards the viewer opened or closed; with no
+  toggle the latest match with a result is open), `teamRuns.sort` (`{ key, dir }`, default fastest first)
+  and `teamRuns.showAll` (phone only: the full runs list instead of the first 12). The stage is
+  not shared with the overview's: the overview keeps its own `event.statsStage` and
+  `event.statsSort` (below).
+- **States.** A spinner, an error with "Try again", and "This team has no published matches in this
+  event." when the team read answers not found (`readTeamOrNotFound` turns a 404 into `null`). What the
+  page reads is in `agents/data-sources.md` (Event stats reads).
+- **View-model.** Render-ready data comes from the pure `events/stats/statsView.ts` (and
+  `team/teamPageView.ts`, `team/teamTablesView.ts`); components stay thin over them.
+
+## Teams tab: roster or stats
+
+The `teams` tab id and `?tab=teams` deep links are unchanged. `EventDetailPage`'s Teams branch
+renders a small `TeamsTab`: "Loading teams…" until the bracket read has settled, then **either** the
+existing roster list **or** the lazy stats overview (`events/stats/StatsOverview.tsx`). The choice is
+`statsMode(bracket)` from the stats view-model: `stats` once the bracket payload's `published` is true,
+`roster` otherwise (also while the payload is null). A manager who can see an unpublished bracket still
+gets the roster, because the rule reads `published`, not visibility. The overview refetches whenever the
+page reloads the bracket (the page's Refresh button, bracket edits from Manage). Its per-entry state is
+`event.statsStage` (the selected stage, default `null` = All) and `event.statsSort` (default
+`standing`).
+
+## Manage → Matches: Caps need linking
+
+`MatchesPanel` (the Manage tab's Matches section) mounts `manage/matches/CapsNeedLinking.tsx` between
+its header and the filters, so it sits above the match list. It is the amber "Caps need linking (n)"
+list of played maps whose linked runs don't cover the recorded score. It renders nothing when empty
+(or when its read fails), and ignores the Matches stage filter. Each row is a button that opens a modal
+(`ui/modal`, `offsetSidebar`) with the cap link picker, prefilled with the row's map and search
+window, inside the Manage tab rather than a route of its own; no navigation happens. Linking closes
+the modal, reloads the list and refreshes the bracket. What the list reads and how the picker is
+prefilled: `agents/data-sources.md` (Caps need linking).
 
 ## Match pick/ban page
 
