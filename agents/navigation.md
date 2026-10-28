@@ -716,8 +716,10 @@ its header and the filters, so it sits above the match list. It is the amber "Ca
 list of played maps whose linked runs don't cover the recorded score. It renders nothing when empty
 (or when its read fails), and ignores the Matches stage filter. Each row is a button that opens a modal
 (`ui/modal`, `offsetSidebar`) with the cap link picker, prefilled with the row's map and search
-window, inside the Manage tab rather than a route of its own; no navigation happens. Linking closes
-the modal, reloads the list and refreshes the bracket. What the list reads and how the picker is
+window, inside the Manage tab rather than a route of its own; no navigation happens. Linking from
+the list keeps the recorded score, even when fewer runs are linked (the editor's picker still fills
+the counts in), so a partly linked map stays in the list. Linking closes the modal, reloads the list
+and refreshes the bracket. What the list reads and how the picker is
 prefilled: `agents/data-sources.md` (Caps need linking).
 
 ## Match pick/ban page

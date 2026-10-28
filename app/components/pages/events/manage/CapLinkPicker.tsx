@@ -23,11 +23,12 @@ interface CapLinkPickerProps {
     initialMap?: string | null
     initialFrom?: string | null
     initialTo?: string | null
+    keepsScore?: boolean
     onLink: (caps: Array<{ cap_id: string; side: EventSide }>) => Promise<void>
 }
 
 export function CapLinkPicker({
-    accessToken, slug, matchId, row, teamNames, disabled, initialMap, initialFrom, initialTo, onLink,
+    accessToken, slug, matchId, row, teamNames, disabled, initialMap, initialFrom, initialTo, keepsScore, onLink,
 }: CapLinkPickerProps) {
     const start = capLinkSearchStart(row, { map: initialMap, from: initialFrom, to: initialTo })
     const [open, setOpen] = useState(false)
@@ -180,7 +181,7 @@ export function CapLinkPicker({
 
                             <div className="flex items-center gap-2 pt-1 border-t border-white/5">
                                 <span className="text-[11px] text-muted-foreground tabular-nums">
-                                    {counts.a} – {counts.b}
+                                    {keepsScore ? `Runs picked ${counts.a} – ${counts.b}` : `${counts.a} – ${counts.b}`}
                                 </span>
                                 <button
                                     type="button"
@@ -188,7 +189,7 @@ export function CapLinkPicker({
                                     disabled={saving}
                                     className="ml-auto h-7 px-2.5 rounded-md border border-emerald-500/30 text-emerald-300 text-[11px] hover:bg-emerald-500/10 transition-colors cursor-pointer disabled:opacity-40"
                                 >
-                                    {saving ? 'Linking…' : 'Link and fill counts'}
+                                    {saving ? 'Linking…' : keepsScore ? 'Link runs' : 'Link and fill counts'}
                                 </button>
                                 <button
                                     type="button"

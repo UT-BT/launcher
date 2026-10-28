@@ -4,11 +4,11 @@ import { cn } from '@/lib/utils'
 import { Modal } from '@/app/components/ui/modal'
 import { ErrorBanner } from '@/app/components/pages/teams/teamsShared'
 import {
-    eventErrorMessage, fetchEventCapReview, fetchEventMatch, linkEventMatchMapCaps,
+    eventErrorMessage, fetchEventCapReview, fetchEventMatch,
     type EventBracket, type EventCapReviewItem, type EventMatch, type EventSide,
 } from '@/app/utils/api'
 import { CapLinkPicker } from '../CapLinkPicker'
-import { capsNeedLinkingRows, type CapsNeedLinkingRow, type CapsNeedLinkingSide } from './capsNeedLinkingView'
+import { capsNeedLinkingRows, linkReviewRuns, type CapsNeedLinkingRow, type CapsNeedLinkingSide } from './capsNeedLinkingView'
 
 interface CapsNeedLinkingProps {
     accessToken: string
@@ -161,6 +161,7 @@ function LinkRunsModal({ accessToken, slug, row, onClose, onLinked }: {
                         {row.sides.map(side => <SideCount key={side.side} side={side} />)}
                     </div>
                     <p className="text-[11px] text-amber-300">{row.reason}</p>
+                    <p className="text-[11px] text-muted-foreground">Linking keeps the recorded score, even if fewer runs are linked.</p>
                 </div>
 
                 <ErrorBanner message={error} />
@@ -185,8 +186,9 @@ function LinkRunsModal({ accessToken, slug, row, onClose, onLinked }: {
                         initialMap={row.prefill.map}
                         initialFrom={row.prefill.from}
                         initialTo={row.prefill.to}
+                        keepsScore
                         onLink={async caps => {
-                            await linkEventMatchMapCaps(accessToken, slug, item.match_id, item.ordinal, caps)
+                            await linkReviewRuns(accessToken, slug, item, caps)
                             onLinked()
                         }}
                     />

@@ -1,7 +1,9 @@
-import { describe, expect, it } from 'vitest'
-import { EVENT_CAP_FLAG_REASONS, type EventCapFlagReason, type EventCapReviewItem } from '@/app/utils/api'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import {
+    EVENT_CAP_FLAG_REASONS, linkEventMatchMapCaps, type EventCapFlagReason, type EventCapReviewItem,
+} from '@/app/utils/api'
 import { eventStatsFixture } from '@/app/utils/fixtures/eventStatsFixtures'
-import { capsNeedLinkingRows, reviewPrefill, reviewReason } from './capsNeedLinkingView'
+import { capsNeedLinkingRows, linkReviewRuns, reviewPrefill, reviewReason } from './capsNeedLinkingView'
 
 const KNRK = { id: 'team-knrk', name: 'KNRK' }
 const HOP = { id: 'team-hop', name: "Hop n' Twerk" }
@@ -124,5 +126,45 @@ describe('capsNeedLinkingRows', () => {
             'Both teams capped within 2 seconds',
         ])
         expect(rows.find(row => row.item.reason === 'no_window')?.prefill).toEqual({})
+    })
+})
+
+describe('linking runs', () => {
+    const caps = [{ cap_id: 'cap-1', side: 'a' as const }, { cap_id: 'cap-2', side: 'a' as const }]
+
+    function stubLinkPut() {
+        const fetchMock = vi.fn().mockResolvedValue(new Response(
+            JSON.stringify({ success: true, data: { match: { id: 'match-1' } } }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+        ))
+        vi.stubGlobal('fetch', fetchMock)
+        return () => {
+            const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+            return { url, method: init.method, body: JSON.parse(init.body as string) }
+        }
+    }
+
+    afterEach(() => {
+        vi.unstubAllGlobals()
+    })
+
+    it('keeps the recorded score when linking from the Caps-need-linking list', async () => {
+        const sent = stubLinkPut()
+
+        await linkReviewRuns('token', 'cup', item({ match_id: 'match-1', ordinal: 1 }), caps)
+
+        expect(sent()).toMatchObject({
+            url: expect.stringMatching(/\/tournaments\/cup\/admin\/matches\/match-1\/maps\/1\/caps$/),
+            method: 'PUT',
+            body: { caps, keep_counts: true },
+        })
+    })
+
+    it('fills the counts from the links when called without keepCounts, as the match editor does', async () => {
+        const sent = stubLinkPut()
+
+        await linkEventMatchMapCaps('token', 'cup', 'match-1', 1, caps)
+
+        expect(sent()).toMatchObject({ method: 'PUT', body: { caps, keep_counts: false } })
     })
 })

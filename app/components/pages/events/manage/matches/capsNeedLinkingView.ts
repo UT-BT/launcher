@@ -1,4 +1,7 @@
-import type { EventCapFlagReason, EventCapReviewItem, EventSide, SideColor } from '@/app/utils/api'
+import {
+    linkEventMatchMapCaps,
+    type EventCapFlagReason, type EventCapReviewItem, type EventMatch, type EventSide, type SideColor,
+} from '@/app/utils/api'
 import { SIDES_TBC, sideColorName, sideColorTitle } from '@/app/utils/sideLabels'
 import type { CapLinkPrefill } from '../capLinkRuns'
 
@@ -102,4 +105,13 @@ export function capsNeedLinkingRows(
             prefill: reviewPrefill(item),
         }
     })
+}
+
+export function linkReviewRuns(
+    accessToken: string,
+    slug: string,
+    item: EventCapReviewItem,
+    caps: Array<{ cap_id: string; side: EventSide }>,
+): Promise<EventMatch> {
+    return linkEventMatchMapCaps(accessToken, slug, item.match_id, item.ordinal, caps, true)
 }
