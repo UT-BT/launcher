@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { ArrowLeft, CalendarClock, CalendarDays, Users2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useNavState } from '@/app/components/navigation/useNavState'
@@ -37,9 +37,12 @@ import { EventTodoPanel } from './events/EventTodoPanel'
 import { eventTodos, scheduleTodoSummary, todoCountsByKind } from '@/app/utils/eventAttention'
 import { isSignupOnlyTab, signupsClosed } from '@/app/utils/signupWindow'
 import { streamTabVisible, type OperatingViewer } from './events/stream/streamTabAccess'
+import { statsMode } from './events/stats/statsView'
+import { loadStatsTabSeen, saveStatsTabSeen, statsTabView } from './events/stats/statsTab'
 
 const StreamTab = lazy(() => import('./events/stream/StreamTab').then(m => ({ default: m.StreamTab })))
 const EventAchievementsTab = lazy(() => import('./events/achievements/EventAchievementsTab').then(m => ({ default: m.EventAchievementsTab })))
+const StatsOverview = lazy(() => import('./events/stats/StatsOverview').then(m => ({ default: m.StatsOverview })))
 
 const PICK_BAN_ME_REFRESH_MS = 30_000
 
@@ -63,6 +66,26 @@ function NextMatchBanner({ match, myTeamId, now }: {
             </span>
             <span className="ml-auto shrink-0 font-medium tabular-nums text-accent-300">{countdown}</span>
         </div>
+    )
+}
+
+function TeamsLoading() {
+    return <div className="py-10 text-center text-sm text-muted-foreground">Loading teams…</div>
+}
+
+function TeamsTab({ eventSlug, accessToken, bracket, bracketLoaded, roster }: {
+    eventSlug: string
+    accessToken: string
+    bracket: EventBracket | null
+    bracketLoaded: boolean
+    roster: ReactNode
+}) {
+    if (!bracketLoaded) return <TeamsLoading />
+    if (statsMode(bracket) === 'roster') return roster
+    return (
+        <Suspense fallback={<TeamsLoading />}>
+            <StatsOverview eventSlug={eventSlug} accessToken={accessToken} refreshKey={bracket} roster={roster} />
+        </Suspense>
     )
 }
 
@@ -104,6 +127,7 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
     const [lfp, setLfp] = useState<EventLfpEntry[]>([])
     const [bracket, setBracket] = useState<EventBracket | null>(null)
     const [bracketLoaded, setBracketLoaded] = useState(false)
+    const [statsSeen, setStatsSeen] = useState(loadStatsTabSeen)
     const [my, setMy] = useState<MyEventStatus | null>(null)
     const [predictions, setPredictions] = useState<PredictionsOverview | null>(null)
     const [predictionsLoaded, setPredictionsLoaded] = useState(false)
@@ -295,6 +319,10 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
     const seenLockSignals = useRef(lockSignals)
 
     useEffect(() => {
+        if (statsSeen) saveStatsTabSeen()
+    }, [statsSeen])
+
+    useEffect(() => {
         const locked = newlyLockedMatchIds(seenLockSignals.current, lockSignals)
         seenLockSignals.current = lockSignals
         if (locked.length > 0) refreshPredictions()
@@ -341,6 +369,8 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
         || (tab === 'schedule' && !scheduleVisible)
         || (tab === 'stream' && !streamVisible)
         || (signupsOver && isSignupOnlyTab(tab)) ? 'info' : tab
+    const statsTab = statsTabView(bracket, bracketLoaded, statsSeen, now)
+    if (statsTab.isNew && activeTab === 'teams') setStatsSeen(true)
 
     return (
         <div className="h-full flex flex-col overflow-hidden space-y-4 animate-in fade-in slide-in-from-bottom-0 duration-500">
@@ -394,8 +424,15 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
                                             : 'border-transparent text-muted-foreground hover:text-white',
                                 )}
                             >
-                                {t.label}
-                                {badgeCount > 0 ? (
+                                {t.id === 'teams' ? statsTab.label : t.label}
+                                {t.id === 'teams' && statsTab.isNew ? (
+                                    <span
+                                        aria-hidden
+                                        className="inline-flex items-center h-5 px-1.5 rounded bg-accent-500/20 border border-accent-500/50 text-accent-200 text-[9px] font-black uppercase tracking-wider"
+                                    >
+                                        New
+                                    </span>
+                                ) : badgeCount > 0 ? (
                                     <span
                                         title={scheduleCount > 0 ? scheduleTodoTitle : undefined}
                                         className="min-w-4 h-4 px-1 inline-flex items-center justify-center rounded-full bg-accent-500 text-[10px] font-bold text-white leading-none"
@@ -433,7 +470,15 @@ export function EventDetailPage({ eventSlug, userProfile, initialTab, onMapSelec
                         )}
                     </div>
                 )}
-                {activeTab === 'teams' && <EventTeamsList teams={teams} teamSize={event.team_size} loading={loading} />}
+                {activeTab === 'teams' && (
+                    <TeamsTab
+                        eventSlug={eventSlug}
+                        accessToken={browseToken}
+                        bracket={bracket}
+                        bracketLoaded={bracketLoaded}
+                        roster={<EventTeamsList teams={teams} teamSize={event.team_size} loading={loading} />}
+                    />
+                )}
                 {activeTab === 'bracket' && (
                     <BracketTab bracket={bracket} loading={loading} onMapSelect={onMapSelect} onScheduleMatch={setSchedulerMatchId}
                         eventSlug={eventSlug} myTeamId={myTeamId} />

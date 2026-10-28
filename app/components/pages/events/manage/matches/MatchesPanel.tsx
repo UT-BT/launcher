@@ -22,6 +22,7 @@ import { matchAdminName, streamerName } from '../../eventsShared'
 import { streamerListNote } from '../../streamerRoster'
 import { MatchEditorModal } from '../MatchEditorModal'
 import { StaffPicker } from '../StaffPicker'
+import { CapsNeedLinking } from './CapsNeedLinking'
 import {
     ALL_STAGES, DEFAULT_MATCHES_FILTER, filterMatchRows, matchRows, matchesSummary, staffChoices, withMatchStaff,
     type MatchRow, type MatchStaffFilter, type MatchStatusFilter, type MatchesFilter,
@@ -237,6 +238,8 @@ export function MatchesPanel({ accessToken, slug, bracket, onBracketChange }: Ma
                         onClick={() => patchFilter({ status: 'open', staff: 'needs_streamer' })} />
                 </div>
             </div>
+
+            <CapsNeedLinking accessToken={accessToken} slug={slug} bracket={bracket} onLinked={() => void refresh()} />
 
             <div className="flex flex-wrap items-center gap-2">
                 <div className="relative w-full sm:w-64">

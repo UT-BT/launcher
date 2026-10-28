@@ -10,7 +10,7 @@ not_here:
   - "IPC channel contract → lib/conveyor/README.md"
   - "build commands reference → agents/build.md"
 sections: [overview, platform-layer, capability-gates, web-auth, pre-shell-routes, anonymous-browsing, shareable-urls, responsive-layout, performance, build, seo-and-link-previews, hosting-note]
-last_verified: 2026-10-26
+last_verified: 2026-10-28
 verify_against:
   - app/public/route-contract.json
   - app/components/navigation/NavLink.tsx
@@ -314,7 +314,7 @@ relative to it needs the `lg:` variant. Screenshot-verify new surfaces at
 ## Performance
 
 The web entry chunk must stay lean — phones parse it on first visit. The initial
-payload is currently **~181 KiB JS + 32 KiB CSS gzip**, enforced by
+payload is currently **~183 KiB JS + 34 KiB CSS gzip**, enforced by
 `npm run check:bundle`.
 
 - **Every primary page except `Home` is `React.lazy`**, built from the shared
@@ -351,7 +351,7 @@ payload is currently **~181 KiB JS + 32 KiB CSS gzip**, enforced by
 - `npm run check:bundle` reads `dist-web/.vite/manifest.json` and measures the
   real **initial payload** (the entry plus its transitive static imports plus
   their CSS), not the largest chunk. Budgets (gzip): initial JS 190 KiB, initial
-  CSS 34 KiB, initial total 220 KiB, largest lazy chunk 120 KiB, **app JS 850
+  CSS 34 KiB, initial total 220 KiB, largest lazy chunk 120 KiB, **app JS 900
   KiB** (every JS file except those only the stream scene pages load) and
   **stream scene JS 120 KiB** (files reachable only from the stream scene root,
   which never load in the app). The last two replace the old single 750 KiB

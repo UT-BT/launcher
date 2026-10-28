@@ -22,6 +22,8 @@ export function viewToPath(view: string, params: NavParams): string {
         }
         case 'match-pickban':
             return `/events/${encodeURIComponent(params.eventSlug ?? '')}/matches/${encodeURIComponent(params.matchId ?? '')}`
+        case 'event-team':
+            return `/events/${encodeURIComponent(params.eventSlug ?? '')}/teams/${encodeURIComponent(params.eventTeamId ?? '')}`
         case 'world-records': return '/world-records'
         case 'cap-it-all': return '/cap-it-all'
         case 'cap-detail': return `/caps/${encodeURIComponent(params.capId ?? '')}`
@@ -64,6 +66,9 @@ export function pathToNav(pathname: string, search: string): RouteTarget {
             if (second) {
                 if (third === 'matches' && fourth && segments.length === 4) {
                     return { view: 'match-pickban', params: { eventSlug: second, matchId: fourth } }
+                }
+                if (third === 'teams' && fourth && segments.length === 4) {
+                    return { view: 'event-team', params: { eventSlug: second, eventTeamId: fourth } }
                 }
                 const tab = query.get('tab')
                 return { view: 'event-detail', params: { eventSlug: second, ...(tab ? { eventTab: tab } : {}) } }

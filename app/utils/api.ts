@@ -4909,6 +4909,10 @@ export interface EventBracketTeamRef {
     status: EventTeamStatus | null
 }
 
+export const EVENT_CAP_LINK_SOURCES = ['auto', 'admin'] as const
+
+export type EventCapLinkSource = typeof EVENT_CAP_LINK_SOURCES[number]
+
 export interface EventMatchCapLink {
     cap_id: string
     side: EventSide
@@ -4917,6 +4921,12 @@ export interface EventMatchCapLink {
     map: string | null
     cap_time_seconds: number | null
     added: string | null
+    source?: EventCapLinkSource
+    team_run_id?: string | null
+    team_cap_id?: string | null
+    team_time_seconds?: number | null
+    has_ghost?: boolean
+    has_demo?: boolean
 }
 
 export interface EventMatchMap {
@@ -5073,6 +5083,331 @@ export interface EventCapCandidate {
     members: EventCapCandidateMember[]
 }
 
+export const EVENT_STATS_STANDINGS = ['alive', 'eliminated', 'champion', 'withdrawn', 'disqualified'] as const
+
+export type EventStatsStanding = typeof EVENT_STATS_STANDINGS[number]
+
+export const EVENT_STATS_MATCH_STATUSES = ['complete', 'forfeit', 'live', 'scheduled'] as const
+
+export type EventStatsMatchStatus = typeof EVENT_STATS_MATCH_STATUSES[number]
+
+export const EVENT_STATS_RESULTS = ['W', 'D', 'L'] as const
+
+export type EventStatsResult = typeof EVENT_STATS_RESULTS[number]
+
+export const EVENT_CAP_FLAG_REASONS = [
+    'no_runs',
+    'too_few_runs',
+    'mixed_servers',
+    'same_second_decider',
+    'run_used_elsewhere',
+    'no_window',
+] as const
+
+export type EventCapFlagReason = typeof EVENT_CAP_FLAG_REASONS[number]
+
+export interface EventRunServer {
+    id: string
+    name: string
+    region: string | null
+}
+
+export interface EventRunMember {
+    user: string
+    alias: string | null
+    cap_id: string
+    cap_time_seconds: number
+}
+
+export interface EventRun {
+    team_run_id: string | null
+    team_cap_id: string | null
+    team_time_seconds: number
+    completed_at: string
+    server: EventRunServer | null
+    members: EventRunMember[]
+    has_ghost: boolean
+    has_demo: boolean
+}
+
+export interface EventStatsMapRef {
+    map: string
+    display_name: string
+}
+
+export interface EventStatsStage {
+    key: string
+    name: string
+    kind: EventStageKind
+    status: EventStageStatus
+}
+
+export interface EventStatsTeamMember {
+    user: string
+    alias: string | null
+}
+
+export interface EventStatsFurthestStage {
+    key: string
+    name: string
+    order: number
+}
+
+export interface EventStatsPathEntry {
+    stage_key: string
+    stage_name: string
+    group: string | null
+    finish: string
+    advanced_to: string | null
+}
+
+export interface EventStatsWdl {
+    w: number
+    d: number
+    l: number
+}
+
+export interface EventStatsCaps {
+    for: number
+    against: number
+}
+
+export interface EventStatsTeamRecord {
+    matches: EventStatsWdl
+    maps: EventStatsWdl
+    caps: EventStatsCaps
+}
+
+export interface EventStatsFormEntry {
+    result: EventStatsResult
+    match_id: string
+    opponent_id: string
+}
+
+export interface EventStatsRecordHeld extends EventStatsMapRef {
+    run: EventRun
+}
+
+export interface EventStatsRecordsHeld {
+    count: number
+    maps: EventStatsRecordHeld[]
+}
+
+export interface EventStatsTeam {
+    id: string
+    name: string
+    status: EventTeamStatus
+    seed: number | null
+    members: EventStatsTeamMember[]
+    standing: EventStatsStanding
+    furthest_stage: EventStatsFurthestStage
+    path: EventStatsPathEntry[]
+    record: EventStatsTeamRecord
+    form: EventStatsFormEntry[]
+    comebacks: number
+    records_held: EventStatsRecordsHeld
+}
+
+export interface EventStatsTeamRun extends EventRun {
+    team_id: string
+}
+
+export interface EventStatsMap extends EventStatsMapRef {
+    played: number
+    picks: number
+    bans: number
+    first_bans: number
+    deciders: number
+    picker_wins: number
+    picker_games: number
+    picker_win_rate: number | null
+    fastest_run: EventStatsTeamRun | null
+}
+
+export interface EventStatsMostPicked extends EventStatsMapRef {
+    picks: number
+    played: number
+}
+
+export interface EventStatsMostBanned extends EventStatsMapRef {
+    bans: number
+    first_bans: number
+}
+
+export interface EventStatsFirstBan extends EventStatsMapRef {
+    first_bans: number
+    played: number
+}
+
+export interface EventStatsPicker {
+    wins: number
+    games: number
+    rate: number
+}
+
+export interface EventStatsBestDefence {
+    team_id: string
+    caps_against: number
+    maps: number
+}
+
+export interface EventStatsBiggestUpset {
+    match_id: string
+    winner_id: string
+    loser_id: string
+    winner_seed: number
+    loser_seed: number
+    seed_gap: number
+    score: { winner: number; loser: number }
+    stage_name: string
+}
+
+export interface EventStatsMostComebacks {
+    team_id: string
+    count: number
+}
+
+export interface EventStatsRecords {
+    most_picked: EventStatsMostPicked | null
+    most_banned: EventStatsMostBanned | null
+    first_ban: EventStatsFirstBan | null
+    picker: EventStatsPicker | null
+    best_defence: EventStatsBestDefence | null
+    biggest_upset: EventStatsBiggestUpset | null
+    most_comebacks: EventStatsMostComebacks | null
+}
+
+export interface EventStats {
+    published: boolean
+    stage: string | null
+    stages: EventStatsStage[]
+    teams: EventStatsTeam[]
+    maps: EventStatsMap[]
+    records: EventStatsRecords
+}
+
+export interface EventTeamMapRank {
+    rank: number
+    of: number
+}
+
+export interface EventTeamStatsOpponent {
+    id: string
+    name: string
+    seed: number | null
+    members: EventStatsTeamMember[]
+}
+
+export interface EventTeamStatsPickBanStep extends EventStatsMapRef {
+    index: number
+    action: PickBanStepAction
+    segment: PickBanSegment
+    team_id: string | null
+}
+
+export interface EventTeamStatsVeto {
+    outcome: VetoOutcome
+    vetoed_by_team_id: string | null
+}
+
+export interface EventTeamStatsPickBan {
+    steps: EventTeamStatsPickBanStep[]
+    veto: EventTeamStatsVeto | null
+    side_chooser_team_id: string | null
+}
+
+export interface EventTeamStatsMap extends EventStatsMapRef {
+    ordinal: number
+    kind: EventMapKind
+    picked_by: string | null
+    played: boolean
+    caps_for: number | null
+    caps_against: number | null
+    result: EventStatsResult | null
+    runs_for: EventRun[]
+    runs_against: EventRun[]
+    unrecorded_for: number
+    unrecorded_against: number
+}
+
+export interface EventTeamStatsMatch {
+    id: string
+    stage_key: string
+    stage_name: string
+    group: string | null
+    round_label: string | null
+    status: EventStatsMatchStatus
+    scheduled_at: string | null
+    opponent: EventTeamStatsOpponent | null
+    own_side: SideColor | null
+    score: EventStatsCaps | null
+    result: EventStatsResult | null
+    pick_ban: EventTeamStatsPickBan | null
+    maps: EventTeamStatsMap[]
+}
+
+export interface EventTeamMapProfileRow extends EventStatsMapRef {
+    picked: number
+    banned_by: number
+    banned_against: number
+    played: number
+    w: number
+    d: number
+    l: number
+    caps_for: number
+    caps_against: number
+    best_run: EventRun | null
+    best_rank: EventTeamMapRank | null
+}
+
+export interface EventTeamRun extends EventRun, EventStatsMapRef {
+    match_id: string
+    stage_key: string
+    stage_name: string
+    opponent_id: string
+}
+
+export interface EventTeamStats {
+    team: EventStatsTeam
+    matches: EventTeamStatsMatch[]
+    map_profile: EventTeamMapProfileRow[]
+    runs: EventTeamRun[]
+}
+
+export interface EventCapReviewTeam {
+    id: string
+    name: string
+}
+
+export interface EventCapReviewDetail {
+    side: EventSide
+    found: number
+    expected: number
+}
+
+export interface EventCapReviewWindow {
+    from: string
+    to: string
+}
+
+export interface EventCapReviewItem extends EventStatsMapRef {
+    match_id: string
+    stage_key: string
+    round_label: string | null
+    team_a: EventCapReviewTeam
+    team_b: EventCapReviewTeam
+    ordinal: number
+    expected: { a: number; b: number }
+    linked: { a: number; b: number }
+    reason: EventCapFlagReason
+    detail: EventCapReviewDetail | null
+    window: EventCapReviewWindow | null
+}
+
+export interface EventCapReview {
+    items: EventCapReviewItem[]
+}
+
 export interface EventMatchMapInput {
     ordinal?: number
     map?: string | null
@@ -5135,6 +5470,29 @@ export async function fetchEventBracket(accessToken: string, slug: string, signa
 export async function fetchEventMatch(accessToken: string, slug: string, matchId: string, signal?: AbortSignal): Promise<EventMatch> {
     const data = await apiGet<{ match: EventMatch }>(eventPath(slug, `/matches/${encodeURIComponent(matchId)}`), { token: accessToken, signal })
     return data.match
+}
+
+function eventStageQuery(stage?: string | null): string {
+    return stage ? `?${new URLSearchParams({ stage }).toString()}` : ''
+}
+
+export async function fetchEventStats(accessToken: string, slug: string, stage?: string | null, signal?: AbortSignal): Promise<EventStats> {
+    return apiGet<EventStats>(eventPath(slug, `/stats${eventStageQuery(stage)}`), { token: accessToken, signal })
+}
+
+export async function fetchEventTeamStats(
+    accessToken: string,
+    slug: string,
+    teamId: string,
+    stage?: string | null,
+    signal?: AbortSignal,
+): Promise<EventTeamStats> {
+    return apiGet<EventTeamStats>(eventPath(slug, `/teams/${encodeURIComponent(teamId)}/stats${eventStageQuery(stage)}`), { token: accessToken, signal })
+}
+
+export async function fetchEventCapReview(accessToken: string, slug: string, stage?: string | null, signal?: AbortSignal): Promise<EventCapReviewItem[]> {
+    const data = await apiGet<EventCapReview>(eventPath(slug, `/admin/caps/review${eventStageQuery(stage)}`), { token: accessToken, signal })
+    return data.items ?? []
 }
 
 export async function fetchEventFormats(accessToken: string, signal?: AbortSignal): Promise<EventFormatTemplate[]> {

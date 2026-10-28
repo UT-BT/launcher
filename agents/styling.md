@@ -9,9 +9,9 @@ provides: "the locked design tokens + the canonical class strings"
 not_here:
   - "which component to use → shared-components.md"
   - "state / persistence → state-patterns.md"
-sections: [class-merging, tables-locked, responsive-columns, page-layout, filter-panel, buttons-toggle-states, form-inputs, card-backgrounds-borders, text, color-palette, animation, css-runtime-cost, broadcast-styling, scene-stylesheet, screenshot-conventions, donts]
-last_verified: 2026-10-26
-verify_against: [app/components/shared/DataTable.tsx, app/components/shared/LiveDot.tsx, app/components/shared/chipStyles.ts, app/styles/globals.css, app/styles/theme.css, app/styles/desktop.css, app/styles/index.css, lib/utils.ts, app/hooks/useElementWidth.ts, app/hooks/usePrefersReducedMotion.ts, app/components/broadcast/broadcastTone.ts, app/components/broadcast/broadcastMotion.ts, app/components/broadcast/broadcastFonts.ts, app/components/broadcast/broadcastFonts.css, app/components/broadcast/BroadcastStage.tsx, app/components/stream/streamScenes.css, app/components/stream/frame/SceneFrame.tsx, e2e/streamHarness.ts, playwright.config.ts, app/components/stream/scenes/overlay/overlayLayout.ts, app/components/stream/scenes/betting/bettingLayout.ts, app/components/stream/scenes/nextMap/NextMapHero.tsx, e2e/audio-balance.broadcast.spec.ts, app/components/stream/scenes/PredictorStandingsScene.tsx, app/components/stream/scenes/standings/predictorStandingsFit.ts, app/components/stream/scenes/standings/predictorStandingsView.ts, app/components/stream/scenes/standings/PredictorStandingsBoard.tsx]
+sections: [class-merging, tables-locked, responsive-columns, page-layout, filter-panel, buttons-toggle-states, form-inputs, card-backgrounds-borders, text, color-palette, animation, css-runtime-cost, event-stats-styling, broadcast-styling, scene-stylesheet, screenshot-conventions, donts]
+last_verified: 2026-10-28
+verify_against: [app/components/shared/DataTable.tsx, app/components/shared/LiveDot.tsx, app/components/shared/chipStyles.ts, app/styles/globals.css, app/styles/theme.css, app/styles/desktop.css, app/styles/index.css, lib/utils.ts, app/hooks/useElementWidth.ts, app/hooks/usePrefersReducedMotion.ts, app/components/broadcast/broadcastTone.ts, app/components/broadcast/broadcastMotion.ts, app/components/broadcast/broadcastFonts.ts, app/components/broadcast/broadcastFonts.css, app/components/broadcast/BroadcastStage.tsx, app/components/stream/streamScenes.css, app/components/stream/frame/SceneFrame.tsx, e2e/streamHarness.ts, playwright.config.ts, app/components/stream/scenes/overlay/overlayLayout.ts, app/components/stream/scenes/betting/bettingLayout.ts, app/components/stream/scenes/nextMap/NextMapHero.tsx, e2e/audio-balance.broadcast.spec.ts, app/components/stream/scenes/PredictorStandingsScene.tsx, app/components/stream/scenes/standings/predictorStandingsFit.ts, app/components/stream/scenes/standings/predictorStandingsView.ts, app/components/stream/scenes/standings/PredictorStandingsBoard.tsx, app/components/pages/events/stats/teamAccents.css, app/components/pages/events/stats/teamAccent.ts, app/components/pages/events/stats/teamAccent.test.ts, app/components/pages/events/stats/teamCards.css, app/components/pages/events/stats/overviewStats.css, app/components/pages/events/stats/team/teamPageAccents.css, app/components/pages/events/stats/team/teamPageView.ts, app/components/pages/events/stats/CupAtAGlance.tsx, app/components/pages/events/stats/MapStatsTable.tsx]
 ---
 
 # Styling reference
@@ -611,6 +611,51 @@ choices have a compositor cost, not just a look:
   elements are not.
 - A page must stay smooth with its largest realistic dataset at its largest
   page size (200 rows) — if a per-row effect can't survive that, it doesn't ship.
+
+## Event stats styling
+
+The Teams tab overview and the team page (`app/components/pages/events/stats/`) share a small set of
+tokens and rules on top of the locked ones above. Nothing here is a new design system: reuse before adding.
+
+- **Team accent palette.** `--team-accent-0` … `--team-accent-11` are defined once on `:root` (every dark
+  theme) and again under `:root[data-theme='light']` in `events/stats/teamAccents.css`. A team's slot is
+  `(seed − 1) mod 12` (see `agents/data-sources.md`, Event stats reads), so two teams share a colour only
+  when their seeds are 12 apart; slot 11 is a low-chroma slate and the fallback for a team with no slot.
+  Use them through `teamAccentColor(slot)` (→ `var(--team-accent-N)`, any integer wraps) and
+  `teamAccentStyle(slot)` (→ `{ --team-accent: … }`) from `events/stats/teamAccent.ts`, never as raw hex.
+  `teamAccent.test.ts` parses the real CSS and fails if a slot leaves the sRGB gamut, drops under 4.5:1 text
+  contrast against the `--background` or `--card` of any theme block in `app/styles/themes.css`, comes within
+  25° of hue of the reserved pick/ban Red, Blue or decider-gold tones, or sits within 15° of another
+  chromatic slot. Add a slot or change a value only with that test green. The team page imports an identical
+  copy of the stylesheet (`team/teamPageAccents.css`) and a same-named helper in `team/teamPageView.ts`;
+  change all of them together until one replaces the other.
+- **Standing chips and form pips** use the functional palette, not the accents: Alive emerald, Eliminated
+  muted, Champion the brand red, Withdrawn and Disqualified amber; W emerald, D amber, L red. The "cup record"
+  badge is the medal gold (`yellow`), never the pick/ban decider gold. A match's Red or Blue tag uses the
+  `pickban-a` / `pickban-b` tones (`sideColorTag`).
+- **Bespoke rules live in lazy stylesheets.** Tailwind puts every utility it finds in the sources into the one
+  entry stylesheet, lazy chunk or not, and the initial CSS budget (34 KiB gzip) has almost no headroom.
+  So a rule that needs `--team-accent` or a one-off template goes in a stats stylesheet imported by the lazy
+  chunk: `teamCards.css` (`.team-cards` grid, `.team-card` accent glow and hover border,
+  `.team-card-avatar` accent ring), `overviewStats.css` (the map table's pick and ban bars, the glance map-art
+  scrim, team-accent glow, picker ring and its container-query tile grid). Everything else reuses utilities the app already uses; a
+  never-before-used utility class anywhere can fail `npm run check:bundle`, so check it after adding one.
+- **Cup at a glance.** No outer box and no footnotes: each headline is a number, a unit word and its subject.
+  Map headlines are map-art cards (the map's `card` screenshot under a dark scrim, white text whatever the
+  theme, a dark fallback colour when the image fails); the picker rate is a conic-gradient ring; team
+  headlines glow in the team's accent; the biggest upset spans two columns with both seeded teams around the
+  score. Tiles go 4 across, then 2 below a 56rem container width, then 1 below 18rem, packed densely so the
+  wide upset tile never leaves a hole. The team page header keeps its one statically blurred backdrop of its
+  most played map. Do not add per-tile blur (see CSS runtime cost).
+- **Tables.** The overview map table, the team page map profile and the runs table are `DataTable` with a
+  `responsive` column list and `compactContent` card rows from the view-model (`mapTableView`,
+  `mapProfileView`, `teamRunsView`), so they never scroll sideways. The identifying columns (the map, and the
+  headline time, W-D-L or run) are required and the rest drop out by priority as the width shrinks; when even
+  those do not fit, the compact rows take over. Dates align left.
+  The team page itself uses viewport breakpoints (`sm`/`md`/`lg`), not container queries, to stay inside the CSS
+  budget.
+- **Live marker.** The shared emerald `LiveDot` is the only infinite animation on the team page, and renders
+  only for a live match.
 
 ## Broadcast styling
 
