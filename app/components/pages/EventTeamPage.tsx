@@ -14,6 +14,8 @@ import { TeamHeader } from '@/app/components/pages/events/stats/team/TeamHeader'
 import { TeamStageChips } from '@/app/components/pages/events/stats/team/TeamStageChips'
 import { TeamTiles } from '@/app/components/pages/events/stats/team/TeamTiles'
 import { MatchTimeline } from '@/app/components/pages/events/stats/team/MatchTimeline'
+import { MapProfileTable } from '@/app/components/pages/events/stats/team/MapProfileTable'
+import { TeamRunsTable } from '@/app/components/pages/events/stats/team/TeamRunsTable'
 import '@/app/components/pages/events/stats/team/teamPageAccents.css'
 import { useAsync } from '@/app/hooks/useAsync'
 import { fetchEventStats, fetchEventTeamStats, type EventTeamStats, type UserProfile } from '@/app/utils/api'
@@ -138,6 +140,10 @@ export function EventTeamPage({ eventSlug, eventTeamId, userProfile, onBackToTea
                                 </div>
                                 <MatchTimeline matches={scope.stats.matches} teamId={team.id} teamName={team.name} />
                             </section>
+
+                            <MapProfileTable rows={scope.stats.map_profile} teamName={team.name} />
+
+                            <TeamRunsTable stats={scope.stats} />
                         </div>
                     )}
                 </TeamPageContext.Provider>
