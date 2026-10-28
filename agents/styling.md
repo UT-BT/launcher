@@ -637,13 +637,16 @@ tokens and rules on top of the locked ones above. Nothing here is a new design s
   entry stylesheet, lazy chunk or not, and the initial CSS budget (34 KiB gzip) has almost no headroom.
   So a rule that needs `--team-accent` or a one-off template goes in a stats stylesheet imported by the lazy
   chunk: `teamCards.css` (`.team-cards` grid, `.team-card` accent glow and hover border,
-  `.team-card-avatar` accent ring), `overviewStats.css` (the map table's pick and ban bars, the glance strip
-  scrim and its container-query tile grid). Everything else reuses utilities the app already uses; a
+  `.team-card-avatar` accent ring), `overviewStats.css` (the map table's pick and ban bars, the glance map-art
+  scrim, team-accent glow, picker ring and its container-query tile grid). Everything else reuses utilities the app already uses; a
   never-before-used utility class anywhere can fail `npm run check:bundle`, so check it after adding one.
-- **Cup at a glance.** One statically blurred `<img>` of the most picked map's screenshot behind a gradient
-  scrim, once per page and with no `backdrop-filter`; the team page header does the same with its most played
-  map. Tiles go 4 across, then 2 below a 56rem container width, then 1 below 18rem, using a container query
-  in `overviewStats.css`. Do not add per-tile blur (see CSS runtime cost).
+- **Cup at a glance.** No outer box and no footnotes: each headline is a number, a unit word and its subject.
+  Map headlines are map-art cards (the map's `card` screenshot under a dark scrim, white text whatever the
+  theme, a dark fallback colour when the image fails); the picker rate is a conic-gradient ring; team
+  headlines glow in the team's accent; the biggest upset spans two columns with both seeded teams around the
+  score. Tiles go 4 across, then 2 below a 56rem container width, then 1 below 18rem, packed densely so the
+  wide upset tile never leaves a hole. The team page header keeps its one statically blurred backdrop of its
+  most played map. Do not add per-tile blur (see CSS runtime cost).
 - **Tables.** The overview map table, the team page map profile and the runs table are `DataTable` with a
   `responsive` column list and `compactContent` card rows from the view-model (`mapTableView`,
   `mapProfileView`, `teamRunsView`), so they never scroll sideways. The identifying columns (the map, and the

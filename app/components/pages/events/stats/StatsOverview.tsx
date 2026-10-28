@@ -76,16 +76,13 @@ export function StatsOverview({ eventSlug, accessToken, refreshKey, roster }: St
             <section aria-labelledby={teamsHeadingId} className="flex flex-col gap-2.5">
                 <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                     <h2 id={teamsHeadingId} className="text-[10px] uppercase tracking-wider text-muted-foreground">Teams</h2>
-                    <span className="text-xs text-muted-foreground">{stageScopeLabel(stats.stages, stats.stage)} · official results only</span>
+                    <span className="text-xs text-muted-foreground">{stageScopeLabel(stats.stages, stats.stage)}</span>
                 </div>
                 <TeamCardsGrid cards={cards} eventSlug={eventSlug} />
             </section>
 
             <section aria-labelledby={mapsHeadingId} className="flex flex-col gap-2.5">
-                <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-                    <h2 id={mapsHeadingId} className="text-[10px] uppercase tracking-wider text-muted-foreground">Maps</h2>
-                    <span className="text-xs text-muted-foreground">Bans and picks from fully revealed pick & bans · renamed maps grouped under their newest name</span>
-                </div>
+                <h2 id={mapsHeadingId} className="text-[10px] uppercase tracking-wider text-muted-foreground">Maps</h2>
                 <MapStatsTable maps={stats.maps} teams={teams} eventSlug={eventSlug} />
             </section>
         </div>

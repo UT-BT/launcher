@@ -87,7 +87,6 @@ export function TeamHeader({ team, accent, backdropMap }: {
                     <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-2" aria-label="Players">
                         {team.members.map(member => (
                             <li key={member.user} className="flex min-w-0 items-center gap-1.5">
-                                {member.flag && <span aria-hidden className="text-sm">{member.flag}</span>}
                                 <PlayerInfo userId={member.user} alias={member.alias} size="sm" />
                             </li>
                         ))}

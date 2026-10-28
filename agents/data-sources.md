@@ -422,19 +422,20 @@ payload shape change has to change the fixtures with it.
   - Each team has `id`, `name`, `status`, `seed` (null when unseeded), `members[]`, `standing`
     (`alive | eliminated | champion | withdrawn | disqualified`), `furthest_stage`, `path[]` (stage, group,
     finish and the stage it advanced to), `record` (`matches`, `maps`, `caps`), `form` (the last five,
-    oldest first), `pace` (`{ value, runs }` or null; negative is faster), `comebacks` and
-    `records_held` (a count and the maps with their run).
+    oldest first), `comebacks` and `records_held` (a count and the maps with their run).
   - Each map is one row per map, **always under its newest name** (`map`, with `display_name` for the
     label), with `played`, `picks`, `bans`, `first_bans`, `deciders`, the picker's wins, games and rate,
     and the `fastest_run` with its `team_id`. The launcher never sees an older name for a map.
-  - `records` has eight headline entries (most picked, most banned, banned first, picker, fastest team,
-    fewest caps conceded, biggest upset, most comebacks), each null when its scope has no data.
+  - `records` has seven headline entries (most picked, most banned, banned first, picker, fewest caps
+    conceded, biggest upset, most comebacks), each null when its scope has no data.
   - A run (`EventRun`) is `{ team_run_id, team_cap_id, team_time_seconds, completed_at, server, members[],
     has_ghost, has_demo }`; `server` may be null, user ids are strings, and a lone cap is a run of one
     member with null `team_run_id` and `team_cap_id`.
 - **`fetchEventTeamStats(token, slug, teamId, stage?)`** (→ `GET /tournaments/<slug>/teams/<teamId>/stats`)
-  returns `EventTeamStats`: `{ team, pace_rank, matches[], map_profile[], runs[] }`. `team` is the same entry
-  the overview carries. Each match has its stage, group, round, status (`complete | forfeit | live |
+  returns `EventTeamStats`: `{ team, matches[], map_profile[], runs[] }`. `team` is the same entry
+  the overview carries. Each `map_profile` row has the team's `best_run` on that map and its `best_rank`
+  (`{ rank, of }`: where that time places among every team with a run on the map, equal times sharing a
+  rank; null with no run). Pick/ban steps name the team, never the captain who clicked. Each match has its stage, group, round, status (`complete | forfeit | live |
   scheduled`), opponent, `own_side` (red or blue, null until set), `score`, `result`, `pick_ban` and
   `maps[]` (`caps_for`/`caps_against`, `runs_for`/`runs_against` and `unrecorded_for`/`unrecorded_against` for
   caps that have no linked run). Score, result, maps and pick/ban are empty unless the match is complete
@@ -464,8 +465,8 @@ payload shape change has to change the fixtures with it.
   A replay icon links to the run page when `has_demo` or `has_ghost`.
 
 `events/stats/statsView.ts` is the pure view-model between these payloads and the components: stage
-chips, team sorts (standing, seed, record, caps), accent slots, form pips, path text, the team card, pace
-and rank text, the team tiles, run and map-row views (with the desktop `responsive` column list and the
+chips, team sorts (standing, seed, record, caps), accent slots, form pips, path text, the team card, the
+per-map rank text, the team tiles, run and map-row views (with the desktop `responsive` column list and the
 phone `compact` cells), the "time not recorded" placeholders and the live/upcoming match states. Every
 export is unit-tested against the fixtures.
 

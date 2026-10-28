@@ -593,7 +593,7 @@ test('landing on a schedule link reads the bracket only as the page load does, a
     await page.waitForTimeout(3_000)
     expect(bracketReads).toBe(pageLoadReads)
 
-    await page.getByRole('button', { name: 'Teams', exact: true }).click()
+    await page.getByRole('button', { name: 'Stats', exact: true }).click()
     await expect(page.getByRole('region', { name: 'All Matches' })).toHaveCount(0)
     await page.getByRole('button', { name: 'Schedule', exact: true }).click()
     await expect(page.getByRole('region', { name: 'Live Now' })).toBeVisible()

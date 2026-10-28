@@ -438,10 +438,10 @@ writing a team, run or stat row.
 | `StageChips` / `team/TeamStageChips` | The "All" plus one pill per stage row, an `aria-pressed` group over `stageChips()`. The overview and the team page each have one (same look). |
 | `TeamCardsGrid` (`TeamSortControl`, the grid) and `TeamCard` | The overview team cards: an overlapped `PlayerInfo` avatar stack with an accent ring, the standing chip, path, record, form pips and cup-record note. The whole card is one `NavLink` to the team page. |
 | `OverviewTeamLink` | A team name that links to its `event-team` page, coloured with its accent. |
-| `CupAtAGlance` | The headline strip: tiles from `cupAtAGlanceView(records, teams)`, a tile left out when its record is null. |
+| `CupAtAGlance` | The headline grid: typed tiles (`map`, `rate`, `team`, `upset`) from `cupAtAGlanceView(records, teams)`, a tile left out when its record is null. Team names link to their page; nothing links to a pick & ban. |
 | `MapStatsTable` (`MapName`) | The overview map table: `DataTable` with the view-model's `responsive` columns and `compactContent` card rows, and `CapTimeLink` with the team cap id for the fastest run. |
 | `team/teamShared.tsx` | The team page building blocks: `TeamPageContext`/`useTeamPage()` (`eventSlug`, `names`, `accentOf`), `TeamLink` (a real link to an opponent's page), `TeamAvatars` (accent-ringed `PlayerInfo` avatars, both names as the label), `ResultBadge`, `FormPips`, `StandingChip`, `SECTION_LABEL`. |
-| `team/RunRow` / `UnrecordedRow` | One run: the team time through `CapTimeLink` (team cap id, falling back to the cap id), both players as `PlayerInfo` with each own time on hover, the region (hidden on phones) and a replay link; and the dashed "Time not recorded" row. |
+| `team/RunRow` / `UnrecordedRow` | One run: the team time through `CapTimeLink` (team cap id, falling back to the cap id), both players as `PlayerInfo`, each followed by their own cap time inline (no hover tooltip), the region (hidden on phones) and a replay link; and the dashed "Time not recorded" row. |
 | `team/TeamTable` (`TeamTable`, `MapName`) | The scaffolding the map profile and runs tables share: heading and caption, empty state, `DataTableShell` with `responsive` + `compactContent`, sortable header row. |
 | `team/MatchTimeline`, `MatchCard`, `PickBanSteps`, `MapRow` | The match timeline: a match node with its expandable body, the pick and ban steps, and a map row with the two sides' runs. |
 

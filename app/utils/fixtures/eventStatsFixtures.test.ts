@@ -39,7 +39,6 @@ import {
     type EventStats,
     type EventStatsBestDefence,
     type EventStatsBiggestUpset,
-    type EventStatsFastestTeam,
     type EventStatsFirstBan,
     type EventStatsFormEntry,
     type EventStatsFurthestStage,
@@ -47,8 +46,6 @@ import {
     type EventStatsMostBanned,
     type EventStatsMostComebacks,
     type EventStatsMostPicked,
-    type EventStatsPace,
-    type EventStatsPaceRank,
     type EventStatsPathEntry,
     type EventStatsPicker,
     type EventStatsRecordHeld,
@@ -59,6 +56,7 @@ import {
     type EventStatsTeamRecord,
     type EventStatsTeamRun,
     type EventTeamMapProfileRow,
+    type EventTeamMapRank,
     type EventTeamRun,
     type EventTeamStats,
     type EventTeamStatsMap,
@@ -95,11 +93,11 @@ const FIXTURE_DIR = resolve(__dirname, 'eventStats')
 
 const PINNED_SHA256: Record<string, string> = {
     'match_detail_links.json': 'e3c65ed374171a52ddc645c40695d7540e5e2fe4a78c9d1ceabf31549ddd47d5',
-    'overview_all.json': 'f565ed6e6942501f5974aa7daf74f547e509c2c6d4ad59783f1b7e22fa7a7ee9',
-    'overview_stage_empty.json': '80e7e7fc9c92f2a33aaff9693053fa92ce4530370eb100b8deb5235f97e61023',
-    'overview_unpublished.json': '88d3a9c6b2e602e3126fd6a102c8c12d0dbe15157f1250ae32021594fdd78903',
+    'overview_all.json': 'c1abbc449c7f79304a302e102c11026a8e3aaa42e70c536f4c39b4a7c376c323',
+    'overview_stage_empty.json': '6acecf2a2e100bc6c296bfdb6119f54172d7a3d9975aab63de8c270b5003eec2',
+    'overview_unpublished.json': '526d6603c059abd38cd535a861abe32235c3f3cd18c26a82c1a240aa86f40d81',
     'review.json': '76967b704e83c9485e70e3f570454d398b4d9e642246ab9b8cb27b67aecc92f3',
-    'team.json': '16e088c84dc8ad7b0122ae0ef74451315d41d965c32d82335102cc5bdfdc987e',
+    'team.json': '6df0ec68b2884d6affe4af1b54f58cf8ae7a18929eaf636465edfaf11228a617',
     'team_not_found.json': '0cea29759987a054bb8ba3bb30edbd0c08c3ffb603938348ee972fe00ea6299d',
 }
 
@@ -149,12 +147,11 @@ const TEAM_KEYS = {
     path: true,
     record: true,
     form: true,
-    pace: true,
     comebacks: true,
     records_held: true,
 } satisfies Record<keyof EventStatsTeam, true>
 
-const TEAM_MEMBER_KEYS = { user: true, alias: true, flag: true } satisfies Record<keyof EventStatsTeamMember, true>
+const TEAM_MEMBER_KEYS = { user: true, alias: true } satisfies Record<keyof EventStatsTeamMember, true>
 
 const FURTHEST_KEYS = { key: true, name: true, order: true } satisfies Record<keyof EventStatsFurthestStage, true>
 
@@ -166,8 +163,6 @@ const PATH_KEYS = { stage_key: true, stage_name: true, group: true, finish: true
 const TEAM_RECORD_KEYS = { matches: true, maps: true, caps: true } satisfies Record<keyof EventStatsTeamRecord, true>
 
 const FORM_KEYS = { result: true, match_id: true, opponent_id: true } satisfies Record<keyof EventStatsFormEntry, true>
-
-const PACE_KEYS = { value: true, runs: true } satisfies Record<keyof EventStatsPace, true>
 
 const RECORD_HELD_KEYS = { map: true, display_name: true, run: true } satisfies Record<keyof EventStatsRecordHeld, true>
 
@@ -192,7 +187,6 @@ const RECORDS_KEYS = {
     most_banned: true,
     first_ban: true,
     picker: true,
-    fastest_team: true,
     best_defence: true,
     biggest_upset: true,
     most_comebacks: true,
@@ -203,7 +197,6 @@ const RECORD_SHAPES: { [K in keyof EventStatsRecords]: Record<string, true> } = 
     most_banned: { map: true, display_name: true, bans: true, first_bans: true } satisfies Record<keyof EventStatsMostBanned, true>,
     first_ban: { map: true, display_name: true, first_bans: true, played: true } satisfies Record<keyof EventStatsFirstBan, true>,
     picker: { wins: true, games: true, rate: true } satisfies Record<keyof EventStatsPicker, true>,
-    fastest_team: { team_id: true, value: true, runs: true } satisfies Record<keyof EventStatsFastestTeam, true>,
     best_defence: { team_id: true, caps_against: true, maps: true } satisfies Record<keyof EventStatsBestDefence, true>,
     biggest_upset: {
         match_id: true,
@@ -218,12 +211,12 @@ const RECORD_SHAPES: { [K in keyof EventStatsRecords]: Record<string, true> } = 
     most_comebacks: { team_id: true, count: true } satisfies Record<keyof EventStatsMostComebacks, true>,
 }
 
-const TEAM_STATS_KEYS = { team: true, pace_rank: true, matches: true, map_profile: true, runs: true } satisfies Record<
+const TEAM_STATS_KEYS = { team: true, matches: true, map_profile: true, runs: true } satisfies Record<
     keyof EventTeamStats,
     true
 >
 
-const PACE_RANK_KEYS = { rank: true, of: true } satisfies Record<keyof EventStatsPaceRank, true>
+const MAP_RANK_KEYS = { rank: true, of: true } satisfies Record<keyof EventTeamMapRank, true>
 
 const MATCH_KEYS = {
     id: true,
@@ -252,7 +245,6 @@ const STEP_KEYS = {
     team_id: true,
     map: true,
     display_name: true,
-    acted_by: true,
 } satisfies Record<keyof EventTeamStatsPickBanStep, true>
 
 const VETO_KEYS = { outcome: true, vetoed_by_team_id: true } satisfies Record<keyof EventTeamStatsVeto, true>
@@ -286,6 +278,7 @@ const PROFILE_KEYS = {
     caps_for: true,
     caps_against: true,
     best_run: true,
+    best_rank: true,
 } satisfies Record<keyof EventTeamMapProfileRow, true>
 
 const TEAM_RUN_ROW_KEYS = {
@@ -376,7 +369,6 @@ function expectTeam(team: EventStatsTeam) {
         expectKeys(entry, FORM_KEYS)
         expect(EVENT_STATS_RESULTS).toContain(entry.result)
     }
-    if (team.pace !== null) expectKeys(team.pace, PACE_KEYS)
     expect(team.records_held.count).toBe(team.records_held.maps.length)
     for (const held of team.records_held.maps) {
         expectKeys(held, RECORD_HELD_KEYS)
@@ -471,14 +463,13 @@ describe('event stats fixtures', () => {
         expectOverview(eventStatsFixture(name))
     })
 
-    it('shows a draw, a team without pace, a team ahead of the generated stages and every headline', () => {
+    it('shows a draw, a team ahead of the generated stages and every headline', () => {
         const stats = eventStatsFixture('overviewAll')
         const stageKeys = stats.stages.map((stage) => stage.key)
         const ahead = stats.teams.filter((team) => !stageKeys.includes(team.furthest_stage.key))
 
         expect(stats.teams.length).toBeGreaterThanOrEqual(4)
         expect(stats.teams.some((team) => team.record.matches.d > 0 && team.form.some((entry) => entry.result === 'D'))).toBe(true)
-        expect(stats.teams.some((team) => team.pace === null)).toBe(true)
         expect(ahead.length).toBeGreaterThan(0)
         expect(ahead.every((team) => team.standing === 'alive')).toBe(true)
         expect(Object.values(stats.records).every((entry) => entry !== null)).toBe(true)
@@ -493,7 +484,6 @@ describe('event stats fixtures', () => {
         expect(stats.maps.every((row) => row.fastest_run === null || ids.has(row.fastest_run.team_id))).toBe(true)
         expect(
             [
-                records.fastest_team?.team_id,
                 records.best_defence?.team_id,
                 records.biggest_upset?.winner_id,
                 records.biggest_upset?.loser_id,
@@ -510,7 +500,7 @@ describe('event stats fixtures', () => {
         expect(stats.maps).toEqual([])
         for (const team of stats.teams) {
             expect(team.record).toEqual({ matches: { w: 0, d: 0, l: 0 }, maps: { w: 0, d: 0, l: 0 }, caps: { for: 0, against: 0 } })
-            expect([team.form, team.pace, team.comebacks, team.records_held]).toEqual([[], null, 0, { count: 0, maps: [] }])
+            expect([team.form, team.comebacks, team.records_held]).toEqual([[], 0, { count: 0, maps: [] }])
         }
         expect(Object.values(stats.records).every((entry) => entry === null)).toBe(true)
     })
@@ -528,13 +518,17 @@ describe('event stats fixtures', () => {
         expectKeys(page, TEAM_STATS_KEYS)
         expectTeam(page.team)
         expect(eventStatsFixture('overviewAll').teams).toContainEqual(page.team)
-        expect(page.pace_rank).not.toBeNull()
-        if (page.pace_rank) expectKeys(page.pace_rank, PACE_RANK_KEYS)
         for (const match of page.matches) expectMatch(match)
         for (const row of page.map_profile) {
             expectKeys(row, PROFILE_KEYS)
             expectMapRef(row)
             if (row.best_run !== null) expectRun(row.best_run)
+            expect(row.best_rank === null).toBe(row.best_run === null)
+            if (row.best_rank !== null) {
+                expectKeys(row.best_rank, MAP_RANK_KEYS)
+                expect(row.best_rank.rank).toBeGreaterThanOrEqual(1)
+                expect(row.best_rank.rank).toBeLessThanOrEqual(row.best_rank.of)
+            }
         }
         for (const run of page.runs) {
             expectRun(run, TEAM_RUN_ROW_KEYS)
@@ -553,6 +547,8 @@ describe('event stats fixtures', () => {
         expect(maps.some((row) => !row.played && row.result === null)).toBe(true)
         expect(maps.some((row) => row.result === 'D')).toBe(true)
         expect(page.map_profile.some((row) => row.best_run === null)).toBe(true)
+        expect(page.map_profile.some((row) => row.best_rank?.rank === 1)).toBe(true)
+        expect(page.map_profile.some((row) => (row.best_rank?.rank ?? 0) > 1)).toBe(true)
         for (const status of ['live', 'scheduled'] as const) {
             const match = page.matches.find((entry) => entry.status === status)
             expect([match?.score, match?.result, match?.pick_ban, match?.maps]).toEqual([null, null, null, []])

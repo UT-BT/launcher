@@ -30,6 +30,7 @@ verify_against:
   - app/components/pages/EventTeamPage.tsx
   - app/components/pages/events/stats/StatsOverview.tsx
   - app/components/pages/events/stats/statsView.ts
+  - app/components/pages/events/stats/statsTab.ts
   - app/components/pages/events/stats/team/MatchTimeline.tsx
   - app/components/pages/events/stats/team/TeamRunsTable.tsx
   - app/components/pages/events/manage/matches/CapsNeedLinking.tsx
@@ -687,7 +688,7 @@ params. It needs no login, and the web build opens it straight from a deep link.
   `match-pickban`.
 - **Per-entry state** (`useNavState`, restored by Back/Forward): `teamPage.stage` (the selected stage,
   default `null` = All), `teamMatches.toggles` (which match cards the viewer opened or closed; with no
-  toggle the latest match with a result is open), `teamRuns.sort` (`{ key, dir }`, default fastest first)
+  toggle the latest match with a result is open), `teamRuns.sort` (`{ key, dir }`, default date ascending, i.e. play order)
   and `teamRuns.showAll` (phone only: the full runs list instead of the first 12). The stage is
   not shared with the overview's: the overview keeps its own `event.statsStage` and
   `event.statsSort` (below).
@@ -708,6 +709,12 @@ gets the roster, because the rule reads `published`, not visibility. The overvie
 page reloads the bracket (the page's Refresh button, bracket edits from Manage). Its per-entry state is
 `event.statsStage` (the selected stage, default `null` = All) and `event.statsSort` (default
 `standing`).
+
+The tab's label follows the same switch (`events/stats/statsTab.ts`, `statsTabView`): **Teams** while it
+is the roster (and until the bracket read settles), **Stats** once it is the stats overview. In stats mode
+it carries a "New" pill (`aria-hidden`, so the button's name stays "Stats") until the viewer opens the
+tab once; that is remembered in `localStorage` (`utbt:eventStatsSeen:v1`, per browser, blocked storage
+reads as not seen), and the pill stops for everyone at `STATS_TAB_NEW_UNTIL` (2027-01-01 UTC).
 
 ## Manage → Matches: Caps need linking
 

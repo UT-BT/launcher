@@ -38,10 +38,8 @@ export function emptyStageStats(team: EventStatsTeam): EventTeamStats {
             ...team,
             record: { matches: none, maps: none, caps: { for: 0, against: 0 } },
             form: [],
-            pace: null,
             comebacks: 0,
         },
-        pace_rank: null,
         matches: [],
         map_profile: [],
         runs: [],
@@ -57,7 +55,6 @@ export interface PickBanStepView {
     actionLabel: string
     teamId: string | null
     teamName: string | null
-    actor: { id: string; name: string } | null
     displayName: string
 }
 
@@ -69,7 +66,6 @@ export function pickBanStepViews(pickBan: EventTeamStatsPickBan, names: Record<s
         actionLabel: STEP_ACTION_LABELS[step.action],
         teamId: step.team_id,
         teamName: step.team_id ? names[step.team_id] ?? null : null,
-        actor: step.acted_by ? { id: step.acted_by.id, name: step.acted_by.display_name } : null,
         displayName: step.display_name,
     }))
 }

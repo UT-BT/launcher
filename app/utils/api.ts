@@ -5145,7 +5145,6 @@ export interface EventStatsStage {
 export interface EventStatsTeamMember {
     user: string
     alias: string | null
-    flag: string | null
 }
 
 export interface EventStatsFurthestStage {
@@ -5185,11 +5184,6 @@ export interface EventStatsFormEntry {
     opponent_id: string
 }
 
-export interface EventStatsPace {
-    value: number
-    runs: number
-}
-
 export interface EventStatsRecordHeld extends EventStatsMapRef {
     run: EventRun
 }
@@ -5210,7 +5204,6 @@ export interface EventStatsTeam {
     path: EventStatsPathEntry[]
     record: EventStatsTeamRecord
     form: EventStatsFormEntry[]
-    pace: EventStatsPace | null
     comebacks: number
     records_held: EventStatsRecordsHeld
 }
@@ -5252,12 +5245,6 @@ export interface EventStatsPicker {
     rate: number
 }
 
-export interface EventStatsFastestTeam {
-    team_id: string
-    value: number
-    runs: number
-}
-
 export interface EventStatsBestDefence {
     team_id: string
     caps_against: number
@@ -5285,7 +5272,6 @@ export interface EventStatsRecords {
     most_banned: EventStatsMostBanned | null
     first_ban: EventStatsFirstBan | null
     picker: EventStatsPicker | null
-    fastest_team: EventStatsFastestTeam | null
     best_defence: EventStatsBestDefence | null
     biggest_upset: EventStatsBiggestUpset | null
     most_comebacks: EventStatsMostComebacks | null
@@ -5300,7 +5286,7 @@ export interface EventStats {
     records: EventStatsRecords
 }
 
-export interface EventStatsPaceRank {
+export interface EventTeamMapRank {
     rank: number
     of: number
 }
@@ -5317,7 +5303,6 @@ export interface EventTeamStatsPickBanStep extends EventStatsMapRef {
     action: PickBanStepAction
     segment: PickBanSegment
     team_id: string | null
-    acted_by: PickBanUserRef | null
 }
 
 export interface EventTeamStatsVeto {
@@ -5372,6 +5357,7 @@ export interface EventTeamMapProfileRow extends EventStatsMapRef {
     caps_for: number
     caps_against: number
     best_run: EventRun | null
+    best_rank: EventTeamMapRank | null
 }
 
 export interface EventTeamRun extends EventRun, EventStatsMapRef {
@@ -5383,7 +5369,6 @@ export interface EventTeamRun extends EventRun, EventStatsMapRef {
 
 export interface EventTeamStats {
     team: EventStatsTeam
-    pace_rank: EventStatsPaceRank | null
     matches: EventTeamStatsMatch[]
     map_profile: EventTeamMapProfileRow[]
     runs: EventTeamRun[]

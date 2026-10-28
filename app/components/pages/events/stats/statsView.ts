@@ -6,8 +6,6 @@ import {
     type EventRun,
     type EventStatsFormEntry,
     type EventStatsMap,
-    type EventStatsPace,
-    type EventStatsPaceRank,
     type EventStatsPathEntry,
     type EventStatsRecordsHeld,
     type EventStatsResult,
@@ -266,59 +264,28 @@ export function teamCardView(team: EventStatsTeam, context: TeamCardContext): Te
     }
 }
 
-export function paceText(value: number): string {
-    const percent = Math.round(Math.abs(value) * 100)
-    if (percent === 0) return '0%'
-    return `${value < 0 ? '−' : '+'}${percent}%`
-}
-
-function ordinal(n: number): string {
+export function ordinal(n: number): string {
     const teen = n % 100 >= 11 && n % 100 <= 13
     const suffix = teen ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' } as Record<number, string>)[n % 10] ?? 'th'
     return `${n}${suffix}`
 }
 
-export function paceRankLabel(paceRank: EventStatsPaceRank): string {
-    const field = plural(paceRank.of, 'team')
-    return paceRank.rank === 1 ? `Fastest of ${field}` : `${ordinal(paceRank.rank)} fastest of ${field}`
-}
-
-export const PACE_MIN_RUNS = 4
-
-export interface TileView {
-    value: string
-    note: string | null
-}
-
-export function paceTileView(pace: EventStatsPace | null, paceRank: EventStatsPaceRank | null): TileView {
-    if (!pace) return { value: EMPTY_STAT, note: `Needs at least ${PACE_MIN_RUNS} linked runs` }
-    const runs = `${plural(pace.runs, 'run')} vs the cup median on each map`
-    return { value: paceText(pace.value), note: paceRank ? `${paceRankLabel(paceRank)} · ${runs}` : runs }
-}
-
 export interface TeamTilesView {
     matches: { value: string; form: FormPip[]; summary: string }
-    maps: TileView
-    caps: TileView
-    pace: TileView
+    maps: string
+    caps: string
 }
 
 export function teamTilesView(stats: EventTeamStats): TeamTilesView {
     const { team } = stats
     const { matches, maps, caps } = team.record
     const matchesPlayed = playedCount(matches)
-    const mapsPlayed = playedCount(maps)
-    const difference = caps.for - caps.against
+    const mapsPlayed = playedCount(maps) > 0
     const form = formPips(team.form, teamNames(teamPageTeams(stats)))
     return {
         matches: { value: matchesPlayed ? wdlText(matches) : EMPTY_STAT, form, summary: formSummary(form) },
-        maps: mapsPlayed
-            ? { value: wdlText(maps), note: `${Math.round((maps.w / mapsPlayed) * 100)}% of maps won` }
-            : { value: EMPTY_STAT, note: 'No maps played' },
-        caps: mapsPlayed
-            ? { value: capsText(caps), note: `${difference >= 0 ? '+' : ''}${difference} cap difference` }
-            : { value: EMPTY_STAT, note: null },
-        pace: paceTileView(team.pace, stats.pace_rank),
+        maps: mapsPlayed ? wdlText(maps) : EMPTY_STAT,
+        caps: mapsPlayed ? capsText(caps) : EMPTY_STAT,
     }
 }
 
@@ -333,32 +300,26 @@ export interface RunMemberView {
     alias: string | null
     capId: string
     time: string
-    title: string
 }
 
 export interface RunView {
     time: string
     teamCapId: string | null
-    title: string
     members: RunMemberView[]
     region: string | null
     replay: ReplayKind | null
 }
 
-function playerName(member: { alias: string | null }): string {
-    return member.alias ?? 'Unknown player'
-}
-
 export function runView(run: EventRun): RunView {
-    const members = run.members.map(member => {
-        const time = runTimeText(member.cap_time_seconds)
-        return { user: member.user, alias: member.alias, capId: member.cap_id, time, title: `${playerName(member)}: ${time}` }
-    })
     return {
         time: runTimeText(run.team_time_seconds),
         teamCapId: run.team_cap_id,
-        title: members.map(member => `${playerName(member)} ${member.time}`).join(' · '),
-        members,
+        members: run.members.map(member => ({
+            user: member.user,
+            alias: member.alias,
+            capId: member.cap_id,
+            time: runTimeText(member.cap_time_seconds),
+        })),
         region: run.server?.region ?? null,
         replay: run.has_demo ? 'demo' : run.has_ghost ? 'ghost' : null,
     }
@@ -562,7 +523,18 @@ export interface MapProfileRowView {
     wdlShares: { w: number; d: number; l: number }
     caps: string
     bestRun: RunView | null
+    rank: MapRankView | null
     compact: StatCell[]
+}
+
+export interface MapRankView {
+    position: string
+    of: string
+    top: boolean
+}
+
+export function mapRankView(rank: { rank: number; of: number } | null): MapRankView | null {
+    return rank && { position: ordinal(rank.rank), of: `of ${rank.of}`, top: rank.rank === 1 }
 }
 
 export interface MapProfileView {
@@ -580,6 +552,7 @@ const MAP_PROFILE_COLUMNS: readonly ResponsiveColumn[] = [
     { id: 'wdl', width: '7.5rem', priority: 85 },
     { id: 'caps', width: '6rem', priority: 50 },
     { id: 'best', width: '8rem', required: true },
+    { id: 'rank', width: '6.5rem', required: true },
 ]
 
 export function mapProfileView(rows: readonly EventTeamMapProfileRow[]): MapProfileView {
@@ -600,6 +573,7 @@ export function mapProfileView(rows: readonly EventTeamMapProfileRow[]): MapProf
                 wdlShares: { w: share(row.w), d: share(row.d), l: share(row.l) },
                 caps,
                 bestRun: row.best_run ? runView(row.best_run) : null,
+                rank: mapRankView(row.best_rank),
                 compact: [
                     { label: 'Picked', value: String(row.picked) },
                     { label: 'Banned', value: String(row.banned_by) },

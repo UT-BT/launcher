@@ -19,11 +19,12 @@ function times(runs: readonly EventTeamRun[]) {
 }
 
 describe('sortTeamRuns', () => {
-    it('defaults to the fastest run first', () => {
+    it('defaults to play order, oldest run first', () => {
         const sorted = sortTeamRuns(teamStats(), DEFAULT_TEAM_RUN_SORT)
-        expect(DEFAULT_TEAM_RUN_SORT).toEqual({ key: 'time', dir: 'asc' })
+        expect(DEFAULT_TEAM_RUN_SORT).toEqual({ key: 'date', dir: 'asc' })
         expect(sorted).toHaveLength(18)
-        expect(times(sorted)).toEqual([...times(teamStats().runs)].sort((a, b) => a - b))
+        const dates = sorted.map(run => Date.parse(run.completed_at))
+        expect(dates).toEqual([...dates].sort((a, b) => a - b))
     })
 
     it('reverses on descending time', () => {

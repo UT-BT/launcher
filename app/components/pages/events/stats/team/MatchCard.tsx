@@ -89,10 +89,7 @@ function MatchBody({ match, view, teamId, teamName }: {
                 <p className="text-xs italic text-muted-foreground">{view.note}</p>
             ) : view.maps.length > 0 && (
                 <div className="grid gap-2">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                        <span className={SECTION_LABEL}>Maps</span>
-                        <span className="text-xs text-muted-foreground">Hover a player for their own cap time</span>
-                    </div>
+                    <span className={SECTION_LABEL}>Maps</span>
                     <div className="grid gap-2">
                         {match.maps.map(map => (
                             <MapRow key={map.ordinal} map={map} teamId={teamId} teamName={teamName} opponentName={opponentName} />

@@ -94,9 +94,8 @@ describe('emptyStageStats', () => {
         expect(empty.runs).toEqual([])
         expect(teamTilesView(empty)).toEqual({
             matches: { value: '—', form: [], summary: 'No results yet' },
-            maps: { value: '—', note: 'No maps played' },
-            caps: { value: '—', note: null },
-            pace: { value: '—', note: 'Needs at least 4 linked runs' },
+            maps: '—',
+            caps: '—',
         })
     })
 
@@ -120,7 +119,6 @@ describe('pickBanStepViews', () => {
             actionLabel: 'Ban',
             teamId: 'def1673e-b430-4770-8956-4cd2de9cf57d',
             teamName: 'KNRK',
-            actor: { id: '797641111560650762', name: 'Rob-Bot' },
             displayName: 'II-CoZyliciouS',
         })
         expect(steps[2]).toMatchObject({ number: 3, action: 'pick', actionLabel: 'Pick', teamName: "Hop n' Twerk", displayName: 'II-FaithCB' })
@@ -128,9 +126,9 @@ describe('pickBanStepViews', () => {
 
     it('labels a decider step with no acting team', () => {
         const pickBan = teamStats().matches[0].pick_ban!
-        pickBan.steps.push({ ...pickBan.steps[0], index: 8, action: 'decider', segment: 'decider', team_id: null, acted_by: null })
+        pickBan.steps.push({ ...pickBan.steps[0], index: 8, action: 'decider', segment: 'decider', team_id: null })
         expect(pickBanStepViews(pickBan, names)[8]).toMatchObject({
-            number: 9, action: 'decider', actionLabel: 'Decider', teamId: null, teamName: null, actor: null,
+            number: 9, action: 'decider', actionLabel: 'Decider', teamId: null, teamName: null,
         })
     })
 })

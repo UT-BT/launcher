@@ -100,7 +100,7 @@ export function FormPips({ pips, summary }: { pips: FormPip[]; summary: string }
     if (pips.length === 0) return <span className="text-xs text-muted-foreground">{summary}</span>
 
     return (
-        <span className="inline-flex gap-1" role="list" aria-label={summary}>
+        <span className="inline-flex flex-wrap gap-1" role="list" aria-label={summary}>
             {pips.map(pip => (
                 <span
                     key={pip.matchId}

@@ -71,7 +71,7 @@ function RunPlayers({ run }: { run: RunView }) {
             {run.members.map((member, index) => (
                 <Fragment key={member.capId}>
                     {index > 0 && <span aria-hidden className="text-xs text-muted-foreground">+</span>}
-                    <span title={member.title} className="min-w-0">
+                    <span className="min-w-0">
                         <PlayerInfo userId={member.user} alias={member.alias} size="sm" presentation="name" />
                     </span>
                 </Fragment>

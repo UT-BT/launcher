@@ -3,8 +3,8 @@ import { fetchEventTeamStats } from '@/app/utils/api'
 import { eventStatsFixture, eventStatsFixtureResponse, type EventStatsFixtureName } from '@/app/utils/fixtures/eventStatsFixtures'
 import {
     readTeamOrNotFound, teamPageStatus,
-    ACCENT_SLOT_COUNT, DEFAULT_TEAM_SORT, TEAM_SORTS, TIME_NOT_RECORDED, accentSlots, formPips, formSummary, paceRankLabel, paceText,
-    paceTileView, pathParts, pathText, runTimeText, runView, sortTeams, stageChips, stageScopeLabel, statsMode, teamCardView,
+    ACCENT_SLOT_COUNT, DEFAULT_TEAM_SORT, TEAM_SORTS, TIME_NOT_RECORDED, accentSlots, formPips, formSummary, mapRankView, ordinal,
+    pathParts, pathText, runTimeText, runView, sortTeams, stageChips, stageScopeLabel, statsMode, teamCardView,
     teamMatchView, teamNames, teamPageTeams, teamTilesView, mapProfileView, mapTableView, teamRunsView,
 } from './statsView'
 
@@ -278,76 +278,45 @@ function teamMatch(idPrefix: string) {
     return teamPage().matches.find(match => match.id.startsWith(idPrefix))!
 }
 
-describe('paceText', () => {
-    it('signs the pace as a whole percentage, negative meaning faster', () => {
-        expect(paceText(-0.14)).toBe('−14%')
-        expect(paceText(0.2128)).toBe('+21%')
-        expect(paceText(-0.0354)).toBe('−4%')
-    })
-
-    it('has no sign when it rounds to zero', () => {
-        expect(paceText(0)).toBe('0%')
-        expect(paceText(-0.004)).toBe('0%')
-    })
-})
-
-describe('paceRankLabel', () => {
-    it('calls the first team the fastest', () => {
-        expect(paceRankLabel({ rank: 1, of: 17 })).toBe('Fastest of 17 teams')
-    })
-
-    it('uses an ordinal for every other rank', () => {
-        expect(paceRankLabel({ rank: 4, of: 17 })).toBe('4th fastest of 17 teams')
-        expect([2, 3, 11, 12, 13, 21, 22, 23].map(rank => paceRankLabel({ rank, of: 30 }).split(' ')[0]))
-            .toEqual(['2nd', '3rd', '11th', '12th', '13th', '21st', '22nd', '23rd'])
-    })
-
-    it('uses the singular for a field of one', () => {
-        expect(paceRankLabel({ rank: 1, of: 1 })).toBe('Fastest of 1 team')
-    })
-})
-
-describe('paceTileView', () => {
-    it('shows the value, the rank and the run count', () => {
-        const page = teamPage()
-        expect(paceTileView(page.team.pace, page.pace_rank)).toEqual({
-            value: '+21%',
-            note: '4th fastest of 5 teams · 18 runs vs the cup median on each map',
-        })
-    })
-
-    it('explains a missing pace', () => {
-        expect(paceTileView(overviewTeam('Cranium Bashers').pace, null)).toEqual({ value: '—', note: 'Needs at least 4 linked runs' })
-    })
-})
-
 describe('teamTilesView', () => {
-    it('gives the four team page tiles', () => {
+    it('gives the three team page tiles', () => {
         const tiles = teamTilesView(teamPage())
         expect(tiles.matches.value).toBe('3-0-2')
         expect(tiles.matches.form.map(pip => pip.title)).toEqual([
             'Won vs KNRK', 'Won vs Cranium Bashers', 'Won vs Team Trials', 'Lost vs Sandbagging', 'Lost vs Niagra Fools',
         ])
-        expect(tiles.maps).toEqual({ value: '8-1-7', note: '50% of maps won' })
-        expect(tiles.caps).toEqual({ value: '18–17', note: '+1 cap difference' })
-        expect(tiles.pace.value).toBe('+21%')
+        expect(tiles.maps).toBe('8-1-7')
+        expect(tiles.caps).toBe('18–17')
     })
 
     it('shows dashes before any map is played in scope', () => {
         const page = teamPage()
         page.team = eventStatsFixture('overviewStageEmpty').teams[0]
-        page.pace_rank = null
         const tiles = teamTilesView(page)
         expect(tiles.matches).toMatchObject({ value: '—', summary: 'No results yet' })
-        expect(tiles.maps).toEqual({ value: '—', note: 'No maps played' })
-        expect(tiles.caps).toEqual({ value: '—', note: null })
-        expect(tiles.pace).toEqual({ value: '—', note: 'Needs at least 4 linked runs' })
+        expect(tiles.maps).toBe('—')
+        expect(tiles.caps).toBe('—')
+    })
+})
+
+describe('ordinal', () => {
+    it('gives the English suffix, teens included', () => {
+        expect([1, 2, 3, 4, 11, 12, 13, 21, 22, 23, 101].map(ordinal))
+            .toEqual(['1st', '2nd', '3rd', '4th', '11th', '12th', '13th', '21st', '22nd', '23rd', '101st'])
+    })
+})
+
+describe('mapRankView', () => {
+    it('reads the rank among the teams with a run on the map', () => {
+        expect(mapRankView({ rank: 3, of: 14 })).toEqual({ position: '3rd', of: 'of 14', top: false })
     })
 
-    it('signs a negative cap difference', () => {
-        const page = teamPage()
-        page.team.record.caps = { for: 2, against: 30 }
-        expect(teamTilesView(page).caps.note).toBe('-28 cap difference')
+    it('marks the fastest team on the map', () => {
+        expect(mapRankView({ rank: 1, of: 9 })).toEqual({ position: '1st', of: 'of 9', top: true })
+    })
+
+    it('has nothing without a run', () => {
+        expect(mapRankView(null)).toBeNull()
     })
 })
 
@@ -363,16 +332,15 @@ describe('runTimeText', () => {
 })
 
 describe('runView', () => {
-    it('names both players with their own cap times on hover', () => {
+    it('gives the team time and the own cap time of each player', () => {
         const run = teamMatch('f7d978c1').maps[0].runs_for[0]
         expect(runView(run)).toMatchObject({
             time: '01:59.932',
             teamCapId: 'c4fbd258-678b-422b-8dee-4056821fe0c0',
-            title: 'Decl 01:59.531 · ShX 01:59.932',
             region: 'Germany',
             replay: 'demo',
         })
-        expect(runView(run).members.map(member => member.title)).toEqual(['Decl: 01:59.531', 'ShX: 01:59.932'])
+        expect(runView(run).members.map(member => [member.alias, member.time])).toEqual([['Decl', '01:59.531'], ['ShX', '01:59.932']])
     })
 
     it('offers a ghost replay, or none', () => {
@@ -529,10 +497,10 @@ describe('mapTableView', () => {
 })
 
 describe('mapProfileView', () => {
-    it('gives the desktop columns, with the map and best time always shown', () => {
+    it('gives the desktop columns, with the map, best time and rank always shown', () => {
         const view = mapProfileView(teamPage().map_profile)
-        expect(view.columns.map(column => column.id)).toEqual(['map', 'picked', 'bannedBy', 'bannedAgainst', 'played', 'wdl', 'caps', 'best'])
-        expect(view.columns.filter(column => column.required).map(column => column.id)).toEqual(['map', 'best'])
+        expect(view.columns.map(column => column.id)).toEqual(['map', 'picked', 'bannedBy', 'bannedAgainst', 'played', 'wdl', 'caps', 'best', 'rank'])
+        expect(view.columns.filter(column => column.required).map(column => column.id)).toEqual(['map', 'best', 'rank'])
     })
 
     it('gives each row its desktop cells and its phone stat cells', () => {
@@ -561,7 +529,7 @@ describe('mapProfileView', () => {
 
     it('shows dashes for a map that was only banned', () => {
         const extant = mapProfileView(teamPage().map_profile).rows.find(row => row.displayName === 'II-Extant')!
-        expect(extant).toMatchObject({ played: '0', wdl: null, caps: '—', bestRun: null })
+        expect(extant).toMatchObject({ played: '0', wdl: null, caps: '—', bestRun: null, rank: null })
         expect(extant.wdlShares).toEqual({ w: 0, d: 0, l: 0 })
         expect(extant.compact.find(cell => cell.label === 'W-D-L')).toEqual({ label: 'W-D-L', value: '—' })
     })

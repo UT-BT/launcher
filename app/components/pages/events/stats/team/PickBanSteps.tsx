@@ -1,5 +1,4 @@
 import { cn } from '@/lib/utils'
-import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { PICK_BAN_HUES, PICK_BAN_TONES } from '@/app/components/broadcast/broadcastTone'
 import type { EventTeamStatsPickBan, PickBanStepAction } from '@/app/utils/api'
 import { pickBanStepViews } from './teamPageView'
@@ -28,12 +27,6 @@ export function PickBanSteps({ pickBan }: { pickBan: EventTeamStatsPickBan }) {
                         <span className="flex min-w-0 items-center gap-1.5 text-[10px]">
                             <span className={cn('shrink-0 font-bold uppercase tracking-wider', ACTION_TONES[step.action])}>{step.actionLabel}</span>
                             {step.teamName && <span className="truncate text-muted-foreground">{step.teamName}</span>}
-                            {step.actor && (
-                                <>
-                                    <span aria-hidden className="text-muted-foreground">·</span>
-                                    <PlayerInfo userId={step.actor.id} alias={step.actor.name} size="sm" presentation="name" />
-                                </>
-                            )}
                         </span>
                         <span className="truncate text-xs font-semibold text-foreground">{step.displayName}</span>
                     </span>

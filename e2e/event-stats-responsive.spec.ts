@@ -113,14 +113,13 @@ for (const viewport of VIEWPORTS) {
             await page.goto(TEAM_PATH)
 
             await expect(page.getByRole('heading', { level: 1, name: teamStats.team.name })).toBeVisible()
-            await expect(page.getByText('Caps for / against')).toBeVisible()
-            await expect(page.getByText('Pace', { exact: true })).toBeVisible()
+            await expect(page.getByText('Maps', { exact: true }).first()).toBeVisible()
+            await expect(page.getByText('Pace', { exact: true })).toHaveCount(0)
 
             await expect(page.getByRole('button', { name: 'Hide match details' })).toHaveCount(1)
             const expandedMatch = page.locator('[id^="team-match-"]')
             await expect(expandedMatch).toHaveCount(1)
             await expect(expandedMatch.getByRole('list', { name: 'Pick and ban steps' })).toBeVisible()
-            await expect(expandedMatch.getByText('Hover a player for their own cap time')).toBeVisible()
             await expect(expandedMatch.getByText(/^\d{2}:\d{2}\.\d{3}$/).first()).toBeVisible()
 
             await expectTable(page.getByRole('region', { name: 'Map profile' }), 'Map profile', viewport.compact)
@@ -137,9 +136,28 @@ test('the teams tab lists the roster while the bracket is unpublished', async ({
     await page.goto(`/events/${SLUG}?tab=teams`)
 
     await expect(page.getByText('6 registered')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Teams', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Stats', exact: true })).toHaveCount(0)
     await expect(page.getByRole('heading', { name: "Hop n' Twerk" })).toBeVisible()
     await expect(page.getByRole('heading', { name: 'Cup at a glance' })).toHaveCount(0)
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1)
+})
+
+test('the published tab is called Stats and marked new until the viewer opens it', async ({ page }) => {
+    await mockApi(page, { bracketPublished: true })
+    await page.goto(`/events/${SLUG}`)
+
+    const tab = page.getByRole('button', { name: 'Stats', exact: true })
+    await expect(tab).toBeVisible()
+    await expect(tab).toContainText('New')
+    await expect(page.getByRole('button', { name: 'Teams', exact: true })).toHaveCount(0)
+
+    await tab.click()
+    await expect(page.getByRole('heading', { name: 'Cup at a glance' })).toBeVisible()
+    await expect(tab).not.toContainText('New')
+
+    await page.goto(`/events/${SLUG}`)
+    await expect(page.getByRole('button', { name: 'Stats', exact: true })).not.toContainText('New')
 })
 
 test('a team card is a real link that opens the team page', async ({ page }) => {

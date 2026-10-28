@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { cn } from '@/lib/utils'
 import { CapTimeLink } from '@/app/components/shared/CapTimeLink'
-import { EMPTY_STAT, mapProfileView, type MapProfileRowView } from '@/app/components/pages/events/stats/statsView'
+import { EMPTY_STAT, mapProfileView, type MapProfileRowView, type MapRankView } from '@/app/components/pages/events/stats/statsView'
 import type { EventRun, EventTeamMapProfileRow } from '@/app/utils/api'
 import { wdlBarSegments } from './teamTablesView'
 import { RESULT_FILLS, SECTION_LABEL } from './teamShared'
@@ -16,6 +16,7 @@ const HEADERS: Record<string, TeamTableHeader> = {
     wdl: { label: 'W-D-L', align: 'left', required: true },
     caps: { label: 'Caps', align: 'right' },
     best: { label: 'Best time', align: 'right' },
+    rank: { label: 'Rank', align: 'right' },
 }
 
 interface ProfileEntry {
@@ -51,6 +52,17 @@ function BestTime({ run }: { run: EventRun | null }) {
     )
 }
 
+function Rank({ rank }: { rank: MapRankView | null }) {
+    if (!rank) return <span className="text-muted-foreground">{EMPTY_STAT}</span>
+
+    return (
+        <span className="inline-flex items-baseline gap-1 whitespace-nowrap">
+            <span className={cn('font-bold tabular-nums', rank.top ? 'text-yellow-300' : 'text-foreground')}>{rank.position}</span>
+            <span className="text-xs tabular-nums text-muted-foreground">{rank.of}</span>
+        </span>
+    )
+}
+
 function Count({ value }: { value: string }) {
     return <span className={cn('font-mono tabular-nums', value === '0' ? 'text-muted-foreground' : 'text-foreground')}>{value}</span>
 }
@@ -65,6 +77,7 @@ function cellContent(id: string, { row, best }: ProfileEntry) {
         case 'wdl': return <WdlCell row={row} />
         case 'caps': return <span className="font-mono tabular-nums text-foreground">{row.caps}</span>
         case 'best': return <BestTime run={best} />
+        case 'rank': return <Rank rank={row.rank} />
         default: return null
     }
 }
@@ -74,7 +87,10 @@ function CompactProfileRow({ entry }: { entry: ProfileEntry }) {
         <div role="listitem" className="flex flex-col gap-3 border-b border-hairline/5 p-3 last:border-0">
             <div className="flex items-center gap-3">
                 <span className="min-w-0 flex-1"><MapName row={entry.row} /></span>
-                <BestTime run={entry.best} />
+                <span className="flex shrink-0 flex-col items-end gap-0.5">
+                    <BestTime run={entry.best} />
+                    {entry.row.rank && <Rank rank={entry.row.rank} />}
+                </span>
             </div>
             <div className="grid grid-cols-3 gap-2">
                 {entry.row.compact.map(cell => (

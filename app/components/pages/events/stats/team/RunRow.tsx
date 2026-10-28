@@ -45,10 +45,7 @@ export function RunRow({ run, own }: { run: EventRun; own: boolean }) {
     const firstCapId = view.members[0]?.capId
 
     return (
-        <div
-            title={view.title}
-            className={cn(ROW, own ? 'bg-hairline/5' : 'border border-dashed border-hairline/10')}
-        >
+        <div className={cn(ROW, own ? 'bg-hairline/5' : 'border border-dashed border-hairline/10')}>
             <CapTimeLink
                 teamCapId={view.teamCapId}
                 capId={firstCapId}
@@ -58,9 +55,12 @@ export function RunRow({ run, own }: { run: EventRun; own: boolean }) {
             <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-1.5 gap-y-0.5">
                 {view.members.map((member, index) => (
                     <Fragment key={member.capId}>
-                        {index > 0 && <span aria-hidden className="text-xs text-muted-foreground">+</span>}
-                        <span title={member.title} className="min-w-0">
+                        {index > 0 && <span aria-hidden className="text-xs text-muted-foreground">·</span>}
+                        <span className="inline-flex min-w-0 items-baseline gap-1.5">
                             <PlayerInfo userId={member.user} alias={member.alias} size="sm" presentation="name" />
+                            {view.members.length > 1 && (
+                                <span className="font-mono text-[11px] tabular-nums text-muted-foreground">{member.time}</span>
+                            )}
                         </span>
                     </Fragment>
                 ))}

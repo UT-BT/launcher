@@ -134,10 +134,7 @@ export function EventTeamPage({ eventSlug, eventTeamId, userProfile, onBackToTea
                             <TeamTiles tiles={teamTilesView(scope.stats)} />
 
                             <section aria-labelledby="team-matches-heading" className="flex flex-col gap-3">
-                                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                                    <h2 id="team-matches-heading" className="text-lg font-bold text-foreground">Matches</h2>
-                                    <span className="text-xs text-muted-foreground">In play order · official results only</span>
-                                </div>
+                                <h2 id="team-matches-heading" className="text-lg font-bold text-foreground">Matches</h2>
                                 <MatchTimeline matches={scope.stats.matches} teamId={team.id} teamName={team.name} />
                             </section>
 

@@ -9,12 +9,12 @@ export interface TeamRunSort {
     dir: 'asc' | 'desc'
 }
 
-export const DEFAULT_TEAM_RUN_SORT: TeamRunSort = { key: 'time', dir: 'asc' }
+export const DEFAULT_TEAM_RUN_SORT: TeamRunSort = { key: 'date', dir: 'asc' }
 
 export const COMPACT_RUN_SORTS: readonly { key: TeamRunSortKey; label: string }[] = [
+    { key: 'date', label: 'Date' },
     { key: 'time', label: 'Time' },
     { key: 'map', label: 'Map' },
-    { key: 'date', label: 'Date' },
 ]
 
 export const COMPACT_RUN_LIMIT = 12

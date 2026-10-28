@@ -70,7 +70,7 @@ function FastestRun({ row, eventSlug }: { row: MapStatsRowView; eventSlug: strin
     if (!run || row.fastestSeconds === null) return <span className="text-muted-foreground">{EMPTY_STAT}</span>
 
     return (
-        <span title={run.title} className="flex min-w-0 flex-col">
+        <span className="flex min-w-0 flex-col">
             <CapTimeLink
                 teamCapId={run.teamCapId}
                 capId={run.members[0]?.capId}

@@ -15,16 +15,44 @@
   container: glance / inline-size;
 }
 
-.glance::before {
+.glance-tiles {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-auto-flow: row dense;
+}
+
+.glance-wide {
+  grid-column: span 2;
+}
+
+.glance-tall {
+  min-height: 10rem;
+}
+
+.glance-map {
+  background-color: #151821;
+  text-shadow: 0 1px 3px rgb(0 0 0 / 0.85);
+}
+
+.glance-map::before {
   content: '';
   position: absolute;
   inset: 0;
   z-index: -1;
-  background: linear-gradient(100deg, color-mix(in oklab, var(--background) 72%, transparent) 30%, transparent 140%);
+  background: linear-gradient(180deg, rgb(8 10 16 / 0.55) 0%, rgb(8 10 16 / 0.1) 38%, rgb(8 10 16 / 0.88) 100%);
 }
 
-.glance-tiles {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+.glance-team {
+  background:
+    radial-gradient(120% 140% at 0% 0%, color-mix(in oklab, var(--glance-accent) 26%, transparent), transparent 62%),
+    color-mix(in oklab, var(--card) 60%, transparent);
+}
+
+.glance-ring {
+  width: 3.25rem;
+  aspect-ratio: 1;
+  border-radius: 9999px;
+  background: conic-gradient(rgb(52 211 153) var(--share), rgb(var(--hairline-rgb) / 0.15) 0);
+  mask: radial-gradient(farthest-side, transparent calc(100% - 0.45rem), #000 calc(100% - 0.4rem));
 }
 
 @container glance (max-width: 56rem) {
@@ -33,8 +61,23 @@
   }
 }
 
+@container glance (max-width: 30rem) {
+  .glance-upset-side {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .glance-upset-end {
+    align-items: flex-end;
+  }
+}
+
 @container glance (max-width: 18rem) {
   .glance-tiles {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .glance-wide {
+    grid-column: auto;
   }
 }
