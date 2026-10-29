@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type MouseEvent } from 'react'
-import { AlertTriangle, CheckCircle2, ChevronRight, FolderOpen, Loader2, OctagonX, Trash2, X } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, ChevronRight, FolderOpen, OctagonX, Trash2, X } from 'lucide-react'
+import { Spinner } from '@/app/components/ui/spinner'
 import { fetchMapUploadDrafts, mapUploadErrorMessage } from '@/app/utils/api'
 import type { DraftSummary } from '@/app/utils/mapUploadTypes'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
@@ -26,7 +27,7 @@ const COLUMNS: ResponsiveColumn[] = [
 
 function Issues({ draft }: { draft: DraftSummary }) {
   if (draft.status === 'analyzing') {
-    return <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"><Loader2 className="size-3.5 animate-spin" />Checking</span>
+    return <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"><Spinner className="size-3.5" />Checking</span>
   }
   if (draft.blocks_count === 0 && draft.warnings_count === 0) {
     return <span className="inline-flex items-center gap-1.5 text-xs text-emerald-300"><CheckCircle2 className="size-3.5" />Clean</span>

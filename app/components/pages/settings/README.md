@@ -10,7 +10,7 @@ not_here:
   - "the ini IPC channel + path safety → lib/conveyor/README.md, lib/main/README.md"
   - "launcher-pref localStorage state → agents/state-patterns.md"
 sections: [layout-sections, responsive-behavior, launcher-vs-game-panels, the-ini-flow, constants-ts, shared-controls]
-last_verified: 2026-07-27
+last_verified: 2026-10-29
 verify_against:
   - app/components/layout/AppLayout.tsx
   - app/components/pages/SettingsWeb.tsx

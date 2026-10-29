@@ -1,8 +1,9 @@
 import { useMemo, useRef, useState } from 'react'
 import {
-    Loader2, ShieldAlert, ShieldCheck, Play, Download, Calendar,
+    ShieldAlert, ShieldCheck, Play, Download, Calendar,
     Users,
 } from 'lucide-react'
+import { Spinner } from '@/app/components/ui/spinner'
 import { cn } from '@/lib/utils'
 import { useNavScrollRestore } from '@/app/components/navigation/useNavScrollRestore'
 import { useDocumentTitle } from '@/app/components/navigation/useDocumentMeta'
@@ -349,7 +350,7 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
                                             title="Watch every member's replay together"
                                         >
                                             {compareState === 'resolving'
-                                                ? <Loader2 className="size-3.5 animate-spin" />
+                                                ? <Spinner className="size-3.5" />
                                                 : <Play className="size-3.5" />}
                                             Watch Team Replay
                                         </button>
@@ -365,7 +366,7 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
                                             title={membersWithDemos.length === 0 ? 'No demos available yet' : 'Download every available member demo'}
                                         >
                                             {demoBatch !== null
-                                                ? <Loader2 className="size-3.5 animate-spin" />
+                                                ? <Spinner className="size-3.5" />
                                                 : <Download className="size-3.5" />}
                                             {demoBatch !== null ? `Downloading ${demoBatch.done}/${demoBatch.total}…` : 'Download Demos'}
                                         </button>
@@ -550,7 +551,7 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
                                                                 title={member.verified ? 'Watch Replay' : 'No replay — cap not verified'}
                                                             >
                                                                 {replay.loadingCapId === member.cap_id
-                                                                    ? <Loader2 className="size-3.5 animate-spin" />
+                                                                    ? <Spinner className="size-3.5" />
                                                                     : <Play className="size-3.5" />}
                                                                 Watch
                                                             </button>
@@ -639,7 +640,7 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
             >
                 {compareState === 'resolving' ? (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
-                        <Loader2 className="size-4 animate-spin" />
+                        <Spinner className="size-4" />
                         Resolving replays…
                     </div>
                 ) : (

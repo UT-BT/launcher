@@ -33,6 +33,7 @@ import { LiveDot } from '@/app/components/shared/LiveDot'
 import { CHIP_SHAPE, LIVE_CHIP_STYLE } from '@/app/components/shared/chipStyles'
 import { IS_WEB, usePlatform } from '@/app/platform'
 import { prefetchPage } from '@/app/components/main/pageLoaders'
+import { SeasonalAmbient, SeasonalOrnament } from '@/app/seasonal/lazyDecor'
 
 interface AppLayoutProps {
     children: ReactNode
@@ -216,6 +217,7 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
     return (
         <div className="flex h-full bg-background text-foreground overflow-hidden relative">
             <div className="nebula-bg absolute inset-0 opacity-30 pointer-events-none" />
+            {currentView === 'home' && <SeasonalAmbient />}
 
             {/* Mobile top bar */}
             <div className="lg:hidden fixed top-0 inset-x-0 h-14 z-30 flex items-center gap-3 px-4 bg-card/80 backdrop-blur-xl border-b border-hairline/10">
@@ -230,7 +232,10 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                 >
                     <Menu className="size-5" />
                 </button>
-                <img src={logo} alt="UTBT Logo" className="size-8 object-contain" />
+                <span className="relative size-8 shrink-0">
+                    <img src={logo} alt="UTBT Logo" className="size-8 object-contain" />
+                    <SeasonalOrnament placement="topbar" />
+                </span>
                 <span className="font-bold tracking-tight">UTBT.net</span>
             </div>
 
@@ -259,11 +264,14 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                 <div className="absolute inset-0 bg-gradient-to-b from-accent-900/10 to-transparent pointer-events-none" />
 
                 <div className="p-6 [@media(max-height:800px)]:p-3 max-lg:hidden flex flex-col items-center relative z-10">
-                    <img
-                        src={logo}
-                        alt="UTBT Logo"
-                        className="w-24 h-24 [@media(max-height:800px)]:w-14 [@media(max-height:800px)]:h-14 object-contain drop-shadow-[0_0_15px_rgb(var(--accent-glow-rgb)/0.3)] mb-4 [@media(max-height:800px)]:mb-0 transition-all hover:scale-105 duration-300"
-                    />
+                    <div className="relative mb-4 [@media(max-height:800px)]:mb-0 transition-all hover:scale-105 duration-300">
+                        <img
+                            src={logo}
+                            alt="UTBT Logo"
+                            className="w-24 h-24 [@media(max-height:800px)]:w-14 [@media(max-height:800px)]:h-14 object-contain drop-shadow-[0_0_15px_rgb(var(--accent-glow-rgb)/0.3)]"
+                        />
+                        <SeasonalOrnament placement="sidebar" />
+                    </div>
                 </div>
 
                 <div className={cn(

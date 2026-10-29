@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
-import { Play, Download, Loader2, ShieldCheck, ShieldAlert, BadgeCheck, Users, Calendar, Columns2 } from 'lucide-react'
+import { Play, Download, ShieldCheck, ShieldAlert, BadgeCheck, Users, Calendar, Columns2 } from 'lucide-react'
+import { Spinner } from '@/app/components/ui/spinner'
 import { cn } from '@/lib/utils'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { MapNavLink } from '@/app/components/shared/MapNavLink'
@@ -123,7 +124,7 @@ export function HeroSection({
                                 )}
                                 title={canWatch ? 'Watch Replay' : 'No replay — cap not verified'}
                             >
-                                {watching ? <Loader2 className="size-3.5 animate-spin" /> : <Play className="size-3.5" />}
+                                {watching ? <Spinner className="size-3.5" /> : <Play className="size-3.5" />}
                                 Watch Replay
                             </button>
                             <button

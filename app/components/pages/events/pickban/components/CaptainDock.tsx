@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react'
-import { AlertTriangle, Check, Loader2, Lock, WifiOff, X, type LucideIcon } from 'lucide-react'
+import { AlertTriangle, Check, Lock, WifiOff, X, type LucideIcon } from 'lucide-react'
+import { Spinner } from '@/app/components/ui/spinner'
 import { cn } from '@/lib/utils'
 import { displayMapName } from '@/app/utils/format'
 import type { PickBanActor, PickBanStepAction, SideColor, VetoChoice } from '@/app/utils/api'
@@ -138,7 +139,7 @@ function Controls({ controls, tone, actingFor, onLockIn, onToggleReady }: {
                                     : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:border-emerald-500/50 hover:bg-emerald-500/25 hover:text-emerald-200',
                             )}
                         >
-                            {controls.busy ? <Loader2 className="size-4 animate-spin" /> : !controls.ready && <Check className="size-4" />}
+                            {controls.busy ? <Spinner className="size-4" /> : !controls.ready && <Check className="size-4" />}
                             {controls.ready ? 'Unready' : 'Ready'}
                         </button>
                     }
@@ -315,7 +316,7 @@ function VetoChoiceCards({ veto, choosing, onChoose }: {
                         selected ? cn(VETO_TONE.solid, VETO_TONE.onSolid) : 'bg-hairline/10 text-muted-foreground',
                     )}
                 >
-                    {busy ? <Loader2 className="size-4 animate-spin" /> : <Lock className="size-4" />}
+                    {busy ? <Spinner className="size-4" /> : <Lock className="size-4" />}
                     {selected === 'veto' ? 'Lock In Veto' : selected === 'play' ? 'Lock In Play' : 'Lock In'}
                 </button>
             </div>
@@ -432,7 +433,7 @@ function SideChoice({ cards, choosing, onChoose }: {
                         tone ? cn(tone.solid, tone.onSolid) : 'bg-hairline/10 text-muted-foreground',
                     )}
                 >
-                    {busy ? <Loader2 className="size-4 animate-spin" /> : <Lock className="size-4" />}
+                    {busy ? <Spinner className="size-4" /> : <Lock className="size-4" />}
                     {selected ? `Lock In ${sideColorName(selected)}` : 'Lock In'}
                 </button>
             </div>

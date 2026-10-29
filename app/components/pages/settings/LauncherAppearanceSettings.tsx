@@ -1,10 +1,29 @@
-import { Palette, Contrast, Check, Lock, Heart, Clock } from 'lucide-react'
+import { useSyncExternalStore } from 'react'
+import { Palette, Contrast, Check, Lock, Heart, Clock, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { SettingsSection, SettingsRow } from './SettingsComponents'
+import { Switch } from '@/app/components/ui/switch'
 import { openExternal } from '@/app/platform'
 import { useTheme } from '@/app/theme/ThemeProvider'
 import { THEMES, type ThemeMeta } from '@/app/theme/themes'
 import { TIMEZONE_OPTIONS, browserResolvedTimezone, useDisplayTimezoneOverride } from '@/app/utils/timezone'
+import {
+    loadSeasonalThemes,
+    readSeasonOverride,
+    saveSeasonalThemes,
+    subscribeSeasonalThemes,
+    subscribeSeasonOverride,
+    writeSeasonOverride,
+} from '@/app/seasonal/preferences'
+import { isSeasonOverride } from '@/app/seasonal/seasons'
+
+const SEASON_PREVIEW_OPTIONS = [
+    { value: '', label: 'Automatic (by date)' },
+    { value: 'halloween', label: 'Halloween' },
+    { value: 'christmas', label: 'Christmas' },
+    { value: 'easter', label: 'Easter' },
+    { value: 'none', label: 'No season' },
+]
 
 interface LauncherAppearanceSettingsProps {
     unlockExclusive?: boolean
@@ -13,6 +32,8 @@ interface LauncherAppearanceSettingsProps {
 export function LauncherAppearanceSettings({ unlockExclusive }: LauncherAppearanceSettingsProps) {
     const { themeId, setThemeId } = useTheme()
     const [timezoneOverride, setTimezoneOverride] = useDisplayTimezoneOverride()
+    const seasonalThemes = useSyncExternalStore(subscribeSeasonalThemes, loadSeasonalThemes)
+    const seasonPreview = useSyncExternalStore(subscribeSeasonOverride, readSeasonOverride)
 
     const renderCard = (theme: ThemeMeta) => {
         const active = theme.id === themeId
@@ -79,6 +100,29 @@ export function LauncherAppearanceSettings({ unlockExclusive }: LauncherAppearan
                 <div className="grid grid-cols-1 @md/panel:grid-cols-2 gap-3 p-4">
                     {solid.map(renderCard)}
                 </div>
+            </SettingsSection>
+
+            <SettingsSection title="Seasonal Themes" icon={Sparkles}>
+                <SettingsRow
+                    label="Seasonal themes"
+                    description="Small Halloween, Christmas and Easter touches while those seasons are on. Colours only change on the UTBT Blue theme."
+                >
+                    <Switch checked={seasonalThemes} onCheckedChange={saveSeasonalThemes} aria-label="Seasonal themes" />
+                </SettingsRow>
+                {import.meta.env.DEV && (
+                    <SettingsRow label="Season preview" description="Development only. Forces a season for this session.">
+                        <select
+                            value={seasonPreview ?? ''}
+                            onChange={e => writeSeasonOverride(isSeasonOverride(e.target.value) ? e.target.value : null)}
+                            style={{ colorScheme: 'dark' }}
+                            className="h-9 w-full @md/panel:w-64 rounded-md border border-hairline/10 bg-card/50 px-3 text-sm text-foreground"
+                        >
+                            {SEASON_PREVIEW_OPTIONS.map(option => (
+                                <option key={option.value} value={option.value}>{option.label}</option>
+                            ))}
+                        </select>
+                    </SettingsRow>
+                )}
             </SettingsSection>
 
             <SettingsSection title="Time Zone" icon={Clock}>

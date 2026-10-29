@@ -9,9 +9,9 @@ provides: "the locked design tokens + the canonical class strings"
 not_here:
   - "which component to use → shared-components.md"
   - "state / persistence → state-patterns.md"
-sections: [class-merging, tables-locked, responsive-columns, page-layout, filter-panel, buttons-toggle-states, form-inputs, card-backgrounds-borders, text, color-palette, animation, css-runtime-cost, event-stats-styling, broadcast-styling, scene-stylesheet, screenshot-conventions, donts]
-last_verified: 2026-10-28
-verify_against: [app/components/shared/DataTable.tsx, app/components/shared/LiveDot.tsx, app/components/shared/chipStyles.ts, app/styles/globals.css, app/styles/theme.css, app/styles/desktop.css, app/styles/index.css, lib/utils.ts, app/hooks/useElementWidth.ts, app/hooks/usePrefersReducedMotion.ts, app/components/broadcast/broadcastTone.ts, app/components/broadcast/broadcastMotion.ts, app/components/broadcast/broadcastFonts.ts, app/components/broadcast/broadcastFonts.css, app/components/broadcast/BroadcastStage.tsx, app/components/stream/streamScenes.css, app/components/stream/frame/SceneFrame.tsx, e2e/streamHarness.ts, playwright.config.ts, app/components/stream/scenes/overlay/overlayLayout.ts, app/components/stream/scenes/betting/bettingLayout.ts, app/components/stream/scenes/nextMap/NextMapHero.tsx, e2e/audio-balance.broadcast.spec.ts, app/components/stream/scenes/PredictorStandingsScene.tsx, app/components/stream/scenes/standings/predictorStandingsFit.ts, app/components/stream/scenes/standings/predictorStandingsView.ts, app/components/stream/scenes/standings/PredictorStandingsBoard.tsx, app/components/pages/events/stats/teamAccents.css, app/components/pages/events/stats/teamAccent.ts, app/components/pages/events/stats/teamAccent.test.ts, app/components/pages/events/stats/teamCards.css, app/components/pages/events/stats/overviewStats.css, app/components/pages/events/stats/team/teamPageAccents.css, app/components/pages/events/stats/team/teamPageView.ts, app/components/pages/events/stats/CupAtAGlance.tsx, app/components/pages/events/stats/MapStatsTable.tsx]
+sections: [class-merging, tables-locked, responsive-columns, page-layout, filter-panel, buttons-toggle-states, form-inputs, card-backgrounds-borders, text, color-palette, seasonal-themes, animation, css-runtime-cost, event-stats-styling, broadcast-styling, scene-stylesheet, screenshot-conventions, donts]
+last_verified: 2026-10-29
+verify_against: [app/components/shared/DataTable.tsx, app/components/shared/LiveDot.tsx, app/components/shared/chipStyles.ts, app/styles/globals.css, app/styles/theme.css, app/styles/desktop.css, app/styles/index.css, lib/utils.ts, app/hooks/useElementWidth.ts, app/hooks/usePrefersReducedMotion.ts, app/components/broadcast/broadcastTone.ts, app/components/broadcast/broadcastMotion.ts, app/components/broadcast/broadcastFonts.ts, app/components/broadcast/broadcastFonts.css, app/components/broadcast/BroadcastStage.tsx, app/components/stream/streamScenes.css, app/components/stream/frame/SceneFrame.tsx, e2e/streamHarness.ts, playwright.config.ts, app/components/stream/scenes/overlay/overlayLayout.ts, app/components/stream/scenes/betting/bettingLayout.ts, app/components/stream/scenes/nextMap/NextMapHero.tsx, e2e/audio-balance.broadcast.spec.ts, app/components/stream/scenes/PredictorStandingsScene.tsx, app/components/stream/scenes/standings/predictorStandingsFit.ts, app/components/stream/scenes/standings/predictorStandingsView.ts, app/components/stream/scenes/standings/PredictorStandingsBoard.tsx, app/components/pages/events/stats/teamAccents.css, app/components/pages/events/stats/teamAccent.ts, app/components/pages/events/stats/teamAccent.test.ts, app/components/pages/events/stats/teamCards.css, app/components/pages/events/stats/overviewStats.css, app/components/pages/events/stats/team/teamPageAccents.css, app/components/pages/events/stats/team/teamPageView.ts, app/components/pages/events/stats/CupAtAGlance.tsx, app/components/pages/events/stats/MapStatsTable.tsx, app/styles/seasons.css, app/styles/seasons.test.ts, app/seasonal/seasons.ts, app/seasonal/SeasonProvider.tsx, app/seasonal/lazyDecor.tsx, app/seasonal/SeasonalDecor.tsx, app/seasonal/decor/ornaments.tsx, app/seasonal/decor/ambient.tsx, app/seasonal/decor/ambient.css, app/seasonal/decor/burst.ts, app/seasonal/decor/glyphs.tsx, e2e/seasonal.spec.ts]
 ---
 
 # Styling reference
@@ -555,6 +555,48 @@ to a hue-preserving, saturation-boosted, luminance-targeted (~4:1 on white) jewe
 tone and the dark text-outline is dropped. `PlayerInfo` recomputes them on theme
 change (it reads `useTheme`), so they update live.
 
+### Seasonal themes
+
+Halloween, Christmas and Easter decorate the launcher on their own each year. Everything lives in
+`app/seasonal/`.
+
+- **When.** The `seasons.ts` registry holds the windows, inclusive and in the viewer's local date:
+  Halloween Oct 24 – Nov 7, Christmas Dec 18 – Jan 15, Easter Sunday ± 7 days (Western, computed).
+  Adding a season is one registry entry, one palette block and its decorations.
+- **Which season shows.** A preview beats the toggle, and the toggle beats the date. The preview is
+  `?season=halloween|christmas|easter|none` on the web, or a dev-only select in Settings → Appearance
+  on desktop, and lasts for the session. The toggle is "Seasonal themes" in Settings → Appearance.
+  `SeasonProvider` (inside `ThemeProvider` in both app roots) sets `data-season` on `<html>` and
+  re-checks on window focus and hourly. The `index.html` pre-paint script sets the attribute from the
+  cached season so the accent never swaps after load; it skips the stream view and stream scene paths,
+  and the stream roots never mount the provider.
+- **Tint** (`app/styles/seasons.css`). Selectors are `:root[data-season='…']:not([data-theme])`, so
+  only Classic is tinted; any chosen theme, Patreon ones included, keeps its colours. Only
+  `--accent-*`, `--accent-glow-rgb` and `--nebula-*` change, never a brand or functional colour.
+  `seasons.test.ts` enforces both and checks contrast: accent-200/300/400 text on the background and
+  white on accent-500 must reach AA, or at least Classic's own ratio where Classic is below it.
+- **Decorations** are one lazy chunk (`SeasonalDecor.tsx`), loaded only while a season shows and never
+  requested otherwise. Mount them through `lazyDecor.tsx` (`SeasonalOrnament`, `SeasonalAmbient`,
+  `SeasonalSpinnerGlyph`): Suspense plus a silent boundary, so a failed import renders nothing, and
+  the web `vite:preloadError` reload ignores this chunk.
+  - **Logo ornament.** An SVG overlay on the sidebar and mobile top-bar logo; `logo.webp` itself is
+    never touched because stream scenes use it. The art is fitted to the bunny (crown at about
+    (157, 96) in the 256-unit logo space, sloping 9°) and carries a white sticker edge (a static
+    `feMorphology` filter) so it stays readable at 32 px. The sidebar ornament's painted area fires a
+    one-off burst with a 10 s cooldown, off under reduced motion.
+  - **Ambient layer.** Home only, behind content, `pointer-events: none`, at most 16 particles (half
+    of them hidden below 768 px), paused on window blur or a hidden page, not rendered under reduced
+    motion. Bats and the butterfly fly through nested elements that each run one transform animation
+    at periods that don't line up (cross, swoop, flutter, bank and a flap per wing; cross, meander,
+    hop, tilt and flap-then-glide), so no path is a straight line. Only `transform` and `opacity`
+    animate, and `e2e/seasonal.spec.ts` asserts it; `offset-path` is out because it runs on the main
+    thread.
+  - **Spinner.** `<Spinner>` (`app/components/ui/spinner.tsx`) shows the season glyph instead of
+    `Loader2`: the pumpkin and egg wobble, the snowflake spins.
+- **e2e.** The desktop and mobile projects preset the toggle to off (`storageState` in
+  `playwright.config.ts`), so app-shell specs never depend on the run date; `seasonal.spec.ts` forces
+  each season with `?season=`.
+
 ## Animation
 
 - **`animate-in` / `fade-in` / `slide-in-*` / `zoom-in-*` emit no CSS.** Their plugin
@@ -634,7 +676,7 @@ tokens and rules on top of the locked ones above. Nothing here is a new design s
   badge is the medal gold (`yellow`), never the pick/ban decider gold. A match's Red or Blue tag uses the
   `pickban-a` / `pickban-b` tones (`sideColorTag`).
 - **Bespoke rules live in lazy stylesheets.** Tailwind puts every utility it finds in the sources into the one
-  entry stylesheet, lazy chunk or not, and the initial CSS budget (34 KiB gzip) has almost no headroom.
+  entry stylesheet, lazy chunk or not, and the initial CSS budget (35 KiB gzip) has almost no headroom.
   So a rule that needs `--team-accent` or a one-off template goes in a stats stylesheet imported by the lazy
   chunk: `teamCards.css` (`.team-cards` grid, `.team-card` accent glow and hover border,
   `.team-card-avatar` accent ring), `overviewStats.css` (the map table's pick and ban bars, the glance map-art

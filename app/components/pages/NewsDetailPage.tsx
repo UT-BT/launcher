@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
-import { Loader2, AlertTriangle, ExternalLink, User } from 'lucide-react'
+import { AlertTriangle, ExternalLink, User } from 'lucide-react'
+import { Spinner } from '@/app/components/ui/spinner'
 import { useAsync } from '@/app/hooks/useAsync'
 import { useRefreshCooldown } from '@/app/hooks/useRefreshCooldown'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
@@ -53,7 +54,7 @@ export function NewsDetailPage({ newsId, userProfile }: NewsDetailPageProps) {
             <div className="p-6">
                 {loading && !article && (
                     <div className="flex items-center justify-center py-24 text-muted-foreground">
-                        <Loader2 className="size-6 animate-spin" />
+                        <Spinner className="size-6" />
                     </div>
                 )}
 

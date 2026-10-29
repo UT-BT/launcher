@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Loader2, ShieldAlert } from 'lucide-react'
+import { ShieldAlert } from 'lucide-react'
+import { Spinner } from '@/app/components/ui/spinner'
 import { useNavScrollRestore } from '@/app/components/navigation/useNavScrollRestore'
 import { Modal } from '@/app/components/ui/modal'
 import { ReplayVideoModal } from '@/app/components/shared/ReplayVideoModal'
@@ -285,7 +286,7 @@ export function CapDetailPage({ capId, userProfile, onMapSelect }: CapDetailPage
             >
                 {videoAvail.checking || videoOpponentData == null ? (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
-                        <Loader2 className="size-4 animate-spin" />
+                        <Spinner className="size-4" />
                         Loading both replays…
                     </div>
                 ) : (

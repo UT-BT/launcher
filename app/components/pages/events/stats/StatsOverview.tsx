@@ -1,5 +1,6 @@
 import { useId, useState, type ReactNode } from 'react'
-import { AlertTriangle, Loader2 } from 'lucide-react'
+import { AlertTriangle } from 'lucide-react'
+import { Spinner } from '@/app/components/ui/spinner'
 import { cn } from '@/lib/utils'
 import { Button } from '@/app/components/ui/button'
 import { useNavState } from '@/app/components/navigation/useNavState'
@@ -52,7 +53,7 @@ export function StatsOverview({ eventSlug, accessToken, refreshKey, roster }: St
         if (read.error) return <StatsError message={read.error} onRetry={read.reload} />
         return (
             <div role="status" aria-label="Loading event stats" className="flex items-center justify-center py-16 text-muted-foreground">
-                <Loader2 className="size-6 animate-spin" />
+                <Spinner className="size-6" />
             </div>
         )
     }

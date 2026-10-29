@@ -12,6 +12,20 @@
         if (t && t !== 'classic') document.documentElement.setAttribute('data-theme', t)
         if (t === 'light') document.documentElement.classList.remove('dark')
       } catch {}
+      try {
+        var seg = location.pathname.split('/').filter(Boolean)
+        var streamRoute = (seg[0] === 'stream' && seg.length === 4) || (seg[0] === 'events' && seg[2] === 'matches' && seg[4] === 'stream' && seg.length === 5)
+        var valid = function (v) { return v === 'none' || v === 'halloween' || v === 'christmas' || v === 'easter' }
+        var param = new URLSearchParams(location.search).get('season')
+        var preview = valid(param) ? param : sessionStorage.getItem('utbt:seasonOverride:v1')
+        var season = null
+        if (valid(preview)) season = preview === 'none' ? null : preview
+        else if (JSON.parse(localStorage.getItem('utbt:seasonalThemes:v1') || 'null') !== 'off') {
+          var cached = JSON.parse(localStorage.getItem('utbt:season:v1') || 'null')
+          if (cached && cached.until > Date.now() && valid(cached.id)) season = cached.id
+        }
+        if (season && !streamRoute) document.documentElement.setAttribute('data-season', season)
+      } catch {}
     </script>
   </head>
 

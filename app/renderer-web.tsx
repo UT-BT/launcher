@@ -8,11 +8,15 @@ import { parseStreamScenePath } from './components/stream/streamScenes'
 import { markPageNoIndex } from './components/stream/noIndex'
 import { pathToNav } from './components/navigation/routes'
 import { prefetchPage } from './components/main/pageLoaders'
+import { SeasonProvider } from './seasonal/SeasonProvider'
+import { captureSeasonOverride } from './seasonal/preferences'
+import { isSeasonalDecorChunkError } from './seasonal/lazyDecor'
 import App from './app'
 import './styles/index.css'
 
 const CHUNK_RELOAD_KEY = 'utbt:chunkReloadedAt'
 window.addEventListener('vite:preloadError', event => {
+  if (isSeasonalDecorChunkError((event as Event & { payload?: unknown }).payload)) return
   const last = Number(sessionStorage.getItem(CHUNK_RELOAD_KEY) ?? 0)
   if (Date.now() - last < 60_000) return
   sessionStorage.setItem(CHUNK_RELOAD_KEY, String(Date.now()))
@@ -36,6 +40,7 @@ if (streamRoute) {
 } else {
   document.documentElement.style.setProperty('--window-titlebar-height', '0px')
 
+  captureSeasonOverride(window.location.search)
   prefetchPage(pathToNav(window.location.pathname, window.location.search).view)
 
   void handleOAuthCallbackIfPresent().finally(() => {
@@ -43,7 +48,9 @@ if (streamRoute) {
       <React.StrictMode>
         <ErrorBoundary>
           <ThemeProvider>
-            <App />
+            <SeasonProvider>
+              <App />
+            </SeasonProvider>
           </ThemeProvider>
         </ErrorBoundary>
       </React.StrictMode>
