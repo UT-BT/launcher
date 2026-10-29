@@ -2,7 +2,6 @@ import { ElementType, ReactNode, lazy, Suspense, useEffect, useMemo, useRef, use
 import { FaDiscord } from 'react-icons/fa'
 import { Server, Trophy, Settings, LogOut, Play, User, Menu } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import logo from '@/app/assets/logo.webp'
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -33,7 +32,9 @@ import { LiveDot } from '@/app/components/shared/LiveDot'
 import { CHIP_SHAPE, LIVE_CHIP_STYLE } from '@/app/components/shared/chipStyles'
 import { IS_WEB, usePlatform } from '@/app/platform'
 import { prefetchPage } from '@/app/components/main/pageLoaders'
-import { SeasonalAmbient, SeasonalOrnament } from '@/app/seasonal/lazyDecor'
+import { SeasonalAmbient, fireSeasonalBurst } from '@/app/seasonal/lazyDecor'
+import { useSeason } from '@/app/seasonal/SeasonProvider'
+import { logoFor } from '@/app/seasonal/logos'
 
 interface AppLayoutProps {
     children: ReactNode
@@ -105,6 +106,8 @@ function getRarityStyles(title: { rarity: number, color_r: number, color_g: numb
 
 export function AppLayout({ children, currentView, onViewChange, getNavBadge, userProfile, installationStatus }: AppLayoutProps) {
     const { capabilities, auth } = usePlatform()
+    const season = useSeason()
+    const logo = logoFor(season)
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
     const [loginError, setLoginError] = useState<string | null>(() => auth.consumeLoginError())
     const [mobileNavOpen, setMobileNavOpen] = useState(false)
@@ -232,10 +235,7 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                 >
                     <Menu className="size-5" />
                 </button>
-                <span className="relative size-8 shrink-0">
-                    <img src={logo} alt="UTBT Logo" className="size-8 object-contain" />
-                    <SeasonalOrnament placement="topbar" />
-                </span>
+                <img src={logo} alt="UTBT Logo" className="size-8 object-contain" />
                 <span className="font-bold tracking-tight">UTBT.net</span>
             </div>
 
@@ -264,14 +264,15 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                 <div className="absolute inset-0 bg-gradient-to-b from-accent-900/10 to-transparent pointer-events-none" />
 
                 <div className="p-6 [@media(max-height:800px)]:p-3 max-lg:hidden flex flex-col items-center relative z-10">
-                    <div className="relative mb-4 [@media(max-height:800px)]:mb-0 transition-all hover:scale-105 duration-300">
-                        <img
-                            src={logo}
-                            alt="UTBT Logo"
-                            className="w-24 h-24 [@media(max-height:800px)]:w-14 [@media(max-height:800px)]:h-14 object-contain drop-shadow-[0_0_15px_rgb(var(--accent-glow-rgb)/0.3)]"
-                        />
-                        <SeasonalOrnament placement="sidebar" />
-                    </div>
+                    <img
+                        src={logo}
+                        alt="UTBT Logo"
+                        onClick={season ? event => {
+                            const rect = event.currentTarget.getBoundingClientRect()
+                            fireSeasonalBurst(season, rect.left + rect.width / 2, rect.top + rect.height / 2)
+                        } : undefined}
+                        className="w-24 h-24 [@media(max-height:800px)]:w-14 [@media(max-height:800px)]:h-14 object-contain drop-shadow-[0_0_15px_rgb(var(--accent-glow-rgb)/0.3)] mb-4 [@media(max-height:800px)]:mb-0 transition-all hover:scale-105 duration-300"
+                    />
                 </div>
 
                 <div className={cn(

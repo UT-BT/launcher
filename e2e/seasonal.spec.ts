@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test'
 import { horizontalOverflow } from './layout'
 
 const SEASONS = ['halloween', 'christmas', 'easter'] as const
+const SEASONAL_LOGO = /logo-(halloween|christmas|easter)/
 const COMPOSITOR_PROPERTIES = new Set(['offset', 'easing', 'composite', 'computedOffset', 'transform', 'opacity'])
 
 async function mockApi(page: Page) {
@@ -24,10 +25,8 @@ function logo(page: Page, isMobile: boolean) {
     return isMobile ? logos.first() : logos.last()
 }
 
-function ornament(page: Page, isMobile: boolean) {
-    return isMobile
-        ? page.locator('svg[viewBox="0 0 256 256"]').first()
-        : page.locator('aside svg[viewBox="0 0 256 256"]')
+function sidebarLogo(page: Page) {
+    return page.locator('aside img[alt="UTBT Logo"]')
 }
 
 async function nonCompositorProperties(page: Page): Promise<string[]> {
@@ -50,7 +49,8 @@ for (const season of SEASONS) {
     test(`${season} decorates the launcher when previewed`, async ({ page, isMobile }) => {
         await page.goto(`/?season=${season}`)
         await expect(page.locator('html')).toHaveAttribute('data-season', season)
-        await expect(ornament(page, isMobile)).toBeAttached()
+        await expect(logo(page, isMobile)).toHaveAttribute('src', new RegExp(`logo-${season}`))
+        await expect(logo(page, isMobile)).toBeVisible()
         const layer = page.locator('.seasonal-layer')
         await expect(layer).toHaveAttribute('data-season-layer', season)
         await expect(layer).toHaveCSS('pointer-events', 'none')
@@ -70,26 +70,31 @@ test('the season follows the calendar and the viewer toggle', async ({ page, isM
     await page.goto('/')
     await expect(logo(page, isMobile)).toBeVisible()
     await expect(page.locator('html')).not.toHaveAttribute('data-season', /.+/)
+    await expect(logo(page, isMobile)).not.toHaveAttribute('src', SEASONAL_LOGO)
 
     await page.evaluate(() => localStorage.setItem('utbt:seasonalThemes:v1', '"on"'))
     await page.reload()
     await expect(page.locator('html')).toHaveAttribute('data-season', 'christmas')
+    await expect(logo(page, isMobile)).toHaveAttribute('src', /logo-christmas/)
 })
 
 test('no season leaves the launcher untouched and never loads the decorations', async ({ page, isMobile }) => {
     const decorRequests: string[] = []
-    page.on('request', request => { if (request.url().includes('SeasonalDecor')) decorRequests.push(request.url()) })
+    page.on('request', request => {
+        const url = request.url()
+        if (url.includes('SeasonalDecor') || (request.resourceType() === 'image' && SEASONAL_LOGO.test(url))) decorRequests.push(url)
+    })
     await page.goto('/?season=none')
     await expect(logo(page, isMobile)).toBeVisible()
     await expect(page.locator('html')).not.toHaveAttribute('data-season', /.+/)
-    await expect(ornament(page, isMobile)).toHaveCount(0)
+    await expect(logo(page, isMobile)).not.toHaveAttribute('src', SEASONAL_LOGO)
     await expect(page.locator('.seasonal-layer')).toHaveCount(0)
     expect(decorRequests).toEqual([])
 })
 
-test('ambient particles stay on Home', async ({ page, isMobile }) => {
+test('ambient particles stay on Home while the seasonal logo stays everywhere', async ({ page, isMobile }) => {
     await page.goto('/maps?season=halloween')
-    await expect(ornament(page, isMobile)).toBeAttached()
+    await expect(logo(page, isMobile)).toHaveAttribute('src', /logo-halloween/)
     await expect(page.locator('.seasonal-layer')).toHaveCount(0)
 })
 
@@ -99,27 +104,27 @@ test('stream routes never get a season', async ({ page }) => {
     await expect(page.locator('html')).not.toHaveAttribute('data-season', /.+/)
 })
 
-test('clicking the sidebar ornament fires one burst per cooldown', async ({ page, isMobile }) => {
+test('clicking the sidebar logo fires one burst per cooldown', async ({ page, isMobile }) => {
     test.skip(isMobile, 'the burst lives on the desktop sidebar logo')
     await page.goto('/?season=halloween')
-    const art = page.locator('aside svg[viewBox="0 0 256 256"] g[filter] path').nth(1)
-    await expect(art).toBeAttached()
-    await art.click({ force: true })
+    await expect(sidebarLogo(page)).toHaveAttribute('src', /logo-halloween/)
+    await sidebarLogo(page).click()
     await expect(page.locator('.seasonal-burst')).toHaveCount(1)
     expect(await nonCompositorProperties(page)).toEqual([])
-    await art.click({ force: true })
+    await sidebarLogo(page).click()
     await expect(page.locator('.seasonal-burst')).toHaveCount(1)
     await expect(page.locator('.seasonal-burst')).toHaveCount(0, { timeout: 5000 })
 })
 
 test.describe('with reduced motion', () => {
-    test('keeps the ornament but drops particles and the burst', async ({ page, isMobile }) => {
+    test('keeps the seasonal logo but drops particles and the burst', async ({ page, isMobile }) => {
         await page.emulateMedia({ reducedMotion: 'reduce' })
         await page.goto('/?season=easter')
-        await expect(ornament(page, isMobile)).toBeAttached()
+        await expect(logo(page, isMobile)).toHaveAttribute('src', /logo-easter/)
         await expect(page.locator('.seasonal-layer')).toHaveCount(0)
         if (!isMobile) {
-            await page.locator('aside svg[viewBox="0 0 256 256"] g[filter] path').nth(2).click({ force: true })
+            await sidebarLogo(page).click()
+            await page.waitForTimeout(300)
             await expect(page.locator('.seasonal-burst')).toHaveCount(0)
         }
     })

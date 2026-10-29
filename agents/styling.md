@@ -11,7 +11,7 @@ not_here:
   - "state / persistence → state-patterns.md"
 sections: [class-merging, tables-locked, responsive-columns, page-layout, filter-panel, buttons-toggle-states, form-inputs, card-backgrounds-borders, text, color-palette, seasonal-themes, animation, css-runtime-cost, event-stats-styling, broadcast-styling, scene-stylesheet, screenshot-conventions, donts]
 last_verified: 2026-10-29
-verify_against: [app/components/shared/DataTable.tsx, app/components/shared/LiveDot.tsx, app/components/shared/chipStyles.ts, app/styles/globals.css, app/styles/theme.css, app/styles/desktop.css, app/styles/index.css, lib/utils.ts, app/hooks/useElementWidth.ts, app/hooks/usePrefersReducedMotion.ts, app/components/broadcast/broadcastTone.ts, app/components/broadcast/broadcastMotion.ts, app/components/broadcast/broadcastFonts.ts, app/components/broadcast/broadcastFonts.css, app/components/broadcast/BroadcastStage.tsx, app/components/stream/streamScenes.css, app/components/stream/frame/SceneFrame.tsx, e2e/streamHarness.ts, playwright.config.ts, app/components/stream/scenes/overlay/overlayLayout.ts, app/components/stream/scenes/betting/bettingLayout.ts, app/components/stream/scenes/nextMap/NextMapHero.tsx, e2e/audio-balance.broadcast.spec.ts, app/components/stream/scenes/PredictorStandingsScene.tsx, app/components/stream/scenes/standings/predictorStandingsFit.ts, app/components/stream/scenes/standings/predictorStandingsView.ts, app/components/stream/scenes/standings/PredictorStandingsBoard.tsx, app/components/pages/events/stats/teamAccents.css, app/components/pages/events/stats/teamAccent.ts, app/components/pages/events/stats/teamAccent.test.ts, app/components/pages/events/stats/teamCards.css, app/components/pages/events/stats/overviewStats.css, app/components/pages/events/stats/team/teamPageAccents.css, app/components/pages/events/stats/team/teamPageView.ts, app/components/pages/events/stats/CupAtAGlance.tsx, app/components/pages/events/stats/MapStatsTable.tsx, app/styles/seasons.css, app/styles/seasons.test.ts, app/seasonal/seasons.ts, app/seasonal/SeasonProvider.tsx, app/seasonal/lazyDecor.tsx, app/seasonal/SeasonalDecor.tsx, app/seasonal/decor/ornaments.tsx, app/seasonal/decor/ambient.tsx, app/seasonal/decor/ambient.css, app/seasonal/decor/burst.ts, app/seasonal/decor/glyphs.tsx, e2e/seasonal.spec.ts]
+verify_against: [app/components/shared/DataTable.tsx, app/components/shared/LiveDot.tsx, app/components/shared/chipStyles.ts, app/styles/globals.css, app/styles/theme.css, app/styles/desktop.css, app/styles/index.css, lib/utils.ts, app/hooks/useElementWidth.ts, app/hooks/usePrefersReducedMotion.ts, app/components/broadcast/broadcastTone.ts, app/components/broadcast/broadcastMotion.ts, app/components/broadcast/broadcastFonts.ts, app/components/broadcast/broadcastFonts.css, app/components/broadcast/BroadcastStage.tsx, app/components/stream/streamScenes.css, app/components/stream/frame/SceneFrame.tsx, e2e/streamHarness.ts, playwright.config.ts, app/components/stream/scenes/overlay/overlayLayout.ts, app/components/stream/scenes/betting/bettingLayout.ts, app/components/stream/scenes/nextMap/NextMapHero.tsx, e2e/audio-balance.broadcast.spec.ts, app/components/stream/scenes/PredictorStandingsScene.tsx, app/components/stream/scenes/standings/predictorStandingsFit.ts, app/components/stream/scenes/standings/predictorStandingsView.ts, app/components/stream/scenes/standings/PredictorStandingsBoard.tsx, app/components/pages/events/stats/teamAccents.css, app/components/pages/events/stats/teamAccent.ts, app/components/pages/events/stats/teamAccent.test.ts, app/components/pages/events/stats/teamCards.css, app/components/pages/events/stats/overviewStats.css, app/components/pages/events/stats/team/teamPageAccents.css, app/components/pages/events/stats/team/teamPageView.ts, app/components/pages/events/stats/CupAtAGlance.tsx, app/components/pages/events/stats/MapStatsTable.tsx, app/styles/seasons.css, app/styles/seasons.test.ts, app/seasonal/seasons.ts, app/seasonal/SeasonProvider.tsx, app/seasonal/lazyDecor.tsx, app/seasonal/SeasonalDecor.tsx, app/seasonal/logos.ts, scripts/render-seasonal-logos.mjs, app/seasonal/decor/ambient.tsx, app/seasonal/decor/ambient.css, app/seasonal/decor/burst.ts, app/seasonal/decor/glyphs.tsx, e2e/seasonal.spec.ts]
 ---
 
 # Styling reference
@@ -575,15 +575,21 @@ Halloween, Christmas and Easter decorate the launcher on their own each year. Ev
   `--accent-*`, `--accent-glow-rgb` and `--nebula-*` change, never a brand or functional colour.
   `seasons.test.ts` enforces both and checks contrast: accent-200/300/400 text on the background and
   white on accent-500 must reach AA, or at least Classic's own ratio where Classic is below it.
+- **Seasonal logo.** Each season has its own redrawn logo: same outline and composition, new colours and
+  details (a scarred, blood-spattered bunny with a glowing eye; a Santa bunny with hat, beard and rosy
+  cheek; a pastel spring bunny with pink ears and a flower crown). The files are
+  `app/assets/seasonal/logo-<season>.webp` (256 px, about 25–30 KiB each), rendered from
+  `app/public/icon-512.png` by `node scripts/render-seasonal-logos.mjs [--preview <dir>]`; better art can
+  replace a file under the same name with no code change. `useLogo()` / `logoFor()` in
+  `app/seasonal/logos.ts` pick the file: the sidebar, the mobile top bar, the desktop splash and the web
+  boot screen use it, on every theme. The favicon, the titlebar and installer icons, the stream scenes
+  and the stinger keep `logo.webp`. Only the active season's file is ever downloaded.
 - **Decorations** are one lazy chunk (`SeasonalDecor.tsx`), loaded only while a season shows and never
-  requested otherwise. Mount them through `lazyDecor.tsx` (`SeasonalOrnament`, `SeasonalAmbient`,
-  `SeasonalSpinnerGlyph`): Suspense plus a silent boundary, so a failed import renders nothing, and
+  requested otherwise. Mount them through `lazyDecor.tsx` (`SeasonalAmbient`, `SeasonalSpinnerGlyph`,
+  `fireSeasonalBurst`): Suspense plus a silent boundary, so a failed import renders nothing, and
   the web `vite:preloadError` reload ignores this chunk.
-  - **Logo ornament.** An SVG overlay on the sidebar and mobile top-bar logo; `logo.webp` itself is
-    never touched because stream scenes use it. The art is fitted to the bunny (crown at about
-    (157, 96) in the 256-unit logo space, sloping 9°) and carries a white sticker edge (a static
-    `feMorphology` filter) so it stays readable at 32 px. The sidebar ornament's painted area fires a
-    one-off burst with a 10 s cooldown, off under reduced motion.
+  - **Burst.** Clicking the sidebar logo fires a one-off burst (bats, snow or petals) through
+    `fireSeasonalBurst`, with a 10 s cooldown, off under reduced motion.
   - **Ambient layer.** Home only, behind content, `pointer-events: none`, at most 16 particles (half
     of them hidden below 768 px), paused on window blur or a hidden page, not rendered under reduced
     motion. Bats and the butterfly fly through nested elements that each run one transform animation

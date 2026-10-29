@@ -1,6 +1,7 @@
 import { Component, lazy, Suspense, type ComponentType, type ReactNode } from 'react'
 import type { LucideProps } from 'lucide-react'
 import { useSeason } from './SeasonProvider'
+import type { SeasonId } from './seasons'
 
 type DecorModule = typeof import('./SeasonalDecor')
 
@@ -40,20 +41,12 @@ class SilentBoundary extends Component<{ children: ReactNode; fallback?: ReactNo
     }
 }
 
-const LazyOrnament = lazyDecor('LogoOrnament')
 const LazyAmbient = lazyDecor('AmbientLayer')
 const LazyGlyph = lazyDecor('SeasonGlyph')
 
-export function SeasonalOrnament({ placement }: { placement: 'sidebar' | 'topbar' }) {
-    const season = useSeason()
-    if (!season) return null
-    return (
-        <SilentBoundary>
-            <Suspense fallback={null}>
-                <LazyOrnament season={season} placement={placement} />
-            </Suspense>
-        </SilentBoundary>
-    )
+export function fireSeasonalBurst(season: SeasonId, x: number, y: number): void {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    void loadDecor().then(module => module?.fireBurst(season, x, y))
 }
 
 export function SeasonalAmbient() {
