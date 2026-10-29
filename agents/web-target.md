@@ -4,7 +4,7 @@ read_when:
   - "making a feature work (or hide) on the web build"
   - "touching app/platform/, the web entry, or web build config"
   - "adding a desktop-only capability or a web fallback"
-keywords: [web, browser, platform, capabilities, IS_WEB, vite, dist-web, dual-target, stream view, stream scenes, noindex, camTool, sound=0, volume=, motion=0]
+keywords: [web, browser, platform, capabilities, IS_WEB, vite, dist-web, dual-target, stream view, stream scenes, noindex, camTool, sound=0, volume=, motion=0, collapsed rail, drawer, --sidebar-width]
 provides: "the web build target: platform layer, capability gates, per-bridge web behavior, build commands"
 not_here:
   - "IPC channel contract → lib/conveyor/README.md"
@@ -47,6 +47,10 @@ verify_against:
   - app/platform/web/sessionRecovery.ts
   - app/app.tsx
   - e2e/session-recovery.spec.ts
+  - app/components/layout/AppLayout.tsx
+  - app/components/layout/sidebarPreference.ts
+  - app/components/layout/sidebar/SidebarCollapseToggle.tsx
+  - app/components/ui/modal.tsx
 ---
 
 # Web target
@@ -298,10 +302,23 @@ don't reintroduce centering).
   card fit an 800px-tall phone. Every nav action goes through `changeView`,
   which closes the drawer. At `lg+` the DOM and styling are the pre-mobile
   desktop layout.
+- **Rail at `lg` and up, drawer below.** At `lg+` the sidebar is a rail beside
+  the content, expanded (16rem) or collapsed (5rem, icon tiles with short
+  captions), toggled by the toggle row above the user card or `Ctrl+B` / `⌘B`,
+  on both targets. The choice is remembered per device
+  (`utbt:sidebarCollapsed:v1`). Below `lg` the collapse preference is ignored:
+  the drawer always shows the full expanded sidebar, the toggle row is hidden
+  and the shortcut isn't attached. A window resized across 1024px switches
+  between the two and back, and a stored collapsed choice reapplies at `lg+`.
+  Details in `agents/navigation.md` (sidebar parts and the collapsed rail).
+- The rail's width is `--sidebar-width` on the root (`16rem`, `5rem`, or `0px`
+  below `lg`), which `AppLayout` sets before first paint; offsets beside the
+  rail read it (see `agents/styling.md`, sidebar width).
 - Content padding scales `p-4 sm:p-6 lg:p-8`; the app root uses `h-dvh` (mobile
   browser toolbars) and the web entry zeroes `--window-titlebar-height`.
-- Modals: `offsetSidebar` pads left only at `lg+` (`lg:pl-64`) so they center on
-  phones. A modal with its own internal rail must not assume the modal is wide:
+- Modals: `offsetSidebar` pads left by the rail's width plus 1rem
+  (`pl-[calc(var(--sidebar-width,0px)_+_1rem)]`), so they center on the content
+  area in both rail modes and on the viewport on phones, where the width is `0px`. A modal with its own internal rail must not assume the modal is wide:
   Settings collapses its 288px rail into a drill-down once the modal body drops
   below 768px and sizes panel contents by named container query — see
   `app/components/pages/settings/README.md` → Responsive behavior. Any
@@ -367,7 +384,7 @@ payload is currently **~185 KiB JS + 34 KiB CSS gzip**, enforced by
 - `npm run check:bundle` reads `dist-web/.vite/manifest.json` and measures the
   real **initial payload** (the entry plus its transitive static imports plus
   their CSS), not the largest chunk. Budgets (gzip): initial JS 190 KiB, initial
-  CSS 35 KiB, initial total 220 KiB, largest lazy chunk 120 KiB, **app JS 900
+  CSS 35 KiB, initial total 222 KiB, largest lazy chunk 120 KiB, **app JS 900
   KiB** (every JS file except those only the stream scene pages load) and
   **stream scene JS 120 KiB** (files reachable only from the stream scene root,
   which never load in the app). The last two replace the old single 750 KiB

@@ -4,13 +4,13 @@ read_when:
   - "adding a new view/page to the nav stack or sidebar"
   - "opening a detail page or wiring a click that navigates"
   - "anything touching Back/Forward, history, or per-entry state keying"
-keywords: [navigate, Main.tsx, AppLayout, NavEntry, useNavigation, open-player, open-cap, renderView, HISTORY_CAP, back, forward, NavLink, href, new tab, EventTab, scheduleView, ScheduleView, tab=schedule, schedulePlayedOpen, tab=stream, streamTabVisible, parseStreamScenePath, eventLink, eventSlugOfView, isEventLinkLive, resolveNavBadge, attentionNavBadge]
+keywords: [navigate, Main.tsx, AppLayout, NavEntry, useNavigation, open-player, open-cap, renderView, HISTORY_CAP, back, forward, NavLink, href, new tab, EventTab, scheduleView, ScheduleView, tab=schedule, schedulePlayedOpen, tab=stream, streamTabVisible, parseStreamScenePath, eventLink, eventSlugOfView, isEventLinkLive, resolveNavBadge, attentionNavBadge, shortLabel, navItemCaption, collapsed rail, SidebarCollapseToggle, Ctrl+B, sidebarCollapsed, --sidebar-width]
 provides: "the whole navigation model: stack, navigate() funnel, renderView, sidebar registry, event-driven detail pages"
 not_here:
   - "where page state / persistence lives → state-patterns.md"
   - "the PlayerInfo / CapTimeLink components that trigger nav → shared-components.md"
   - "the Schedule tab's own visibility rule and its audiences → data-sources.md"
-sections: [the-model, navigate-is-the-only-entry-point, leave-guards, url-sync-web-build, link-semantics, page-views-vs-detail-pages, the-sidebar-registry, event-driven-navigation, sidebar-new-badges, page-refresh-registry, per-entry-state, shareable-match-links, event-team-page, teams-tab-roster-or-stats, manage-matches-caps-need-linking, match-pickban-page]
+sections: [the-model, navigate-is-the-only-entry-point, leave-guards, url-sync-web-build, link-semantics, page-views-vs-detail-pages, the-sidebar-registry, sidebar-parts-and-the-collapsed-rail, event-driven-navigation, sidebar-new-badges, page-refresh-registry, per-entry-state, shareable-match-links, event-team-page, teams-tab-roster-or-stats, manage-matches-caps-need-linking, match-pickban-page]
 last_verified: 2026-10-29
 verify_against:
   - app/components/main/Main.tsx
@@ -48,6 +48,12 @@ verify_against:
   - app/components/pages/admin/sections/MapsManagementSection.tsx
   - app/components/stream/streamScenes.ts
   - app/components/navigation/routes.contract.test.ts
+  - app/components/layout/sidebar/SidebarNavItem.tsx
+  - app/components/layout/sidebar/SidebarBrand.tsx
+  - app/components/layout/sidebar/SidebarActions.tsx
+  - app/components/layout/sidebar/SidebarCollapseToggle.tsx
+  - app/components/layout/sidebar/SidebarUserCard.tsx
+  - app/components/layout/sidebarPreference.ts
 ---
 
 # Navigation
@@ -340,7 +346,8 @@ The left rail is data, not markup. The section registry, its item types, the
 destination, event-of-view, active-state and Live-tag rules live in
 `app/components/navigation/nav-items.ts` — a small pure module with no React, so
 it's tested without mounting anything. `AppLayout.tsx`
-imports from it and only renders:
+imports from it and renders each item through `SidebarNavItem` (see
+[Sidebar parts and the collapsed rail](#sidebar-parts-and-the-collapsed-rail)):
 
 ```ts
 export const BASE_NAV_SECTIONS: NavSection[] = [
@@ -356,8 +363,8 @@ export function buildNavSections(userProfile?: UserProfile): NavSection[] {
 // in AppLayout: const navSections = useMemo(() => buildNavSections(userProfile), [userProfile])
 ```
 
-A `NavItem` is either a **plain item** (`id`, `label`, `icon`, nothing else) or
-carries one optional **event link**:
+A `NavItem` is either a **plain item** (`id`, `label`, `icon`, an optional
+`shortLabel`, nothing else) or carries one optional **event link**:
 
 ```ts
 interface EventLink {
@@ -369,10 +376,20 @@ interface EventLink {
 interface NavItem {
   id: string
   label: string
+  shortLabel?: string
   icon: ElementType
   eventLink?: EventLink
 }
 ```
+
+**Rail captions.** The collapsed rail shows a short caption under each icon.
+`navItemCaption(item)` (exported next to `navItemDestination`) returns
+`item.shortLabel ?? item.label`, and it is the only source of captions: the rail
+never shortens or invents a name itself. Set `shortLabel` only when the label
+doesn't fit the rail tile (see `agents/styling.md`, collapsed rail). Today two
+items have one: World Records reads "Records" and Achievements reads "Awards".
+Every other caption is the label. `nav-items.test.ts` pins this against the live
+registry, so adding a `shortLabel` means updating that test too.
 
 `slug` is the event's slug, `fullName` its real name (read to screen readers), and
 `liveUntil` the last day the Live tag shows, written `'YYYY-MM-DD'`
@@ -401,14 +418,19 @@ of the day after `liveUntil`, so it never parses the day as a UTC instant).
 `AppLayout` passes `new Date()` on each render, so the tag drops on the next render
 after that midnight. Only the tag expires; the link itself stays until it is removed
 by hand. Labels never wrap: the label truncates, so keep it short enough to fit
-beside the tag in the 16rem rail (about 110px of label).
+beside the tag in the 16rem rail (about 110px of label), and give the item a
+caption that fits the collapsed rail too. In the collapsed rail the chip becomes a
+red dot before the caption (see the collapsed rail below).
 
 **Accessible name.** An event link's name starts with the visible label and then
 adds the full name, so voice control can use the visible text and screen readers
-hear which event it opens (WCAG 2.5.3, label in name). `AppLayout` renders, in
+hear which event it opens (WCAG 2.5.3, label in name). `SidebarNavItem` renders, in
 order: the visible `label`, a `sr-only` span with `fullName`, the `sr-only` badge
 details (see sidebar badges below), then the `Live` chip. The cup link reads
-"2v2 Cup 2v2 World Cup 2026 … Live".
+"2v2 Cup 2v2 World Cup 2026 … Live". In the collapsed rail the visible text is the
+caption, so the order becomes: the caption, the full `label` as `sr-only` (only
+when it differs from the caption), `fullName`, the badge details, then a `sr-only`
+"Live" where the chip was. The name still starts with the visible text.
 
 Every sidebar entry renders through `NavLink` with its resolved destination
 `view`/`params` (an anchor with the right href on web, a button on desktop; see
@@ -451,6 +473,91 @@ The closed mobile drawer is marked `inert` so its hidden controls cannot receive
 focus or clicks. `AppLayout` listens to the same `1023px` media-query boundary as
 the `lg` shell styles and removes `inert` when the sidebar becomes desktop-visible;
 keep those states synchronized when changing the responsive navigation.
+
+## Sidebar parts and the collapsed rail
+
+The sidebar's parts live in `app/components/layout/sidebar/`. `AppLayout.tsx`
+keeps every piece of state (the drawer, `inert`, the login error, the logout
+confirm, Settings, Change Title, the collapsed choice) and passes it down; the
+parts only render:
+
+| Part | Renders |
+|---|---|
+| `SidebarBrand` | the logo and its seasonal-burst click |
+| `SidebarActions` | Join Server, and Launch Game behind `capabilities.game` with its disabled state |
+| `SidebarNavItem` | one nav row or rail tile: icon, badges, label or caption, Live chip or dot, tooltip |
+| `SidebarCollapseToggle` | the collapse toggle row |
+| `SidebarUserCard` | the signed-in profile dropdown, or the signed-out Discord login and its error |
+
+`SidebarActions` and `SidebarUserCard` read capabilities through `usePlatform()`
+themselves rather than taking them as props, so the web build can still drop
+desktop-only markup from its entry chunk.
+
+**Two modes at `lg` and up.** The rail is either expanded (16rem, the full
+sidebar) or collapsed (5rem, icons over short captions). The effective mode is
+`collapsed = collapsePreference && !isMobileViewport`: the preference applies only
+at `lg` and up. Below `lg` the drawer is always the full expanded sidebar, the
+toggle row is hidden and the shortcut isn't attached; the stored choice is kept
+and comes back when the window is wide again. `AppLayout` publishes the rail's
+width as `--sidebar-width` on `document.documentElement` (`16rem`, `5rem`, or `0px`
+below `lg`) in a layout effect, so overlays that sit beside the rail follow it
+(see `agents/styling.md`, sidebar width). Switching modes is instant, with no width
+transition.
+
+**The preference.** `utbt:sidebarCollapsed:v1`, a device-local JSON boolean in
+`app/components/layout/sidebarPreference.ts` (see `agents/state-patterns.md`, key
+table). It is read once as the `useState` initialiser, so a collapsed rail is
+painted collapsed on the first frame, with no flash. `toggleCollapsed` writes it
+and then sets state; nothing else writes it.
+
+**The toggle row.** `SidebarCollapseToggle` sits between the nav and the user card,
+`max-lg:hidden`. It is a `button` named "Collapse sidebar" or "Expand sidebar", with
+`aria-expanded={!collapsed}` and `aria-controls="app-navigation"` (the `aside`'s
+id). Expanded it shows `PanelLeftClose` and the word "Collapse"; collapsed it shows
+`PanelLeftOpen` alone. Its tooltip reads "Collapse sidebar (Ctrl+B)" or "Expand
+sidebar (Ctrl+B)" and opens on top when expanded, on the right when collapsed. The
+icon stays in the same place in both modes, so the user card under it must keep the
+same height in both modes.
+
+**The shortcut.** `Ctrl+B` or `⌘B` toggles the rail. The listener is on `window`
+and is attached only at `lg` and up. It acts when the key is `b` (any case) with
+exactly one of Ctrl or Meta and neither Alt nor Shift, so Ctrl+Shift+B,
+Ctrl+Alt+B and Ctrl+Meta+B are ignored. It also ignores an event that is already
+`defaultPrevented`, and one whose target is an input, textarea, select or
+contentEditable (the same typing test `Main.tsx` uses for Alt+←/→). When it acts it
+calls `preventDefault`; a held key (`event.repeat`) is prevented but toggles only
+once.
+
+**What the collapsed rail shows.**
+- **Nav items** are tiles: the icon over the `navItemCaption` caption. Section
+  titles become `sr-only` headings, each followed by a divider line, so the list
+  keeps its structure for screen readers. The destination, `href`, prefetch and
+  `onActivate` are the same as expanded.
+- **One tooltip per tile.** Each tile is wrapped in the shared `Tooltip` on the
+  `right`, which opens on hover and on keyboard focus. It lists the full label
+  (bold), the event's full name, "Live", then the badge details. Collapsed, the
+  icon's badge marks have no tooltip of their own, so an item never shows two.
+  Expanded keeps the top-side badge tooltip on the icon and no tooltip on the
+  label.
+- **Live** is decided by the same `isEventLinkLive`. Instead of the chip, a red dot
+  sits before the caption (`aria-hidden`), and "Live" stays in the accessible name
+  as `sr-only` text.
+- **Logo and actions.** The logo is a 40px mark and still fires the seasonal burst.
+  Join and Play are stacked square tiles captioned "Join" and "Play", with the full
+  names ("Join Server", "Launch Game") as `sr-only` text. Join is the same `NavLink`
+  to `servers`. A disabled Play tile keeps its "No valid UT99 installation found"
+  tooltip, on the right when collapsed.
+- **User card, signed in.** The trigger is the avatar alone, a real `button` named
+  "<name>, profile menu", with the title's rarity shown as a ring (and a glow, for
+  the top rarity) around the avatar. The menu opens to the right, bottom-aligned.
+  Both modes share one menu header with the name, the Patreon badge and the active
+  title. In the header the badge is inert (shown, and announced as "Tier N Patreon
+  Supporter"), because a focusable button inside a menu breaks the menu's roles.
+  Expanded, the trigger is still the whole card and the menu still opens on top.
+- **User card, signed out.** A square Discord button named "Login with Discord". A
+  login error shows in a popover beside it, outside the rail (`role="alert"`, linked
+  by `aria-describedby`, rendered through a portal to `document.body`). It clears on
+  the next login click, like the expanded inline error.
 
 **Gated pages** (e.g. `admin`): hide the nav item (`buildNavSections` only appends
 the Staff group when `isStaff(userProfile)`, helpers in `app/utils/roles.ts`) **and**
@@ -511,7 +618,8 @@ navigation but are **not** navigation events:
   `params.eventSlug`. Badges sit on the item's icon rather than in the row:
   `count` is a static accent bubble at the icon's top-right, and `live` is a
   pulsing emerald dot at its bottom-right. The icon is wrapped in the shared
-  `Tooltip`, which lists `details` one per line (no native `title`). The same
+  `Tooltip`, which lists `details` one per line (no native `title`); in the
+  collapsed rail those lines move into the tile's one right-side tooltip. The same
   lines go into a `sr-only` span after the label for screen readers (see
   `agents/styling.md`, sidebar badges). A plain "new" pill comes from
   `newSinceVisitBadge(count)`: `null` for no count, otherwise the count with
