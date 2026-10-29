@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Loader2, ChevronLeft, ChevronRight, Download, Play, Columns2, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Download, Play, Columns2, X } from 'lucide-react'
+import { Spinner } from '@/app/components/ui/spinner'
 import { cn } from '@/lib/utils'
 import { Modal } from '@/app/components/ui/modal'
 import { Tooltip } from '@/app/components/ui/tooltip'
@@ -229,7 +230,7 @@ export function ReplayPickerModal({
 
                 {loading && (
                     <div className="flex items-center justify-center py-10 text-muted-foreground">
-                        <Loader2 className="size-5 animate-spin mr-2" /> Loading leaderboard…
+                        <Spinner className="size-5 mr-2" /> Loading leaderboard…
                     </div>
                 )}
 
@@ -294,7 +295,7 @@ export function ReplayPickerModal({
                                             </span>
                                             <span className="text-sm font-mono text-amber-300 shrink-0">{formatCapTime(row.entry.cap_time_seconds)}</span>
                                             {checking ? (
-                                                <Loader2 className="size-4 animate-spin text-muted-foreground/60 shrink-0" />
+                                                <Spinner className="size-4 text-muted-foreground/60 shrink-0" />
                                             ) : unavailable ? (
                                                 <NoReplayIndicator />
                                             ) : (
@@ -347,7 +348,7 @@ export function ReplayPickerModal({
                                         </span>
                                         {checking ? (
                                             <span className="inline-flex size-7 items-center justify-center shrink-0">
-                                                <Loader2 className="size-4 animate-spin text-muted-foreground/60" />
+                                                <Spinner className="size-4 text-muted-foreground/60" />
                                             </span>
                                         ) : unavailable ? (
                                             <NoReplayIndicator padded />

@@ -1,4 +1,5 @@
-import { Download, Calendar, Star, Sparkles, Loader2, User, Users, ImagePlus } from 'lucide-react'
+import { Download, Calendar, Star, Sparkles, User, Users, ImagePlus } from 'lucide-react'
+import { Spinner } from '@/app/components/ui/spinner'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
@@ -97,7 +98,7 @@ export function HeroSection({
                                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-accent-500/15 border border-accent-500/40 text-accent-200 hover:bg-accent-500/25 hover:text-foreground hover:border-accent-500/60 disabled:opacity-60 disabled:cursor-not-allowed transition-colors text-xs font-semibold cursor-pointer"
                             >
                                 {isDownloading ? (
-                                    <Loader2 className="size-3.5 animate-spin" />
+                                    <Spinner className="size-3.5" />
                                 ) : (
                                     <Download className="size-3.5" />
                                 )}

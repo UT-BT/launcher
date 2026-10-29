@@ -1,5 +1,5 @@
 import { Loader2 } from 'lucide-react'
-import logo from '@/app/assets/logo.webp'
+import { useLogo } from '@/app/seasonal/logos'
 import { Button } from '@/app/components/ui/button'
 
 interface WebBootScreenProps {
@@ -7,6 +7,7 @@ interface WebBootScreenProps {
 }
 
 export function WebBootScreen({ error }: WebBootScreenProps) {
+    const logo = useLogo()
     return (
         <div className="h-dvh flex flex-col items-center justify-center gap-4 bg-background text-foreground">
             <img src={logo} alt="UTBT Logo" className="size-20 object-contain" />

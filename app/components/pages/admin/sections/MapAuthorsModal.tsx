@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import {
-  AlertTriangle, ArrowLeft, ArrowRight, CheckCircle2, Link2, Loader2, Search, Unlink,
+  AlertTriangle, ArrowLeft, ArrowRight, CheckCircle2, Link2, Search, Unlink,
 } from 'lucide-react'
+import { Spinner } from '@/app/components/ui/spinner'
 import {
   fetchAdminUsers, fetchLinkedMapAuthors, fetchMapAuthorCandidates, fetchMapAuthorPreview,
   fetchMapAuthorStrings, fetchMapAuthorStringsCount, linkMapAuthor, toActiveTitle, unlinkMapAuthor,
@@ -311,7 +312,7 @@ export function MapAuthorsModal({ open, onClose, token, onApplied }: {
       <div className="space-y-4">
         {step.status === 'applying' && (
           <div className="flex items-center justify-center gap-3 py-12 text-muted-foreground">
-            <Loader2 className="size-5 animate-spin" />
+            <Spinner className="size-5" />
             <span className="text-sm">Applying…</span>
           </div>
         )}
@@ -478,7 +479,7 @@ export function MapAuthorsModal({ open, onClose, token, onApplied }: {
 
             {reviewPreview === null ? (
               <div className="flex items-center gap-2 py-8 text-muted-foreground">
-                <Loader2 className="size-4 animate-spin" /><span className="text-xs">Loading maps…</span>
+                <Spinner className="size-4" /><span className="text-xs">Loading maps…</span>
               </div>
             ) : (
               <>
@@ -577,7 +578,7 @@ export function MapAuthorsModal({ open, onClose, token, onApplied }: {
               <p className="text-xs text-muted-foreground mb-2">Suggested players</p>
               {candidates === null ? (
                 <div className="flex items-center gap-2 py-3 text-muted-foreground">
-                  <Loader2 className="size-4 animate-spin" /><span className="text-xs">Finding matches…</span>
+                  <Spinner className="size-4" /><span className="text-xs">Finding matches…</span>
                 </div>
               ) : (
                 <CandidateList candidates={candidates} onPick={(c) => goPreview(step.author, c)} />

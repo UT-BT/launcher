@@ -3,7 +3,7 @@ import { Modal } from '@/app/components/ui/modal'
 import { Button } from '@/app/components/ui/button'
 import { Slider } from '@/app/components/ui/slider'
 import { submitSummaryReview, fetchMapReviews } from '@/app/utils/api'
-import { Loader2 } from 'lucide-react'
+import { Spinner } from '@/app/components/ui/spinner'
 import { cn } from '@/lib/utils'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { scoreTextColor, scoreSliderAccent } from '@/app/utils/scoreColors'
@@ -318,7 +318,7 @@ export function ReviewModal({ open, onOpenChange, accessToken, userId, mapName, 
                             className="w-full h-10 bg-accent-500/15 border border-accent-500/40 text-accent-200 hover:bg-accent-500/25 hover:text-foreground hover:border-accent-500/60 hover:shadow-[0_0_20px_rgba(59,130,246,0.25)] transition-all font-semibold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {loading ? (
-                                <Loader2 className="size-4 animate-spin" />
+                                <Spinner className="size-4" />
                             ) : (
                                 'Submit Review'
                             )}

@@ -2,7 +2,6 @@ import { ElementType, ReactNode, lazy, Suspense, useEffect, useMemo, useRef, use
 import { FaDiscord } from 'react-icons/fa'
 import { Server, Trophy, Settings, LogOut, Play, User, Menu } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import logo from '@/app/assets/logo.webp'
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -33,6 +32,9 @@ import { LiveDot } from '@/app/components/shared/LiveDot'
 import { CHIP_SHAPE, LIVE_CHIP_STYLE } from '@/app/components/shared/chipStyles'
 import { IS_WEB, usePlatform } from '@/app/platform'
 import { prefetchPage } from '@/app/components/main/pageLoaders'
+import { SeasonalAmbient, fireSeasonalBurst } from '@/app/seasonal/lazyDecor'
+import { useSeason } from '@/app/seasonal/SeasonProvider'
+import { logoFor } from '@/app/seasonal/logos'
 
 interface AppLayoutProps {
     children: ReactNode
@@ -104,6 +106,8 @@ function getRarityStyles(title: { rarity: number, color_r: number, color_g: numb
 
 export function AppLayout({ children, currentView, onViewChange, getNavBadge, userProfile, installationStatus }: AppLayoutProps) {
     const { capabilities, auth } = usePlatform()
+    const season = useSeason()
+    const logo = logoFor(season)
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
     const [loginError, setLoginError] = useState<string | null>(() => auth.consumeLoginError())
     const [mobileNavOpen, setMobileNavOpen] = useState(false)
@@ -216,6 +220,7 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
     return (
         <div className="flex h-full bg-background text-foreground overflow-hidden relative">
             <div className="nebula-bg absolute inset-0 opacity-30 pointer-events-none" />
+            {currentView === 'home' && <SeasonalAmbient />}
 
             {/* Mobile top bar */}
             <div className="lg:hidden fixed top-0 inset-x-0 h-14 z-30 flex items-center gap-3 px-4 bg-card/80 backdrop-blur-xl border-b border-hairline/10">
@@ -262,6 +267,10 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                     <img
                         src={logo}
                         alt="UTBT Logo"
+                        onClick={season ? event => {
+                            const rect = event.currentTarget.getBoundingClientRect()
+                            fireSeasonalBurst(season, rect.left + rect.width / 2, rect.top + rect.height / 2)
+                        } : undefined}
                         className="w-24 h-24 [@media(max-height:800px)]:w-14 [@media(max-height:800px)]:h-14 object-contain drop-shadow-[0_0_15px_rgb(var(--accent-glow-rgb)/0.3)] mb-4 [@media(max-height:800px)]:mb-0 transition-all hover:scale-105 duration-300"
                     />
                 </div>

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { ImagePlus, Loader2, ZoomIn } from 'lucide-react'
+import { ImagePlus, ZoomIn } from 'lucide-react'
+import { Spinner } from '@/app/components/ui/spinner'
 import { Modal } from '@/app/components/ui/modal'
 import { Button } from '@/app/components/ui/button'
 import { Slider } from '@/app/components/ui/slider'
@@ -341,7 +342,7 @@ export function MapScreenshotModal(props: MapScreenshotModalProps) {
                     disabled={!loaded || saving || !ready}
                     className="w-full h-10 bg-accent-500/15 border border-accent-500/40 text-accent-200 hover:bg-accent-500/25 hover:text-foreground hover:border-accent-500/60 transition-all font-semibold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                    {saving ? <Loader2 className="size-4 animate-spin" /> : 'Save Screenshot'}
+                    {saving ? <Spinner className="size-4" /> : 'Save Screenshot'}
                 </Button>
             </div>
         </Modal>

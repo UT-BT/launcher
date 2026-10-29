@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { Map as MapIcon, Plus, Pencil, RefreshCw, ImagePlus, ImageOff, AlertTriangle, Megaphone, Gauge, Loader2, CheckCircle2, Link2 } from 'lucide-react'
+import { Map as MapIcon, Plus, Pencil, RefreshCw, ImagePlus, ImageOff, AlertTriangle, Megaphone, Gauge, CheckCircle2, Link2 } from 'lucide-react'
+import { Spinner } from '@/app/components/ui/spinner'
 import {
   fetchAdminMaps, fetchAdminMapsCount, updateMap, fetchAdminMapTags,
   fetchMapvoteStatus, setMapvoteAnnouncement, regenerateMapvote,
@@ -534,14 +535,14 @@ function DifficultySyncModal({ open, onClose, token, onApplied }: {
       <div className="space-y-4">
         {state.status === 'loading' && (
           <div className="flex items-center justify-center gap-3 py-12 text-muted-foreground">
-            <Loader2 className="size-5 animate-spin" />
+            <Spinner className="size-5" />
             <span className="text-sm">Computing review averages…</span>
           </div>
         )}
 
         {state.status === 'applying' && (
           <div className="flex items-center justify-center gap-3 py-12 text-muted-foreground">
-            <Loader2 className="size-5 animate-spin" />
+            <Spinner className="size-5" />
             <span className="text-sm">Applying changes…</span>
           </div>
         )}

@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Modal } from '@/app/components/ui/modal'
 import { fetchTitles, assignTitle, AssignedTitleV2, ActiveTitle } from '@/app/utils/api'
 import { getTitleTextStyle } from '@/app/utils/titleStyles'
-import { Loader2, Check } from 'lucide-react'
+import { Check } from 'lucide-react'
+import { Spinner } from '@/app/components/ui/spinner'
 import { cn } from '@/lib/utils'
 
 interface ChangeTitleModalProps {
@@ -54,7 +55,7 @@ function TitleRow({ label, titleStyle, selected, assigning, disabled, onSelect }
 
             <span className="shrink-0 flex items-center">
                 {assigning ? (
-                    <Loader2 className="size-4 animate-spin text-accent-300" />
+                    <Spinner className="size-4 text-accent-300" />
                 ) : selected ? (
                     <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-accent-300">
                         <Check className="size-3.5" />
@@ -133,7 +134,7 @@ export function ChangeTitleModal({ isOpen, onClose, accessToken, userId, current
         >
             {loading ? (
                 <div className="flex justify-center py-12">
-                    <Loader2 className="size-8 animate-spin text-muted-foreground" />
+                    <Spinner className="size-8 text-muted-foreground" />
                 </div>
             ) : error ? (
                 <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-300 text-sm">

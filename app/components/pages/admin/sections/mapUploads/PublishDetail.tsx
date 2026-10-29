@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { cn } from '@/lib/utils'
-import { AlertTriangle, Check, CheckCircle2, FolderOpen, Loader2, OctagonX, Radio, Rocket, Send, Server, X, Zap } from 'lucide-react'
+import { AlertTriangle, Check, CheckCircle2, FolderOpen, OctagonX, Radio, Rocket, Send, Server, X, Zap } from 'lucide-react'
+import { Spinner } from '@/app/components/ui/spinner'
 import { ApiError, fetchMapUploadPublish, forceActivateMapUploadPublish } from '@/app/utils/api'
 import type { Publish, PublishHost } from '@/app/utils/mapUploadTypes'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
@@ -90,7 +91,7 @@ function StepTracker({ publish }: { publish: Publish }) {
               step.status === 'current' && 'border-accent-500/60 bg-accent-500/20 text-accent-200 shadow-[0_0_12px_rgb(var(--accent-glow-rgb)/0.35)]',
               step.status === 'todo' && 'border-hairline/10 bg-hairline/5 text-muted-foreground',
             )}>
-              {step.status === 'done' ? <Check className="size-3.5" /> : step.status === 'current' ? <Loader2 className="size-3.5 animate-spin" /> : index + 1}
+              {step.status === 'done' ? <Check className="size-3.5" /> : step.status === 'current' ? <Spinner className="size-3.5" /> : index + 1}
             </span>
             <span className={cn(
               'hidden whitespace-nowrap text-[11px] @2xl/publish:block',

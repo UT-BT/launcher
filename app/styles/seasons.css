@@ -1,0 +1,56 @@
+:root[data-season='halloween']:not([data-theme]) {
+  --accent-50: oklch(0.98 0.016 73.684);
+  --accent-100: oklch(0.954 0.038 75.164);
+  --accent-200: oklch(0.901 0.076 70.697);
+  --accent-300: oklch(0.837 0.128 66.29);
+  --accent-400: oklch(0.75 0.183 55.934);
+  --accent-500: oklch(0.625 0.205 44);
+  --accent-600: oklch(0.575 0.195 40);
+  --accent-700: oklch(0.51 0.175 38);
+  --accent-800: oklch(0.45 0.15 37);
+  --accent-900: oklch(0.4 0.12 38);
+  --accent-950: oklch(0.266 0.079 36.259);
+  --accent-glow-rgb: 251 146 60;
+  --nebula-1: 249, 115, 22;
+  --nebula-2: 88, 28, 135;
+  --nebula-3: 147, 51, 234;
+  --nebula-4: 194, 65, 12;
+}
+
+:root[data-season='christmas']:not([data-theme]) {
+  --accent-50: oklch(0.971 0.013 16);
+  --accent-100: oklch(0.936 0.032 16);
+  --accent-200: oklch(0.885 0.062 16);
+  --accent-300: oklch(0.808 0.114 17);
+  --accent-400: oklch(0.704 0.191 19);
+  --accent-500: oklch(0.637 0.237 21);
+  --accent-600: oklch(0.577 0.245 22);
+  --accent-700: oklch(0.505 0.213 22);
+  --accent-800: oklch(0.444 0.177 22);
+  --accent-900: oklch(0.396 0.141 21);
+  --accent-950: oklch(0.258 0.092 21);
+  --accent-glow-rgb: 250 204 21;
+  --nebula-1: 22, 163, 74;
+  --nebula-2: 20, 83, 45;
+  --nebula-3: 220, 38, 38;
+  --nebula-4: 234, 179, 8;
+}
+
+:root[data-season='easter']:not([data-theme]) {
+  --accent-50: oklch(0.977 0.014 305);
+  --accent-100: oklch(0.946 0.033 305);
+  --accent-200: oklch(0.902 0.06 305);
+  --accent-300: oklch(0.84 0.095 305);
+  --accent-400: oklch(0.73 0.13 305);
+  --accent-500: oklch(0.625 0.16 303);
+  --accent-600: oklch(0.56 0.165 302);
+  --accent-700: oklch(0.5 0.16 300);
+  --accent-800: oklch(0.43 0.13 300);
+  --accent-900: oklch(0.37 0.1 300);
+  --accent-950: oklch(0.27 0.07 300);
+  --accent-glow-rgb: 216 180 254;
+  --nebula-1: 196, 181, 253;
+  --nebula-2: 110, 231, 183;
+  --nebula-3: 249, 168, 212;
+  --nebula-4: 253, 224, 71;
+}

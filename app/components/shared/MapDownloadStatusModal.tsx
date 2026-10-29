@@ -1,4 +1,5 @@
-import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react'
+import { CheckCircle2, AlertCircle } from 'lucide-react'
+import { Spinner } from '@/app/components/ui/spinner'
 import { Modal } from '@/app/components/ui/modal'
 import { Button } from '@/app/components/ui/button'
 import { displayMapName } from '@/app/utils/format'
@@ -47,7 +48,7 @@ export function MapDownloadStatusModal({ state, onClose }: MapDownloadStatusModa
             {state?.status === 'downloading' && (
                 <div className="space-y-2 py-2">
                     <div className="flex items-center gap-3">
-                        <Loader2 className="size-5 animate-spin text-accent-300 shrink-0" />
+                        <Spinner className="size-5 text-accent-300 shrink-0" />
                         <div className="text-sm text-foreground/80 truncate">{displayMapName(state.mapName)}</div>
                     </div>
                     <p className="text-xs text-muted-foreground pl-8">

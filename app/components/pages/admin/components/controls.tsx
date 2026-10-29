@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, type ReactNode } from 'react'
-import { Search, Loader2, X, ChevronLeft, ChevronRight, ChevronDown, Check, Copy, type LucideIcon } from 'lucide-react'
+import { Search, X, ChevronLeft, ChevronRight, ChevronDown, Check, Copy, type LucideIcon } from 'lucide-react'
+import { Spinner } from '@/app/components/ui/spinner'
 import { cn } from '@/lib/utils'
 import { Input } from '@/app/components/ui/input'
 import { Button } from '@/app/components/ui/button'
@@ -31,7 +32,7 @@ export function ActionButton({ tone = 'accent', icon: Icon, children, onClick, d
         TONE_BTN[tone],
       )}
     >
-      {loading ? <Loader2 className="size-3.5 animate-spin" /> : Icon ? <Icon className="size-3.5" /> : null}
+      {loading ? <Spinner className="size-3.5" /> : Icon ? <Icon className="size-3.5" /> : null}
       {children}
     </button>
   )

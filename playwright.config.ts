@@ -3,6 +3,10 @@ import { defineConfig, devices } from '@playwright/test'
 const port = process.env.E2E_PORT ?? '5175'
 const origin = `http://127.0.0.1:${port}`
 const BROADCAST_SPECS = /\.broadcast\.spec\.ts$/
+const SEASONAL_THEMES_OFF = {
+  cookies: [],
+  origins: [{ origin, localStorage: [{ name: 'utbt:seasonalThemes:v1', value: '"off"' }] }],
+}
 
 export default defineConfig({
   testDir: './e2e',
@@ -33,8 +37,8 @@ export default defineConfig({
     timeout: 120_000,
   },
   projects: [
-    { name: 'desktop-chromium', testIgnore: BROADCAST_SPECS, use: { ...devices['Desktop Chrome'] } },
-    { name: 'mobile-chromium', testIgnore: BROADCAST_SPECS, use: { ...devices['Pixel 7'] } },
+    { name: 'desktop-chromium', testIgnore: BROADCAST_SPECS, use: { ...devices['Desktop Chrome'], storageState: SEASONAL_THEMES_OFF } },
+    { name: 'mobile-chromium', testIgnore: BROADCAST_SPECS, use: { ...devices['Pixel 7'], storageState: SEASONAL_THEMES_OFF } },
     {
       name: 'broadcast',
       testMatch: BROADCAST_SPECS,

@@ -1,0 +1,12 @@
+.seasonal-wobble {
+  animation: seasonal-wobble 0.6s ease-in-out infinite alternate;
+}
+
+@keyframes seasonal-wobble {
+  from {
+    transform: rotate(-14deg);
+  }
+  to {
+    transform: rotate(14deg);
+  }
+}

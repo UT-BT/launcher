@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { AlertTriangle, ChevronRight, Loader2 } from 'lucide-react'
+import { AlertTriangle, ChevronRight } from 'lucide-react'
+import { Spinner } from '@/app/components/ui/spinner'
 import { cn } from '@/lib/utils'
 import { Modal } from '@/app/components/ui/modal'
 import { ErrorBanner } from '@/app/components/pages/teams/teamsShared'
@@ -168,7 +169,7 @@ function LinkRunsModal({ accessToken, slug, row, onClose, onLinked }: {
 
                 {!match && !error && (
                     <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                        <Loader2 className="size-3.5 animate-spin" /> Loading the match…
+                        <Spinner className="size-3.5" /> Loading the match…
                     </p>
                 )}
 

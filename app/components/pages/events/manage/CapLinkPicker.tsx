@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react'
-import { Link2, Loader2 } from 'lucide-react'
+import { Link2 } from 'lucide-react'
+import { Spinner } from '@/app/components/ui/spinner'
 import { cn } from '@/lib/utils'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { teamInputClass } from '@/app/components/pages/teams/teamsShared'
@@ -106,7 +107,7 @@ export function CapLinkPicker({
                     disabled={disabled || loading}
                     className="h-8 px-3 rounded-md border border-white/10 bg-card/50 text-xs text-foreground hover:border-white/20 transition-colors cursor-pointer disabled:opacity-40 inline-flex items-center gap-1.5"
                 >
-                    {loading ? <Loader2 className="size-3.5 animate-spin" /> : <Link2 className="size-3.5" />}
+                    {loading ? <Spinner className="size-3.5" /> : <Link2 className="size-3.5" />}
                     Find caps
                 </button>
                 {linked.size > 0 && (

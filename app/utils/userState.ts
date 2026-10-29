@@ -11,6 +11,7 @@ const SYNCED_KEYS = new Set([
     'utbt:displayTimezone:v1',
     'utbt:pickBanSound:v1',
     'utbt:pickBanMotion:v1',
+    'utbt:seasonalThemes:v1',
 ])
 
 export function isSyncedKey(key: string): boolean {

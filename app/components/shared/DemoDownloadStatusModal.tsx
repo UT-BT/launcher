@@ -1,4 +1,5 @@
-import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react'
+import { CheckCircle2, AlertCircle } from 'lucide-react'
+import { Spinner } from '@/app/components/ui/spinner'
 import { Modal } from '@/app/components/ui/modal'
 import { Button } from '@/app/components/ui/button'
 import type { DemoDownloadState } from '@/app/hooks/useDemoDownload'
@@ -48,7 +49,7 @@ export function DemoDownloadStatusModal({ state, onClose }: DemoDownloadStatusMo
         >
             {state?.status === 'downloading' && (
                 <div className="flex items-center gap-3 py-2">
-                    <Loader2 className="size-5 animate-spin text-accent-300 shrink-0" />
+                    <Spinner className="size-5 text-accent-300 shrink-0" />
                     <div className="text-sm text-foreground/80 truncate">{state.filename}</div>
                 </div>
             )}

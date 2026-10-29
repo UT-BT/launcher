@@ -12,7 +12,6 @@ import {
     Info,
     Link2,
     ListOrdered,
-    Loader2,
     LockOpen,
     MonitorPlay,
     Pause,
@@ -25,6 +24,7 @@ import {
     Undo2,
     type LucideIcon,
 } from 'lucide-react'
+import { Spinner } from '@/app/components/ui/spinner'
 import { cn } from '@/lib/utils'
 import { Button } from '@/app/components/ui/button'
 import {
@@ -332,7 +332,7 @@ function PrimaryCard({ primary, pending, onRun }: { primary: ManagerPrimary; pen
                     onClick={() => onRun(primary.command)}
                     className={cn(PRIMARY_BUTTON, PRIMARY_TONES[primary.command])}
                 >
-                    {pending ? <Loader2 className="size-5 animate-spin" /> : <Icon className="size-5" />}
+                    {pending ? <Spinner className="size-5" /> : <Icon className="size-5" />}
                     {primary.label}
                 </button>
                 <p id={hintId} className="text-xs text-muted-foreground @md/primary:flex-1">{primary.hint}</p>
@@ -492,7 +492,7 @@ function StepZeroChoice({ stepZero, pending, onChoose }: { stepZero: ManagerStep
             <div className="space-y-0.5">
                 <p id={labelId} className="flex items-center gap-2 text-sm font-bold text-foreground">
                     Step 0 · Act for {stepZero.teamName}
-                    {pending && <Loader2 className="size-3.5 animate-spin text-muted-foreground" />}
+                    {pending && <Spinner className="size-3.5 text-muted-foreground" />}
                 </p>
                 <p className="text-xs text-muted-foreground">{stepZero.teamName} choose Red or Blue. Choose for them only if they can’t.</p>
             </div>
@@ -571,7 +571,7 @@ function SwapButton({ button, aSide, pending, onSwap }: { button: ManagerButton<
                 className="flex size-11 cursor-pointer items-center justify-center rounded-full border border-hairline/15 bg-card text-muted-foreground shadow-md shadow-black/20 transition-colors hover:border-accent-500/50 hover:text-accent-200 disabled:cursor-not-allowed disabled:opacity-50"
             >
                 {pending ? (
-                    <Loader2 className="size-4 animate-spin" />
+                    <Spinner className="size-4" />
                 ) : (
                     <span className="flex @max-lg/sides:rotate-90">
                         <motion.span animate={{ rotate: aSide === 'team_b' ? 180 : 0 }} transition={SWAP_TRANSITION} className="flex">
@@ -644,7 +644,7 @@ function ControlPicker({ tile, members, disabled, pending, onHandOver }: {
                                 <span className="text-xs text-muted-foreground">Nobody yet</span>
                             )}
                         </span>
-                        {pending ? <Loader2 className="size-4 shrink-0 animate-spin text-muted-foreground" /> : <ChevronDown className="size-4 shrink-0 text-muted-foreground" />}
+                        {pending ? <Spinner className="size-4 shrink-0 text-muted-foreground" /> : <ChevronDown className="size-4 shrink-0 text-muted-foreground" />}
                     </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className={cn(MENU, 'w-[var(--radix-dropdown-menu-trigger-width)] min-w-64')}>
@@ -716,7 +716,7 @@ function TeamRadios({ label, hint, choices, disabled, pending, highlight, refuse
             <div className="space-y-0.5">
                 <p id={labelId} className={cn('flex items-center gap-2', highlight ? 'text-sm font-bold text-foreground' : SMALL_CAPS)}>
                     {label}
-                    {pending && <Loader2 className="size-3.5 animate-spin text-muted-foreground" />}
+                    {pending && <Spinner className="size-3.5 text-muted-foreground" />}
                 </p>
                 <p id={hintId} className={cn('text-xs', refused ? 'text-amber-300' : 'text-muted-foreground')}>{hint}</p>
             </div>
@@ -807,7 +807,7 @@ function SequenceField({ sequence, slug, accessToken, disabled, pending, onChang
                     <DropdownMenuTrigger asChild disabled={disabled}>
                         <button type="button" aria-labelledby={`${labelId} ${valueId}`} className={cn(FIELD, 'min-h-11 px-3 py-2')}>
                             {value}
-                            {pending ? <Loader2 className="size-4 shrink-0 animate-spin text-muted-foreground" /> : <ChevronDown className="size-4 shrink-0 text-muted-foreground" />}
+                            {pending ? <Spinner className="size-4 shrink-0 text-muted-foreground" /> : <ChevronDown className="size-4 shrink-0 text-muted-foreground" />}
                         </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="start" className={cn(MENU, 'max-h-80 w-[var(--radix-dropdown-menu-trigger-width)] min-w-64 overflow-y-auto')}>
@@ -886,7 +886,7 @@ function VetoActFor({ actFor, pending, onChoose }: { actFor: ManagerVetoActFor; 
         <div role="group" aria-labelledby={labelId} className={cn('space-y-2.5 rounded-lg border bg-gradient-to-br to-transparent to-70% p-3', VETO_TONE.wash, VETO_TONE.line)}>
             <p id={labelId} className="flex items-center gap-2 text-sm font-bold text-foreground">
                 Act for {actFor.teamName}
-                {pending && <Loader2 className="size-3.5 animate-spin text-muted-foreground" />}
+                {pending && <Spinner className="size-3.5 text-muted-foreground" />}
             </p>
             <div className="grid gap-2 sm:grid-cols-2">
                 {actFor.options.map((option) => (
@@ -928,7 +928,7 @@ function ZoneButton({ button, tone, pending, onClick }: {
     return (
         <Tooltip content={button.hint} className="w-full sm:w-auto">
             <button type="button" disabled={button.disabled} onClick={onClick} className={cn(ZONE_BUTTON, ZONE_TONES[tone])}>
-                {pending ? <Loader2 className="size-3.5 animate-spin" /> : <Icon className="size-3.5" />}
+                {pending ? <Spinner className="size-3.5" /> : <Icon className="size-3.5" />}
                 {button.label}
             </button>
         </Tooltip>

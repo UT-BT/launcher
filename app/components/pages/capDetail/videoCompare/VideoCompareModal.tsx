@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Play, Pause, Minus, Plus, RotateCcw, Loader2, Flag, Volume2, VolumeX, ChevronsLeft, ChevronsRight } from 'lucide-react'
+import { Play, Pause, Minus, Plus, RotateCcw, Flag, Volume2, VolumeX, ChevronsLeft, ChevronsRight } from 'lucide-react'
+import { Spinner } from '@/app/components/ui/spinner'
 import { Modal } from '@/app/components/ui/modal'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
@@ -490,7 +491,7 @@ function VideoPane({
                         )}
                         {buffering && !ended && (
                             <div className="absolute inset-0 flex items-center justify-center bg-black/30 pointer-events-none">
-                                <Loader2 className="size-6 animate-spin text-foreground/70" />
+                                <Spinner className="size-6 text-foreground/70" />
                             </div>
                         )}
                     </>

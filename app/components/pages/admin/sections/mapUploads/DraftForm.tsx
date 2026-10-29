@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import {
   AlertTriangle, Check, CheckCircle2, Circle, Loader2, OctagonX, PenLine, Pencil, Rocket, Send, type LucideIcon,
 } from 'lucide-react'
+import { Spinner } from '@/app/components/ui/spinner'
 import { fetchAdminMapTags, mapUploadErrorMessage, patchMapUploadDraft, publishMapUploadDraft } from '@/app/utils/api'
 import type { Draft } from '@/app/utils/mapUploadTypes'
 import { Input } from '@/app/components/ui/input'
@@ -255,7 +256,7 @@ function PublishPanel({ draft, values, gate, saving, busy, feedback, onDismissFe
               'disabled:cursor-not-allowed disabled:border-hairline/10 disabled:bg-hairline/5 disabled:text-muted-foreground disabled:hover:text-muted-foreground',
             )}
           >
-            {busy ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
+            {busy ? <Spinner className="size-4" /> : <Send className="size-4" />}
             Publish
           </button>
         </div>

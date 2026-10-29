@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useMemo, useState } from 'react'
-import { Loader2, Info } from 'lucide-react'
+import { Info } from 'lucide-react'
+import { Spinner } from '@/app/components/ui/spinner'
 import { cn } from '@/lib/utils'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import { formatCapTime } from '@/app/utils/format'
@@ -142,7 +143,7 @@ export function CheckpointSplitsCard({
                 </div>
                 {hasCheckpoints && hasCandidates && (
                     <div className="absolute right-4 flex items-center gap-2">
-                        {comparing && <Loader2 className="size-3.5 animate-spin text-muted-foreground" />}
+                        {comparing && <Spinner className="size-3.5 text-muted-foreground" />}
                         <span className="text-[10px] uppercase tracking-wider text-muted-foreground inline-flex items-center gap-1">
                             compare vs
                             <Tooltip content="You can only compare against runs done on the same team. Checkpoint zones are mirrored per team, so cross-team splits don't line up." side="top">
