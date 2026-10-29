@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { ChevronLeft, ChevronRight, Loader2, MessageSquarePlus, Play } from 'lucide-react'
+import { ChevronLeft, ChevronRight, MessageSquarePlus, Play } from 'lucide-react'
+import { Spinner } from '@/app/components/ui/spinner'
 import { Modal } from '@/app/components/ui/modal'
 import { Button } from '@/app/components/ui/button'
 import { fetchSummaryCaps, SummaryCap } from '@/app/utils/api'
@@ -340,7 +341,7 @@ export function HistoryModal({
                     <div className="flex items-center justify-between gap-3 px-1">
                         <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">
                             {loading
-                                ? <Loader2 className="inline size-3 animate-spin" />
+                                ? <Spinner className="inline size-3" />
                                 : `Page ${page}`
                             }
                         </span>

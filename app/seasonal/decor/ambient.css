@@ -1,0 +1,426 @@
+.seasonal-layer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.seasonal-layer[data-paused] *,
+.seasonal-layer[data-paused] {
+  animation-play-state: paused !important;
+}
+
+@media (max-width: 767px) {
+  .seasonal-layer > span:nth-of-type(2n) {
+    display: none;
+  }
+}
+
+.seasonal-flake,
+.seasonal-petal {
+  position: absolute;
+  top: -16px;
+  left: var(--x);
+  animation: seasonal-fall var(--d) linear var(--delay) infinite;
+  will-change: transform;
+}
+
+.seasonal-flake i {
+  display: block;
+  width: var(--s);
+  height: var(--s);
+  border-radius: 9999px;
+  background: rgb(255 255 255 / var(--o));
+  animation: seasonal-sway var(--swayd) ease-in-out infinite alternate;
+}
+
+:root:not(.dark) .seasonal-flake i {
+  background: rgb(100 116 139 / calc(var(--o) * 0.8));
+}
+
+@keyframes seasonal-fall {
+  from {
+    transform: translate3d(0, -2vh, 0);
+  }
+  to {
+    transform: translate3d(0, 104vh, 0);
+  }
+}
+
+@keyframes seasonal-sway {
+  from {
+    transform: translate3d(calc(var(--sway) * -1), 0, 0);
+  }
+  to {
+    transform: translate3d(var(--sway), 0, 0);
+  }
+}
+
+.seasonal-petal i {
+  display: block;
+  width: 12px;
+  height: 8px;
+  border-radius: 0 100% 0 100%;
+  background: var(--c);
+  opacity: 0.75;
+  animation: seasonal-tumble var(--tumble) ease-in-out infinite alternate;
+}
+
+:root:not(.dark) .seasonal-petal i {
+  opacity: 0.8;
+  box-shadow: 0 0 0 0.5px rgb(0 0 0 / 0.15);
+}
+
+@keyframes seasonal-tumble {
+  from {
+    transform: translate3d(-22px, 0, 0) rotate(0deg);
+  }
+  to {
+    transform: translate3d(22px, 0, 0) rotate(300deg);
+  }
+}
+
+.seasonal-bat,
+.seasonal-bfly {
+  position: absolute;
+  left: 0;
+  top: var(--y);
+  width: var(--s);
+  will-change: transform;
+}
+
+.seasonal-bat {
+  animation: seasonal-bat-cross var(--d) linear var(--delay) infinite;
+}
+
+.seasonal-bat span,
+.seasonal-bfly span {
+  display: block;
+}
+
+.seasonal-swoop {
+  animation: seasonal-bat-swoop var(--swoopd) ease-in-out infinite;
+}
+
+.seasonal-flutter {
+  animation: seasonal-bat-flutter var(--flutd) ease-in-out infinite;
+}
+
+.seasonal-bank {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2 / 1;
+  animation: seasonal-bat-bank var(--bankd) ease-in-out infinite alternate;
+}
+
+.seasonal-bank > *,
+.seasonal-tilt > * {
+  position: absolute;
+  inset: 0;
+}
+
+.seasonal-bank svg,
+.seasonal-tilt svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.seasonal-bat svg {
+  fill: rgb(124 92 160);
+}
+
+.seasonal-bat .seasonal-bank {
+  opacity: 0.55;
+}
+
+:root:not(.dark) .seasonal-bat svg {
+  fill: rgb(31 27 46);
+}
+
+.seasonal-wing-l {
+  transform-origin: 46% 42%;
+  animation: seasonal-wing-l var(--flapd) ease-in-out infinite alternate;
+}
+
+.seasonal-wing-r {
+  transform-origin: 54% 42%;
+  animation: seasonal-wing-r var(--flapd) ease-in-out infinite alternate;
+}
+
+@keyframes seasonal-wing-l {
+  from {
+    transform: rotate(-20deg) scaleY(0.95);
+  }
+  to {
+    transform: rotate(30deg) scaleY(0.7);
+  }
+}
+
+@keyframes seasonal-wing-r {
+  from {
+    transform: rotate(20deg) scaleY(0.95);
+  }
+  to {
+    transform: rotate(-30deg) scaleY(0.7);
+  }
+}
+
+@keyframes seasonal-bat-cross {
+  0% {
+    transform: translate3d(var(--from), 0, 0) scale(0.8);
+  }
+  7% {
+    transform: translate3d(calc(var(--from) + var(--span) * 0.26), calc(var(--dy) * 0.5), 0) scale(0.92);
+  }
+  11% {
+    transform: translate3d(calc(var(--from) + var(--span) * 0.34), calc(var(--dy) * 0.1), 0) scale(1);
+  }
+  13.5% {
+    transform: translate3d(calc(var(--from) + var(--span) * 0.31), calc(var(--dy) * -0.4), 0) scale(1.06);
+  }
+  19% {
+    transform: translate3d(calc(var(--from) + var(--span) * 0.58), calc(var(--dy) * 0.6), 0) scale(1.12);
+  }
+  22% {
+    transform: translate3d(calc(var(--from) + var(--span) * 0.66), calc(var(--dy) * 1.3), 0) scale(1.05);
+  }
+  30% {
+    transform: translate3d(calc(var(--from) + var(--span)), var(--dy), 0) scale(0.9);
+  }
+  100% {
+    transform: translate3d(calc(var(--from) + var(--span)), var(--dy), 0) scale(0.9);
+  }
+}
+
+@keyframes seasonal-bat-swoop {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  14% {
+    transform: translate3d(0, 30px, 0);
+  }
+  22% {
+    transform: translate3d(0, -6px, 0);
+  }
+  37% {
+    transform: translate3d(0, 42px, 0);
+  }
+  45% {
+    transform: translate3d(0, 12px, 0);
+  }
+  61% {
+    transform: translate3d(0, -32px, 0);
+  }
+  72% {
+    transform: translate3d(0, 14px, 0);
+  }
+  86% {
+    transform: translate3d(0, -14px, 0);
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes seasonal-bat-flutter {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  17% {
+    transform: translate3d(6px, -5px, 0);
+  }
+  31% {
+    transform: translate3d(-4px, 3px, 0);
+  }
+  52% {
+    transform: translate3d(7px, 2px, 0);
+  }
+  68% {
+    transform: translate3d(-5px, -6px, 0);
+  }
+  83% {
+    transform: translate3d(2px, 5px, 0);
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes seasonal-bat-bank {
+  from {
+    transform: rotate(-14deg);
+  }
+  to {
+    transform: rotate(12deg);
+  }
+}
+
+.seasonal-bfly {
+  animation: seasonal-bfly-cross var(--d) linear var(--delay) infinite;
+}
+
+.seasonal-meander {
+  animation: seasonal-meander 7.3s ease-in-out infinite;
+}
+
+.seasonal-hop {
+  animation: seasonal-hop 1.45s ease-out infinite;
+}
+
+.seasonal-tilt {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 6 / 5;
+  animation: seasonal-tilt 2.3s ease-in-out infinite alternate;
+}
+
+.seasonal-bwings {
+  opacity: 0.8;
+  animation: seasonal-bwing 1.45s linear infinite;
+}
+
+:root:not(.dark) .seasonal-bwings {
+  opacity: 1;
+}
+
+@keyframes seasonal-bfly-cross {
+  0% {
+    transform: translate3d(var(--from), 0, 0);
+  }
+  8% {
+    transform: translate3d(calc(var(--from) + var(--span) * 0.14), calc(var(--dy) * 0.3), 0);
+  }
+  13% {
+    transform: translate3d(calc(var(--from) + var(--span) * 0.21), calc(var(--dy) * -0.2), 0);
+  }
+  17% {
+    transform: translate3d(calc(var(--from) + var(--span) * 0.18), calc(var(--dy) * -0.5), 0);
+  }
+  25% {
+    transform: translate3d(calc(var(--from) + var(--span) * 0.36), calc(var(--dy) * 0.1), 0);
+  }
+  31% {
+    transform: translate3d(calc(var(--from) + var(--span) * 0.48), calc(var(--dy) * 0.7), 0);
+  }
+  35% {
+    transform: translate3d(calc(var(--from) + var(--span) * 0.45), calc(var(--dy) * 0.9), 0);
+  }
+  43% {
+    transform: translate3d(calc(var(--from) + var(--span) * 0.66), calc(var(--dy) * 0.4), 0);
+  }
+  49% {
+    transform: translate3d(calc(var(--from) + var(--span) * 0.8), calc(var(--dy) * 0.8), 0);
+  }
+  56% {
+    transform: translate3d(calc(var(--from) + var(--span)), var(--dy), 0);
+  }
+  100% {
+    transform: translate3d(calc(var(--from) + var(--span)), var(--dy), 0);
+  }
+}
+
+@keyframes seasonal-meander {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  15% {
+    transform: translate3d(44px, -44px, 0);
+  }
+  28% {
+    transform: translate3d(-18px, -60px, 0);
+  }
+  40% {
+    transform: translate3d(-40px, -20px, 0);
+  }
+  55% {
+    transform: translate3d(14px, 18px, 0);
+  }
+  70% {
+    transform: translate3d(62px, -6px, 0);
+  }
+  85% {
+    transform: translate3d(26px, 32px, 0);
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes seasonal-hop {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  7% {
+    transform: translate3d(0, -5px, 0);
+  }
+  14% {
+    transform: translate3d(0, -2px, 0);
+  }
+  21% {
+    transform: translate3d(0, -8px, 0);
+  }
+  28% {
+    transform: translate3d(0, -5px, 0);
+  }
+  35% {
+    transform: translate3d(0, -11px, 0);
+  }
+  42% {
+    transform: translate3d(0, -8px, 0);
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes seasonal-tilt {
+  from {
+    transform: rotate(-18deg);
+  }
+  to {
+    transform: rotate(16deg);
+  }
+}
+
+@keyframes seasonal-bwing {
+  0%,
+  14%,
+  28%,
+  42%,
+  100% {
+    transform: scaleX(1);
+  }
+  7%,
+  21% {
+    transform: scaleX(0.18);
+  }
+  35% {
+    transform: scaleX(0.25);
+  }
+}
+
+.seasonal-fog {
+  position: absolute;
+  left: -10%;
+  right: -10%;
+  bottom: -40px;
+  height: 220px;
+  background:
+    radial-gradient(ellipse 40% 60% at 25% 70%, rgb(167 139 250 / 0.12), transparent 70%),
+    radial-gradient(ellipse 45% 55% at 70% 75%, rgb(249 115 22 / 0.08), transparent 70%),
+    radial-gradient(ellipse 35% 50% at 50% 90%, rgb(203 213 225 / 0.09), transparent 70%);
+  animation: seasonal-fogdrift 30s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+@keyframes seasonal-fogdrift {
+  from {
+    transform: translate3d(-4%, 0, 0);
+  }
+  to {
+    transform: translate3d(4%, 0, 0);
+  }
+}

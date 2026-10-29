@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
-import { ClipboardCheck, ChevronLeft, ChevronRight, Loader2, AlertTriangle, RefreshCw } from 'lucide-react'
+import { ClipboardCheck, ChevronLeft, ChevronRight, AlertTriangle, RefreshCw } from 'lucide-react'
+import { Spinner } from '@/app/components/ui/spinner'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { FavoriteStar } from '@/app/components/shared/FavoriteStar'
 import { MapNavLink } from '@/app/components/shared/MapNavLink'
@@ -150,7 +151,7 @@ export function MapsToReviewCard({
                 <div className="flex items-center justify-between gap-3 px-1">
                     <span className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">
                         {loading
-                            ? <Loader2 className="inline size-3 animate-spin" />
+                            ? <Spinner className="inline size-3" />
                             : `Page ${page} of ${totalPages}`}
                     </span>
                     <div className="flex items-center gap-1">

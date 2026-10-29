@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
-import { AlertTriangle, ArrowLeft, Loader2, Users } from 'lucide-react'
+import { AlertTriangle, ArrowLeft, Users } from 'lucide-react'
+import { Spinner } from '@/app/components/ui/spinner'
 import { Button } from '@/app/components/ui/button'
 import { NavLink } from '@/app/components/navigation/NavLink'
 import { useDocumentTitle } from '@/app/components/navigation/useDocumentMeta'
@@ -90,7 +91,7 @@ export function EventTeamPage({ eventSlug, eventTeamId, userProfile, onBackToTea
 
             {status === 'loading' && (
                 <div role="status" aria-label="Loading team" className="flex items-center justify-center py-24 text-muted-foreground">
-                    <Loader2 className="size-6 animate-spin" />
+                    <Spinner className="size-6" />
                 </div>
             )}
 
@@ -125,7 +126,7 @@ export function EventTeamPage({ eventSlug, eventTeamId, userProfile, onBackToTea
 
                     {!scope.error && !scope.stats && (
                         <div role="status" aria-label="Loading stage" className="flex items-center justify-center py-16 text-muted-foreground">
-                            <Loader2 className="size-6 animate-spin" />
+                            <Spinner className="size-6" />
                         </div>
                     )}
 

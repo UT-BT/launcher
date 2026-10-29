@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react'
 import { requestLogin } from '@/app/components/shared/AuthRequiredModal'
 import { Modal } from '@/app/components/ui/modal'
-import { Loader2, Pencil, Plus } from 'lucide-react'
+import { Pencil, Plus } from 'lucide-react'
+import { Spinner } from '@/app/components/ui/spinner'
 import { cn } from '@/lib/utils'
 import { fetchMapReviews, MapReview } from '@/app/utils/api'
 import { ReviewModal } from './ReviewModal'
@@ -137,7 +138,7 @@ export function MapReviewsModal({
 
                     {loading ? (
                         <div className="flex items-center justify-center py-16">
-                            <Loader2 className="size-6 animate-spin text-muted-foreground" />
+                            <Spinner className="size-6 text-muted-foreground" />
                         </div>
                     ) : reviews.length === 0 ? (
                         <div className="space-y-3">

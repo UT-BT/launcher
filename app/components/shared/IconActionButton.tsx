@@ -1,4 +1,5 @@
-import { Loader2, LucideIcon } from 'lucide-react'
+import { LucideIcon } from 'lucide-react'
+import { Spinner } from '@/app/components/ui/spinner'
 import { cn } from '@/lib/utils'
 import { Tooltip } from '@/app/components/ui/tooltip'
 
@@ -45,7 +46,7 @@ export function IconActionButton({
                 )}
             >
                 {loading
-                    ? <Loader2 className="size-3 animate-spin" />
+                    ? <Spinner className="size-3" />
                     : <Icon className={cn('size-3', iconFill && 'fill-current')} />
                 }
             </button>

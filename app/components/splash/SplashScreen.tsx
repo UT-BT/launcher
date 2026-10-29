@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect, useCallback } from 'react'
 import { useLogger } from '@/app/hooks/use-logger'
-import logo from '@/app/assets/logo.webp'
+import { useLogo } from '@/app/seasonal/logos'
 
 interface SplashScreenProps {
   onReady: () => void
@@ -8,6 +8,7 @@ interface SplashScreenProps {
 }
 
 export function SplashScreen({ onReady, variant = 'intro' }: SplashScreenProps) {
+  const logo = useLogo()
   const logger = useLogger('Splash')
   const containerRef = useRef<HTMLDivElement>(null)
   const [phase, setPhase] = useState<'checking' | 'animating' | 'complete'>('checking')

@@ -42,6 +42,8 @@ verify_against:
   - app/components/stream/streamScenes.css
   - app/components/pages/events/stream/panels/camsGate.ts
   - app/public/robots.txt
+  - app/index.html
+  - app/seasonal/lazyDecor.tsx
   - app/platform/web/sessionRecovery.ts
   - app/app.tsx
   - e2e/session-recovery.spec.ts
@@ -157,7 +159,9 @@ mounts: `/auth/callback` (above), the pick/ban **stream view**
 (`/events/:eventSlug/matches/:matchId/stream` — see `agents/navigation.md` →
 `shareable-match-links` for the path shape) and the **stream scene pages**
 (`/stream/:eventSlug/:streamerId/:scene`, the OBS browser sources; see
-*Stream scene pages* below).
+*Stream scene pages* below). None of them mounts `SeasonProvider`, and the `index.html` pre-paint
+script skips both stream paths, so they never get a seasonal look (see `agents/styling.md` →
+Seasonal themes).
 
 `renderer-web.tsx` checks `parseStreamPath(window.location.pathname)`
 (`app/components/navigation/matchLinks.ts`) and `parseStreamScenePath` first. On a match it skips the
@@ -326,7 +330,7 @@ relative to it needs the `lg:` variant. Screenshot-verify new surfaces at
 ## Performance
 
 The web entry chunk must stay lean — phones parse it on first visit. The initial
-payload is currently **~183 KiB JS + 34 KiB CSS gzip**, enforced by
+payload is currently **~185 KiB JS + 34 KiB CSS gzip**, enforced by
 `npm run check:bundle`.
 
 - **Every primary page except `Home` is `React.lazy`**, built from the shared
@@ -363,7 +367,7 @@ payload is currently **~183 KiB JS + 34 KiB CSS gzip**, enforced by
 - `npm run check:bundle` reads `dist-web/.vite/manifest.json` and measures the
   real **initial payload** (the entry plus its transitive static imports plus
   their CSS), not the largest chunk. Budgets (gzip): initial JS 190 KiB, initial
-  CSS 34 KiB, initial total 220 KiB, largest lazy chunk 120 KiB, **app JS 900
+  CSS 35 KiB, initial total 220 KiB, largest lazy chunk 120 KiB, **app JS 900
   KiB** (every JS file except those only the stream scene pages load) and
   **stream scene JS 120 KiB** (files reachable only from the stream scene root,
   which never load in the app). The last two replace the old single 750 KiB
@@ -457,4 +461,5 @@ references. Two layers keep that from stranding users: the deploy workflow
 copies the previous release's `assets/` into each new release (no-clobber,
 pruned after 30 days), and `app/renderer-web.tsx` listens for Vite's
 `vite:preloadError` and does a one-shot reload (sessionStorage-throttled to
-once per minute) so the session picks up the fresh `index.html`.
+once per minute) so the session picks up the fresh `index.html`. It ignores failures that name the
+seasonal decorations chunk (`isSeasonalDecorChunkError`); those decorations simply stay away.
