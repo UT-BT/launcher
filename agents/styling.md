@@ -284,8 +284,9 @@ room for them.
 
 Both marks are `aria-hidden`. Their meaning goes into a `sr-only` span after the
 label, and into the shared `Tooltip` on the icon, one line per detail. In the
-collapsed rail the marks stay on the icon but lose their own tooltip; the lines
-join the tile's right-side tooltip instead.
+collapsed rail the marks stay on the icon, placed for the rail tile (see collapsed
+rail, icon marks), and lose their own tooltip; the lines join the tile's
+right-side tooltip instead.
 
 ### Collapsed rail
 
@@ -301,24 +302,43 @@ collapsed rail). Switching modes is instant: nothing in the sidebar may use
   ```
   "flex-col items-center justify-center gap-1 min-h-11 px-1 py-1.5 [@media(max-height:800px)]:py-1"
   ```
-- **Caption**: `navItemCaption(item)`, one line, never wrapped.
+- **Caption**: `navItemCaption(item)`, one line, never wrapped, plain centred text
+  with nothing before it.
   ```
-  "min-w-0 truncate text-[10px] leading-tight font-medium"
+  "max-w-full truncate text-[10px] leading-tight font-medium"
   ```
   **The "labels about 110px" rule covers captions too.** A caption has about 59px
   at 10px (`system-ui`): "Achievements" measured 63px and overflowed, which is why
   it captions as "Awards". When a label won't fit that box, give the item a
   `shortLabel`; never let a caption truncate. The rail e2e asserts no caption
   overflows.
-- **Live dot**: the collapsed form of the sidebar status tag. A static red dot before
-  the caption, inside the caption row (`flex items-center gap-1`):
-  ```
-  "size-1.5 shrink-0 rounded-full bg-red-500"
-  ```
-  It is `aria-hidden` and never animates, so it reads apart from the pulsing emerald
-  `LiveDot` lobby dot on the icon (red vs emerald, before the caption vs on the
-  icon, static vs pinging). The tooltip's "Live" line uses the chip's text red,
-  `text-red-300`.
+- **Icon marks**: one corner of the icon per signal, each `aria-hidden` with the
+  `ring-2 ring-card` cutout. The rail places them for its tile, not with the
+  expanded offsets:
+  - **Live dot**, top-left: the collapsed form of the sidebar status tag, a static
+    red dot the size of the lobby dot. It never animates, so it reads apart from the
+    pinging emerald lobby dot (red vs emerald, top-left vs bottom-right, static vs
+    pinging). The tooltip's "Live" line uses the chip's text red, `text-red-300`.
+    ```
+    "absolute -top-px -left-2.5 size-2.5 rounded-full bg-red-500 ring-2 ring-card"
+    ```
+    It moves out to `-left-4.5` when the count shows `99+`, so the wider bubble
+    never meets it.
+  - **Count bubble**, top-right: the expanded bubble's look at
+    `absolute -top-px -right-[5px]`. It grows leftwards over the icon.
+  - **Lobby dot**, bottom-right: `<LiveDot className="ring-2 ring-card" />` in an
+    `absolute -bottom-px -right-5 flex` wrapper.
+
+  The tile leaves 6px above the icon (4px under `max-height: 800px`) and 4px under
+  it before the caption, so no mark sits more than 1px past the icon's top or
+  bottom edge, and every ring stays inside the tile's `overflow-hidden`. That
+  leaves no height to stack the bubble over the lobby dot, so the lobby dot sits to
+  the right of the bubble instead, and the bubble grows left. Counts up to 99 clear
+  the Live dot where it sits; `99+` clears it once the dot moves out. The caption
+  stays where a non-live item's is. The marks e2e
+  (`e2e/sidebar-collapse-marks.spec.ts`) checks at 1280×900 and 1024×720, active
+  tile included, that every mark, ring included, stays inside its tile, sits on
+  its own corner, and meets no other mark and no caption.
 - **Dividers**: section titles become `sr-only`, and every section, the first
   included, starts with an `aria-hidden` line:
   ```

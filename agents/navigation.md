@@ -420,7 +420,7 @@ after that midnight. Only the tag expires; the link itself stays until it is rem
 by hand. Labels never wrap: the label truncates, so keep it short enough to fit
 beside the tag in the 16rem rail (about 110px of label), and give the item a
 caption that fits the collapsed rail too. In the collapsed rail the chip becomes a
-red dot before the caption (see the collapsed rail below).
+red dot on the icon's top-left corner (see the collapsed rail below).
 
 **Accessible name.** An event link's name starts with the visible label and then
 adds the full name, so voice control can use the visible text and screen readers
@@ -544,8 +544,11 @@ once.
   Expanded keeps the top-side badge tooltip on the icon and no tooltip on the
   label.
 - **Live** is decided by the same `isEventLinkLive`. Instead of the chip, a red dot
-  sits before the caption (`aria-hidden`), and "Live" stays in the accessible name
-  as `sr-only` text.
+  sits on the icon's top-left corner (`aria-hidden`), and "Live" stays in the
+  accessible name as `sr-only` text. Each signal on a rail icon has its own corner:
+  Live top-left, the count bubble top-right, the green lobby dot bottom-right. The
+  caption stays plain text, in the same place whether the item is live or not (see
+  `agents/styling.md`, collapsed rail, icon marks).
 - **Logo and actions.** The logo is a 40px mark and still fires the seasonal burst.
   Join and Play are stacked square tiles captioned "Join" and "Play", with the full
   names ("Join Server", "Launch Game") as `sr-only` text. Join is the same `NavLink`

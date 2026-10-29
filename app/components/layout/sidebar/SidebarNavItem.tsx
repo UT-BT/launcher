@@ -17,13 +17,17 @@ interface SidebarNavItemProps {
     onActivate: () => void
 }
 
-function NavItemIcon({ icon: Icon, active, badge, badgeTooltip }: { icon: ElementType; active: boolean; badge: NavBadge | null; badgeTooltip: boolean }) {
-    const glyph = (
+function NavGlyph({ icon: Icon, active }: { icon: ElementType; active: boolean }) {
+    return (
         <Icon className={cn(
             "size-5 transition-colors duration-200",
             active ? "text-accent-400" : "group-hover:text-accent-400/80"
         )} />
     )
+}
+
+function NavItemIcon({ icon, active, badge }: { icon: ElementType; active: boolean; badge: NavBadge | null }) {
+    const glyph = <NavGlyph icon={icon} active={active} />
 
     if (!badge) return <span className="relative z-10 flex shrink-0">{glyph}</span>
 
@@ -39,8 +43,6 @@ function NavItemIcon({ icon: Icon, active, badge, badgeTooltip }: { icon: Elemen
         </>
     )
 
-    if (!badgeTooltip) return <span className="relative z-10 inline-flex shrink-0 items-center">{marks}</span>
-
     return (
         <Tooltip
             side="top"
@@ -53,6 +55,30 @@ function NavItemIcon({ icon: Icon, active, badge, badgeTooltip }: { icon: Elemen
         >
             {marks}
         </Tooltip>
+    )
+}
+
+function RailItemIcon({ icon, active, badge, live }: { icon: ElementType; active: boolean; badge: NavBadge | null; live: boolean }) {
+    return (
+        <span className="relative z-10 flex shrink-0">
+            <NavGlyph icon={icon} active={active} />
+            {live && (
+                <span aria-hidden data-testid="rail-mark-live" className={cn(
+                    "absolute -top-px size-2.5 rounded-full bg-red-500 ring-2 ring-card",
+                    (badge?.count ?? 0) > 99 ? "-left-4.5" : "-left-2.5"
+                )} />
+            )}
+            {badge?.count != null && (
+                <span aria-hidden data-testid="rail-mark-count" className="absolute -top-px -right-[5px] inline-flex items-center justify-center min-w-4 h-4 px-1 rounded-full bg-accent-500 text-white text-[10px] font-black leading-none tabular-nums ring-2 ring-card shadow-[0_0_8px_rgb(var(--accent-glow-rgb)/0.5)]">
+                    {badge.count > 99 ? '99+' : badge.count}
+                </span>
+            )}
+            {badge?.live && (
+                <span data-testid="rail-mark-lobby" className="absolute -bottom-px -right-5 flex">
+                    <LiveDot className="ring-2 ring-card" />
+                </span>
+            )}
+        </span>
     )
 }
 
@@ -91,14 +117,16 @@ export function SidebarNavItem({ item, destination, active, badge, live, collaps
                 <span className="absolute inset-0 bg-gradient-to-r from-accent-600/20 to-red-600/20 border-l-2 border-accent-500" />
             )}
 
-            <NavItemIcon icon={item.icon} active={active} badge={badge} badgeTooltip={!collapsed} />
             {collapsed ? (
-                <span className="relative z-10 flex max-w-full items-center gap-1">
-                    {live && <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-red-500" />}
-                    <span className="min-w-0 truncate text-[10px] leading-tight font-medium">{caption}</span>
-                </span>
+                <>
+                    <RailItemIcon icon={item.icon} active={active} badge={badge} live={live} />
+                    <span data-testid="rail-caption" className="relative z-10 max-w-full truncate text-[10px] leading-tight font-medium">{caption}</span>
+                </>
             ) : (
-                <span className="relative z-10 min-w-0 truncate font-medium">{item.label}</span>
+                <>
+                    <NavItemIcon icon={item.icon} active={active} badge={badge} />
+                    <span className="relative z-10 min-w-0 truncate font-medium">{item.label}</span>
+                </>
             )}
             {collapsed && caption !== item.label && <span className="sr-only">{item.label}</span>}
             {item.eventLink && <span className="sr-only">{item.eventLink.fullName}</span>}

@@ -142,20 +142,23 @@ test('a live cup link shows its full event name and Live in the tooltip and keep
     await expectBesideRail(page, tooltip, cup)
 })
 
-test('a live cup link shows a dot before its caption that the finished event does not', async ({ page }) => {
+test('a live cup link puts its caption where the finished event does and marks its icon instead', async ({ page }) => {
     await page.clock.setFixedTime(new Date(2026, 10, 20, 12, 0))
     await openCollapsed(page)
-    const caption = railLink(page, /2v2 World Cup 2026/).getByText('2v2 Cup', { exact: true })
+    const cup = railLink(page, /2v2 World Cup 2026/)
+    const caption = cup.getByText('2v2 Cup', { exact: true })
+    await expect(cup.getByTestId('rail-mark-live')).toBeVisible()
     const liveCaption = await box(caption)
-    const tile = await box(railLink(page, /2v2 World Cup 2026/))
-    const centredWhenLive = Math.abs((liveCaption.x + liveCaption.width / 2) - (tile.x + tile.width / 2))
+    const tile = await box(cup)
 
     await page.clock.setFixedTime(new Date(2026, 11, 1, 12, 0))
     await page.reload()
     await expect(sidebarToggle(page)).toHaveAccessibleName('Expand sidebar')
+    await expect(cup.getByTestId('rail-mark-live')).toHaveCount(0)
     const finishedCaption = await box(caption)
-    expect(liveCaption.x - finishedCaption.x).toBeGreaterThanOrEqual(4)
-    expect(Math.abs((finishedCaption.x + finishedCaption.width / 2) - (tile.x + tile.width / 2))).toBeLessThan(centredWhenLive)
+    expect(Math.abs(liveCaption.x - finishedCaption.x)).toBeLessThanOrEqual(0.5)
+    expect(Math.abs(liveCaption.y - finishedCaption.y)).toBeLessThanOrEqual(0.5)
+    expect(Math.abs((liveCaption.x + liveCaption.width / 2) - (tile.x + tile.width / 2))).toBeLessThanOrEqual(0.5)
 })
 
 test('a finished cup link drops Live from its tooltip and its name', async ({ page }) => {
