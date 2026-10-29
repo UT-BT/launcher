@@ -334,12 +334,14 @@ collapsed rail). Switching modes is instant: nothing in the sidebar may use
   ```
   "size-12 [@media(max-height:800px)]:size-11 flex-col gap-0.5 px-0 has-[>svg]:px-0"
   ```
-- **Logo** (`SidebarBrand`): `size-10` with `p-4` (`p-2` on short windows).
-- **Toggle row** (`SidebarCollapseToggle`): an `h-10` ghost row,
-  `text-muted-foreground hover:text-foreground hover:bg-hairline/5 transition-colors`,
-  whose `size-5` icon keeps the same position in both modes.
-- **User card**: the card keeps the same height in both modes, so the toggle above
-  it doesn't move. Collapsed, the rarity border and glow move from the card
+- **Logo** (`SidebarBrand`): `size-10` with `px-4 pb-4 pt-14` (`px-2 pb-2 pt-12` on
+  short windows); the taller top padding leaves room for the toggle above it.
+- **Toggle** (`SidebarCollapseToggle`): a 36px (`size-9`) icon-only ghost button with a
+  `size-5` icon,
+  `rounded-lg text-muted-foreground hover:text-foreground hover:bg-hairline/10 transition-colors`.
+  `SidebarBrand` places it `absolute left-[22px] top-3` (`top-2` on short windows), so
+  it is centred 40px from the sidebar's left edge at the same spot in both modes.
+- **User card**: collapsed, it sizes to its content. The rarity border and glow move from the card
   rectangle to a ring around the avatar: from rarity 3 a 2px ring in the title
   colour, and at rarity 5 also the 15px glow with the existing
   `animate-pulse-slow` on the ring (one per page, so within the runtime budget).
@@ -781,7 +783,7 @@ tokens and rules on top of the locked ones above. Nothing here is a new design s
   badge is the medal gold (`yellow`), never the pick/ban decider gold. A match's Red or Blue tag uses the
   `pickban-a` / `pickban-b` tones (`sideColorTag`).
 - **Bespoke rules live in lazy stylesheets.** Tailwind puts every utility it finds in the sources into the one
-  entry stylesheet, lazy chunk or not, and the initial CSS budget (35 KiB gzip) has almost no headroom.
+  entry stylesheet, lazy chunk or not, and the initial CSS budget (36 KiB gzip) has almost no headroom.
   So a rule that needs `--team-accent` or a one-off template goes in a stats stylesheet imported by the lazy
   chunk: `teamCards.css` (`.team-cards` grid, `.team-card` accent glow and hover border,
   `.team-card-avatar` accent ring), `overviewStats.css` (the map table's pick and ban bars, the glance map-art

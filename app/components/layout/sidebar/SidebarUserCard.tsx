@@ -257,13 +257,6 @@ export function SidebarUserCard({
                                 <UserAvatar userProfile={userProfile} />
                             </button>
                         </DropdownMenuTrigger>
-                        <UserIdentity
-                            name={name}
-                            patreonTier={patreonTier}
-                            title={userProfile.active_title}
-                            titleStyle={titleStyle}
-                            className="w-0 overflow-hidden invisible"
-                        />
                     </div>
                 ) : (
                     <DropdownMenuTrigger asChild>

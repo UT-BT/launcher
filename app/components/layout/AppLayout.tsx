@@ -233,7 +233,12 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
             >
                 <div className="absolute inset-0 bg-gradient-to-b from-accent-900/10 to-transparent pointer-events-none" />
 
-                <SidebarBrand logo={logo} season={season} collapsed={collapsed} />
+                <SidebarBrand
+                    logo={logo}
+                    season={season}
+                    collapsed={collapsed}
+                    toggle={isMobileViewport ? null : <SidebarCollapseToggle collapsed={collapsed} onToggle={toggleCollapsed} />}
+                />
 
                 <SidebarActions
                     installValid={isInstallValid}
@@ -271,8 +276,6 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                         </div>
                     ))}
                 </nav>
-
-                <SidebarCollapseToggle collapsed={collapsed} onToggle={toggleCollapsed} />
 
                 <SidebarUserCard
                     userProfile={userProfile}

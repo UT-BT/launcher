@@ -304,10 +304,10 @@ don't reintroduce centering).
   desktop layout.
 - **Rail at `lg` and up, drawer below.** At `lg+` the sidebar is a rail beside
   the content, expanded (16rem) or collapsed (5rem, icon tiles with short
-  captions), toggled by the toggle row above the user card or `Ctrl+B` / `⌘B`,
+  captions), toggled by the icon button in the sidebar's top-left corner or `Ctrl+B` / `⌘B`,
   on both targets. The choice is remembered per device
   (`utbt:sidebarCollapsed:v1`). Below `lg` the collapse preference is ignored:
-  the drawer always shows the full expanded sidebar, the toggle row is hidden
+  the drawer always shows the full expanded sidebar, the toggle is hidden
   and the shortcut isn't attached. A window resized across 1024px switches
   between the two and back, and a stored collapsed choice reapplies at `lg+`.
   Details in `agents/navigation.md` (sidebar parts and the collapsed rail).
@@ -384,7 +384,7 @@ payload is currently **~185 KiB JS + 34 KiB CSS gzip**, enforced by
 - `npm run check:bundle` reads `dist-web/.vite/manifest.json` and measures the
   real **initial payload** (the entry plus its transitive static imports plus
   their CSS), not the largest chunk. Budgets (gzip): initial JS 190 KiB, initial
-  CSS 35 KiB, initial total 222 KiB, largest lazy chunk 120 KiB, **app JS 900
+  CSS 36 KiB, initial total 224 KiB, largest lazy chunk 120 KiB, **app JS 900
   KiB** (every JS file except those only the stream scene pages load) and
   **stream scene JS 120 KiB** (files reachable only from the stream scene root,
   which never load in the app). The last two replace the old single 750 KiB

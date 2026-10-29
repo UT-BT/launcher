@@ -11,20 +11,17 @@ export function SidebarCollapseToggle({ collapsed, onToggle }: SidebarCollapseTo
     const name = collapsed ? 'Expand sidebar' : 'Collapse sidebar'
 
     return (
-        <div className="max-lg:hidden px-4 py-2 relative z-10">
-            <Tooltip content={`${name} (Ctrl+B)`} side={collapsed ? 'right' : 'top'} className="w-full">
-                <button
-                    type="button"
-                    aria-label={name}
-                    aria-expanded={!collapsed}
-                    aria-controls="app-navigation"
-                    onClick={onToggle}
-                    className="w-full h-10 flex items-center gap-4 px-3.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-hairline/5 transition-colors cursor-pointer"
-                >
-                    <Icon className="size-5 shrink-0" />
-                    {!collapsed && <span className="text-sm font-medium">Collapse</span>}
-                </button>
-            </Tooltip>
-        </div>
+        <Tooltip content={`${name} (Ctrl+B)`} side="right" className="max-lg:hidden">
+            <button
+                type="button"
+                aria-label={name}
+                aria-expanded={!collapsed}
+                aria-controls="app-navigation"
+                onClick={onToggle}
+                className="size-9 inline-flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-hairline/10 transition-colors cursor-pointer"
+            >
+                <Icon className="size-5" />
+            </button>
+        </Tooltip>
     )
 }

@@ -177,18 +177,6 @@ for (const withError of [false, true]) {
     })
 }
 
-test('the collapsed signed-out card keeps the expanded card height, so the toggle stays put', async ({ page }) => {
-    await page.setViewportSize({ width: 1280, height: 900 })
-    await page.goto('/')
-    const expanded = await loginButton(page).evaluate(button => button.closest('aside')!.lastElementChild!.getBoundingClientRect().height)
-
-    await sidebarToggle(page).click()
-    await expect(sidebarToggle(page)).toHaveAccessibleName('Expand sidebar')
-    const collapsed = await loginButton(page).evaluate(button => button.closest('aside')!.lastElementChild!.getBoundingClientRect().height)
-
-    expect(Math.abs(collapsed - expanded)).toBeLessThanOrEqual(1)
-})
-
 test.describe('signed in', () => {
     test.beforeEach(async ({ page }) => {
         await page.setViewportSize({ width: 1280, height: 900 })
@@ -230,16 +218,15 @@ test.describe('signed in', () => {
         await expect.poll(async () => { const box = (await menu.boundingBox())!; return box.y + box.height }).toBeLessThanOrEqual(cardBox!.y)
     })
 
-    test('the collapsed card keeps the expanded card height and nothing overflows the rail', async ({ page }) => {
+    test('the collapsed card sizes to its avatar and nothing overflows the rail', async ({ page }) => {
         await page.goto('/')
-        const lastCard = () => sidebarRail(page).evaluate(rail => rail.lastElementChild!.getBoundingClientRect().height)
         await expect(sidebarRail(page).getByText(TITLE, { exact: true })).toBeVisible()
-        const expanded = await lastCard()
 
         await sidebarToggle(page).click()
         await expect(sidebarToggle(page)).toHaveAccessibleName('Expand sidebar')
         await expect(profileTrigger(page)).toBeVisible()
-        expect(Math.abs(await lastCard() - expanded)).toBeLessThanOrEqual(1)
+        await expect(sidebarRail(page).getByText(PLAYER_NAME, { exact: true })).toHaveCount(0)
+        await expect(sidebarRail(page).getByText(TITLE, { exact: true })).toHaveCount(0)
         expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1)
         expect(await sidebarRail(page).evaluate(rail => rail.scrollWidth - rail.clientWidth)).toBeLessThanOrEqual(0)
 

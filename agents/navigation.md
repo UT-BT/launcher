@@ -486,7 +486,7 @@ parts only render:
 | `SidebarBrand` | the logo and its seasonal-burst click |
 | `SidebarActions` | Join Server, and Launch Game behind `capabilities.game` with its disabled state |
 | `SidebarNavItem` | one nav row or rail tile: icon, badges, label or caption, Live chip or dot, tooltip |
-| `SidebarCollapseToggle` | the collapse toggle row |
+| `SidebarCollapseToggle` | the icon-only collapse toggle, placed in `SidebarBrand`'s top-left corner |
 | `SidebarUserCard` | the signed-in profile dropdown, or the signed-out Discord login and its error |
 
 `SidebarActions` and `SidebarUserCard` read capabilities through `usePlatform()`
@@ -497,7 +497,7 @@ desktop-only markup from its entry chunk.
 sidebar) or collapsed (5rem, icons over short captions). The effective mode is
 `collapsed = collapsePreference && !isMobileViewport`: the preference applies only
 at `lg` and up. Below `lg` the drawer is always the full expanded sidebar, the
-toggle row is hidden and the shortcut isn't attached; the stored choice is kept
+toggle is hidden and the shortcut isn't attached; the stored choice is kept
 and comes back when the window is wide again. `AppLayout` publishes the rail's
 width as `--sidebar-width` on `document.documentElement` (`16rem`, `5rem`, or `0px`
 below `lg`) in a layout effect, so overlays that sit beside the rail follow it
@@ -510,14 +510,18 @@ table). It is read once as the `useState` initialiser, so a collapsed rail is
 painted collapsed on the first frame, with no flash. `toggleCollapsed` writes it
 and then sets state; nothing else writes it.
 
-**The toggle row.** `SidebarCollapseToggle` sits between the nav and the user card,
-`max-lg:hidden`. It is a `button` named "Collapse sidebar" or "Expand sidebar", with
+**The toggle.** `SidebarCollapseToggle` is a small icon-only `button`,
+`max-lg:hidden`, named "Collapse sidebar" or "Expand sidebar", with
 `aria-expanded={!collapsed}` and `aria-controls="app-navigation"` (the `aside`'s
-id). Expanded it shows `PanelLeftClose` and the word "Collapse"; collapsed it shows
-`PanelLeftOpen` alone. Its tooltip reads "Collapse sidebar (Ctrl+B)" or "Expand
-sidebar (Ctrl+B)" and opens on top when expanded, on the right when collapsed. The
-icon stays in the same place in both modes, so the user card under it must keep the
-same height in both modes.
+id). It shows `PanelLeftClose` when expanded and `PanelLeftOpen` when collapsed, with
+no visible text in either mode. Its tooltip reads "Collapse sidebar (Ctrl+B)" or
+"Expand sidebar (Ctrl+B)" and opens on the right in both modes. `AppLayout` passes it
+to `SidebarBrand` as `toggle`, which pins it to the sidebar's top-left corner: centred
+on the collapsed rail's centre line (40px from the left edge) at the same height in
+both modes. Expanded, it sits in the logo header's corner, clear of the centred logo,
+and nothing else moves; collapsed, the header grows at the top so the small logo sits
+directly below it. It is the sidebar's first focusable control, before Join. Below
+`lg` `AppLayout` doesn't render it at all, so it never enters the drawer's focus trap.
 
 **The shortcut.** `Ctrl+B` or `⌘B` toggles the rail. The listener is on `window`
 and is attached only at `lg` and up. It acts when the key is `b` (any case) with
