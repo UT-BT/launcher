@@ -1,18 +1,8 @@
-import { ElementType, ReactNode, lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
-import { FaDiscord } from 'react-icons/fa'
-import { Server, Trophy, Settings, LogOut, Play, User, Menu } from 'lucide-react'
+import { ReactNode, lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { LogOut, Menu } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from '@/app/components/ui/dropdown-menu'
 import { Button } from '@/app/components/ui/button'
 import { NavHistoryBar } from '@/app/components/navigation/NavHistoryBar'
-import { NavLink } from '@/app/components/navigation/NavLink'
 import { buildNavSections, isEventLinkLive, isNavItemActive, navItemDestination, type NavBadge } from '@/app/components/navigation/nav-items'
 import type { NavParams } from '@/app/components/navigation/NavigationContext'
 import { useNavigation } from '@/app/components/navigation/NavigationContext'
@@ -24,17 +14,18 @@ const SettingsModal = lazy(loadSettingsModal)
 const ChangeTitleModal = lazy(() => import('@/app/components/modals/ChangeTitleModal').then(m => ({ default: m.ChangeTitleModal })))
 import { PageRefreshProvider } from '@/app/components/navigation/PageRefreshContext'
 
-import { UserProfile, avatarSizeFor, getAvatarUrl } from '@/app/utils/api'
-import { Tooltip } from '@/app/components/ui/tooltip'
+import { UserProfile } from '@/app/utils/api'
 import { usePatreonTier } from '@/app/utils/patreon'
-import { PatreonBadge } from '@/app/components/shared/PatreonBadge'
-import { LiveDot } from '@/app/components/shared/LiveDot'
-import { CHIP_SHAPE, LIVE_CHIP_STYLE } from '@/app/components/shared/chipStyles'
 import { IS_WEB, usePlatform } from '@/app/platform'
-import { prefetchPage } from '@/app/components/main/pageLoaders'
-import { SeasonalAmbient, fireSeasonalBurst } from '@/app/seasonal/lazyDecor'
+import { SeasonalAmbient } from '@/app/seasonal/lazyDecor'
 import { useSeason } from '@/app/seasonal/SeasonProvider'
 import { logoFor } from '@/app/seasonal/logos'
+import { SidebarActions } from '@/app/components/layout/sidebar/SidebarActions'
+import { SidebarBrand } from '@/app/components/layout/sidebar/SidebarBrand'
+import { SidebarNavItem } from '@/app/components/layout/sidebar/SidebarNavItem'
+import { SidebarUserCard } from '@/app/components/layout/sidebar/SidebarUserCard'
+
+const SIDEBAR_WIDTH_EXPANDED = '16rem'
 
 interface AppLayoutProps {
     children: ReactNode
@@ -43,65 +34,6 @@ interface AppLayoutProps {
     getNavBadge?: (view: string, params: NavParams) => NavBadge | null
     userProfile?: UserProfile
     installationStatus?: 'valid' | 'no-install' | 'unsupported' | null
-}
-
-function NavItemIcon({ icon: Icon, active, badge }: { icon: ElementType; active: boolean; badge: NavBadge | null }) {
-    const glyph = (
-        <Icon className={cn(
-            "size-5 transition-colors duration-200",
-            active ? "text-accent-400" : "group-hover:text-accent-400/80"
-        )} />
-    )
-
-    if (!badge) return <span className="relative z-10 flex shrink-0">{glyph}</span>
-
-    return (
-        <Tooltip
-            side="top"
-            className="z-10 shrink-0"
-            content={
-                <span className="flex flex-col gap-0.5">
-                    {badge.details.map(line => <span key={line}>{line}</span>)}
-                </span>
-            }
-        >
-            {glyph}
-            {badge.count != null && (
-                <span aria-hidden className="absolute -top-1.5 -right-1.5 inline-flex items-center justify-center min-w-4 h-4 px-1 rounded-full bg-accent-500 text-white text-[10px] font-black leading-none tabular-nums ring-2 ring-card shadow-[0_0_8px_rgb(var(--accent-glow-rgb)/0.5)]">
-                    {badge.count > 99 ? '99+' : badge.count}
-                </span>
-            )}
-            {badge.live && <LiveDot className="absolute -bottom-1 -right-1 ring-2 ring-card" />}
-        </Tooltip>
-    )
-}
-
-function getRarityStyles(title: { rarity: number, color_r: number, color_g: number, color_b: number } | undefined | null) {
-    if (!title) return { containerStyle: {}, titleStyle: {}, containerClass: '', titleClass: '' }
-
-    const { rarity, color_r, color_g, color_b } = title
-    const rgb = `rgb(${color_r}, ${color_g}, ${color_b})`
-
-    const containerStyle: React.CSSProperties = {}
-    const titleStyle: React.CSSProperties = { color: rarity >= 2 ? rgb : undefined }
-    let containerClass = ''
-    let titleClass = ''
-
-    if (rarity >= 3) {
-        containerStyle.borderColor = rgb
-    }
-
-    if (rarity >= 4) {
-        titleClass = 'animate-pulse-slow'
-        titleStyle.textShadow = `0 0 10px ${rgb}`
-    }
-
-    if (rarity >= 5) {
-        containerClass = 'animate-pulse-slow'
-        containerStyle.boxShadow = `0 0 15px ${rgb}`
-    }
-
-    return { containerStyle, titleStyle, containerClass, titleClass }
 }
 
 export function AppLayout({ children, currentView, onViewChange, getNavBadge, userProfile, installationStatus }: AppLayoutProps) {
@@ -126,7 +58,6 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
     const [isSettingsOpen, setIsSettingsOpen] = useState(false)
     const [isChangeTitleOpen, setIsChangeTitleOpen] = useState(false)
     const [settingsInitialSection, setSettingsInitialSection] = useState<string | undefined>(undefined)
-    const { containerStyle, titleStyle, containerClass, titleClass } = getRarityStyles(userProfile?.active_title)
     const patreonTier = usePatreonTier(userProfile?.id ?? undefined)
     const navSections = useMemo(() => buildNavSections(userProfile), [userProfile])
     const now = new Date()
@@ -163,6 +94,14 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
         mobileQuery.addEventListener('change', handleViewportChange)
         return () => mobileQuery.removeEventListener('change', handleViewportChange)
     }, [])
+
+    useLayoutEffect(() => {
+        const root = document.documentElement
+        root.style.setProperty('--sidebar-width', isMobileViewport ? '0px' : SIDEBAR_WIDTH_EXPANDED)
+        return () => {
+            root.style.removeProperty('--sidebar-width')
+        }
+    }, [isMobileViewport])
 
     useEffect(() => {
         const sidebar = sidebarRef.current
@@ -256,61 +195,19 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                 aria-label="Primary navigation"
                 tabIndex={-1}
                 className={cn(
-                "w-64 bg-card/50 backdrop-blur-xl border-r border-hairline/10 flex flex-col relative z-20",
+                "w-[var(--sidebar-width,0px)] bg-card/50 backdrop-blur-xl border-r border-hairline/10 flex flex-col relative z-20",
                 "max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:z-50 max-lg:w-72 max-lg:max-w-[85vw] max-lg:bg-card/95 max-lg:transition-transform max-lg:duration-200",
                 mobileNavOpen ? "max-lg:translate-x-0" : "max-lg:-translate-x-full"
                 )}
             >
                 <div className="absolute inset-0 bg-gradient-to-b from-accent-900/10 to-transparent pointer-events-none" />
 
-                <div className="p-6 [@media(max-height:800px)]:p-3 max-lg:hidden flex flex-col items-center relative z-10">
-                    <img
-                        src={logo}
-                        alt="UTBT Logo"
-                        onClick={season ? event => {
-                            const rect = event.currentTarget.getBoundingClientRect()
-                            fireSeasonalBurst(season, rect.left + rect.width / 2, rect.top + rect.height / 2)
-                        } : undefined}
-                        className="w-24 h-24 [@media(max-height:800px)]:w-14 [@media(max-height:800px)]:h-14 object-contain drop-shadow-[0_0_15px_rgb(var(--accent-glow-rgb)/0.3)] mb-4 [@media(max-height:800px)]:mb-0 transition-all hover:scale-105 duration-300"
-                    />
-                </div>
+                <SidebarBrand logo={logo} season={season} />
 
-                <div className={cn(
-                    'px-4 mb-6 [@media(max-height:800px)]:mb-3 relative z-10 space-y-2',
-                    !capabilities.game && 'max-lg:hidden max-lg:mb-0',
-                )}>
-                    <Button
-                        asChild
-                        variant="ghost"
-                        className="w-full h-11 bg-accent-500/15 border border-accent-500/40 text-accent-200 hover:bg-accent-500/25 hover:text-foreground hover:border-accent-500/60 hover:shadow-[0_0_20px_rgba(59,130,246,0.25)] transition-all font-semibold rounded-lg"
-                    >
-                        <NavLink view="servers" onActivate={() => changeView('servers')}>
-                            <Server className="size-4" />
-                            Join Server
-                        </NavLink>
-                    </Button>
-                    {capabilities.game && (isInstallValid ? (
-                        <Button
-                            variant="ghost"
-                            className="w-full h-9 bg-card/50 border border-hairline/10 text-muted-foreground hover:text-foreground hover:bg-card/80 hover:border-hairline/20 transition-colors rounded-lg font-medium"
-                            onClick={() => window.conveyor.game.launchGameStandalone()}
-                        >
-                            <Play className="size-4 fill-current" />
-                            Launch Game
-                        </Button>
-                    ) : (
-                        <Tooltip content="No valid UT99 installation found" side="top" className="w-full">
-                            <Button
-                                variant="ghost"
-                                disabled
-                                className="w-full h-9 bg-card/30 border border-hairline/5 text-muted-foreground/60 cursor-not-allowed rounded-lg font-medium"
-                            >
-                                <Play className="size-4 fill-current" />
-                                Launch Game
-                            </Button>
-                        </Tooltip>
-                    ))}
-                </div>
+                <SidebarActions
+                    installValid={isInstallValid}
+                    onJoinServer={() => changeView('servers')}
+                />
 
                 <nav className="flex-1 min-h-0 overflow-y-auto px-4 max-lg:pt-6 space-y-6 [@media(max-height:800px)]:space-y-3 relative z-10">
                     {navSections.map((section) => (
@@ -319,151 +216,33 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                                 {section.title}
                             </h3>
                             {section.items.map((item) => {
-                                const { view: destinationView, params: destinationParams } = navItemDestination(item)
-                                const badge = getNavBadge?.(destinationView, destinationParams) ?? null
-                                const active = isNavItemActive(item, currentView, currentParams)
+                                const destination = navItemDestination(item)
                                 return (
-                                <NavLink
-                                    key={item.id}
-                                    view={destinationView}
-                                    params={destinationParams}
-                                    onPointerEnter={() => prefetchPage(destinationView)}
-                                    onFocus={() => prefetchPage(destinationView)}
-                                    onActivate={() => changeView(destinationView, destinationParams)}
-                                    className={cn(
-                                        "w-full flex items-center gap-4 px-4 py-3 [@media(max-height:800px)]:py-2 rounded-lg transition-all duration-200 cursor-pointer group relative overflow-hidden",
-                                        active
-                                            ? "text-foreground shadow-[0_0_20px_rgba(29,78,216,0.3)]"
-                                            : "text-muted-foreground hover:text-foreground hover:bg-hairline/5"
-                                    )}
-                                >
-                                    {active && (
-                                        <span className="absolute inset-0 bg-gradient-to-r from-accent-600/20 to-red-600/20 border-l-2 border-accent-500" />
-                                    )}
-
-                                    <NavItemIcon icon={item.icon} active={active} badge={badge} />
-                                    <span className="relative z-10 min-w-0 truncate font-medium">{item.label}</span>
-                                    {item.eventLink && <span className="sr-only">{item.eventLink.fullName}</span>}
-                                    {badge && <span className="sr-only">{badge.details.join('. ')}</span>}
-                                    {item.eventLink && isEventLinkLive(item.eventLink, now) && (
-                                        <span className={cn('relative z-10 ml-auto shrink-0', CHIP_SHAPE, LIVE_CHIP_STYLE)}>
-                                            Live
-                                        </span>
-                                    )}
-                                </NavLink>
+                                    <SidebarNavItem
+                                        key={item.id}
+                                        item={item}
+                                        destination={destination}
+                                        active={isNavItemActive(item, currentView, currentParams)}
+                                        badge={getNavBadge?.(destination.view, destination.params) ?? null}
+                                        live={!!item.eventLink && isEventLinkLive(item.eventLink, now)}
+                                        onActivate={() => changeView(destination.view, destination.params)}
+                                    />
                                 )
                             })}
                         </div>
                     ))}
                 </nav>
 
-                <div className="p-4 border-t border-hairline/10 relative z-10">
-                                        {!userProfile ? (
-                        <div className="space-y-2">
-                            {loginError && (
-                                <p className="px-1 text-xs text-red-400 text-center">{loginError}</p>
-                            )}
-                            <button
-                                onClick={() => { setLoginError(null); void auth.login() }}
-                                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-foreground bg-[#5865F2] hover:bg-[#4752C4] active:bg-[#3C45A5] rounded-lg transition-all duration-200 text-sm font-medium shadow-lg hover:shadow-[#5865F2]/25 cursor-pointer"
-                            >
-                                <FaDiscord className="size-4" />
-                                <span>Login with Discord</span>
-                            </button>
-
-                        </div>
-                    ) : (
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <div className="relative group cursor-pointer outline-none">
-                                <div
-                                    className={cn(
-                                        "absolute inset-0 rounded-lg bg-hairline/5 border border-hairline/5 transition-colors group-hover:bg-hairline/10",
-                                        containerClass
-                                    )}
-                                    style={containerStyle}
-                                />
-                                <div className="relative flex items-center gap-3 px-4 py-2">
-                                    <div className="size-8 rounded-full bg-gradient-to-br from-accent-500 to-red-500 p-[1px]">
-                                        {userProfile?.id ? (
-                                            <img
-                                                src={getAvatarUrl(userProfile.id, avatarSizeFor(32))}
-                                                alt="Avatar"
-                                                width={32}
-                                                height={32}
-                                                loading="lazy"
-                                                decoding="async"
-                                                className="w-full h-full rounded-full object-cover"
-                                                onError={e => {
-                                                    const fallbackIdx = userProfile.discordId
-                                                        ? Number(userProfile.discordId) % 5
-                                                        : 0
-                                                    ;(e.target as HTMLImageElement).src = `https://cdn.discordapp.com/embed/avatars/${fallbackIdx}.png`
-                                                }}
-                                            />
-                                        ) : (
-                                            <div className="w-full h-full rounded-full bg-black/50 backdrop-blur-sm" />
-                                        )}
-                                    </div>
-                                    <div className="flex flex-col flex-1 min-w-0 text-left">
-                                        <div className="flex items-center gap-1.5 min-w-0">
-                                            <span className="text-sm font-medium truncate">{userProfile?.alias || userProfile?.username || 'Player'}</span>
-                                            {patreonTier !== 0 && <PatreonBadge tier={patreonTier} size="sm" />}
-                                        </div>
-                                        {userProfile?.active_title ? (
-                                            <span
-                                                className={cn("text-xs font-medium truncate", titleClass)}
-                                                style={titleStyle}
-                                            >
-                                                {userProfile.active_title.name}
-                                            </span>
-                                        ) : null}
-                                    </div>
-                                </div>
-                            </div>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent side="top" align="center" className="w-56 bg-card/95 backdrop-blur-xl border-hairline/10">
-                            <DropdownMenuLabel>{userProfile?.alias || userProfile?.username || 'Player'}</DropdownMenuLabel>
-                            <DropdownMenuSeparator className="bg-hairline/10" />
-                            {userProfile?.id != null && String(userProfile.id).length > 5 && (
-                                <DropdownMenuItem
-                                    onClick={() => window.dispatchEvent(new CustomEvent('open-player', { detail: { userId: userProfile.id } }))}
-                                    className="text-muted-foreground focus:text-foreground focus:bg-hairline/10 cursor-pointer mb-1"
-                                >
-                                    <User className="mr-2 size-4" />
-                                    <span>View Profile</span>
-                                </DropdownMenuItem>
-                            )}
-                            <DropdownMenuItem
-                                onClick={() => setIsChangeTitleOpen(true)}
-                                className="text-muted-foreground focus:text-foreground focus:bg-hairline/10 cursor-pointer mb-1"
-                            >
-                                <Trophy className="mr-2 size-4" />
-                                <span>Change Title</span>
-                            </DropdownMenuItem>
-                            {capabilities.settingsModal && (
-                                <DropdownMenuItem
-                                    onPointerEnter={() => void loadSettingsModal()}
-                                    onFocus={() => void loadSettingsModal()}
-                                    onClick={() => setIsSettingsOpen(true)}
-                                    className="text-muted-foreground focus:text-foreground focus:bg-hairline/10 cursor-pointer mb-1"
-                                >
-                                    <Settings className="mr-2 size-4" />
-                                    <span>Settings</span>
-                                </DropdownMenuItem>
-                            )}
-                            <DropdownMenuSeparator className="bg-hairline/10" />
-                            <DropdownMenuItem
-                                onClick={() => setShowLogoutConfirm(true)}
-                                className="text-red-500 focus:text-red-500 focus:bg-red-500/10 cursor-pointer"
-                            >
-                                <LogOut className="mr-2 size-4" />
-                                <span>Sign out</span>
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                    )}
-                </div>
+                <SidebarUserCard
+                    userProfile={userProfile}
+                    patreonTier={patreonTier}
+                    loginError={loginError}
+                    onLogin={() => { setLoginError(null); void auth.login() }}
+                    onChangeTitle={() => setIsChangeTitleOpen(true)}
+                    onSettingsIntent={() => void loadSettingsModal()}
+                    onOpenSettings={() => setIsSettingsOpen(true)}
+                    onSignOut={() => setShowLogoutConfirm(true)}
+                />
             </aside>
 
             {/* Main Content */}

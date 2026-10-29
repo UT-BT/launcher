@@ -16,7 +16,7 @@ export function AnalyticsConsentBanner({ onChoice }: { onChoice: () => void }) {
   return createPortal(
     <>
       <div
-        className="fixed left-1/2 lg:left-[calc(50%+8rem)] w-[calc(100vw-24px)] lg:w-[calc(100vw-280px)] max-w-3xl -translate-x-1/2 z-[45] rounded-xl border border-border bg-card p-4 shadow-2xl"
+        className="fixed left-[calc(50%_+_var(--sidebar-width,0px)/2)] w-[calc(100vw_-_24px_-_var(--sidebar-width,0px))] max-w-3xl -translate-x-1/2 z-[45] rounded-xl border border-border bg-card p-4 shadow-2xl"
         style={{
           top: 'auto',
           right: 'auto',

@@ -415,7 +415,7 @@ export function GameInputSettings() {
 
             {/* Editing Overlay */}
             {editingBind && createPortal(
-                <div data-modal-backdrop className="fixed top-[var(--window-titlebar-height)] right-0 bottom-0 left-0 lg:left-64 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+                <div data-modal-backdrop className="fixed top-[var(--window-titlebar-height)] right-0 bottom-0 left-[var(--sidebar-width,0px)] z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
                     <div className="bg-card border border-border p-6 rounded-lg shadow-lg max-w-sm w-full text-center space-y-4 animate-in zoom-in-95 duration-200">
                         <h3 className="text-lg font-bold">Press any key</h3>
                         <p className="text-muted-foreground">Press a key to bind to <b>{BIND_CATEGORIES.flatMap(c => c.binds).find(b => b.command === editingBind.command)?.label}</b></p>
@@ -432,7 +432,7 @@ export function GameInputSettings() {
                 title="Bind Conflict"
                 portal
                 className="max-w-lg"
-                backdropClassName="left-64"
+                backdropClassName="left-[var(--sidebar-width,0px)]"
                 footer={
                     <div className="p-4 border-t border-border bg-muted/50 flex justify-end gap-2 shrink-0">
                         <Button variant="outline" onClick={() => setConflictInfo(null)}>Cancel</Button>
