@@ -4,14 +4,14 @@ read_when:
   - "styling a new page, button, table, form, chip, card, or modal"
   - "choosing a color, radius, spacing, or animation"
   - "you see drift from a token and are tempted to add a variant"
-keywords: [broadcast, BROADCAST_SURFACE, broadcastTone, broadcastMotion, broadcastFonts, transparent stage, streamScenes.css, theme.css, @source not, screenshot, toHaveScreenshot, broadcast project, tailwind, cn, DataTable, tokens, colors, button, card, white/5, bg-card, animation, framer-motion, reduced motion, table-fixed, align]
+keywords: [broadcast, BROADCAST_SURFACE, broadcastTone, broadcastMotion, broadcastFonts, transparent stage, streamScenes.css, theme.css, @source not, screenshot, toHaveScreenshot, broadcast project, tailwind, cn, DataTable, tokens, colors, button, card, white/5, bg-card, animation, framer-motion, reduced motion, table-fixed, align, sidebar, collapsed rail, rail tile, caption, --sidebar-width, offsetSidebar, Tooltip side]
 provides: "the locked design tokens + the canonical class strings"
 not_here:
   - "which component to use → shared-components.md"
   - "state / persistence → state-patterns.md"
-sections: [class-merging, tables-locked, responsive-columns, page-layout, filter-panel, buttons-toggle-states, form-inputs, card-backgrounds-borders, text, color-palette, seasonal-themes, animation, css-runtime-cost, event-stats-styling, broadcast-styling, scene-stylesheet, screenshot-conventions, donts]
+sections: [class-merging, tables-locked, responsive-columns, page-layout, sidebar-width, tooltip-sides, filter-panel, buttons-toggle-states, collapsed-rail, form-inputs, card-backgrounds-borders, text, color-palette, seasonal-themes, animation, css-runtime-cost, event-stats-styling, broadcast-styling, scene-stylesheet, screenshot-conventions, donts]
 last_verified: 2026-10-29
-verify_against: [app/components/shared/DataTable.tsx, app/components/shared/LiveDot.tsx, app/components/shared/chipStyles.ts, app/styles/globals.css, app/styles/theme.css, app/styles/desktop.css, app/styles/index.css, lib/utils.ts, app/hooks/useElementWidth.ts, app/hooks/usePrefersReducedMotion.ts, app/components/broadcast/broadcastTone.ts, app/components/broadcast/broadcastMotion.ts, app/components/broadcast/broadcastFonts.ts, app/components/broadcast/broadcastFonts.css, app/components/broadcast/BroadcastStage.tsx, app/components/stream/streamScenes.css, app/components/stream/frame/SceneFrame.tsx, e2e/streamHarness.ts, playwright.config.ts, app/components/stream/scenes/overlay/overlayLayout.ts, app/components/stream/scenes/betting/bettingLayout.ts, app/components/stream/scenes/nextMap/NextMapHero.tsx, e2e/audio-balance.broadcast.spec.ts, app/components/stream/scenes/PredictorStandingsScene.tsx, app/components/stream/scenes/standings/predictorStandingsFit.ts, app/components/stream/scenes/standings/predictorStandingsView.ts, app/components/stream/scenes/standings/PredictorStandingsBoard.tsx, app/components/pages/events/stats/teamAccents.css, app/components/pages/events/stats/teamAccent.ts, app/components/pages/events/stats/teamAccent.test.ts, app/components/pages/events/stats/teamCards.css, app/components/pages/events/stats/overviewStats.css, app/components/pages/events/stats/team/teamPageAccents.css, app/components/pages/events/stats/team/teamPageView.ts, app/components/pages/events/stats/CupAtAGlance.tsx, app/components/pages/events/stats/MapStatsTable.tsx, app/styles/seasons.css, app/styles/seasons.test.ts, app/seasonal/seasons.ts, app/seasonal/SeasonProvider.tsx, app/seasonal/lazyDecor.tsx, app/seasonal/SeasonalDecor.tsx, app/seasonal/logos.ts, scripts/render-seasonal-logos.mjs, app/seasonal/decor/ambient.tsx, app/seasonal/decor/ambient.css, app/seasonal/decor/burst.ts, app/seasonal/decor/glyphs.tsx, e2e/seasonal.spec.ts]
+verify_against: [app/components/shared/DataTable.tsx, app/components/shared/LiveDot.tsx, app/components/shared/chipStyles.ts, app/styles/globals.css, app/styles/theme.css, app/styles/desktop.css, app/styles/index.css, lib/utils.ts, app/hooks/useElementWidth.ts, app/hooks/usePrefersReducedMotion.ts, app/components/broadcast/broadcastTone.ts, app/components/broadcast/broadcastMotion.ts, app/components/broadcast/broadcastFonts.ts, app/components/broadcast/broadcastFonts.css, app/components/broadcast/BroadcastStage.tsx, app/components/stream/streamScenes.css, app/components/stream/frame/SceneFrame.tsx, e2e/streamHarness.ts, playwright.config.ts, app/components/stream/scenes/overlay/overlayLayout.ts, app/components/stream/scenes/betting/bettingLayout.ts, app/components/stream/scenes/nextMap/NextMapHero.tsx, e2e/audio-balance.broadcast.spec.ts, app/components/stream/scenes/PredictorStandingsScene.tsx, app/components/stream/scenes/standings/predictorStandingsFit.ts, app/components/stream/scenes/standings/predictorStandingsView.ts, app/components/stream/scenes/standings/PredictorStandingsBoard.tsx, app/components/pages/events/stats/teamAccents.css, app/components/pages/events/stats/teamAccent.ts, app/components/pages/events/stats/teamAccent.test.ts, app/components/pages/events/stats/teamCards.css, app/components/pages/events/stats/overviewStats.css, app/components/pages/events/stats/team/teamPageAccents.css, app/components/pages/events/stats/team/teamPageView.ts, app/components/pages/events/stats/CupAtAGlance.tsx, app/components/pages/events/stats/MapStatsTable.tsx, app/styles/seasons.css, app/styles/seasons.test.ts, app/seasonal/seasons.ts, app/seasonal/SeasonProvider.tsx, app/seasonal/lazyDecor.tsx, app/seasonal/SeasonalDecor.tsx, app/seasonal/logos.ts, scripts/render-seasonal-logos.mjs, app/seasonal/decor/ambient.tsx, app/seasonal/decor/ambient.css, app/seasonal/decor/burst.ts, app/seasonal/decor/glyphs.tsx, e2e/seasonal.spec.ts, app/components/layout/AppLayout.tsx, app/components/layout/sidebar/SidebarNavItem.tsx, app/components/layout/sidebar/SidebarBrand.tsx, app/components/layout/sidebar/SidebarActions.tsx, app/components/layout/sidebar/SidebarCollapseToggle.tsx, app/components/layout/sidebar/SidebarUserCard.tsx, app/components/ui/tooltip.tsx, app/components/ui/modal.tsx]
 ---
 
 # Styling reference
@@ -165,6 +165,40 @@ composite stacked cells (Maps WR/PB = time + sub-label) keeps everything
 
 Icon buttons in header: `p-2 rounded-md text-muted-foreground hover:text-white hover:bg-white/5 transition-colors cursor-pointer`.
 
+### Sidebar width
+
+The sidebar's width is one CSS custom property, `--sidebar-width`, which
+`AppLayout` sets on `document.documentElement`: `16rem` expanded, `5rem` collapsed,
+`0px` below `lg` (where the sidebar is a drawer over the page). It is set in a
+layout effect before first paint and removed on unmount, so an overlay that renders
+before the layout (the boot-time `ErrorModal`) falls back to `0px`. The `aside`
+itself is `w-[var(--sidebar-width,0px)]`; the drawer's `max-lg:w-72` wins below `lg`.
+
+Anything that sits beside the rail reads the property, always with the `0px`
+fallback, and never hard-codes `16rem`, `lg:pl-64` or `256px`:
+- `Modal` `offsetSidebar` (`app/components/ui/modal.tsx`) pads the backdrop
+  `pl-[calc(var(--sidebar-width,0px)_+_1rem)]`, the rail plus the backdrop's own
+  1rem, so an offset dialog is centred exactly over the content area in both modes,
+  and centred on the viewport on phones;
+- `ErrorModal`'s non-fullscreen backdrop, the Game Input key-capture overlay and the
+  bind-conflict dialog start at `left-[var(--sidebar-width,0px)]`;
+- `AnalyticsConsentBanner` centres on the content area with
+  `left-[calc(50%_+_var(--sidebar-width,0px)/2)]` and
+  `w-[calc(100vw_-_24px_-_var(--sidebar-width,0px))]`.
+
+A new overlay that should leave the rail visible uses the same pattern; a modal
+uses `offsetSidebar`.
+
+### Tooltip sides
+
+The shared `Tooltip` (`app/components/ui/tooltip.tsx`) takes `side="top"`
+(default), `"bottom"` or `"right"`. Top and bottom flip when there is no room.
+`right` places the box 10px right of the trigger, vertically centred on it,
+clamped between the titlebar's bottom + 8px and the viewport bottom − 8px and kept
+inside the viewport horizontally; the arrow points left at the trigger's middle.
+Use `right` for anything in the collapsed rail (nav tiles, the toggle, the disabled
+Play tile), so the tooltip opens over the page instead of over the rail.
+
 ## Filter panel
 
 ```tsx
@@ -198,13 +232,17 @@ Count badge inside toggle: `text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-
 
 Primary CTA (driving users to a key action):
 ```
-"w-full h-11 bg-accent-500/15 border border-accent-500/40 text-accent-200 hover:bg-accent-500/25 hover:text-white hover:border-accent-500/60 hover:shadow-[0_0_20px_rgba(59,130,246,0.25)] transition-all font-semibold rounded-lg"
+"w-full h-11 bg-accent-500/15 border border-accent-500/40 text-accent-200 hover:bg-accent-500/25 hover:text-foreground hover:border-accent-500/60 hover:shadow-[0_0_20px_rgba(59,130,246,0.25)] transition font-semibold rounded-lg"
 ```
 
 Secondary action (muted):
 ```
-"w-full h-9 bg-card/50 border border-white/10 text-muted-foreground hover:text-white hover:bg-card/80 hover:border-white/20 transition-colors rounded-lg font-medium"
+"w-full h-9 bg-card/50 border border-hairline/10 text-muted-foreground hover:text-foreground hover:bg-card/80 hover:border-hairline/20 transition-colors rounded-lg font-medium"
 ```
+
+The CTA uses `transition`, not `transition-all`, so its colour and glow still
+animate but its size doesn't when the rail collapses (see collapsed rail below). In
+the collapsed rail `w-full h-11` / `w-full h-9` is swapped for the tile shape.
 
 ### Sidebar status tag
 
@@ -245,7 +283,90 @@ room for them.
   component, so all three read as one signal.
 
 Both marks are `aria-hidden`. Their meaning goes into a `sr-only` span after the
-label, and into the shared `Tooltip` on the icon, one line per detail.
+label, and into the shared `Tooltip` on the icon, one line per detail. In the
+collapsed rail the marks stay on the icon, placed for the rail tile (see collapsed
+rail, icon marks), and lose their own tooltip; the lines join the tile's
+right-side tooltip instead.
+
+### Collapsed rail
+
+At `lg` and up the sidebar can collapse to a 5rem rail (`--sidebar-width: 5rem`,
+see sidebar width; behaviour in `agents/navigation.md`, sidebar parts and the
+collapsed rail). Switching modes is instant: nothing in the sidebar may use
+`transition-all` or animate width, padding, gap or size. Use `transition` or
+`transition-colors`, so only colour, shadow and the logo's hover scale animate.
+
+- **Rail tile** (`SidebarNavItem`, collapsed): the icon over a caption, at least
+  44px tall, and the full width of the nav (79px less `px-1.5`), so the whole tile
+  is the click target. The active overlay and hover look are the expanded row's.
+  ```
+  "flex-col items-center justify-center gap-1 min-h-11 px-1 py-1.5 [@media(max-height:800px)]:py-1"
+  ```
+- **Caption**: `navItemCaption(item)`, one line, never wrapped, plain centred text
+  with nothing before it.
+  ```
+  "max-w-full truncate text-[10px] leading-tight font-medium"
+  ```
+  **The "labels about 110px" rule covers captions too.** A caption has about 59px
+  at 10px (`system-ui`): "Achievements" measured 63px and overflowed, which is why
+  it captions as "Awards". When a label won't fit that box, give the item a
+  `shortLabel`; never let a caption truncate. The rail e2e asserts no caption
+  overflows.
+- **Icon marks**: one corner of the icon per signal, each `aria-hidden` with the
+  `ring-2 ring-card` cutout. The rail places them for its tile, not with the
+  expanded offsets:
+  - **Live dot**, top-left: the collapsed form of the sidebar status tag, a static
+    red dot the size of the lobby dot. It never animates, so it reads apart from the
+    pinging emerald lobby dot (red vs emerald, top-left vs bottom-right, static vs
+    pinging). The tooltip's "Live" line uses the chip's text red, `text-red-300`.
+    ```
+    "absolute -top-px -left-2.5 size-2.5 rounded-full bg-red-500 ring-2 ring-card"
+    ```
+    It moves out to `-left-4.5` when the count shows `99+`, so the wider bubble
+    never meets it.
+  - **Count bubble**, top-right: the expanded bubble's look at
+    `absolute -top-px -right-[5px]`. It grows leftwards over the icon.
+  - **Lobby dot**, bottom-right: `<LiveDot className="ring-2 ring-card" />` in an
+    `absolute -bottom-px -right-5 flex` wrapper.
+
+  The tile leaves 6px above the icon (4px under `max-height: 800px`) and 4px under
+  it before the caption, so no mark sits more than 1px past the icon's top or
+  bottom edge, and every ring stays inside the tile's `overflow-hidden`. That
+  leaves no height to stack the bubble over the lobby dot, so the lobby dot sits to
+  the right of the bubble instead, and the bubble grows left. Counts up to 99 clear
+  the Live dot where it sits; `99+` clears it once the dot moves out. The caption
+  stays where a non-live item's is. The marks e2e
+  (`e2e/sidebar-collapse-marks.spec.ts`) checks at 1280×900 and 1024×720, active
+  tile included, that every mark, ring included, stays inside its tile, sits on
+  its own corner, and meets no other mark and no caption.
+- **Dividers**: section titles become `sr-only`, and every section, the first
+  included, starts with an `aria-hidden` line:
+  ```
+  "mx-3 mb-2 border-t border-hairline/10"
+  ```
+- **Nav**: `px-1.5 space-y-2`, `overflow-x-hidden` and a hidden scrollbar
+  (`[scrollbar-width:none]`), because a Windows scrollbar would take about 11px of
+  the 80px rail. The list still scrolls by wheel, touch and focus. Expanded keeps
+  its scrollbar.
+- **Action tiles** (`SidebarActions`): Join and Play are stacked squares, 48px
+  (44px under `max-height: 800px`), the icon (`size-5`) over a `text-[10px]`
+  caption, each keeping its expanded colouring and disabled look:
+  ```
+  "size-12 [@media(max-height:800px)]:size-11 flex-col gap-0.5 px-0 has-[>svg]:px-0"
+  ```
+- **Logo** (`SidebarBrand`): `size-10` with `px-4 pb-4 pt-14` (`px-2 pb-2 pt-12` on
+  short windows); the taller top padding leaves room for the toggle above it.
+- **Toggle** (`SidebarCollapseToggle`): a 36px (`size-9`) icon-only ghost button with a
+  `size-5` icon,
+  `rounded-lg text-muted-foreground hover:text-foreground hover:bg-hairline/10 transition-colors`.
+  `SidebarBrand` places it `absolute left-[22px] top-3` (`top-2` on short windows), so
+  it is centred 40px from the sidebar's left edge at the same spot in both modes.
+- **User card**: collapsed, it sizes to its content. The rarity border and glow move from the card
+  rectangle to a ring around the avatar: from rarity 3 a 2px ring in the title
+  colour, and at rarity 5 also the 15px glow with the existing
+  `animate-pulse-slow` on the ring (one per page, so within the runtime budget).
+  Signed out, the Discord button is a `size-10` square. The collapsed login-error
+  popover is `bg-popover/95` with a red border and no backdrop blur.
 
 ### Action chips inside table rows (Join, Spec, etc.)
 
@@ -682,7 +803,7 @@ tokens and rules on top of the locked ones above. Nothing here is a new design s
   badge is the medal gold (`yellow`), never the pick/ban decider gold. A match's Red or Blue tag uses the
   `pickban-a` / `pickban-b` tones (`sideColorTag`).
 - **Bespoke rules live in lazy stylesheets.** Tailwind puts every utility it finds in the sources into the one
-  entry stylesheet, lazy chunk or not, and the initial CSS budget (35 KiB gzip) has almost no headroom.
+  entry stylesheet, lazy chunk or not, and the initial CSS budget (36 KiB gzip) has almost no headroom.
   So a rule that needs `--team-accent` or a one-off template goes in a stats stylesheet imported by the lazy
   chunk: `teamCards.css` (`.team-cards` grid, `.team-card` accent glow and hover border,
   `.team-card-avatar` accent ring), `overviewStats.css` (the map table's pick and ban bars, the glance map-art
@@ -896,6 +1017,8 @@ Scenes are checked visually at 1920×1080 with Playwright (`playwright.config.ts
   `bg-card` / `bg-popover` so modals + `<option>`s flip in the Light theme. Use
   `*-hairline/<n>` not `white/<n>`, and `text-foreground` not `text-white` (except
   text on a solid colour fill, which stays white).
+- Don't hard-code the sidebar width (`16rem`, `lg:pl-64`, `256px`) — read
+  `var(--sidebar-width,0px)` or use `Modal` `offsetSidebar` (see sidebar width).
 - Don't re-roll table styling inline — use `DataTable.*` primitives.
 - Don't re-roll preset menus, columns menus, player avatars, map thumbnails, favorite stars — use the shared components.
 - Don't put rarity/title styling outside `PlayerInfo`.

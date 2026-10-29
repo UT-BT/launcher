@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
+import type { UserProfile } from '@/app/utils/api'
 import type { EventAttention, EventAttentionMap } from '@/app/utils/eventAttention'
+import { ROLE } from '@/app/utils/roles'
 import {
-    attentionNavBadge, BASE_NAV_SECTIONS, eventSlugOfView, isEventLinkLive, isNavItemActive, navItemDestination,
-    newSinceVisitBadge, resolveNavBadge, type NavItem,
+    attentionNavBadge, BASE_NAV_SECTIONS, buildNavSections, eventSlugOfView, isEventLinkLive, isNavItemActive,
+    navItemCaption, navItemDestination, newSinceVisitBadge, resolveNavBadge, type NavItem,
 } from './nav-items'
 
 const mapsItem: NavItem = { id: 'maps', label: 'Maps', icon: () => null }
@@ -75,6 +77,38 @@ describe('BASE_NAV_SECTIONS registry', () => {
     it('makes the cup item an event link to the 2v2 World Cup 2026, live until 2026-11-22', () => {
         expect(cupItem.label).toBe('2v2 Cup')
         expect(cupItem.eventLink).toEqual({ slug: '2v2-cup-2026', fullName: '2v2 World Cup 2026', liveUntil: '2026-11-22' })
+    })
+})
+
+describe('navItemCaption', () => {
+    const adminVisibleItems = buildNavSections({ utbt_role: ROLE.ADMIN } as UserProfile).flatMap(section => section.items)
+
+    it('uses the short label when one is set', () => {
+        expect(navItemCaption({ ...mapsItem, shortLabel: 'Map' })).toBe('Map')
+    })
+
+    it('falls back to the label without a short label', () => {
+        expect(navItemCaption(mapsItem)).toBe('Maps')
+    })
+
+    it('captions World Records as Records', () => {
+        const worldRecords = adminVisibleItems.find(item => item.id === 'world-records')!
+        expect(navItemCaption(worldRecords)).toBe('Records')
+    })
+
+    it('captions Achievements as Awards, because its label overflows a rail tile', () => {
+        const achievements = adminVisibleItems.find(item => item.id === 'achievements')!
+        expect(navItemCaption(achievements)).toBe('Awards')
+    })
+
+    it('captions every other registry item with its label', () => {
+        const others = adminVisibleItems.filter(item => item.id !== 'world-records' && item.id !== 'achievements')
+        expect(others.map(navItemCaption)).toEqual(others.map(item => item.label))
+    })
+
+    it('gives every registry item a non-empty caption, including the Staff section\'s Admin', () => {
+        expect(adminVisibleItems.map(item => item.id)).toContain('admin')
+        for (const item of adminVisibleItems) expect(navItemCaption(item).trim()).not.toBe('')
     })
 })
 

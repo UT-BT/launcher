@@ -3,21 +3,29 @@ import { createPortal } from 'react-dom'
 import { Info } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
+type TooltipSide = 'top' | 'bottom' | 'right'
+
 interface TooltipProps {
     content: ReactNode
     children?: ReactNode
     className?: string
-    side?: 'top' | 'bottom'
+    side?: TooltipSide
 }
 
 const EDGE_PAD = 8
 const GAP = 10
 
+const ARROW_CLASS: Record<TooltipSide, string> = {
+    top: 'top-full -translate-x-1/2 -mt-[5px] border-t-popover/95',
+    bottom: 'bottom-full -translate-x-1/2 -mb-[5px] border-b-popover/95',
+    right: 'right-full -translate-y-1/2 -mr-[5px] border-r-popover/95',
+}
+
 export function Tooltip({ content, children, className, side = 'top' }: TooltipProps) {
     const [isVisible, setIsVisible] = useState(false)
     const [placed, setPlaced] = useState(false)
-    const [coords, setCoords] = useState({ top: 0, left: 0, arrowLeft: 0 })
-    const [resolvedSide, setResolvedSide] = useState<'top' | 'bottom'>(side)
+    const [coords, setCoords] = useState({ top: 0, left: 0, arrowOffset: 0 })
+    const [resolvedSide, setResolvedSide] = useState<TooltipSide>(side)
     const triggerRef = useRef<HTMLSpanElement>(null)
     const tooltipRef = useRef<HTMLDivElement>(null)
 
@@ -41,23 +49,32 @@ export function Tooltip({ content, children, className, side = 'top' }: TooltipP
         const titlebar = document.querySelector('.window-titlebar')
         const topBound = (titlebar ? titlebar.getBoundingClientRect().bottom : 0) + EDGE_PAD
 
-        let nextSide: 'top' | 'bottom' = side
+        let nextSide: TooltipSide = side
         if (side === 'top' && trigger.top - GAP - tip.height < topBound) {
             nextSide = 'bottom'
         } else if (side === 'bottom' && trigger.bottom + GAP + tip.height > vh - EDGE_PAD) {
             nextSide = 'top'
         }
 
-        const top = nextSide === 'bottom' ? trigger.bottom + GAP : trigger.top - GAP - tip.height
-
-        const center = trigger.left + trigger.width / 2
         const maxLeft = Math.max(EDGE_PAD, vw - EDGE_PAD - tip.width)
-        const left = Math.min(Math.max(center - tip.width / 2, EDGE_PAD), maxLeft)
-        // Keep the arrow pointing at the trigger even when the box is clamped.
-        const arrowLeft = Math.min(Math.max(center - left, 12), tip.width - 12)
+        const middle = trigger.top + trigger.height / 2
+        const center = trigger.left + trigger.width / 2
+
+        let top: number
+        let left: number
+        if (nextSide === 'right') {
+            top = Math.min(Math.max(middle - tip.height / 2, topBound), Math.max(topBound, vh - EDGE_PAD - tip.height))
+            left = Math.min(trigger.right + GAP, maxLeft)
+        } else {
+            top = nextSide === 'bottom' ? trigger.bottom + GAP : trigger.top - GAP - tip.height
+            left = Math.min(Math.max(center - tip.width / 2, EDGE_PAD), maxLeft)
+        }
+        const arrowOffset = nextSide === 'right'
+            ? Math.min(Math.max(middle - top, 12), tip.height - 12)
+            : Math.min(Math.max(center - left, 12), tip.width - 12)
 
         setResolvedSide(nextSide)
-        setCoords({ top, left, arrowLeft })
+        setCoords({ top, left, arrowOffset })
         setPlaced(true)
     }, [isVisible, side, content])
 
@@ -84,11 +101,10 @@ export function Tooltip({ content, children, className, side = 'top' }: TooltipP
                     style={{ top: coords.top, left: coords.left }}
                 >
                     {content}
-                    {resolvedSide === 'bottom' ? (
-                        <div className="absolute bottom-full -translate-x-1/2 -mb-[5px] border-[5px] border-transparent border-b-popover/95" style={{ left: coords.arrowLeft }} />
-                    ) : (
-                        <div className="absolute top-full -translate-x-1/2 -mt-[5px] border-[5px] border-transparent border-t-popover/95" style={{ left: coords.arrowLeft }} />
-                    )}
+                    <div
+                        className={cn('absolute border-[5px] border-transparent', ARROW_CLASS[resolvedSide])}
+                        style={resolvedSide === 'right' ? { top: coords.arrowOffset } : { left: coords.arrowOffset }}
+                    />
                 </div>,
                 document.body
             )}

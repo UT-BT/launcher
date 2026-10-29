@@ -88,7 +88,7 @@ export function ErrorModal({
 
     const containerClasses = fullScreen
         ? "fixed top-[var(--window-titlebar-height)] right-0 bottom-0 left-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-md p-4 animate-in fade-in duration-200"
-        : "fixed top-[var(--window-titlebar-height)] right-0 bottom-0 left-64 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+        : "fixed top-[var(--window-titlebar-height)] right-0 bottom-0 left-[var(--sidebar-width,0px)] z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200"
 
     return (
         <div data-modal-backdrop className={containerClasses}>
