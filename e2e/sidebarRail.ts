@@ -31,3 +31,33 @@ export async function centreX(locator: Locator): Promise<number> {
     if (!box) throw new Error('element has no bounding box')
     return box.x + box.width / 2
 }
+
+export const SIDEBAR_COLLAPSED_KEY = 'utbt:sidebarCollapsed:v1'
+
+export async function preseedCollapsedRail(page: Page) {
+    await page.addInitScript(key => {
+        if (localStorage.getItem(key) === null) localStorage.setItem(key, 'true')
+    }, SIDEBAR_COLLAPSED_KEY)
+}
+
+export function sidebarToggle(page: Page): Locator {
+    return sidebarRail(page).getByRole('button', { name: /^(Collapse|Expand) sidebar$/ })
+}
+
+export async function railWidth(page: Page): Promise<number> {
+    return sidebarRail(page).evaluate(rail => rail.getBoundingClientRect().width)
+}
+
+export function railTiles(page: Page): Locator {
+    return sidebarRail(page).getByRole('navigation').getByRole('link')
+}
+
+export async function overflowingRailText(page: Page): Promise<string[]> {
+    return sidebarRail(page).getByRole('navigation').evaluate(nav =>
+        Array.from(nav.querySelectorAll<HTMLElement>('a *'))
+            .filter(element => Array.from(element.childNodes).some(node => node.nodeType === Node.TEXT_NODE && node.textContent?.trim()))
+            .filter(element => element.getBoundingClientRect().width > 1)
+            .filter(element => element.scrollWidth > element.clientWidth)
+            .map(element => element.textContent ?? ''),
+    )
+}

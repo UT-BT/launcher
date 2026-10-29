@@ -1,4 +1,4 @@
-import { ReactNode, lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { ReactNode, lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { LogOut, Menu } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/app/components/ui/button'
@@ -22,10 +22,21 @@ import { useSeason } from '@/app/seasonal/SeasonProvider'
 import { logoFor } from '@/app/seasonal/logos'
 import { SidebarActions } from '@/app/components/layout/sidebar/SidebarActions'
 import { SidebarBrand } from '@/app/components/layout/sidebar/SidebarBrand'
+import { SidebarCollapseToggle } from '@/app/components/layout/sidebar/SidebarCollapseToggle'
 import { SidebarNavItem } from '@/app/components/layout/sidebar/SidebarNavItem'
 import { SidebarUserCard } from '@/app/components/layout/sidebar/SidebarUserCard'
+import { readSidebarCollapsed, writeSidebarCollapsed } from '@/app/components/layout/sidebarPreference'
 
 const SIDEBAR_WIDTH_EXPANDED = '16rem'
+const SIDEBAR_WIDTH_COLLAPSED = '5rem'
+
+function isTypingTarget(target: EventTarget | null): boolean {
+    return target instanceof HTMLElement && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))
+}
+
+function isToggleShortcut(event: KeyboardEvent): boolean {
+    return event.key.toLowerCase() === 'b' && event.ctrlKey !== event.metaKey && !event.altKey && !event.shiftKey
+}
 
 interface AppLayoutProps {
     children: ReactNode
@@ -46,6 +57,8 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
     const [isMobileViewport, setIsMobileViewport] = useState(
         () => window.matchMedia('(max-width: 1023px)').matches,
     )
+    const [collapsePreference, setCollapsePreference] = useState(readSidebarCollapsed)
+    const collapsed = collapsePreference && !isMobileViewport
     const mobileMenuButtonRef = useRef<HTMLButtonElement>(null)
     const sidebarRef = useRef<HTMLElement>(null)
 
@@ -97,11 +110,29 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
 
     useLayoutEffect(() => {
         const root = document.documentElement
-        root.style.setProperty('--sidebar-width', isMobileViewport ? '0px' : SIDEBAR_WIDTH_EXPANDED)
+        const width = isMobileViewport ? '0px' : collapsed ? SIDEBAR_WIDTH_COLLAPSED : SIDEBAR_WIDTH_EXPANDED
+        root.style.setProperty('--sidebar-width', width)
         return () => {
             root.style.removeProperty('--sidebar-width')
         }
-    }, [isMobileViewport])
+    }, [isMobileViewport, collapsed])
+
+    const toggleCollapsed = useCallback(() => {
+        const next = !collapsePreference
+        writeSidebarCollapsed(next)
+        setCollapsePreference(next)
+    }, [collapsePreference])
+
+    useEffect(() => {
+        if (isMobileViewport) return
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.defaultPrevented || !isToggleShortcut(event) || isTypingTarget(event.target)) return
+            event.preventDefault()
+            if (!event.repeat) toggleCollapsed()
+        }
+        window.addEventListener('keydown', handleKeyDown)
+        return () => window.removeEventListener('keydown', handleKeyDown)
+    }, [isMobileViewport, toggleCollapsed])
 
     useEffect(() => {
         const sidebar = sidebarRef.current
@@ -202,19 +233,26 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
             >
                 <div className="absolute inset-0 bg-gradient-to-b from-accent-900/10 to-transparent pointer-events-none" />
 
-                <SidebarBrand logo={logo} season={season} />
+                <SidebarBrand logo={logo} season={season} collapsed={collapsed} />
 
                 <SidebarActions
                     installValid={isInstallValid}
+                    collapsed={collapsed}
                     onJoinServer={() => changeView('servers')}
                 />
 
-                <nav className="flex-1 min-h-0 overflow-y-auto px-4 max-lg:pt-6 space-y-6 [@media(max-height:800px)]:space-y-3 relative z-10">
+                <nav className={cn(
+                    "flex-1 min-h-0 overflow-y-auto relative z-10",
+                    collapsed
+                        ? "overflow-x-hidden [scrollbar-width:none] px-1.5 space-y-2"
+                        : "px-4 max-lg:pt-6 space-y-6 [@media(max-height:800px)]:space-y-3"
+                )}>
                     {navSections.map((section) => (
-                        <div key={section.title} className="space-y-2">
-                            <h3 className="px-4 mb-1 text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider">
+                        <div key={section.title} className={collapsed ? "space-y-1" : "space-y-2"}>
+                            <h3 className={collapsed ? "sr-only" : "px-4 mb-1 text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider"}>
                                 {section.title}
                             </h3>
+                            {collapsed && <div aria-hidden className="mx-3 mb-2 border-t border-hairline/10" />}
                             {section.items.map((item) => {
                                 const destination = navItemDestination(item)
                                 return (
@@ -225,6 +263,7 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                                         active={isNavItemActive(item, currentView, currentParams)}
                                         badge={getNavBadge?.(destination.view, destination.params) ?? null}
                                         live={!!item.eventLink && isEventLinkLive(item.eventLink, now)}
+                                        collapsed={collapsed}
                                         onActivate={() => changeView(destination.view, destination.params)}
                                     />
                                 )
@@ -233,8 +272,11 @@ export function AppLayout({ children, currentView, onViewChange, getNavBadge, us
                     ))}
                 </nav>
 
+                <SidebarCollapseToggle collapsed={collapsed} onToggle={toggleCollapsed} />
+
                 <SidebarUserCard
                     userProfile={userProfile}
+                    collapsed={collapsed}
                     patreonTier={patreonTier}
                     loginError={loginError}
                     onLogin={() => { setLoginError(null); void auth.login() }}

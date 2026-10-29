@@ -7,15 +7,18 @@ import { usePlatform } from '@/app/platform'
 
 interface SidebarActionsProps {
     installValid: boolean
+    collapsed: boolean
     onJoinServer: () => void
 }
 
-export function SidebarActions({ installValid, onJoinServer }: SidebarActionsProps) {
+export function SidebarActions({ installValid, collapsed, onJoinServer }: SidebarActionsProps) {
     const { capabilities } = usePlatform()
+    const labelClass = collapsed ? 'sr-only' : undefined
 
     return (
         <div className={cn(
-            'px-4 mb-6 [@media(max-height:800px)]:mb-3 relative z-10 space-y-2',
+            'mb-6 [@media(max-height:800px)]:mb-3 relative z-10 space-y-2',
+            collapsed ? 'px-2' : 'px-4',
             !capabilities.game && 'max-lg:hidden max-lg:mb-0',
         )}>
             <Button
@@ -25,7 +28,7 @@ export function SidebarActions({ installValid, onJoinServer }: SidebarActionsPro
             >
                 <NavLink view="servers" onActivate={onJoinServer}>
                     <Server className="size-4" />
-                    Join Server
+                    <span className={labelClass}>Join Server</span>
                 </NavLink>
             </Button>
             {capabilities.game && (installValid ? (
@@ -35,7 +38,7 @@ export function SidebarActions({ installValid, onJoinServer }: SidebarActionsPro
                     onClick={() => window.conveyor.game.launchGameStandalone()}
                 >
                     <Play className="size-4 fill-current" />
-                    Launch Game
+                    <span className={labelClass}>Launch Game</span>
                 </Button>
             ) : (
                 <Tooltip content="No valid UT99 installation found" side="top" className="w-full">
@@ -45,7 +48,7 @@ export function SidebarActions({ installValid, onJoinServer }: SidebarActionsPro
                         className="w-full h-9 bg-card/30 border border-hairline/5 text-muted-foreground/60 cursor-not-allowed rounded-lg font-medium"
                     >
                         <Play className="size-4 fill-current" />
-                        Launch Game
+                        <span className={labelClass}>Launch Game</span>
                     </Button>
                 </Tooltip>
             ))}

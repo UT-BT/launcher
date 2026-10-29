@@ -43,7 +43,7 @@ export const BASE_NAV_SECTIONS: NavSection[] = [
         items: [
             { id: 'home', label: 'Home', icon: Home },
             { id: 'news', label: 'News', icon: Newspaper },
-            { id: 'achievements', label: 'Achievements', icon: Award },
+            { id: 'achievements', label: 'Achievements', shortLabel: 'Awards', icon: Award },
             {
                 id: 'cup-2v2-2026',
                 label: '2v2 Cup',

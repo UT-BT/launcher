@@ -1,7 +1,7 @@
 import type { ElementType } from 'react'
 import { cn } from '@/lib/utils'
 import { NavLink } from '@/app/components/navigation/NavLink'
-import type { NavBadge, NavDestination, NavItem } from '@/app/components/navigation/nav-items'
+import { navItemCaption, type NavBadge, type NavDestination, type NavItem } from '@/app/components/navigation/nav-items'
 import { Tooltip } from '@/app/components/ui/tooltip'
 import { LiveDot } from '@/app/components/shared/LiveDot'
 import { CHIP_SHAPE, LIVE_CHIP_STYLE } from '@/app/components/shared/chipStyles'
@@ -13,6 +13,7 @@ interface SidebarNavItemProps {
     active: boolean
     badge: NavBadge | null
     live: boolean
+    collapsed: boolean
     onActivate: () => void
 }
 
@@ -47,7 +48,9 @@ function NavItemIcon({ icon: Icon, active, badge }: { icon: ElementType; active:
     )
 }
 
-export function SidebarNavItem({ item, destination, active, badge, live, onActivate }: SidebarNavItemProps) {
+export function SidebarNavItem({ item, destination, active, badge, live, collapsed, onActivate }: SidebarNavItemProps) {
+    const caption = navItemCaption(item)
+
     return (
         <NavLink
             view={destination.view}
@@ -56,7 +59,10 @@ export function SidebarNavItem({ item, destination, active, badge, live, onActiv
             onFocus={() => prefetchPage(destination.view)}
             onActivate={onActivate}
             className={cn(
-                "w-full flex items-center gap-4 px-4 py-3 [@media(max-height:800px)]:py-2 rounded-lg transition-all duration-200 cursor-pointer group relative overflow-hidden",
+                "w-full flex rounded-lg transition duration-200 cursor-pointer group relative overflow-hidden",
+                collapsed
+                    ? "flex-col items-center justify-center gap-1 min-h-11 px-1 py-1.5 [@media(max-height:800px)]:py-1"
+                    : "items-center gap-4 px-4 py-3 [@media(max-height:800px)]:py-2",
                 active
                     ? "text-foreground shadow-[0_0_20px_rgba(29,78,216,0.3)]"
                     : "text-muted-foreground hover:text-foreground hover:bg-hairline/5"
@@ -67,10 +73,15 @@ export function SidebarNavItem({ item, destination, active, badge, live, onActiv
             )}
 
             <NavItemIcon icon={item.icon} active={active} badge={badge} />
-            <span className="relative z-10 min-w-0 truncate font-medium">{item.label}</span>
+            {collapsed ? (
+                <span className="relative z-10 max-w-full truncate text-[10px] leading-tight font-medium">{caption}</span>
+            ) : (
+                <span className="relative z-10 min-w-0 truncate font-medium">{item.label}</span>
+            )}
+            {collapsed && caption !== item.label && <span className="sr-only">{item.label}</span>}
             {item.eventLink && <span className="sr-only">{item.eventLink.fullName}</span>}
             {badge && <span className="sr-only">{badge.details.join('. ')}</span>}
-            {live && (
+            {live && !collapsed && (
                 <span className={cn('relative z-10 ml-auto shrink-0', CHIP_SHAPE, LIVE_CHIP_STYLE)}>
                     Live
                 </span>

@@ -96,8 +96,13 @@ describe('navItemCaption', () => {
         expect(navItemCaption(worldRecords)).toBe('Records')
     })
 
+    it('captions Achievements as Awards, because its label overflows a rail tile', () => {
+        const achievements = adminVisibleItems.find(item => item.id === 'achievements')!
+        expect(navItemCaption(achievements)).toBe('Awards')
+    })
+
     it('captions every other registry item with its label', () => {
-        const others = adminVisibleItems.filter(item => item.id !== 'world-records')
+        const others = adminVisibleItems.filter(item => item.id !== 'world-records' && item.id !== 'achievements')
         expect(others.map(navItemCaption)).toEqual(others.map(item => item.label))
     })
 

@@ -17,6 +17,7 @@ import { usePlatform } from '@/app/platform'
 
 interface SidebarUserCardProps {
     userProfile?: UserProfile
+    collapsed: boolean
     patreonTier: 0 | PatreonTier
     loginError: string | null
     onLogin: () => void
@@ -56,6 +57,7 @@ function getRarityStyles(title: { rarity: number, color_r: number, color_g: numb
 
 export function SidebarUserCard({
     userProfile,
+    collapsed,
     patreonTier,
     loginError,
     onLogin,
@@ -68,18 +70,18 @@ export function SidebarUserCard({
     const { containerStyle, titleStyle, containerClass, titleClass } = getRarityStyles(userProfile?.active_title)
 
     return (
-        <div className="p-4 border-t border-hairline/10 relative z-10">
+        <div className={cn("border-t border-hairline/10 relative z-10", collapsed ? "px-2 py-4" : "p-4")}>
             {!userProfile ? (
                 <div className="space-y-2">
                     {loginError && (
-                        <p className="px-1 text-xs text-red-400 text-center">{loginError}</p>
+                        <p className={cn("px-1 text-red-400 text-center", collapsed ? "text-[10px] break-words" : "text-xs")}>{loginError}</p>
                     )}
                     <button
                         onClick={onLogin}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-foreground bg-[#5865F2] hover:bg-[#4752C4] active:bg-[#3C45A5] rounded-lg transition-all duration-200 text-sm font-medium shadow-lg hover:shadow-[#5865F2]/25 cursor-pointer"
+                        className={cn("w-full flex items-center justify-center gap-2 py-2.5 text-foreground bg-[#5865F2] hover:bg-[#4752C4] active:bg-[#3C45A5] rounded-lg transition-all duration-200 text-sm font-medium shadow-lg hover:shadow-[#5865F2]/25 cursor-pointer", collapsed ? "h-10 px-0" : "px-4")}
                     >
                         <FaDiscord className="size-4" />
-                        <span>Login with Discord</span>
+                        <span className={collapsed ? "sr-only" : undefined}>Login with Discord</span>
                     </button>
 
                 </div>
@@ -94,7 +96,7 @@ export function SidebarUserCard({
                                 )}
                                 style={containerStyle}
                             />
-                            <div className="relative flex items-center gap-3 px-4 py-2">
+                            <div className={cn("relative flex items-center py-2", collapsed ? "justify-center" : "gap-3 px-4")}>
                                 <div className="size-8 rounded-full bg-gradient-to-br from-accent-500 to-red-500 p-[1px]">
                                     {userProfile?.id ? (
                                         <img
@@ -116,7 +118,7 @@ export function SidebarUserCard({
                                         <div className="w-full h-full rounded-full bg-black/50 backdrop-blur-sm" />
                                     )}
                                 </div>
-                                <div className="flex flex-col flex-1 min-w-0 text-left">
+                                <div className={cn("flex flex-col min-w-0 text-left", collapsed ? "w-0 overflow-hidden invisible" : "flex-1")}>
                                     <div className="flex items-center gap-1.5 min-w-0">
                                         <span className="text-sm font-medium truncate">{userProfile?.alias || userProfile?.username || 'Player'}</span>
                                         {patreonTier !== 0 && <PatreonBadge tier={patreonTier} size="sm" />}
