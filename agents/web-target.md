@@ -44,6 +44,9 @@ verify_against:
   - app/public/robots.txt
   - app/index.html
   - app/seasonal/lazyDecor.tsx
+  - app/platform/web/sessionRecovery.ts
+  - app/app.tsx
+  - e2e/session-recovery.spec.ts
 ---
 
 # Web target
@@ -127,6 +130,15 @@ on web.
    `POST /auth/discord/refresh` when within 5 min of expiry, stale-on-failure.
 4. Tokens are raw Discord bearers, so every existing `app/utils/api.ts` fetcher
    works unchanged once the profile is in React state.
+5. A token the API refuses at boot (`/users/me` → 401) never dead-ends the site.
+   `app.tsx` asks `platformAuth.recoverRejectedSession()`, which refreshes once:
+   success retries the profile with the new token; a refresh the API refuses
+   (4xx, e.g. `invalid_grant`) drops `utbt:webAuth:v1` and continues logged out
+   with "Your session expired. Please log in again."; a refresh that can't be
+   checked (5xx or offline) keeps the stored login for the next visit and
+   continues logged out with a "couldn't confirm your login" note. Both notes
+   show under the sidebar's login button (`consumeLoginError()`). Desktop
+   returns `unrecoverable`, so its boot behaviour is unchanged.
 
 Client-side API contract: `POST /auth/discord/token`
 (`{code, code_verifier, redirect_uri}` →

@@ -8,7 +8,7 @@ import { UpdaterProvider } from '@/app/hooks/useUpdater'
 const LoginPage = lazy(() => import('@/app/components/pages/LoginPage').then(m => ({ default: m.LoginPage })))
 const UpdateModal = lazy(() => import('@/app/components/updater/UpdateModal').then(m => ({ default: m.UpdateModal })))
 import { useLogger } from '@/app/hooks/use-logger'
-import { IS_WEB, platformAuth } from '@/app/platform'
+import { IS_WEB, isRejectedSession, platformAuth, type AuthProfile } from '@/app/platform'
 import { fetchUserProfile, UserProfile, fetchLatestActivity } from '@/app/utils/api'
 import { getTelemetryConsent, identifyTelemetry, initializeTelemetry, trackOutcome } from '@/app/utils/telemetry'
 import { AnalyticsConsentBanner } from '@/app/components/AnalyticsConsentBanner'
@@ -20,6 +20,20 @@ type InitResult =
   | { status: 'loggedin'; profile: UserProfile }
   | { status: 'loggedout' }
   | { status: 'error'; error: Error }
+
+async function loadFullProfile(authConfig: AuthProfile): Promise<UserProfile> {
+  const [extendedProfile, latestActivity] = await Promise.allSettled([
+    fetchUserProfile(authConfig.accessToken),
+    fetchLatestActivity(authConfig.accessToken)
+  ])
+  if (extendedProfile.status === 'rejected') throw extendedProfile.reason
+  if (latestActivity.status === 'rejected') throw latestActivity.reason
+  return {
+    ...authConfig,
+    ...extendedProfile.value,
+    latest_activity: latestActivity.value
+  }
+}
 
 export default function App() {
   const loggerRef = useRef(useLogger('App'))
@@ -44,18 +58,16 @@ export default function App() {
       }
 
       logger.info('Preload: User logged in, fetching extended profile')
-      const [extendedProfile, latestActivity] = await Promise.all([
-        fetchUserProfile(authConfig.accessToken),
-        fetchLatestActivity(authConfig.accessToken)
-      ])
-
-      const fullProfile: UserProfile = {
-        ...authConfig,
-        ...extendedProfile,
-        latest_activity: latestActivity
+      try {
+        return { status: 'loggedin', profile: await loadFullProfile(authConfig) }
+      } catch (error) {
+        if (!isRejectedSession(error)) throw error
+        logger.warn('Preload: login token rejected, trying to recover the session')
+        const recovery = await platformAuth.recoverRejectedSession(authConfig)
+        if (recovery.kind === 'unrecoverable') throw error
+        if (recovery.kind === 'signedOut') return { status: 'loggedout' }
+        return { status: 'loggedin', profile: await loadFullProfile(recovery.profile) }
       }
-
-      return { status: 'loggedin', profile: fullProfile }
 
     } catch (error: any) {
       logger.error('Preload failed', error)

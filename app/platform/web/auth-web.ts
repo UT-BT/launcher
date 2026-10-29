@@ -1,5 +1,6 @@
 import { API_BASE_URL } from '@/app/utils/api'
-import type { AuthProfile, PlatformAuth } from '../auth'
+import type { AuthProfile, PlatformAuth, SessionRecovery } from '../auth'
+import { AuthRequestError, refreshFailureIsFinal, SESSION_EXPIRED_MESSAGE, SESSION_UNCONFIRMED_MESSAGE } from './sessionRecovery'
 
 const DISCORD_CLIENT_ID = '989441174022520842'
 const DISCORD_AUTHORIZE_URL = 'https://discord.com/api/oauth2/authorize'
@@ -69,14 +70,19 @@ function persistProfile(profile: AuthProfile): boolean {
 }
 
 async function postAuthEndpoint(path: string, body: Record<string, string>): Promise<TokenResponse> {
-    const response = await fetch(`${API_BASE_URL}${path}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-    })
+    let response: Response
+    try {
+        response = await fetch(`${API_BASE_URL}${path}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        })
+    } catch {
+        throw new AuthRequestError('The login service could not be reached.', null)
+    }
     const payload = await response.json().catch(() => null)
     if (!response.ok || !payload?.success || !payload?.data?.access_token) {
-        throw new Error(payload?.error || `Auth request failed with status ${response.status}`)
+        throw new AuthRequestError(payload?.error || `Auth request failed with status ${response.status}`, response.status)
     }
     return payload.data as TokenResponse
 }
@@ -165,30 +171,49 @@ async function performRefresh(profile: AuthProfile): Promise<AuthProfile> {
     return next
 }
 
+function refreshOnce(profile: AuthProfile): Promise<AuthProfile> {
+    if (!refreshPromise) {
+        refreshPromise = performRefresh(profile).finally(() => {
+            refreshPromise = null
+        })
+    }
+    return refreshPromise
+}
+
 async function getWebProfile(): Promise<AuthProfile | undefined> {
     const profile = readStoredProfile()
     if (!profile) return undefined
 
     if (Date.now() > profile.expiresAt - REFRESH_MARGIN_MS) {
         try {
-            if (!refreshPromise) {
-                refreshPromise = performRefresh(profile).finally(() => {
-                    refreshPromise = null
-                })
-            }
-            return await refreshPromise
+            return await refreshOnce(profile)
         } catch (err) {
             if (Date.now() < profile.expiresAt) {
                 console.warn('Web token refresh failed; using the still-valid stored token', err)
                 return profile
             }
             window.localStorage.removeItem(AUTH_STORAGE_KEY)
-            loginError = 'Your session expired. Please log in again.'
+            loginError = SESSION_EXPIRED_MESSAGE
             return undefined
         }
     }
 
     return profile
+}
+
+async function recoverRejectedSession(profile: AuthProfile): Promise<SessionRecovery> {
+    try {
+        return { kind: 'refreshed', profile: await refreshOnce(profile) }
+    } catch (err) {
+        if (refreshFailureIsFinal(err)) {
+            window.localStorage.removeItem(AUTH_STORAGE_KEY)
+            loginError = SESSION_EXPIRED_MESSAGE
+        } else {
+            console.warn('Web login could not be confirmed; browsing logged out for now', err)
+            loginError = SESSION_UNCONFIRMED_MESSAGE
+        }
+        return { kind: 'signedOut' }
+    }
 }
 
 export const webAuth: PlatformAuth = {
@@ -203,4 +228,5 @@ export const webAuth: PlatformAuth = {
         loginError = null
         return error
     },
+    recoverRejectedSession,
 }
