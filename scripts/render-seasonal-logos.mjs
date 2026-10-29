@@ -89,41 +89,17 @@ const BEARD_POINTS = [
 ]
 
 const BEARD = smoothPath(BEARD_POINTS, true)
-const BEARD_TOP_EDGE = smoothPath(BEARD_TOP, false)
 
-function beardTopY(x) {
-  const line = [...BEARD_TOP].reverse()
-  for (let i = 1; i < line.length; i++) {
-    const [x0, y0] = line[i - 1]
-    const [x1, y1] = line[i]
-    if (x <= x1) return y0 + ((y1 - y0) * (Math.max(x, x0) - x0)) / (x1 - x0)
-  }
-  return line.at(-1)[1]
+function wedge(x, y, length, lean) {
+  const tipX = x - lean
+  const tipY = y - length
+  return `<path d="M ${x - 3.5} ${y + 1} C ${x - 4} ${y - length * 0.35} ${tipX - 1} ${y - length * 0.7} ${tipX} ${tipY} C ${tipX + 2} ${y - length * 0.7} ${x + 1} ${y - length * 0.35} ${x + 3.5} ${y + 1} Z"/>`
 }
 
-function beardStrands() {
-  return BEARD_TIPS.flatMap(([tx, ty], index) => [[-24, 0], [-11, 6]].map(([back, shorten]) => {
-    const sx = Math.max(248, tx + back)
-    const sy = beardTopY(sx) + 7 + (index % 2) * 3
-    const end = [tx + 2 + back / 6, ty - 12 - shorten]
-    const mid = (sy + end[1]) / 2
-    const sway = 9 + (index % 3) * 2
-    return `<path d="M ${sx} ${sy.toFixed(1)} C ${(sx + sway).toFixed(1)} ${(mid - 8).toFixed(1)} ${(end[0] - sway).toFixed(1)} ${(mid + 10).toFixed(1)} ${end[0].toFixed(1)} ${end[1].toFixed(1)}"/>`
-  })).join('')
-}
-
-function beardShading() {
-  return BEARD_VALLEYS.map(([vx, vy]) => `<path d="M ${vx} ${vy - 2} C ${vx - 3} ${vy - 12} ${vx - 1} ${vy - 20} ${vx - 4} ${vy - 28}"/>`).join('')
-}
-
-function beardRoots() {
-  const strokes = []
-  for (let x = 252; x <= 384; x += 10) {
-    const y = beardTopY(x)
-    const reach = 7 + ((x / 10) % 3) * 2.5
-    strokes.push(`<path d="M ${x} ${(y - 3).toFixed(1)} q 1.5 ${(reach / 2).toFixed(1)} 4 ${reach.toFixed(1)}"/>`)
-  }
-  return strokes.join('')
+function beardWedges() {
+  const valleys = BEARD_VALLEYS.map(([vx, vy], index) => wedge(vx, vy + 2, 26 + (index % 3) * 6, 6))
+  const body = [[326, 356, 30], [372, 382, 34]].map(([x, y, length]) => wedge(x, y, length, 8))
+  return [...valleys, ...body].join('')
 }
 
 const EAR_SCAR = [[151, 150], [164, 155], [182, 165], [198, 172]]
@@ -204,32 +180,24 @@ const SEASONS = {
         svg: svg(`${specks(11, 70, ['#f8fafc', '#f8fafc', '#e2e8f0'], 1.4, 3.6)}${specks(29, 40, ['#f5c542', '#fde68a'], 1.2, 2.8)}`),
       },
       {
+        mask: 'swirl',
+        svg: svg(`<path d="${BEARD}" fill="none" stroke="#ffffff" stroke-width="20" stroke-linejoin="round"/><path d="${MOUSTACHE}" fill="none" stroke="#ffffff" stroke-width="14" stroke-linejoin="round"/>`),
+      },
+      {
         mask: 'none',
         svg: svg(`
-          <defs>
-            <linearGradient id="beard" x1="236" y1="0" x2="424" y2="0" gradientUnits="userSpaceOnUse">
-              <stop offset="0" stop-color="#d2dae6"/><stop offset="0.5" stop-color="#f4f7fb"/><stop offset="1" stop-color="#ffffff"/>
-            </linearGradient>
-            <filter id="beardSoft"><feGaussianBlur stdDeviation="2.2"/></filter>
-          </defs>
-          <path d="${BEARD}" fill="url(#beard)"/>
-          <path d="${BEARD_TOP_EDGE}" fill="none" stroke="#cfd8e3" stroke-width="6" stroke-linecap="round" opacity="0.8" filter="url(#beardSoft)"/>
-          <g fill="none" stroke="#c3cddb" stroke-width="5" stroke-linecap="round" filter="url(#beardSoft)">${beardShading()}</g>
-          <g fill="none" stroke="#bcc7d5" stroke-width="2" stroke-linecap="round">${beardStrands()}</g>
-          <g fill="none" stroke="#d5dde7" stroke-width="1.6" stroke-linecap="round">${beardRoots()}</g>`),
+          <path d="${BEARD}" fill="#ffffff"/>
+          <g fill="${outline}">${beardWedges()}</g>`),
       },
       {
         mask: 'notFur',
-        svg: svg(`<path d="${BEARD}" fill="none" stroke="${outline}" stroke-width="5" stroke-linejoin="round"/>`),
+        svg: svg(`<path d="${BEARD}" fill="none" stroke="${outline}" stroke-width="9" stroke-linejoin="round"/>`),
       },
       {
         mask: 'none',
         svg: svg(`
-          <path d="${MOUSTACHE_LOWER}" fill="#eef2f7" stroke="${outline}" stroke-width="3.5" stroke-linejoin="round"/>
-          <path d="${MOUSTACHE}" fill="#f8fafc" stroke="${outline}" stroke-width="3.5" stroke-linejoin="round"/>
-          <g fill="none" stroke="#a8b5c7" stroke-width="1.6" stroke-linecap="round">
-            <path d="M 416 279 C 404 277 392 280 384 287"/><path d="M 410 283 C 400 283 390 287 383 293"/><path d="M 410 288 C 401 289 394 293 390 299"/>
-          </g>
+          <path d="${MOUSTACHE_LOWER}" fill="#ffffff" stroke="${outline}" stroke-width="5" stroke-linejoin="round"/>
+          <path d="${MOUSTACHE}" fill="#ffffff" stroke="${outline}" stroke-width="5" stroke-linejoin="round"/>
           <g transform="translate(322 200) rotate(10)" stroke="${outline}" stroke-width="8" stroke-linejoin="round" stroke-linecap="round">
             <path d="M -60 -12 C -58 -60 -24 -96 14 -100 C 48 -102 66 -70 64 -12 Z" fill="#d61f2c"/>
             <path d="M -6 -96 C -44 -112 -90 -102 -116 -70 C -110 -64 -104 -60 -96 -58 C -82 -80 -50 -88 -20 -78 Z" fill="#d61f2c"/>
