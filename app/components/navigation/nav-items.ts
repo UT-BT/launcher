@@ -16,6 +16,7 @@ export interface EventLink {
 export interface NavItem {
     id: string
     label: string
+    shortLabel?: string
     icon: ElementType
     eventLink?: EventLink
 }
@@ -65,7 +66,7 @@ export const BASE_NAV_SECTIONS: NavSection[] = [
         title: 'Leaderboards',
         items: [
             { id: 'cap-it-all', label: 'Cap It All', icon: Flag },
-            { id: 'world-records', label: 'World Records', icon: Trophy },
+            { id: 'world-records', label: 'World Records', shortLabel: 'Records', icon: Trophy },
         ],
     },
 ]
@@ -76,6 +77,10 @@ export function buildNavSections(userProfile?: UserProfile): NavSection[] {
         ...BASE_NAV_SECTIONS,
         { title: 'Staff', items: [{ id: 'admin', label: 'Admin', icon: ShieldAlert }] },
     ]
+}
+
+export function navItemCaption(item: NavItem): string {
+    return item.shortLabel ?? item.label
 }
 
 export function navItemDestination(item: NavItem): NavDestination {
