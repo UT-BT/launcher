@@ -4,7 +4,7 @@ import {
     WEB_CAPABILITIES,
     type PlatformCapabilities,
 } from './capabilities'
-import { platformAuth, type AuthProfile, type PlatformAuth } from './auth'
+import { isRejectedSession, platformAuth, type AuthProfile, type PlatformAuth, type SessionRecovery } from './auth'
 import { fetchGatewayPatrons, fetchGatewayServers } from './gateway'
 import { openExternal } from './external'
 import { saveDemoFile, saveMapZip, type DemoSaveResult, type MapSaveResult } from './downloads'
@@ -32,5 +32,5 @@ export function usePlatform() {
     return platform
 }
 
-export { IS_WEB, platformAuth, openExternal, fetchGatewayServers, fetchGatewayPatrons, saveDemoFile, saveMapZip }
-export type { PlatformCapabilities, AuthProfile, PlatformAuth, DemoSaveResult, MapSaveResult }
+export { IS_WEB, platformAuth, isRejectedSession, openExternal, fetchGatewayServers, fetchGatewayPatrons, saveDemoFile, saveMapZip }
+export type { PlatformCapabilities, AuthProfile, PlatformAuth, SessionRecovery, DemoSaveResult, MapSaveResult }
