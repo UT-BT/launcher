@@ -24,6 +24,7 @@ const updaterStateSchema = z.object({
   currentVersion: z.string(),
   lastCheckTrigger: z.union([z.literal('auto'), z.literal('manual'), z.null()]),
   lastCheckedAt: z.string().optional(),
+  holdingLaunch: z.boolean(),
 })
 
 export const updaterIpcSchema = {

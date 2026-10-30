@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { UpdaterStateSnapshot } from '@/lib/conveyor/schemas/updater-schema'
 import { capabilities } from '@/app/platform'
 
@@ -6,6 +6,7 @@ const DEFAULT_STATE: UpdaterStateSnapshot = {
   phase: 'idle',
   currentVersion: '',
   lastCheckTrigger: null,
+  holdingLaunch: false,
 }
 
 type UpdaterContextValue = {
@@ -23,7 +24,6 @@ const UpdaterContext = createContext<UpdaterContextValue | null>(null)
 export function UpdaterProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<UpdaterStateSnapshot>(DEFAULT_STATE)
   const [isModalOpen, setModalOpen] = useState(false)
-  const autoOpenedForVersionRef = useRef<string | null>(null)
 
   useEffect(() => {
     if (!capabilities.updater) return
@@ -43,15 +43,6 @@ export function UpdaterProvider({ children }: { children: ReactNode }) {
       remove?.()
     }
   }, [])
-
-  useEffect(() => {
-    if (state.phase !== 'available') return
-    if (state.lastCheckTrigger !== 'auto') return
-    if (!state.version) return
-    if (autoOpenedForVersionRef.current === state.version) return
-    autoOpenedForVersionRef.current = state.version
-    setModalOpen(true)
-  }, [state.phase, state.lastCheckTrigger, state.version])
 
   const check = useCallback(async (manual = false) => {
     if (!capabilities.updater) return

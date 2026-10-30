@@ -11,7 +11,7 @@ not_here:
   - "the step-by-step add-a-channel procedure → .claude/skills/add-ipc-channel/SKILL.md"
   - "the main-process services behind the handlers → lib/main/README.md"
 sections: [overview, the-channel-inventory, calling-from-the-renderer, adding-a-channel, event-bridges, conventions]
-last_verified: 2026-10-05
+last_verified: 2026-10-30
 verify_against:
   - lib/conveyor/api/index.ts
   - lib/conveyor/schemas/index.ts
@@ -20,6 +20,7 @@ verify_against:
   - lib/conveyor/schemas/stream-kit-schema.ts
   - lib/conveyor/api/stream-kit-api.ts
   - lib/conveyor/handlers/stream-kit-handler.ts
+  - lib/conveyor/schemas/legacy-install-schema.ts
 ---
 
 # Conveyor — type-safe IPC
@@ -60,6 +61,7 @@ channel is one triple kept in three folders:
 | `maps` | `extractToInstall(mapName, bytes)` → extract a map zip into the install dir without overwriting |
 | `demos` | `saveToSystem(filename, bytes)` → write a demo into `{install}/System` |
 | `updater` | `check(manual?)`, `download()`, `quitAndInstall()`, `getState()` |
+| `legacyInstall` | `getStatus()` → `{ found: false }` or `{ found: true, uninstallerName, offer }`, `dismiss()`, `remove()` → `{ outcome: 'removed', pinLost }` or `{ outcome: 'declined' | 'failed' | 'gone' }` — the old all-users copy (Windows desktop only) |
 | `streamKit` | Cam tool (Windows desktop only): `planCams(req)`, `launchCams(req)`, `retitleCams()`, `getCamStatus()`, `restartCam(slot, req?)`, `stopCams()`, `getCamFps()`, `setCamFps(fps)`; kit: `selectKitFolder(current)`, `extractKit({url,token,folder})` → channel `extractStreamKit` |
 | `logging` | `log/info/warn/error/debug(message, context?, data?)`, `getLogFilePath()`, `getRecentLogs(lines?)` |
 
@@ -163,7 +165,7 @@ useEffect(() => window.utFavorites.onGameClosed(() => refetchFavorites()), [])
 ## Conventions
 
 - **Match the existing channel-name style in the namespace you touch.** `window`
-  uses kebab-case (`window-minimize`); `updater` uses `updater:method`; the newer
+  uses kebab-case (`window-minimize`); `updater` and `legacyInstall` use `namespace:method`; the newer
   game/ini/maps/demos/app channels use camelCase. Don't introduce a fourth style.
 - **Always define the Zod schema** for both `args` and `return` — no `any`.
 - **Handlers are the security boundary.** File/process access happens here, not in

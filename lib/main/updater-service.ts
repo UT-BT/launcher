@@ -1,9 +1,15 @@
 import { app, type BrowserWindow } from 'electron'
 import { autoUpdater } from 'electron-updater'
 import { loggingService } from './logging-service'
+import { runStartupUpdate } from './startup-update'
 
 const GITHUB_OWNER = 'UT-BT'
 const GITHUB_REPO = 'launcher'
+const STARTUP_CHECK_TIMEOUT_MS = 5_000
+const STARTUP_DOWNLOAD_TIMEOUT_MS = 120_000
+const INSTALL_HOLD_RELEASE_MS = 15_000
+const FIRST_BACKGROUND_CHECK_DELAY_MS = 2_000
+const BACKGROUND_CHECK_INTERVAL_MS = 4 * 60 * 60 * 1000
 
 export type UpdaterPhase =
   | 'idle'
@@ -28,27 +34,125 @@ export type UpdaterState = {
   currentVersion: string
   lastCheckTrigger: 'auto' | 'manual' | null
   lastCheckedAt?: string
+  holdingLaunch: boolean
 }
 
 class UpdaterService {
   private mainWindow: BrowserWindow | null = null
   private state: UpdaterState
-  private wired = false
+  private configured = false
   private lastTrigger: 'auto' | 'manual' = 'auto'
+  private pendingDownload: Promise<boolean> | null = null
+  private backgroundTimer: NodeJS.Timeout | null = null
 
   constructor() {
     this.state = {
       phase: 'idle',
       currentVersion: app.getVersion(),
       lastCheckTrigger: null,
+      holdingLaunch: false,
     }
   }
 
   init(mainWindow: BrowserWindow): void {
     this.mainWindow = mainWindow
+    this.configure()
+  }
+
+  getState(): UpdaterState {
+    return { ...this.state }
+  }
+
+  async installBeforeLaunch(): Promise<boolean> {
+    if (!app.isPackaged) return false
+    this.configure()
+    this.update({ holdingLaunch: true })
+    const installing = await runStartupUpdate({
+      check: () => this.check(false),
+      download: () => this.download(),
+      install: () => this.quitAndInstall(),
+      checkTimeoutMs: STARTUP_CHECK_TIMEOUT_MS,
+      downloadTimeoutMs: STARTUP_DOWNLOAD_TIMEOUT_MS,
+    })
+    if (installing) {
+      setTimeout(() => this.update({ holdingLaunch: false }), INSTALL_HOLD_RELEASE_MS)
+    } else {
+      this.update({ holdingLaunch: false })
+    }
+    return installing
+  }
+
+  startBackgroundChecks(): void {
+    if (this.backgroundTimer) return
+    if (!app.isPackaged) {
+      setTimeout(() => void this.backgroundCheck(), FIRST_BACKGROUND_CHECK_DELAY_MS)
+    }
+    this.backgroundTimer = setInterval(() => void this.backgroundCheck(), BACKGROUND_CHECK_INTERVAL_MS)
+  }
+
+  async check(manual: boolean): Promise<boolean> {
+    this.configure()
+    this.lastTrigger = manual ? 'manual' : 'auto'
+    if (this.state.phase === 'checking' || this.state.phase === 'downloading') {
+      return this.state.phase === 'downloading'
+    }
+    this.update({
+      phase: 'checking',
+      error: undefined,
+      lastCheckTrigger: this.lastTrigger,
+    })
+    try {
+      this.useDefaultFeed()
+      const result = await autoUpdater.checkForUpdates()
+      const available = result?.isUpdateAvailable === true
+      if (available && app.isPackaged) {
+        void this.download()
+      }
+      return available
+    } catch (err) {
+      const rawMessage = err instanceof Error ? err.message : String(err)
+      loggingService.error('checkForUpdates failed', 'Updater', { message: rawMessage })
+      this.update({ phase: 'error', error: this.friendlyError(rawMessage) })
+      return false
+    }
+  }
+
+  download(): Promise<boolean> {
+    if (this.state.phase === 'downloaded') return Promise.resolve(true)
+    if (this.pendingDownload) return this.pendingDownload
+    if (this.state.phase !== 'available') return Promise.resolve(false)
+    this.update({ phase: 'downloading', progressPercent: 0 })
+    this.pendingDownload = autoUpdater
+      .downloadUpdate()
+      .then(
+        () => true,
+        (err) => {
+          const rawMessage = err instanceof Error ? err.message : String(err)
+          loggingService.error('downloadUpdate failed', 'Updater', { message: rawMessage })
+          this.update({ phase: 'error', error: this.friendlyError(rawMessage) })
+          return false
+        },
+      )
+      .finally(() => {
+        this.pendingDownload = null
+      })
+    return this.pendingDownload
+  }
+
+  quitAndInstall(): void {
+    if (this.state.phase !== 'downloaded') {
+      return
+    }
+    this.update({ phase: 'installing' })
+    autoUpdater.quitAndInstall(false, true)
+  }
+
+  private configure(): void {
+    if (this.configured) return
+    this.configured = true
 
     autoUpdater.autoDownload = false
-    autoUpdater.autoInstallOnAppQuit = false
+    autoUpdater.autoInstallOnAppQuit = app.isPackaged
     autoUpdater.allowPrerelease = false
     autoUpdater.logger = {
       info: (msg: unknown) => loggingService.info(String(msg), 'Updater'),
@@ -61,56 +165,13 @@ class UpdaterService {
       autoUpdater.forceDevUpdateConfig = true
     }
 
-    if (!this.wired) {
-      this.wireEvents()
-      this.wired = true
-    }
+    this.wireEvents()
   }
 
-  getState(): UpdaterState {
-    return { ...this.state }
-  }
-
-  async check(manual: boolean): Promise<void> {
-    this.lastTrigger = manual ? 'manual' : 'auto'
-    if (this.state.phase === 'checking' || this.state.phase === 'downloading') {
-      return
-    }
-    this.update({
-      phase: 'checking',
-      error: undefined,
-      lastCheckTrigger: this.lastTrigger,
-    })
-    try {
-      this.useDefaultFeed()
-      await autoUpdater.checkForUpdates()
-    } catch (err) {
-      const rawMessage = err instanceof Error ? err.message : String(err)
-      loggingService.error('checkForUpdates failed', 'Updater', { message: rawMessage })
-      this.update({ phase: 'error', error: this.friendlyError(rawMessage) })
-    }
-  }
-
-  async download(): Promise<void> {
-    if (this.state.phase !== 'available') {
-      return
-    }
-    this.update({ phase: 'downloading', progressPercent: 0 })
-    try {
-      await autoUpdater.downloadUpdate()
-    } catch (err) {
-      const rawMessage = err instanceof Error ? err.message : String(err)
-      loggingService.error('downloadUpdate failed', 'Updater', { message: rawMessage })
-      this.update({ phase: 'error', error: this.friendlyError(rawMessage) })
-    }
-  }
-
-  quitAndInstall(): void {
-    if (this.state.phase !== 'downloaded') {
-      return
-    }
-    this.update({ phase: 'installing' })
-    autoUpdater.quitAndInstall(false, true)
+  private async backgroundCheck(): Promise<void> {
+    const busy: UpdaterPhase[] = ['checking', 'downloading', 'downloaded', 'installing']
+    if (busy.includes(this.state.phase)) return
+    await this.check(false)
   }
 
   private useDefaultFeed(): void {

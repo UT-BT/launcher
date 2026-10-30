@@ -5,6 +5,7 @@ import { Button } from '@/app/components/ui/button'
 import { Switch } from '@/app/components/ui/switch'
 import { SettingsSection, SettingsRow } from './SettingsComponents'
 import { useUpdater } from '@/app/hooks/useUpdater'
+import { loadLegacyInstall, openLegacyCard, useLegacyInstall } from '@/app/components/updater/legacyInstall'
 
 type MinimizeAction = 'taskbar' | 'tray'
 type CloseAction = 'quit' | 'tray'
@@ -14,6 +15,7 @@ const selectClass = "flex h-9 w-full @md/panel:w-[220px] rounded-md border borde
 export function LauncherGeneralSettings() {
     const [uiScale, setUiScale] = useState(100)
     const { state, check, download, install } = useUpdater()
+    const legacyInstall = useLegacyInstall()
 
     const [minimizeAction, setMinimizeAction] = useState<MinimizeAction>('taskbar')
     const [closeAction, setCloseAction] = useState<CloseAction>('quit')
@@ -38,6 +40,7 @@ export function LauncherGeneralSettings() {
             }
         }
         void loadWindowBehavior()
+        loadLegacyInstall()
     }, [])
 
     const handleScaleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -87,7 +90,7 @@ export function LauncherGeneralSettings() {
             case 'downloading':
                 return `Downloading… ${Math.round(state.progressPercent ?? 0)}%`
             case 'downloaded':
-                return `Update ready — v${state.version}. Restart to install.`
+                return `Update ready — v${state.version} installs the next time UTBT starts.`
             case 'installing':
                 return 'Installing…'
             case 'not-available':
@@ -106,7 +109,7 @@ export function LauncherGeneralSettings() {
             return { label: `Download v${state.version}`, run: () => { void download() } }
         }
         if (state.phase === 'downloaded') {
-            return { label: 'Restart & install', run: () => { void install() } }
+            return { label: 'Restart now', run: () => { void install() } }
         }
         return { label: state.phase === 'checking' ? 'Checking…' : 'Check for updates', run: () => { void check(true) } }
     })()
@@ -207,6 +210,16 @@ export function LauncherGeneralSettings() {
                         {updateAction.label}
                     </Button>
                 </SettingsRow>
+                {legacyInstall.uninstallerName && (
+                    <SettingsRow
+                        label="Old copy of UTBT"
+                        description="A copy of UTBT from before self-updating is still on your PC."
+                    >
+                        <Button variant="secondary" onClick={openLegacyCard}>
+                            Remove old copy
+                        </Button>
+                    </SettingsRow>
+                )}
             </SettingsSection>
         </div>
     )

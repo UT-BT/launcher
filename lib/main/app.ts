@@ -12,6 +12,7 @@ import { registerDemosHandlers } from '@/lib/conveyor/handlers/demos-handler'
 import { registerMapsHandlers } from '@/lib/conveyor/handlers/maps-handler'
 import { registerUpdaterHandlers } from '@/lib/conveyor/handlers/updater-handler'
 import { registerStreamKitHandlers } from '@/lib/conveyor/handlers/stream-kit-handler'
+import { registerLegacyInstallHandlers } from '@/lib/conveyor/handlers/legacy-install-handler'
 import { demoWatcherService } from '@/lib/main/demo-watcher-service'
 import { updaterService } from '@/lib/main/updater-service'
 import { trayService } from '@/lib/main/tray-service'
@@ -100,6 +101,7 @@ export function createAppWindow(): void {
   registerMapsHandlers(mainWindow)
   registerUpdaterHandlers(mainWindow)
   registerStreamKitHandlers(mainWindow)
+  registerLegacyInstallHandlers(mainWindow)
   startBackgroundGamePoller(mainWindow)
 
   demoWatcherService.startWatching()
@@ -110,9 +112,7 @@ export function createAppWindow(): void {
     if (!startHidden) {
       mainWindow.show()
     }
-    setTimeout(() => {
-      void updaterService.check(false)
-    }, 2000)
+    updaterService.startBackgroundChecks()
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {

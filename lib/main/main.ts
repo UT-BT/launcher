@@ -3,6 +3,7 @@ import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { createAppWindow } from './app'
 import { trayService } from '@/lib/main/tray-service'
 import { loggingService } from '@/lib/main/logging-service'
+import { updaterService } from '@/lib/main/updater-service'
 
 app.setName('UTBT')
 
@@ -28,6 +29,7 @@ if (!app.requestSingleInstanceLock()) {
     electronApp.setAppUserModelId('com.utbt.launcher')
     // Create app window
     createAppWindow()
+    void updaterService.installBeforeLaunch()
     loggingService.info('UTBT Launcher application started successfully', 'MainProcess')
 
     // Default open or close DevTools by F12 in development
