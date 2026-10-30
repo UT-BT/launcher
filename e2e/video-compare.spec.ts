@@ -8,6 +8,7 @@ import {
     type RunCompareComparisonName,
 } from '../app/utils/fixtures/runCompareFixtures'
 import type { CapCheckpoint, CapComparisonErrorCode, CapDetail, TeamCapDetail } from '../app/utils/api'
+import { defaultCompareCandidate } from '../app/components/pages/capDetail/runDelta/compareCandidates'
 
 const VIDEO = readFileSync(resolve(__dirname, 'next-map-flythrough.webm'))
 const AVATAR = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', 'base64')
@@ -223,6 +224,10 @@ function scrubTicks(modal: Locator): Locator {
 }
 
 const SPAN = REFERENCE.cap_time_ms / 1000 + VIDEO_TAIL_SECONDS
+const CARD_PAIR = pairKey(
+    RUNNER.cap_id,
+    defaultCompareCandidate(RUNNER_DETAIL.cap.cap_time_seconds, RUNNER_DETAIL.cap.has_ghost, RUNNER_DETAIL.compare_candidates)!.id,
+)
 const RUNNER_STRIP = `Scrub both replays via ${RUNNER.alias}'s delta`
 const CHECKPOINT_STRIP = 'Scrub both replays via the delta'
 
@@ -235,7 +240,7 @@ test.describe('cap page Compare Run', () => {
         const requests = await mockApi(page, { compare: 'separated' })
         const modal = await openFromCapPage(page)
 
-        expect(new Set(requests)).toEqual(new Set([pairKey(RUNNER.cap_id, REFERENCE.cap_id)]))
+        expect(new Set(requests)).toEqual(new Set([CARD_PAIR, pairKey(RUNNER.cap_id, REFERENCE.cap_id)]))
         await expect(modal.getByRole('slider', { name: RUNNER_STRIP })).toBeVisible()
         await expect(modal.getByText(`ticks = ${RUNNER.alias}'s sector splits`)).toBeVisible()
         await expect(scrubTicks(modal)).toHaveCount(20)
@@ -251,7 +256,7 @@ test.describe('cap page Compare Run', () => {
         const requests = await mockApi(page, { compare: 'no_ghost' })
         const modal = await openFromCapPage(page)
 
-        expect(new Set(requests)).toEqual(new Set([pairKey(RUNNER.cap_id, REFERENCE.cap_id)]))
+        expect(new Set(requests)).toEqual(new Set([CARD_PAIR, pairKey(RUNNER.cap_id, REFERENCE.cap_id)]))
         await expect(modal.getByRole('slider', { name: CHECKPOINT_STRIP })).toBeVisible()
         await expect(modal.getByRole('slider', { name: RUNNER_STRIP })).toHaveCount(0)
 
@@ -266,7 +271,7 @@ test.describe('cap page Compare Run', () => {
         const modal = await openFromCapPage(page)
 
         await expect(scrubTicks(modal)).toHaveCount(9)
-        expect(requests).toEqual([])
+        expect(new Set(requests)).toEqual(new Set([CARD_PAIR]))
         await expect(modal.getByRole('slider', { name: RUNNER_STRIP })).toHaveCount(0)
         await expect(modal.getByRole('slider', { name: CHECKPOINT_STRIP })).toHaveCount(0)
         await expect(pane(modal, RUNNER.alias!)).not.toContainText('−27.894')
