@@ -1,22 +1,8 @@
+import { STREAM_SCENES, type StreamSceneId } from './streamSceneRegistry'
+
+export { STREAM_SCENES, streamSceneObsName, type StreamScene, type StreamSceneId } from './streamSceneRegistry'
+
 const SITE_ORIGIN = (import.meta.env.VITE_SITE_ORIGIN || 'https://utbt.net').replace(/\/$/, '')
-
-export const STREAM_SCENES = [
-    { id: 'starting-soon', label: 'Starting Soon', transparent: false },
-    { id: 'preview', label: 'Match Preview', transparent: false },
-    { id: 'pick-ban', label: 'Pick & Ban', transparent: false },
-    { id: 'betting', label: 'Betting', transparent: false },
-    { id: 'overlay', label: 'Match Overlay', transparent: true },
-    { id: 'intermission', label: 'Intermission', transparent: false },
-    { id: 'next-map', label: 'Next Map', transparent: false },
-    { id: 'post-match', label: 'Post-match', transparent: false },
-    { id: 'standings', label: 'Standings', transparent: false },
-    { id: 'predictor-standings', label: 'Predictor Standings', transparent: false },
-    { id: 'brb', label: 'BRB', transparent: false },
-    { id: 'ending', label: 'Ending', transparent: false },
-    { id: 'caster', label: 'Caster Cam', transparent: true },
-] as const
-
-export type StreamSceneId = (typeof STREAM_SCENES)[number]['id']
 
 export interface StreamSceneRoute {
     eventSlug: string

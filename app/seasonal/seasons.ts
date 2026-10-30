@@ -1,9 +1,3 @@
-export type SeasonId = 'halloween' | 'christmas' | 'easter'
-
-export type SeasonOverride = SeasonId | 'none'
-
-export const SEASON_IDS: readonly SeasonId[] = ['halloween', 'christmas', 'easter']
-
 export interface ActiveSeason {
     id: SeasonId
     until: number
@@ -15,7 +9,8 @@ interface SeasonWindow {
 }
 
 interface Season {
-    id: SeasonId
+    id: string
+    label: string
     window(year: number): SeasonWindow
 }
 
@@ -44,20 +39,29 @@ function daysAround(anchor: Date, before: number, after: number): SeasonWindow {
     return { start: new Date(year, month, day - before), endExclusive: new Date(year, month, day + after + 1) }
 }
 
-const SEASONS: readonly Season[] = [
+export const SEASONS = [
     {
         id: 'halloween',
+        label: 'Halloween',
         window: year => ({ start: new Date(year, 9, 24), endExclusive: new Date(year, 10, 8) }),
     },
     {
         id: 'christmas',
+        label: 'Christmas',
         window: year => ({ start: new Date(year, 11, 18), endExclusive: new Date(year + 1, 0, 16) }),
     },
     {
         id: 'easter',
+        label: 'Easter',
         window: year => daysAround(easterSunday(year), 7, 7),
     },
-]
+] as const satisfies readonly Season[]
+
+export type SeasonId = (typeof SEASONS)[number]['id']
+
+export type SeasonOverride = SeasonId | 'none'
+
+export const SEASON_IDS: readonly SeasonId[] = SEASONS.map(season => season.id)
 
 export function activeSeason(now: Date): ActiveSeason | null {
     const time = now.getTime()

@@ -15,15 +15,16 @@ import {
     subscribeSeasonOverride,
     writeSeasonOverride,
 } from '@/app/seasonal/preferences'
-import { isSeasonOverride } from '@/app/seasonal/seasons'
+import { SEASONS, isSeasonOverride } from '@/app/seasonal/seasons'
+import { joinWithAnd } from '@/app/utils/wording'
 
 const SEASON_PREVIEW_OPTIONS = [
     { value: '', label: 'Automatic (by date)' },
-    { value: 'halloween', label: 'Halloween' },
-    { value: 'christmas', label: 'Christmas' },
-    { value: 'easter', label: 'Easter' },
+    ...SEASONS.map(season => ({ value: season.id, label: season.label })),
     { value: 'none', label: 'No season' },
 ]
+
+const SEASONAL_THEMES_DESCRIPTION = `Small ${joinWithAnd(SEASONS.map(season => season.label))} touches while those seasons are on. Colours only change on the UTBT Blue theme.`
 
 interface LauncherAppearanceSettingsProps {
     unlockExclusive?: boolean
@@ -105,7 +106,7 @@ export function LauncherAppearanceSettings({ unlockExclusive }: LauncherAppearan
             <SettingsSection title="Seasonal Themes" icon={Sparkles}>
                 <SettingsRow
                     label="Seasonal themes"
-                    description="Small Halloween, Christmas and Easter touches while those seasons are on. Colours only change on the UTBT Blue theme."
+                    description={SEASONAL_THEMES_DESCRIPTION}
                 >
                     <Switch checked={seasonalThemes} onCheckedChange={saveSeasonalThemes} aria-label="Seasonal themes" />
                 </SettingsRow>

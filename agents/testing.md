@@ -63,6 +63,7 @@ These read source files and guard wiring rules rather than behaviour:
 | `app/components/main/pageLoaders.test.ts` | `Main.tsx` never value-imports a lazy page; every sidebar view except Home has a shared loader |
 | `app/components/navigation/routes.contract.test.ts` | every view in `viewToPath` has an entry in `app/public/route-contract.json` and round-trips; `robots.txt` blocks stream pages and leaves every other non-admin route crawlable |
 | `app/components/pages/events/stream/streamPanels.test.ts` | Stream tab panels and Match sections keep their order and load only lazily |
+| `app/prePaint.test.ts`, `app/styles/themes.test.ts`, `app/seasonal/logos.test.ts` | the `index.html` pre-paint script's default theme, light themes and seasons equal the registries; every non-default theme has a palette block and only the `solid` group hides the nebula; every season has its logo file |
 | `app/styles/seasons.test.ts`, `app/components/pages/events/stats/teamAccent.test.ts` | seasonal palettes target only the Classic theme; every team accent slot has a dark and a light value and its own hue |
 | `app/utils/recordsDefinitions.test.ts` | cap types, medal multipliers, difficulty tiers, the map author name and the team-run label are defined once in `app/utils/` and never copied into a records file |
 
