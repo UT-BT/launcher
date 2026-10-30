@@ -60,7 +60,7 @@ Make sure `register<Ns>Handlers(mainWindow)` is called in
 
 ## Verify
 
-- `npx tsc --noEmit -p tsconfig.web.json` — types flow end-to-end through the
+- `npm run typecheck:web` — types flow end-to-end through the
   shared schema; a missing registration or arg-type mismatch shows up here.
 - `npm run dev`: call it and confirm the result; a Zod failure logs
   `IPC Error in doThing`.

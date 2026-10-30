@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "description": "Golden fixture for the medal-hunt rule port. Recorded against the pre-endpoint client implementation. Thresholds and difficulty use the semantic token \"absent\" rather than a wire literal: the API emits \"\" for an absent float/int (base.py:39 casts through the dataclass field type, float(None)/int(None) raise TypeError, caught at base.py:45-46), while the Python port sees None. Each suite maps \"absent\" to its own native representation.",
+  "description": "Golden fixture for the medal-hunt rule port. Recorded against the pre-endpoint client implementation. Thresholds and difficulty use the semantic token \"absent\" rather than a wire literal: the API emits \"\" for an absent float/int. Each suite maps \"absent\" to its own native representation.",
   "cases": [
     {
       "name": "certified cap above bronze targets Bronze",

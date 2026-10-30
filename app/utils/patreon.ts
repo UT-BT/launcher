@@ -5,7 +5,7 @@ import { fetchGatewayPatrons } from '@/app/platform/gateway'
  * Patreon member tiers, keyed by Discord user id (the same id used as
  * `PlayerInfo.userId` / in avatar URLs). Source: gateway `GET /patreon`,
  * fetched once via IPC and cached in localStorage — members rarely change, so
- * we don't refetch per render. See agents/data-sources.md.
+ * we don't refetch per render. See agents/api.md.
  */
 
 const STORAGE_KEY = 'utbt:patreon:v1'

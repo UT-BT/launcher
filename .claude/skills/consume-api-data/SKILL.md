@@ -11,41 +11,38 @@ description: >-
 
 # Consume new API data
 
-All HTTP lives in `app/utils/api.ts` — never raw `fetch` in a component. Read
-`agents/data-sources.md` first.
+All HTTP goes through the helpers in `app/utils/api.ts`. Read `agents/api.md` first, plus the
+`agents/features/*.md` doc for the area you are touching.
 
 ## 1. Confirm the API exposes it
 
-Check whether the field/endpoint already exists — look at the existing fetcher's
-response type, or inspect a live response. If it's already there, skip to step 3.
+Look at the existing fetcher's response type, or inspect a live response. If the field or
+endpoint is already there, skip to step 3.
 
-## 2. If the API does NOT expose it yet
+## 2. If the API does not expose it yet
 
-Getting the field added is a **backend change made in the separate (private)
-backend repo — out of scope for this repo, and no backend details belong in
-launcher code or docs.** Don't work around a missing field by deriving it
-client-side or hand-rolling a request to an undocumented endpoint (that's the
-hard rule: extend the API, don't hack the renderer). Coordinate the backend
-change separately; once the API returns the field, continue.
+Getting it added is a backend change, made in the separate private backend repo and out of
+scope here; describe the needed field to the user and stop until the API returns it. Keep
+launcher code and docs free of backend details, and keep the renderer from deriving the
+missing value or calling an undocumented endpoint (hard rule: extend the API).
 
-## 3. Add / extend the fetcher in `app/utils/api.ts`
+## 3. Add or extend the fetcher in `app/utils/api.ts`
 
-- Put it in the right domain group; reuse the existing `build*Query` helpers for
-  query strings (`buildMapQuery`, `buildWorldRecordsQuery`, `buildPlayerQuery`).
+- Put it in the right domain group; build query strings with the existing `build*Query`
+  helpers (`buildMapQuery`, `buildWorldRecordsQuery`, `buildPlayerQuery`).
 - Signature: `accessToken` first when the endpoint is authenticated, then params.
-- Unwrap the `{ success, data }` envelope (the existing helpers do this) and give
-  the response a named TypeScript type.
+- Normalise the response at the fetch layer (`agents/api.md`: envelope and coercion helpers)
+  and give it a named TypeScript type.
 
 ## 4. Render it
 
-- Call the fetcher from the page/detail component. For primary pages, store rows
-  in `caches` and gate the skeleton on `querySig` if it's server-paginated
-  (`agents/state-patterns.md`).
-- Render through shared components — `PlayerInfo` for any player, `CapTimeLink`
-  for any cap time, `DataTable.*` for tables (`agents/shared-components.md`).
+- Call the fetcher from the page or detail component. Primary pages keep rows in `caches`
+  and gate the skeleton on `querySig` when server-paginated (`agents/state-patterns.md`).
+- Render through the shared components: `PlayerInfo` for any player, `CapTimeLink` for any
+  cap time, `DataTable.*` for tables (`agents/shared-components.md`).
 
 ## Verify
 
-- `npx tsc --noEmit -p tsconfig.web.json`.
-- `npm run dev`: the data loads, errors surface in the page's error banner, and a
-  revisit uses the cache instead of refetching.
+- `npm run typecheck:web`.
+- `npm run dev`: the data loads, errors surface in the page's error banner, and a revisit
+  uses the cache instead of refetching.

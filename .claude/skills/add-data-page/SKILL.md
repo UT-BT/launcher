@@ -27,7 +27,7 @@ page-views vs detail-pages) first.
 - Layout follows `agents/styling.md` Page layout; tables use the `DataTable.*`
   primitives; players render through `PlayerInfo` (`agents/shared-components.md`).
 - Fetch data via `app/utils/api.ts` helpers — never raw `fetch`
-  (`agents/data-sources.md`).
+  (`agents/api.md`).
 
 ## 2. Wire it in `Main.tsx`
 
@@ -99,7 +99,7 @@ calling it done:
 
 ## Verify
 
-- `npx tsc --noEmit -p tsconfig.web.json` (0 errors).
+- `npm run typecheck:web` (0 errors).
 - `npm run dev`: the sidebar item appears, opens the page, and Back/Forward
   restores the page's query state; a fresh sidebar click starts from defaults;
   persisted prefs survive a restart.

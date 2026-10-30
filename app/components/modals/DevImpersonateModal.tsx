@@ -42,7 +42,7 @@ export function DevImpersonateModal() {
         >
             <p className="text-sm leading-relaxed text-muted-foreground mb-3">
                 Every API request authenticates as this discord_id instead of your own account.
-                Requires DataService running locally with DEV_IMPERSONATION_ENABLED=1.
+                Requires the API running locally with DEV_IMPERSONATION_ENABLED=1.
             </p>
             <Input
                 value={userId}
