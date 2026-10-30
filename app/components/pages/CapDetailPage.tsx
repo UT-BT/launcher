@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ShieldAlert } from 'lucide-react'
 import { Spinner } from '@/app/components/ui/spinner'
 import { useNavScrollRestore } from '@/app/components/navigation/useNavScrollRestore'
@@ -17,6 +17,7 @@ import { SITE_NAME } from '@/app/components/navigation/titles'
 import {
     fetchCapDetail,
     fetchCapCheckpoints,
+    fetchCapComparison,
     fetchTeamRunStatus,
     type CapDetail,
     type LeaderboardEntry,
@@ -27,6 +28,8 @@ import {
 import { ReplayPickerModal } from '@/app/components/modals/ReplayPickerModal'
 import { HeroSection } from './capDetail/HeroSection'
 import { CheckpointSplitsCard } from './capDetail/CheckpointSplitsCard'
+import { defaultCompareCandidate } from './capDetail/runDelta/compareCandidates'
+import { wantsComparison, type ComparisonResult } from './capDetail/runDelta/checkpointCardView'
 import { RankContextCard } from './capDetail/RankContextCard'
 import { MedalThresholdsStrip } from './capDetail/MedalThresholdsStrip'
 import { ClientSettingsGrid } from './capDetail/ClientSettingsGrid'
@@ -37,20 +40,6 @@ interface CapDetailPageProps {
     capId: string
     userProfile?: UserProfile
     onMapSelect?: (mapName: string) => void
-}
-
-function nearestByTime<T extends { id: string; cap_time_seconds: number }>(items: T[], capTime: number): T | null {
-    let faster: T | null = null
-    let slower: T | null = null
-    for (const c of items) {
-        if (c.cap_time_seconds === capTime) return c
-        if (c.cap_time_seconds < capTime) {
-            if (!faster || c.cap_time_seconds > faster.cap_time_seconds) faster = c
-        } else if (!slower || c.cap_time_seconds < slower.cap_time_seconds) {
-            slower = c
-        }
-    }
-    return faster ?? slower ?? items[0] ?? null
 }
 
 export function CapDetailPage({ capId, userProfile, onMapSelect }: CapDetailPageProps) {
@@ -78,6 +67,7 @@ export function CapDetailPage({ capId, userProfile, onMapSelect }: CapDetailPage
     const [compareCapId, setCompareCapId] = useState<string | null>(null)
     const [compareData, setCompareData] = useState<{ checkpoints: CapDetail['checkpoints']; cap_time_seconds: number; alias: string | null; team: number | null } | null>(null)
     const [comparing, setComparing] = useState(false)
+    const [comparison, setComparison] = useState<ComparisonResult | null>(null)
 
     const [comparePickerOpen, setComparePickerOpen] = useState(false)
     const [videoOpponent, setVideoOpponent] = useState<LeaderboardEntry | null>(null)
@@ -97,8 +87,22 @@ export function CapDetailPage({ capId, userProfile, onMapSelect }: CapDetailPage
     useEffect(() => {
         if (!detail || detail?.cap?.id !== capId || defaultedFor.current === capId) return
         defaultedFor.current = capId
-        setCompareCapId(nearestByTime(detail.compare_candidates, detail.cap.cap_time_seconds)?.id ?? null)
+        setCompareCapId(defaultCompareCandidate(detail.cap.cap_time_seconds, detail.cap.has_ghost, detail.compare_candidates)?.id ?? null)
     }, [detail, capId])
+
+    const compareTarget = detail?.cap.id === capId
+        ? detail.compare_candidates.find(c => c.id === compareCapId) ?? null
+        : null
+    const replayTargetId = compareTarget && wantsComparison(detail?.cap.has_ghost, compareTarget) ? compareTarget.id : null
+    useEffect(() => {
+        if (!replayTargetId) return
+        const controller = new AbortController()
+        fetchCapComparison(capId, replayTargetId, controller.signal)
+            .then(result => {
+                if (!controller.signal.aborted) setComparison({ runnerId: capId, referenceId: replayTargetId, comparison: result })
+            })
+        return () => controller.abort()
+    }, [capId, replayTargetId])
 
     useEffect(() => {
         if (!compareCapId) {
@@ -123,12 +127,6 @@ export function CapDetailPage({ capId, userProfile, onMapSelect }: CapDetailPage
             .then(s => { if (!cancelled) setTeamRun(s) })
         return () => { cancelled = true; controller.abort() }
     }, [teamRunId, accessToken, refreshKey])
-
-    const compareOptions = useMemo(
-        () => (detail?.compare_candidates ?? [])
-            .map(c => ({ id: c.id, label: `${c.alias ?? c.user} — ${formatCapTime(c.cap_time_seconds)}` })),
-        [detail],
-    )
 
     const cap = detail?.cap
     useDocumentTitle(
@@ -246,16 +244,19 @@ export function CapDetailPage({ capId, userProfile, onMapSelect }: CapDetailPage
                         <MedalThresholdsStrip medals={detail.medals} deltas={detail.deltas} />
 
                         <CheckpointSplitsCard
+                            capId={capId}
+                            capHasReplay={cap.has_ghost}
                             hasCheckpoints={detail.has_checkpoints}
                             checkpoints={detail.checkpoints}
                             capTime={cap.cap_time_seconds}
                             baseline={baseline}
                             baselineTime={baselineTime}
                             baselineLabel={baselineLabel}
-                            compareOptions={compareOptions}
+                            candidates={detail.compare_candidates}
                             selectedCompareId={compareCapId}
                             onSelectCompare={setCompareCapId}
                             comparing={comparing}
+                            comparison={comparison}
                         />
                     </div>
                 </>

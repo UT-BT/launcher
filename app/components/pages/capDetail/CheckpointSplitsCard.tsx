@@ -1,8 +1,5 @@
 import { lazy, Suspense, useCallback, useMemo, useState } from 'react'
-import { Info } from 'lucide-react'
-import { Spinner } from '@/app/components/ui/spinner'
 import { cn } from '@/lib/utils'
-import { Tooltip } from '@/app/components/ui/tooltip'
 import { formatCapTime } from '@/app/utils/format'
 import {
     DataTableShell,
@@ -13,43 +10,58 @@ import {
     type ResponsiveColumn,
 } from '@/app/components/shared/DataTable'
 import { buildDeltaPoints, buildSyncAnchors, formatSignedDelta, deltaClass } from './capStats'
-import type { CapCheckpoint } from '@/app/utils/api'
+import type { CapCheckpoint, CapCompareCandidate } from '@/app/utils/api'
+import { checkpointCardView, type ComparisonResult } from './runDelta/checkpointCardView'
+import type { ReplayCard } from './runDelta/runDeltaCard'
+import { RunDeltaChip } from './runDelta/RunDeltaChip'
+import { ComparePicker } from './runDelta/ComparePicker'
+import { SectorTable } from './runDelta/SectorTable'
 
 const CheckpointDeltaChart = lazy(() => import('./CheckpointDeltaChart'))
-
-export interface CompareOption {
-    id: string
-    label: string
-}
+const RunDeltaChart = lazy(() => import('./runDelta/RunDeltaChart'))
 
 interface CheckpointSplitsCardProps {
+    capId: string
+    capHasReplay: boolean | undefined
     hasCheckpoints: boolean
     checkpoints: CapCheckpoint[]
     capTime: number
     baseline: CapCheckpoint[]
     baselineTime: number | null
     baselineLabel: string
-    compareOptions: CompareOption[]
+    candidates: CapCompareCandidate[]
     selectedCompareId: string | null
     onSelectCompare: (id: string | null) => void
     comparing: boolean
+    comparison: ComparisonResult | null
+}
+
+interface ZonetimeViewProps {
+    hasCheckpoints: boolean
+    hasCandidates: boolean
+    checkpoints: CapCheckpoint[]
+    capTime: number
+    baseline: CapCheckpoint[]
+    baselineTime: number | null
+    baselineLabel: string
+    chartKey: string
 }
 
 type SplitsColumnId = 'cp' | 'split' | 'cumulative' | 'splitDelta' | 'cumDelta'
 
-const COLUMN_WIDTH: Record<SplitsColumnId, string | undefined> = {
+const COLUMN_WIDTH: Record<SplitsColumnId, string> = {
     cp: '4rem',
-    split: undefined,
-    cumulative: undefined,
-    splitDelta: undefined,
-    cumDelta: undefined,
+    split: '5.5rem',
+    cumulative: '7rem',
+    splitDelta: '6rem',
+    cumDelta: '6rem',
 }
 
 const COLUMN_PRIORITY: Partial<Record<SplitsColumnId, number>> = {
-    split: 60,
-    cumulative: 50,
-    splitDelta: 20,
-    cumDelta: 10,
+    split: 20,
+    cumulative: 30,
+    splitDelta: 50,
+    cumDelta: 60,
 }
 
 const REQUIRED_COLUMNS = new Set<SplitsColumnId>(['cp'])
@@ -62,15 +74,109 @@ function NoSplits({ message }: { message: string }) {
     )
 }
 
+function ZonesNote({ note }: { note: string }) {
+    return (
+        <div className="mx-3 mt-3 px-2.5 py-2 rounded-md bg-hairline/[0.03] border border-hairline/[0.08] text-xs text-foreground/80">
+            {note}
+        </div>
+    )
+}
+
+function ReplayView({ card, referenceLabel }: { card: ReplayCard; referenceLabel: string }) {
+    return (
+        <div className="flex flex-col xl:flex-row xl:h-[460px]">
+            <div className="xl:w-1/2 xl:h-full xl:border-r border-hairline/5 min-h-0 flex flex-col">
+                <SectorTable rows={card.rows} />
+            </div>
+            <div className="xl:w-1/2 h-[300px] lg:h-[360px] xl:h-full p-3 min-h-0">
+                <Suspense fallback={<div className="h-full bg-hairline/[0.02] border border-hairline/5 rounded-lg animate-pulse" />}>
+                    <RunDeltaChart
+                        chart={card.chart}
+                        referenceLabel={referenceLabel}
+                        description={`Gap to ${referenceLabel} over the run, ${card.finalGap.label} at the cap`}
+                    />
+                </Suspense>
+            </div>
+        </div>
+    )
+}
+
+function LoadingView() {
+    return (
+        <div className="flex flex-col xl:flex-row xl:h-[460px] gap-3 p-3" aria-busy="true">
+            <div className="xl:w-1/2 h-[320px] xl:h-full bg-hairline/[0.02] border border-hairline/5 rounded-lg animate-pulse" />
+            <div className="xl:w-1/2 h-[280px] xl:h-full bg-hairline/[0.02] border border-hairline/5 rounded-lg animate-pulse" />
+        </div>
+    )
+}
+
 export function CheckpointSplitsCard({
-    hasCheckpoints, checkpoints = [], capTime, baseline, baselineTime, baselineLabel,
-    compareOptions, selectedCompareId, onSelectCompare, comparing,
+    capId, capHasReplay, hasCheckpoints, checkpoints = [], capTime, baseline, baselineTime, baselineLabel,
+    candidates, selectedCompareId, onSelectCompare, comparing, comparison,
 }: CheckpointSplitsCardProps) {
+    const target = useMemo(
+        () => candidates.find(c => c.id === selectedCompareId) ?? null,
+        [candidates, selectedCompareId],
+    )
+    const view = useMemo(
+        () => checkpointCardView({ capId, capHasReplay, target, result: comparison, zonetimesLoading: comparing }),
+        [capId, capHasReplay, target, comparison, comparing],
+    )
+    const hasCandidates = candidates.length > 0
+    const referenceLabel = target ? (target.alias ?? target.user) : ''
+
+    return (
+        <div className="bg-card/30 border border-hairline/5 rounded-xl flex flex-col overflow-hidden">
+            <div className="relative flex flex-col lg:flex-row items-center gap-2 px-4 py-3 border-b border-hairline/5 shrink-0">
+                <div className="flex-1 flex items-center justify-center gap-2 min-h-7">
+                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
+                        Checkpoint Deltas
+                    </span>
+                    {view.kind !== 'none' && <RunDeltaChip chip={view.chip} />}
+                </div>
+                {hasCandidates && (
+                    <div className="w-full lg:w-auto xl:absolute xl:right-4">
+                        <ComparePicker
+                            candidates={candidates}
+                            capHasReplay={capHasReplay}
+                            selectedId={selectedCompareId}
+                            onSelect={onSelectCompare}
+                            busy={comparing || view.kind === 'loading'}
+                        />
+                    </div>
+                )}
+            </div>
+
+            {view.kind === 'replay' ? (
+                <ReplayView card={view} referenceLabel={referenceLabel} />
+            ) : view.kind === 'loading' ? (
+                <LoadingView />
+            ) : (
+                <>
+                    {view.kind === 'zones' && <ZonesNote note={view.note} />}
+                    <ZonetimeView
+                        hasCheckpoints={hasCheckpoints}
+                        hasCandidates={hasCandidates}
+                        checkpoints={checkpoints}
+                        capTime={capTime}
+                        baseline={baseline}
+                        baselineTime={baselineTime}
+                        baselineLabel={baselineLabel}
+                        chartKey={selectedCompareId ?? 'cmp'}
+                    />
+                </>
+            )}
+        </div>
+    )
+}
+
+function ZonetimeView({
+    hasCheckpoints, hasCandidates, checkpoints, capTime, baseline, baselineTime, baselineLabel, chartKey,
+}: ZonetimeViewProps) {
     const baseByZone = useMemo(
         () => new Map(baseline.map(c => [c.zone, c.cumulative])),
         [baseline],
     )
-    const hasCandidates = compareOptions.length > 0
     const sharedCount = useMemo(
         () => checkpoints.reduce((n, c) => n + (baseByZone.has(c.zone) ? 1 : 0), 0),
         [checkpoints, baseByZone],
@@ -135,112 +241,81 @@ export function CheckpointSplitsCard({
     const isVisible = (id: SplitsColumnId) =>
         presentColumns.includes(id) && (!resolved || resolved.has(id))
 
+    if (!hasCheckpoints) return <NoSplits message="No checkpoint splits available for this run." />
+
     return (
-        <div className="bg-card/30 border border-hairline/5 rounded-xl flex flex-col overflow-hidden">
-            <div className="relative flex items-center px-4 py-3 border-b border-hairline/5 shrink-0">
-                <div className="flex-1 text-center text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
-                    Checkpoint Deltas
-                </div>
-                {hasCheckpoints && hasCandidates && (
-                    <div className="absolute right-4 flex items-center gap-2">
-                        {comparing && <Spinner className="size-3.5 text-muted-foreground" />}
-                        <span className="text-[10px] uppercase tracking-wider text-muted-foreground inline-flex items-center gap-1">
-                            compare vs
-                            <Tooltip content="You can only compare against runs done on the same team. Checkpoint zones are mirrored per team, so cross-team splits don't line up." side="top">
-                                <Info className="size-3 text-muted-foreground/60" />
-                            </Tooltip>
-                        </span>
-                        <select
-                            value={selectedCompareId ?? ''}
-                            onChange={(e) => onSelectCompare(e.target.value || null)}
-                            style={{ colorScheme: 'dark' }}
-                            className="h-7 rounded-md bg-card/60 border border-hairline/10 text-xs text-foreground px-2 hover:border-hairline/20 focus:outline-none focus:border-accent-500/50 cursor-pointer max-w-[16rem]"
-                        >
-                            {compareOptions.map(o => (
-                                <option key={o.id} value={o.id}>{o.label}</option>
-                            ))}
-                        </select>
-                    </div>
-                )}
+        <div className="flex flex-col lg:flex-row lg:h-[460px]">
+            <div className="lg:w-1/2 h-[320px] lg:h-full lg:border-r border-hairline/5 min-h-0 flex flex-col">
+                <DataTableShell
+                    className="!bg-transparent !border-0 !rounded-none"
+                    responsive={{ columns: responsiveColumns, onResolve: handleResolve }}
+                >
+                    <DataTableHeaderRow>
+                        {isVisible('cp') && <DataTableHeaderCell width="4rem" align="center">CP</DataTableHeaderCell>}
+                        {isVisible('split') && <DataTableHeaderCell align="right">Split</DataTableHeaderCell>}
+                        {isVisible('cumulative') && <DataTableHeaderCell align="right">Cumulative</DataTableHeaderCell>}
+                        {isVisible('splitDelta') && <DataTableHeaderCell align="right">Δ Split</DataTableHeaderCell>}
+                        {isVisible('cumDelta') && <DataTableHeaderCell align="right">Δ Total</DataTableHeaderCell>}
+                    </DataTableHeaderRow>
+                    <tbody>
+                        {rows.map(({ key, n, segment, cumulative, cumDelta, splitDelta }) => (
+                            <DataTableRow key={key}>
+                                {isVisible('cp') && (
+                                    <DataTableCell align="center">
+                                        <span className="text-xs font-mono text-muted-foreground tabular-nums">{n}</span>
+                                    </DataTableCell>
+                                )}
+                                {isVisible('split') && (
+                                    <DataTableCell align="right">
+                                        <span className="text-xs font-mono tabular-nums text-muted-foreground">
+                                            {segment != null ? segment.toFixed(3) : '—'}
+                                        </span>
+                                    </DataTableCell>
+                                )}
+                                {isVisible('cumulative') && (
+                                    <DataTableCell align="right">
+                                        <span className="text-sm font-mono tabular-nums text-foreground">
+                                            {formatCapTime(cumulative)}
+                                        </span>
+                                    </DataTableCell>
+                                )}
+                                {isVisible('splitDelta') && (
+                                    <DataTableCell align="right">
+                                        <span className={cn('text-xs font-mono tabular-nums', deltaClass(splitDelta))}>
+                                            {splitDelta != null ? formatSignedDelta(splitDelta) : '—'}
+                                        </span>
+                                    </DataTableCell>
+                                )}
+                                {isVisible('cumDelta') && (
+                                    <DataTableCell align="right">
+                                        <span className={cn('text-xs font-mono tabular-nums', deltaClass(cumDelta))}>
+                                            {cumDelta != null ? formatSignedDelta(cumDelta) : '—'}
+                                        </span>
+                                    </DataTableCell>
+                                )}
+                            </DataTableRow>
+                        ))}
+                    </tbody>
+                </DataTableShell>
             </div>
 
-            {!hasCheckpoints ? (
-                <NoSplits message="No checkpoint splits available for this run." />
-            ) : (
-                <div className="flex flex-col lg:flex-row lg:h-[460px]">
-                    <div className="lg:w-1/2 h-[320px] lg:h-full lg:border-r border-hairline/5 min-h-0 flex flex-col">
-                        <DataTableShell
-                            className="!bg-transparent !border-0 !rounded-none"
-                            responsive={{ columns: responsiveColumns, onResolve: handleResolve }}
-                        >
-                            <DataTableHeaderRow>
-                                {isVisible('cp') && <DataTableHeaderCell width="4rem" align="center">CP</DataTableHeaderCell>}
-                                {isVisible('split') && <DataTableHeaderCell align="right">Split</DataTableHeaderCell>}
-                                {isVisible('cumulative') && <DataTableHeaderCell align="right">Cumulative</DataTableHeaderCell>}
-                                {isVisible('splitDelta') && <DataTableHeaderCell align="right">Δ Split</DataTableHeaderCell>}
-                                {isVisible('cumDelta') && <DataTableHeaderCell align="right">Δ Total</DataTableHeaderCell>}
-                            </DataTableHeaderRow>
-                            <tbody>
-                                {rows.map(({ key, n, segment, cumulative, cumDelta, splitDelta }) => (
-                                    <DataTableRow key={key}>
-                                        {isVisible('cp') && (
-                                            <DataTableCell align="center">
-                                                <span className="text-xs font-mono text-muted-foreground tabular-nums">{n}</span>
-                                            </DataTableCell>
-                                        )}
-                                        {isVisible('split') && (
-                                            <DataTableCell align="right">
-                                                <span className="text-xs font-mono tabular-nums text-muted-foreground">
-                                                    {segment != null ? segment.toFixed(3) : '—'}
-                                                </span>
-                                            </DataTableCell>
-                                        )}
-                                        {isVisible('cumulative') && (
-                                            <DataTableCell align="right">
-                                                <span className="text-sm font-mono tabular-nums text-foreground">
-                                                    {formatCapTime(cumulative)}
-                                                </span>
-                                            </DataTableCell>
-                                        )}
-                                        {isVisible('splitDelta') && (
-                                            <DataTableCell align="right">
-                                                <span className={cn('text-xs font-mono tabular-nums', deltaClass(splitDelta))}>
-                                                    {splitDelta != null ? formatSignedDelta(splitDelta) : '—'}
-                                                </span>
-                                            </DataTableCell>
-                                        )}
-                                        {isVisible('cumDelta') && (
-                                            <DataTableCell align="right">
-                                                <span className={cn('text-xs font-mono tabular-nums', deltaClass(cumDelta))}>
-                                                    {cumDelta != null ? formatSignedDelta(cumDelta) : '—'}
-                                                </span>
-                                            </DataTableCell>
-                                        )}
-                                    </DataTableRow>
-                                ))}
-                            </tbody>
-                        </DataTableShell>
-                    </div>
-
-                    <div className="lg:w-1/2 h-[280px] lg:h-full p-3 min-h-0">
-                        {canCompare && deltaPoints.length >= 2 ? (
-                            <Suspense fallback={<div className="h-full bg-hairline/[0.02] border border-hairline/5 rounded-lg animate-pulse" />}>
-                                <CheckpointDeltaChart
-                                    key={selectedCompareId ?? 'cmp'}
-                                    points={deltaPoints}
-                                    baselineLabel={baselineLabel}
-                                />
-                            </Suspense>
-                        ) : (
-                            <NoSplits message={
-                                hasCandidates
-                                    ? "No shared checkpoints with this run."
-                                    : 'No same-team run with checkpoints to compare against.'
-                            } />
-                        )}
-                    </div>
-                </div>
-            )}
+            <div className="lg:w-1/2 h-[280px] lg:h-full p-3 min-h-0">
+                {canCompare && deltaPoints.length >= 2 ? (
+                    <Suspense fallback={<div className="h-full bg-hairline/[0.02] border border-hairline/5 rounded-lg animate-pulse" />}>
+                        <CheckpointDeltaChart
+                            key={chartKey}
+                            points={deltaPoints}
+                            baselineLabel={baselineLabel}
+                        />
+                    </Suspense>
+                ) : (
+                    <NoSplits message={
+                        hasCandidates
+                            ? "No shared checkpoints with this run."
+                            : 'No same-team run with checkpoints to compare against.'
+                    } />
+                )}
+            </div>
         </div>
     )
 }
