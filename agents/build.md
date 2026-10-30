@@ -7,7 +7,7 @@ keywords: [npm, dev, lint, tsc, build, node, pre-commit, typecheck]
 provides: "the dev/build/lint/typecheck commands + the pre-commit gate"
 not_here: ["release / versioning process → CONTRIBUTING.md"]
 sections: [commands, requirements, pre-commit-checklist]
-last_verified: 2026-07-22
+last_verified: 2026-10-30
 verify_against: [package.json, tsconfig.web.json, vite.config.web.ts]
 ---
 
