@@ -58,10 +58,20 @@ auth service's fixed Discord authorize URL.
 reads the current file and writes it back whole, so other keys survive. A missing or
 unreadable file reads as `{}`.
 
-- **Auth tokens** go through Electron `safeStorage` in `setAuthConfig`/`getAuthConfig`
-  (stored with an `enc:` prefix). When encryption is unavailable they are stored as
-  given, and an `enc:` value that cannot be decrypted reads as empty. Never log tokens or
-  put secrets in other fields.
+- **Auth tokens** never reach the disk unencrypted. Read and write them only through
+  `getAuthConfig`/`setAuthConfig`/`clearAuthConfig`, never from the file.
+  - With Electron `safeStorage` encryption available, both tokens are stored encrypted with
+    an `enc:` prefix, and an `enc:` value that cannot be decrypted reads as empty.
+  - Without it, sign-ins are session-only: the sign-in lives in memory and is never written
+    to the file (signing in or out also drops an encrypted `auth` an earlier session stored),
+    and the user signs in on each launch. The first auth access logs once that sign-ins are
+    session-only on this machine.
+  - Encryption is checked on each auth access. On Windows `safeStorage` reports it
+    unavailable until app `ready`, so call the auth accessors only after `ready`; an earlier
+    call would treat the machine as session-only.
+  - Loading the config deletes an `auth` holding a plain-text token (left by versions before
+    session-only sign-ins) and logs the removal, whatever encryption is available.
+  - Never log tokens or put secrets in other fields.
 - **`camFps`**: `60` or `120`; anything else reads as `120` (`camFpsOf`).
 - **`camVolume`**: whole percent `0`-`100`; anything else reads as `50` (`camVolumeOf`).
 - **`windowBehavior`**: minimize/close-to-tray and start-on-startup, applied by
@@ -75,8 +85,10 @@ unreadable file reads as `{}`.
 `http://127.0.0.1:54321/callback`, opens Discord's authorize page and exchanges the code
 with Discord directly (the web build goes through the API instead, see
 [agents/web-target.md](../../agents/web-target.md)). `getProfile` refreshes single-flight
-within 5 minutes of expiry and falls back to the stored token if that fails. The renderer
-never receives the refresh token (`toRendererProfile` blanks it). The `auth:*` channels are
+within 5 minutes of expiry and falls back to the stored token if that fails. Sign-in,
+refresh and sign-out persist through the config auth accessors, so without encryption they
+all stay in memory (see Config storage). The renderer never receives the refresh token
+(`toRendererProfile` blanks it). The `auth:*` channels are
 plain `ipcMain.handle` calls in `main.ts`, outside the Zod-validated Conveyor set.
 
 ## Ini access (settings panels)
