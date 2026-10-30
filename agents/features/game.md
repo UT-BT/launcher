@@ -180,7 +180,7 @@ through `app.setDemoWatcherConfig`, and the game's own recording switch `AutoDem
    yet → retry.
 3. Look the cap up on the gateway: `GET /caps?btpog_ids=<id>&columns=cap_type,team_run_id`.
    No row → retry (the server may not have registered the cap yet). No row with
-   `cap_type === 2` (certified) → `rejected`, file left alone. A failed lookup retries.
+   a certified `cap_type` (`isCertifiedCap`) → `rejected`, file left alone. A failed lookup retries.
 4. Team run (`team_run_id` set) → upload whatever the PB/WR setting: every certified
    member demo is evidence for the team run.
 5. Solo: `Personal Bests Only` compares with the signed-in user's best verified time

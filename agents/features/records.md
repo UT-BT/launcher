@@ -28,6 +28,7 @@ Hunt, latest records) in [home.md](home.md).
 | `app/components/modals/` | replay picker, WR progression, cap-time distribution, playtime breakdown, history, review and favourites lists |
 | `app/components/shared/ReplayVideoModal.tsx`, `app/hooks/useReplayWatch.ts`, `useVideoCompareAvailability.ts`, `useDemoDownload.ts` | replay and demo plumbing every record surface reuses |
 | `app/utils/format.ts`, `medals.ts`, `difficulty.ts` | cap-time formatting (`format.test.ts`), medal icons, difficulty tiers |
+| `app/utils/capTypes.ts`, `medalThresholds.ts`, `mapAuthor.ts`, `teamRunState.ts` | the one definition of the cap types, the medal multipliers, the map author name and the team-run label (each with a `.test.ts`); `recordsDefinitions.test.ts` fails when a records file copies one of them or the difficulty tiers |
 
 ## Cap status
 
@@ -35,15 +36,15 @@ A cap carries three independent signals:
 
 | Field | Meaning |
 |---|---|
-| `cap_type` | where it was set: `2` a certified UTBT server, `3` I4Games, anything else casual. "Certified" in the UI always means `cap_type === 2`. |
+| `cap_type` | where it was set: `2` a certified UTBT server (`CAP_TYPE_UTBT_CERTIFIED`), `3` I4Games (`CAP_TYPE_I4GAMES`), anything else casual. "Certified" in the UI always means `isCertifiedCap(cap)`. |
 | `verified` | its demo was uploaded and accepted. Only verified caps have a replay video and count toward the World Record. |
 | `disallowed` | removed by staff: it no longer counts toward leaderboards, medals or world records, and cannot be watched. |
 
 A list row's status chip takes the first match: Disallowed, Verified, Certified, I4Games, Casual
 (`renderCapStatus` in `playerDetail/RecentCapsCard.tsx`; `PersonalBestsCard` repeats it without
 the Disallowed step). The cap-detail hero shows a Disallowed / Verified / Unverified chip and a
-separate cap-type chip. The cap-type numbers are bare literals in each file; grep
-`cap_type === 2` and `CAP_TYPE_` before changing them.
+separate cap-type chip. Compare cap types only through `app/utils/capTypes.ts`, in the renderer
+and the demo watcher alike; never write the numbers.
 
 Enable Watch and Compare only for `verified` caps (All Caps also excludes `disallowed` ones), with
 the tooltip "No replay — cap not verified" on the disabled button, rather than letting the replay
@@ -64,9 +65,9 @@ pending-WR state or countdown: render the rows the API returns.
 per-combination rule are in [api.md](../api.md). Each member carries its own `verified`; the team
 cap detail read adds `has_demo` and the member's full `cap`.
 
-The pending label differs by surface: Team Cap Detail says "Pending", while the team-run chip
-on Cap Detail and the map's team leaderboard say "Certified". Use one wording when you touch
-either.
+Label a run's state with `teamRunStateLabel` (`app/utils/teamRunState.ts`): Incomplete, Pending,
+Verified, Disallowed. Team Cap Detail, the team-run chip on Cap Detail and the map's team
+leaderboard all use it, so a run reads "Pending" until it is verified.
 
 ## Medals
 
@@ -78,7 +79,7 @@ The medal arrives in three encodings; use the helper for each:
 | cap detail, team cap detail, team leaderboard rows | int `6` WR, `5` Champion, `4` Gold, `3` Silver, `2` Bronze, `1` Certified, `0` Casual | `medalIconForInt` / `medalLabelForInt` (`capDetail/capStats.ts`) |
 | map lists and the solo map leaderboard | not sent; derived from the cap and the map's thresholds | `computeMedalTier` (`pages/maps/medals.ts`) |
 
-`computeMedalTier(bestCap, map)`: no cap is `uncapped`; a cap that is not `cap_type 2` is
+`computeMedalTier(bestCap, map)`: no cap is `uncapped`; a cap that is not certified is
 `casual`; a certified cap within 0.0005 s of the map's `world_record` is `world_record` (exact
 equality misses because of float noise); otherwise the best threshold it meets, else `verified`.
 The tier id `verified` is labelled "Certified" (`TIER_LABELS`): a certified cap below every
@@ -87,15 +88,17 @@ medal.
 **Thresholds.** Solo maps carry server-computed `world_record`, `champion_medal`, `gold_medal`,
 `silver_medal` and `bronze_medal` columns, and Cap Detail sends `medals` + `deltas` (a negative
 delta is faster than the threshold). Team maps have no threshold columns: `mapDetail/MedalCard.tsx`
-(the rows' `multiplier`) and `CapTimeDistributionModal` (`TEAM_MEDAL_MULTIPLIERS`) each derive them
-from the fastest verified team run times the medal multipliers (Champion 1.025, Gold 1.125,
-Silver 1.30, Bronze 1.60).
+and `CapTimeDistributionModal` both take the fastest verified team run (`teamWorldRecord`) times
+the medal multipliers (`medalThresholdsFromWorldRecord`, `app/utils/medalThresholds.ts`: Champion
+1.025, Gold 1.125, Silver 1.30, Bronze 1.60).
 
-**Copies of server rules.** Besides those two multiplier tables, the multipliers appear as
-explainer labels in `MedalCard` and `playerDetail/MedalShowcaseCard.tsx`, and the points table
-(WR 10, Champion 8, Gold 6, Silver 4, Bronze 2, Certified 1) in `playerDetail/HeroSection.tsx`.
-Points and the global rank themselves come from the API (`summary.medals`, `/v2/players` rows).
-Change every copy when the server's medal or scoring rules change.
+**Copies of server rules.** `MEDAL_MULTIPLIERS` in `medalThresholds.ts` is the client's one copy
+of the multipliers; the "WR + 2.5%" explainer labels in `MedalCard` and
+`playerDetail/MedalShowcaseCard.tsx` come from it through `medalMultiplierLabel`. The points table
+(WR 10, Champion 8, Gold 6, Silver 4, Bronze 2, Certified 1) is a second copy, in
+`playerDetail/HeroSection.tsx`. Points and the global rank themselves come from the API
+(`summary.medals`, `/v2/players` rows). Change both when the server's medal or scoring rules
+change.
 
 ## Cap times
 
@@ -178,9 +181,12 @@ those rows; none fetches for itself except the version bar.
   prompt (`requestLogin`).
 - **Activity chart** (`mapDetail/ActivityChart.tsx`, lazy): caps by default, weekly; zooming the
   brush below 90 days switches to daily buckets.
-- **Author**: a linked author (`author_ref`) renders as `PlayerInfo`, so it links to the profile;
-  a free-text `author_str` renders as a plain `MetaPill`. The Maps table does the same through
-  `PlayerInfo presentation="name"` ([shared-components.md](../shared-components.md)).
+- **Author**: the name is `mapAuthorName(map)` (`app/utils/mapAuthor.ts`) everywhere a map's
+  author shows (Map Detail, the Maps table, its author filter and sort, the Uncapped tab): the
+  display `author` first, then the free-text `author_str`, trimmed. A linked author
+  (`author_ref`) renders as `PlayerInfo`, so it links to the profile; a free-text author renders
+  as a plain `MetaPill`. The Maps table does the same through `PlayerInfo presentation="name"`
+  ([shared-components.md](../shared-components.md)).
 - **Inactive version** (`active === false`): an amber "no longer in rotation" banner, reviews
   closed (`ReviewsCard canSubmit`), screenshot editing for staff only. The screenshot permission
   rule is in [api.md](../api.md).

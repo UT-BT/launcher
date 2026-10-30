@@ -9,6 +9,8 @@ import { Tooltip } from '@/app/components/ui/tooltip'
 import { displayMapName, formatCapTime, formatAddedDate } from '@/app/utils/format'
 import { medalIconForInt, medalLabelForInt, formatSignedDelta, deltaClass } from './capStats'
 import type { CapRecord, TeamRunStatus } from '@/app/utils/api'
+import { CAP_TYPE_I4GAMES, CAP_TYPE_UTBT_CERTIFIED } from '@/app/utils/capTypes'
+import { teamRunStateLabel } from '@/app/utils/teamRunState'
 
 interface HeroSectionProps {
     cap: CapRecord
@@ -44,7 +46,7 @@ function friendlyDate(iso: string | null | undefined): string {
 }
 
 function CapTypeBadge({ capType }: { capType: number | null | undefined }) {
-    if (capType === 2) {
+    if (capType === CAP_TYPE_UTBT_CERTIFIED) {
         return (
             <span className="inline-flex items-center gap-1.5 h-7 px-2 rounded-md border text-xs font-semibold bg-blue-500/15 border-blue-500/40 text-blue-300">
                 <BadgeCheck className="size-3.5" />
@@ -52,7 +54,7 @@ function CapTypeBadge({ capType }: { capType: number | null | undefined }) {
             </span>
         )
     }
-    if (capType === 3) {
+    if (capType === CAP_TYPE_I4GAMES) {
         return (
             <span className="inline-flex items-center h-7 px-2 rounded-md border text-xs font-semibold bg-purple-500/15 border-purple-500/40 text-purple-300">
                 i4Games
@@ -205,13 +207,7 @@ export function HeroSection({
                                                 : 'bg-hairline/5 border-hairline/10 text-muted-foreground',
                                 )}>
                                     {teamRun.state === 'verified' ? <ShieldCheck className="size-3" /> : <ShieldAlert className="size-3" />}
-                                    {teamRun.state === 'verified'
-                                        ? 'Verified'
-                                        : teamRun.state === 'disallowed'
-                                            ? 'Disallowed'
-                                            : teamRun.state === 'pending'
-                                                ? 'Certified'
-                                                : 'Incomplete'}
+                                    {teamRunStateLabel(teamRun.state)}
                                 </span>
                             </div>
                             <div className="flex flex-col gap-1.5">

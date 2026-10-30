@@ -5,6 +5,8 @@ import { usePaginatedQuery } from '@/app/hooks/useAsync'
 import { useNavState } from '@/app/components/navigation/useNavState'
 import { displayMapName } from '@/app/utils/format'
 import { difficultyBgColor } from '@/app/utils/scoreColors'
+import { DIFFICULTY_TIER_OPTIONS, DIFFICULTY_TIER_RANGES, type DifficultyTierValue } from '@/app/utils/difficulty'
+import { mapAuthorName } from '@/app/utils/mapAuthor'
 import { MapThumbnail } from '@/app/components/shared/MapThumbnail'
 import { MapNavLink } from '@/app/components/shared/MapNavLink'
 import {
@@ -39,19 +41,12 @@ export function UncappedMapsCard({ accessToken, userId, onMapSelect, tabsSlot }:
     const [queryRaw, setQueryRaw] = useState(query)
     const [sortField, setSortField] = useNavState<SortField>('uncapped.sortField', 'name')
     const [sortDir, setSortDir] = useNavState<'asc' | 'desc'>('uncapped.sortDir', 'asc')
-    const [difficultyTier, setDifficultyTier] = useNavState<'all' | 'beginner' | 'intermediate' | 'advanced' | 'expert'>('uncapped.difficultyTier', 'all')
+    const [difficultyTier, setDifficultyTier] = useNavState<'all' | DifficultyTierValue>('uncapped.difficultyTier', 'all')
     const [uncappedPage, setUncappedPage] = useNavState('uncapped.page', 1)
     const [uncappedPageSize, setUncappedPageSize] = useNavState('uncapped.pageSize', 10)
 
-    const difficultyRange = (() => {
-        switch (difficultyTier) {
-            case 'beginner': return { min: 1, max: 3 }
-            case 'intermediate': return { min: 4, max: 6 }
-            case 'advanced': return { min: 7, max: 8 }
-            case 'expert': return { min: 9, max: 10 }
-            default: return { min: undefined, max: undefined }
-        }
-    })()
+    const tierRange = difficultyTier === 'all' ? undefined : DIFFICULTY_TIER_RANGES[difficultyTier]
+    const difficultyRange = { min: tierRange?.[0], max: tierRange?.[1] }
 
     useEffect(() => {
         const t = setTimeout(() => setQuery(queryRaw), DEBOUNCE_MS)
@@ -138,15 +133,14 @@ export function UncappedMapsCard({ accessToken, userId, onMapSelect, tabsSlot }:
                     </div>
                     <select
                         value={difficultyTier}
-                        onChange={e => setDifficultyTier(e.target.value as 'all' | 'beginner' | 'intermediate' | 'advanced' | 'expert')}
+                        onChange={e => setDifficultyTier(e.target.value as 'all' | DifficultyTierValue)}
                         style={{ colorScheme: 'dark' }}
                         className="px-2 py-1 bg-card/50 border border-hairline/10 rounded text-xs text-foreground focus:outline-none focus:border-accent-500/50 cursor-pointer"
                     >
                         <option value="all" className="bg-[#0f1115]">All difficulties</option>
-                        <option value="beginner" className="bg-[#0f1115]">Beginner (1–3)</option>
-                        <option value="intermediate" className="bg-[#0f1115]">Intermediate (4–6)</option>
-                        <option value="advanced" className="bg-[#0f1115]">Advanced (7–8)</option>
-                        <option value="expert" className="bg-[#0f1115]">Expert (9–10)</option>
+                        {DIFFICULTY_TIER_OPTIONS.map(([value, label]) => (
+                            <option key={value} value={value} className="bg-[#0f1115]">{label}</option>
+                        ))}
                     </select>
                 </div>
             </div>
@@ -185,7 +179,7 @@ export function UncappedMapsCard({ accessToken, userId, onMapSelect, tabsSlot }:
                                 {isVisible('author') && (
                                     <DataTableCell>
                                         <span className="text-xs text-muted-foreground truncate">
-                                            {m.author_str ?? String(m.author ?? '—')}
+                                            {mapAuthorName(m) || '—'}
                                         </span>
                                     </DataTableCell>
                                 )}

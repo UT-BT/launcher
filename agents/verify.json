@@ -179,6 +179,7 @@
     "app/utils/api.pickBan.test.ts",
     "app/utils/fixtures/streamSidesFixtures.test.ts",
     "app/utils/fixtures/streamSidesFixtures.ts",
+    "app/utils/recordsDefinitions.test.ts",
     "e2e/camToolHarness.ts",
     "e2e/layout.ts",
     "e2e/responsive-accessibility.spec.ts",
@@ -521,8 +522,14 @@
     "app/components/shared/ReplayVideoModal.tsx",
     "app/hooks/useReplayWatch.ts",
     "app/hooks/useVideoCompareAvailability.ts",
+    "app/utils/capTypes.ts",
+    "app/utils/difficulty.ts",
     "app/utils/format.ts",
-    "app/utils/medals.ts"
+    "app/utils/mapAuthor.ts",
+    "app/utils/medalThresholds.ts",
+    "app/utils/medals.ts",
+    "app/utils/recordsDefinitions.test.ts",
+    "app/utils/teamRunState.ts"
   ],
   "agents/features/stream-kit.md": [
     "app/components/broadcast/BroadcastStage.tsx",

@@ -6,6 +6,7 @@ import { readFile, writeFile, rename, unlink, mkdir, access, readdir, stat } fro
 import { existsSync, type Stats } from 'fs'
 import { gatewayService } from '@/lib/main/gateway-service'
 import { ApiError, uploadDemo } from '@/app/utils/api'
+import { isCertifiedCap } from '@/app/utils/capTypes'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
 import { app } from 'electron'
@@ -737,7 +738,7 @@ export class DemoWatcherService {
                 return false
             }
 
-            const isCertified = response.data.some((cap) => cap.cap_type === 2)
+            const isCertified = response.data.some(isCertifiedCap)
             return isCertified
         } catch (error) {
             loggingService.error(`Certification check API error for ${btpogId}`, 'DemoWatcher', error)
@@ -757,7 +758,7 @@ export class DemoWatcherService {
             return { found: false, certified: false, teamRunId: null }
         }
 
-        const certifiedCap = response.data.find((cap) => cap.cap_type === 2)
+        const certifiedCap = response.data.find(isCertifiedCap)
         return {
             found: true,
             certified: certifiedCap != null,

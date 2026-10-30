@@ -31,7 +31,9 @@ import { MultiFilterDropdown } from '@/app/components/ui/multi-filter-dropdown'
 import { FilterPanelRow } from '@/app/components/ui/filter-panel-row'
 import { FilterPresetsMenu } from '@/app/components/shared/FilterPresetsMenu'
 import { persistPresets, newPresetId, presetFiltersMatch, useSyncedPresets } from '@/app/utils/filterPresets'
-import { DIFFICULTY_TIER_RANGES as DIFFICULTY_RANGES } from '@/app/utils/difficulty'
+import { DIFFICULTY_TIER_LABEL, DIFFICULTY_TIER_OPTIONS, DIFFICULTY_TIER_RANGES as DIFFICULTY_RANGES } from '@/app/utils/difficulty'
+import { CAP_TYPE_UTBT_CERTIFIED } from '@/app/utils/capTypes'
+import { mapAuthorName } from '@/app/utils/mapAuthor'
 import { ColumnsMenu } from '@/app/components/shared/ColumnsMenu'
 import { ActiveFilterChip } from '@/app/components/shared/ActiveFilterChip'
 import {
@@ -387,7 +389,7 @@ function getTutorialMockRow(mapName: string): {
         },
         bestCap: {
             map: mapName, cap_id: 'tutorial-mock-pb',
-            cap_time_seconds: 48.234, cap_type: 2, verified: true,
+            cap_time_seconds: 48.234, cap_type: CAP_TYPE_UTBT_CERTIFIED, verified: true,
         },
         wrHolder: {
             user_id: '0', alias: 'TopPlayer', cap_id: 'tutorial-mock-wr',
@@ -524,14 +526,6 @@ function computePageSize(): number {
 
 const SKELETON_ROW_COUNT = 10
 const SEARCH_DEBOUNCE_MS = 200
-
-function getAuthorString(m: Partial<Pick<Map, 'author' | 'author_str'>>): string {
-    const author = m.author
-    if (typeof author === 'string' && author.trim()) return author.trim()
-    if (typeof author === 'number') return String(author)
-    if (m.author_str && m.author_str.trim()) return m.author_str.trim()
-    return ''
-}
 
 function mapHasMatchingTag(m: Map | MapMetadata, term: string): boolean {
     const tags = (m.tags ?? '').toLowerCase().split(',').map(t => t.trim()).filter(Boolean)
@@ -982,7 +976,7 @@ export function MapsPage({
         opts?: { skipNew?: boolean; skipFavorites?: boolean },
     ): boolean => {
         if (state.authorFilters.length > 0) {
-            const a = getAuthorString(m as Map).toLowerCase()
+            const a = mapAuthorName(m).toLowerCase()
             if (!state.authorFilters.some(f => f.toLowerCase() === a)) return false
         }
         if (state.tagFilters.length > 0) {
@@ -1154,8 +1148,8 @@ export function MapsPage({
             let cmp = 0
             if (state.sortBy === 'name') cmp = a.name.localeCompare(b.name)
             else if (state.sortBy === 'author') {
-                const aA = getAuthorString(a as Map).toLowerCase()
-                const bA = getAuthorString(b as Map).toLowerCase()
+                const aA = mapAuthorName(a).toLowerCase()
+                const bA = mapAuthorName(b).toLowerCase()
                 if (!aA && bA) cmp = 1
                 else if (aA && !bA) cmp = -1
                 else cmp = aA.localeCompare(bA)
@@ -1972,7 +1966,7 @@ export function MapsPage({
                         <ActiveFilterChip
                             key={`diff-${d}`}
                             label="Difficulty"
-                            value={difficultyOptions.find(([v]) => v === d)?.[1] ?? d}
+                            value={DIFFICULTY_TIER_LABEL[d] ?? d}
                             onClear={() => updateFilter('difficultyFilters', state.difficultyFilters.filter(x => x !== d) as DifficultyValue[])}
                         />
                     ))}
@@ -2056,12 +2050,7 @@ export function MapsPage({
                             label="Difficulty"
                             values={state.difficultyFilters}
                             onChange={v => updateFilter('difficultyFilters', v as DifficultyValue[])}
-                            options={[
-                                ['beginner', 'Beginner (1–3)'],
-                                ['intermediate', 'Intermediate (4–6)'],
-                                ['advanced', 'Advanced (7–8)'],
-                                ['expert', 'Expert (9–10)'],
-                            ]}
+                            options={DIFFICULTY_TIER_OPTIONS}
                         />
                         <MultiFilterDropdown
                             label="Author"
@@ -2207,7 +2196,7 @@ export function MapsPage({
                         <DataTableEmpty colSpan={visibleColumnCount} message="No maps match your filters." />
                     ) : (
                             pageItems.map((map, index) => {
-                                const author = getAuthorString(map as Map) || '—'
+                                const author = mapAuthorName(map) || '—'
                                 const tags = map.tags
                                     ? map.tags.split(',').map(t => t.trim()).filter(Boolean).sort((a, b) => a.localeCompare(b))
                                     : []
@@ -2405,13 +2394,6 @@ export function MapsPage({
         </div>
     )
 }
-
-const difficultyOptions: [string, string][] = [
-    ['beginner', 'Beginner (1–3)'],
-    ['intermediate', 'Intermediate (4–6)'],
-    ['advanced', 'Advanced (7–8)'],
-    ['expert', 'Expert (9–10)'],
-]
 
 const ratingTierOptions: [string, string][] = [
     ['excellent', 'Excellent (8.0+)'],

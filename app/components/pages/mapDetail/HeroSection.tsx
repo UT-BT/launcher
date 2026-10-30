@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils'
 import { displayMapName, formatAddedDate, isNew } from '@/app/utils/format'
 import { difficultyBgColor } from '@/app/utils/scoreColors'
 import type { MapMetadata } from '@/app/utils/api'
+import { mapAuthorName } from '@/app/utils/mapAuthor'
 import { MapVersionsBar } from './MapVersionsCard'
 
 interface HeroSectionProps {
@@ -32,7 +33,7 @@ export function HeroSection({
     accessToken, onMapSelect, requiredPlayers, canEditScreenshot, onEditScreenshot,
 }: HeroSectionProps) {
     const difficulty = map?.difficulty
-    const author = map?.author_str ?? (map?.author != null ? String(map.author) : null)
+    const author = mapAuthorName(map) || null
     const authorRef = map?.author_ref
     const tags = (map?.tags ?? '').split(',').map(t => t.trim()).filter(Boolean)
     const added = map?.added
