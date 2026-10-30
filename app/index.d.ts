@@ -47,14 +47,9 @@ declare module '*.mp3' {
 interface Window {
   conveyor: import('@/lib/conveyor/api').ConveyorApi
   utInstall: {
-    onProgress: (cb: (data: { stage?: string; progress?: number }) => void) => () => void
-    onStatus: (cb: (data: { status: string }) => void) => () => void
-    onConfirm: (cb: (data: { id: string; title: string; message: string; detail?: string }) => void) => () => void
-    respondConfirm: (id: string, accepted: boolean) => void
     onIsoDownloadProgress: (cb: (data: { progress: number; totalBytes: number; downloadedBytes: number }) => void) => () => void
   }
   utPatch: {
-    onStatus: (cb: (data: { status: string; message?: string; tag?: string }) => void) => () => void
     onPatchInstallStatus: (cb: (data: { status: string; tag?: string; message?: string }) => void) => () => void
     onPatchInstallProgress: (cb: (data: { progress: number }) => void) => () => void
     onInstallationPathUpdated: (cb: (data: { version: string }) => void) => () => void

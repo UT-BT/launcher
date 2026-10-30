@@ -7,7 +7,6 @@ import { SettingsButton } from './SettingsButton'
 import { UploadLogButton } from './UploadLogButton'
 import { GameProfilesButton } from './GameProfilesButton'
 import { DevImpersonateButton } from './DevImpersonateButton'
-import type { TitlebarMenu } from './TitlebarMenu'
 import { FaMinus, FaSquare, FaTimes, FaWindowRestore } from 'react-icons/fa'
 
 export const Titlebar = () => {
@@ -88,5 +87,4 @@ export interface TitlebarProps {
   title: string
   titleCentered?: boolean
   icon?: string
-  menuItems?: TitlebarMenu[]
 }

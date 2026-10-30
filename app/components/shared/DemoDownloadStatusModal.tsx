@@ -12,7 +12,7 @@ interface DemoDownloadStatusModalProps {
 function reasonText(reason: string): string {
     if (reason === 'no-install') return 'A valid UT99 installation is required to download demos. Set one up in Settings → Game Installation.'
     if (reason === 'empty') return 'The downloaded demo was empty. Try again, or pick a different run.'
-    if (reason.startsWith('http-')) return `The demo server responded with ${reason.replace('http-', 'status ')}. The demo may not be available.`
+    if (reason === 'write-error') return 'Failed to write the demo to disk. Check that the launcher has write access to the install folder.'
     if (reason === 'fetch-error') return 'Network error while downloading. Check your connection and try again.'
     return `Download failed (${reason}).`
 }

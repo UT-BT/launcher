@@ -67,8 +67,10 @@ modules, which also carry the web fallback).
   (`window-minimize`, `web-open-url`); `updater` and `legacyInstall` use
   `namespace:method` (`updater:check`, `legacyInstall:remove`); every other namespace uses
   camelCase. Match the namespace you touch; do not add a fourth style.
-- **Define a Zod schema for both `args` and `return`**, with real types.
-  (`readIniSection`'s `return` is `z.any()`, the one exception.)
+- **Define a Zod schema for both `args` and `return`**, with real types. The two
+  exceptions are deliberate: `fetchServers` returns raw gateway rows (`z.array(z.any())`)
+  that `app/platform/gateway.ts` normalises, and `logMessage`'s optional data argument is
+  free-form.
 - **Handlers are the security boundary.** File and process access happens there, and
   every untrusted input is validated (paths via `resolveWithin`; see
   [lib/main/README.md](../main/README.md)). The renderer sends intent, not paths or
@@ -79,7 +81,8 @@ modules, which also carry the web fallback).
 ### `ini`
 
 Paths are relative to `{install}/System` and contained there. `readIniValue` returns the
-first value of a duplicated key, `readIniSection` returns duplicates as arrays,
+first value of a duplicated key, `readIniSection` returns the section as
+`Record<string, string | string[]>` (duplicates as arrays) or `undefined`,
 `writeIniValue(path, section, key, value | null, createIfMissing?)` deletes the key on
 `null` and rewrites the whole file (comments are lost). Details in
 [lib/main/README.md](../main/README.md); the settings panels are the consumer.
@@ -145,10 +148,6 @@ useEffect(() => window.utFavorites?.onGameClosed(() => refetchFavorites()), [])
 | `window.utbtUpdater` | `onStateChanged`: updater state push | `updater:state-changed` |
 | `window.utStreamKit` | `onKitProgress`: `{ phase: 'downloading' \| 'extracting', done, total }` (`total` null without a content length) | `stream-kit:kit-progress` |
 | `window.uiScale` | `set(factor)` / `get()`: zoom through `webFrame`, no IPC | none |
-
-`utInstall.onProgress`, `onStatus`, `onConfirm` / `respondConfirm` and `utPatch.onStatus`
-listen on channels (`ut-install-progress`, `ut-install-status`, `ut-install-confirm`,
-`ut-patch-status`) that nothing in main sends; do not build on them.
 
 To add a bridge, expose it in both branches of `preload.ts` (the `contextIsolated` branch
 and the fallback that assigns `window.*` directly), and declare its type in

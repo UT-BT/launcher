@@ -359,6 +359,7 @@
     "app/components/window/UploadLogButton.tsx",
     "app/components/window/UploadLogModal.tsx",
     "app/components/window/WindowContext.tsx",
+    "app/components/window/profileAction.ts",
     "app/hooks/useDemoDownload.ts",
     "app/hooks/useMapDownload.ts",
     "app/hooks/useServerJoin.ts",

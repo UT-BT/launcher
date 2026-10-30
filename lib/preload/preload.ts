@@ -11,27 +11,6 @@ if (process.contextIsolated) {
     conveyor.app.getPathForFile = (file: File) => webUtils.getPathForFile(file)
     contextBridge.exposeInMainWorld('conveyor', conveyor)
     contextBridge.exposeInMainWorld('utInstall', {
-      onProgress: (cb: (data: { stage?: string; progress?: number }) => void) => {
-        const listener = (_: unknown, data: { stage?: string; progress?: number }) => cb(data)
-        ipcRenderer.on('ut-install-progress', listener)
-        return () => ipcRenderer.removeListener('ut-install-progress', listener)
-      },
-      onStatus: (cb: (data: { status: string }) => void) => {
-        const listener = (_: unknown, data: { status: string }) => cb(data)
-        ipcRenderer.on('ut-install-status', listener)
-        return () => ipcRenderer.removeListener('ut-install-status', listener)
-      },
-      onConfirm: (cb: (data: { id: string; title: string; message: string; detail?: string }) => void) => {
-        const listener = (
-          _: unknown,
-          data: { id: string; title: string; message: string; detail?: string }
-        ) => cb(data)
-        ipcRenderer.on('ut-install-confirm', listener)
-        return () => ipcRenderer.removeListener('ut-install-confirm', listener)
-      },
-      respondConfirm: (id: string, accepted: boolean) => {
-        ipcRenderer.send('ut-install-confirm-response', { id, accepted })
-      },
       onIsoDownloadProgress: (cb: (data: { progress: number; totalBytes: number; downloadedBytes: number }) => void) => {
         const listener = (_: unknown, data: { progress: number; totalBytes: number; downloadedBytes: number }) => cb(data)
         ipcRenderer.on('iso-download-progress', listener)
@@ -39,14 +18,6 @@ if (process.contextIsolated) {
       },
     })
     contextBridge.exposeInMainWorld('utPatch', {
-      onStatus: (cb: (data: { status: string; message?: string; tag?: string }) => void) => {
-        const listener = (
-          _: unknown,
-          data: { status: string; message?: string; tag?: string }
-        ) => cb(data)
-        ipcRenderer.on('ut-patch-status', listener)
-        return () => ipcRenderer.removeListener('ut-patch-status', listener)
-      },
       onPatchInstallStatus: (cb: (data: { status: string; tag?: string; message?: string }) => void) => {
         const listener = (_: unknown, data: { status: string; tag?: string; message?: string }) => cb(data)
         ipcRenderer.on('patch-install-status', listener)
@@ -135,27 +106,6 @@ if (process.contextIsolated) {
 } else {
   window.conveyor = conveyor
   window.utInstall = {
-    onProgress: (cb: (data: { stage?: string; progress?: number }) => void) => {
-      const listener = (_: unknown, data: { stage?: string; progress?: number }) => cb(data)
-      ipcRenderer.on('ut-install-progress', listener)
-      return () => ipcRenderer.removeListener('ut-install-progress', listener)
-    },
-    onStatus: (cb: (data: { status: string }) => void) => {
-      const listener = (_: unknown, data: { status: string }) => cb(data)
-      ipcRenderer.on('ut-install-status', listener)
-      return () => ipcRenderer.removeListener('ut-install-status', listener)
-    },
-    onConfirm: (cb: (data: { id: string; title: string; message: string; detail?: string }) => void) => {
-      const listener = (
-        _: unknown,
-        data: { id: string; title: string; message: string; detail?: string }
-      ) => cb(data)
-      ipcRenderer.on('ut-install-confirm', listener)
-      return () => ipcRenderer.removeListener('ut-install-confirm', listener)
-    },
-    respondConfirm: (id: string, accepted: boolean) => {
-      ipcRenderer.send('ut-install-confirm-response', { id, accepted })
-    },
     onIsoDownloadProgress: (cb: (data: { progress: number; totalBytes: number; downloadedBytes: number }) => void) => {
       const listener = (_: unknown, data: { progress: number; totalBytes: number; downloadedBytes: number }) => cb(data)
       ipcRenderer.on('iso-download-progress', listener)
@@ -163,14 +113,6 @@ if (process.contextIsolated) {
     },
   }
   window.utPatch = {
-    onStatus: (cb: (data: { status: string; message?: string; tag?: string }) => void) => {
-      const listener = (
-        _: unknown,
-        data: { status: string; message?: string; tag?: string }
-      ) => cb(data)
-      ipcRenderer.on('ut-patch-status', listener)
-      return () => ipcRenderer.removeListener('ut-patch-status', listener)
-    },
     onPatchInstallStatus: (cb: (data: { status: string; tag?: string; message?: string }) => void) => {
       const listener = (_: unknown, data: { status: string; tag?: string; message?: string }) => cb(data)
       ipcRenderer.on('patch-install-status', listener)

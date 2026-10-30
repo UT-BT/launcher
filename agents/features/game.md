@@ -263,6 +263,10 @@ through `app.setDemoWatcherConfig`, and the game's own recording switch `AutoDem
   or from, or delete them (case-insensitive, trailing dots and spaces ignored, as Windows
   folder names are), and the modal disables those row buttons. Only Browse writes them
   ([the folder's profile pair](#choosing-and-validating)).
+- A refused or failed create, overwrite, rename, delete or switch shows main's message under
+  the create field (`runProfileAction` in `app/components/window/profileAction.ts` strips
+  Electron's IPC wrapper). A failed rename keeps its field open. Escape closes an open
+  confirm first, then an open rename, then the modal.
 
 ## Window chrome (desktop only)
 
@@ -295,15 +299,13 @@ through `app.setDemoWatcherConfig`, and the game's own recording switch `AutoDem
 - Buttons that open UI living under `App` dispatch a `window` event instead: Settings sends
   `open-settings` ([navigation.md](../navigation.md)), Impersonate sends
   `DEV_IMPERSONATE_EVENT` for `DevImpersonateModal`. Game Profiles and Demo Uploads render
-  their own modals. Links and the About page open URLs through `web-open-url`.
+  their own `ui/modal.tsx` modals in place (`offsetSidebar`, no portal, so their
+  `ConfirmModal`s stay on top). Links and the About page open URLs through `web-open-url`.
 - `--window-titlebar-height` (26 px in `app/styles/window.css`, 0 px on web) is the top
   offset of full-window overlays (`top-[var(--window-titlebar-height)]` in
   `app/components/ui/modal.tsx`, `ErrorModal`, the settings fallback), which keeps the
   titlebar usable.
   Titlebar colours and the scope of `window.css`: [styling.md](../styling.md).
-- Not in use: `TitlebarMenu.tsx` and `menus.ts` (a File / View / Links / About menu bar,
-  still exported from `index.ts`) are never rendered, and nothing sends
-  `set-titlebar-lock` or calls `webSetLocked`. Build on the action buttons.
 
 ## Platform notes
 

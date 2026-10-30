@@ -70,7 +70,7 @@ export function GameGameplaySettings() {
             }
 
             // Macro dodging check
-            const inputSection = await window.conveyor.ini.readIniSection('User.ini', 'Engine.Input') as Record<string, string | string[]> | undefined
+            const inputSection = await window.conveyor.ini.readIniSection('User.ini', 'Engine.Input')
             if (inputSection) {
                 const moveForwardAlias = Object.values(inputSection).find(v => {
                     const val = Array.isArray(v) ? v[0] : v
@@ -120,7 +120,7 @@ export function GameGameplaySettings() {
     const updateDisableMacroDodging = async (disabled: boolean) => {
         setDisableMacroDodging(disabled)
         try {
-            const section = await window.conveyor.ini.readIniSection('User.ini', 'Engine.Input') as Record<string, string | string[]>
+            const section = await window.conveyor.ini.readIniSection('User.ini', 'Engine.Input')
             if (!section) return
 
             const movements = ['MoveForward', 'MoveBackward', 'StrafeLeft', 'StrafeRight']
