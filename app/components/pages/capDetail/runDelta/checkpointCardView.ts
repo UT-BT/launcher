@@ -1,6 +1,12 @@
 import type { CapCompareCandidate, CapComparison } from '@/app/utils/api'
 import { candidateTag } from './compareCandidates'
-import { buildRunDeltaCard, type ReplayCard, type RunDeltaCardInput, type ZonesCard } from './runDeltaCard'
+import {
+    buildRunDeltaCard,
+    type ReplayCard,
+    type RoutesDifferCard,
+    type RunDeltaCardInput,
+    type ZonesCard,
+} from './runDeltaCard'
 
 export interface ComparisonResult {
     runnerId: string
@@ -25,7 +31,7 @@ export interface LoadingView {
     chip: 'REPLAY'
 }
 
-export type CheckpointCardView = NoTargetView | LoadingView | ReplayCard | ZonesCard
+export type CheckpointCardView = NoTargetView | LoadingView | ReplayCard | RoutesDifferCard | ZonesCard
 
 const LOADING: LoadingView = { kind: 'loading', chip: 'REPLAY' }
 
@@ -50,6 +56,6 @@ export function checkpointCardView({ capId, capHasReplay, target, result, zoneti
     if (!wantsComparison(capHasReplay, target)) return zonesFallback(input)
     if (!result || result.runnerId !== capId || result.referenceId !== target.id) return LOADING
     const card = buildRunDeltaCard(input)
-    if (card.kind === 'replay') return card
+    if (card.kind !== 'zones') return card
     return zonetimesLoading ? LOADING : zonesFallback(input)
 }

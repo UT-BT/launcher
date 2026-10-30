@@ -16,6 +16,10 @@ import type { ReplayCard } from './runDelta/runDeltaCard'
 import { RunDeltaChip } from './runDelta/RunDeltaChip'
 import { ComparePicker } from './runDelta/ComparePicker'
 import { SectorTable } from './runDelta/SectorTable'
+import { RoutesDifferView } from './runDelta/RoutesDifferView'
+import type { ChartView } from './runDelta/ChartViewToggle'
+import { differentLineNote } from './runDelta/runDeltaCopy'
+import { useNavState } from '@/app/components/navigation/useNavState'
 
 const CheckpointDeltaChart = lazy(() => import('./CheckpointDeltaChart'))
 const RunDeltaChart = lazy(() => import('./runDelta/RunDeltaChart'))
@@ -82,18 +86,23 @@ function ZonesNote({ note }: { note: string }) {
     )
 }
 
-function ReplayView({ card, referenceLabel }: { card: ReplayCard; referenceLabel: string }) {
+function ReplayView({ card, runnerLabel, referenceLabel }: { card: ReplayCard; runnerLabel: string; referenceLabel: string }) {
+    const [chartView, setChartView] = useNavState<ChartView>('checkpointDeltas.chartView', 'cumulative')
     return (
         <div className="flex flex-col xl:flex-row xl:h-[460px]">
             <div className="xl:w-1/2 xl:h-full xl:border-r border-hairline/5 min-h-0 flex flex-col">
-                <SectorTable rows={card.rows} />
+                <SectorTable
+                    rows={card.rows}
+                    differentLineNote={card.flagged ? differentLineNote(runnerLabel, referenceLabel) : null}
+                />
             </div>
-            <div className="xl:w-1/2 h-[300px] lg:h-[360px] xl:h-full p-3 min-h-0">
+            <div className="xl:w-1/2 h-[320px] lg:h-[360px] xl:h-full p-3 min-h-0">
                 <Suspense fallback={<div className="h-full bg-hairline/[0.02] border border-hairline/5 rounded-lg animate-pulse" />}>
                     <RunDeltaChart
-                        chart={card.chart}
+                        card={card}
+                        view={chartView}
+                        onViewChange={setChartView}
                         referenceLabel={referenceLabel}
-                        description={`Gap to ${referenceLabel} over the run, ${card.finalGap.label} at the cap`}
                     />
                 </Suspense>
             </div>
@@ -124,6 +133,8 @@ export function CheckpointSplitsCard({
     )
     const hasCandidates = candidates.length > 0
     const referenceLabel = target ? (target.alias ?? target.user) : ''
+    const runner = comparison?.comparison?.runner
+    const runnerLabel = runner ? (runner.alias ?? runner.user) : ''
 
     return (
         <div className="bg-card/30 border border-hairline/5 rounded-xl flex flex-col overflow-hidden">
@@ -148,7 +159,9 @@ export function CheckpointSplitsCard({
             </div>
 
             {view.kind === 'replay' ? (
-                <ReplayView card={view} referenceLabel={referenceLabel} />
+                <ReplayView card={view} runnerLabel={runnerLabel} referenceLabel={referenceLabel} />
+            ) : view.kind === 'routes_differ' ? (
+                <RoutesDifferView card={view} referenceLabel={referenceLabel} />
             ) : view.kind === 'loading' ? (
                 <LoadingView />
             ) : (

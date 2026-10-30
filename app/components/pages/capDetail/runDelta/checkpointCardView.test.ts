@@ -85,13 +85,62 @@ describe('the checkpoint card view', () => {
         expect(view({ zonetimesLoading: true }).kind).toBe('replay')
     })
 
-    it('falls back to zone checkpoints for a pair whose routes differ', () => {
+    it('shows the routes differ state, with the coverage and the final gap only, for a pair whose routes differ', () => {
         const routesDiffer = runCompareFixture('routesDiffer')
         const target = { ...BUN, id: routesDiffer.reference.cap_id }
         expect(view({
             capId: routesDiffer.runner.cap_id,
             target,
             result: { runnerId: routesDiffer.runner.cap_id, referenceId: target.id, comparison: routesDiffer },
-        })).toMatchObject({ kind: 'zones', chip: 'ZONES' })
+        })).toEqual({
+            kind: 'routes_differ',
+            chip: 'REPLAY',
+            coveragePercent: 27,
+            finalGap: { ms: -90, label: '−0.090', tone: 'ahead' },
+        })
+    })
+
+    it('keeps a pair whose routes differ under REPLAY while the zone checkpoints are still loading', () => {
+        const routesDiffer = runCompareFixture('routesDiffer')
+        const target = { ...BUN, id: routesDiffer.reference.cap_id }
+        expect(view({
+            capId: routesDiffer.runner.cap_id,
+            target,
+            result: { runnerId: routesDiffer.runner.cap_id, referenceId: target.id, comparison: routesDiffer },
+            zonetimesLoading: true,
+        }).kind).toBe('routes_differ')
+    })
+
+    it.each(['separated', 'neverRejoins', 'long', 'short'] as const)(
+        'never switches a %s pair with different lines to zone checkpoints',
+        name => {
+            const comparison = runCompareFixture(name)
+            const target = { ...BUN, id: comparison.reference.cap_id }
+            const card = view({
+                capId: comparison.runner.cap_id,
+                target,
+                result: { runnerId: comparison.runner.cap_id, referenceId: target.id, comparison },
+            })
+            expect(card.kind).toBe('replay')
+            if (card.kind !== 'replay') return
+            expect(card.flagged).toBe(true)
+            expect(card.chart.bands).toHaveLength(comparison.separations.length)
+        },
+    )
+
+    it('draws a run that never rejoins with a band to the cap, the lone cap point and hollow dots in its bands', () => {
+        const comparison = runCompareFixture('neverRejoins')
+        const target = { ...BUN, id: comparison.reference.cap_id }
+        const card = view({
+            capId: comparison.runner.cap_id,
+            target,
+            result: { runnerId: comparison.runner.cap_id, referenceId: target.id, comparison },
+        })
+        if (card.kind !== 'replay') throw new Error(card.kind)
+        expect(card.chart.bands.at(-1)).toMatchObject({ endMs: 39792, rejoined: false })
+        expect(card.chart.capPoint).toEqual({ tMs: 39792, deltaMs: -14470, tone: 'ahead' })
+        expect(card.chart.dots.filter(d => d.hollow).map(d => d.index)).toEqual([4, 5, 9, 10])
+        expect(card.rows.filter(r => r.flagged).map(r => r.label)).toEqual(['S4', 'S5', 'S9', 'S10'])
+        expect(card.bars.bars.filter(b => b.flagged).map(b => b.label)).toEqual(['S4', 'S5', 'S9', 'S10'])
     })
 })
