@@ -11,7 +11,10 @@ import {
     deleteTeamAvatar, disbandTeam, leaveTeam, setMyTagHidden, transferTeamOwnership, updateTeam, uploadTeamAvatar,
     type TeamDetail, type UserProfile,
 } from '@/app/utils/api'
-import { AccessBadge, AccessToggle, ErrorBanner, TagChip, refreshUserProfile, teamInputClass, teamErrorMessage } from './teamsShared'
+import {
+    AccessBadge, AccessToggle, ErrorBanner, TagChip, TEAM_AVATAR_ACCEPT,
+    refreshUserProfile, teamAvatarValidationError, teamInputClass, teamErrorMessage,
+} from './teamsShared'
 import { nameValidationError, tagValidationError, TEAM_NAME_MAX_LENGTH, TAG_MAX_LENGTH } from './tagFormat'
 import { TagPreview, TagStyleFields, type TagStyleValue } from './TagStyleFields'
 import { TeamAvatar } from './TeamAvatar'
@@ -72,6 +75,11 @@ export function TeamHeaderCard({
 
     const pickAvatar = async (file: File | null) => {
         if (!file) return
+        const invalid = teamAvatarValidationError(file)
+        if (invalid) {
+            setError(invalid)
+            return
+        }
         await runAvatar(() => uploadTeamAvatar(accessToken, team.id, file, file.name))
     }
 
@@ -142,7 +150,7 @@ export function TeamHeaderCard({
                             <input
                                 ref={avatarInputRef}
                                 type="file"
-                                accept="image/png,image/jpeg,image/webp,image/gif"
+                                accept={TEAM_AVATAR_ACCEPT}
                                 className="hidden"
                                 onChange={e => {
                                     void pickAvatar(e.target.files?.[0] ?? null)
@@ -212,7 +220,7 @@ export function TeamHeaderCard({
                     }
                 }}
                 title="Delete team?"
-                message={`This permanently deletes ${team.name}, its members, and its lineups.`}
+                message={`This permanently deletes ${team.name} and removes every member from it.`}
                 detail="This cannot be undone."
                 confirmText="Delete"
                 cancelText="Cancel"

@@ -13,7 +13,7 @@ team runs and team caps on team maps are in [api.md](../api.md).
 
 | Path | Holds |
 |---|---|
-| `app/components/pages/TeamsPage.tsx`, `TeamsPage.types.ts` | the `teams` page-view: my-team and invitations cache, gallery, Create Team modal; the types file keeps state and cache defaults out of the lazy page |
+| `app/components/pages/TeamsPage.tsx`, `TeamsPage.types.ts` | the `teams` page-view: my-team, invitations and directory caches, gallery, Create Team modal; the types file keeps state and cache defaults out of the lazy page |
 | `app/components/pages/teams/TeamDetailsPage.tsx` | the `team-detail` entry: loads the team and `/me/team`, derives the viewer's role, owns Join / Accept / Decline |
 | `teams/TeamHeaderCard.tsx` | owner actions (edit modal, crest, transfer, delete), Leave, the per-member tag toggle |
 | `teams/MembersPanel.tsx` | roster plus the manager modals: Requests, Member numbers, Manage members, Audit log |
@@ -24,16 +24,21 @@ team runs and team caps on team maps are in [api.md](../api.md).
 | `teams/teamsShared.tsx` | team helpers (`teamErrorMessage`, `refreshUserProfile`, crest limits) and a form/section kit other features import (see [Shared beyond Teams](#shared-beyond-teams)) |
 | `teams/PlayerSearchInput.tsx` | the app-wide player picker ([shared-components.md](../shared-components.md)) |
 | `app/utils/api.ts` | every team type (`TeamCore`, `TeamDetail`, `TeamMember`, …) and fetcher; grep `/teams/` or `/me/team` |
+| `e2e/teams.spec.ts` | Playwright: profile refresh after Join and Accept, crest validation, the cached directory on revisit |
 
 ## Pages and navigation
 
 - **`teams`** is a lazy, controlled page-view. Per-entry state (`utbt:teamsState:v2`, no
   preference fields): search, access filter, sort field, sort direction, scroll. Its `caches`
   hold `myTeam` (from `/me/team`) and `invitations` (from `/me/invitations`), revalidated on
-  every mount through `load(background)`.
-- **The directory list is not cached.** `TeamGallery` keeps the rows in its own state and
-  refetches the whole directory (`fetchTeams` with `limit: 0`) on every visit and on each
-  search (350 ms debounce), access filter or sort change. Default sort: World Records,
+  every mount through `load(background)`, plus the directory rows `TeamGallery` revalidates.
+- **The directory rows live in the Teams caches.** `TeamGallery` fetches the whole directory
+  (`fetchTeams` with `limit: 0`) on every visit and on each search (350 ms debounce), access
+  filter or sort change, and hands the rows up as `caches.directory` with the query they
+  answer as `caches.directorySig`. "Loading teams…" shows only while no rows are cached for
+  the current query; a revisit paints the cached rows and refreshes them silently, keeping
+  them if that refresh fails. Refresh clears `directory` and `directorySig`, bumps the
+  gallery's `refreshKey` and reloads `myTeam` and `invitations`. Default sort: World Records,
   descending.
 - **`team-detail`** (`/teams/<id>`) is keyed per entry. Its `onExitToGallery` is
   `exitTeamsToGallery` in `Main.tsx`: it marks the teams cache unloaded and navigates to
@@ -84,13 +89,13 @@ their `TeamMember.role`; on any other team it is `none`. The UI calls `admin` "M
   page. A manager withdraws an invite with `denyTeamMember`.
 - **Blocking**: `kickTeamMember(…, true)` kicks and leaves a `blocked` row; that player sees
   "Blocked from joining" instead of Join. `unblockTeamMember` (from Requests) removes it.
-- **Mutations return the fresh `TeamDetail`** (leave, disband and the lineup calls excepted).
+- **Mutations return the fresh `TeamDetail`** (leave and disband excepted).
   Replace the page's team with it through `onTeamChange`; never patch members locally.
 - **Refresh the viewer's own profile after anything that changes the name they wear.** The
   profile alias carries the clan tag, so the sidebar card and Home go stale otherwise.
   `refreshUserProfile()` dispatches `refresh-user-profile` and `app.tsx` refetches the
-  profile. Create, Accept from the Teams page, Leave, Delete, Edit and the tag toggle call it;
-  the team page's Join and Accept do not.
+  profile. Create, Join, Accept (from the Teams page and the team page), Leave, Delete, Edit
+  and the tag toggle call it.
 
 ## Clan tags, styles and numbers
 
@@ -127,7 +132,9 @@ section covers editing it.
   `avatar_updated` busts the cached image.
 - `teamsShared.tsx` mirrors the server's limits (`TEAM_AVATAR_MAX_BYTES`,
   `TEAM_AVATAR_ACCEPT`, `teamAvatarValidationError`) so a bad file fails before the upload.
-  The create form validates; the header card only filters by the file input's `accept`.
+  The create form and the header card both validate the picked file and use
+  `TEAM_AVATAR_ACCEPT` for the file input; the header card shows the message in its
+  `ErrorBanner` and uploads nothing.
 - **Create then upload.** The crest endpoint needs a team id, so `CreateTeamForm` creates the
   team, then uploads. If the upload fails it holds the created team: Retry upload never
   re-creates it and "Continue without image" proceeds to the team.
@@ -157,15 +164,14 @@ section covers editing it.
 Managers open it from the Members header; `fetchTeamAudit(limit: 100)` loads when the modal
 opens and again when `team.members` changes. `AUDIT_META` in `MembersPanel.tsx` turns each
 `action` into an icon and a sentence. It keeps `apply`, `withdraw`, `approve` and `deny`
-because older rows carry them, and it handles `number` and `avatar`, which `TeamAuditAction`
-in `api.ts` does not list. An unknown action renders as `actor · action`; when the server adds
+because older rows carry them; `TeamAuditAction` in `api.ts` lists the same actions,
+`number` and `avatar` included. An unknown action renders as `actor · action`; when the server adds
 one, add its row to `AUDIT_META`.
 
 ## Lineups
 
-`TeamDetail.lineups`, the lineup fetchers and `LineupsPanel.tsx` (named sets of 2–12 active
-members) exist, but no page mounts the panel: lineups have no UI. Deleting a team deletes its
-lineups.
+Team lineups are API-only: the launcher has no lineup UI, fetchers or types, and ignores the
+`lineups` field a team payload may carry. Add them back only when a page needs them.
 
 ## Shared beyond Teams
 

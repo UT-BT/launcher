@@ -599,7 +599,6 @@
     "app/components/pages/TeamsPage.tsx",
     "app/components/pages/TeamsPage.types.ts",
     "app/components/pages/teams/CreateTeamForm.tsx",
-    "app/components/pages/teams/LineupsPanel.tsx",
     "app/components/pages/teams/MembersPanel.tsx",
     "app/components/pages/teams/TagStyleFields.tsx",
     "app/components/pages/teams/TeamActivityPanel.tsx",
@@ -612,7 +611,8 @@
     "app/components/pages/teams/TeamWorldRecordsPanel.tsx",
     "app/components/pages/teams/tagFormat.ts",
     "app/components/pages/teams/teamsShared.tsx",
-    "app/utils/api.ts"
+    "app/utils/api.ts",
+    "e2e/teams.spec.ts"
   ],
   "app/components/pages/settings/README.md": [
     "app/components/layout/AppLayout.tsx",

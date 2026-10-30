@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Search, X, ArrowUp, ArrowDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/app/components/ui/button'
@@ -27,6 +27,10 @@ const SORT_OPTIONS: { value: TeamSort; label: string }[] = [
 interface TeamGalleryProps {
     accessToken: string
     myTeam: TeamDetail | null
+    cachedTeams: TeamCore[]
+    cachedSig: string | null
+    onTeamsLoaded: (sig: string, teams: TeamCore[]) => void
+    refreshKey: number
     search: string
     access: TeamAccessFilter
     sort: TeamSort
@@ -44,14 +48,22 @@ function accessToIsOpen(access: TeamAccessFilter): boolean | undefined {
     return undefined
 }
 
+function directorySig(search: string, access: TeamAccessFilter, sort: TeamSort, sortDir: 'asc' | 'desc'): string {
+    return JSON.stringify([search, access, sort, sortDir])
+}
+
 export function TeamGallery({
-    accessToken, myTeam, search, access, sort, sortDir,
+    accessToken, myTeam, cachedTeams, cachedSig, onTeamsLoaded, refreshKey, search, access, sort, sortDir,
     onSearchChange, onAccessChange, onSortChange, onSortDirChange, onSelect,
 }: TeamGalleryProps) {
     const [raw, setRaw] = useState(search)
-    const [teams, setTeams] = useState<TeamCore[]>([])
-    const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+    const sig = directorySig(search, access, sort, sortDir)
+    const cached = cachedSig === sig
+    const cachedRef = useRef(cached)
+    cachedRef.current = cached
+    const teams = cached ? cachedTeams : []
+    const loading = !cached && !error
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -62,7 +74,7 @@ export function TeamGallery({
 
     useEffect(() => {
         let cancelled = false
-        setLoading(true)
+        const silent = cachedRef.current
         setError(null)
         fetchTeams(accessToken, {
             search: search || undefined,
@@ -71,11 +83,10 @@ export function TeamGallery({
             order: sortDir,
             limit: 0,
         })
-            .then(res => { if (!cancelled) setTeams(res.teams) })
-            .catch(e => { if (!cancelled) setError(teamErrorMessage(e)) })
-            .finally(() => { if (!cancelled) setLoading(false) })
+            .then(res => { if (!cancelled) onTeamsLoaded(sig, res.teams) })
+            .catch(e => { if (!cancelled && !silent) setError(teamErrorMessage(e)) })
         return () => { cancelled = true }
-    }, [accessToken, search, access, sort, sortDir])
+    }, [accessToken, search, access, sort, sortDir, sig, refreshKey, onTeamsLoaded])
 
     const highlight = isTeamStatSort(sort) ? sort : undefined
 
