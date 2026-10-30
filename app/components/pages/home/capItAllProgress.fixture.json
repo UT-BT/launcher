@@ -1,0 +1,48 @@
+{
+  "description": "GET /v2/summary/user/<id> responses for the signed-in player: ranked, unranked (rank null), a capItAll without a rank, and a response without the capItAll field.",
+  "responses": {
+    "ranked": {
+      "success": true,
+      "data": {
+        "profile": { "id": 42, "alias": "Runner42", "registered_at": "2024-03-01T12:00:00+00:00", "twitch_url": null, "flag": "de", "utbt_role": 0, "active_title": null, "active_ban": null },
+        "medals": { "user_id": "42", "world_records": 3, "champion_medals": 1, "gold_medals": 4, "silver_medals": 6, "bronze_medals": 9, "certified_caps": 25, "points": 1840, "rank": 17 },
+        "counts": { "total_caps": 140, "verified_caps": 120, "disallowed_caps": 1, "certified_caps": 25, "unique_maps": 34, "uncapped_maps": 210, "total_playtime_seconds": 86400, "spectator_playtime_seconds": 3600, "map_review_count": 5, "wr_count": 3, "favorite_count": 2 },
+        "capItAll": { "rank": 12, "team_caps": 4 },
+        "recentCaps": [],
+        "recentWrs": []
+      }
+    },
+    "unranked": {
+      "success": true,
+      "data": {
+        "profile": { "id": 43, "alias": "Newcomer", "registered_at": "2026-10-29T08:00:00+00:00", "twitch_url": null, "flag": null, "utbt_role": 0, "active_title": null, "active_ban": null },
+        "medals": { "user_id": "43", "world_records": 0, "champion_medals": 0, "gold_medals": 0, "silver_medals": 0, "bronze_medals": 0, "certified_caps": 0, "points": 0, "rank": 0 },
+        "counts": { "total_caps": 0, "verified_caps": 0, "disallowed_caps": 0, "certified_caps": 0, "unique_maps": 0, "uncapped_maps": 244, "total_playtime_seconds": 600, "spectator_playtime_seconds": 0, "map_review_count": 0, "wr_count": 0, "favorite_count": 0 },
+        "capItAll": { "rank": null, "team_caps": 0 },
+        "recentCaps": [],
+        "recentWrs": []
+      }
+    },
+    "capItAllWithoutRank": {
+      "success": true,
+      "data": {
+        "profile": { "id": 42, "alias": "Runner42", "registered_at": "2024-03-01T12:00:00+00:00", "twitch_url": null, "flag": "de", "utbt_role": 0, "active_title": null, "active_ban": null },
+        "medals": { "user_id": "42", "world_records": 3, "champion_medals": 1, "gold_medals": 4, "silver_medals": 6, "bronze_medals": 9, "certified_caps": 25, "points": 1840, "rank": 17 },
+        "counts": { "total_caps": 140, "verified_caps": 120, "disallowed_caps": 1, "certified_caps": 25, "unique_maps": 34, "uncapped_maps": 210, "total_playtime_seconds": 86400, "spectator_playtime_seconds": 3600, "map_review_count": 5, "wr_count": 3, "favorite_count": 2 },
+        "capItAll": { "team_caps": 4 },
+        "recentCaps": [],
+        "recentWrs": []
+      }
+    },
+    "withoutCapItAll": {
+      "success": true,
+      "data": {
+        "profile": { "id": 42, "alias": "Runner42", "registered_at": "2024-03-01T12:00:00+00:00", "twitch_url": null, "flag": "de", "utbt_role": 0, "active_title": null, "active_ban": null },
+        "medals": { "user_id": "42", "world_records": 3, "champion_medals": 1, "gold_medals": 4, "silver_medals": 6, "bronze_medals": 9, "certified_caps": 25, "points": 1840, "rank": 17 },
+        "counts": { "total_caps": 140, "verified_caps": 120, "disallowed_caps": 1, "certified_caps": 25, "unique_maps": 34, "uncapped_maps": 210, "total_playtime_seconds": 86400, "spectator_playtime_seconds": 3600, "map_review_count": 5, "wr_count": 3, "favorite_count": 2 },
+        "recentCaps": [],
+        "recentWrs": []
+      }
+    }
+  }
+}

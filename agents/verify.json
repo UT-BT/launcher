@@ -398,6 +398,7 @@
     "app/components/pages/home/PersonalProgressSnapshot.tsx",
     "app/components/pages/home/RecentCapsCard.tsx",
     "app/components/pages/home/SpotlightSection.tsx",
+    "app/components/pages/home/capItAllProgress.fixture.json",
     "app/components/pages/home/capItAllProgress.ts",
     "app/components/pages/home/news/NewsCard.tsx",
     "app/utils/api.ts",

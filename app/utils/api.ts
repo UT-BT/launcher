@@ -3109,10 +3109,16 @@ export interface UserSummaryRecentWr {
     added: string | null
 }
 
+export interface UserSummaryCapItAll {
+    rank: number | null
+    team_caps: number
+}
+
 export interface UserSummary {
     profile: UserSummaryProfile
     medals: UserSummaryMedals
     counts: UserSummaryCounts
+    capItAll: UserSummaryCapItAll | null
     recentCaps: SummaryCap[]
     recentWrs: UserSummaryRecentWr[]
 }
@@ -3161,6 +3167,15 @@ function normaliseUserSummaryCounts(raw: any): UserSummaryCounts {
     }
 }
 
+function normaliseUserSummaryCapItAll(raw: unknown): UserSummaryCapItAll | null {
+    const capItAll = asNonEmptyObj<UserSummaryCapItAll>(raw)
+    if (!capItAll) return null
+    const { rank, team_caps } = capItAll
+    const rankValid = rank === null || (Number.isSafeInteger(rank) && rank > 0)
+    const teamCapsValid = Number.isSafeInteger(team_caps) && team_caps >= 0
+    return rankValid && teamCapsValid ? { rank, team_caps } : null
+}
+
 export async function fetchUserSummary(accessToken: string, userId: string | number): Promise<UserSummary> {
     const response = await fetch(`${API_BASE_URL}/v2/summary/user/${encodeURIComponent(String(userId))}`, {
         headers: bearerHeaders(accessToken),
@@ -3189,6 +3204,7 @@ export async function fetchUserSummary(accessToken: string, userId: string | num
         profile: normalisedProfile,
         medals: normaliseUserSummaryMedals(data.medals, userId),
         counts: normaliseUserSummaryCounts(data.counts),
+        capItAll: normaliseUserSummaryCapItAll(data.capItAll),
         recentCaps: asArray(data.recentCaps),
         recentWrs: asArray(data.recentWrs),
     }
