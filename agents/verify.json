@@ -526,11 +526,15 @@
     "app/components/pages/mapDetail/StatsRow.tsx",
     "app/components/pages/mapDetail/YourStatsCard.tsx",
     "app/components/pages/maps/medals.ts",
+    "app/components/pages/playerDetail/AuthoredMapsCard.tsx",
     "app/components/pages/playerDetail/DisallowedCapsCard.tsx",
     "app/components/pages/playerDetail/HeroSection.tsx",
     "app/components/pages/playerDetail/MainSectionTabs.tsx",
     "app/components/pages/playerDetail/MedalShowcaseCard.tsx",
+    "app/components/pages/playerDetail/PlaytimeBreakdownCard.tsx",
     "app/components/pages/playerDetail/RecentCapsCard.tsx",
+    "app/components/pages/playerDetail/UncappedMapsCard.tsx",
+    "app/components/pages/playerDetail/WorldRecordsCard.tsx",
     "app/components/pages/playerDetail/activityChart.ts",
     "app/components/pages/playerDetail/playerDetailTabs.ts",
     "app/components/shared/ReplayVideoModal.tsx",
@@ -543,7 +547,8 @@
     "app/utils/medalThresholds.ts",
     "app/utils/medals.ts",
     "app/utils/recordsDefinitions.test.ts",
-    "app/utils/teamRunState.ts"
+    "app/utils/teamRunState.ts",
+    "e2e/profile-tabs-responsive.spec.ts"
   ],
   "agents/features/stream-kit.md": [
     "app/components/broadcast/BroadcastStage.tsx",

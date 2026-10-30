@@ -148,6 +148,15 @@ unlocks favourite toggling, Change Title and the screenshot actions on Maps Auth
 - **Fetch failures look empty.** The server-paged tab fetchers (caps, disallowed, PBs, WRs,
   playtime, uncapped) resolve `{ total: 0, items: [] }` (or `[]`) on a non-2xx, so a failing tab
   shows its empty state, not its error line.
+- **Phone card rows.** Every profile tab table passes `compactContent` with its own skeleton and
+  empty rows, and marks the map name and its core metric `required` at `nameFloorRem: 14`: time on
+  All Caps, Disallowed, Personal Bests and World Records, hours on Playtime, difficulty on
+  Uncapped and Maps Authored (plus the screenshot action on your own profile). At 390 px each tab
+  shows card rows: map name with time or chip on the right, then the second detail (disallow
+  reason, sessions, author, added date) below the name. World Records keeps its progression
+  button and your own Maps Authored keeps Add/Change in the card. Sorting is table-only.
+  `e2e/profile-tabs-responsive.spec.ts` checks the cards (populated, loading and empty) at 390 px and
+  the full tables at 1920 px.
 - **Tab state** lives in `useNavState` keys prefixed per card (`caps.*`, `disallowed.*`, `pbs.*`,
   `wrs.*`, `playtime.*`, `uncapped.*`, `achievements.*`, `authored.*`) and the active tab in
   `player.activeTab`, so Back restores tab, page, sort and search.
@@ -332,8 +341,8 @@ the new-map highlight apply to either.
 
 ## Adding a profile tab
 
-Reference instance: the Disallowed tab (`DisallowedCapsCard.tsx`), the smallest server-paged tab.
-It has no phone card rows yet; take those from `RecentCapsCard.tsx`.
+Reference instance: the Disallowed tab (`DisallowedCapsCard.tsx`), the smallest server-paged tab,
+phone card rows included.
 
 1. **Fetcher** in `app/utils/api.ts` returning `{ total, items }` (skill: consume-api-data). If
    the tab shows a count, add the field to `UserSummaryCounts` and `normaliseUserSummaryCounts`.
@@ -342,7 +351,8 @@ It has no phone card rows yet; take those from `RecentCapsCard.tsx`.
    `accessToken`, `userId`, `onMapSelect`, `tabsSlot`; render `tabsSlot` first in the header; keep
    query, sort, page and page size in `useNavState('<prefix>.<field>')` with a prefix no other
    card uses; page through `usePaginatedQuery`; render `DataTableShell` with `responsive`
-   including `compactContent` (as `RecentCapsCard` does), then `PaginationBar`.
+   including `compactContent` and the core metric `required` (as `DisallowedCapsCard` does), then
+   `PaginationBar`.
 4. **Wire it**: add `{ value, label, count, hidden }` to the tab list in
    `playerDetail/playerDetailTabs.ts` in display order; if the tab can hide, add its known-empty
    fallback there the way `disallowed` and `maps` fall back to `caps`, with a case in
@@ -351,5 +361,7 @@ It has no phone card rows yet; take those from `RecentCapsCard.tsx`.
    `tabsSlot={<MainSectionTabs tabs={tabs} active={activeTab} onChange={setActiveTab} />}`.
 5. **Verify**: `npm run typecheck:web` passes. In `npm run dev:web`, open `/players/<id>`, switch to
    the tab, change page, open a map and go Back: tab, page and search are restored; at 390 px the
-   compact rows render with no horizontal scroll. `npm run test:e2e -- responsive-accessibility`
+   compact rows render with no horizontal scroll. Add the tab to `TABS` in
+   `e2e/profile-tabs-responsive.spec.ts` with its empty message, and its list read to `serveApi` and
+   `emptyTabRead`; `npm run test:e2e -- responsive-accessibility`
    still renders `/players/1` without the error boundary.

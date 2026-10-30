@@ -111,6 +111,50 @@ export function DisallowedCapsCard({ accessToken, userId, onMapSelect, tabsSlot 
 
     const dir = (field: SortField): SortDirection => sortField === field ? sortDir : null
 
+    const emptyMessage = query ? 'No disallowed caps match that search.' : 'No disallowed caps.'
+
+    const compactRows = loading ? (
+        Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} role="listitem" className="p-3 border-b border-hairline/5 last:border-0 animate-pulse">
+                <div className="h-10 rounded bg-hairline/5" />
+            </div>
+        ))
+    ) : items.length === 0 ? (
+        <div role="listitem" className="px-4 py-12 text-center text-sm text-muted-foreground">
+            {emptyMessage}
+        </div>
+    ) : items.map(cap => (
+        <div
+            key={cap.id}
+            role="listitem"
+            className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 p-3 border-b border-hairline/5 last:border-0 cursor-pointer"
+            onClick={() => onMapSelect?.(cap.mapName)}
+        >
+            <div className="min-w-0 space-y-1">
+                <div className="flex items-center gap-2 min-w-0">
+                    <MapNavLink mapName={cap.mapName} onMapSelect={onMapSelect} className="text-sm font-semibold text-foreground truncate min-w-0">{displayMapName(cap.mapName)}</MapNavLink>
+                    {cap.isTeam && (
+                        <TeamRosterBadge members={cap.teamMembers} currentUserId={String(userId)} />
+                    )}
+                </div>
+                {cap.disallow_reason && (
+                    <p className="text-xs text-muted-foreground line-clamp-2 break-words">{cap.disallow_reason}</p>
+                )}
+            </div>
+            <div className="flex flex-col items-end gap-0.5">
+                <CapTimeLink
+                    capId={cap.isTeam ? undefined : cap.id}
+                    teamCapId={cap.isTeam ? cap.teamCapId ?? undefined : undefined}
+                    seconds={cap.time}
+                    className="text-sm font-mono tabular-nums font-bold text-foreground"
+                />
+                <span className="text-xs text-muted-foreground tabular-nums">
+                    {cap.disallowed_at ? formatAddedDate(cap.disallowed_at) : '—'}
+                </span>
+            </div>
+        </div>
+    ))
+
     return (
         <div className="bg-card/30 border border-hairline/5 rounded-xl flex flex-col overflow-hidden">
             <div className="flex items-center justify-between gap-3 gap-y-2 px-4 py-3 border-b border-hairline/5 flex-wrap">
@@ -146,7 +190,13 @@ export function DisallowedCapsCard({ accessToken, userId, onMapSelect, tabsSlot 
 
             <DataTableShell
                 className="!flex-none !min-h-0 !overflow-visible !rounded-none !border-0"
-                responsive={{ columns: responsiveColumns, nameFloorRem: 14, onResolve: handleResolve }}
+                responsive={{
+                    columns: responsiveColumns,
+                    nameFloorRem: 14,
+                    onResolve: handleResolve,
+                    compactContent: compactRows,
+                    compactAriaLabel: 'Disallowed caps',
+                }}
             >
                 <DataTableHeaderRow>
                     {isVisible('map') && <DataTableHeaderCell width="32%" sortable sortDirection={dir('map')} onSort={() => handleSort('map')}>Map</DataTableHeaderCell>}
@@ -160,7 +210,7 @@ export function DisallowedCapsCard({ accessToken, userId, onMapSelect, tabsSlot 
                             <DataTableSkeletonRow key={i} columnCount={visibleColumnCount} />
                         ))
                     ) : items.length === 0 ? (
-                        <DataTableEmpty colSpan={visibleColumnCount} message={query ? 'No disallowed caps match that search.' : 'No disallowed caps.'} />
+                        <DataTableEmpty colSpan={visibleColumnCount} message={emptyMessage} />
                     ) : (
                         items.map(cap => (
                             <DataTableRow

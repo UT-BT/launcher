@@ -32,7 +32,16 @@ type ColumnId = 'name' | 'author' | 'difficulty'
 const COLUMNS: ColumnId[] = ['name', 'author', 'difficulty']
 const COLUMN_WIDTH: Partial<Record<ColumnId, string>> = { difficulty: '7rem' }
 const COLUMN_PRIORITY: Partial<Record<ColumnId, number>> = { difficulty: 80, author: 30 }
-const REQUIRED_COLUMNS = new Set<ColumnId>(['name'])
+const REQUIRED_COLUMNS = new Set<ColumnId>(['name', 'difficulty'])
+
+function difficultyChip(difficulty: number | null | undefined) {
+    if (difficulty == null) return <span className="text-xs text-muted-foreground">—</span>
+    return (
+        <span className={`inline-flex items-center justify-center size-5 rounded text-[10px] font-bold text-foreground ${difficultyBgColor(difficulty)}`}>
+            {difficulty}
+        </span>
+    )
+}
 
 export function UncappedMapsCard({ accessToken, userId, onMapSelect, tabsSlot }: UncappedMapsCardProps) {
     const [total, setTotal] = useState(0)
@@ -114,6 +123,35 @@ export function UncappedMapsCard({ accessToken, userId, onMapSelect, tabsSlot }:
     const isVisible = (id: ColumnId): boolean => !resolved || resolved.has(id)
     const visibleColumnCount = COLUMNS.reduce((n, id) => n + (isVisible(id) ? 1 : 0), 0)
 
+    const emptyMessage = query ? 'No uncapped maps match that search.' : 'All caught up — no uncapped maps.'
+
+    const compactRows = loading ? (
+        Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} role="listitem" className="p-3 border-b border-hairline/5 last:border-0 animate-pulse">
+                <div className="h-10 rounded bg-hairline/5" />
+            </div>
+        ))
+    ) : items.length === 0 ? (
+        <div role="listitem" className="px-4 py-12 text-center text-sm text-muted-foreground">
+            {emptyMessage}
+        </div>
+    ) : items.map(m => (
+        <div
+            key={m.name}
+            role="listitem"
+            className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 p-3 border-b border-hairline/5 last:border-0 cursor-pointer"
+            onClick={() => onMapSelect?.(m.name)}
+        >
+            <div className="min-w-0 space-y-1">
+                <div className="flex items-center min-w-0">
+                    <MapNavLink mapName={m.name} onMapSelect={onMapSelect} className="text-sm font-semibold text-foreground truncate min-w-0">{displayMapName(m.name)}</MapNavLink>
+                </div>
+                <div className="text-xs text-muted-foreground truncate">{mapAuthorName(m) || '—'}</div>
+            </div>
+            {difficultyChip(m.difficulty)}
+        </div>
+    ))
+
     return (
         <div className="bg-card/30 border border-hairline/5 rounded-xl flex flex-col overflow-hidden">
             <div className="flex items-center justify-between gap-3 gap-y-2 px-4 py-3 border-b border-hairline/5 flex-wrap">
@@ -147,7 +185,13 @@ export function UncappedMapsCard({ accessToken, userId, onMapSelect, tabsSlot }:
 
             <DataTableShell
                 className="!flex-none !min-h-0 !overflow-visible !rounded-none !border-0"
-                responsive={{ columns: responsiveColumns, onResolve: handleResolve }}
+                responsive={{
+                    columns: responsiveColumns,
+                    nameFloorRem: 14,
+                    onResolve: handleResolve,
+                    compactContent: compactRows,
+                    compactAriaLabel: 'Uncapped maps',
+                }}
             >
                 <DataTableHeaderRow>
                     {isVisible('name') && <DataTableHeaderCell sortable sortDirection={dir('name')} onSort={() => handleSort('name')}>Map</DataTableHeaderCell>}
@@ -160,7 +204,7 @@ export function UncappedMapsCard({ accessToken, userId, onMapSelect, tabsSlot }:
                             <DataTableSkeletonRow key={i} columnCount={visibleColumnCount} />
                         ))
                     ) : items.length === 0 ? (
-                        <DataTableEmpty colSpan={visibleColumnCount} message={query ? 'No uncapped maps match that search.' : 'All caught up — no uncapped maps.'} />
+                        <DataTableEmpty colSpan={visibleColumnCount} message={emptyMessage} />
                     ) : (
                         items.map(m => (
                             <DataTableRow
@@ -185,13 +229,7 @@ export function UncappedMapsCard({ accessToken, userId, onMapSelect, tabsSlot }:
                                 )}
                                 {isVisible('difficulty') && (
                                     <DataTableCell align="center">
-                                        {m.difficulty != null ? (
-                                            <span className={`inline-flex items-center justify-center size-5 rounded text-[10px] font-bold text-foreground ${difficultyBgColor(m.difficulty)}`}>
-                                                {m.difficulty}
-                                            </span>
-                                        ) : (
-                                            <span className="text-xs text-muted-foreground">—</span>
-                                        )}
+                                        {difficultyChip(m.difficulty)}
                                     </DataTableCell>
                                 )}
                             </DataTableRow>
