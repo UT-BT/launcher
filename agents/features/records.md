@@ -307,6 +307,15 @@ the capped filter run `computeMedalTier` on those best caps; the medal sort puts
 casual maps last in either direction. WR holders load lazily for the visible rows
 (`fetchWorldRecordsForMaps`) and accumulate in `caches.wrHolders`.
 
+Map, Difficulty, World Record and (signed in) Personal Best are the responsive table's
+`required` core columns (`CORE_COLUMNS` next to `REQUIRED_COLUMNS`), so mid widths drop the
+optional columns first; they stay hideable in Columns. When even those don't fit, the table
+becomes compact card rows (a list labelled "Maps"): favourite star, map name and New badge,
+difficulty and author on the left, WR and, signed in, medal and PB through `CapTimeLink` on the
+right, with their own skeleton and "No maps match your filters." empty state. Columns hides while
+cards show. Both views render from the same per-row context, so the tutorial's mock first row and
+the new-map highlight apply to either.
+
 ## Shared modals
 
 | Modal | Opened from | Rules |
