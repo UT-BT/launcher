@@ -15,6 +15,10 @@ import {
 } from '@/app/utils/api'
 import { computeMedalTier, TIER_ICONS, TIER_LABELS, type MedalTier } from '@/app/components/pages/maps/medals'
 import { formatCapTime, displayMapName } from '@/app/utils/format'
+import {
+    cacheReplayRows, cacheReplayVideo, cachedReplayRows, replayRowsFromLeaderboard, withoutCap, withReplayVideo,
+    type RunRow,
+} from './replayPickerCache'
 
 interface ReplayPickerModalProps {
     open: boolean
@@ -28,30 +32,7 @@ interface ReplayPickerModalProps {
     excludeCapId?: string
 }
 
-type RunRow = {
-    entry: LeaderboardEntry
-    video: ReplayVideo | null | undefined
-}
-
 const PAGE_SIZE = 10
-const CACHE_TTL_MS = 5 * 60 * 1000
-
-interface CacheEntry { rows: RunRow[]; fetchedAt: number }
-const replayCache = new Map<string, CacheEntry>()
-
-function readCache(mapName: string): RunRow[] | null {
-    const c = replayCache.get(mapName)
-    if (!c) return null
-    if (Date.now() - c.fetchedAt > CACHE_TTL_MS) {
-        replayCache.delete(mapName)
-        return null
-    }
-    return c.rows
-}
-
-function writeCache(mapName: string, rows: RunRow[]): void {
-    replayCache.set(mapName, { rows, fetchedAt: Date.now() })
-}
 
 function NoReplayIndicator({ padded = false }: { padded?: boolean }) {
     return (
@@ -120,7 +101,7 @@ export function ReplayPickerModal({
         }
 
         setTeamRuns([])
-        const cached = readCache(mapName)
+        const cached = cachedReplayRows(mapName, excludeCapId)
         if (cached) {
             setRows(cached)
             setLoading(false)
@@ -134,9 +115,9 @@ export function ReplayPickerModal({
             try {
                 const leaderboard = await fetchMapLeaderboard(accessToken ?? '', mapName, true)
                 if (cancelled || requestRef.current !== myRequest) return
-                const eligible = leaderboard.filter(e => e.id && e.id !== excludeCapId)
-                const initial: RunRow[] = eligible.map(e => ({ entry: e, video: undefined }))
-                setRows(initial)
+                const all = replayRowsFromLeaderboard(leaderboard)
+                cacheReplayRows(mapName, all)
+                setRows(withoutCap(all, excludeCapId))
                 setLoading(false)
             } catch {
                 if (cancelled || requestRef.current !== myRequest) return
@@ -183,11 +164,8 @@ export function ReplayPickerModal({
                 fetched.add(id)
                 const video = await fetchReplayVideo(id)
                 if (cancelled) return
-                setRows(prev => {
-                    const next = prev.map(r => r.entry.id === id ? { ...r, video } : r)
-                    if (mapName) writeCache(mapName, next)
-                    return next
-                })
+                if (mapName) cacheReplayVideo(mapName, id, video)
+                setRows(prev => withReplayVideo(prev, id, video))
             }
         }
 

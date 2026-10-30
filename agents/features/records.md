@@ -16,8 +16,8 @@ Hunt, latest records) in [home.md](home.md).
 
 | Path | Holds |
 |---|---|
-| `app/components/pages/PlayerDetailPage.tsx` | profile entry: the summary read, the tab list and which tabs hide, the lazy activity chart |
-| `app/components/pages/playerDetail/` | one card per profile tab plus the hero and sidebar cards, each fetching for itself; `activityChart.ts` is the pure chart default and hour labels (`activityChart.test.ts`) |
+| `app/components/pages/PlayerDetailPage.tsx` | profile entry: the summary read, the active tab's card, the lazy activity chart |
+| `app/components/pages/playerDetail/` | one card per profile tab plus the hero and sidebar cards, each fetching for itself; `activityChart.ts` is the pure chart default and hour labels (`activityChart.test.ts`); `playerDetailTabs.ts` is the tab list, which tabs hide and the stored tab's fallback (`playerDetailTabs.test.ts`) |
 | `app/components/pages/MapDetailPage.tsx` + `mapDetail/` | map detail: one load of every read, then cards that derive stats, ranks and team medal thresholds from the fetched rows |
 | `app/components/pages/CapDetailPage.tsx` | one cap: hero, checkpoint splits, both compare flows |
 | `app/components/pages/TeamCapDetailPage.tsx` | one team run: roster, per-member analytics, the team replay |
@@ -25,7 +25,7 @@ Hunt, latest records) in [home.md](home.md).
 | `app/components/pages/capDetail/videoCompare/` | the synced multi-video comparison player |
 | `app/components/pages/WorldRecordsPage.tsx`, `CapItAllPage.tsx` (+ `.types.ts`) | the two server-paginated record lists |
 | `app/components/pages/MapsPage.tsx`, `maps/medals.ts`, `PlayersPage.tsx` | the list pages; `computeMedalTier` |
-| `app/components/modals/` | replay picker, WR progression, cap-time distribution, playtime breakdown, history, review and favourites lists |
+| `app/components/modals/` | replay picker (its row cache in `replayPickerCache.ts`, `replayPickerCache.test.ts`), WR progression, cap-time distribution, playtime breakdown, history, review and favourites lists |
 | `app/components/shared/ReplayVideoModal.tsx`, `app/hooks/useReplayWatch.ts`, `useVideoCompareAvailability.ts`, `useDemoDownload.ts` | replay and demo plumbing every record surface reuses |
 | `app/utils/format.ts`, `medals.ts`, `difficulty.ts` | cap-time formatting (`format.test.ts`), medal icons, difficulty tiers |
 | `app/utils/capTypes.ts`, `medalThresholds.ts`, `mapAuthor.ts`, `teamRunState.ts` | the one definition of the cap types, the medal multipliers, the map author name and the team-run label (each with a `.test.ts`); `recordsDefinitions.test.ts` fails when a records file copies one of them or the difficulty tiers |
@@ -133,10 +133,11 @@ unlocks favourite toggling, Change Title and the screenshot actions on Maps Auth
 | `achievements` | `PlayerAchievementsCard` | `fetchAchievementDefinitions` + `fetchUserAchievements` | client |
 | `maps` Maps Authored | `AuthoredMapsCard` | `fetchMaps({ authorRef })` | client |
 
-- **Tab visibility.** Counts come from `summary.counts`. Disallowed hides while
-  `disallowed_caps` is zero; Maps Authored hides until `fetchMapsCount({ authorRef })` is
-  non-zero, and a stored `maps` tab falls back to `caps` while hidden. Both show to every
-  viewer, not only on your own profile.
+- **Tab visibility** (`playerDetailTabs`). Counts come from `summary.counts`. Disallowed hides
+  while `disallowed_caps` is zero; Maps Authored hides until `fetchMapsCount({ authorRef })` is
+  non-zero. A stored `disallowed` or `maps` tab whose count has loaded as zero falls back to
+  `caps`, and the All Caps button shows active; while its count is still loading the stored tab
+  stays. Both show to every viewer, not only on your own profile.
 - **Disallowed caps.** All Caps includes them, dimmed, with the Disallowed chip and no
   watch/download. Its filter offers All / Verified / Certified / Casual; disallowed caps have
   their own tab, which shows `disallow_reason` and sorts by `disallowed_at` (newest first).
@@ -192,8 +193,10 @@ those rows; none fetches for itself except the version bar.
   rule is in [api.md](../api.md).
 - **Version chain** (`MapVersionsBar` in `MapVersionsCard.tsx`): follows `preceded_by` /
   `superseded_by` one `fetchMap` per hop, caches the chain module-wide under every member's
-  name, and makes another version clickable only when it has caps (records are not transferred
-  between versions). Labels are the names minus their shared prefix.
+  name, and links another version only when it has caps (records are not transferred between
+  versions). A linked pill is a `MapNavLink`, so on the web it is an `<a href>` that opens in a
+  new tab on a middle click (`e2e/map-versions.spec.ts`). Labels are the names minus their
+  shared prefix.
 
 ## Cap detail
 
@@ -309,7 +312,7 @@ casual maps last in either direction. WR holders load lazily for the visible row
 | Modal | Opened from | Rules |
 |---|---|---|
 | `shared/ReplayVideoModal.tsx` + `useReplayWatch` | every Watch button | `openReplay` turns a `null` video into "Replay video not available yet" and a thrown read into "Could not load this replay"; render `replay.error` in a `Modal` titled "Replay not available" beside it. Volume persists in `utbt:replayVideoVolume:v1`; Share copies `view_url ?? mp4_url`. |
-| `modals/ReplayPickerModal.tsx` | Maps row replay, Home Medal Hunt, Cap Detail Compare Run | Lists the map's verified solo runs, or its team runs on a team map outside `compareMode`. Resolves each row's video three at a time, visible page first, and caches the rows per map for 5 minutes. |
+| `modals/ReplayPickerModal.tsx` | Maps row replay, Home Medal Hunt, Cap Detail Compare Run | Lists the map's verified solo runs, or its team runs on a team map outside `compareMode`. Resolves each row's video three at a time, visible page first. Caches every run per map for 5 minutes (`replayPickerCache.ts`), and drops `excludeCapId` (the cap being compared) after the read, so compare mode never offers the cap itself and a later normal open still lists it. |
 | `modals/WorldRecordProgressionModal.tsx` | the WR history trigger on Map Detail, World Records and the profile WR tab | `lazy()`-loaded; the caller fetches `fetchWorldRecordProgression` and passes `entries`. |
 | `modals/CapTimeDistributionModal.tsx` | Map Detail median tile | Certified caps only on solo maps, every team run on team maps; the x-axis ends at the tightest medal boundary that holds about 95 % of caps. |
 | `modals/PlaytimeBreakdownModal.tsx` | Map Detail playtime tiles | Per-player playtime; spectator rows excluded. |
@@ -331,10 +334,12 @@ It has no phone card rows yet; take those from `RecentCapsCard.tsx`.
    query, sort, page and page size in `useNavState('<prefix>.<field>')` with a prefix no other
    card uses; page through `usePaginatedQuery`; render `DataTableShell` with `responsive`
    including `compactContent` (as `RecentCapsCard` does), then `PaginationBar`.
-4. **Wire it** in `PlayerDetailPage.tsx`: add `{ value, label, count, hidden }` to `tabs` in
-   display order, and an `activeTab === '<id>'` block rendering the card with
-   `tabsSlot={<MainSectionTabs tabs={tabs} active={activeTab} onChange={setActiveTab} />}`. If the
-   tab can hide, add its fallback to `activeTab` the way `maps` falls back to `caps`.
+4. **Wire it**: add `{ value, label, count, hidden }` to the tab list in
+   `playerDetail/playerDetailTabs.ts` in display order; if the tab can hide, add its known-empty
+   fallback there the way `disallowed` and `maps` fall back to `caps`, with a case in
+   `playerDetailTabs.test.ts`. In `PlayerDetailPage.tsx`, add an `activeTab === '<id>'` block
+   rendering the card with
+   `tabsSlot={<MainSectionTabs tabs={tabs} active={activeTab} onChange={setActiveTab} />}`.
 5. **Verify**: `npm run typecheck:web` passes. In `npm run dev:web`, open `/players/<id>`, switch to
    the tab, change page, open a map and go Back: tab, page and search are restored; at 390 px the
    compact rows render with no horizontal scroll. `npm run test:e2e -- responsive-accessibility`
