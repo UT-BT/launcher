@@ -76,14 +76,15 @@ useUnsavedChanges(dirty, 'The tournament format has edits you have not saved yet
 
 `useUnsavedChanges` (`app/components/navigation/useUnsavedChanges.ts`) registers the guard
 through `registerLeaveGuard` and arms `beforeunload` while `dirty`. The guard covers in-app
-moves; `beforeunload` covers a reload, a closed tab and a hard navigation. On web, the
-browser's own Back/Forward arrives as `popstate` and moves the cursor without consulting
-the guards.
+moves and, on web, the browser's own Back/Forward, which arrive as `popstate` and pass the
+same check ([URL sync](#routes-and-url-sync-web-build)); `beforeunload` covers a reload, a
+closed tab and a hard navigation.
 
 When a guard returns a message, `Main` parks the move in `pendingLeave` and shows a
 "Leave without saving?" confirm; confirming calls `commitNavigate` (or the parked
-`back`/`forward`), which bypasses the guards. Navigating to the entry you are on skips the
-check.
+`back`/`forward` or browser history move), which bypasses the guards. Navigating to the
+entry you are on skips the check. `e2e/history-leave-guards.spec.ts` covers browser Back,
+Forward and a multi-entry jump with and without unsaved work.
 
 - `registerLeaveGuard` returns the unregister function; return it from the effect. A guard
   that outlives its view blocks the whole app.
@@ -128,13 +129,33 @@ segments as a route needs and checks exact segment counts, so
 segments and anything else under `/events/:slug` stays on `event-detail`.
 
 On web (`useUrlSync.ts`; on desktop `useUrlSync` returns `null` and `pushUrlForEntry`
-no-ops) the in-memory stack is master and browser history mirrors it:
+no-ops) the in-memory stack is master and browser history mirrors it. Each history entry's
+state is `{ navId, position }`: the stack entry's `id` and the entry's place in the tab's
+history, one more than the entry it was pushed from.
 
-- The boot effect `replaceState`s the canonical path of the seeded entry.
-- `commitNavigate` calls `pushUrlForEntry(entry)` (`pushState({ navId }, …)`).
-- In-app Back/Forward call `history.back()` / `forward()`. The `popstate` handler finds
-  `state.navId` in the stack and moves the cursor; a missing `navId` falls back to
-  `pathToNav` and `pushExternal`, which pushes a fresh entry (and runs `markViewed`).
+- The boot effect reads `position` from `history.state` (0 when there is none, so a reload
+  keeps it) and `replaceState`s the canonical path of the seeded entry.
+- `commitNavigate` calls `pushUrlForEntry(entry)` (`pushState({ navId, position }, …)` with
+  the next position). A push also drops a confirmed position that never got its `popstate`
+  (a `go` past either end of history), so it can't wave through a later move.
+- In-app Back/Forward (already past `Main`'s guard check) mark the neighbouring position as
+  confirmed and call `history.go(-1)` / `go(1)`.
+- The `popstate` handler ignores a `position` equal to the current one, then runs the
+  [leave guards](#leave-guards) unless the move was confirmed. When a guard blocks, it calls
+  `history.go(current - target)`, so the URL returns to the current entry with forward
+  history intact and the cursor never moves, and hands the move to `Main` through
+  `onBlocked({ message, move })`. `Main` shows the same confirm; Leave runs `move`, which
+  marks the target confirmed and replays `history.go(target - current)`. A jump of several
+  entries (the Back button's history menu) is put back and replayed whole.
+- A move that passes finds `state.navId` in the stack and moves the cursor; a missing
+  `navId` falls back to `pathToNav` and `pushExternal`, which pushes a fresh entry (and runs
+  `markViewed`).
+- An entry with no `position` can't be put back reliably, so the move onto it skips the
+  guard check and takes the next position; only the `pushExternal` path stamps that into
+  the entry's state. That fits a fragment link, which arrives with a `null` state and is
+  always pushed forward. An entry left by a build from before positions carries only a
+  `navId` and may sit behind the current one, so in a tab open across that update a later
+  block can put the URL back to the wrong entry.
 
 **Adding a route touches three files in one commit:** both directions in `routes.ts`, an
 entry in `app/public/route-contract.json` (path, view, unique `kind`, and a `params` array
