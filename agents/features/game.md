@@ -17,7 +17,7 @@ launcher packaging, not the game: lib/main/README.md.
 | `lib/main/game-service.ts` | install validation, standalone launch, `isGameRunning`, game profiles; Vitest covers Browse profiles and reserved names |
 | `lib/main/installation-service.ts`, `lib/main/patch-service.ts` | UT99 ISO download (cancel tested in Vitest) and setup, patch download, verify and extract |
 | `app/utils/ut99Install.ts` | the download-then-install flow behind a `Ut99InstallPort`, the cancel error and `isUt99DownloadCancelled`; Vitest |
-| `lib/main/demo-watcher-service.ts` | the demo watcher: detection, cap checks, upload, durable retry, upload log; no tests |
+| `lib/main/demo-watcher-service.ts` | the demo watcher: detection, cap checks, upload, durable retry, upload log; Vitest covers the upload's sign-in refresh and outcome |
 | `lib/main/game-processes.ts` | pure `tasklist` parsing that keeps cam PIDs out of `isGameRunning`; Vitest |
 | `lib/conveyor/handlers/` | `game-handler.ts` (join, ping), `app-handler.ts` (install, patches, profiles, demo log), `maps-handler.ts` and `demos-handler.ts` (writes into the install), `window-handler.ts` |
 | `app/components/main/Main.tsx` | `installationStatus`, `validateInstallation`, the install banner |
@@ -210,13 +210,19 @@ through `app.setDemoWatcherConfig`, and the game's own recording switch `AutoDem
 ### Upload
 
 - `uploadDemo` is imported from `app/utils/api.ts` into main, so keep it free of DOM and
-  renderer-only APIs. The watcher sends the stored desktop token (`getAuthConfig`) as is,
-  without refreshing it; no token → retry.
+  renderer-only APIs.
+- The token comes from `authService.getProfile()`, which refreshes it within 5 minutes of
+  expiry. No sign-in → retry. A token still expired after that (the refresh failed) →
+  retry, without sending it.
+- `401` → one forced refresh (`authService.refreshNow()`) and one immediate retry with the
+  new token, at most once per upload. A failed refresh or a second `401` sends the demo to
+  the durable retry; it is never marked `rejected` for its sign-in.
 - In place it tries up to 5 times, `attempt × 2 s` apart, but repeats only file locks
   (`EBUSY`, `EPERM`, `EACCES`, `EIO`), cloud-file errors, "no matching cap found" and
   "network error". After the fifth attempt, or at once for any other failure, the demo
   goes to the durable retry.
-- An error message containing "already verified" or "already exists" counts as success.
+- A demo the server already has is answered with success like a new one, so it counts as
+  uploaded. Error messages are never read as success.
 - `422` → `rejected`, never retried (contract in [api.md](../api.md)).
 - Success → `uploaded`, then `postUploadAction` (`System/Uploaded`, delete, or leave).
 

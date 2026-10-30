@@ -5,6 +5,7 @@ import { getUt99InstallPath, getDemoWatcherConfig, getAuthConfig, type DemoWatch
 import { readFile, writeFile, rename, unlink, mkdir, access, readdir, stat } from 'fs/promises'
 import { existsSync, type Stats } from 'fs'
 import { gatewayService } from '@/lib/main/gateway-service'
+import { authService } from '@/lib/main/auth-service'
 import { ApiError, uploadDemo } from '@/app/utils/api'
 import { isCertifiedCap } from '@/app/utils/capTypes'
 import { execFile } from 'child_process'
@@ -37,6 +38,11 @@ type RetryJob = {
     nextAttempt: number
     attempts: number
     lastError?: string
+}
+
+type UploadSession = {
+    accessToken: string
+    refreshed: boolean
 }
 
 type WatcherState = {
@@ -78,6 +84,8 @@ export class DemoWatcherService {
     private static readonly ADD_DEBOUNCE_MS = 3000
     private static readonly LASTADD_TTL_MS = 60 * 1000
     private static readonly REFUSED_STATUS = 422
+    private static readonly UNAUTHORIZED_STATUS = 401
+    private static readonly SIGN_IN_EXPIRED = 'Sign-in expired and could not be refreshed'
 
     constructor() {
         this.systemPath = undefined
@@ -485,7 +493,7 @@ export class DemoWatcherService {
         map: string,
         timeInSeconds: number,
         config: DemoWatcherConfig,
-        btpogId?: string,
+        btpogId: string,
     ): Promise<void> {
         let shouldUpload = false
         let shouldDiscard = false
@@ -559,36 +567,21 @@ export class DemoWatcherService {
         filePath: string,
         filename: string,
         config: DemoWatcherConfig,
-        verifiedBtpogId?: string,
+        btpogId: string,
     ): Promise<void> {
-        const auth = getAuthConfig()
+        const auth = await authService.getProfile()
         if (!auth) {
             loggingService.warn('Cannot upload demo: User not logged in', 'DemoWatcher')
-            this.queueRetry(filePath, filename, 'User is not logged in', verifiedBtpogId)
+            this.queueRetry(filePath, filename, 'User is not logged in', btpogId)
+            return
+        }
+        if (auth.expiresAt <= Date.now()) {
+            loggingService.warn(`Cannot upload ${filename} yet: the sign-in expired and could not be refreshed`, 'DemoWatcher')
+            this.queueRetry(filePath, filename, DemoWatcherService.SIGN_IN_EXPIRED, btpogId)
             return
         }
 
-        loggingService.info(`Uploading demo: ${filename}`, 'DemoWatcher')
-
-        if (verifiedBtpogId) {
-            loggingService.info(`Verified team run demo ${filename} (BTPog ID: ${verifiedBtpogId}). Proceeding with upload.`, 'DemoWatcher')
-        } else {
-            const btpogId = await this.extractBtpogId(filePath)
-            if (!btpogId) {
-                loggingService.warn(`Ignoring demo ${filename}: No BTPog ID found`, 'DemoWatcher')
-                this.markCompleted(filename, 'rejected')
-                return
-            }
-
-            const isCertified = await this.checkIsCertified(btpogId)
-            if (!isCertified) {
-                loggingService.info(`Ignoring demo ${filename}: Run is not certified (BTPog ID: ${btpogId})`, 'DemoWatcher')
-                this.markCompleted(filename, 'rejected')
-                return
-            }
-
-            loggingService.info(`Verified demo ${filename} (BTPog ID: ${btpogId}). Proceeding with upload.`, 'DemoWatcher')
-        }
+        loggingService.info(`Uploading demo: ${filename} (BTPog ID: ${btpogId})`, 'DemoWatcher')
 
         this.addLogEntry({
             filename,
@@ -601,6 +594,7 @@ export class DemoWatcherService {
         let attempts = 0
         const maxAttempts = 5
         let success = false
+        const session: UploadSession = { accessToken: auth.accessToken, refreshed: false }
 
         while (attempts < maxAttempts && !success) {
             attempts++
@@ -612,7 +606,7 @@ export class DemoWatcherService {
                 const buffer = await readFile(filePath)
                 const blob = new Blob([buffer])
 
-                await uploadDemo(blob, filename, auth.accessToken)
+                await this.uploadWithFreshToken(blob, filename, session)
                 success = true
 
                 loggingService.info(`Demo uploaded successfully: ${filename}`, 'DemoWatcher')
@@ -620,13 +614,6 @@ export class DemoWatcherService {
             } catch (error: any) {
                 const errorMessage = error.message || 'Unknown error'
                 const lower = errorMessage.toLowerCase()
-
-                if (lower.includes('already verified') || lower.includes('already exists')) {
-                    loggingService.info(`Demo ${filename} already on server (${errorMessage}); treating as success`, 'DemoWatcher')
-                    success = true
-                    this.updateLogStatus(filename, 'success')
-                    break
-                }
 
                 if (error instanceof ApiError && error.status === DemoWatcherService.REFUSED_STATUS) {
                     loggingService.warn(`Demo ${filename} was refused and will not be retried: ${errorMessage}`, 'DemoWatcher')
@@ -655,7 +642,7 @@ export class DemoWatcherService {
         }
 
         if (!success) {
-            this.queueRetry(filePath, filename, 'Upload failed after local retries', verifiedBtpogId)
+            this.queueRetry(filePath, filename, 'Upload failed after local retries', btpogId)
             return
         }
 
@@ -680,6 +667,20 @@ export class DemoWatcherService {
             }
         } catch (error) {
             loggingService.error('Failed to perform post-upload action', 'DemoWatcher', error)
+        }
+    }
+
+    private async uploadWithFreshToken(blob: Blob, filename: string, session: UploadSession): Promise<void> {
+        try {
+            await uploadDemo(blob, filename, session.accessToken)
+        } catch (error) {
+            if (session.refreshed || !(error instanceof ApiError) || error.status !== DemoWatcherService.UNAUTHORIZED_STATUS) throw error
+            session.refreshed = true
+            loggingService.info(`Upload of ${filename} was not authorised; refreshing the sign-in and retrying once`, 'DemoWatcher')
+            const accessToken = await authService.refreshNow()
+            if (!accessToken) throw new Error(DemoWatcherService.SIGN_IN_EXPIRED)
+            session.accessToken = accessToken
+            await uploadDemo(blob, filename, accessToken)
         }
     }
 
@@ -721,29 +722,6 @@ export class DemoWatcherService {
 
         loggingService.debug(`WR check: ${timeSeconds} < ${currentWR} = ${isWr}`, 'DemoWatcher')
         return isWr
-    }
-
-    private async checkIsCertified(btpogId: string): Promise<boolean> {
-        try {
-            const endpoint = `/caps?btpog_ids=${btpogId}&columns=cap_type`
-            const response = await gatewayService.get<CapResponse>(endpoint)
-
-            if (!response.success) {
-                loggingService.warn(`Certification check failed for ${btpogId}: API returned success=false`, 'DemoWatcher')
-                return false
-            }
-
-            if (!response.data || response.data.length === 0) {
-                loggingService.warn(`Certification check failed for ${btpogId}: No cap data found`, 'DemoWatcher')
-                return false
-            }
-
-            const isCertified = response.data.some(isCertifiedCap)
-            return isCertified
-        } catch (error) {
-            loggingService.error(`Certification check API error for ${btpogId}`, 'DemoWatcher', error)
-            return false
-        }
     }
 
     private async checkCap(btpogId: string): Promise<{ found: boolean; certified: boolean; teamRunId: string | null }> {

@@ -85,11 +85,15 @@ unreadable file reads as `{}`.
 `http://127.0.0.1:54321/callback`, opens Discord's authorize page and exchanges the code
 with Discord directly (the web build goes through the API instead, see
 [agents/web-target.md](../../agents/web-target.md)). `getProfile` refreshes single-flight
-within 5 minutes of expiry and falls back to the stored token if that fails. Sign-in,
-refresh and sign-out persist through the config auth accessors, so without encryption they
-all stay in memory (see Config storage). The renderer never receives the refresh token
-(`toRendererProfile` blanks it). The `auth:*` channels are
-plain `ipcMain.handle` calls in `main.ts`, outside the Zod-validated Conveyor set.
+within 5 minutes of expiry and falls back to the stored token if that fails. `refreshNow`
+refreshes at once, whatever the expiry, and returns the new access token, or `null` when
+nobody is signed in or the refresh fails (never the stale token; the sign-in stays stored).
+It joins a refresh already in flight, so a rotated refresh token is spent once. The demo
+watcher calls it after a `401` ([agents/features/game.md](../../agents/features/game.md)).
+Sign-in, refresh and sign-out persist through the config auth accessors, so without
+encryption they all stay in memory (see Config storage). The renderer never receives the
+refresh token (`toRendererProfile` blanks it). The `auth:*` channels are plain
+`ipcMain.handle` calls in `main.ts`, outside the Zod-validated Conveyor set.
 
 ## Ini access (settings panels)
 

@@ -131,3 +131,52 @@ describe('desktop sign-in without encryption', () => {
     expect(await authService.getProfile()).toBeUndefined()
   })
 })
+
+describe('forced refresh', () => {
+  const validSession: AuthConfig = { ...expiringSession, expiresAt: NOW + 3_600_000 }
+
+  it('returns the new access token and keeps the rotated sign-in', async () => {
+    vi.stubGlobal('fetch', discordStub(tokenResponse('refreshed-access-token', 'rotated-refresh-token')))
+    const { config, authService } = await freshModules()
+    config.setAuthConfig(validSession)
+
+    expect(await authService.refreshNow()).toBe('refreshed-access-token')
+    expect(config.getAuthConfig()).toMatchObject({
+      accessToken: 'refreshed-access-token',
+      refreshToken: 'rotated-refresh-token',
+    })
+  })
+
+  it('returns null instead of the stale token when the refresh fails, and keeps the sign-in', async () => {
+    const fetch = discordStub(new Response('{}', { status: 401, statusText: 'Unauthorized' }))
+    vi.stubGlobal('fetch', fetch)
+    const { config, authService } = await freshModules()
+    config.setAuthConfig(validSession)
+
+    expect(await authService.refreshNow()).toBeNull()
+    expect(fetch).toHaveBeenCalledTimes(1)
+    expect(config.getAuthConfig()).toMatchObject({ accessToken: 'old-access-token', refreshToken: 'old-refresh-token' })
+  })
+
+  it('returns null without calling Discord when nobody is signed in', async () => {
+    const fetch = discordStub(tokenResponse('refreshed-access-token', 'rotated-refresh-token'))
+    vi.stubGlobal('fetch', fetch)
+    const { authService } = await freshModules()
+
+    expect(await authService.refreshNow()).toBeNull()
+    expect(fetch).not.toHaveBeenCalled()
+  })
+
+  it('shares a refresh already in flight, so the refresh token is spent once', async () => {
+    const fetch = discordStub(tokenResponse('refreshed-access-token', 'rotated-refresh-token'))
+    vi.stubGlobal('fetch', fetch)
+    const { config, authService } = await freshModules()
+    config.setAuthConfig(expiringSession)
+
+    const [profile, forced] = await Promise.all([authService.getProfile(), authService.refreshNow()])
+
+    expect(profile).toMatchObject({ accessToken: 'refreshed-access-token' })
+    expect(forced).toBe('refreshed-access-token')
+    expect(fetch).toHaveBeenCalledTimes(1)
+  })
+})
