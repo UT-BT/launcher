@@ -19,6 +19,7 @@ gate goes red. Commands and the pre-commit gate are in [build.md](build.md).
 | `e2e/sidebarRail.ts`, `e2e/layout.ts`, `e2e/streamPanels.ts` | shared spec helpers: the catch-all `mockApi`, `horizontalOverflow`, `openStreamPanel` |
 | `e2e/<name>Harness.html` + `.ts` | standalone pages that mount one component tree outside the app |
 | `playwright.config.ts`, `vitest.config.ts`, `.github/workflows/` | runner config and CI |
+| `tsconfig.e2e.json` | the TypeScript project for `e2e/` and the two runner configs: `typecheck:e2e` and ESLint read it |
 
 ## Vitest
 
@@ -87,7 +88,7 @@ Each area under `app/utils/fixtures/` (`eventStats/`, `mapUploads/`, `pickBanVet
   both ways through `satisfies Record<keyof T, true>` maps, so a field added on one side fails
   until both agree.
 - The folder's `.gitattributes` (`*.json -text`) keeps git from rewriting line endings, which
-  would break the pins. Prettier rewrites these files too: keep `npm run format` off them.
+  would break the pins. `.prettierignore` keeps Prettier off them for the same reason.
 
 A fixture changes only when the contract does: replace the file with the new payload, take the new
 hash from the failing pin test (it prints the received value), and update the key maps and the
@@ -205,7 +206,7 @@ when a page stays blank.
 4. Scene specs open through `openScene` and shoot through `expectSceneScreenshot`
    ([stream-kit.md](features/stream-kit.md)).
 5. Verify: `npx playwright test e2e/<file>` passes twice in a row in every project it runs in, and
-   `npm run lint` passes (see the lint cap under [When the gate fails](#when-the-gate-fails)).
+   `npm run typecheck:e2e` and `npm run lint` pass.
 
 ## Screenshot baselines
 
@@ -263,7 +264,7 @@ nondeterminism: pin it (table above) instead of updating.
 
 | Workflow | Trigger | Runs |
 |---|---|---|
-| `.github/workflows/web.yml` | push to `main`, manual | Ubuntu, Node 20: `npm ci`, `npm run quality:web` (`typecheck:web`, `lint`, `test`, `build:web`, `check:bundle`), then a deploy that waits for approval |
+| `.github/workflows/web.yml` | push to `main`, manual | Ubuntu, Node 20: `npm ci`, `npm run quality:web` (`typecheck:web`, `typecheck:e2e`, `lint`, `test`, `build:web`, `check:bundle`), then a deploy that waits for approval |
 | `.github/workflows/release.yml` | push to `main` | Windows: builds and publishes the installer when the `package.json` version has no tag yet; no tests |
 
 Nothing runs on pull requests or on `staging`. No workflow runs Playwright, the Windows-only
@@ -290,10 +291,10 @@ A gate run after a merge went red. Work in this order:
    Report a recurring flake; keep the timeouts, retries and thresholds in specs and config as they
    are.
 4. **Fix the merge.** Each branch passed alone, so look at what the two sides changed together:
-   - `npm run typecheck:web`: one side renamed a type, field or export the other uses; fix the
-     consumer. `tsconfig.web.json` covers `app/`, `lib/` and `resources/`, so no gate type-checks
-     `e2e/` or the two test configs; Playwright strips a spec's types, so a type error there
-     surfaces only as a runtime failure.
+   - `npm run typecheck:web` or `npm run typecheck:e2e`: one side renamed a type, field or export
+     the other uses; fix the consumer. `tsconfig.web.json` covers `app/`, `lib/` and `resources/`;
+     `tsconfig.e2e.json` adds `e2e/` and the two runner configs, so a spec that builds a payload
+     with a dropped field fails here instead of at run time (Playwright strips a spec's types).
    - A structure test (table above) after a new page, route or Stream panel: wire it the way the
      test states.
    - A golden fixture pin or key map after both sides touched one area: keep the contract's bytes,
@@ -306,10 +307,10 @@ A gate run after a merge went red. Work in this order:
      spec's mock.
    - A broadcast screenshot after shared scene CSS or a token changed: decide intended or regression
      as in [Updating a baseline](#updating-a-baseline).
-5. **`npm run lint`.** Fix errors in the files the merge touched. `Too many files (>60) have matched
-   the default project` means `e2e/` outgrew the cap (spec files and the two configs lint through
-   typescript-eslint's default project): raise
-   `maximumDefaultProjectFileMatchCount_THIS_WILL_SLOW_DOWN_LINTING` in `eslint.config.mjs`.
+5. **`npm run lint`.** Fix errors in the files the merge touched. ESLint parses each TypeScript file
+   through the project in `tsconfig.json`'s `references` that includes it, with no file cap. `was not
+   found by the project service` means a new file sits outside every project: add its folder to
+   the matching tsconfig's `include`.
 6. **`npm run check:bundle`.** Run `npm run build:web` first: the check reads
    `dist-web/.vite/manifest.json`, so a stale build gives stale numbers. The closing
    `Web bundle checks failed` list names each broken budget, chunk or desktop-only marker; the usual

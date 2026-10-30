@@ -42,10 +42,8 @@ function stepZeroState(name: 'pickBanSideChoice' | 'pickBanSideSpotlight' | 'pic
     return {
         ...fixture,
         match: { ...fixture.match, id: MATCH },
-        chooser_side: null,
-        a_confirmed: false,
         viewer: { side: null, roster_captain: false },
-        capabilities: { ...fixture.capabilities, acting_side: null, can_ready: false, can_choose_side: false, can_choose_a: false, can_lock_now: false },
+        capabilities: { ...fixture.capabilities, acting_side: null, can_ready: false, can_choose_side: false, can_lock_now: false },
     }
 }
 

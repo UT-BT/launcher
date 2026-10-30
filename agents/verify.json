@@ -26,7 +26,10 @@
     "lib/main/demo-watcher-service.ts"
   ],
   "agents/build.md": [
+    ".prettierignore",
+    "eslint.config.mjs",
     "package.json",
+    "tsconfig.e2e.json",
     "tsconfig.web.json"
   ],
   "agents/navigation.md": [
@@ -168,6 +171,7 @@
   "agents/testing.md": [
     ".github/workflows/release.yml",
     ".github/workflows/web.yml",
+    ".prettierignore",
     "app/components/main/pageLoaders.test.ts",
     "app/components/navigation/routes.contract.test.ts",
     "app/components/pages/events/stream/streamPanels.test.ts",
@@ -189,6 +193,8 @@
     "package.json",
     "playwright.config.ts",
     "scripts/check-web-bundle.mjs",
+    "tsconfig.e2e.json",
+    "tsconfig.json",
     "tsconfig.web.json",
     "vitest.config.ts"
   ],

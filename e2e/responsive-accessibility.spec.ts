@@ -171,7 +171,7 @@ test('settings panels are sized by their container, not the viewport', async ({ 
   await expect(panel).toBeVisible()
   const containers = await panel.evaluate(el => {
     const parent = el.closest('[class*="@container/settings"]') as HTMLElement
-    const read = (node: HTMLElement) => {
+    const read = (node: Element) => {
       const style = getComputedStyle(node)
       return { type: style.containerType, name: style.containerName }
     }
