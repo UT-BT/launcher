@@ -360,6 +360,7 @@
     "app/renderer-desktop.tsx",
     "app/styles/window.css",
     "app/utils/serverJoin.ts",
+    "app/utils/ut99Install.ts",
     "lib/conveyor/handlers/app-handler.ts",
     "lib/conveyor/handlers/demos-handler.ts",
     "lib/conveyor/handlers/favorites-handler.ts",

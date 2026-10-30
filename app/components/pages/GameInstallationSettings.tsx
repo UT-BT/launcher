@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { AlertTriangle, Download, Folder, Package } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
 import { Input } from '@/app/components/ui/input'
@@ -6,11 +6,13 @@ import { ErrorModal } from '@/app/components/ErrorModal'
 import { ConfirmModal } from '@/app/components/shared/ConfirmModal'
 import { GameInstallLegalModal } from '@/app/components/modals/GameInstallLegalModal'
 import { SettingsSection, SettingsRow } from './settings/SettingsComponents'
+import { runUt99Install, type Ut99InstallerView } from '@/app/utils/ut99Install'
 
 export function GameInstallationSettings() {
     const [installPath, setInstallPath] = useState('')
     const [patchVersion, setPatchVersion] = useState('')
-    const [downloading, setDownloading] = useState(false)
+    const [installerStep, setInstallerStep] = useState<Ut99InstallerView['step']>('idle')
+    const downloading = installerStep !== 'idle'
     const [progress, setProgress] = useState(0)
     const [status, setStatus] = useState('')
     const [errorMessage, setErrorMessage] = useState('')
@@ -25,7 +27,6 @@ export function GameInstallationSettings() {
     const [announcerProgress, setAnnouncerProgress] = useState(0)
     const [isInstallingAnnouncer, setIsInstallingAnnouncer] = useState(false)
     const [showUnsupported, setShowUnsupported] = useState(false)
-    const downloadAttemptRef = useRef(0)
 
     useEffect(() => {
         loadSettings()
@@ -102,32 +103,15 @@ export function GameInstallationSettings() {
 
     const performDownload = async () => {
         setShowLegalModal(false)
-        const attemptId = ++downloadAttemptRef.current
-        setDownloading(true)
-        setStatus('Checking existing files...')
         setProgress(0)
-        try {
-            await window.conveyor.app.downloadUt99Iso()
-            if (downloadAttemptRef.current !== attemptId) return
-
-            setStatus('Mounting ISO and starting installer...')
-            await window.conveyor.app.mountAndRunUt99Iso()
-
-            if (downloadAttemptRef.current !== attemptId) return
-            setStatus('Installation complete. Please select the installation directory below.')
-            setDownloading(false)
-        } catch (err: any) {
-            if (downloadAttemptRef.current !== attemptId) return
-            setStatus('Error: ' + (err.message || 'Unknown error'))
-            setDownloading(false)
-        }
+        await runUt99Install(window.conveyor.app, (view) => {
+            setInstallerStep(view.step)
+            setStatus(view.status)
+        })
     }
 
     const handleCancel = async () => {
-        downloadAttemptRef.current++
         await window.conveyor.app.cancelUt99Download()
-        setDownloading(false)
-        setStatus('Cancelled')
     }
 
     const handleBrowse = async () => {
@@ -231,11 +215,13 @@ export function GameInstallationSettings() {
                                         style={{ width: `${progress}%` }}
                                     />
                                 </div>
-                                <div className="flex justify-end pt-2">
-                                    <Button variant="destructive" size="sm" onClick={handleCancel}>
-                                        Cancel
-                                    </Button>
-                                </div>
+                                {installerStep === 'downloading' && (
+                                    <div className="flex justify-end pt-2">
+                                        <Button variant="destructive" size="sm" onClick={handleCancel}>
+                                            Cancel
+                                        </Button>
+                                    </div>
+                                )}
                             </>
                         )}
                     </div>

@@ -14,8 +14,9 @@ launcher packaging, not the game: lib/main/README.md.
 
 | Path | Holds |
 |---|---|
-| `lib/main/game-service.ts` | install validation, standalone launch, `isGameRunning`, game profiles; no tests |
-| `lib/main/installation-service.ts`, `lib/main/patch-service.ts` | UT99 ISO download and setup, patch download, verify and extract |
+| `lib/main/game-service.ts` | install validation, standalone launch, `isGameRunning`, game profiles; Vitest covers Browse profiles and reserved names |
+| `lib/main/installation-service.ts`, `lib/main/patch-service.ts` | UT99 ISO download (cancel tested in Vitest) and setup, patch download, verify and extract |
+| `app/utils/ut99Install.ts` | the download-then-install flow behind a `Ut99InstallPort`, the cancel error and `isUt99DownloadCancelled`; Vitest |
 | `lib/main/demo-watcher-service.ts` | the demo watcher: detection, cap checks, upload, durable retry, upload log; no tests |
 | `lib/main/game-processes.ts` | pure `tasklist` parsing that keeps cam PIDs out of `isGameRunning`; Vitest |
 | `lib/conveyor/handlers/` | `game-handler.ts` (join, ping), `app-handler.ts` (install, patches, profiles, demo log), `maps-handler.ts` and `demos-handler.ts` (writes into the install), `window-handler.ts` |
@@ -43,11 +44,20 @@ launcher packaging, not the game: lib/main/README.md.
   `gatewayService`). No match is the tag `'Unsupported'`. `installedPatch.sha256` holds
   that MD5 despite its name.
 - **Browse** (`selectInstallDirectory`, then `validateAndSetInstallPath(path)`) checks the
-  layout, stores path and patch, restarts the demo watcher, snapshots the ini files into
-  two new profiles `Original (n)` and `Default (n)` (Default becomes active), sends
+  layout, stores path and patch, restarts the demo watcher, makes sure the folder has its
+  `Original` / `Default` profile pair (below), sends
   `installation-path-updated`, then downloads the custom announcer to
   `Sounds/Announcer.uax` from the gateway's `/assets/ut/Announcer.uax` with progress
   events. An announcer failure only logs.
+- **The folder's profile pair.** Browse snapshots the ini files into an `Original` and a
+  `Default` profile, named with the first free `Original`, `Original (1)`, … (the same for
+  `Default`), and stamps each with `install.json` (`{ installPath, role }`) in its profile
+  folder. Browse on a folder that already has a stamped pair (the path compared resolved,
+  and case-insensitively on Windows) reuses it and recreates only a missing half. The
+  folder's `Default` becomes active, without copying it over the install, unless the
+  browsed folder is the current one and the active profile still exists; then the active
+  profile stays. Profiles made before the stamp existed match no folder, so the first
+  Browse after updating adds one stamped pair.
 - **`validateCurrentInstallation()`** re-checks the stored path: `{ valid: false }` when
   the path, the patch or a required file is missing; `{ valid: true, version:
   'Unsupported' }` (and stored) when the hash matches no active patch; the stored tag when
@@ -79,7 +89,14 @@ is `'Unsupported'`.
   (a cached ISO that matches skips the download; progress on `iso-download-progress`).
   `mountAndRunUt99Iso` mounts it with PowerShell `Mount-DiskImage`, runs `Setup.exe`,
   waits, and always unmounts. The installer never sets the path: the user browses to the
-  folder afterwards. `cancelUt99Download` aborts only the download.
+  folder afterwards.
+- **Cancel.** `cancelUt99Download` aborts only the download (the request, or the check of
+  a cached ISO) and removes the partial ISO; `downloadUt99Iso` then rejects with an
+  `AbortError` whose message is `UT99 download cancelled`. Across IPC only the message
+  survives, so the renderer tests it with `isUt99DownloadCancelled`. Settings →
+  Installation runs the flow through `runUt99Install`, which ends idle with "Cancelled",
+  the error, or the browse hint, and never mounts after a cancel. Cancel shows only while
+  downloading; the installer step can't be cancelled.
 - **Patches.** `fetchPatches` lists the active gateway patches. `installPatch` reuses
   `{userData}/patch-cache/<asset_name>` when its SHA-256 matches, else downloads and
   verifies it, extracts over the install root (an entry escaping the root fails the
@@ -236,9 +253,10 @@ through `app.setDemoWatcherConfig`, and the game's own recording switch `AutoDem
   `WinDrv.WindowsClient`, `Engine.Player`, `Engine.GameInfo` and every `*RenderDevice` /
   `*AudioSubsystem` section, ignoring `RunCount` and `LocalTime`. The modal asks before
   switching away from a dirty profile.
-- `Original` and `Original (n)` cannot be overwritten, renamed or deleted from the modal;
-  main does not enforce it. Every successful Browse adds a new `Original (n)` /
-  `Default (n)` pair, even for the same folder.
+- `Original` and `Original (n)` are reserved: main refuses to create, overwrite, rename to
+  or from, or delete them (case-insensitive, trailing dots and spaces ignored, as Windows
+  folder names are), and the modal disables those row buttons. Only Browse writes them
+  ([the folder's profile pair](#choosing-and-validating)).
 
 ## Window chrome (desktop only)
 
