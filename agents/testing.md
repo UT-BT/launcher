@@ -51,8 +51,9 @@ can reach it.
 `lib/main/cam-launcher.test.ts` and `lib/main/kit-extractor.test.ts` wrap their file-writing
 suites in `describe.skipIf(process.platform !== 'win32')`. They assert Windows paths (drive
 letters, backslashes, CRLF ini files), and the kit folder must be a drive path
-(`lib/main/kit-folder.ts`). The Linux CI runner skips them, so run them locally after touching
-the cam launcher, `lib/stream-kit/cam-plan.ts` or the kit extractor.
+(`lib/main/kit-folder.ts`). The pull-request gate runs on Windows, so they run there; the `main`
+web build runs on Linux and skips them. Run them locally after touching the cam launcher,
+`lib/stream-kit/cam-plan.ts` or the kit extractor.
 
 ### Structure tests
 
@@ -266,12 +267,25 @@ nondeterminism: pin it (table above) instead of updating.
 
 | Workflow | Trigger | Runs |
 |---|---|---|
+| `.github/workflows/ci.yml`, job `Fast gate` | pull request into `staging` or `main`, push to `staging` | Windows, Node 20: `npm ci`, `typecheck:web`, `typecheck:e2e`, `lint`, `test` (Windows-only suites included), `docs:check`, `build:web`, `check:bundle`, one step each |
+| `.github/workflows/ci.yml`, job `Playwright` | the same | Windows, Node 20: `npm ci`, `npx playwright install chromium`, `npm run test:e2e` (all three projects, against the `-win32` baselines); on failure uploads `playwright-report/` and `test-results/` as artifacts |
 | `.github/workflows/web.yml` | push to `main`, manual | Ubuntu, Node 20: `npm ci`, `npm run quality:web` (`typecheck:web`, `typecheck:e2e`, `lint`, `test`, `build:web`, `check:bundle`), then a deploy that waits for approval |
 | `.github/workflows/release.yml` | push to `main` | Windows: builds and publishes the installer when the `package.json` version has no tag yet; no tests |
 
-Nothing runs on pull requests or on `staging`. No workflow runs Playwright, the Windows-only
-Vitest suites or `docs:check`; they gate locally only, so a branch is ready when the gate in
-[build.md](build.md) and `npm run test:e2e` pass. `npm run quality:web` reproduces the `main` job.
+`ci.yml` turns off `core.autocrlf` before checkout, so the runner gets each file's committed line
+endings, as a local checkout does. A newer push to the same pull request cancels its run in
+progress; runs on `staging` finish, so every merged commit gets a result.
+GitHub sets `CI`, so Playwright runs with 2 retries, `forbidOnly` and the `github` reporter
+([Projects](#projects)); the job adds `--reporter=github,html` so a failure leaves an HTML report.
+Download the `playwright-report` artifact and open its `index.html`, or read the images and
+`trace.zip` in `playwright-test-results` as in [Reading a mismatch](#reading-a-mismatch).
+`docs:check` runs on a shallow checkout with no history before the tested commit, so in CI it
+checks paths, links and the manifest but lists no docs to review; run it locally for that list.
+
+`Fast gate` is the check to require on `staging` and `main`. `Playwright` stays advisory until it
+has been stable. A branch is ready when the gate in [build.md](build.md) and `npm run test:e2e`
+pass locally, the same commands the two jobs run. `npm run quality:web` reproduces the `main` web
+job.
 
 ## When the gate fails
 

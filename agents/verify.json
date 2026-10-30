@@ -173,6 +173,7 @@
     "scripts/render-seasonal-logos.mjs"
   ],
   "agents/testing.md": [
+    ".github/workflows/ci.yml",
     ".github/workflows/release.yml",
     ".github/workflows/web.yml",
     ".prettierignore",
