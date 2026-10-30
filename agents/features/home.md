@@ -14,7 +14,7 @@ the seasonal ambient layer (Home only) in [styling.md](../styling.md).
 
 | Path | Holds |
 |---|---|
-| `app/components/pages/Home.tsx` | the page: `HomePageCaches`, the main parallel load, Refresh, the layout, the modals, the join/spectate handler |
+| `app/components/pages/Home.tsx` | the page: `HomePageCaches`, the main parallel load, Refresh, the layout, the modals, Join/Spec through `useServerJoin` |
 | `home/SpotlightSection.tsx` | the section frame: title, tick colour (from `ACCENTS` in `Home.tsx`), optional "See All" `NavLink` |
 | `home/YouDoorway.tsx`, `CommunityStatsRow.tsx` | top row: profile card with Change title; Players and Maps totals with online / new links |
 | `home/PersonalProgressSnapshot.tsx`, `capItAllProgress.ts` | Your Progress tiles; the Cap It All rank lookup and its cache type |
@@ -130,9 +130,9 @@ achievements carry a Team chip.
 - Ping runs once per unique IP over IPC when `capabilities.ping`. Join and Spec render only
   with `capabilities.game` and enable on `installationStatus === 'valid'` (Join also needs a
   free slot).
-- `handleJoinServer` in `Home.tsx` copies `ServerBrowserPage`'s: it sets or clears the
-  `User.ini` spectator `OverrideClass`, then launches the game. Change both together; the game
-  side is in [game.md](game.md).
+- Join and Spec call `useServerJoin`, the same hook the server browser uses; Home shows its
+  notice (launch error or game already running) in a modal. The behaviour is in
+  [game.md](game.md).
 - `installationStatus` reaches Home only through `case 'home'` in `Main.tsx`, not the
   `default` case.
 

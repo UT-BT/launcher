@@ -35,7 +35,7 @@ loads on first paint. Build commands are in [build.md](build.md).
 
 | Feature | On web | Gate |
 |---|---|---|
-| Launch / join / spectate, sidebar Play + Join Server | hidden | `capabilities.game` in `SidebarActions`, `Home`, `ServerBrowserPage`, `FavoriteServersCard` |
+| Launch / join / spectate, sidebar Play + Join Server | hidden | `capabilities.game` in `SidebarActions`, `ServerBrowserPage`, `FavoriteServersCard`, and in `useServerJoin` / `launchStandaloneGame` before any IPC call |
 | Ping column and server pings | hidden, skipped | `capabilities.ping` in `ServerBrowserPage` (`displayColumnOrder`) and `FavoriteServersCard` |
 | Settings modal | web modal with Appearance + Privacy only; game panels never fetched | `capabilities.settingsModal` + target-specific lazy modal in `AppLayout` |
 | Install banner and patches | off (`validateInstallation` returns early) | `capabilities.install` in `Main.tsx` |

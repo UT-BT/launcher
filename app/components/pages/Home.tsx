@@ -14,6 +14,7 @@ import { HistoryModal } from '@/app/components/modals/HistoryModal'
 import { ReplayVideoModal } from '@/app/components/shared/ReplayVideoModal'
 import { useReplayWatch } from '@/app/hooks/useReplayWatch'
 import { useRefreshCooldown } from '@/app/hooks/useRefreshCooldown'
+import { useServerJoin } from '@/app/hooks/useServerJoin'
 import { useRegisterPageRefresh } from '@/app/components/navigation/PageRefreshContext'
 import type { Server } from '@/app/utils/server-utils'
 
@@ -121,7 +122,7 @@ export function Home({
     const [error, setError] = useState<string | null>(null)
     const [reviewOpen, setReviewOpen] = useState(false)
     const [historyOpen, setHistoryOpen] = useState(false)
-    const [launchError, setLaunchError] = useState<string | null>(null)
+    const { join: handleJoinServer, notice: launchNotice, clearNotice: clearLaunchNotice } = useServerJoin()
     const [activeReviewMap, setActiveReviewMap] = useState<string | null>(null)
     const [reviewsRefreshKey, setReviewsRefreshKey] = useState(0)
     const [refreshKey, setRefreshKey] = useState(0)
@@ -275,27 +276,6 @@ export function Home({
             time: cap.time,
             alias: userProfile?.alias ?? undefined,
         })
-    }
-
-    const handleJoinServer = async (server: Server, asSpectator: boolean) => {
-        if (!capabilities.game) return
-        try {
-            if (window.conveyor?.ini) {
-                if (asSpectator) {
-                    await window.conveyor.ini.writeIniValue('User.ini', 'DefaultPlayer', 'OverrideClass', 'Botpack.CHSpectator')
-                } else {
-                    const currentClass = await window.conveyor.ini.readIniValue('User.ini', 'DefaultPlayer', 'Class')
-                    if (currentClass === 'Botpack.CHSpectator') {
-                        await window.conveyor.ini.writeIniValue('User.ini', 'DefaultPlayer', 'Class', '')
-                    }
-                    await window.conveyor.ini.writeIniValue('User.ini', 'DefaultPlayer', 'OverrideClass', '')
-                }
-            }
-            await window.conveyor.game.launchGame(server.ip, server.hostport)
-        } catch (err) {
-            console.error('Failed to launch game:', err)
-            setLaunchError(err instanceof Error ? err.message : 'Failed to launch the game.')
-        }
     }
 
     const newsFeed = useMemo(() => news.slice(0, 5), [news])
@@ -629,13 +609,13 @@ export function Home({
             </Modal>
 
             <Modal
-                isOpen={launchError !== null}
-                onClose={() => setLaunchError(null)}
-                title="Launch Error"
+                isOpen={launchNotice !== null}
+                onClose={clearLaunchNotice}
+                title={launchNotice?.title}
                 className="w-[95%] sm:w-[440px] max-w-md"
                 offsetSidebar
             >
-                <p className="text-sm text-muted-foreground">{launchError}</p>
+                <p className="text-sm text-muted-foreground">{launchNotice?.message}</p>
             </Modal>
         </div>
     )

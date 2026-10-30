@@ -21,7 +21,8 @@ launcher packaging, not the game: lib/main/README.md.
 | `lib/conveyor/handlers/` | `game-handler.ts` (join, ping), `app-handler.ts` (install, patches, profiles, demo log), `maps-handler.ts` and `demos-handler.ts` (writes into the install), `window-handler.ts` |
 | `app/components/main/Main.tsx` | `installationStatus`, `validateInstallation`, the install banner |
 | `app/components/pages/GameInstallationSettings.tsx` | Settings → Installation: ISO installer, folder picker, patch list |
-| `app/components/pages/ServerBrowserPage.tsx`, `app/components/pages/Home.tsx` | the two Join/Spec handlers (`handleJoin`, `handleJoinServer`) |
+| `app/utils/serverJoin.ts` | pure Join/Spec/Play decisions (running check, `User.ini` class writes) behind a `GameLaunchPort`; Vitest |
+| `app/hooks/useServerJoin.ts` | `useServerJoin` (Join/Spec for the server browser and Home, with the notice it shows) and `launchStandaloneGame` (sidebar Play) |
 | `app/components/layout/sidebar/SidebarActions.tsx` | sidebar Join Server and Play |
 | `app/platform/` | capability flags, `saveMapZip` / `saveDemoFile` with their web fallbacks, the gateway server list (normaliser tested in `gateway.test.ts`) |
 | `app/hooks/useMapDownload.ts`, `app/hooks/useDemoDownload.ts`, `app/components/shared/` | download state, and the `*DownloadStatusModal` reason → message tables |
@@ -88,22 +89,28 @@ is `'Unsupported'`.
 
 ## Launching and joining
 
-- **Play** (sidebar): `game.launchGameStandalone()` spawns `System/UnrealTournament.exe`
-  detached, with `System` as the working directory.
+- Every entry point goes through `app/utils/serverJoin.ts`: the server browser and Home
+  (with its favorite servers card) call `useServerJoin().join`, the sidebar Play calls
+  `launchStandaloneGame`. Both return early without `capabilities.game`, and the buttons
+  render only with it, so web shows no Join, Spec or Play. Add a new launch entry point
+  through them, never with direct `window.conveyor` calls.
+- **Play** (sidebar) first resets `User.ini` `[DefaultPlayer]` to a player (below), then
+  `game.launchGameStandalone()` spawns `System/UnrealTournament.exe` detached, with
+  `System` as the working directory. A launch failure only logs.
 - **Join / Spec** (server browser rows and compact cards, Home's favorite servers card)
-  first write `User.ini` `[DefaultPlayer]`, then call `game.launchGame(ip, hostport)`:
+  check that the game is not running (below), write `User.ini` `[DefaultPlayer]`, then call
+  `game.launchGame(ip, hostport)`:
   - Spec sets `OverrideClass=Botpack.CHSpectator`.
-  - Join clears `OverrideClass`, and clears `Class` when it is `Botpack.CHSpectator`.
-  - The value persists in `User.ini`. Play does not reset it, so a standalone launch keeps
-    the class the last Join or Spec chose.
-  - The handler exists twice, `ServerBrowserPage.handleJoin` and `Home.handleJoinServer`.
-    Keep them identical; extract a shared helper rather than adding a third copy.
+  - Join and Play clear `OverrideClass`, and clear `Class` when it is `Botpack.CHSpectator`,
+    so a Spec never carries over into a later Join or Play.
 - **`launchGame`** (main) checks the stored path and exe, requires `ip` to match
   `^[a-zA-Z0-9.-]+$`, and spawns the exe with `unreal://<ip>:<port>` as its only argument.
   The schema requires a positive integer port, so a server whose `hostport` normalised to
   `0` fails before main runs. Join passes no password or URL options; the stream cams are
   the only launch that sends a server password (lib/main/README.md).
-- Launch errors open the server browser's error modal or set Home's `launchError`.
+- `useServerJoin` holds one `notice` (`{ title, message }`): a launch error ("Launch Error")
+  or the already-running notice ("Game Already Running"). The server browser shows it in its
+  `ErrorModal`, Home in a `Modal`.
 - **Ping.** `pingServer` accepts IPv4 only (schema) and runs one `ping` with a 1 s
   timeout; `999` means failed. The server browser pings unique IPs six at a time after
   each fetch, behind `capabilities.ping`.
@@ -116,8 +123,11 @@ is `'Unsupported'`.
 - `startBackgroundGamePoller` (`favorites-handler.ts`, every 5 s from main) sends
   `favorites:game-closed` on a running → stopped edge; map favorites re-read the ini then
   ([api.md](../api.md)).
-- Nothing checks it before Join, Play, a Spec ini write, a profile switch or a settings
-  write. A second Join starts a second client.
+- Join and Spec check it first. While the game runs, or while another Join or Spec is still
+  starting it, they write nothing and launch nothing, and show "UT99 is already running.
+  Close it to join another server." instead.
+- Nothing checks it before Play, a profile switch or a settings write, so a second Play
+  still starts a second client.
 
 ## Files written into the install
 
