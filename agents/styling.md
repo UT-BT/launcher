@@ -183,11 +183,13 @@ the pre-paint script pick it up.
    `--nebula-1…4` for a gradient theme, and the surfaces (`--background`, `--card`,
    `--popover`, `--secondary`, `--muted`, `--accent`, `--border`, `--input`). Anything left
    out comes from Classic (`:root` in `themes.css`, then `globals.css`). Write
-   `--background` and `--card` as `hsl(…)`:
+   `--background` and `--card` as `hsl(…)`, `rgb(…)`, `#hex` or `oklch(…)`:
    `app/components/pages/events/stats/teamAccent.test.ts` reads them from every
-   theme block and fails when a team accent drops under 4.5:1 on them, and it skips a value
-   in any other notation. Optional: `--window-c-titlebar-background` (desktop titlebar),
-   `--radius-*` (Slate Blue Squared sets all to 0).
+   theme block and fails when a team accent drops under 4.5:1 on them. It also fails on a
+   value it can't read (`var(…)`, `color-mix(…)`, `lab(…)`), on a translucent one, and on a
+   registered theme with no block of that exact selector, so no theme goes unchecked.
+   Optional: `--window-c-titlebar-background` (desktop titlebar), `--radius-*` (Slate Blue
+   Squared sets all to 0).
 2. **Solid only:** add the theme's `.nebula-bg` selector to the `display: none` rule at the
    end of `themes.css`.
 3. **Registry.** Append a `ThemeMeta` to `THEMES` (`app/theme/themes.ts`): `id` (the
@@ -581,8 +583,10 @@ scale animate.
 ## Motion
 
 - `animate-in`, `fade-in`, `slide-in-*` and `zoom-in-*` emit no CSS: `tw-animate-css` is
-  a dependency but never imported, so those classes (still present on some modals and
-  the tutorial) do nothing. Animate with framer-motion.
+  a dependency but never imported, so those classes do nothing. Older overlays still carry
+  them; drop them when you touch one. Animate with framer-motion. `ui/modal.tsx` opens
+  without animation because it ships in the web entry; the tutorial dropped its no-op
+  classes too.
 - Skeletons: `animate-pulse` with `bg-hairline/5`. Legendary titles and avatars:
   `legendaryAvatarPulse` / `legendaryTitlePulse` in `globals.css`.
 - framer-motion stays out of the web entry: import it only from lazily loaded
