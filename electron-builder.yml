@@ -3,14 +3,8 @@ productName: UTBT
 directories:
   buildResources: resources/build
 files:
-  - '!**/.vscode/*'
-  - '!src/*'
-  - '!electron.vite.config.{js,ts,mjs,cjs}'
-  - '!vite.config.web.{js,ts,mjs,cjs}'
-  - '!dist-web/**'
-  - '!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
-  - '!{.env,.env.*}'
-  - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+  - out/**
+  - resources/**
   - '!node_modules/koffi/{doc,src,vendor}/**'
   - '!node_modules/koffi/build/koffi/{darwin,freebsd,linux,musl,openbsd}_*/**'
 asarUnpack:
@@ -28,6 +22,8 @@ win:
   icon: resources/build/icon.ico
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
+  oneClick: true
+  perMachine: false
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
@@ -37,14 +33,7 @@ nsis:
   installerHeaderIcon: resources/build/icon.ico
   menuCategory: true
   language: 1033
-  installerSidebar: resources/build/installerSidebar.bmp
-  packElevateHelper: true
-  perMachine: true
   warningsAsErrors: false
-  license: LICENSE
-  oneClick: false
-  allowElevation: true
-  allowToChangeInstallationDirectory: true
   displayLanguageSelector: false
 npmRebuild: false
 publish:

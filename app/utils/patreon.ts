@@ -122,3 +122,7 @@ export function usePatreonTier(userId?: string | number): 0 | PatreonTier {
 
     return tier
 }
+
+export function getPatreonMembers(): { id: string; tier: PatreonTier }[] {
+    return Object.entries(tiers).map(([id, tier]) => ({ id, tier }))
+}

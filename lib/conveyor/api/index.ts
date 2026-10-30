@@ -8,6 +8,7 @@ import { FavoritesApi } from './favorites-api'
 import { DemosApi } from './demos-api'
 import { MapsApi } from './maps-api'
 import { UpdaterApi } from './updater-api'
+import { LegacyInstallApi } from './legacy-install-api'
 import { StreamKitApi } from './stream-kit-api'
 
 export const conveyor = {
@@ -21,6 +22,7 @@ export const conveyor = {
   demos: new DemosApi(electronAPI),
   maps: new MapsApi(electronAPI),
   updater: new UpdaterApi(electronAPI),
+  legacyInstall: new LegacyInstallApi(electronAPI),
   streamKit: new StreamKitApi(electronAPI),
 }
 

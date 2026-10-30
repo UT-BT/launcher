@@ -21,7 +21,7 @@ verify_against: [package.json, tsconfig.web.json, vite.config.web.ts]
 | `npm run dev:web` | Start the WEB dev server (plain browser, port 5174). See `agents/web-target.md`. |
 | `npm run lint` | ESLint over `app/`, `lib/`. Auto-fix via `--fix` (already wired in). |
 | `npx tsc --noEmit -p tsconfig.web.json` | Typecheck renderer code only. Fast. Run before commits. |
-| `npm run build:win` | Production Windows build. |
+| `npm run build:win` | Production Windows build: a one-click per-user installer in `dist/`. |
 | `npm run build:web` | Static web build into `dist-web/` (gitignored, excluded from the installer). |
 | `npm run preview:web` | Serve the production web build locally. |
 
@@ -29,6 +29,11 @@ verify_against: [package.json, tsconfig.web.json, vite.config.web.ts]
 
 - **Node 20+**. Vite 7 calls `crypto.hash` which only exists in Node 20+. Older Node = obscure error at dev-server start.
 - Windows-first project. PowerShell is the default shell; Bash via WSL also works.
+- **Where a new package goes.** `dependencies` is only for what the main process or
+  preload load at runtime; they ship inside the installer as-is. Renderer libraries
+  (React UI kits, icons, charts) go in `devDependencies`, because Vite bundles them
+  into `out/renderer` anyway. Putting one in `dependencies` ships it a second time
+  and grows every update (see `lib/main/README.md`, Auto-updates).
 
 ## Pre-commit checklist
 

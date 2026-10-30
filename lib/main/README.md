@@ -5,15 +5,26 @@ read_when:
   - "reading/writing files, the UT99 install, or UTBT.ini from main"
   - "opening external URLs, spawning the game, or persisting launcher config"
   - "deciding whether logic belongs in the renderer or the main process"
-keywords: [main, services, handle, resolveWithin, path-safety, openExternalSafe, config, safeStorage, ini, gateway, spawn, CSP, cam, koffi, stream-kit]
+keywords: [main, services, handle, resolveWithin, path-safety, openExternalSafe, config, safeStorage, ini, gateway, spawn, CSP, cam, koffi, stream-kit, updater, installer, splash]
 provides: "the main-process service map, the safety helpers, config storage, and the renderer/main boundary"
 not_here:
   - "the IPC channel/api/handler pattern → lib/conveyor/README.md"
   - "renderer HTTP calls → agents/data-sources.md"
-sections: [services, the-renderer-main-boundary, file-path-safety, opening-urls, config-storage, ini-access, stream-cams, stream-kit-extractor, window-security-csp]
-last_verified: 2026-10-05
+sections: [services, the-renderer-main-boundary, file-path-safety, opening-urls, config-storage, ini-access, stream-cams, auto-updates, stream-kit-extractor, window-security-csp]
+last_verified: 2026-10-30
 verify_against:
   - lib/main/app.ts
+  - lib/main/main.ts
+  - lib/main/updater-service.ts
+  - lib/main/startup-update.ts
+  - app/components/splash/SplashScreen.tsx
+  - app/components/splash/splashUpdateStatus.ts
+  - app/components/splash/SplashPatreonCard.tsx
+  - lib/main/legacy-install.ts
+  - lib/main/legacy-install-service.ts
+  - lib/conveyor/handlers/legacy-install-handler.ts
+  - app/components/updater/LegacyInstallCard.tsx
+  - app/components/updater/legacyInstall.ts
   - lib/main/config.ts
   - lib/main/path-safety.ts
   - lib/main/url-safety.ts
@@ -34,9 +45,9 @@ verify_against:
 
 Node-privileged Electron code. It owns the filesystem, child processes, the UT99
 install, OS integration, and the Discord OAuth flow. The renderer reaches it only
-through Conveyor IPC (`lib/conveyor/README.md`). `createAppWindow()` in `app.ts`
-is the entry point: it sets the CSP, creates the window, and registers every
-handler.
+through Conveyor IPC (`lib/conveyor/README.md`). `main.ts` runs the update check
+first (Auto-updates below), then `createAppWindow()` in `app.ts` sets the CSP,
+creates the window, and registers every handler.
 
 ## Services
 
@@ -49,7 +60,7 @@ handlers/`) are thin and delegate to these.
 | `game-service` | Launch/validate the UT99 install, detect running game |
 | `demo-watcher-service` | Watch the demo folder, parse `.dem` headers, auto-upload per config |
 | `patch-service` | Download + install the UTBT patch, version checks |
-| `updater-service` | Stable launcher auto-updates (electron-updater) |
+| `updater-service` | Stable launcher auto-updates (electron-updater): update-before-launch, background checks, silent install on quit (see Auto-updates) |
 | `tray-service` | System-tray icon + right-click menu, minimize/close-to-tray interception (window `close`/`minimize` events + `before-quit` flag), start-on-startup login item |
 | `gateway-service` | HTTP client for the gateway host (avatars, patrons, server list) |
 | `installation-service` | Install detection/validation, ISO download orchestration |
@@ -96,7 +107,9 @@ atomically (tmp + rename). Typed accessors only — don't read the file directly
 `getCamFps` / `setCamFps` (the `camFps` key, the stream cams' frame rate: `60` or `120`; anything
 else, a missing value or an unreadable file reads as `120`, and saving keeps the rest of the config),
 `getCamVolume` / `setCamVolume` (the `camVolume` key, the stream cams' game volume in whole percent
-`0`-`100`; anything else reads as `50`, the same way).
+`0`-`100`; anything else reads as `50`, the same way),
+`getLegacyInstallDismissedVersion` / `setLegacyInstallDismissedVersion` (the `legacyInstallDismissedVersion`
+key, the launcher version whose old-copy card was dismissed or acted on; see Auto-updates).
 
 **Secrets are encrypted at rest.** Auth access/refresh tokens go through Electron
 `safeStorage` (`enc:` prefix) in `set/getAuthConfig`. Never log them or store
@@ -185,6 +198,69 @@ lineup, two server addresses, an optional password per team and the frame rate,
   ESM in the CJS main bundle. If it fails to load the cams still run and
   `retitle.available` is false. Packaging: `electron-builder.yml` unpacks
   `node_modules/koffi/**` from the asar and strips its non-Windows binaries.
+
+## Auto-updates
+
+Packaged builds update during the intro splash, Discord-style. `main.ts` creates the
+window and calls `updaterService.installBeforeLaunch()`, which sets `holdingLaunch`
+in the updater state while it runs. The sequence lives in `startup-update.ts`
+(unit-tested): check (5 s cap), download (2 min cap), then `quitAndInstall`. A
+failed or slow step releases the hold and the app opens normally; a download that
+is still running carries on in the background.
+
+The renderer's `SplashScreen` will not leave the intro while `holdingLaunch` is set.
+`splashUpdateStatus.ts` (unit-tested) turns the updater state into the line under
+the subtitle: "Updating to vX" with a progress bar, then "Restarting to finish the
+update". The check usually finishes inside the 2 s intro, so a launch with nothing to
+install looks exactly like before. If the check is still running when the intro
+ends, "Checking for updates" appears. When an install starts, the hold is released
+after 15 s in case the app never quits. While an update downloads or restarts,
+`SplashPatreonCard` fades in under the bar: "Love BunnyTrack? Be a legend like
+<patron>" with a Support on Patreon button. How the patron is picked is in
+`agents/data-sources.md` (Patreon members).
+
+- **In-session:** `startBackgroundChecks()` re-checks every 4 h and downloads on
+  its own. A finished download shows `UpdateBanner` (Restart now · What's new); it
+  never opens the modal on its own. `autoInstallOnAppQuit` installs it silently on
+  quit, so the next start is already current.
+- **Dev:** unpackaged builds never hold the launch or download on their own; the
+  Settings → Updates button still drives check / download by hand.
+- **Installer:** `electron-builder.yml` builds a one-click per-user NSIS installer
+  (`%LOCALAPPDATA%\Programs\utbt-launcher`), so updates need no wizard and no UAC.
+  Differential downloads use the `.blockmap` the release uploads.
+- **Moving off all-users installs:** releases before the switch installed for all
+  users, and the per-user installer cannot remove that copy. The new app offers to
+  remove it once it is running, and never without asking: `LegacyInstallCard`
+  (`app/components/updater/`, opened from `app.tsx` once the app reaches main)
+  explains that UTBT now updates itself and that Windows will ask once to allow the
+  old uninstaller, named as Windows shows it. Windows asks only after the player
+  clicks Remove old copy. "Not now" stores the version in
+  `legacyInstallDismissedVersion`, so the card returns after the next update, and
+  Settings → General shows a Remove old copy row that opens the same card while the
+  old copy exists. The renderer state lives in `legacyInstall.ts`; the channels are
+  `legacyInstall:getStatus`, `legacyInstall:dismiss` and `legacyInstall:remove`.
+  `legacy-install-service.ts` reads the machine registry (`LEGACY_INSTALL_KEY`,
+  which comes from the unchanged `appId`), and `planLegacyRemoval()`
+  (`legacy-install.ts`, unit-tested) decides whether it is safe. It removes only
+  when the registered uninstaller sits in the install folder, the app is not running
+  from that folder, and the folder holds nothing but launcher files: Electron's
+  `.dll/.pak/.bin/.dat`, `locales`, `resources`, the exe, the uninstaller and the
+  license files. A custom folder that also holds a game, demos or anything else is
+  left alone, because the old uninstaller deletes its whole folder. Removal runs the
+  registered uninstaller with `/S /allusers` through an elevated `Start-Process`:
+  one UAC prompt, app data kept. The uninstaller hands off to a temp copy and exits,
+  so the service polls until the uninstall key is gone (up to 2 minutes) before it
+  reports `removed`; a declined prompt reports `declined`. The old uninstaller stops
+  processes by their path inside its own folder, so the new app keeps running (only
+  without PowerShell does it fall back to stopping every `utbt.exe`). Taskbar
+  pins that pointed into the old folder are rewritten to the new exe when they
+  survive the uninstall; when Windows removed them, the card tells the player how to
+  pin UTBT again.
+- **Package size:** `files` in `electron-builder.yml` is an allowlist (`out/**`,
+  `resources/**`). `dependencies` in `package.json` holds only what main and preload
+  load at runtime; renderer libraries belong in `devDependencies`, because Vite
+  already bundles them into `out/renderer` and anything in `dependencies` ships in
+  the asar a second time.
 
 ## Stream kit extractor
 

@@ -144,7 +144,7 @@ export function UpdateModal() {
                     <Button variant="secondary" onClick={closeModal}>Later</Button>
                     <Button onClick={() => { void install() }}>
                         <RefreshCw className="size-4" />
-                        Restart & install
+                        Restart now
                     </Button>
                 </div>
             )
@@ -203,11 +203,14 @@ export function UpdateModal() {
                 )}
 
                 {state.phase === 'downloaded' && (
-                    <div className="flex items-start gap-3">
-                        <CheckCircle2 className="size-5 text-primary shrink-0 mt-0.5" />
-                        <p className="text-muted-foreground">
-                            Update downloaded. Restart the launcher to finish installing v{state.version}.
-                        </p>
+                    <div className="space-y-4">
+                        <div className="flex items-start gap-3">
+                            <CheckCircle2 className="size-5 text-primary shrink-0 mt-0.5" />
+                            <p className="text-muted-foreground">
+                                v{state.version} is downloaded and installs the next time UTBT starts.
+                            </p>
+                        </div>
+                        {state.releaseNotes && <ReleaseNotes notes={state.releaseNotes} />}
                     </div>
                 )}
 

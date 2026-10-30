@@ -45,6 +45,7 @@ type LauncherConfig = {
   windowBehavior?: WindowBehaviorConfig
   camFps?: CamFps
   camVolume?: number
+  legacyInstallDismissedVersion?: string
 }
 
 const CONFIG_FILE_NAME = 'config.json'
@@ -121,6 +122,14 @@ export function markFreshInstall(): void {
 
 export function getInstalledPatch(): InstalledPatch | undefined {
   return readConfig().installedPatch
+}
+
+export function getLegacyInstallDismissedVersion(): string | undefined {
+  return readConfig().legacyInstallDismissedVersion
+}
+
+export function setLegacyInstallDismissedVersion(version: string): void {
+  writeConfig({ ...readConfig(), legacyInstallDismissedVersion: version })
 }
 
 export function getGatewayConfig(): GatewayConfig {

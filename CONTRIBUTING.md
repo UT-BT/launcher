@@ -298,6 +298,10 @@ installer, and publishes a GitHub Release with the artifacts (`.exe`, `.blockmap
 `latest.yml`). There is no manual tag step — bumping the version in step 2 and
 promoting in step 3 is all it takes.
 
+Installed launchers pick the release up on their own: the next time a player opens
+UTBT it downloads the update, installs it with no wizard and restarts. Launchers
+left running pick it up within four hours and install it when they quit.
+
 Confirm it started:
 
 ```bash

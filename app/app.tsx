@@ -7,6 +7,7 @@ import { UpdaterProvider } from '@/app/hooks/useUpdater'
 
 const LoginPage = lazy(() => import('@/app/components/pages/LoginPage').then(m => ({ default: m.LoginPage })))
 const UpdateModal = lazy(() => import('@/app/components/updater/UpdateModal').then(m => ({ default: m.UpdateModal })))
+const LegacyInstallCard = lazy(() => import('@/app/components/updater/LegacyInstallCard').then(m => ({ default: m.LegacyInstallCard })))
 import { useLogger } from '@/app/hooks/use-logger'
 import { IS_WEB, isRejectedSession, platformAuth, type AuthProfile } from '@/app/platform'
 import { fetchUserProfile, UserProfile, fetchLatestActivity } from '@/app/utils/api'
@@ -218,6 +219,12 @@ export default function App() {
       {!IS_WEB && (
         <Suspense fallback={null}>
           <UpdateModal />
+        </Suspense>
+      )}
+
+      {!IS_WEB && appPhase === 'main' && (
+        <Suspense fallback={null}>
+          <LegacyInstallCard />
         </Suspense>
       )}
 
