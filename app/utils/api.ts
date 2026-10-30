@@ -2497,6 +2497,8 @@ export interface CapRecord {
     ping_25pc?: number | null
     ping_50pc?: number | null
     active_title?: ActiveTitle | null
+    has_ghost?: boolean
+    zone_checkpoints?: string | null
     [key: string]: unknown
 }
 
@@ -2521,6 +2523,7 @@ export interface CapCompareCandidate {
     user: string
     alias: string | null
     cap_time_seconds: number
+    has_ghost?: boolean
 }
 
 export interface CapDetail {
@@ -2588,6 +2591,93 @@ export async function fetchCapDetail(accessToken: string, capId: string, signal?
         return normaliseCapDetail(raw)
     } catch (e) {
         console.error('fetchCapDetail failed', e)
+        return null
+    }
+}
+
+export const CAP_COMPARISON_STATES = ['aligned', 'routes_differ'] as const
+
+export type CapComparisonState = (typeof CAP_COMPARISON_STATES)[number]
+
+export const CAP_COMPARISON_ERROR_CODES = [
+    'bad_request',
+    'cap_not_found',
+    'different_map',
+    'different_side',
+    'no_ghost',
+    'unreadable_ghost',
+] as const
+
+export type CapComparisonErrorCode = (typeof CAP_COMPARISON_ERROR_CODES)[number]
+
+export interface CapComparisonRun {
+    cap_id: string
+    user: string
+    alias: string | null
+    team: number
+    cap_time_ms: number
+}
+
+export type CapComparisonPoint = [t_ms: number, delta_ms: number]
+
+export interface CapComparisonSeparation {
+    start_ms: number
+    end_ms: number
+    start_delta_ms: number
+    end_delta_ms: number
+    rejoined: boolean
+}
+
+export interface CapComparisonSector {
+    index: number
+    end_ms: number
+    split_ms: number
+    delta_split_ms: number
+    delta_total_ms: number
+    separated: boolean
+}
+
+export interface CapComparison {
+    algo_version: number
+    state: CapComparisonState
+    runner: CapComparisonRun
+    reference: CapComparisonRun
+    duration_ms: number
+    final_delta_ms: number
+    coverage: number
+    segments: CapComparisonPoint[][]
+    separations: CapComparisonSeparation[]
+    sectors: CapComparisonSector[]
+}
+
+function isCapComparison(raw: unknown): raw is CapComparison {
+    if (!raw || typeof raw !== 'object') return false
+    const body = raw as Partial<CapComparison>
+    return (
+        CAP_COMPARISON_STATES.includes(body.state as CapComparisonState)
+        && typeof body.duration_ms === 'number'
+        && typeof body.final_delta_ms === 'number'
+        && !!body.runner && typeof body.runner === 'object'
+        && !!body.reference && typeof body.reference === 'object'
+        && Array.isArray(body.segments)
+        && Array.isArray(body.separations)
+        && Array.isArray(body.sectors)
+    )
+}
+
+export async function fetchCapComparison(
+    runnerCapId: string,
+    referenceCapId: string,
+    signal?: AbortSignal,
+): Promise<CapComparison | null> {
+    const query = new URLSearchParams({ runner: runnerCapId, reference: referenceCapId })
+    try {
+        const res = await apiRequest(`/ghosts/compare?${query.toString()}`, { signal })
+        if (res.status !== 200) return null
+        const json = await res.json()
+        if (!json || json.success !== true || !isCapComparison(json.data)) return null
+        return json.data
+    } catch {
         return null
     }
 }
