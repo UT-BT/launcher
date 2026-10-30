@@ -7,18 +7,18 @@ import { PlayerInfo } from '@/app/components/shared/PlayerInfo'
 import { formatCapTime, displayMapName } from '@/app/utils/format'
 import { ReplaySourceCredit } from '@/app/components/shared/ReplayVideoModal'
 import { cn } from '@/lib/utils'
-import type { ActiveTitle, CapCheckpoint, ReplayVideo } from '@/app/utils/api'
-import { buildSyncAnchors, formatSignedDelta, deltaClass } from '@/app/components/pages/capDetail/capStats'
+import type { ActiveTitle, ReplayVideo } from '@/app/utils/api'
+import { formatSignedDelta, deltaClass } from '@/app/components/pages/capDetail/capStats'
 import { CompareScrubber, type ScrubTick, type ScrubLane } from './CompareScrubber'
 import { CompareDeltaBar } from './CompareDeltaBar'
+import { ReplayDeltaStrip } from './ReplayDeltaStrip'
+import { buildCompareView, paneReadout, type CompareRunTiming, type PaneReadout } from './compareView'
+import { useRunComparisons } from './useRunComparisons'
 
-export interface CompareRun {
-    capId: string
+export interface CompareRun extends CompareRunTiming {
     alias: string | null
     userId: string | number
     title: ActiveTitle | null
-    capTime: number
-    checkpoints: CapCheckpoint[]
     video: ReplayVideo
 }
 
@@ -57,12 +57,6 @@ function isFiniteDuration(d: number | undefined | null): d is number {
     return d != null && Number.isFinite(d) && d > 0
 }
 
-function lastPassedIdx(cpTimes: number[], vt: number): number {
-    let idx = -1
-    for (let i = 0; i < cpTimes.length; i++) if (cpTimes[i] <= vt) idx = i
-    return idx
-}
-
 function gridColsClass(count: number): string {
     if (count <= 2) return 'grid-cols-1 lg:grid-cols-2'
     if (count === 3) return 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
@@ -99,11 +93,9 @@ export function VideoCompareModal({ open, onClose, mapName, runs }: VideoCompare
     const tMax = durations.reduce<number>((m, d) => Math.max(m, d ?? 0), 0)
     const frameStep = 1 / Math.min(...runs.map(r => r.video.fps ?? FALLBACK_FPS))
 
-    const refIndex = useMemo(
-        () => runs.reduce((maxI, r, i, arr) => (r.capTime > arr[maxI].capTime ? i : maxI), 0),
-        [runs],
-    )
-    const refRun = runs[refIndex] ?? runs[0]
+    const comparisons = useRunComparisons(runs, open)
+    const view = useMemo(() => buildCompareView(runs, comparisons), [runs, comparisons])
+    const refRun = runs[view.referenceIndex] ?? runs[0]
 
     const seekVideo = (video: HTMLVideoElement | null, nudge: number, T: number) => {
         if (!video) return
@@ -253,38 +245,24 @@ export function VideoCompareModal({ open, onClose, mapName, runs }: VideoCompare
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, tMax, frameStep])
 
-    const paneAnchors = useMemo(
-        () => runs.map(r => buildSyncAnchors(r.checkpoints, refRun.checkpoints, r.capTime, refRun.capTime)),
-        [runs, refRun],
-    )
-    const paneCpAnchors = useMemo(
-        () => paneAnchors.map(a => a.filter(x => x.label !== 'SPAWN' && x.label !== 'CAP')),
-        [paneAnchors],
-    )
-
     const paneTicks = useMemo<ScrubTick[][]>(
-        () => runs.map((r, i) => {
+        () => view.tracks.map((track, i) => {
             const nudge = nudges[i] ?? 0
             return [
-                ...paneCpAnchors[i].map(a => ({ t: a.aTime + nudge, isCap: false })),
-                { t: r.capTime + nudge, isCap: true },
+                ...track.ticks.map(t => ({ t: t + nudge, isCap: false })),
+                { t: track.capTime + nudge, isCap: true },
             ]
         }),
-        [runs, paneCpAnchors, nudges],
+        [view, nudges],
     )
 
     const panes = runs.map((r, i) => {
-        const nudge = nudges[i] ?? 0
-        const vt = master - nudge
-        const cp = paneCpAnchors[i]
-        const idx = lastPassedIdx(cp.map(a => a.aTime), vt)
-        const atCap = vt >= r.capTime - END_EPS
+        const vt = master - (nudges[i] ?? 0)
         const dur = durations[i] ?? null
         const ended = dur != null && vt >= dur - END_EPS
-        const capDelta = r.capTime - refRun.capTime
-        const label = atCap ? 'CAP' : idx < 0 ? 'SPAWN' : `CP${idx + 1}`
-        const delta = atCap ? capDelta : idx < 0 ? null : cp[idx].aTime - cp[idx].bTime
-        return { label, delta, ended, capDelta }
+        const track = view.tracks[i]
+        const compared = track.role === 'replay' || track.role === 'zones'
+        return { readout: paneReadout(track, vt), ended, capDelta: compared ? r.capTime - refRun.capTime : null }
     })
 
     const lanes = useMemo<ScrubLane[]>(
@@ -301,18 +279,12 @@ export function VideoCompareModal({ open, onClose, mapName, runs }: VideoCompare
         [runs, paneTicks],
     )
 
-    const showDeltaBar = n === 2
-    const pairAnchors = useMemo(
-        () => (showDeltaBar ? buildSyncAnchors(runs[0].checkpoints, runs[1].checkpoints, runs[0].capTime, runs[1].capTime) : []),
-        [showDeltaBar, runs],
-    )
-    const deltaPoints = useMemo(() => {
-        if (!showDeltaBar) return []
-        const cp = pairAnchors.filter(a => a.label !== 'SPAWN' && a.label !== 'CAP')
-        if (cp.length === 0) return []
-        const nudge = nudges[0] ?? 0
-        return pairAnchors.map(a => ({ x: a.aTime + nudge, delta: a.aTime - a.bTime }))
-    }, [showDeltaBar, pairAnchors, nudges])
+    const strip = view.strip
+    const checkpointPoints = useMemo(() => {
+        if (strip?.kind !== 'zones') return []
+        const nudge = nudges[strip.timeIndex] ?? 0
+        return strip.points.map(p => ({ x: p.t + nudge, delta: p.delta }))
+    }, [strip, nudges])
 
     const durationsReady = runs.every((_, i) => isFiniteDuration(durations[i]))
     const canPlay = !errors.some(Boolean) && durationsReady
@@ -339,10 +311,8 @@ export function VideoCompareModal({ open, onClose, mapName, runs }: VideoCompare
                             key={run.capId}
                             run={run}
                             color={RUN_COLORS[i % RUN_COLORS.length]}
-                            isReference={i === refIndex}
                             capDelta={panes[i].capDelta}
-                            cpLabel={panes[i].label}
-                            delta={panes[i].delta}
+                            readout={panes[i].readout}
                             ended={panes[i].ended}
                             error={errors[i] ?? false}
                             buffering={bufferings[i] ?? false}
@@ -397,9 +367,22 @@ export function VideoCompareModal({ open, onClose, mapName, runs }: VideoCompare
                     onScrubEnd={handleScrubEnd}
                 />
 
-                {showDeltaBar && deltaPoints.length > 0 && (
+                {strip?.kind === 'replay' && (
+                    <ReplayDeltaStrip
+                        strip={strip.strip}
+                        runnerName={lanes[strip.runnerIndex]?.alias ?? 'Run'}
+                        runnerOffset={nudges[strip.runnerIndex] ?? 0}
+                        duration={tMax}
+                        master={master}
+                        onScrub={handleScrub}
+                        onScrubStart={handleScrubStart}
+                        onScrubEnd={handleScrubEnd}
+                    />
+                )}
+
+                {strip?.kind === 'zones' && (
                     <CompareDeltaBar
-                        points={deltaPoints}
+                        points={checkpointPoints}
                         duration={tMax}
                         master={master}
                         onScrub={handleScrub}
@@ -415,10 +398,8 @@ export function VideoCompareModal({ open, onClose, mapName, runs }: VideoCompare
 interface VideoPaneProps {
     run: CompareRun
     color: RunColor
-    isReference: boolean
-    capDelta: number
-    cpLabel: string
-    delta: number | null
+    capDelta: number | null
+    readout: PaneReadout
     ended: boolean
     error: boolean
     buffering: boolean
@@ -436,7 +417,7 @@ interface VideoPaneProps {
 }
 
 function VideoPane({
-    run, color, isReference, capDelta, cpLabel, delta, ended, error, buffering, muted, nudge, maxHeight,
+    run, color, capDelta, readout, ended, error, buffering, muted, nudge, maxHeight,
     videoRefCb, onDurationKnown, onBufferingChange, onError, onToggleMute, onStepNudge, onSetNudge, onResetNudge,
 }: VideoPaneProps) {
     return (
@@ -448,7 +429,7 @@ function VideoPane({
                 </div>
                 <span className="shrink-0 flex items-baseline gap-1.5">
                     <span className="text-sm font-mono tabular-nums text-amber-300">{formatCapTime(run.capTime)}</span>
-                    {!isReference && (
+                    {capDelta != null && (
                         <span className={cn('text-xs font-mono tabular-nums', deltaClass(capDelta))}>
                             ({formatSignedDelta(capDelta)})
                         </span>
@@ -498,16 +479,21 @@ function VideoPane({
                 )}
             </div>
 
-            <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-muted-foreground min-w-0">
-                    <span className="truncate">{ended ? 'Capped' : cpLabel}</span>
-                    {delta != null && (
-                        <span className={cn('font-mono tabular-nums normal-case', deltaClass(delta))}>
-                            ({formatSignedDelta(delta)})
+            <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5">
+                <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-muted-foreground whitespace-nowrap">
+                    <span>{ended ? 'Capped' : readout.label}</span>
+                    {readout.gap && (
+                        <span
+                            className={cn(
+                                'font-mono tabular-nums normal-case',
+                                readout.greyed ? 'text-muted-foreground' : deltaClass(readout.gap.ms),
+                            )}
+                        >
+                            ({readout.gap.label})
                         </span>
                     )}
                 </div>
-                <div className="flex items-center gap-1.5 shrink-0">
+                <div className="flex items-center gap-1.5 shrink-0 ml-auto">
                     <MuteButton muted={muted} onToggle={onToggleMute} who={run.alias ?? 'this run'} />
                     <div className="flex items-center gap-1">
                         <NudgeButton onStep={() => onStepNudge(-1)} aria="Nudge earlier (hold to repeat)">

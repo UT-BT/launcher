@@ -256,6 +256,7 @@ export function TeamCapDetailPage({ teamCapId, userProfile, onMapSelect }: TeamC
                 userId: member.user,
                 title: member.active_title,
                 capTime: member.cap_time_seconds,
+                side: member.cap?.team ?? cps?.team ?? null,
                 checkpoints: cps?.checkpoints ?? [],
                 video,
             } as CompareRun

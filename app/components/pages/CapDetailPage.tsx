@@ -155,7 +155,6 @@ export function CapDetailPage({ capId, userProfile, onMapSelect }: CapDetailPage
     }, [videoOpponent, accessToken])
 
     const videoAvail = useVideoCompareAvailability(cap?.id, videoOpponent?.id ?? null, !!videoOpponent)
-    const videoSameTeam = cap?.team != null && videoOpponentData?.team != null && cap.team === videoOpponentData.team
     const videoReady = videoAvail.bothReady && videoOpponentData != null
 
     const scrollRef = useRef<HTMLDivElement>(null)
@@ -313,7 +312,8 @@ export function CapDetailPage({ capId, userProfile, onMapSelect }: CapDetailPage
                             userId: cap.user,
                             title: cap.active_title ?? null,
                             capTime: cap.cap_time_seconds,
-                            checkpoints: videoSameTeam ? detail.checkpoints : [],
+                            side: cap.team ?? null,
+                            checkpoints: detail.checkpoints,
                             video: videoAvail.videoA as ReplayVideo,
                         },
                         {
@@ -322,7 +322,8 @@ export function CapDetailPage({ capId, userProfile, onMapSelect }: CapDetailPage
                             userId: videoOpponent.user,
                             title: videoOpponent.active_title ?? null,
                             capTime: videoOpponent.cap_time_seconds,
-                            checkpoints: videoSameTeam ? (videoOpponentData?.checkpoints ?? []) : [],
+                            side: videoOpponentData?.team ?? null,
+                            checkpoints: videoOpponentData?.checkpoints ?? [],
                             video: videoAvail.videoB as ReplayVideo,
                         },
                     ]}
